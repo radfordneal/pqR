@@ -1,0 +1,484 @@
+#
+# ${R_HOME}/doc/manual/Makefile
+
+VPATH = @srcdir@
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+
+top_builddir = ../..
+subdir = doc/manual
+
+include $(top_builddir)/Makeconf
+
+SORT = sort # to match Windows
+
+distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
+SOURCES_TEXI = R-FAQ.texi R-admin.texi R-data.texi R-exts.texi \
+  R-intro.texi R-ints.texi R-lang.texi
+DISTFILES = \
+	README \
+	Makefile.in Makefile.win \
+	R-defs.texi dir epsf.tex pdfcolor.tex \
+	$(SOURCES_TEXI) \
+	resources.texi \
+	R-exts.R R-exts.c R-intro.R \
+	refman.top refman.bot \
+	ISBN Rman.css Rfaq.css
+SUBDIRS_WITH_NO_BUILD = images
+
+OBJECTS_DVI = $(SOURCES_TEXI:.texi=.dvi)
+OBJECTS_HTML = $(SOURCES_TEXI:.texi=.html)
+OBJECTS_INFO = $(SOURCES_TEXI:.texi=.info)
+OBJECTS_PDF = $(SOURCES_TEXI:.texi=.pdf)
+
+MAKEINFO = @MAKEINFO@
+MAKEINFO_HTML_OPTS = --html --no-split --css-include=$(srcdir)/Rman.css
+MAKEINFO_TEXT_OPTS = --number-sections --fill-column=76 --no-split --no-headers
+TEXI2HTML = $(MAKEINFO) $(MAKEINFO_HTML_OPTS)
+TEXI2TEXT = $(MAKEINFO) $(MAKEINFO_TEXT_OPTS)
+TEXI2DVI = @TEXI2DVI@ --texinfo="@set UseExternalXrefs "
+TEXI2PDF = $(TEXI2DVI) --pdf
+PDFLATEX = @PDFLATEX@
+PDFTEX = @PDFTEX@
+TEX = @TEX@
+
+BATCHLATEX = $(LATEX) -interaction=nonstopmode
+BATCHPDFLATEX = $(PDFLATEX) -interaction=nonstopmode
+
+datarootdir = @datarootdir@
+infodir = @infodir@
+INSTALL_INFO = @INSTALL_INFO@
+
+R_PAPERSIZE = @R_PAPERSIZE@
+R_RD4DVI = @R_RD4DVI@
+R_RD4PDF = @R_RD4PDF@
+
+texinputs_BASE = $(R_PKGS_BASE:=-pkg.tex)
+texinputs_RECOMMENDED = $(R_PKGS_RECOMMENDED:=-pkg.tex)
+R_PKGS_refman = base datasets grDevices graphics grid methods stats tools utils
+refman_TEXINPUTS = $(R_PKGS_refman:=-pkg.tex)
+refman_DEPENDENCIES = version.tex $(top_srcdir)/share/texmf/Rd.sty
+fullrefman_TEXINPUTS = $(texinputs_BASE) @USE_RECOMMENDED_PACKAGES_TRUE@ $(texinputs_RECOMMENDED)
+
+texiincludes = version.texi $(srcdir)/R-defs.texi
+
+.SUFFIXES:
+.SUFFIXES: .dvi .html .info .texi .pdf
+
+all: Makefile R docs
+
+Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
+	@cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+
+R: Makefile
+
+docs: html
+
+.texi.dvi:
+	@if test -z "$(TEX)"; then \
+	  $(ECHO) "ERROR: 'tex' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	@if test -z "$(TEXI2DVI)"; then \
+	  $(ECHO) "ERROR: 'texi2dvi' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	TEXINPUTS="$(srcdir):$$TEXINPUTS" $(TEXI2DVI) $<
+
+.texi.html:
+	@if test -z "$(MAKEINFO)"; then \
+	  $(ECHO) "'makeinfo' v4.7 or later needed to make HTML docs but missing on your system." ; \
+	  $(ECHO) "file $@ will be missing"; \
+	else \
+	  $(ECHO) "creating doc/manual/$@"; \
+	  $(TEXI2HTML) -D UseExternalXrefs -I$(srcdir) $< -o $@ || touch $@; \
+	fi
+
+.texi.info:
+	@if test -z "$(MAKEINFO)"; then \
+	  $(ECHO) "ERROR: 'makeinfo' v4.7 or later needed but missing on your system."; \
+	  exit 1; \
+	fi
+	$(MAKEINFO) --enable-encoding -D UseExternalXrefs -I$(srcdir) $<
+
+.texi.pdf:
+	@if test -z "$(PDFTEX)"; then \
+	  $(ECHO) "ERROR: 'pdftex' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	@if test -z "$(TEXI2DVI)"; then \
+	  $(ECHO) "ERROR: 'texi2dvi' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	TEXINPUTS="$(srcdir):$$TEXINPUTS" $(TEXI2PDF) $<
+
+## We have to be careful not to install a local R-admin.html made prior to
+## texinfo 4.7, as doc/html/SearchEngine.html links to it.
+## So use that in the sources if we can -- it is not in the svn archive.
+## There are no cross-references, external or not.
+R-admin.html: $(srcdir)/R-admin.texi
+	@if test -f "$(top_srcdir)/doc/html/R-admin.html" ; then \
+	  cp "$(top_srcdir)/doc/html/R-admin.html" R-admin.html ; \
+	else \
+	  if test -z "$(MAKEINFO)"; then \
+	    $(ECHO) "'makeinfo' v4.7 or later needed to make HTML docs but missing on your system." ; \
+	    $(ECHO) "file $@ will be missing"; \
+	  else \
+	    $(ECHO) "creating doc/manual/$@"; \
+	    $(TEXI2HTML) -I$(srcdir) $(srcdir)/R-admin.texi -o $@ || touch $@;\
+	  fi ; \
+	fi
+
+R-FAQ.html: $(srcdir)/R-FAQ.texi
+	@if test -z "$(MAKEINFO)"; then \
+	  $(ECHO) "'makeinfo' v4.7 or later needed to make HTML docs but missing on your system." ; \
+	  $(ECHO) "file $@ will be missing"; \
+	else \
+	  $(ECHO) "creating doc/manual/$@"; \
+	  $(MAKEINFO) --html --no-split --css-include=$(srcdir)/Rfaq.css -D UseExternalXrefs -I$(srcdir) $< -o $@ || touch $@; \
+	fi
+
+dvi: refman.dvi $(OBJECTS_DVI)
+refman.dvi: $(refman_DEPENDENCIES) stamp-refman-dvi
+	@if test -z "$(LATEX)"; then \
+	  $(ECHO) "ERROR: 'latex' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	@$(ECHO) "DVI/LaTeX documentation: reference index ..."
+	@rm -f *.aux refman.toc refman.ind stamp-refman-dvi
+## <NOTE>
+## We do not make sure $(ECHO) does not interpret backslash escapes.
+## Could be trouble ...
+	@(opt="$(R_PAPERSIZE)paper"; \
+	  $(ECHO) "\\documentclass[$${opt}]{book}"; \
+	  opt="$(R_RD4DVI)"; \
+	  $(ECHO) "\\usepackage[$${opt}]{Rd}"; \
+	  $(ECHO) "\\usepackage[utf8]{inputenc}"; \
+	  cat $(srcdir)/refman.top; \
+	  texinputs=`(for f in $(refman_TEXINPUTS); \
+	    do $(ECHO) $${f}; done) | LC_COLLATE=C $(SORT)`; \
+	  for f in $${texinputs}; do $(ECHO) "\\input{$${f}}"; done; \
+	  cat $(srcdir)/refman.bot) > refman.tex
+## </NOTE>
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHLATEX) refman.tex
+	@-$(MAKEINDEX) refman
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHLATEX) refman.tex
+	@touch stamp-refman-dvi
+
+version.tex: Makefile $(top_builddir)/SVN-REVISION $(top_builddir)/VERSION
+	@$(ECHO) "creating $(subdir)/$@"
+	@(v=`cat $(top_srcdir)/VERSION`; \
+	  v="$${v} (`sed -e 1d -e 's/^Last Changed Date: //' $(top_builddir)/SVN-REVISION`)"; \
+	  $(ECHO) "$${v}") > $@
+
+stamp-refman-dvi: $(refman_TEXINPUTS)
+	@touch $@
+
+R_EXE = $(top_builddir)/bin/R --slave --vanilla
+
+## <NOTE> This assumes none of the latex dirs are zipped </NOTE>
+$(texinputs_BASE): FORCE
+	@(pkg=`basename $@ -pkg.tex`; \
+	if $(R_EXE) -e \
+	  "tools:::.Rdnewer(\"$(top_srcdir)/src/library/$${pkg}\", \"$@\")"; then \
+	  $(ECHO) "collecting LaTeX docs for package '$${pkg}' ..."; \
+	  $(ECHO) "tools:::.pkg2tex(\"$(top_builddir)/library/$${pkg}\")" \
+	    | LC_ALL=C $(R_EXE) ; \
+	fi)
+FORCE:
+
+$(texinputs_RECOMMENDED): FORCE
+	@(pkg=`basename $@ -pkg.tex`; \
+	if find $@ -newer $(top_builddir)/library/$${pkg}/DESCRIPTION \
+	    -print 2> /dev/null | grep $@ > /dev/null; then :; else \
+	  $(ECHO) "collecting LaTeX docs for package '$${pkg}' ..."; \
+	  $(ECHO) "tools:::.pkg2tex(\"$(top_builddir)/library/$${pkg}\")" \
+	    | LC_ALL=C $(R_EXE) ; \
+	fi)
+
+fullrefman.dvi: $(refman_DEPENDENCIES) stamp-fullrefman-dvi
+	@if test -z "$(LATEX)"; then \
+	  $(ECHO) "ERROR: 'latex' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	@$(ECHO) "DVI/LaTeX documentation: full reference index ..."
+	@rm -f *.aux fullrefman.toc fullrefman.ind stamp-fullrefman-dvi
+	@(opt="$(R_PAPERSIZE)paper"; \
+	  $(ECHO) "\\documentclass[$${opt}]{book}"; \
+	  opt="$(R_RD4DVI)"; \
+	  $(ECHO) "\\usepackage[$${opt}]{Rd}"; \
+	  $(ECHO) "\\usepackage[utf8]{inputenc}"; \
+	  cat $(srcdir)/refman.top; \
+	  $(ECHO) "\\part{}"; \
+	  texinputs=`(for f in $(refman_TEXINPUTS); \
+	    do $(ECHO) $${f}; done) | LC_COLLATE=C $(SORT)`; \
+	  for f in $${texinputs}; do $(ECHO) "\\input{$${f}}"; done; \
+	  $(ECHO) "\\part{}"; \
+	  texinputs=`(for f in $(fullrefman_TEXINPUTS); \
+	    do $(ECHO) $${f}; done) | LC_COLLATE=C $(SORT)`; \
+	  for f in $(refman_TEXINPUTS); do \
+	    texinputs=`$(ECHO) "$${texinputs}" | sed "/$${f}/d"`; \
+	  done; \
+	  for f in $${texinputs}; do $(ECHO) "\\input{$${f}}"; done; \
+	  cat $(srcdir)/refman.bot) > fullrefman.tex
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHLATEX) fullrefman.tex 
+	@-$(MAKEINDEX) fullrefman
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHLATEX) fullrefman.tex
+	@touch stamp-fullrefman-dvi
+stamp-fullrefman-dvi: $(fullrefman_TEXINPUTS)
+
+R-admin.dvi: $(texiincludes)
+R-data.dvi: $(texiincludes)
+R-exts.dvi: $(texiincludes)
+R-ints.dvi: $(texiincludes)
+version.texi: Makefile $(top_srcdir)/VERSION $(top_builddir)/SVN-REVISION
+	@$(ECHO) "creating $(subdir)/$@"
+	@(v=`sed 's/\([^ ]*\).*/\1/' $(top_srcdir)/VERSION`; \
+	  $(ECHO) "@set VERSIONno $${v}" > $@; \
+	  v="$${v} (`sed -e 1d -e 's/^Last Changed Date: //' $(top_builddir)/SVN-REVISION`)"; \
+	  $(ECHO) "@set VERSION $${v}" >> $@; \
+	  rwv=`$(PERL) $(top_srcdir)/src/gnuwin32/fixed/rwver.pl $(top_srcdir)/VERSION`; \
+	  $(ECHO) "@set RWVERSION $${rwv}" >> $@ )
+	@if test "$(R_PAPERSIZE)" = "a4"; then \
+	  $(ECHO) "@afourpaper" >> $@ ; \
+	fi
+
+R-intro.dvi: stamp-images-eps $(texiincludes)
+stamp-images-eps:
+	@if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
+	  $(MAKE) rdocdir=$(top_builddir)/doc install-images-eps; \
+	fi
+	@touch $@
+R-lang.dvi: $(texiincludes)
+
+html: $(OBJECTS_HTML)
+	@(cd ../html; $(MAKE) index.html)
+
+R-admin.html: $(texiincludes) $(srcdir)/Rman.css
+R-data.html: $(texiincludes) $(srcdir)/Rman.css
+R-exts.html: $(texiincludes) $(srcdir)/Rman.css
+R-intro.html: $(texiincludes) $(srcdir)/Rman.css
+R-ints.html: $(texiincludes) $(srcdir)/Rman.css
+R-lang.html: $(texiincludes) $(srcdir)/Rman.css
+R-FAQ.html: $(srcdir)/Rfaq.css
+
+info: $(OBJECTS_INFO)
+R-admin.info: $(texiincludes)
+R-data.info: $(texiincludes)
+R-exts.info: $(texiincludes)
+R-intro.info: $(texiincludes)
+R-ints.info: $(texiincludes)
+R-lang.info: $(texiincludes)
+
+pdf: refman.pdf $(OBJECTS_PDF)
+refman.pdf: $(refman_DEPENDENCIES) stamp-refman-pdf
+	@if test -z "$(PDFLATEX)"; then \
+	  $(ECHO) "ERROR: 'pdflatex' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	@$(ECHO) "PDF/LaTeX documentation: reference index ..."
+	@rm -f *.aux refman.toc refman.ind stamp-refman-pdf
+## <NOTE>
+## We do not make sure $(ECHO) does not interpret backslash escapes.
+## Could be trouble ...
+	@(opt="$(R_PAPERSIZE)paper"; \
+	  $(ECHO) "\\documentclass[$${opt}]{book}"; \
+	  opt="$(R_RD4PDF)"; \
+	  $(ECHO) "\\usepackage[$${opt}]{Rd}"; \
+	  $(ECHO) "\\usepackage[utf8]{inputenc}"; \
+	  cat $(srcdir)/refman.top; \
+	  texinputs=`(for f in $(refman_TEXINPUTS); \
+	    do $(ECHO) $${f}; done) | LC_COLLATE=C $(SORT)`; \
+	  for f in $${texinputs}; do $(ECHO) "\\input{$${f}}"; done; \
+	  cat $(srcdir)/refman.bot) > refman.tex
+## </NOTE>
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHPDFLATEX) refman.tex
+	@-$(MAKEINDEX) refman
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHPDFLATEX) refman.tex
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHPDFLATEX) refman.tex
+	@touch stamp-refman-pdf
+stamp-refman-pdf: $(refman_TEXINPUTS)
+	@touch $@
+fullrefman.pdf: $(refman_DEPENDENCIES) stamp-fullrefman-pdf
+	@if test -z "$(PDFLATEX)"; then \
+	  $(ECHO) "ERROR: 'pdflatex' needed but missing on your system."; \
+	  exit 1; \
+	fi
+	@$(ECHO) "PDF/LaTeX documentation: full reference index ..."
+	@rm -f *.aux fullrefman.toc fullrefman.ind stamp-fullrefman-pdf
+	@(opt="$(R_PAPERSIZE)paper"; \
+	  $(ECHO) "\\documentclass[$${opt}]{book}"; \
+	  opt="$(R_RD4PDF)"; \
+	  $(ECHO) "\\usepackage[$${opt}]{Rd}"; \
+	  $(ECHO) "\\usepackage[utf8]{inputenc}"; \
+	  cat $(srcdir)/refman.top; \
+	  $(ECHO) "\\part{}"; \
+	  texinputs=`(for f in $(refman_TEXINPUTS); \
+	    do $(ECHO) $${f}; done) | LC_COLLATE=C $(SORT)`; \
+	  for f in $${texinputs}; do $(ECHO) "\\input{$${f}}"; done; \
+	  $(ECHO) "\\part{}"; \
+	  texinputs=`(for f in $(fullrefman_TEXINPUTS); \
+	    do $(ECHO) $${f}; done) | LC_COLLATE=C $(SORT)`; \
+	  for f in $(refman_TEXINPUTS); do \
+	    texinputs=`$(ECHO) "$${texinputs}" | sed "/$${f}/d"`; \
+	  done; \
+	  for f in $${texinputs}; do $(ECHO) "\\input{$${f}}"; done; \
+	  cat $(srcdir)/refman.bot) > fullrefman.tex
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHPDFLATEX) fullrefman.tex
+	@-$(MAKEINDEX) fullrefman
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHPDFLATEX) fullrefman.tex
+	@TEXINPUTS="$(top_srcdir)/share/texmf:$$TEXINPUTS" \
+	  $(BATCHPDFLATEX) fullrefman.tex
+	@touch stamp-fullrefman-pdf
+stamp-fullrefman-pdf: $(fullrefman_TEXINPUTS)
+
+R-admin.pdf: $(texiincludes)
+R-data.pdf: $(texiincludes)
+R-exts.pdf: $(texiincludes)
+R-intro.pdf: stamp-images-pdf $(texiincludes)
+R-ints.pdf: $(texiincludes)
+stamp-images-pdf:
+	@if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
+	  $(MAKE) rdocdir=$(top_builddir)/doc install-images-pdf; \
+	fi
+	@touch $@
+R-lang.pdf: $(texiincludes)
+
+install: install-message installdirs install-html
+install-message:
+	@$(ECHO) "installing $(subdir) ..."
+installdirs:
+	@$(MKINSTALLDIRS) "$(DESTDIR)$(rdocdir)/manual"
+install-strip: install
+install-dvi: installdirs dvi installdirs install-images-eps
+	@$(ECHO) "installing R manuals in DVI format ..."
+	@for f in *.dvi; do \
+	  $(INSTALL_DATA) $${f} "$(DESTDIR)$(rdocdir)/manual"; \
+	done
+install-images-eps: installdirs
+	@$(MKINSTALLDIRS) "$(DESTDIR)$(rdocdir)/manual/images"
+	@-for f in $(srcdir)/images/*.eps; do \
+	  $(INSTALL_DATA) $${f} "$(DESTDIR)$(rdocdir)/manual/images"; \
+	done
+install-images-pdf: installdirs
+	@$(MKINSTALLDIRS) "$(DESTDIR)$(rdocdir)/manual/images"
+	@-for f in $(srcdir)/images/*.pdf; do \
+	  $(INSTALL_DATA) $${f} "$(DESTDIR)$(rdocdir)/manual/images"; \
+	done
+## if there is no makeinfo >= 4.7 then there are no html pages
+install-html: installdirs
+	@for f in $(OBJECTS_HTML); do \
+	  if test -f $${f} ; then \
+	    $(INSTALL_DATA) $${f} "$(DESTDIR)$(rdocdir)/manual"; \
+	  fi \
+	done
+install-info: info $(DESTDIR)$(infodir)/dir
+	@$(ECHO) "installing R info pages ..."
+	@for f in $(OBJECTS_INFO:.info=.info*); do \
+	  $(INSTALL_DATA) $${f} "$(DESTDIR)$(infodir)"; \
+	  $(R_GZIPCMD) -f "$(DESTDIR)$(infodir)/$${f}"; \
+	done
+	@$(ECHO) "updating '$(infodir)/dir' ..."
+	@for f in $(OBJECTS_INFO); do \
+	  $(INSTALL_INFO) --info-dir=$(DESTDIR)$(infodir) $(DESTDIR)$(infodir)/$${f} \
+	    || $(ECHO) "you need to adjust $(infodir)/dir manually"; \
+	done
+install-pdf: pdf installdirs
+	@$(ECHO) "installing R manuals in PDF format ..."
+	@for f in *.pdf; do \
+	  $(INSTALL_DATA) $${f} "$(DESTDIR)$(rdocdir)/manual"; \
+	done
+
+$(DESTDIR)$(infodir)/dir:
+	@$(MKINSTALLDIRS) "$(DESTDIR)$(infodir)"
+	$(INSTALL_DATA) "$(srcdir)/dir" "$(DESTDIR)$(infodir)"
+
+uninstall:
+	@if test -f "$(DESTDIR)$(infodir)/R-data.info" \
+	     || test -f "$(DESTDIR)$(infodir)/R-data.info.gz"; then \
+	  $(MAKE) uninstall-info; \
+	fi
+	@$(ECHO) "uninstalling $(subdir) ..."
+	@rm -rf "$(DESTDIR)$(rdocdir)/manual"
+uninstall-dvi:
+	@$(ECHO) "uninstalling R manuals in DVI format ..."
+	@-rm -f "$(DESTDIR)$(rdocdir)/manual"/images/*.eps
+	@-rmdir "$(DESTDIR)$(rdocdir)/manual"/images
+	@-rm -f "$(DESTDIR)$(rdocdir)/manual"/*.dvi
+uninstall-info:
+	@$(ECHO) "uninstalling R info pages ..."
+	@for f in $(OBJECTS_INFO); do \
+	  $(INSTALL_INFO) --remove --info-dir=$(DESTDIR)$(infodir) $${f} \
+	    || $(ECHO) "you need to adjust $(infodir)/dir manually"; \
+	done
+	@for f in $(OBJECTS_INFO:.info=.info*); do \
+	  rm -f "$(DESTDIR)$(infodir)/$${f}" "$(DESTDIR)$(infodir)/$${f}.gz" ; \
+	done
+uninstall-pdf:
+	@$(ECHO) "uninstalling R manuals in PDF format ..."
+	@-rm -f "$(DESTDIR)$(rdocdir)/manual"/*.pdf
+
+mostlyclean: clean
+clean:
+	@if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
+	  rm -rf $(INSTFILES) images; \
+	fi
+	-@rm -f *.aux *.cp *.cps *.dvi *.en *.ens *.fn *.fns *.html *.info* \
+	  *.ky *.kys *.log *.out *.pdf *.pg *.pgs *.ps *.ps-2 *.tmp \
+	  *.toc *.tp *.vr *.vrs \
+	  *-pkg.tex refman.i?? refman.tex fullrefman.i?? fullrefman.tex \
+	  version.tex version.texi
+	-@rm -f stamp-*
+distclean: clean
+	-@rm -f Makefile
+maintainer-clean: distclean
+
+distdir: $(DISTFILES)
+	@for f in $(DISTFILES); do \
+	  test -f $(distdir)/$${f} \
+	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>/dev/null \
+	    || cp -p $(srcdir)/$${f} $(distdir)/$${f}; \
+	done
+	@for d in $(SUBDIRS_WITH_NO_BUILD); do \
+	  ((cd $(srcdir); $(TAR) -c -f - $(DISTDIR_TAR_EXCLUDE) $${d}) \
+	      | (cd $(distdir); $(TAR) -x -f -)) \
+	    || exit 1; \
+	done
+	@if test -z "$(MAKEINFO)"; then \
+	  $(ECHO) "ERROR: 'makeinfo' v4.7 or later needed but missing on your system."; \
+	  exit 1; \
+	fi
+#	$(distdir)/doc/html has already been created
+	@$(TEXI2HTML) --no-headers --number-sections \
+	  $(srcdir)/R-admin.texi -I$(srcdir) \
+	  -o $(distdir)/../html/R-admin.html
+#	front-matter files
+#	@$(TEXI2TEXT) $(srcdir)/resources.texi -o $(distdir)/../../RESOURCES
+#	@$(TEXI2TEXT) $(srcdir)/R-FAQ.texi -o $(distdir)/../../FAQ
+#	@$(TEXI2HTML) --no-headers $(srcdir)/resources.texi \
+#	  -o $(distdir)/../html/resources.html
+
+front-matter: ${top_builddir}/doc/RESOURCES ${top_builddir}/doc/FAQ
+
+${top_builddir}/doc/RESOURCES: $(srcdir)/resources.texi
+	@$(ECHO) "creating RESOURCES"
+	@$(TEXI2TEXT) $(srcdir)/resources.texi -o $@
+
+${top_builddir}/doc/FAQ: $(srcdir)/R-FAQ.texi
+	@$(ECHO) "creating FAQ"
+	@$(TEXI2TEXT) $(srcdir)/R-FAQ.texi -o $@
+
+html-non-svn: ../html/resources.html
+
+../html/resources.html: $(srcdir)/resources.texi
+	@$(ECHO) "creating doc/html/resources.html"
+	@$(TEXI2HTML) --no-headers $(srcdir)/resources.texi -o $@

@@ -1,0 +1,10 @@
+rhome=@rhome
+rlibdir=${rhome}/lib
+rincludedir=@rincludedir
+
+Name: libR
+Description: R as a library
+Version: @VERSION
+Libs: -L${rlibdir} -lR
+Cflags: -I${rincludedir}
+Libs.private:@libsprivate

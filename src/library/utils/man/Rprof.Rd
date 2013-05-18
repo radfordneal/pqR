@@ -1,0 +1,102 @@
+% File src/library/utils/man/Rprof.Rd
+% Part of the R package, http://www.R-project.org
+% Copyright 1995-2009 R Core Development Team
+% Distributed under GPL 2 or later
+
+\name{Rprof}
+\alias{Rprof}
+\title{Enable Profiling of R's Execution}
+\description{
+  Enable or disable profiling of the execution of \R expressions.
+}
+\usage{
+Rprof(filename = "Rprof.out", append = FALSE, interval = 0.02,
+       memory.profiling=FALSE)
+}
+\arguments{
+  \item{filename}{
+    The file to be used for recording the profiling results.
+    Set to \code{NULL} or \code{""} to disable profiling.
+  }
+  \item{append}{
+    logical: should the file be over-written or appended to?
+  }
+  \item{interval}{
+    real: time interval between samples.
+  }
+  \item{memory.profiling}{logical: write memory use information to the file?}
+}
+\details{
+  Enabling profiling automatically disables any existing profiling to
+  another or the same file.
+  
+  Profiling works by writing out the call stack every \code{interval}
+  seconds, to the file specified.  Either the \code{\link{summaryRprof}}
+  function or the Perl script \command{R CMD Rprof} can be used to process
+  the output file to produce a summary of the
+  usage; use \command{R CMD Rprof --help} for usage information.
+
+#ifdef windows
+  Exactly what the time interval measures is subtle: it is time that the
+  \R process is running and executing an \R command.  It is not however just
+  CPU time, for if \code{readline()} is waiting for input, that counts
+  (on Windows, but not on a Unix-alike).
+
+  Note that the timing interval cannot be too small, for the time spent
+  in each profiling step is added to the interval.  What is feasible is
+  machine-dependent, but 10ms seems as small as advisable on a 1GHz machine.
+#endif
+#ifdef unix
+  How time is measured varies by platform: on a Unix-alike it is the CPU
+  time of the \R process, so for example excludes time when \R is waiting
+  for input or for processes run by \code{\link{system}} to return.
+  
+  Note that the timing interval cannot usefully be too small: once the
+  timer goes off, the information is not recorded until the next timing
+  click (probably in the range 1--10msecs).
+#endif
+
+  Functions will only be recorded in the profile log if they put a
+  context on the call stack (see \code{\link{sys.calls}}).  Some
+  \link{primitive} functions do not do so: specifically those which are
+  of \link{type} \code{"special"} (see the \sQuote{R Internals} manual
+  for more details).
+}
+\note{
+#ifdef windows
+  Using \command{R CMD Rprof} needs Windows Perl to be installed: this can
+  be installed from \code{Rtools.exe}.  \code{\link{summaryRprof}} is an
+  alternative that does not use Perl.
+#endif
+#ifdef unix
+  Profiling is not available on all platforms.  By default, it is
+  attempted to compile support for profiling.  Configure \R with
+  \option{--disable-R-profiling} to change this.
+
+  As \R profiling uses the same mechanisms as C profiling, the two
+  cannot be used together, so do not use \code{Rprof} in an executable
+  built for profiling.
+#endif
+}
+\seealso{
+  The chapter on \dQuote{Tidying and profiling R code} in
+  \dQuote{Writing \R Extensions} (see the \file{doc/manual} subdirectory
+  of the \R source tree).
+
+  \code{\link{summaryRprof}}
+
+  \code{\link{tracemem}}, \code{\link{Rprofmem}} for other ways to track
+  memory use.
+}
+\examples{
+\dontrun{Rprof()
+## some code to be profiled
+Rprof(NULL)
+## some code NOT to be profiled
+Rprof(append=TRUE)
+## some code to be profiled
+Rprof(NULL)
+\dots
+## Now post-process the output as described in Details
+}}
+\keyword{utilities}

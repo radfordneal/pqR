@@ -1,0 +1,163 @@
+% File src/library/stats/man/splinefun.Rd
+% Part of the R package, http://www.R-project.org
+% Copyright 1995-2008 R Core Development Team
+% Distributed under GPL 2 or later
+
+\name{splinefun}
+\alias{spline}
+\alias{splinefun}
+\alias{splinefunH}
+\title{Interpolating Splines}
+\description{
+  Perform cubic (or Hermite) spline interpolation of given data points,
+  returning either a list of points obtained by the interpolation or a
+  \emph{function} performing the interpolation.
+}
+\usage{
+splinefun(x, y = NULL, method = c("fmm", "periodic", "natural", "monoH.FC"),
+          ties = mean)
+
+spline(x, y = NULL, n = 3*length(x), method = "fmm",
+       xmin = min(x), xmax = max(x), xout, ties = mean)
+
+splinefunH(x, y, m)
+}
+\arguments{
+  \item{x,y}{vectors giving the coordinates of the points to be
+    interpolated.  Alternatively a single plotting structure can be
+    specified: see \code{\link{xy.coords}.}}
+  \item{m}{(for \code{splinefunH()}): vector of \emph{slopes}
+    \eqn{m_i}{m[i]} at the points \eqn{(x_i,y_i)}{(x[i],y[i])}; these
+    together determine the \bold{H}ermite \dQuote{spline} which is
+    piecewise cubic, (only) \emph{once} differentiable continuously.}
+  \item{method}{specifies the type of spline to be used.  Possible
+    values are \code{"fmm"}, \code{"natural"}, \code{"periodic"} and
+    \code{"monoH.FC"}.}
+  \item{n}{if \code{xout} is left unspecified, interpolation takes place
+       at \code{n} equally spaced points spanning the interval
+       [\code{xmin}, \code{xmax}].}
+  \item{xmin, xmax}{left-hand and right-hand endpoint of the
+       interpolation interval (when \code{xout} is unspecified).}
+  \item{xout}{an optional set of values specifying where interpolation
+    is to take place.}
+  \item{ties}{Handling of tied \code{x} values.  Either a function
+    with a single vector argument returning a single number result or
+    the string \code{"ordered"}.}
+}
+\details{
+  The inputs can contain missing values which are deleted, so at least
+  one complete \code{(x, y)} pair is required.
+  If \code{method = "fmm"}, the spline used is that of Forsythe, Malcolm
+  and Moler (an exact cubic is fitted through the four points at each
+  end of the data, and this is used to determine the end conditions).
+  Natural splines are used when \code{method = "natural"}, and periodic
+  splines when \code{method = "periodic"}.
+
+  The new (R 2.8.0) method \code{"monoH.FC"} computes a \emph{monotone}
+  Hermite spline according to the method of Fritsch and Carlson.  It
+  does so by determining slopes such that the Hermite spline, determined
+  by \eqn{(x_i,y_i,m_i)}{(x[i],y[i],m[i])}, is monotone (increasing or
+  decreasing) \bold{iff} the data are.
+
+  These interpolation splines can also be used for extrapolation, that is
+  prediction at points outside the range of \code{x}.  Extrapolation
+  makes little sense for \code{method = "fmm"}; for natural splines it
+  is linear using the slope of the interpolating curve at the nearest
+  data point.
+}
+\value{
+  \code{spline} returns a list containing components \code{x} and
+  \code{y} which give the ordinates where interpolation took place and
+  the interpolated values.
+
+  \code{splinefun} returns a function with formal arguments \code{x} and
+  \code{deriv}, the latter defaulting to zero.  This function
+  can be used to evaluate the interpolating cubic spline
+  (\code{deriv}=0), or its derivatives (\code{deriv}=1,2,3) at the
+  points \code{x}, where the spline function interpolates the data
+  points originally specified.  This is often more useful than
+  \code{spline}.
+}
+\references{
+  Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
+  \emph{The New S Language}.
+  Wadsworth & Brooks/Cole.
+
+  Forsythe, G. E., Malcolm, M. A. and Moler, C. B. (1977)
+  \emph{Computer Methods for Mathematical Computations}.
+
+  Fritsch, F. N. and Carlson, R. E. (1980)
+  Monotone piecewise cubic interpolation, \emph{SIAM Journal on
+  Numerical Analysis} \bold{17}, 238--246.
+}
+\seealso{
+  \code{\link{approx}} and \code{\link{approxfun}} for constant and
+  linear interpolation.
+
+  Package \pkg{splines}, especially \code{\link[splines]{interpSpline}}
+  and \code{\link[splines]{periodicSpline}} for interpolation splines.
+  That package also generates spline bases that can be used for
+  regression splines.
+
+  \code{\link{smooth.spline}} for smoothing splines.
+}
+\examples{
+require(graphics)
+
+op <- par(mfrow = c(2,1), mgp = c(2,.8,0), mar = .1+c(3,3,3,1))
+n <- 9
+x <- 1:n
+y <- rnorm(n)
+plot(x, y, main = paste("spline[fun](.) through", n, "points"))
+lines(spline(x, y))
+lines(spline(x, y, n = 201), col = 2)
+
+y <- (x-6)^2
+plot(x, y, main = "spline(.) -- 3 methods")
+lines(spline(x, y, n = 201), col = 2)
+lines(spline(x, y, n = 201, method = "natural"), col = 3)
+lines(spline(x, y, n = 201, method = "periodic"), col = 4)
+legend(6,25, c("fmm","natural","periodic"), col=2:4, lty=1)
+
+y <- sin((x-0.5)*pi)
+f <- splinefun(x, y)
+ls(envir = environment(f))
+splinecoef <- get("z", envir = environment(f))
+curve(f(x), 1, 10, col = "green", lwd = 1.5)
+points(splinecoef, col = "purple", cex = 2)
+curve(f(x, deriv=1), 1, 10, col = 2, lwd = 1.5)
+curve(f(x, deriv=2), 1, 10, col = 2, lwd = 1.5, n = 401)
+curve(f(x, deriv=3), 1, 10, col = 2, lwd = 1.5, n = 401)
+par(op)
+
+## Manual spline evaluation --- demo the coefficients :
+.x <- splinecoef$x
+u <- seq(3,6, by = 0.25)
+(ii <- findInterval(u, .x))
+dx <- u - .x[ii]
+f.u <- with(splinecoef,
+            y[ii] + dx*(b[ii] + dx*(c[ii] + dx* d[ii])))
+stopifnot(all.equal(f(u), f.u))
+
+## An example with ties (non-unique  x values):
+set.seed(1); x <- round(rnorm(30), 1); y <- sin(pi * x) + rnorm(30)/10
+plot(x,y, main="spline(x,y)  when x has ties")
+lines(spline(x,y, n= 201), col = 2)
+## visualizes the non-unique ones:
+tx <- table(x); mx <- as.numeric(names(tx[tx > 1]))
+ry <- matrix(unlist(tapply(y, match(x,mx), range, simplify=FALSE)),
+             ncol=2, byrow=TRUE)
+segments(mx, ry[,1], mx, ry[,2], col = "blue", lwd = 2)
+
+## An example of  monotone  interpolation
+n <- 20
+set.seed(11)
+x. <- sort(runif(n)) ; y. <- cumsum(abs(rnorm(n)))
+plot(x.,y.)
+curve(splinefun(x.,y.)(x),                add=TRUE, col=2, n=1001)
+curve(splinefun(x.,y., method="mono")(x), add=TRUE, col=3, n=1001)
+legend("topleft", paste("splinefun( \"", c("fmm", "monoH.CS"), "\" )", sep=''),
+        col=2:3, lty=1)
+}
+\keyword{math}
+\keyword{dplot}

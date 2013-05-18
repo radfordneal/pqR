@@ -1,0 +1,266 @@
+% File src/library/base/man/grep.Rd
+% Part of the R package, http://www.R-project.org
+% Copyright 1995-2009 R Core Development Team
+% Distributed under GPL 2 or later
+
+\name{grep}
+\title{Pattern Matching and Replacement}
+\alias{grep}
+\alias{grepl}
+\alias{sub}
+\alias{gsub}
+\alias{regexpr}
+\alias{gregexpr}
+\description{
+  \code{grep}, \code{grepl}, \code{regexpr} and \code{gregexpr} search
+  for matches to argument \code{pattern} within a character vector: they
+  differ in the format of and amount of detail in the results.
+
+  \code{sub} and \code{gsub} perform replacement of the first and all
+  matches respectively.
+}
+\usage{
+grep(pattern, x, ignore.case = FALSE, perl = FALSE, value = FALSE,
+     fixed = FALSE, useBytes = FALSE, invert = FALSE)
+
+grepl(pattern, x, ignore.case = FALSE, perl = FALSE, fixed = FALSE,
+      useBytes = FALSE)
+
+sub(pattern, replacement, x, ignore.case = FALSE, perl = FALSE,
+    fixed = FALSE, useBytes = FALSE)
+
+gsub(pattern, replacement, x, ignore.case = FALSE, perl = FALSE,
+     fixed = FALSE, useBytes = FALSE)
+
+regexpr(pattern, text, ignore.case = FALSE, perl = FALSE,
+        fixed = FALSE, useBytes = FALSE)
+
+gregexpr(pattern, text, ignore.case = FALSE, perl = FALSE,
+         fixed = FALSE, useBytes = FALSE)
+}
+\arguments{
+  \item{pattern}{character string containing a \link{regular expression}
+    (or character string for \code{fixed = TRUE}) to be matched
+    in the given character vector.  Coerced by
+    \code{\link{as.character}} to a character string if possible.  If a
+    character vector of length 2 or more is supplied, the first element
+    is used with a warning.  Missing values are allowed except for
+    \code{regexpr} and \code{gregexpr}.}
+  \item{x, text}{a character vector where matches are sought, or an
+    object which can be coerced by \code{as.character} to a character vector.}
+  \item{ignore.case}{if \code{FALSE}, the pattern matching is \emph{case
+      sensitive} and if \code{TRUE}, case is ignored during matching.}
+  \item{perl}{logical. Should perl-compatible regexps be used?
+    Has priority over \code{extended}.}
+  \item{value}{if \code{FALSE}, a vector containing the (\code{integer})
+    indices of the matches determined by \code{grep} is returned, and if
+    \code{TRUE}, a vector containing the matching elements themselves is
+    returned.}
+  \item{fixed}{logical.  If \code{TRUE}, \code{pattern} is a string to be
+    matched as is.  Overrides all conflicting arguments.}
+  \item{useBytes}{logical.  If \code{TRUE} the matching is done
+    byte-by-byte rather than character-by-character.  See
+    \sQuote{Details}.}
+  \item{invert}{logical.  If \code{TRUE} return indices or values for
+         elements that do \emph{not} match.}
+  \item{replacement}{a replacement for matched pattern in \code{sub} and
+    \code{gsub}.  Coerced to character if possible.  For \code{fixed =
+      FALSE} this can include backreferences \code{"\\1"} to
+    \code{"\\9"} to parenthesized subexpressions of \code{pattern}.  For
+    \code{perl = TRUE} only, it can also contain \code{"\\U"} or
+    \code{"\\L"} to convert the rest of the replacement to upper or
+    lower case and \code{"\\E"} to end case conversion.  If a
+    character vector of length 2 or more is supplied, the first element
+    is used with a warning.  If \code{NA}, all elements in the result
+    corresponding to matches will be set to \code{NA}.
+  }
+}
+\details{
+  Arguments which should be character strings or character vectors are
+  coerced to character if possible.
+
+  Each of these functions operates in one of three modes:
+  \enumerate{
+    \item \code{fixed = TRUE}: use exact matching.
+    \item \code{perl = TRUE}: use Perl-style regular expressions.
+    \item \code{fixed = FALSE, perl = FALSE}: use POSIX 1003.2
+    extended regular expressions.
+  }
+  See the help pages on \link{regular expression} for details of the
+  different types of regular expressions.
+
+  The two \code{*sub} functions differ only in that \code{sub} replaces
+  only the first occurrence of a \code{pattern} whereas \code{gsub}
+  replaces all occurrences.
+
+  For \code{regexpr} and \code{gregexpr} it is an error for
+  \code{pattern} to be \code{NA}, otherwise \code{NA} is permitted and
+  gives an \code{NA} match.
+
+  The main effect of \code{useBytes} is to avoid errors/warnings about
+  invalid inputs and spurious matches in multibyte locales, but for
+  \code{regexpr} it changes the interpretation of the output.  As from
+  \R 2.10.0 it inhibits the conversion of inputs with marked encodings.
+  
+  Caseless matching does not make much sense for bytes in a multibyte
+  locale, and you should expect it only to work for ASCII characters if
+  \code{useBytes = TRUE}.
+}
+
+\note{
+  Prior to \R 2.11.0 there was an argument \code{extended} which could
+  be used to select \sQuote{basic} regular expressions: this was often
+  used when \code{fixed = TRUE} would be preferable.  In the actual
+  implementation (as distinct from the POSIX standard) the only
+  difference was that \samp{?}, \samp{+}, \samp{\{}, \samp{|}, \samp{(},
+  and \samp{)} were not interpreted as metacharacters.
+}
+
+\value{
+  \code{grep(value = FALSE)} returns an integer vector of the indices
+  of the elements of \code{x} that yielded a match (or not, for
+  \code{invert = TRUE}.
+  
+  \code{grep(value = TRUE)} returns a character vector containing the
+  selected elements of \code{x} (after coercion, preserving names but no
+  other attributes).
+
+  \code{grepl} returns a logical vector (match or not for each element of
+  \code{x}).
+
+  For \code{sub} and \code{gsub} return a character vector of the same
+  length and with the same attributes as \code{x} (after possible
+  coercion to character).  Elements of character vectors \code{x} which
+  are not substituted will be returned unchanged (including any declared
+  encoding).  If \code{useBytes = FALSE} a non-ASCII substituted result
+  will often be in UTF-8 with a marked encoding (e.g. if there is a
+  UTF-8 input, and in a multibyte locale unless \code{fixed = TRUE}).
+
+  \code{regexpr} returns an integer vector of the same length as
+  \code{text} giving the starting position of the first match or
+  \eqn{-1} if there is none, with attribute \code{"match.length"}, an
+  integer vector giving the length of the matched text (or \eqn{-1} for
+  no match).  The match positions and lengths are in characters unless
+  \code{useBytes = TRUE} is used, when they are in bytes.
+
+  \code{gregexpr} returns a list of the same length as \code{text} each
+  element of which is of the same form as the return value for \code{regexpr},
+  except that the starting positions of every (disjoint) match are
+  given.
+}
+
+\section{Warning}{
+  POSIX 1003.2 mode of \code{gsub} and \code{gregexpr} does not
+  work correctly with repeated word-boundaries (e.g. \code{pattern =
+  "\\b"}).  Use \code{perl = TRUE} for such matches (but that may not
+  work as expected with non-ASCII inputs, as the meaning of
+  \sQuote{word} is system-dependent).
+}
+
+\section{Performance considerations}{
+  If you are doing a lot of regular expression matching, including on
+  very long strings, you will want to consider the options used.
+  Generally PCRE will be faster than the default regular expression
+  engine, and \code{fixed = TRUE} faster still (especially when each
+  pattern is matched only a few times).
+
+  If you are working in a single-byte locale and have marked UTF-8
+  strings that are representable in that locale, convert them first as
+  just one UTF-8 string will force all the matching to be done in
+  Unicode, which attracts a penalty of around \eqn{3\times{}}{3x} for
+  the default POSIX 1003.2 mode.
+  
+  If you can make use of \code{useBytes = TRUE}, the strings will not be
+  checked before matching, and the actual matching will be faster.
+  Often byte-based matching suffices in a UTF-8 locale since byte
+  patterns of one character never match part of another.
+}
+
+\source{
+  The C code for POSIX-style regular expression matching has changed
+  over the years. As from \R 2.10.0 the TRE library of Ville Laurikari
+  (\url{http://laurikari.net/tre/}) is used.  From 2005 to \R 2.9.2,
+  code based on \code{glibc} was used (and before that, code from GNU
+  \command{grep}).  The POSIX standard does give some room for
+  interpretation, especially in the handling of invalid regular
+  expressions and the collation of character ranges, so the results will
+  have changed slightly.
+
+  For Perl-style matching PCRE (\url{http://www.pcre.org}) is used.
+}
+
+\references{
+  Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
+  \emph{The New S Language}.
+  Wadsworth & Brooks/Cole (\code{grep})
+}
+
+% the `aka' below is for ESS
+\seealso{
+  \link{regular expression} (aka \code{\link{regexp}}) for the details
+  of the pattern specification.
+
+  \code{\link{glob2rx}} to turn wildcard matches into regular expressions.
+
+  \code{\link{agrep}} for approximate matching.
+
+  \code{\link{enc2native}} to re-encode the result of \code{sub}.
+
+  \code{\link{tolower}}, \code{\link{toupper}} and \code{\link{chartr}}
+  for character translations.
+  \code{\link{charmatch}}, \code{\link{pmatch}}, \code{\link{match}}.
+
+  \code{\link{apropos}} uses regexps and has more examples.
+}
+\examples{
+grep("[a-z]", letters)
+
+txt <- c("arm","foot","lefroo", "bafoobar")
+if(length(i <- grep("foo",txt)))
+   cat("'foo' appears at least once in\n\t",txt,"\n")
+i # 2 and 4
+txt[i]
+
+## Double all 'a' or 'b's;  "\\" must be escaped, i.e., 'doubled'
+gsub("([ab])", "\\\\1_\\\\1_", "abc and ABC")
+
+txt <- c("The", "licenses", "for", "most", "software", "are",
+  "designed", "to", "take", "away", "your", "freedom",
+  "to", "share", "and", "change", "it.",
+   "", "By", "contrast,", "the", "GNU", "General", "Public", "License",
+   "is", "intended", "to", "guarantee", "your", "freedom", "to",
+   "share", "and", "change", "free", "software", "--",
+   "to", "make", "sure", "the", "software", "is",
+   "free", "for", "all", "its", "users")
+( i <- grep("[gu]", txt) ) # indices
+stopifnot( txt[i] == grep("[gu]", txt, value = TRUE) )
+
+## Note that in locales such as en_US this includes B as the
+## collation order is aAbBcCdEe ...
+(ot <- sub("[b-e]",".", txt))
+txt[ot != gsub("[b-e]",".", txt)]#- gsub does "global" substitution
+
+txt[gsub("g","#", txt) !=
+    gsub("g","#", txt, ignore.case = TRUE)] # the "G" words
+
+regexpr("en", txt)
+
+gregexpr("e", txt)
+
+## trim trailing white space
+str <- 'Now is the time      '
+sub(' +$', '', str)  ## spaces only
+sub('[[:space:]]+$', '', str) ## white space, POSIX-style
+sub('\\\\s+$', '', str, perl = TRUE) ## Perl-style white space
+
+## capitalizing
+txt <- "a test of capitalizing"
+gsub("(\\\\w)(\\\\w*)", "\\\\U\\\\1\\\\L\\\\2", txt, perl=TRUE)
+gsub("\\\\b(\\\\w)",    "\\\\U\\\\1",       txt, perl=TRUE)
+
+txt2 <- "useRs may fly into JFK or laGuardia"
+gsub("(\\\\w)(\\\\w*)(\\\\w)", "\\\\U\\\\1\\\\E\\\\2\\\\U\\\\3", txt2, perl=TRUE)
+ sub("(\\\\w)(\\\\w*)(\\\\w)", "\\\\U\\\\1\\\\E\\\\2\\\\U\\\\3", txt2, perl=TRUE)
+}
+\keyword{character}
+\keyword{utilities}

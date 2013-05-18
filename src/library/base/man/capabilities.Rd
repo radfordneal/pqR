@@ -1,0 +1,97 @@
+% File src/library/base/man/capabilities.Rd
+% Part of the R package, http://www.R-project.org
+% Copyright 1995-2008 R Core Development Team
+% Distributed under GPL 2 or later
+
+\name{capabilities}
+\alias{capabilities}
+\title{Report Capabilities of this Build of R}
+\description{
+  Report on the optional features which have been compiled into this
+  build of \R.
+}
+\usage{
+capabilities(what = NULL)
+}
+\arguments{
+  \item{what}{character vector or \code{NULL}, specifying
+    required components.  \code{NULL} implies that all are required.}
+}
+#ifdef unix
+\section{Note to Mac OS X users}{
+  Capabilities \code{"jpeg"}, \code{"png"} and \code{"tiff"} refer to
+  the X11-based versions of these devices.  If
+  \code{capabilities("aqua")} is true, then these devices with
+  \code{type="quartz"} will be available, and out-of-the-box will be the
+  default type.  Thus for example the \code{\link{tiff}} device will be
+  available if \code{capabilities("aqua") || capabilities("tiff")} if
+  the defaults are unchanged.
+}
+#endif
+\value{
+  A named logical vector. Current components are
+    \item{jpeg}{Is the \code{\link{jpeg}} function operational?}
+    \item{png}{Is the \code{\link{png}} function operational?}
+    \item{tiff}{Is the \code{\link{tiff}} function operational?}
+    \item{tcltk}{Is the \pkg{tcltk} package operational?
+#ifdef unix
+      Note that to make use of Tk you will almost always need to check
+      that \code{"X11"} is also available.
+#endif
+    }
+#ifdef unix
+    \item{X11}{Are the \code{\link{X11}} graphics device and the
+      X11-based data editor available?  This loads the X11 module if not
+      already loaded, and checks that the default display can be
+      contacted unless a \code{X11} device has already been used.}
+    \item{aqua}{Are the \code{R.app} GUI components and the
+      \code{\link{quartz}} function operational?  Only on some Mac OS X
+      builds.  Note that this is distinct from
+      \code{.Platform$GUI == "AQUA"}, which is true when using the Mac
+      \code{R.app} console.}
+#endif
+#ifdef windows
+    \item{X11}{always \code{FALSE} on Windows.}
+    \item{aqua}{\code{FALSE} except on Mac OS X.}
+#endif
+    \item{http/ftp}{Are \code{\link{url}} and the internal method for
+      \code{\link{download.file}} available?}
+    \item{sockets}{Are \code{\link{make.socket}} and related functions
+      available?}
+    \item{libxml}{Is there support for integrating \code{libxml} with
+      the \R event loop?}
+    \item{fifo}{are FIFO connections supported?}
+    \item{cledit}{Is command-line editing available in the current \R
+      session?  This is false in non-interactive sessions.
+#ifdef unix
+      It will be true for the command-line interface if \code{readline}
+      support has been compiled in and \option{--no-readline} was
+      \emph{not} used when \R was invoked.
+#endif
+      }
+    \item{iconv}{is internationalization conversion via
+      \code{\link{iconv}} supported?  Always true as from \R 2.10.0.}
+    \item{NLS}{is there Natural Language Support (for message translations)?}
+    \item{profmem}{is there support for memory profiling?}
+#ifdef windows
+    \item{cairo}{applies to Unix-alikes -- always \code{FALSE}.}
+#endif
+#ifdef unix
+    \item{cairo}{is there support for \code{type="Cairo"} in
+      \code{\link{X11}}, \code{\link{png}},\code{\link{jpeg}},
+      \code{\link{tiff}} and \code{\link{bmp}}, and
+      for the \code{\link{svg}}, \code{\link{cairo_pdf}} and
+      \code{\link{cairo_ps}} devices?}
+#endif    
+}
+\seealso{\code{\link{.Platform}}}
+
+\examples{
+capabilities()
+
+if(!capabilities("http/ftp"))
+   warning("internal download.file() is not available")
+
+## See also the examples for 'connections'.
+}
+\keyword{utilities}

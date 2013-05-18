@@ -1,0 +1,99 @@
+% File src/library/base/man/file.info.Rd
+% Part of the R package, http://www.R-project.org
+% Copyright 1995-2009 R Core Development Team
+% Distributed under GPL 2 or later
+
+\name{file.info}
+\alias{file.info}
+\title{Extract File Information}
+\description{
+  Utility function to extract information about files on the user's
+  file systems.
+}
+\usage{
+file.info(\dots)
+}
+\arguments{
+  \item{\dots}{character vectors containing file paths.}
+}
+\details{
+  The file paths are tilde-expanded: see \code{\link{path.expand}}.
+
+  The file \sQuote{mode} follows POSIX conventions, giving three octal
+  digits summarizing the permissions for the file owner, the owner's
+  group and for anyone respectively.  Each digit is the logical
+  \emph{or} of read (4), write (2) and execute/search (1) permissions.
+  
+#ifdef unix
+  On most systems symbolic links are followed, so information is given
+  about the file to which the link points rather than about the link.
+#endif
+#ifdef windows
+  File modes are probably only useful on NTFS file systems, and it seems
+  all three digits refer to the file's owner.
+  The execute/search bits are set for directories, and for files based
+  on their extensions (e.g., \file{.exe}, \file{.com}, \file{.cmd}
+  and \file{.bat} files).  \code{\link{file.access}} will give a more
+  reliable view of read/write access availability to the \R process.
+#endif
+}
+\value{
+  A data frame with row names the file names and columns
+  \item{size}{double: File size in bytes.}
+  \item{isdir}{logical: Is the file a directory?}
+  \item{mode}{integer of class \code{"octmode"}.  The file permissions,
+    printed in octal, for example \code{644}.}
+  \item{mtime, ctime, atime}{integer of class \code{"POSIXct"}:
+    file modification, \sQuote{last status change} and last access times.}
+#ifdef unix
+  \item{uid}{integer: the user ID of the file's owner.}
+  \item{gid}{integer: the group ID of the file's group.}
+  \item{uname}{character: \code{uid} interpreted as a user name.}
+  \item{grname}{character: \code{gid} interpreted as a group name.}
+  Unknown user and group names will be \code{NA}.
+#endif
+#ifdef windows
+  \item{exe}{character: what sort of executable is this?  Possible
+    values are \code{"no"}, \code{"msdos"}, \code{"win16"},
+    \code{"win32"}, \code{"win64"} and \code{"unknown"}.  Note that a
+    file (e.g. a script file) can be executable according to the mode
+    bits but not executable in this sense.}
+#endif
+
+  Entries for non-existent or non-readable files will be \code{NA}.
+#ifdef unix
+  The \code{uid}, \code{gid}, \code{uname} and \code{grname} columns
+  may not be supplied on a non-POSIX Unix-alike system.
+#endif
+
+  What is meant by the three file times depends on the OS and file
+  system.  On Windows native file systems \code{ctime} is the file
+  creation time.  What is meant by \sQuote{file access} and hence the
+  \sQuote{last access time} is system-dependent.
+}
+#ifdef unix
+\note{
+  Some systems allow files of more than 2Gb to be created but
+  not accessed by the \code{stat} system call.  Such files will show up
+  as non-readable (and very likely not be readable by any of \R's input
+  functions) -- fortunately such file systems are becoming rare.
+}
+#endif
+
+\seealso{
+  \code{\link{Sys.readlink}} to find out about symbolic links,
+  \code{\link{files}}, \code{\link{file.access}},
+  \code{\link{list.files}},
+  and \code{\link{DateTimeClasses}} for the date formats.
+  
+  \code{\link{Sys.chmod}} to change permissions.
+}
+\examples{
+ncol(finf <- file.info(dir()))# at least six
+\dontrun{finf # the whole list}
+## Those that are more than 100 days old :
+finf[difftime(Sys.time(), finf[,"mtime"], units="days") > 100 , 1:4]
+
+file.info("no-such-file-exists")
+}
+\keyword{file}

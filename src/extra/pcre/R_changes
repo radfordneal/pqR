@@ -1,0 +1,31 @@
+pcre_internal.h includes the relevant definitions that configure would
+make.
+
+--- pcre-7.9/pcre_internal.h	2009-04-11 09:21:17.000000000 +0100
++++ ./pcre_internal.h	2009-06-13 10:45:35.000000000 +0100
+@@ -81,6 +81,24 @@
+ #endif
+ 
+ 
++/* Get the definitions provided by running "configure" */
++
++#include <config.h>
++
++/* and those that are not in R's configure */
++#define HAVE_MEMMOVE 1
++#ifndef LINK_SIZE
++#define LINK_SIZE 2
++#define MATCH_LIMIT 10000000
++#define MATCH_LIMIT_RECURSION MATCH_LIMIT
++#define MAX_NAME_COUNT 10000
++#define MAX_NAME_SIZE 32
++#define NEWLINE 10
++#define POSIX_MALLOC_THRESHOLD 10
++#define SUPPORT_UTF8
++#define SUPPORT_UCP
++#endif
++
+ /* Standard C headers plus the external interface definition. The only time
+ setjmp and stdarg are used is when NO_RECURSE is set. */
+
+

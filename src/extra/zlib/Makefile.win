@@ -1,0 +1,48 @@
+#-*- Makefile -*-
+include ../../gnuwin32/MkRules
+
+all: makeMakedeps DLL implib headers
+
+SOURCES = adler32.c compress.c crc32.c deflate.c gzio.c infback.c \
+  inffast.c inflate.c inftrees.c trees.c uncompr.c zutil.c
+OBJECTS = $(SOURCES:.c=.o)
+
+CFLAGS=-I../../include -DHAVE_CONFIG_H $(OPTFLAGS)
+
+# libz.a: $(OBJECTS)
+
+DLL: Rzlib.dll
+	@cp Rzlib.dll ../../../$(BINDIR)
+
+Rzlib.dll: $(OBJECTS)
+
+ifdef USE_IMPLIBS
+implib: libRzlib.dll.a
+	@$(MKDIR) -p ../../../lib
+	@$(CP) libRzlib.dll.a ../../../lib
+else
+implib:
+endif
+
+libRzlib.dll.a: Rzlib.def
+
+Rzlib.def: $(OBJECTS)
+	@$(ECHO) EXPORTS > $@
+	@$(NM) $^ | $(SED) -n 's/^.* [BCDRT] _/ /p' | $(SORT) | uniq >> $@
+
+headers:
+	@$(CP) -p zlib.h zconf.h ../../../include
+
+clean:
+	@$(RM) *.o *~ *.d Makedeps Rzlib.def
+distclean: clean
+	@$(RM) libz.a Rzlib.dll libRzlib.dll.a
+
+# Dependencies
+DEPS=$(SOURCES:.c=.d)
+
+makeMakedeps: $(DEPS)
+	@$(RM) Makedeps
+	@cat $(DEPS) >> Makedeps
+
+-include Makedeps

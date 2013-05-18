@@ -1,0 +1,93 @@
+% File src/library/base/man/dcf.Rd
+% Part of the R package, http://www.R-project.org
+% Copyright 1995-2009 R Core Development Team
+% Distributed under GPL 2 or later
+
+\name{dcf}
+\alias{read.dcf}
+\alias{write.dcf}
+\title{Read and Write Data in DCF Format}
+\description{
+  Reads or writes an \R object from/to a file in Debian Control File
+  format. 
+}
+\usage{
+read.dcf(file, fields = NULL, all = FALSE)
+
+write.dcf(x, file = "", append = FALSE,
+          indent = 0.1 * getOption("width"),
+          width = 0.9 * getOption("width"))
+}
+\arguments{
+  \item{file}{either a character string naming a file or a connection.
+    \code{""} indicates output to the console.  For \code{read.dcf} this
+    can name a compressed file (see \code{\link{gzfile}}).}
+  \item{fields}{Fields to read from the DCF file.  Default is to read all
+    fields.}
+  \item{all}{a logical indicating whether in case of multiple
+    occurrences of a field in a record, all these should be gathered.
+    If \code{all} is false (default), only the last such occurrence is
+    used.}
+  \item{x}{the object to be written, typically a data frame.  If not, it
+    is attempted to coerce \code{x} to a data frame.}
+  \item{append}{logical.  If \code{TRUE}, the output is appended to the
+    file.  If \code{FALSE}, any existing file of the name is destroyed.}
+  \item{indent}{a positive integer specifying the indentation for
+    continuation lines in output entries.}
+  \item{width}{a positive integer giving the target column for wrapping
+    lines in the output.}
+}
+\details{
+  DCF is a simple format for storing databases in plain text files that
+  can easily be directly read and written by humans.  DCF is used in
+  various places to store \R system information, like descriptions and
+  contents of packages.
+
+  The DCF rules as implemented in \R are:
+  \enumerate{
+    \item A database consists of one or more records, each with one or
+    more named fields.  Not every record must contain each field.
+    Fields may appear more than once in a record.
+    \item Regular lines start with a non-whitespace character.
+    \item Regular lines are of form \code{tag:value}, i.e., have a name
+    tag and a value for the field, separated by \code{:} (only the first
+    \code{:} counts).  The value can be empty (=whitespace only).
+    \item Lines starting with whitespace are continuation lines (to the
+    preceding field) if at least one character in the line is
+    non-whitespace.  Continuation lines where the only non-whitespace
+    character is a \samp{.} are taken as blank lines (allowing for
+    multi-paragraph field values).
+    \item Records are separated by one or more empty (=whitespace only)
+    lines.
+  }
+
+  By default, \code{read.dcf} returns a character matrix with one row
+  per record and one column per field.  Leading and trailing whitespace
+  of field values is ignored.  If a tag name is specified, but the
+  corresponding value is empty, then an empty string is returned.  If
+  the tag name of a field is never used in a record, then \code{NA} is
+  returned.  If fields are repeated within a record, the last one
+  encountered is returned.  Malformed lines lead to an error.  If
+  \code{all} is true, a data frame is returned, again with one row per
+  record and one column per field, and columns lists of character
+  vectors for fields with multiple occurrences, and character vectors
+  otherwise.
+  
+  Note that \code{read.dcf(all = FALSE)} reads the file byte-by-byte.
+  This allows a \file{DESCRIPTION} file to be read and only its ASCII
+  fields used, or its \samp{Encoding} field used to re-encode the
+  remaining fields.
+
+  \code{write.dcf} does not write \code{NA} fields.
+}
+\seealso{
+  \code{\link{write.table}}.
+}
+\examples{\dontrun{
+## Create a reduced version of the 'CONTENTS' file in package 'splines'
+x <- read.dcf(file = system.file("CONTENTS", package = "splines"),
+              fields = c("Entry", "Description"))
+write.dcf(x)
+}}
+\keyword{print}
+\keyword{file}

@@ -1,0 +1,18 @@
+#-*- Makefile -*-
+include ../../gnuwin32/MkRules
+
+DEFS=-DWIN32 -D_X86_ -DHAVE_CONFIG_H
+ifdef LEA_MALLOC
+DEFS+=-DLEA_MALLOC
+endif
+
+CFLAGS=-I. -I../../include $(DEFS) $(OPTFLAGS)
+
+all: libxdr.a
+
+libxdr.a: xdr.o xdr_float.o xdr_stdio.o xdr_mem.o
+
+clean:
+	$(RM) *.o *~
+distclean: clean
+	$(RM) libxdr.a

@@ -1,0 +1,82 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" type="text/css" href="http://cran.r-project.org/R.css">
+<title>Download the R-@FULLVERSION@ build for Windows.  The R-project for statistical computing.</title>
+<style>
+.download {
+  border: 1px solid #ccc;
+  margin: 1em 0em;
+  padding: 0.5em 1em;
+  background-color: #eee;
+}
+.download p {
+  font-size: 1.2em;
+  margin: 0.5em 0 0.5em 0;
+}
+.download p span {font-size: 0.8em;}
+.download a:link, .download a:visited {background-color: #eee;}
+.download ul, .download li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.download li {
+  font-size: 0.8em;
+  margin-bottom: 0.25em;
+  font-family: Verdana, Arial, "sans serif";
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>R-@FULLVERSION@ build for Windows (@BITSIZE@ bit)</h1>
+
+<div class="download">
+  <p><a href="@RWVER@-win@BITSIZE@.exe">Download R-@FULLVERSION@ build for Windows</a> <span>(33 megabytes, @BITSIZE@ bit)</span></p>
+  <ul>
+    <li><a href="../../windows/base/README.@RWVER@">Installation and other instructions</a></li>
+    <li>New features in this version: <a href="../../windows/base/CHANGES.@RWVER@">Windows specific</a>, <a href="../../windows/base/NEWS.@RWVER@">all platforms</a>.</li>
+  </ul>
+</div>
+
+
+<p>This is a Windows @BITSIZE@ bit binary build of the @DATE@
+r@SVNREVISION@ development snapshot of R (which will eventually become
+R-@RVER@). </p>
+
+<p>This is a development version of R. <strong>It likely contains
+bugs, so be careful if you use it</strong>.  Please don't report bugs
+in this version through the usual R bug reporting system, please report
+them on the r-devel mailing list---but only if they persist for a day or more.</p>
+
+<h2>Frequently asked questions</h2>
+
+<ul>
+  <li><a href="../../windows/base/rw-FAQ.html#Does-R-run-under-Windows-Vista_003f">How do I install R when using Windows Vista?</a></li>
+  <li><a href="../../windows/base/rw-FAQ.html#What_0027s-the-best-way-to-upgrade_003f">How do I update packages in my previous version of R?</a></li>
+  <li><a href="../../windows/base/rw-FAQ.html#Should-I-run-32_002dbit-or-64_002dbit-R_003f">Should I run 32-bit or 64-bit R?</a></li>
+</ul>
+  
+<p>Please see the <a
+href="http://cran.r-project.org/doc/FAQ/R-FAQ.html">R FAQ</a> for
+general information about R and the <a href="../../windows/base/rw-FAQ.html">R Windows
+FAQ</a> for Windows-specific information.</p>
+
+
+<h2>Other builds</h2>
+
+<ul>
+  <li><a href="index.html">The current official release.</a></li>
+  <li>Patches to the official release are incorporated in the <a href="rpatched.html">r-patched snapshot build</a>.</li>
+  <li><a href="../../windows/base/old/">Previous releases</a></li>
+</ul>
+
+<hr>
+
+<p>Last build: @DATE@, by Duncan Murdoch</p>
+</body>
+</html>
