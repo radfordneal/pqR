@@ -32,6 +32,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include "Defn.h"
 #include <R_ext/RS.h> /* for Calloc, Realloc and for S4 object bit */
@@ -1298,7 +1299,7 @@ static SEXP get_primitive_methods(SEXP op, SEXP rho)
 {
     SEXP f, e, val;
     int nprotect = 0;
-    f = PROTECT(allocVector(STRSXP, 1));  nprotect++;
+    PROTECT(f = allocVector(STRSXP, 1));  nprotect++;
     SET_STRING_ELT(f, 0, mkChar(PRIMNAME(op)));
     PROTECT(e = allocVector(LANGSXP, 2)); nprotect++;
     SETCAR(e, install("getGeneric"));

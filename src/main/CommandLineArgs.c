@@ -29,6 +29,7 @@
 
 #include <string.h>
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <R_ext/RStartup.h>
 
@@ -80,7 +81,7 @@ do_commandArgs(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP vals;
 
     /* need protection as mkChar allocates */
-    vals = PROTECT(allocVector(STRSXP, NumCommandLineArgs));
+    PROTECT(vals = allocVector(STRSXP, NumCommandLineArgs));
     for(i = 0; i < NumCommandLineArgs; i++)
 	SET_STRING_ELT(vals, i, mkChar(CommandLineArgs[i]));
     UNPROTECT(1);

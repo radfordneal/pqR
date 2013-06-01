@@ -36,6 +36,7 @@
 #include <string.h>
 
 #define __MAIN__
+#define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include "Defn.h"
 #include "Rinterface.h"

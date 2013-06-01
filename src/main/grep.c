@@ -59,6 +59,7 @@ strsplit grep [g]sub [g]regexpr
 #endif
 
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <R_ext/RS.h>  /* for Calloc/Free */
 #include <ctype.h>
@@ -1111,7 +1112,7 @@ SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 		    /* if there are more matches than in the buffer, 
 		       we actually need to get them first */
 		    if (nmatches > MAX_MATCHES_MINIBUF) { 
-			mvec = PROTECT(allocVector(INTSXP, nmatches));
+			PROTECT(mvec = allocVector(INTSXP, nmatches));
 			fmatches = INTEGER(mvec);
 			memcpy(fmatches, matches, sizeof(matches));
 			nmatches = MAX_MATCHES_MINIBUF;
@@ -1126,7 +1127,7 @@ SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 		    }
 
 		    /* there are always nmatches + 1 pieces (unlike strsplit) */
-		    ans = PROTECT(allocVector(VECSXP, nmatches + 1));
+		    PROTECT(ans = allocVector(VECSXP, nmatches + 1));
 		    /* add all pieces before matches */
 		    for (i = 0; i < nmatches; i++) {
 			R_size_t elt_size = fmatches[i] - 1 - pos;
@@ -1149,7 +1150,7 @@ SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 
 		/* value=TRUE is pathetic for fixed=TRUE without
 		   invert as it is just rep(pat, nmatches) */
-		ans = PROTECT(allocVector(VECSXP, nmatches));
+		PROTECT(ans = allocVector(VECSXP, nmatches));
 		for (i = 0; i < nmatches; i++)
 		    SET_VECTOR_ELT(ans, i, pat);
 		UNPROTECT(1);
@@ -1215,7 +1216,7 @@ SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
        to allow use on big binary strings with many matches (it could be done
        by re-allocating a temp buffer but I chose sequential allocations to
        reduce possible fragmentation) */
-    res_head = res_tail = PROTECT(list1(allocVector(INTSXP, res_alloc)));
+    PROTECT(res_head = res_tail = list1(allocVector(INTSXP, res_alloc)));
     res_val = INTEGER(CAR(res_tail));
     res_ptr = 0;
     while (1) {
@@ -1255,7 +1256,7 @@ SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_size_t entry = 0, cptr = 0, clen = (CDR(res_head) == R_NilValue) ? res_ptr : LENGTH(vec);
 	R_size_t inv_start = 0; /* 0-based start position of the pieces for invert */
 	res_val = INTEGER(vec);
-	ans = PROTECT(allocVector(VECSXP, invert ? (nmatches + 1) : nmatches));
+	PROTECT(ans = allocVector(VECSXP, invert ? (nmatches + 1) : nmatches));
 	while (entry < nmatches) {
 	    if (invert) { /* for invert=TRUE store the current piece up to the match */
 		SEXP rvec = allocVector(RAWSXP, res_val[cptr] - 1 - inv_start);

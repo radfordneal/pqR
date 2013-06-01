@@ -30,6 +30,7 @@
 #endif
 
 #define __R_Names__ /* used in Defn.h for extern on R_FunTab */
+#define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Print.h>

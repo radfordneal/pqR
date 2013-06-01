@@ -28,5 +28,6 @@
 #endif
 
 #define COMPILING_R 1 /* for Rinlinedfuns.h included via Defn.h */
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #undef COMPILING_R

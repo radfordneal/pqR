@@ -28,6 +28,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <float.h>		/* for DBL_MAX */
 #include <Print.h>		/* for printRealVector() */
@@ -371,7 +372,7 @@ static int FT_lookup(int n, const double *x, function_info *state)
 static void fcn(int n, const double x[], double *f, function_info
 		*state)
 {
-    SEXP s, R_fcall;
+    SEXP s, R_fcall, tmp;
     ftable *Ftable;
     double *g = (double *) 0, *h = (double *) 0;
     int i;
@@ -388,7 +389,7 @@ static void fcn(int n, const double x[], double *f, function_info
 	if (!R_FINITE(x[i])) error(_("non-finite value supplied by 'nlm'"));
 	REAL(s)[i] = x[i];
     }
-    s = PROTECT(eval(state->R_fcall, state->R_env));
+    PROTECT(s = eval(state->R_fcall, state->R_env));
     switch(TYPEOF(s)) {
     case INTSXP:
 	if (length(s) != 1) goto badvalue;
@@ -410,9 +411,11 @@ static void fcn(int n, const double x[], double *f, function_info
 	goto badvalue;
     }
     if (state->have_gradient) {
-	g = REAL(PROTECT(coerceVector(getAttrib(s, install("gradient")), REALSXP)));
+	PROTECT(tmp = coerceVector(getAttrib(s, install("gradient")), REALSXP));
+	g = REAL(tmp);
 	if (state->have_hessian) {
-	    h = REAL(PROTECT(coerceVector(getAttrib(s, install("hessian")), REALSXP)));
+	    PROTECT(tmp = coerceVector(getAttrib(s, install("hessian")), REALSXP));
+	    h = REAL(tmp);
 	}
     }
     FT_store(n, *f, x, g, h, state);

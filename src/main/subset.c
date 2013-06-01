@@ -44,6 +44,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 
 /* JMC convinced MM that this was not a good idea: */
@@ -1046,7 +1047,7 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* first translate CADR of args into a string so that we can
        pass it down to DispatchorEval and have it behave correctly */
-    input = PROTECT(allocVector(STRSXP, 1));
+    PROTECT(input = allocVector(STRSXP, 1));
 
     nlist = CADR(args);
     if(isSymbol(nlist) )

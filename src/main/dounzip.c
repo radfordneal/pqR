@@ -31,6 +31,7 @@
 
 #define HAVE_BZIP2
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <Fileio.h> /* for R_fopen */
 #include "unzip.h"

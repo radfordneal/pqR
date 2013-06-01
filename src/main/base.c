@@ -31,6 +31,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <Graphics.h>
 #include <Colors.h>

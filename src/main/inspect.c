@@ -34,6 +34,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
 #define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in

@@ -27,6 +27,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 /* -> Rinternals.h which exports R_compute_identical() */
 

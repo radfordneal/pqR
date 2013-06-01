@@ -506,8 +506,10 @@ void (SET_HASHVALUE)(SEXP x, int v);
 #define isByteCode(x)	(TYPEOF(x)==BCODESXP)
 
 /* Pointer Protection and Unprotection */
-#define PROTECT(s)	Rf_protect(s)
-#define UNPROTECT(n)	Rf_unprotect(n)
+#define PROTECT(s)		Rf_protect(s)
+#define PROTECT2(s1,s2)		Rf_protect2(s) /* BEWARE! All args evaluated */
+#define PROTECT3(s1,s2,s3)	Rf_protect3(s) /*   before any are protected */
+#define UNPROTECT(n)		Rf_unprotect(n)
 #define UNPROTECT_PTR(s)	Rf_unprotect_ptr(s)
 
 /* We sometimes need to coerce a protected value and place the new
@@ -661,6 +663,8 @@ Rboolean Rf_pmatch(SEXP, SEXP, Rboolean);
 Rboolean Rf_psmatch(const char *, const char *, Rboolean);
 void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
+void Rf_protect2(SEXP, SEXP);
+void Rf_protect3(SEXP, SEXP, SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
@@ -676,7 +680,7 @@ SEXP Rf_type2str(SEXPTYPE);
 void Rf_unprotect(int);
 void Rf_unprotect_ptr(SEXP);
 
-void R_ProtectWithIndex(SEXP, PROTECT_INDEX *);
+SEXP R_ProtectWithIndex(SEXP, PROTECT_INDEX *);
 void R_Reprotect(SEXP, PROTECT_INDEX);
 SEXP R_tryEval(SEXP, SEXP, int *);
 SEXP R_tryEvalSilent(SEXP, SEXP, int *);

@@ -32,6 +32,7 @@
 # include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 /* This is remapped */
 #undef pmatch 

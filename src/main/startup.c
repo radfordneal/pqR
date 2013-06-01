@@ -32,6 +32,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 #include "Fileio.h" /* for R_fopen */
 #include "Startup.h"

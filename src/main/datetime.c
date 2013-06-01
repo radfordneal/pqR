@@ -116,6 +116,7 @@ extern time_t mktime (struct tm*);
 #endif
 
 #include <stdlib.h> /* for setenv or putenv */
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
 /* The glibc in RH8.0 was broken and assumed that dates before

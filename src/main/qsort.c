@@ -34,6 +34,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h> /* => Utils.h with the C protos from here */
 #include <R_ext/Applic.h> /* F77_.. protos from here */
 #include <Rmath.h>

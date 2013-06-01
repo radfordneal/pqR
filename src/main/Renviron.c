@@ -34,6 +34,7 @@
 #endif
 
 #include <stdlib.h> /* for setenv or putenv */
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h> /* for PATH_MAX */
 #include <Rinterface.h>
 #include <Fileio.h>
