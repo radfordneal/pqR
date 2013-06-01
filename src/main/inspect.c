@@ -36,6 +36,9 @@
 
 #include <Defn.h>
 
+#define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in
+                                     a LISTSXP or LANGSXP be shown? */
+
 /* FIXME: envir.c keeps this private - it should probably go to Defn.h */
 #define FRAME_LOCK_MASK (1<<14)
 #define FRAME_IS_LOCKED(e) (ENVFLAGS(e) & FRAME_LOCK_MASK)
@@ -62,10 +65,7 @@ static void PrintEnvironment(SEXP x)
 
 /* print prefix */
 static void pp(int pre) {
-    /* this is sort of silly, I know, but it saves at least some output
-       calls (and we can replace \t by spaces if desired) ... */
-    while (pre >= 8) { Rprintf("\t"); pre -= 8; }
-    while (pre-- > 0) Rprintf(" ");
+    Rprintf("%*s",pre,"");
 }
 
 static const char *typename(SEXP v) {
@@ -224,6 +224,15 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 	    {
 		SEXP lc = v;
 		while (lc != R_NilValue) {
+                    if (SHOW_PAIRLIST_NODES && lc != v) {
+#ifdef _WIN64
+                        pp(pre+1); Rprintf("@%p ... ", lc);
+#else
+                        pp(pre+1); Rprintf("@%lx ... ", (long) lc);
+#endif
+                        Rprintf ("%s\n", TYPEOF(lc)==LISTSXP ? ""
+                                          : TYPEOF(lc)==LANGSXP ? "L" : "?");
+                    }
 		    if (TAG(lc) && TAG(lc) != R_NilValue) {
 			pp(pre + 2);
 			Rprintf("TAG: "); /* TAG should be a one-liner since it's a symbol so we don't put it on an extra line*/
