@@ -518,6 +518,11 @@ typedef int PROTECT_INDEX;
 #define PROTECT_WITH_INDEX(x,i) R_ProtectWithIndex(x,i)
 #define REPROTECT(x,i) R_Reprotect(x,i)
 
+/* Macro for creating a local copy of a non-changing global SEXP variable,
+   if a global copy of it has been set up. */
+
+#define LOCAL_COPY(var) SEXP var = var##_COPY_
+
 /* Evaluation Environment */
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 
@@ -531,6 +536,7 @@ LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
 /* Special Values */
 LibExtern SEXP	R_NilValue;	    /* The nil object */
+LibExtern SEXP	R_NilValue_COPY_;   /* Copy of R_NilValue, for LOCAL_COPY */
 LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */

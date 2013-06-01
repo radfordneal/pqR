@@ -177,7 +177,10 @@ users, such as cleanups of source code.
 
  31)
 
- 32)
+   o Introduced a facility for making a local copy of R_NilValue, and
+     potentially other globals.  This is done with LOCAL_COPY(R_NilValue).
+     Access to the local copy may be faster, partly because the compiler will 
+     know that it isn't being modified.
 
  33)
 
