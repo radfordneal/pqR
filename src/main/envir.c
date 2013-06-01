@@ -781,6 +781,35 @@ static SEXP R_GetGlobalCache(SEXP symbol)
 }
 #endif /* USE_GLOBAL_CACHE */
 
+/* Remove variable from a list, return the new list, and return its old value 
+   (NULL if not there) in 'value'. */
+
+static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
+{
+    SEXP last = R_NilValue;
+    SEXP curr = list;
+
+    while (curr != R_NilValue) {
+
+        if (TAG(curr) == thing) {
+            *value = CAR(curr);
+            SETCAR(curr, R_UnboundValue); /* in case binding is cached */
+            LOCK_BINDING(curr);           /* in case binding is cached */
+            if (last==R_NilValue)
+                list = CDR(curr);
+            else
+                SETCDR(last, CDR(curr));
+            return list;
+        }
+
+        last = curr;
+        curr = CDR(curr);
+    }
+
+    *value = NULL;
+    return list;
+}
+
 /*----------------------------------------------------------------------
 
   unbindVar
@@ -794,44 +823,8 @@ static SEXP R_GetGlobalCache(SEXP symbol)
   (and applydefine only works for unhashed environments, so not base).
 */
 
-static SEXP RemoveFromList(SEXP thing, SEXP list, int *found)
-{
-    if (list == R_NilValue) {
-	*found = 0;
-	return R_NilValue;
-    }
-    else if (TAG(list) == thing) {
-	*found = 1;
-	SETCAR(list, R_UnboundValue); /* in case binding is cached */
-	LOCK_BINDING(list);           /* in case binding is cached */
-	return CDR(list);
-    }
-    else {
-	SEXP last = list;
-	SEXP next = CDR(list);
-	while (next != R_NilValue) {
-	    if (TAG(next) == thing) {
-		*found = 1;
-		SETCAR(next, R_UnboundValue); /* in case binding is cached */
-		LOCK_BINDING(next);           /* in case binding is cached */
-		SETCDR(last, CDR(next));
-		return list;
-	    }
-	    else {
-		last = next;
-		next = CDR(next);
-	    }
-	}
-	*found = 0;
-	return list;
-    }
-}
-
 void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 {
-    int hashcode;
-    SEXP c;
-
     if (rho == R_BaseNamespace)
 	error(_("cannot unbind in the base namespace"));
     if (rho == R_BaseEnv)
@@ -843,16 +836,17 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	R_FlushGlobalCache(symbol);
 #endif
     if (HASHTAB(rho) == R_NilValue) {
-	int found;
-	SEXP list;
-	list = RemoveFromList(symbol, FRAME(rho), &found);
-	if (found) {
+	SEXP list, value;
+	list = RemoveFromList(symbol, FRAME(rho), &value);
+	if (value != NULL) {
 	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
 	    SET_FRAME(rho, list);
 	}
     }
     else {
 	/* This case is currently unused */
+        int hashcode;
+        SEXP c;
 	c = PRINTNAME(symbol);
 	if( !HASHASH(c) ) {
 	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
@@ -1656,23 +1650,13 @@ SEXP attribute_hidden do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
     return envir;
 }
 
+/* Remove variable and return its previous value, or NULL if it didn't exist. 
+   For a user database, R_NilValue is returned when the variable exists, 
+   rather than the value. */
 
-/*----------------------------------------------------------------------
-
-  do_remove
-
-  There are three arguments to do_remove; a list of names to remove,
-  an optional environment (if missing set it to R_GlobalEnv) and
-  inherits, a logical indicating whether to look in the parent env if
-  a symbol is not found in the supplied env.  This is ignored if
-  environment is not specified.
-
-*/
-
-static int RemoveVariable(SEXP name, int hashcode, SEXP env)
+static SEXP RemoveVariable(SEXP name, SEXP env)
 {
-    int found;
-    SEXP list;
+    SEXP list, value;
 
     if (env == R_BaseNamespace)
 	error(_("cannot remove variables from base namespace"));
@@ -1688,43 +1672,58 @@ static int RemoveVariable(SEXP name, int hashcode, SEXP env)
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(env));
 	if(table->remove == NULL)
 	    error(_("cannot remove variables from this database"));
-	return(table->remove(CHAR(PRINTNAME(name)), table));
+	return table->remove(CHAR(PRINTNAME(name)), table) ? R_NilValue : NULL;
     }
 
     if (IS_HASHED(env)) {
 	SEXP hashtab = HASHTAB(env);
+        int hashcode = HASHASH(PRINTNAME(name)) ? HASHVALUE(PRINTNAME(name))
+                        : R_Newhashpjw(CHAR(PRINTNAME(name)));
 	int idx = hashcode % HASHSIZE(hashtab);
-	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &found);
-	if (found) {
-	    if(env == R_GlobalEnv) R_DirtyImage = 1;
+	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
+	if (value != NULL) 
 	    SET_VECTOR_ELT(hashtab, idx, list);
-#ifdef USE_GLOBAL_CACHE
-	    if (IS_GLOBAL_FRAME(env))
-		R_FlushGlobalCache(name);
-#endif
-	}
     }
     else {
-	list = RemoveFromList(name, FRAME(env), &found);
-	if (found) {
-	    if(env == R_GlobalEnv) R_DirtyImage = 1;
+	list = RemoveFromList(name, FRAME(env), &value);
+	if (value != NULL)
 	    SET_FRAME(env, list);
-#ifdef USE_GLOBAL_CACHE
-	    if (IS_GLOBAL_FRAME(env))
-		R_FlushGlobalCache(name);
-#endif
-	}
     }
-    return found;
+
+    if (value != NULL) {
+        if(env == R_GlobalEnv) R_DirtyImage = 1;
+#ifdef USE_GLOBAL_CACHE
+	if (IS_GLOBAL_FRAME(env)) {
+            PROTECT(value);
+            R_FlushGlobalCache(name);
+            UNPROTECT(1);
+        }
+#endif
+    }
+
+    return value;
 }
+
+/*----------------------------------------------------------------------
+
+  do_remove
+
+  There are three arguments to do_remove; a list of names to remove,
+  an optional environment (if missing set it to R_GlobalEnv) and
+  inherits, a logical indicating whether to look in the parent env if
+  a symbol is not found in the supplied env.  This is ignored if
+  environment is not specified.
+
+*/
 
 SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* .Internal(remove(list, envir, inherits)) */
 
-    SEXP name, envarg, tsym, tenv;
+    SEXP name, envarg, tsym, tenv, done;
     int ginherits = 0;
-    int done, i, hashcode;
+    int i;
+
     checkArity(op, args);
 
     name = CAR(args);
@@ -1747,24 +1746,55 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < LENGTH(name); i++) {
 	done = 0;
 	tsym = install(translateChar(STRING_ELT(name, i)));
-	if( !HASHASH(PRINTNAME(tsym)) )
-	    hashcode = R_Newhashpjw(CHAR(PRINTNAME(tsym)));
-	else
-	    hashcode = HASHVALUE(PRINTNAME(tsym));
 	tenv = envarg;
 	while (tenv != R_EmptyEnv) {
-	    done = RemoveVariable(tsym, hashcode, tenv);
-	    if (done || !ginherits)
+	    done = RemoveVariable(tsym, tenv);
+	    if (done != NULL || !ginherits)
 		break;
 	    tenv = CDR(tenv);
 	}
-	if (!done)
-	    warning(_("object '%s' not found"),
-		    CHAR(PRINTNAME(tsym)));
+	if (done == NULL)
+	    warning (_("object '%s' not found"), CHAR(PRINTNAME(tsym)));
     }
     return R_NilValue;
 }
 
+/*----------------------------------------------------------------------
+
+ do_get_rm - get value of variable and then remove the variable, decrementing
+             the NAMED count when possible. 
+*/
+
+SEXP attribute_hidden do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP name, value;
+
+    checkArity(op, args);
+    check1arg(args, call, "x");
+
+    name = CAR(args);
+    if (TYPEOF(name) != SYMSXP)
+        error(_("invalid argument"));
+
+    value = RemoveVariable (name, rho);
+
+    if (value == NULL)
+        error (_("object '%s' not found"), CHAR(PRINTNAME(name)));
+
+    if (NAMED(value) == 1) 
+        SET_NAMED(value,0);
+
+    if (TYPEOF(value) == PROMSXP) {
+        PROTECT(value);
+        SEXP prvalue = forcePromise(value);
+        if (NAMED(value) == 0 && NAMED(prvalue) == 1) 
+            SET_NAMED(prvalue,0);
+        UNPROTECT(1);
+        return prvalue;
+    }
+    else
+        return value;
+}
 
 /*----------------------------------------------------------------------
 
@@ -3316,16 +3346,11 @@ SEXP attribute_hidden do_regNS(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP name;
-    int hashcode;
     checkArity(op, args);
     name = checkNSname(call, CAR(args));
     if (findVarInFrame(R_NamespaceRegistry, name) == R_UnboundValue)
 	errorcall(call, _("namespace not registered"));
-    if( !HASHASH(PRINTNAME(name)))
-	hashcode = R_Newhashpjw(CHAR(PRINTNAME(name)));
-    else
-	hashcode = HASHVALUE(PRINTNAME(name));
-    RemoveVariable(name, hashcode, R_NamespaceRegistry);
+    RemoveVariable(name, R_NamespaceRegistry);
     return R_NilValue;
 }
 

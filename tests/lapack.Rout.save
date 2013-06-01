@@ -1,7 +1,11 @@
 
-R version 2.15.0 alpha (2012-03-02 r58556)
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.0 (2013-05-31), based on R 2.15.0 (2012-03-30)
+
+R is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013 Radford M. Neal
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -82,9 +86,6 @@ $v
 $d
 [1] 12.07  1.16
 
-$u
-NULL
-
 $v
        [,1]    [,2]
 [1,] 0.1979  0.9802
@@ -123,9 +124,6 @@ $u
 [5,] 0.42250 -0.008201
 [6,] 0.50372 -0.178840
 [7,] 0.58494 -0.349479
-
-$v
-NULL
 
 > 
 > # test of complex case

@@ -1,5 +1,6 @@
 #  File src/library/base/R/svd.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,11 +18,11 @@
 svd <- function(x, nu = min(n,p), nv = min(n,p), LINPACK = FALSE)
 {
     x <- as.matrix(x)
-    if (any(!is.finite(x))) stop("infinite or missing values in 'x'")
     dx <- dim(x)
     n <- dx[1L]
     p <- dx[2L]
     if(!n || !p) stop("0 extent dimensions")
+
     if (is.complex(x)) {
         res <- La.svd(x, nu, nv)
         return(list(d = res$d, u = if(nu) res$u, v = if(nv) Conj(t(res$vt))))
@@ -30,8 +31,14 @@ svd <- function(x, nu = min(n,p), nv = min(n,p), LINPACK = FALSE)
 	storage.mode(x) <- "double"
     if (!LINPACK) {
         res <- La.svd(x, nu, nv)
-        return(list(d = res$d, u = if(nu) res$u, v = if(nv) t(res$vt)))
+        ret <- list()
+        ret$d <- res$d
+        if (nu) ret$u <- res$u
+        if (nv) ret$v <- t(res$vt)
+        return (ret)
     }
+
+    if (!all(is.finite(x))) stop("infinite or missing values in 'x'")
 
     if(nu == 0L) {
 	job <- 0L

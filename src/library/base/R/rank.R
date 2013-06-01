@@ -1,5 +1,6 @@
 #  File src/library/base/R/rank.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,31 +19,44 @@ rank <- function(x, na.last = TRUE,
 		 ties.method=c("average", "first", "random", "max", "min"))
 {
     nas <- is.na(x)
+    not.nas <- !nas
+    any.nas <- any(nas)
     nm <- names(x)
     ties.method <- match.arg(ties.method)
     ## To preserve past behaviour
     if(is.factor(x)) x <- as.integer(x)
-    y <- switch(ties.method,
+    if (any.nas) {
+        y <- switch(ties.method,
 		"average"= , "min"= , "max" =
-		.Internal(rank(x[!nas], ties.method)),
-		"first" = sort.list(sort.list(x[!nas])),
-		"random" = sort.list(order(x[!nas], stats::runif(sum(!nas)))))
-    if(!is.na(na.last) && any(nas)) {
-	## the internal code has ranks in [1, length(y)]
-	yy <- integer(length(x))
-	storage.mode(yy) <- storage.mode(y) # integer or double
-	yy <- NA
+		  .Internal (rank (x[not.nas], ties.method)),
+		"first" = 
+                  sort.list(sort.list(x[not.nas])),
+		"random" = 
+                  sort.list(order(x[not.nas], stats::runif(sum(not.nas)))))
+    }
+    else
+        y <- switch(ties.method,
+		"average"= , "min"= , "max" =
+		   .Internal (rank (x, ties.method)),
+		"first" = 
+                   sort.list(sort.list(x)),
+		"random" = 
+                   sort.list(order(x, stats::runif(length(x)))))
+    if(!is.na(na.last) && any.nas) {
+	yy <- integer(length(x)) + NA_integer_
 	NAkeep <- (na.last == "keep")
 	if(NAkeep || na.last) {
-	    yy[!nas] <- y
+	    yy[not.nas] <- y
 	    if(!NAkeep) yy[nas] <- (length(y) + 1L) : length(yy)
 	} else {
 	    len <- sum(nas)
-	    yy[!nas] <- y + len
+	    yy[not.nas] <- y + len
 	    yy[nas] <- 1L : len
 	}
 	y <- yy
 	names(y) <- nm
-    } else names(y) <- nm[!nas]
-    y
+    } 
+    else
+        names(y) <- nm[not.nas]
+    get_rm(y)
 }

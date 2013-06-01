@@ -1,0 +1,12 @@
+A new function get_rm is now defined, which removes a variable and
+returns the value it had had.  See the NEWS item and help(get_rm) for
+details.
+
+Many function in base have been changed to use get_rm to reduce
+duplication of objects.  Some other code improvements have been
+made at the same time.
+
+Two bugs have been fixed, as reported in NEWS.
+
+The lapack.Rout.save file has been changed to match the new behaviour
+of svd regarding return of NULL elements.

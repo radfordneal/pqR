@@ -260,6 +260,7 @@ SEXP do_getGraphicsEvent(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getlocale(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getRestart(SEXP, SEXP, SEXP, SEXP);
+SEXP do_get_rm(SEXP, SEXP, SEXP, SEXP);
 SEXP do_gettext(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getwd(SEXP, SEXP, SEXP, SEXP);
 SEXP do_glob(SEXP, SEXP, SEXP, SEXP);
