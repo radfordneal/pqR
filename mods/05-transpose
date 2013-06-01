@@ -1,0 +1,7 @@
+The speed of the transpose (t) function has been improved, when
+applied to real, integer, and logical matrices.  This is done by
+moving pairs of elements, which improves memory access behaviour.
+
+Note that I had previously speeded up transpose with a patch that was
+incorporated into R 2.12.0.  This improvement gives an additional
+speedup, by up to a factor of about 1.4.

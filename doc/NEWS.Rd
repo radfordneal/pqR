@@ -185,7 +185,9 @@
       \item Some speedup has been obtained by using new internal C functions 
             for performing exact or partial string matches in the interpreter.
       \item **2
-      \item **3
+      \item The speed of the transpose (t) function has been
+            improved, when applied to real, integer, and logical
+            matrices.
       \item **4
       \item Code for the sum and prod functions has been changed to
             move some checks outside the inner summation loops.  The effect
