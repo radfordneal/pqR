@@ -168,7 +168,7 @@ struct sxpinfo_struct {
     unsigned int mark  :  1;
     unsigned int debug :  1;
     unsigned int trace :  1;  /* functions and memory tracing */
-    unsigned int spare :  1;  /* currently unused */
+    unsigned int misc  :  1;  /* miscellaneous uses - eg, RSTEP */
     unsigned int gcgen :  1;  /* old generation number */
     unsigned int gccls :  3;  /* node class */
 }; /*		    Tot: 32 */
@@ -318,8 +318,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define CLOENV(x)	((x)->u.closxp.env)
 #define RDEBUG(x)	((x)->sxpinfo.debug)
 #define SET_RDEBUG(x,v)	(((x)->sxpinfo.debug)=(v))
-#define RSTEP(x)	((x)->sxpinfo.spare)
-#define SET_RSTEP(x,v)	(((x)->sxpinfo.spare)=(v))
+#define RSTEP(x)	((x)->sxpinfo.misc)
+#define SET_RSTEP(x,v)	(((x)->sxpinfo.misc)=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	((x)->u.symsxp.pname)
@@ -347,6 +347,7 @@ const char *(R_CHAR)(SEXP x);
 
 /* Various tests with macro versions below */
 Rboolean (Rf_isNull)(SEXP s);
+Rboolean (Rf_isRaw)(SEXP s);
 Rboolean (Rf_isSymbol)(SEXP s);
 Rboolean (Rf_isLogical)(SEXP s);
 Rboolean (Rf_isReal)(SEXP s);
@@ -607,6 +608,7 @@ SEXP Rf_findFun(SEXP, SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
 SEXP Rf_findVarInFrame(SEXP, SEXP);
 SEXP Rf_findVarInFrame3(SEXP, SEXP, Rboolean);
+SEXP Rf_fixup_NaRm(SEXP);
 SEXP Rf_getAttrib(SEXP, SEXP);
 SEXP Rf_GetArrayDimnames(SEXP);
 SEXP Rf_GetColNames(SEXP);
@@ -900,6 +902,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define findVar			Rf_findVar
 #define findVarInFrame		Rf_findVarInFrame
 #define findVarInFrame3		Rf_findVarInFrame3
+#define fixup_NaRm		Rf_fixup_NaRm
 #define GetArrayDimnames	Rf_GetArrayDimnames
 #define getAttrib		Rf_getAttrib
 #define getCharCE		Rf_getCharCE
@@ -936,6 +939,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define isOrdered		Rf_isOrdered
 #define isPairList		Rf_isPairList
 #define isPrimitive		Rf_isPrimitive
+#define isRaw			Rf_isRaw
 #define isReal			Rf_isReal
 #define isS4			Rf_isS4
 #define isString		Rf_isString
@@ -1077,6 +1081,8 @@ SEXP	 Rf_ScalarString(SEXP);
 /* Test macros with function versions above */
 #undef isNull
 #define isNull(s)	(TYPEOF(s) == NILSXP)
+#undef isRaw
+#define isRaw(s)	(TYPEOF(s) == RAWSXP)
 #undef isSymbol
 #define isSymbol(s)	(TYPEOF(s) == SYMSXP)
 #undef isLogical

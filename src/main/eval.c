@@ -1328,8 +1328,6 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile SEXP body;
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
     if (R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho);
 	return R_NilValue;
@@ -1360,8 +1358,6 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int bgn;
     volatile SEXP body;
     RCNTXT cntxt;
-
-    checkArity(op, args);
 
     if (R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho);
@@ -1440,7 +1436,7 @@ SEXP attribute_hidden do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue; /*NOTREACHED*/
 }
 
-/* Declated with a variable number of args in names.c */
+/* Declared with a variable number of args in names.c */
 SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rval, srcref;
@@ -1449,7 +1445,7 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 	op = forcePromise(op);
 	SET_NAMED(op, 2);
     }
-    if (length(args) < 2) WrongArgCount("function");
+
     CheckFormals(CAR(args));
     rval = mkCLOSXP(CAR(args), CADR(args), rho);
     srcref = CADDR(args);
@@ -1699,8 +1695,9 @@ SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP s;
-    if (length(args) != 2)
-	WrongArgCount(asym[PRIMVAL(op)]);
+
+    checkArity(op,args);
+
     if (isString(CAR(args))) {
 	/* fix up a duplicate or args and recursively call do_set */
 	SEXP val;

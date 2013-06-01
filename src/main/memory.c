@@ -3255,6 +3255,7 @@ SEXP (SET_CXTAIL)(SEXP x, SEXP v) {
 
 /* Test functions */
 Rboolean Rf_isNull(SEXP s) { return isNull(s); }
+Rboolean Rf_isRaw(SEXP s) { return isRaw(s); }
 Rboolean Rf_isSymbol(SEXP s) { return isSymbol(s); }
 Rboolean Rf_isLogical(SEXP s) { return isLogical(s); }
 Rboolean Rf_isReal(SEXP s) { return isReal(s); }

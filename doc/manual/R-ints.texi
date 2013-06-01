@@ -247,7 +247,7 @@ struct sxpinfo_struct @{
     unsigned int mark  :  1;  /* @r{mark object as `in use' in GC} */
     unsigned int debug :  1;
     unsigned int trace :  1;
-    unsigned int spare :  1;  /* @r{unused} */
+    unsigned int misc  :  1;  /* @r{miscellaneous uses - eg, RSTEP} */
     unsigned int gcgen :  1;  /* @r{generation for GC} */
     unsigned int gccls :  3;  /* @r{class of node for GC} */
 @};  /*              Tot: 32 */
@@ -263,6 +263,12 @@ single-step mode.
 @findex trace bit
 The @code{trace} bit is used for functions for @code{trace()} and for
 other objects when tracing duplications (see @code{tracemem}).
+
+@findex misc bit
+@findex RSTEP
+The bit called @code{misc} in @pqR{} was called @code{spare} in R-2.15.0, 
+and was said to be unused, but this was not true.
+For closures, the @code{misc} bit is used as the @code{RSTEP} flag.
 
 @findex named bit
 @findex NAMED
@@ -2208,7 +2214,7 @@ evaluate their second argument, and @code{~}, @code{.Internal},
 @code{quote} and @code{substitute} which do not evaluate some of their
 arguments.
 
-@code{rep} and @code{seq.int} are special as they evaluate some of their
+@code{rep} is special as it evaluates some of its
 arguments conditional on which are non-missing.
 
 @code{log}, @code{round} and @code{signif} are special to allow default

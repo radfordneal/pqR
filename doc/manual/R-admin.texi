@@ -405,6 +405,36 @@ and the @R{} @acronym{FAQ} (files @file{FAQ} or
 @uref{http://CRAN.R-project.org/@/doc/@/FAQ/@/R-FAQ.html} which always
 has the version for the latest release of @R{}).
 
+Most of the files in the source directory are human-created, but a few
+are created automatically from other files.  One example is
+@file{NEWS}, supplied with the source directory, but also re-created
+from @file{doc/NEWS.Rd}, as part of the normal build process.  Other
+such files do not normally need to be re-created.  In particular, you
+will not usually need to re-create @file{configure}, which is derived
+from @file{configure.ac}, @file{VERSION}, and the macro definitions in
+the @file{m4} directory.  If you do want to re-create this or other
+other automatically built files (such as @file{src/main/gram.c} from
+@file{src/main/gram.y}), you will need to run @file{./configure} with the
+@code{--enable-maintainer-mode} option, which creates a
+@file{Makefile} with the appropriate rules.  Note that these files are
+always recreated in the source directory, even if you are using a
+separate build directory.  (When re-creating @file{configure}, you
+should not use a separate build directory, since this has the effect
+of stripping comments from @file{configure}.)
+
+There is a possible logical flaw with the concept of re-creating
+@file{configure} using a @file{Makefile} that can be created only if
+you have a working @file{configure} script --- if necessary, you can re-create
+@file{configure} as follows, when in the main source directory:
+@example
+   cat m4/R.m4 m4/bigendian.m4 m4/cairo.m4 m4/clibs.m4 \
+       m4/codeset.m4 m4/gettext.m4 m4/gettext-lib.m4 \
+       m4/java.m4 m4/libtool.m4 m4/ltoptions.m4 m4/ltversion.m4 \
+       m4/ltsugar.m4 m4/lt~obsolete.m4 m4/stat-time.m4 > acinclude.m4
+   aclocal --output=aclocal.m4 -I .
+   autoconf -B .
+@end example
+
 @node Help options, Making the manuals, Simple compilation, Installing R under Unix-alikes
 @section Help options
 
@@ -869,7 +899,7 @@ this manual are either standard @command{autoconf} options not relevant
 to @R{} or intended for specialist uses by the @R{} developers.
 
 One that may be useful when working on @R{} itself is the option
-@option{--disable-byte-compilation}, which ensures that the base and
+@option{--disable-byte-compiled-packages}, which ensures that the base and
 recommended packages are lazyloaded but not byte-compiled.
 (Alternatively the (make or environment) variable
 @env{R_NO_BASE_COMPILE} can be set to a non-empty value for the duration

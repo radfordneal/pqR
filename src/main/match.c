@@ -50,6 +50,40 @@
 
 #include "Defn.h"
 
+/* This is a horrible kludge used in logic.c and in summary.c (where 
+   it previously was covertly defined as extern). */
+
+SEXP fixup_NaRm(SEXP args)
+{
+    SEXP a, r, t, na_value, prev = R_NilValue;
+
+    /* Need to make sure na.rm is last and exists */
+    na_value = ScalarLogical(FALSE);
+    for(a = args ; a != R_NilValue; a = CDR(a)) {
+	if(TAG(a) == R_NaRmSymbol) {
+	    if(CDR(a) == R_NilValue) return args;
+	    na_value = CAR(a);
+	    if(prev == R_NilValue) args = CDR(a);
+	    else SETCDR(prev, CDR(a));
+	}
+	prev = a;
+    }
+
+    PROTECT(na_value);
+    t = CONS(na_value, R_NilValue);
+    UNPROTECT(1);
+    PROTECT(t);
+    SET_TAG(t, R_NaRmSymbol);
+    if (args == R_NilValue)
+	args = t;
+    else {
+	r = args;
+	while (CDR(r) != R_NilValue) r = CDR(r);
+	SETCDR(r, t);
+    }
+    UNPROTECT(1);
+    return args;
+}
 
 /* used in subscript.c and subassign.c */
 Rboolean NonNullStringMatch(SEXP s, SEXP t)

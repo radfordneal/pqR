@@ -2423,7 +2423,7 @@ SEXP attribute_hidden do_rawconnection(SEXP call, SEXP op, SEXP args, SEXP env)
     if(strchr(open, 't'))
 	error(_("invalid '%s' argument"), "open");
     ncon = NextConnection();
-    if(TYPEOF(sraw) != RAWSXP)
+    if (!isRaw(sraw))
 	error(_("invalid '%s' argument"), "raw");
     con = Connections[ncon] = newraw(desc, sraw, open);
 
@@ -3525,15 +3525,15 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	nbytes = 0, np = 0;
     const char *what;
     void *p = NULL;
-    Rboolean wasopen = TRUE, isRaw = FALSE;
+    Rboolean wasopen = TRUE, israw = FALSE;
     Rconnection con = NULL;
     Rbyte *bytes = NULL;
     RCNTXT cntxt;
 
     checkArity(op, args);
 
-    if(TYPEOF(CAR(args)) == RAWSXP) {
-	isRaw = TRUE;
+    if (isRaw(CAR(args))) {
+	israw = TRUE;
 	bytes = RAW(CAR(args));
 	nbytes = LENGTH(CAR(args));
     } else {
@@ -3555,7 +3555,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
     swap = asLogical(CAR(args));
     if(swap == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "swap");
-    if(!isRaw) {
+    if(!israw) {
 	wasopen = con->isopen;
 	if(!wasopen) {
 	    /* Documented behaviour */
@@ -3577,7 +3577,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	SEXP onechar;
 	PROTECT(ans = allocVector(STRSXP, n));
 	for(i = 0, m = 0; i < n; i++) {
-	    onechar = isRaw ? rawOneString(bytes, nbytes, &np)
+	    onechar = israw ? rawOneString(bytes, nbytes, &np)
 		: readOneString(con);
 	    if(onechar != R_NilValue) {
 		SET_STRING_ELT(ans, i, onechar);
@@ -3590,7 +3590,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("size changing is not supported for complex vectors"));
 	PROTECT(ans = allocVector(CPLXSXP, n));
 	p = (void *) COMPLEX(ans);
-	if(isRaw) m = rawRead(p, size, n, bytes, nbytes, &np);
+	if(israw) m = rawRead(p, size, n, bytes, nbytes, &np);
 	else {
 	    /* Do this in blocks to avoid large buffers in the connection */
 	    char *pp = p;
@@ -3679,7 +3679,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(!signd && (mode != 1 || size > 2))
 	    warning(_("'signed = FALSE' is only valid for integers of sizes 1 and 2"));
 	if(size == sizedef) {
-	    if(isRaw) m = rawRead(p, size, n, bytes, nbytes, &np);
+	    if(israw) m = rawRead(p, size, n, bytes, nbytes, &np);
 	    else {
 		/* Do this in blocks to avoid large buffers in the connection */
 		char *pp = p;
@@ -3701,7 +3701,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	    int s;
 	    if(mode == 1) { /* integer result */
 		for(i = 0, m = 0; i < n; i++) {
-		    s = isRaw ? rawRead(buf, size, 1, bytes, nbytes, &np)
+		    s = israw ? rawRead(buf, size, 1, bytes, nbytes, &np)
 			: con->read(buf, size, 1, con);
 		    if(s) m++; else break;
 		    if(swap && size > 1) swapb(buf, size);
@@ -3733,7 +3733,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 		}
 	    } else if (mode == 2) { /* double result */
 		for(i = 0, m = 0; i < n; i++) {
-		    s = isRaw ? rawRead(buf, size, 1, bytes, nbytes, &np)
+		    s = israw ? rawRead(buf, size, 1, bytes, nbytes, &np)
 			: con->read(buf, size, 1, con);
 		    if(s) m++; else break;
 		    if(swap && size > 1) swapb(buf, size);
@@ -3771,7 +3771,7 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
     int i, j, size, swap, len, n = 0, useBytes;
     const char *s;
     char *buf;
-    Rboolean wasopen = TRUE, isRaw = FALSE;
+    Rboolean wasopen = TRUE, israw = FALSE;
     Rconnection con = NULL;
     RCNTXT cntxt;
 
@@ -3780,8 +3780,8 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isVectorAtomic(object))
 	error(_("'x' is not an atomic vector type"));
 
-    if(TYPEOF(CADR(args)) == RAWSXP) {
-	isRaw = TRUE;
+    if (isRaw(CADR(args))) {
+	israw = TRUE;
     } else {
 	con = getConnection(asInteger(CADR(args)));
 	if(con->text) error(_("can only write to a binary connection"));
@@ -3798,11 +3798,11 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "useBytes");
     len = LENGTH(object);
     if(len == 0) {
-	if(isRaw) return allocVector(RAWSXP, 0); else return R_NilValue;
+	if(israw) return allocVector(RAWSXP, 0); else return R_NilValue;
     }
     /* RAW vectors are limited to 2^31 - 1 bytes */
     if((double)len *size > INT_MAX) {
-	if(isRaw)
+	if(israw)
 	    error(_("only 2^31-1 bytes can be written to a raw vector"));
 	else
 	    error(_("only 2^31-1 bytes can be written in a single writeBin() call"));
@@ -3825,7 +3825,7 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
     if(TYPEOF(object) == STRSXP) {
-	if(isRaw) {
+	if(israw) {
 	    Rbyte *bytes;
 	    int np, outlen;
 	    if(useBytes)
@@ -4002,7 +4002,7 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 
 	/* write it now */
-	if(isRaw) { /* We checked size*len < 2^31-1 above */
+	if(israw) { /* We checked size*len < 2^31-1 above */
 	    PROTECT(ans = allocVector(RAWSXP, size*len));
 	    memcpy(RAW(ans), buf, size*len);
 	} else {
@@ -4013,7 +4013,7 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if(!wasopen) {endcontext(&cntxt);con->close(con);}
-    if(isRaw) {
+    if(israw) {
 	R_Visible = TRUE;
 	UNPROTECT(1);
     } else R_Visible = FALSE;
@@ -4110,15 +4110,15 @@ SEXP attribute_hidden do_readchar(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans = R_NilValue, onechar, nchars;
     int i, len, n, m = 0, nbytes = 0, np = 0, useBytes;
-    Rboolean wasopen = TRUE, isRaw = FALSE;
+    Rboolean wasopen = TRUE, israw = FALSE;
     Rconnection con = NULL;
     Rbyte *bytes = NULL;
     RCNTXT cntxt;
 
     checkArity(op, args);
 
-    if(TYPEOF(CAR(args)) == RAWSXP) {
-	isRaw = TRUE;
+    if (isRaw(CAR(args))) {
+	israw = TRUE;
 	bytes = RAW(CAR(args));
 	nbytes = LENGTH(CAR(args));
     } else {
@@ -4133,7 +4133,7 @@ SEXP attribute_hidden do_readchar(SEXP call, SEXP op, SEXP args, SEXP env)
     if(useBytes == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "useBytes");
 
-    if (!isRaw) {
+    if (!israw) {
 	wasopen = con->isopen;
 	if(!wasopen) {
 	    /* Documented behaviour */
@@ -4157,7 +4157,7 @@ SEXP attribute_hidden do_readchar(SEXP call, SEXP op, SEXP args, SEXP env)
 	len = INTEGER(nchars)[i];
 	if(len == NA_INTEGER || len < 0)
 	    error(_("invalid '%s' argument"), "nchar");
-	onechar = isRaw ? rawFixedString(bytes, len, nbytes, &np, useBytes)
+	onechar = israw ? rawFixedString(bytes, len, nbytes, &np, useBytes)
 	    : readFixedString(con, len, useBytes);
 	if(onechar != R_NilValue) {
 	    SET_STRING_ELT(ans, i, onechar);
@@ -4181,7 +4181,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
     int i, len, lenb, lenc, n, nwrite=0, slen, tlen, useBytes;
     char *buf;
     const char *s, *ssep = "";
-    Rboolean wasopen = TRUE, usesep, isRaw = FALSE;
+    Rboolean wasopen = TRUE, usesep, israw = FALSE;
     Rconnection con = NULL;
     mbstate_t mb_st;
     RCNTXT cntxt;
@@ -4190,8 +4190,8 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
     object = CAR(args);
     if(TYPEOF(object) != STRSXP)
 	error(_("invalid '%s' argument"), "object");
-    if(TYPEOF(CADR(args)) == RAWSXP) {
-	isRaw = TRUE;
+    if (isRaw(CADR(args))) {
+	israw = TRUE;
     } else {
 	con = getConnection(asInteger(CADR(args)));
 	if(!con->canwrite)
@@ -4222,11 +4222,11 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
     if(LENGTH(object) < n)
 	error(_("'object' is too short"));
     if(n == 0) {
-	if(isRaw) return allocVector(RAWSXP, 0); else return R_NilValue;
+	if(israw) return allocVector(RAWSXP, 0); else return R_NilValue;
     }
 
     len = 0;
-    if (!isRaw) {
+    if (!israw) {
 	for(i = 0; i < n; i++) {
 	    /* This is not currently needed, just future-proofing in case
 	       the logic gets changed */
@@ -4277,7 +4277,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 		strcat(buf, ssep);
 		len += slen;
 	    }
-	    if (!isRaw) {
+	    if (!israw) {
 		nwrite = con->write(buf, sizeof(char), len, con);
 		if(!nwrite) {
 		    warning(_("problem writing to connection"));
@@ -4317,7 +4317,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 		strcat(buf, ssep);
 		lenb += slen;
 	    }
-	    if (!isRaw) {
+	    if (!israw) {
 		nwrite = con->write(buf, sizeof(char), lenb, con);
 		if(!nwrite) {
 		    warning(_("problem writing to connection"));
@@ -4328,7 +4328,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
     if(!wasopen) {endcontext(&cntxt); con->close(con);}
-    if(isRaw) {
+    if(israw) {
 	R_Visible = TRUE;
 	UNPROTECT(1);
     } else {
@@ -5209,7 +5209,7 @@ SEXP R_compress1(SEXP in)
     Bytef *buf;
     SEXP ans;
 
-    if(TYPEOF(in) != RAWSXP)
+    if (!isRaw(in))
 	error("R_compress1 requires a raw vector");
     inlen = LENGTH(in);
     outlen = 1.001*inlen + 20;
@@ -5232,7 +5232,7 @@ SEXP R_decompress1(SEXP in)
     unsigned char *p = RAW(in);
     SEXP ans;
 
-    if(TYPEOF(in) != RAWSXP)
+    if (!isRaw(in))
 	error("R_decompress1 requires a raw vector");
     inlen = LENGTH(in);
     outlen = (uLong) uiSwap(*((unsigned int *) p));
@@ -5252,7 +5252,7 @@ SEXP R_compress2(SEXP in)
     char *buf;
     SEXP ans;
 
-    if(TYPEOF(in) != RAWSXP)
+    if (!isRaw(in))
 	error("R_compress2 requires a raw vector");
     inlen = LENGTH(in);
     outlen = 1.01*inlen + 600;
@@ -5283,7 +5283,7 @@ SEXP R_decompress2(SEXP in)
     char *buf, *p = (char *) RAW(in), type;
     SEXP ans;
 
-    if(TYPEOF(in) != RAWSXP)
+    if (!isRaw(in))
 	error("R_decompress2 requires a raw vector");
     inlen = LENGTH(in);
     outlen = (uLong) uiSwap(*((unsigned int *) p));
@@ -5379,7 +5379,7 @@ SEXP R_compress3(SEXP in)
     lzma_stream strm = LZMA_STREAM_INIT;
     lzma_ret ret;
 
-    if(TYPEOF(in) != RAWSXP)
+    if (!isRaw(in))
 	error("R_compress3 requires a raw vector");
     inlen = LENGTH(in);
     outlen = inlen + 5;  /* don't allow it to expand */
@@ -5417,7 +5417,7 @@ SEXP R_decompress3(SEXP in)
     unsigned char *buf, *p = RAW(in), type = p[4];
     SEXP ans;
 
-    if(TYPEOF(in) != RAWSXP)
+    if (!isRaw(in))
 	error("R_decompress3 requires a raw vector");
     inlen = LENGTH(in);
     outlen = (uLong) uiSwap(*((unsigned int *) p));
@@ -5464,7 +5464,7 @@ do_memCompress(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
     ans = from = CAR(args);
-    if(TYPEOF(from) != RAWSXP) error("'from' must be raw or character");
+    if (!isRaw(from)) error("'from' must be raw or character");
     type = asInteger(CADR(args));
     switch(type) {
     case 1: break; /* none */
@@ -5542,7 +5542,7 @@ do_memDecompress(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
     ans = from = CAR(args);
-    if(TYPEOF(from) != RAWSXP) error("'from' must be raw or character");
+    if (!isRaw(from)) error("'from' must be raw or character");
     type = asInteger(CADR(args));
     if (type == 5) {/* type = 5 is "unknown" */
 	char *p = (char *) RAW(from);
