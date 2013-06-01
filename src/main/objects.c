@@ -39,7 +39,7 @@
 
 static SEXP GetObject(RCNTXT *cptr)
 {
-    SEXP s, sysp, b, formals, funcall, tag;
+    SEXP s, sysp, a, b, formals, funcall, tag;
     sysp = R_GlobalContext->sysparent;
 
     PROTECT(funcall = R_syscall(0, cptr));
@@ -53,42 +53,55 @@ static SEXP GetObject(RCNTXT *cptr)
     formals = FORMALS(b);
 
     tag = TAG(formals);
-    if (tag != R_NilValue && tag != R_DotsSymbol) {
-	s = R_NilValue;
-	/** exact matches **/
-	for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
-	    if (TAG(b) != R_NilValue && ep_match_exprs(tag,TAG(b)) == 1 /*exact*/) {
-		if (s != R_NilValue)
-		    error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
-		else
-		    s = CAR(b);
-	    }
+    a = cptr->promargs;
 
-	if (s == R_NilValue)
-	    /** partial matches **/
-	    for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
-		if (TAG(b) != R_NilValue && ep_match_exprs(tag,TAG(b)) != 0) {
-		    if ( s != R_NilValue)
-			error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
-		    else
-			s = CAR(b);
-		}
-	if (s == R_NilValue)
-	    /** first untagged argument **/
-	    for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
-		if (TAG(b) == R_NilValue )
-		{
-		    s = CAR(b);
-		    break;
-		}
-	if (s == R_NilValue)
-	    s = CAR(cptr->promargs);
-/*
-	    error("failed to match argument for dispatch");
-*/
+    if (tag == R_NilValue || tag == R_DotsSymbol)
+        s = CAR(a);
+    else {
+
+        SEXP exact, partial, partial2;
+        exact = partial = partial2 = NULL;  /* Not R_NilValue! */
+
+	for (b = a; b != R_NilValue ; b = CDR(b)) {
+	    if (TAG(b) != R_NilValue) {
+                int m = ep_match_exprs(tag,TAG(b));
+                if (m != 0) {
+                    if (m > 0) { 
+                        if (exact != NULL)
+                            error (_("formal argument \"%s\" matched by multiple actual arguments"), 
+                                   tag);
+                        exact = CAR(b);
+                    }
+                    else {
+                        if (partial == NULL)
+                            partial = CAR(b);
+                        else
+                            partial2 = CAR(b);
+                    }
+                }
+            }
+        }
+
+        if (exact != NULL)
+            s = exact;
+        else if (partial != NULL) {
+            if (partial2 != NULL)
+                error (_("formal argument \"%s\" matched by multiple actual arguments"), 
+                       tag);
+            s = partial;
+        }
+        else { /* no exact or partial match - use first untagged argument */
+            for (b = a; b != R_NilValue; b = CDR(b))
+                if (TAG(b) == R_NilValue) {
+                    s = CAR(b);
+                    break;
+                }
+            if (b == R_NilValue) /* no untagged argument */
+                s = CAR(a);
+                /* had once been the following?
+                      error("failed to match argument for dispatch"); */
+        }
     }
-    else
-	s = CAR(cptr->promargs);
 
     UNPROTECT(2);
     if (TYPEOF(s) == PROMSXP) {
@@ -261,7 +274,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     SEXP klass, method, sxp, t, s, matchedarg, sort_list;
     SEXP op, formals, newrho, newcall;
     char buf[512];
-    int i, j, nclass, matched, /* S4toS3, */ nprotect;
+    int i, j, nclass, /* S4toS3, */ nprotect;
     RCNTXT *cptr;
 
     /* Get the context which UseMethod was called from. */
@@ -277,6 +290,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     op = CAR(cptr->call);
     switch (TYPEOF(op)) {
     case SYMSXP:
+
 	PROTECT(op = findFun(op, cptr->sysparent));
 	break;
     case LANGSXP:
@@ -295,13 +309,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-	    matched = 0;
-	    for (t = formals; t != R_NilValue; t = CDR(t))
-	        if (TAG(t) == TAG(s)) {
-		    matched = 1;
-		}
-
-	    if (!matched) defineVar(TAG(s), CAR(s), newrho);
+	    for (t = formals; t!=R_NilValue && TAG(t)!=TAG(s); t = CDR(t)) ;
+	    if (t == R_NilValue) 
+                defineVar(TAG(s), CAR(s), newrho);
 	}
     }
 
@@ -394,7 +404,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call, _("there must be a 'generic' argument"));
     else
 	PROTECT(generic = eval(CAR(argList), env));
-    if(!isString(generic) || length(generic) != 1)
+    if(!isString(generic) || LENGTH(generic) != 1)
 	errorcall(call, _("'generic' argument must be a character string"));
 
 
@@ -436,18 +446,17 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(obj = GetObject(cptr));
     }
 
-    if (TYPEOF(generic) != STRSXP ||
-	LENGTH(generic) < 1 ||
-	CHAR(STRING_ELT(generic, 0))[0] == '\0')
+    SEXP generic_name = STRING_ELT(generic, 0);
+    if (CHAR(generic_name)[0] == 0)
 	errorcall(call, _("first argument must be a generic name"));
 
-    if (usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
+    if (usemethod(translateChar(generic_name), obj, call, CDR(args),
 		  env, callenv, defenv, &ans) == 1) {
 	UNPROTECT(2); /* obj, argList */
 	PROTECT(ans);
 	findcontext(CTXT_RETURN, env, ans); /* does not return */
     }
-    else {
+    else {  /* SHOULD FIX THIS TO PROTECT AGAINST BUFFER OVERFLOW */
 	SEXP klass;
 	int nclass;
 	char cl[1000];
@@ -465,7 +474,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    strcat(cl, "')");
 	}
 	errorcall(call, _("no applicable method for '%s' applied to an object of class \"%s\""),
-		  translateChar(STRING_ELT(generic, 0)), cl);
+		  translateChar(generic_name), cl);
     }
     /* Not reached */
     return R_NilValue;
@@ -664,7 +673,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("generic function not specified"));
     PROTECT(generic);
 
-    if (!isString(generic) || length(generic) != 1)
+    if (!isString(generic) || LENGTH(generic) != 1)
 	error(_("invalid generic argument to NextMethod"));
 
     if (CHAR(STRING_ELT(generic, 0))[0] == '\0')
@@ -677,7 +686,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (group == R_UnboundValue) PROTECT(group = mkString(""));
     else PROTECT(group);
 
-    if (!isString(group) || length(group) != 1)
+    if (!isString(group) || LENGTH(group) != 1)
 	error(_("invalid 'group' argument found in NextMethod"));
 
     /* determine the root: either the group or the generic will be it */
@@ -791,7 +800,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(method = duplicate(method));
         int len_method = length(method);
 	for(j = 0; j < len_method; j++) {
-	    if (strlen(CHAR(STRING_ELT(method,j))))
+	    if (CHAR(STRING_ELT(method,j))[0] != 0) /* not empty string */
 		SET_STRING_ELT(method, j,  mkChar(buf));
 	}
     } else
@@ -924,9 +933,9 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
     SEXP cl = getAttrib(x, R_ClassSymbol);
     const char *class = CHAR(asChar(cl));
     for (ans = 0; ; ans++) {
-	if (!strlen(valid[ans])) // empty string
+	if (valid[ans][0]==0) /* empty string */
 	    break;
-	if (!strcmp(class, valid[ans])) return ans;
+	if (strcmp(class, valid[ans])==0) return ans;
     }
     /* if not found directly, now search the non-virtual super classes :*/
     if(IS_S4_OBJECT(x)) {
@@ -950,9 +959,9 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
             for(i=0; i < LENGTH(superCl); i++) {
                 const char *s_class = CHAR(STRING_ELT(superCl, i));
                 for (ans = 0; ; ans++) {
-                    if (!strlen(valid[ans]))
+                    if (valid[ans][0]==0) /* empty string */
                         break;
-                    if (!strcmp(s_class, valid[ans])) {
+                    if (strcmp(s_class, valid[ans])==0) {
                         UNPROTECT(1);
                         return ans;
                     }
