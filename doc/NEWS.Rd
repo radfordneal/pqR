@@ -108,7 +108,8 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
-      \item **1
+      \item Some speedup has been obtained by using new internal C functions 
+            for performing exact or partial string matches in the interpreter.
       \item **2
       \item **3
       \item **4

@@ -4811,8 +4811,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	   n = LENGTH(names);
 	   which = n - 1;
 	   for (i = 0; i < n - 1; i++)
-	       if (pmatch(STRING_ELT(value, 0),
-			  STRING_ELT(names, i), 1 /* exact */)) {
+	       if (ep_match_exprs(STRING_ELT(value, 0),
+			          STRING_ELT(names, i))==1 /* exact */) {
 		   which = i;
 		   break;
 	       }
