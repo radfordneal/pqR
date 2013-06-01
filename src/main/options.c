@@ -307,6 +307,13 @@ void attribute_hidden InitOptions(void)
     SET_TAG(v, install("browserNLdisabled"));
     SETCAR(v, ScalarLogical(FALSE));
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("mat_mult_with_BLAS"));
+    SETCAR(v, allocVector (LGLSXP, R_mat_mult_with_BLAS_len));
+    for (int i = 0; i < R_mat_mult_with_BLAS_len; i++) 
+        LOGICAL(CAR(v))[i] = R_mat_mult_with_BLAS[i];
+
 #ifdef HAVE_RL_COMPLETION_MATCHES
     /* value from Rf_initialize_R */
     SETCDR(v,CONS(R_NilValue,R_NilValue));
@@ -603,6 +610,22 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		R_DisableNLinBrowser = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
+	    else if (streql(CHAR(namei), "mat_mult_with_BLAS")) {
+                SEXP ov;
+                int j;
+		if (TYPEOF(argi)!=LGLSXP
+                 || LENGTH(argi)!=1 && LENGTH(argi)!=R_mat_mult_with_BLAS_len)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+                ov = allocVector (LGLSXP, R_mat_mult_with_BLAS_len);
+                for (j = 0; j<R_mat_mult_with_BLAS_len; j++) {
+                    LOGICAL(ov)[j] = LOGICAL(argi) [LENGTH(argi)==1 ? 0 : j];
+                    if (LOGICAL(ov)[j] == NA_LOGICAL)
+		        error(_("invalid value for '%s'"), CHAR(namei));
+                }
+                for (j = 0; j<R_mat_mult_with_BLAS_len; j++) 
+                    R_mat_mult_with_BLAS[j] = LOGICAL(ov)[j];
+		SET_VECTOR_ELT(value, i, SetOption(tag, ov));
 	    }
 	    else {
 		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));

@@ -716,6 +716,19 @@ extern0 int	R_ParseContextLine; /* Line in file of the above */
 /* Image Dump/Restore */
 extern int	R_DirtyImage	INI_as(0);	/* Current image dirty */
 
+/* How should %*% operations be done - with C routines or BLAS routines?  
+   For four kinds of operations: vec-dot, mat-vec, vec-mat, mat-mat. */
+#define R_mat_mult_with_BLAS_len 4
+extern0 Rboolean R_mat_mult_with_BLAS [R_mat_mult_with_BLAS_len] 
+#ifdef __MAIN__
+#ifdef R_MAT_MULT_WITH_BLAS_BY_DEFAULT
+  = { TRUE, TRUE, TRUE, TRUE }
+#else
+  = { FALSE, FALSE, FALSE, FALSE }
+#endif
+#endif
+;
+
 /* History */
 LibExtern char *R_HistoryFile;	/* Name of the history file */
 LibExtern int	R_HistorySize;	/* Size of the history file */

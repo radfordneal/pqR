@@ -1,6 +1,7 @@
 % File src/library/base/man/options.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{options}
@@ -153,6 +154,15 @@ getOption(x, default = NULL)
     \item{\code{keep.source.pkgs}:}{As for \code{keep.source}, used only
     when packages are installed.  Defaults to \code{FALSE} unless the
     environment variable \env{R_KEEP_PKG_SOURCE} is set to \code{yes}.}
+
+    \item{\code{mat_mult_with_BLAS}:}{logical vector of length four,
+      defaulting to all \code{TRUE}, indicating whether a BLAS routine
+      (rather than a built-in C routine) should be used for \code{\%*\%}
+      when the operands result in the operation being a vector dot 
+      product, a product of a matrix and column vector, a product of
+      a row vector and a matrix, or a general matrix-matrix product.  
+      May be set using a single logical value, which is replicated
+      to give four values.}
 
     \item{\code{max.print}:}{integer, defaulting to \code{99999}.
       \code{\link{print}} or \code{\link{show}} methods can make use of
