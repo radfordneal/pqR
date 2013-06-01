@@ -8,39 +8,42 @@
 ## large-sample approximation to the Kolmogorov-Smirnov statistic.
 ##
 
-
-superror <- function(rfoo,pfoo,sample.size,...) {
-    x <- rfoo(sample.size,...)
-    tx <- table(signif(x, 12)) # such that xi will be sort(unique(x))
-    xi <- as.numeric(names(tx))
-    f <- pfoo(xi,...)
-    fhat <- cumsum(tx)/sample.size
-    max(abs(fhat-f))
-}
-
 pdkwbound <- function(n,t) 2*exp(-2*n*t*t)
 
 qdkwbound <- function(n,p) sqrt(log(p/2)/(-2*n))
 
 dkwtest <- function(stub = "norm", ...,
                     sample.size = 10000, pthreshold = 0.001,
-                    print.result = TRUE, print.detail = FALSE,
+                    print.result = TRUE, print.detail = TRUE,
                     stop.on.failure = TRUE)
 {
     rfoo <- eval(as.name(paste("r", stub, sep="")))
     pfoo <- eval(as.name(paste("p", stub, sep="")))
-    s <- superror(rfoo, pfoo, sample.size, ...)
+    x <- rfoo(sample.size,...)
+    tx <- table(signif(x, 12)) # such that xi will be sort(unique(x))
+    xi <- as.numeric(names(tx))
+    f <- pfoo(xi,...)
+    fhat <- cumsum(tx)/sample.size
+    s <- max(abs(fhat-f))
     if (print.result || print.detail) {
         printargs <- substitute(list(...))
         printargs[[1]] <- as.name(stub)
         cat(deparse(printargs))
-        if (print.detail)
-            cat("\nsupremum error = ",signif(s,2),
-                " with p-value=",min(1,round(pdkwbound(sample.size,s),4)),"\n")
     }
     rval <- (s < qdkwbound(sample.size,pthreshold))
     if (print.result)
-        cat(c(" FAILED\n"," PASSED\n")[rval+1])
+        cat(c(" FAILED\n"," PASSED")[rval+1])
+    if (print.detail || !rval)
+        cat ("\n",
+             " first =", round(x[4],1),
+             " last =", round(x[sample.size],1),
+             " median =", round(median(x),4),
+             " mean =", round(mean(x),4),
+             " sd =", round(sd(x),4),
+             "\n",
+             " supremum error = ", round(signif(s,2),4),
+             " with p-value =", min(1,round(pdkwbound(sample.size,s),4)))
+    cat("\n\n")
     if (stop.on.failure && !rval)
         stop("dkwtest failed")
     rval
@@ -48,6 +51,8 @@ dkwtest <- function(stub = "norm", ...,
 
 .proctime00 <- proc.time() # start timing
 
+RNGkind("default","default")
+set.seed(123456)
 
 dkwtest("binom",size =   1,prob = 0.2)
 dkwtest("binom",size =   2,prob = 0.2)

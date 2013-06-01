@@ -1,0 +1,4 @@
+Eliminated non-deterministic aspect of testing of random number
+generators.  Also prints more details on failure.  
+
+See NEWS entry for details.

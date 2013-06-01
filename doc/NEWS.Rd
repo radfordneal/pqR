@@ -34,7 +34,13 @@
       \item **4
       \item **5
       \item **6
-      \item **7
+      \item The tests of random number generation run with \code{make check-all}
+            now set the random number seed explicity.  Previously, the random
+            number seed was set from the time and process ID, with the result
+            that these tests would occassionally fail non-deterministically,
+            when by chance one of the p-values obtained was below the threshold
+            used.  (Any such failure should now occur consistently, rather
+            than appearing to be due to a non-deterministic bug.)
       \item **8
       \item **9
       \item **10
