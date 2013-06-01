@@ -309,6 +309,97 @@ static SEXP lcall;
 static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                            int variant)
 {
+    /* Quickly do real arithmetic and integer plus/minus on scalars with 
+       no attributes. */
+
+    int type = TYPEOF(arg1);
+
+    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 
+                                        && ATTRIB(arg1)==R_NilValue) {
+        int opcode = PRIMVAL(op);
+
+        if (arg2==NULL) {
+            switch (opcode) {
+            case PLUSOP:
+                return arg1;
+            case MINUSOP: ;
+                SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 : allocVector(type,1);
+                if (type==REALSXP) 
+                    *REAL(ans) = - *REAL(arg1);
+                else /* INTSXP */
+                    *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
+                                      : - *INTEGER(arg1);
+                return ans;
+            }
+        }
+        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1 
+                                    && ATTRIB(arg2)==R_NilValue) {
+            if (type==REALSXP) {
+
+                SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 
+                         : NAMEDCNT_EQ_0(arg2) ? arg2
+                         : allocVector(type,1);
+    
+                double a1 = *REAL(arg1), a2 = *REAL(arg2);
+        
+                switch (opcode) {
+                case PLUSOP:
+                    *REAL(ans) = a1 + a2;
+                    return ans;
+                case MINUSOP:
+                    *REAL(ans) = a1 - a2;
+                    return ans;
+                case TIMESOP:
+                    *REAL(ans) = a1 * a2;
+                    return ans;
+                case DIVOP:
+                    *REAL(ans) = a1 / a2;
+                    return ans;
+                case POWOP:
+                    if (a2 == 2.0)       *REAL(ans) = a1 * a1;
+                    else if (a2 == 1.0)  *REAL(ans) = a1;
+                    else if (a2 == 0.0)  *REAL(ans) = 1.0;
+                    else if (a2 == -1.0) *REAL(ans) = 1.0 / a1;
+                    else                 *REAL(ans) = R_pow(a1,a2);
+                    return ans;
+                case MODOP:
+                    *REAL(ans) = myfmod(a1,a2);
+                    return ans;
+                case IDIVOP:
+                    *REAL(ans) = myfloor(a1,a2);
+                    return ans;
+                }
+            }
+            else if (opcode==PLUSOP || opcode==MINUSOP) { /* type==INTSXP */
+
+                SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 
+                         : NAMEDCNT_EQ_0(arg2) ? arg2
+                         : allocVector(type,1);
+
+                int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
+
+                if (a1==NA_INTEGER || a2==NA_INTEGER) {
+                    *INTEGER(ans) = NA_INTEGER;
+                    return ans;
+                }
+
+                if (opcode==MINUSOP) a2 = -a2;
+
+                *INTEGER(ans) = a1 + a2;
+
+                if (a1>0 ? (a2>0 && *INTEGER(ans)<0) 
+                         : (a2<0 && *INTEGER(ans)>0)) {
+                    warningcall(call, _("NAs produced by integer overflow"));
+                    *INTEGER(ans) = NA_INTEGER;
+                }
+
+                return ans;
+            }
+        }
+    }
+
+    /* Otherwise, handle the general case. */
+
     return arg2==NULL ? R_unary (call, op, arg1) 
                       : R_binary (call, op, arg1, arg2);
 }
