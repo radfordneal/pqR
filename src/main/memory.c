@@ -3663,6 +3663,39 @@ R_FreeStringBufferL(R_StringBuffer *buf)
     }
 }
 
+/* See if space for an operand can be used for the result too.  Assumes
+   independent element-by-element computation.  Returns the operand that
+   can be reused, or R_NilValue if neither can be reused. */
+
+SEXP attribute_hidden can_save_alloc (SEXP s1, SEXP s2, SEXPTYPE typ)
+{
+    int n1 = LENGTH(s1);
+    int n2 = LENGTH(s2);
+
+    if (n1==0 || n2==0)  
+        return R_NilValue;  /* since result may not have length max(n1,n2) */
+
+    /* Try to use space for 2nd arg if both same length, so 1st argument's
+       attributes will then take precedence when copied. */
+
+    if (n2>=n1) {
+        if (TYPEOF(s2)==typ && NAMED(s2)==0)
+            return s2;
+        else
+            /* Can use 1st arg's space only if 2nd arg has no attributes, else
+               we may not get attributes of result right. */
+            if (n1==n2 && TYPEOF(s1)==typ && NAMED(s1)==0
+                       && ATTRIB(s2)==R_NilValue)
+                return s1;
+    } else {
+        if (TYPEOF(s1)==typ && NAMED(s1)==0)
+            return s1;
+    }
+
+    return R_NilValue;
+}
+
+
 /* ======== These need direct access to gp field for efficiency ======== */
 
 /* FIXME: consider inlining here */
