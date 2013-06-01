@@ -140,7 +140,10 @@
             hash table.  In particular, this speeds up basic
             operations such as "+", "<-", "if", and "length".
       \item **26
-      \item **27
+      \item Lookup of some builtin/special function symbols (eg, '+' and 'if')
+            has been sped up by allowing fast bypass of non-global environments
+            that do not contain (and have never contained) one of these 
+            symbols.
       \item **28
       \item **29
       \item **30

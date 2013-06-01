@@ -345,12 +345,18 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define BASE_CACHE(x)  ((x)->sxpinfo.misc) /*1 = base binding in global cache*/
 #define SET_BASE_CACHE(x,v) ((x)->sxpinfo.misc = (v))
 
+/* Flag indicating whether a symbol starts with a special character. */
+#define SPEC_SYM(x)	(PRINTNAME(x)->sxpinfo.misc)
+#define SET_SPEC_SYM(x,v) (PRINTNAME(x)->sxpinfo.misc = (v)) 
+
 /* Environment Access Macros */
 #define FRAME(x)	((x)->u.envsxp.frame)
 #define ENCLOS(x)	((x)->u.envsxp.enclos)
 #define HASHTAB(x)	((x)->u.envsxp.hashtab)
 #define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
+#define NO_SPEC_SYM(x)  ((x)->sxpinfo.misc) /* 1 = env has symbol w spec char*/
+#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.misc = (v))
 
 #else /* not USE_RINTERNALS */
 
@@ -670,6 +676,7 @@ Rboolean Rf_psmatch(const char *, const char *, Rboolean);
 void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
+void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_setVar(SEXP, SEXP, SEXP);
@@ -1034,6 +1041,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define ScalarString		Rf_ScalarString
 #define ScalarRaw		Rf_ScalarRaw
 #define setAttrib		Rf_setAttrib
+#define setNoSpecSymFlag	Rf_setNoSpecSymFlag
 #define setSVector		Rf_setSVector
 #define set_elements_to_NA_or_NULL Rf_set_elements_to_NA_or_NULL
 #define setVar			Rf_setVar
