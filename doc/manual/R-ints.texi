@@ -136,13 +136,10 @@ available to @R{} Extensions: rather @code{SEXP} is an opaque pointer,
 and the internals can only be accessed by the functions provided.
 
 @cindex node
-Both types of node structure have as their first three fields a 32-bit
+Both types of node structure have as their first three fields a 64-bit
 @code{sxpinfo} header and then three pointers (to the attributes and the
 previous and next node in a doubly-linked list), and then some further
-fields.  On a 32-bit platform a node@footnote{strictly, a @code{SEXPREC}
-node; @code{VECTOR_SEXPREC} nodes are slightly smaller but followed by
-data in the node.} occupies 28 bytes: on a 64-bit platform typically 56
-bytes (depending on alignment constraints).
+fields.
 
 The first five bits of the @code{sxpinfo} header specify one of up to 32
 @code{SEXPTYPE}s.
@@ -168,7 +165,7 @@ gap cannot easily be reused.
 @quotation
 @multitable {no} {SPECIALSXPXXX} {S4 classes not of simple type}
 @headitem no @tab  SEXPTYPE@tab  Description
-@item @code{0}   @tab @code{NILSXP}      @tab @code{NULL}
+@item @code{0}   @tab @code{NILSXP}      @tab @code{R_NilValue}
 @item @code{1}   @tab @code{SYMSXP}      @tab symbols
 @item @code{2}   @tab @code{LISTSXP}     @tab pairlists
 @item @code{3}   @tab @code{CLOSXP}      @tab closures
@@ -215,7 +212,9 @@ function.} to the function to be called with remaining elements the
 actual arguments for the call (and with the tags if present giving the
 specified argument names).  Although this is not enforced, many places
 in the code assume that the pairlist is of length one or more, often
-without checking.
+without checking (though note that taking the @code{CAR} or @code{CDR} of
+@code{R_NilValue} gives @code{R_NilValue} without error, so disaster
+may be avoided).
 
 @cindex expression
 Expressions are of type @code{EXPRSXP}: they are a vector of (usually
@@ -237,20 +236,27 @@ solely of a simple type such as an atomic vector or function.  Prior to
 @node Rest of header, The 'data', SEXPTYPEs, SEXPs
 @subsection Rest of header
 
-The @code{sxpinfo} header is defined as a 32-bit C structure by
+The @code{sxpinfo} header is defined as a 64-bit C structure by
 
 @example
 struct sxpinfo_struct @{
-    SEXPTYPE type      :  5;  /* @r{discussed above} */
-    unsigned int obj   :  1;  /* @r{is this an object with a class attribute?} */
-    unsigned int named :  2;  /* @r{used to control copying} */
-    unsigned int gp    : 16;  /* @r{general purpose, see below} */
-    unsigned int mark  :  1;  /* @r{mark object as `in use' in GC} */
+    unsigned int type  :  5;  /*@r{discussed above} */
+    unsigned int nmcnt :  3;  /* count of "names" referring to object */
+    /* Garbage collector stuff - keep in one byte to maybe speed up access */
+    unsigned int gcgen :  1;  /* old generation number - may be best first */
+    unsigned int gcoton:  1;  /* 1 if already in old-to-new list */
+    unsigned int mark  :  1;  /* mark object as `in use' in garbage collector */
+    unsigned int gccls :  3;  /* node class for garbage collector */
+    /* debug/trace */
     unsigned int debug :  1;
-    unsigned int trace :  1;
-    unsigned int misc  :  1;  /* @r{miscellaneous uses - eg, RSTEP} */
-    unsigned int gcgen :  1;  /* @r{generation for GC} */
-    unsigned int gccls :  3;  /* @r{class of node for GC} */
+    unsigned int trace :  1;  /* functions and memory tracing */
+    /* "general purpose" fields, used for miscellaneous purposes */
+    unsigned int gp    : 16;  /* old "gp" field */
+    unsigned int gp2   : 28;  /* new "gp" field, replaces old "truelength" */
+    /* other */
+    unsigned int obj   :  1;  /* set if this is an S3 or S4 object */
+    unsigned int misc  :  1;  /* miscellaneous uses - eg, RSTEP */
+    unsigned int unused:  2;  /* not currently in use */
 @};  /*              Tot: 32 */
 @end example
 
@@ -271,12 +277,15 @@ The bit called @code{misc} in @pqR{} was called @code{spare} in R-2.15.0,
 and was said to be unused, but this was not true.
 For closures, the @code{misc} bit is used as the @code{RSTEP} flag.
 
-@findex named bit
+@findex nmcnt field
+@findex named field
 @findex NAMED
 @findex SET_NAMED
 @cindex copying semantics
-The @code{named} field is set and accessed by the @code{SET_NAMED} and
+The field called @code{nmcnt} in @pqR{} was called @code{named} in R-2.15.0.
+It is set and accessed by the @code{SET_NAMED} and
 @code{NAMED} macros, and take values @code{0}, @code{1} and @code{2}.
+(But in @pqR{} it is three bits in size for future extension.)
 @R{} has a `call by value' illusion, so an assignment like
 @example
 b <- a
@@ -390,7 +399,7 @@ restoring saved data.
 @node The 'data', Allocation classes, Rest of header, SEXPs
 @subsection The `data'
 
-A @code{SEXPREC} is a C structure containing the 32-bit header as
+A @code{SEXPREC} is a C structure containing the 64-bit header as
 described above, three pointers (to the attributes, previous and next
 node) and the node data, a union
 
@@ -414,26 +423,29 @@ The vector types are @code{RAWSXP}, @code{CHARSXP}, @code{LGLSXP},
 @code{INTSXP}, @code{REALSXP}, @code{CPLXSXP}, @code{STRSXP},
 @code{VECSXP}, @code{EXPRSXP} and @code{WEAKREFSXP}.  Remember that such
 types are a @code{VECTOR_SEXPREC}, which again consists of the header
-and the same three pointers, but followed by two integers giving the
-length and `true length'@footnote{This is almost unused.  The only
-current use is for hash tables of environments (@code{VECSXP}s), where
-@code{length} is the size of the table and @code{truelength} is the
-number of primary slots in use, and for the reference hash tables in
-serialization (@code{VECSXP}s), where @code{truelength} is the number of
-slots in use.} of the vector, and then followed by the data (aligned as
-required: on most 32-bit systems with a 24-byte @code{VECTOR_SEXPREC}
-node the data can follow immediately after the node).  The data are a
-block of memory of the appropriate length to store `true length'
-elements (rounded up to a multiple of 8 bytes, with the 8-byte blocks
-being the `Vcells' referred in the documentation for @code{gc()}).
+and the same three pointers, but followed by an integer giving the
+length of the vector, and then followed by the data.@footnote{There 
+used to be a so-called `true length' field too,
+almost unused, which in pqR is partially replaced by @code{gp2}.}  
+The data is aligned as required for a double and/or a pointer (even
+when the actual data is integer, or some other type not requiring this
+alignment).
 
 The `data' for the various types are given in the table below.  A lot of
-this is interpretation, i.e. the types are not checked.
+this is interpretation, i.e. the types are not checked.  In particular,
+the garbage collector assumes that all the ``three-pointer'' types
+have pointers that can be acessed as @code{CAR}, @code{CDR}, and @code{TAG},
+even when they aren't in a @code{LISTSXP} object, and that pointers
+in all vector types can be accessed with @code{STRING_ELT} even when
+they are not in a @code{STRSXP}.
 
 @table @code
 @item NILSXP
 There is only one object of type @code{NILSXP}, @code{R_NilValue}, with
-no data.
+no data.  However, asking for the @code{CAR}, @code{CDR}, or @code{TAG}
+of @code{R_NilValue} will actually return @code{R_NilValue} without error.
+Note that since there is only one @code{NILSXP}, the tests 
+@code{s==R_NilValue} and @code{isNull(s)} should be equivalent.
 
 @item SYMSXP
 Pointers to three nodes, the name, value and internal, accessed by
@@ -442,22 +454,22 @@ Pointers to three nodes, the name, value and internal, accessed by
 the last is a pointer to the appropriate @code{SEXPREC}.)  Many symbols
 have @code{SYMVALUE} @code{R_UnboundValue}.
 
-@item LISTSXP
-Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{NULL}) and
-TAG (a @code{SYMSXP} or @code{NULL}).
-
 @item CLOSXP
 Pointers to the formals (a pairlist), the body and the environment.
 
 @item ENVSXP
-Pointers to the frame, enclosing environment and hash table (@code{NULL} or a
+Pointers to the frame, enclosing environment and hash table (@code{R_NilValue} or a
 @code{VECSXP}).  A frame is a tagged pairlist with tag the symbol and
 CAR the bound value.
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
 the expression).  Once an promise has been evaluated, the environment is
-set to @code{NULL}.
+set to @code{R_NilValue}.
+
+@item LISTSXP
+Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{R_NilValue}) and
+TAG (a @code{SYMSXP} or @code{R_NilValue}).
 
 @item LANGSXP
 A special type of @code{LISTSXP} used for function calls.  (The CAR
@@ -467,6 +479,10 @@ documentation references to `expressions' / `language objects' are
 mainly @code{LANGSXP}s, but can be symbols (@code{SYMSXP}s) or
 expression vectors (@code{EXPRSXP}s).
 
+@item DOTSXP
+A special type of @code{LISTSXP} for the value bound to a @code{...}
+symbol: a pairlist of promises.
+
 @item SPECIALSXP
 @itemx BUILTINSXP
 An integer (in the gp field) giving the offset into the table of
@@ -475,36 +491,32 @@ that table for fast access.  This extra information is set up when
 the offset is set with @code{SET_PRIMOFFSET}.
 
 @item CHARSXP
-@code{length}, @code{truelength} followed by a block of bytes (allowing
-for the @code{nul} terminator).
+@code{length} followed by a block of bytes (allowing
+for the @code{nul} terminator).  The @code{gp2} field holds a hash 
+value.
 
 @item LGLSXP
 @itemx INTSXP
-@code{length}, @code{truelength} followed by a block of C @code{int}s
+@code{length} followed by a block of C @code{int}s
 (which are 32 bits on all @R{} platforms).
 
 @item REALSXP
-@code{length}, @code{truelength} followed by a block of C @code{double}s
+@code{length} followed by a block of C @code{double}s
 
 @item CPLXSXP
-@code{length}, @code{truelength} followed by a block of C99 @code{double
+@code{length} followed by a block of C99 @code{double
 complex}s.
 
+@item RAWSXP
+@code{length} followed by a block of bytes.
+
 @item STRSXP
-@code{length}, @code{truelength} followed by a block of pointers
+@code{length} followed by a block of pointers
 (@code{SEXP}s pointing to @code{CHARSXP}s).
-
-@item DOTSXP
-A special type of @code{LISTSXP} for the value bound to a @code{...}
-symbol: a pairlist of promises.
-
-@item ANYSXP
-This is used as a place holder for any type: there are no actual objects
-of this type.
 
 @item VECSXP
 @itemx EXPRSXP
-@code{length}, @code{truelength} followed by a block of pointers.  These
+@code{length} followed by a block of pointers.  These
 are internally identical (and identical to @code{STRSXP}) but differ in
 the interpretations placed on the elements.
 
@@ -518,14 +530,16 @@ which if alive protects this object) and a tag (a @code{SYMSXP}?).
 @item WEAKREFSXP
 A @code{WEAKREFSXP} is a special @code{VECSXP} of length 4, with
 elements @samp{key}, @samp{value}, @samp{finalizer} and @samp{next}.
-The @samp{key} is @code{NULL}, an environment or an external pointer,
-and the @samp{finalizer} is a function or @code{NULL}.
-
-@item RAWSXP
-@code{length}, @code{truelength} followed by a block of bytes.
+The @samp{key} is @code{R_NilValue}, an environment or an external pointer,
+and the @samp{finalizer} is a function or @code{R_NilValue}.
 
 @item S4SXP
 two unused pointers and a tag.
+
+@item ANYSXP
+This is used as a place holder for any type: there are no actual objects
+of this type.
+
 @end table
 
 @node Allocation classes,  , The 'data', SEXPs
@@ -660,7 +674,7 @@ table.
 Environments in @R{} usually have a hash table, and nowadays that is the
 default in @code{new.env()}.  It is stored as a @code{VECSXP} where
 @code{length} is used for the allocated size of the table and
-@code{truelength} is the number of primary slots in use---the pointer to
+@code{gp2} is the number of primary slots in use---the pointer to
 the @code{VECSXP} is part of the header of a @code{SEXP} of type
 @code{ENVSXP}, and this points to @code{R_NilValue} if the environment
 is not hashed.
@@ -691,7 +705,7 @@ As we have seen, every @code{SEXPREC} has a pointer to the attributes of
 the node (default @code{R_NilValue}).  The attributes can be
 accessed/set by the macros/functions @code{ATTRIB} and
 @code{SET_ATTRIB}, but such direct access is normally only used to check
-if the attributes are @code{NULL} or to reset them.  Otherwise access
+if the attributes are @code{R_NilValue} or to reset them.  Otherwise access
 goes through the functions @code{getAttrib} and @code{setAttrib} which
 impose restrictions on the attributes.  One thing to watch is that if
 you copy attributes from one object to another you may (un)set the
@@ -713,7 +727,7 @@ checked, and any @code{"names"} and @code{"dimnames"} attributes are
 removed.  Similarly, you cannot set @code{"dimnames"} without having set
 @code{"dim"}, and the value assigned must be a list of the correct
 length and with elements of the correct lengths (and all zero-length
-elements are replaced by @code{NULL}).
+elements are replaced by @code{R_NilValue}).
 
 The other attributes which are given special treatment are
 @code{"names"}, @code{"class"}, @code{"tsp"}, @code{"comment"} and
@@ -2040,7 +2054,7 @@ accessed directly.  And of course, primitive functions are needed for
 basic operations---for example @code{.Internal} is itself a primitive.
 Note that primitive functions make no use of @R{} code, and hence are
 very different from the usual interpreted functions.  In particular,
-@code{formals} and @code{body} return @code{NULL} for such objects, and
+@code{formals} and @code{body} return @code{R_NilValue} for such objects, and
 argument matching can be handled differently.  For some primitives
 (including @code{call}, @code{switch}, @code{.C} and @code{.subset})
 positional matching is important to avoid partial matching of the first
@@ -2294,7 +2308,7 @@ two environments in the @pkg{base} package (and namespace),
 generics, and @samp{.ArgsEnv} for the rest.  Those environments contain
 closures with the same names as the primitives, formal arguments derived
 (manually) from the help pages, a body which is a suitable call to
-@code{UseMethod} or @code{NULL} and environment the base namespace.
+@code{UseMethod} or @code{R_NilValue} and environment the base namespace.
 
 The C code for @code{print.default} and @code{args} uses the closures in
 these environments in preference to the definitions in base (as
