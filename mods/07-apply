@@ -1,3 +1,0 @@
-Sped up "apply" in the common case where it is applied to a matrix.
-Also clarified the documentation and fixed a bug, as described in
-NEWS.

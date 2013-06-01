@@ -1,4 +1,0 @@
-Changed the ISNAN macro to be faster for many common cases.  This
-change relies on the same result being produced when casting both NaN
-and NA to integer, which is true on systems I've tried (though the
-result for both can differ from system to system).
