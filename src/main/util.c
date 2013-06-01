@@ -441,13 +441,13 @@ void Rf_checkArityCall(SEXP op, SEXP args, SEXP call)
 void attribute_hidden Rf_check1arg(SEXP arg, SEXP call, const char *formal)
 {
     SEXP tag = TAG(arg);
-    const char *supplied;
-    size_t ns;
-    if (tag == R_NilValue) return;
-    supplied = CHAR(PRINTNAME(tag)); ns = strlen(supplied);
-    if (ns > strlen(formal) || strncmp(supplied, formal, ns))
-	errorcall(call, _("supplied argument name '%s' does not match '%s'"),
-		  supplied, formal);
+    if (tag != R_NilValue) {
+        const char *supplied = CHAR(PRINTNAME(tag));
+        if (ep_match_strings(formal,supplied) == 0) /* no exact/partial match */
+            errorcall (call,
+                       _("supplied argument name '%s' does not match '%s'"),
+                       supplied, formal);
+    }
 }
 
 

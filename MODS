@@ -24,7 +24,28 @@ users, such as cleanups of source code.
 
   5)
 
-  6)
+   o New functions are defined for finding exact or partial matches,
+     to replace the existing pmatch, psmatch, and other matching
+     functions (but pmatch and psmatch are retained, in case anyone
+     uses them).  These functions return 0, -1, or +1 for no match,
+     partial match, and exact match, allowing any subset of these
+     conditions to be easily checked for in one comparison.  There is
+     therefore no need for an "exact" argument as in psmatch.  The new
+     functions should usually be faster as well (the old psmatch uses
+     strcmp for exact matches, which might be able to use special
+     machine instructions if they exist, but since most calls will be
+     for short strings, and early failure to match is likely the most
+     common result, this is unlikely to provide a benefit once extra
+     procedure call overhead is accounted for.)
+
+     Versions are provided for matching a string to a string, an SEXP
+     to an SEXP, or a string to an SEXP, called ep_match_strings,
+     ep_match_exprs, and ep_match_string_expr.
+
+     Calls of pmatch are replaced by calls of ep_match_exprs in
+     various places.  The modified versions of matchArgs and in
+     do_subset3 (implementing $), describe elsewhere, also use these
+     new functions.
 
   7)
 

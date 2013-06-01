@@ -23,12 +23,30 @@
  *  along with this program; if not, a copy is available at
  *  http://www.r-project.org/Licenses/
 
-
+ *  ------------------------------------------------------------------------
  *  Matching and Partial Matching for Strings
  *
  *  In theory all string matching code should be placed in this file
  *  At present there are still a couple of rogue matchers about.
  *
+ *  Routines for general partial or exact string matching (R Neal, May 2011):
+ *
+ *  ep_match_strings (const char *f, const char *t)
+ *      Returns 0 if f and t do not match at all, 1 if they match exactly,
+ *      and -1 if t is a prefix of f, but does not match exactly.  Note that 
+ *      the empty string is a prefix of any string.
+ *
+ *  ep_match_exprs (SEXP formal, SEXP tag)
+ *      Like ep_match_strings but for strings specified as SEXPs, which
+ *      may be of type SYMSXP, CHARSXP, or STRSXP (the last translated).
+ *
+ *  ep_match_string_expr (const char *f, SEXP tag)
+ *      Like ep_match_strings but with the second string specified as a SEXP,
+ *      as for ep_match_exprs.
+ *
+ *  psmatch is an old routine, still included in case anyone uses it.
+ *  It is inferior to the new ep_match functions, which return full
+ *  information about exact or partial match at no extra cost.
  *
  *  psmatch(char *, char *, int);
  *
@@ -94,6 +112,92 @@ Rboolean NonNullStringMatch(SEXP s, SEXP t)
 	return TRUE;
     else
 	return FALSE;
+}
+
+/*  Exact or partial string match.  Returns 0 if f and t do not match at all, 
+    1 if they match exactly, and -1 if t is a prefix of f, but does not match 
+    exactly.  Note that the empty string is a prefix of any string. */
+
+int ep_match_strings (const char *f, const char *t)
+{
+    while (*t) {
+        if (*t != *f)
+            return 0;
+        t++;
+        f++;
+    }
+
+    return *f==0 ? 1 : -1;
+}
+
+/*  Exact or partial match for strings given by SEXPs.  Returned value
+    is as for ep_match_strings above. */
+
+int ep_match_exprs (SEXP formal, SEXP tag)
+{
+    const char *f, *t;
+
+    if (formal==tag)
+        return 1;
+
+    switch (TYPEOF(formal)) {
+    case SYMSXP:
+	f = CHAR(PRINTNAME(formal));
+	break;
+    case CHARSXP:
+	f = CHAR(formal);
+	break;
+    case STRSXP:
+	f = translateChar(STRING_ELT(formal, 0));
+	break;
+    default:
+	goto fail;
+    }
+
+    switch(TYPEOF(tag)) {
+    case SYMSXP:
+	t = CHAR(PRINTNAME(tag));
+	break;
+    case CHARSXP:
+	t = CHAR(tag);
+	break;
+    case STRSXP:
+	t = translateChar(STRING_ELT(tag, 0));
+	break;
+    default:
+	goto fail;
+    }
+
+    return ep_match_strings (f, t);
+
+ fail:
+    error(_("invalid partial string match"));
+    return 0;/* for -Wall */
+}
+
+/*  Exact or partial match for strings, with second given by a SEXP.  
+    Returned value is as for ep_match_strings above. */
+
+int ep_match_string_expr (const char *f, SEXP tag)
+{
+    const char *t;
+
+    switch(TYPEOF(tag)) {
+    case SYMSXP:
+	t = CHAR(PRINTNAME(tag));
+	break;
+    case CHARSXP:
+	t = CHAR(tag);
+	break;
+    case STRSXP:
+	t = translateChar(STRING_ELT(tag, 0));
+	break;
+    default:
+        error(_("invalid partial string match"));
+        return 0;/* for -Wall */
+    }
+
+    return ep_match_strings (f, t);
 }
 
 /* currently unused outside this file */

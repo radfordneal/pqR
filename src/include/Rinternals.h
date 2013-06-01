@@ -608,6 +608,9 @@ SEXP Rf_dimnamesgets(SEXP, SEXP);
 SEXP Rf_DropDims(SEXP);
 SEXP Rf_duplicate(SEXP);
 SEXP Rf_duplicated(SEXP, Rboolean);
+int Rf_ep_match_strings(const char *, const char *);
+int Rf_ep_match_exprs(SEXP, SEXP);
+int Rf_ep_match_string_expr(const char *, SEXP);
 SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_findFun(SEXP, SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
@@ -901,6 +904,9 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define duplicate		Rf_duplicate
 #define duplicated		Rf_duplicated
 #define elt			Rf_elt
+#define ep_match_strings	Rf_ep_match_strings
+#define ep_match_exprs		Rf_ep_match_exprs
+#define ep_match_string_expr	Rf_ep_match_string_expr
 #define errorcall		Rf_errorcall
 #define eval			Rf_eval
 #define findFun			Rf_findFun
