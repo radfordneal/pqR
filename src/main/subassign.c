@@ -981,7 +981,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     int **subs, *indx, *bound, *offset;
     SEXP dims, tmp;
     double ry;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
 
     PROTECT(dims = getAttrib(x, R_DimSymbol));
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
@@ -1165,7 +1165,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
     }
     UNPROTECT(3);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return x;
 }
 
@@ -1244,7 +1244,7 @@ static SEXP listRemove(SEXP x, SEXP s, int ind)
     int i, ii, *indx, ns, nx, stretch=0;
     const void *vmax;
 
-    vmax = vmaxget();
+    vmax = VMAXGET();
     nx = length(x);
     PROTECT(s = GetOneIndex(s, ind));
     PROTECT(s = makeSubscript(x, s, &stretch, R_NilValue));
@@ -1276,7 +1276,7 @@ static SEXP listRemove(SEXP x, SEXP s, int ind)
     SET_OBJECT(CDR(a), OBJECT(x));
     SET_NAMED(CDR(a), NAMED(x));
     UNPROTECT(3);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return CDR(a);
 }
 

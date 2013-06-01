@@ -719,7 +719,7 @@ void Rcons_vprintf(const char *format, va_list arg)
 {
     char buf[R_BUFSIZE], *p = buf;
     int res;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     int usedRalloc = FALSE, usedVasprintf = FALSE;
     va_list aq;
 
@@ -751,7 +751,7 @@ void Rcons_vprintf(const char *format, va_list arg)
     }
 #endif /* HAVE_VASPRINTF */
     R_WriteConsole(p, strlen(p));
-    if(usedRalloc) vmaxset(vmax);
+    if(usedRalloc) VMAXSET(vmax);
     if(usedVasprintf) free(p);
 }
 

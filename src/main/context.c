@@ -170,7 +170,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 {
     R_PPStackTop = cptr->cstacktop;
     R_EvalDepth = cptr->evaldepth;
-    vmaxset(cptr->vmax);
+    VMAXSET(cptr->vmax);
     R_interrupts_suspended = cptr->intsusp;
     R_HandlerStack = cptr->handlerstack;
     R_RestartStack = cptr->restartstack;
@@ -231,7 +231,7 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->cstacktop = R_PPStackTop;       /*   since that may be faster   */
     cptr->evaldepth = R_EvalDepth;
     cptr->callfun = callfun;
-    cptr->vmax = vmaxget();
+    cptr->vmax = VMAXGET();
     cptr->intsusp = R_interrupts_suspended;
     cptr->callflag = flags;
     cptr->handlerstack = R_HandlerStack;

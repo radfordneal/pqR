@@ -322,7 +322,7 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     char buf[BUFSIZE], *b = buf;
     int res;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     int usedRalloc = FALSE, usedVasprintf = FALSE;
     va_list aq;
 
@@ -382,7 +382,7 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 				       zero-length input */
     } else
 	con->write(b, 1, res, con);
-    if(usedRalloc) vmaxset(vmax);
+    if(usedRalloc) VMAXSET(vmax);
     if(usedVasprintf) free(b);
     return res;
 }
@@ -2623,7 +2623,7 @@ static int text_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     Routtextconn this = con->private;
     char buf[BUFSIZE], *b = buf, *p, *q;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     int res = 0, usedRalloc = FALSE, buffree,
 	already = strlen(this->lastline);
     SEXP tmp;
@@ -2703,7 +2703,7 @@ static int text_vfprintf(Rconnection con, const char *format, va_list ap)
 	    break;
 	}
     }
-    if(usedRalloc) vmaxset(vmax);
+    if(usedRalloc) VMAXSET(vmax);
     return res;
 }
 
@@ -4030,7 +4030,7 @@ readFixedString(Rconnection con, int len, int useBytes)
     SEXP ans;
     char *buf;
     int  m;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
 
     if(utf8locale && !useBytes) {
 	int i, clen;
@@ -4061,7 +4061,7 @@ readFixedString(Rconnection con, int len, int useBytes)
     /* String may contain nuls which we now (R >= 2.8.0) assume to be
        padding and ignore silently */
     ans = mkChar(buf);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return ans;
 }
 
@@ -4070,7 +4070,7 @@ rawFixedString(Rbyte *bytes, int len, int nbytes, int *np, int useBytes)
 {
     char *buf;
     SEXP res;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
 
     if(*np + len > nbytes) {
 	len = nbytes - *np;
@@ -4103,7 +4103,7 @@ rawFixedString(Rbyte *bytes, int len, int nbytes, int *np, int useBytes)
 	res = mkCharLenCE(buf, len, CE_NATIVE);
 	Free(buf);
     }
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return res;
 }
 

@@ -2793,7 +2793,7 @@ void GPolygon(int n, double *x, double *y, int coords,
     int i;
     double *xx;
     double *yy;
-    const void *vmaxsave = vmaxget();
+    const void *vmaxsave = VMAXGET();
     R_GE_gcontext gc; gcontextFromGP(&gc, dd);
 
     if (gpptr(dd)->lty == LTY_BLANK)
@@ -2819,7 +2819,7 @@ void GPolygon(int n, double *x, double *y, int coords,
     gc.col = fg;
     gc.fill = bg;
     GEPolygon(n, xx, yy, &gc, dd);
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
 }
 
 #include <stdio.h>
@@ -2832,7 +2832,7 @@ void GPolyline(int n, double *x, double *y, int coords, pGEDevDesc dd)
     int i;
     double *xx;
     double *yy;
-    const void *vmaxsave = vmaxget();
+    const void *vmaxsave = VMAXGET();
     R_GE_gcontext gc; gcontextFromGP(&gc, dd);
 
     /*
@@ -2853,7 +2853,7 @@ void GPolyline(int n, double *x, double *y, int coords, pGEDevDesc dd)
      */
     GClip(dd);
     GEPolyline(n, xx, yy, &gc, dd);
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
 }
 
 

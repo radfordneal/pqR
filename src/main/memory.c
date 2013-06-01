@@ -30,8 +30,8 @@
  *      with two or three generations.
  *
  *	Memory allocated by R_alloc is maintained in a stack.  Code
- *	that R_allocs memory must use vmaxget and vmaxset to obtain
- *	and reset the stack pointer.
+ *	that R_allocs memory must use vmaxget/VMAXGET and vmaxset/VMAXSET 
+ *	to obtain and reset the stack pointer.
  */
 
 #define USE_RINTERNALS
@@ -384,7 +384,6 @@ void R_SetPPSize(R_size_t size)
 
 /* Miscellaneous Globals. */
 
-static SEXP R_VStack = NULL;		/* R_alloc stack pointer */
 static SEXP R_PreciousList = NULL;      /* List of Persistent Objects */
 static R_size_t R_LargeVallocSize = 0;
 static R_size_t R_SmallVallocSize = 0;
@@ -1966,15 +1965,15 @@ void attribute_hidden InitMemory()
 /* Since memory allocated from the heap is non-moving, R_alloc just
    allocates off the heap as RAWSXP/REALSXP and maintains the stack of
    allocations through the ATTRIB pointer.  The stack pointer R_VStack
-   is traced by the collector. */
+   is traced by the collector.  Defined using the fast macros in Defn.h */
 void *vmaxget(void)
 {
-    return (void *) R_VStack;
+    return VMAXGET();
 }
 
 void vmaxset(const void *ovmax)
 {
-    R_VStack = (SEXP) ovmax;
+    VMAXSET(ovmax);
 }
 
 char *R_alloc(size_t nelem, int eltsize)

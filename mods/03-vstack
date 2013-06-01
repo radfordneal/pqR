@@ -1,0 +1,2 @@
+Many calls of vmaxget and vmaxset are replaced by macros VMAXGET and
+VMAXSET that do the same thing faster.

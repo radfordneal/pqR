@@ -197,7 +197,7 @@ int attribute_hidden R_TextBufferInit(TextBuffer *txtb, SEXP text)
 		    l = k;
 	    }
 	}
-	txtb->vmax = vmaxget();
+	txtb->vmax = VMAXGET();
 	txtb->buf = (unsigned char *)R_alloc(l+2, sizeof(char)); /* '\n' and '\0' */
 	txtb->bufp = txtb->buf;
 	txtb->text = text;
@@ -209,7 +209,7 @@ int attribute_hidden R_TextBufferInit(TextBuffer *txtb, SEXP text)
 	return 1;
     }
     else {
-	txtb->vmax = vmaxget();
+	txtb->vmax = VMAXGET();
 	txtb->buf = NULL;
 	txtb->bufp = NULL;
 	txtb->text = R_NilValue;
@@ -223,7 +223,7 @@ int attribute_hidden R_TextBufferInit(TextBuffer *txtb, SEXP text)
 
 int attribute_hidden R_TextBufferFree(TextBuffer *txtb)
 {
-    vmaxset(txtb->vmax);
+    VMAXSET(txtb->vmax);
     return 0;/* not used */
 }
 

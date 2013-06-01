@@ -190,7 +190,7 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("'pattern' must be a non-empty character string"));
 
     /* wtransChar and translateChar can R_alloc */
-    vmax = vmaxget();
+    vmax = VMAXGET();
     if(useBytes)
 	rc = tre_regcompb(&reg, CHAR(STRING_ELT(pat, 0)), cflags);
     else if(useWC)
@@ -231,13 +231,13 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 	    rc = tre_regawexec(&reg,
 			       wtransChar(STRING_ELT(vec, i)), 
 			       &match, params, 0);
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	} else {
 	    const char *s = translateChar(STRING_ELT(vec, i));
 	    if(mbcslocale && !mbcsValid(s))
 		error(_("input string %d is invalid in this locale"), i+1);
 	    rc = tre_regaexec(&reg, s, &match, params, 0);
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
 	if(rc == REG_OK) {
 	    LOGICAL(ind)[i] = 1;
@@ -575,7 +575,7 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     /* wtransChar and translateChar can R_alloc */
-    vmax = vmaxget();
+    vmax = VMAXGET();
     for(i = 0; i < nx; i++) {
 	elt = STRING_ELT(x, i);
 	if(elt == NA_STRING) {
@@ -594,7 +594,7 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 		rc = tre_regcompb(&reg, CHAR(elt), cflags);
 	    else if(useWC) {
 		rc = tre_regwcomp(&reg, wtransChar(elt), cflags);
-		vmaxset(vmax);
+		VMAXSET(vmax);
 	    } else {
 		s = translateChar(elt);
 		if(mbcslocale && !mbcsValid(s)) {
@@ -602,7 +602,7 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 			  i + 1);
 		}
 		rc = tre_regcomp(&reg, s, cflags);
-		vmaxset(vmax);
+		VMAXSET(vmax);
 	    }
 	    if(rc) {
 		char errbuf[1001];
@@ -640,7 +640,7 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 		    else if(useWC) {
 			rc = tre_regawexec(&reg, wtransChar(elt), 
 					   &match, params, 0);
-			vmaxset(vmax);
+			VMAXSET(vmax);
 		    } else {
 			t = translateChar(elt);
 			if(mbcslocale && !mbcsValid(t)) {
@@ -649,7 +649,7 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 			}
 			rc = tre_regaexec(&reg, t,
 					  &match, params, 0);
-			vmaxset(vmax);
+			VMAXSET(vmax);
 		    }
 		    if(rc == REG_OK) {
 			ANS(i, j) = (double) match.cost;
@@ -837,7 +837,7 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 	    SET_VECTOR_ELT(ans, i, matchpos);
 	    UNPROTECT(1);
 	} else {
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    /* Perform match. */
 	    memset(&match, 0, sizeof(match));
 	    match.nmatch = nmatch;
@@ -848,7 +848,7 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 	    else if(useWC) {
 		rc = tre_regawexec(&reg, wtransChar(STRING_ELT(vec, i)),
 				   &match, params, 0);
-		vmaxset(vmax);
+		VMAXSET(vmax);
 	    }
 	    else {
 		t = translateChar(STRING_ELT(vec, i));
@@ -857,7 +857,7 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 			  i + 1);
 		rc = tre_regaexec(&reg, t,
 				  &match, params, 0);
-		vmaxset(vmax);		
+		VMAXSET(vmax);		
 	    }
 	    if(rc == REG_OK) {
 		PROTECT(matchpos = allocVector(INTSXP, nmatch));

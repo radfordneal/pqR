@@ -276,7 +276,7 @@ SEXP deparse1line(SEXP call, Rboolean abbrev)
 	    if (thisenc != CE_NATIVE) 
 	    	enc = thisenc; /* assume only one non-native encoding */ 
 	}    
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	buf = R_alloc((size_t) len+lines, sizeof(char));
 	*buf = '\0';
 	for (i = 0; i < length(temp); i++) {
@@ -285,7 +285,7 @@ SEXP deparse1line(SEXP call, Rboolean abbrev)
 	    	strcat(buf, "\n");
 	}
 	temp = ScalarString(mkCharCE(buf, enc));
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }		
     UNPROTECT(1);	
     return(temp);

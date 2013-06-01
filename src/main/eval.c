@@ -484,7 +484,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	}
 	if (TYPEOF(op) == SPECIALSXP) {
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
-	    const void *vmax = vmaxget();
+	    const void *vmax = VMAXGET();
 	    PROTECT(CDR(e));
 	    R_Visible = flag != 1;
             tmp = CALL_PRIMFUN(e, op, CDR(e), rho, variant);
@@ -500,11 +500,11 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	    if (flag < 2) R_Visible = flag != 1;
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
-	    const void *vmax = vmaxget();
+	    const void *vmax = VMAXGET();
 	    RCNTXT cntxt;
 	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
 	    if (flag < 2) R_Visible = flag != 1;
@@ -527,7 +527,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	    if (flag < 2) R_Visible = flag != 1;
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
@@ -4511,14 +4511,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP call = VECTOR_ELT(constants, GETOP());
 	SEXP args = GETSTACK(-2);
 	int flag;
-	const void *vmax = vmaxget();
+	const void *vmax = VMAXGET();
 	if (TYPEOF(fun) != BUILTINSXP)
 	  error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
         value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
+	VMAXSET(vmax);
 	R_BCNodeStackTop -= 2;
 	SETSTACK(-1, value);
 	NEXT();
@@ -4529,7 +4529,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = CAR(call);
 	SEXP fun = getPrimitive(symbol, SPECIALSXP);
 	int flag;
-	const void *vmax = vmaxget();
+	const void *vmax = VMAXGET();
 	if (RTRACE(fun)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
@@ -4539,7 +4539,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	R_Visible = flag != 1;
         value = CALL_PRIMFUN(call, fun, CDR(call), rho, 0);
 	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
+	VMAXSET(vmax);
 	SETSTACK(-1, value); /* replaces fun on stack */
 	NEXT();
       }

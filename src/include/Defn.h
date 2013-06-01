@@ -671,6 +671,8 @@ extern0 Rboolean R_Visible;	    /* Value visibility flag */
 LibExtern int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 
+extern0 SEXP    R_VStack        INI_as(NULL);   /* R_alloc stack pointer */
+
 extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
 extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
@@ -1300,6 +1302,12 @@ extern char *locale2charset(const char *);
     if (R_interrupts_pending && ! R_interrupts_suspended) \
         onintr(); \
 } while(0)
+
+
+/* Macros for fast vmaxget and vmaxset */
+
+#define VMAXGET() ((void *) R_VStack)
+#define VMAXSET(ovmax) (R_VStack = (SEXP) (ovmax))
 
 
 #ifdef __GNUC__
