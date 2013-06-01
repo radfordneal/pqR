@@ -51,7 +51,10 @@ users, such as cleanups of source code.
 
  25)
 
- 26)
+   o Rinternals.h now has a #define for R_OMP_FIRSTPRIVATE_VARS, which 
+     contains a comma-separated list of variables that should usually
+     be included in the firstprivate part of an OMP parallel construction,
+     since they are used in macros such as NA_REAL.
 
  27)
 

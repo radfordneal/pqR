@@ -1,0 +1,7 @@
+Rinternals.h now has a #define for R_OMP_FIRSTPRIVATE_VARS, which
+contains a comma-separated list of variables that should usually be
+included in the firstprivate part of an OMP parallel construction,
+since they are used in macros such as NA_REAL.
+
+The only use of this in the interpreter itself gets deleted by a later
+mod, but this mod is retained anyway...

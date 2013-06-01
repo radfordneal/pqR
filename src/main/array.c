@@ -1261,8 +1261,8 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    nthreads = 1; /* for now */
 #pragma omp parallel for num_threads(nthreads) default(none) \
     private(j, i, ix, rx) \
-    firstprivate(x, ans, n, p, type, cnt, sum, \
-		 NaRm, keepNA, R_NaReal, R_NaInt, OP)
+    firstprivate(R_OMP_FIRSTPRIVATE_VARS, \
+                 x, ans, n, p, type, cnt, sum, NaRm, keepNA, OP)
 #endif
 	for (j = 0; j < p; j++) {
 	    switch (type) {
