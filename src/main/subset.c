@@ -1001,70 +1001,57 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-
-enum pmatch {
-    NO_MATCH,
-    EXACT_MATCH,
-    PARTIAL_MATCH
-};
-
-/* A helper to partially match tags against a candidate.
-   Tags are always in the native charset.
- */
-/* Returns: */
-static
-enum pmatch
-pstrmatch(SEXP target, SEXP input, int slen)
-{
-    const char *st = "";
-
-    if(target == R_NilValue)
-	return NO_MATCH;
-
-    switch (TYPEOF(target)) {
-    case SYMSXP:
-	st = CHAR(PRINTNAME(target));
-	break;
-    case CHARSXP:
-	st = translateChar(target);
-	break;
-    }
-    if(strncmp(st, translateChar(input), slen) == 0)
-	return (strlen(st) == slen) ?  EXACT_MATCH : PARTIAL_MATCH;
-    else return NO_MATCH;
-}
-
-
 /* The $ subset operator.
    We need to be sure to only evaluate the first argument.
    The second will be a symbol that needs to be matched, not evaluated.
 */
 SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP input, nlist, ans;
+    SEXP from, what, ans, input;
+
+    SEXP string = R_NilValue;
+    SEXP name = R_NilValue;
+    int argsevald = 0;
 
     checkArity(op, args);
+    from = CAR(args);
+    what = CADR(args);
+
+    if (isSymbol(what))
+        name = what;
+    else if (isString(what)) 
+        string = STRING_ELT(what,0);
+    else
+	errorcall(call, _("invalid subscript type '%s'"), 
+                        type2char(TYPEOF(what)));
+
+    /* Handle usual case with no "..." and not from an object quickly, without
+       overhead of allocation and calling of DispatchOrEval. */
+
+    if (from != R_DotsSymbol) {
+        from = eval (from, env);
+        if (isObject(from)) {
+            PROTECT(from);
+            argsevald = 1;
+        } else 
+            return R_subset3_dflt (from, string, name, call);
+    }
 
     /* first translate CADR of args into a string so that we can
        pass it down to DispatchorEval and have it behave correctly */
     PROTECT(input = allocVector(STRSXP, 1));
 
-    nlist = CADR(args);
-    if(isSymbol(nlist) )
-	SET_STRING_ELT(input, 0, PRINTNAME(nlist));
-    else if(isString(nlist) )
-	SET_STRING_ELT(input, 0, STRING_ELT(nlist, 0));
-    else {
-	errorcall(call,_("invalid subscript type '%s'"),
-		  type2char(TYPEOF(nlist)));
-    }
+    if (name!=R_NilValue)
+	SET_STRING_ELT(input, 0, PRINTNAME(name));
+    else
+	SET_STRING_ELT(input, 0, string);
 
     /* replace the second argument with a string */
 
     /* Previously this was SETCADR(args, input); */
     /* which could cause problems when nlist was */
     /* ..., as in PR#8718 */
-    PROTECT(args = CONS(CAR(args), CONS(input, R_NilValue)));
+    PROTECT(args = CONS(from, CONS(input, R_NilValue)));
 
     /* If the first argument is an object and there is */
     /* an approriate method, we dispatch to that method, */
@@ -1072,31 +1059,31 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     /* through to the generic code below.  Note that */
     /* evaluation retains any missing argument indicators. */
 
-    if(DispatchOrEval(call, op, "$", args, env, &ans, 0, 0)) {
-	UNPROTECT(2);
+    if(DispatchOrEval(call, op, "$", args, env, &ans, 0, argsevald)) {
+        UNPROTECT(2+argsevald);
 	if (NAMED(ans))
 	    SET_NAMED(ans, 2);
 	return(ans);
     }
 
-    UNPROTECT(2);
-    return R_subset3_dflt(CAR(ans), STRING_ELT(input, 0), call);
+    UNPROTECT(2+argsevald);
+    return R_subset3_dflt(CAR(ans), string, name, call);
 }
 
-/* used in eval.c */
-SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
+/* Used above and in eval.c.  The field to extract is specified by either the
+   "input" argument or the "name" argument, or both. */
+
+SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 {
-    SEXP y, nlist;
-    int slen;
+    const char *cinp, *ctarg;
+    int mtch;
+    SEXP y;
 
-    PROTECT(x);
-    PROTECT(input);
-
-    /* Optimisation to prevent repeated recalculation */
-    slen = strlen(translateChar(input));
      /* The mechanism to allow  a class extending "environment" */
     if( IS_S4_OBJECT(x) && TYPEOF(x) == S4SXP ){
+        PROTECT(x);
         x = R_getS4DataSlot(x, ANYSXP);
+        UNPROTECT(1);
 	if(x == R_NilValue)
 	    errorcall(call, "$ operator not defined for this S4 class");
     }
@@ -1107,37 +1094,36 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
     if (isPairList(x)) {
 	SEXP xmatch = R_NilValue;
 	int havematch;
-	UNPROTECT(2);
+        if (name!=R_NilValue) {
+            /* Quick check for exact match by name */
+            for (y = x; y != R_NilValue; y = CDR(y))
+                if (TAG(y)==name) {
+                    y = CAR(y);
+                    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
+    	            return y;
+                }
+        }
+        cinp = input==R_NilValue ? CHAR(PRINTNAME(name)) : translateChar(input);
 	havematch = 0;
 	for (y = x ; y != R_NilValue ; y = CDR(y)) {
-	    switch(pstrmatch(TAG(y), input, slen)) {
-	    case EXACT_MATCH:
+            ctarg = CHAR(PRINTNAME(TAG(y)));
+	    mtch = ep_match_strings(ctarg, cinp);
+	    if (mtch>0) /* exact */ {
 		y = CAR(y);
 		if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
 		return y;
-	    case PARTIAL_MATCH:
+            }
+            else if (mtch<0) /* partial */ {
 		havematch++;
 		xmatch = y;
-		break;
-	    case NO_MATCH:
-		break;
-	    }
+            }
 	}
 	if (havematch == 1) { /* unique partial match */
 	    if(R_warn_partial_match_dollar) {
-		const char *st = "";
-		SEXP target = TAG(y);
-		switch (TYPEOF(target)) {
-		case SYMSXP:
-		    st = CHAR(PRINTNAME(target));
-		    break;
-		case CHARSXP:
-		    st = translateChar(target);
-		    break;
-		}
+                ctarg = CHAR(PRINTNAME(TAG(xmatch)));
 		warningcall(call, _("partial match of '%s' to '%s'"),
-			    translateChar(input), st);
-	    }
+			    cinp, ctarg);
+            }
 	    y = CAR(xmatch);
 	    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
 	    return y;
@@ -1146,18 +1132,23 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
     }
     else if (isVectorList(x)) {
 	int i, n, havematch, imatch=-1;
-	nlist = getAttrib(x, R_NamesSymbol);
-	UNPROTECT(2);
+        SEXP str_elt;
+        SEXP nlist = getAttrib(x, R_NamesSymbol);
+        cinp = input==R_NilValue ? CHAR(PRINTNAME(name)) : translateChar(input);
 	n = length(nlist);
 	havematch = 0;
 	for (i = 0 ; i < n ; i = i + 1) {
-	    switch(pstrmatch(STRING_ELT(nlist, i), input, slen)) {
-	    case EXACT_MATCH:
+            str_elt = STRING_ELT (nlist, i);
+            ctarg = TYPEOF(str_elt)==CHARSXP ? translateChar(str_elt)/*always?*/
+                                             : CHAR(PRINTNAME(str_elt));
+	    mtch = ep_match_strings(ctarg, cinp);
+            if (mtch>0) /* exact */ {
 		y = VECTOR_ELT(x, i);
 		if (NAMED(x) > NAMED(y))
 		    SET_NAMED(y, NAMED(x));
 		return y;
-	    case PARTIAL_MATCH:
+            }
+	    else if (mtch<0) /* partial */ {
 		havematch++;
 		if (havematch == 1) {
 		    /* partial matches can cause aliasing in eval.c:evalseq
@@ -1168,25 +1159,15 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 		    SET_VECTOR_ELT(x,i,y);
 		}
 		imatch = i;
-		break;
-	    case NO_MATCH:
-		break;
 	    }
 	}
 	if(havematch == 1) { /* unique partial match */
 	    if(R_warn_partial_match_dollar) {
-		const char *st = "";
-		SEXP target = STRING_ELT(nlist, imatch);
-		switch (TYPEOF(target)) {
-		case SYMSXP:
-		    st = CHAR(PRINTNAME(target));
-		    break;
-		case CHARSXP:
-		    st = translateChar(target);
-		    break;
-		}
+                str_elt = STRING_ELT (nlist, imatch);
+                ctarg = TYPEOF(str_elt)==CHARSXP ? translateChar(str_elt)
+                                                 : CHAR(PRINTNAME(str_elt));
 		warningcall(call, _("partial match of '%s' to '%s'"),
-			    translateChar(input), st);
+			    cinp, ctarg);
 	    }
 	    y = VECTOR_ELT(x, imatch);
 	    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
@@ -1195,27 +1176,24 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	return R_NilValue;
     }
     else if( isEnvironment(x) ){
-	y = findVarInFrame(x, install(translateChar(input)));
+        if (name==R_NilValue) 
+            name = install(translateChar(input));
+	y = findVarInFrame (x, name);
 	if( TYPEOF(y) == PROMSXP ) {
 	    PROTECT(y);
 	    y = eval(y, R_GlobalEnv);
 	    UNPROTECT(1);
 	}
-	UNPROTECT(2);
-	if( y != R_UnboundValue ) {
-	    if (NAMED(y))
-		SET_NAMED(y, 2);
-	    else if (NAMED(x) > NAMED(y))
-		SET_NAMED(y, NAMED(x));
-	    return(y);
-	}
-      return R_NilValue;
+        if (y == R_UnboundValue)
+            return R_NilValue;
+        SET_NAMED(y,2);  /* Likely overkill, but 2.13.0 does the equivalent */
+        return y;
     }
     else if( isVectorAtomic(x) ){
 	errorcall(call, "$ operator is invalid for atomic vectors");
     }
     else /* e.g. a function */
 	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
-    UNPROTECT(2);
+
     return R_NilValue;
 }
