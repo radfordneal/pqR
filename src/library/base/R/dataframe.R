@@ -1,5 +1,6 @@
 #  File src/library/base/R/dataframe.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -236,29 +237,34 @@ as.data.frame.matrix <- function(x, row.names = NULL, optional = FALSE, ...,
                                  stringsAsFactors = default.stringsAsFactors())
 {
     d <- dim(x)
-    nrows <- d[1L]; ir <- seq_len(nrows)
-    ncols <- d[2L]; ic <- seq_len(ncols)
+    nrows <- d[1L];
+    ncols <- d[2L];
     dn <- dimnames(x)
-    ## surely it cannot be right to override the supplied row.names?
-    ## changed in 1.8.0
-    if(is.null(row.names)) row.names <- dn[[1L]]
-    collabs <- dn[[2L]]
-    if(any(empty <- !nzchar(collabs)))
-	collabs[empty] <- paste0("V", ic)[empty]
+
+    if (is.null(row.names)) row.names <- dn[[1L]]
+
     value <- vector("list", ncols)
-    if(mode(x) == "character" && stringsAsFactors) {
-	for(i in ic)
+    if (mode(x) == "character" && stringsAsFactors) {
+	for (i in seq_len(ncols))
 	    value[[i]] <- as.factor(x[,i])
-    } else {
-	for(i in ic)
+    } 
+    else {
+	for (i in seq_len(ncols))
 	    value[[i]] <- as.vector(x[,i])
     }
-    if(length(row.names) != nrows)
+
+    if (length(row.names) != nrows)
 	row.names <- .set_row_names(nrows)
-    if(length(collabs) == ncols)
-	names(value) <- collabs
-    else if(!optional)
-	names(value) <- paste0("V", ic)
+
+    collabs <- dn[[2L]]
+    if (length(collabs) == ncols) {
+        if (! all (nz <- nzchar(collabs)))
+            collabs[!nz] <- paste0("V", seq_len(ncols)[!nz])
+        names(value) <- collabs
+    }
+    else if (!optional)
+	names(value) <- paste0("V", seq_len(ncols))
+
     attr(value, "row.names") <- row.names
     class(value) <- "data.frame"
     value
