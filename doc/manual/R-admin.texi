@@ -3492,6 +3492,10 @@ option.  Disabling support for helper threads will produce a small
 speed improvement, compared to running @pqR{} with helper thread
 support enabled, but with no helper threads.
 
+If the BLAS routines used for matrix multiplication are not thread-safe,
+the @code{--disable-mat-multi-with-BLAS-in-helpers} option should be
+used, to prevent tasks that call the BLAS from being run in helper threads.
+
 
 @node Internationalization support, Configuration variables, Helper threads, Configuration on a Unix-alike
 @section Internationalization support

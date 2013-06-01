@@ -11,12 +11,12 @@ R_HOME = $(top_builddir)
 
 include $(top_builddir)/Makeconf
 
-MATPROD_CPPFLAGS = -I$(srcdir)
+MATPROD_CPPFLAGS = -I$(srcdir) -I$(srcdir)/../helpers
 ALL_CPPFLAGS = $(MATPROD_CPPFLAGS) $(R_XTRA_CPPFLAGS) $(CPPFLAGS) $(DEFS)
 
-SOURCES = matprod.c
+SOURCES = matprod.c piped-matprod.c
 
-HEADERS = matprod.h
+HEADERS = matprod.h piped-matprod.h
 
 DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)
