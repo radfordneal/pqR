@@ -1256,43 +1256,56 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* colSums(x, n, p, na.rm) and also the same with "row" and/or "Means". */
 
-static SEXP colSums (SEXP x, int OP, int n, int p, int keepNA)
+void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 {
-    SEXP ans;
-    long double sum;
-    int cnt;
-    int i, j;
+    int keepNA = op&1;        /* Don't skip NA/NaN elements? */
+    int Means = op&2;         /* Find means rather than sums? */
+    unsigned n = op>>3;       /* Number of rows in matrix */
+    unsigned p = LENGTH(ans); /* Number of columns in matrix */
+    double *a = REAL(ans);    /* Pointer to start of result vector */
+    int np = n*p;             /* Number of elements we need in total */
+    int avail = 0;            /* Number of input elements known to be computed*/
 
-    PROTECT(ans = allocVector(REALSXP, p));
+    int cnt;                  /* # elements not NA/NaN, if Means and !keepNA */
+    int i, j;                 /* Row and column indexes */
+    int k;                    /* Index going sequentially through whole matrix*/
+
+    HELPERS_SETUP_OUT (n>500 ? 3 : n>50 ? 4 : 5);
 
     if (TYPEOF(x) == REALSXP) {
-        double *a;
-        double *rx;
-        a = REAL(ans);
-        rx  = REAL(x);
+        double *rx = REAL(x);
+        long double sum;
+        k = 0;
+        j = 0;
         if (keepNA) {
-            for (j = p; j > 0; j--) {
-                sum = (n & 1) ? *rx++ : 0.0;
+            while (j < p) {
+                if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
+                sum = (n & 1) ? rx[k++] : 0.0;
                 for (i = n - (n & 1); i > 0; i -= 2) { 
-                    sum += *rx++;
-                    sum += *rx++;
+                    sum += rx[k++];
+                    sum += rx[k++];
                 }
-                *a++ = OP==0 ? sum : sum/n;
+                a[j] = !Means ? sum : sum/n;
+                HELPERS_NEXT_OUT (j);
             }
         }
         else { /* ! keepNA */
-            if (OP==0) {
-                for (j = p; j > 0; j--) {
-                    for (sum = 0.0, i = n; i > 0; i--, rx++)
-                        if (!ISNAN(*rx)) sum += *rx;
-                    *a++ = sum;
+            if (!Means) {
+                while (j < p) {
+                    if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
+                    for (sum = 0.0, i = n; i > 0; i--, k++)
+                        if (!ISNAN(rx[k])) sum += rx[k];
+                    a[j] = sum;
+                    HELPERS_NEXT_OUT (j);
                 }
             }
             else {
-                for (j = p; j > 0; j--) {
-                    for (cnt = 0, sum = 0.0, i = n; i > 0; i--, rx++)
-                        if (!ISNAN(*rx)) { cnt += 1; sum += *rx; }
-                    *a++ = sum/cnt;
+                while (j < p) {
+                    if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
+                    for (cnt = 0, sum = 0.0, i = n; i > 0; i--, k++)
+                        if (!ISNAN(rx[k])) { cnt += 1; sum += rx[k]; }
+                    a[j] = sum/cnt;
+                    HELPERS_NEXT_OUT (j);
                 }
             }
         }
@@ -1300,70 +1313,82 @@ static SEXP colSums (SEXP x, int OP, int n, int p, int keepNA)
 
     else {
 
-        long lsum; /* big enough to sum up to 2^32 integers, or 2^63 logicals */
+        int_fast64_t lsum; /* good to sum up to 2^32 integers or 2^63 logicals*/
         int *ix;
 
         switch (TYPEOF(x)) {
         case INTSXP:
-            for (j = 0; j < p; j++) {
-                ix = INTEGER(x) + n*j;
-                for (cnt = 0, lsum = 0, i = 0; i < n; i++, ix++)
-                    if (*ix != NA_INTEGER) {
+            ix = INTEGER(x);
+            k = 0;
+            j = 0;
+            while (j < p) {
+                if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
+                for (cnt = 0, lsum = 0, i = 0; i < n; i++, k++)
+                    if (ix[k] != NA_INTEGER) {
                         cnt += 1; 
-                        lsum += *ix;
+                        lsum += ix[k];
                     }
                     else if (keepNA) {
-                        REAL(ans)[j] = NA_REAL; 
+                        a[j] = NA_REAL;
+                        k += n-i;
                         goto next_int;
                     }
-                REAL(ans)[j] = OP==0 ? lsum : (double)lsum/cnt;
-              next_int: ;
+                a[j] = !Means ? lsum : (double)lsum/cnt;
+              next_int:
+                HELPERS_NEXT_OUT (j);
             }
             break;
         case LGLSXP:
-            for (j = 0; j < p; j++) {
-                ix = LOGICAL(x) + n*j;
-                for (cnt = 0, lsum = 0, i = 0; i < n; i++, ix++)
-                    if (*ix != NA_LOGICAL) {
+            ix = LOGICAL(x);
+            k = 0;
+            j = 0;
+            while (j < p) {
+                if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
+                for (cnt = 0, lsum = 0, i = 0; i < n; i++, k++)
+                    if (ix[k] != NA_LOGICAL) {
                         cnt += 1; 
-                        lsum += *ix;
+                        lsum += ix[k];
                     }
                     else if (keepNA) {
-                        REAL(ans)[j] = NA_REAL; 
+                        a[j] = NA_REAL; 
+                        k += n-i;
                         goto next_logical;
                     }
-                REAL(ans)[j] = OP==0 ? lsum : (double)lsum/cnt;
-              next_logical: ;
+                a[j] = !Means ? lsum : (double)lsum/cnt;
+              next_logical:
+                HELPERS_NEXT_OUT (j);
             }
             break;
         }
     }
-
-    UNPROTECT(1);
-    return ans;
 }
 
-#define rowSums_together 100  /* Sum this number of rows (or fewer) together */
+#define rowSums_together 16   /* Sum this number of rows (or fewer) together */
 
-static SEXP rowSums (SEXP x, int OP, int n, int p, int keepNA)
+void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 {
-    long double sums[rowSums_together];
-    int cnts[rowSums_together];
+    int keepNA = op&1;        /* Don't skip NA/NaN elements? */
+    int Means = op&2;         /* Find means rather than sums? */
+    unsigned p = op>>3;       /* Number of columns in matrix */
+    unsigned n = LENGTH(ans); /* Number of rows in matrix */
+    double *a = REAL(ans);    /* Pointer to result vector, initially the start*/
 
-    SEXP ans;
-    int i, j, k, u;
+    int i, j;                 /* Row and column indexes */
 
-    PROTECT(ans = allocVector(REALSXP, n));
+    HELPERS_SETUP_OUT (p>20 ? 4 : 5);
 
     if (TYPEOF(x) == REALSXP) {
-   
-        for (i = 0; i < n; i += rowSums_together) {
 
-            double *rx, *rx2, *a;
+        i = 0;
+        while (i < n) {
+
+            long double sums[rowSums_together];
+            int cnts[rowSums_together];
+            double *rx, *rx2;
             long double *s;
+            int k, u;
             int *c;
 
-            a = REAL(ans) + i;
             rx = REAL(x) + i;
             u = n - i;
             if (u > rowSums_together) u = rowSums_together;
@@ -1378,11 +1403,13 @@ static SEXP rowSums (SEXP x, int OP, int n, int p, int keepNA)
                     for (k = u, s = sums; k > 0; k--, s++) 
                         *s = 0.0;
                 for (j = p - (p & 1); j > 0; j -= 2) {
-                    for (k = u, s = sums, rx2 = rx; k > 0; k--, s++, rx2++) 
-                        *s = +(*s + *rx2) + *(rx2+n);
+                    for (k = u, s = sums, rx2 = rx; k > 0; k--, s++, rx2++) {
+                        *s += *rx2;
+                        *s += *(rx2+n);
+                    }
                     rx += 2*n;
                 }
-                if (OP==2)
+                if (!Means)
                     for (k = u, s = sums; k > 0; k--, a++, s++) 
                         *a = *s;
                 else
@@ -1391,7 +1418,7 @@ static SEXP rowSums (SEXP x, int OP, int n, int p, int keepNA)
             }
 
             else { /* ! keepNA */
-                if (OP==2) {
+                if (!Means) {
                     s = sums;
                     for (k = u; k > 0; k--, s++) 
                         *s = 0.0; 
@@ -1419,18 +1446,21 @@ static SEXP rowSums (SEXP x, int OP, int n, int p, int keepNA)
                         *a = (*s)/(*c);
                 }
             }
+
+            HELPERS_BLOCK_OUT (i, u);
         }
     }
 
     else {
 
-        long lsum; /* big enough to sum up to 2^32 integers, or 2^63 logicals */
+        int_fast64_t lsum; /* good to sum up to 2^32 integers or 2^63 logicals*/
         int cnt;
         int *ix;
 
         switch (TYPEOF(x)) {
         case INTSXP:
-            for (i = 0; i < n; i++) {
+            i = 0;
+            while (i < n) {
                 ix = INTEGER(x) + i;
                 for (cnt = 0, lsum = 0, j = 0; j < p; j++, ix += n)
                     if (*ix != NA_INTEGER) {
@@ -1438,15 +1468,17 @@ static SEXP rowSums (SEXP x, int OP, int n, int p, int keepNA)
                         lsum += *ix;
                     }
                     else if (keepNA) {
-                        REAL(ans)[i] = NA_REAL; 
+                        a[i] = NA_REAL; 
                         goto next_int;
                     }
-                REAL(ans)[i] = OP==2 ? lsum : (double)lsum/cnt;
-              next_int: ;
+                a[i] = !Means ? lsum : (double)lsum/cnt;
+              next_int:
+                HELPERS_NEXT_OUT (i);
             }
             break;
         case LGLSXP:
-            for (i = 0; i < n; i++) {
+            i = 0;
+            while (i < n) {
                 ix = LOGICAL(x) + i;
                 for (cnt = 0, lsum = 0, j = 0; j < p; j++, ix += n)
                     if (*ix != NA_LOGICAL) {
@@ -1454,38 +1486,45 @@ static SEXP rowSums (SEXP x, int OP, int n, int p, int keepNA)
                         lsum += *ix;
                     }
                     else if (keepNA) {
-                        REAL(ans)[i] = NA_REAL; 
+                        a[i] = NA_REAL; 
                         goto next_logical;
                     }
-                REAL(ans)[i] = OP==2 ? lsum : (double)lsum/cnt;
-              next_logical: ;
+                a[i] = !Means ? lsum : (double)lsum/cnt;
+              next_logical:
+                HELPERS_NEXT_OUT (i);
             }
             break;
         }
     }
-
-    UNPROTECT(1);
-    return ans;
 }
 
-SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
+#define T_colSums THRESHOLD_ADJUST(20)
+#define T_rowSums THRESHOLD_ADJUST(20)
+
+SEXP attribute_hidden do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                 int variant)
 {
-    SEXP x;
+    SEXP arg2, arg3, arg4;
+    SEXP x, ans;
     int OP, n, p;
     Rboolean NaRm;
 
     checkArity(op, args);
+
+    /* we let x be being computed */
     x = CAR(args); args = CDR(args);
-    n = asInteger(CAR(args)); args = CDR(args);
-    p = asInteger(CAR(args)); args = CDR(args);
-    NaRm = asLogical(CAR(args));
+    /* other arguments we wait for */
+    wait_until_arguments_computed(args);
+    n = asInteger(CAR(args));    args = CDR(args);
+    p = asInteger(CAR(args));    args = CDR(args);
+    NaRm = asLogical(CAR(args)); args = CDR(args);
+
     if (n == NA_INTEGER || n < 0)
 	error(_("invalid '%s' argument"), "n");
     if (p == NA_INTEGER || p < 0)
 	error(_("invalid '%s' argument"), "p");
     if (NaRm == NA_LOGICAL) error(_("invalid '%s' argument"), "na.rm");
 
-    OP = PRIMVAL(op);
     switch (TYPEOF(x)) {
     case LGLSXP: break;
     case INTSXP: break;
@@ -1494,8 +1533,24 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("'x' must be numeric"));
     }
 
-    if (OP == 0 || OP == 1) 
-        return colSums (x, OP, n, p, !NaRm); /* colSums (0) and colMeans (1)*/
-    else
-        return rowSums (x, OP, n, p, !NaRm); /* rowSums (2) and rowMeans (3)*/
+    if ((double)n*p > LENGTH(x))
+	error(_("invalid '%s' argument"), "n*p");
+
+    OP = PRIMVAL(op);
+
+    if (OP < 2) { /* columns */
+        ans = allocVector (REALSXP, p);
+        DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_colSums,
+          HELPERS_PIPE_IN1_OUT, task_colSums_or_colMeans, 
+          ((helpers_op_t)n<<3) | (OP<<1) | !NaRm, ans, x);
+    }
+
+    else { /* rows */
+        ans = allocVector (REALSXP, n);
+        DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_rowSums,
+          HELPERS_PIPE_OUT, task_rowSums_or_rowMeans, 
+          ((helpers_op_t)p<<3) | (OP<<1) | !NaRm, ans, x);
+    }
+
+    return ans;
 }

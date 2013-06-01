@@ -1,0 +1,4 @@
+Changed (row/col)(Sums/Means) to use task procedures that can be done
+in a helper thread.  Also makes other tweaks.
+
+Fixed lack of error check for .rowMeans, etc. (see NEWS).

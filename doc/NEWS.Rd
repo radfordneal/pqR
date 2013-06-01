@@ -470,7 +470,8 @@
       \item Fixed gc.time, which was producing grossly incorrect values
             for user and system time.
       \item **22
-      \item **23
+      \item Now check for bad arguments for .rowSums, .colSums, .rowMeans,
+            and .rowMeans (would previously segfault if n*p too big).
       \item **24
       \item Fixed a bug where excess warning messages may be produced
             on conversion to RAW.  For instance:

@@ -37,6 +37,8 @@ char *Rf_task_name (helpers_task_proc *task)
 
     TASK_NAME(row_or_col);
     /* a */
+    TASK_NAME(rowSums_or_rowMeans);
+    TASK_NAME(colSums_or_colMeans);
     /* b */
     /* c */
     /* d */
