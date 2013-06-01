@@ -476,15 +476,16 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
 	val = complex_binary(oper, x, y);
     }
     else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
-	if(!(TYPEOF(x) == INTSXP || TYPEOF(y) == INTSXP
-	     /* || TYPEOF(x) == LGLSXP || TYPEOF(y) == LGLSXP*/)) {
-	    /* Can get a LGLSXP. In base-Ex.R on 24 Oct '06, got 8 of these. */
-	    COERCE_IF_NEEDED(x, REALSXP, xpi);
-	    COERCE_IF_NEEDED(y, REALSXP, ypi);
-	}
+         /* real_binary can handle REAL and INT, but not LOGICAL, operands */
+        if (TYPEOF(x) != INTSXP) COERCE_IF_NEEDED(x, REALSXP, xpi);
+        if (TYPEOF(y) != INTSXP) COERCE_IF_NEEDED(y, REALSXP, ypi);
 	val = real_binary(oper, x, y);
     }
-    else val = integer_binary(oper, x, y, lcall);
+    else {
+        /* integer_binary is assumed to work for LOGICAL too, which won't
+           be true if the aren't really the same */
+        val = integer_binary(oper, x, y, lcall);
+    }
 
     /* quick return if there are no attributes */
     if (! xattr && ! yattr) {
@@ -509,9 +510,9 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
 	}
     }
     else {
-	if (length(val) == length(xnames))
+	if (LENGTH(val) == length(xnames))
 	    setAttrib(val, R_NamesSymbol, xnames);
-	else if (length(val) == length(ynames))
+	else if (LENGTH(val) == length(ynames))
 	    setAttrib(val, R_NamesSymbol, ynames);
     }
 
@@ -553,13 +554,12 @@ static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     case PLUSOP:
 	return s1;
     case MINUSOP:
-	ans = duplicate(s1);
-	SET_TYPEOF(ans, INTSXP);
 	n = LENGTH(s1);
+	ans = NAMED(s1)==0 ? s1 : duplicate(s1);
+	SET_TYPEOF(ans, INTSXP);  /* Assumes LGLSXP is really the same... */
 	for (i = 0; i < n; i++) {
 	    x = INTEGER(s1)[i];
-	    INTEGER(ans)[i] = (x == NA_INTEGER) ?
-		NA_INTEGER : ((x == 0.0) ? 0 : -x);
+	    INTEGER(ans)[i] = x==NA_INTEGER ? NA_INTEGER : -x;
 	}
 	return ans;
     default:
@@ -576,8 +576,8 @@ static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
     switch (code) {
     case PLUSOP: return s1;
     case MINUSOP:
-	ans = duplicate(s1);
 	n = LENGTH(s1);
+        ans = NAMED(s1)==0 ? s1 : duplicate(s1);
 	for (i = 0; i < n; i++)
 	    REAL(ans)[i] = -REAL(s1)[i];
 	return ans;
@@ -642,22 +642,20 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
     /* S4-compatibility change: if n1 or n2 is 0, result is of length 0 */
-    if (n1 == 0 || n2 == 0) n = 0; else n = (n1 > n2) ? n1 : n2;
+    n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     if (code == DIVOP || code == POWOP)
 	ans = allocVector(REALSXP, n);
-    else
-	ans = allocVector(INTSXP, n);
-    if (n1 == 0 || n2 == 0) return(ans);
-    /* note: code below was surely wrong in DIVOP and POWOP cases,
-       since ans was a REALSXP.
-     */
+    else {
+        ans = can_save_alloc (s1, s2, INTSXP);
+	if (ans==R_NilValue) 
+            ans = allocVector(INTSXP, n);
+    }
 
-/*    if (n1 < 1 || n2 < 1) {
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = NA_INTEGER;
-	return ans;
-	} */
+    if (n==0) return(ans);
+
+    PROTECT(ans);
+
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(s1) || RTRACE(s2)) {
        if (RTRACE(s1) && RTRACE(s2)) {
@@ -779,22 +777,14 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 	break;
     }
 
-
-    /* quick return if there are no attributes */
-    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue)
-	return ans;
-
     /* Copy attributes from longer argument. */
 
-    if (n1 > n2)
-	copyMostAttrib(s1, ans);
-    else if (n1 == n2) {
-	copyMostAttrib(s2, ans);
-	copyMostAttrib(s1, ans);
-    }
-    else
-	copyMostAttrib(s2, ans);
+    if (ATTRIB(s2)!=R_NilValue && n2==n && ans!=s2)
+        copyMostAttrib(s2, ans);
+    if (ATTRIB(s1)!=R_NilValue && n1==n && ans!=s1)
+        copyMostAttrib(s1, ans); /* Done 2nd so s1's attrs overwrite s2's */
 
+    UNPROTECT(1);
     return ans;
 }
 
@@ -811,9 +801,14 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
     /* S4-compatibility change: if n1 or n2 is 0, result is of length 0 */
     if (n1 == 0 || n2 == 0) return(allocVector(REALSXP, 0));
-
     n = (n1 > n2) ? n1 : n2;
-    PROTECT(ans = allocVector(REALSXP, n));
+
+    ans = can_save_alloc (s1, s2, REALSXP);
+    if (ans==R_NilValue)
+        ans = allocVector(REALSXP, n);
+
+    PROTECT(ans);
+
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(s1) || RTRACE(s2)) {
        if (RTRACE(s1) && RTRACE(s2)) {
@@ -1009,22 +1004,12 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	break;
     }
 
-    /* quick return if there are no attributes */
-    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue) {
-	UNPROTECT(1);
-	return ans;
-    }
+    /* Copy attributes from arguments as needed. */
 
-    /* Copy attributes from longer argument. */
-
-    if (n1 > n2)
-	copyMostAttrib(s1, ans);
-    else if (n1 == n2) {
-	copyMostAttrib(s2, ans);
-	copyMostAttrib(s1, ans);
-    }
-    else
-	copyMostAttrib(s2, ans);
+    if (ATTRIB(s2)!=R_NilValue && n2==n && ans!=s2)
+        copyMostAttrib(s2, ans);
+    if (ATTRIB(s1)!=R_NilValue && n1==n && ans!=s1)
+        copyMostAttrib(s1, ans); /* Done 2nd so s1's attrs overwrite s2's */
 
     UNPROTECT(1);
     return ans;
@@ -1043,10 +1028,13 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall)
     if (!isNumeric(sa))
 	errorcall(lcall, R_MSG_NONNUM_MATH);
 
-    n = length(sa);
+    n = LENGTH(sa);
     /* coercion can lose the object bit */
     PROTECT(sa = coerceVector(sa, REALSXP));
-    PROTECT(sy = allocVector(REALSXP, n));
+
+    sy = NAMED(sa)==0 ? sa : allocVector(REALSXP, n);
+    PROTECT(sy);
+
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(sa)){
        memtrace_report(sa, sy);
@@ -1067,7 +1055,9 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall)
     if(naflag)
 	warningcall(lcall, R_MSG_NA);
 
-    DUPLICATE_ATTRIB(sy, sa);
+    if (sa!=sy) 
+        DUPLICATE_ATTRIB(sy, sa);
+
     UNPROTECT(2);
     return sy;
 }
@@ -1161,22 +1151,27 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
     if (isInteger(x) || isLogical(x)) {
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
-	int i, n = length(x);
-	PROTECT(s = allocVector(INTSXP, n));
+        int n = LENGTH(x);
+	s = NAMED(x)==0 && TYPEOF(x)==INTSXP ? x : allocVector(INTSXP, n);
 	/* Note: relying on INTEGER(.) === LOGICAL(.) : */
-	for(i = 0 ; i < n ; i++)
-	    INTEGER(s)[i] = abs(INTEGER(x)[i]);
+	for (int i = 0 ; i < n ; i++) {
+            int v = INTEGER(x)[i];
+	    INTEGER(s)[i] = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+        }
     } else if (TYPEOF(x) == REALSXP) {
-	int i, n = length(x);
-	PROTECT(s = allocVector(REALSXP, n));
-	for(i = 0 ; i < n ; i++)
+	int n = LENGTH(x);
+        s = NAMED(x)==0 ? x : allocVector(REALSXP, n);
+	for (int i = 0 ; i < n ; i++)
 	    REAL(s)[i] = fabs(REAL(x)[i]);
     } else if (isComplex(x)) {
 	return do_cmathfuns(call, op, args, env);
     } else
 	errorcall(call, R_MSG_NONNUM_MATH);
-    DUPLICATE_ATTRIB(s, x);
-    UNPROTECT(1);
+    if (x!=s) {
+        PROTECT(s);
+        DUPLICATE_ATTRIB(s, x);
+        UNPROTECT(1);
+    }
     return s;
 }
 
@@ -1480,14 +1475,10 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
     SETCDR(call2, args);
 
     n = length(args);
-    switch (n) {
-    case 1:
-    case 2:
-	break;
-    default:
+
+    if (n != 1 && n != 2)
 	error(_("%d arguments passed to '%s' which requires 1 or 2"),
 	      n, PRIMNAME(op));
-    }
 
     if (! DispatchGroup("Math", call2, op, args, env, &res)) {
 	if(n == 1) {

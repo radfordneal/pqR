@@ -813,6 +813,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 
 # define allocCharsxp		Rf_allocCharsxp
 # define begincontext		Rf_begincontext
+# define can_save_alloc		Rf_can_save_alloc
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
 # define CheckFormals		Rf_CheckFormals
@@ -1018,6 +1019,7 @@ void CheckFormals(SEXP);
 void R_check_locale(void);
 void check_stack_balance(SEXP op, int save);
 void CleanEd(void);
+SEXP can_save_alloc (SEXP, SEXP, SEXPTYPE);
 void copyListMatrix(SEXP, SEXP, Rboolean);
 void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);

@@ -137,7 +137,13 @@
       \item **26
       \item **27
       \item **28
-      \item **29
+
+      \item Some binary and unary arithmetic operations have been sped
+            up by, when possible, using the space holding one of the
+            operands to hold the result, rather than allocating new
+            space.  Though primarily a speed improvement, for very
+            long vectors avoiding this allocation could avoid running
+            out of space.
       \item **30
       \item **31
       \item **32

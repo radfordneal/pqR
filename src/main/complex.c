@@ -116,12 +116,11 @@ SEXP attribute_hidden complex_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     case PLUSOP:
 	return s1;
     case MINUSOP:
-	ans = duplicate(s1);
+	ans = NAMED(s1)==0 ? s1 : duplicate(s1);
 	n = LENGTH(s1);
 	for (i = 0; i < n; i++) {
-	    Rcomplex x = COMPLEX(s1)[i];
-	    COMPLEX(ans)[i].r = -x.r;
-	    COMPLEX(ans)[i].i = -x.i;
+	    COMPLEX(ans)[i].r = -COMPLEX(s1)[i].r;
+	    COMPLEX(ans)[i].i = -COMPLEX(s1)[i].i;
 	}
 	return ans;
     default:
@@ -218,7 +217,13 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
     if (n1 == 0 || n2 == 0) return(allocVector(CPLXSXP, 0));
 
     n = (n1 > n2) ? n1 : n2;
-    ans = allocVector(CPLXSXP, n);
+
+    ans = can_save_alloc (s1, s2, CPLXSXP);
+    if (ans==R_NilValue)
+        ans = allocVector(CPLXSXP, n);
+
+    PROTECT(ans);
+
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(s1) || RTRACE(s2)){
        if (RTRACE(s1) && RTRACE(s2)){
@@ -271,18 +276,14 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	error(_("unimplemented complex operation"));
     }
 
-    /* quick return if there are no attributes */
-    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue)
-	return ans;
-
     /* Copy attributes from longer argument. */
-    if (n1 > n2)
-	copyMostAttrib(s1, ans);
-    else if (n1 == n2) {
-	copyMostAttrib(s2, ans);
-	copyMostAttrib(s1, ans);
-    } else
-	copyMostAttrib(s2, ans);
+
+    if (ATTRIB(s2)!=R_NilValue && n2==n && ans!=s2)
+        copyMostAttrib(s2, ans);
+    if (ATTRIB(s1)!=R_NilValue && n1==n && ans!=s1)
+        copyMostAttrib(s1, ans); /* Done 2nd so s1's attrs overwrite s2's */
+
+    UNPROTECT(1);
     return ans;
 }
 
@@ -296,8 +297,9 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchGroup("Complex", call, op, args, env, &x))
 	return x;
     x = CAR(args);
-    n = length(x);
+
     if (isComplex(x)) {
+        n = LENGTH(x);
 	switch(PRIMVAL(op)) {
 	case 1:	/* Re */
 	    y = allocVector(REALSXP, n);
@@ -329,7 +331,7 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 	    break;
 	case 5:	/* Conj */
-	    y = allocVector(CPLXSXP, n);
+	    y = NAMED(x)==0 ? x : allocVector(CPLXSXP, n);
 	    for(i = 0 ; i < n ; i++) {
 		COMPLEX(y)[i].r = COMPLEX(x)[i].r;
 		COMPLEX(y)[i].i = -COMPLEX(x)[i].i;
@@ -338,22 +340,23 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
     else if(isNumeric(x)) { /* so no complex numbers involved */
-	if(isReal(x)) PROTECT(x);
-	else PROTECT(x = coerceVector(x, REALSXP));
+
+        n = LENGTH(x);
+	if (!isReal(x)) x = coerceVector(x, REALSXP);
+        PROTECT(x);
+        y = NAMED(x)==0 ? x : allocVector(REALSXP, n);
+
 	switch(PRIMVAL(op)) {
 	case 1:	/* Re */
 	case 5:	/* Conj */
-	    y = allocVector(REALSXP, n);
 	    for(i = 0 ; i < n ; i++)
 		REAL(y)[i] = REAL(x)[i];
 	    break;
 	case 2:	/* Im */
-	    y = allocVector(REALSXP, n);
 	    for(i = 0 ; i < n ; i++)
 		REAL(y)[i] = 0.0;
 	    break;
 	case 4:	/* Arg */
-	    y = allocVector(REALSXP, n);
 	    for(i = 0 ; i < n ; i++)
 		if(ISNAN(REAL(x)[i]))
 		    REAL(y)[i] = REAL(x)[i];
@@ -364,7 +367,6 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
 	case 3:	/* Mod */
 	case 6:	/* abs */
-	    y = allocVector(REALSXP, n);
 	    for(i = 0 ; i < n ; i++)
 		REAL(y)[i] = fabs(REAL(x)[i]);
 	    break;
@@ -372,10 +374,13 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
 	UNPROTECT(1);
     }
     else errorcall(call, _("non-numeric argument to function"));
-    PROTECT(x);
-    PROTECT(y);
-    DUPLICATE_ATTRIB(y, x);
-    UNPROTECT(2);
+
+    if (x!=y) {
+        PROTECT(x);
+        PROTECT(y);
+        DUPLICATE_ATTRIB(y, x);
+        UNPROTECT(2);
+    }
     return y;
 }
 
