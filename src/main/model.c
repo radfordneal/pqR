@@ -1355,8 +1355,8 @@ SEXP attribute_hidden do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 	const char *ss;
 	if (VECTOR_ELT(dots, i) == R_NilValue) continue;
 	ss = translateChar(STRING_ELT(dotnames, i));
-	if(strlen(ss) + 3 > 256) error(_("overlong names in '%s'"), ss);
-	sprintf(buf, "(%s)", ss);
+        if (!copy_3_strings (buf, 256, "(", ss, ")"))
+	    error(_("overlong names in '%s'"), ss);
 	SET_VECTOR_ELT(data, nvars + j, VECTOR_ELT(dots, i));
 	SET_STRING_ELT(names, nvars + j,  mkChar(buf));
 	j++;

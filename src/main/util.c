@@ -62,6 +62,79 @@ void F77_SYMBOL(rexitc)(char *msg, int *nchar);
 
 /* Many small functions are included from ../include/Rinlinedfuns.h */
 
+
+/* Copy one string from "from" to "to", with 0 terminator.  Returns FALSE 
+   if the length of "from" is greater than "size" minus 1, in which case the 
+   copy will be incomplete, and TRUE otherwise.  "size" must be at least 1. */
+
+Rboolean copy_1_string(char *to, int size, const char *from)
+{
+    while (*to = *from) {
+        from += 1;
+        to += 1;
+        size -= 1;
+        if (size<=0) return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Copy concatenation of strings from "from1" and "from2" to "to", with 0 
+   terminator.  Returns FALSE if the resulting length is greater than "size" 
+   minus 1, in which case the copy will be incomplete, and TRUE otherwise.  
+   "size" must be at least 1. */
+
+Rboolean copy_2_strings(char *to, int size, const char *from1, const char *from2)
+{
+    while (*to = *from1) {
+        from1 += 1;
+        to += 1;
+        size -= 1;
+        if (size<=0) return FALSE;
+    }
+
+    while (*to = *from2) {
+        from2 += 1;
+        to += 1;
+        size -= 1;
+        if (size<=0) return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Copy concatenation of strings from "from1", "from2", and "from3" to "to", 
+   with 0 terminator.  Returns FALSE if the resulting length is greater than 
+   "size" minus 1, in which case the copy will be incomplete, and TRUE 
+   otherwise.  "size" must be at least 1. */
+
+Rboolean copy_3_strings(char *to, int size, const char *from1, 
+                        const char *from2, const char *from3)
+{
+    while (*to = *from1) {
+        from1 += 1;
+        to += 1;
+        size -= 1;
+        if (size<=0) return FALSE;
+    }
+
+    while (*to = *from2) {
+        from2 += 1;
+        to += 1;
+        size -= 1;
+        if (size<=0) return FALSE;
+    }
+
+    while (*to = *from3) {
+        from3 += 1;
+        to += 1;
+        size -= 1;
+        if (size<=0) return FALSE;
+    }
+
+    return TRUE;
+}
+
 Rboolean tsConform(SEXP x, SEXP y)
 {
     if ((x = getAttrib(x, R_TspSymbol)) != R_NilValue &&
@@ -151,9 +224,9 @@ SEXP asChar(SEXP x)
 		if (LOGICAL(x)[0] == NA_LOGICAL)
 		    return NA_STRING;
 		if (LOGICAL(x)[0])
-		    sprintf(buf, "T");
+		    strcpy(buf, "T");
 		else
-		    sprintf(buf, "F");
+		    strcpy(buf, "F");
 		return mkChar(buf);
 	    case INTSXP:
 		if (INTEGER(x)[0] == NA_INTEGER)

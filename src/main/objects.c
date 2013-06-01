@@ -314,9 +314,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     nclass = length(klass);
     for (i = 0; i < nclass; i++) {
         const char *ss = translateChar(STRING_ELT(klass, i));
-	if(strlen(generic) + strlen(ss) + 2 > 512)
+        if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
 	    error(_("class name too long in '%s'"), generic);
-	sprintf(buf, "%s.%s", generic, ss);
 	method = install(buf);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
@@ -349,9 +348,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    return 1;
 	}
     }
-    if(strlen(generic) + strlen("default") + 2 > 512)
+    if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
 	error(_("class name too long in '%s'"), generic);
-    sprintf(buf, "%s.default", generic);
     method = install(buf);
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
@@ -702,35 +700,31 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("wrong value for .Method"));
 	for(i = 0; i < LENGTH(method); i++) {
 	    ss = translateChar(STRING_ELT(method, i));
-	    if(strlen(ss) >= 512)
+            if (!copy_1_string (b, sizeof b, ss))
 		error(_("method name too long in '%s'"), ss);
-	    sprintf(b, "%s", ss);
-	    if(strlen(b)) break;
+	    if(*b!=0) break;
 	}
 	/* for binary operators check that the second argument's method
 	   is the same or absent */
 	for(j = i; j < LENGTH(method); j++){
 	    const char *ss = translateChar(STRING_ELT(method, j));
-	    if(strlen(ss) >= 512)
+            if (!copy_1_string (bb, sizeof bb, ss))
 		error(_("method name too long in '%s'"), ss);
-	  sprintf(bb, "%s", ss);
-	  if (strlen(bb) && strcmp(b,bb))
-	      warning(_("Incompatible methods ignored"));
+	    if (*bb!=0 && strcmp(b,bb))
+	        warning(_("Incompatible methods ignored"));
 	}
     }
     else {
-	if(strlen(CHAR(PRINTNAME(CAR(cptr->call)))) >= 512)
+        if (!copy_1_string (b, sizeof b, CHAR(PRINTNAME(CAR(cptr->call)))))
 	   error(_("call name too long in '%s'"),
 		 CHAR(PRINTNAME(CAR(cptr->call))));
-	sprintf(b, "%s", CHAR(PRINTNAME(CAR(cptr->call))));
     }
 
     sb = translateChar(STRING_ELT(basename, 0));
     for (j = 0; j < len_klass; j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-	if(strlen(sb) + strlen(sk) + 2 > 512)
+        if (!copy_3_strings (buf, sizeof buf, sb, ".", sk))
 	    error(_("class name too long in '%s'"), sb);
-	sprintf(buf, "%s.%s", sb, sk);
 	if (!strcmp(buf, b)) break;
     }
 
@@ -745,16 +739,14 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     sg = translateChar(STRING_ELT(generic, 0));
     for (i = j ; i < len_klass; i++) {
 	sk = translateChar(STRING_ELT(klass, i));
-	if(strlen(sg) + strlen(sk) + 2 > 512)
+        if (!copy_3_strings (buf, sizeof buf, sg, ".", sk))
 	    error(_("class name too long in '%s'"), sg);
-	sprintf(buf, "%s.%s", sg, sk);
 	nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
 	if (isFunction(nextfun)) break;
 	if (group != R_UnboundValue) {
 	    /* if not Generic.foo, look for Group.foo */
-	    if(strlen(sb) + strlen(sk) + 2 > 512)
+            if (!copy_3_strings (buf, sizeof buf, sb, ".", sk))
 		error(_("class name too long in '%s'"), sb);
-	    sprintf(buf, "%s.%s", sb, sk);
 	    nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
 	    if(isFunction(nextfun))
 		break;
@@ -763,7 +755,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
     }
     if (!isFunction(nextfun)) {
-	sprintf(buf, "%s.default", sg);
+        if (!copy_2_strings (buf, sizeof buf, sg, ".default"))
+            error(_("class name too long in '%s'"), sg);
 	nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
 	/* If there is no default method, try the generic itself,
 	   provided it is primitive or a wrapper for a .Internal

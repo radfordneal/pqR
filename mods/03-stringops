@@ -1,0 +1,7 @@
+Procedures copy_1_string, copy_2_strings, and copy_3_strings are now
+defined in utils.c, and used in many places in the interpreter.  These
+procedures concatenate 1, 2, or 3 strings, checking for overflow of
+the destination space.  They are faster and less error-prone than the
+various code sequences they replace (often involving strlen and sprintf).
+This gives signficant speed-ups for some operations such as calling
+S3 methods.

@@ -500,8 +500,9 @@ static SEXP NewBase(SEXP base, SEXP tag)
     tag = EnsureString(tag);
     if (*CHAR(base) && *CHAR(tag)) { /* test of length */
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
-	cbuf = R_AllocStringBuffer(strlen(st) + strlen(sb) + 1, &cbuff);
-	sprintf(cbuf, "%s.%s", sb, st);
+        size_t alloc_len = strlen(st) + strlen(sb) + 1;
+	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+        (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
 	/* This isn't strictly correct as we do not know that all the
 	   components of the name were correctly translated. */
 	ans = mkCharCE(cbuf, CE_UTF8);
@@ -531,27 +532,36 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
     tag = EnsureString(tag);
     if (*CHAR(base) && *CHAR(tag)) {
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
-	cbuf = R_AllocStringBuffer(strlen(sb) + strlen(st) + 1, &cbuff);
-	sprintf(cbuf, "%s.%s", sb, st);
+        size_t alloc_len = strlen(sb) + strlen(st) + 1;
+	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+        (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
 	ans = mkCharCE(cbuf, CE_UTF8);
     }
     else if (*CHAR(base)) {
 	const char *sb = translateChar(base);
-	cbuf = R_AllocStringBuffer(strlen(sb) + (size_t) IndexWidth(seqno),
-				   &cbuff);
-	sprintf(cbuf, "%s%d", sb, seqno);
+        char sn[31];
+        sprintf(sn,"%d",seqno);
+        size_t alloc_len = strlen(sb) + strlen(sn);
+	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+        (void) copy_2_strings (cbuf, alloc_len+1, sb, sn);
 	ans = mkCharCE(cbuf, CE_UTF8);
     }
     else if (*CHAR(tag)) {
 	if(tag == NA_STRING) ans = NA_STRING;
 	else {
 	    const char *st = translateCharUTF8(tag);
-	    cbuf = R_AllocStringBuffer(strlen(st), &cbuff);
-	    sprintf(cbuf, "%s", st);
-	    ans = mkCharCE(cbuf, CE_UTF8);
+            if (st == CHAR(tag))
+                ans = tag;
+            else {
+                size_t alloc_len = strlen(st);
+                cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+                strcpy(cbuf,st);
+                ans = mkCharCE(cbuf, CE_UTF8);
+            }
 	}
     }
-    else ans = R_BlankString;
+    else 
+        ans = R_BlankString;
     return ans;
 }
 
@@ -1042,9 +1052,8 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	    for (i = 0; i < len_classlist; i++) {
 		classname = STRING_ELT(classlist, i);
 		s = translateChar(classname);
-		if(strlen(generic) + strlen(s) + 2 > 512)
+                if (!copy_3_strings (buf, sizeof buf, generic, ".", s))
 		    error(_("class name too long in '%s'"), generic);
-		sprintf(buf, "%s.%s", generic, s);
 		classmethod = R_LookupMethod(install(buf), env, env,
 					     R_BaseNamespace);
 		if (classmethod != R_UnboundValue) {
