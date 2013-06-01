@@ -1799,10 +1799,8 @@ int Scollate(SEXP a, SEXP b)
     int result = 0;
     UErrorCode  status = U_ZERO_ERROR;
     UCharIterator aIter, bIter;
-    const char *as = translateCharUTF8(a), *bs = translateCharUTF8(b);
-    size_t len1 = strlen(as), len2 = strlen(bs);
 
-    if (collator == NULL && strcmp("C", setlocale(LC_COLLATE, NULL)) ) {
+    if (collator == NULL && strcmp("C", setlocale(LC_COLLATE, NULL)) != 0) {
 	/* do better later */
 	uloc_setDefault(setlocale(LC_COLLATE, NULL), &status);
 	if(U_FAILURE(status))
@@ -1812,6 +1810,9 @@ int Scollate(SEXP a, SEXP b)
     }
     if (collator == NULL)
 	return strcoll(translateChar(a), translateChar(b));
+
+    const char *as = translateCharUTF8(a), *bs = translateCharUTF8(b);
+    size_t len1 = strlen(as), len2 = strlen(bs);
 
     uiter_setUTF8(&aIter, as, len1);
     uiter_setUTF8(&bIter, bs, len2);
