@@ -31,7 +31,7 @@
 
 #define YYERROR_VERBOSE 1
 
-static void yyerror(char *);
+static void yyerror(const char *);
 static int yylex();
 int yyparse(void);
 
@@ -88,12 +88,16 @@ typedef struct yyltype
 /* Functions used in the parsing process */
 
 static void	CheckFormalArgs(SEXP, SEXP, YYLTYPE *);
+static SEXP	FirstArg0(SEXP);
 static SEXP	FirstArg(SEXP, SEXP);
+static SEXP	GrowList0(SEXP, SEXP);
 static SEXP	GrowList(SEXP, SEXP);
 static SEXP	Insert(SEXP, SEXP);
+static SEXP	WrapInsert(SEXP, SEXP);
 static void	IfPush(void);
 static int	KeywordLookup(const char *);
 static SEXP	NewList(void);
+static SEXP	NextArg0(SEXP, SEXP);
 static SEXP	NextArg(SEXP, SEXP, SEXP);
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
@@ -621,7 +625,7 @@ static SEXP xxsub0(void)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang2(R_MissingArg,R_NilValue));
+	PROTECT(ans = cons_with_tag(R_MissingArg,R_NilValue,R_NilValue));
     else
 	PROTECT(ans = R_NilValue);
     return ans;
@@ -689,7 +693,7 @@ static SEXP xxsublist1(SEXP sub)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = FirstArg(CAR(sub),CADR(sub)));
+	PROTECT(ans = FirstArg0(sub));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(sub);
@@ -700,7 +704,7 @@ static SEXP xxsublist2(SEXP sublist, SEXP sub)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = NextArg(sublist, CAR(sub), CADR(sub)));
+	PROTECT(ans = NextArg0(sublist, sub));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(sub);
@@ -809,17 +813,21 @@ static SEXP xxfuncall(SEXP expr, SEXP args)
 	if (isString(expr))
 	    expr = install(CHAR(STRING_ELT(expr, 0)));
 	PROTECT(expr);
-	if (length(CDR(args)) == 1 && CADR(args) == R_MissingArg && TAG(CDR(args)) == R_NilValue )
+	if (length(CDR(args)) == 1 && CADR(args) == R_MissingArg 
+                                   && TAG(CDR(args)) == R_NilValue)
 	    ans = lang1(expr);
-	else
-	    ans = LCONS(expr, CDR(args));
+	else {
+	    ans = WrapInsert(args,expr);
+            SET_TYPEOF(ans,LANGSXP);
+        }
 	UNPROTECT(1);
+        UNPROTECT_PTR(args); /* do now, since ans might be args */
 	PROTECT(ans);
     }
     else {
+        UNPROTECT_PTR(args);
 	PROTECT(ans = R_NilValue);
     }
-    UNPROTECT_PTR(args);
     UNPROTECT_PTR(sav_expr);
     return ans;
 }
@@ -891,16 +899,11 @@ static SEXP xxparen(SEXP n1, SEXP n2)
     return ans;
 }
 
-
-/* This should probably use CONS rather than LCONS, but
-   it shouldn't matter and we would rather not meddle
-   See PR#7055 */
-
 static SEXP xxsubscript(SEXP a1, SEXP a2, SEXP a3)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = LCONS(a2, CONS(a1, CDR(a3))));
+	PROTECT(ans = LCONS(a2, WrapInsert(a3,a1)));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(a3);
@@ -915,8 +918,8 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 
     EatLines = 0;
     if (GenerateCode) {
+        a2 = WrapInsert(a2,a1);
 	SET_TYPEOF(a2, LANGSXP);
-	SETCAR(a2, a1);
 	if (ParseState.keepSrcRefs) {
 	    PROTECT(prevSrcrefs = getAttrib(a2, R_SrcrefSymbol));
 	    REPROTECT(SrcRefs = Insert(SrcRefs, makeSrcref(lloc, ParseState.SrcFile)), srindex);
@@ -942,11 +945,13 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
     switch (TYPEOF(tag)) {
     case STRSXP:
 	tag = install(translateChar(STRING_ELT(tag, 0)));
+        /* fall through... */
     case NILSXP:
     case SYMSXP:
-	return lang2(arg, tag);
+	return cons_with_tag (arg, R_NilValue, tag);
     default:
-	error(_("incorrect tag type at line %d"), lloc->first_line); return R_NilValue/* -Wall */;
+	error(_("incorrect tag type at line %d"), lloc->first_line); 
+        return R_NilValue/* -Wall */;
     }
 }
 
@@ -969,6 +974,13 @@ static SEXP NewList(void)
 
 /* Add a new element at the end of a stretchy list */
 
+static SEXP GrowList0(SEXP l, SEXP t)
+{
+    SETCDR(CAR(l), t);
+    SETCAR(l, t);
+    return l;
+}
+
 static SEXP GrowList(SEXP l, SEXP s)
 {
     SEXP tmp;
@@ -989,6 +1001,37 @@ static SEXP Insert(SEXP l, SEXP s)
     tmp = CONS(s, CDR(l));
     UNPROTECT(1);
     SETCDR(l, tmp);
+    return l;
+}
+
+/* Insert a new element at the head of a stretchy list, using the stretchy
+   list head itself for the CONS cell of the new element, returning the
+   new list.  The stretchy list is no more after this.  This function is
+   useful in maintaining sequential allocation of nodes for R functions and
+   expressions (with the aim of better cache performance). */
+
+static SEXP WrapInsert(SEXP l, SEXP s)
+{
+    SETCAR(l,s);
+    return l;
+}
+
+static SEXP FirstArg0(SEXP t)
+{
+    SEXP tmp;
+    PROTECT(t);
+    PROTECT(tmp = NewList());
+    tmp = GrowList0(tmp, t);
+    UNPROTECT(2);
+    return tmp;
+}
+
+static SEXP NextArg0(SEXP l, SEXP t)
+{
+    PROTECT(l);
+    PROTECT(t);
+    l = GrowList0(l, t);
+    UNPROTECT(2);
     return l;
 }
 
@@ -1659,7 +1702,7 @@ SEXP mkFalse(void)
     return s;
 }
 
-static void yyerror(char *s)
+static void yyerror(const char *s)
 {
     static const char *const yytname_translations[] =
     {
