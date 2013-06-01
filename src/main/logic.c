@@ -160,6 +160,8 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
     return x;
 }
 
+/* Handles only the ! operator */
+
 static SEXP lunary(SEXP call, SEXP op, SEXP arg)
 {
     SEXP x, dim, dimnames, names;
@@ -171,6 +173,16 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg)
 	if (!len) return allocVector(LGLSXP, 0);
 	errorcall(call, _("invalid argument type"));
     }
+
+    /* Quickly do scalar operation on logical with no attributes. */
+
+    if (len==1 && isLogical(arg) && ATTRIB(arg)==R_NilValue) {
+        int v = LOGICAL(arg)[0];
+        return ScalarLogical (v==NA_LOGICAL ? v : !v);
+    }
+
+    /* The general case... */
+
     PROTECT(names = getAttrib(arg, R_NamesSymbol));
     PROTECT(dim = getAttrib(arg, R_DimSymbol));
     PROTECT(dimnames = getAttrib(arg, R_DimNamesSymbol));
@@ -210,64 +222,57 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg)
     return x;
 }
 
-/* && || */
+/* Does && (op 1) and || (op 2). */
+
 SEXP attribute_hidden do_logic2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-/*  &&	and  ||	 */
     SEXP s1, s2;
     int x1, x2;
-    SEXP ans;
 
     if (length(args) != 2)
 	error(_("'%s' operator requires 2 arguments"),
 	      PRIMVAL(op) == 1 ? "&&" : "||");
 
-    s1 = CAR(args);
-    s2 = CADR(args);
-    PROTECT(ans = allocVector(LGLSXP, 1));
-    s1 = eval(s1, env);
+    s1 = eval(CAR(args), env);
     if (!isNumber(s1))
 	errorcall(call, _("invalid 'x' type in 'x %s y'"),
 		  PRIMVAL(op) == 1 ? "&&" : "||");
     x1 = asLogical(s1);
 
-#define get_2nd							\
-	s2 = eval(s2, env);					\
-	if (!isNumber(s2))					\
-	    errorcall(call, _("invalid 'y' type in 'x %s y'"),	\
-		      PRIMVAL(op) == 1 ? "&&" : "||");		\
-	x2 = asLogical(s2);
+    if (PRIMVAL(op)==1 && x1==FALSE)  /* FALSE && ... */
+        return ScalarLogical(FALSE);
 
-    switch (PRIMVAL(op)) {
-    case 1: /* && */
-	if (x1 == FALSE)
-	    LOGICAL(ans)[0] = FALSE;
-	else {
-	    get_2nd;
-	    if (x1 == NA_LOGICAL)
-		LOGICAL(ans)[0] = (x2 == NA_LOGICAL || x2) ? NA_LOGICAL : x2;
-	    else /* x1 == TRUE */
-		LOGICAL(ans)[0] = x2;
-	}
-	break;
-    case 2: /* || */
-	if (x1 == TRUE)
-	    LOGICAL(ans)[0] = TRUE;
-	else {
-	    get_2nd;
-	    if (x1 == NA_LOGICAL)
-		LOGICAL(ans)[0] = (x2 == NA_LOGICAL || !x2) ? NA_LOGICAL : x2;
-	    else /* x1 == FALSE */
-		LOGICAL(ans)[0] = x2;
-	}
-    }
-    UNPROTECT(1);
-    return ans;
+    if (PRIMVAL(op)==2 && x1==TRUE)   /* TRUE || ... */
+        return ScalarLogical(TRUE);
+    
+    s2  = eval(CADR(args), env);
+    if (!isNumber(s2))	
+        errorcall(call, _("invalid 'y' type in 'x %s y'"),
+	          PRIMVAL(op) == 1 ? "&&" : "||");		
+    x2 = asLogical(s2);
+
+    if (PRIMVAL(op)==1) /* ... && ... */
+        return ScalarLogical (x2==FALSE ? FALSE
+                            : x1==TRUE && x2==TRUE ? TRUE
+                            : NA_LOGICAL);
+    else /* ... || ... */
+        return ScalarLogical (x2==TRUE ? TRUE
+                            : x1==FALSE && x2==FALSE ? FALSE
+                            : NA_LOGICAL);
 }
+
+/* i1 = i % n1; i2 = i % n2;
+ * this macro is quite a bit faster than having real modulo calls
+ * in the loop (tested on Intel and Sparc)
+ */
+#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
+	i1 = (++i1 == n1) ? 0 : i1,\
+	i2 = (++i2 == n2) ? 0 : i2,\
+	++i)
 
 static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
 {
-    int i, n, n1, n2;
+    int i, i1, i2, n, n1, n2;
     int x1, x2;
     SEXP ans;
 
@@ -281,41 +286,72 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
     ans = allocVector(LGLSXP, n);
 
     switch (code) {
-    case 1:		/* & : AND */
-	for (i = 0; i < n; i++) {
-	    x1 = LOGICAL(s1)[i % n1];
-	    x2 = LOGICAL(s2)[i % n2];
-	    if (x1 == 0 || x2 == 0)
-		LOGICAL(ans)[i] = 0;
-	    else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = 1;
-	}
-	break;
-    case 2:		/* | : OR */
-	for (i = 0; i < n; i++) {
-	    x1 = LOGICAL(s1)[i % n1];
-	    x2 = LOGICAL(s2)[i % n2];
-	    if ((x1 != NA_LOGICAL && x1) || (x2 != NA_LOGICAL && x2))
-		LOGICAL(ans)[i] = 1;
-	    else if (x1 == 0 && x2 == 0)
-		LOGICAL(ans)[i] = 0;
-	    else
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	}
-	break;
+    case 1:  /* & : AND */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+                x1 = LOGICAL(s1)[i];
+                x2 = LOGICAL(s2)[i];
+                if (x1 == 0 || x2 == 0)
+                    LOGICAL(ans)[i] = 0;
+                else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
+                    LOGICAL(ans)[i] = NA_LOGICAL;
+                else
+                    LOGICAL(ans)[i] = 1;
+            }
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2) {
+                x1 = LOGICAL(s1)[i1];
+                x2 = LOGICAL(s2)[i2];
+                if (x1 == 0 || x2 == 0)
+                    LOGICAL(ans)[i] = 0;
+                else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
+                    LOGICAL(ans)[i] = NA_LOGICAL;
+                else
+                    LOGICAL(ans)[i] = 1;
+            }
+        }
+        break;
+    case 2:  /* | : OR */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+                x1 = LOGICAL(s1)[i];
+                x2 = LOGICAL(s2)[i];
+                if (x1 == 0)
+                    LOGICAL(ans)[i] = 
+                      x2==0 ? 0 : x2==NA_LOGICAL ? NA_LOGICAL : 1;
+                else if (x1 == NA_LOGICAL)
+                    LOGICAL(ans)[i] = 
+                      x2==0 || x2==NA_LOGICAL ? NA_LOGICAL : 1;
+                else
+                    LOGICAL(ans)[i] = 1;
+            }
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2) {
+                x1 = LOGICAL(s1)[i1];
+                x2 = LOGICAL(s2)[i2];
+                if (x1 == 0)
+                    LOGICAL(ans)[i] = 
+                      x2==0 ? 0 : x2==NA_LOGICAL ? NA_LOGICAL : 1;
+                else if (x1 == NA_LOGICAL)
+                    LOGICAL(ans)[i] = 
+                      x2==0 || x2==NA_LOGICAL ? NA_LOGICAL : 1;
+                else
+                    LOGICAL(ans)[i] = 1;
+            }
+        }
+        break;
     case 3:
-	error(_("Unary operator `!' called with two arguments"));
-	break;
+        error(_("Unary operator `!' called with two arguments"));
+        break;
     }
     return ans;
 }
 
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 {
-    int i, n, n1, n2;
-    int x1, x2;
+    int i, i1, i2, n, n1, n2;
     SEXP ans;
 
     n1 = LENGTH(s1);
@@ -328,19 +364,25 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
     ans = allocVector(RAWSXP, n);
 
     switch (code) {
-    case 1:		/* & : AND */
-	for (i = 0; i < n; i++) {
-	    x1 = RAW(s1)[i % n1];
-	    x2 = RAW(s2)[i % n2];
-	    RAW(ans)[i] = x1 & x2;
-	}
+    case 1:  /* & : AND */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++)
+                RAW(ans)[i] = RAW(s1)[i] & RAW(s2)[i];
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2)
+                RAW(ans)[i] = RAW(s1)[i1] & RAW(s2)[i2];
+        }
 	break;
-    case 2:		/* | : OR */
-	for (i = 0; i < n; i++) {
-	    x1 = RAW(s1)[i % n1];
-	    x2 = RAW(s2)[i % n2];
-	    RAW(ans)[i] = x1 | x2;
-	}
+    case 2:  /* | : OR */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++)
+                RAW(ans)[i] = RAW(s1)[i] | RAW(s2)[i];
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2)
+                RAW(ans)[i] = RAW(s1)[i1] | RAW(s2)[i2];
+        }
 	break;
     }
     return ans;

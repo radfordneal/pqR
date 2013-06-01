@@ -142,7 +142,11 @@
             rather than allocate logical values themselve.  This is both
             cleaner and now more efficient given the change above.
       \item **10
-      \item **11
+      \item Logical operations and relational operators have been sped up
+            in simple cases, and use the new facility for producing a scalar
+            logical result without allocating new storage.  Relational
+            operators have also been substantially speeded up for long
+            vectors.
       \item **12
       \item A call of R_isMissing was removed in the interpeter's evalList 
             function.  This check, done for every argument to a builtin 
