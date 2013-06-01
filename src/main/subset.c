@@ -66,73 +66,77 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
     if (x == R_NilValue)
 	return x;
 
-    for (i = 0; i < n; i++) {
-	ii = INTEGER(indx)[i];
-	if (ii != NA_INTEGER)
-	    ii--;
-	switch (mode) {
-	case LGLSXP:
-	    if (0 <= ii && ii < nx && ii != NA_LOGICAL)
-		LOGICAL(result)[i] = LOGICAL(x)[ii];
-	    else
-		LOGICAL(result)[i] = NA_INTEGER;
-	    break;
-	case INTSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER)
-		INTEGER(result)[i] = INTEGER(x)[ii];
-	    else
-		INTEGER(result)[i] = NA_INTEGER;
-	    break;
-	case REALSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER)
-		REAL(result)[i] = REAL(x)[ii];
-	    else
-		REAL(result)[i] = NA_REAL;
-	    break;
-	case CPLXSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER) {
-		COMPLEX(result)[i] = COMPLEX(x)[ii];
-	    }
-	    else {
-		COMPLEX(result)[i].r = NA_REAL;
-		COMPLEX(result)[i].i = NA_REAL;
-	    }
-	    break;
-	case STRSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER)
-		SET_STRING_ELT(result, i, STRING_ELT(x, ii));
-	    else
-		SET_STRING_ELT(result, i, NA_STRING);
-	    break;
-	case VECSXP:
-	case EXPRSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER)
-		SET_VECTOR_ELT(result, i, VECTOR_ELT(x, ii));
-	    else
-		SET_VECTOR_ELT(result, i, R_NilValue);
-	    break;
-	case LISTSXP:
+    switch (mode) {
+    case LGLSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                LOGICAL(result)[i] = NA_LOGICAL;
+            else
+                LOGICAL(result)[i] = LOGICAL(x)[ii];
+        break;
+    case INTSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                INTEGER(result)[i] = NA_INTEGER;
+            else
+                INTEGER(result)[i] = INTEGER(x)[ii];
+        break;
+    case REALSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                REAL(result)[i] = NA_REAL;
+            else
+                REAL(result)[i] = REAL(x)[ii];
+        break;
+    case CPLXSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx) {
+                COMPLEX(result)[i].r = NA_REAL;
+                COMPLEX(result)[i].i = NA_REAL; 
+            }
+            else
+                COMPLEX(result)[i] = COMPLEX(x)[ii];
+        break;
+    case STRSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                SET_STRING_ELT(result, i, NA_STRING);
+            else
+                SET_STRING_ELT(result, i, STRING_ELT(x, ii));
+        break;
+    case VECSXP:
+    case EXPRSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                SET_VECTOR_ELT(result, i, R_NilValue);
+            else
+                SET_VECTOR_ELT(result, i, VECTOR_ELT(x, ii));
+        break;
+    case LISTSXP:
 	    /* cannot happen: pairlists are coerced to lists */
-	case LANGSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER) {
-		tmp2 = nthcdr(x, ii);
-		SETCAR(tmp, CAR(tmp2));
-		SET_TAG(tmp, TAG(tmp2));
-	    }
-	    else
-		SETCAR(tmp, R_NilValue);
-	    tmp = CDR(tmp);
-	    break;
-	case RAWSXP:
-	    if (0 <= ii && ii < nx && ii != NA_INTEGER)
-		RAW(result)[i] = RAW(x)[ii];
-	    else
-		RAW(result)[i] = (Rbyte) 0;
-	    break;
-	default:
-	    errorcall(call, R_MSG_ob_nonsub, type2char(mode));
-	}
+    case LANGSXP:
+        for (i = 0; i<n; i++) {
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                SETCAR(tmp, R_NilValue);
+            else {
+                tmp2 = nthcdr(x, ii);
+                SETCAR(tmp, CAR(tmp2));
+                SET_TAG(tmp, TAG(tmp2));
+            }
+            tmp = CDR(tmp);
+        }
+        break;
+    case RAWSXP:
+        for (i = 0; i<n; i++)
+            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                RAW(result)[i] = (Rbyte) 0;
+            else
+                RAW(result)[i] = RAW(x)[ii];
+        break;
+    default:
+        errorcall(call, R_MSG_ob_nonsub, type2char(mode));
     }
+
     return result;
 }
 
@@ -217,105 +221,217 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 }
 
 
-static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
+/* Used in MatrixSubset to set a whole row or column of a matrix to NAs. */
+
+static void set_row_or_col_to_na (SEXP result, int start, int step, int end,
+                                  SEXP call)
 {
-    SEXP attr, result, sr, sc, dim;
-    int nr, nc, nrs, ncs;
-    int i, j, ii, jj, ij, iijj;
+    int i;
+    switch (TYPEOF(result)) {
+    case LGLSXP:
+        for (i = start; i<end; i += step)
+            LOGICAL(result)[i] = NA_LOGICAL;
+        break;
+    case INTSXP:
+        for (i = start; i<end; i += step)
+            INTEGER(result)[i] = NA_INTEGER;
+        break;
+    case REALSXP:
+        for (i = start; i<end; i += step)
+            REAL(result)[i] = NA_REAL;
+        break;
+    case CPLXSXP:
+        for (i = start; i<end; i += step) {
+            COMPLEX(result)[i].r = NA_REAL;
+            COMPLEX(result)[i].i = NA_REAL;
+        }
+        break;
+    case STRSXP:
+        for (i = start; i<end; i += step)
+            SET_STRING_ELT(result, i, NA_STRING);
+        break;
+    case VECSXP:
+        for (i = start; i<end; i += step)
+            SET_VECTOR_ELT(result, i, R_NilValue);
+        break;
+    case RAWSXP:
+        for (i = start; i<end; i += step)
+            RAW(result)[i] = (Rbyte) 0;
+        break;
+    default:
+        errorcall(call, _("matrix subscripting not handled for this type"));
+    }
+}
 
-    nr = nrows(x);
-    nc = ncols(x);
 
-    /* Note that "s" is protected on entry. */
-    /* The following ensures that pointers remain protected. */
-    dim = getAttrib(x, R_DimSymbol);
+/* Used in MatrixSubset when only one (valid) row is accessed. */
 
-    sr = SETCAR(s, arraySubscript(0, CAR(s), dim, getAttrib,
-				  (STRING_ELT), x));
-    sc = SETCADR(s, arraySubscript(1, CADR(s), dim, getAttrib,
-				   (STRING_ELT), x));
+static void one_row_of_matrix (SEXP call, SEXP x, SEXP result, 
+                               int ii, int nr, SEXP sc, int ncs, int nc)
+{
+    int typeofx = TYPEOF(x);
+    int j, jj, st;
+
+    st = (ii-1) - nr;
+
+    for (j = 0; j < ncs; j++) {
+
+        jj = INTEGER(sc)[j];
+
+        if (jj == NA_INTEGER) {
+            set_row_or_col_to_na (result, j, 1, j+1, call);
+            continue;
+        }
+
+        if (jj < 1 || jj > nc)
+            errorcall(call, R_MSG_subs_o_b);
+
+        switch (typeofx) {
+        case LGLSXP:
+            LOGICAL(result)[j] = LOGICAL(x) [st+jj*nr];
+            break;
+        case INTSXP:
+            INTEGER(result)[j] = INTEGER(x) [st+jj*nr];
+            break;
+        case REALSXP:
+            REAL(result)[j] = REAL(x) [st+jj*nr];
+            break;
+        case CPLXSXP:
+            COMPLEX(result)[j] = COMPLEX(x) [st+jj*nr];
+            break;
+        case STRSXP:
+            SET_STRING_ELT(result, j, STRING_ELT(x, st+jj*nr));
+            break;
+        case VECSXP:
+            SET_VECTOR_ELT(result, j, VECTOR_ELT(x, st+jj*nr));
+            break;
+        case RAWSXP:
+            RAW(result)[j] = RAW(x) [st+jj*nr];
+            break;
+        default:
+            errorcall(call, _("matrix subscripting not handled for this type"));
+        }
+    }
+}
+
+
+/* Used in MatrixSubset for the general case of subsetting. */
+
+static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result, 
+    SEXP sr, int nrs, int nr, SEXP sc, int ncs, int nc)
+{
+    int i, j, ii, jj, ij, iijj, jjnr;
+
+    /* Set rows of result to NAs where there are NA row indexes.  Also check 
+       for bad row indexes (once here rather than many times in loop). */
+
+    for (i = 0; i < nrs; i++) {
+        ii = INTEGER(sr)[i];
+        if (ii == NA_INTEGER) 
+            set_row_or_col_to_na (result, i, nrs, i+nrs*ncs, call);
+        else if (ii < 1 || ii > nr)
+            errorcall(call, R_MSG_subs_o_b);
+    }
+
+    /* Loop to handle extraction except for NAs.  Outer loop is over columns so
+       writes are sequential, which is faster for indexing, and probably better
+       for memory speed. */
+
+    for (j = 0, ij = 0; j < ncs; j++) {
+        jj = INTEGER(sc)[j];
+
+        /* If column index is NA, just set column of result to NAs. */
+
+        if (jj == NA_INTEGER) {
+            set_row_or_col_to_na (result, j*nrs, 1, (j+1)*nrs, call);
+            ij += nrs;
+            continue;
+        }
+
+        /* Check for bad column index. */
+
+        if (jj < 1 || jj > nc)
+            errorcall(call, R_MSG_subs_o_b);
+
+        /* Loops over row indexes, except skips NA row indexes, done above. */
+
+        jjnr = (jj-1) * nr;
+        switch (TYPEOF(x)) {
+        case LGLSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    LOGICAL(result)[ij] = LOGICAL(x)[(ii-1)+jjnr];
+            break;
+        case INTSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    INTEGER(result)[ij] = INTEGER(x)[(ii-1)+jjnr];
+            break;
+        case REALSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    REAL(result)[ij] = REAL(x)[(ii-1)+jjnr];
+            break;
+        case CPLXSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    COMPLEX(result)[ij] = COMPLEX(x)[(ii-1)+jjnr];
+            break;
+        case STRSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    SET_STRING_ELT(result, ij, STRING_ELT(x, (ii-1)+jjnr));
+            break;
+        case VECSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    SET_VECTOR_ELT(result, ij, VECTOR_ELT(x, (ii-1)+jjnr));
+            break;
+        case RAWSXP:
+            for (i = 0; i < nrs; i++, ij++) 
+                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    RAW(result)[ij] = RAW(x)[(ii-1)+jjnr];
+            break;
+        default:
+            errorcall(call, _("matrix subscripting not handled for this type"));
+        }
+    }
+}
+
+
+/* Subset for a vector with dim attribute specifying two dimensions. */
+
+static SEXP MatrixSubset(SEXP x, SEXP sb, SEXP call, int drop)
+{
+    SEXP attr, result, sr, sc;
+    int nr, nc, nrs, ncs, ii;
+
+    SEXP dim = getAttrib(x, R_DimSymbol);
+
+    nr = INTEGER(dim)[0];
+    nc = INTEGER(dim)[1];
+
+    PROTECT (sr = arraySubscript(0, CAR(sb), dim, getAttrib, (STRING_ELT), x));
+    PROTECT (sc = arraySubscript(1, CADR(sb), dim, getAttrib, (STRING_ELT), x));
+
     nrs = LENGTH(sr);
     ncs = LENGTH(sc);
+
     /* Check this does not overflow */
-    if ((double)nrs * (double)ncs > INT_MAX)
-	error(_("dimensions would exceed maximum size of array"));
-    PROTECT(sr);
-    PROTECT(sc);
-    result = allocVector(TYPEOF(x), nrs*ncs);
-    PROTECT(result);
-    for (i = 0; i < nrs; i++) {
-	ii = INTEGER(sr)[i];
-	if (ii != NA_INTEGER) {
-	    if (ii < 1 || ii > nr)
-		errorcall(call, R_MSG_subs_o_b);
-	    ii--;
-	}
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj != NA_INTEGER) {
-		if (jj < 1 || jj > nc)
-		    errorcall(call, R_MSG_subs_o_b);
-		jj--;
-	    }
-	    ij = i + j * nrs;
-	    if (ii == NA_INTEGER || jj == NA_INTEGER) {
-		switch (TYPEOF(x)) {
-		case LGLSXP:
-		case INTSXP:
-		    INTEGER(result)[ij] = NA_INTEGER;
-		    break;
-		case REALSXP:
-		    REAL(result)[ij] = NA_REAL;
-		    break;
-		case CPLXSXP:
-		    COMPLEX(result)[ij].r = NA_REAL;
-		    COMPLEX(result)[ij].i = NA_REAL;
-		    break;
-		case STRSXP:
-		    SET_STRING_ELT(result, ij, NA_STRING);
-		    break;
-		case VECSXP:
-		    SET_VECTOR_ELT(result, ij, R_NilValue);
-		    break;
-		case RAWSXP:
-		    RAW(result)[ij] = (Rbyte) 0;
-		    break;
-		default:
-		    errorcall(call, _("matrix subscripting not handled for this type"));
-		    break;
-		}
-	    }
-	    else {
-		iijj = ii + jj * nr;
-		switch (TYPEOF(x)) {
-		case LGLSXP:
-		    LOGICAL(result)[ij] = LOGICAL(x)[iijj];
-		    break;
-		case INTSXP:
-		    INTEGER(result)[ij] = INTEGER(x)[iijj];
-		    break;
-		case REALSXP:
-		    REAL(result)[ij] = REAL(x)[iijj];
-		    break;
-		case CPLXSXP:
-		    COMPLEX(result)[ij] = COMPLEX(x)[iijj];
-		    break;
-		case STRSXP:
-		    SET_STRING_ELT(result, ij, STRING_ELT(x, iijj));
-		    break;
-		case VECSXP:
-		    SET_VECTOR_ELT(result, ij, VECTOR_ELT(x, iijj));
-		    break;
-		case RAWSXP:
-		    RAW(result)[ij] = RAW(x)[iijj];
-		    break;
-		default:
-		    errorcall(call, _("matrix subscripting not handled for this type"));
-		    break;
-		}
-	    }
-	}
-    }
+    if ((double)nrs * (double)ncs > R_LEN_T_MAX)
+        error(_("dimensions would exceed maximum size of array"));
+
+    PROTECT (result = allocVector(TYPEOF(x), nrs*ncs));
+
+    /* Extract elements from matrix x to result. */
+
+    if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER && ii >= 0 && ii <= nr)
+        one_row_of_matrix (call, x, result, ii, nr, sc, ncs, nc);
+    else
+        multiple_rows_of_matrix (call, x, result, sr, nrs, nr, sc, ncs, nc);
+
+    /* Set up dimensions attribute. */
+
     if(nrs >= 0 && ncs >= 0) {
 	PROTECT(attr = allocVector(INTSXP, 2));
 	INTEGER(attr)[0] = nrs;
@@ -588,6 +704,143 @@ static int ExtractExactArg(SEXP args)
     return exact;
 }
 
+
+/* Returns simple (positive or negative) index, or zero if not so simple. */
+
+static R_INLINE R_len_t simple_index (SEXP s)
+{
+    switch (TYPEOF(s)) {
+    case REALSXP:
+        if (LENGTH(s) != 1 || ISNAN(REAL(s)[0])
+         || REAL(s)[0] > R_LEN_T_MAX || REAL(s)[0] < -R_LEN_T_MAX)
+            return 0;
+         return (R_len_t) REAL(s)[0];
+    case INTSXP:
+        if (LENGTH(s) != 1 || INTEGER(s)[0] == NA_INTEGER)
+            return 0;
+        return INTEGER(s)[0];
+    default:
+        return 0;
+    }
+}
+
+
+/* Look for the simple case of subscripting an atomic vector with one 
+   valid integer or real subscript that is positive or negative (not zero, 
+   NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
+   so simple.  The arguments x and s do not need to be protected before 
+   this function is called. */
+
+static SEXP one_vector_subscript (SEXP x, SEXP s)
+{
+    R_len_t ix, n;
+    int typeofx;
+
+    typeofx = TYPEOF(x);
+
+    if (!isVectorAtomic(x))
+        return R_NilValue;
+
+    n = LENGTH(x);
+    ix = simple_index (s);
+
+    if (ix == 0 || ix > n || ix < -n)
+        return R_NilValue;
+
+    if (ix>0) {
+        switch (typeofx) {
+        case LGLSXP:  return ScalarLogical (LOGICAL(x)[ix-1]);
+        case INTSXP:  return ScalarInteger (INTEGER(x)[ix-1]);
+        case REALSXP: return ScalarReal (REAL(x)[ix-1]);
+        case RAWSXP:  return ScalarRaw (RAW(x)[ix-1]);
+        case STRSXP:  return ScalarString (STRING_ELT(x,ix-1));
+        case CPLXSXP: return ScalarComplex (COMPLEX(x)[ix-1]);
+        }
+    }
+    else { /* ix < 0 */
+
+        R_len_t i, j, ex;
+        SEXP r;
+
+        PROTECT(x);
+        r = allocVector (typeofx, n-1);
+
+        j = 0;
+        ix = -ix-1;
+        ex = n-ix-1;
+
+        switch (typeofx) {
+        case LGLSXP: 
+            if (ix!=0) memcpy(LOGICAL(r), LOGICAL(x), ix * sizeof *LOGICAL(r));
+            if (ex!=0) memcpy(LOGICAL(r)+ix, LOGICAL(x)+ix+1, 
+                                                      ex * sizeof *LOGICAL(r));
+            break;
+        case INTSXP: 
+            if (ix!=0) memcpy(INTEGER(r), INTEGER(x), ix * sizeof *INTEGER(r));
+            if (ex!=0) memcpy(INTEGER(r)+ix, INTEGER(x)+ix+1, 
+                                                      ex * sizeof *INTEGER(r));
+            break;
+        case REALSXP: 
+            if (ix!=0) memcpy(REAL(r), REAL(x), ix * sizeof *REAL(r));
+            if (ex!=0) memcpy(REAL(r)+ix, REAL(x)+ix+1, ex * sizeof *REAL(r));
+            break;
+        case RAWSXP: 
+            if (ix!=0) memcpy(RAW(r), RAW(x), ix * sizeof *RAW(r));
+            if (ex!=0) memcpy(RAW(r)+ix, RAW(x)+ix+1, ex * sizeof *RAW(r));
+            break;
+        case STRSXP: 
+            if (ix!=0) copy_string_elements (r, 0, x, 0, ix);
+            if (ex!=0) copy_string_elements (r, ix, x, ix+1, ex); 
+            break;
+        case CPLXSXP: 
+            if (ix!=0) memcpy(COMPLEX(r), COMPLEX(x), ix * sizeof *COMPLEX(r));
+            if (ex!=0) memcpy(COMPLEX(r)+ix, COMPLEX(x)+ix+1, 
+                                                      ex * sizeof *COMPLEX(r));
+            break;
+        }
+
+        UNPROTECT(1);
+        return r;
+    }
+}
+
+
+/* Look for the simple case of subscripting an atomic matrix with two
+   valid integer or real subscript that are positive (not negative, zero, 
+   NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
+   so simple.  The arguments x, dim, s1, and s2 do not need to be 
+   protected before this function is called. */
+
+static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
+{
+    R_len_t ix1, ix2, nrow, ncol, e;
+
+    if (!isVectorAtomic(x))
+        return R_NilValue;
+
+    nrow = INTEGER(dim)[0];
+    ix1 = simple_index (s1);
+    if (ix1 <= 0 || ix1 > nrow)
+        return R_NilValue;
+
+    ncol = INTEGER(dim)[1];
+    ix2 = simple_index (s2);
+    if (ix2 <= 0 || ix2 > ncol)
+        return R_NilValue;
+
+    e = (ix1 - 1) + nrow * (ix2 - 1);
+
+    switch (TYPEOF(x)) {
+    case LGLSXP:  return ScalarLogical (LOGICAL(x)[e]);
+    case INTSXP:  return ScalarInteger (INTEGER(x)[e]);
+    case REALSXP: return ScalarReal (REAL(x)[e]);
+    case RAWSXP:  return ScalarRaw (RAW(x)[e]);
+    case STRSXP:  return ScalarString (STRING_ELT(x,e));
+    case CPLXSXP: return ScalarComplex (COMPLEX(x)[e]);
+    }
+}
+
+
 /* The "[" subset operator.
  * This provides the most general form of subsetting. */
 
@@ -612,96 +865,53 @@ SEXP attribute_hidden do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* run the generic internal code. */
     return do_subset_dflt(call, op, ans, rho);
 }
-
-static R_INLINE int scalarIndex(SEXP s)
-{
-    if (ATTRIB(s) == R_NilValue)
-	switch (TYPEOF(s)) {
-	case REALSXP:
-	    if (LENGTH(s) == 1 && ! ISNAN(REAL(s)[0]))
-		return REAL(s)[0];
-	    else return -1;
-	case INTSXP:
-	    if (LENGTH(s) == 1 && INTEGER(s)[0] != NA_INTEGER)
-		return INTEGER(s)[0];
-	    else return -1;
-	default: return -1;
-	}
-    else return -1;
-}
     
 SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, ax, px, x, subs;
     int drop, i, nsubs, type;
+    SEXP cdrArgs = CDR(args);
+    SEXP cddrArgs = CDR(cdrArgs);
 
     /* By default we drop extents of length 1 */
 
-    /* Handle cases of extracting a single element from a simple vector
-       or matrix directly to improve speed for these simple case. */
-    SEXP cdrArgs = CDR(args);
-    SEXP cddrArgs = CDR(cdrArgs);
-    if (cdrArgs != R_NilValue && cddrArgs == R_NilValue &&
-	TAG(cdrArgs) == R_NilValue) {
-	/* one index, not named */
-	SEXP x = CAR(args);
-	if (ATTRIB(x) == R_NilValue) {
-	    SEXP s = CAR(cdrArgs);
-	    int i = scalarIndex(s);
-	    switch (TYPEOF(x)) {
-	    case REALSXP:
-		if (i >= 1 && i <= LENGTH(x))
-		    return ScalarReal( REAL(x)[i-1] );
-		break;
-	    case INTSXP:
-		if (i >= 1 && i <= LENGTH(x))
-		    return ScalarInteger( INTEGER(x)[i-1] );
-		break;
-	    case LGLSXP:
-		if (i >= 1 && i <= LENGTH(x))
-		    return ScalarLogical( LOGICAL(x)[i-1] );
-		break;
-	    default: break;
-	    }
-	}
-    }
-    else if (cddrArgs != R_NilValue && CDR(cddrArgs) == R_NilValue &&
-	     TAG(cdrArgs) == R_NilValue && TAG(cddrArgs) == R_NilValue) {
-	/* two indices, not named */
-	SEXP x = CAR(args);
-	SEXP attr = ATTRIB(x);
-	if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
-	    /* only attribute of x is 'dim' */
-	    SEXP dim = CAR(attr);
-	    if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {
-		/* x is a matrix */
-		SEXP si = CAR(cdrArgs);
-		SEXP sj = CAR(cddrArgs);
-		int i = scalarIndex(si);
-		int j = scalarIndex(sj);
-		int nrow = INTEGER(dim)[0];
-		int ncol = INTEGER(dim)[1];
-		if (i > 0 && j > 0 && i <= nrow && j <= ncol) {
-		    /* indices are legal scalars */
-		    int k = i - 1 + nrow * (j - 1);
-		    switch (TYPEOF(x)) {
-		    case REALSXP:
-			if (k < LENGTH(x))
-			    return ScalarReal( REAL(x)[k] );
-			break;
-		    case INTSXP:
-			if (k < LENGTH(x))
-			    return ScalarInteger( INTEGER(x)[k] );
-			break;
-		    case LGLSXP:
-			if (k < LENGTH(x))
-			    return ScalarLogical( LOGICAL(x)[k] );
-			break;
-		    default: break;
-		    }
-		}
-	    }
-	}
+    if (CAR(args) != R_NilValue && cdrArgs != R_NilValue 
+                                && TAG(cdrArgs) == R_NilValue) {
+
+        /* Check for one subscript, handling simple cases like this */
+        if (cddrArgs == R_NilValue) { 
+            SEXP x = CAR(args);
+            SEXP attr = ATTRIB(x);
+            if (attr != R_NilValue) {
+                if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
+                    SEXP dim = CAR(attr);
+                    if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 1)
+                        attr = R_NilValue;  /* only a dim attribute, 1D */
+                }
+            }
+            if (attr == R_NilValue) {
+                SEXP r = one_vector_subscript(x,CAR(cdrArgs));
+                if (r != R_NilValue)
+                    return r;
+            }
+        }
+
+        /* Check for two subscripts, handling simple cases like this */
+        else if (cddrArgs != R_NilValue && CDR(cddrArgs) == R_NilValue
+	          && TAG(cddrArgs) == R_NilValue) { /* two subscripts */
+            SEXP x = CAR(args);
+            SEXP attr = ATTRIB(x);
+            if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
+                SEXP dim = CAR(attr);
+                if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {
+                    /* x is a matrix */
+                    SEXP r = two_matrix_subscripts (x, dim, CAR(cdrArgs),
+                                                            CAR(cddrArgs));
+                    if (r != R_NilValue)
+                        return r;
+                }
+            }
+        }
     }
 
     PROTECT(args);
