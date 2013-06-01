@@ -403,7 +403,9 @@ Rcomplex *(COMPLEX)(SEXP x);
 SEXP (STRING_ELT)(SEXP x, int i);
 SEXP (VECTOR_ELT)(SEXP x, int i);
 void SET_STRING_ELT(SEXP x, int i, SEXP v);
+void copy_string_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP SET_VECTOR_ELT(SEXP x, int i, SEXP v);
+void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP *(STRING_PTR)(SEXP x);
 SEXP *(VECTOR_PTR)(SEXP x);
 
@@ -600,6 +602,7 @@ SEXP Rf_cons(SEXP, SEXP);
 void Rf_copyMatrix(SEXP, SEXP, Rboolean);
 void Rf_copyMostAttrib(SEXP, SEXP);
 void Rf_copyVector(SEXP, SEXP);
+void Rf_copy_elements(SEXP, int, SEXP, int, int);
 int Rf_countContexts(int, int);
 SEXP Rf_CreateTag(SEXP);
 void Rf_defineVar(SEXP, SEXP, SEXP);
@@ -647,6 +650,7 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
+void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_setVar(SEXP, SEXP, SEXP);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
@@ -892,6 +896,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define copyMatrix		Rf_copyMatrix
 #define copyMostAttrib		Rf_copyMostAttrib
 #define copyVector		Rf_copyVector
+#define copy_elements		Rf_copy_elements
 #define countContexts		Rf_countContexts
 #define CreateTag		Rf_CreateTag
 #define defineVar		Rf_defineVar
@@ -1004,6 +1009,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define ScalarRaw		Rf_ScalarRaw
 #define setAttrib		Rf_setAttrib
 #define setSVector		Rf_setSVector
+#define set_elements_to_NA_or_NULL Rf_set_elements_to_NA_or_NULL
 #define setVar			Rf_setVar
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank

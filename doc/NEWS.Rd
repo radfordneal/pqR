@@ -263,7 +263,8 @@
       \item **30
       \item **31
       \item **32
-      \item **33
+      \item Fixed a bug in which \code{Im(matrix(complex(0),3,4))} returned
+            a matrix of zero elements rather than a matrix of NA elements.
       \item **34
       \item **35
       \item **36

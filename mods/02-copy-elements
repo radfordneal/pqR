@@ -1,0 +1,14 @@
+Defines several functions for use within the R interpreter.
+
+New functions copy_string_elements and copy_vector_elements are now
+defined.  Compared to using SET_STRING_ELT and SET_VECTOR_ELT, these
+allow copying of multiple elements without error checks on every
+element, and sometimes without old-to-new checks on every element.
+
+A new function copy_elements is also defined, for copying elements in
+any sort of vector (duplicating non-atomic elements, and using
+copy_string_elements).
+
+A new function set_elements_to_NA_or_NULL is defined for doing that.
+
+See also the NEWS item on a bug fix.
