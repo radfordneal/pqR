@@ -3193,7 +3193,7 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	    PROTECT(ans = attachSrcrefs(a2));
 	    REPROTECT(SrcRefs = prevSrcrefs, srindex);
 	    /* SrcRefs got NAMED by being an attribute... */
-	    SET_NAMED(SrcRefs, 0);
+	    SET_NAMEDCNT_0(SrcRefs);
 	    UNPROTECT_PTR(prevSrcrefs);
 	}
 	else

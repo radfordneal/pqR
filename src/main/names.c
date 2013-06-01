@@ -1201,15 +1201,15 @@ void InitNames()
     /* Logical values */
     R_ScalarLogicalNA = allocVector(LGLSXP, 1);
     LOGICAL(R_ScalarLogicalNA)[0] = NA_LOGICAL;
-    SET_NAMED(R_ScalarLogicalNA,2);
+    SET_NAMEDCNT_MAX(R_ScalarLogicalNA);
 
     R_ScalarLogicalFALSE = allocVector(LGLSXP, 1);
     LOGICAL(R_ScalarLogicalFALSE)[0] = FALSE;
-    SET_NAMED(R_ScalarLogicalFALSE,2);
+    SET_NAMEDCNT_MAX(R_ScalarLogicalFALSE);
 
     R_ScalarLogicalTRUE = allocVector(LGLSXP, 1);
     LOGICAL(R_ScalarLogicalTRUE)[0] = TRUE;
-    SET_NAMED(R_ScalarLogicalTRUE,2);
+    SET_NAMEDCNT_MAX(R_ScalarLogicalTRUE);
 
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that

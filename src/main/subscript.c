@@ -732,7 +732,7 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 #else
     /* Duplicate if the subscript might be being used to replace elements of
        itself. */
-    if (used_to_replace && NAMED(s) > 0) 
+    if (used_to_replace && NAMEDCNT_GT_0(s)) 
         s = duplicate(s);
     PROTECT(s);
 #endif

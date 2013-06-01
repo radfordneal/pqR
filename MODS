@@ -278,9 +278,14 @@ users, such as cleanups of source code.
 
  45)
 
- 46)
+ 46) The count of hash table entries in use was wrongly maintained in
+     HashSet in envir.c.  This affected when hash tables were resized,
+     but not correctness.
 
- 47)
+ 47) Assignment to a global symbol no longer causes it to be flushed from 
+     the global cache, unless it did not previously exist.  (Flushing is 
+     not necessary when all that changes is the value bound, not whether 
+     and where it is bound.)
 
  48)
 

@@ -1573,7 +1573,7 @@ SEXP asS4(SEXP s, Rboolean flag, int complete)
     if(flag == IS_S4_OBJECT(s))
 	return s;
     PROTECT(s);
-    if(NAMED(s) == 2)
+    if(NAMEDCNT_GT_1(s))
 	s = duplicate(s);
     UNPROTECT(1);
     if(flag) SET_S4_OBJECT(s);

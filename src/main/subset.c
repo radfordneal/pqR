@@ -337,7 +337,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
     if (mode == VECSXP || mode == EXPRSXP)
 	/* we do not duplicate the values when extracting the subset,
 	   so to be conservative mark the result as NAMED = 2 */
-	SET_NAMED(result, 2);
+	SET_NAMEDCNT_MAX(result);
 
     PROTECT(result = s==R_NilValue ? ExtractRange(x, result, start, end, call)
                                    : ExtractSubset(x, result, indx, call));
@@ -1152,8 +1152,8 @@ SEXP attribute_hidden do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(DispatchOrEval(call, op, "[", args, rho, &ans, 0, argsevald)) {
 /*     if(DispatchAnyOrEval(call, op, "[", args, rho, &ans, 0, 0)) */
-	if (NAMED(ans))
-	    SET_NAMED(ans, 2);
+	if (NAMEDCNT_GT_0(ans))
+	    SET_NAMEDCNT_MAX(ans);
 	return(ans);
     }
 
@@ -1309,7 +1309,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	setAttrib(ans, R_DimSymbol, getAttrib(ax, R_DimSymbol));
 	setAttrib(ans, R_DimNamesSymbol, getAttrib(ax, R_DimNamesSymbol));
 	setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
-	SET_NAMED(ans, NAMED(ax)); /* PR#7924 */
+	SET_NAMEDCNT(ans, NAMEDCNT(ax)); /* PR#7924 */
     }
     else {
 	PROTECT(ans);
@@ -1342,8 +1342,8 @@ SEXP attribute_hidden do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(DispatchOrEval(call, op, "[[", args, rho, &ans, 0, 0)) {
 /*     if(DispatchAnyOrEval(call, op, "[[", args, rho, &ans, 0, 0)) */
-	if (NAMED(ans))
-	    SET_NAMED(ans, 2);
+	if (NAMEDCNT_GT_0(ans))
+	    SET_NAMEDCNT_MAX(ans);
 	return(ans);
     }
 
@@ -1409,14 +1409,14 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    ans = eval(ans, R_GlobalEnv);
 	    UNPROTECT(1);
       } else {
-	    SET_NAMED(ans, 2);
+	    SET_NAMEDCNT_MAX(ans);
       }
 
       UNPROTECT(1);
       if(ans == R_UnboundValue )
 	  return(R_NilValue);
-      if (NAMED(ans))
-	  SET_NAMED(ans, 2);
+      if (NAMEDCNT_GT_0(ans))
+	  SET_NAMEDCNT_MAX(ans);
       return(ans);
     }
 
@@ -1424,7 +1424,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!(isVector(x) || isList(x) || isLanguage(x)))
 	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
-    named_x = NAMED(x);  /* x may change below; save this now.  See PR#13411 */
+    named_x = NAMEDCNT(x); /* x may change below; save this now. See PR#13411 */
 
     if(nsubs == 1) { /* vector indexing */
 	SEXP thesub = CAR(subs);
@@ -1476,13 +1476,13 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(isPairList(x)) {
 	ans = CAR(nthcdr(x, offset));
-	if (named_x > NAMED(ans))
-	    SET_NAMED(ans, named_x);
+	if (named_x > NAMEDCNT(ans))
+	    SET_NAMEDCNT(ans, named_x);
     } else if(isVectorList(x)) {
 	/* did unconditional duplication before 2.4.0 */
 	ans = VECTOR_ELT(x, offset);
-	if (named_x > NAMED(ans))
-	    SET_NAMED(ans, named_x);
+	if (named_x > NAMEDCNT(ans))
+	    SET_NAMEDCNT(ans, named_x);
     } else {
 	ans = allocVector(TYPEOF(x), 1);
 	switch (TYPEOF(x)) {
@@ -1570,8 +1570,8 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if(DispatchOrEval(call, op, "$", args, env, &ans, 0, argsevald)) {
         UNPROTECT(2+argsevald);
-	if (NAMED(ans))
-	    SET_NAMED(ans, 2);
+	if (NAMEDCNT_GT_0(ans))
+	    SET_NAMEDCNT_MAX(ans);
 	return(ans);
     }
 
@@ -1608,7 +1608,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
             for (y = x; y != R_NilValue; y = CDR(y))
                 if (TAG(y)==name) {
                     y = CAR(y);
-                    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
+                    if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
     	            return y;
                 }
         }
@@ -1619,7 +1619,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	    mtch = ep_match_strings(ctarg, cinp);
 	    if (mtch>0) /* exact */ {
 		y = CAR(y);
-		if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
+		if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
 		return y;
             }
             else if (mtch<0) /* partial */ {
@@ -1634,7 +1634,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 			    cinp, ctarg);
             }
 	    y = CAR(xmatch);
-	    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
+	    if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
 	    return y;
 	}
 	return R_NilValue;
@@ -1653,8 +1653,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	    mtch = ep_match_strings(ctarg, cinp);
             if (mtch>0) /* exact */ {
 		y = VECTOR_ELT(x, i);
-		if (NAMED(x) > NAMED(y))
-		    SET_NAMED(y, NAMED(x));
+		if (NAMEDCNT(x) > NAMEDCNT(y))
+		    SET_NAMEDCNT(y, NAMEDCNT(x));
 		return y;
             }
 	    else if (mtch<0) /* partial */ {
@@ -1664,7 +1664,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 		       This is overkill, but alternative ways to prevent
 		       the aliasing appear to be even worse */
 		    y = VECTOR_ELT(x,i);
-		    SET_NAMED(y,2);
+		    SET_NAMEDCNT_MAX(y);
 		    SET_VECTOR_ELT(x,i,y);
 		}
 		imatch = i;
@@ -1679,7 +1679,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 			    cinp, ctarg);
 	    }
 	    y = VECTOR_ELT(x, imatch);
-	    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
+	    if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
 	    return y;
 	}
 	return R_NilValue;
@@ -1695,7 +1695,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	}
         if (y == R_UnboundValue)
             return R_NilValue;
-        SET_NAMED(y,2);  /* Likely overkill, but 2.13.0 does the equivalent */
+        SET_NAMEDCNT_MAX(y); /* Likely overkill but 2.13.0 does the equivalent*/
         return y;
     }
     else if( isVectorAtomic(x) ){

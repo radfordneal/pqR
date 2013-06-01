@@ -117,7 +117,7 @@ SEXP attribute_hidden complex_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     case PLUSOP:
 	return s1;
     case MINUSOP:
-	ans = NAMED(s1)==0 ? s1 : duplicate(s1);
+	ans = NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
 	n = LENGTH(s1);
 	for (i = 0; i < n; i++) {
 	    COMPLEX(ans)[i].r = -COMPLEX(s1)[i].r;
@@ -327,7 +327,7 @@ static SEXP do_fast_cmathfuns (SEXP call, SEXP op, SEXP x, SEXP env,
 #endif
 	    break;
 	case 5:	/* Conj */
-	    y = NAMED(x)==0 ? x : allocVector(CPLXSXP, n);
+	    y = NAMEDCNT_EQ_0(x) ? x : allocVector(CPLXSXP, n);
 	    for(i = 0 ; i < n ; i++) {
 		COMPLEX(y)[i].r = COMPLEX(x)[i].r;
 		COMPLEX(y)[i].i = -COMPLEX(x)[i].i;
@@ -340,7 +340,7 @@ static SEXP do_fast_cmathfuns (SEXP call, SEXP op, SEXP x, SEXP env,
         n = LENGTH(x);
 	if (!isReal(x)) x = coerceVector(x, REALSXP);
         PROTECT(x);
-        y = NAMED(x)==0 ? x : allocVector(REALSXP, n);
+        y = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
 
 	switch(PRIMVAL(op)) {
 	case 1:	/* Re */

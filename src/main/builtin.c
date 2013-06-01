@@ -90,7 +90,7 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(aenv))
 	errorcall(call, _("invalid '%s' argument"), "assign.env");
 
-    defineVar(name, mkPROMISE(expr, eenv), aenv);
+    defineVar(name, mkPROMISE(expr, eenv), aenv);  /* NAMEDCNT==1 for promise */
     return R_NilValue;
 }
 
@@ -116,7 +116,7 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(val = eval(VECTOR_ELT(values, i), eenv));
 	PROTECT(expr0 = duplicate(expr));
 	SETCAR(CDR(expr0), val);
-	defineVar(name, mkPROMISE(expr0, eenv), aenv);
+	defineVar(name, mkPROMISE(expr0, eenv), aenv); /* NAMEDCNT==1 for promise */
 	UNPROTECT(2);
     }
     return R_NilValue;
@@ -283,7 +283,7 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    isNull(env))) {
 	if (isNull(env))
 	    error(_("use of NULL environment is defunct"));
-	if(NAMED(s) > 1)
+	if(NAMEDCNT_GT_1(s))
 	    /* this copies but does not duplicate args or code */
 	    s = duplicate(s);
 	if (TYPEOF(BODY(s)) == BCODESXP)
@@ -667,7 +667,7 @@ SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else {
 	    SET_STRING_ELT(names, i, R_BlankString);
 	}
-	if (NAMED(CAR(args)))
+	if (NAMEDCNT_GT_0(CAR(args)))
 	    SET_VECTOR_ELT(list, i, duplicate(CAR(args)));
 	else
 	    SET_VECTOR_ELT(list, i, CAR(args));
@@ -690,7 +690,7 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(EXPRSXP, n));
     a = args;
     for (i = 0; i < n; i++) {
-	if(NAMED(CAR(a)))
+	if(NAMEDCNT_GT_0(CAR(a)))
 	    SET_VECTOR_ELT(ans, i, duplicate(CAR(a)));
 	else
 	    SET_VECTOR_ELT(ans, i, CAR(a));

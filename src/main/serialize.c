@@ -2620,11 +2620,11 @@ SEXP attribute_hidden R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 	if (force && TYPEOF(tmp) == PROMSXP) {
 	    PROTECT(tmp);
 	    tmp = eval(tmp, R_GlobalEnv);
-	    SET_NAMED(tmp, 2);
+	    SET_NAMEDCNT_MAX(tmp);
 	    UNPROTECT(1);
 	}
-	else if (TYPEOF(tmp) != NILSXP && NAMED(tmp) < 1)
-	    SET_NAMED(tmp, 1);
+	else if (NAMEDCNT_EQ_0(tmp))
+	    SET_NAMEDCNT_1(tmp);
 	SET_VECTOR_ELT(val, i, tmp);
     }
     setAttrib(val, R_NamesSymbol, vars);
@@ -2695,7 +2695,7 @@ do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(val) == PROMSXP) {
 	REPROTECT(val, vpi);
 	val = eval(val, R_GlobalEnv);
-	SET_NAMED(val, 2);
+	SET_NAMEDCNT_MAX(val);
     }
     UNPROTECT(1);
     return val;

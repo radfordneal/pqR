@@ -247,6 +247,7 @@ typedef struct VECTOR_SEXPREC {
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
+
 /* Macros for accessing and changing NAMEDCNT. */
 
 #define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
@@ -319,6 +320,21 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
   ( (v) > 1 ? SET_NAMEDCNT_MAX((x)) : SET_NAMEDCNT((x),(v)) )
 
 #endif
+
+/* Decrement NAMEDCNT for object and for PRVALUE if object is a promise. */
+
+#if 0  /* temporarily disabled, pending problem resolution */
+#define DEC_NAMEDCNT_AND_PRVALUE(x) do { \
+    SEXP _q_ = (x); \
+    DEC_NAMEDCNT(_q_); \
+    if (TYPEOF(_q_) == PROMSXP && NAMEDCNT_EQ_0(_q_) \
+                               && PRVALUE(_q_) != R_UnboundValue) \
+        DEC_NAMEDCNT(PRVALUE(_q_)); \
+  } while (0)
+#else
+#define DEC_NAMEDCNT_AND_PRVALUE(x) DEC_NAMEDCNT((x))
+#endif
+
 
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)
@@ -762,6 +778,8 @@ void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_setVar(SEXP, SEXP, SEXP);
+int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
+void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1131,6 +1149,8 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define setSVector		Rf_setSVector
 #define set_elements_to_NA_or_NULL Rf_set_elements_to_NA_or_NULL
 #define setVar			Rf_setVar
+#define set_var_in_frame	Rf_set_var_in_frame
+#define set_var_nonlocal	Rf_set_var_nonlocal
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute
