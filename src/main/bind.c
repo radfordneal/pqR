@@ -819,7 +819,7 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
             for (t = args; t != R_NilValue; t = CDR(t)) {
                 SEXP a = CAR(t);
                 R_len_t ln = LENGTH(a);
-                copy_elements (ans, i, a, 0, ln);
+                copy_elements (ans, i, 1, a, 0, 1, ln);
                 i += ln;
             }
             UNPROTECT(1); /* args */
@@ -1153,7 +1153,8 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     data.ans_length = 0;
     data.ans_nnames = 0;
     for (t = args; t != R_NilValue; t = CDR(t))
-	AnswerType(PRVALUE(CAR(t)), 0, 0, &data, call);
+	AnswerType (TYPEOF(CAR(t))==PROMSXP ? PRVALUE(CAR(t)) : CAR(t), 
+                    0, 0, &data, call);
 
     /* zero-extent matrices shouldn't give NULL, but cbind(NULL) should: */
     if (!data.ans_flags && !data.ans_length) {
@@ -1212,82 +1213,92 @@ static void SetColNames(SEXP dimnames, SEXP x)
 	SETCADR(dimnames, x);
 }
 
-/*
- * Apparently i % 0 could occur here (PR#2541).  But it should not,
- * as zero-length vectors are ignored and
- * zero-length matrices must have zero columns,
- * unless the result has zero rows, hence is of length zero and no
- * copying will be done.
- */
 static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		  int deparse_level)
 {
-    int i, j, k, idx, n;
+    int h, i, j, k, idx, nargs, n;
     Rboolean have_rnames = FALSE, have_cnames = FALSE, warned = FALSE;
     int nnames, mnames;
-    int rows, cols, mrows, lenmin = 0;
+    int rows, cols, mrows, lenmin;
     SEXP dn, t, u, result, dims, expr;
 
-    nnames = 0;
-    mnames = 0;
-    rows = 0;
-    cols = 0;
-    mrows = -1;
+    nargs = length(args);
 
-    /* check if we are in the zero-row case */
+    char argkind[nargs]; /* Kind of argument: 1=vector, 2=matrix, 3=other */
+    SEXP argval[nargs];  /* Values of arguments, later maybe coerced versions */
+    R_len_t matrows[nargs];  /* Numbers of rows in matrices */
+    R_len_t matcols[nargs];  /* Numbers of columns in matrices */
+    R_len_t arg_len[nargs];  /* Lengths of non-matrix args */
 
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-	u = PRVALUE(CAR(t));
-	if((isMatrix(u) ? nrows(u) : length(u)) > 0) {
-	    lenmin = 1;
-	    break;
-	}
+    lenmin = 0;
+
+    /* Record args, what kind they are, and their numbers of rows and columns
+       or lengths for non-matrix arguments.  Also check if we are in the 
+       zero-rows case. */
+
+    for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
+	argval[n] = TYPEOF(CAR(t))==PROMSXP ? PRVALUE(CAR(t)) : CAR(t);
+        argkind[n] = !isVector(argval[n]) && !isPairList(argval[n]) ? 3
+                      : isMatrix(argval[n]) ? 2 : 1;
+        if (argkind[n] == 2) {
+            matrows[n] = nrows(argval[n]);
+            matcols[n] = ncols(argval[n]);
+            if (matrows[n] > 0) 
+                lenmin = 1;
+        }
+        else {
+            arg_len[n] = length(argval[n]);
+            if (arg_len[n] > 0)
+                lenmin = 1;
+        }
     }
 
     /* check conformability of matrix arguments */
 
-    n = 0;
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-	u = PRVALUE(CAR(t));
-	dims = getAttrib(u, R_DimSymbol);
-	if (length(dims) == 2) {
-	    if (mrows == -1)
-		mrows = INTEGER(dims)[0];
-	    else if (mrows != INTEGER(dims)[0])
-		error(_("number of rows of matrices must match (see arg %d)"),
-		      n + 1);
-	    cols += INTEGER(dims)[1];
-	}
-	else if (length(u) >= lenmin) {
-	    rows = imax2(rows, length(u));
-	    cols += 1;
-	}
-	n++;
+    rows = 0;
+    cols = 0;
+    mrows = -1;
+
+    for (n = 0; n < nargs; n++) {
+        if (argkind[n] == 2) {
+            if (mrows == -1)
+                mrows = matrows[n];
+            else if (mrows != matrows[n])
+               error(_("number of rows of matrices must match (see arg %d)"),
+                     n + 1);
+            cols += matcols[n];
+        }
+        else if (arg_len[n] >= lenmin) {
+            if (arg_len[n] > rows) rows = arg_len[n];
+            cols += 1;
+        }
     }
-    if (mrows != -1) rows = mrows;
 
-    /* Check conformability of vector arguments. -- Look for dimnames. */
+    if (mrows != -1) 
+        rows = mrows;
 
-    n = 0;
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-	u = PRVALUE(CAR(t));
-	n++;
-	dims = getAttrib(u, R_DimSymbol);
-	if (length(dims) == 2) {
-	    dn = getAttrib(u, R_DimNamesSymbol);
+    /* Check conformability of non-matrix arguments. -- Look for dimnames. */
+
+    nnames = 0;
+    mnames = 0;
+
+    for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
+	if (argkind[n] == 2) {
+	    dn = getAttrib (argval[n], R_DimNamesSymbol);
 	    if (length(dn) == 2) {
 		if (VECTOR_ELT(dn, 1) != R_NilValue)
 		    have_cnames = TRUE;
 		if (VECTOR_ELT(dn, 0) != R_NilValue)
 		    mnames = mrows;
 	    }
-	} else {
-	    k = length(u);
-	    if (!warned && k > 0 && (k > rows || rows % k)) {
+	}
+	else {
+	    k = arg_len[n];
+	    if (!warned && k>0 && (k > rows || rows % k)) {
 		warned = TRUE;
-		warning("number of rows of result is not a multiple of vector length (arg %d)", n);
+		warning("number of rows of result is not a multiple of vector length (arg %d)", n + 1);
 	    }
-	    dn = getAttrib(u, R_NamesSymbol);
+	    dn = getAttrib (argval[n], R_NamesSymbol);
 	    if (k >= lenmin && (TAG(t) != R_NilValue ||
 				(deparse_level == 2) ||
 				((deparse_level == 1) &&
@@ -1296,119 +1307,97 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	    nnames = imax2(nnames, length(dn));
 	}
     }
+
     if (mnames || nnames == rows)
 	have_rnames = TRUE;
 
+    /* allocate space for result. */
+
     PROTECT(result = allocMatrix(mode, rows, cols));
-    n = 0;
 
-    if (mode == STRSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		u = coerceVector(u, STRSXP);
-		k = LENGTH(u);
-		idx = (!isMatrix(u)) ? rows : k;
-		for (i = 0; i < idx; i++)
-		    SET_STRING_ELT(result, n++, STRING_ELT(u, i % k));
-	    }
-	}
+    /* Coerce data for VECSXP result.  Replace args to ignore with R_NilValue */
+
+    if (mode == VECSXP) {
+        for (n = 0; n < nargs; n++) {
+            if (argkind[n] != 3)
+                argval[n] = argkind[n] == 2 || arg_len[n] >= lenmin 
+                             ? coerceVector(argval[n],mode) : R_NilValue;
+            PROTECT(argval[n]);
+        }
     }
-    else if (mode == VECSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		/* we cannot assume here that coercion will work */
-		switch(TYPEOF(u)) {
-		case NILSXP:
-		case LANGSXP:
-		case RAWSXP:
-		case LGLSXP:
-		case INTSXP:
-		case REALSXP:
-		case CPLXSXP:
-		case STRSXP:
-		case VECSXP:
-		case LISTSXP:
-		    PROTECT(u = coerceVector(u, mode));
-		    k = LENGTH(u);
-		    if (k > 0) {
-			idx = (!isMatrix(u)) ? rows : k;
-			for (i = 0; i < idx; i++)
-			    SET_VECTOR_ELT(result, n++,
-					   duplicate(VECTOR_ELT(u, i % k)));
-		    }
-		    UNPROTECT(1);
-		    break;
-		default:
-		    for (i = 0; i < rows; i++)
-			SET_VECTOR_ELT(result, n++, duplicate(u));
-		}
-	    }
-	}
-    }
-    else if (mode == CPLXSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		u = coerceVector(u, CPLXSXP);
-		k = LENGTH(u);
-		idx = (!isMatrix(u)) ? rows : k;
-		for (i = 0; i < idx; i++)
-		    COMPLEX(result)[n++] = COMPLEX(u)[i % k];
-	    }
-	}
-    }
-    else if (mode == RAWSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		u = coerceVector(u, RAWSXP);
-		k = LENGTH(u);
-		idx = (!isMatrix(u)) ? rows : k;
-		for (i = 0; i < idx; i++)
-		    RAW(result)[n++] = RAW(u)[i % k];
-	    }
-	}
-    }
-    else { /* everything else, currently REALSXP, INTSXP, LGLSXP */
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t)); /* type of u can be any of: RAW, LGL, INT, REAL */
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		k = LENGTH(u);
-		idx = (!isMatrix(u)) ? rows : k;
-		if (TYPEOF(u) <= INTSXP) { /* INT or LGL */
-		    if (mode <= INTSXP) {
-			for (i = 0; i < idx; i++)
-			    INTEGER(result)[n++] = INTEGER(u)[i % k];
-		    }
-		    else {
-			for (i = 0; i < idx; i++)
-			    REAL(result)[n++] = (INTEGER(u)[i % k]) == NA_INTEGER ? NA_REAL : INTEGER(u)[i % k];
-		    }
-		}
-		else if (TYPEOF(u) == REALSXP) {
-		    for (i = 0; i < idx; i++)
-			REAL(result)[n++] = REAL(u)[i % k];
-		} 
-		else { /* RAWSXP */
-		    /* FIXME: I'm not sure what the author intended when the 
-                       sequence was defined as raw < logical -- it is possible 
-                       to represent logical as raw losslessly but not vice 
-                       versa. So due to the way this was defined the 
-                       raw -> logical conversion is bound to be lossy .. */
-		    if (mode == LGLSXP)
-			for (i = 0; i < idx; i++)
-			    LOGICAL(result)[n++] = RAW(u)[i % k] ? TRUE : FALSE;
-		    else
-			for (i = 0; i < idx; i++)
-			    INTEGER(result)[n++] = (unsigned char) RAW(u)[i % k];
-		}
-	    }
-	}
+    else {
+        for (n = 0; n < nargs; n++)
+            if (argkind[n] == 1 && arg_len[n] < lenmin) 
+                argval[n] = R_NilValue;
     }
 
-    /* Adjustment of dimnames attributes. */
+    /* Copy the data. */
+
+    j = 0;
+
+    for (n = 0; n < nargs; n++) {
+        if (argval[n] != R_NilValue) {
+            if (mode == VECSXP) {
+                if (argkind[n] == 3) { /* something special - eg, closure */
+                    idx = 1;
+                    for (i = 0; i < rows; i++)
+                        SET_VECTOR_ELT (result, i + j*rows,
+                                                duplicate(argval[n]));
+                }
+                else { /* matrix or vector */
+                    idx = argkind[n] == 2 ? matcols[n] : 1;
+                    if (idx == 1) { /* vector, or matrix with one column */
+                        k = LENGTH(argval[n]);
+                        if (k >= rows) /* no repetition needed */
+                            copy_elements (result, j*rows, 1,
+                                           argval[n], 0, 1, rows);
+                        else if (k == 1) /* repeat single element */
+                            copy_elements (result, j*rows, 1,
+                                           argval[n], 0, 0, rows);
+                        else { /* need to repeat short vector */
+                            if (k == 0) abort(); /* shouldn't happen */
+                            for (h = 0; h < rows; h += k)
+                                copy_elements (result, h + j*rows, 1,
+                                   argval[n], 0, 1, rows-h >= k ? k : rows-h);
+                        }
+                    }
+                    else { /* general matrix */
+                        copy_elements (result, j*rows, 1,
+                                       argval[n], 0, 1, idx*rows);
+                    }
+                }
+            }
+            else {
+                idx = argkind[n] == 2 ? matcols[n] : 1;
+                if (idx == 1) { /* vector, or matrix with one column */
+                    k = LENGTH(argval[n]);
+                    if (k >= rows) /* no repetition needed */
+                        copy_elements_coerced (result, j*rows, 1,
+                                               argval[n], 0, 1, rows);
+                    else if (k == 1) /* repeat single element */
+                        copy_elements_coerced (result, j*rows, 1,
+                                               argval[n], 0, 0, rows);
+                    else { /* need to repeat short vector */
+                        if (k == 0) abort(); /* shouldn't happen */
+                        for (h = 0; h < rows; h += k)
+                            copy_elements_coerced (result, h + j*rows, 1,
+                               argval[n], 0, 1, rows-h >= k ? k : rows-h);
+                    }
+                } 
+                else { /* general matrix */
+                    copy_elements_coerced (result, j*rows, 1,
+                                           argval[n], 0, 1, idx*rows);
+                }
+            }
+            j += idx;
+        }
+    }
+
+    if (mode == VECSXP)
+        UNPROTECT(nargs);
+
+    /* Adjust dimnames attributes. */
+
     if (have_cnames || have_rnames) {
 	SEXP nam, tnam,v;
 	PROTECT(dn = allocVector(VECSXP, 2));
@@ -1417,9 +1406,9 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	else
 	    nam = R_NilValue;	/* -Wall */
 	j = 0;
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u)) {
+	for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
+	    u = TYPEOF(CAR(t))==PROMSXP ? PRVALUE(CAR(t)) : CAR(t);
+	    if (argkind[n] == 2) {
 		v = getAttrib(u, R_DimNamesSymbol);
 
 		if (have_rnames &&
@@ -1431,19 +1420,19 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		/* but if tnam is non-null, have_cnames = TRUE: see above */
 		tnam = GetColNames(v);
 		if (tnam != R_NilValue) {
-		    for (i = 0; i < LENGTH(tnam); i++)
-			SET_STRING_ELT(nam, j++, STRING_ELT(tnam, i));
+                    copy_string_elements (nam, j, tnam, 0, LENGTH(tnam));
+                    j += LENGTH(tnam);
 		}
 		else if (have_cnames) {
 		    for (i = 0; i < ncols(u); i++)
 			SET_STRING_ELT(nam, j++, R_BlankString);
 		}
-	    } else if (length(u) >= lenmin) {
-		u = getAttrib(u, R_NamesSymbol);
+	    } else if (arg_len[n] >= lenmin) {
+		v = getAttrib(u, R_NamesSymbol);
 
 		if (have_rnames && GetRowNames(dn) == R_NilValue
-		    && u != R_NilValue && length(u) == rows)
-		    SetRowNames(dn, duplicate(u));
+		    && v != R_NilValue && length(v) == rows)
+		    SetRowNames(dn, duplicate(v));
 
 		if (TAG(t) != R_NilValue)
 		    SET_STRING_ELT(nam, j++, PRINTNAME(TAG(t)));
@@ -1462,67 +1451,87 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	setAttrib(result, R_DimNamesSymbol, dn);
 	UNPROTECT(1);
     }
+
     UNPROTECT(1);
     return result;
+
 } /* cbind */
 
+
+#define RBIND_COLS 4  /* Number of columns to copy at once */
 
 static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		  int deparse_level)
 {
-    int i, j, k, idx, n;
+    int h, i, j, k, idx, nargs, n;
     Rboolean have_rnames = FALSE, have_cnames = FALSE, warned = FALSE;
     int nnames, mnames;
-    int rows, cols, mcols, lenmin = 0;
-    SEXP dn, t, u, result, dims, expr;
+    int rows, cols, mcols, lenmin;
+    SEXP dn, t, result, dims, expr;
+ 
+    nargs = length(args);
 
-    nnames = 0;
-    mnames = 0;
-    rows = 0;
-    cols = 0;
-    mcols = -1;
+    char argkind[nargs]; /* Kind of argument: 1=vector, 2=matrix, 3=other */
+    SEXP argval[nargs];  /* Values of arguments, later maybe coerced versions */
+    R_len_t matrows[nargs];  /* Numbers of rows in matrices */
+    R_len_t matcols[nargs];  /* Numbers of columns in matrices */
+    R_len_t arg_len[nargs];  /* Lengths of non-matrix args */
 
-    /* check if we are in the zero-cols case */
+    lenmin = 0;
 
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-	u = PRVALUE(CAR(t));
-	if((isMatrix(u) ? ncols(u) : length(u)) > 0) {
-	    lenmin = 1;
-	    break;
-	}
+    /* Record args, what kind they are, and their numbers of rows and columns
+       or lengths for non-matrix arguments.  Also check if we are in the 
+       zero-cols case. */
+
+    for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
+	argval[n] = TYPEOF(CAR(t))==PROMSXP ? PRVALUE(CAR(t)) : CAR(t);
+        argkind[n] = !isVector(argval[n]) && !isPairList(argval[n]) ? 3
+                      : isMatrix(argval[n]) ? 2 : 1;
+        if (argkind[n] == 2) {
+            matrows[n] = nrows(argval[n]);
+            matcols[n] = ncols(argval[n]);
+            if (matcols[n] > 0) 
+                lenmin = 1;
+        }
+        else {
+            arg_len[n] = length(argval[n]);
+            if (arg_len[n] > 0)
+                lenmin = 1;
+        }
     }
 
     /* check conformability of matrix arguments */
 
-    n = 0;
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-	u = PRVALUE(CAR(t));
-	dims = getAttrib(u, R_DimSymbol);
-	if (length(dims) == 2) {
-	    if (mcols == -1)
-		mcols = INTEGER(dims)[1];
-	    else if (mcols != INTEGER(dims)[1])
-		error(_("number of columns of matrices must match (see arg %d)"),
-		      n + 1);
-	    rows += INTEGER(dims)[0];
-	}
-	else if (length(u) >= lenmin){
-	    cols = imax2(cols, length(u));
-	    rows += 1;
-	}
-	n++;
+    rows = 0;
+    cols = 0;
+    mcols = -1;
+
+    for (n = 0; n < nargs; n++) {
+        if (argkind[n] == 2) {
+            if (mcols == -1)
+                mcols = matcols[n];
+            else if (mcols != matcols[n])
+               error(_("number of columns of matrices must match (see arg %d)"),
+                     n + 1);
+            rows += matrows[n];
+        }
+        else if (arg_len[n] >= lenmin) {
+            if (arg_len[n] > cols) cols = arg_len[n];
+            rows += 1;
+        }
     }
-    if (mcols != -1) cols = mcols;
 
-    /* Check conformability of vector arguments. -- Look for dimnames. */
+    if (mcols != -1) 
+        cols = mcols;
 
-    n = 0;
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-	u = PRVALUE(CAR(t));
-	n++;
-	dims = getAttrib(u, R_DimSymbol);
-	if (length(dims) == 2) {
-	    dn = getAttrib(u, R_DimNamesSymbol);
+    /* Check conformability of non-matrix arguments. -- Look for dimnames. */
+
+    nnames = 0;
+    mnames = 0;
+
+    for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
+	if (argkind[n] == 2) {
+	    dn = getAttrib (argval[n], R_DimNamesSymbol);
 	    if (length(dn) == 2) {
 		if (VECTOR_ELT(dn, 0) != R_NilValue)
 		    have_rnames = TRUE;
@@ -1531,12 +1540,12 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	    }
 	}
 	else {
-	    k = length(u);
+	    k = arg_len[n];
 	    if (!warned && k>0 && (k > cols || cols % k)) {
 		warned = TRUE;
-		warning("number of columns of result is not a multiple of vector length (arg %d)", n);
+		warning("number of columns of result is not a multiple of vector length (arg %d)", n + 1);
 	    }
-	    dn = getAttrib(u, R_NamesSymbol);
+	    dn = getAttrib (argval[n], R_NamesSymbol);
 	    if (k >= lenmin && (TAG(t) != R_NilValue ||
 				(deparse_level == 2) ||
 				((deparse_level == 1) &&
@@ -1545,65 +1554,134 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	    nnames = imax2(nnames, length(dn));
 	}
     }
+
     if (mnames || nnames == cols)
 	have_cnames = TRUE;
 
+    /* allocate space for result. */
+
     PROTECT(result = allocMatrix(mode, rows, cols));
 
-    n = 0;
+    /* Coerce data for VECSXP result.  Replace args to ignore with R_NilValue */
 
-    if (mode == VECSXP || mode == EXPRSXP) {
-        for (t = args; t != R_NilValue; t = CDR(t)) {
-            u = PRVALUE(CAR(t));
-            if (isMatrix(u) || length(u) >= lenmin) {
-                PROTECT(u = coerceVector(u, mode));
-                k = LENGTH(u);
-                if (k > 0) {
-                    idx = (isMatrix(u)) ? nrows(u) : 1;
-                    for (j = 0; j < cols; j++)
-                        copy_elements (result, n + j*rows, u, (j*idx)%k, idx);
-                    n += idx;
-                }
-                UNPROTECT(1);
-            }
+    if (mode == VECSXP) {
+        for (n = 0; n < nargs; n++) {
+            if (argkind[n] != 3)
+                argval[n] = argkind[n] == 2 || arg_len[n] >= lenmin 
+                             ? coerceVector(argval[n],mode) : R_NilValue;
+            PROTECT(argval[n]);
         }
     }
     else {
-        for (t = args; t != R_NilValue; t = CDR(t)) {
-            u = PRVALUE(CAR(t));
-            if (isMatrix(u) || length(u) >= lenmin) {
-                k = LENGTH(u);
-                if (k > 0) {
-                    if (isMatrix(u)) {
-                        idx = nrows(u);
-                        for (j = 0; j < cols; j++)
-                            copy_numeric_or_string_elements (result, n + j*rows,
-                                                             u, (j*idx)%k, idx);
-                        n += idx;
-                    }
-                    else {
-                        for (j = 0; j < cols; j++)
-                            copy_numeric_or_string_elements (result, n + j*rows,
-                                                             u, j % k, 1);
-                        n += 1;
-                    }
-                }
-            }
-        }
+        for (n = 0; n < nargs; n++)
+            if (argkind[n] == 1 && arg_len[n] < lenmin) 
+                argval[n] = R_NilValue;
     }
 
-    /* Adjustment of dimnames attributes. */
+    /* Copy the data.  Data from all arguments is copied into succesive 
+       columns of the result matrix, with RBIND_COLS being copied at once,
+       to improve cache performance, and for vectors or matrices with few
+       rows, reduce the overhead of calling copy_elements... */
+
+    j = 0;
+
+    while (j < cols) {
+
+        int m = j+RBIND_COLS <= cols ? j+RBIND_COLS : cols;
+
+        i = 0;
+        for (n = 0; n < nargs; n++) {
+            if (argval[n] != R_NilValue) {
+                if (mode == VECSXP) {
+                    if (argkind[n] == 3) { /* something special - eg, closure */
+                        idx = 1;
+                        for (h = j; h < m; h++)
+                            SET_VECTOR_ELT (result, i + h*rows,
+                                                    duplicate(argval[n]));
+                    }
+                    else { /* matrix or vector */
+                        idx = argkind[n] == 2 ? matrows[n] : 1;
+                        if (idx == 1) { /* vector, or matrix with one row */
+                            k = LENGTH(argval[n]);
+                            if (k >= cols) /* no repetition needed */
+                                copy_elements (result, i + j*rows, rows,
+                                               argval[n], j, 1, m-j);
+                            else if (k == 1) /* repeat single element */
+                                copy_elements (result, i + j*rows, rows,
+                                               argval[n], 0, 0, m-j);
+                            else { /* need to repeat short vector */
+                                if (k == 0) abort(); /* shouldn't happen */
+                                h = j;
+                                while (h < m) {
+                                    int s = h%k, t = k-s;
+                                    copy_elements (result, i + h*rows, rows,
+                                      argval[n], s, 1, t>m-h ? m-h : t);
+                                    h += t;
+                                }
+                            }
+                        }
+                        else { /* general matrix */
+                            for (h = j; h < m; h++)
+                                copy_elements (result, i + h*rows, 1,
+                                               argval[n], h*idx, 1, idx);
+                        }
+                    }
+                }
+                else {
+                    idx = argkind[n] == 2 ? matrows[n] : 1;
+                    if (idx == 1) { /* vector, or matrix with one row */
+                        k = LENGTH(argval[n]);
+                        if (k >= cols) /* no repetition needed */
+                            copy_elements_coerced (result, i + j*rows, rows,
+                                                   argval[n], j, 1, m-j);
+                        else if (k == 1) /* repeat single element */
+                            copy_elements_coerced (result, i + j*rows, rows,
+                                                   argval[n], 0, 0, m-j);
+                        else { /* need to repeat short vector */
+                            if (k == 0) abort(); /* shouldn't happen */
+                            h = j;
+                            while (h < m) {
+                                int s = h%k, t = k-s;
+                                copy_elements_coerced (result, i + h*rows, rows,
+                                   argval[n], s, 1, t>m-h ? m-h : t);
+                                h += t;
+                            }
+                        }
+                    }
+                    else if (idx < m-j) { /* matrix with few rows */
+                        for (h = 0; h < idx; h++)
+                            copy_elements_coerced (result, i + h + j*rows, rows,
+                              argval[n], h + j*idx, idx, m-j);
+                    }
+                    else { /* general matrix */
+                        for (h = j; h < m; h++)
+                            copy_elements_coerced (result, i + h*rows, 1,
+                                                   argval[n], h*idx, 1, idx);
+                    }
+                }
+                i += idx;
+            }
+        }
+
+        j = m;
+    }
+
+    if (mode == VECSXP)
+        UNPROTECT(nargs);
+
+    /* adjust dimnames attributes. */
+
     if (have_rnames || have_cnames) {
-	SEXP nam, tnam,v;
+	SEXP nam, tnam, u, v;
 	PROTECT(dn = allocVector(VECSXP, 2));
 	if (have_rnames)
 	    nam = SET_VECTOR_ELT(dn, 0, allocVector(STRSXP, rows));
 	else
 	    nam = R_NilValue;	/* -Wall */
 	j = 0;
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u)) {
+	for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
+	    u = TYPEOF(CAR(t))==PROMSXP ? PRVALUE(CAR(t)) : CAR(t);
+	    if (argkind[n] == 2) {
 		v = getAttrib(u, R_DimNamesSymbol);
 
 		if (have_cnames &&
@@ -1616,21 +1694,21 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		tnam = GetRowNames(v);
 		if (have_rnames) {
 		    if (tnam != R_NilValue) {
-			for (i = 0; i < LENGTH(tnam); i++)
-			    SET_STRING_ELT(nam, j++, STRING_ELT(tnam, i));
-		    }
+                        copy_string_elements (nam, j, tnam, 0, LENGTH(tnam));
+                        j += LENGTH(tnam);
+                    }
 		    else {
-			for (i = 0; i < nrows(u); i++)
-				SET_STRING_ELT(nam, j++, R_BlankString);
+			for (i = 0; i < matrows[n]; i++)
+			    SET_STRING_ELT(nam, j++, R_BlankString);
 		    }
 		}
 	    }
-	    else if (length(u) >= lenmin) {
-		u = getAttrib(u, R_NamesSymbol);
+	    else if (arg_len[n] >= lenmin) {
+		v = getAttrib(u, R_NamesSymbol);
 
 		if (have_cnames && GetColNames(dn) == R_NilValue
-		    && u != R_NilValue && length(u) == cols)
-		    SetColNames(dn, duplicate(u));
+		    && v != R_NilValue && length(v) == cols)
+		    SetColNames(dn, duplicate(v));
 
 		if (TAG(t) != R_NilValue)
 		    SET_STRING_ELT(nam, j++, PRINTNAME(TAG(t)));
@@ -1649,6 +1727,8 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	setAttrib(result, R_DimNamesSymbol, dn);
 	UNPROTECT(1);
     }
+
     UNPROTECT(1);
     return result;
+
 } /* rbind */

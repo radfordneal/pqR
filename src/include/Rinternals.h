@@ -663,6 +663,14 @@ LibExtern SEXP  R_dot_target;       /* ".target" */
 LibExtern SEXP	R_NaString;	    /* NA_STRING as a CHARSXP */
 LibExtern SEXP	R_BlankString;	    /* "" as a CHARSXP */
 
+/* Coercion warnings - will be OR'ed : */
+
+#define WARN_NA	   1
+#define WARN_INACC 2
+#define WARN_IMAG  4
+#define WARN_RAW  8
+
+
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 /* Type Coercions of all kinds */
@@ -703,7 +711,8 @@ Rboolean Rf_copy_3_strings(char *, int, const char *, const char *, const char *
 void Rf_copyMatrix(SEXP, SEXP, Rboolean);
 void Rf_copyMostAttrib(SEXP, SEXP);
 void Rf_copyVector(SEXP, SEXP);
-void Rf_copy_elements(SEXP, int, SEXP, int, int);
+void Rf_copy_elements(SEXP, int, int, SEXP, int, int, int);
+int Rf_copy_elements_coerced(SEXP, int, int, SEXP, int, int, int);
 int Rf_countContexts(int, int);
 SEXP Rf_CreateTag(SEXP);
 void Rf_defineVar(SEXP, SEXP, SEXP);
@@ -1011,6 +1020,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define copyMostAttrib		Rf_copyMostAttrib
 #define copyVector		Rf_copyVector
 #define copy_elements		Rf_copy_elements
+#define copy_elements_coerced	Rf_copy_elements_coerced
 #define countContexts		Rf_countContexts
 #define CreateTag		Rf_CreateTag
 #define defineVar		Rf_defineVar
