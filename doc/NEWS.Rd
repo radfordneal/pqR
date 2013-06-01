@@ -5,35 +5,50 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
+\section{CHANGES IN VERSION RELEASED 2013-05-31}{
 
-\section{CHANGES IN VERSION 2.15.0}{
+\subsection{INTRODUCTION}{
 
-  \subsection{INTRODUCTION}{
-    \itemize{
+\itemize{
+\item This is the initial public release of pqR.  It is based on R-2.15.0,
+distributed by the R Core Team, but improves on it in many ways,
+mostly ways that speed it up, but also by implementing some new
+features and fixing some bugs.  
 
-      \item This file documents changes in versions of pqR, starting
-            with changes from R-2.15.0, distributed by the R Core
-            Team, on which pqR was based.  For changes from earlier
-            version of R to R-2.15.0, see the ONEWS, OONEWS, and
-            OOONEWS files.  Some changes of little interest to users,
-            such as code cleanups, are documented in the file MODS.
+\item One notable improvement is that for systems with multiple
+processors or processor cores, pqR is able to do some numeric
+computations in parallel with other operations of the interpreter, and
+with other numeric computations.
 
-      \item Note that for compatibility with R's version system, pqR
-            presently uses the same version number, 2.15.0, as the
-            version of R on which it is based. This allows 
-            checks for feature availability to continue to work.
-            This scheme will likely change in the future.
-    } 
-  }
+\item This section documents changes in pqR from R-2.15.0 that are of
+direct interest to users.  For changes from earlier version of R to
+R-2.15.0, see the ONEWS, OONEWS, and OOONEWS files.  Changes of little
+interest to users, such as code cleanups and internal details on
+performance improvements, are documented in the file MODS, which
+relates these changes to branches in the code repository at
+github.com/radfordneal/pqR.
+
+\item Note that for compatibility with R's version system, pqR presently
+uses the same version number, 2.15.0, as the version of R on which it
+is based. This allows checks for feature availability to continue to
+work.  This scheme will likely change in the future.  Releases of pqR
+with the same version number are distinguished by release date.
+
+}}
 
   \subsection{NEW FEATURES}{
     \itemize{
+      \item A new primitive function \code{get_rm} has been added,
+            which removes a variable while returning the value it
+            had when removed.  See \code{help(get_rm)} for details,
+            and how this can sometimes improve efficiency of R functions.
+
       \item An enhanced version of the Rprofmem function for profiling
             allocation of vectors has been implemented, that can
             display more information, and can output to the terminal,
             allowing the source of allocations to more easily be
             determined.  Also, Rprofmem has now been made accessible
-            even when the --enable-memory-profiling configuration
+            even when the \code{--enable-memory-profiling} configuration
             option is not used, since the overhead of making it
             accessible is negligible.
  
@@ -42,260 +57,210 @@
             other output can be informative.  More identifying
             information, including type, number of elements, and
             hexadecimal address, can also be output.  For more details on
-            these and other changes, see help(Rprofmem).
-      \item **2
+            these and other changes, see \code{help(Rprofmem)}.
+
       \item A new primitive function, pnamedcnt, has been added, that
-            prints the NAMED count for an R object, which is helpful
+            prints the NAMEDCNT/NAMED count for an R object, which is helpful
             in tracking when objects will have to be duplicated.  For
             details, see help(pnamedcnt).
-      \item **4
-      \item When installing from source, the output of ./configure 
-            now displays whether base and recommended packages will
-            be byte compiled.
-      \item **6
-      \item The tests of random number generation run with \code{make check-all}
-            now set the random number seed explicity.  Previously, the random
-            number seed was set from the time and process ID, with the result
-            that these tests would occassionally fail non-deterministically,
-            when by chance one of the p-values obtained was below the threshold
-            used.  (Any such failure should now occur consistently, rather
-            than appearing to be due to a non-deterministic bug.)
-      \item **8
+
       \item Some options that can be set by arguments to the R command can
             now also be set with environment variables, specifically, the
             values of R_DEBUGGER, R_DEBUGGER_ARGS, and R_HELPERS give the
-            default when --debugger, --debugger-args, and --helpers are
-            not specified on the command line.  This feature is useful when
-            using a shell file or Makefile contains R commands that one would
-            rather not have to modify.
-      \item **10
-      \item A new primitive function \code{get_rm} has been added,
-            which removes a variable while returning the value it
-            had when removed.  See \code{help(get_rm)} for details,
-            and how this can sometimes improve efficiency of R functions.
-      \item **12
+            default when \code{--debugger}, \code{--debugger-args}, and 
+            \code{--helpers} are not specified on the command line.  This 
+            feature is useful when using a shell file or Makefile that contains 
+            R commands that one would rather not have to modify.
+    }
+  }
+
+  \subsection{INSTALLATION AND TESTING}{
+    \itemize{
+      \item Testing of pqR has so far been done only on Linux/Unix
+            systems, not on Windows or Mac systems.  There is no specific
+            reason to believe that it will not work on Windows or Mac
+            systems, but until tests have been done, trying to use it 
+            on these systems is not recommended.
+
+      \item New configuration options relating to helper threads and
+            to matrix multiplication now exist.  See doc/R-admin.html 
+            (or R-admin.pdf) for details.
+
+      \item When installing from source, the output of ./configure 
+            now displays whether base and recommended packages will
+            be byte compiled.
+
+      \item The tests of random number generation run with \code{make check-all}
+            now set the random number seed explicitly.  Previously, the random
+            number seed was set from the time and process ID, with the result
+            that these tests would occasionally fail non-deterministically,
+            when by chance one of the p-values obtained was below the threshold
+            used.  (Any such failure should now occur consistently, rather
+            than appearing to be due to a non-deterministic bug.)
+
+      \item Note that the output of \code{make check-all} for the boot 
+            package includes many warning messages regarding a non-integer
+            argument, and when byte compilation is enabled, these messages
+            identify the wrong function call as the source.  This appears to 
+            have no wider implications, and can be ignored.
+
+      \item The details of how valgrind is used have changed. See the source
+            file \file{memory.c}.
+    }
+  }
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+    \itemize{
+      \item Many detailed improvements have been made that reduce
+            general interpretive overhead and speed up particular 
+            functions.  Only some of these improvements are noted
+            below.
+
       \item Numerical computations can now be performed in parallel with
-            interpretation of R code using ``helper threads'', one machines
-            with multiple processors or multiple processor cores.  See
-            help(helpers) for details.
-      \item **14
+            each other and with interpretation of R code, by using 
+            ``helper threads'', on machines
+            with multiple processors or multiple processor cores.  When
+            the output of one such computation is used as the input to
+            another computation, these computations can often be done
+            in parallel, with the output of one task being ``pipelined''
+            to the other task.  Note that these 
+            parallel execution facilities do not require any changes to user 
+            code --- only that helper threads be enabled with the 
+            \code{--helpers} option to the command starting pqR. See 
+            \code{help(helpers)} for details.
+
+            This facility is still undergoing rapid development.  Additional 
+            documentation on which operations may be done in parallel will be 
+            forthcoming.
+
+      \item Several primitive functions that can generate integer sequences
+            --- ":", seq.int, seq_len, and seq_along --- will now sometimes
+            not generate an actual sequence, but rather just a description
+            of its start and end points.  This is not visible to users,
+            but is used to speed up several operations.
+
+            In particular, "for" loops such as \code{for (i in 1:1000000) ...}
+            are now done without actually allocating a vector to hold
+            the sequence.  This saves both space and time.  Also,
+            a subscript such as \code{101:200} for a vector or as the first 
+            subscript for a matrix is now (often) handled without actually 
+            creating a vector of indexes, saving both time and space.  
+
+            However, the above performance improvements 
+            are not effective in compiled code.
+
+      \item Matrix multiplications with the \code{\%*\%} operator are now
+            much faster when the operation is a vector dot product, a
+            vector-matrix product, a matrix-vector product, or more generally
+            when the sum of the numbers of rows and columns in the result
+            is not much less than their product.  This improvement results
+            from the elimination of a costly check for NA/NaN elements in the 
+            operands before doing the multiply.  There is no need for this check
+            if the supplied BLAS is used.  If a BLAS that does not properly
+            handle NaN is supplied, the \code{\%*\%} operator will still
+            handle NaN properly if the new library of matrix multiply
+            routines is used for \code{\%*\%} instead of the BLAS.  See the
+            next two items for more relevant details.
+
+      \item A new library of matrix multiply routines is provided, which
+            is guaranteed to handle NA/NaN correctly, and which supports
+            pipelined computation with helper threads.  Whether this
+            library or the BLAS routines are used for \code{\%*\%} is
+            controlled by the \code{mat_mult_with_BLAS} option. The default
+            is to not use the BLAS, but the 
+            \code{--enable-mat-mult-with-BLAS-by-default} configuration option
+            will change this.  See \code{help("\%*\%")} for details.
+
       \item The BLAS routines supplied with R were modified to improve the 
             performance of the routines DGEMM (matrix-matrix multiply) and 
             DGEMV (matrix-vector multiply).  Also, proper propagation of NaN, 
-            Inf, etc. is done now.
-      \item **16
+            Inf, etc. is now always done in these routines.  This speeds
+            up the \code{\%*\%} operator in R, when the supplied BLAS is used
+            for matrix multiplications, and speeds up other matrix operations
+            that call these BLAS routines, if the BLAS used is the one supplied.
+
+      \item The low-level routines for generation of uniform random
+            numbers have been improved.  (These routines are also used for
+            higher-level functions such as \code{rnorm}.)
+
+            The previous code copied the seed back and forth to
+            .Random.seed for every call of a random number generation
+            function, which is rather time consuming given that for
+            the default generator \code{.Random.seed} is 625 integers long.
+            It also allocated new space for \code{.Random.seed} every time.
+            Now, \code{.Random.seed} is used without copying, except when the 
+            generator is user-supplied.  
+
+            The previous code had imposed an unnecessary limit on the
+            length of a seed for a user-supplied random number
+            generator, which has now been removed.
+
+      \item The \code{any} and \code{all} primitives have been substantially
+            sped up for large vectors.  
+
+            Also, expressions such as
+            \code{all(v>0)} and \code{any(is.na(v))}, where \code{v} is a
+            real vector, avoid computing and storing a logical vector,
+            instead computing the result of \code{any} or \code{all}
+            without this intermediate, looking at only as much of \code{v}
+            as is needed to determine the result.
+            However, this improvement is not effective in compiled code.
+
+      \item When \code{sum} is applied to many mathematical functions
+            of one vector argument, for example \code{sum(log(v))}, the
+            sum is performed as the function is computed, without a
+            vector being allocated to hold the function values.  
+            However, this improvement is not effective in compiled code.
+
       \item The handling of power operations has been improved (primarily 
             for powers of reals, but slightly affecting powers of integers too).
+            In particular, scalar powers of 2, 1, 0, and -1, are handled 
+            specially to avoid general power operations in these cases.
 
-            I previously proposed a simple patch speeding up squaring,
-            which the R core team did not adopt.  Instead, in R-2.12.0
-            and continuing in R-2.13.0, they introduced an inline
-            function R_POW, that checks specially for a power of 2,
-            and does it as a multiply, otherwise calling the R_pow
-            function.  R_pow proceeds to check again for a power of 2
-            at the beginning, and then check again for a power of 2
-            just before calling the C pow function.  The R_pow
-            function also contains a check for a power of 0.5, but it
-            is disabled for recent versions of gcc, to bypass a bug
-            that according to a comment existed at one time.  Note
-            that the inline R_POW function will not necessarily be
-            actually inlined by the compiler, and that in any case the
-            check for a power of 2 is done over again for every
-            element of a vector being raised to that power, even if
-            the power is a scalar.
-
-            In this new patch, if the power is a scalar, I check for
-            it being 2, 1, 0, or -1, and if so handle it specially.
-            Otherwise, I call R_pow, which I changed to not bother
-            checking for powers of 2, and to actually check for a
-            power of 0.5.  (Since the relevant code has changed, any
-            buggy compilers still extant probably will compile the new
-            code OK; if not, they probably compile lots of stuff
-            incorrectly, since there is nothing unusual in the new
-            code.)
-
-            For non-scalar powers, I use R_POW, but change it to a
-            macro, so that it will definitely be inlined, and have it
-            check for powers of 2 and 1.  (If one is going to do this
-            check when the power is a vector, it makes sense to tailor
-            it to something other than a vector of powers that are all
-            the same, since this doesn't seem like a common case.
-            Some powers of 1 and some of 2 seems plausible in some
-            statistical applications.)  The macro also allows for the
-            power to be an integer, slightly speeding up some
-            integer^integer operations.
-
-            The speed improvement from this patch depends a lot on the
-            machine architecture and the compiler.  On machines where
-            memory is much slower than the processor, checking for a
-            power of 2 every time may mostly overlap with the a memory
-            fetch or store operation, but one would not expect this to
-            always be the case.  The check for a power of -1 will
-            greatly speed up code where the programmer had a stylistic
-            preference for (...)^(-1) over 1/(...).
-      \item **18
-      \item **19
-      \item **20
-      \item **21
-      \item **22
       \item Extending lists and character vectors by assigning to an
-            index past the end, deleting list items by assigning NULL,
-            and concatenation of character vectors with "c" have all
-            been speeded up by factors of up to two or three.
-      \item **24
-      \item **25
-      \item **26
-      \item **27
-      \item **28
-      \item **29
-      \item **30
+            index past the end, and deleting list items by assigning NULL
+            have been sped up substantially.
+
+      \item The speed of the transpose (\code{t}) function has been
+            improved, when applied to real, integer, and logical
+            matrices.
+
+      \item The \code{cbind} and \code{rbind} functions have been greatly
+            sped up for large objects.
+
+      \item The \code{c} and \code{unlist} functions have been sped up 
+            by a bit in simple cases, and by a lot in some situations 
+            involving names.
+
+      \item The \code{matrix} function has been greatly sped up, in
+            many cases.
+
+      \item Extraction of subsets of vectors or matrices (eg, \code{v[100:200]}
+            or \code{M[1:100,101:110]}) has been sped up substantially.
+
+      \item Logical operations and relational operators have been sped up
+            in simple cases. Relational
+            operators have also been substantially sped up for long vectors.
+
+      \item Access via the $ operator to lists, pairlists, and environments 
+            has been sped up. 
+
       \item Existing code for handling special cases of "[" in which there is
             only one scalar index was replaced by cleaner code that handles 
             more cases.   The old code handled only integer and real vectors, 
             and only positive indexes.  The new code handles all atomic 
             vectors (logical, integer, real, complex, raw, and string), and 
             positive or negative indexes that are not out of bounds.
-      \item Extraction of subsets of vectors or matrices (eg, v[10:20]
-            or M[1:10,101:110]) has been sped up substantially.
-      \item **33
-      \item **34
-      \item **35
-      \item The low-level routines for generation of uniform random
-            numbers have been improved.
 
-            The previous code copied the seed back and forth to
-            .Random.seed for every call of a random number generation
-            function, which is rather time consuming given that for
-            the default generator .Random.seed is 625 integers long.
-            It also allocated new space for .Random.seed every time.
-            I changed the code to use the seed in .Random.seed without
-            copying, except when the generator is user-supplied.  
-
-            The previous code had imposed an unnecessary limit on the
-            length of a seed for a user-supplied random number
-            generator, which I removed.
-      \item **37
-      \item **38
-      \item **39
-      \item **40
-      \item **41
-      \item **42
-      \item **43
       \item Many unary and binary primitive functions are now usually
             called using a faster internal interface that does not allocate
             nodes for a pairlist of evaluated arguments. This change
             substantially speeds up some programs.
-      \item **45
-      \item The \code{any} and \code{all} primitives have been substantially
-            speeded up for large vectors.  Also, expressions such as
-            \code{all(v>0)} and \code{any(is.na(v))} where \code{v} is a
-            real vector avoid computing and storing a logical vector,
-            instead computing the result of \code{any} or \code{all}
-            without this intermediate, looking at only as much of \code{v}
-            as is needed to determine the result.
-      \item When \code{sum} is applied to many mathematical functions
-            of one vector argument, for example \code{sum(log(v))}, the
-            sum is performed as the function is computed, without a
-            vector being allocated to hold the function values.  
-      \item **48
-      \item **49
-      \item **50
-    }
-  }
 
-  \subsection{PERFORMANCE IMPROVEMENTS}{
-    \itemize{
-      \item Some speedup has been obtained by using new internal C functions 
-            for performing exact or partial string matches in the interpreter.
-      \item **2
-      \item The speed of the transpose (t) function has been
-            improved, when applied to real, integer, and logical
-            matrices.
-      \item **4
-      \item Code for the sum and prod functions has been changed to
-            move some checks outside the inner summation loops.  The effect
-            depends on the extent to which the unnecessary checks overlap 
-            memory fetch operations, but one would expect signficant 
-            speed-ups with some machines/compilers.
-
-            I had previously proposed this modificaton to sum and prod 
-            before R-2.12.0.  That patch was not adopted by the R core team, 
-            though they did swap the order of checking for NA/NaN and 
-            checking the na.rm option, which avoids the worst inefficiency 
-            of the previous code in R-2.11.1.  
-      \item **6
-      \item Various inlined procedures where changed to be more efficient, 
-            and "length" was un-inlined, since it's fairly long.  Numerous
-            occurences of for (i = 0; i < length(...); i++) were replaced
-            by code that doesn't call length numerous times.
-      \item **8
-      \item Global constants R_ScalarLogicalNA, R_ScalarLogicalTRUE, and
-            R_ScalarLogicalFALSE have been created, and the interpreter's
-            ScalarLogical function now returns one of these rather than
-            allocate new space for every logical value. 
-
-            To avoid problems with an external C or Fortran routine
-            changing one of these values (with an incorrect
-            specification of DUP=FALSE even though it modifies the
-            argument), the values of these constants are checked after
-            the return of an external function called with .C or
-            .Fortran, and if they have changed, their values are reset
-            and an error is signalled.
-
-            The bytecode interpreter sets up a similar set of logical
-            constants.  That facility should be merged with this one
-            (perhaps by just calling the ScalarLogical function in the
-            bytecode interpreter).
-
-            Various places in coerce.c were changed to use ScalarLogical
-            rather than allocate logical values themselve.  This is both
-            cleaner and now more efficient given the change above.
-      \item **10
-      \item Logical operations and relational operators have been sped up
-            in simple cases, and use the new facility for producing a scalar
-            logical result without allocating new storage.  Relational
-            operators have also been substantially speeded up for long
-            vectors.
-      \item **12
-      \item A call of R_isMissing was removed in the interpeter's evalList 
-            function.  This check, done for every argument to a builtin 
-            primitive that is a symbol, is slow, and appears to serve only 
-            to produce an error message that is slightly different (and 
-            sometimes less informative) than simply letting the symbol be 
-            evaluated.
-      \item **14
-      \item **15
-      \item **16
-      \item **17
-      \item **18
-      \item The creation of argument lists for closures was sped up 
-            by avoiding an unnecessary allocation of a CONS cell, in the 
-            same way as was done in my Sep 2010 patch for evalList, which 
-            was incorporated into 2.12.0 and later versions of R.
-      \item **20
-      \item Access via the $ operator to lists, pairlists, and environments 
-            has been sped up.  The speedup comes mainly from (a) avoiding the
-            overhead of calling DispatchOrEval if there are no complexities,
-            (b) passing on the field to extract as a symbol, or a name, or 
-            both, as available, and then converting only as necessary, 
-            (c) using the new ep_match functions instead of the previous local
-            pstrmatch procedure, and (d) not translating a string multiple 
-            times.
-      \item **22
-      \item **23
-      \item **24
-      \item Lookup of symbols defined in the base environment has been
-            sped up by flagging symbols that have a base environment
-            definition recorded in the global cache. This allows the
-            definition to be retrieved quickly without looking in the
-            hash table.  In particular, this speeds up basic
-            operations such as "+", "<-", "if", and "length".
-      \item **26
-      \item Lookup of some builtin/special function symbols (eg, '+' and 'if')
+      \item Lookup of some builtin/special function symbols (eg, "+" and "if")
             has been sped up by allowing fast bypass of non-global environments
             that do not contain (and have never contained) one of these 
             symbols.
-      \item **28
 
       \item Some binary and unary arithmetic operations have been sped
             up by, when possible, using the space holding one of the
@@ -303,95 +268,9 @@
             space.  Though primarily a speed improvement, for very
             long vectors avoiding this allocation could avoid running
             out of space.
-      \item **30
-      \item **31
-      \item **32
-      \item **33
-      \item PUT IN ITEM HERE ABOUT MATRIX MULTIPLY MODS.
-      \item **35
-      \item **36
-      \item **37
-      \item Several primitive functions that can generate integer sequences
-            --- ":", seq.int, seq_len, and seq_along --- will now sometimes
-            not generate an actual sequence, but rather just a description
-            of its start and end points.  This is not visible to users
-            (except in time and space savings), but is used to speed up 
-            other primitive operations, specifically "for" loops such
-            as \code{for (i in 1:1000000) ...}, and indexing of vectors
-            such as \code{v[1000:2000]}.
-      \item **39
-      \item For loops in which the index variable goes through an
-            integer sequence, such as, \code{for (i in 1:10000000) ...},
-            are now done without actualy allocating a vector to hold
-            the sequence.  This saves both space and time.
-      \item **41
-      \item A subscript such as 101:200 for a vector or as the first subscript
-            for a matrix is now (often) handled without actually creating
-            a vector of indexes, saving both time and space.  A missing
-            row subscript for a matrix is now also handled without
-            creating a vector of indexes for all rows.  (However, these 
-            changes are not effective in compiled code.)
-      \item **43
-      \item **44
-      \item **45
-      \item **46
-      \item **47
-      \item **48
-      \item The \code{cbind} and \code{rbind} functions have been greatly
-            speeded up for large objects.
-      \item The \code{c} and \code{unlist} functions have been speeded up 
-            by a bit in simple cases, and by a lot in some situations 
-            involving names.
-      \item **51
-      \item The \code{matrix} function has been greatly speeded up, in
-            many cases.
-      \item **53
-      \item **54
-      \item **55
-      \item **56
-      \item **57
-      \item **58
-      \item **59
-      \item **60
-      \item **61
-      \item **62
-      \item **63
-      \item **64
-      \item **65
-      \item **66
-      \item **67
-      \item **68
-      \item **69
-      \item **70
-      \item **71
-      \item **72
-      \item **73
-      \item **74
-      \item **75
-      \item **76
-      \item **77
-      \item **78
-      \item **79
-      \item **80
-      \item **81
-      \item **82
-      \item **83
-      \item **84
-      \item **85
-      \item **86
-      \item **87
-      \item **88
-      \item **89
-      \item **90
-      \item **91
-      \item **92
-      \item **93
-      \item **94
-      \item **95
-      \item **96
-      \item **97
-      \item **98
-      \item **99
+
+      \item Some speedup has been obtained by using new internal C functions 
+            for performing exact or partial string matches in the interpreter.
     }
   }
 
@@ -399,98 +278,88 @@
     \itemize{
       \item The "debug" facility has been fixed.  Its behaviour for if,
             while, repeat, and for statements when the inner statement
-            was or was not one with curly brackets had made no sense,
-            and it had also displayed inappropriate expressions, and
-            displayed things at the wrong time.  The new behaviour is
-            now documented in help(debug).
-      \item **2
-      \item Fixed a small error-reporting bug with "$",
-            illustrated by the following output:
-\preformatted{
-    > options(warnPartialMatchDollar=TRUE)
-    > pl <- pairlist(abc=1,def=2)
-    > pl$ab
-    [1] 1
-    Warning message:
-    In pl$ab : partial match of 'ab' to ''
+            was or was not one with curly brackets had made no sense.
+            The fixed behaviour is now documented in help(debug). 
+            (I reported this bug and how
+            to fix it to the R Core Team in July 2012, but the bug is 
+            still present in R-3.0.1, released May 2013.)
+
+      \item Fixed a bug in \code{sum}, where overflow is allowed (and not 
+            detected) where overflow can actually be avoided.  For example:
+\preformatted{   > v<-c(3L,1000000000L:1010000000L,-(1000000000L:1010000000L))
+   > sum(v)
+   [1] 4629
 }
-      \item **4
-      \item Fixed documentation error in R-admin regarding the
-            --disable-byte-compiled-packages configuration option, 
-            and changed the DESCRIPTION file for the recommended mgcv 
-            package to respect this option.
-      \item **6
-      \item Fixed a bug in numeric_deriv in stats/src/nls.c, where it
-            was not duplicating when it should, as illustrated below:
-\preformatted{
-  > x <- 5; y <- 2; f <- function (y) x
-  > numericDeriv(f(y),"y")
-   [1] 5
-   attr(,"gradient")
-        [,1]
-   [1,]    0
-   > x
-   [1] 5
-   attr(,"gradient")
-        [,1]
-   [1,]    0
-}
-      \item **8
+            Also fixed a related bug in \code{mean}, applied to an integer
+            vector, which would arise only on a system where a long double 
+            is no bigger than a double.
+
       \item Fixed \code{diag} so that it returns a matrix when passed
             a list of elements to put on the diagonal.
-      \item Fixed \code{svd} so that it will not return a list with
-            \code{NULL} elements.  This matches the behaviour of \code{La.svd}.
-      \item **11
-      \item Fixed a minor error-reporting bug with
-            \code{(1:2):integer(0)} and similar expressions.
+
       \item Fixed a bug that could lead to mis-identification of the 
             direction of stack growth on a non-Windows system, causing
             stack overflow to not be detected, and a segmentation fault 
             to occur.  (I also reported this bug and how to fix it to the 
             R Core Team, who included a fix in R-2.15.2.)
+
       \item Fixed a bug where, for example, \code{log(base=4)} returned 
             the natural log of 4, rather than signalling an error. 
-      \item **15
-      \item Fixed a bug in \code{sum}, where overflow is allowed (and not 
-            detected) where overflow can actually be avoided.  For example:
-\preformatted{
-> v<-c(3L,1000000000L:1010000000L,-(1000000000L:1010000000L))
-> sum(v)
-[1] 4629
+
+      \item The documentation on what \code{MARGIN} arguments are allowed for
+            \code{apply} has been clarified, and checks for validity added.
+            The call 
+\preformatted{   > apply(array(1:24,c(2,3,4)),-3,sum)
 }
-            Also fixed a related bug in \code{mean}, applied to an integer
-            vector, which would arise only on a system where a long double 
-            is no bigger than a double.
-      \item **17
+            now produces correct results (the same as when \code{MARGIN}
+            is \code{1:2}).
+
+      \item Fixed a bug in which \code{Im(matrix(complex(0),3,4))} returned
+            a matrix of zero elements rather than a matrix of NA elements.
+
       \item Fixed a bug where more than six warning messages at startup
             would overwrite random memory, causing garbage output 
             and perhaps arbitrarily bizarre behaviour.
+
       \item Fixed a bug where LC_PAPER was not correctly set at startup.
-      \item **20
+
       \item Fixed gc.time, which was producing grossly incorrect values
             for user and system time.
-      \item **22
+
       \item Now check for bad arguments for .rowSums, .colSums, .rowMeans,
             and .rowMeans (would previously segfault if n*p too big).
-      \item **24
+
       \item Fixed a bug where excess warning messages may be produced
             on conversion to RAW.  For instance:
-\preformatted{
-  > as.raw(1e40)
-  [1] 00
-  Warning messages:
-  1: NAs introduced by coercion 
-  2: out-of-range values treated as 0 in coercion to raw 
+\preformatted{   > as.raw(1e40)
+   [1] 00
+   Warning messages:
+   1: NAs introduced by coercion 
+   2: out-of-range values treated as 0 in coercion to raw 
 }
             Now, only the second warning message is produced.
-      \item **26
+
       \item A bug has been fixed in which rbind would not handle 
             non-vector objects such as function closures, whereas
             cbind did handle them, and both were documented to do so.
-      \item **28
+
+      \item Fixed a bug in numeric_deriv in stats/src/nls.c, where it
+            was not duplicating when it should, as illustrated below:
+\preformatted{   > x <- 5; y <- 2; f <- function (y) x
+   > numericDeriv(f(y),"y")
+    [1] 5
+    attr(,"gradient")
+         [,1]
+    [1,]    0
+    > x
+    [1] 5
+    attr(,"gradient")
+         [,1]
+    [1,]    0
+}
+
       \item Fixed a bug in vapply illustrated by the following:
-\preformatted{
-   X<-list(456)
+\preformatted{   X<-list(456)
    f<-function(a)X
    A<-list(1,2)  
    B<-vapply(A,f,list(0))
@@ -502,25 +371,25 @@
             assignment to \code{X}. Similar bugs in mapply, eapply, and rapply 
             have also been fixed.  I reported these bugs to r-devel, and
             (different) fixes are in R-3.0.0 and later versions.
+
       \item Fixed a but in rep.int illustrated by the following:
-\preformatted{
-   a<-list(1,2)
+\preformatted{   a<-list(1,2)
    b<-rep.int(a,c(2,2))
    b[[1]][1]<-9
    print(a[[1]])
 }
+
       \item Fixed a bug in mget, illustrated by the following code:
-\preformatted{
-   a <- numeric(1)
+\preformatted{   a <- numeric(1)
    x <- mget("a",as.environment(1))
    print(x)
    a[1] <- 9
    print(x)
 }
-      \item Fixed bugs that the R Core Team fixed (differently) for R-2.13.3,
+
+      \item Fixed bugs that the R Core Team fixed (differently) for R-2.15.3,
             illustrated by the following:
-\preformatted{
-   a <- list(c(1,2),c(3,4))
+\preformatted{   a <- list(c(1,2),c(3,4))
    b <- list(1,2,3)
    b[2:3] <- a
    b[[2]][2] <- 99
@@ -532,66 +401,60 @@
    b[[1]][1] <- 1
    print(b[2:4])
 }
-      \item **31
-      \item The documentation on what \code{MARGIN} arguments are allowed for
-            \code{apply} has been clarified, and checks for validity added.
-            The call 
-\preformatted{
-  > apply(array(1:24,c(2,3,4)),-3,sum)
-}
-            now produces correct results (the same as when \code{MARGIN}
-            is \code{1:2}).
-      \item **32
-      \item Fixed a bug in which \code{Im(matrix(complex(0),3,4))} returned
-            a matrix of zero elements rather than a matrix of NA elements.
-      \item **34
+
       \item Fixed a bug illustrated by the following:
-\preformatted{
-> library(compiler)
-> foo <- function(x,y) UseMethod("foo")
-> foo.numeric <- function(x,y) "numeric"
-> foo.default <- function(x,y) "default"
-> testi <- function () foo(x=NULL,2)
-> testc <- cmpfun (function () foo(x=NULL,2))
-> testi() 
-[1] "default"
-> testc()
-[1] "numeric"
+\preformatted{   > library(compiler)
+   > foo <- function(x,y) UseMethod("foo")
+   > foo.numeric <- function(x,y) "numeric"
+   > foo.default <- function(x,y) "default"
+   > testi <- function () foo(x=NULL,2)
+   > testc <- cmpfun (function () foo(x=NULL,2))
+   > testi() 
+   [1] "default"
+   > testc()
+   [1] "numeric"
 }
+
       \item Fixed several bugs that produced wrong results 
             such as the following:
-\preformatted{
-   a<-list(c(1,2),c(3,4),c(5,6))
+\preformatted{   a<-list(c(1,2),c(3,4),c(5,6))
    b<-a[2:3]
    a[[2]][2]<-9
    print(b[[1]][2])
 }
       I reported this to r-devel, and a (different) fix is in R-3.0.0 and 
       later versions.
-      \item **36
-      \item Fixed bugs reported on r-devel by Justin Talbot, Jan 2013
-            (also fixed, differently, in R-2.15.3), illustrated by the following:
-\preformatted{
-   a <- list(1)
+
+      \item Fixed bugs reported on r-devel by Justin Talbot, Jan 2013 (also
+            fixed, differently, in R-2.15.3), illustrated by the following:
+\preformatted{   a <- list(1)
    b <- (a[[1]] <- a)
    print(b)
    a <- list(x=1)
    b <- (a$x <- a)
    print(b)
 }
-      \item **38
-      \item **39
-      \item **40
-      \item **41
-      \item **42
-      \item **43
-      \item **44
-      \item **45
-      \item **46
-      \item **47
-      \item **48
-      \item **49
-      \item **50
+
+      \item Fixed \code{svd} so that it will not return a list with
+            \code{NULL} elements.  This matches the behaviour of \code{La.svd}.
+
+      \item Fixed a minor error-reporting bug with
+            \code{(1:2):integer(0)} and similar expressions.
+
+      \item Fixed a small error-reporting bug with "$",
+            illustrated by the following output:
+\preformatted{    > options(warnPartialMatchDollar=TRUE)
+    > pl <- pairlist(abc=1,def=2)
+    > pl$ab
+    [1] 1
+    Warning message:
+    In pl$ab : partial match of 'ab' to ''
+}
+
+      \item Fixed documentation error in R-admin regarding the
+            \code{--disable-byte-compiled-packages} configuration option, 
+            and changed the DESCRIPTION file for the recommended mgcv 
+            package to respect this option.
     }
   }
 }
