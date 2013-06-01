@@ -343,7 +343,8 @@
             by a bit in simple cases, and by a lot in some situations 
             involving names.
       \item **51
-      \item **52
+      \item The \code{matrix} function has been greatly speeded up, in
+            many cases.
       \item **53
       \item **54
       \item **55
