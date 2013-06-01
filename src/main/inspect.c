@@ -122,7 +122,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 #endif
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
     if (MARK(v)) { if (a) Rprintf(","); Rprintf("MARK"); a = 1; }
-    if (NAMED(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMED(v)); a = 1; }
+    if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
     if (RTRACE(v)) { if (a) Rprintf(","); Rprintf("TR"); a = 1; }
     if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }

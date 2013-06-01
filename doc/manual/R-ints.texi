@@ -105,6 +105,7 @@ checked against the current version of the source code.
 * Argument evaluation::         
 * Autoprinting::                
 * The eval function::           
+* Reference counts and the nmcnt field::  
 * The write barrier::           
 * Serialization Formats::       
 * Encodings for CHARSXPs::      
@@ -292,44 +293,29 @@ so that it can be bypassed in searches for such symbols.
 @findex NAMED
 @findex SET_NAMED
 @cindex copying semantics
-The field called @code{nmcnt} in @pqR{} was called @code{named} in R-2.15.0.
-It is set and accessed by the @code{SET_NAMED} and
-@code{NAMED} macros, and take values @code{0}, @code{1} and @code{2}.
-(But in @pqR{} it is three bits in size for future extension.)
-@R{} has a `call by value' illusion, so an assignment like
-@example
-b <- a
-@end example
+The field called @code{nmcnt} in @pqR{} replaces the two-bit @code{named} 
+field in R-2.15.0.
+The @code{nmcnt} field is accessed and set by the @code{NAMEDCNT} 
+and @code{SET_NAMEDCNT} macros, by other macros for testing, incrementing,
+and decrementing the field, and also by the @code{NAMED} and @code{SET_NAMED} 
+macros provided for compatibility with the previous scheme using @code{named}.  
 
-@noindent
-appears to make a copy of @code{a} and refer to it as @code{b}.
-However, if neither @code{a} nor @code{b} are subsequently altered there
-is no need to copy.  What really happens is that a new symbol @code{b}
-is bound to the same value as @code{a} and the @code{named} field on the
-value object is set (in this case to @code{2}).  When an object is about
-to be altered, the @code{named} field is consulted.  A value of @code{2}
-means that the object must be duplicated before being changed.  (Note
-that this does not say that it is necessary to duplicate, only that it
-should be duplicated whether necessary or not.)  A value of @code{0}
-means that it is known that no other @code{SEXP} shares data with this
-object, and so it may safely be altered.  A value of @code{1} is used
-for situations like
+The @code{nmcnt} field is three bits in size, allowing for values from
+0 to 7, which are interpreted as the number of bindings to variables
+or other references to the object, though in many cases, this is
+simply an upper bound on the number of references, since the count is
+not always decremented when a reference disappears.
 
-@example
-dim(a) <- c(7, 2)
-@end example
+This count of references allows @pqR{} to more efficiently maintain
+the appearence that when an object is assigned to a variable, passed
+as the argument of a function, or stored as an element of a list, it
+is duplicated, so that subsequent changes to the original object do
+not modify the copy, and vice versa.  This duplication can be deferred
+and sometimes avoided by instead simply incrementing the @code{nmcnt} field
+for the object.
 
-@noindent
-where in principle two copies of @code{a} exist for the duration of the
-computation as (in principle)
+See @ref{Reference counts and the nmcnt field} for details.
 
-@example
-a <- `dim<-`(a, c(7, 2))
-@end example
-
-@noindent
-but for no longer, and so some primitive functions can be optimized to
-avoid a copy in this case.
 
 The @code{gp} bits are by definition `general purpose'.  We label these
 from 0 to 15.  Bits 0--5 and bits 14--15 have been used as described below
@@ -1123,7 +1109,7 @@ Otherwise, if the object bit is set (so the object has a
 for objects without a class the internal code of @code{print.default}
 is called.
 
-@node The eval function, The write barrier, Autoprinting, R Internal Structures
+@node The eval function, Reference counts and the nmcnt field, Autoprinting, R Internal Structures
 @section The eval function
 
 @findex eval
@@ -1164,7 +1150,63 @@ function --- with any variant result propagated back.
 
 @comment Just here to help with merging new section later...
 
-@node The write barrier, Serialization Formats, The eval function, R Internal Structures
+@node Reference counts and the nmcnt field, The write barrier, The eval function, R Internal Structures
+@section Reference counts and the nmcnt field
+
+@cindex nmcnt
+
+There is evidence in the code that @R{} at one point used a single-bit
+@code{named} field in an object, to indicate whether the object was
+`named' --- that is, was the value of some variable.  Later, this
+field was expanded to two bits, though only values 0, 1, and 2 were
+possible.  A value of 2 for @code{named} indicated that the object is
+(or at least might be) the value of more than one variable (or
+otherwise could be referenced in more than one way), and therefore
+would need to be duplicated before being modified when accessed via any of
+these references.  The value of @code{named} was never decremented in
+this scheme, leading to many unnecessary duplications.
+
+In @pqR{}, a true reference counting scheme is implemented, using a
+@code{nmcnt} field (currently three bits in size) that records how
+many variables, function arguments, list elements, or other references
+an object has.  If this number is greater than the maximum that is possible
+(@code{MAX_NAMEDCNT}, currently 7), the maximum value is stored.
+Currently, @code{nmcnt} is not always decremented when a reference
+ceases to exist, so @code{nmcnt} is merely an upper bound on the
+number of references.  In particular, note that once @code{nmcnt}
+reaches @code{MAX_NAMEDCNT}, it can never be decremented, since it is
+not known how many references beyond this number actually exist.
+
+For compatibility with C code written for use with the previous
+scheme, the @code{NAMED} and @code{SET_NAMED} macros are still
+defined.  @code{SET_NAMED} sets @code{nmcnt} to the value given if it
+is 0 or 1, and to @code{MAX_NAMEDCNT} if the value given to
+@code{SET_NAMED} is 2.  @code{NAMED} delivers the value of
+@code{nmcnt} if it is 0 or 1, and the value 2 if @code{nmcnt} is any
+value greater than 1.  Furthermore, if @code{NAMED} delivers the value
+2, it changes @code{nmcnt} to @code{MAX_NAMEDCNT}.  This is necessary
+because existing code may assume that if @code{NAMED} is 2, it will
+never decrease, and hence the object will always be duplicated before
+being modified, regardless of subsequent operations.
+
+The @code{nmcnt} field can be accessed by the macro @code{NAMEDCNT},
+but when appropriate, macros for testing its value called
+@code{NAMEDCNT_EQ_0}, @code{NAMEDCNT_GT_0}, and @code{NAMEDCNT_GT_1}
+should be used, since they may be more efficient than a comparison
+with the value returned by @code{NAMEDCNT}.
+
+The @code{nmcnt} field can be set with the @code{SET_NAMEDCNT} macro,
+but when possible, it is better to use the @code{SET_NAMEDCNT_0},
+@code{SET_NAMEDCNT_1}, @code{SET_NAMEDCNT_MAX}, @code{INC_NAMEDCNT},
+@code{DEC_NAMEDCNT}, and @code{INC_NAMEDCNT_0_AS_1} macros, since they
+may be more efficient.  The @code{INC_NAMEDCNT} and
+@code{DEC_NAMEDCNT} macros increment and decrement @code{nmcnt},
+except that they do not change its value if it is @code{MAX_NAMEDCNT}.
+The @code{INC_NAMEDCNT_0_AS_1} macro first changes @code{nmcnt} to 1
+if it is 0, and then increments the value (unless it is
+@code{MAX_NAMEDCNT}).
+
+@node The write barrier, Serialization Formats, Reference counts and the nmcnt field, R Internal Structures
 @section The write barrier and the garbage collector
 
 @cindex write barrier

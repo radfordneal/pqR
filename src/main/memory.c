@@ -3423,6 +3423,61 @@ int  attribute_hidden (ENC_KNOWN)(SEXP x) { return ENC_KNOWN(x); }
 void attribute_hidden (SET_CACHED)(SEXP x) { SET_CACHED(x); }
 int  attribute_hidden (IS_CACHED)(SEXP x) { return IS_CACHED(x); }
 
+
+/* ------------------------------------------------------------------------
+   Function (plus global variables) not intended to ever be called, and 
+   normally not defined, whose code can be examined to see how the compiler
+   is implementing facilities such as the NAMEDCNT macros. 
+*/
+
+#if 0
+
+SEXP R_tobj_a, R_tobj_b, R_tobj_c, R_tobj_d, R_tobj_e, R_tobj_f, R_tobj_g,
+     R_tobj_h, R_tobj_i, R_tobj_j, R_tobj_k, R_tobj_l, R_tobj_m, R_tobj_n,
+     R_tobj_o, R_tobj_p, R_tobj_q, R_tobj_r, R_tobj_s, R_tobj_t, R_tobj_u,
+     R_tobj_v, R_tobj_w, R_tobj_x, R_tobj_y, R_tobj_z;
+
+int  R_tint_a, R_tint_b, R_tint_c, R_tint_d, R_tint_e, R_tint_f, R_tint_g,
+     R_tint_h, R_tint_i, R_tint_j, R_tint_k, R_tint_l, R_tint_m, R_tint_n,
+     R_tint_o, R_tint_p, R_tint_q, R_tint_r, R_tint_s, R_tint_t, R_tint_u,
+     R_tint_v, R_tint_w, R_tint_x, R_tint_y, R_tint_z;
+
+void Rf_code_gen_test_func (void)
+{
+  R_tint_a = NAMEDCNT(R_tobj_a);
+  R_tint_b = NAMED(R_tobj_b);
+
+  if (NAMEDCNT_EQ_0(R_tobj_c)) REprintf("xx\n");
+  if (NAMEDCNT_GT_0(R_tobj_d)) REprintf("xx\n");
+  if (NAMEDCNT_GT_1(R_tobj_e)) REprintf("xx\n");
+
+  SET_NAMEDCNT(R_tobj_f,R_tint_f);
+  SET_NAMEDCNT_0(R_tobj_g);
+  SET_NAMEDCNT_1(R_tobj_h);
+  SET_NAMEDCNT_MAX(R_tobj_i);
+
+  SET_NAMED(R_tobj_j,R_tint_j);
+
+  INC_NAMEDCNT(R_tobj_k);
+  DEC_NAMEDCNT(R_tobj_l);
+
+  R_tint_m = LEVELS(R_tobj_m);
+  R_tint_n = TRUELENGTH(R_tobj_n);
+
+  SETLEVELS(R_tobj_o,R_tint_o);
+  SET_TRUELENGTH(R_tobj_p,R_tint_p);
+
+  R_tint_q = TYPEOF(R_tobj_q);
+  R_tint_r = NODE_CLASS(R_tobj_r);
+
+  SET_NODE_CLASS(R_tobj_s,R_tint_s);
+}
+
+#endif
+
+
+/* ------------------------------------------------------------------------ */
+
 SEXP attribute_hidden do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {   SEXP a;
     int j;
@@ -3436,7 +3491,8 @@ SEXP attribute_hidden do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
         if (!isString(CAR(a)))
             error(_("invalid argument"));
 
-    Rprintf ("PNAMEDCNT:  %d  %x  %s", NAMED(CAR(args)), CAR(args),
+    /* access nmcnt directly, so won't delay for possible task syncronization */
+    Rprintf ("PNAMEDCNT:  %d  %x  %s", CAR(args)->sxpinfo.nmcnt, CAR(args),
                                        type2char(TYPEOF(CAR(args))));
 
     for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
