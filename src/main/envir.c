@@ -96,6 +96,9 @@
 #include "Defn.h"
 #include <R_ext/Callbacks.h>
 
+#define FAST_BASE_CACHE_LOOKUP  /* Define to enable fast lookups of symbols */
+                                /*    in global cache from base environment */
+
 #define IS_USER_DATABASE(rho)  OBJECT((rho)) && inherits((rho), "UserDefinedDatabase")
 
 /* various definitions of macros/functions in Defn.h */
@@ -594,6 +597,12 @@ static SEXP R_HashProfile(SEXP table)
    created in a global frame or if the variable is removed from any
    global frame.
 
+   Symbols in the global cache with values from the base environment
+   are flagged with BASE_CACHE, so that their value can be returned
+   immediately without needing to look in the hash table.  They must
+   still have entries in the hash table, however, so that they can be
+   flushed as needed.
+
    To make sure the cache is valid, all binding creations and removals
    from global frames must go through the interface functions in this
    file.
@@ -671,8 +680,12 @@ static void R_FlushGlobalCache(SEXP sym)
 {
     SEXP entry = R_HashGetLoc(hashIndex(sym, R_GlobalCache), sym,
 			      R_GlobalCache);
-    if (entry != R_NilValue)
+    if (entry != R_NilValue) {
 	SETCAR(entry, R_UnboundValue);
+#ifdef FAST_BASE_CACHE_LOOKUP
+        SET_BASE_CACHE(sym,0);
+#endif
+    }
 }
 
 static void R_FlushGlobalCacheFromTable(SEXP table)
@@ -708,6 +721,9 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
     int oldpri = HASHPRI(R_GlobalCache);
     R_HashSet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache, place,
 	      FALSE);
+#ifdef FAST_BASE_CACHE_LOOKUP
+    SET_BASE_CACHE (symbol, symbol==place);
+#endif
     if (oldpri != HASHPRI(R_GlobalCache) &&
 	HASHPRI(R_GlobalCache) > 0.85 * HASHSIZE(R_GlobalCache)) {
 	R_GlobalCache = R_HashResize(R_GlobalCache);
@@ -717,7 +733,14 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
 
 static SEXP R_GetGlobalCache(SEXP symbol)
 {
-    SEXP vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol,
+    SEXP vl;
+
+#ifdef FAST_BASE_CACHE_LOOKUP
+    if (BASE_CACHE(symbol))
+        return SYMBOL_BINDING_VALUE(symbol);
+#endif
+
+    vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol,
 			R_GlobalCache);
     switch(TYPEOF(vl)) {
     case SYMSXP:
@@ -1304,10 +1327,18 @@ SEXP findFun(SEXP symbol, SEXP rho)
 {
     SEXP vl;
     while (rho != R_EmptyEnv) {
-	/* This is not really right.  Any variable can mask a function */
+
+        /* Any variable can mask a function here; checked for below. */
 #ifdef USE_GLOBAL_CACHE
 	if (rho == R_GlobalEnv)
-	    vl = findGlobalVar(symbol);
+#ifdef FAST_BASE_CACHE_LOOKUP
+            if (BASE_CACHE(symbol)) /* do quickly here, since time-critical */
+                vl = SYMBOL_BINDING_VALUE(symbol);
+            else
+                vl = findGlobalVar(symbol);
+#else
+            vl = findGlobalVar(symbol);
+#endif
 	else
 	    vl = findVarInFrame3(rho, symbol, TRUE);
 #else

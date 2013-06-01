@@ -269,6 +269,10 @@ other objects when tracing duplications (see @code{tracemem}).
 @findex RSTEP
 The bit called @code{misc} in @pqR{} was called @code{spare} in R-2.15.0, 
 and was said to be unused, but this was not true.
+For symbols, the @code{misc} bit is used for the BASE_CACHE flag, that
+indicates that the symbol is in the global cache with a binding in the 
+base environment, allowing its value to be obtained directly without 
+looking in the hash table.
 For closures, the @code{misc} bit is used as the @code{RSTEP} flag.
 
 @findex named bit
