@@ -316,7 +316,12 @@
             are now done without actualy allocating a vector to hold
             the sequence.  This saves both space and time.
       \item **41
-      \item **42
+      \item A subscript such as 101:200 for a vector or as the first subscript
+            for a matrix is now (often) handled without actually creating
+            a vector of indexes, saving both time and space.  A missing
+            row subscript for a matrix is now also handled without
+            creating a vector of indexes for all rows.  (However, these 
+            changes are not effective in compiled code.)
       \item **43
       \item **44
       \item **45
