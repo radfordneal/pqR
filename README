@@ -1,5 +1,29 @@
+pqR - a "pretty quick" implementation of the R programming language
 
-			THE BASIC R README
+This directory contains the source code (plus documentation) for an
+implementation of the R programming language, including some R
+packages.  This implementation is a modification of R-2.15.0,
+distributed by the R Core Team, and found at www.r-project.org.
+
+The modifications in pqR substantially improve the speed of R.  Some
+extensions to R are also implemented.  These modifications were
+written by Radford M. Neal, radfordneal@gmail.com.
+
+A git repository for this source code that include modification
+history is at github.com/radfordneal/pqR.
+
+This implementation of R is distributed under the GNU General Public
+Licence, version 2 or version 3.  See the files COPYING and
+doc/COPYRIGHTS for details.
+
+See INSTALL, NEWS, MODS, and the files in the doc sub-directory for
+more information.
+
+-----------------------------------------------------------------------------
+
+                     THE BASIC R README
+
+           (from R-2.15.0, distributed 2012-03-30)
 
 
 	   (See "doc/FAQ" and "doc/RESOURCES" for more detailed information

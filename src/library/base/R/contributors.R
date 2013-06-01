@@ -1,5 +1,6 @@
 #  File src/library/base/R/contributors.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,13 +19,7 @@ contributors <- function()
 {
     outFile <- tempfile()
     outConn <- file(outFile, open = "w")
-    writeLines(paste("R is a project which is attempting to provide a ",
-                     "modern piece of\nstatistical software for the ",
-                     "GNU suite of software.\n\n",
-                     "The current R is the result of a collaborative ",
-                     "effort with\ncontributions from all over the ",
-                     "world.\n\n",
-                     sep = ""), outConn)
+
     writeLines(readLines(file.path(R.home("doc"), "AUTHORS")), outConn)
     writeLines("", outConn)
     writeLines(readLines(file.path(R.home("doc"), "THANKS")), outConn)

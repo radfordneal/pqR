@@ -9,13 +9,13 @@ TOOLS_DIR=`echo ${0} | sed 's%/[^/][^/]*$%%'`
   pl=`echo ${min} | sed 's/\..*//'`
   sl=`echo ${min} | sed 's/.*\.//'`
   ver=`expr ${maj} \\* 65536 + ${pl} \\* 256 + ${sl}`
-  if test -f ../../SVN-REVISION ; then
-    dat=`sed  -e 1d -e 's/^Last Changed Date: //' ../../SVN-REVISION`
+  if test -f ${TOOLS_DIR}/../SVN-REVISION ; then
+    dat=`sed  -e 1d -e 's/^Last Changed Date: //' ${TOOLS_DIR}/../SVN-REVISION`
     y=`echo ${dat} | cut -d- -f1`
     m=`echo ${dat} | cut -d- -f2`
     d=`echo ${dat} | cut -d- -f3`
     y1=`expr ${y} - 2000`
-    svn_rev=`sed -n -e 's/^Revision: //' -e '1p' < ../../SVN-REVISION`
+    svn_rev=`sed -n -e 's/^Revision: //' -e '1p' < ${TOOLS_DIR}/../SVN-REVISION`
   else
     y=2006
     m=01
@@ -44,6 +44,10 @@ TOOLS_DIR=`echo ${0} | sed 's%/[^/][^/]*$%%'`
 ## Using 1-digit year stops problems with leading zeros
 #  echo "#define R_FILEVERSION    ${maj},${pl}${sl},${y1}${m}${d},0"
   echo "#define R_FILEVERSION    ${maj},${pl}${sl},${svn_rev},0"
+  echo
+  echo "#define pqR_BASE_VERSION" \"`cat ${TOOLS_DIR}/../pqR-BASE-VERSION`\"
+  echo "#define pqR_BASE_DATE" \"`cat ${TOOLS_DIR}/../pqR-BASE-DATE`\"
+  echo "#define pqR_BASE_YEAR" \"`sed s/-.\*// <${TOOLS_DIR}/../pqR-BASE-DATE`\"
   echo
   echo '#ifdef __cplusplus'
   echo '}'

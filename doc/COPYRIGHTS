@@ -1,5 +1,10 @@
+COPYRIGHT STATUS OF pqR.
+ 
+The modifications made to the source of R-2.15.0 to create pqR are
+Copyright (C) 2013 by Radford M. Neal.
 
-COPYRIGHT STATUS
+
+COPYRIGHT STATUS of R-2.15.0 (taken from this file in R-2.15.0)
 
 The bulk of this code is copyright by members of or all of the R
 Development Core Team.

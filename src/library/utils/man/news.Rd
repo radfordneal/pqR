@@ -1,6 +1,7 @@
 % File src/library/utils/man/news.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{news}
@@ -29,11 +30,17 @@ news(query, package = "R", lib.loc = NULL, format = NULL,
 }
 \details{
   If \code{package} is \code{"R"} (default), a news db is built with the
-  news since the 2.10.0 release of R (corresponding to R's top-level
+  news since the first release of pqR (corresponding to pqR's top-level
   \file{NEWS} file).  Otherwise, if the given add-on package can be
   found in the given libraries, it is attempted to read its news in
   structured form from files \file{inst/NEWS.Rd}, \file{NEWS} or
   \file{inst/NEWS} (in that order).
+
+  News on versions of R distributed by the R Core Team up to the
+  version pqR was based on may be perused using RShowDoc("ONEWS"),
+  RShowDoc("OONEWS"), and RShowDoc("OOONEWS").  RShowDoc("MODS")
+  will show some mods in pqR that are not in NEWS, since they are
+  of little interest to users.
 
   File \file{inst/NEWS.Rd} should be an Rd file given the entries as Rd
   \verb{\itemize} lists, grouped according to version using

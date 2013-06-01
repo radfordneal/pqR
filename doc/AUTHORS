@@ -1,4 +1,14 @@
-Authors of R.
+pqR is a modification of R-2.15.0, containing numerous efficiency
+improvements, and other changes.  These modifications were done by
+Radford Neal.  Radford Neal also contributed some efficiency
+improvements to R incorporated into R-2.12.0 and later versions.
+
+Radford Neal can be contacted at radfordneal@gmail.com.  The pqR source
+code repository is at githup.com/radfordneal/pqR.
+
+--------------------------------------------------------------------------
+
+R-2.15.0 credits authors as follows:
 
 R was initially written by Robert Gentleman and Ross Ihaka of the
 Statistics Department of the University of Auckland.

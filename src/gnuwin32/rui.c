@@ -663,7 +663,7 @@ static void menuabout(control m)
     PrintVersionString(s2);
     sprintf(s, "%s\n%s %s %s",
 	    s2,
-	    "Copyright (C)", R_YEAR,
+	    "Copyright (C)", R_BASE_YEAR,
 	    "The R Foundation for Statistical Computing");
     askok(s);
 /*    show(RConsole); */
