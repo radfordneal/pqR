@@ -1924,6 +1924,7 @@ void attribute_hidden InitMemory()
        since the write barrier prevents assignments to R_NilValue's fields.
        because of checks for nil */
     GET_FREE_NODE(R_NilValue);
+    R_NilValue_COPY_ = R_NilValue;
     R_NilValue->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     TYPEOF(R_NilValue) = NILSXP;
     CAR(R_NilValue) = R_NilValue;
