@@ -100,6 +100,8 @@
 #include "Defn.h"
 #include <R_ext/Callbacks.h>
 
+#include <helpers/helpers-app.h>
+
 #define FAST_BASE_CACHE_LOOKUP  /* Define to enable fast lookups of symbols */
                                 /*    in global cache from base environment */
 
@@ -149,6 +151,7 @@ static void setActiveValue(SEXP fun, SEXP val)
 {
     SEXP arg = LCONS(R_QuoteSymbol, LCONS(val, R_NilValue));
     SEXP expr = LCONS(fun, LCONS(arg, R_NilValue));
+    WAIT_UNTIL_COMPUTED(val); \
     PROTECT(expr);
     eval(expr, R_GlobalEnv);
     UNPROTECT(1);
@@ -870,69 +873,65 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 
   findVarLocInFrame
 
-  Look up the location of the value of a symbol in a
-  single environment frame.  Almost like findVarInFrame, but
-  does not return the value. R_NilValue if not found.
+  Look up the location of the value of a symbol in a single
+  environment frame.  Returns the binding cell rather than the value
+  itself, or R_NilValue if not found.  Does not wait for the bound
+  value to be computed.
 
   Callers set *canCache = TRUE or NULL
 */
 
 static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 {
-    int hashcode;
-    SEXP frame, c;
+    SEXP loc;
 
-    if (rho == R_BaseEnv || rho == R_BaseNamespace) {
-	error("'findVarLocInFrame' cannot be used on the base environment");
-	/* the code below doesn't really make sense as it returns the
-	   value, not the binding.  We _could_ return the symbol as
-	   the binding object in that case, but it isn't clear that
-	   would be useful. LT */
-	c = SYMBOL_BINDING_VALUE(symbol);
-	return (c == R_UnboundValue) ? R_NilValue : c;
-    }
-
-    if (rho == R_EmptyEnv)
-	return(R_NilValue);
-
-    if(IS_USER_DATABASE(rho)) {
-	R_ObjectTable *table;
-	SEXP val, tmp = R_NilValue;
-	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
-	/* Better to use exists() here if we don't actually need the value! */
-	val = table->get(CHAR(PRINTNAME(symbol)), canCache, table);
-	if(val != R_UnboundValue) {
+    if (IS_USER_DATABASE(rho)) {
+	R_ObjectTable *table = (R_ObjectTable *)R_ExternalPtrAddr(HASHTAB(rho));
+	SEXP val = table->get(CHAR(PRINTNAME(symbol)), canCache, table);
+	/* Better to use exists() here if we don't actually need the value? */
+	if (val == R_UnboundValue)
+            loc = R_NilValue;
+        else {
 	    /* The result should probably be identified as being from
 	       a user database, or maybe use an active binding
 	       mechanism to allow setting a new value to get back to
 	       the data base. */
-	    tmp = allocSExp(LISTSXP);
-	    SETCAR(tmp, val);
-	    SET_TAG(tmp, symbol);
+            loc = cons_with_tag (val, R_NilValue, symbol);
 	    /* If the database has a canCache method, then call that.
 	       Otherwise, we believe the setting for canCache. */
 	    if(canCache && table->canCache)
 		*canCache = table->canCache(CHAR(PRINTNAME(symbol)), table);
 	}
-	return(tmp);
     }
 
-    if (HASHTAB(rho) == R_NilValue) {
-	frame = FRAME(rho);
-	while (frame != R_NilValue && TAG(frame) != symbol)
-	    frame = CDR(frame);
-	return frame;
+    else if (rho == R_BaseEnv || rho == R_BaseNamespace)
+	error("'findVarLocInFrame' cannot be used on the base environment");
+
+    /* DISABLED ERROR CHECK.  Somebody calls this with a non-environment!
+
+    else if (!isEnvironment(rho))
+	error(_("argument to '%s' is not an environment"), "findVarLocInFrame");
+    */
+
+    else if (HASHTAB(rho) == R_NilValue) {
+	loc = FRAME(rho);
+	while (loc != R_NilValue && TAG(loc) != symbol)
+	    loc = CDR(loc);
     }
+
     else {
-	c = PRINTNAME(symbol);
+        int hashcode;
+	SEXP c = PRINTNAME(symbol);
 	if( !HASHASH(c) ) {
 	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
 	    SET_HASHASH(c,  1);
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_NilValue' if not found */
-	return R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
+	loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
     }
+
+    return loc;
 }
 
 
@@ -951,7 +950,9 @@ R_varloc_t R_findVarLocInFrame(SEXP rho, SEXP symbol)
 
 SEXP R_GetVarLocValue(R_varloc_t vl)
 {
-    return BINDING_VALUE((SEXP) vl);
+    SEXP value = BINDING_VALUE((SEXP) vl);
+    WAIT_UNTIL_COMPUTED(value);
+    return value;
 }
 
 SEXP R_GetVarLocSymbol(R_varloc_t vl)
@@ -972,117 +973,98 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 
 /*----------------------------------------------------------------------
 
-  findVarInFrame
+  findVarInFrame3
 
   Look up the value of a symbol in a single environment frame.	This
   is the basic building block of all variable lookups.
 
   It is important that this be as efficient as possible.
 
-  The final argument is usually TRUE and indicates whether the
-  lookup is being done in order to get the value (TRUE) or
-  simply to check whether there is a value bound to the specified
-  symbol in this frame (FALSE).  This is used for get() and exists().
+  The final argument controls the exact behaviour, as follows:
+
+    0 (or FALSE)  Lookup and return value, or R_UnboundValue if doesn't exist.
+                  On a user database, does a "get" only if "exists" is true.
+                  Waits for computation of the value to finish.
+
+    1 (or TRUE)   Same as 0, except always does a "get" on a user database.
+
+    2             Only checks existence, returning R_UnboundValue if a 
+                  binding doesn't exist and R_NilValue if one does exist.
+                  Doesn't wait for computation of the value to finish, since 
+                  it isn't being returned.
+
+    3             Same as 1, except doesn't wait for computation of the value 
+                  to finish.
+
+  Note that (option&1)!=0 if a get should aways be done on a user database,
+  and (option&2)!=0 if we don't need to wait.
 */
 
-SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
+SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
-    int hashcode;
-    SEXP frame, c;
+    SEXP loc, value;
 
-    if (TYPEOF(rho) == NILSXP)
-	error(_("use of NULL environment is defunct"));
+    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
+        if (option==2) 
+            return SYMBOL_HAS_BINDING(symbol) ? R_NilValue : R_UnboundValue;
+        value = SYMBOL_BINDING_VALUE(symbol);
+    }
 
-    if (rho == R_BaseNamespace || rho == R_BaseEnv)
-	return SYMBOL_BINDING_VALUE(symbol);
-
-    if (rho == R_EmptyEnv)
-	return R_UnboundValue;
-
-    if(IS_USER_DATABASE(rho)) {
+    else if (IS_USER_DATABASE(rho)) {
 	/* Use the objects function pointer for this symbol. */
-	R_ObjectTable *table;
-	SEXP val = R_UnboundValue;
-	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
-	if(table->active) {
-	    if(doGet)
-		val = table->get(CHAR(PRINTNAME(symbol)), NULL, table);
+	R_ObjectTable *table = (R_ObjectTable *)R_ExternalPtrAddr(HASHTAB(rho));
+	value = R_UnboundValue;
+	if (table->active) {
+	    if (option&1)
+		value = table->get (CHAR(PRINTNAME(symbol)), NULL, table);
 	    else {
-		if(table->exists(CHAR(PRINTNAME(symbol)), NULL, table))
-		    val = table->get(CHAR(PRINTNAME(symbol)), NULL, table);
+		if (table->exists (CHAR(PRINTNAME(symbol)), NULL, table)) {
+                    if (option==2) 
+                        return R_NilValue;
+		    value = table->get (CHAR(PRINTNAME(symbol)), NULL, table);
+                }
 		else
-		    val = R_UnboundValue;
+		    value = R_UnboundValue;
 	    }
 	}
-	return(val);
-    } else if (HASHTAB(rho) == R_NilValue) {
-	frame = FRAME(rho);
-	while (frame != R_NilValue) {
-	    if (TAG(frame) == symbol)
-		return BINDING_VALUE(frame);
-	    frame = CDR(frame);
+    }
+
+    else if (!isEnvironment(rho))
+	error(_("argument to '%s' is not an environment"), "findVarInFrame3");
+
+    else if (HASHTAB(rho) == R_NilValue) {
+	loc = FRAME(rho);
+        for (;;) {
+            if (loc == R_NilValue)
+                return R_UnboundValue;
+            if (TAG(loc) == symbol) {
+                if (option==2)
+                    return R_NilValue;
+                value = BINDING_VALUE(loc);
+                break;
+            }
+            loc = CDR(loc);
 	}
     }
+
     else {
-	c = PRINTNAME(symbol);
+        SEXP c = PRINTNAME(symbol);
+        int hashcode;
 	if( !HASHASH(c) ) {
 	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
 	    SET_HASHASH(c, 1);
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	/* Will return 'R_UnboundValue' if not found */
-	return(R_HashGet(hashcode, symbol, HASHTAB(rho)));
+        if (option==2)
+            return R_HashExists (hashcode, symbol, HASHTAB(rho)) 
+                    ? R_NilValue : R_UnboundValue;
+	value = R_HashGet(hashcode, symbol, HASHTAB(rho));
     }
-    return R_UnboundValue;
-}
 
-/* This variant of findVarinFrame3 is needed to avoid running active
-   binding functions in calls to exists() with mode = "any" */
-static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
-{
-    int hashcode;
-    SEXP frame, c;
+    if (option != 3)
+        WAIT_UNTIL_COMPUTED(value);
 
-    if (TYPEOF(rho) == NILSXP)
-	error(_("use of NULL environment is defunct"));
-
-    if (rho == R_BaseNamespace || rho == R_BaseEnv)
-	return SYMBOL_HAS_BINDING(symbol);
-
-    if (rho == R_EmptyEnv)
-	return FALSE;
-
-    if(IS_USER_DATABASE(rho)) {
-	/* Use the objects function pointer for this symbol. */
-	R_ObjectTable *table;
-	Rboolean val = FALSE;
-	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
-	if(table->active) {
-	    if(table->exists(CHAR(PRINTNAME(symbol)), NULL, table))
-		val = TRUE;
-	    else
-		val = FALSE;
-	}
-	return(val);
-    } else if (HASHTAB(rho) == R_NilValue) {
-	frame = FRAME(rho);
-	while (frame != R_NilValue) {
-	    if (TAG(frame) == symbol)
-		return TRUE;
-	    frame = CDR(frame);
-	}
-    }
-    else {
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	/* Will return 'R_UnboundValue' if not found */
-	return R_HashExists(hashcode, symbol, HASHTAB(rho));
-    }
-    return FALSE;
+    return value;
 }
 
 SEXP findVarInFrame(SEXP rho, SEXP symbol)
@@ -1091,17 +1073,12 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
 }
 
 
-/*----------------------------------------------------------------------
-
-  findVar
-
-  Look up a symbol in an environment.
-
-*/
 
 #ifdef USE_GLOBAL_CACHE
-/* findGlobalVar searches for a symbol value starting at R_GlobalEnv,
-   so the cache can be used. */
+
+/* findGlobalVar searches for a symbol value starting at R_GlobalEnv, so the
+   cache can be used.  Doesn't wait for the value found to be computed. */
+
 static SEXP findGlobalVar(SEXP symbol)
 {
     SEXP vl, rho;
@@ -1129,39 +1106,98 @@ static SEXP findGlobalVar(SEXP symbol)
 }
 #endif
 
+
+/*----------------------------------------------------------------------
+
+  findVar
+
+     Look up a symbol in an environment.  Waits for the value to be computed.
+
+  findVarPendingOK 
+
+     Like findVar, but doesn't wait for the value to be computed.
+*/
+
 SEXP findVar(SEXP symbol, SEXP rho)
 {
-    SEXP vl;
-
-    if (TYPEOF(rho) == NILSXP)
-	error(_("use of NULL environment is defunct"));
+    SEXP value;
 
     if (!isEnvironment(rho))
 	error(_("argument to '%s' is not an environment"), "findVar");
 
 #ifdef USE_GLOBAL_CACHE
+
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
        R_GlobalEnv */
+
     while (rho != R_GlobalEnv && rho != R_EmptyEnv) {
-	vl = findVarInFrame3(rho, symbol, TRUE /* get rather than exists */);
-	if (vl != R_UnboundValue) return (vl);
+	value = findVarInFrame3 (rho, symbol, 1);
+	if (value != R_UnboundValue) 
+            return value;
 	rho = ENCLOS(rho);
     }
-    if (rho == R_GlobalEnv)
-	return findGlobalVar(symbol);
+
+    if (rho == R_GlobalEnv) {
+	value = findGlobalVar(symbol);
+        WAIT_UNTIL_COMPUTED(value);
+        return value;
+    }
     else
 	return R_UnboundValue;
+
 #else
+
     while (rho != R_EmptyEnv) {
-	vl = findVarInFrame3(rho, symbol, TRUE);
-	if (vl != R_UnboundValue) return (vl);
+	value = findVarInFrame3 (rho, symbol, 1);
+	if (value != R_UnboundValue) 
+            return value;
 	rho = ENCLOS(rho);
     }
     return R_UnboundValue;
+
 #endif
 }
 
+SEXP findVarPendingOK(SEXP symbol, SEXP rho)
+{
+    SEXP value;
+
+    if (!isEnvironment(rho))
+	error(_("argument to '%s' is not an environment"), "findVar");
+
+#ifdef USE_GLOBAL_CACHE
+
+    /* This first loop handles local frames, if there are any.  It
+       will also handle all frames if rho is a global frame other than
+       R_GlobalEnv */
+
+    while (rho != R_GlobalEnv && rho != R_EmptyEnv) {
+	value = findVarInFrame3 (rho, symbol, 3);
+	if (value != R_UnboundValue) 
+            return value;
+	rho = ENCLOS(rho);
+    }
+
+    if (rho == R_GlobalEnv) {
+	value = findGlobalVar(symbol);
+        return value;
+    }
+    else
+	return R_UnboundValue;
+
+#else
+
+    while (rho != R_EmptyEnv) {
+	value = findVarInFrame3 (rho, symbol, 3);
+	if (value != R_UnboundValue) 
+            return value;
+	rho = ENCLOS(rho);
+    }
+    return R_UnboundValue;
+
+#endif
+}
 
 
 /*----------------------------------------------------------------------
@@ -1215,7 +1251,7 @@ findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 	mode = CLOSXP;
     while (rho != R_EmptyEnv) {
 	if (! doGet && mode == ANYSXP)
-	    vl = existsVarInFrame(rho, symbol) ? R_NilValue : R_UnboundValue;
+	    vl = findVarInFrame3(rho, symbol, 2);
 	else
 	    vl = findVarInFrame3(rho, symbol, doGet);
 
@@ -1337,14 +1373,17 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 
   findFun
 
-  Search for a function in an environment This is a specially modified
+  Search for a function in an environment. This is a specially modified
   version of findVar which ignores values its finds if they are not
   functions.
 
- [ NEEDED: This needs to be modified so that a search for an arbitrary mode can
-  be made.  Then findVar and findFun could become same function.]
+  [ NEEDED: This needs to be modified so that a search for an arbitrary mode can
+            be made.  Then findVar and findFun could become same function.]
 
   This could call findVar1.  NB: they behave differently on failure.
+
+  There is no need to wait for computations of the values found to finish, 
+  since functions never have their computation deferred.
 */
 
 SEXP findFun(SEXP symbol, SEXP rho)
@@ -1372,9 +1411,9 @@ SEXP findFun(SEXP symbol, SEXP rho)
             vl = findGlobalVar(symbol);
 #endif
 	else
-	    vl = findVarInFrame3(rho, symbol, TRUE);
+	    vl = findVarInFrame3(rho, symbol, 3);
 #else
-	vl = findVarInFrame3(rho, symbol, TRUE);
+	vl = findVarInFrame3(rho, symbol, 3);
 #endif
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP) {
@@ -1407,6 +1446,9 @@ SEXP findFun(SEXP symbol, SEXP rho)
   2 = increment new value only, 3 = decrement old value and increment new value.
   Returns TRUE if an assignment was successfully made. 
 
+  Waits for computation to finish for values stored into user databases and 
+  into the base environment.
+
   The symbol, value, and rho arguments are protected by this function. */
 
 int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
@@ -1417,11 +1459,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     PROTECT3(symbol,value,rho);
 
-    if (rho == R_EmptyEnv)
-        error(_("cannot assign values in the empty environment"));
-
-    if(IS_USER_DATABASE(rho)) {
+    if (IS_USER_DATABASE(rho)) {
         /* FIXME: This does not behave as described - DESCRIBED WHERE? HOW? */
+        WAIT_UNTIL_COMPUTED(value);
         R_ObjectTable *table;
         table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
         if (table->assign == NULL) /* maybe should just return FALSE? */
@@ -1438,6 +1478,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         UNPROTECT(3);
         return TRUE; /* unclear whether assign always succeeds, but assume so */
     }
+
+    if (rho == R_EmptyEnv)
+        error(_("cannot assign values in the empty environment"));
 
     if (rho == R_BaseNamespace || rho == R_BaseEnv) {
         if (!create && SYMVALUE(symbol) == R_UnboundValue) {
@@ -1582,7 +1625,9 @@ void setVar(SEXP symbol, SEXP value, SEXP rho)
 
   gsetVar
 
-  Assignment directly into the base environment.  */
+  Assignment directly into the base environment.  
+
+  Waits until the value has been computed. */
 
 void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 {
@@ -1595,6 +1640,7 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 #endif
     }
 
+    WAIT_UNTIL_COMPUTED(value);
     SET_SYMBOL_BINDING_VALUE(symbol, value);
 }
 
@@ -1920,13 +1966,8 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_NAMEDCNT_1(rval);
 	return rval;
     }
-    else { /* exists(.) */
-	if (rval == R_UnboundValue)
-	    ginherits = 0;
-	else
-	    ginherits = 1;
-	return ScalarLogical(ginherits);
-    }
+    else /* exists(.) */
+	return ScalarLogical (rval != R_UnboundValue);
 }
 
 static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,

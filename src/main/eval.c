@@ -523,7 +523,8 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	if( DDVAL(e) )
 		tmp = ddfindVar(e,rho);
 	else
-		tmp = findVar(e, rho);
+		tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
+                                                   : findVar (e, rho);
 	if (tmp == R_UnboundValue)
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
 	/* if ..d is missing then ddfindVar will signal */
@@ -1854,31 +1855,21 @@ static R_INLINE SEXP installAssignFcnName(SEXP fun)
     return install(buf);
 }
 
-/* Main entry point for complex assignments */
-/* We have checked to see that expr is a LANGSXP */
+/* Main entry point for complex assignments; rhs has already been evaluated. */
 
-static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
+static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 {
-    SEXP lhs, rhs, saverhs, tmp, afun, rhsprom;
+    SEXP lhs, tmp, afun, rhsprom;
     R_varloc_t tmploc;
     RCNTXT cntxt;
     int nprot;
 
-    /*  It's important that the rhs get evaluated first because
-	assignment is right associative i.e.  a <- b <- c is parsed as
-	a <- (b <- c).  */
+    /*  NOTE:  This code only works for unhashed ones. */
 
-    PROTECT(saverhs = rhs = eval(val, rho));
-
-    /*  FIXME: We need to ensure that this works for hashed
-	environments.  This code only works for unhashed ones.  the
-	syntax error here is a deliberate marker so I don't forget that
-	this needs to be done.  The code used in "missing" will help
-	here.  */
-
-    /*  FIXME: This strategy will not work when we are working in the
-	data frame defined by the system hash table.  The structure there
-	is different.  Should we special case here?  */
+    if (rho == R_BaseNamespace)
+	errorcall(call, _("cannot do complex assignments in base namespace"));
+    if (rho == R_BaseEnv)
+	errorcall(call, _("cannot do complex assignments in base environment"));
 
     /*  We need a temporary variable to hold the intermediate values
 	in the computation.  For efficiency reasons we record the
@@ -1909,10 +1900,6 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
 
 	    LT */
 
-    if (rho == R_BaseNamespace)
-	errorcall(call, _("cannot do complex assignments in base namespace"));
-    if (rho == R_BaseEnv)
-	errorcall(call, _("cannot do complex assignments in base environment"));
     defineVar(R_TmpvalSymbol, R_NilValue, rho);
     PROTECT((SEXP) (tmploc = R_findVarLocInFrame(rho, R_TmpvalSymbol)));
 
@@ -1929,9 +1916,9 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
 		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
 
     PROTECT(lhs);
-    PROTECT(rhsprom = mkPROMISE(val, rho));
+    PROTECT(rhsprom = mkPROMISE(CADDR(call), rho));
     SET_PRVALUE(rhsprom, rhs);
-    INC_NAMEDCNT(rhs);
+    WAIT_UNTIL_COMPUTED(rhs);
 
     while (isLanguage(CADR(expr))) {
 	nprot = 1; /* the PROTECT of rhs below from this iteration */
@@ -1956,14 +1943,13 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
-        INC_NAMEDCNT(rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
 	lhs = CDR(lhs);
 	expr = CADR(expr);
     }
 
-    nprot = 5; /* the common case */
+    nprot = 4; /* the common case */
     if (TYPEOF(CAR(expr)) == SYMSXP)
 	afun = installAssignFcnName(CAR(expr));
     else {
@@ -1988,49 +1974,70 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
     UNPROTECT(nprot);
     endcontext(&cntxt); /* which does not run the remove */
     unbindVar(R_TmpvalSymbol, rho);
-#ifdef CONSERVATIVE_COPYING /* not default */
-    return duplicate(saverhs);
-#else
-    /* we do not duplicate the value, so to be conservative mark the
-       value as NAMED = 2 */
-    SET_NAMEDCNT_MAX(saverhs);
-    return saverhs;
-#endif
 }
+
 
 /*  Assignment in its various forms  */
 
-SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
+                              int variant)
 {
-    SEXP a, lhs, rhs, result;
-    int lhs_string = 0;
+    SEXP a, lhs, rhs;
 
-    if (isNull(args) || isNull(a = CDR(args)) || !isNull(CDR(a)))
+    if (args == R_NilValue 
+     || (a = CDR(args)) == R_NilValue 
+     || CDR(a) != R_NilValue)
         checkArity(op,args);
 
+    rhs = evalv (CAR(a), rho, VARIANT_PENDING_OK);
     lhs = CAR(args);
-    rhs = CAR(a);
 
-    if (isString(lhs)) {
-        PROTECT(lhs = install(translateChar(STRING_ELT(lhs, 0)))); 
-        lhs_string = 1;
-    }
+    switch (TYPEOF(lhs)) {
 
-    if (isSymbol(lhs)) {
-        result = evalv (rhs, rho, 0);
+    /* Assignment to simple variable. */
+
+    case STRSXP:
+        lhs = install(translateChar(STRING_ELT(lhs, 0)));
+        /* fall through... */
+    case SYMSXP:
         if (PRIMVAL(op) == 2) /* <<- */
-            set_var_nonlocal (lhs, result, ENCLOS(rho), 3);
+            set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
         else
-            set_var_in_frame (lhs, result, rho, TRUE, 3);
-    }
-    else if (isLanguage(lhs)) {
-        result = applydefine (call, op, lhs, rhs, rho);
-    }
-    else
-        error(_("invalid assignment left-hand side"));
+            set_var_in_frame (lhs, rhs, rho, TRUE, 3);
+        break;
 
-    if (lhs_string) UNPROTECT(1);
-    return result;
+    /* Assignment to complex target. */
+
+    case LANGSXP:
+
+        /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
+           to protect it from being modified by the assignment, or otherwise. */
+
+        if (VARIANT_KIND(variant) != VARIANT_NULL)
+            INC_NAMEDCNT(rhs);
+        PROTECT(rhs);
+
+        applydefine (call, op, lhs, rhs, rho);
+
+        UNPROTECT(1);
+        if (VARIANT_KIND(variant) != VARIANT_NULL)
+            DEC_NAMEDCNT(rhs);
+  
+        break;
+
+    /* Assignment to invalid target. */
+
+    default:
+        error(_("invalid assignment left-hand side"));
+    }
+
+    if (VARIANT_KIND(variant) == VARIANT_NULL)
+        return R_NilValue;
+
+    if (!(variant & VARIANT_PENDING_OK)) 
+        WAIT_UNTIL_COMPUTED(rhs);
+    
+    return rhs;
 }
 
 

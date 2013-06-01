@@ -449,7 +449,7 @@ SEXP do_seq(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_seq_along(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_seq_len(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_serializeToConn(SEXP, SEXP, SEXP, SEXP);
-SEXP do_set(SEXP, SEXP, SEXP, SEXP);
+SEXP do_set(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_setencoding(SEXP, SEXP, SEXP, SEXP);
 SEXP do_setenv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_seterrmessage(SEXP, SEXP, SEXP, SEXP);

@@ -57,6 +57,16 @@ stopifnot(a[[1]]==1)
 
 # Vector/matrix/array list assignments
 
+w <- list(1)
+a <- list(1)
+b <- (a[[1]] <- a)
+stopifnot(identical(b,w))
+
+w <- list(x=1)
+a <- list(x=1)
+b <- (a$x <- a)
+stopifnot(identical(b,w))
+
 a <- list(c(1,2),c(3,4))
 b <- list(1,2,3)
 b[2:3] <- a

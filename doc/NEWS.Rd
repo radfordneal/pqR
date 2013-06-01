@@ -558,7 +558,16 @@
 [1] "numeric"
 }
       \item **36
-      \item **37
+      \item Fixed bugs reported on r-devel by Justin Talbot, Jan 2013
+            (also fixed, differently, in R-2.15.3), illustrated by the following:
+\preformatted{
+   a <- list(1)
+   b <- (a[[1]] <- a)
+   print(b)
+   a <- list(x=1)
+   b <- (a$x <- a)
+   print(b)
+}
       \item **38
       \item **39
       \item **40
