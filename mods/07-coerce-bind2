@@ -1,0 +1,8 @@
+The "rbind", "cbind", "c", and "unlist" primitives have been speeded
+up for many cases.  A bug in "rbind" has been fixed, as documented in
+a NEWS item.
+
+A new copy_elements_coerced procedure numeric and string vectors with
+possible coercion, and has been used to replace much repetitive code
+that does this.  This replaces the copy_numeric_or_string_elements
+procedure from the 04-coerce-bind mod.

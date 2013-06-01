@@ -55,6 +55,9 @@ users, such as cleanups of source code.
      and sometimes without old-to-new checks on every element.  A new function
      copy_elements is also defined, for copying elements in any sort of vector
      (duplicating non-atomic elements, and using copy_string_elements).
+     A new function copy_elements_coerced copies numeric and string vectors
+     with possible coercion, and has been used to replace much repetitive
+     code that does this.
 
   9)
 

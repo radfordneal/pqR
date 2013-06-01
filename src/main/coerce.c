@@ -64,18 +64,8 @@
   } \
 } while (0)
 
-/* Coercion warnings will be OR'ed : */
-#define WARN_NA	   1
-#define WARN_INACC 2
-#define WARN_IMAG  4
-#define WARN_RAW  8
-
 void attribute_hidden CoercionWarning(int warn)
 {
-/* FIXME: Use
-   =====
-   WarningMessage(R_NilValue, WARNING_....);
-*/
     if (warn & WARN_NA)
 	warning(_("NAs introduced by coercion"));
     if (warn & WARN_INACC)
@@ -411,12 +401,14 @@ SEXP attribute_hidden StringFromComplex(Rcomplex x, int *warn)
 }
 
 /* Copy n elements from a numeric (raw, logical, integer, real, or complex) 
-   or string vector v (starting at j) to a numeric or string vector x (starting 
-   at i), which is not necessarily of the same type.  The value returned is 
-   the OR of all warning flags produced as a result of conversions, zero if 
-   no warnings.  The arguments x and v are protected within this procedure. */
+   or string vector v (starting at j, stepping by t) to a numeric or string 
+   vector x (starting at i, stepping by s), which is not necessarily of the 
+   same type.  The value returned is the OR of all warning flags produced 
+   as a result of conversions, zero if no warnings.  The arguments x and v 
+   are protected within this procedure. */
 
-int copy_numeric_or_string_elements (SEXP x, int i, SEXP v, int j, int n)
+int copy_elements_coerced
+  (SEXP x, int i, int s, SEXP v, int j, int t, int n)
 {
     if (n == 0) 
         return 0;
@@ -425,11 +417,10 @@ int copy_numeric_or_string_elements (SEXP x, int i, SEXP v, int j, int n)
     int typv = TYPEOF(v);
 
     if (typx == typv) {
-        copy_elements(x,i,v,j,n);
+        copy_elements(x,i,s,v,j,t,n);
         return 0;
     }
 
-    int L = i + n;
     int w = 0;
 
     PROTECT(x); 
@@ -438,118 +429,188 @@ int copy_numeric_or_string_elements (SEXP x, int i, SEXP v, int j, int n)
     switch ((typx<<5) + typv) {
 
     case (RAWSXP<<5) + LGLSXP:
-        do RAW(x)[i++] = RawFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        do {
+            RAW(x)[i] = RawFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (RAWSXP<<5) + INTSXP:
-        do RAW(x)[i++] = RawFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        do {
+            RAW(x)[i] = RawFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (RAWSXP<<5) + REALSXP:
-        do RAW(x)[i++] = RawFromReal(REAL(v)[j++],&w); while(i<L);
+        do {
+            RAW(x)[i] = RawFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (RAWSXP<<5) + CPLXSXP:
-        do RAW(x)[i++] = RawFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        do {
+            RAW(x)[i] = RawFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (RAWSXP<<5) + STRSXP:
-        do RAW(x)[i++] = 
-          RawFromString(STRING_ELT(v,j++),&w); while(i<L);
+        do {
+            RAW(x)[i] = RawFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
-
     case (LGLSXP<<5) + RAWSXP:
-        do LOGICAL(x)[i++] = LogicalFromRaw(RAW(v)[j++],&w); while(i<L);
+        do {
+            LOGICAL(x)[i] = LogicalFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (LGLSXP<<5) + INTSXP:
-        do LOGICAL(x)[i++] = LogicalFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        do {
+            LOGICAL(x)[i] = LogicalFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (LGLSXP<<5) + REALSXP:
-        do LOGICAL(x)[i++] = LogicalFromReal(REAL(v)[j++],&w); while(i<L);
+        do {
+            LOGICAL(x)[i] = LogicalFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (LGLSXP<<5) + CPLXSXP:
-        do LOGICAL(x)[i++] = LogicalFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        do {
+            LOGICAL(x)[i] = LogicalFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (LGLSXP<<5) + STRSXP:
-        do LOGICAL(x)[i++] = 
-          LogicalFromString(STRING_ELT(v,j++),&w); while(i<L);
+        do {
+            LOGICAL(x)[i] = LogicalFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
-
     case (INTSXP<<5) + RAWSXP:
-        do INTEGER(x)[i++] = IntegerFromRaw(RAW(v)[j++],&w); while(i<L);
+        do {
+            INTEGER(x)[i] = IntegerFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (INTSXP<<5) + LGLSXP:
-        do INTEGER(x)[i++] = IntegerFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        do {
+            INTEGER(x)[i] = IntegerFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (INTSXP<<5) + REALSXP:
-        do INTEGER(x)[i++] = IntegerFromReal(REAL(v)[j++],&w); while(i<L);
+        do {
+            INTEGER(x)[i] = IntegerFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (INTSXP<<5) + CPLXSXP:
-        do INTEGER(x)[i++] = IntegerFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        do {
+            INTEGER(x)[i] = IntegerFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (INTSXP<<5) + STRSXP:
-        do INTEGER(x)[i++] = 
-          IntegerFromString(STRING_ELT(v,j++),&w); while(i<L);
+        do {
+            INTEGER(x)[i] = IntegerFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
-
     case (REALSXP<<5) + RAWSXP:
-        do REAL(x)[i++] = RealFromRaw(RAW(v)[j++],&w); while(i<L);
+        do {
+            REAL(x)[i] = RealFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (REALSXP<<5) + LGLSXP:
-        do REAL(x)[i++] = RealFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        do {
+            REAL(x)[i] = RealFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (REALSXP<<5) + INTSXP:
-        do REAL(x)[i++] = RealFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        do {
+            REAL(x)[i] = RealFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (REALSXP<<5) + CPLXSXP:
-        do REAL(x)[i++] = RealFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        do {
+            REAL(x)[i] = RealFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (REALSXP<<5) + STRSXP:
-        do REAL(x)[i++] = 
-          RealFromString(STRING_ELT(v,j++),&w); while(i<L);
+        do {
+            REAL(x)[i] = RealFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
-
     case (CPLXSXP<<5) + RAWSXP:
-        do COMPLEX(x)[i++] = ComplexFromRaw(RAW(v)[j++],&w); while(i<L);
+        do {
+            COMPLEX(x)[i] = ComplexFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (CPLXSXP<<5) + LGLSXP:
-        do COMPLEX(x)[i++] = ComplexFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        do {
+            COMPLEX(x)[i] = ComplexFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (CPLXSXP<<5) + INTSXP:
-        do COMPLEX(x)[i++] = ComplexFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        do {
+            COMPLEX(x)[i] = ComplexFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (CPLXSXP<<5) + REALSXP:
-        do COMPLEX(x)[i++] = ComplexFromReal(REAL(v)[j++],&w); while(i<L);
+        do {
+            COMPLEX(x)[i] = ComplexFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (CPLXSXP<<5) + STRSXP:
-        do COMPLEX(x)[i++] = 
-          ComplexFromString(STRING_ELT(v,j++),&w); while(i<L);
+        do {
+            COMPLEX(x)[i] = ComplexFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (--n>0);
         break;
-
     case (STRSXP<<5) + RAWSXP:
         do {
-            SET_STRING_ELT (x, i++, StringFromRaw(RAW(v)[j++],&w)); 
-        } while (i<L);
+            SET_STRING_ELT (x, i, StringFromRaw(RAW(v)[j],&w)); 
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (STRSXP<<5) + LGLSXP:
         do {
-            SET_STRING_ELT (x, i++, StringFromLogical(LOGICAL(v)[j++],&w)); 
-        } while (i<L);
+            SET_STRING_ELT (x, i, StringFromLogical(LOGICAL(v)[j],&w)); 
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (STRSXP<<5) + INTSXP:
         do {
-            SET_STRING_ELT (x, i++, StringFromInteger(INTEGER(v)[j++],&w)); 
-        } while (i<L);
+            SET_STRING_ELT (x, i, StringFromInteger(INTEGER(v)[j],&w)); 
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (STRSXP<<5) + REALSXP:
         do {
-            SET_STRING_ELT (x, i++, StringFromReal(REAL(v)[j++],&w)); 
-        } while (i<L);
+            SET_STRING_ELT (x, i, StringFromReal(REAL(v)[j],&w)); 
+            i += s; j += t;
+        } while (--n>0);
         break;
     case (STRSXP<<5) + CPLXSXP:
         do {
-            SET_STRING_ELT (x, i++, StringFromComplex(COMPLEX(v)[j++],&w)); 
-        } while (i<L);
+            SET_STRING_ELT (x, i, StringFromComplex(COMPLEX(v)[j],&w)); 
+            i += s; j += t;
+        } while (--n>0);
         break;
 
     default:
-       UNIMPLEMENTED_TYPE("copy_numeric_elements", x);
+       UNIMPLEMENTED_TYPE("copy_elements_coerced", x);
     }
 
     UNPROTECT(2);
@@ -1011,7 +1072,7 @@ static SEXP coerce_numeric_or_string (SEXP v, int type)
 #endif
     DUPLICATE_ATTRIB(ans, v);
 
-    warn = copy_numeric_or_string_elements (ans, 0, v, 0, n);
+    warn = copy_elements_coerced (ans, 0, 1, v, 0, 1, n);
     if (warn) CoercionWarning(warn);
 
     UNPROTECT(1);
@@ -1174,7 +1235,7 @@ static SEXP asFunction(SEXP x)
 	n = length(x);
 	pf = allocList(n - 1);
 	SET_FORMALS(f, pf);
-	while(--n) {
+	while (--n) {
 	    if (TAG(x) == R_NilValue) {
 		SET_TAG(pf, CreateTag(CAR(x)));
 		SETCAR(pf, R_MissingArg);

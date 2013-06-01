@@ -328,8 +328,11 @@
       \item **46
       \item **47
       \item **48
-      \item **49
-      \item **50
+      \item The \code{cbind} and \code{rbind} functions have been greatly
+            speeded up for large objects.
+      \item The \code{c} and \code{unlist} functions have been speeded up 
+            by a bit in simple cases, and by a lot in some situations 
+            involving names.
       \item **51
       \item **52
       \item **53
@@ -470,7 +473,9 @@
 }
             Now, only the second warning message is produced.
       \item **26
-      \item **27
+      \item A bug has been fixed in which rbind would not handle 
+            non-vector objects such as function closures, whereas
+            cbind did handle them, and both were documented to do so.
       \item **28
       \item **29
       \item **30
