@@ -160,8 +160,9 @@ static Rboolean smin(SEXP x, SEXP *value, Rboolean narm)
     int i;
     SEXP s = NA_STRING; /* -Wall */
     Rboolean updated = FALSE;
+    int len = length(x);
 
-    for (i = 0; i < length(x); i++) {
+    for (i = 0; i < len; i++) {
 	if (STRING_ELT(x, i) != NA_STRING) {
 	    if (!updated ||
 		(s != STRING_ELT(x, i) && Scollate(s, STRING_ELT(x, i)) > 0)) {
@@ -228,8 +229,9 @@ static Rboolean smax(SEXP x, SEXP *value, Rboolean narm)
     int i;
     SEXP s = NA_STRING; /* -Wall */
     Rboolean updated = FALSE;
+    int len = length(x);
 
-    for (i = 0; i < length(x); i++) {
+    for (i = 0; i < len; i++) {
 	if (STRING_ELT(x, i) != NA_STRING) {
 	    if (!updated ||
 		(s != STRING_ELT(x, i) && Scollate(s, STRING_ELT(x, i)) < 0)) {

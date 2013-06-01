@@ -77,55 +77,54 @@
 
 #include <string.h> /* for strlen, strcmp */
 
+
+/* Sets of SEXTYPES, for fast testing with if ((set >> type) & 1) ... */
+
+#define CONS_TYPES ( \
+  (1<<LISTSXP) + (1<<LANGSXP) + (1<<DOTSXP) \
+)
+
+#define PAIRLIST_TYPES ( \
+  (1<<NILSXP) + (1<<LISTSXP) + (1<<LANGSXP) \
+)
+
+#define ATOMIC_VECTOR_TYPES ( \
+  (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) + \
+  (1<<RAWSXP) + (1<<STRSXP) + (1<<CPLXSXP) \
+)
+
+#define NONATOMIC_VECTOR_TYPES ( \
+  (1<<VECSXP) + (1<<EXPRSXP) \
+)
+
+#define VECTOR_TYPES ( \
+  ATOMIC_VECTOR_TYPES + NONATOMIC_VECTOR_TYPES \
+)
+
+#define VECTOR_OR_CHAR_TYPES ( \
+  VECTOR_TYPES + (1<<CHARSXP) \
+)
+
+#define PRIMITIVE_FUN_TYPES ( \
+  (1<<BUILTINSXP) + (1<<SPECIALSXP) \
+)
+
+#define FUNCTION_TYPES ( \
+  PRIMITIVE_FUN_TYPES + (1<<CLOSXP) \
+)
+
+#define NUMERIC_TYPES ( \
+  (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) \
+)
+
+#define NUMBER_TYPES ( \
+  NUMERIC_TYPES + (1<<CPLXSXP) \
+)
+
+
 /* define inline-able functions */
 
-
-/* from dstruct.c */
-
-/*  length - length of objects  */
-
-int Rf_envlength(SEXP rho);
-
-/* TODO: a  Length(.) {say} which is  length() + dispatch (S3 + S4) if needed
-         for one approach, see do_seq_along() in ../main/seq.c
-*/
-INLINE_FUN R_len_t length(SEXP s)
-{
-    int i;
-    switch (TYPEOF(s)) {
-    case NILSXP:
-	return 0;
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case CHARSXP:
-    case VECSXP:
-    case EXPRSXP:
-    case RAWSXP:
-	return LENGTH(s);
-    case LISTSXP:
-    case LANGSXP:
-    case DOTSXP:
-	i = 0;
-	while (s != NULL && s != R_NilValue) {
-	    i++;
-	    s = CDR(s);
-	}
-	return i;
-    case ENVSXP:
-	return Rf_envlength(s);
-    default:
-	return 1;
-    }
-}
-
-
 /* from list.c */
-/* Return a dotted pair with the given CAR and CDR. */
-/* The (R) TAG slot on the cell is set to NULL. */
-
 
 /* Get the i-th element of a list */
 INLINE_FUN SEXP elt(SEXP list, int i)
@@ -166,7 +165,7 @@ INLINE_FUN SEXP list1(SEXP s)
 INLINE_FUN SEXP list2(SEXP s, SEXP t)
 {
     PROTECT(s);
-    s = CONS(s, list1(t));
+    s = CONS(s, CONS(t, R_NilValue));
     UNPROTECT(1);
     return s;
 }
@@ -175,8 +174,9 @@ INLINE_FUN SEXP list2(SEXP s, SEXP t)
 INLINE_FUN SEXP list3(SEXP s, SEXP t, SEXP u)
 {
     PROTECT(s);
-    s = CONS(s, list2(t, u));
-    UNPROTECT(1);
+    PROTECT(t);
+    s = CONS(s, CONS(t, CONS(u, R_NilValue)));
+    UNPROTECT(2);
     return s;
 }
 
@@ -184,16 +184,21 @@ INLINE_FUN SEXP list3(SEXP s, SEXP t, SEXP u)
 INLINE_FUN SEXP list4(SEXP s, SEXP t, SEXP u, SEXP v)
 {
     PROTECT(s);
-    s = CONS(s, list3(t, u, v));
-    UNPROTECT(1);
+    PROTECT(t);
+    PROTECT(u);
+    s = CONS(s, CONS(t, CONS(u, CONS(v, R_NilValue))));
+    UNPROTECT(3);
     return s;
 }
 
 INLINE_FUN SEXP list5(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w)
 {
     PROTECT(s);
-    s = CONS(s, list4(t, u, v, w));
-    UNPROTECT(1);
+    PROTECT(t);
+    PROTECT(u);
+    PROTECT(v);
+    s = CONS(s, CONS(t, CONS(u, CONS(v, CONS(w, R_NilValue)))));
+    UNPROTECT(4);
     return s;
 }
 
@@ -225,6 +230,10 @@ INLINE_FUN SEXP lcons(SEXP car, SEXP cdr)
     return e;
 }
 
+/* Define the langN functions so that the nodes are allocated in order,
+   not reverse order, so that access will be sequential if node allocation
+   is sequential. */
+
 INLINE_FUN SEXP lang1(SEXP s)
 {
     return LCONS(s, R_NilValue);
@@ -232,40 +241,50 @@ INLINE_FUN SEXP lang1(SEXP s)
 
 INLINE_FUN SEXP lang2(SEXP s, SEXP t)
 {
-    PROTECT(s);
-    s = LCONS(s, list1(t));
+    PROTECT (s = LCONS(s,R_NilValue));
+    SETCDR (s, CONS(t,R_NilValue));
     UNPROTECT(1);
     return s;
 }
 
 INLINE_FUN SEXP lang3(SEXP s, SEXP t, SEXP u)
 {
-    PROTECT(s);
-    s = LCONS(s, list2(t, u));
+    PROTECT (s = LCONS(s,R_NilValue));
+    SETCDR (s, t = CONS(t,R_NilValue));
+    SETCDR (t, CONS(u,R_NilValue));
     UNPROTECT(1);
     return s;
 }
 
 INLINE_FUN SEXP lang4(SEXP s, SEXP t, SEXP u, SEXP v)
 {
-    PROTECT(s);
-    s = LCONS(s, list3(t, u, v));
+    PROTECT (s = LCONS(s,R_NilValue));
+    SETCDR (s, t = CONS(t,R_NilValue));
+    SETCDR (t, u = CONS(u,R_NilValue));
+    SETCDR (u, CONS(v,R_NilValue));
     UNPROTECT(1);
     return s;
 }
 
 INLINE_FUN SEXP lang5(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w)
 {
-    PROTECT(s);
-    s = LCONS(s, list4(t, u, v, w));
+    PROTECT (s = LCONS(s,R_NilValue));
+    SETCDR (s, t = CONS(t,R_NilValue));
+    SETCDR (t, u = CONS(u,R_NilValue));
+    SETCDR (u, v = CONS(v,R_NilValue));
+    SETCDR (v, CONS(w,R_NilValue));
     UNPROTECT(1);
     return s;
 }
 
 INLINE_FUN SEXP lang6(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w, SEXP x)
 {
-    PROTECT(s);
-    s = LCONS(s, list5(t, u, v, w, x));
+    PROTECT (s = LCONS(s,R_NilValue));
+    SETCDR (s, t = CONS(t,R_NilValue));
+    SETCDR (t, u = CONS(u,R_NilValue));
+    SETCDR (u, v = CONS(v,R_NilValue));
+    SETCDR (v, w = CONS(w,R_NilValue));
+    SETCDR (w, CONS(x,R_NilValue));
     UNPROTECT(1);
     return s;
 }
@@ -280,7 +299,7 @@ INLINE_FUN Rboolean conformable(SEXP x, SEXP y)
     PROTECT(x = getAttrib(x, R_DimSymbol));
     y = getAttrib(y, R_DimSymbol);
     UNPROTECT(1);
-    if ((n = length(x)) != length(y))
+    if ((n = LENGTH(x)) != LENGTH(y))
 	return FALSE;
     for (i = 0; i < n; i++)
 	if (INTEGER(x)[i] != INTEGER(y)[i])
@@ -297,7 +316,9 @@ INLINE_FUN Rboolean inherits(SEXP s, const char *name)
     int i, nclass;
     if (OBJECT(s)) {
 	klass = getAttrib(s, R_ClassSymbol);
-	nclass = length(klass);
+        if (klass == R_NilValue)
+            return FALSE;
+	nclass = LENGTH(klass);
 	for (i = 0; i < nclass; i++) {
 	    if (!strcmp(CHAR(STRING_ELT(klass, i)), name))
 		return TRUE;
@@ -329,15 +350,12 @@ INLINE_FUN Rboolean isUserBinop(SEXP s)
 
 INLINE_FUN Rboolean isFunction(SEXP s)
 {
-    return (TYPEOF(s) == CLOSXP ||
-	    TYPEOF(s) == BUILTINSXP ||
-	    TYPEOF(s) == SPECIALSXP);
+    return (FUNCTION_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isPrimitive(SEXP s)
 {
-    return (TYPEOF(s) == BUILTINSXP ||
-	    TYPEOF(s) == SPECIALSXP);
+    return (PRIMITIVE_FUN_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isList(SEXP s)
@@ -353,58 +371,22 @@ INLINE_FUN Rboolean isNewList(SEXP s)
 
 INLINE_FUN Rboolean isPairList(SEXP s)
 {
-    switch (TYPEOF(s)) {
-    case NILSXP:
-    case LISTSXP:
-    case LANGSXP:
-	return TRUE;
-    default:
-	return FALSE;
-    }
+    return (PAIRLIST_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isVectorList(SEXP s)
 {
-    switch (TYPEOF(s)) {
-    case VECSXP:
-    case EXPRSXP:
-	return TRUE;
-    default:
-	return FALSE;
-    }
+    return (NONATOMIC_VECTOR_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isVectorAtomic(SEXP s)
 {
-    switch (TYPEOF(s)) {
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case RAWSXP:
-	return TRUE;
-    default: /* including NULL */
-	return FALSE;
-    }
+    return (ATOMIC_VECTOR_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isVector(SEXP s)/* === isVectorList() or isVectorAtomic() */
 {
-    switch(TYPEOF(s)) {
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case RAWSXP:
-
-    case VECSXP:
-    case EXPRSXP:
-	return TRUE;
-    default:
-	return FALSE;
-    }
+    return (VECTOR_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isFrame(SEXP s)
@@ -470,30 +452,15 @@ INLINE_FUN int nlevels(SEXP f)
 
 INLINE_FUN Rboolean isNumeric(SEXP s)
 {
-    switch(TYPEOF(s)) {
-    case INTSXP:
-	if (inherits(s,"factor")) return FALSE;
-    case LGLSXP:
-    case REALSXP:
-	return TRUE;
-    default:
-	return FALSE;
-    }
+    return TYPEOF(s) == INTSXP ? !inherits(s,"factor")
+                               : ((NUMERIC_TYPES >> TYPEOF(s)) & 1);
 }
 
 /** Is an object "Numeric" or  complex */
 INLINE_FUN Rboolean isNumber(SEXP s)
 {
-    switch(TYPEOF(s)) {
-    case INTSXP:
-	if (inherits(s,"factor")) return FALSE;
-    case LGLSXP:
-    case REALSXP:
-    case CPLXSXP:
-	return TRUE;
-    default:
-	return FALSE;
-    }
+    return TYPEOF(s) == INTSXP ? !inherits(s,"factor")
+                               : ((NUMBER_TYPES >> TYPEOF(s)) & 1);
 }
 
 /* As from R 2.4.0 we check that the value is allowed. */

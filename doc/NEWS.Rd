@@ -115,7 +115,10 @@
       \item **4
       \item **5
       \item **6
-      \item **7
+      \item Various inlined procedures where changed to be more efficient, 
+            and "length" was un-inlined, since it's fairly long.  Numerous
+            occurences of for (i = 0; i < length(...); i++) were replaced
+            by code that doesn't call length numerous times.
       \item **8
       \item **9
       \item **10

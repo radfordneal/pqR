@@ -2049,19 +2049,19 @@ void attribute_hidden CheckFormals(SEXP ls)
 static SEXP VectorToPairListNamed(SEXP x)
 {
     SEXP xptr, xnew, xnames;
-    int i, len = 0, named;
+    int i, len = 0, len_x = length(x), named;
 
     PROTECT(x);
     PROTECT(xnames = getAttrib(x, R_NamesSymbol)); /* isn't this protected via x? */
     named = (xnames != R_NilValue);
     if(named)
-	for (i = 0; i < length(x); i++)
+	for (i = 0; i < len_x; i++)
 	    if (CHAR(STRING_ELT(xnames, i))[0] != '\0') len++;
 
     if(len) {
 	PROTECT(xnew = allocList(len));
 	xptr = xnew;
-	for (i = 0; i < length(x); i++) {
+	for (i = 0; i < len_x; i++) {
 	    if (CHAR(STRING_ELT(xnames, i))[0] != '\0') {
 		SETCAR(xptr, VECTOR_ELT(x, i));
 		SET_TAG(xptr, install(translateChar(STRING_ELT(xnames, i))));
@@ -2651,7 +2651,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	  : getAttrib00(CAR(s), R_ClassSymbol);
 	set = 0;
 	if (isString(t)) {
-	    for (j = 0 ; j < length(t) ; j++) {
+	    for (j = 0 ; j < LENGTH(t) ; j++) {
 		if (!strcmp(translateChar(STRING_ELT(t, j)),
 			    translateChar(STRING_ELT(lclass, lwhich)))) {
 		    SET_STRING_ELT(m, i, mkChar(lbuf));

@@ -454,10 +454,11 @@ fillBuffer(SEXPTYPE type, int strip, int *bch, LocalData *d,
    na.strings includes "" */
 static R_INLINE int isNAstring(const char *buf, int mode, LocalData *d)
 {
-    int i;
+    int i, len;
 
     if(!mode && strlen(buf) == 0) return 1;
-    for (i = 0; i < length(d->NAstrings); i++)
+    len = length(d->NAstrings);
+    for (i = 0; i < len; i++)
 	if (!strcmp(CHAR(STRING_ELT(d->NAstrings, i)), buf)) return 1;
     return 0;
 }
@@ -1746,7 +1747,8 @@ SEXP attribute_hidden do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
     cdec = sdec[0];
     quote_col = (Rboolean *) R_alloc(nc, sizeof(Rboolean));
     for(j = 0; j < nc; j++) quote_col[j] = FALSE;
-    for(i = 0; i < length(quote); i++) { /* NB, quote might be NULL */
+    int len_quote = length(quote); /* NB, quote might be NULL */
+    for(i = 0; i < len_quote; i++) { 
 	int this = INTEGER(quote)[i];
 	if(this == 0) quote_rn = TRUE;
 	if(this >  0) quote_col[this - 1] = TRUE;

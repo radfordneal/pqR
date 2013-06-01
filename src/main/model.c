@@ -169,12 +169,12 @@ static void CheckRHS(SEXP v)
 	CheckRHS(CAR(v));
 	v = CDR(v);
     }
-    if (isSymbol(v)) {
-	for (i = 0; i < length(framenames); i++) {
+    if (isSymbol(v) && framenames != R_NilValue) {
+	for (i = 0; i < LENGTH(framenames); i++) {
 	    s = install(translateChar(STRING_ELT(framenames, i)));
 	    if (v == s) {
-		t = allocVector(STRSXP, length(framenames)-1);
-		for (j = 0; j < length(t); j++) {
+		t = allocVector(STRSXP, LENGTH(framenames)-1);
+		for (j = 0; j < LENGTH(t); j++) {
 		    if (j < i)
 			SET_STRING_ELT(t, j, STRING_ELT(framenames, j));
 		    else
@@ -205,7 +205,7 @@ static void ExtractVars(SEXP formula, int checkonly)
 	if (!checkonly) {
 	    if (formula == dotSymbol && framenames != R_NilValue) {
 		haveDot = TRUE;
-		for (i = 0; i < length(framenames); i++) {
+		for (i = 0; i < LENGTH(framenames); i++) {
 		    v = install(translateChar(STRING_ELT(framenames, i)));
 		    if (!MatchVar(v, CADR(varlist))) InstallVar(v);
 		}

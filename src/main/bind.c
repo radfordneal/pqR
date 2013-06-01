@@ -1035,9 +1035,10 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     for (a = args; a != R_NilValue && compatible; a = CDR(a)) {
 	PROTECT(obj = eval(CAR(a), env));
 	if (isObject(obj)) {
-	    int i;
+	    int i, len_classlist;
 	    classlist = getAttrib(obj, R_ClassSymbol);
-	    for (i = 0; i < length(classlist); i++) {
+            len_classlist = length(classlist);
+	    for (i = 0; i < len_classlist; i++) {
 		classname = STRING_ELT(classlist, i);
 		s = translateChar(classname);
 		if(strlen(generic) + strlen(s) + 2 > 512)
@@ -1362,7 +1363,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		/* but if tnam is non-null, have_cnames = TRUE: see above */
 		tnam = GetColNames(v);
 		if (tnam != R_NilValue) {
-		    for (i = 0; i < length(tnam); i++)
+		    for (i = 0; i < LENGTH(tnam); i++)
 			SET_STRING_ELT(nam, j++, STRING_ELT(tnam, i));
 		}
 		else if (have_cnames) {
@@ -1613,7 +1614,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		tnam = GetRowNames(v);
 		if (have_rnames) {
 		    if (tnam != R_NilValue) {
-			for (i = 0; i < length(tnam); i++)
+			for (i = 0; i < LENGTH(tnam); i++)
 			    SET_STRING_ELT(nam, j++, STRING_ELT(tnam, i));
 		    }
 		    else {

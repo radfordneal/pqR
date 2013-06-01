@@ -1203,7 +1203,7 @@ static SEXP NewReadVec(SEXPTYPE type, SEXP sym_table, SEXP env_table, FILE *fp, 
     case STRSXP:
 	do {
 	    int cnt;
-	    for (cnt = 0; cnt < length(my_vec); ++cnt)
+	    for (cnt = 0; cnt < LENGTH(my_vec); ++cnt)
 		SET_STRING_ELT(my_vec, cnt, InCHARSXP(fp, m, d));
 	} while (0);
 	break;

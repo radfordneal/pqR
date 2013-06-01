@@ -423,19 +423,34 @@ SEXP attribute_hidden EnsureString(SEXP s)
 /* used in modules */
 void Rf_checkArityCall(SEXP op, SEXP args, SEXP call)
 {
-    if (PRIMARITY(op) >= 0 && PRIMARITY(op) != length(args)) {
-	if (PRIMINTERNAL(op))
-	    error(ngettext("%d argument passed to .Internal(%s) which requires %d",
-		     "%d arguments passed to .Internal(%s) which requires %d",
-			   (unsigned long) length(args)),
-		  length(args), PRIMNAME(op), PRIMARITY(op));
-	else
-	    errorcall(call,
-		      ngettext("%d argument passed to '%s' which requires %d",
-			       "%d arguments passed to '%s' which requires %d",
-			       (unsigned long) length(args)),
-		      length(args), PRIMNAME(op), PRIMARITY(op));
+    int len, arity;
+    SEXP rest;
+
+    arity = PRIMARITY(op);
+    if (arity < 0) 
+        return;
+
+    /* For speed, check number of args with code here rather than call length */
+    rest = args;
+    while (rest != R_NilValue) {
+        arity -= 1;
+        rest = CDR(rest);
     }
+    if (arity == 0) 
+        return;
+
+    len = length(args);
+    if (PRIMINTERNAL(op))
+        error(ngettext("%d argument passed to .Internal(%s) which requires %d",
+                 "%d arguments passed to .Internal(%s) which requires %d",
+                 (unsigned long) len),
+              len, PRIMNAME(op), PRIMARITY(op));
+    else
+        errorcall(call,
+                  ngettext("%d argument passed to '%s' which requires %d",
+                           "%d arguments passed to '%s' which requires %d",
+                           (unsigned long) len),
+                  len, PRIMNAME(op), PRIMARITY(op));
 }
 
 void attribute_hidden Rf_check1arg(SEXP arg, SEXP call, const char *formal)
@@ -465,6 +480,38 @@ SEXP nthcdr(SEXP s, int n)
     return R_NilValue;/* for -Wall */
 }
 
+/* TODO: a  Length(.) {say} which is  length() + dispatch (S3 + S4) if needed
+         for one approach, see do_seq_along() in ../main/seq.c
+*/
+R_len_t length(SEXP s)
+{
+    extern int Rf_envlength(SEXP);
+    int i;
+    switch (TYPEOF(s)) {
+    case NILSXP:
+        return 0;
+    case LGLSXP:
+    case INTSXP:
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case CHARSXP:
+    case VECSXP:
+    case EXPRSXP:
+    case RAWSXP:
+        return LENGTH(s);
+    case LISTSXP:
+    case LANGSXP:
+    case DOTSXP:
+        i = 0;
+	while (s != R_NilValue) { i += 1; s = CDR(s); }
+        return i;
+    case ENVSXP:
+        return Rf_envlength(s);
+    default:
+        return 1;
+    }
+}
 
 /* This is a primitive (with no arguments) */
 SEXP attribute_hidden do_nargs(SEXP call, SEXP op, SEXP args, SEXP rho)

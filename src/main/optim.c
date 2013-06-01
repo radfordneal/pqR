@@ -35,9 +35,10 @@
 static SEXP getListElement(SEXP list, char *str)
 {
     SEXP elmt = R_NilValue, names = getAttrib(list, R_NamesSymbol);
-    int i;
+    int i, len;
 
-    for (i = 0; i < length(list); i++)
+    len = length(list);
+    for (i = 0; i < len; i++)
 	if (strcmp(CHAR(STRING_ELT(names, i)), str) == 0) {
 	    elmt = VECTOR_ELT(list, i);
 	    break;

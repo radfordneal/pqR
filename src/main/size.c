@@ -69,26 +69,26 @@ static R_size_t objectsize(SEXP s)
     case BUILTINSXP:
 	break;
     case CHARSXP:
-	vcnt = BYTE2VEC(length(s)+1);
+	vcnt = BYTE2VEC(LENGTH(s)+1);
 	isVec = TRUE;
 	break;
     case LGLSXP:
     case INTSXP:
-	vcnt = INT2VEC(length(s));
+	vcnt = INT2VEC(LENGTH(s));
 	isVec = TRUE;
 	break;
     case REALSXP:
-	vcnt = FLOAT2VEC(length(s));
+	vcnt = FLOAT2VEC(LENGTH(s));
 	isVec = TRUE;
 	break;
     case CPLXSXP:
-	vcnt = COMPLEX2VEC(length(s));
+	vcnt = COMPLEX2VEC(LENGTH(s));
 	isVec = TRUE;
 	break;
     case STRSXP:
-	vcnt = PTR2VEC(length(s));
+	vcnt = PTR2VEC(LENGTH(s));
 	dup = csduplicated(s);
-	for (i = 0; i < length(s); i++) {
+	for (i = 0; i < LENGTH(s); i++) {
 	    tmp = STRING_ELT(s, i);
 	    if(tmp != NA_STRING && !LOGICAL(dup)[i])
 		cnt += objectsize(tmp);
