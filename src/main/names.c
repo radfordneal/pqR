@@ -1140,6 +1140,13 @@ static void SymbolShortcuts(void)
     R_SeedsSymbol = install(".Random.seed");
     R_SourceSymbol = install("source");   /* Still present for back compatibility, but not used */
     R_TspSymbol = install("tsp");
+    R_ValueSymbol = install("value");
+    R_AssignSymbols[1] = install("<-");
+    R_AssignSymbols[2] = install("<<-");
+    R_AssignSymbols[3] = install("=");
+    R_SubAssignSymbol = install("[<-");
+    R_SubSubAssignSymbol = install("[[<-");
+    R_DollarAssignSymbol = install("$<-");
     /* ../include/Defn.h , i.e. non-public : */
     R_CommentSymbol = install("comment");
     R_DotEnvSymbol = install(".Environment");

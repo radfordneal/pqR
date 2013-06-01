@@ -1103,46 +1103,8 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 }
 
 
-/* Note: If val is a language object it must be protected */
-/* to prevent evaluation.  As an example consider */
-/* e <- quote(f(x=1,y=2); names(e) <- c("","a","b") */
-
-static SEXP replaceCall(SEXP fun, SEXP val, SEXP args, SEXP rhs)
-{
-    SEXP tmp, ptmp;
-    PROTECT(fun);
-    PROTECT(args);
-    PROTECT(rhs);
-    PROTECT(val);
-    ptmp = tmp = allocList(length(args)+3);
-    UNPROTECT(4);
-    SETCAR(ptmp, fun); ptmp = CDR(ptmp);
-    SETCAR(ptmp, val); ptmp = CDR(ptmp);
-    while(args != R_NilValue) {
-	SETCAR(ptmp, CAR(args));
-	SET_TAG(ptmp, TAG(args));
-	ptmp = CDR(ptmp);
-	args = CDR(args);
-    }
-    SETCAR(ptmp, rhs);
-    SET_TAG(ptmp, install("value"));
-    SET_TYPEOF(tmp, LANGSXP);
-    return tmp;
-}
-
-
-static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
-		       SEXP val, SEXP args, SEXP rhs)
-{
-    PROTECT(op);
-    PROTECT(symbol);
-    val = replaceCall(fun, val, args, rhs);
-    UNPROTECT(2);
-    return lang3(op, symbol, val);
-}
-
                                   /* Caller needn't protect the s arg below */
-static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call) 
+static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
     Rboolean cond;
     int len;
@@ -1519,24 +1481,86 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/*
+/*  -------------------------------------------------------------------
  *  Assignments for complex LVAL specifications. This is the stuff that
- *  nightmares are made of ...	Note that "evalseq" preprocesses the LHS
- *  of an assignment.  Given an expression, it builds a list of partial
- *  values for the exression.  For example, the assignment x$a[3] <- 10
- *  with LHS x$a[3] yields the (improper) list:
+ *  nightmares are made of ...	
  *
- *	 (eval(x$a[3])	eval(x$a)  eval(x)  .  x)
+ *  For complex superassignment  x[y==z]<<-w  we want x required to be 
+ *  nonlocal, y,z, and w permitted to be local or nonlocal.
  *
- *  (Note the terminating symbol).  The partial evaluations are carried
- *  out efficiently using previously computed components.
+ *  If val is a language object, we must prevent evaluation.  As an
+ *  example consider  e <- quote(f(x=1,y=2)); names(e) <- c("","a","b") 
  */
 
-/*
-  For complex superassignment  x[y==z]<<-w
-  we want x required to be nonlocal, y,z, and w permitted to be local or
-  nonlocal.
-*/
+/* arguments of replaceCall must be protected by the caller. */
+
+static SEXP replaceCall(SEXP fun, SEXP val, SEXP args, SEXP rhs)
+{
+    LOCAL_COPY(R_NilValue);
+    SEXP first, p;
+
+    first = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
+
+    /* For speed, handle zero arguments or one argument specially. */
+
+    if (args == R_NilValue)
+        /* nothing */;
+
+    else if (CDR(args) == R_NilValue)
+        first = cons_with_tag (CAR(args), first, TAG(args));
+
+    else { /* the general case with any number of arguments */
+
+        for (p = args; p != R_NilValue; p = CDR(p))
+            first = CONS (R_NilValue, first);
+
+        p = first;
+        while (args != R_NilValue) {
+            SETCAR (p, CAR(args));
+            SET_TAG (p, TAG(args));
+            args = CDR(args);
+            p = CDR(p);
+        }
+    }
+
+    first = CONS (fun, CONS(val, first));
+    SET_TYPEOF (first, LANGSXP);
+
+    return first;
+}
+
+/* arguments of assignCall must be protected by the caller. */
+
+static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
+		       SEXP val, SEXP args, SEXP rhs)
+{
+    SEXP c;
+
+    c = CONS (op, CONS (symbol, 
+          CONS (replaceCall(fun, val, args, rhs), R_NilValue)));
+
+    SET_TYPEOF (c, LANGSXP);
+
+    return c;
+}
+
+/*  "evalseq" preprocesses the LHS of an assignment.  Given an expression, 
+ *  it builds a list of partial values for the expression.  For example, 
+ *  the assignment 
+ *
+ *       x$a[[3]][2] <- 10
+ *
+ *  yields the (improper) list:
+ *
+ *       (eval(x$a[[3]])  eval(x$a)  eval(x) . x)
+ *
+ *  Note that the full LHS expression is not included (and not passed to
+ *  evalseq).  Note also the terminating symbol in the improper list.  
+ *  The partial evaluations are carried out efficiently using previously 
+ *  computed components.
+ *
+ *  The expr and rho arguments must be protected by the caller of evalseq.
+ */
 
 static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 {
@@ -1544,34 +1568,26 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
     if (isNull(expr))
 	error(_("invalid (NULL) left side of assignment"));
     if (isSymbol(expr)) {
-	PROTECT(expr);
 	if(forcelocal) {
 	    nval = EnsureLocal(expr, rho);
 	}
 	else {/* now we are down to the target symbol */
 	  nval = eval(expr, ENCLOS(rho));
 	}
-	UNPROTECT(1);
 	return CONS(nval, expr);
     }
     else if (isLanguage(expr)) {
-	PROTECT(expr);
 	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
 	R_SetVarLocValue(tmploc, CAR(val));
-	PROTECT(nexpr = LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr)));
-	PROTECT(nexpr = LCONS(CAR(expr), nexpr));
+	PROTECT(nexpr = LCONS (CAR(expr), 
+                               LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr))));
 	nval = eval(nexpr, rho);
-	UNPROTECT(4);
+	UNPROTECT(2);
 	return CONS(nval, val);
     }
     else error(_("target of assignment expands to non-language object"));
     return R_NilValue;	/*NOTREACHED*/
 }
-
-/* Main entry point for complex assignments */
-/* We have checked to see that CAR(args) is a LANGSXP */
-
-static const char * const asym[] = {":=", "<-", "<<-", "="};
 
 static void tmp_cleanup(void *data)
 {
@@ -1599,25 +1615,41 @@ static void tmp_cleanup(void *data)
 static R_INLINE SEXP installAssignFcnName(SEXP fun)
 {
     char buf[ASSIGNBUFSIZ];
-    if (!copy_2_strings (buf, sizeof buf, CHAR(PRINTNAME(fun)), "<-"))
-	error(_("overlong name in '%s'"), CHAR(PRINTNAME(fun)));
+    const char *fname = CHAR(PRINTNAME(fun));
+
+    /* Handle "[", "[[", and "$" specially for speed. */
+
+    if (fname[0] == '[') {
+        if (fname[1] == 0)
+            return R_SubAssignSymbol;
+        else if (fname[1] == '[' && fname[2] == 0)
+            return R_SubSubAssignSymbol;
+    }
+    else if (fname[0] == '$' && fname[1] == 0)
+        return R_DollarAssignSymbol;
+
+    /* The general case... */
+
+    if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
+        error(_("overlong name in '%s'"), fname);
     return install(buf);
 }
 
-static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* Main entry point for complex assignments */
+/* We have checked to see that expr is a LANGSXP */
+
+static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
 {
-    SEXP expr, lhs, rhs, saverhs, tmp, afun, rhsprom;
+    SEXP lhs, rhs, saverhs, tmp, afun, rhsprom;
     R_varloc_t tmploc;
     RCNTXT cntxt;
     int nprot;
-
-    expr = CAR(args);
 
     /*  It's important that the rhs get evaluated first because
 	assignment is right associative i.e.  a <- b <- c is parsed as
 	a <- (b <- c).  */
 
-    PROTECT(saverhs = rhs = eval(CADR(args), rho));
+    PROTECT(saverhs = rhs = eval(val, rho));
 
     /*  FIXME: We need to ensure that this works for hashed
 	environments.  This code only works for unhashed ones.  the
@@ -1678,7 +1710,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
 
     PROTECT(lhs);
-    PROTECT(rhsprom = mkPROMISE(CADR(args), rho));
+    PROTECT(rhsprom = mkPROMISE(val, rho));
     SET_PRVALUE(rhsprom, rhs);
     SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
 
@@ -1711,7 +1743,8 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	lhs = CDR(lhs);
 	expr = CADR(expr);
     }
-    nprot = 5; /* the commont case */
+
+    nprot = 5; /* the common case */
     if (TYPEOF(CAR(expr)) == SYMSXP)
 	afun = installAssignFcnName(CAR(expr));
     else {
@@ -1730,7 +1763,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid function in complex assignment"));
     }
     SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
-    PROTECT(expr = assignCall(install(asym[PRIMVAL(op)]), CDR(lhs),
+    PROTECT(expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
 			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
     expr = eval(expr, rho);
     UNPROTECT(nprot);
@@ -1760,24 +1793,28 @@ SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP s;
+    SEXP s, a, lhs, rhs;
 
-    checkArity(op,args);
+    if (isNull(args) || isNull(a = CDR(args)) || !isNull(CDR(a)))
+        checkArity(op,args);
 
-    if (isString(CAR(args))) {
+    lhs = CAR(args);
+    rhs = CAR(a);
+
+    if (isString(lhs)) {
 	/* fix up a duplicate or args and recursively call do_set */
 	SEXP val;
-	PROTECT(args = duplicate(args));
-	SETCAR(args, install(translateChar(STRING_ELT(CAR(args), 0))));
+        PROTECT (a = install(translateChar(STRING_ELT(lhs, 0))));
+        PROTECT (args = CONS (a, CONS(rhs, R_NilValue)));
 	val = do_set(call, op, args, rho);
-	UNPROTECT(1);
+	UNPROTECT(2);
 	return val;
     }
 
     switch (PRIMVAL(op)) {
     case 1: case 3:					/* <-, = */
-	if (isSymbol(CAR(args))) {
-	    s = eval(CADR(args), rho);
+	if (isSymbol(lhs)) {
+	    s = eval(rhs, rho);
 #ifdef CONSERVATIVE_COPYING /* not default */
 	    if (NAMED(s))
 	    {
@@ -1788,7 +1825,7 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 		s = t;
 	    }
 	    PROTECT(s);
-	    defineVar(CAR(args), s, rho);
+	    defineVar(lhs, s, rho);
 	    UNPROTECT(1);
 	    SET_NAMED(s, 1);
 #else
@@ -1796,31 +1833,31 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    case 0: SET_NAMED(s, 1); break;
 	    case 1: SET_NAMED(s, 2); break;
 	    }
-	    defineVar(CAR(args), s, rho);
+	    defineVar(lhs, s, rho);
 #endif
 	    R_Visible = FALSE;
 	    return (s);
 	}
-	else if (isLanguage(CAR(args))) {
+	else if (isLanguage(lhs)) {
 	    R_Visible = FALSE;
-	    return applydefine(call, op, args, rho);
+	    return applydefine(call, op, lhs, rhs, rho);
 	}
 	else errorcall(call,
 		       _("invalid (do_set) left-hand side to assignment"));
     case 2:						/* <<- */
-	if (isSymbol(CAR(args))) {
-	    s = eval(CADR(args), rho);
+	if (isSymbol(lhs)) {
+	    s = eval(rhs, rho);
 	    if (NAMED(s))
 		s = duplicate(s);
 	    PROTECT(s);
-	    setVar(CAR(args), s, ENCLOS(rho));
+	    setVar(lhs, s, ENCLOS(rho));
 	    UNPROTECT(1);
 	    SET_NAMED(s, 1);
 	    R_Visible = FALSE;
 	    return s;
 	}
-	else if (isLanguage(CAR(args)))
-	    return applydefine(call, op, args, rho);
+	else if (isLanguage(lhs))
+	    return applydefine(call, op, lhs, rhs, rho);
 	else error(_("invalid assignment left-hand side"));
 
     default:

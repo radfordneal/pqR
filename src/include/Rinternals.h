@@ -564,6 +564,11 @@ LibExtern SEXP	R_RowNamesSymbol;   /* "row.names" */
 LibExtern SEXP	R_SeedsSymbol;	    /* ".Random.seed" */
 LibExtern SEXP	R_SourceSymbol;     /* "source" */
 LibExtern SEXP	R_TspSymbol;	    /* "tsp" */
+LibExtern SEXP	R_ValueSymbol;	    /* "value" */
+LibExtern SEXP	R_AssignSymbols[4]; /* 0, "<-", "<<-", "=" */
+LibExtern SEXP	R_SubAssignSymbol;  /* "[<-" */
+LibExtern SEXP	R_SubSubAssignSymbol; /* "[[<-" */
+LibExtern SEXP	R_DollarAssignSymbol; /* "$<-" */
 
 LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */

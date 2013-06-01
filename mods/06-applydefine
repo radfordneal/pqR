@@ -1,0 +1,4 @@
+Speed up assignment to a subset of a variable by various detailed
+improvements to "applydefine" and associated functions in eval.c.
+Includes handling "[", "[[", and "R" as special cases, with pre-setup
+symbols for "[<-", etc. rather than using "install".
