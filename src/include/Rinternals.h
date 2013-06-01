@@ -183,8 +183,15 @@ struct vecsxp_struct {
     R_len_t	truelength;
 };
 
-struct primsxp_struct {
-    int offset;
+struct primsxp_struct {    /* table offset of this and other info is in gp  */
+    void *primsxp_cfun;        /* c-code address, cast as func, from table  */
+    void *primsxp_fast_cfun;   /* c-code address for fast interface, or NULL*/
+    short primsxp_code;        /* operation code, from table                */
+    signed char primsxp_arity; /* function arity (-1 for any), from table   */
+    unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
+    unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
+    unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
+    unsigned int primsxp_foreign:1; /* primitive to call C/Fortran function */
 };
 
 struct symsxp_struct {
@@ -522,6 +529,7 @@ LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
 /* Special Values */
 LibExtern SEXP	R_NilValue;	    /* The nil object */
+LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 #ifdef __MAIN__
@@ -609,6 +617,7 @@ SEXP Rf_DropDims(SEXP);
 SEXP Rf_duplicate(SEXP);
 SEXP Rf_duplicated(SEXP, Rboolean);
 SEXP Rf_eval(SEXP, SEXP);
+SEXP Rf_evalv(SEXP, SEXP, int);
 SEXP Rf_findFun(SEXP, SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
 SEXP Rf_findVarInFrame(SEXP, SEXP);
@@ -903,6 +912,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define elt			Rf_elt
 #define errorcall		Rf_errorcall
 #define eval			Rf_eval
+#define evalv			Rf_evalv
 #define findFun			Rf_findFun
 #define findVar			Rf_findVar
 #define findVarInFrame		Rf_findVarInFrame

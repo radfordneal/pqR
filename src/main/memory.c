@@ -1473,6 +1473,7 @@ static void RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_EmptyEnv);
     FORWARD_NODE(R_Warnings);	           /* Warnings, if any */
 
+    FORWARD_NODE(R_VariantResult);        /* Marker for variant result of op */
     FORWARD_NODE(R_HandlerStack);          /* Condition handler stack */
     FORWARD_NODE(R_RestartStack);          /* Available restarts stack */
 
@@ -3294,7 +3295,7 @@ void attribute_hidden (UNLOCK_BINDING)(SEXP b) {UNLOCK_BINDING(b);}
 /* R_FunTab accessors */
 int (PRIMVAL)(SEXP x) { return PRIMVAL(x); }
 CCODE (PRIMFUN)(SEXP x) { return PRIMFUN(x); }
-void (SET_PRIMFUN)(SEXP x, CCODE f) { PRIMFUN(x) = f; }
+void (SET_PRIMFUN)(SEXP x, CCODE f) { SET_PRIMFUN(x,f); }
 
 /* for use when testing the write barrier */
 int  attribute_hidden (IS_BYTES)(SEXP x) { return IS_BYTES(x); }
