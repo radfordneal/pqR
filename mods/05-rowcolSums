@@ -1,0 +1,4 @@
+Rewrote the internal rowSums and colSums functions to be faster.  Also
+changed the R rowSums and colSums functions that call the internal
+functions so that they treat the common case where the array is matrix
+specially, with less overhead.
