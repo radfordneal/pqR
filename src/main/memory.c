@@ -3309,6 +3309,34 @@ int  attribute_hidden (ENC_KNOWN)(SEXP x) { return ENC_KNOWN(x); }
 void attribute_hidden (SET_CACHED)(SEXP x) { SET_CACHED(x); }
 int  attribute_hidden (IS_CACHED)(SEXP x) { return IS_CACHED(x); }
 
+SEXP attribute_hidden do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
+{   SEXP a;
+    int j;
+
+    if (args == R_NilValue)
+        error(_("too few arguments"));
+
+    check1arg(args, call, "x");
+
+    for (a = CDR(args); a != R_NilValue; a = CDR(a))
+        if (!isString(CAR(a)))
+            error(_("invalid argument"));
+
+    Rprintf ("PNAMEDCNT:  %d  %x  %s", NAMED(CAR(args)), CAR(args),
+                                       type2char(TYPEOF(CAR(args))));
+
+    for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+        Rprintf(" :");
+        for (j = 0; j < LENGTH(CAR(a)); j++)
+            Rprintf(" %s", CHAR(STRING_ELT(CAR(a),j)));
+    }
+
+    Rprintf("\n");
+
+    return CAR(args);
+}
+
+
 /*******************************************/
 /* Non-sampling memory use profiler reports vector allocations and/or
    calls to GetNewPage */

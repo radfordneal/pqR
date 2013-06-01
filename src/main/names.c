@@ -1031,8 +1031,12 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"setTimeLimit",do_setTimeLimit,0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"setSessionTimeLimit",do_setSessionTimeLimit,0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"icuSetCollate",do_ICUset,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"readRenviron",do_readEnviron,	0,      111,     1,      {PP_FUNCALL, PREC_FN,	0}},
+{"readRenviron",do_readEnviron,	0,      111,     1,     {PP_FUNCALL, PREC_FN,	0}},
+
+{"pnamedcnt",	do_pnamedcnt,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+
 };
 
 /* also used in eval.c */
