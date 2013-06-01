@@ -84,7 +84,10 @@ Rcomplex Rf_ComplexFromReal(double, int*);
 #define CALLED_FROM_DEFN_H 1
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
+#undef eval
+#define eval(e,rho) evalv(e,rho,0)  /* eval is a macro within interpreter */
 #undef CALLED_FROM_DEFN_H
+
 extern0 SEXP	R_CommentSymbol;    /* "comment" */
 extern0 SEXP	R_DotEnvSymbol;     /* ".Environment" */
 extern0 SEXP	R_ExactSymbol;	    /* "exact" */
@@ -305,9 +308,14 @@ extern int putenv(char *string);
 			   Was 256 prior to 2.13.0, now just a sanity check.
 			*/
 
-/* The type of the do_xxxx functions. */
-/* These are the built-in R functions. */
+/* Types for the do_xxxx functions for SPECIAL and BUILTIN operations. */
+
 typedef SEXP (*CCODE)(SEXP, SEXP, SEXP, SEXP);
+typedef SEXP (*CCODEV)(SEXP, SEXP, SEXP, SEXP, int);  /* with variant info */
+
+#define CALL_PRIMFUN(call,op,args,env,variant) \
+  (PRIMVARIANT(op) ? PRIMFUNV(op)(call,op,args,env,variant) \
+                   : PRIMFUN(op)(call,op,args,env))
 
 /* Information for Deparsing Expressions */
 typedef enum {
@@ -365,9 +373,9 @@ typedef struct {
 /* This table can be found in ../main/names.c */
 typedef struct {
     char   *name;    /* print name */
-    CCODE  cfun;     /* c-code address */
+    void   *cfun;    /* c-code address */
     int	   code;     /* offset within c-code */
-    int	   eval;     /* evaluate args? */
+    int	   eval;     /* evaluate args? (and other info) */
     int	   arity;    /* function arity */
     PPinfo gram;     /* pretty-print info */
 } FUNTAB;
@@ -378,15 +386,57 @@ typedef struct {
  */
 
 /* Primitive Access Macros */
-#define PRIMOFFSET(x)	((x)->u.primsxp.offset)
-#define SET_PRIMOFFSET(x,v)	(((x)->u.primsxp.offset)=(v))
-#define PRIMFUN(x)	(R_FunTab[(x)->u.primsxp.offset].cfun)
-#define PRIMNAME(x)	(R_FunTab[(x)->u.primsxp.offset].name)
-#define PRIMVAL(x)	(R_FunTab[(x)->u.primsxp.offset].code)
-#define PRIMARITY(x)	(R_FunTab[(x)->u.primsxp.offset].arity)
-#define PPINFO(x)	(R_FunTab[(x)->u.primsxp.offset].gram)
-#define PRIMPRINT(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)/100)%10)
-#define PRIMINTERNAL(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)%100)/10)
+
+/* Set offset of primitive in table, and copy some of the information from
+   the table into the primsxp structure for fast access.  Note that 
+   primsxp_fast_cfun will (possibly) be set by the slow function, not here. */
+
+#define SET_PRIMOFFSET(x,v) do { \
+    SEXP setprim_ptr = (x); \
+    int setprim_value = (v); \
+    setprim_ptr->sxpinfo.gp = setprim_value; \
+    setprim_ptr->u.primsxp.primsxp_cfun   = R_FunTab[setprim_value].cfun; \
+    setprim_ptr->u.primsxp.primsxp_fast_cfun = 0; \
+    setprim_ptr->u.primsxp.primsxp_code   = R_FunTab[setprim_value].code; \
+    setprim_ptr->u.primsxp.primsxp_arity  = R_FunTab[setprim_value].arity; \
+    setprim_ptr->u.primsxp.primsxp_foreign \
+        = R_FunTab[setprim_value].gram.kind==PP_FOREIGN; \
+    setprim_ptr->u.primsxp.primsxp_print \
+        = (R_FunTab[setprim_value].eval/100)%10; \
+    setprim_ptr->u.primsxp.primsxp_variant \
+        = (R_FunTab[setprim_value].eval/1000)&1; \
+    setprim_ptr->u.primsxp.primsxp_internal \
+        = (R_FunTab[setprim_value].eval/10)&1; \
+} while (0)
+
+#define PRIMOFFSET(x)	((x)->sxpinfo.gp)
+
+#define PRIMFUN(x)	((CCODE)((x)->u.primsxp.primsxp_cfun))
+#define PRIMFUNV(x)	((CCODEV)((x)->u.primsxp.primsxp_cfun))
+#define SET_PRIMFUN(x,f) \
+    ( (x)->u.primsxp.primsxp_cfun = R_FunTab[PRIMOFFSET(x)].cfun = (f), \
+      (x)->u.primsxp.primsxp_fast_cfun = 0 )
+#define PRIMVAL(x)	((x)->u.primsxp.primsxp_code)
+#define PRIMARITY(x)	((x)->u.primsxp.primsxp_arity)
+#define PRIMPRINT(x)	((x)->u.primsxp.primsxp_print)
+#define PRIMINTERNAL(x)	((x)->u.primsxp.primsxp_internal)
+#define PRIMVARIANT(x)	((x)->u.primsxp.primsxp_variant)
+#define PRIMFOREIGN(x)	((x)->u.primsxp.primsxp_foreign)
+#define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
+#define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)
+
+#define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
+#define SET_PRIMFUN_FAST(x,f) \
+    ((x)->u.primsxp.primsxp_fast_cfun = (f))
+
+/* Symbols for eval variants.  Return of a variant result is indicated by 
+   the attribute field being R_VariantResult. */
+
+#define VARIANT_NULL 1	/* May just return R_NilValue (but do side effects) */
+#define VARIANT_SEQ  2  /* May return a sequence spec, rather than a vector */
+#define VARIANT_AND  3  /* May return AND of a logical vec rather than vec  */
+#define VARIANT_OR   4  /* May return OR of a logical vec rather than vec   */
+#define VARIANT_SUM  5  /* May return sum of vec elements rather than vec   */
 
 /* Promise Access Macros */
 #define PRCODE(x)	((x)->u.promsxp.expr)

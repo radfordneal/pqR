@@ -1640,7 +1640,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    s = R_NilValue; /* keep compiler happy */
 	    error(_("ReadItem: unknown type %i, perhaps written by later version of R"), type);
 	}
-	if (type != CHARSXP)
+	if (type != CHARSXP && type != SPECIALSXP && type != BUILTINSXP)
 	    SETLEVELS(s, levs);
 	SET_OBJECT(s, objf);
 #ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS

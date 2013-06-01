@@ -104,6 +104,7 @@ checked against the current version of the source code.
 * Contexts::                    
 * Argument evaluation::         
 * Autoprinting::                
+* The eval function::           
 * The write barrier::           
 * Serialization Formats::       
 * Encodings for CHARSXPs::      
@@ -382,6 +383,10 @@ that is @code{NA_STRING} or is in the @code{CHARSXP} cache (this is not
 serialized).  Only exceptionally is a @code{CHARSXP} not hashed, and
 this should never happen in end-user code.
 
+The whole gp field is used for the table offset in a @code{BUILTINSXP}
+or @code{SPECIALSXP}.  This offset is found again from the name when
+restoring saved data.
+
 @node The 'data', Allocation classes, Rest of header, SEXPs
 @subsection The `data'
 
@@ -401,8 +406,8 @@ union @{
 @end example
 
 @noindent
-All of these alternatives apart from the first (an @code{int}) are three
-pointers, so the union occupies three words.
+All of these alternatives apart from the first are three pointers, and
+the first should be no larger, so the union should occupy three words.
 
 @cindex vector type
 The vector types are @code{RAWSXP}, @code{CHARSXP}, @code{LGLSXP},
@@ -464,8 +469,10 @@ expression vectors (@code{EXPRSXP}s).
 
 @item SPECIALSXP
 @itemx BUILTINSXP
-An integer giving the offset into the table of
-primitives/@code{.Internal}s.
+An integer (in the gp field) giving the offset into the table of
+primitives/@code{.Internal}s, plus various information copied from
+that table for fast access.  This extra information is set up when
+the offset is set with @code{SET_PRIMOFFSET}.
 
 @item CHARSXP
 @code{length}, @code{truelength} followed by a block of bytes (allowing
@@ -1027,7 +1034,7 @@ Special primitives may need to handle @code{...} arguments: see for
 example the internal code of @code{switch} in file
 @file{src/main/builtin.c}.
 
-@node Autoprinting, The write barrier, Argument evaluation, R Internal Structures
+@node Autoprinting, The eval function, Argument evaluation, R Internal Structures
 @section Autoprinting
 
 @cindex autoprinting
@@ -1089,8 +1096,48 @@ Otherwise, if the object bit is set (so the object has a
 for objects without a class the internal code of @code{print.default}
 is called.
 
+@node The eval function, The write barrier, Autoprinting, R Internal Structures
+@section The eval function
 
-@node The write barrier, Serialization Formats, Autoprinting, R Internal Structures
+@findex eval
+@findex evalv
+
+The @code{eval} function is the central routine in the interpreter.
+It takes as arguments an expression to evaluate and an environment 
+(both of which must be protected by the caller) and returns the 
+value that the expression evaluates to.
+
+In pqR, @code{eval} calls @code{evalv} (or is a macro expanding to a
+call of @code{evalv} internally), which takes one additional argument,
+that may specify that a ``variant'' result is allowed.  This argument
+should be 0 if no variant is allowed, as for plain @code{eval}.
+Symbols for other variants are defined in @file{Rinternals.h}.  
+
+For example, a caller of @code{evalv} might specify that the value
+will not be used (evaluation being done only for side effects), and
+may therefore be returned as @code{R_NilValue}, or that if the value
+is a numeric vector, only the sum of vector elements is needed, so
+that this sum may be returned rather than the vector (which will then
+not need to have space allocated for it).  However, the caller of
+@code{evalv} must always be prepared to receive an ordinary value,
+rather than the variant asked for.
+
+For many variants, a value returned by @code{evalv} that is a variant
+is identified by an attribute field of @code{R_VariantResult}, which
+is a special object that should not be propagated to be visible from
+user code.
+
+The variant argument of @code{evalv} will be passed on to a function
+implementing a primitive if the appropriate flag is set in the
+primitive's specification in @file{names.c}.  Variant arguments may be
+passed onwards from the expression passed to @code{evalv} --- for
+example, from an ``if'' statement to the evaluation of the chosen
+branch, or from a function call to the evaluation of the body of the
+function --- with any variant result propagated back.
+
+@comment Just here to help with merging new section later...
+
+@node The write barrier, Serialization Formats, The eval function, R Internal Structures
 @section The write barrier and the garbage collector
 
 @cindex write barrier

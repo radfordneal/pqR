@@ -59,13 +59,18 @@
  *		Convention:
  *		 - all start with "do_",
  *		 - all return SEXP.
- *		 - all have argument list
- *			 (SEXP call, SEXP op, SEXP args, SEXP env)
+ *		 - have argument list
+ *		      (SEXP call, SEXP op, SEXP args, SEXP env)
+ *                 or 
+ *                    (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
  *
  * offset:	the 'op' (offset pointer) above; used for C functions
  *		which deal with more than one R function...
  *
- * eval:	= XYZ (three digits) --- where e.g. '1' means '001'
+ * eval:	= WXYZ (four digits) --- where e.g. '1' means '0001'
+ *              W=1 says pass a "variant" argument to the c-entry procedure
+ *                  (ignored if PPkind is PP_FOREIGN)
+ *              W=0 says don't pass a "variant" argument
  *		X=1 says that we should force R_Visible off
  *		X=0 says that we should force R_Visible on
  *		X=2 says that we should switch R_Visible on but let the C
@@ -1150,6 +1155,8 @@ void InitNames()
     SET_SYMVALUE(R_UnboundValue, R_UnboundValue);
     SET_PRINTNAME(R_UnboundValue, R_NilValue);
     SET_ATTRIB(R_UnboundValue, R_NilValue);
+    /* R_VariantResult - anything distinct and inaccessible to users is OK. */
+    R_VariantResult = CONS(R_NilValue,R_NilValue); 
     /* R_MissingArg */
     R_MissingArg = allocSExp(SYMSXP);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
@@ -1235,7 +1242,7 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
-    ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
+    ans = CALL_PRIMFUN(s, INTERNAL(fun), args, env, 0);
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;

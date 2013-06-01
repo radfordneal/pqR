@@ -1,0 +1,29 @@
+Two changes to how expressions are evaluated.
+
+First, a facility has been introduced for an expression to be
+evaluated in a context in which a "variant result" is allowed - eg, if
+the result will be ignored anyway (expression is evaluated only for
+side effects), a null result might be allowed.  This is done by
+introducing an "evalv" function that is like "eval" but with an extra
+parameter saying what variant results are permissible.  This facility
+is used for later modifications, with some symbols defined here in
+anticipation of these modifications.
+
+Second, calling of primitive functions has been speeded up by copying
+relevant information (eg, arity) from the table defining primitives
+(in names.c) to fields in the SEXP for the primitive.  This saves
+table access computations and also division and remainder operations
+to get at the information in the "eval" field in names.c, which is
+encoded as decimal digits.
+
+A procedure SET_PRIMFUN in memory.c was surreptitiously changing the
+function pointer for a primitive via the function pointer access
+macro, PRIMFUN.  A SET_PRIMFUN macro now does this properly.
+
+Code in saveload.c (for loading old workspaces?) creates a primitive
+directly, bypassing the mkPRIMSXP procedure.  This seems unwise, since
+creation via mkPRIMSXP is apparently needed to ensure protection of
+primitives.  Whatever is going on there should not be affected by this
+modification, however.
+
+R-ints.texi has been updated to document evalv and variants.

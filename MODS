@@ -64,9 +64,31 @@ users, such as cleanups of source code.
 
  12)
 
- 13)
+ 13) A facility has been introduced for an expression to be evaluated
+     in a context in which a "variant result" is allowed - eg, if the
+     result will be ignored anyway (expression is evaluated only for
+     side effects), a null result might be allowed.  This is done by
+     introducing an "evalv" function that is like "eval" but with an
+     extra parameter saying what variant results are permissible.
+     This facility is used for some modifications noted elsewhere.
 
- 14)
+ 14) Calling of primitive functions has been speeded up by copying
+     relevant information (eg, arity) from the table defining
+     primitives (in names.c) to fields in the SEXP for the primitive.
+     This saves table access computations and also division and
+     remainder operations to get at the information in the "eval"
+     field in names.c, which is encoded as decimal digits.  
+
+     A procedure SET_PRIMFUN in memory.c was surreptitiously changing
+     the function pointer for a primitive via the function pointer
+     access macro, PRIMFUN.  I have introduced a SET_PRIMFUN macro to
+     do this properly.
+
+     Code in saveload.c (for loading old workspaces?) creates a
+     primitive directly, bypassing the mkPRIMSXP procedure.  This
+     seems unwise, since creation via mkPRIMSXP is apparently needed
+     to ensure protection of primitives.  Whatever is going on there
+     should not be affected by this modification, however.
 
  15)
 

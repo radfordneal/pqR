@@ -39,6 +39,7 @@
 
 #define ARGUSED(x) LEVELS(x)
 
+static SEXP applyClosure_v (SEXP, SEXP, SEXP, SEXP, SEXP, int);
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
 /*#define BC_PROFILING*/
@@ -334,9 +335,18 @@ static SEXP forcePromise(SEXP e)
     return PRVALUE(e);
 }
 
-/* Return value of "e" evaluated in "rho". */
+/* Return value of "e" evaluated in "rho".  This will be bypassed by
+   a macro definition for "eval" in the interpreter itself. */
 
-SEXP eval(SEXP e, SEXP rho)
+SEXP Rf_eval(SEXP e, SEXP rho)
+{
+    evalv(e,rho,0);
+}
+
+/* Return value of "e" evalued in "rho", allowing the result to possibly 
+   be a variant as described by "variant". */
+
+SEXP evalv(SEXP e, SEXP rho, int variant)
 {
     SEXP op, tmp;
     static int evalcount = 0;
@@ -469,7 +479,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    const void *vmax = vmaxget();
 	    PROTECT(CDR(e));
 	    R_Visible = flag != 1;
-	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
+            tmp = CALL_PRIMFUN(e, op, CDR(e), rho, variant);
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
@@ -495,10 +505,10 @@ SEXP eval(SEXP e, SEXP rho)
 	    if (R_Profiling || (PPINFO(op).kind == PP_FOREIGN)) {
 		begincontext(&cntxt, CTXT_BUILTIN, e,
 			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-		tmp = PRIMFUN(op) (e, op, tmp, rho);
+                tmp = CALL_PRIMFUN(e, op, tmp, rho, variant);
 		endcontext(&cntxt);
 	    } else {
-		tmp = PRIMFUN(op) (e, op, tmp, rho);
+                tmp = CALL_PRIMFUN(e, op, tmp, rho, variant);
 	    }
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
@@ -513,7 +523,7 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv);
+	    tmp = applyClosure_v (e, op, tmp, rho, R_BaseEnv, variant);
 	    UNPROTECT(1);
 	}
 	else
@@ -698,7 +708,8 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 	return R_NilValue;
 }
 
-SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
+static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
+                            SEXP suppliedenv, int variant)
 {
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
@@ -852,13 +863,13 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = eval(body, newrho));
+	    PROTECT(tmp = evalv (body, newrho, variant));
 	}
 	else
 	    PROTECT(tmp = R_ReturnedValue);
     }
     else {
-	PROTECT(tmp = eval(body, newrho));
+	PROTECT(tmp = evalv (body, newrho, variant));
     }
 
     endcontext(&cntxt);
@@ -869,6 +880,12 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     }
     UNPROTECT(3);
     return (tmp);
+}
+
+SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
+                   SEXP suppliedenv)
+{
+  return applyClosure_v (call, op, arglist, rho, suppliedenv, 0);
 }
 
 /* **** FIXME: This code is factored out of applyClosure.  If we keep
@@ -2178,7 +2195,7 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP) 
     	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_BaseEnv);
+    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, R_BaseEnv, 0);
     UNPROTECT(1);
     return ans;
 }
@@ -2614,7 +2631,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	if(isOps) SET_TAG(m, R_NilValue);
     }
 
-    *ans = applyClosure(t, lsxp, s, rho, newrho);
+    *ans = applyClosure_v(t, lsxp, s, rho, newrho, 0);
     UNPROTECT(5);
     return 1;
 }
@@ -4400,17 +4417,17 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-	  value = PRIMFUN(fun) (call, fun, args, rho);
+          value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+          value = CALL_PRIMFUN(call, fun, CDR(call), rho, 0);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure_v(call, fun, args, rho, R_BaseEnv, 0);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -4430,7 +4447,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
-	value = PRIMFUN(fun) (call, fun, args, rho);
+        value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	R_BCNodeStackTop -= 2;
@@ -4451,7 +4468,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	BCNPUSH(fun);  /* for GC protection */
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
-	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+        value = CALL_PRIMFUN(call, fun, CDR(call), rho, 0);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	SETSTACK(-1, value); /* replaces fun on stack */
@@ -4701,7 +4718,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, lhs);
 	  /* make the call */
 	  checkForMissings(args, call);
-	  value = PRIMFUN(fun) (call, fun, args, rho);
+          value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and put into stack for GC protection */
@@ -4719,7 +4736,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SET_PRVALUE(prom, rhs);
 	  SETCAR(last, prom);
 	  /* make the call */
-	  value = PRIMFUN(fun) (call, fun, args, rho);
+          value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	  break;
 	case CLOSXP:
 	  /* push evaluated promise for RHS onto arguments with 'value' tag */
@@ -4733,7 +4750,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure_v(call, fun, args, rho, R_BaseEnv, 0);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -4755,7 +4772,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, lhs);
 	  /* make the call */
 	  checkForMissings(args, call);
-	  value = PRIMFUN(fun) (call, fun, args, rho);
+          value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and put into stack for GC protection */
@@ -4766,7 +4783,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SET_PRVALUE(prom, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = PRIMFUN(fun) (call, fun, args, rho);
+          value = CALL_PRIMFUN(call, fun, args, rho, 0);
 	  break;
 	case CLOSXP:
 	  /* replace first argument with evaluated promise for LHS */
@@ -4775,7 +4792,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure_v(call, fun, args, rho, R_BaseEnv, 0);
 	  break;
 	default: error(_("bad function"));
 	}

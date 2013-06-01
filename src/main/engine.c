@@ -2755,7 +2755,7 @@ void GEplayDisplayList(pGEDevDesc dd)
 	    SEXP theOperation = CAR(theList);
 	    SEXP op = CAR(theOperation);
 	    SEXP args = CADR(theOperation);
-	    PRIMFUN(op) (R_NilValue, op, args, R_NilValue);
+	    CALL_PRIMFUN(R_NilValue, op, args, R_NilValue, 0);
 	    /* Check with each graphics system that the plotting went ok
 	     */
 	    if (!GEcheckState(dd)) {
