@@ -271,6 +271,17 @@ void endcontext(RCNTXT * cptr)
 }
 
 
+/* revisecontext - change environments in a context
+
+   The revised context differs from the previous one only in env and sysp. */
+
+void revisecontext (SEXP env, SEXP sysp)
+{
+    R_GlobalContext->sysparent = sysp;
+    R_GlobalContext->cloenv = env;
+}
+
+
 /* findcontext - find the correct context */
 
 void attribute_hidden findcontext(int mask, SEXP env, SEXP val)
