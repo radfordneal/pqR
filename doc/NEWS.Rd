@@ -30,7 +30,10 @@
     \itemize{
       \item **1
       \item **2
-      \item **3
+      \item A new primitive function, pnamedcnt, has been added, that
+            prints the NAMED count for an R object, which is helpful
+            in tracking when objects will have to be duplicated.  For
+            details, see help(pnamedcnt).
       \item **4
       \item **5
       \item **6
