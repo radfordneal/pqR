@@ -1,0 +1,42 @@
+HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
+          Example Programs Using the Helpers Library
+
+Copyright (c) 2013 Radford M. Neal.
+
+  The helpers library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+The example programs in this directory demonstrate how to write
+programs that use the helpers facility, and can be used to test what
+performance gains are achievable.  The programs are documented in
+examples-doc.
+
+The "example" program takes many options that can be used to exercise
+various features.  
+
+The program "simple" is a simplified version of this example, which is
+a better place to start looking.
+
+The program "parex" is another version that demonstrates how a single
+vector computation can be parallelized.
+
+All the programs are compiled with "make".  The Makefile provided is
+set up to use gcc, but it can be modified to use a different compiler.
+(Options suitable for a SPARC system not using gcc are in the Makefile
+but disabled.)  The program "example-d" is "example" compiled with
+helpers disabled.
+
+The shell file "doit" runs "example" and "parex" with various numbers
+of helpers, with and without pipelining.

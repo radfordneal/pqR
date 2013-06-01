@@ -1173,7 +1173,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     a = REAL(sa);
     naflag = 0;
 
-    if (variant == VARIANT_SUM) {
+    if (VARIANT_KIND(variant) == VARIANT_SUM) {
         long double s = 0.0;
         if (math1_err_table[opcode]==0) {
             for (i = 0; i < n; i++) {
@@ -1315,7 +1315,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         }
     } else if (TYPEOF(x) == REALSXP) {
 	int n = LENGTH(x);
-        if (variant == VARIANT_SUM) {
+        if (VARIANT_KIND(variant) == VARIANT_SUM) {
             long double r = 0.0;
 	    for (int i = 0 ; i < n ; i++)
                 r += fabs(REAL(x)[i]);

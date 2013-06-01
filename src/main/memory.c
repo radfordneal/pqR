@@ -48,6 +48,8 @@
 #include <R_ext/GraphicsEngine.h> /* GEDevDesc, GEgetDevice */
 #include <R_ext/Rdynload.h>
 
+#include <helpers/helpers-app.h>
+
 
 /* CONFIGURATION OPTIONS.  
 
@@ -1876,6 +1878,16 @@ static void RunGenCollect(R_size_t size_needed)
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++) /* Byte code stack */
         FORWARD_NODE(*sp);
 
+    /* Forward vars used by scheduled tasks last, so there's more time for
+       tasks to finish.  For a full collection, we wait for all tasks to
+       complete, so we can collect all variables that they used. */
+
+    if (num_old_gens_to_collect == NUM_OLD_GENERATIONS)
+        helpers_wait_for_all();
+    else
+        for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
+            FORWARD_NODE(*var_list);
+
     /* main processing loop */
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
@@ -2630,9 +2642,9 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     /* SET_NAMEDCNT_1(s); */
 
     TYPEOF(s) = PROMSXP;
+    s->u.promsxp.value = R_UnboundValue;
     PRCODE(s) = CHK(expr);
     PRENV(s) = CHK(rho);
-    PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
     return s;
@@ -3702,7 +3714,8 @@ SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
-void (SET_PRVALUE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; }
+void (SET_PRVALUE)(SEXP x, SEXP v) 
+  { CHECK_OLD_TO_NEW(x, v); x->u.promsxp.value = v; }
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
 

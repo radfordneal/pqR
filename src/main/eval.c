@@ -37,6 +37,8 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 
+#include <helpers/helpers-app.h>
+
 
 /* Bit flags that say whether each SEXP type evaluates to itself.  Used via
    SELF_EVAL(t), which says whether something of type t evaluates to itself. 
@@ -68,7 +70,6 @@
 
 #define ARGUSED(x) LEVELS(x)
 
-static SEXP applyClosure_v (SEXP, SEXP, SEXP, SEXP, SEXP, int);
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
 /*#define BC_PROFILING*/
@@ -334,6 +335,47 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 }
 
 
+/* Wait until no value in an argument list is still being computed by a task.
+   Macro version does preliminary check in-line for speed. */
+
+#define WAIT_UNTIL_ARGUMENTS_COMPUTED(_args_) \
+    do { \
+        if (helpers_tasks > 0) { \
+            SEXP _a_ = (_args_); \
+            while (_a_ != R_NilValue) { \
+                if (IS_BEING_COMPUTED_BY_TASK(CAR(_a_))) { \
+                    wait_until_arguments_computed (_a_); \
+                    break; \
+                } \
+                _a_ = CDR(_a_); \
+            } \
+        } \
+    } while (0)
+
+void attribute_hidden wait_until_arguments_computed (SEXP args)
+{
+    SEXP wait_for, a;
+
+    if (helpers_tasks == 0) return;
+
+    wait_for = NULL;
+
+    for (a = args; a != R_NilValue; a = CDR(a)) {
+        SEXP this_arg = CAR(a);
+        if (IS_BEING_COMPUTED_BY_TASK(this_arg)) {
+            if (wait_for == NULL)
+                wait_for = this_arg;
+            else {
+                helpers_wait_until_not_being_computed2 (wait_for, this_arg);
+                wait_for = NULL;
+            }
+        }
+    }
+
+    if (wait_for != NULL)
+        helpers_wait_until_not_being_computed (wait_for);
+}
+
 SEXP attribute_hidden forcePromise(SEXP e)
 {
     if (PRVALUE(e) == R_UnboundValue) {
@@ -367,6 +409,42 @@ SEXP attribute_hidden forcePromise(SEXP e)
 	SET_PRENV(e, R_NilValue);
     }
     return PRVALUE(e);
+}
+
+
+SEXP attribute_hidden forcePromisePendingOK(SEXP e)
+{
+    if (PRVALUE(e) == R_UnboundValue) {
+	RPRSTACK prstack;
+	SEXP val;
+	if(PRSEEN(e)) {
+	    if (PRSEEN(e) == 1)
+		errorcall(R_GlobalContext->call,
+			  _("promise already under evaluation: recursive default argument reference or earlier problems?"));
+	    else warningcall(R_GlobalContext->call,
+			     _("restarting interrupted promise evaluation"));
+	}
+	/* Mark the promise as under evaluation and push it on a stack
+	   that can be used to unmark pending promises if a jump out
+	   of the evaluation occurs. */
+	SET_PRSEEN(e, 1);
+	prstack.promise = e;
+	prstack.next = R_PendingPromises;
+	R_PendingPromises = &prstack;
+
+	val = evalv (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
+
+	/* Pop the stack, unmark the promise and set its value field.
+	   Also set the environment to R_NilValue to allow GC to
+	   reclaim the promise environment; this is also useful for
+	   fancy games with delayedAssign() */
+	R_PendingPromises = prstack.next;
+	SET_PRSEEN(e, 0);
+	SET_PRVALUE(e, val);
+        INC_NAMEDCNT(val);
+	SET_PRENV(e, R_NilValue);
+    }
+    return PRVALUE_PENDING_OK(e);
 }
 
 /* Return value of "e" evaluated in "rho".  This will be bypassed by
@@ -456,25 +534,31 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	    else error(_("argument is missing, with no default"));
 	}
 	else if (TYPEOF(tmp) == PROMSXP) {
-	    if (PRVALUE(tmp) == R_UnboundValue) {
+	    if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue) {
 		/* not sure the PROTECT is needed here but keep it to
 		   be on the safe side. */
 		PROTECT(tmp);
-		tmp = forcePromise(tmp);
+		tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(tmp)
+                                                   : forcePromise(tmp);
 		UNPROTECT(1);
 	    }
-	    else tmp = PRVALUE(tmp);
+	    else 
+                tmp = variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(tmp)
+                                                   : PRVALUE(tmp);
 	}
 	else if (NAMEDCNT_EQ_0(tmp))
 	    SET_NAMEDCNT_1(tmp);
 	break;
     case PROMSXP:
-	if (PRVALUE(e) == R_UnboundValue)
-	    /* We could just unconditionally use the return value from
-	       forcePromise; the test avoids the function call if the
-	       promise is already evaluated. */
-	    forcePromise(e);
-	tmp = PRVALUE(e);
+        /* We could just unconditionally use the return value from
+           forcePromise; the test below avoids the function call if the
+           promise is already evaluated. */
+	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
+            tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(e)
+                                               : forcePromise(e);
+        else
+            tmp = variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(e)
+                                               : PRVALUE(e);
 	break;
     case LANGSXP:
 	if (TYPEOF(CAR(e)) == SYMSXP)
@@ -552,14 +636,16 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                    fast after all. */
 
                 if (fast) {
-                    PROTECT(arg1 = evalv (arg1, rho, PRIMFUN_ARG1VAR(op)));
+                    PROTECT(arg1 = evalv (arg1, rho, 
+                              PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
                     if (PRIMFUN_DSPTCH1(op) && isObject(arg1)) {
                         args = CDR(args);
                         arg2 = NULL;
                         fast = FALSE;
                     }
                     else if (arg2 != NULL) {
-                        PROTECT(arg2 = evalv(arg2, rho, PRIMFUN_ARG2VAR(op)));
+                        PROTECT(arg2 = evalv(arg2, rho, 
+                                  PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
                         if (PRIMFUN_DSPTCH2(op) && isObject(arg2)) {
                             args = R_NilValue;  /* == CDDR(args) */
                             fast = FALSE;
@@ -572,7 +658,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                    have to be put on at the front of the argument list. */
 
                 if (!fast) { 
-                    args = evalList (args, rho, e);
+                    args = evalListPendingOK (args, rho, e);
                     if (arg2 != NULL) {
                         args = CONS(arg2,args);
                         UNPROTECT(1);  /* arg2 */
@@ -596,18 +682,31 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                 }
 
                 /* Call primitive, either the non-fast way with an argument
-                   list, or the fast way, passing arg1 or arg1 and arg2
-                   (but note that arg2 may be NULL). */
+                   list, or the fast way, passing arg1 or arg1 and arg2 (but
+                   note that arg2 may be NULL).  May need to wait for arguments
+                   before calling, if primitive can't handle pending args. */
 
                 if (!fast) {
+                    if (!PRIMFUN_PENDING_OK(op)) {
+                        WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
+                    }
                     tmp = CALL_PRIMFUN(e, op, args, rho, variant);
                 }
                 else if (PRIMARITY(op) != 2) {
+                    if (!PRIMFUN_PENDING_OK(op)) {
+                        WAIT_UNTIL_COMPUTED(arg1);
+                    }
                     tmp = 
                       ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                         (e, op, arg1, rho, variant);
                 }
                 else { /* PRIMARITY(op) == 2 */
+                    if (!PRIMFUN_PENDING_OK(op)) {
+                        if (arg2==NULL)
+                            WAIT_UNTIL_COMPUTED(arg1);
+                        else
+                            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+                    }
                     tmp = 
                       ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
                         (e, op, arg1, arg2, rho, variant);
@@ -824,8 +923,8 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 	return R_NilValue;
 }
 
-static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
-                            SEXP suppliedenv, int variant)
+SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
+                                     SEXP suppliedenv, int variant)
 {
     LOCAL_COPY(R_NilValue);
     SEXP formals, actuals, savedrho;
@@ -978,8 +1077,11 @@ static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
 	    PROTECT(tmp = evalv (body, newrho, variant));
 	}
-	else
+	else {
 	    PROTECT(tmp = R_ReturnedValue);
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(tmp);
+        }
     }
     else {
 	PROTECT(tmp = evalv (body, newrho, variant));
@@ -1081,8 +1183,10 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
 	    PROTECT(tmp = eval(body, newrho));
 	}
-	else
+	else {
 	    PROTECT(tmp = R_ReturnedValue);
+            WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+        }
     }
     else {
 	PROTECT(tmp = eval(body, newrho));
@@ -1281,6 +1385,8 @@ SEXP attribute_hidden do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 
+/* For statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
+
 #define DO_LOOP_RDEBUG(call, op, body, rho, bgn) do { \
     if (!bgn && RDEBUG(rho)) { \
 	SrcrefPrompt("debug", R_Srcref); \
@@ -1420,7 +1526,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
         DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 
-        evalv (body, rho, VARIANT_NULL);
+        evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 
     for_next: ;  /* semi-colon needed for attaching label */
     }
@@ -1434,6 +1540,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+
+/* While statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
 SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1457,7 +1565,7 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
-	    evalv (body, rho, VARIANT_NULL);
+	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
     }
     endcontext(&cntxt);
@@ -1465,6 +1573,8 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+
+/* Repeat statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
 SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1488,7 +1598,7 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	for (;;) {
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
-	    evalv (body, rho, VARIANT_NULL);
+	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
     }
     endcontext(&cntxt);
@@ -1526,11 +1636,12 @@ SEXP attribute_hidden do_paren (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* Curly brackets.  Passes on the eval variant to the last expression.
-   Requests VARIANT_NULL for earlier expressions. */
+   Evaluates earlier expresstions with VARIANT_NULL | VARIANT_PENDING_OK. */
 
 SEXP attribute_hidden do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
                                 int variant)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP s = R_NilValue;
     if (args != R_NilValue) {
     	SEXP srcrefs = getBlockSrcrefs(call);
@@ -1542,8 +1653,8 @@ SEXP attribute_hidden do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
 	        PrintValue(CAR(args));
 		do_browser(call, op, R_NilValue, rho);
 	    }
-	    s = evalv (CAR(args), rho, 
-                       isNull(CDR(args)) ? variant : VARIANT_NULL);
+	    s = evalv (CAR(args), rho, CDR(args) == R_NilValue ? variant 
+                                        : VARIANT_NULL | VARIANT_PENDING_OK);
 	    UNPROTECT(1);
 	    args = CDR(args);
 	}
@@ -1560,7 +1671,7 @@ SEXP attribute_hidden do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (args == R_NilValue) /* zero arguments provided */
 	v = R_NilValue;
     else if (CDR(args) == R_NilValue) /* one argument */
-	v = eval(CAR(args), rho);
+	v = evalv (CAR(args), rho, VARIANT_PENDING_OK);
     else {
 	v = R_NilValue; /* to avoid compiler warnings */
 	errorcall(call, _("multi-argument returns are not permitted"));
@@ -1923,10 +2034,9 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* Evaluate each expression in "el" in the environment "rho".  This is
-   a naturally recursive algorithm, but we use the iterative form below
-   because it is does not cause growth of the pointer protection stack,
-   and because it is a little more efficient.
+/* Evaluate each expression in "el" in the environment "rho", with the
+   result allowed to have arguments whose computation is pending (see
+   below for the version that waits for these computations).
 
    Used in eval and applyMethod (object.c) for builtin primitives,
    do_internal (names.c) for builtin .Internals and in evalArgs.
@@ -1939,7 +2049,8 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 
    If the 'call' argument is NULL, missing arguments are retained.
  */
-SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
+
+SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 {
     LOCAL_COPY(R_NilValue);
     SEXP head, tail, ev, h;
@@ -1963,7 +2074,10 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
 		while (h != R_NilValue) {
                     ev = call == NULL && CAR(h) == R_MissingArg ? 
                          cons_with_tag (R_MissingArg, R_NilValue, TAG(h))
-                       : cons_with_tag (eval(CAR(h),rho), R_NilValue, TAG(h));
+                       : cons_with_tag (
+                           evalv (CAR(h), rho, VARIANT_PENDING_OK),
+                           R_NilValue,
+                           TAG(h));
                     if (head==R_NilValue)
                         PROTECT(head = ev);
                     else
@@ -1990,7 +2104,10 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
                                  isSymbol(CAR(el)) && R_isMissing(CAR(el),rho)))
                 ev = cons_with_tag (R_MissingArg, R_NilValue, TAG(el));
             else
-                ev = cons_with_tag (eval(CAR(el), rho), R_NilValue, TAG(el));
+                ev = cons_with_tag (
+                       evalv (CAR(el), rho, VARIANT_PENDING_OK), 
+                       R_NilValue, 
+                       TAG(el));
             if (head==R_NilValue)
                 PROTECT(head = ev);
             else
@@ -2001,16 +2118,27 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
 	el = CDR(el);
     }
 
-    if (head!=R_NilValue) 
+    if (head!=R_NilValue)
         UNPROTECT(1);
 
     return head;
 
 } /* evalList() */
 
-/* A slight variation of evaluating each expression in "el" in "rho". */
+/* Evaluate argument list, waiting for any pending computations of arguments. */
 
-/* used in evalArgs, arithmetic.c, seq.c */
+SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
+{
+    SEXP args;
+
+    args = evalListPendingOK (el, rho, call);
+    WAIT_UNTIL_ARGUMENTS_COMPUTED (args);
+
+    return args;
+}
+
+/* Evaluate argument list, with no error for missing arguments. */
+
 SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 { 
     return evalList (el, rho, NULL);
@@ -2163,7 +2291,8 @@ static SEXP VectorToPairListNamed(SEXP x)
 /* "eval" and "eval.with.vis" : Evaluate the first argument */
 /* in the environment specified by the second argument. */
 
-SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                               int variant)
 {
     SEXP encl, x, xptr;
     volatile SEXP expr, env, tmp;
@@ -2187,14 +2316,12 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
     switch(TYPEOF(env)) {
     case NILSXP:
 	env = encl;     /* so eval(expr, NULL, encl) works */
-	/* falls through */
+        break;
     case ENVSXP:
-	PROTECT(env);	/* so we can unprotect 2 at the end */
 	break;
     case LISTSXP:
 	/* This usage requires all the pairlist to be named */
 	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
-	PROTECT(env);
 	break;
     case VECSXP:
 	/* PR#14035 */
@@ -2202,7 +2329,6 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
 	    SET_NAMEDCNT_MAX(CAR(xptr));
 	env = NewEnvironment(R_NilValue, x, encl);
-	PROTECT(env);
 	break;
     case INTSXP:
     case REALSXP:
@@ -2211,53 +2337,58 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	frame = asInteger(env);
 	if (frame == NA_INTEGER)
 	    error(_("invalid '%s' argument"), "envir");
-	PROTECT(env = R_sysframe(frame, R_GlobalContext));
+	env = R_sysframe(frame, R_GlobalContext);
 	break;
     default:
 	error(_("invalid '%s' argument"), "envir");
     }
 
-    /* isLanguage include NILSXP, and that does not need to be
-       evaluated
-    if (isLanguage(expr) || isSymbol(expr) || isByteCode(expr)) { */
+    PROTECT(env); /* may no longer be what was passed in arg */
+
+    /* isLanguage includes NILSXP, and that does not need to be evaluated,
+       so don't use isLanguage(expr) || isSymbol(expr) || isByteCode(expr) */
     if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
-	PROTECT(expr);
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
 	if (!SETJMP(cntxt.cjmpbuf))
-	    expr = eval(expr, env);
+	    expr = evalv (expr, env, variant);
 	else {
 	    expr = R_ReturnedValue;
 	    if (expr == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 		error(_("restarts not supported in 'eval'"));
 	    }
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
 	}
 	endcontext(&cntxt);
-	UNPROTECT(1);
     }
     else if (TYPEOF(expr) == EXPRSXP) {
 	int i, n;
-	PROTECT(expr);
 	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
 	if (!SETJMP(cntxt.cjmpbuf))
-	    for(i = 0 ; i < n ; i++)
-		tmp = eval(VECTOR_ELT(expr, i), env);
+	    for (i = 0 ; i < n ; i++)
+		tmp = evalv (VECTOR_ELT(expr, i), env, 
+                        i==n-1 ? variant : VARIANT_NULL | VARIANT_PENDING_OK);
 	else {
 	    tmp = R_ReturnedValue;
 	    if (tmp == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 		error(_("restarts not supported in 'eval'"));
 	    }
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
 	}
 	endcontext(&cntxt);
-	UNPROTECT(1);
 	expr = tmp;
     }
     else if( TYPEOF(expr) == PROMSXP ) {
-	expr = eval(expr, rho);
-    } /* else expr is returned unchanged */
+	expr = evalv (expr, rho, variant);
+    } 
+    else 
+        ; /* expr is returned unchanged */
+
     if (PRIMVAL(op)) { /* eval.with.vis(*) : */
 	PROTECT(expr);
 	PROTECT(env = allocVector(VECSXP, 2));
@@ -2270,6 +2401,7 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	expr = env;
 	UNPROTECT(3);
     }
+
     UNPROTECT(1);
     return expr;
 }
@@ -2518,7 +2650,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       new environment rho1 is created and used.  LT */
 	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
-	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, ans))
+	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
 	    {
 		endcontext(&cntxt);
 		UNPROTECT(nprotect);
@@ -3649,7 +3781,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   /* See comment at first usemethod() call in this file. LT */
   PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho));
   begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
-  if (usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, pv))
+  if (usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, pv))
     dispatched = TRUE;
   endcontext(&cntxt);
   UNPROTECT(2);

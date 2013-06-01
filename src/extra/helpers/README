@@ -1,0 +1,37 @@
+HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
+
+Files in this directory are Copyright (C) 2013 Radford M. Neal.  
+
+  The helpers library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+The file COPYING contains the text of the GNU General Public License,
+version 2.
+
+This software is available at github.com/radfordneal/helpers.  Radford
+Neal may be contacted at radfordneal@gmail.com.
+
+
+The helpers library provides facilities by which a "master" thread can
+schedule tasks to be done, perhaps by a "helper" thread, or perhaps by
+the master itself.  Interaction of the master and helpers is currently
+implemented using OpenMP, version 3.0 or 3.1.
+
+The C interface is defined by helpers.h.  The C routines implementing
+the helpers facility are in helpers.c.  Documentation regarding how an
+application program should use this facility is in the file api-doc.
+The file imp-doc has information on how the facility is implemented.
+
+The "examples" directory contains example programs that demonstrate
+many of the features.  See the README in that directory for details.

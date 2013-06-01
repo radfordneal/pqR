@@ -44,6 +44,7 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include "Startup.h"
+#include <helpers/helpers-app.h>
 
 #include <locale.h>
 
@@ -71,6 +72,29 @@ int R_stack_growth_direction (uintptr_t cvaraddr)
 { 
     int dummy; 
     return (uintptr_t) &dummy < cvaraddr ? 1 : -1; 
+}
+
+
+/* WAIT FOR HELPERS BEOFRE FORK.  Should be called before a call of "fork", 
+   so that the child will see memory that is not still being updated.   Will 
+   be referenced with an 'extern' declaration in the referencing source file, 
+   since helpers-app.h may not be accessible. */
+
+void Rf_wait_for_helpers_before_fork (void)
+{
+    helpers_wait_for_all();
+}
+
+
+/* DISABLE HELPERS AFTER FORK.  Should be called in the child process after a 
+   "fork", so it won't try to use helper threads.  Will be referenced with an 
+   'extern' declaration in the referencing source file, since helpers-app.h 
+   may not be accessible. */
+
+void Rf_disable_helpers_after_fork (void)
+{
+    helpers_disable(1);
+    helpers_trace(0);
 }
 
 
@@ -1009,10 +1033,20 @@ void run_Rmainloop(void)
     end_Rmainloop(); /* must go here */
 }
 
-void mainloop(void)
+void helpers_master (void)
 {
     setup_Rmainloop();
     run_Rmainloop();
+}
+
+void mainloop(void)
+{
+    int n;
+
+    n = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
+
+    helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
+    helpers_startup(n);  /* will call helpers_master above */
 }
 
 /*this functionality now appears in 3
@@ -1156,6 +1190,8 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     endcontext(&returncontext);
 
+    WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+
     /* Reset the interpreter state. */
 
     R_CurrentExpr = topExp;
@@ -1165,6 +1201,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_CurrentExpr = topExp;
     R_ToplevelContext = saveToplevelContext;
     R_GlobalContext = saveGlobalContext;
+
     return R_ReturnedValue;
 }
 

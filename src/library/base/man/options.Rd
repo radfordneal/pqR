@@ -141,6 +141,19 @@ getOption(x, default = NULL)
       you may cause a segfault from overflow of the C stack, and on OSes
       where it is possible you may want to increase that.}
 
+    \item{\code{helpers_disable}:}{A logical value set to \code{TRUE} to disable
+      helper threads.  It will also be \code{TRUE} when there are no helper
+      threads.  Initially \code{FALSE} unless there are no helper threads.}
+
+    \item{\code{helpers_no_pipelining}:}{A logical value set to \code{TRUE} 
+      to disable pipelining of data between helper threads.  Initially
+      \code{FALSE}.}
+
+    \item{\code{helpers_trace}:}{A logical value set to \code{TRUE} 
+      to enable tracing of tasks that are done (or might have been done)
+      in helper threads.  Initially \code{FALSE}, unless the environment
+      variable \code{R_HELPERS_TRACE} was defined at startup.}
+
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
       functions (newly defined or loaded) is stored internally
       allowing comments to be kept in the right places.  Retrieve the

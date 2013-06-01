@@ -36,6 +36,8 @@
 #include <R_ext/RS.h>     /* for Calloc/Free */
 #include <R_ext/Applic.h> /* for dgemm */
 
+#include <helpers/helpers-app.h>
+
 /* "GetRowNames" and "GetColNames" are utility routines which
  * locate and return the row names and column names from the
  * dimnames attribute of a matrix.  They are useful because
@@ -62,6 +64,39 @@ SEXP GetColNames(SEXP dimnames)
 	return VECTOR_ELT(dimnames, 1);
     else
 	return R_NilValue;
+}
+
+/* Allocate matrix, checking for errors, and putting in dims.  Split into
+   two parts to allow the second part to sometimes be done in parallel with 
+   computation of matrix elements (after just the first part done). */
+
+static SEXP R_INLINE allocMatrix0 (SEXPTYPE mode, int nrow, int ncol)
+{
+    if (nrow < 0 || ncol < 0)
+	error(_("negative extents to matrix"));
+
+    if ((double)nrow * (double)ncol > INT_MAX)
+	error(_("allocMatrix: too many elements specified"));
+
+    return allocVector (mode, nrow*ncol);
+}
+
+static SEXP R_INLINE allocMatrix1 (SEXP s, int nrow, int ncol)
+{
+    SEXP t;
+
+    PROTECT(s);
+    PROTECT(t = allocVector(INTSXP, 2));
+    INTEGER(t)[0] = nrow;
+    INTEGER(t)[1] = ncol;
+    setAttrib(s, R_DimSymbol, t);
+    UNPROTECT(2);
+    return s;
+}
+
+SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
+{
+    return allocMatrix1 (allocMatrix0 (mode, nrow, ncol), nrow, ncol);
 }
 
 /* Package matrix uses this .Internal with 5 args: should have 7 */
@@ -148,26 +183,6 @@ SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ans = dimnamesgets(ans, dimnames);
     UNPROTECT(1);
     return ans;
-}
-
-
-SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
-{
-    SEXP s, t;
-    int n;
-
-    if (nrow < 0 || ncol < 0)
-	error(_("negative extents to matrix"));
-    if ((double)nrow * (double)ncol > INT_MAX)
-	error(_("allocMatrix: too many elements specified"));
-    n = nrow * ncol;
-    PROTECT(s = allocVector(mode, n));
-    PROTECT(t = allocVector(INTSXP, 2));
-    INTEGER(t)[0] = nrow;
-    INTEGER(t)[1] = ncol;
-    setAttrib(s, R_DimSymbol, t);
-    UNPROTECT(2);
-    return s;
 }
 
 /**
@@ -382,35 +397,59 @@ SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
     return do_fast_length (call, op, CAR(args), rho, 0);
 }
 
-
-SEXP attribute_hidden do_rowscols(SEXP call, SEXP op, SEXP args, SEXP rho)
+void task_row_or_col (helpers_op_t op, SEXP ans, SEXP dim, SEXP ignored)
 {
-    SEXP x, ans;
-    int i, j, nr, nc;
+    int nr = INTEGER(dim)[0], nc = INTEGER(dim)[1];
+    R_len_t k;
+    int i, j;
+    int *p;
+
+    HELPERS_SETUP_OUT(10); /* large, since computing one element is very fast */
+
+    p = INTEGER(ans);                   /* store sequentially (down columns)  */
+    k = 0;                              /* with k, for good cache performance */
+
+    switch (op) {
+    case 1: /* row */
+        for (j = 1; j <= nc; j++) {
+            for (i = 1; i <= nr; i++) {
+                p[k] = i;
+                HELPERS_NEXT_OUT (k);
+            }
+        }
+        break;
+    case 2: /* col */
+        for (j = 1; j <= nc; j++) {
+            for (i = 1; i <= nr; i++) {
+                p[k] = j;
+                HELPERS_NEXT_OUT (k);
+            }
+        }
+        break;
+    }
+}
+
+#define T_rowscols THRESHOLD_ADJUST(100)
+
+SEXP attribute_hidden do_rowscols (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                   int variant)
+{
+    SEXP dim, ans;
+    int nr, nc;
 
     checkArity(op, args);
-    x = CAR(args);
-    if (!isInteger(x) || LENGTH(x) != 2)
+    dim = CAR(args);
+    if (!isInteger(dim) || LENGTH(dim) != 2)
 	error(_("a matrix-like object is required as argument to 'row/col'"));
+    nr = INTEGER(dim)[0];
+    nc = INTEGER(dim)[1];
 
-    nr = INTEGER(x)[0];
-    nc = INTEGER(x)[1];
+    ans = allocMatrix0 (INTSXP, nr, nc);
 
-    ans = allocMatrix(INTSXP, nr, nc);
+    DO_NOW_OR_LATER1 (variant, LENGTH(ans) >= T_rowscols,
+      HELPERS_PIPE_OUT, task_row_or_col, PRIMVAL(op), ans, dim);
 
-    switch (PRIMVAL(op)) {
-    case 1:
-	for (i = 0; i < nr; i++)
-	    for (j = 0; j < nc; j++)
-		INTEGER(ans)[i + j * nr] = i + 1;
-	break;
-    case 2:
-	for (i = 0; i < nr; i++)
-	    for (j = 0; j < nc; j++)
-		INTEGER(ans)[i + j * nr] = j + 1;
-	break;
-    }
-    return ans;
+    return allocMatrix1 (ans, nr, nc);
 }
 
 /* Real matrix product, using either one of the C routines in extra/matprod or

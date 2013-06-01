@@ -1,0 +1,993 @@
+HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
+          Application Program Interface Documentation
+
+Copyright (c) 2013 Radford M. Neal.
+
+  The helpers library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INTRODUCTION
+
+This software implements a facility by which a "master" thread can
+schedule computational tasks to be done, perhaps in parallel by
+"helper" threads, or perhaps by the master itself.  Tasks can be
+scheduled before their inputs have been computed; they are then
+started automatically when the tasks computing their inputs have
+finished.  Alternatively, a task may be capable of taking pipelined
+inputs, in which case it can start as soon as the tasks producing its
+inputs have started, and process parts of those inputs as soon as they
+are produced.  It is also possible to use more than one task for a
+single computation.
+
+A C interface for this facility is provided, and summarized at the end
+of this document.  Interfaces for other languages might be possible.
+
+The helpers facility is currently written in C (conforming to the C99
+standard) and implemented using OpenMP (version 3.0 or 3.1).  See
+imp-doc for more details.  Programs using the facility do not use
+OpenMP pragmas or call OpenMP procedures, so reimplementing the
+facility using something other than OpenMP would be possible.
+
+This helpers facility is designed for use implementing an interpretive
+language that provides parallel computations without the programmer
+needing to write any explicitly parallel code.  It is potentially
+useful for many other applications as well.
+
+
+USING THE HELPERS FACILITY
+
+This implementation of the helpers facility is contained in a C source
+file called helpers.c and a C header file called helpers.h.
+
+An application program written in C that uses this facility must
+provide a C header file called helpers-app.h, which will declare
+several types, as detailed below, and then include the file helpers.h.
+Also (as described later), several macros for use by the helpers
+facility may optionally be defined in helpers-app.h, which default to
+stubs if they are not define there.  Other declarations used by the
+application program may be put in helpers-app.h if that is convenient.
+The helpers-app.h header file is included by the helpers.c module,
+which implements the helpers facility, and it should be included in
+application source files that use the helpers facility.
+
+The helpers-app.h file must declare a type called helpers_var_ptr that
+points to a variable of the type that tasks operate on.  Normally,
+helpers_var_ptr will be a pointer type, perhaps void * if no other
+more specific declaration is suitable, but all that is really required
+is that casting 0 to type helpers_var_ptr will produce a "null" value
+that will not be confused with an actual variable.  So helpers_var_ptr
+could, for example, be an integer index in some array of variables.
+
+An unsigned integer type of some size named helpers_op_t must also be
+declared in the helpers-app.h file.  A value of this type will be
+passed as an argument when a task is started.  It might, for example,
+specify the exact operation to be performed, or the length of the
+vectors the operation is performed on.  (The helpers facility could
+easily be modified to allow helpers_op_t to be some other numerical
+type, or a structure - it is limited to an unsigned integer type only
+by the current formatting requirements for trace output - though using
+a large structure as an operand could of course be slow.)
+
+Also, the helpers-app.h file must declare an unsigned integer type
+called helpers_size_t, which will hold the number of elements in a
+vector that is used in a pipelined computation.  This type could be
+used to hold lengths of vectors for non-pipelined computations as
+well, but this is would directly involve only the application program.
+If an application doesn't use pipelining, this type can be defined to
+be some arbitrary unsigned integer type.
+
+The helpers.c source file provided by the helpers facility must be
+compiled in whatever way is needed for OpenMP (eg, with the -fopenmp
+option for gcc).  It should work with OpenMP 3.0 or 3.1 on most
+machines, but see the file imp-doc for more information on the
+concurrent memory model that is assumed, options regarding atomic
+reads and writes, and performance issues.
+
+After any necessary initialization, an application program using the
+helpers facility should call the helpers_startup procedure, passing it
+the number of helpers desired (from 0 to HELPERS_MAX, with larger
+values silently reduced to HELPERS_MAX).  This procedure will start up
+the helper threads (if any), and then, in the master thread, call the
+helpers_master procedure, which takes no arguments, and returns void.
+The number of helpers started may be less than was requested,
+depending on the number supported by the OpenMP implementation, and
+the setting of the OMP_THREAD_LIMIT environment variable.  The actual
+number of helpers started is given by the global variable helpers_num.
+
+The helpers_master procedure must be defined by the application
+program using the helpers facility.  It should do the main work of the
+program, which may include scheduling computational tasks using the
+helpers_do_task procedure.  The results of these computations will be
+the same as if each computation was performed immediately when
+helpers_do_task was called, but the elapsed time taken for these
+computations may be much less than for such sequential execution,
+depending on how many helper threads there are, on the dependence of a
+task on outputs computed by other tasks, and on whether the task
+procedures support pipelining.
+
+The helpers_master procedure may exit, or it may simply return, in
+which case helpers_startup will immediately exit (with status 0).
+Hence the helpers_startup procedure will never return.
+
+
+SCHEDULING TASKS
+
+The helpers_do_task procedure returns void, and takes five arguments,
+as follows:
+
+  1) Integer flags argument - often zero, see below for other options.
+  2) Pointer to a procedure implementing the computation to be done.
+  3) Unsigned integer operand of the computation, of type helpers_op_t.
+  4) Pointer to the variable set to the output of the computation.
+  5) Pointer to the 1st variable that is an input for the computation.
+  6) Pointer to the 2nd variable that is an input for the computation.
+
+The pointers for arguments 4, 5, and 6 are of type helpers_var_ptr.
+Both helpers_var_ptr and helpers_op_t are declared in the application
+programs's helpers-app.h file.
+
+The procedure passed as the second argument to helpers_do_task should
+be of type helpers_task_proc, which is declared in helpers.h as a
+procedure taking a helpers_op_t operand argument and three arguments
+of type helpers_var_ptr (the output pointer and two input pointers),
+and returning void.  This task procedure may access both the output
+and input variables, but should modify only the output variable.
+Completion of the task performed by the procedure is indicated by the
+procedure's return.
+
+The previous contents of the output variable may also be used as an
+input to the computation.  The pointers to the output variable and to
+either or both input variables may be null - that is, the value given
+by the ((helpers_var_ptr) 0) cast - indicating that that variable is
+absent.  For instance, the output pointer will be null if the task is
+simply to write the data in the input variables to a file, and one or
+both pointers to input variables will be null when the computation
+does not take that many inputs.  The helpers_op_t operand is always
+present, but if such an operand is not needed, it can of course just
+be passed as 0 and then ignored.
+
+It is allowed to call helpers_do_task with two or more of the variable
+pointer arguments being the same, provided that the task procedure has
+been written to handle this possibility.
+
+A variable is said to be "being computed" if it is the output variable
+of some scheduled task that has not completed (or sometimes, the
+output of a task that the master thread has not noticed has completed,
+even if it actually has completed).  A variable is said to be "in use"
+if it is the input variable of a scheduled task that has not completed
+(or sometimes that the master hasn't notice has completed) and this
+variable is not also the output variable of that task.
+
+A task may be scheduled at a time when one or more of its input
+variables is being computed (if necessary, the task will not be run
+until that computation has finished).  However, a task must not be
+scheduled at a time when its output variable is in use.  If the
+structure of the program does not guarantee that the output variable
+is not in use, the program should call helpers_wait_until_not_in_use
+(see below), or check the flag set by helpers_mark_in_use (also
+described below).  The helpers_do_task procedure does not check for
+violations of this restriction (to reduce the overhead of scheduling a
+task), but a violation could lead to incorrect results.
+
+The sizes of a task's input and output variables are determined by
+conventions of the application program.  For example, the size of a
+variable might be fixed, or it might be stored in a header at the
+start of the variable, or it might be specified by the helpers_op_t
+operand argument to the task procedure.  
+
+The tasks scheduled with helpers_do_task should interact with each
+other and with the master procedure only via the helpers_op_t operand
+they receive and their input and output variables (including via the
+pipelining facilities described below).  These tasks should not
+attempt to schedule additional tasks themselves - that can be done
+only by the master (and not within a scheduled task running in the
+master).  If tasks use any potentially shared resources (eg, files),
+they must ensure that no conflicts arise when they run concurrently.
+A task procedure may access shared global variables, as long as these
+variables do not change during the execution of the task procedure.
+
+The helpers_do_task procedure may sometimes immediately do the task
+itself - in the master thread rather than a helper - for example, when
+there are no helper threads, or when the limit on the number of
+outstanding tasks has been reached.
+
+
+MASTER-ONLY AND MASTER-NOW TASKS
+
+An application can schedule a task that is guaranteed to only be done
+by the master thread (though not necessarily immediately), by passing
+HELPERS_MASTER_ONLY as the first argument to helpers_do_task (whereas
+passing 0 allows either the master or a helper to do the task).  Such
+"master-only" tasks will be done in the master thread in the same
+order as they were scheduled (though other tasks might also be done in
+the master thread between such master-only tasks).  If instead
+HELPERS_MASTER_NOW is passed as the first argument to helpers_do_task,
+the task will be done only by the master and before the call to
+helpers_do_task returns.  Note that before doing such a "master-now"
+task, helpers_do_task will first do any master-only tasks that were
+previously scheduled, and may need to do or wait for tasks computing
+the inputs to the master-now task, or previous master-only tasks.
+
+Master-only tasks might, for example, be used for computations that
+use sequentially-generated pseudo-random numbers.  Sequential
+execution could be guaranteed by just doing such computations in the
+master thread without use of helpers_do_task, but scheduling all such
+computations as master-only tasks would ensure sequential execution
+while allowing the master thread to possibly defer such computations
+until it would otherwise be idle (and in the mean time, perhaps
+schedule additional tasks for helpers to perform concurrently with
+these master-only tasks).
+
+Scheduling a master-only or master-now task is also one way for a
+computation that must run in the master to consume or produce
+pipelined input and output, as described below.
+
+The master thread may also directly call a task procedure, without
+using helpers_do_task.  Unlike scheduling a master-now procedure,
+calling the task procedure directly will of course not wait for input
+variables to be computed, or for previous master-only tasks to finish.
+
+Directly calling a task procedure has lower overhead than scheduling
+it with helpers_do_task, and may be preferred if the computation is
+expected to take only a short time.  Scheduling a master-now task will
+also have lower overhead (but not as low overhead as a direct call),
+and may be desirable when inputs have not been fully computed and are
+pipelined, but the output variable must be fully computed before the
+master thread can continue.
+
+The following macro is provided for convenience in doing a task with
+either a direct call or with helpers_do_task, either as a master-now
+task or a regular scheduled task:
+
+  HELPERS_NOW_OR_LATER (cond1, cond2, flags, proc, op, out, in1, in2)
+
+If "cond1" is true, helpers_do_task is called with the last six
+arguments above.  Otherwise, if cond2 is true, helpers_do_task is
+called with these six arguments, but with HELPERS_MASTER_NOW or'd with
+the given flags.  If cond1 and cond2 are both false, "proc" is called
+directly, with the last four arguments above.
+
+
+WAITING FOR COMPUTATIONS TO FINISH
+
+The master thread may sometimes need to wait until one or more
+computations have finished - for example, because it wants to look at
+the outputs of such computations, or because it wants to modify a
+variable that is an input to an ongoing computation.  Several wait
+procedures are provided for these purposes.  When one is called, the
+master thread may perform one or more tasks itself, that need to be
+done before the procedure can return.  The future allocation of tasks
+to helpers threads, as they become available, may also be affected,
+with the aim of allowing the master thread to continue as soon as
+possible.
+
+The helpers_wait_until_not_in_use procedure takes one helpers_var_ptr
+argument, and waits until it is not in use - that is, until there are
+no uncompleted tasks for which that variable is one of the input
+variables but not the output variable.
+
+The helpers_wait_until_not_being_computed procedure takes one
+helpers_var_ptr argument, and waits until there are no uncompleted
+tasks whose output variable (if not null) matches this argument.  
+
+When the master needs to wait until two variables are not being
+computed, it should call the helpers_wait_until_not_being_computed2
+procedure, which takes two helpers_var_ptr arguments (either of which
+may be null, in which case only one (or no) variable is waited for).
+This is more than just a convenience, since it allows the helpers
+module to choose tasks to run so that computation of both variables
+will be completed as soon as possible (whereas task scheduling might
+be non-optimal if first one and then the other variable were waited
+for by calling helpers_wait_until_not_being_computed twice).  Note
+that helpers_wait_until_not_being_computed is actually a macro that
+calls helpers_wait_until_not_being_computed2 with a null second
+argument.
+
+The helpers_wait_for_all_master_only procedure takes no arguments, and
+waits until all scheduled master-only tasks have completed.  Note that
+master-only tasks can otherwise remain undone indefinitely, if the
+master thread has other things to do, and it does not explicitly or
+implicitly wait for the variables used or computed by the master-only
+tasks.
+
+The helpers_wait_for_all procedure takes no arguments, and waits until
+all scheduled tasks have completed.  Calling this procedure may be
+advisable before terminating the program, if some pending tasks may
+have desired side effects (such as writing data to files).
+
+Programs may sometimes wish to quickly check (in the master thread)
+whether a variable is currently in use or is being computed, without
+the overhead of a procedure call.  This can be arranged by providing
+"in-use" and "being-computed" markers associated with each variable,
+in whatever manner is convenient for the application.  For example,
+such flags might be stored in a header present at the start of every
+variable.
+
+If such markers are used, they should be initialized to "not in use"
+and "not being computed", and macros for modifying these markers
+should be defined in helpers-app.h.  These macros, which take a single
+helpers_var_ptr argument, are as follows:
+
+  helpers_mark_in_use
+  helpers_mark_not_in_use
+  helpers_mark_being_computed
+  helpers_mark_not_being_computed
+
+Note that "not in use" means that the variable is not an input of any
+uncompleted task, unless it is also the output of that task.  It can
+therefore happen that a variable is simultaneously "being computed"
+and "not in use".
+
+When one of these macros is not defined in helpers-app.h, the
+corresponding marker will not be set or cleared, which is sensible
+only if this marker is not used.
+
+These macros will be invoked only in the master thread, when a task is
+scheduled by helpers_do_task, or when helpers_do_task or one of the
+other procedures notices that a task has completed.  Consequently, a
+variable may remain marked as in-use or being-computed when it no
+longer is, if the master thread has not yet noticed the change.  These
+markers should be examined only from the master thread, so that no
+synchronization will be required when accessing them.
+
+
+SETTING UP PIPELINED COMPUTATIONS
+
+If a task is scheduled by a call of helpers_do_task with the flags
+argument set to zero or to HELPERS_MASTER_ONLY or HELPERS_MASTER_NOW,
+it will not be started until all its inputs (including its output
+variable, which may be read as an input) have been computed - that is,
+until all previously-scheduled tasks that have one of these inputs as
+their output variable have finished.  However, task procedures may be
+written to make use of partially-computed inputs, and/or to make
+available partially-computed outputs.  Two or more task procedures of
+this sort can be linked in a "pipeline", in which the partial output
+of one task in the pipeline is utilized as an input by the next task
+in the pipeline without waiting for the entire output to be computed.
+It is also possible for a pipelined output variable to supply two or
+more tasks that have that variable as an input.
+
+For example, pipelining element-by-element vector operations is easy.
+If the first k elements of one or more input vectors are available,
+the first k elements of an output vector depending only on the
+corresponding elements of these inputs can be computed immediately.
+Of course, not all computations can be pipelined - sometimes, the
+entirety of an input must be known before any computation of the
+output can begin.
+
+A pipelined computation is set up by passing suitable flags arguments
+when tasks are scheduled with helpers_do_task.  Such flags arguments
+can be constructed by or'ing together constants from the list below
+(perhaps along with HELPERS_MASTER_ONLY or HELPERS_MASTER_NOW):
+
+  HELPERS_PIPE_OUT   Output to the output variable can be pipelined
+  HELPERS_PIPE_IN0   Input from the output variable can be pipelined
+  HELPERS_PIPE_IN1   The 1st input variable can be pipelined
+  HELPERS_PIPE_IN2   The 2nd input variable can be pipelined
+
+The following combinations are pre-defined:
+
+  HELPERS_PIPE_IN01 = HELPERS_PIPE_IN0 | HELPERS_PIPE_IN1
+  HELPERS_PIPE_IN02 = HELPERS_PIPE_IN0 | HELPERS_PIPE_IN2
+  HELPERS_PIPE_IN12 = HELPERS_PIPE_IN1 | HELPERS_PIPE_IN2
+
+  HELPERS_PIPE_IN012 = HELPERS_PIPE_IN01 | HELPERS_PIPE_IN2
+
+  HELPERS_PIPE_IN0_OUT = HELPERS_PIPE_IN0 | HELPERS_PIPE_OUT
+  HELPERS_PIPE_IN1_OUT = HELPERS_PIPE_IN1 | HELPERS_PIPE_OUT
+  HELPERS_PIPE_IN2_OUT = HELPERS_PIPE_IN2 | HELPERS_PIPE_OUT
+
+  HELPERS_PIPE_IN01_OUT = HELPERS_PIPE_IN01 | HELPERS_PIPE_OUT
+  HELPERS_PIPE_IN02_OUT = HELPERS_PIPE_IN02 | HELPERS_PIPE_OUT
+  HELPERS_PIPE_IN12_OUT = HELPERS_PIPE_IN12 | HELPERS_PIPE_OUT
+
+  HELPERS_PIPE_IN012_OUT = HELPERS_PIPE_IN012 | HELPERS_PIPE_OUT
+
+Flags pertaining to variables that are null are ignored.
+
+Pipelining of an output to an input will be set up only if the
+HELPERS_PIPE_OUT flag is used when the task producing the output is
+scheduled, and the appropriate HELPERS_PIPE_INn flag is used when the
+task using this output is scheduled.  A scheduled task will be run
+only when every one of its inputs has either already been computed, or
+that input has been set up for pipelining, and the task producing it
+has started running.
+
+A flag indicating that an input variable is pipelined must be used
+only when the task procedure being scheduled has been written to
+properly handle partial input for that variable, as otherwise the
+results may be erroneous.  Furthermore, inefficiencies may result if a
+task is scheduled with pipelining for its output when its task
+procedure has not been written to produce partial output.  Doing so
+will not lead to erroneous results, but may, for example, lead to a
+helper thread running a task that looks for partial input from a task
+that does not produce partial output, in which case the helper thread
+will be doing no useful work for a period of time when it might
+instead have run some other task.
+
+Any number of tasks in a pipeline may be scheduled as master-only (by
+including HELPERS_MASTER_ONLY in its flags argument), but if a
+pipeline has more than one master-only task, it will of course not be
+possible for all tasks in the pipeline to run concurrently, as there
+is only one master thread.  
+
+Scheduling a master-now task with pipelined output makes no sense (but
+is allowed), since a task that would use the output cannot be
+scheduled until the master-now task has finished.  However, scheduling
+a master-now task with pipelined inputs may be useful.
+
+Pipelining can be disabled by calling helpers_no_pipelining with
+argument 1 (it can be re-enabled by calling helpers_no_pipelining with
+argument 0).  When pipelining is disabled, the HELPERS_PIPE_OUT flag
+will be disregarded when a task is scheduled.  (Existing tasks are
+not affected.)  Disabling pipelining slightly decreases overhead for
+tasks scheduled with HELPERS_PIPE_OUT, when no process is receiving
+the piped output, and may also be desirable when the number of helper
+threads may exceed the number of available processor cores (as could
+happen uncontrollably in a time-shared environment), since a wait for
+pipelined input uses a spin-loop that occupies a processor core.  When
+pipelining is disabled, the global variable helpers_are_not_pipelining
+will be set to 1 (versus 0 otherwise).  Pipelining is always disabled
+when there are no helper threads (and hence pipelining is impossible).
+
+
+WRITING PIPELINED TASK PROCEDURES
+
+A task procedure that produces pipelined output indicates how much
+output it has produced so far by calling the helpers_amount_out
+procedure, passing it an argument of type helpers_size_t (which should
+be defined in helpers-app.h as an unsigned integer type of some size).
+Successive calls of helpers_amount_out during a single computation
+should pass non-decreasing values for this argument.  The computation
+begins in a state as if helpers_amount_out had been called with 0 as
+its argument.  
+
+The meaning of the argument to helpers_amount_out is determined by
+conventions of the application program, but for element-by-element
+vector computations, it is recommended that the of argument passed to
+helpers_amount_out be the number of vector elements that have so far
+been computed by the task procedure (which may be less than the number
+of bytes in the vector, if an element is more than one byte in size).
+However, unless the computation of a single element is exceptionally
+time-consuming, it is recommended that helpers_amount_out not be
+called after every element element has been computed, but only after a
+multiple of some power of two elements has been computed.  This will
+reduce communications overhead, and avoid a possible degradation in
+performance due to cache invalidation when one thread is fetching from
+near where another thread is storing.  This convention is supported by
+macros discussed below, which will often be used rather than the
+lower-level procedures discussed next.
+
+A task procedure that handles pipelined input can determine how much
+input is available by calling the helpers_avail0, helpers_avail1, or
+helpers_avail2 function, for input from the output variable, 1st input
+variable, and 2nd input variable, respectively.  These functions will
+return the argument in the most recent call of helpers_amount_out by
+the task procedure outputting to that variable (zero if never called),
+or they return the argument passed to them (of type helpers_size_t) if
+that task has finished, or there never was a task computing the input.
+For element-by-element vector computations, following the recommended
+conventions, the argument passed to helpers_availN should be the
+number of elements in the vector.
+
+A task scheduled with HELPERS_PIPE_IN0 must not finish before the task
+(if any) supplying the input for its output variable has finished
+computing that variable.  Similarly if the output variable for a task
+is the same as one of its other input variables, which was scheduled
+with pipelined input, the task must not finish before the task (if
+any) supplying that input.  For example, a task that computes the
+result of changing all leading zeros in an input vector to ones
+(leaving later elements unchanged) is not allowed to finish when it
+finds a non-zero element, without waiting until the rest of the input
+is computed, since if it did so, a task that receives its output might
+incorrectly believe that the computation was finished, when elements
+after the first non-zero element are still being computed.
+
+After a task procedure has called helpers_amount_out, it should not
+change the part of the output variable that it has indicated has been
+computed.  It also should not rely on that part of the output variable
+remaining unchanged, since the task receiving the pipelined input
+might modify it.  Note that if an input variable might be the same as
+the output variable, then the corresponding part of that input might
+also change after helpers_amount_out is called.
+
+In a task procedure called directly from the master thread (not using
+helpers_do_task), helpers_avail0, helpers_avail1, and helpers_avail2
+always return their argument, and calls of helpers_amount_out do
+nothing.  A task procedure designed for pipelining can therefore be
+used to do a computation directly in the master, albeit with some
+overhead that is unnecessary in that context.
+
+If a variable was not flagged for pipelined input when the task
+procedure was scheduled, calling helpers_avail0, helpers_avail1, or
+helpers_avail2 is not necessary, since they will always return their
+argument.  Assuming that an input is not pipelined therefore allows
+overhead in the task procedure to be reduced - but of course, a task
+procedure written with this assumption must never be scheduled with
+that input flagged for pipelining.
+
+
+PIPELINING FOR ELEMENT-BY-ELEMENT VECTOR COMPUTATIONS
+
+The conventions for pipelined element-by-element vector computations
+are implemented in a set of macros that use the lower-level procedures
+described above.
+
+A task procedure producing pipelined output using these macros should
+start (after its declarations) with a macro call of this form:
+
+  HELPERS_SETUP_OUT (pow2)
+
+This specifies that output will be passed on to the next task in the
+pipeline in chunks of size two to the power pow2.  So, if pow2 is 0,
+every element will be passed on as soon as it is computed.  For
+reasons discussed above, a value of at least 4 is recommended for
+pow2, unless computing a single element is very time consuming.  This
+macro declares a local variable helpers_mask, which it sets to
+(((helpers_size_t)1<<pow2)-1).  This variable is used by the macros
+described below; it should not be used directly by an application
+program.
+
+The task procedure producing the output should keep track of how many
+vector elements have been computed in some local variable (which
+should generally be of type helpers_size_t.  When another element has
+been computed, a macro call of the following form should be made:
+
+  HELPERS_NEXT_OUT (i)
+
+Here, i is the variable that holds the number of elements computed so
+far.  This macro call firsts increment i, and then if (i&helpers_mask)
+is zero, calls helpers_amount_out with argument i.  Output of a block
+of k elements can be signalled with the following macro call:
+
+  HELPERS_BLOCK_OUT (i, k)
+
+This will add k to i, and then call helpers_amount_out with argument i
+if the addition of k moves i past the end of the current chunk of
+output.  This is similar to k calls of HELPERS_NEXT_OUT(i), but is
+more efficient.
+
+A task procedure that receives pipelined input can use a macro call of
+the following form to update the number of elements available from
+that input:
+
+  HELPERS_WAIT_INn (avail, prev, length)
+
+Here n is 0, 1, or 2, for input from the "out", "in1", and "in2"
+arguments of the task procedure.  The "length" argument must be the
+number of elements in the vector.  The "avail" argument must be a
+local variable of type helpers_size_t, which this macro sets to the
+number of elements of the input that are now guaranteed to have been
+computed, after waiting until more than "prev" elements have been
+computed.  The "prev" argument is evaluated exactly once, before avail
+is changed; it must be less than "length".
+
+As an example, here is a pipelined task procedure that computes its
+output vector by multiplying corresponding elements of its two input
+vectors, with the size of all vectors being given by the helpers_op_t
+argument of the task procedure:
+
+  void task_proc (helpers_op_t length, helpers_var_ptr out, 
+                  helpers_var_ptr in1, helpers_var_ptr in2)
+  { helpers_size_t i = 0;
+    HELPERS_SETUP_OUT (5);
+    while (i<length)
+    { helpers_size_t a1, a2;
+      HELPERS_WAIT_IN1 (a1, i, length);
+      HELPERS_WAIT_IN2 (a2, i, length);
+      do
+      { out[i] = in1[i] * in2[i];
+        HELPERS_NEXT_OUT (i);
+      } while (i<a1 && i<a2);
+    }
+  }
+
+In this example, helpers_var_ptr could be defined to be any of various
+types, such as pointer to int, pointer to float, or pointer to double.
+
+Here is an alternative way of writing this procedure, which will
+sometimes call helpers_amount_out before the version above, and which
+may be easier for some compilers to optimize:
+
+  void task_proc (helpers_op_t length, helpers_var_ptr out, 
+                  helpers_var_ptr in1, helpers_var_ptr in2)
+  { helpers_size_t i = 0;
+    HELPERS_SETUP_OUT (5);
+    while (i<length)
+    { helpers_size_t a1, a2;
+      HELPERS_WAIT_IN1 (a1, i, length);
+      HELPERS_WAIT_IN2 (a2, i, length);
+      do
+      { helpers_size_t u = HELPERS_UP_TO2(i,a1,a2);
+        do
+        { out[i] = in1[i] * in2[i];
+          i += 1;
+        } while (i<=u)
+        helpers_amount_out(i);
+      } while (i<a1 && i<a2);
+    }
+  }
+
+The HELPERS_UP_TO2(i,a1,a2) macro returns the minimum of a1-1, a2-1,
+and the smallest value greater than or equal to i that is one less
+than a multiple of the chunk size established with HELPERS_SETUP_OUT.
+The macro HELPERS_UP_TO(i,a) can be used instead when only one input
+is being used.
+
+
+ACCESSING PIPELINED DATA OUTSIDE A TASK PROCEDURE
+
+The master may sometimes wish to access data that may currently be
+being pipelined into a variable.  This can be done by scheduling a
+master-now procedure with that variable as an input, but this has
+overhead that may be better avoided if the data is to be used in a
+small computation.  
+
+As an alternative, the master may start by calling the procedure
+helpers_start_computing_var, passing it the variable from which data
+is needed.  This will arrange for computation of this variable to have
+priority when helpers look for tasks to do.  It may also result in the
+master itself doing the task that is computing this variable, or doing
+tasks that need to be started before that task can start.  When
+helpers_start_computing_var returns, the task that computes the
+variable passed will have started (and it might also have completed).
+If this task was schedule with HELPERS_PIPE_OUT, and was written to do
+output pipelining, the master can potentially access part of the
+variable before its computation is complete.
+
+The master may see how much of this variable has been computed by
+calling the function helpers_avail_var, which takes a helpers_var_ptr
+as its first argument, and returns the most recent value passed to
+helpers_amount_out by the task computing that variable, or the second
+argument of helpers_var_ptr if that task task has finished.  This is
+analogous to calling helpers_availN in a task that has this variable
+as its N'th input.
+
+When the variable is a vector being computed element-by-element using
+the conventions described above, the master thread can use the
+following macro (after calling helpers_start_computing_var) to see how
+much of a variable has been computed:
+
+  HELPERS_WAIT_IN_VAR (var, avail, prev, length)
+
+The first argument is of type helpers_var_ptr; the remaining arguments
+are analogous to those of HELPERS_WAIT_INn, as described above.
+
+
+PARALLELIZING A SINGLE COMPUTATION
+
+The facilities described above allow for concurrent execution of
+independent computations, and for concurrent execution of computations
+in which one computation pipelines data to another.  It is also
+possible, by applying the pipelining facilities, to perform a single
+element-by-element vector computation using several tasks, which
+operate on different parts of the vector.
+
+To see one way that this can be done, consider a function F(v) that
+takes a vector argument and returns the vector obtained by applying
+the scalar function f to each element of v.  This function can be
+computed as Feven(Fodd(v),v).  The function Fodd(v) computes a vector
+the same size as v whose odd elements (with indexes starting at zero)
+are computed by applying f to the corresponding element of v and whose
+even elements have arbitrary values.  The function Feven(u,v) computes
+a vector the same size as u and v whose even elements are computed by
+applying f to the corresponding element of v and whose odd elements
+are equal to the corresponding element of u.  When expressed this way,
+computation of F(v) can be done by two tasks, one computing Fodd from
+v, the other computing Feven from the result of Fodd and v.  These
+tasks can execute concurrently, with the result of the computation of
+Fodd being pipelined as an input to the computation of Feven.
+
+In practice, in order to improve cache locality and reduce overhead,
+it will usually be better to divide a vector into "chunks" of more
+than one element, and then let the even-numbered and odd-numbered
+chunks be computed by the two tasks.  Using more than two tasks is
+possible by assigning chunks to a sequence of pipelined tasks cyclicly
+(with the last task in the pipeline computing the first chunk).  For
+appropriate computations, the tasks in the pipeline can be written to
+allow pipelining of the input vector (as well as of the output of the
+previous task in the pipeline), and the last task in the pipeline can
+written to produce pipelined output of the final result.
+
+For more details on how to do this, see the "parex" example program,
+and its documentation in examples-doc.  It is possible that a future
+version of the helpers facility will provide a more convenient and
+efficient way of parallelizing a single computation.
+
+
+INFORMATION FUNCTIONS AND VARIABLES
+
+Information about the configuration or state is available to the
+master thread via the variables and function described here.
+
+As mentioned earlier, the global variable helpers_num is set to the
+number of helper threads.  Knowing this might sometimes be useful in
+deciding on a computational strategy.
+
+The global variable helpers_tasks is set to the number of currently
+outstanding tasks, which have been scheduled by the master, but which
+the master has not noticed the completion of.  If this is zero, the
+master can be sure that there are no variables that are in use or
+being computed, without checking them individually.
+
+To help the master decide how many tasks should be created to do a
+computation in parallel, the helpers_idle function is provided, which
+takes no arguments, and returns an estimate of how many helper threads
+are currently idle.  This estimate is not guaranteed to be correct
+(but will be in the range from 0 the helpers_num), and of course may
+soon be out-of-date, so it should be used only as a rough guide.
+
+
+OBTAINING A LIST OF VARIABLES
+
+If storage for variables is managed using a garbage collection scheme,
+it may be necessary for the garbage collector to find out what
+variables are currently referenced by scheduled tasks, if it is
+possible that some such variables are no longer referenced elsewhere.
+
+The helpers_var_list function is provided for this purpose.  It takes
+no arguments, and returns a pointer to an array of pointers to all
+input and output variables for tasks that have been scheduled with
+helpers_do_task, but which the master thread has not yet noticed have
+completed.  (The helpers_var_list function will start by looking for
+completed tasks, but of course a task might complete just after this,
+before the list is produced.)  
+
+The array returned by helpers_var_list has elements of type
+helpers_var_ptr and is terminated by a null pointer.  The order of
+variables within this array is arbitrary.  A variable may appear more
+than once in the array.
+
+
+TRACE AND STATISTICS OUTPUT
+
+If the helpers_trace procedure is called with argument 1, a trace of
+tasks scheduled, of tasks completed, and of calls to wait procedures
+will be written to standard output.  Tracing may later be disabled by
+calling the helpers_trace procedure with argument 0.  Tracing is
+disabled initially, but may be enabled before helpers_startup is
+called.
+
+All trace output is produced in the master thread, by calling the
+helpers_printf procedure, which may be defined (as a macro with no
+arguments) in helpers-app.h.  If no such definition is provided,
+helpers_printf defaults to the standard C printf procedure.
+
+Lines written as trace output will all start with "HELPERS:".  The
+trace output will be more useful if names for variables and tasks are
+available.  Macros called helpers_var_name and helpers_task_name may
+be defined in helpers-app.h.  These macros take arguments of type
+helpers_var_ptr or helpers_task_proc, and return a pointer to a
+null-terminated name.  If either of these macros is not defined in
+helpers-app.h, it will default to a macro that always returns "?".
+These macros will never be called with a null argument.
+
+Calling helpers_stats (with no arguments) from the master thread
+prints a report (using helpers_printf) containing statistics such as
+the number of tasks done by the master and each helper, collected from
+the start of the program.
+
+By changing the definitions for ENABLE_TRACE and ENABLE_STATS at the
+beginning of the helpers.c source file (or defining them with some
+compiler option), the trace and statistics facilities can be disabled
+(so they produce no output regardless of calls to helpers_trace and
+helpers_stats), with a slight gain in speed of helpers operations.
+ENABLE_TRACE can also be set so additional trace output is produced,
+whose meaning can be gathered from the source code, and which is
+intended mostly for debugging and tuning the helpers implementation,
+
+
+DISABLING THE HELPERS FACILITY
+
+If HELPERS_DISABLED is defined prior to helpers.h being included
+(perhaps in helpers-app.h, or perhaps using a compiler option), the
+helpers_startup procedure is replaced by a macro that simply calls
+helpers_master, and the helpers_do_task procedure is replaced by a
+macro that simply calls the procedure given by the second argument,
+passing the following four arguments.  No attempt is made to perform
+computations in parallel.
+
+Other procedures and macros are also replaced by suitable stubs: the
+helpers_avail0, helpers_avail1, helpers_avail2, and helpers_avail_var
+procedures are replaced with macros that always return their last
+argument; helpers_var_list is replaced by a macro that returns a
+pointer to a null list; the HELPERS_SETUP_OUT macro does nothing;
+HELPERS_NEXT_OUT(i) adds 1 to i; HELPERS_BLOCK_OUT(i,k) adds k to i;
+HELPERS_UP_TO(i,a) returns a-1; HELPERS_UP_TO2(i,a1,a2) returns the
+minimum of a1-1 and a2-1; and HELPERS_WAIT_IN_VAR(v,a,i,s) and
+HELPERS_WAIT_INn(a,i,s) and set a to s. The remaining helpers
+procedures, such as helpers_amount_out, are replaced with macros that
+do nothing.  The helpers_num and helpers_tasks variables are made
+preprocessor symbols defined as 0.
+
+If HELPERS_DISABLED is defined, the helpers.c module produces no code;
+it may be compiled and linked with the program or not, as convenient.
+Consequently, the C implementation needn't support OpenMP.
+
+No statistics or trace output is produced when HELPERS_DISABLED is
+defined.
+
+All computations are also done in one thread when HELPERS_DISABLED is
+not defined, but helpers_startup is passed zero as the number of
+helpers, though there will be slightly more overhead than when
+HELPERS_DISABLED is defined.  Statistics and trace output can be
+produced in this context.
+
+The helpers facility can also be disabled temporarily by calling (from
+the master thread) the helpers_disable procedure, with argument 1, and
+may later be re-enabled by calling helpers_disable with argument 0.
+When helpers are disabled, any current tasks are first allowed to
+complete, all new tasks are then treated as if they were scheduled
+with the HELPERS_MASTER_NOW flag.  The helper threads continue to
+exist while their use is disabled, but will not occupy processor
+resources (provided the OpenMP implementation that is used suspends
+threads that are waiting on a lock.)
+
+Note that even when helpers are not disabled, helper threads typically
+do not occupy processor resources when they have nothing to do for an
+extended period of time (such as when waiting for user input).  So
+calling helpers_disable makes sense only when some circumstance (eg,
+high time-sharing system load) makes use of helper threads undesirable
+during a computation that might have used them.
+
+The global variable helpers_are_disabled will be set to 1 (versus 0)
+when helpers are disabled, or when the number of helper threads is
+zero.
+
+
+SUMMARY OF THE APPLICATION PROGRAM INTERFACE TO THE HELPERS FACILITY
+
+Below, are all procedures and macros provided by the helpers facility,
+along with the context in which they may be called.
+
+  contexts:
+
+      init     the application program before calling helpers_startup
+      master   the master thread, outside of a task procedure
+      task     a task procedure scheduled by helpers_do_task, or
+               called directly from the master thread
+
+  -------------------------------------------------------------------
+  procedure         returns        arguments             context
+  -------------------------------------------------------------------
+
+  helpers_startup   never          void                  init
+
+  helpers_do_task   void           int,                  master
+                                   helpers_task_proc,
+                                   helpers_op_t,
+                                   helpers_var_ptr,
+                                   helpers_var_ptr,
+                                   helpers_var_ptr
+
+  helpers_start_computing_var
+                    void           helpers_var_ptr       master
+
+  helpers_wait_until_not_in_use
+                    void           helpers_var_ptr       master
+
+  helpers_wait_until_not_being_computed (actually a macro)
+                    void           helpers_var_ptr       master
+
+  helpers_wait_until_not_being_computed2
+                    void           helpers_var_ptr,      master
+                                   helpers_var_ptr
+
+  helpers_wait_for_all_master_only
+                    void           void                  master
+
+  helpers_wait_for_all
+                    void           void                  master
+
+  helpers_amount_out  
+                    void           helpers_size_t        task
+
+  helpers_avail0    helpers_size_t helpers_size_t        task
+  helpers_avail1    helpers_size_t helpers_size_t        task
+  helpers_avail2    helpers_size_t helpers_size_t        task
+
+  helpers_avail_var helpers_size_t helpers_var_ptr,      master
+                                   helpers_size_t
+
+  helpers_idle      int            void                  master
+
+  helpers_var_list  helpers_var_ptr *
+                                   void                  master or init
+
+  helpers_stats     void           void                  master
+  helpers_trace     void           int                   master or init
+  helpers_disable   void           int                   master or init
+  helpers_no_pipelining                                  master or init
+                    void           int
+
+An application program using the helpers facility must define the
+following types in helpers-app.h:
+
+  helpers_var_ptr   Type of a pointer to an application program variable
+  helpers_op_t      Type of a task procedure's unsigned integer operand
+  helpers_size_t    Unsigned integer type for the length of a vector
+
+The application program must also define the following procedure:
+
+  -----------------------------------------------------------
+  procedure                         returns   arguments
+  -----------------------------------------------------------
+
+  helpers_master                    void      void
+
+The following macros may be defined in helpers-app.h, but will default
+to stubs if they are not defined there:
+
+  -----------------------------------------------------------
+  macro                             returns   arguments
+  -----------------------------------------------------------
+
+  helpers_mark_in_use               void      helpers_var_ptr
+  helpers_mark_not_in_use           void      helpers_var_ptr
+  helpers_mark_being_computed       void      helpers_var_ptr
+  helpers_mark_not_being_computed   void      helpers_var_ptr
+
+  helpers_var_name                  char *    helpers_var_ptr
+  helpers_task_name                 char *    helpers_var_ptr
+
+  helpers_printf                    symbol - no arguments
+
+The following global variables (of type int) are available in the
+master:
+
+  helpers_num                Number of helper threads
+  helpers_tasks              Number of tasks currently outstanding
+  helpers_are_not_pipelining Set to 1 if pipelining is disabled, 0 otherwise
+  helpers_are_disabled       Set to 1 if no enabled helpers, 0 otherwise
+
+The following constants are defined in helpers.h:
+
+  HELPERS_MAX                Maximum number of helper threads
+
+  HELPERS_MASTER_ONLY        Constants that may be or'd together to
+  HELPERS_MASTER_NOW           create a flags argument to be passed
+  HELPERS_PIPE_OUT             to helpers_do_task.
+  HELPERS_PIPE_IN0
+  HELPERS_PIPE_IN1
+  HELPERS_PIPE_IN2
+  HELPERS_PIPE_IN01
+  HELPERS_PIPE_IN02
+  HELPERS_PIPE_IN12
+  HELPERS_PIPE_IN012
+  HELPERS_PIPE_IN0_OUT
+  HELPERS_PIPE_IN1_OUT
+  HELPERS_PIPE_IN2_OUT
+  HELPERS_PIPE_IN01_OUT
+  HELPERS_PIPE_IN02_OUT
+  HELPERS_PIPE_IN12_OUT
+  HELPERS_PIPE_IN012_OUT
+
+The following macro is provided as a convenience for conditionally
+calling a procedure via helpers_do_task or calling it directly:
+
+  HELPERS_NOW_OR_LATER (cond1, cond2, flags, proc, op, out, in1, in2)
+
+The following macros for element-by-element pipelined computation on
+vectors are defined:
+
+  HELPERS_SETUP_OUT (pow2)
+  HELPERS_NEXT_OUT (i)
+  HELPERS_BLOCK_OUT (i, k)
+
+  HELPERS_WAIT_IN0 (avail, prev, length)
+  HELPERS_WAIT_IN1 (avail, prev, length)
+  HELPERS_WAIT_IN2 (avail, prev, length)
+
+  HELPERS_WAIT_IN_VAR (var, avail, prev, length)

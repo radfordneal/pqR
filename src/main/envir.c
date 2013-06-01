@@ -1787,12 +1787,14 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 /*----------------------------------------------------------------------
 
  do_get_rm - get value of variable and then remove the variable, decrementing
-             NAMEDCNT when possible. 
+             NAMEDCNT when possible.  If return of pending value is allowed,
+             will pass on pending value in the variable without waiting for it.
 */
 
-SEXP attribute_hidden do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP name, value;
+    int pending_ok;
 
     checkArity(op, args);
     check1arg(args, call, "x");
@@ -1806,17 +1808,25 @@ SEXP attribute_hidden do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho)
     if (value == NULL)
         error (_("object '%s' not found"), CHAR(PRINTNAME(name)));
 
+    pending_ok = variant & VARIANT_PENDING_OK;
+
     if (TYPEOF(value) == PROMSXP) {
         PROTECT(value);
-        SEXP prvalue = forcePromise(value);
+        SEXP prvalue = pending_ok ? forcePromisePendingOK(value) : forcePromise(value);
         DEC_NAMEDCNT_AND_PRVALUE(value);
         UNPROTECT(1);
-        return prvalue;
+        value = prvalue;
     }
-    else {
+    else
         DEC_NAMEDCNT(value);
-        return value;
-    }
+
+    if (VARIANT_KIND(variant) == VARIANT_NULL)
+        return R_NilValue;
+
+    if (!pending_ok)
+        WAIT_UNTIL_COMPUTED(value);
+
+    return value;
 }
 
 /*----------------------------------------------------------------------

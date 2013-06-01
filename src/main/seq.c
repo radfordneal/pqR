@@ -100,7 +100,7 @@ static SEXP make_seq (int from, int len, int variant)
     SEXP ans;
     int *p;
 
-    if (variant == VARIANT_SEQ) {
+    if (VARIANT_KIND(variant) == VARIANT_SEQ) {
         ans = allocVector (INTSXP, 2);
         p = INTEGER(ans);
         p[0] = from;
@@ -689,7 +689,7 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho,
                                    int variant)
 {
     static SEXP length_op = NULL;
-    SEXP ans;
+    SEXP arg, ans;
     int len;
 
     /* Store the .Primitive for 'length' for DispatchOrEval to use. */
@@ -705,16 +705,18 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho,
 
     checkArity(op, args);
     check1arg(args, call, "along.with");
+    arg = CAR(args);
 
-    /* Try to dispatch to S3 or S4 metods for 'length'.  For cases
+    /* Try to dispatch to S3 or S4 methods for 'length'.  For cases
        where no methods are defined this is more efficient than an
        unconditional callback to R */
-    if (isObject(CAR(args)) &&
-	DispatchOrEval(call, length_op, "length", args, rho, &ans, 0, 1)) {
+
+    if (isObject(arg)
+	  && DispatchOrEval(call, length_op, "length", args, rho, &ans, 0, 1)) {
 	len = asInteger(ans);
     }
     else
-	len = length(CAR(args));
+	len = length(arg);
 
     return make_seq (1, len, variant);
 }

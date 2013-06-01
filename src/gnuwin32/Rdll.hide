@@ -1,4 +1,4 @@
- BINDING_IS_LOCKED
+BINDING_IS_LOCKED
  BM_norm_keep
  BZ2_blockSort
  BZ2_bsInitWrite
@@ -347,9 +347,11 @@
  Rf_dpptr
  Rf_evalList
  Rf_evalListKeepMissing
+ Rf_evalListPendingOK
  Rf_findVar1
  Rf_findcontext
  Rf_forcePromise
+ Rf_forcePromisePendingOK
  Rf_framedepth
  Rf_gamma_cody
  Rf_gammalims
@@ -439,6 +441,7 @@
  UTF8in
  UTF8out
  UseInternet2
+ Rf_wait_until_arguments_computed
  WinCheckUTF8
  WinUTF8out
  WrongArgCount

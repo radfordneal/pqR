@@ -202,6 +202,18 @@ AC_SUBST(config_opts)
 
 ### ** Optional features.
 
+## Allow the user to specify support for helper threads.
+AC_ARG_ENABLE([helper_threads],
+[AS_HELP_STRING([--enable-helper-threads],[support use of helper threads @<:@yes@:>@])],
+[if test "${enableval}" = no; then
+  want_helper_threads=no
+elif test "${enableval}" = yes; then
+  want_helper_threads=yes
+else
+  want_helper_threads=yes
+fi],
+[want_helper_threads=yes])
+
 ## Allow the user to specify support for R profiling.
 AC_ARG_ENABLE([R-profiling],
 [AS_HELP_STRING([--enable-R-profiling],[attempt to compile support for Rprof() @<:@yes@:>@])],
@@ -2174,6 +2186,11 @@ R_SYS_POSIX_LEAPSECONDS
 
 ## stat times
 gl_STAT_TIME
+
+## helper threads.
+if test "${want_helper_threads}" = yes; then
+  AC_DEFINE(R_HELPER_THREADS, 1, [Define this to enable helper threads.])
+fi
  
 ## R profiling.
 if test "${want_R_profiling}" = yes; then
@@ -2564,6 +2581,7 @@ AC_CONFIG_FILES(
   src/extra/xz/Makefile
   src/extra/zlib/Makefile
   src/extra/matprod/Makefile
+  src/extra/helpers/Makefile
   src/include/Makefile
   src/include/Rmath.h0
   src/include/R_ext/Makefile
@@ -2707,6 +2725,9 @@ if test "${r_cv_cairo_works}" = yes; then
   R_SH_VAR_ADD(r_capabilities, [cairo], [, ])
 fi
 r_options=
+if test "${want_helper_threads}" = yes; then
+  R_SH_VAR_ADD(r_options, [helper threads], [, ])
+fi
 if test "${want_R_framework}" = yes; then
   R_SH_VAR_ADD(r_options, [framework], [, ])
 elif test "${want_R_shlib}" = yes; then
