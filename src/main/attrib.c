@@ -91,22 +91,36 @@ static SEXP stripAttrib(SEXP tag, SEXP lst)
     return lst;
 }
 
-/* NOTE: For environments serialize.c calls this function to find if
-   there is a class attribute in order to reconstruct the object bit
-   if needed.  This means the function cannot use OBJECT(vec) == 0 to
-   conclude that the class attribute is R_NilValue.  If you want to
-   rewrite this function to use such a pre-test, be sure to adjust
-   serialize.c accordingly.  LT */
-SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
+/* The 00 version of getAttrib can be called when it is known that "name"
+   is a symbol (not a string) and is not one that is handled specially. */
+
+SEXP attribute_hidden getAttrib00(SEXP vec, SEXP name)
+{
+    SEXP s;
+    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
+	if (TAG(s) == name) {
+	    SET_NAMED(CAR(s), 2);
+	    return CAR(s);
+	}
+    }
+    return R_NilValue;
+}
+
+/* The 0 version of getAttrib can be called when it is known that "name'
+   is a symbol (not a string) and is not R_RowNamesSymbol (or the special
+   processing for R_RowNamesSymbol is not desired).  (Currently static,
+   so not callable outside this module.) */
+
+static SEXP getAttrib0(SEXP vec, SEXP name)
 {
     SEXP s;
     int len, i, any;
 
     if (name == R_NamesSymbol) {
 	if(isVector(vec) || isList(vec) || isLanguage(vec)) {
-	    s = getAttrib(vec, R_DimSymbol);
-	    if(TYPEOF(s) == INTSXP && length(s) == 1) {
-		s = getAttrib(vec, R_DimNamesSymbol);
+	    s = getAttrib00(vec, R_DimSymbol);
+	    if(TYPEOF(s) == INTSXP && LENGTH(s) == 1) {
+		s = getAttrib0(vec, R_DimNamesSymbol);
 		if(!isNull(s)) {
 		    SET_NAMED(VECTOR_ELT(s, 0), 2);
 		    return VECTOR_ELT(s, 0);
@@ -137,27 +151,37 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 	    return R_NilValue;
 	}
     }
+
+    s = getAttrib00(vec,name);
+
     /* This is where the old/new list adjustment happens. */
-    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s))
-	if (TAG(s) == name) {
-	    if (name == R_DimNamesSymbol && TYPEOF(CAR(s)) == LISTSXP) {
-		SEXP _new, old;
-		int i;
-		_new = allocVector(VECSXP, length(CAR(s)));
-		old = CAR(s);
-		i = 0;
-		while (old != R_NilValue) {
-		    SET_VECTOR_ELT(_new, i++, CAR(old));
-		    old = CDR(old);
-		}
-		SET_NAMED(_new, 2);
-		return _new;
-	    }
-	    SET_NAMED(CAR(s), 2);
-	    return CAR(s);
-	}
-    return R_NilValue;
+
+    if (name == R_DimNamesSymbol && TYPEOF(s) == LISTSXP) {
+        SEXP new, old;
+        int i;
+        new = allocVector(VECSXP, length(s));
+        old = s;
+        i = 0;
+        while (old != R_NilValue) {
+            SET_VECTOR_ELT(new, i++, CAR(old));
+            old = CDR(old);
+        }
+        SET_NAMED(new, 2);
+        return new;
+    }
+
+    return s;
 }
+
+/* General version of getAttrib.  Can be called when "name" may be a string.
+   Does all special handling.
+
+   NOTE: For environments serialize.c calls getAttrib to find if
+   there is a class attribute in order to reconstruct the object bit
+   if needed.  This means the function cannot use OBJECT(vec) == 0 to
+   conclude that the class attribute is R_NilValue.  If you want to
+   rewrite this function to use such a pre-test, be sure to adjust
+   serialize.c accordingly.  LT */
 
 SEXP getAttrib(SEXP vec, SEXP name)
 {
@@ -172,7 +196,7 @@ SEXP getAttrib(SEXP vec, SEXP name)
 
     /* special test for c(NA, n) rownames of data frames: */
     if (name == R_RowNamesSymbol) {
-	SEXP s = getAttrib0(vec, R_RowNamesSymbol);
+	SEXP s = getAttrib00(vec, R_RowNamesSymbol);
 	if(isInteger(s) && LENGTH(s) == 2 && INTEGER(s)[0] == NA_INTEGER) {
 	    int i, n = abs(INTEGER(s)[1]);
 	    PROTECT(s = allocVector(INTSXP, n));
@@ -540,11 +564,11 @@ SEXP attribute_hidden do_class(SEXP call, SEXP op, SEXP args, SEXP env)
     check1arg(args, call, "x");
     SEXP x = CAR(args), s3class;
     if(IS_S4_OBJECT(x)) {
-      if((s3class = S3Class(x)) != R_NilValue) {
-	return s3class;
-      }
-    } /* else */
-    return getAttrib(x, R_ClassSymbol);
+        if((s3class = S3Class(x)) != R_NilValue) {
+            return s3class;
+        }
+    } 
+    return getAttrib00(x, R_ClassSymbol);
 }
 
 /* character elements corresponding to the syntactic types in the
@@ -581,7 +605,7 @@ static SEXP lang2str(SEXP obj, SEXPTYPE t)
  */
 SEXP R_data_class(SEXP obj, Rboolean singleString)
 {
-    SEXP value, klass = getAttrib(obj, R_ClassSymbol);
+    SEXP value, klass = getAttrib00(obj, R_ClassSymbol);
     int n = length(klass);
     if(n == 1 || (n > 0 && !singleString))
 	return(klass);
@@ -670,7 +694,7 @@ static SEXP S4_extends(SEXP klass) {
 /* Version for S3-dispatch */
 SEXP attribute_hidden R_data_class2 (SEXP obj)
 {
-    SEXP klass = getAttrib(obj, R_ClassSymbol);
+    SEXP klass = getAttrib00(obj, R_ClassSymbol);
       if(length(klass) > 0) {
 	if(IS_S4_OBJECT(obj))
 	    return S4_extends(klass);
@@ -679,7 +703,7 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
       }
       else { /* length(klass) == 0 */
 	SEXPTYPE t;
-	SEXP value, class0 = R_NilValue, dim = getAttrib(obj, R_DimSymbol);
+	SEXP value, class0 = R_NilValue, dim = getAttrib0(obj, R_DimSymbol);
 	int n = length(dim);
 	if(n > 0) {
 	    if(n == 2)
@@ -1615,7 +1639,7 @@ SEXP attribute_hidden do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(object = eval(CAR(args), env));
     if(!s_dot_Data) init_slot_handling();
     if(nlist != s_dot_Data && !IS_S4_OBJECT(object)) {
-	klass = getAttrib(object, R_ClassSymbol);
+	klass = getAttrib00(object, R_ClassSymbol);
 	if(length(klass) == 0)
 	    error(_("trying to get slot \"%s\" from an object of a basic class (\"%s\") with no slots"),
 		  CHAR(PRINTNAME(nlist)),

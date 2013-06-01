@@ -566,7 +566,7 @@ void SrcrefPrompt(const char * prefix, SEXP srcref)
     /* If we have a valid srcref, use it */
     if (srcref && srcref != R_NilValue) {
         if (TYPEOF(srcref) == VECSXP) srcref = VECTOR_ELT(srcref, 0);
-	SEXP srcfile = getAttrib(srcref, R_SrcfileSymbol);
+	SEXP srcfile = getAttrib00(srcref, R_SrcfileSymbol);
 	if (TYPEOF(srcfile) == ENVSXP) {
 	    SEXP filename = findVar(install("filename"), srcfile);
 	    if (isString(filename) && length(filename)) {
@@ -707,7 +707,7 @@ static SEXP bytecodeExpr(SEXP);
    
 static R_INLINE SEXP getBlockSrcrefs(SEXP call)
 {
-    SEXP srcrefs = getAttrib(call, R_SrcrefSymbol);
+    SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
     if (TYPEOF(srcrefs) == VECSXP) return srcrefs;
     return R_NilValue;
 }
@@ -719,10 +719,10 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 {
     SEXP result;
     if (!isNull(srcrefs)
-        && length(srcrefs) > ind
+        && LENGTH(srcrefs) > ind
         && !isNull(result = VECTOR_ELT(srcrefs, ind))
 	&& TYPEOF(result) == INTSXP
-	&& length(result) >= 6)
+	&& LENGTH(result) >= 6)
 	return result;
     else
 	return R_NilValue;
@@ -2565,11 +2565,11 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     sprintf(generic, "%s", PRIMNAME(op) );
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
-      : getAttrib(CAR(args), R_ClassSymbol);
+      : getAttrib00(CAR(args), R_ClassSymbol);
 
     if( nargs == 2 )
 	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
-      : getAttrib(CADR(args), R_ClassSymbol);
+      : getAttrib00(CADR(args), R_ClassSymbol);
     else
 	rclass = R_NilValue;
 
@@ -2648,7 +2648,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     s = args;
     for (i = 0 ; i < nargs ; i++) {
 	t = IS_S4_OBJECT(CAR(s)) ? R_data_class2(CAR(s))
-	  : getAttrib(CAR(s), R_ClassSymbol);
+	  : getAttrib00(CAR(s), R_ClassSymbol);
 	set = 0;
 	if (isString(t)) {
 	    for (j = 0 ; j < length(t) ; j++) {
