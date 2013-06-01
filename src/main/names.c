@@ -100,7 +100,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 /* Language Related Constructs */
 
 /* Primitives */
-{"if",		do_if,		0,	200,	-1,	{PP_IF,	     PREC_FN,	  1}},
+{"if",		do_if,		0,	1200,	-1,	{PP_IF,	     PREC_FN,	  1}},
 {"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
 {"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
 {"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
