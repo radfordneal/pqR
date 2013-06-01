@@ -795,33 +795,36 @@ can work and reasonable information can be produced on error conditions
 (such as @emph{via} traceback), and otherwise (the @code{sys.@var{xxx}}
 functions).
 
-Execution contexts are a stack of C @code{structs}:
+Execution contexts are a stack of C @code{structs}, with fields ordered
+with some care to pack nicely, as follows:
 
 @example
 typedef struct RCNTXT @{
     struct RCNTXT *nextcontext; /* @r{The next context up the chain} */
-    int callflag;               /* @r{The context `type'} */
-    JMP_BUF cjmpbuf;            /* @r{C stack and register information} */
     int cstacktop;              /* @r{Top of the pointer protection stack} */
-    int evaldepth;              /* @r{Evaluation depth at inception} */
-    SEXP promargs;              /* @r{Promises supplied to closure} */
+    int evaldepth;              /* @r{evaluation depth at inception} */
     SEXP callfun;               /* @r{The closure called} */
-    SEXP sysparent;             /* @r{Environment the closure was called from} */
+    void *vmax;                 /* @r{top of R_alloc stack} */
+    int intsusp;                /* @r{interrupts are suspended} */
+    int callflag;               /* @r{The context "type"} */
+    SEXP handlerstack;          /* @r{condition handler stack} */
+    SEXP restartstack;          /* @r{stack of available restarts} */
+    SEXP promargs;              /* @r{Promises supplied to closure} */
+    SEXP sysparent;             /* @r{environment the closure was called from} */
     SEXP call;                  /* @r{The call that effected this context} */
     SEXP cloenv;                /* @r{The environment} */
-    SEXP conexit;               /* @r{Interpreted @code{on.exit} code} */
-    void (*cend)(void *);       /* @r{C @code{on.exit} thunk} */
-    void *cenddata;             /* @r{Data for C @code{on.exit} thunk} */
-    char *vmax;                 /* @r{Top of the @code{R_alloc} stack} */
-    int intsusp;                /* @r{Interrupts are suspended} */
-    SEXP handlerstack;          /* @r{Condition handler stack} */
-    SEXP restartstack;          /* @r{Stack of available restarts} */
-    struct RPRSTACK *prstack;   /* @r{Stack of pending promises} */
+    SEXP conexit;               /* @r{Interpreted "on.exit" code} */
+    void (*cend)(void *);       /* @r{C "on.exit" thunk} */
+    struct RPRSTACK *prstack;   /* @r{stack of pending promises} */
+    SEXP srcref;                /* @r{The source line in effect} */
+    SEXP *nodestack;
+    void *cenddata;             /* @r{data for C "on.exit" thunk} */
+    JMP_BUF cjmpbuf;            /* @r{C stack and register information} */
 @} RCNTXT, *context;
 @end example
 
 @noindent
-plus additional fields for the byte-code compiler.  The `types'
+plus an additional field for the byte-code compiler.  The `types'
 are from
 
 @example
