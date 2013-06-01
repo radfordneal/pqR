@@ -152,14 +152,14 @@ static int shash(SEXP x, int indx, HashData *d)
 {
     unsigned int k;
     const char *p;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     if(!d->useUTF8 && d->useCache) return cshash(x, indx, d);
     /* Not having d->useCache really should not happen anymore. */
     p = translateCharUTF8(STRING_ELT(x, indx));
     k = 0;
     while (*p++)
 	    k = 11 * k + *p; /* was 8 but 11 isn't a power of 2 */
-    vmaxset(vmax); /* discard any memory used by translateChar */
+    VMAXSET(vmax); /* discard any memory used by translateChar */
     return scatter(k, d);
 }
 
@@ -1043,7 +1043,7 @@ SEXP attribute_hidden do_charmatch(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = allocVector(INTSXP, n_input));
     ians = INTEGER(ans);
 
-    vmax = vmaxget();
+    vmax = VMAXGET();
     for(i = 0; i < n_input; i++) {
 	if(useBytes)
 	    ss = CHAR(STRING_ELT(input, i));
@@ -1081,7 +1081,7 @@ SEXP attribute_hidden do_charmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
 	ians[i] = (imatch == NA_INTEGER) ? no_match : imatch;
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }
     UNPROTECT(1);
     return ans;
@@ -1519,12 +1519,12 @@ SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("'sep' must be a character string"));
     csep = translateChar(STRING_ELT(sep, 0));
     PROTECT(ans = allocVector(STRSXP, n));
-    vmax = vmaxget();
+    vmax = VMAXGET();
     for(i = 0; i < n; i++) {
 	SET_STRING_ELT(ans, i, STRING_ELT(names, i));
 	len = (R_len_t) strlen(translateChar(STRING_ELT(names, i)));
 	if(len > maxlen) maxlen = len;
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }
     if(n > 1) {
 	/* +2 for terminator and rounding error */
@@ -1543,7 +1543,7 @@ SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(newx = allocVector(STRSXP, 1));
 	PROTECT(dup = duplicated2(names, &data));
 	PROTECT(data.HashTable);
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for(i = 1; i < n; i++) { /* first cannot be a duplicate */
 	    dp = INTEGER(dup)[i]; /* 1-based number of first occurrence */
 	    if(dp == 0) continue;
@@ -1557,7 +1557,7 @@ SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 	    SET_STRING_ELT(ans, i, STRING_ELT(newx, 0));
 	    /* insert it */ (void) isDuplicated(ans, i, &data);
 	    cnts[dp-1] = cnt+1; /* cache the first unused cnt value */
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
 	UNPROTECT(3);
     }

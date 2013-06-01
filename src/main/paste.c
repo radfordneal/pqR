@@ -153,7 +153,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
 	if (use_Bytes) use_UTF8 = FALSE;
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for (j = 0; j < nx; j++) {
 	    k = length(VECTOR_ELT(x, j));
 	    if (k > 0) {
@@ -163,7 +163,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 		    pwidth += strlen(translateCharUTF8(STRING_ELT(VECTOR_ELT(x, j), i % k)));
 		else
 		    pwidth += strlen(translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k)));
-		vmaxset(vmax);
+		VMAXSET(vmax);
 	    }
 	}
 	if(use_sep) {
@@ -174,7 +174,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    pwidth += (nx - 1) * (use_UTF8 ? u_sepw : sepw);
 	}
 	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for (j = 0; j < nx; j++) {
 	    k = length(VECTOR_ELT(x, j));
 	    if (k > 0) {
@@ -200,7 +200,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 		    buf += sepw;
 		}
 	    }
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	}
 	ienc = 0;
 	if(use_UTF8) ienc = CE_UTF8;
@@ -233,16 +233,16 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	anyKnown = ENC_KNOWN(sep) > 0;
 	allKnown = anyKnown || strIsASCII(csep);
 	pwidth = 0;
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for (i = 0; i < nx; i++)
 	    if(use_UTF8) {
 		pwidth += strlen(translateCharUTF8(STRING_ELT(ans, i)));
-		vmaxset(vmax);
+		VMAXSET(vmax);
 	    } else /* already translated */
 		pwidth += strlen(CHAR(STRING_ELT(ans, i)));
 	pwidth += (nx - 1) * sepw;
 	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for (i = 0; i < nx; i++) {
 	    if(i > 0) {
 		strcpy(buf, csep);
@@ -258,7 +258,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    allKnown = allKnown &&
 		(strIsASCII(s) || (ENC_KNOWN(STRING_ELT(ans, i)) > 0));
 	    anyKnown = anyKnown || (ENC_KNOWN(STRING_ELT(ans, i)) > 0);
-	    if(use_UTF8) vmaxset(vmax);
+	    if(use_UTF8) VMAXSET(vmax);
 	}
 	UNPROTECT(1);
 	ienc = CE_NATIVE;

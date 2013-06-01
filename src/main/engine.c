@@ -788,7 +788,7 @@ static void CScliplines(int n, double *x, double *y,
     double *xx, *yy;
     double x1, y1, x2, y2;
     cliprect cr;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
 
     if (toDevice)
 	getClipRectToDevice(&cr.xl, &cr.yb, &cr.xr, &cr.yt, dd);
@@ -843,7 +843,7 @@ static void CScliplines(int n, double *x, double *y,
 	y1 = y[i];
     }
 
-    vmaxset(vmax);
+    VMAXSET(vmax);
 }
 
 /****************************************************************
@@ -1053,7 +1053,7 @@ static void clipPolygon(int n, double *x, double *y,
 			const pGEcontext gc, int toDevice, pGEDevDesc dd)
 {
     double *xc = NULL, *yc = NULL;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
 
     /* if bg not specified then draw as polyline rather than polygon
      * to avoid drawing line along border of clipping region
@@ -1081,7 +1081,7 @@ static void clipPolygon(int n, double *x, double *y,
 	    dd->dev->polygon(npts, xc, yc, gc, dd->dev);
 	}
     }
-    vmaxset(vmax);
+    VMAXSET(vmax);
 }
 
 /****************************************************************
@@ -1094,7 +1094,7 @@ void GEPolygon(int n, double *x, double *y, const pGEcontext gc, pGEDevDesc dd)
      * Save (and reset below) the heap pointer to clean up
      * after any R_alloc's done by functions I call.
      */
-    const void *vmaxsave = vmaxget();
+    const void *vmaxsave = VMAXGET();
     if (gc->lty == LTY_BLANK)
 	/* "transparent" border */
 	gc->col = R_TRANWHITE;
@@ -1113,7 +1113,7 @@ void GEPolygon(int n, double *x, double *y, const pGEcontext gc, pGEDevDesc dd)
 	 * ourselves.
 	 */
 	clipPolygon(n, x, y, gc, 0, dd);
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
 }
 
 
@@ -1251,7 +1251,7 @@ void GECircle(double x, double y, double radius, const pGEcontext gc, pGEDevDesc
 	    dd->dev->circle(x, y, radius, gc, dd->dev);
 	}
 	else {
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    xc = (double*)R_alloc(result+1, sizeof(double));
 	    yc = (double*)R_alloc(result+1, sizeof(double));
 	    convertCircle(x, y, radius, result, xc, yc);
@@ -1272,7 +1272,7 @@ void GECircle(double x, double y, double radius, const pGEcontext gc, pGEDevDesc
 		    dd->dev->polygon(npts, xcc, ycc, gc, dd->dev);
 		}
 	    }
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
     }
 }
@@ -1338,7 +1338,7 @@ void GERect(double x0, double y0, double x1, double y1,
 	if (dd->dev->canClip)
 	    dd->dev->rect(x0, y0, x1, y1, gc, dd->dev);
 	else {
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    xc = (double*)R_alloc(5, sizeof(double));
 	    yc = (double*)R_alloc(5, sizeof(double));
 	    xc[0] = x0; yc[0] = y0;
@@ -1361,7 +1361,7 @@ void GERect(double x0, double y0, double x1, double y1,
 		    dd->dev->polygon(npts, xcc, ycc, gc, dd->dev);
 		}
 	    }
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
     }
 }
@@ -1686,7 +1686,7 @@ void GEText(double x, double y, const char * const str, cetype_t enc,
 	    double xoff, yoff, hadj;
 	    double sin_rot, cos_rot;/* sin() & cos() of rot{ation} in radians */
 	    double xleft, ybottom;
-	    const void *vmax = vmaxget();
+	    const void *vmax = VMAXGET();
 
 	    enc2 = (gc->fontface == 5) ? CE_SYMBOL : enc;
 	    if(enc2 != CE_SYMBOL)
@@ -1881,7 +1881,7 @@ void GEText(double x, double y, const char * const str, cetype_t enc,
 		else *sb++ = *s;
 		if (!*s) break;
 	    }
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
 	R_Visible = savevis;
     }
@@ -1917,7 +1917,7 @@ SEXP GEXspline(int n, double *x, double *y, double *s, Rboolean open,
      * Save (and reset below) the heap pointer to clean up
      * after any R_alloc's done by functions I call.
      */
-    const void *vmaxsave = vmaxget();
+    const void *vmaxsave = VMAXGET();
     ys = (double *) R_alloc(n, sizeof(double));
     for (i = 0; i < n; i++) ys[i] = y[i]*asp;
     if (open) {
@@ -1944,7 +1944,7 @@ SEXP GEXspline(int n, double *x, double *y, double *s, Rboolean open,
 	SET_VECTOR_ELT(result, 1, ypts);
 	UNPROTECT(3);
     }
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
     return result;
 }
 
@@ -2462,7 +2462,7 @@ double GEStrWidth(const char *str, cetype_t enc, const pGEcontext gc, pGEDevDesc
 	    char *sb;
 	    double wdash;
 	    cetype_t enc2;
-	    const void *vmax = vmaxget();
+	    const void *vmax = VMAXGET();
 
 	    enc2 = (gc->fontface == 5) ? CE_SYMBOL : enc;
 	    if(enc2 != CE_SYMBOL)
@@ -2487,7 +2487,7 @@ double GEStrWidth(const char *str, cetype_t enc, const pGEcontext gc, pGEDevDesc
 		else *sb++ = *s;
 		if (!*s) break;
 	    }
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
 	return w;
     }

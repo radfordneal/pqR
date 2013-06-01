@@ -750,7 +750,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     R_ExternalRoutine fun = NULL;
     SEXP retval;
     R_RegisteredNativeSymbol symbol = {R_EXTERNAL_SYM, {NULL}, NULL};
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
 
     if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
@@ -775,7 +775,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 
     retval = (SEXP)fun(args);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return retval;
 }
 
@@ -793,7 +793,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP retval, cargs[MAX_ARGS], pargs;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
     int nargs;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
 
     if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
@@ -1471,7 +1471,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	errorcall(call, _("too many arguments, sorry"));
     }
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return retval;
 }
 
@@ -1628,7 +1628,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if (EncSymbol == NULL) EncSymbol = install("ENCODING");
     if (CSingSymbol == NULL) CSingSymbol = install("Csingle");
-    vmax = vmaxget();
+    vmax = VMAXGET();
     Fort = PRIMVAL(op);
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
@@ -2336,7 +2336,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	UNPROTECT(1);
     }
     UNPROTECT(1);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return (ans);
 }
 

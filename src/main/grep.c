@@ -195,7 +195,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* group by token for efficiency with PCRE/TRE versions */
     PROTECT(ans = allocVector(VECSXP, len));
-    vmax = vmaxget();
+    vmax = VMAXGET();
     for (itok = 0; itok < tlen; itok++) {
 	SEXP this = STRING_ELT(tok, itok);
 
@@ -204,7 +204,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		SET_VECTOR_ELT(ans, i, ScalarString(STRING_ELT(x, i)));
 	    continue;
 	} else if (!CHAR(this)[0]) { /* empty */
-	    vmax2 = vmaxget();
+	    vmax2 = VMAXGET();
 	    for (i = itok; i < len; i += tlen) {
 		SEXP t;
 		if (STRING_ELT(x, i) == NA_STRING) {
@@ -271,7 +271,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		}
 		SET_VECTOR_ELT(ans, i, t);
 		UNPROTECT(1);
-		vmaxset(vmax2);
+		VMAXSET(vmax2);
 	    }
 	} else if (fixed_opt) {
 	    const char *laststart, *ebuf;
@@ -290,7 +290,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    slen = strlen(split);
 
-	    vmax2 = vmaxget();
+	    vmax2 = VMAXGET();
 	    for (i = itok; i < len; i += tlen) {
 		SEXP t;
 		if (STRING_ELT(x, i) == NA_STRING) {
@@ -363,7 +363,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		    else
 		    	SET_STRING_ELT(t, ntok, markKnown(bufp, STRING_ELT(x, i)));
 		}
-		vmaxset(vmax2);
+		VMAXSET(vmax2);
 	    }
 	} else if (perl_opt) {
 	    pcre *re_pcre;
@@ -398,7 +398,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (errorptr)
 		warning(_("PCRE pattern study error\n\t'%s'\n"), errorptr);
 
-	    vmax2 = vmaxget();
+	    vmax2 = VMAXGET();
 	    for (i = itok; i < len; i += tlen) {
 		SEXP t;
 		if (STRING_ELT(x, i) == NA_STRING) {
@@ -467,7 +467,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		    else
 		    	SET_STRING_ELT(t, ntok, markKnown(bufp, STRING_ELT(x, i)));
 		}
-		vmaxset(vmax2);
+		VMAXSET(vmax2);
 	    }
 	    pcre_free(re_pe);
 	    pcre_free(re_pcre);
@@ -489,7 +489,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if ((rc = tre_regwcomp(&reg, wsplit, cflags)))
 		reg_report(rc, &reg, translateChar(STRING_ELT(tok, itok)));
 
-	    vmax2 = vmaxget();
+	    vmax2 = VMAXGET();
 	    for (i = itok; i < len; i += tlen) {
 		SEXP t;
 		if (STRING_ELT(x, i) == NA_STRING) {
@@ -534,7 +534,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (*wbufp)
 		    SET_STRING_ELT(t, ntok,
 				   mkCharWLen(wbufp, wcslen(wbufp)));
-		vmaxset(vmax2);
+		VMAXSET(vmax2);
 	    }
 	    tre_regfree(&reg);
 	} else { /* ERE in normal chars -- single byte or MBCS */
@@ -560,7 +560,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if ((rc = tre_regcomp(&reg, split, cflags)))
 		reg_report(rc, &reg, split);
 
-	    vmax2 = vmaxget();
+	    vmax2 = VMAXGET();
 	    for (i = itok; i < len; i += tlen) {
 		SEXP t;
 		if (STRING_ELT(x, i) == NA_STRING) {
@@ -613,11 +613,11 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		}
 		if (*bufp)
 		    SET_STRING_ELT(t, ntok, markKnown(bufp, STRING_ELT(x, i)));
-		vmaxset(vmax2);
+		VMAXSET(vmax2);
 	    }
 	    tre_regfree(&reg);
 	}
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }
 
     if (getAttrib(x, R_NamesSymbol) != R_NilValue)
@@ -864,7 +864,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     PROTECT(ind = allocVector(LGLSXP, n));
-    vmax = vmaxget();
+    vmax = VMAXGET();
     for (i = 0 ; i < n ; i++) {
 	LOGICAL(ind)[i] = 0;
 	if (STRING_ELT(text, i) != NA_STRING) {
@@ -900,7 +900,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (rc == 0) LOGICAL(ind)[i] = 1;
 	    }
 	}
-	vmaxset(vmax);
+	VMAXSET(vmax);
 	if (invert ^ LOGICAL(ind)[i]) nmatches++;
     }
 
@@ -1464,7 +1464,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     pcre *re_pcre = NULL;
     pcre_extra *re_pe  = NULL;
     const unsigned char *tables = NULL;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
 
     checkArity(op, args);
 
@@ -1605,7 +1605,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     PROTECT(ans = allocVector(STRSXP, n));
-    vmax = vmaxget();
+    vmax = VMAXGET();
     for (i = 0 ; i < n ; i++) {
 	/* NA pattern was handled above */
 	if (STRING_ELT(text,i) == NA_STRING) {
@@ -1865,7 +1865,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    Free(cbuf);
 	}
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }
 
     if (fixed_opt) ; 
@@ -2435,7 +2435,7 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    UNPROTECT(3);
 	}
 
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for (i = 0 ; i < n ; i++) {
 	    if (STRING_ELT(text, i) == NA_STRING) {
 		INTEGER(matchlen)[i] = INTEGER(ans)[i] = NA_INTEGER;
@@ -2503,12 +2503,12 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 		    } else INTEGER(ans)[i] = INTEGER(matchlen)[i] = -1;
 		}
 	    }
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
     } else {
 	SEXP elt;
 	PROTECT(ans = allocVector(VECSXP, n));
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	for (i = 0 ; i < n ; i++) {
 	    if (STRING_ELT(text, i) == NA_STRING) {
 		elt = gregexpr_NAInputAns();
@@ -2538,7 +2538,7 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 					  useBytes, use_WC);
 	    }
 	    SET_VECTOR_ELT(ans, i, elt);
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	}
     }
 
@@ -2657,14 +2657,14 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 	    SET_VECTOR_ELT(ans, i, matchpos);
 	    UNPROTECT(1);
 	} else {
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    if(useBytes)
 		rc = tre_regexecb(&reg, CHAR(STRING_ELT(vec, i)),
 				  nmatch, pmatch, 0);
 	    else if(useWC) {
 		rc = tre_regwexec(&reg, wtransChar(STRING_ELT(vec, i)),
 				  nmatch, pmatch, 0);
-		vmaxset(vmax);
+		VMAXSET(vmax);
 	    }
 	    else {
 		t = translateChar(STRING_ELT(vec, i));
@@ -2673,7 +2673,7 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 			  i + 1);
 		rc = tre_regexec(&reg, t,
 				 nmatch, pmatch, 0);
-		vmaxset(vmax);		
+		VMAXSET(vmax);		
 	    }
 	    if(rc == REG_OK) {
 		PROTECT(matchpos = allocVector(INTSXP, nmatch));

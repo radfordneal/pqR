@@ -388,7 +388,7 @@ static SEGP ctr_segupdate(double xend, double yend, int dir, Rboolean tail,
 
 /* labelList, label1, and label2 are all SEXPs rather than being allocated
    using R_alloc because they need to persist across calls to contour().
-   In do_contour() there is a vmaxget() ... vmaxset() around each call to
+   In do_contour() there is a VMAXGET() ... VMAXSET() around each call to
    contour() to release all of the memory used in the drawing of the
    contour _lines_ at each contour level.  We need to keep track of the
    contour _labels_ for _all_ contour levels, hence we have to use a
@@ -830,10 +830,10 @@ SEXP GEcontourLines(double *x, int nx, double *y, int ny,
      */
     for (i = 0; i < nl; i++) {
 	/*
-	 * The vmaxget/set is to manage the memory that gets
+	 * The VMAXGET/set is to manage the memory that gets
 	 * R_alloc'ed in the creation of the segmentDB structure
 	 */
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	/*
 	 * Generate a segment database
 	 */
@@ -844,7 +844,7 @@ SEXP GEcontourLines(double *x, int nx, double *y, int ny,
 	nlines = addContourLines(x, nx, y, ny, z, levels[i],
 				 atom, segmentDB, nlines,
 				 container);
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }
     /*
      * Trim the list of lines to the appropriate length.
@@ -946,9 +946,9 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
     Rprintf("contour(lev = %g):\n", zc);
 #endif
 
-    vmax = vmaxget();
+    vmax = VMAXGET();
     ctr_SegDB = contourLines(REAL(x), nx, REAL(y), ny, REAL(z), zc, atom);
-    /* we need to keep ctr_SegDB available, so vmaxset(vmax); was wrong */
+    /* we need to keep ctr_SegDB available, so VMAXSET(vmax); was wrong */
 
     /* The segment database is now assembled. */
     /* Begin following contours. */
@@ -1009,7 +1009,7 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
 	       if (ns > 3) ns2 = ns/2; else ns2 = -1;
 	    */
 
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    xxx = (double *) R_alloc(ns + 1, sizeof(double));
 	    yyy = (double *) R_alloc(ns + 1, sizeof(double));
 	    /* now have the space, go through again: */
@@ -1310,10 +1310,10 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
 	    }
 
 //	    GMode(0, dd);
-	    vmaxset(vmax);
+	    VMAXSET(vmax);
 	} /* while */
       } /* for(i .. )  for(j ..) */
-    vmaxset(vmax); /* now we are done with ctr_SegDB */
+    VMAXSET(vmax); /* now we are done with ctr_SegDB */
     UNPROTECT_PTR(label1); /* pwwwargh! This is messy, but last thing
 			      protected is likely labelList, and that needs
 			      to be preserved across calls */
@@ -1466,7 +1466,7 @@ SEXP attribute_hidden do_contour(SEXP call, SEXP op, SEXP args, SEXP env)
     /* the top of the stack, otherwise we run out of */
     /* memory after a sequence of displaylist replays */
 
-    vmax0 = vmaxget();
+    vmax0 = VMAXGET();
     ctr_SegDB = (SEGP*)R_alloc(nx*ny, sizeof(SEGP));
 
     for (i = 0; i < nx; i++)
@@ -1485,7 +1485,7 @@ SEXP attribute_hidden do_contour(SEXP call, SEXP op, SEXP args, SEXP env)
     /* draw contour for levels[i] */
     GMode(1, dd);
     for (i = 0; i < nc; i++) {
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	gpptr(dd)->lty = INTEGER(lty)[i % nlty];
 	if (gpptr(dd)->lty == NA_INTEGER)
 	    gpptr(dd)->lty = ltysave;
@@ -1499,10 +1499,10 @@ SEXP attribute_hidden do_contour(SEXP call, SEXP op, SEXP args, SEXP env)
 	gpptr(dd)->cex = labcex;
 	contour(x, nx, y, ny, z, REAL(c)[i], labels, i,
 		drawLabels, method - 1, atom, dd);
-	vmaxset(vmax);
+	VMAXSET(vmax);
     }
     GMode(0, dd);
-    vmaxset(vmax0);
+    VMAXSET(vmax0);
     gpptr(dd)->lty = ltysave;
     gpptr(dd)->col = colsave;
     gpptr(dd)->lwd = lwdsave;

@@ -375,7 +375,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     xdims = getAttrib(x, R_DimSymbol);
     k = length(xdims);
 
-    vmaxsave = vmaxget();
+    vmaxsave = VMAXGET();
     subs = (int**)R_alloc(k, sizeof(int*));
     indx = (int*)R_alloc(k, sizeof(int));
     offset = (int*)R_alloc(k, sizeof(int));
@@ -529,7 +529,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     /* This was removed for matrices in 1998
        copyMostAttrib(x, result); */
     /* Free temporary memory */
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
     if (drop)
 	DropDims(result);
     UNPROTECT(1);

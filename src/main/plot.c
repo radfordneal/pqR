@@ -1607,7 +1607,7 @@ SEXP attribute_hidden do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
 	    ytemp = (double *) alloca(2*n*sizeof(double));
 	    R_CheckStack();
 	} else {
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    xtemp = (double *) R_alloc(2*n, sizeof(double));
 	    ytemp = (double *) R_alloc(2*n, sizeof(double));
 	}
@@ -1632,7 +1632,7 @@ SEXP attribute_hidden do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
 	    yold = yy;
 	}
 	if(n0 > 0) GPolyline(n0, xtemp, ytemp, DEVICE, dd);
-	if(n > 1000) vmaxset(vmax);
+	if(n > 1000) VMAXSET(vmax);
     }
     break;
 
@@ -1645,7 +1645,7 @@ SEXP attribute_hidden do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
 	    ytemp = (double *) alloca(2*n*sizeof(double));
 	    R_CheckStack();
 	} else {
-	    vmax = vmaxget();
+	    vmax = VMAXGET();
 	    xtemp = (double *) R_alloc(2*n, sizeof(double));
 	    ytemp = (double *) R_alloc(2*n, sizeof(double));
 	}
@@ -1670,7 +1670,7 @@ SEXP attribute_hidden do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
 	    yold = yy;
 	}
 	if(n0 > 0) GPolyline(n0, xtemp, ytemp, DEVICE, dd);
-	if(n > 1000) vmaxset(vmax);
+	if(n > 1000) VMAXSET(vmax);
     }
     break;
 
@@ -1954,7 +1954,7 @@ SEXP attribute_hidden do_path(SEXP call, SEXP op, SEXP args, SEXP env)
 
     GMode(1, dd);
 
-    vmax = vmaxget();
+    vmax = VMAXGET();
 
     /*
      * Work in device coordinates because that is what the
@@ -1988,7 +1988,7 @@ SEXP attribute_hidden do_path(SEXP call, SEXP op, SEXP args, SEXP env)
     if (GRecording(call, dd))
 	GErecordGraphicOperation(op, originalArgs, dd);
 
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return R_NilValue;
 }
 
@@ -2010,7 +2010,7 @@ SEXP attribute_hidden do_raster(SEXP call, SEXP op, SEXP args, SEXP env)
     n = LENGTH(raster);
     dim = getAttrib(raster, R_DimSymbol);
 
-    vmax = vmaxget();
+    vmax = VMAXGET();
     /* raster is rather inefficient so allow a native representation as
        an integer array which requires no conversion */
     if (inherits(raster, "nativeRaster") && isInteger(raster))
@@ -2061,7 +2061,7 @@ SEXP attribute_hidden do_raster(SEXP call, SEXP op, SEXP args, SEXP env)
     if (GRecording(call, dd))
 	GErecordGraphicOperation(op, originalArgs, dd);
 
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return R_NilValue;
 }
 
@@ -3713,7 +3713,7 @@ SEXP attribute_hidden do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
     ProcessInlinePars(args, dd, call);
     gpptr(dd)->cex = gpptr(dd)->cexbase * gpptr(dd)->cex;
     dnd_offset = GStrWidth("m", CE_ANY, INCHES, dd);
-    vmax = vmaxget();
+    vmax = VMAXGET();
     /* n is the number of merges, so the points are labelled 1 ... n+1 */
     y =  (double*)R_alloc(n+1, sizeof(double));
     ll = (double*)R_alloc(n+1, sizeof(double));
@@ -3775,7 +3775,7 @@ SEXP attribute_hidden do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
     /* NOTE: only record operation if no "error"  */
     if (GRecording(call, dd))
 	GErecordGraphicOperation(op, originalArgs, dd);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return R_NilValue;
   badargs:
     error(_("invalid dendrogram input"));
@@ -3964,7 +3964,7 @@ SEXP attribute_hidden do_symbols(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("invalid stars data"));
 	if (!SymbolRange(REAL(p), nc * nr, &pmax, &pmin))
 	    error(_("invalid symbol parameter"));
-	vmax = vmaxget();
+	vmax = VMAXGET();
 	pp = (double*)R_alloc(nc, sizeof(double));
 	xp = (double*)R_alloc(nc, sizeof(double));
 	yp = (double*)R_alloc(nc, sizeof(double));
@@ -3999,7 +3999,7 @@ SEXP attribute_hidden do_symbols(SEXP call, SEXP op, SEXP args, SEXP env)
 			 INTEGER(bg)[i%nbg], INTEGER(fg)[i%nfg], dd);
 	    }
 	}
-	vmaxset(vmax);
+	VMAXSET(vmax);
 	break;
     case 5: /* thermometers */
 	if (nc != 3 && nc != 4)
@@ -4170,7 +4170,7 @@ SEXP attribute_hidden do_xspline(SEXP call, SEXP op, SEXP args, SEXP env)
 
     x = REAL(sx);
     y = REAL(sy);
-    vmaxsave = vmaxget();
+    vmaxsave = VMAXGET();
     xx = (double *) R_alloc(nx, sizeof(double));
     yy = (double *) R_alloc(nx, sizeof(double));
     if (!xx || !yy)
@@ -4184,7 +4184,7 @@ SEXP attribute_hidden do_xspline(SEXP call, SEXP op, SEXP args, SEXP env)
     gc.col = INTEGER(border)[0];
     gc.fill = INTEGER(col)[0];
     res = GEXspline(nx, xx, yy, REAL(ss), open, repEnds, draw, &gc, dd);
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
     UNPROTECT(2);
 
     if(!draw) {

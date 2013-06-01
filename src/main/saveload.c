@@ -676,7 +676,7 @@ static SEXP DataLoad(FILE *fp, int startup, InputRoutines *m,
     /* these are non-relocatable, so we must */
     /* save the current non-relocatable base */
 
-    vmaxsave = vmaxget();
+    vmaxsave = VMAXGET();
     node.OldOffset = (int*)R_alloc(node.NSymbol + node.NSave, sizeof(int));
     PROTECT(node.NewAddress = allocVector(VECSXP, node.NSymbol + node.NSave));
     for (i = 0 ; i < node.NTotal ; i++) {
@@ -731,7 +731,7 @@ static SEXP DataLoad(FILE *fp, int startup, InputRoutines *m,
 
     /* restore the heap */
 
-    vmaxset(vmaxsave);
+    VMAXSET(vmaxsave);
     UNPROTECT(1);
 
     /* clean the string buffer */
