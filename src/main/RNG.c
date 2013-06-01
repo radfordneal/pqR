@@ -320,7 +320,7 @@ static void RNG_Init (RNGtype newkind, Int32 seed)
     n_seed = RNG_Table[newkind].n_seed;
     PROTECT(s = allocVector (INTSXP, n_seed + 1));
     defineVar (R_SeedsSymbol, s, R_GlobalEnv);
-    SET_NAMED(s, 1);
+    SET_NAMEDCNT_1(s);
     UNPROTECT(1);
 
     /* Switch to new kind - but only after we know alloc above hasn't failed. */
@@ -422,7 +422,7 @@ static void GetRNGkind(SEXP seeds)
 
 /* Link to the data in .Random.seed for a built-in generator's seeds, or
    copy from .Random.seed to the seeds for a user-supplied generator 
-   (if it has revealed its seed location).  Note: If NAMED is greater than
+   (if it has revealed its seed location).  Note: If NAMEDCNT is greater than
    1 for the value in .Random.seed, it has to be replaced by a duplicate. */
 
 void GetRNGstate()
@@ -443,10 +443,10 @@ void GetRNGstate()
 	else if (LENGTH(seeds) < n_seed + 1)
 	    error(_(".Random.seed has wrong length"));
 	else {
-            if (NAMED(seeds) > 1) {
+            if (NAMEDCNT_GT_1(seeds)) {
                 PROTECT(seeds = duplicate(seeds));
                 defineVar(R_SeedsSymbol, seeds, R_GlobalEnv);
-                SET_NAMED(seeds, 1);
+                SET_NAMEDCNT_1(seeds);
                 UNPROTECT(1);
             }
             s_seed = seeds;

@@ -163,8 +163,6 @@ static SEXP getActiveValue(SEXP fun)
     return expr;
 }
 
-/* Macro version of isNull for only the test against R_NilValue */
-#define ISNULL(x) ((x) == R_NilValue)
 
 /* Function to correctly set NO_SPEC_SYM flag for an (unhashed) environment. */
 
@@ -231,6 +229,7 @@ int attribute_hidden R_Newhashpjw(const char *s)
     return h;
 }
 
+
 /*----------------------------------------------------------------------
 
   R_HashSet
@@ -242,27 +241,28 @@ int attribute_hidden R_Newhashpjw(const char *s)
 */
 
 static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
-		      Rboolean frame_locked)
+                      Rboolean frame_locked)
 {
-    SEXP chain;
+    SEXP chain, loc, new_chain;
 
     /* Grab the chain from the hashtable */
     chain = VECTOR_ELT(table, hashcode);
 
     /* Search for the value in the chain */
-    for (; !ISNULL(chain); chain = CDR(chain))
-	if (TAG(chain) == symbol) {
-	    SET_BINDING_VALUE(chain, value);
-	    SET_MISSING(chain, 0);	/* Over-ride for new value */
-	    return;
-	}
+    for (loc = chain; loc != R_NilValue; loc = CDR(loc))
+        if (TAG(loc) == symbol) {
+            SET_BINDING_VALUE(loc, value);
+            SET_MISSING(loc, 0);        /* Over-ride for new value */
+            return;
+        }
     if (frame_locked)
-	error(_("cannot add bindings to a locked environment"));
-    if (ISNULL(chain))
-	SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
+        error(_("cannot add bindings to a locked environment"));
+    if (chain == R_NilValue)
+        SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
     /* Add the value into the chain */
-    SET_VECTOR_ELT(table, hashcode, CONS(value, VECTOR_ELT(table, hashcode)));
-    SET_TAG(VECTOR_ELT(table, hashcode), symbol);
+    new_chain = CONS(value, chain);
+    SET_TAG (new_chain, symbol);
+    SET_VECTOR_ELT (table, hashcode, new_chain);
     return;
 }
 
@@ -320,13 +320,11 @@ static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
 {
     SEXP chain;
 
-    /* Grab the chain from the hashtable */
-    chain = VECTOR_ELT(table, hashcode);
-    /* Retrieve the value from the chain */
-    for (; !ISNULL(chain); chain = CDR(chain))
-	if (TAG(chain) == symbol) return chain;
-    /* If not found */
-    return R_NilValue;
+    for (chain = VECTOR_ELT(table, hashcode);
+         chain != R_NilValue && TAG(chain) != symbol;
+         chain = CDR(chain)) ;
+
+    return chain;
 }
 
 
@@ -438,12 +436,12 @@ static SEXP R_HashResize(SEXP table)
     /* Move entries into new table. */
     for (counter = 0; counter < LENGTH(table); counter++) {
 	chain = VECTOR_ELT(table, counter);
-	while (!ISNULL(chain)) {
+	while (chain != R_NilValue) {
 	    new_hashcode = R_Newhashpjw(CHAR(PRINTNAME(TAG(chain))))
                              % HASHSIZE(new_table);
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
-	    if (ISNULL(new_chain))
+	    if (new_chain == R_NilValue)
 		SET_HASHSLOTSUSED(new_table, HASHSLOTSUSED(new_table) + 1);
 	    tmp_chain = chain;
 	    chain = CDR(chain);
@@ -475,11 +473,11 @@ static SEXP R_HashResize(SEXP table)
 
   R_HashSizeCheck
 
-  Hash table size rechecking function.	Compares the load factor
-  (# of entries / # of slots used) to a threshhold value (any positive
-  threshold is valid).  Returns true if the table needs to be resized.
-  Does NOT check whether resizing shouldn't be done because HASHMAXSIZE
-  would then be exceeded.
+  Hash table size rechecking function.	Looks at the fraction of table
+  entries that have one or more symbols, comparing to a threshold value
+  (which should be in the interval (0,1)).  Returns true if the table 
+  needs to be resized.  Does NOT check whether resizing shouldn't be 
+  done because HASHMAXSIZE would then be exceeded.
 */
 
 static R_INLINE int R_HashSizeCheck(SEXP table)
@@ -488,7 +486,7 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, R_HashSizeCheck");
 
-    return HASHSLOTSUSED(table) > 0.85 * HASHSIZE(table);
+    return HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
 }
 
 
@@ -514,7 +512,7 @@ static SEXP R_HashFrame(SEXP rho)
 	error("argument not of type ENVSXP, from R_Hashframe");
     table = HASHTAB(rho);
     frame = FRAME(rho);
-    while (!ISNULL(frame)) {
+    while (frame != R_NilValue) {
 	if( !HASHASH(PRINTNAME(TAG(frame))) ) {
 	    SET_HASHVALUE(PRINTNAME(TAG(frame)),
 			  R_Newhashpjw(CHAR(PRINTNAME(TAG(frame)))));
@@ -523,7 +521,8 @@ static SEXP R_HashFrame(SEXP rho)
 	hashcode = HASHVALUE(PRINTNAME(TAG(frame))) % HASHSIZE(table);
 	chain = VECTOR_ELT(table, hashcode);
 	/* If using a previously-unused slot then increase HASHSLOTSUSED */
-	if (ISNULL(chain)) SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
+	if (chain == R_NilValue) 
+            SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
 	tmp_chain = frame;
 	frame = CDR(frame);
 	SETCDR(tmp_chain, chain);
@@ -756,7 +755,7 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
     SET_BASE_CACHE (symbol, symbol==place);
 #endif
     if (oldslotsused != HASHSLOTSUSED(R_GlobalCache) &&
-	HASHSLOTSUSED(R_GlobalCache) > 0.85 * HASHSIZE(R_GlobalCache)) {
+        R_HashSizeCheck(R_GlobalCache)) {
 	R_GlobalCache = R_HashResize(R_GlobalCache);
 	SETCAR(R_GlobalCachePreserve, R_GlobalCache);
     }
@@ -1397,198 +1396,216 @@ SEXP findFun(SEXP symbol, SEXP rho)
     return R_UnboundValue;
 }
 
+/*----------------------------------------------------------------------
+
+  set_var_in_frame
+
+  Assign a value in a specific environment frame.  If 'create' is TRUE, it
+  creates the variable if it doesn't already exist.  May increment or decrement
+  NAMEDCNT for the assigned and previous value, depending on the setting of
+  'incdec' - 0 = no increment or decrement, 1 = decrement old value only,
+  2 = increment new value only, 3 = decrement old value and increment new value.
+  Returns TRUE if an assignment was successfully made. 
+
+  The symbol, value, and rho arguments are protected by this function. */
+
+int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
+{
+    LOCAL_COPY(R_NilValue);
+    int hashcode;
+    SEXP loc;
+
+    PROTECT3(symbol,value,rho);
+
+    if (rho == R_EmptyEnv)
+        error(_("cannot assign values in the empty environment"));
+
+    if(IS_USER_DATABASE(rho)) {
+        /* FIXME: This does not behave as described - DESCRIBED WHERE? HOW? */
+        R_ObjectTable *table;
+        table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
+        if (table->assign == NULL) /* maybe should just return FALSE? */
+            error(_("cannot assign variables to this database"));
+        table->assign (CHAR(PRINTNAME(symbol)), value, table);
+        if (incdec&2) 
+            INC_NAMEDCNT(value);
+        /* don't try to do decrement on old value (getting it might be slow) */
+#ifdef USE_GLOBAL_CACHE
+        if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
+#endif
+        if (rho == R_GlobalEnv) 
+            R_DirtyImage = 1;
+        UNPROTECT(3);
+        return TRUE; /* unclear whether assign always succeeds, but assume so */
+    }
+
+    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
+        if (!create && SYMVALUE(symbol) == R_UnboundValue) {
+            UNPROTECT(3);
+            return FALSE;
+        }
+        gsetVar(symbol,value,rho);
+        if (incdec&2) 
+            INC_NAMEDCNT(value);  
+        /* don't bother with decrement on the old value (not time-critical) */
+        UNPROTECT(3);
+        return TRUE;      /* should have either succeeded, or raised an error */
+    }
+
+    if (HASHTAB(rho) == R_NilValue)
+        loc = FRAME(rho);
+    else {
+        SEXP c = PRINTNAME(symbol);
+        if( !HASHASH(c) ) {
+            SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
+            SET_HASHASH(c, 1);
+        }
+        hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+        loc = VECTOR_ELT(HASHTAB(rho), hashcode);
+    }
+
+    while (loc != R_NilValue) {
+        if (TAG(loc) == symbol) { /* variable already exists */
+            if ((incdec&1) && !IS_ACTIVE_BINDING(loc))
+                DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
+            SET_BINDING_VALUE(loc,value);
+            if (incdec&2) 
+                INC_NAMEDCNT(value);
+            SET_MISSING(loc,0);
+            if (rho == R_GlobalEnv) 
+                R_DirtyImage = 1;
+            UNPROTECT(3);
+            return TRUE;
+        }
+        loc = CDR(loc);
+    }
+
+    if (create) { /* try to create new variable */
+
+        if (FRAME_IS_LOCKED(rho))
+            error(_("cannot add bindings to a locked environment"));
+
+#ifdef USE_GLOBAL_CACHE
+        if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
+#endif
+        if (rho == R_GlobalEnv) 
+            R_DirtyImage = 1;
+
+        if (HASHTAB(rho) == R_NilValue) {
+            SEXP new = cons_with_tag (value, FRAME(rho), symbol);
+            SET_FRAME(rho, new);
+            if (SPEC_SYM(symbol))
+                SET_NO_SPEC_SYM(rho,0);
+        }
+        else {
+            SEXP table = HASHTAB(rho);
+            SEXP chain = VECTOR_ELT(table,hashcode);
+            SEXP new = cons_with_tag (value, chain, symbol);
+            SET_VECTOR_ELT (table, hashcode, new);
+            if (chain == R_NilValue)
+                SET_HASHSLOTSUSED (table, HASHSLOTSUSED(table) + 1);
+            if (R_HashSizeCheck(table))
+                SET_HASHTAB(rho, R_HashResize(table));
+        }
+
+        if (incdec&2)
+            INC_NAMEDCNT(value);
+
+        UNPROTECT(3);
+        return TRUE;
+    }
+
+    UNPROTECT(3);
+    return FALSE;
+}
+
 
 /*----------------------------------------------------------------------
+
+  set_var_nonlocal
+
+  Assign a value in a specific environment frame or any enclosing frame,
+  or create it in R_GlobalEnv if it doesn't exist in any such frame.  May 
+  increment or decrement NAMEDCNT for the assigned and previous value, 
+  depending on the setting of 'incdec' - 0 = no increment or decrement, 
+  1 = decrement old value only, 2 = increment new value only, 3 = decrement 
+  old value and increment new value. */
+
+void set_var_nonlocal (SEXP symbol, SEXP value, SEXP rho, int incdec)
+{
+    while (rho != R_EmptyEnv) {
+	if (set_var_in_frame (symbol, value, rho, FALSE, incdec)) 
+            return;
+	rho = ENCLOS(rho);
+    }
+    set_var_in_frame (symbol, value, R_GlobalEnv, TRUE, incdec);
+}
+
+
+/*----------------------------------------------------------------------
+
+  OLD FUNCTION PROVIDED FOR BACKWARDS COMPATIBILITY (MENTIONED IN R API).
 
   defineVar
 
-  Assign a value in a specific environment frame.
-
-*/
+  Assign a value in a specific environment frame. */
 
 void defineVar(SEXP symbol, SEXP value, SEXP rho)
 {
-    int hashcode;
-    SEXP frame, c;
-
-    /* R_DirtyImage should only be set if assigning to R_GlobalEnv. */
-    if (rho == R_GlobalEnv) R_DirtyImage = 1;
-
-    if (rho == R_EmptyEnv)
-	error(_("cannot assign values in the empty environment"));
-
-    if(IS_USER_DATABASE(rho)) {
-	R_ObjectTable *table;
-	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
-	if(table->assign == NULL)
-	    error(_("cannot assign variables to this database"));
-	table->assign(CHAR(PRINTNAME(symbol)), value, table);
-#ifdef USE_GLOBAL_CACHE
-	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
-#endif
-	return;
-    }
-
-    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
-	gsetVar(symbol, value, rho);
-    } else {
-#ifdef USE_GLOBAL_CACHE
-	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
-#endif
-
-        if (SPEC_SYM(symbol))
-            SET_NO_SPEC_SYM(rho,0);
-
-	if (HASHTAB(rho) == R_NilValue) {
-	    /* First check for an existing binding */
-	    frame = FRAME(rho);
-	    while (frame != R_NilValue) {
-		if (TAG(frame) == symbol) {
-		    SET_BINDING_VALUE(frame, value);
-		    SET_MISSING(frame, 0);	/* Over-ride */
-		    return;
-		}
-		frame = CDR(frame);
-	    }
-	    if (FRAME_IS_LOCKED(rho))
-		error(_("cannot add bindings to a locked environment"));
-	    SET_FRAME(rho, CONS(value, FRAME(rho)));
-	    SET_TAG(FRAME(rho), symbol);
-	}
-	else {
-	    c = PRINTNAME(symbol);
-	    if( !HASHASH(c) ) {
-		SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-		SET_HASHASH(c, 1);
-	    }
-	    hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	    R_HashSet(hashcode, symbol, HASHTAB(rho), value,
-		      FRAME_IS_LOCKED(rho));
-	    if (R_HashSizeCheck(HASHTAB(rho)))
-		SET_HASHTAB(rho, R_HashResize(HASHTAB(rho)));
-	}
-    }
-}
-
-/*----------------------------------------------------------------------
-
-  setVarInFrame
-
-  Assign a new value to an existing symbol in a frame.
-  Return the symbol if successful and R_NilValue if not.
-
-  [ Taken static in 2.4.0: not called for emptyenv or baseenv. ]
-*/
-
-static SEXP setVarInFrame(SEXP rho, SEXP symbol, SEXP value)
-{
-    int hashcode;
-    SEXP frame, c;
-
-    /* R_DirtyImage should only be set if assigning to R_GlobalEnv. */
-    if (rho == R_GlobalEnv) R_DirtyImage = 1;
-    if (rho == R_EmptyEnv) return R_NilValue;
-
-    if(IS_USER_DATABASE(rho)) {
-	/* FIXME: This does not behave as described */
-	R_ObjectTable *table;
-	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
-	if(table->assign == NULL)
-	    error(_("cannot assign variables to this database"));
-	return(table->assign(CHAR(PRINTNAME(symbol)), value, table));
-    }
-
-    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
-	if (SYMVALUE(symbol) == R_UnboundValue) return R_NilValue;
-	SET_SYMBOL_BINDING_VALUE(symbol, value);
-	return symbol;
-    }
-
-    if (HASHTAB(rho) == R_NilValue) {
-	frame = FRAME(rho);
-	while (frame != R_NilValue) {
-	    if (TAG(frame) == symbol) {
-		if (rho == R_GlobalEnv) R_DirtyImage = 1;
-		SET_BINDING_VALUE(frame, value);
-		SET_MISSING(frame, 0);	/* same as defineVar */
-		return symbol;
-	    }
-	    frame = CDR(frame);
-	}
-    } else {
-	/* Do the hash table thing */
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	frame = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
-	if (frame != R_NilValue) {
-	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
-	    SET_BINDING_VALUE(frame, value);
-	    SET_MISSING(frame, 0);	/* same as defineVar */
-	    return symbol;
-	}
-    }
-    return R_NilValue; /* -Wall */
+    set_var_in_frame (symbol, value, rho, TRUE, 0);
 }
 
 
 /*----------------------------------------------------------------------
 
-    setVar
+  OLD FUNCTION PROVIDED FOR BACKWARDS COMPATIBILITY (MENTIONED IN R API).
 
-    Assign a new value to bound symbol.	 Note this does the "inherits"
-    case.  I.e. it searches frame-by-frame for a symbol and binds the
-    given value to the first symbol encountered.  If no symbol is
-    found then a binding is created in the global environment.
+  setVar
 
-    Changed in R 2.4.0 to look in the base environment (previously the
-    search stopped befor the base environment, but would (and still
-    does) assign into the base namespace if that is on the search and
-    the symbol existed there).
-
-*/
+  Assign a new value to bound symbol.	 Note this does the "inherits"
+  case.  I.e. it searches frame-by-frame for a symbol and binds the
+  given value to the first symbol encountered.  If no symbol is
+  found then a binding is created in the global environment. */
 
 void setVar(SEXP symbol, SEXP value, SEXP rho)
 {
-    SEXP vl;
     while (rho != R_EmptyEnv) {
-	vl = setVarInFrame(rho, symbol, value);
-	if (vl != R_NilValue) return;
+	if (set_var_in_frame (symbol, value, rho, FALSE, 0)) 
+            return;
 	rho = ENCLOS(rho);
     }
-    defineVar(symbol, value, R_GlobalEnv);
+    set_var_in_frame (symbol, value, R_GlobalEnv, TRUE, 0);
 }
-
 
 
 /*----------------------------------------------------------------------
 
   gsetVar
 
-  Assignment in the base environment. Here we assign directly into
-  the base environment.
-
-*/
+  Assignment directly into the base environment.  */
 
 void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 {
-    if (FRAME_IS_LOCKED(rho)) {
-	if(SYMVALUE(symbol) == R_UnboundValue)
-	    error(_("cannot add binding of '%s' to the base environment"),
-		  CHAR(PRINTNAME(symbol)));
-    }
+    if (SYMVALUE(symbol) == R_UnboundValue) {
+        if (FRAME_IS_LOCKED(rho))
+            error(_("cannot add binding of '%s' to the base environment"),
+                  CHAR(PRINTNAME(symbol)));
 #ifdef USE_GLOBAL_CACHE
-    R_FlushGlobalCache(symbol);
+        R_FlushGlobalCache(symbol);
 #endif
+    }
+
     SET_SYMBOL_BINDING_VALUE(symbol, value);
 }
 
-/* get environment from a subclass if possible; else return NULL */
-#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
 
+/*----------------------------------------------------------------------
+
+  get environment from a subclass if possible; else return NULL. */
+
+#define simple_as_environment(arg) \
+  (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) \
+                                               : R_NilValue)
 	    
 
 /*----------------------------------------------------------------------
@@ -1620,9 +1637,9 @@ SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
     if (ginherits)
-	setVar(name, val, aenv);
+	set_var_nonlocal (name, val, aenv, 3);
     else
-	defineVar(name, val, aenv);
+	set_var_in_frame (name, val, aenv, TRUE, 3);
     UNPROTECT(1);
     return val;
 }
@@ -1726,7 +1743,7 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* .Internal(remove(list, envir, inherits)) */
 
-    SEXP name, envarg, tsym, tenv, done;
+    SEXP name, envarg, tsym, tenv, value;
     int ginherits = 0;
     int i;
 
@@ -1750,17 +1767,19 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("invalid '%s' argument"), "inherits");
 
     for (i = 0; i < LENGTH(name); i++) {
-	done = 0;
+	value = NULL;
 	tsym = install(translateChar(STRING_ELT(name, i)));
 	tenv = envarg;
 	while (tenv != R_EmptyEnv) {
-	    done = RemoveVariable(tsym, tenv);
-	    if (done != NULL || !ginherits)
+	    value = RemoveVariable(tsym, tenv);
+	    if (value != NULL || !ginherits)
 		break;
 	    tenv = CDR(tenv);
 	}
-	if (done == NULL)
+	if (value == NULL)
 	    warning (_("object '%s' not found"), CHAR(PRINTNAME(tsym)));
+        else
+            DEC_NAMEDCNT_AND_PRVALUE(value);
     }
     return R_NilValue;
 }
@@ -1768,7 +1787,7 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 /*----------------------------------------------------------------------
 
  do_get_rm - get value of variable and then remove the variable, decrementing
-             the NAMED count when possible. 
+             NAMEDCNT when possible. 
 */
 
 SEXP attribute_hidden do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1787,19 +1806,17 @@ SEXP attribute_hidden do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho)
     if (value == NULL)
         error (_("object '%s' not found"), CHAR(PRINTNAME(name)));
 
-    if (NAMED(value) == 1) 
-        SET_NAMED(value,0);
-
     if (TYPEOF(value) == PROMSXP) {
         PROTECT(value);
         SEXP prvalue = forcePromise(value);
-        if (NAMED(value) == 0 && NAMED(prvalue) == 1) 
-            SET_NAMED(prvalue,0);
+        DEC_NAMEDCNT_AND_PRVALUE(value);
         UNPROTECT(1);
         return prvalue;
     }
-    else
+    else {
+        DEC_NAMEDCNT(value);
         return value;
+    }
 }
 
 /*----------------------------------------------------------------------
@@ -1889,8 +1906,8 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (TYPEOF(rval) == PROMSXP)
 	    rval = eval(rval, genv);
 
-	if (!ISNULL(rval) && NAMED(rval) == 0)
-	    SET_NAMED(rval, 1);
+	if (NAMEDCNT_EQ_0(rval))
+	    SET_NAMEDCNT_1(rval);
 	return rval;
     }
     else { /* exists(.) */
@@ -1924,7 +1941,8 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
 
     /* We need to evaluate if it is a promise */
     if (TYPEOF(rval) == PROMSXP) rval = eval(rval, env);
-    if (!ISNULL(rval) && NAMED(rval) == 0) SET_NAMED(rval, 1);
+    if (NAMEDCNT_EQ_0(rval)) 
+        SET_NAMEDCNT_1(rval);
     return rval;
 }
 
@@ -1958,7 +1976,7 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* FIXME: should we install them all?) */
 
     env = CADR(args);
-    if (ISNULL(env)) {
+    if (env == R_NilValue) {
 	error(_("use of NULL environment is defunct"));
     } else if( !isEnvironment(env) )
 	error(_("second argument must be an environment"));
@@ -2261,15 +2279,13 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 
 	/* Connect FRAME(s) into HASHTAB(s) */
-	if (length(s) < HASHMINSIZE)
+        hsize = (int) (length(s)/0.6);   /* about 45% of entries will be used */
+	if (hsize < HASHMINSIZE)
 	    hsize = HASHMINSIZE;
-	else
-	    hsize = length(s);
 
 	SET_HASHTAB(s, R_NewHashTable(hsize));
 	s = R_HashFrame(s);
 
-	/* FIXME: A little inefficient */
 	while (R_HashSizeCheck(HASHTAB(s)))
 	    SET_HASHTAB(s, R_HashResize(HASHTAB(s)));
 
@@ -2632,7 +2648,7 @@ SEXP attribute_hidden do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     env = CAR(args);
-    if (ISNULL(env))
+    if (env == R_NilValue)
 	error(_("use of NULL environment is defunct"));
     if( !isEnvironment(env) ) {
         SEXP xdata;
@@ -2692,7 +2708,7 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     env = eval(CAR(args), rho);
-    if (ISNULL(env))
+    if (env == R_NilValue)
 	error(_("use of NULL environment is defunct"));
     if( !isEnvironment(env) )
 	error(_("argument must be an environment"));

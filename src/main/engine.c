@@ -2959,7 +2959,7 @@ SEXP attribute_hidden do_recordGraphics(SEXP call, SEXP op, SEXP args, SEXP env)
      */
     PROTECT(x = VectorToPairList(list));
     for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
-	SET_NAMED(CAR(xptr) , 2);
+	SET_NAMEDCNT_MAX(CAR(xptr));
     /*
      * The environment passed in as the third arg is used as
      * the parent of the new evaluation environment.

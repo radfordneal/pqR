@@ -637,7 +637,7 @@ static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 	return s1;
     case MINUSOP:
 	n = LENGTH(s1);
-	ans = NAMED(s1)==0 ? s1 : duplicate(s1);
+	ans = NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
 	SET_TYPEOF(ans, INTSXP);  /* Assumes LGLSXP is really the same... */
 	for (i = 0; i < n; i++) {
 	    x = INTEGER(s1)[i];
@@ -659,7 +659,7 @@ static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
     case PLUSOP: return s1;
     case MINUSOP:
 	n = LENGTH(s1);
-        ans = NAMED(s1)==0 ? s1 : duplicate(s1);
+        ans = NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
 	for (i = 0; i < n; i++)
 	    REAL(ans)[i] = -REAL(s1)[i];
 	return ans;
@@ -1200,7 +1200,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     }
     else { /* non-variant return */
         double *y;
-        sy = NAMED(sa)==0 ? sa : allocVector(REALSXP, n);
+        sy = NAMEDCNT_EQ_0(sa) ? sa : allocVector(REALSXP, n);
         PROTECT(sy);
         y = REAL(sy);
 
@@ -1307,7 +1307,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
-	s = NAMED(x)==0 && TYPEOF(x)==INTSXP ? x : allocVector(INTSXP, n);
+	s = NAMEDCNT_EQ_0(x) && TYPEOF(x)==INTSXP ? x : allocVector(INTSXP, n);
 	/* Note: relying on INTEGER(.) === LOGICAL(.) : */
 	for (int i = 0 ; i < n ; i++) {
             int v = INTEGER(x)[i];
@@ -1324,7 +1324,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             SET_ATTRIB (s, R_VariantResult);
             return s;
         }
-        s = NAMED(x)==0 ? x : allocVector(REALSXP, n);
+        s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
 	for (int i = 0 ; i < n ; i++)
 	    REAL(s)[i] = fabs(REAL(x)[i]);
     } else if (isComplex(x)) {

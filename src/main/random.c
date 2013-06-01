@@ -487,7 +487,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(y = allocVector(INTSXP, k));
     if (!isNull(prob)) {
 	prob = coerceVector(prob, REALSXP);
-	if (NAMED(prob)) prob = duplicate(prob);
+	if (NAMEDCNT_GT_0(prob)) prob = duplicate(prob);
 	PROTECT(prob);
 	p = REAL(prob);
 	if (length(prob) != n)
@@ -532,7 +532,7 @@ SEXP attribute_hidden do_rmultinom(SEXP call, SEXP op, SEXP args, SEXP rho)
     prob = CAR(args);
     prob = coerceVector(prob, REALSXP);
     k = length(prob);/* k = #{components or classes} = X-vector length */
-    if (NAMED(prob)) prob = duplicate(prob);/*as `do_sample' -- need this line? */
+    if (NAMEDCNT_GT_0(prob)) prob = duplicate(prob);
     PROTECT(prob);
     /* check and make sum = 1: */
     FixupProb(REAL(prob), k, /*require_k = */ 0, TRUE);

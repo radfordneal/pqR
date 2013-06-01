@@ -48,10 +48,10 @@ u[500] <- 0L  # the change to u[500] can be done without copying
 
 g <- function (v) { v[1:(length(v)/2)] <- 1; get_rm(v) }
 u <- g(numeric(1000))
-u[500] <- 9  # only a single allocation of a vector of length 1000 will be done
+u[500] <- 9  # just one allocation of a vector of length 1000 will be done
 
 A <- numeric(1000)+2
 B <- numeric(1000)+3
-A <- get_rm(A)*B # doesn't need to allocate space for three 1000-element vectors
+A <- get_rm(A)*B # doesn't allocate space for a third 1000-element vector
 }
 \keyword{programming}

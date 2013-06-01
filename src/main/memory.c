@@ -1436,7 +1436,7 @@ static SEXP NewWeakRef(SEXP key, SEXP val, SEXP fin, Rboolean onexit)
     }
 
     PROTECT2 (key, fin);
-    PROTECT (val = NAMED(val) ? duplicate(val) : val);
+    PROTECT (val = NAMEDCNT_GT_0(val) ? duplicate(val) : val);
 
     w = allocVector(VECSXP, WEAKREF_SIZE);
     SET_TYPEOF(w, WEAKREFSXP);
@@ -1526,8 +1526,8 @@ SEXP R_WeakRefValue(SEXP w)
     if (TYPEOF(w) != WEAKREFSXP)
 	error(_("not a weak reference"));
     v = WEAKREF_VALUE(w);
-    if (v != R_NilValue && NAMED(v) != 2)
-	SET_NAMED(v, 2);
+    if (v!=R_NilValue) 
+        SET_NAMEDCNT_MAX(v);
     return v;
 }
 
@@ -2378,6 +2378,7 @@ void attribute_hidden InitMemory()
     R_NilValue = get_free_node(SEXPREC_class);
     R_NilValue_COPY_ = R_NilValue;
     TYPEOF(R_NilValue) = NILSXP;
+    SET_NAMEDCNT_MAX(R_NilValue);
     CAR(R_NilValue) = R_NilValue;
     CDR(R_NilValue) = R_NilValue;
     TAG(R_NilValue) = R_NilValue;
@@ -2608,7 +2609,11 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 }
 
 /* mkPROMISE is defined directly do avoid the need to protect its arguments
-   unless a GC will actually occur. */
+   unless a GC will actually occur. 
+
+   NAMEDCNT for the new promise is set to 1, and 'expr' has its NAMEDCNT
+   set to the maximum. */
+
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
@@ -2621,9 +2626,8 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     }
     s = get_free_node(SEXPREC_class);
 
-    /* precaution to ensure code does not get modified via
-       substitute() and the like */
-    if (NAMED(expr) < 2) SET_NAMED(expr, 2);
+    SET_NAMEDCNT_MAX(expr);
+    /* SET_NAMEDCNT_1(s); */
 
     TYPEOF(s) = PROMSXP;
     PRCODE(s) = CHK(expr);
@@ -4334,16 +4338,16 @@ SEXP attribute_hidden can_save_alloc (SEXP s1, SEXP s2, SEXPTYPE typ)
        attributes will then take precedence when copied. */
 
     if (n2>=n1) {
-        if (TYPEOF(s2)==typ && NAMED(s2)==0)
+        if (TYPEOF(s2)==typ && NAMEDCNT_EQ_0(s2))
             return s2;
         else
             /* Can use 1st arg's space only if 2nd arg has no attributes, else
                we may not get attributes of result right. */
-            if (n1==n2 && TYPEOF(s1)==typ && NAMED(s1)==0
+            if (n1==n2 && TYPEOF(s1)==typ && NAMEDCNT_EQ_0(s1)
                        && ATTRIB(s2)==R_NilValue)
                 return s1;
     } else {
-        if (TYPEOF(s1)==typ && NAMED(s1)==0)
+        if (TYPEOF(s1)==typ && NAMEDCNT_EQ_0(s1))
             return s1;
     }
 

@@ -1300,7 +1300,7 @@ static SEXP listRemove(SEXP x, SEXP s, int ind)
     SET_ATTRIB(CDR(a), ATTRIB(x));
     IS_S4_OBJECT(x) ?  SET_S4_OBJECT(CDR(a)) : UNSET_S4_OBJECT(CDR(a));
     SET_OBJECT(CDR(a), OBJECT(x));
-    SET_NAMED(CDR(a), NAMED(x));
+    SET_NAMEDCNT(CDR(a), NAMEDCNT(x));
     UNPROTECT(3);
     VMAXSET(vmax);
     return CDR(a);
@@ -1363,8 +1363,8 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* over always duplicating. */
     /* Shouldn't x be protected?  It is (as args is)! */
 
-    if (NAMED(CAR(args)) == 2)
-	x = SETCAR(args, duplicate(CAR(args)));
+    if (NAMEDCNT_GT_1(CAR(args)))
+	SETCAR(args, duplicate(CAR(args)));
 
     SubAssignArgs(args, &x, &subs, &y);
     S4 = IS_S4_OBJECT(x);
@@ -1435,7 +1435,7 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* in a naked fashion. */
 
     UNPROTECT(2);
-    SET_NAMED(x, 0);
+    SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }
@@ -1539,7 +1539,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	thesub = CAR(subs);
 	len = length(thesub);
 	if (len > 1) {
-            if (NAMED(x) == 2)
+            if (NAMEDCNT_GT_1(x))
                 SETCAR(args, x = xtop = duplicate(x));
 	    xup = vectorIndex(x, thesub, 0, len-2, /*partial ok*/TRUE, call);
 	    /* OneIndex sets newname, but it will be overwritten before being used. */
@@ -1595,7 +1595,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	which = SubassignTypeFix(&x, &y, stretch, 2, call);
 
-        if (NAMED(x) == 2) {
+        if (NAMEDCNT_GT_1(x)) {
             PROTECT(x);
             x = duplicate(x);
             UNPROTECT(1);
@@ -1714,7 +1714,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 1919:      /* vector     <- vector     */
 	case 2020:	/* expression <- expression */
 
-	    if( NAMED(y) ) y = duplicate(y);
+	    if (NAMEDCNT_GT_0(y)) y = duplicate(y);
 	    SET_VECTOR_ELT(x, offset, y);
 	    break;
 
@@ -1794,7 +1794,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     else xtop = x;
 
     UNPROTECT(1);
-    SET_NAMED(xtop, 0);
+    SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
     return xtop;
 }
@@ -1851,7 +1851,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     PROTECT_WITH_INDEX(val, &pvalidx);
     S4 = IS_S4_OBJECT(x);
 
-    if (NAMED(x) == 2)
+    if (NAMEDCNT_GT_1(x))
 	REPROTECT(x = duplicate(x), pxidx);
 
     /* If we aren't creating a new entry and NAMED>0
@@ -1859,10 +1859,11 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
        If we are creating a new entry we could duplicate
        or increase NAMED. We duplicate if NAMED==1, but
        not if NAMED==2 */
-    if (NAMED(val) == 2)
+    if (NAMEDCNT_GT_1(val))
 	maybe_duplicate=TRUE;
-    else if (NAMED(val)==1)
+    else if (NAMEDCNT_GT_0(val))
 	REPROTECT(val = duplicate(val), pvalidx);
+
     /* code to allow classes to extend ENVSXP */
     if(TYPEOF(x) == S4SXP) {
 	xS4 = x;
@@ -1880,7 +1881,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		SET_ATTRIB(CDR(x), ATTRIB(x));
 		IS_S4_OBJECT(x) ?  SET_S4_OBJECT(CDR(x)) : UNSET_S4_OBJECT(CDR(x));
 		SET_OBJECT(CDR(x), OBJECT(x));
-		SET_NAMED(CDR(x), NAMED(x));
+		SET_NAMEDCNT(CDR(x), NAMEDCNT(x));
 		x = CDR(x);
 	    }
 	    else
@@ -2009,7 +2010,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     UNPROTECT(2);
     if(xS4 != R_NilValue)
 	x = xS4; /* x was an env't, the data slot of xS4 */
-    SET_NAMED(x, 0);
+    SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }

@@ -954,13 +954,13 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     /* expression -> list, new in R 2.4.0 */
     if (type == VECSXP && TYPEOF(v) == EXPRSXP) {
 	/* This is sneaky but saves us rewriting a lot of the duplicate code */
-	rval = NAMED(v) ? duplicate(v) : v;
+	rval = NAMEDCNT_GT_0(v) ? duplicate(v) : v;
 	SET_TYPEOF(rval, VECSXP);
 	return rval;
     }
 
     if (type == EXPRSXP && TYPEOF(v) == VECSXP) {
-	rval = NAMED(v) ? duplicate(v) : v;
+	rval = NAMEDCNT_GT_0(v) ? duplicate(v) : v;
 	SET_TYPEOF(rval, EXPRSXP);
 	return rval;
     }
@@ -1224,7 +1224,7 @@ static SEXP asFunction(SEXP x)
     if (isFunction(x)) return x;
     PROTECT(f = allocSExp(CLOSXP));
     SET_CLOENV(f, R_GlobalEnv);
-    if (NAMED(x)) PROTECT(x = duplicate(x));
+    if (NAMEDCNT_GT_0(x)) PROTECT(x = duplicate(x));
     else PROTECT(x);
 
     if (isNull(x) || !isList(x)) {
@@ -1272,7 +1272,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
 	   Generally coerceVector will copy over attributes.
 	*/
 	if (type != ANYSXP && TYPEOF(u) != type) v = coerceVector(u, type);
-	else if (NAMED(u)) v = duplicate(u);
+	else if (NAMEDCNT_GT_0(u)) v = duplicate(u);
 
 	/* drop attributes() and class() in some cases for as.pairlist:
 	   But why?  (And who actually coerces to pairlists?)
@@ -1354,7 +1354,7 @@ SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
     x = CAR(args);
     if(TYPEOF(x) == type) {
 	if(ATTRIB(x) == R_NilValue) return x;
-	ans = NAMED(x) ? duplicate(x) : x;
+	ans = NAMEDCNT_GT_0(x) ? duplicate(x) : x;
 	CLEAR_ATTRIB(ans);
 	return ans;
     }
@@ -1396,7 +1396,7 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case STRSXP:
 	case RAWSXP:
 	    if(ATTRIB(x) == R_NilValue) return x;
-	    ans  = NAMED(x) ? duplicate(x) : x;
+	    ans  = NAMEDCNT_GT_0(x) ? duplicate(x) : x;
 	    CLEAR_ATTRIB(ans);
 	    return ans;
 	case EXPRSXP:
@@ -2493,12 +2493,7 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(c, fun);
     c = CDR(c);
     for (i = 0; i < n; i++) {
-#ifndef NEW
 	SETCAR(c, VECTOR_ELT(args, i));
-#else
-	SETCAR(c, mkPROMISE(VECTOR_ELT(args, i), rho));
-	SET_PRVALUE(CAR(c), VECTOR_ELT(args, i)); */
-#endif
 	if (ItemName(names, i) != R_NilValue)
 	    SET_TAG(c, install(translateChar(ItemName(names, i))));
 	c = CDR(c);
@@ -2537,7 +2532,7 @@ SEXP substitute(SEXP lang, SEXP rho)
 			t = PREXPR(t);
 		    } while(TYPEOF(t) == PROMSXP);
 		    /* make sure code will not be modified: */
-		    if (NAMED(t) < 2) SET_NAMED(t, 2);
+		    SET_NAMEDCNT_MAX(t);
 		    return t;
 		}
 		else if (TYPEOF(t) == DOTSXP)
@@ -2645,7 +2640,7 @@ SEXP attribute_hidden do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP val = CAR(args); 
     /* Make sure expression has NAMED == 2 before being returning
        in to avoid modification of source code */
-    if (NAMED(val) != 2) SET_NAMED(val, 2);
+    SET_NAMEDCNT_MAX(val);
     return(val);
 }
 

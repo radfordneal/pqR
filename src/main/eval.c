@@ -363,7 +363,7 @@ SEXP attribute_hidden forcePromise(SEXP e)
 	R_PendingPromises = prstack.next;
 	SET_PRSEEN(e, 0);
 	SET_PRVALUE(e, val);
-        SET_NAMED (val, NAMED(val)==0 ? 1 : 2);
+        INC_NAMEDCNT(val);
 	SET_PRENV(e, R_NilValue);
     }
     return PRVALUE(e);
@@ -402,7 +402,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	   used as values.  Setting NAMED to 2 makes sure weird calls
 	   to assignment functions won't modify constants in
 	   expressions.  */
-        SET_NAMED(e,2);
+        SET_NAMEDCNT_MAX(e);
         return e;
     }
     
@@ -465,8 +465,8 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	    }
 	    else tmp = PRVALUE(tmp);
 	}
-	else if (!isNull(tmp) && NAMED(tmp) < 1)
-	    SET_NAMED(tmp, 1);
+	else if (NAMEDCNT_EQ_0(tmp))
+	    SET_NAMEDCNT_1(tmp);
 	break;
     case PROMSXP:
 	if (PRVALUE(e) == R_UnboundValue)
@@ -894,9 +894,7 @@ static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 		if (TAG(a) == TAG(tmp))
 		    break;
 	    if (a == R_NilValue)
-		/* Use defineVar instead of earlier version that added
-		   bindings manually */
-		defineVar(TAG(tmp), CAR(tmp), newrho);
+		set_var_in_frame (TAG(tmp), CAR(tmp), newrho, TRUE, 3);
 	}
     }
 
@@ -1187,11 +1185,10 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     if ((vl = findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
-	if(NAMED(vl) == 2) {
+	if(NAMEDCNT_GT_1(vl)) {
 	    PROTECT(vl = duplicate(vl));
-	    defineVar(symbol, vl, rho);
+	    set_var_in_frame (symbol, vl, rho, TRUE, 3);
 	    UNPROTECT(1);
-	    SET_NAMED(vl, 1);
 	}
 	return vl;
     }
@@ -1201,9 +1198,8 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 	error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
 
     PROTECT(vl = duplicate(vl));
-    defineVar(symbol, vl, rho);
+    set_var_in_frame (symbol, vl, rho, TRUE, 3);
     UNPROTECT(1);
-    SET_NAMED(vl, 1);
     return vl;
 }
 
@@ -1292,18 +1288,6 @@ SEXP attribute_hidden do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
 	do_browser(call, op, R_NilValue, rho); \
     } } while (0)
 
-
-/* Allocate space for the loop variable value the first time through
-   (when v == R_NilValue) and when the value has been assigned to
-   another variable (NAMED(v) == 2). This should be safe and avoid
-   allocation in many cases. */
-#define ALLOC_LOOP_VAR(v, val_type, vpi) do { \
-        if (v == R_NilValue || NAMED(v) == 2) { \
-	    REPROTECT(v = allocVector(val_type, 1), vpi); \
-	    SET_NAMED(v, 1); \
-	} \
-    } while(0)
-
 SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Need to declare volatile variables whose values are relied on
@@ -1312,7 +1296,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
        include n and bgn, but gcc -O2 -Wclobbered warns about these so
        to be safe we declare them volatile as well. */
     volatile int i, n, bgn;
-    volatile SEXP v, val;
+    volatile SEXP v, val, nval;
     int dbg, val_type;
     SEXP sym, body;
     RCNTXT cntxt;
@@ -1350,11 +1334,13 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         if ( inherits(val, "factor") )
             REPROTECT(val = asCharacterFactor(val), valpi);
 
-        /* increment NAMED for sequence to avoid modification by loop code */
-        if (NAMED(val) < 2) SET_NAMED(val, NAMED(val) + 1);
+        /* increment NAMEDCNT for sequence to avoid modification by loop code */
+        INC_NAMEDCNT(val);
 
-        if (isList(val) || isNull(val))
+        if (isList(val) || isNull(val)) {
 	    n = length(val);
+            nval = val;
+        }
         else
 	    n = LENGTH(val);
 
@@ -1384,20 +1370,24 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case EXPRSXP:
 	case VECSXP:
 	    v = VECTOR_ELT(val, i);
-	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(v, 2);
+	    SET_NAMEDCNT_MAX(v); /* maybe unnecessary? */
 	    break;
 
 	case LISTSXP:
-	    v = CAR(val);
-	    val = CDR(val);
-	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(v, 2);
+	    v = CAR(nval);
+	    nval = CDR(nval);
+	    SET_NAMEDCNT_MAX(v);
 	    break;
 
 	default:
 
-            ALLOC_LOOP_VAR(v, val_type, vpi);
+            /* Allocate space for the loop variable value the first time through
+               (when v == R_NilValue), when the value has been assigned to
+               another variable (NAMEDCNT(v) > 1), and when an attribute
+               has been attached to it. */
+
+            if (v == R_NilValue || NAMEDCNT_GT_1(v) || ATTRIB(v) != R_NilValue)
+                REPROTECT(v = allocVector(val_type, 1), vpi);
 
             switch (val_type) {
             case LGLSXP:
@@ -1424,9 +1414,9 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
 
             break;
-	    }
+        }
 
-        defineVar(sym, v, rho); /* define, not set, as it might be removed */
+        set_var_in_frame (sym, v, rho, TRUE, 3);
 
         DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 
@@ -1437,6 +1427,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
  for_break:
     endcontext(&cntxt);
+    if (!variant) 
+        DEC_NAMEDCNT(val);
     UNPROTECT(4);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
@@ -1586,7 +1578,7 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (TYPEOF(op) == PROMSXP) {
 	op = forcePromise(op);
-	SET_NAMED(op, 2);
+	SET_NAMEDCNT_MAX(op);
     }
 
     CheckFormals(CAR(args));
@@ -1719,9 +1711,9 @@ static void tmp_cleanup(void *data)
 #define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
-	if (NAMED(__v__) == 2) { \
+	if (NAMEDCNT_GT_1(__v__)) { \
 	    __v__ = duplicate(__v__); \
-	    SET_NAMED(__v__, 1); \
+	    SET_NAMEDCNT_1(__v__); \
 	    SETCAR(__lhs__, __v__); \
 	} \
 	R_SetVarLocValue(loc, __v__); \
@@ -1828,7 +1820,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
     PROTECT(lhs);
     PROTECT(rhsprom = mkPROMISE(val, rho));
     SET_PRVALUE(rhsprom, rhs);
-    SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
+    INC_NAMEDCNT(rhs);
 
     while (isLanguage(CADR(expr))) {
 	nprot = 1; /* the PROTECT of rhs below from this iteration */
@@ -1853,7 +1845,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
-        SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
+        INC_NAMEDCNT(rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
 	lhs = CDR(lhs);
@@ -1890,26 +1882,17 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP expr, SEXP val, SEXP rho)
 #else
     /* we do not duplicate the value, so to be conservative mark the
        value as NAMED = 2 */
-    SET_NAMED(saverhs, 2);
+    SET_NAMEDCNT_MAX(saverhs);
     return saverhs;
 #endif
 }
-
-/* Defunct in 1.5.0
-SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    checkArity(op,args);
-    Rprintf(".Alias is deprecated; there is no replacement \n");
-    SET_NAMED(CAR(args), 0);
-    return CAR(args);
-}
-*/
 
 /*  Assignment in its various forms  */
 
 SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP s, a, lhs, rhs;
+    SEXP a, lhs, rhs, result;
+    int lhs_string = 0;
 
     if (isNull(args) || isNull(a = CDR(args)) || !isNull(CDR(a)))
         checkArity(op,args);
@@ -1918,69 +1901,25 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
     rhs = CAR(a);
 
     if (isString(lhs)) {
-	/* fix up a duplicate or args and recursively call do_set */
-	SEXP val;
-        PROTECT (a = install(translateChar(STRING_ELT(lhs, 0))));
-        PROTECT (args = CONS (a, CONS(rhs, R_NilValue)));
-	val = do_set(call, op, args, rho);
-	UNPROTECT(2);
-	return val;
+        PROTECT(lhs = install(translateChar(STRING_ELT(lhs, 0)))); 
+        lhs_string = 1;
     }
 
-    switch (PRIMVAL(op)) {
-    case 1: case 3:					/* <-, = */
-	if (isSymbol(lhs)) {
-	    s = eval(rhs, rho);
-#ifdef CONSERVATIVE_COPYING /* not default */
-	    if (NAMED(s))
-	    {
-		SEXP t;
-		PROTECT(s);
-		t = duplicate(s);
-		UNPROTECT(1);
-		s = t;
-	    }
-	    PROTECT(s);
-	    defineVar(lhs, s, rho);
-	    UNPROTECT(1);
-	    SET_NAMED(s, 1);
-#else
-	    switch (NAMED(s)) {
-	    case 0: SET_NAMED(s, 1); break;
-	    case 1: SET_NAMED(s, 2); break;
-	    }
-	    defineVar(lhs, s, rho);
-#endif
-	    R_Visible = FALSE;
-	    return (s);
-	}
-	else if (isLanguage(lhs)) {
-	    R_Visible = FALSE;
-	    return applydefine(call, op, lhs, rhs, rho);
-	}
-	else errorcall(call,
-		       _("invalid (do_set) left-hand side to assignment"));
-    case 2:						/* <<- */
-	if (isSymbol(lhs)) {
-	    s = eval(rhs, rho);
-	    if (NAMED(s))
-		s = duplicate(s);
-	    PROTECT(s);
-	    setVar(lhs, s, ENCLOS(rho));
-	    UNPROTECT(1);
-	    SET_NAMED(s, 1);
-	    R_Visible = FALSE;
-	    return s;
-	}
-	else if (isLanguage(lhs))
-	    return applydefine(call, op, lhs, rhs, rho);
-	else error(_("invalid assignment left-hand side"));
-
-    default:
-	UNIMPLEMENTED("do_set");
-
+    if (isSymbol(lhs)) {
+        result = evalv (rhs, rho, 0);
+        if (PRIMVAL(op) == 2) /* <<- */
+            set_var_nonlocal (lhs, result, ENCLOS(rho), 3);
+        else
+            set_var_in_frame (lhs, result, rho, TRUE, 3);
     }
-    return R_NilValue;/*NOTREACHED*/
+    else if (isLanguage(lhs)) {
+        result = applydefine (call, op, lhs, rhs, rho);
+    }
+    else
+        error(_("invalid assignment left-hand side"));
+
+    if (lhs_string) UNPROTECT(1);
+    return result;
 }
 
 
@@ -2153,7 +2092,7 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
     for (a = values, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
         if (TYPEOF(CAR(b)) == PROMSXP) {
             SET_PRVALUE(CAR(b), CAR(a));
-            SET_NAMED (CAR(a), NAMED(CAR(a))==0 ? 1 : 2);
+            INC_NAMEDCNT(CAR(a));
         }
     UNPROTECT(1);
     return s;
@@ -2168,7 +2107,7 @@ SEXP attribute_hidden promiseArgsWith1Value(SEXP el, SEXP rho, SEXP value)
     if (s == R_NilValue) error(_("dispatch error"));
     if (TYPEOF(CAR(s)) == PROMSXP) {
         SET_PRVALUE(CAR(s), value);
-        SET_NAMED (value, NAMED(value)==0 ? 1 : 2);
+        INC_NAMEDCNT(value);
     }
     UNPROTECT(1);
     return s;
@@ -2261,7 +2200,7 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/* PR#14035 */
 	x = VectorToPairListNamed(CADR(args));
 	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
-	    SET_NAMED(CAR(xptr) , 2);
+	    SET_NAMEDCNT_MAX(CAR(xptr));
 	env = NewEnvironment(R_NilValue, x, encl);
 	PROTECT(env);
 	break;
@@ -2728,7 +2667,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	/* This and the similar test below implement the strategy
 	 for S3 methods selected for S4 objects.  See ?Methods */
         value = CAR(args);
-	if(NAMED(value)) SET_NAMED(value, 2);
+	if (NAMEDCNT_GT_0(value)) SET_NAMEDCNT_MAX(value);
 	value = R_getS4DataSlot(value, S4SXP); /* the .S3Class obj. or NULL*/
 	if(value != R_NilValue) /* use the S3Part as the inherited object */
 	    SETCAR(args, value);
@@ -2743,7 +2682,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if(isFunction(rsxp) && IS_S4_OBJECT(CADR(args)) && rwhich > 0
        && isBasicClass(translateChar(STRING_ELT(rclass, rwhich)))) {
         value = CADR(args);
-	if(NAMED(value)) SET_NAMED(value, 2);
+	if (NAMEDCNT_GT_0(value)) SET_NAMEDCNT_MAX(value);
 	value = R_getS4DataSlot(value, S4SXP);
 	if(value != R_NilValue) SETCADR(args, value);
     }
@@ -2902,10 +2841,10 @@ void R_initialize_bcode(void)
   R_valueSym = install("value");
 
   R_TrueValue = mkTrue();
-  SET_NAMED(R_TrueValue, 2);
+  SET_NAMEDCNT_MAX(R_TrueValue);
   R_PreserveObject(R_TrueValue);
   R_FalseValue = mkFalse();
-  SET_NAMED(R_FalseValue, 2);
+  SET_NAMEDCNT_MAX(R_FalseValue);
   R_PreserveObject(R_FalseValue);
 #ifdef THREADED_CODE
   bcEval(NULL, NULL, FALSE);
@@ -3133,7 +3072,7 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
     SEXP value = SYMVALUE(symbol);
     if (TYPEOF(value) == PROMSXP) {
 	value = forcePromise(value);
-	SET_NAMED(value, 2);
+	SET_NAMEDCNT_MAX(value);
     }
     if (TYPEOF(value) != type) {
 	/* probably means a package redefined the base function so
@@ -3188,7 +3127,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
     SEXP op = getPrimitive(opsym, BUILTINSXP);
     if (TYPEOF(op) == PROMSXP) {
 	op = forcePromise(op);
-	SET_NAMED(op, 2);
+	SET_NAMEDCNT_MAX(op);
     }
     if (isObject(x) || isObject(y)) {
 	SEXP args, ans;
@@ -3608,8 +3547,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss);
     else if (TYPEOF(value) == PROMSXP)
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
-    else if (NAMED(value) == 0 && value != R_NilValue)
-	SET_NAMED(value, 1);
+    else if (NAMEDCNT_EQ_0(value))
+	SET_NAMEDCNT_1(value);
     return value;
 }
 
@@ -3636,8 +3575,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	case INTSXP: \
 	case LGLSXP: \
 	    /* may be ok to skip this test: */ \
-	    if (NAMED(value) == 0) \
-		SET_NAMED(value, 1); \
+	    if (NAMEDCNT_EQ_0(value)) \
+		SET_NAMEDCNT_1(value); \
 	    R_Visible = TRUE; \
 	    BCNPUSH(value); \
 	    NEXT(); \
@@ -3653,8 +3592,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 		    }							\
 		    else value = pv;					\
 		}							\
-		else if (NAMED(value) == 0)				\
-		    SET_NAMED(value, 1);				\
+		else if (NAMEDCNT_EQ_0(value))				\
+		    SET_NAMEDCNT_1(value);				\
 		R_Visible = TRUE;					\
 		BCNPUSH(value);						\
 		NEXT();							\
@@ -3729,7 +3668,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	last = CDR(last);
     prom = mkPROMISE(CAR(last), rho);
     SET_PRVALUE(prom, rhs);
-    SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
+    INC_NAMEDCNT(rhs);
     SETCAR(last, prom);
     result = tryDispatch(generic, ncall, lhs, rho, pv);
     UNPROTECT(1);
@@ -3773,10 +3712,10 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   int label = GETOP(); \
   SEXP lhs = GETSTACK(-2); \
   SEXP rhs = GETSTACK(-1); \
-  if (NAMED(lhs) == 2) { \
+  if (NAMEDCNT_GT_1(lhs)) { \
     lhs = duplicate(lhs); \
     SETSTACK(-2, lhs); \
-    SET_NAMED(lhs, 1); \
+    SET_NAMEDCNT_1(lhs); \
   } \
   if (isObject(lhs) && \
       tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
@@ -3832,10 +3771,10 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
     if (isObject(lhs)) { \
 	SEXP call = VECTOR_ELT(constants, callidx); \
 	SEXP rhs = GETSTACK(-1); \
-	if (NAMED(lhs) == 2) { \
+	if (NAMEDCNT_GT_1(lhs)) { \
 	    lhs = duplicate(lhs); \
 	    SETSTACK(-2, lhs); \
-	    SET_NAMED(lhs, 1); \
+	    SET_NAMEDCNT_1(lhs); \
 	} \
 	if (tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
 	    R_BCNodeStackTop--; \
@@ -4046,12 +3985,12 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     SEXP idx, args, value;
     SEXP vec = GETSTACK_PTR(sx);
 
-    if (NAMED(vec) == 2) {
+    if (NAMEDCNT_GT_1(vec)) {
 	vec = duplicate(vec);
 	SETSTACK_PTR(sx, vec);
     }
-    else if (NAMED(vec) == 1)
-	SET_NAMED(vec, 0);
+    else
+	SET_NAMEDCNT_0(vec);
 
     if (ATTRIB(vec) == R_NilValue) {
 	int i = bcStackIndex(si);
@@ -4090,12 +4029,12 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     SEXP dim, idx, jdx, args, value;
     SEXP mat = GETSTACK(-4);
 
-    if (NAMED(mat) > 1) {
+    if (NAMEDCNT_GT_1(mat)) {
 	mat = duplicate(mat);
 	SETSTACK(-4, mat);
     }
-    else if (NAMED(mat) == 1)
-	SET_NAMED(mat, 0);
+    else
+	SET_NAMEDCNT_0(mat);
 
     dim = getMatrixDim(mat);
 
@@ -4173,10 +4112,10 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
 
 #define GET_VEC_LOOP_VALUE(var, pos) do {		\
     (var) = GETSTACK(pos);				\
-    if (NAMED(var) == 2) {				\
+    if (NAMEDCNT_GT_1(var)) {				\
 	(var) = allocVector(TYPEOF(seq), 1);		\
 	SETSTACK(pos, var);				\
-	SET_NAMED(var, 1);				\
+	SET_NAMEDCNT_1(var);				\
     }							\
 } while (0)
 
@@ -4318,7 +4257,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	BCNPUSH(value);
 
 	/* bump up NAMED count of seq to avoid modification by loop code */
-	if (NAMED(seq) < 2) SET_NAMED(seq, NAMED(seq) + 1);
+	INC_NAMEDCNT(seq);
 
 	/* place initial loop variable value object on stack */
 	switch(TYPEOF(seq)) {
@@ -4374,12 +4313,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  case EXPRSXP:
 	  case VECSXP:
 	    value = VECTOR_ELT(seq, i);
-	    SET_NAMED(value, 2);
+	    SET_NAMEDCNT_MAX(value);
 	    break;
 	  case LISTSXP:
 	    value = CAR(seq);
 	    SETSTACK(-4, CDR(seq));
-	    SET_NAMED(value, 2);
+	    SET_NAMEDCNT_MAX(value);
 	    break;
 	  default:
 	    error(_("invalid sequence argument in for loop"));
@@ -4427,10 +4366,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    loc = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	}
 	value = GETSTACK(-1);
-	switch (NAMED(value)) {
-	case 0: SET_NAMED(value, 1); break;
-	case 1: SET_NAMED(value, 2); break;
-	}
+        INC_NAMEDCNT(value);
 	if (! SET_BINDING_VALUE(loc, value)) {
 	    SEXP symbol = VECTOR_ELT(constants, sidx);
 	    PROTECT(value);
@@ -4486,7 +4422,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
 	    value = forcePromise(value);
-	    SET_NAMED(value, 2);
+	    SET_NAMEDCNT_MAX(value);
 	}
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
@@ -4713,7 +4649,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = BINDING_VALUE(cell);
-	if (value == R_UnboundValue || NAMED(value) != 1)
+	if (value == R_UnboundValue || NAMEDCNT(value) != 1)
 	    value = EnsureLocal(symbol, rho);
 	BCNPUSH(value);
 	BCNDUP2ND();
@@ -4726,17 +4662,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = GETSTACK(-1); /* leave on stack for GC protection */
-	switch (NAMED(value)) {
-	case 0: SET_NAMED(value, 1); break;
-	case 1: SET_NAMED(value, 2); break;
-	}
+        INC_NAMEDCNT(value);
 	if (! SET_BINDING_VALUE(cell, value))
 	    defineVar(symbol, value, rho);
 	R_BCNodeStackTop--; /* now pop LHS value off the stack */
 	/* original right-hand side value is now on top of stack again */
 	/* we do not duplicate the right-hand side value, so to be
 	   conservative mark the value as NAMED = 2 */
-	SET_NAMED(GETSTACK(-1), 2);
+	SET_NAMEDCNT_MAX(GETSTACK(-1));
 	NEXT();
       }
     OP(STARTSUBSET, 2): DO_STARTDISPATCH("[");
@@ -4778,10 +4711,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	SEXP x = GETSTACK(-2);
 	SEXP rhs = GETSTACK(-1);
-	if (NAMED(x) == 2) {
+	if (NAMEDCNT_GT_1(x)) {
 	    x = duplicate(x);
 	    SETSTACK(-2, x);
-	    SET_NAMED(x, 1);
+	    SET_NAMEDCNT_1(x);
 	}
 	if (isObject(x)) {
 	    SEXP ncall, prom;
@@ -4790,7 +4723,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    SETCAR(CDDR(ncall), ScalarString(PRINTNAME(symbol)));
 	    prom = mkPROMISE(CADDDR(ncall), rho);
 	    SET_PRVALUE(prom, rhs);
-            SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
+            INC_NAMEDCNT(rhs);
 	    SETCAR(CDR(CDDR(ncall)), prom);
 	    dispatched = tryDispatch("$<-", ncall, x, rho, &value);
 	    UNPROTECT(1);
@@ -4870,11 +4803,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = GETSTACK(-1);
-	if (NAMED(value)) {
+	if (NAMEDCNT_GT_0(value)) {
 	    value = duplicate(value);
 	    SETSTACK(-1, value);
 	}
-	setVar(symbol, value, ENCLOS(rho));
+	set_var_nonlocal (symbol, value, ENCLOS(rho), 3);
 	NEXT();
       }
     OP(STARTASSIGN2, 1):
@@ -4890,15 +4823,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = BCNPOP();
-	switch (NAMED(value)) {
-	case 0: SET_NAMED(value, 1); break;
-	case 1: SET_NAMED(value, 2); break;
-	}
-	setVar(symbol, value, ENCLOS(rho));
+	set_var_nonlocal (symbol, value, ENCLOS(rho), 3);
 	/* original right-hand side value is now on top of stack again */
 	/* we do not duplicate the right-hand side value, so to be
 	   conservative mark the value as NAMED = 2 */
-	SET_NAMED(GETSTACK(-1), 2);
+	SET_NAMEDCNT_MAX(GETSTACK(-1));
 	NEXT();
       }
     OP(SETTER_CALL, 2):
@@ -4909,10 +4838,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP call = VECTOR_ELT(constants, GETOP());
 	SEXP vexpr = VECTOR_ELT(constants, GETOP());
 	SEXP args, prom, last;
-	if (NAMED(lhs) == 2) {
+	if (NAMEDCNT_GT_1(lhs)) {
 	  lhs = duplicate(lhs);
 	  SETSTACK(-5, lhs);
-	  SET_NAMED(lhs, 1);
+	  SET_NAMEDCNT_1(lhs);
 	}
 	switch (ftype) {
 	case BUILTINSXP:
@@ -4933,7 +4862,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* insert evaluated promise for LHS as first argument */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
-          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
+          INC_NAMEDCNT(lhs);
 	  SETCAR(args, prom);
 	  /* insert evaluated promise for RHS as last argument */
 	  last = args;
@@ -4941,7 +4870,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      last = CDR(last);
 	  prom = mkPROMISE(vexpr, rho);
 	  SET_PRVALUE(prom, rhs);
-          SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
+          INC_NAMEDCNT(rhs);
 	  SETCAR(last, prom);
 	  /* make the call */
           value = CALL_PRIMFUN(call, fun, args, rho, 0);
@@ -4950,13 +4879,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* push evaluated promise for RHS onto arguments with 'value' tag */
 	  prom = mkPROMISE(vexpr, rho);
 	  SET_PRVALUE(prom, rhs);
-          SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
+          INC_NAMEDCNT(rhs);
 	  PUSHCALLARG(prom);
 	  SET_TAG(GETSTACK(-1), R_valueSym);
 	  /* replace first argument with evaluated promise for LHS */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
-          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
+          INC_NAMEDCNT(lhs);
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
@@ -4991,7 +4920,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* insert evaluated promise for LHS as first argument */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
-          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
+          INC_NAMEDCNT(lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
           value = CALL_PRIMFUN(call, fun, args, rho, 0);
@@ -5000,7 +4929,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* replace first argument with evaluated promise for LHS */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
-          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
+          INC_NAMEDCNT(lhs);
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
