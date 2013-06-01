@@ -1,0 +1,3 @@
+The write.table function is modified to allow the data vector to not
+be fully computed when write.table starts.  It waits for an element to
+be computed only when that element is the next to be written.
