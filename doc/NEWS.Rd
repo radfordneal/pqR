@@ -439,7 +439,19 @@
       \item Fixed a bug in which \code{Im(matrix(complex(0),3,4))} returned
             a matrix of zero elements rather than a matrix of NA elements.
       \item **34
-      \item **35
+      \item Fixed a bug illustrated by the following:
+\preformatted{
+> library(compiler)
+> foo <- function(x,y) UseMethod("foo")
+> foo.numeric <- function(x,y) "numeric"
+> foo.default <- function(x,y) "default"
+> testi <- function () foo(x=NULL,2)
+> testc <- cmpfun (function () foo(x=NULL,2))
+> testi() 
+[1] "default"
+> testc()
+[1] "numeric"
+}
       \item **36
       \item **37
       \item **38
