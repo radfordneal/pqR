@@ -1022,18 +1022,58 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 }
 
 
-/* Mathematical Functions of One Argument  Implements a variant return
+/* MATHEMATICAL FUNCTIONS OF ONE ARGUMENT.  Implements a variant return
    of the sum of the vector result, rather than the vector itself. */
 
-static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall, int variant)
+/* Table to map math1 operation code to function.  The entries for trunc
+   and R_log are not called via do_math1 like the others, but from special
+   primitives. */
+
+static double (*math1_func_table[44])(double) = {
+        /*      0       1       2       3       4       5       6 7 8 9 */
+/* 00 */        0,      floor,  ceil,   sqrt,   sign,   trunc,  0,0,0,0,
+/* 10 */        exp,    expm1,  log1p,  R_log,  0,      0,      0,0,0,0,
+/* 20 */        cos,    sin,    tan,    acos,   asin,   atan,   0,0,0,0,
+/* 30 */        cosh,   sinh,   tanh,   acosh,  asinh,  atanh,  0,0,0,0,
+/* 40 */      lgammafn, gammafn,digamma,trigamma
+};
+
+/* Table of flags saying when an operation may produce NA/NaN or warning:
+
+       0:  NA/NaN only when argument is NA/NaN
+       1:  NA/NaN only when argument is NA/Nan or +-Inf
+      -1:  NA/NaN possible for finite argument as well as NA/NaN or +- Inf
+      -2:  may produce warning message, not just NA/NaN
+
+   Entries correspond to those in math1_func_table above. */
+
+static char math1_err_table[44] = {
+        /*      0       1       2       3       4       5       6 7 8 9 */
+/* 00 */        0,      0,      0,      -1,     0,      0,      0,0,0,0,
+/* 10 */        0,      0,      -1,     -1,     0,      0,      0,0,0,0,
+/* 20 */        1,      1,      1,      -1,     -1,     0,      0,0,0,0,
+/* 30 */        0,      0,      0,      -1,     0,      -1,     0,0,0,0,
+/* 40 */        -2,     -2,     -1,     -1
+};
+
+static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 {
     SEXP sy;
     double *a;
     int i, n;
     int naflag;
 
+    double (*f)(double);
+
+    if (opcode == 10003) /* horrible kludge for log */
+        opcode = 13;
+    else if (opcode >= 44)
+        errorcall(call, _("unimplemented real function of 1 argument"));
+
+    f = math1_func_table[opcode];
+
     if (!isNumeric(sa))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
+        errorcall(call, R_MSG_NONNUM_MATH);
 
     n = LENGTH(sa);
     /* coercion can lose the object bit */
@@ -1044,15 +1084,24 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall, int variant)
 
     if (variant == VARIANT_SUM) {
         long double s = 0.0;
-        double t;
-        for (i = 0; i < n; i++) {
-	    if (ISNAN(a[i]))
-	        s  += a[i];
-	    else {
-	        t = f(a[i]);
-	        if (ISNAN(t)) naflag = 1;
-                s += t;
-	    }
+        if (math1_err_table[opcode]==0) {
+            for (i = 0; i < n; i++) {
+                if (ISNAN(a[i]))
+                    s += a[i];
+                else
+                    s += f(a[i]);
+            }
+        }
+        else {
+            for (i = 0; i < n; i++) {
+                if (ISNAN(a[i]))
+                    s += a[i];
+                else {
+                    double t = f(a[i]);
+                    if (ISNAN(t)) naflag = 1;
+                    s += t;
+                }
+            }
         }
         sy = allocVector(REALSXP, 1);
         REAL(sy)[0] = (double) s;
@@ -1070,13 +1119,23 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall, int variant)
            SET_RTRACE(sy, 1);
         }
 #endif
-        for (i = 0; i < n; i++) {
-	    if (ISNAN(a[i]))
-	        y[i] = a[i];
-	    else {
-	        y[i] = f(a[i]);
-	        if (ISNAN(y[i])) naflag = 1;
-	    }
+        if (math1_err_table[opcode]==0) {
+            for (i = 0; i < n; i++) {
+                if (ISNAN(a[i]))
+                    y[i] = a[i];
+                else
+                    y[i] = f(a[i]);
+            }
+        }
+        else {
+            for (i = 0; i < n; i++) {
+                if (ISNAN(a[i]))
+                    y[i] = a[i];
+                else {
+                    y[i] = f(a[i]);
+                    if (ISNAN(y[i])) naflag = 1;
+                }
+            }
         }
 
         if (sa!=sy) 
@@ -1085,13 +1144,12 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall, int variant)
     }
 
     if (naflag)
-	warningcall(lcall, R_MSG_NA);
+        warningcall(call, R_MSG_NA);
 
     UNPROTECT(1);
 
     return sy;
 }
-
 
 static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
@@ -1099,56 +1157,12 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         /* for the moment, keep the interface to complex_math1 the same */
         SEXP tmp;
         PROTECT(tmp = CONS(arg,R_NilValue));
-	tmp = complex_math1(call, op, tmp, env);
+        tmp = complex_math1(call, op, tmp, env);
         UNPROTECT(1);
         return tmp;
     }
 
-#define MATH1(x) math1(arg, x, call, variant);
-    switch (PRIMVAL(op)) {
-    case 1: return MATH1(floor);
-    case 2: return MATH1(ceil);
-    case 3: return MATH1(sqrt);
-    case 4: return MATH1(sign);
-	/* case 5: return MATH1(trunc); separate from 2.6.0 */
-
-    case 10: return MATH1(exp);
-    case 11: return MATH1(expm1);
-    case 12: return MATH1(log1p);
-    case 20: return MATH1(cos);
-    case 21: return MATH1(sin);
-    case 22: return MATH1(tan);
-    case 23: return MATH1(acos);
-    case 24: return MATH1(asin);
-    case 25: return MATH1(atan);
-
-    case 30: return MATH1(cosh);
-    case 31: return MATH1(sinh);
-    case 32: return MATH1(tanh);
-    case 33: return MATH1(acosh);
-    case 34: return MATH1(asinh);
-    case 35: return MATH1(atanh);
-
-    case 40: return MATH1(lgammafn);
-    case 41: return MATH1(gammafn);
-
-    case 42: return MATH1(digamma);
-    case 43: return MATH1(trigamma);
-	/* case 44: return MATH1(tetragamma);
-	   case 45: return MATH1(pentagamma);
-	   removed in 2.0.0
-	*/
-
-	/* case 46: return MATH1(Rf_gamma_cody); removed in 2.8.0 */
-
-    default:
-        /* log put here in case the compiler handles a sparse switch poorly */
-        if (PRIMVAL(op) == 10003) 
-            return MATH1(R_log);
-
-	errorcall(call, _("unimplemented real function of 1 argument"));
-    }
-    return R_NilValue; /* never used; to keep -Wall happy */
+    return math1 (arg, PRIMVAL(op), call, variant);
 }
 
 
@@ -1172,7 +1186,7 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_fast_trunc (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
-    return math1(arg, trunc, call, variant);
+    return math1(arg, 5, call, variant);
 }
 
 SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1188,7 +1202,7 @@ SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
     if (PRIMFUN_FAST(op)==0)
         SET_PRIMFUN_FAST_UNARY (op, do_fast_trunc, 1, 0);
 
-    return math1(CAR(args), trunc, call, 0);
+    return math1(CAR(args), 5, call, 0);
 }
 
 /* Note that abs is slightly different from the do_math1 set, both
@@ -1255,78 +1269,83 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
     return do_fast_abs (call, op, CAR(args), env, 0);
 }
 
-/* Mathematical Functions of Two Numeric Arguments (plus 1 int) */
+/* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
 
-#define if_NA_Math2_set(y,a,b)				\
-	if      (ISNA (a) || ISNA (b)) y = NA_REAL;	\
-	else if (ISNAN(a) || ISNAN(b)) y = R_NaN;
+static void setup_Math2 
+    (SEXP *sa, SEXP *sb, SEXP *sy, int na, int nb, SEXP lcall)
+{
+    if (!isNumeric(*sa) || !isNumeric(*sb))
+	errorcall(lcall, R_MSG_NONNUM_MATH);
+
+    if (na == 0 || nb == 0) {
+	PROTECT(*sy = allocVector(REALSXP, 0));
+        /* for 0-length a we want the attributes of a, not those of b
+           as no recycling will occur */
+	if (na == 0) DUPLICATE_ATTRIB(*sy, *sa);
+	UNPROTECT(1);
+        return;
+    }
+
+    PROTECT(*sa = coerceVector (*sa, REALSXP));
+    PROTECT(*sb = coerceVector (*sb, REALSXP));
+    PROTECT(*sy = allocVector (REALSXP, na < nb ? nb : na));
+
+#ifdef R_MEMORY_PROFILING
+    if (RTRACE(*sa) || RTRACE(*sb)) {
+       if (RTRACE(*sa) && RTRACE(*sb)){
+	  if (na > nb)
+	      memtrace_report(*sa, *sy);
+	  else
+	      memtrace_report(*sb, *sy);
+       } else if (RTRACE(*sa))
+	   memtrace_report(*sa, *sy);
+       else /* only s2 */
+	   memtrace_report(*sb, *sy);
+       SET_RTRACE(*sy, 1);
+    }
+#endif
+}
+
+#define DO_MATH2(y,a,b,n,na,nb,fncall) do { \
+    int naflag = 0; \
+    double ai, bi; \
+    int i, ia, ib; \
+    mod_iterate(na, nb, ia, ib) { \
+        ai = a[ia]; \
+        bi = b[ib]; \
+        if (ISNAN(ai+bi)) { \
+            if (ISNA(ai) || ISNA(bi)) { \
+                y[i] = NA_REAL; \
+                continue; \
+            } \
+            if (ISNAN(ai) || ISNAN(bi)) { \
+                y[i] = R_NaN; \
+                continue; \
+            } \
+        } \
+        y[i] = fncall; \
+        if (ISNAN(y[i])) naflag = 1; \
+    } \
+    if (naflag) warningcall(lcall, R_MSG_NA); \
+    if (n == na)  DUPLICATE_ATTRIB(sy, sa); \
+    else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
+    UNPROTECT(3); \
+} while (0)
+
 
 static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double),
 		  SEXP lcall)
 {
+    double *a, *b, *y;
+    int n, na, nb;
     SEXP sy;
-    int i, ia, ib, n, na, nb;
-    double ai, bi, *a, *b, *y;
-    int naflag;
 
-    if (!isNumeric(sa) || !isNumeric(sb))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
+    na = LENGTH(sa); nb = LENGTH(sb);
+    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); y = REAL(sy);
 
-    /* for 0-length a we want the attributes of a, not those of b
-       as no recycling will occur */
-#define SETUP_Math2				\
-    na = LENGTH(sa);				\
-    nb = LENGTH(sb);				\
-    if ((na == 0) || (nb == 0))	{		\
-	PROTECT(sy = allocVector(REALSXP, 0));	\
-	if (na == 0) DUPLICATE_ATTRIB(sy, sa);	\
-	UNPROTECT(1);				\
-	return(sy);				\
-    }						\
-    n = (na < nb) ? nb : na;			\
-    PROTECT(sa = coerceVector(sa, REALSXP));	\
-    PROTECT(sb = coerceVector(sb, REALSXP));	\
-    PROTECT(sy = allocVector(REALSXP, n));	\
-    a = REAL(sa);				\
-    b = REAL(sb);				\
-    y = REAL(sy);				\
-    naflag = 0
-
-    SETUP_Math2;
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb)) {
-       if (RTRACE(sa) && RTRACE(sb)){
-	  if (na > nb)
-	      memtrace_report(sa, sy);
-	  else
-	      memtrace_report(sb, sy);
-       } else if (RTRACE(sa))
-	   memtrace_report(sa, sy);
-       else /* only s2 */
-	   memtrace_report(sb, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
-
-    mod_iterate(na, nb, ia, ib) {
-	ai = a[ia];
-	bi = b[ib];
-	if_NA_Math2_set(y[i], ai, bi)
-	else {
-	    y[i] = f(ai, bi);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-
-#define FINISH_Math2				\
-    if(naflag)					\
-	warningcall(lcall, R_MSG_NA);		\
-    if (n == na)  DUPLICATE_ATTRIB(sy, sa);	\
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb);	\
-    UNPROTECT(3)
-
-    FINISH_Math2;
+    DO_MATH2(y,a,b,n,na,nb, f(ai,bi));
 
     return sy;
 } /* math2() */
@@ -1334,123 +1353,61 @@ static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double),
 static SEXP math2_1(SEXP sa, SEXP sb, SEXP sI,
 		    double (*f)(double, double, int), SEXP lcall)
 {
+    double *a, *b, *y;
+    int n, na, nb;
     SEXP sy;
-    int i, ia, ib, n, na, nb;
-    double ai, bi, *a, *b, *y;
-    int m_opt;
-    int naflag;
 
-    if (!isNumeric(sa) || !isNumeric(sb))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
+    na = LENGTH(sa); nb = LENGTH(sb);
+    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); y = REAL(sy);
 
-    SETUP_Math2;
-    m_opt = asInteger(sI);
+    int m_opt = asInteger(sI);
 
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb)) {
-       if (RTRACE(sa) && RTRACE(sb)) {
-	  if (na > nb)
-	      memtrace_report(sa, sy);
-	  else
-	      memtrace_report(sb, sy);
-       } else if (RTRACE(sa))
-	   memtrace_report(sa, sy);
-       else /* only s2 */
-	   memtrace_report(sb, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
+    DO_MATH2(y,a,b,n,na,nb, f(ai,bi,m_opt));
 
-    mod_iterate(na, nb, ia, ib) {
-	ai = a[ia];
-	bi = b[ib];
-	if_NA_Math2_set(y[i], ai, bi)
-	else {
-	    y[i] = f(ai, bi, m_opt);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-    FINISH_Math2;
     return sy;
 } /* math2_1() */
 
 static SEXP math2_2(SEXP sa, SEXP sb, SEXP sI1, SEXP sI2,
 		    double (*f)(double, double, int, int), SEXP lcall)
 {
+    double *a, *b, *y;
+    int n, na, nb;
     SEXP sy;
-    int i, ia, ib, n, na, nb;
-    double ai, bi, *a, *b, *y;
-    int i_1, i_2;
-    int naflag;
-    if (!isNumeric(sa) || !isNumeric(sb))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
 
-    SETUP_Math2;
-    i_1 = asInteger(sI1);
-    i_2 = asInteger(sI2);
+    na = LENGTH(sa); nb = LENGTH(sb);
+    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); y = REAL(sy);
 
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb)) {
-       if (RTRACE(sa) && RTRACE(sb)) {
-	  if (na > nb)
-	      memtrace_report(sa, sy);
-	  else
-	      memtrace_report(sb, sy);
-       } else if (RTRACE(sa))
-	   memtrace_report(sa, sy);
-       else /* only s2 */
-	   memtrace_report(sb, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
+    int i_1 = asInteger(sI1);
+    int i_2 = asInteger(sI2);
 
-    mod_iterate(na, nb, ia, ib) {
-	ai = a[ia];
-	bi = b[ib];
-	if_NA_Math2_set(y[i], ai, bi)
-	else {
-	    y[i] = f(ai, bi, i_1, i_2);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-    FINISH_Math2;
+    DO_MATH2(y,a,b,n,na,nb, f(ai,bi,i_1,i_2));
+
     return sy;
 } /* math2_2() */
 
 static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
 		   SEXP lcall)
 {
+    double *a, *b, *y;
+    int n, na, nb;
     SEXP sy;
-    int i, ia, ib, n, na, nb;
-    double ai, bi, *a, *b, *y;
-    int naflag;
-    double amax, *work;
-    long nw;
 
-    if (!isNumeric(sa) || !isNumeric(sb))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
-
-    /* for 0-length a we want the attributes of a, not those of b
-       as no recycling will occur */
-    SETUP_Math2;
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb)) {
-       if (RTRACE(sa) && RTRACE(sb)) {
-	  if (na > nb)
-	      memtrace_report(sa, sy);
-	  else
-	      memtrace_report(sb, sy);
-       } else if (RTRACE(sa))
-	   memtrace_report(sa, sy);
-       else /* only s2 */
-	   memtrace_report(sb, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
+    na = LENGTH(sa); nb = LENGTH(sb);
+    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); y = REAL(sy);
 
     /* allocate work array for BesselJ, BesselY large enough for all
        arguments */
+
+    double amax, *work;
+    long nw;
+    int i;
+
     amax = 0.0;
     for (i = 0; i < nb; i++) {
 	double av = b[i] < 0 ? -b[i] : b[i];
@@ -1459,26 +1416,15 @@ static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
     nw = 1 + (long)floor(amax);
     work = (double *) R_alloc((size_t) nw, sizeof(double));
 
-    mod_iterate(na, nb, ia, ib) {
-	ai = a[ia];
-	bi = b[ib];
-	if_NA_Math2_set(y[i], ai, bi)
-	else {
-	    y[i] = f(ai, bi, work);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-
-
-    FINISH_Math2;
+    DO_MATH2(y,a,b,n,na,nb, f(ai,bi,work));
 
     return sy;
 } /* math2B() */
 
-#define Math2(A, FUN)	  math2(CAR(A), CADR(A), FUN, call);
-#define Math2_1(A, FUN)	math2_1(CAR(A), CADR(A), CADDR(A), FUN, call);
+#define Math2(A, FUN)	  math2(CAR(A), CADR(A), FUN, call)
+#define Math2_1(A, FUN)	math2_1(CAR(A), CADR(A), CADDR(A), FUN, call)
 #define Math2_2(A, FUN) math2_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call)
-#define Math2B(A, FUN)	  math2B(CAR(A), CADR(A), FUN, call);
+#define Math2B(A, FUN)	  math2B(CAR(A), CADR(A), FUN, call)
 
 SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -1488,12 +1434,9 @@ SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	(PRIMVAL(op) == 0 && isComplex(CADR(args))))
 	return complex_math2(call, op, args, env);
 
-
     switch (PRIMVAL(op)) {
 
     case  0: return Math2(args, atan2);
-    case 10001: return Math2(args, fround);/* round(), src/nmath/fround.c */
-    case 10004: return Math2(args, fprec); /* signif(), src/nmath/fprec.c */
 
     case  2: return Math2(args, lbeta);
     case  3: return Math2(args, beta);
@@ -1528,7 +1471,13 @@ SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     case 25: return Math2B(args, bessel_y_ex);
     case 26: return Math2(args, psigamma);
 
-    default:
+    default: 
+        /* Put 10001 and 10004 here so switch table won't be sparse. */
+        if (PRIMVAL(op) == 10001)
+            return Math2(args, fround); /* round(), src/nmath/fround.c */
+        if (PRIMVAL(op) == 10004)
+            return Math2(args, fprec);  /* signif(), src/nmath/fprec.c */
+
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 2);
     }
@@ -1659,7 +1608,7 @@ SEXP attribute_hidden do_log (SEXP call, SEXP op, SEXP args, SEXP env,
 	    if (isComplex(CAR(args)))
 		res = complex_math1(call, op, args, env);
 	    else
-		res = math1(CAR(args), R_log, call, variant);
+		res = math1(CAR(args), 13, call, variant);
 	    break;
 	case 2:
 	{
@@ -1686,153 +1635,128 @@ SEXP attribute_hidden do_log (SEXP call, SEXP op, SEXP args, SEXP env,
 
 /* Mathematical Functions of Three (Real) Arguments */
 
-#define if_NA_Math3_set(y,a,b,c)			        \
-	if      (ISNA (a) || ISNA (b)|| ISNA (c)) y = NA_REAL;	\
-	else if (ISNAN(a) || ISNAN(b)|| ISNAN(c)) y = R_NaN;
+static void setup_Math3
+    (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sy, int na, int nb, int nc, SEXP lcall)
+{
+    if (!isNumeric(*sa) || !isNumeric(*sb) || !isNumeric(*sc))
+	errorcall(lcall, R_MSG_NONNUM_MATH);
 
-#define mod_iterate3(n1,n2,n3,i1,i2,i3) for (i=i1=i2=i3=0; i<n; \
-	i1 = (++i1==n1) ? 0 : i1,				\
-	i2 = (++i2==n2) ? 0 : i2,				\
-	i3 = (++i3==n3) ? 0 : i3,				\
-	++i)
+    if (na == 0 || nb == 0 || nc == 0) {
+	*sy = allocVector(REALSXP,0);
+        return;
+    }
 
-#define SETUP_Math3						\
-    if (!isNumeric(sa) || !isNumeric(sb) || !isNumeric(sc))	\
-	errorcall(lcall, R_MSG_NONNUM_MATH);			\
-								\
-    na = LENGTH(sa);						\
-    nb = LENGTH(sb);						\
-    nc = LENGTH(sc);						\
-    if ((na == 0) || (nb == 0) || (nc == 0))			\
-	return(allocVector(REALSXP, 0));			\
-    n = na;							\
-    if (n < nb) n = nb;						\
-    if (n < nc) n = nc;						\
-    PROTECT(sa = coerceVector(sa, REALSXP));			\
-    PROTECT(sb = coerceVector(sb, REALSXP));			\
-    PROTECT(sc = coerceVector(sc, REALSXP));			\
-    PROTECT(sy = allocVector(REALSXP, n));			\
-    a = REAL(sa);						\
-    b = REAL(sb);						\
-    c = REAL(sc);						\
-    y = REAL(sy);						\
-    naflag = 0
+    PROTECT(*sa = coerceVector (*sa, REALSXP));
+    PROTECT(*sb = coerceVector (*sb, REALSXP));
+    PROTECT(*sc = coerceVector (*sc, REALSXP));
 
-#define FINISH_Math3				\
-    if(naflag)					\
-	warningcall(lcall, R_MSG_NA);		\
-						\
-    if (n == na) DUPLICATE_ATTRIB(sy, sa);	\
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb);	\
-    else if (n == nc) DUPLICATE_ATTRIB(sy, sc);	\
-    UNPROTECT(4)
+    int n = na;
+    if (n < nb) n = nb;
+    if (n < nc) n = nc;
+    PROTECT(*sy = allocVector (REALSXP, n));
+
+#ifdef R_MEMORY_PROFILING
+    if (RTRACE(*sa) || RTRACE(*sb) || RTRACE(*sc)) {
+       if (RTRACE(*sa))
+	  memtrace_report(*sa, *sy);
+       else if (RTRACE(*sb))
+	  memtrace_report(*sb, *sy);
+       else if (RTRACE(*sc))
+	  memtrace_report(*sc, *sy);
+       SET_RTRACE(*sy, 1);
+    }
+#endif
+}
+
+#define DO_MATH3(y,a,b,c,n,na,nb,nc,fncall) do { \
+    int naflag = 0; \
+    double ai, bi, ci; \
+    int i, ia, ib, ic; \
+    for (i = ia = ib = ic = 0; i < n; \
+         ia = (++ia==na) ? 0 : ia, \
+         ib = (++ib==nb) ? 0 : ib, \
+         ic = (++ic==nc) ? 0 : ic, i++) { \
+        ai = a[ia]; \
+        bi = b[ib]; \
+        ci = c[ic]; \
+        if (ISNAN(ai+bi+ci)) { \
+            if (ISNA(ai) || ISNA(bi) || ISNA(ci)) { \
+                y[i] = NA_REAL; \
+                continue; \
+            } \
+            if (ISNAN(ai) || ISNAN(bi) || ISNAN(ci)) { \
+                y[i] = R_NaN; \
+                continue; \
+            } \
+        } \
+        y[i] = fncall; \
+        if (ISNAN(y[i])) naflag = 1; \
+    } \
+    if (naflag) warningcall(lcall, R_MSG_NA); \
+    if (n == na) DUPLICATE_ATTRIB(sy, sa); \
+    else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
+    else if (n == nc) DUPLICATE_ATTRIB(sy, sc); \
+    UNPROTECT(4); \
+} while (0)
 
 static SEXP math3_1(SEXP sa, SEXP sb, SEXP sc, SEXP sI,
 		    double (*f)(double, double, double, int), SEXP lcall)
 {
+    double *a, *b, *c, *y;
+    int n, na, nb, nc;
     SEXP sy;
-    int i, ia, ib, ic, n, na, nb, nc;
-    double ai, bi, ci, *a, *b, *c, *y;
-    int i_1;
-    int naflag;
 
-    SETUP_Math3;
-    i_1 = asInteger(sI);
+    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc);
+    setup_Math3 (&sa, &sb, &sc, &sy, na, nb, nc, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); c = REAL(sc); y = REAL(sy);
 
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb) || RTRACE(sc)) {
-       if (RTRACE(sa))
-	  memtrace_report(sa, sy);
-       else if (RTRACE(sb))
-	  memtrace_report(sb, sy);
-       else if (RTRACE(sc))
-	  memtrace_report(sc, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
+    int i_1 = asInteger(sI);
 
-    mod_iterate3 (na, nb, nc, ia, ib, ic) {
-	ai = a[ia];
-	bi = b[ib];
-	ci = c[ic];
-	if_NA_Math3_set(y[i], ai,bi,ci)
-	else {
-	    y[i] = f(ai, bi, ci, i_1);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
+    DO_MATH3(y,a,b,c,n,na,nb,nc, f(ai,bi,ci,i_1));
 
-    FINISH_Math3;
     return sy;
 } /* math3_1 */
 
 static SEXP math3_2(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ,
 		    double (*f)(double, double, double, int, int), SEXP lcall)
 {
+    double *a, *b, *c, *y;
+    int n, na, nb, nc;
     SEXP sy;
-    int i, ia, ib, ic, n, na, nb, nc;
-    double ai, bi, ci, *a, *b, *c, *y;
-    int i_1,i_2;
-    int naflag;
 
-    SETUP_Math3;
-    i_1 = asInteger(sI);
-    i_2 = asInteger(sJ);
+    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc);
+    setup_Math3 (&sa, &sb, &sc, &sy, na, nb, nc, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); c = REAL(sc); y = REAL(sy);
 
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb) || RTRACE(sc)) {
-       if (RTRACE(sa))
-	  memtrace_report(sa, sy);
-       else if (RTRACE(sb))
-	  memtrace_report(sb, sy);
-       else if (RTRACE(sc))
-	  memtrace_report(sc, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
+    int i_1 = asInteger(sI);
+    int i_2 = asInteger(sJ);
 
+    DO_MATH3(y,a,b,c,n,na,nb,nc, f(ai,bi,ci,i_1,i_2));
 
-    mod_iterate3 (na, nb, nc, ia, ib, ic) {
-	ai = a[ia];
-	bi = b[ib];
-	ci = c[ic];
-	if_NA_Math3_set(y[i], ai,bi,ci)
-	else {
-	    y[i] = f(ai, bi, ci, i_1, i_2);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-
-    FINISH_Math3;
     return sy;
 } /* math3_2 */
 
 static SEXP math3B(SEXP sa, SEXP sb, SEXP sc,
 		   double (*f)(double, double, double, double *), SEXP lcall)
 {
+    double *a, *b, *c, *y;
+    int n, na, nb, nc;
     SEXP sy;
-    int i, ia, ib, ic, n, na, nb, nc;
-    double ai, bi, ci, *a, *b, *c, *y;
-    int naflag;
-    double amax, *work;
-    long nw;
 
-    SETUP_Math3;
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa) || RTRACE(sb) || RTRACE(sc)) {
-       if (RTRACE(sa))
-	  memtrace_report(sa, sy);
-       else if (RTRACE(sb))
-	  memtrace_report(sb, sy);
-       else if (RTRACE(sc))
-	  memtrace_report(sc, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
+    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc);
+    setup_Math3 (&sa, &sb, &sc, &sy, na, nb, nc, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); c = REAL(sc); y = REAL(sy);
 
     /* allocate work array for BesselI, BesselK large enough for all
        arguments */
+
+    double amax, *work;
+    long nw;
+    int i;
+
     amax = 0.0;
     for (i = 0; i < nb; i++) {
 	double av = b[i] < 0 ? -b[i] : b[i];
@@ -1841,25 +1765,14 @@ static SEXP math3B(SEXP sa, SEXP sb, SEXP sc,
     nw = 1 + (long)floor(amax);
     work = (double *) R_alloc((size_t) nw, sizeof(double));
 
-    mod_iterate3 (na, nb, nc, ia, ib, ic) {
-	ai = a[ia];
-	bi = b[ib];
-	ci = c[ic];
-	if_NA_Math3_set(y[i], ai,bi,ci)
-	else {
-	    y[i] = f(ai, bi, ci, work);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-
-    FINISH_Math3;
+    DO_MATH3(y,a,b,c,n,na,nb,nc, f(ai,bi,ci,work));
 
     return sy;
 } /* math3B */
 
-#define Math3_1(A, FUN)	math3_1(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call);
+#define Math3_1(A, FUN)	math3_1(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call)
 #define Math3_2(A, FUN) math3_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), CAD4R(A), FUN, call)
-#define Math3B(A, FUN)  math3B (CAR(A), CADR(A), CADDR(A), FUN, call);
+#define Math3B(A, FUN)  math3B (CAR(A), CADR(A), CADDR(A), FUN, call)
 
 SEXP attribute_hidden do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -1939,131 +1852,117 @@ SEXP attribute_hidden do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* Mathematical Functions of Four (Real) Arguments */
 
-#define if_NA_Math4_set(y,a,b,c,d)				\
-	if      (ISNA (a)|| ISNA (b)|| ISNA (c)|| ISNA (d)) y = NA_REAL;\
-	else if (ISNAN(a)|| ISNAN(b)|| ISNAN(c)|| ISNAN(d)) y = R_NaN;
-
-#define mod_iterate4(n1,n2,n3,n4,i1,i2,i3,i4) for (i=i1=i2=i3=i4=0; i<n; \
-	i1 = (++i1==n1) ? 0 : i1,					\
-	i2 = (++i2==n2) ? 0 : i2,					\
-	i3 = (++i3==n3) ? 0 : i3,					\
-	i4 = (++i4==n4) ? 0 : i4,					\
-	++i)
-
-static SEXP math4(SEXP sa, SEXP sb, SEXP sc, SEXP sd,
-		  double (*f)(double, double, double, double), SEXP lcall)
+static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy, 
+                         int na, int nb, int nc, int nd, SEXP lcall)
 {
-    SEXP sy;
-    int i, ia, ib, ic, id, n, na, nb, nc, nd;
-    double ai, bi, ci, di, *a, *b, *c, *d, *y;
-    int naflag;
+    if (!isNumeric(*sa) || !isNumeric(*sb) || !isNumeric(*sc) || !isNumeric(*sd))
+	errorcall(lcall, R_MSG_NONNUM_MATH);
 
-#define SETUP_Math4							\
-    if(!isNumeric(sa)|| !isNumeric(sb)|| !isNumeric(sc)|| !isNumeric(sd))\
-	errorcall(lcall, R_MSG_NONNUM_MATH);				\
-									\
-    na = LENGTH(sa);							\
-    nb = LENGTH(sb);							\
-    nc = LENGTH(sc);							\
-    nd = LENGTH(sd);							\
-    if ((na == 0) || (nb == 0) || (nc == 0) || (nd == 0))		\
-	return(allocVector(REALSXP, 0));				\
-    n = na;								\
-    if (n < nb) n = nb;							\
-    if (n < nc) n = nc;							\
-    if (n < nd) n = nd;							\
-    PROTECT(sa = coerceVector(sa, REALSXP));				\
-    PROTECT(sb = coerceVector(sb, REALSXP));				\
-    PROTECT(sc = coerceVector(sc, REALSXP));				\
-    PROTECT(sd = coerceVector(sd, REALSXP));				\
-    PROTECT(sy = allocVector(REALSXP, n));				\
-    a = REAL(sa);							\
-    b = REAL(sb);							\
-    c = REAL(sc);							\
-    d = REAL(sd);							\
-    y = REAL(sy);							\
-    naflag = 0
-
-    SETUP_Math4;
-
-    mod_iterate4 (na, nb, nc, nd, ia, ib, ic, id) {
-	ai = a[ia];
-	bi = b[ib];
-	ci = c[ic];
-	di = d[id];
-	if_NA_Math4_set(y[i], ai,bi,ci,di)
-	else {
-	    y[i] = f(ai, bi, ci, di);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
+    if (na == 0 || nb == 0 || nc == 0 || nd == 0) {
+	*sy = allocVector(REALSXP,0);
+        return;
     }
 
-#define FINISH_Math4				\
-    if(naflag)					\
-	warningcall(lcall, R_MSG_NA);		\
-						\
-    if (n == na) DUPLICATE_ATTRIB(sy, sa);	\
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb);	\
-    else if (n == nc) DUPLICATE_ATTRIB(sy, sc);	\
-    else if (n == nd) DUPLICATE_ATTRIB(sy, sd);	\
-    UNPROTECT(5)
+    PROTECT(*sa = coerceVector (*sa, REALSXP));
+    PROTECT(*sb = coerceVector (*sb, REALSXP));
+    PROTECT(*sc = coerceVector (*sc, REALSXP));
+    PROTECT(*sd = coerceVector (*sd, REALSXP));
 
-    FINISH_Math4;
+    int n = na;
+    if (n < nb) n = nb;
+    if (n < nc) n = nc;
+    if (n < nd) n = nd;
+    PROTECT(*sy = allocVector (REALSXP, n));
+}
+
+#define DO_MATH4(y,a,b,c,d,n,na,nb,nc,nd,fncall) do { \
+    int naflag = 0; \
+    double ai, bi, ci, di; \
+    int i, ia, ib, ic, id; \
+    for (i = ia = ib = ic = id = 0; i < n; \
+         ia = (++ia==na) ? 0 : ia, \
+         ib = (++ib==nb) ? 0 : ib, \
+         ic = (++ic==nc) ? 0 : ic, \
+         id = (++id==nd) ? 0 : id, i++) { \
+        ai = a[ia]; \
+        bi = b[ib]; \
+        ci = c[ic]; \
+        di = d[id]; \
+        if (ISNAN(ai+bi+ci+di)) { \
+            if (ISNA(ai) || ISNA(bi) || ISNA(ci) || ISNA(di)) { \
+                y[i] = NA_REAL; \
+                continue; \
+            } \
+            if (ISNAN(ai) || ISNAN(bi) || ISNAN(ci) || ISNAN(di)) { \
+                y[i] = R_NaN; \
+                continue; \
+            } \
+        } \
+        y[i] = fncall; \
+        if (ISNAN(y[i])) naflag = 1; \
+    } \
+    if (naflag) warningcall(lcall, R_MSG_NA); \
+    if (n == na) DUPLICATE_ATTRIB(sy, sa); \
+    else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
+    else if (n == nc) DUPLICATE_ATTRIB(sy, sc); \
+    else if (n == nd) DUPLICATE_ATTRIB(sy, sd); \
+    UNPROTECT(5); \
+} while (0)
+
+
+static SEXP math4 (SEXP sa, SEXP sb, SEXP sc, SEXP sd,
+              double (*f)(double, double, double, double), SEXP lcall)
+{
+    double *a, *b, *c, *d, *y;
+    int n, na, nb, nc, nd;
+    SEXP sy;
+
+    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc); nd = LENGTH(sd);
+    setup_Math4 (&sa, &sb, &sc, &sd, &sy, na, nb, nc, nd, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); c = REAL(sc); d = REAL(sd); y = REAL(sy);
+
+    DO_MATH4(y,a,b,c,d,n,na,nb,nc,nd, f(ai,bi,ci,di));
 
     return sy;
 } /* math4() */
 
-static SEXP math4_1(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, double (*f)(double, double, double, double, int), SEXP lcall)
+static SEXP math4_1 (SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, 
+              double (*f)(double, double, double, double, int), SEXP lcall)
 {
+    double *a, *b, *c, *d, *y;
+    int n, na, nb, nc, nd;
     SEXP sy;
-    int i, ia, ib, ic, id, n, na, nb, nc, nd;
-    double ai, bi, ci, di, *a, *b, *c, *d, *y;
-    int i_1;
-    int naflag;
 
-    SETUP_Math4;
-    i_1 = asInteger(sI);
+    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc); nd = LENGTH(sd);
+    setup_Math4 (&sa, &sb, &sc, &sd, &sy, na, nb, nc, nd, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); c = REAL(sc); d = REAL(sd); y = REAL(sy);
 
-    mod_iterate4 (na, nb, nc, nd, ia, ib, ic, id) {
-	ai = a[ia];
-	bi = b[ib];
-	ci = c[ic];
-	di = d[id];
-	if_NA_Math4_set(y[i], ai,bi,ci,di)
-	else {
-	    y[i] = f(ai, bi, ci, di, i_1);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-    FINISH_Math4;
+    int i_1 = asInteger(sI);
+
+    DO_MATH4(y,a,b,c,d,n,na,nb,nc,nd, f(ai,bi,ci,di,i_1));
+
     return sy;
 } /* math4_1() */
 
-static SEXP math4_2(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ,
-		    double (*f)(double, double, double, double, int, int), SEXP lcall)
+static SEXP math4_2 (SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ,
+              double (*f)(double, double, double, double, int, int), SEXP lcall)
 {
+    double *a, *b, *c, *d, *y;
+    int n, na, nb, nc, nd;
     SEXP sy;
-    int i, ia, ib, ic, id, n, na, nb, nc, nd;
-    double ai, bi, ci, di, *a, *b, *c, *d, *y;
-    int i_1, i_2;
-    int naflag;
 
-    SETUP_Math4;
-    i_1 = asInteger(sI);
-    i_2 = asInteger(sJ);
+    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc); nd = LENGTH(sd);
+    setup_Math4 (&sa, &sb, &sc, &sd, &sy, na, nb, nc, nd, lcall);
+    if ((n = LENGTH(sy)) == 0) return sy;
+    a = REAL(sa); b = REAL(sb); c = REAL(sc); d = REAL(sd); y = REAL(sy);
 
-    mod_iterate4 (na, nb, nc, nd, ia, ib, ic, id) {
-	ai = a[ia];
-	bi = b[ib];
-	ci = c[ic];
-	di = d[id];
-	if_NA_Math4_set(y[i], ai,bi,ci,di)
-	else {
-	    y[i] = f(ai, bi, ci, di, i_1, i_2);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-    FINISH_Math4;
+    int i_1 = asInteger(sI);
+    int i_2 = asInteger(sJ);
+
+    DO_MATH4(y,a,b,c,d,n,na,nb,nc,nd, f(ai,bi,ci,di,i_1,i_2));
+
     return sy;
 } /* math4_2() */
 
@@ -2087,7 +1986,7 @@ SEXP attribute_hidden do_math4(SEXP call, SEXP op, SEXP args, SEXP env)
     switch (PRIMVAL(op)) {
 
 	/* Completely dummy for -Wall -- math4() at all! : */
-    case -99: return Math4(args, (double (*)(double, double, double, double))NULL);
+    case -1: return Math4(args, (double (*)(double, double, double, double))NULL);
 
     case  1: return Math4_1(args, dhyper);
     case  2: return Math4_2(args, phyper);
