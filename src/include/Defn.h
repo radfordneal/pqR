@@ -517,28 +517,28 @@ typedef struct RPRSTACK {
 /* Evaluation Context Structure */
 typedef struct RCNTXT {
     struct RCNTXT *nextcontext;	/* The next context up the chain */
-    int callflag;		/* The context "type" */
-    JMP_BUF cjmpbuf;		/* C stack and register information */
     int cstacktop;		/* Top of the pointer protection stack */
     int evaldepth;	        /* evaluation depth at inception */
-    SEXP promargs;		/* Promises supplied to closure */
     SEXP callfun;		/* The closure called */
+    void *vmax;		        /* top of R_alloc stack */
+    int intsusp;                /* interrupts are suspended */
+    int callflag;		/* The context "type" */
+    SEXP handlerstack;          /* condition handler stack */
+    SEXP restartstack;          /* stack of available restarts */
+    SEXP promargs;		/* Promises supplied to closure */
     SEXP sysparent;		/* environment the closure was called from */
     SEXP call;			/* The call that effected this context*/
     SEXP cloenv;		/* The environment */
     SEXP conexit;		/* Interpreted "on.exit" code */
     void (*cend)(void *);	/* C "on.exit" thunk */
-    void *cenddata;		/* data for C "on.exit" thunk */
-    void *vmax;		        /* top of R_alloc stack */
-    int intsusp;                /* interrupts are suspended */
-    SEXP handlerstack;          /* condition handler stack */
-    SEXP restartstack;          /* stack of available restarts */
     struct RPRSTACK *prstack;   /* stack of pending promises */
+    SEXP srcref;	        /* The source line in effect */
     SEXP *nodestack;
 #ifdef BC_INT_STACK
     IStackval *intstack;
 #endif
-    SEXP srcref;	        /* The source line in effect */
+    void *cenddata;		/* data for C "on.exit" thunk */
+    JMP_BUF cjmpbuf;		/* C stack and register information */
 } RCNTXT, *context;
 
 /* The Various Context Types.

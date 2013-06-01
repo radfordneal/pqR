@@ -183,11 +183,11 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
     /* Need to reset R_Expressions in case we are jumping after
        handling a stack overflow. */
     R_Expressions = R_Expressions_keep;
+    R_Srcref = cptr->srcref;
     R_BCNodeStackTop = cptr->nodestack;
 #ifdef BC_INT_STACK
     R_BCIntStackTop = cptr->intstack;
 #endif
-    R_Srcref = cptr->srcref;
 }
 
 
@@ -226,27 +226,27 @@ void begincontext(RCNTXT * cptr, int flags,
 		  SEXP syscall, SEXP env, SEXP sysp,
 		  SEXP promargs, SEXP callfun)
 {
-    cptr->nextcontext = R_GlobalContext;
-    cptr->cstacktop = R_PPStackTop;
+    cptr->nextcontext = R_GlobalContext;  /* store in order in structure, */
+    cptr->cstacktop = R_PPStackTop;       /*   since that may be faster   */
     cptr->evaldepth = R_EvalDepth;
-    cptr->callflag = flags;
-    cptr->call = syscall;
-    cptr->cloenv = env;
-    cptr->sysparent = sysp;
-    cptr->conexit = R_NilValue;
-    cptr->cend = NULL;
-    cptr->promargs = promargs;
     cptr->callfun = callfun;
     cptr->vmax = vmaxget();
     cptr->intsusp = R_interrupts_suspended;
+    cptr->callflag = flags;
     cptr->handlerstack = R_HandlerStack;
     cptr->restartstack = R_RestartStack;
+    cptr->promargs = promargs;
+    cptr->sysparent = sysp;
+    cptr->call = syscall;
+    cptr->cloenv = env;
+    cptr->conexit = R_NilValue;
+    cptr->cend = NULL;
     cptr->prstack = R_PendingPromises;
+    cptr->srcref = R_Srcref;
     cptr->nodestack = R_BCNodeStackTop;
 #ifdef BC_INT_STACK
     cptr->intstack = R_BCIntStackTop;
 #endif
-    cptr->srcref = R_Srcref;
     R_GlobalContext = cptr;
 }
 
