@@ -1,7 +1,13 @@
  /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998--2011	The R Development Core Team.
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

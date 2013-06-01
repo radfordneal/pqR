@@ -4,7 +4,10 @@
    
       Copyright (C) 1984, 1989-1990, 2000-2011 Free Software Foundation, Inc.
    
-   This program is free software: you can redistribute it and/or modify
+   The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
+ *
+ *  This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
@@ -67,9 +70,15 @@
 
 
 /*
- *  R : A Computer Langage for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2011  The R Development Core Team
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
