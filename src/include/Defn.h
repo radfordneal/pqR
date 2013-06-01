@@ -860,6 +860,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define PrintVersionString    	Rf_PrintVersionString
 # define PrintWarnings		Rf_PrintWarnings
 # define promiseArgs		Rf_promiseArgs
+# define promiseArgsWithValues	Rf_promiseArgsWithValues
+# define promiseArgsWith1Value	Rf_promiseArgsWith1Value
 # define RealFromComplex	Rf_RealFromComplex
 # define RealFromInteger	Rf_RealFromInteger
 # define RealFromLogical	Rf_RealFromLogical
@@ -1051,6 +1053,8 @@ void process_site_Renviron(void);
 void process_system_Renviron(void);
 void process_user_Renviron(void);
 SEXP promiseArgs(SEXP, SEXP);
+SEXP promiseArgsWithValues(SEXP, SEXP, SEXP);
+SEXP promiseArgsWith1Value(SEXP, SEXP, SEXP);
 void Rcons_vprintf(const char *, va_list);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);

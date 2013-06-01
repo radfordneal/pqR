@@ -1959,6 +1959,36 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
     UNPROTECT(1);
     return CDR(ans);
 }
+ 
+/* Create promises for arguments, with values for promises filled in.  
+   Values for arguments that don't become promises are silently ignored.  
+   This is used in method dispatch, hence the text of the error message 
+   (which should never occur). */
+ 
+SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
+{
+    SEXP s, a, b;
+    PROTECT(s = promiseArgs(el, rho));
+    if (length(s) != length(values)) error(_("dispatch error"));
+    for (a = values, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
+        if (TYPEOF(CAR(b)) == PROMSXP)
+            SET_PRVALUE(CAR(b), CAR(a));
+    UNPROTECT(1);
+    return s;
+}
+
+/* Like promiseArgsWithValues except it sets only the first value. */
+
+SEXP attribute_hidden promiseArgsWith1Value(SEXP el, SEXP rho, SEXP value)
+{
+    SEXP s, a, b;
+    PROTECT(s = promiseArgs(el, rho));
+    if (s == R_NilValue) error(_("dispatch error"));
+    if (TYPEOF(CAR(s)) == PROMSXP)
+        SET_PRVALUE(CAR(s), value);
+    UNPROTECT(1);
+    return s;
+}
 
 
 /* Check that each formal is a symbol */
@@ -2233,9 +2263,13 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 /* DispatchOrEval is used in internal functions which dispatch to
  * object methods (e.g. "[" or "[[").  The code either builds promises
  * and dispatches to the appropriate method, or it evaluates the
- * (unevaluated) arguments it comes in with and returns them so that
- * the generic built-in C code can continue.
-
+ * arguments it comes in with (if argsevald is 0) and returns them so that
+ * the generic built-in C code can continue.  Note that CDR(call) is
+ * used to obtain the unevaluated arguments when creating promises, even
+ * when argsevald is 1 (so args is the evaluated arguments).  Note also
+ * that args must be protected before the call if argsevald is 0, but not 
+ * if argsevald is 1.
+ *
  * To call this an ugly hack would be to insult all existing ugly hacks
  * at large in the world.
  */
@@ -2255,8 +2289,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     SEXP x = R_NilValue;
     int dots = FALSE, nprotect = 0;;
 
-    if( argsevald )
-	{PROTECT(x = CAR(args)); nprotect++;}
+    if (argsevald) {
+	PROTECT(x = CAR(args)); nprotect++;
+    }
     else {
 	/* Find the object to dispatch on, dropping any leading
 	   ... arguments with missing or empty values.  If there are no
@@ -2274,15 +2309,15 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 #endif
 		    dots = TRUE;
 		    x = eval(CAR(h), rho);
-		break;
+                    break;
 		}
 		else if (h != R_NilValue && h != R_MissingArg)
 		    error(_("'...' used in an incorrect context"));
 	    }
 	    else {
-		dots = FALSE;
-	    x = eval(CAR(args), rho);
-	    break;
+                dots = FALSE;
+                x = eval(CAR(args), rho);
+                break;
 	    }
 	}
 	PROTECT(x); nprotect++;
@@ -2294,13 +2329,13 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
 	    SEXP value, argValue;
 	    /* create a promise to pass down to applyClosure  */
-	    if(!argsevald) {
-		argValue = promiseArgs(args, rho);
-		SET_PRVALUE(CAR(argValue), x);
-	    } else argValue = args;
+	    if(!argsevald)
+		argValue = promiseArgsWith1Value(args, rho, x);
+	    else 
+                argValue = args;
 	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
-	    value = R_possible_dispatch(call, op, argValue, rho, TRUE);
+	    value = R_possible_dispatch(call, op, argValue, rho, !argsevald);
 	    if(value) {
 		*ans = value;
 		UNPROTECT(nprotect);
@@ -2335,7 +2370,15 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	if (pt == NULL || strcmp(pt,".default")) {
 	    RCNTXT cntxt;
 	    SEXP pargs, rho1;
-	    PROTECT(pargs = promiseArgs(args, rho)); nprotect++;
+
+            if (argsevald) {  /* handle as in R_possible_dispatch */
+                PROTECT(args); nprotect++;
+                pargs = promiseArgsWithValues(CDR(call), rho, args);
+            }
+            else
+                pargs = promiseArgsWith1Value(args, rho, x); 
+            PROTECT(pargs); nprotect++;
+
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some
 	       internal usemethod() code and avoids the need for a
@@ -2352,7 +2395,6 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
 	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
-	    SET_PRVALUE(CAR(pargs), x);
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, ans))
 	    {
@@ -2605,13 +2647,11 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     /* out to a closure we need to wrap them in promises so that */
     /* they get duplicated and things like missing/substitute work. */
 
-    PROTECT(s = promiseArgs(CDR(call), rho));
-    if (length(s) != length(args))
-	error(_("dispatch error in group dispatch"));
-    for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
-	SET_PRVALUE(CAR(m), CAR(args));
-	/* ensure positional matching for operators */
-	if(isOps) SET_TAG(m, R_NilValue);
+    PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
+    if (isOps) {
+        /* ensure positional matching for operators */
+        for (m = s; m != R_NilValue; m = CDR(m))
+            SET_TAG(m, R_NilValue);
     }
 
     *ans = applyClosure(t, lsxp, s, rho, newrho);
@@ -3471,8 +3511,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   int dispatched = FALSE;
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
-  PROTECT(pargs = promiseArgs(CDR(call), rho));
-  SET_PRVALUE(CAR(pargs), x);
+  PROTECT(pargs = promiseArgsWith1Value(CDR(call), rho, x));
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check
 	and do not dispatch then some arguments beyond the first might
