@@ -1228,16 +1228,36 @@ SEXP install(const char *name)
     SEXP sym;
     int i, hashcode;
 
+#if 0  /* Enable for tuning info */
+    if (strcmp(name,"HOWMANYSYMBOLS")==0) {
+        double count = 0, count_sq = 0;
+        for (i = 0; i<HSIZE; i++) {
+            int c = 0;
+            for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym)) c++;
+            count += c;
+            count_sq += c*c;
+        }
+        Rprintf("Number of symbols in table: %f\n", count);
+        Rprintf("Expected number in accessed bucket: %f\n", count_sq/count);
+    }
+#endif
+
     if (*name == '\0')
 	error(_("attempt to use zero-length variable name"));
-    if (strlen(name) > MAXIDSIZE)
-	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
+
     hashcode = R_Newhashpjw(name);
     i = hashcode % HSIZE;
+
     /* Check to see if the symbol is already present;  if it is, return it. */
-    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym))
-	if (strcmp(name, CHAR(PRINTNAME(CAR(sym)))) == 0) return (CAR(sym));
+    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym)) {
+        const char *s = CHAR(PRINTNAME(CAR(sym)));
+	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
+            return (CAR(sym));
+    }
+
     /* Create a new symbol node and link it into the table. */
+    if (strlen(name) > MAXIDSIZE)
+	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
     sym = mkSYMSXP(mkChar(name), R_UnboundValue);
     SET_HASHVALUE(PRINTNAME(sym), hashcode);
     SET_HASHASH(PRINTNAME(sym), 1);

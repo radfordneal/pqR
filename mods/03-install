@@ -1,0 +1,3 @@
+Detailed speed-up of the "install" function for installing a new (or
+old) symbol.  Also put in (currently disabled) code for seeing how
+many symbols there are, for tuning purposes.
