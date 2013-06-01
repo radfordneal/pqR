@@ -7,7 +7,8 @@ The library in src/extra/matprod is Copyright (C) 2013 Radford M. Neal,
 and licensed under GPL2 or later.
 
 
-COPYRIGHT STATUS of R-2.15.0 (taken from this file in R-2.15.0)
+COPYRIGHT STATUS of R-2.15.0 (taken from this file in R-2.15.0, modified
+as required for use of new versions)
 
 The bulk of this code is copyright by members of or all of the R
 Development Core Team.
@@ -414,7 +415,7 @@ src/include/valgrind.h
 
 From valgrind,
 
-   Copyright (C) 2000-2005 Julian Seward.  All rights reserved.
+   Copyright (C) 2000-2011 Julian Seward.  All rights reserved.
 
 
 src/main/mkdtemp.c

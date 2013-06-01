@@ -204,6 +204,14 @@ struct promsxp_struct {
    
        4-byte pointers:  32 bytes
        8-byte pointers:  56 bytes
+
+   Note, however, that the routines in memory.c may choose to allocate
+   64 bytes to hold a 56 byte SEXPREC record, to improve cache alignment, 
+   and to allow more vector nodes to share pages with SEXPREC nodes, which
+   also improves cache locality.  
+
+   Standard nodes may be used to hold small vectors as well as cons cells
+   and other fixed-size objects.
 */
 
 typedef struct SEXPREC {
@@ -215,13 +223,12 @@ typedef struct SEXPREC {
 	struct envsxp_struct envsxp;
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
-        struct vecsxp_struct vecsxp; /* because used for 0-length vectors */
     } u;
 } SEXPREC, *SEXP;
 
 /* Reduced version of SEXPREC used as a header in vector nodes.  The 
    layout MUST be kept consistent with the SEXPREC definition.  The size
-   varies with the size of a pointer, the size of R_len_T, and whether
+   varies with the size of a pointer, the size of R_len_t, and whether
    alignment to a multiple of 8 bytes is done, as follows:
    
        4-byte pointers, 4-byte R_len_t:  24 bytes
@@ -250,7 +257,9 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=(v))
 
-/* The TRUELENGTH is seldom used, and usually has no connection with length */
+/* The TRUELENGTH is seldom used, and usually has no connection with length.
+   Used to be a 32-bit "truelength" field in the vecsxp_struct, but is now 
+   a 28-bit field in sxpinfo. */
 #define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.gp2)
 #define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.gp2)=(v))
 

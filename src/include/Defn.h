@@ -123,7 +123,17 @@ extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 #define CACHED_MASK (1<<5)
 #define ASCII_MASK (1<<6)
 #define HASHASH_MASK 1
-/**** HASHASH uses the first bit -- see HASHASH_MASK defined below */
+
+/* Symbol and string hash table declarations. */
+#define HASHMAXSIZE ((1<<28)-1)  /* so the count of entries used will fit
+                                    in the 28-bit gc2 (aka TRUELENGTH) field */
+#define HASHSIZE(x)	     LENGTH(x)
+#define HASHSLOTSUSED(x)     TRUELENGTH(x)
+#define HASHTABLEGROWTHRATE  1.2
+#define HASHMINSIZE	     29
+#define SET_HASHSIZE(x,v)    SETLENGTH(x,v)
+#define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
+#define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
@@ -137,7 +147,7 @@ extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 # define ENC_KNOWN(x) ((x)->sxpinfo.gp & (LATIN1_MASK | UTF8_MASK))
 # define SET_CACHED(x) (((x)->sxpinfo.gp) |= CACHED_MASK)
 # define IS_CACHED(x) (((x)->sxpinfo.gp) & CACHED_MASK)
-#else
+#else /* USE_RINTERNALS */
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
 void SET_BYTES(SEXP x);
@@ -150,18 +160,17 @@ void SET_UTF8(SEXP x);
 int ENC_KNOWN(SEXP x);
 int SET_CACHED(SEXP x);
 int IS_CACHED(SEXP x);
-#endif
+#endif /* USE_RINTERNALS */
+
 /* macros and declarations for managing CHARSXP cache */
 #define USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
 #ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
 # define CXHEAD(x) (x)
 # define CXTAIL(x) ATTRIB(x)
-SEXP (SET_CXTAIL)(SEXP x, SEXP y);
 #else
 # define CXHEAD(x) CAR(x)
 # define CXTAIL(x) CDR(x)
 #endif /* USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS */
-
 
 #include "Internal.h"		/* do_FOO */
 
@@ -235,7 +244,7 @@ extern void R_ProcessEvents(void);
 #define	R_NSIZE		350000L
 #endif
 #ifndef R_VSIZE
-#define	R_VSIZE		6291456L
+#define	R_VSIZE		8000000L
 #endif
 
 /* some commonly needed headers */
