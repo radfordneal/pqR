@@ -133,54 +133,15 @@ SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("too many elements specified"));
 
     PROTECT(ans = allocMatrix(TYPEOF(vals), nr, nc));
+
     if(lendat) {
 	if (isVector(vals))
 	    copyMatrix(ans, vals, byrow);
 	else
 	    copyListMatrix(ans, vals, byrow);
-    } else if (isVector(vals)) { /* fill with NAs */
-	int i, j;
-	switch(TYPEOF(vals)) {
-	case STRSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    SET_STRING_ELT(ans, i + j * nr, NA_STRING);
-	    break;
-	case LGLSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    LOGICAL(ans)[i + j * nr] = NA_LOGICAL;
-	    break;
-	case INTSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    INTEGER(ans)[i + j * nr] = NA_INTEGER;
-	    break;
-	case REALSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    REAL(ans)[i + j * nr] = NA_REAL;
-	    break;
-	case CPLXSXP:
-	    {
-		Rcomplex na_cmplx;
-		na_cmplx.r = NA_REAL;
-		na_cmplx.i = 0;
-		for (i = 0; i < nr; i++)
-		    for (j = 0; j < nc; j++)
-			COMPLEX(ans)[i + j * nr] = na_cmplx;
-	    }
-	    break;
-	case RAWSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    RAW(ans)[i + j * nr] = 0;
-	    break;
-	default:
-	    /* don't fill with anything */
-	    ;
-	}
-    }
+    } else if (isVectorAtomic(vals)) /* VECSXP/EXPRSXP already are R_NilValue */
+        set_elements_to_NA_or_NULL (ans, 0, nr*nc);
+
     if(!isNull(dimnames)&& length(dimnames) > 0)
 	ans = dimnamesgets(ans, dimnames);
     UNPROTECT(1);

@@ -429,6 +429,7 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 6, 8, 16 };
 #define NODE_GENERATION(s) ((s)->sxpinfo.gcgen)
 #define SET_NODE_GENERATION(s,g) ((s)->sxpinfo.gcgen=(g))
 
+#define NODE_GEN_IS_YOUNGEST(x) (!NODE_IS_MARKED(x))
 #define NODE_GEN_IS_YOUNGER(s,g) \
   (! NODE_IS_MARKED(s) || NODE_GENERATION(s) < (g))
 #define NODE_IS_OLDER(x, y) \
@@ -3121,6 +3122,33 @@ void (SET_STRING_ELT)(SEXP x, int i, SEXP v) {
     STRING_ELT(x, i) = v;
 }
 
+/* Copy n string elements from v (starting at j) to x (starting at i). */
+void copy_string_elements(SEXP x, int i, SEXP v, int j, int n) 
+{
+    SEXP e;
+    int k;
+
+    if(TYPEOF(x) != STRSXP)
+	error("%s() can only be applied to a '%s', not a '%s'",
+         "copy_string_elements", "character vector", type2char(TYPEOF(x)));
+
+    if (NODE_GEN_IS_YOUNGEST(x)) {
+        /* x can't be older than anything */
+        for (k = 0; k<n; k++) {
+            e = STRING_ELT(v,j+k);
+            STRING_ELT(x,i+k) = e;
+        }
+    }
+    else {  
+        /* need to check each time if x is older */
+        for (k = 0; k<n; k++) {
+            e = STRING_ELT(v,j+k);
+            CHECK_OLD_TO_NEW(x, e);
+            STRING_ELT(x,i+k) = e;
+        }
+    }
+}
+
 SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {
     /*  we need to allow vector-like types here */
     if(TYPEOF(x) != VECSXP &&
@@ -3131,6 +3159,37 @@ SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {
     }
     CHECK_OLD_TO_NEW(x, v);
     return VECTOR_ELT(x, i) = v;
+}
+
+/* Copy n vector elements from v (starting at j) to x (starting at i). */
+void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n) 
+{
+    SEXP e;
+    int k;
+
+    /*  we need to allow vector-like types here */
+    if(TYPEOF(x) != VECSXP &&
+       TYPEOF(x) != EXPRSXP &&
+       TYPEOF(x) != WEAKREFSXP) {
+	error("%s() can only be applied to a '%s', not a '%s'",
+	      "copy_vector_elements", "list", type2char(TYPEOF(x)));
+    }
+
+    if (NODE_GEN_IS_YOUNGEST(x)) {
+        /* x can't be older than anything */
+        for (k = 0; k<n; k++) {
+            e = VECTOR_ELT(v,j+k);
+            VECTOR_ELT(x,i+k) = e;
+        }
+    }
+    else {  
+        /* need to check each time if x is older */
+        for (k = 0; k<n; k++) {
+            e = VECTOR_ELT(v,j+k);
+            CHECK_OLD_TO_NEW(x, e);
+            VECTOR_ELT(x,i+k) = e;
+        }
+    }
 }
 
 

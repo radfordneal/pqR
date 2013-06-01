@@ -252,12 +252,99 @@ static SEXP duplicate1(SEXP s)
     return t;
 }
 
+
+/* Set n elements of vector x (starting at i) to the appropriate NA value, or
+   to R_NilValue for a VECSXP or EXPRSXP, or to 0 for a RAWSXP. */
+
+void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
+{
+    int ln = i + n;
+
+    if (n == 0) return;
+
+    switch (TYPEOF(x)) {
+    case RAWSXP:
+        do RAW(x)[i++] = 0; while (i<ln);
+        break;
+    case LGLSXP:
+        do LOGICAL(x)[i++] = NA_LOGICAL; while (i<ln);
+        break;
+    case INTSXP:
+        do INTEGER(x)[i++] = NA_INTEGER; while (i<ln);
+        break;
+    case REALSXP:
+        do REAL(x)[i++] = NA_REAL; while (i<ln);
+        break;
+    case CPLXSXP:
+        do { COMPLEX(x)[i].r = COMPLEX(x)[i].i = NA_REAL; i++; } while (i<ln);
+        break;
+    case STRSXP:
+        do SET_STRING_ELT (x, i++, NA_STRING); while (i<ln);
+        break;
+    case VECSXP:
+    case EXPRSXP:
+        do SET_VECTOR_ELT (x, i++, R_NilValue); while (i<ln);
+        break;
+    default:
+	UNIMPLEMENTED_TYPE("set_elements_to_NA_or_NULL", x);
+    }
+}
+
+
+/* Copy n elements from vector v (starting at j) to vector x (starting at i).
+   The vectors x and v must be of the same type, which may be numeric or 
+   non-numeric.  Elements of a VECSXP or EXPRSXP are duplicated.  If necessary,
+   x and v are protected. */
+
+void copy_elements (SEXP x, int i, SEXP v, int j, int n)
+{
+    int ln = i + n;
+
+    if (n == 0) return;
+
+    switch (TYPEOF(x)) {
+    case RAWSXP:
+        do RAW(x)[i++] = RAW(v)[j++]; while (i<ln);
+        break;
+    case LGLSXP:
+        do LOGICAL(x)[i++] = LOGICAL(v)[j++]; while (i<ln);
+        break;
+    case INTSXP:
+        do INTEGER(x)[i++] = INTEGER(v)[j++]; while (i<ln);
+        break;
+    case REALSXP:
+        do REAL(x)[i++] = REAL(v)[j++]; while (i<ln);
+        break;
+    case CPLXSXP:
+        do COMPLEX(x)[i++] = COMPLEX(v)[j++]; while (i<ln);
+        break;
+    case STRSXP:
+        copy_string_elements (x, i, v, j, n);
+        break;
+    case VECSXP:
+    case EXPRSXP:
+        PROTECT(x);
+        PROTECT(v);
+        do SET_VECTOR_ELT (x, i++, duplicate(VECTOR_ELT(v,j++))); while (i<ln);
+        UNPROTECT(2);
+        break;
+    default:
+	UNIMPLEMENTED_TYPE("copy_elements", x);
+    }
+}
+
 void copyVector(SEXP s, SEXP t)
 {
     int i, ns, nt;
 
     nt = LENGTH(t);
     ns = LENGTH(s);
+
+    if (nt >= ns && TYPEOF(s) != VECSXP && TYPEOF(s) != EXPRSXP) {
+        copy_elements (s, 0, t, 0, ns);
+        return;
+    }
+
     switch (TYPEOF(s)) {
     case STRSXP:
 	for (i = 0; i < ns; i++)
@@ -291,8 +378,6 @@ void copyVector(SEXP s, SEXP t)
 	for (i = 0; i < ns; i++)
 	    RAW(s)[i] = RAW(t)[i % nt];
 	break;
-    default:
-	UNIMPLEMENTED_TYPE("copyVector", s);
     }
 }
 
