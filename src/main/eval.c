@@ -742,22 +742,19 @@ static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	R_jit_enabled = old_enabled;
     }
 
-    /*  Set up a context with the call in it so error has access to it */
+    /*  Set up a context with the call in it for use if an error occurs below
+        in matchArgs or from running out of memory (eg, in NewEnvironment). */
 
     begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
 
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
-	contains the matched pairs.  Ideally this environment sould be
-	hashed.  */
+	contains the matched pairs.  Note that actuals is protected via
+        newrho. */
 
-    PROTECT(actuals = matchArgs(formals, NULL, 0, arglist, call));
+    actuals = matchArgs(formals, NULL, 0, arglist, call);
     PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
         /* no longer passes formals, since matchArg now puts tags in actuals */
-
-    /*  Use the default code for unbound formals.  FIXME: It looks like
-	this code should preceed the building of the environment so that
-	this will also go into the hash table.  */
 
     /* This piece of code is destructively modifying the actuals list,
        which is now also the list of bindings in the frame of newrho.
@@ -794,20 +791,18 @@ static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	}
     }
 
-    /*  Terminate the previous context and start a new one with the
-	correct environment. */
+    UNPROTECT(1); /* newrho, which will be protected below via revised context*/
 
-    endcontext(&cntxt);
+    /*  Change the previously-set-up context to have the correct environment.
 
-    /*  If we have a generic function we need to use the sysparent of
+        If we have a generic function we need to use the sysparent of
 	the generic as the sysparent of the method because the method
-	is a straight substitution of the generic.  */
+	is a straight substitution of the generic. */
 
-    if( R_GlobalContext->callflag == CTXT_GENERIC )
-	begincontext(&cntxt, CTXT_RETURN, call,
-		     newrho, R_GlobalContext->sysparent, arglist, op);
+    if (R_GlobalContext->nextcontext->callflag == CTXT_GENERIC)
+	revisecontext (newrho, R_GlobalContext->nextcontext->sysparent);
     else
-	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+	revisecontext (newrho, rho);
 
     /* The default return value is NULL.  FIXME: Is this really needed
        or do we always get a sensible value returned?  */
@@ -889,7 +884,7 @@ static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	Rprintf("exiting from: ");
 	PrintValueRec(call, rho);
     }
-    UNPROTECT(3);
+    UNPROTECT(1); /* tmp */
     return (tmp);
 }
 
