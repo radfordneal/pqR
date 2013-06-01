@@ -1,0 +1,6 @@
+Various inlined procedures were changed to be more efficient, and
+"length" was un-inlined, since it's fairly long.  Numerous occurences
+of code like for (i = 0; i < length(...); i++) ... were replaced by
+code that doesn't call length numerous times, sometimes by saving the
+result of one call of length, sometimes by replacing length with
+LENGTH.  (Though note that LENGTH doesn't work for R_NilValue!)

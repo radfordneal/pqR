@@ -156,6 +156,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
     int indx, i, warn_pok = 0;
     double dblind;
     const char *ss, *cur_name;
+    int len_names = length(names);
 
     if (pok == -1) {
 	pok = 1;
@@ -194,7 +195,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 
 	/* Try for exact match */
 	ss = translateChar(STRING_ELT(s, pos));
-	for (i = 0; i < length(names); i++)
+	for (i = 0; i < len_names; i++)
 	    if (STRING_ELT(names, i) != NA_STRING) {
 		if (streql(translateChar(STRING_ELT(names, i)), ss)) {
 		    indx = i;
@@ -204,7 +205,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	/* Try for partial match */
 	if (pok && indx < 0) {
 	    len = strlen(ss);
-	    for(i = 0; i < length(names); i++) {
+	    for(i = 0; i < len_names; i++) {
 		if (STRING_ELT(names, i) != NA_STRING) {
 		    cur_name = translateChar(STRING_ELT(names, i));
 		    if(!strncmp(cur_name, ss, len)) {
@@ -234,7 +235,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	}
 	break;
     case SYMSXP:
-	for (i = 0; i < length(names); i++)
+	for (i = 0; i < len_names; i++)
 	    if (STRING_ELT(names, i) != NA_STRING &&
 		streql(translateChar(STRING_ELT(names, i)),
 		       CHAR(PRINTNAME(s)))) {

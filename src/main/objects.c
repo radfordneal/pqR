@@ -327,7 +327,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    if (i > 0) {
 	        int ii;
 		PROTECT(t = allocVector(STRSXP, nclass - i));
-		for(j = 0, ii = i; j < length(t); j++, ii++)
+		for(j = 0, ii = i; j < LENGTH(t); j++, ii++)
 		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
 		setAttrib(t, install("previous"), klass);
 		defineVar(R_dot_Class, t, newrho);
@@ -517,6 +517,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP callenv, defenv;
     RCNTXT *cptr;
     int i, j;
+    int len_klass;
 
     cptr = R_GlobalContext;
     cptr->callflag = CTXT_GENERIC;
@@ -651,6 +652,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (!isObject(s)) error(_("object not specified"));
 	klass = getAttrib(s, R_ClassSymbol);
     }
+    len_klass = length(klass);
 
     /* the generic comes from either the sysparent or it's named */
     generic = findVarInFrame3(R_GlobalContext->sysparent,
@@ -695,7 +697,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	const char *ss;
 	if( !isString(method) )
 	    error(_("wrong value for .Method"));
-	for(i = 0; i < length(method); i++) {
+	for(i = 0; i < LENGTH(method); i++) {
 	    ss = translateChar(STRING_ELT(method, i));
 	    if(strlen(ss) >= 512)
 		error(_("method name too long in '%s'"), ss);
@@ -704,7 +706,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	/* for binary operators check that the second argument's method
 	   is the same or absent */
-	for(j = i; j < length(method); j++){
+	for(j = i; j < LENGTH(method); j++){
 	    const char *ss = translateChar(STRING_ELT(method, j));
 	    if(strlen(ss) >= 512)
 		error(_("method name too long in '%s'"), ss);
@@ -721,7 +723,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     sb = translateChar(STRING_ELT(basename, 0));
-    for (j = 0; j < length(klass); j++) {
+    for (j = 0; j < len_klass; j++) {
 	sk = translateChar(STRING_ELT(klass, j));
 	if(strlen(sb) + strlen(sk) + 2 > 512)
 	    error(_("class name too long in '%s'"), sb);
@@ -738,7 +740,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	   how many classes to drop. */
 
     sg = translateChar(STRING_ELT(generic, 0));
-    for (i = j ; i < length(klass); i++) {
+    for (i = j ; i < len_klass; i++) {
 	sk = translateChar(STRING_ELT(klass, i));
 	if(strlen(sg) + strlen(sk) + 2 > 512)
 	    error(_("class name too long in '%s'"), sg);
@@ -779,10 +781,10 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
-    PROTECT(s = allocVector(STRSXP, length(klass) - i));
+    PROTECT(s = allocVector(STRSXP, len_klass - i));
     PROTECT(klass = duplicate(klass));
     PROTECT(m = allocSExp(ENVSXP));
-    for (j = 0; j < length(s); j++)
+    for (j = 0; j < LENGTH(s); j++)
 	SET_STRING_ELT(s, j, duplicate(STRING_ELT(klass, i++)));
     setAttrib(s, install("previous"), klass);
     defineVar(R_dot_Class, s, m);
@@ -791,7 +793,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (method != R_UnboundValue) {
 	/* for Ops we need `method' to be a vector */
 	PROTECT(method = duplicate(method));
-	for(j = 0; j < length(method); j++) {
+        int len_method = length(method);
+	for(j = 0; j < len_method; j++) {
 	    if (strlen(CHAR(STRING_ELT(method,j))))
 		SET_STRING_ELT(method, j,  mkChar(buf));
 	}
@@ -947,17 +950,18 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	superCl = eval(_call, rho);
 	UNPROTECT(2);
 	PROTECT(superCl);
-	for(i=0; i < length(superCl); i++) {
-	    const char *s_class = CHAR(STRING_ELT(superCl, i));
-	    for (ans = 0; ; ans++) {
-		if (!strlen(valid[ans]))
-		    break;
-		if (!strcmp(s_class, valid[ans])) {
-		    UNPROTECT(1);
-		    return ans;
-		}
-	    }
-	}
+        if (isString(superCl))
+            for(i=0; i < LENGTH(superCl); i++) {
+                const char *s_class = CHAR(STRING_ELT(superCl, i));
+                for (ans = 0; ; ans++) {
+                    if (!strlen(valid[ans]))
+                        break;
+                    if (!strcmp(s_class, valid[ans])) {
+                        UNPROTECT(1);
+                        return ans;
+                    }
+                }
+            }
 	UNPROTECT(1);
     }
     return -1;

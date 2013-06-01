@@ -3424,7 +3424,7 @@ SEXP attribute_hidden do_writelines(SEXP call, SEXP op, SEXP args, SEXP env)
 	Rconnection con0;
 	do {
 	    con0 = getConnection(con_num);
-	    for(i = 0; i < length(text); i++)
+	    for(i = 0; i < LENGTH(text); i++)
 		Rconn_printf(con0, "%s%s",
 			     useBytes ? CHAR(STRING_ELT(text, i)) :
 			     translateChar0(STRING_ELT(text, i)), ssep);
@@ -3432,7 +3432,7 @@ SEXP attribute_hidden do_writelines(SEXP call, SEXP op, SEXP args, SEXP env)
 	    con_num = getActiveSink(j++);
 	} while (con_num > 0);
     } else {
-	for(i = 0; i < length(text); i++)
+	for(i = 0; i < LENGTH(text); i++)
 	    Rconn_printf(con, "%s%s",
 			 useBytes ? CHAR(STRING_ELT(text, i)) :
 			 translateChar0(STRING_ELT(text, i)), ssep);

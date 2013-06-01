@@ -35,7 +35,7 @@ static SEXP cumsum(SEXP x, SEXP s)
     int i;
     long double sum = 0.;
     double *rx = REAL(x), *rs = REAL(s);
-    for (i = 0 ; i < length(x) ; i++) {
+    for (i = 0 ; i < LENGTH(x) ; i++) {
 	if (ISNAN(rx[i])) break;
 	sum += rx[i];
 	rs[i] = sum;
@@ -48,7 +48,7 @@ static SEXP icumsum(SEXP x, SEXP s)
 {
     int i, *ix = INTEGER(x), *is = INTEGER(s);
     double sum = 0.0;
-    for (i = 0 ; i < length(x) ; i++) {
+    for (i = 0 ; i < LENGTH(x) ; i++) {
 	if (ix[i] == NA_INTEGER) break;
 	sum += ix[i];
 	if(sum > INT_MAX || sum < 1 + INT_MIN) { /* INT_MIN is NA_INTEGER */
@@ -66,7 +66,7 @@ static SEXP ccumsum(SEXP x, SEXP s)
     Rcomplex sum;
     sum.r = 0;
     sum.i = 0;
-    for (i = 0 ; i < length(x) ; i++) {
+    for (i = 0 ; i < LENGTH(x) ; i++) {
 	sum.r += COMPLEX(x)[i].r;
 	sum.i += COMPLEX(x)[i].i;
 	COMPLEX(s)[i].r = sum.r;
@@ -81,7 +81,7 @@ static SEXP cumprod(SEXP x, SEXP s)
     long double prod;
     double *rx = REAL(x), *rs = REAL(s);
     prod = 1.0;
-    for (i = 0 ; i < length(x) ; i++) {
+    for (i = 0 ; i < LENGTH(x) ; i++) {
 	prod *= rx[i];
 	rs[i] = prod;
     }
@@ -94,7 +94,7 @@ static SEXP ccumprod(SEXP x, SEXP s)
     int i;
     prod.r = 1;
     prod.i = 0;
-    for (i = 0 ; i < length(x) ; i++) {
+    for (i = 0 ; i < LENGTH(x) ; i++) {
 	tmp.r = prod.r;
 	tmp.i = prod.i;
 	prod.r = COMPLEX(x)[i].r * tmp.r - COMPLEX(x)[i].i * tmp.i;
@@ -110,7 +110,7 @@ static SEXP cummax(SEXP x, SEXP s)
     int i;
     double max, *rx = REAL(x), *rs = REAL(s);
     max = R_NegInf;
-    for (i = 0 ; i < length(x) ; i++) {
+    for (i = 0 ; i < LENGTH(x) ; i++) {
 	if(ISNAN(rx[i]) || ISNAN(max))
 	    max = max + rx[i];  /* propagate NA and NaN */
 	else
@@ -125,7 +125,7 @@ static SEXP cummin(SEXP x, SEXP s)
     int i;
     double min, *rx = REAL(x), *rs = REAL(s);
     min = R_PosInf; /* always positive, not NA */
-    for (i = 0 ; i < length(x) ; i++ ) {
+    for (i = 0 ; i < LENGTH(x) ; i++ ) {
 	if (ISNAN(rx[i]) || ISNAN(min))
 	    min = min + rx[i];  /* propagate NA and NaN */
 	else
@@ -140,7 +140,7 @@ static SEXP icummax(SEXP x, SEXP s)
     int i, *ix = INTEGER(x), *is = INTEGER(s);
     int max = ix[0];
     is[0] = max;
-    for (i = 1 ; i < length(x) ; i++) {
+    for (i = 1 ; i < LENGTH(x) ; i++) {
 	if(ix[i] == NA_INTEGER) break;
 	is[i] = max = (max > ix[i]) ? max : ix[i];
     }
@@ -152,7 +152,7 @@ static SEXP icummin(SEXP x, SEXP s)
     int i, *ix = INTEGER(x), *is = INTEGER(s);
     int min = ix[0];
     is[0] = min;
-    for (i = 1 ; i < length(x) ; i++ ) {
+    for (i = 1 ; i < LENGTH(x) ; i++ ) {
 	if(ix[i] == NA_INTEGER) break;
 	is[i] = min = (min < ix[i]) ? min : ix[i];
     }
@@ -172,7 +172,7 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
 	UNPROTECT(1);
 	if(LENGTH(t) == 0) return s;
-	for (i = 0 ; i < length(t) ; i++) {
+	for (i = 0 ; i < LENGTH(t) ; i++) {
 	    COMPLEX(s)[i].r = NA_REAL;
 	    COMPLEX(s)[i].i = NA_REAL;
 	}

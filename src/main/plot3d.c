@@ -2309,7 +2309,7 @@ static void PerspAxis(double *x, double *y, double *z,
     case 2: /* "detailed": normal ticks as per 2D plots */
 	PROTECT(at = CreateAtVector(axp, range, 7, FALSE));
 	PROTECT(lab = labelformat(at));
-	for (i=0; i<length(at); i++) {
+	for (i=0; i<LENGTH(at); i++) {
 	    switch (axisType) {
 	    case 0:
 		u1[0] = REAL(at)[i];

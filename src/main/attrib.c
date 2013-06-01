@@ -500,7 +500,7 @@ SEXP classgets(SEXP vec, SEXP klass)
 	    if (vec == R_NilValue)
 		error(_("attempt to set an attribute on NULL"));
 
-	    for(i = 0; i < length(klass); i++)
+	    for(i = 0; i < LENGTH(klass); i++)
 		if(streql(CHAR(STRING_ELT(klass, i)), "factor")) { /* ASCII */
 		    isfactor = TRUE;
 		    break;

@@ -1088,11 +1088,13 @@ SEXP attribute_hidden do_deriv(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_BODY(funarg, exprlist);
     }
     else if (isString(funarg)) {
+        int len_names;
 	PROTECT(names = duplicate(funarg));
+        len_names = length(names);
 	PROTECT(funarg = allocSExp(CLOSXP));
-	PROTECT(ans = allocList(length(names)));
+	PROTECT(ans = allocList(len_names));
 	SET_FORMALS(funarg, ans);
-	for(i = 0; i < length(names); i++) {
+	for(i = 0; i < len_names; i++) {
 	    SET_TAG(ans, install(translateChar(STRING_ELT(names, i))));
 	    SETCAR(ans, R_MissingArg);
 	    ans = CDR(ans);

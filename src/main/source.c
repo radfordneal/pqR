@@ -107,10 +107,11 @@ static SEXP tabExpand(SEXP strings)
     int i;
     char buffer[200], *b;
     const char *input;
+    int len = length(strings);
     SEXP result;
     PROTECT(strings);
-    PROTECT(result = allocVector(STRSXP, length(strings)));
-    for (i = 0; i < length(strings); i++) {
+    PROTECT(result = allocVector(STRSXP, len));
+    for (i = 0; i < len; i++) {
     	input = CHAR(STRING_ELT(strings, i));
     	for (b = buffer; *input && (b-buffer < 192); input++) {
     	    if (*input == '\t') do {
@@ -247,7 +248,7 @@ SEXP attribute_hidden do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	   different encodings, but all that matters is that all
 	   non-ASCII elements have known encoding.
 	*/
-	for(i = 0; i < length(text); i++)
+	for(i = 0; i < LENGTH(text); i++)
 	    if(!ENC_KNOWN(STRING_ELT(text, i)) &&
 	       !IS_ASCII(STRING_ELT(text, i))) {
 		allKnown = FALSE;

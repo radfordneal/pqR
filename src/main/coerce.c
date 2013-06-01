@@ -1197,13 +1197,10 @@ SEXP CreateTag(SEXP x)
 {
     if (isNull(x) || isSymbol(x))
 	return x;
-    if (isString(x)
-	&& length(x) >= 1
-	&& length(STRING_ELT(x, 0)) >= 1)
-	x = install(translateChar(STRING_ELT(x, 0)));
+    else if (isString(x) && LENGTH(x) >= 1 && LENGTH(STRING_ELT(x, 0)) >= 1)
+	return install(translateChar(STRING_ELT(x, 0)));
     else
-	x = install(CHAR(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0)));
-    return x;
+	return install(CHAR(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0)));
 }
 
 static SEXP asFunction(SEXP x)

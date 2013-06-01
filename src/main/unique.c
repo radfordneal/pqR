@@ -412,7 +412,7 @@ SEXP duplicated(SEXP x, Rboolean from_last)
     h = INTEGER(data.HashTable);				\
     if(TYPEOF(x) == STRSXP) {					\
 	data.useUTF8 = FALSE; data.useCache = TRUE;		\
-	for(i = 0; i < length(x); i++) {			\
+	for(i = 0; i < LENGTH(x); i++) {			\
 	    if(IS_BYTES(STRING_ELT(x, i))) {			\
 		data.useUTF8 = FALSE; break;			\
 	    }                                                   \
@@ -740,7 +740,8 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 	Rboolean useBytes = FALSE;
 	Rboolean useUTF8 = FALSE;
         Rboolean useCache = TRUE;
-	for(i = 0; i < length(x); i++) {
+        int len_x = length(x);
+	for(i = 0; i < len_x; i++) {
             SEXP s = STRING_ELT(x, i);
 	    if(IS_BYTES(s)) {
 		useBytes = TRUE;
@@ -756,7 +757,8 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 	    }
         }
 	if(!useBytes || useCache) {
-	    for(i = 0; i < length(table); i++) {
+            int len_table = length(table);
+	    for(i = 0; i < len_table; i++) {
                 SEXP s = STRING_ELT(table, i);
 		if(IS_BYTES(s)) {
 		    useBytes = TRUE;

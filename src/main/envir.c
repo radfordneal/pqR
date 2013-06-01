@@ -407,7 +407,7 @@ static SEXP R_HashResize(SEXP table)
 
     /* Allocate the new hash table */
     new_table = R_NewHashTable(HASHSIZE(table) * HASHTABLEGROWTHRATE);
-    for (counter = 0; counter < length(table); counter++) {
+    for (counter = 0; counter < LENGTH(table); counter++) {
 	chain = VECTOR_ELT(table, counter);
 	while (!ISNULL(chain)) {
 	    new_hashcode = R_Newhashpjw(CHAR(PRINTNAME(TAG(chain)))) %
@@ -527,6 +527,7 @@ static SEXP R_HashProfile(SEXP table)
 {
     SEXP chain, ans, chain_counts, nms;
     int i, count;
+    int len_table = length(table);
 
     PROTECT(ans = allocVector(VECSXP, 3));
     PROTECT(nms = allocVector(STRSXP, 3));
@@ -536,11 +537,11 @@ static SEXP R_HashProfile(SEXP table)
     setAttrib(ans, R_NamesSymbol, nms);
     UNPROTECT(1);
 
-    SET_VECTOR_ELT(ans, 0, ScalarInteger(length(table)));
+    SET_VECTOR_ELT(ans, 0, ScalarInteger(len_table));
     SET_VECTOR_ELT(ans, 1, ScalarInteger(HASHPRI(table)));
 
     PROTECT(chain_counts = allocVector(INTSXP, length(table)));
-    for (i = 0; i < length(table); i++) {
+    for (i = 0; i < len_table; i++) {
 	chain = VECTOR_ELT(table, i);
 	count = 0;
 	for (; chain != R_NilValue ; chain = CDR(chain)) {
