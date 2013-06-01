@@ -146,7 +146,14 @@
       \item **35
       \item **36
       \item **37
-      \item **38
+      \item Several primitive functions that can generate integer sequences
+            --- ":", seq.int, seq_len, and seq_along --- will now sometimes
+            not generate an actual sequence, but rather just a description
+            of its start and end points.  This is not visible to users
+            (except in time and space savings), but is used to speed up 
+            other primitive operations, specifically "for" loops such
+            as \code{for (i in 1:1000000) ...}, and indexing of vectors
+            such as \code{v[1000:2000]}.
       \item **39
       \item **40
       \item **41

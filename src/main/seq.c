@@ -93,11 +93,33 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
     return(a);
 }
 
-static SEXP seq_colon(double n1, double n2, SEXP call)
+/* Create a simple integer sequence, or as variant, a description of it. */
+static SEXP make_seq (int from, int len, int variant)
+{
+    SEXP ans;
+    int *p;
+
+    if (variant == VARIANT_SEQ) {
+        ans = allocVector (INTSXP, 2);
+        p = INTEGER(ans);
+        p[0] = from;
+        p[1] = from + len - 1;
+        SET_ATTRIB (ans, R_VariantResult);
+    }
+    else {
+        ans = allocVector (INTSXP, len);
+        p = INTEGER(ans);
+        for (int i = 0; i < len; i++) p[i] = from + i;
+    }
+
+    return ans;
+}
+
+static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
 {
     int i, n, in1;
     double r;
-    SEXP ans;
+    SEXP ans, rng;
     Rboolean useInt;
 
     r = fabs(n2 - n1);
@@ -118,11 +140,12 @@ static SEXP seq_colon(double n1, double n2, SEXP call)
 	}
     }
     if (useInt) {
-	ans = allocVector(INTSXP, n);
-	if (n1 <= n2)
-	    for (i = 0; i < n; i++) INTEGER(ans)[i] = in1 + i;
-	else
-	    for (i = 0; i < n; i++) INTEGER(ans)[i] = in1 - i;
+        if (n1 <= n2)
+            ans = make_seq (in1, n, variant);
+        else {
+	    ans = allocVector(INTSXP, n);
+            for (i = 0; i < n; i++) INTEGER(ans)[i] = in1 - i;
+        }
     } else {
 	ans = allocVector(REALSXP, n);
 	if (n1 <= n2)
@@ -133,7 +156,8 @@ static SEXP seq_colon(double n1, double n2, SEXP call)
     return ans;
 }
 
-SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho,
+                               int variant)
 {
     SEXP s1, s2;
     double n1, n2;
@@ -156,7 +180,7 @@ SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho)
     n2 = asReal(s2);
     if (ISNAN(n1) || ISNAN(n2))
 	errorcall(call, _("NA/NaN argument"));
-    return seq_colon(n1, n2, call);
+    return seq_colon(n1, n2, call, variant);
 }
 
 static SEXP rep2(SEXP s, SEXP ncopy)
@@ -463,7 +487,8 @@ done:
 
 #define FEPS 1e-10
 /* to match seq.default */
-SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho,
+                             int variant)
 {
     SEXP ans = R_NilValue /* -Wall */, ap, tmp, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
@@ -498,9 +523,9 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(One && from != R_MissingArg) {
 	lf = length(from);
 	if(lf == 1 && (TYPEOF(from) == INTSXP || TYPEOF(from) == REALSXP))
-	    ans = seq_colon(1.0, asReal(from), call);
+	    ans = seq_colon(1.0, asReal(from), call, variant);
 	else if (lf)
-	    ans = seq_colon(1.0, (double)lf, call);
+	    ans = seq_colon(1.0, (double)lf, call, variant);
 	else
 	    ans = allocVector(INTSXP, 0);
 	goto done;
@@ -508,7 +533,8 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(along != R_MissingArg) {
 	lout = LENGTH(along);
 	if(One) {
-	    ans = lout ? seq_colon(1.0, (double)lout, call) : allocVector(INTSXP, 0);
+	    ans = lout ? seq_colon(1.0, (double)lout, call, variant) 
+                       : allocVector(INTSXP, 0);
 	    goto done;
 	}
     } else if(len != R_MissingArg && len != R_NilValue) {
@@ -526,7 +552,7 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(from == R_MissingArg) rfrom = 1.0;
 	if(to == R_MissingArg) rto = 1.0;
 	if(by == R_MissingArg)
-	    ans = seq_colon(rfrom, rto, call);
+	    ans = seq_colon(rfrom, rto, call, variant);
 	else {
 	    double del = rto - rfrom, n, dd;
 	    int nn;
@@ -587,7 +613,7 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
     } else if (lout == 0) {
 	ans = allocVector(INTSXP, 0);
     } else if (One) {
-	ans = seq_colon(1.0, (double)lout, call);
+	ans = seq_colon(1.0, (double)lout, call, variant);
     } else if (by == R_MissingArg) {
 	double rfrom = asReal(from), rto = asReal(to), rby;
 	if(to == R_MissingArg) rto = rfrom + lout - 1;
@@ -646,11 +672,12 @@ done:
     return ans;
 }
 
-SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho,
+                                   int variant)
 {
-    SEXP ans;
-    int i, len, *p;
     static SEXP length_op = NULL;
+    SEXP ans;
+    int len;
 
     /* Store the .Primitive for 'length' for DispatchOrEval to use. */
     if (length_op == NULL) {
@@ -676,16 +703,13 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	len = length(CAR(args));
 
-    ans = allocVector(INTSXP, len);
-    p = INTEGER(ans);
-    for(i = 0; i < len; i++) p[i] = i+1;
-    return ans;
+    return make_seq (1, len, variant);
 }
 
-SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                 int variant)
 {
-    SEXP ans;
-    int i, len, *p;
+    int len;
 
     checkArity(op, args);
     check1arg(args, call, "length.out");
@@ -695,9 +719,6 @@ SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(length(CAR(args)) != 1)
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");
-    ans = allocVector(INTSXP, len);
-    p = INTEGER(ans);
-    for(i = 0; i < len; i++) p[i] = i+1;
 
-    return ans;
+    return make_seq (1, len, variant);
 }
