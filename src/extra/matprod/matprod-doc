@@ -1,0 +1,220 @@
+MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
+          Documentation for Library Procedures and Test Programs
+
+Copyright (C) 2013 Radford M. Neal.
+
+  The matprod library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+The matprod library provides double-precision real matrix/vector by
+matrix/vector multiplication routines.  These routines are written
+with some attention to cache performance and other efficiency issues,
+but they are probably not as efficient as some other matrix
+multiplication packages.  However, they do not bypass multiplications
+by zero, and therefore propagate Inf and NaN values properly, and the
+pipelined versions allow for possible parallel operation in the
+context of a program using the helpers library.
+
+There are two implementations of these routines, with different
+interfaces.  One set, in matprod.c, are called in ordinary C fashion.
+The other set, in piped-matprod.c, are task procedures for use with
+the helpers library for parallel computation.  These task procedures
+support pipelined input for the second operand, and pipelined output
+in the case of matrix-matrix and vector-matrix multiplication.
+
+Note that matrices are assumed to be stored in FORTRAN memory order,
+proceeding down columns (not across rows).  To use the matprod
+routines with matrices stored in standard C (row-major) order, just
+reverse the order of the operands.
+
+
+Procedures in matprod.c:
+
+The procedures below are in matprod.c, with declarations in matprod.h:
+
+    double matprod_vec_vec (double *x, double *y, int k)
+
+      Multiply row vector x and column vector y, both of dimension k,
+      returning the result.
+
+    void matprod_vec_mat (double *x, double *y, double *z, int k, int m);
+
+      Multiply row vector x, of dimension k, and matrix y, of dimension
+      k x m, storing the result in row vector z, of dimension m.
+
+    void matprod_mat_vec (double *x, double *y, double *z, int n, int k);
+
+      Multiply matrix x, of dimension n x k, and column vector y, of
+      dimension k, storing the result in column vector z, of dimension n.
+
+    void matprod (double *x, double *y, double *z, int n, int k, int m);
+
+      Multiply matrix x, of dimension n x k, and matrix y, of dimension
+      k x m, storing the result in matrix z, of dimension n x m.
+
+For the above procedures, the result matrix, z, must have no overlap
+with the operands, x and y.  However, the operands may be the same or
+may overlap.
+
+See the comments in matprod.c for details on the algorithms used,
+including compile options for selecting an alternative algorithm for
+each procedure.
+
+
+Task procedures in piped-matprod.c:
+
+In this version, the matprod routines are task procedures for use with
+the "helpers" facility, with pipelining of the second operand and, for
+matrix-matrix and vector-matrix procedures, of the output.
+
+Using these routines requires the helpers.h and helpers.c files from
+the helpers library, available at github.com/radfordneal/helpers.  A
+helpers-app.h file must also be defined, which in addition to the type
+definitions required for the helpers routines, must define a LENGTH
+macro that returns the number of elements in an operand or result
+matrix (equal to the number of rows times the number of columns), and
+a REAL macro that returns a pointer to the double-precision data for
+an operand or result matrix.
+
+These task procedures are declared in piped-matprod.h to be of type
+helpers_task_proc, for which the arguments are an op value, a pointer
+to the result matrix, a pointer to the first operand matrix, and a
+pointer to the second operand matrix.  (For some of the task
+procedures, an operand may be a vector rather than a matrix, and the
+result may be a vector or scalar instead of a matrix.)
+
+The task procedures (found in piped-matprod.c) correspond to the
+non-pipelined procedures above, and are as follows:
+
+    task_piped_matprod_vec_vec
+
+      Vector-vector multiply, with element-by-element pipelining of
+      the second operand.
+
+    task_piped_matprod_vec_mat
+
+      Vector-matrix multiply, with column-by-column pipelining of the
+      second operand, and element-by-element pipelining of the output.
+      (However, to reduce overhead, an element of the output may not
+      always be made available immediately after it is computed.)
+
+    task_piped_matprod_mat_vec
+
+      Matrix-vector multiply, with element-by-element pipelining of
+      the second operand.
+
+    task_piped_matprod_mat_mat
+
+      Vector-matrix multiply, with column-by-column pipelining of the
+      second operand, and column-by-column pipelining of the output.
+
+There are no alternative algorithms implemented for these procedures.
+
+
+Test programs:
+
+Test programs are provided for the matprod and piped-matprod routines,
+sharing a common framework, which can also be used to test matrix
+multiply routines in a BLAS or other library.  These test programs
+allow some checks on correctness, but are primarily intended for
+testing speed.
+
+These programs are invoked by a command such as the following:
+
+    matprod-test rep A B C D
+
+Where the arguments are positive integers.  In this example, three
+matrices of dimensions AxB, BxC, and CxD are created, and the product
+of the first of these matrices with the product of the second and
+third matrices is computed (note the right associativity), with this
+computation repeated rep times (with identical results each time, one
+hopes).  The upper-right and lower-left elements of the result are
+then printed on standard output (except that only one element is
+printed if the result is scalar, that is of dimensions 1x1).
+
+In general, n>2 arguments must follow the rep argument, defining the
+dimensions of n-1 matrices, which are used as operands in n-2 matrix
+multiplication operations, which associate to the right.  The result
+of each of these products will be a matrix with number of columns
+equal to the last argument.
+
+An argument after rep with the value "1" may be replaced with the
+argument "v" or "V", which has the same effect as "1", except that the
+appropriate mat_vec, vec_mat, or vec_vec procedure is used for some or
+all products, rather than the general matrix multiplication procedure.
+This applies both to the vectors specified in this way, and the
+vectors that result from multiplying such a vector by a matrix.  For
+example, if the last argument is "v", all the products will use the
+mat_vec procedure, except if the first operand was also specified
+using "v" or "V", in which case the vec_vec procedure will be used.
+
+The matrices created by the test programs have elements that are set
+to the index of the matrix (from 0), plus the index of the element
+(from 0, down each column in succession), plus 0.1.
+
+Several test programs can be compiled using the supplied Makefile,
+as follows:
+
+    matprod-test
+
+      Uses the procedures in matprod.c
+
+    matprod-test-alt
+
+      Uses the procedures in matprod.c with the alternative algorithms
+      enabled for all the procedures.
+
+    piped-matprod-test
+
+      Uses the procedures in piped-matprod.c, and the helpers library.
+      The number of helper threads used is given by the environment
+      variable HELPERS (default 0).  If an environment variable TRACE
+      is defined, trace output from the helpers library is enabled.
+      See below for the special role of a last argument of "V".
+
+    piped-matprod-test-d
+
+      The same as piped-matprod-test, except that helper threads are
+      disabled, which allows the overhead of providing for helper
+      threads to be assessed, by comparing with piped-matprod-test
+      with HELPERS set to 0 (or not set).
+
+    blas-test
+
+      Uses BLAS routines in ddot.f, dgemm.f, dgemv.f, and lsame.f.  
+      A xerbla routine for BLAS error reporting is provided as part 
+      of the test program.
+
+    blas2-test
+
+      Like blas-test, except that all BLAS routines are taken from
+      one file called blas.f.
+
+The helpers procedures that are used in the piped-matprod test
+programs can be obtained from github.com/radfordneal/helpers.
+
+Reference BLAS routines can be obtained from www.netlib.org/blas.
+
+If the last argument to piped-matprod-test is "V" (only, not "v"), the
+final matrix (a column vector) will be supplied as pipelined output
+from a task procedure that delivers elements in groups of 17 (or fewer
+for the last group), with variable time lags.  This allows pipelining
+to be tested for the mat_vec and vec_vec procedures, for which pipeled
+input cannot otherwise be arranged.  (Of course, this is slower than
+just accessing the already-initialized matrix.)
+
+The shell file run-tests runs a series of tests, with the test program
+specified by its first argument (eg, matprod-test) and a setting of an
+environment variable given by its optional second argument.

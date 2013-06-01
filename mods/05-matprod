@@ -1,0 +1,7 @@
+Includes the matprod library from github.com/radfordneal/matprod, 
+and uses it for the %*% operator when doing so is specified by the
+mat_mult_with_BLAS option.  See help("%*%") and help(options) for
+details.  
+
+The NEWS item for this is a stub, since it will be combined with
+that for a later mod.

@@ -224,7 +224,7 @@
       \item **31
       \item **32
       \item **33
-      \item **34
+      \item PUT IN ITEM HERE ABOUT MATRIX MULTIPLY MODS.
       \item **35
       \item **36
       \item **37

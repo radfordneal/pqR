@@ -260,6 +260,18 @@ if test "${want_R_framework}" != no; then
 fi
 AM_CONDITIONAL(WANT_R_FRAMEWORK, [test "x${want_R_framework}" = xyes])
 
+## Allow speciication of the default for mat_mult_with_BLAS
+AC_ARG_ENABLE([mat-mult-with-BLAS-by-default],
+[AS_HELP_STRING([--enable-mat-mult-with-BLAS-by-default],[default to using BLAS for %*% @<:@no@:>@])],
+[if test "${enableval}" = no; then
+  mat_mult_with_BLAS_by_default=no
+elif test "${enableval}" = yes; then
+  mat_mult_with_BLAS_by_default=yes
+else
+  mat_mult_with_BLAS_by_default=no
+fi],
+[mat_mult_with_BLAS_by_default=no])
+
 ## Allow the user to specify building R as a shared library.
 ## (but a 'dynamic library' in the terminology of Mac OS X).
 ## <NOTE>
@@ -2177,6 +2189,11 @@ if test "${want_memory_profiling}" = yes; then
   AC_DEFINE(R_MEMORY_PROFILING, 1, [Define this to enable memory profiling.])
 fi
 
+## Default for mat_mult_with_BLAS
+if test "${mat_mult_with_BLAS_by_default}" = yes; then
+  AC_DEFINE(R_MAT_MULT_WITH_BLAS_BY_DEFAULT, 1, [Define to use BLAS for %*% by default.])
+fi
+
 ## Large-file-support
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
@@ -2546,6 +2563,7 @@ AC_CONFIG_FILES(
   src/extra/xdr/Makefile
   src/extra/xz/Makefile
   src/extra/zlib/Makefile
+  src/extra/matprod/Makefile
   src/include/Makefile
   src/include/Rmath.h0
   src/include/R_ext/Makefile
