@@ -1,5 +1,6 @@
 #  File src/library/base/R/outer.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -53,11 +54,12 @@ outer <- function (X, Y, FUN = "*", ...)
         dim(robj) <- c(dX, dY) # careful not to lose class here
     }
     ## no dimnames if both don't have ..
-    if(no.nx) nx <- vector("list", length(dX)) else
-    if(no.ny) ny <- vector("list", length(dY))
-    if(!(no.nx && no.ny))
+    if(!(no.nx && no.ny)) {
+        if (no.nx) nx <- vector("list", length(dX)) 
+        else if (no.ny) ny <- vector("list", length(dY))
 	dimnames(robj) <- c(nx, ny)
-    robj
+    }
+    get_rm(robj)
 }
 
 ## Binary operator, hence don't simply do "%o%" <- outer.

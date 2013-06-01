@@ -1,5 +1,6 @@
 #  File src/library/base/R/array.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -29,7 +30,7 @@ function(data = NA, dim = length(data), dimnames = NULL)
 	dim(data) <- dim
     if(is.list(dimnames) && length(dimnames))
 	dimnames(data) <- dimnames
-    data
+    get_rm(data)
 }
 
 slice.index <-
@@ -49,5 +50,5 @@ function(x, MARGIN)
 			 prod(d[seq_len(MARGIN - 1L)]) * rep.int(1L, d[MARGIN])),
 		 prod(d[seq.int(from = MARGIN + 1L, length.out = n - MARGIN)]))
     dim(y) <- d
-    y
+    get_rm(y)
 }

@@ -1,5 +1,6 @@
 #  File src/library/base/R/zzz.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -87,6 +88,7 @@ assign("enc2utf8", function(x) NULL, envir = .ArgsEnv)
 assign("environment<-", function(fun, value) NULL, envir = .ArgsEnv)
 assign("expression", function(...) NULL, envir = .ArgsEnv)
 assign("gc.time", function(on = TRUE) NULL, envir = .ArgsEnv)
+assign("get_rm", function(x) NULL, envir = .ArgsEnv)
 assign("globalenv", function() NULL, envir = .ArgsEnv)
 assign("interactive", function() NULL, envir = .ArgsEnv)
 assign("invisible", function(x) NULL, envir = .ArgsEnv)

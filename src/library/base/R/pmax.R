@@ -1,5 +1,6 @@
 #  File src/library/base/R/pmax.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -51,8 +52,9 @@ pmax <- function (..., na.rm = FALSE)
             if (has.na && !na.rm) mmm[nas[, 1L] | nas[, 2L]] <- NA
         }
     }
-    mostattributes(mmm) <- attributes(elts[[1L]])
-    mmm
+    if (!is.null(attributes(elts[[1L]])))
+        mostattributes(mmm) <- attributes(elts[[1L]])
+    get_rm(mmm)
 }
 
 pmin <- function (..., na.rm = FALSE)
@@ -88,6 +90,7 @@ pmin <- function (..., na.rm = FALSE)
             if (has.na && !na.rm) mmm[nas[, 1L] | nas[, 2L]] <- NA
         }
     }
-    mostattributes(mmm) <- attributes(elts[[1L]])
-    mmm
+    if (!is.null(attributes(elts[[1L]])))
+        mostattributes(mmm) <- attributes(elts[[1L]])
+    get_rm(mmm)
 }

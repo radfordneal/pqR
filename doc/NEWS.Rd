@@ -63,7 +63,10 @@
       \item **8
       \item **9
       \item **10
-      \item **11
+      \item A new primitive function \code{get_rm} has been added,
+            which removes a variable while returning the value it
+            had when removed.  See \code{help(get_rm)} for details,
+            and how this can sometimes improve efficiency of R functions.
       \item **12
       \item **13
       \item **14
@@ -412,8 +415,10 @@
    [1,]    0
 }
       \item **8
-      \item **9
-      \item **10
+      \item Fixed \code{diag} so that it returns a matrix when passed
+            a list of elements to put on the diagonal.
+      \item Fixed \code{svd} so that it will not return a list with
+            \code{NULL} elements.  This matches the behaviour of \code{La.svd}.
       \item **11
       \item Fixed a minor error-reporting bug with
             \code{(1:2):integer(0)} and similar expressions.

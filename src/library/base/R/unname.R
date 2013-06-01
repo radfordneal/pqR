@@ -1,5 +1,6 @@
 #  File src/library/base/R/unname.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,5 +20,5 @@ unname <- function (obj, force= FALSE) {
         names(obj) <- NULL
     if (!is.null(dimnames(obj)) && (force || !is.data.frame(obj)))
         dimnames(obj) <- NULL
-    obj
+    get_rm(obj)
 }

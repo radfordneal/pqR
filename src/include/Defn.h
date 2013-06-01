@@ -895,6 +895,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findVar1		Rf_findVar1
+# define forcePromise		Rf_forcePromise
 # define FrameClassFix		Rf_FrameClassFix
 # define framedepth		Rf_framedepth
 # define frameSubscript		Rf_frameSubscript
@@ -1092,6 +1093,7 @@ SEXP evalListKeepMissing(SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
 void findcontext(int, SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
+SEXP forcePromise(SEXP);
 void FrameClassFix(SEXP);
 SEXP frameSubscript(int, SEXP, SEXP);
 int get1index(SEXP, SEXP, int, int, int, SEXP);

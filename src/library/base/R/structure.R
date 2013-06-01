@@ -1,5 +1,6 @@
 #  File src/library/base/R/structure.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,5 +32,5 @@ structure <- function (.Data, ...)
 	   storage.mode(.Data) <- "integer"
 	attributes(.Data) <- c(attributes(.Data), attrib)
     }
-    return(.Data)
+    get_rm (.Data)
 }

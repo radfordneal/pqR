@@ -1,5 +1,6 @@
 #  File src/library/base/R/LAPACK.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,7 +19,7 @@ La.svd <- function(x, nu = min(n, p), nv = min(n, p))
 {
     if(!is.numeric(x) && !is.complex(x))
 	stop("argument to 'La.svd' must be numeric or complex")
-    if (any(!is.finite(x))) stop("infinite or missing values in 'x'")
+    if (!all(is.finite(x))) stop("infinite or missing values in 'x'")
     x <- as.matrix(x)
     if (is.numeric(x)) storage.mode(x) <- "double"
     n <- nrow(x)
@@ -79,10 +80,13 @@ La.svd <- function(x, nu = min(n, p), nv = min(n, p))
         jobv <- ""
         res <- .Call("La_svd", jobu, jobv, x, double(min(n,p)), u, v,
                      "dgsedd", PACKAGE = "base")
-        res <- res[c("d", if(nu) "u", if(nv) "vt")]
-        if(nu) res$u <- res$u[, 1L:min(n, nu), drop = FALSE]
-        if(nv) res$vt <- res$vt[1L:min(p, nv), , drop = FALSE]
-        return(res)
+        ret <- list()
+        ret$d <- res$d
+        if(nu) ret$u <- ( if (ncol(res$u)==min(n,nu)) res$u
+                          else res$u[, 1L:min(n, nu), drop = FALSE] )
+        if(nv) ret$vt <- ( if (nrow(res$vt)==min(p,nv)) res$vt
+                           else res$vt[1L:min(p, nv), , drop = FALSE] )
+        return(ret)
     }
     ## not reached
 }
