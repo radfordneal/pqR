@@ -46,6 +46,8 @@
 #include <Rconnections.h>
 #include <errno.h>
 
+#include <helpers/helpers-app.h>
+
 static R_INLINE int imin2(int x, int y)
 {
     return (x < y) ? x : y;
@@ -1708,11 +1710,17 @@ SEXP attribute_hidden do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    x = CAR(args);		   args = CDR(args);
+    /* first argument allowed to still be being computed */
+    x = CAR(args);
+    args = CDR(args);
+    /* wait for other arguments to be computed */
+    wait_until_arguments_computed(args);
+
     /* this is going to be a connection open or openable for writing */
     if(!inherits(CAR(args), "connection"))
 	error(_("'file' is not a connection"));
-    con = getConnection(asInteger(CAR(args))); args = CDR(args);
+    con = getConnection(asInteger(CAR(args))); 
+    args = CDR(args);
     if(!con->canwrite)
 	error(_("cannot write to this connection"));
     wasopen = con->isopen;
@@ -1720,6 +1728,7 @@ SEXP attribute_hidden do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 	strcpy(con->mode, "wt");
 	if(!con->open(con)) error(_("cannot open the connection"));
     }
+
     nr = asInteger(CAR(args));	   args = CDR(args);
     nc = asInteger(CAR(args));	   args = CDR(args);
     rnames = CAR(args);		   args = CDR(args);
@@ -1766,6 +1775,8 @@ SEXP attribute_hidden do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
     cntxt.cenddata = &wi;
 
     if(isVectorList(x)) { /* A data frame */
+
+        WAIT_UNTIL_COMPUTED(x);
 
 	/* handle factors internally, check integrity */
 	levels = (SEXP *) R_alloc(nc, sizeof(SEXP));
@@ -1814,24 +1825,39 @@ SEXP attribute_hidden do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     } else { /* A matrix */
 
+        R_len_t len, avail;
+
 	if(!isVectorAtomic(x))
 	    UNIMPLEMENTED_TYPE("write.table, matrix method", x);
-	/* quick integrity check */
-	if(LENGTH(x) != nr * nc)
+	
+        len = LENGTH(x);
+	if(len != nr * nc) /* quick integrity check */
 	    error(_("corrupt matrix -- dims not not match length"));
 
-	for(i = 0; i < nr; i++) {
+        if (IS_BEING_COMPUTED_BY_TASK(x)) {
+            helpers_start_computing_var(x);
+            avail = 0;
+        }
+        else
+            avail = len;
+
+	for (i = 0; i < nr; i++) {
 	    if(i % 1000 == 999) R_CheckUserInterrupt();
 	    if(!isNull(rnames))
 		Rconn_printf(con, "%s%s",
 			     EncodeElement2(rnames, i, quote_rn, qmethod,
 					    &strBuf, cdec), csep);
-	    for(j = 0; j < nc; j++) {
-		if(j > 0) Rconn_printf(con, "%s", csep);
-		if(isna(x, i + j*nr)) tmp = cna;
+	    for (j = 0; j < nc; j++) {
+                R_len_t indx = i + j*nr;
+                if (avail <= indx)
+                    HELPERS_WAIT_IN_VAR (x, avail, indx, len);
+		if (j > 0) 
+                    Rconn_printf(con, "%s", csep);
+		if (isna(x,indx)) 
+                    tmp = cna;
 		else {
-		    tmp = EncodeElement2(x, i + j*nr, quote_col[j], qmethod,
-					&strBuf, cdec);
+		    tmp = EncodeElement2 (x, indx, quote_col[j], qmethod,
+					  &strBuf, cdec);
 		    /* if(cdec) change_dec(tmp, cdec, TYPEOF(x)); */
 		}
 		Rconn_printf(con, "%s", tmp);

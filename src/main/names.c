@@ -1035,7 +1035,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"importIntoEnv",do_importIntoEnv, 0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"env.profile",  do_envprofile,    0,	211,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"write.table",	do_writetable,	0,    111,     11,	{PP_FUNCALL, PREC_FN,	0}},
+{"write.table",	do_writetable,	0,	10111,	11,	{PP_FUNCALL, PREC_FN,	0}},
 {"Encoding",	do_encoding,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"setEncoding",	do_setencoding,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"lazyLoadDBfetch",do_lazyLoadDBfetch,0,1,	4,	{PP_FUNCALL, PREC_FN,	0}},
