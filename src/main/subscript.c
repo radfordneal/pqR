@@ -33,7 +33,6 @@
 
  *  makeSubscript()   -- for "[" and "[<-" in ./subset.c and ./subassign.c,
  *			 and "[[<-" with a scalar in ./subassign.c
- *  vectorSubscript() -- for makeSubscript()   {currently unused externally}
  *  arraySubscript()  -- for "[i,j,..." and "[<-..." in ./subset.c, ./subassign.c
  */
 
@@ -423,7 +422,7 @@ static SEXP negativeSubscript(SEXP s, int ns, int nx, SEXP call)
     return s;
 }
 
-static SEXP positiveSubscript(SEXP s, int ns, int nx)
+static SEXP nonnegativeSubscript(SEXP s, int ns, int nx)
 {
     SEXP indx;
     int i, zct = 0;
@@ -445,34 +444,53 @@ static SEXP positiveSubscript(SEXP s, int ns, int nx)
 static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 {
     int i, ii, min, max, canstretch;
-    Rboolean isna = FALSE;
+    Rboolean isna;
+
     canstretch = *stretch;
     *stretch = 0;
-    min = 0;
-    max = 0;
+
     for (i = 0; i < ns; i++) {
 	ii = INTEGER(s)[i];
-	if (ii != NA_INTEGER) {
-	    if (ii < min)
-		min = ii;
-	    if (ii > max)
-		max = ii;
-	} else isna = TRUE;
+	if (ii != NA_INTEGER) 
+            break;
     }
+
+    if (i==ns) /* all NA, or ns==0 */
+        return s;
+
+    isna = i>0;
+
+    min = ii;
+    max = ii;
+    for (i = i+1; i < ns; i++) {
+	ii = INTEGER(s)[i];
+	if (ii == NA_INTEGER) 
+            isna = TRUE;
+        else {
+	    if (ii > max)  /* checked first since more common than ii < min */
+		max = ii;
+	    else if (ii < min)
+		min = ii;
+        }
+    }
+
     if (max > nx) {
 	if(canstretch) *stretch = max;
 	else {
 	    ECALL(call, _("subscript out of bounds"));
 	}
     }
-    if (min < 0) {
-	if (max == 0 && !isna) return negativeSubscript(s, ns, nx, call);
+
+    if (min > 0) /* All positive (or NA) */
+        return s;
+    else if (min < 0) {
+	if (max <= 0 && !isna) return negativeSubscript(s, ns, nx, call);
 	else {
 	    ECALL(call, _("only 0's may be mixed with negative subscripts"));
 	}
     }
-    else return positiveSubscript(s, ns, nx);
-    return R_NilValue;
+    else /* min == 0 */
+        return nonnegativeSubscript(s, ns, nx);
 }
 
 typedef SEXP (*StringEltGetter)(SEXP x, int i);
@@ -492,21 +510,25 @@ typedef SEXP (*StringEltGetter)(SEXP x, int i);
  * large, then it will be too slow unless ns is very small.
  */
 
+#define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
+
 static SEXP
 stringSubscript(SEXP s, int ns, int nx, SEXP names,
-		StringEltGetter strg, int *stretch, Rboolean in, SEXP call)
+		StringEltGetter strg, int *stretch, SEXP call)
 {
     SEXP indx, indexnames;
-    int i, j, nnames, sub, extra;
+    int i, j, k, nnames, sub, extra;
     int canstretch = *stretch;
     /* product may overflow, so check factors as well. */
-    Rboolean usehashing = in && ( ((ns > 1000 && nx) || (nx > 1000 && ns)) || (ns * nx > 15*nx + ns) );
+    Rboolean usehashing = names == R_NilValue ? FALSE :
+        ns > 1000 ? (nx > 2) : nx > 1000 ? (ns > 15) : (ns*nx > 15*nx + 2*ns);
+    /* was: (ns > 1000 && nx) || (nx > 1000 && ns) || (ns * nx > 15*nx + ns) */
 
     PROTECT(s);
     PROTECT(names);
-    PROTECT(indexnames = allocVector(VECSXP, ns));
-    nnames = nx;
-    extra = nnames;
+    indexnames = 0;
+    nnames = names==R_NilValue ? 0 : nx;
+    extra = nx;
 
     /* Process each of the subscripts. First we compare with the names
      * on the vector and then (if there is no match) with each of the
@@ -516,64 +538,76 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
      */
 
     if(usehashing) {
-	/* must be internal, so names contains a character vector */
 	/* NB: this does not behave in the same way with respect to ""
 	   and NA names: they will match */
 	PROTECT(indx = match(names, s, 0));
 	/* second pass to correct this */
-	for (i = 0; i < ns; i++)
-	    if(STRING_ELT(s, i) == NA_STRING || !CHAR(STRING_ELT(s, i))[0])
-		INTEGER(indx)[i] = 0;
-	for (i = 0; i < ns; i++) SET_VECTOR_ELT(indexnames, i, R_NilValue);
-    } else {
-	PROTECT(indx = allocVector(INTSXP, ns));
 	for (i = 0; i < ns; i++) {
-	    sub = 0;
-	    if (names != R_NilValue) {
-		for (j = 0; j < nnames; j++) {
-		    SEXP names_j = strg(names, j);
-		    if (!in && TYPEOF(names_j) != CHARSXP) {
-			ECALL(call, _("character vector element does not have type CHARSXP"));
-		    }
-		    if (NonNullStringMatch(STRING_ELT(s, i), names_j)) {
-			sub = j + 1;
-			SET_VECTOR_ELT(indexnames, i, R_NilValue);
-			break;
-		    }
-		}
-	    }
-	    INTEGER(indx)[i] = sub;
-	}
+            SEXP sbe_i = STRING_ELT(s,i);
+	    if (na_or_empty_string(sbe_i))
+		INTEGER(indx)[i] = 0;
+        }
+    } else {
+        PROTECT(indx = allocVector(INTSXP, ns));
+        if (nnames == 0)
+            for (i = 0; i < ns; i++) 
+                INTEGER(indx)[i] = 0;
+        else {
+            for (i = 0; i < ns; i++) {
+                SEXP sbe_i = STRING_ELT(s,i);
+                sub = 0;
+                if (!na_or_empty_string(sbe_i)) {
+                    for (j = 0; j < nnames; j++) {
+                        if (Seql (sbe_i, strg(names,j))) {
+                            sub = j + 1;
+                            break;
+                        }
+                    }
+                }
+                INTEGER(indx)[i] = sub;
+            }
+        }
     }
-
 
     for (i = 0; i < ns; i++) {
-	sub = INTEGER(indx)[i];
-	if (sub == 0) {
-	    for (j = 0 ; j < i ; j++)
-		if (NonNullStringMatch(STRING_ELT(s, i), STRING_ELT(s, j))) {
-		    sub = INTEGER(indx)[j];
-		    SET_VECTOR_ELT(indexnames, i, STRING_ELT(s, j));
-		    break;
-		}
-	}
-	if (sub == 0) {
-	    if (!canstretch) {
-		ECALL(call, _("subscript out of bounds"));
-	    }
-	    extra += 1;
-	    sub = extra;
-	    SET_VECTOR_ELT(indexnames, i, STRING_ELT(s, i));
-	}
-	INTEGER(indx)[i] = sub;
+	if (INTEGER(indx)[i] == 0) {
+            SEXP sbe_i = STRING_ELT(s,i);
+            if (indexnames==0) { /* first non-matching index */
+                if (!canstretch) {
+	            ECALL(call, _("subscript out of bounds"));
+	        }
+                PROTECT (indexnames = allocVector(VECSXP, ns));
+                for (k = 0; k < ns; k++) 
+                    if (INTEGER(indx)[k] != 0)
+                        SET_VECTOR_ELT (indexnames, k, R_NilValue);
+            }
+            SET_VECTOR_ELT (indexnames, i, sbe_i);
+            extra += 1;
+            sub = extra;
+            INTEGER(indx)[i] = sub;
+            if (!na_or_empty_string(sbe_i)) {
+                for (j = i+1 ; j<ns ; j++) {
+                    if (INTEGER(indx)[j] == 0) {
+                        SEXP sbe_j = STRING_ELT(s,j);
+                        if (Seql (sbe_i, sbe_j)) { 
+                            INTEGER(indx)[j] = sub;
+                            SET_VECTOR_ELT (indexnames, j, sbe_i);
+                        }
+                    }
+                }
+            }
+        }
     }
+
     /* We return the new names as the names attribute of the returned
        subscript vector. */
-    if (extra != nnames)
+    if (indexnames != 0)
 	setAttrib(indx, R_UseNamesSymbol, indexnames);
     if (canstretch)
 	*stretch = extra;
-    UNPROTECT(4);
+
+    UNPROTECT (3+(indexnames!=0));
+
     return indx;
 }
 
@@ -589,7 +623,7 @@ typedef SEXP AttrGetter(SEXP x, SEXP data);
 
 static SEXP
 int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
-		   StringEltGetter strg, SEXP x, Rboolean in, SEXP call)
+                   StringEltGetter strg, SEXP x, SEXP call)
 {
     int nd, ns, stretch = 0;
     SEXP dnames, tmp;
@@ -614,7 +648,7 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
 	    ECALL(call, _("no 'dimnames' attribute for array"));
 	}
 	dnames = VECTOR_ELT(dnames, dim);
-	return stringSubscript(s, ns, nd, dnames, strg, &stretch, in, call);
+	return stringSubscript(s, ns, nd, dnames, strg, &stretch, call);
     case SYMSXP:
 	if (s == R_MissingArg)
 	    return nullSubscript(nd);
@@ -634,61 +668,75 @@ SEXP
 arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
 	       StringEltGetter strg, SEXP x)
 {
-    return int_arraySubscript(dim, s, dims, dng, strg, x, TRUE, R_NilValue);
+    return int_arraySubscript(dim, s, dims, dng, strg, x, R_NilValue);
 }
 
-/* Subscript creation.  The first thing we do is check to see */
-/* if there are any user supplied NULL's, these result in */
-/* returning a vector of length 0. */
-/* if stretch is zero on entry then the vector x cannot be
-   "stretched",
-   otherwise, stretch returns the new required length for x
+/* Subscript creation.  
+   x is the object being subscripted; s is the R subscript value.
+   If stretch is zero on entry then the vector x cannot be "stretched",
+   otherwise, stretch returns the new required length for x.
+   The used_to_replace arguement is 1 if the subscript is used to replace 
+   items (hence subscript may need to be duplicated in case it itself 
+   would be modified), and 0 if the subscript is only for extracting items.
 */
 
-SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call)
+SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call, 
+                                    int used_to_replace)
 {
-    int nx;
-    SEXP ans;
+    int nx, ns;
+    SEXP ans, tmp;
 
-    ans = R_NilValue;
-    if (isVector(x) || isList(x) || isLanguage(x)) {
-	nx = length(x);
-
-	ans = vectorSubscript(nx, s, stretch, getAttrib, (STRING_ELT),
-			      x, call);
-    }
-    else {
+    if (!isVector(x) && !isList(x) && !isLanguage(x)) {
 	ECALL(call, _("subscripting on non-vector"));
+        return R_NilValue;
     }
-    return ans;
 
-}
-
-/* nx is the length of the object being subscripted,
-   s is the R subscript value,
-   dng gets a given attrib for x, which is the object we are
-   subsetting,
-*/
-
-static SEXP
-int_vectorSubscript(int nx, SEXP s, int *stretch, AttrGetter dng,
-		    StringEltGetter strg, SEXP x, Rboolean in, SEXP call)
-{
-    int ns;
-    SEXP ans = R_NilValue, tmp;
-
+    nx = length(x);
     ns = length(s);
+
+#if 0 /* In r52822, checked for no attributes of s, but only potential */
+      /* problem seems to be an R_UseNamesSymbol attribute, which can  */
+      /* be ignored if the subscripts aren't strings.                  */
     /* special case for simple indices -- does not duplicate */
-    if (ns == 1 && TYPEOF(s) == INTSXP && ATTRIB(s) == R_NilValue) {
-	int i = INTEGER(s)[0];
-	if (0 < i && i <= nx) {
-	    *stretch = 0;
-	    return s;
-	}
-    }
+    if (ns == 1 && ATTRIB(s) == R_NilValue) 
+#else
+    /* Handle single positive index (real or integer), not out of bounds.  */
+    /* Note that we don't have to worry about a length one subscript being */
+    /* modified in a replace operation, since even if it is,  we don't use */
+    /* it anymore after the modification.                                  */
+    if (ns == 1) 
+#endif
+        if (TYPEOF(s) == INTSXP) {
+            int i = INTEGER(s)[0];
+            if (0 < i && i <= nx) {
+                *stretch = 0;
+                return s;
+            }
+	} else if (TYPEOF(s) == REALSXP) {
+            int i, warn = 0;
+            i = IntegerFromReal (REAL(s)[0], &warn);
+            if (0 < i && i <= nx) {
+                if (warn) CoercionWarning(warn);
+                *stretch = 0;
+                return ScalarInteger(i);
+            }
+        }
+
+#if 0 /* Duplicated in r52822, but seems unnecessary as long as callers ignore
+         any R_UseNamesSymbol attribute when not subscripting with strings,
+         and the subscript will not be modified in a replacement operation
+         that it is supplying the subscripts for. */
     PROTECT(s = duplicate(s));
     SET_ATTRIB(s, R_NilValue);
     SET_OBJECT(s, 0);
+#else
+    /* Duplicate if the subscript might be being used to replace elements of
+       itself. */
+    if (used_to_replace && NAMED(s) > 0) 
+        s = duplicate(s);
+    PROTECT(s);
+#endif
+
     switch (TYPEOF(s)) {
     case NILSXP:
 	*stretch = 0;
@@ -706,13 +754,12 @@ int_vectorSubscript(int nx, SEXP s, int *stretch, AttrGetter dng,
 	ans = integerSubscript(tmp, ns, nx, stretch, call);
 	UNPROTECT(1);
 	break;
-    case STRSXP:
-    {
-	SEXP names = dng(x, R_NamesSymbol);
+    case STRSXP: {
+	SEXP names = getAttrib(x, R_NamesSymbol);
 	/* *stretch = 0; */
-	ans = stringSubscript(s, ns, nx, names, strg, stretch, in, call);
+	ans = stringSubscript(s, ns, nx, names, (STRING_ELT), stretch, call);
+        break;
     }
-    break;
     case SYMSXP:
 	*stretch = 0;
 	if (s == R_MissingArg) {
@@ -728,12 +775,4 @@ int_vectorSubscript(int nx, SEXP s, int *stretch, AttrGetter dng,
     }
     UNPROTECT(1);
     return ans;
-}
-
-
-SEXP attribute_hidden
-vectorSubscript(int nx, SEXP s, int *stretch, AttrGetter dng,
-		StringEltGetter strg, SEXP x, SEXP call)
-{
-    return int_vectorSubscript(nx, s, stretch, dng, strg, x, TRUE, call);
 }

@@ -1082,7 +1082,7 @@ void jump_to_toplevel(void);
 void KillAllDevices(void);
 SEXP levelsgets(SEXP, SEXP);
 void mainloop(void);
-SEXP makeSubscript(SEXP, SEXP, int *, SEXP);
+SEXP makeSubscript(SEXP, SEXP, int *, SEXP, int);
 SEXP markKnown(const char *, SEXP);
 SEXP mat2indsub(SEXP, SEXP, SEXP);
 SEXP matchArg(SEXP, SEXP*);

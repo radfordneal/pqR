@@ -166,9 +166,8 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
     }
 
     /* Convert to a vector of integer subscripts */
-    /* in the range 1:length(x). */
 
-    PROTECT(indx = makeSubscript(x, s, &stretch, call));
+    PROTECT(indx = makeSubscript(x, s, &stretch, call, 0));
     n = LENGTH(indx);
 
     /* Allocate the result. */
