@@ -874,7 +874,8 @@ SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP a, r, dims, dimnames, dimnamesnames=R_NilValue,
 	ndimnamesnames, rnames, cnames;
-    int i, ldim, len = 0, ncol=0, nrow=0;
+    int ldim, len = 0, ncol=0, nrow=0;
+    int i, j;
 
     checkArity(op, args);
     a = CAR(args);
@@ -917,23 +918,42 @@ SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else
 	goto not_matrix;
+
     PROTECT(r = allocVector(TYPEOF(a), len));
-    int j, l_1 = len-1;
+
+    int l_1 = len-1, l_2 = len-2;
     switch (TYPEOF(a)) {
+    /* For LGL, INT, and REAL, access successive pairs from two rows, and 
+       store in successive positions in two columns (except perhaps for the 
+       first row & column).  This improves memory access performance.*/
     case LGLSXP:
     case INTSXP:
-	// filling in columnwise, "accessing row-wise":
-        for (i = 0, j = 0; i < len; i++, j += nrow) {
-            if (j > l_1) j -= l_1;
-            INTEGER(r)[i] = INTEGER(a)[j];
+        i = 0;
+        if (nrow & 1) 
+            for (j = 0; i < ncol; j += nrow, i++) 
+                INTEGER(r)[i] = INTEGER(a)[j];
+        j = nrow & 1;
+        while (i < len) {
+            INTEGER(r)[i] = INTEGER(a)[j]; 
+            INTEGER(r)[i+ncol] = INTEGER(a)[j+1];
+            i += 1; j += nrow;
+            if (j >= len) { i += ncol; j -= l_2; }
         }
         break;
     case REALSXP:
-        for (i = 0, j = 0; i < len; i++, j += nrow) {
-            if (j > l_1) j -= l_1;
-            REAL(r)[i] = REAL(a)[j];
+        i = 0;
+        if (nrow & 1) 
+            for (j = 0; i < ncol; j += nrow, i++) 
+                REAL(r)[i] = REAL(a)[j];
+        j = nrow & 1;
+        while (i < len) {
+            REAL(r)[i] = REAL(a)[j]; 
+            REAL(r)[i+ncol] = REAL(a)[j+1];
+            i += 1; j += nrow;
+            if (j >= len) { i += ncol; j -= l_2; }
         }
         break;
+    /* For less-used types below, just access row-wise and store column-wise. */
     case CPLXSXP:
         for (i = 0, j = 0; i < len; i++, j += nrow) {
             if (j > l_1) j -= l_1;
