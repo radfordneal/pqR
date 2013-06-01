@@ -1,4 +1,4 @@
-export("?", .DollarNames, CRAN.packages, Rprof, Rprofmem, RShowDoc,
+export("?", .DollarNames, CRAN.packages, Rprof, Rprofmem, Rprofmemt, RShowDoc,
        RSiteSearch, URLdecode, URLencode, View, adist, alarm, apropos,
        aregexec, argsAnywhere, assignInMyNamespace, assignInNamespace,
        as.roman, as.person, as.personList, as.relistable, aspell,

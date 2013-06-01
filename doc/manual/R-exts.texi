@@ -5830,12 +5830,13 @@ particular these allow call graphs to be studied.
 @cindex Memory use
 
 Measuring memory use in @R{} code is useful either when the code takes
-more memory than is conveniently available or when memory allocation and
-copying of objects is responsible for slow code. There are three ways to
-profile memory use over time in @R{} code. All three require @R{} to
-have been compiled with @option{--enable-memory-profiling}, which is not
-the default, but is currently used for the Mac OS X and Windows binary
-distributions. All can be misleading, for different reasons.
+more memory than is conveniently available or when memory allocation
+and copying of objects is responsible for slow code. There are three
+ways to profile memory use over time in @R{} code. All except @code{Rprofmem}
+require @R{} to have been compiled with @option{--enable-memory-profiling},
+which is not the default, but is currently used for the Mac OS X and
+Windows binary distributions. All can be misleading, for different
+reasons.
 
 In understanding the memory profiles it is useful to know a little more
 about @R{}'s memory allocation. Looking at the results of @code{gc()}
@@ -5917,7 +5918,10 @@ profiler, @code{Rprofmem()}, which writes out a stack trace to an
 output file every time a large vector is allocated (with a
 user-specified threshold for `large') or a new page of memory is
 allocated for the @R{} heap. Summary functions for this output are still
-being designed.
+being designed.  In pqR, @code{Rprofmem} is enhanced to allow
+output to the terminal (interspersed with other output, allowing
+better understanding), more detailed output, and better control
+of which allocations are displayed.
 
 Running the example from the previous section with
 

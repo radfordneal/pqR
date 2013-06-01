@@ -227,10 +227,18 @@ static Rboolean gc_inhibit_release = FALSE;
 # define FORCE_GC 0
 #endif
 
-#ifdef R_MEMORY_PROFILING
-static void R_ReportAllocation(R_size_t);
+/* Declarations relating to Rprofmem */
+
+static int R_IsMemReporting;
+static int R_MemReportingToTerminal;
+static int R_MemPagesReporting;
+static int R_MemStackReporting;
+static int R_MemDetailsReporting;
+static FILE *R_MemReportingOutfile;
+static R_size_t R_MemReportingThreshold;
+static R_len_t R_MemReportingNElem;
+static void R_ReportAllocation (R_size_t, SEXPTYPE, R_len_t);
 static void R_ReportNewPage();
-#endif
 
 extern SEXP framenames;
 
@@ -797,9 +805,7 @@ static void GetNewPage(int node_class)
 	if (page == NULL)
 	    mem_err_malloc((R_size_t) R_PAGE_SIZE);
     }
-#ifdef R_MEMORY_PROFILING
-    R_ReportNewPage();
-#endif
+    if (R_IsMemReporting) R_ReportNewPage();
     page->next = R_GenHeap[node_class].pages;
     R_GenHeap[node_class].pages = page;
     R_GenHeap[node_class].PageCount++;
@@ -2248,6 +2254,10 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 	    LENGTH(s) = length;
 	    TRUELENGTH(s) = 0;
 	    NAMED(s) = 0;
+            if (R_IsMemReporting && !R_MemPagesReporting) {
+                R_ReportAllocation (sizeof(SEXPREC_ALIGN) + sizeof(VECREC),
+                                    type, length);
+            }
 	    return(s);
 	}
     }
@@ -2395,9 +2405,6 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 		    s = malloc(sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC));
 		}
 		if (s != NULL) success = TRUE;
-#ifdef R_MEMORY_PROFILING
-		R_ReportAllocation(sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC));
-#endif
 	    }
 	    if (! success) {
 		double dsize = (double)size * sizeof(VECREC)/1024.0;
@@ -2433,8 +2440,8 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     TRUELENGTH(s) = 0;
     NAMED(s) = 0;
 
-    /* The following prevents disaster in the case */
-    /* that an uninitialised string vector is marked */
+    /* For EXPRSXP, VECSXP, and STRSXP, prevent disaster in the case */
+    /* that an uninitialised list vector or string vector is marked */
     /* Direct assignment is OK since the node was just allocated and */
     /* so is at least as new as R_NilValue and R_BlankString */
     if (type == EXPRSXP || type == VECSXP) {
@@ -2471,6 +2478,15 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     else if (type == RAWSXP)
 	VALGRIND_MAKE_WRITABLE(RAW(s), actual_size);
 #endif
+
+    if (R_IsMemReporting) {
+        if (!R_MemPagesReporting
+              || size > 0 && node_class >= NUM_SMALL_NODE_CLASSES)
+            R_ReportAllocation (
+                sizeof(SEXPREC_ALIGN) + alloc_size * sizeof(VECREC),
+                type, length);
+    }
+
     return s;
 }
 
@@ -3293,106 +3309,158 @@ void attribute_hidden (SET_CACHED)(SEXP x) { SET_CACHED(x); }
 int  attribute_hidden (IS_CACHED)(SEXP x) { return IS_CACHED(x); }
 
 /*******************************************/
-/* Non-sampling memory use profiler
-   reports all large vector heap
-   allocations and all calls to GetNewPage */
+/* Non-sampling memory use profiler reports vector allocations and/or
+   calls to GetNewPage */
 /*******************************************/
 
-#ifndef R_MEMORY_PROFILING
-
-SEXP attribute_hidden do_Rprofmem(SEXP call, SEXP op, SEXP args, SEXP rho)
+static void R_OutputStackTrace (void)
 {
-    error(_("memory profiling is not available on this system"));
-    return R_NilValue; /* not reached */
-}
-
-#else
-static int R_IsMemReporting;  /* Rboolean more appropriate? */
-static FILE *R_MemReportingOutfile;
-static R_size_t R_MemReportingThreshold;
-
-static void R_OutputStackTrace(FILE *file)
-{
-    int newline = 0;
     RCNTXT *cptr;
+    int newline;
+
+    if (!R_MemStackReporting) goto print_newline;
+
+    newline = R_MemReportingToTerminal | R_MemDetailsReporting;
+
+    if (R_MemReportingOutfile != NULL) 
+        fprintf (R_MemReportingOutfile, ":");
+    if (R_MemReportingToTerminal) 
+        REprintf (":");
 
     for (cptr = R_GlobalContext; cptr; cptr = cptr->nextcontext) {
 	if ((cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN))
 	    && TYPEOF(cptr->call) == LANGSXP) {
 	    SEXP fun = CAR(cptr->call);
 	    if (!newline) newline = 1;
-	    fprintf(file, "\"%s\" ",
-		    TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) :
-		    "<Anonymous>");
+	    if (R_MemReportingOutfile != NULL)
+                fprintf (R_MemReportingOutfile, "\"%s\" ",
+		         TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) :
+		         "<Anonymous>");
+	    if (R_MemReportingToTerminal)
+                REprintf ("\"%s\" ",
+		          TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) :
+		          "<Anonymous>");
 	}
     }
-    if (newline) fprintf(file, "\n");
+
+    if (!newline) return;
+
+print_newline:
+    if (R_MemReportingOutfile != NULL) 
+        fprintf (R_MemReportingOutfile, "\n");
+    if (R_MemReportingToTerminal) 
+        REprintf ("\n");
 }
 
-static void R_ReportAllocation(R_size_t size)
+static void R_ReportAllocation (R_size_t size, SEXPTYPE type, R_len_t length)
 {
-    if (R_IsMemReporting) {
-	if(size > R_MemReportingThreshold) {
-	    fprintf(R_MemReportingOutfile, "%ld :", (unsigned long) size);
-	    R_OutputStackTrace(R_MemReportingOutfile);
-	}
+    if (size > R_MemReportingThreshold && length >= R_MemReportingNElem) {
+        if (R_MemReportingOutfile != NULL) {
+            if (R_MemDetailsReporting)
+                fprintf (R_MemReportingOutfile, "%lu (%s %lu)",
+                  (unsigned long) size, 
+                  type==intCHARSXP ? "char" : type2char(type), 
+                  (unsigned long) length);
+            else 
+                fprintf (R_MemReportingOutfile, "%lu ",
+                  (unsigned long) size);
+        }
+        if (R_MemReportingToTerminal) {
+            if (R_MemDetailsReporting)
+                REprintf ("RPROFMEM: %lu (%s %lu)",
+                  (unsigned long) size, 
+                  type==intCHARSXP ? "char" : type2char(type), 
+                  (unsigned long) length);
+            else
+                REprintf ("RPROFMEM: %lu ", 
+                  (unsigned long) size);
+        }
+        R_OutputStackTrace();
     }
-    return;
 }
 
 static void R_ReportNewPage(void)
 {
-    if (R_IsMemReporting) {
-	fprintf(R_MemReportingOutfile, "new page:");
-	R_OutputStackTrace(R_MemReportingOutfile);
+    if (R_MemPagesReporting) {
+        if (R_MemReportingOutfile != NULL)
+            fprintf (R_MemReportingOutfile, "new page");
+        if (R_MemReportingToTerminal)
+            REprintf ("RPROFMEM: new page");
+	R_OutputStackTrace();
     }
-    return;
 }
 
-static void R_EndMemReporting()
+static void R_EndMemReporting(void)
 {
     if(R_MemReportingOutfile != NULL) {
-	/* does not fclose always flush? */
-	fflush(R_MemReportingOutfile);
-	fclose(R_MemReportingOutfile);
+	fclose (R_MemReportingOutfile);
 	R_MemReportingOutfile=NULL;
     }
     R_IsMemReporting = 0;
-    return;
 }
 
-static void R_InitMemReporting(SEXP filename, int append,
-			       R_size_t threshold)
+static void R_InitMemReporting(SEXP filename, int append)
 {
-    if(R_MemReportingOutfile != NULL) R_EndMemReporting();
-    R_MemReportingOutfile = RC_fopen(filename, append ? "a" : "w", TRUE);
-    if (R_MemReportingOutfile == NULL)
-	error(_("Rprofmem: cannot open output file '%s'"), filename);
-    R_MemReportingThreshold = threshold;
+    if (R_IsMemReporting)
+        R_EndMemReporting();
+
+    if (strlen(CHAR(filename)) > 0) {
+        R_MemReportingOutfile = RC_fopen (filename, append ? "a" : "w", TRUE);
+        if (R_MemReportingOutfile == NULL)
+            error(_("Rprofmem: cannot open output file '%s'"), filename);
+    }
+    else
+        R_MemReportingOutfile = NULL;
+
     R_IsMemReporting = 1;
+
     return;
 }
 
 SEXP attribute_hidden do_Rprofmem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP filename;
-    R_size_t threshold;
+    SEXP filename, ap;
     int append_mode;
 
     checkArity(op, args);
-    if (!isString(CAR(args)) || (LENGTH(CAR(args))) != 1)
+
+    ap = args;
+    if (!isString(CAR(ap)) || (LENGTH(CAR(ap))) != 1)
 	error(_("invalid '%s' argument"), "filename");
-    append_mode = asLogical(CADR(args));
-    filename = STRING_ELT(CAR(args), 0);
-    threshold = REAL(CADDR(args))[0];
-    if (strlen(CHAR(filename)))
-	R_InitMemReporting(filename, append_mode, threshold);
+    filename = STRING_ELT(CAR(ap), 0);
+
+    ap = CDR(ap);
+    append_mode = asLogical(CAR(ap));
+
+    ap = CDR(ap);
+    if (!isReal(CAR(ap)) || (LENGTH(CAR(ap))) != 1)
+	error(_("invalid '%s' argument"), "threshold");
+    R_MemReportingThreshold = REAL(CAR(ap))[0];
+
+    ap = CDR(ap);
+    if (!isReal(CAR(ap)) || (LENGTH(CAR(ap))) != 1)
+	error(_("invalid '%s' argument"), "nelem");
+    R_MemReportingNElem = REAL(CAR(ap))[0];
+
+    ap = CDR(ap);
+    R_MemStackReporting = asLogical(CAR(ap));
+
+    ap = CDR(ap);
+    R_MemReportingToTerminal = asLogical(CAR(ap));
+
+    ap = CDR(ap);
+    R_MemPagesReporting = asLogical(CAR(ap));
+
+    ap = CDR(ap);
+    R_MemDetailsReporting = asLogical(CAR(ap));
+
+    if (R_MemReportingToTerminal || strlen(CHAR(filename)) > 0)
+	R_InitMemReporting(filename, append_mode);
     else
 	R_EndMemReporting();
+
     return R_NilValue;
 }
-
-#endif /* R_MEMORY_PROFILING */
 
 /* RBufferUtils, moved from deparse.c */
 

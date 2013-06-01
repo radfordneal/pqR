@@ -28,7 +28,21 @@
 
   \subsection{NEW FEATURES}{
     \itemize{
-      \item **1
+      \item An enhanced version of the Rprofmem function for profiling
+            allocation of vectors has been implemented, that can
+            display more information, and can output to the terminal,
+            allowing the source of allocations to more easily be
+            determined.  Also, Rprofmem has now been made accessible
+            even when the --enable-memory-profiling configuration
+            option is not used, since the overhead of making it
+            accessible is negligible.
+ 
+            The new version allows records of memory allocation to be
+            output to the terminal, where their position relative to
+            other output can be informative.  More identifying
+            information, including type, number of elements, and
+            hexadecimal address, can also be output.  For more details on
+            these and other changes, see help(Rprofmem).
       \item **2
       \item **3
       \item **4
