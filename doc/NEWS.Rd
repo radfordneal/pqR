@@ -133,7 +133,12 @@
       \item **22
       \item **23
       \item **24
-      \item **25
+      \item Lookup of symbols defined in the base environment has been
+            sped up by flagging symbols that have a base environment
+            definition recorded in the global cache. This allows the
+            definition to be retrieved quickly without looking in the
+            hash table.  In particular, this speeds up basic
+            operations such as "+", "<-", "if", and "length".
       \item **26
       \item **27
       \item **28

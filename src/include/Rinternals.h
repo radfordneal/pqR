@@ -342,6 +342,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) (((x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
+#define BASE_CACHE(x)  ((x)->sxpinfo.misc) /*1 = base binding in global cache*/
+#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.misc = (v))
 
 /* Environment Access Macros */
 #define FRAME(x)	((x)->u.envsxp.frame)
