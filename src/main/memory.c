@@ -2108,6 +2108,34 @@ SEXP cons(SEXP car, SEXP cdr)
     return s;
 }
 
+/* version of cons that sets TAG too.  Caller needn't protect arguments. */
+SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
+{
+    SEXP s;
+    if (FORCE_GC || NO_FREE_NODES()) {
+	PROTECT(car);
+	PROTECT(cdr);
+	PROTECT(tag);
+	R_gc_internal(0);
+	UNPROTECT(3);
+	if (NO_FREE_NODES())
+	    mem_err_cons();
+    }
+    GET_FREE_NODE(s);
+#if VALGRIND_LEVEL > 2
+    VALGRIND_MAKE_WRITABLE(&ATTRIB(s), sizeof(void *));
+    VALGRIND_MAKE_WRITABLE(&(s->u), 3*(sizeof(void *)));
+    VALGRIND_MAKE_WRITABLE(s,3);
+#endif
+    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    SET_TYPEOF(s,LISTSXP);
+    CAR(s) = CHK(car);
+    CDR(s) = CHK(cdr);
+    TAG(s) = CHK(tag);
+    ATTRIB(s) = R_NilValue;
+    return s;
+}
+
 /*----------------------------------------------------------------------
 
   NewEnvironment
