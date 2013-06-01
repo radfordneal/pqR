@@ -1,5 +1,6 @@
 #  File src/library/tools/R/news.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -354,7 +355,7 @@ function(f, pdf_file) {
         "\\begin{document}\n",
         "\\chapter*{}\\sloppy\n",
         "\\begin{center}\n\\huge\n",
-        "NEWS for ", R.version$version.string, "\n",
+        "NEWS for ", paste("pq",R.version$version.string,sep=""), "\n",
         "\\end{center}\n",
         sep = "", file = out)
     writeLines(readLines(f2), out)
