@@ -204,12 +204,17 @@ static R_INLINE double R_log(double x) {
     return x > 0 ? log(x) : x < 0 ? R_NaN : R_NegInf;
 }
 
+/* Macro handling powers 1 and 2 quickly, and otherwise using R_pow.  
+   First argument should be double, second may be double or int. */
+
+#define R_POW(x,y) ((y) == 2 ? (x)*(x) : (y) == 1 ? (x) : R_pow((x),(y)))
+
 double R_pow(double x, double y) /* = x ^ y */
 {
-    /* squaring is the most common of the specially handled cases so
-       check for it first. */
-    if(y == 2.0)
-	return x * x;
+    /* Don't optimize for powers of 1 or 2, since we assume most calls are
+       via R_POW, which already does that, or from some other place making
+       similar checks. */
+
     if(x == 1. || y == 0.)
 	return(1.);
     if(x == 0.) {
@@ -217,22 +222,13 @@ double R_pow(double x, double y) /* = x ^ y */
 	else if(y < 0) return(R_PosInf);
 	else return(y); /* NA or NaN, we assert */
     }
-    if (R_FINITE(x) && R_FINITE(y)) {
-/* work around a bug in May 2007 snapshots of gcc pre-4.3.0, also
-   present in the release version.  If compiled with, say, -g -O3
-   on x86_64 Linux this compiles to a call to sqrtsd and gives
-   100^0.5 as 3.162278.  -g is needed, as well as -O2 or higher.
-   example(pbirthday) will fail.
- */
-/* FIXME: with the y == 2.0 test now at the top that case isn't
-   reached here, but i have left it for someone who understands the
-   bug fix issue here to remove. LT */
-#if __GNUC__ == 4 && __GNUC_MINOR__ >= 3
-	return (y == 2.0) ? x*x : pow(x, y);
-#else
-	return (y == 2.0) ? x*x : ((y == 0.5) ? sqrt(x) : pow(x, y));
-#endif
-    }
+
+    if (R_FINITE(x) && R_FINITE(y))
+        if (y == 0.5)
+            return sqrt(x);
+        else
+            return pow(x, y);
+
     if (ISNAN(x) || ISNAN(y))
 	return(x + y);
     if(!R_FINITE(x)) {
@@ -255,11 +251,6 @@ double R_pow(double x, double y) /* = x ^ y */
 				   non-int}; (neg)^{+-Inf} */
 }
 
-static R_INLINE double R_POW(double x, double y) /* handle x ^ 2 inline */
-{
-    return y == 2.0 ? x * x : R_pow(x, y);
-}
-
 double R_pow_di(double x, int n)
 {
     double xn = 1.0;
@@ -268,7 +259,7 @@ double R_pow_di(double x, int n)
     if (n == NA_INTEGER) return NA_REAL;
 
     if (n != 0) {
-	if (!R_FINITE(x)) return R_POW(x, (double)n);
+	if (!R_FINITE(x)) return R_POW(x, n);
 
 	Rboolean is_neg = (n < 0);
 	if(is_neg) n = -n;
@@ -750,7 +741,7 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
 		REAL(ans)[i] = NA_REAL;
 	    else {
-		REAL(ans)[i] = R_POW((double) x1, (double) x2);
+		REAL(ans)[i] = R_POW((double) x1, x2);
 	    }
 	}
 	break;
@@ -951,8 +942,23 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
             if (n2 == 1) {
                 double tmp = REAL(s2)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = R_POW(REAL(s1)[i], tmp);
+                if (tmp == 2.0)
+                    for (i = 0; i < n; i++) {
+                        double tmp2 = REAL(s1)[i];
+                        REAL(ans)[i] = tmp2 * tmp2;
+                    }
+                else if (tmp == 1.0)
+                    for (i = 0; i < n; i++)
+                        REAL(ans)[i] = REAL(s1)[i];
+                else if (tmp == 0.0)
+                    for (i = 0; i < n; i++)
+                        REAL(ans)[i] = 1.0;
+                else if (tmp == -1.0)
+                    for (i = 0; i < n; i++)
+                        REAL(ans)[i] = 1.0 / REAL(s1)[i];
+                else
+                    for (i = 0; i < n; i++)
+                        REAL(ans)[i] = R_pow(REAL(s1)[i], tmp); 
             }
             else if (n1 == 1) {
                 double tmp = REAL(s1)[0];
@@ -963,9 +969,9 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
                 for (i = 0; i < n; i++)
 		    REAL(ans)[i] = R_POW(REAL(s1)[i], REAL(s2)[i]);
             else
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_POW(REAL(s1)[i1], REAL(s2)[i2]);
-	    }
+	        mod_iterate(n1, n2, i1, i2) {
+	            REAL(ans)[i] = R_POW(REAL(s1)[i1], REAL(s2)[i2]);
+	        }
 	} else if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_POW( R_INTEGER(s1, i1), REAL(s2)[i2]);
@@ -980,7 +986,7 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = myfmod(REAL(s1)[i1], REAL(s2)[i2]);
-	    }
+	   }
 	} else if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = myfmod( R_INTEGER(s1, i1), REAL(s2)[i2]);
@@ -995,7 +1001,7 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = myfloor(REAL(s1)[i1], REAL(s2)[i2]);
-	    }
+	   }
 	} else if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = myfloor(R_INTEGER(s1, i1), REAL(s2)[i2]);
