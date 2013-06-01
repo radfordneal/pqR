@@ -79,12 +79,24 @@ static Rboolean rsum(double *x, int n, double *value, Rboolean narm)
     int i;
     Rboolean updated = FALSE;
 
-    for (i = 0; i < n; i++) {
-	if (!narm || !ISNAN(x[i])) {
-	    if(!updated) updated = TRUE;
-	    s += x[i];
-	}
+    if (narm) {
+        for (i = 0; i < n; i++) {
+	    if (!ISNAN(x[i])) {
+                s += x[i];
+	        updated = TRUE;
+                break;
+            }
+        }
+        for (i = i+1; i < n; i++) {
+	    if (!ISNAN(x[i]))
+                s += x[i];
+        }
+    } else { 
+        for (i = 0; i < n; i++)
+            s += x[i];
+        if (n>0) updated = TRUE;
     }
+    
     *value = s;
 
     return(updated);
@@ -283,12 +295,24 @@ static Rboolean rprod(double *x, int n, double *value, Rboolean narm)
     int i;
     Rboolean updated = FALSE;
 
-    for (i = 0; i < n; i++) {
-	if (!narm || !ISNAN(x[i])) {
-	    if(!updated) updated = TRUE;
-	    s *= x[i];
-	}
+    if (narm) {
+        for (i = 0; i < n; i++) {
+	    if (!ISNAN(x[i])) {
+                s *= x[i];
+	        updated = TRUE;
+                break;
+            }
+        }
+        for (i = i+1; i < n; i++) {
+	    if (!ISNAN(x[i]))
+                s *= x[i];
+        }
+    } else { 
+        for (i = 0; i < n; i++)
+            s *= x[i];
+        if (n>0) updated = TRUE;
     }
+
     *value = s;
 
     return(updated);

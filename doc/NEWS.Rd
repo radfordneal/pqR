@@ -187,7 +187,17 @@
       \item **2
       \item **3
       \item **4
-      \item **5
+      \item Code for the sum and prod functions has been changed to
+            move some checks outside the inner summation loops.  The effect
+            depends on the extent to which the unnecessary checks overlap 
+            memory fetch operations, but one would expect signficant 
+            speed-ups with some machines/compilers.
+
+            I had previously proposed this modificaton to sum and prod 
+            before R-2.12.0.  That patch was not adopted by the R core team, 
+            though they did swap the order of checking for NA/NaN and 
+            checking the na.rm option, which avoids the worst inefficiency 
+            of the previous code in R-2.11.1.  
       \item **6
       \item Various inlined procedures where changed to be more efficient, 
             and "length" was un-inlined, since it's fairly long.  Numerous
