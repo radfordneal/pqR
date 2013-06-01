@@ -38,8 +38,6 @@
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
-#define LIST_ASSIGN(x) {SET_VECTOR_ELT(data->ans_ptr, data->ans_length, x); data->ans_length++;}
-
 static SEXP cbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 static SEXP rbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 
@@ -160,6 +158,11 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 /* The following functions are used to coerce arguments to */
 /* the appropriate type for inclusion in the returned value. */
 
+#define LIST_ASSIGN(x) do { \
+  SET_VECTOR_ELT(data->ans_ptr, data->ans_length, x); \
+  data->ans_length++; \
+} while (0) /* apparently defined as this in case SET_VECTOR_ELT is a macro */
+
 static void
 ListAnswer(SEXP x, int recurse, struct BindData *data, SEXP call)
 {
@@ -244,8 +247,8 @@ StringAnswer(SEXP x, struct BindData *data, SEXP call)
     default:
 	PROTECT(x = coerceVector(x, STRSXP));
 	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(data->ans_ptr, data->ans_length++, STRING_ELT(x, i));
+        copy_string_elements (data->ans_ptr, data->ans_length, x, 0, n);
+        data->ans_length += n;
 	UNPROTECT(1);
 	break;
     }

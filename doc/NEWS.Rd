@@ -75,7 +75,10 @@
       \item **20
       \item **21
       \item **22
-      \item **23
+      \item Extending lists and character vectors by assigning to an
+            index past the end, deleting list items by assigning NULL,
+            and concatenation of character vectors with "c" have all
+            been speeded up by factors of up to two or three.
       \item **24
       \item **25
       \item **26
