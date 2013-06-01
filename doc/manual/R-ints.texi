@@ -1262,8 +1262,7 @@ with flag @option{--enable-strict-barrier} which ensures that header
 @file{Defn.h} does not define @samp{USE_RINTERNALS} and hence that
 @code{SEXP} is opaque in most of @R{} itself.  (There are some necessary
 exceptions: foremost in file @file{memory.c} where the accessor
-functions are defined and also in file @file{size.c} which needs access
-to the sizes of the internal structures.)
+functions are defined.)
 
 For background papers see
 @uref{http://www.stat.uiowa.edu/~luke/R/barrier.html} and

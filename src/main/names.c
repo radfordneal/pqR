@@ -1186,19 +1186,16 @@ void InitNames()
     R_UnboundValue = allocSExp(SYMSXP);
     SET_SYMVALUE(R_UnboundValue, R_UnboundValue);
     SET_PRINTNAME(R_UnboundValue, R_NilValue);
-    SET_ATTRIB(R_UnboundValue, R_NilValue);
     /* R_VariantResult - anything distinct and inaccessible to users is OK. */
     R_VariantResult = CONS(R_NilValue,R_NilValue); 
     /* R_MissingArg */
     R_MissingArg = allocSExp(SYMSXP);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
     SET_PRINTNAME(R_MissingArg, mkChar(""));
-    SET_ATTRIB(R_MissingArg, R_NilValue);
     /* R_RestartToken */
     R_RestartToken = allocSExp(SYMSXP);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
     SET_PRINTNAME(R_RestartToken, mkChar(""));
-    SET_ATTRIB(R_RestartToken, R_NilValue);
 
     /* Logical values */
     R_ScalarLogicalNA = allocVector(LGLSXP, 1);

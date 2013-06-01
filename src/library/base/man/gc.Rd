@@ -1,6 +1,7 @@
 % File src/library/base/man/gc.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{gc}
@@ -32,10 +33,6 @@ gcinfo(verbose)
   has been removed, as this may prompt \R to return memory to the
   operating system.
 
-  \R allocates space for vectors in multiples of 8 bytes: hence the
-  report of \code{"Vcells"}, a relict of an earlier allocator (that used
-  a vector heap).
-
   When \code{gcinfo(TRUE)} is in force, messages are sent to the message
   connection at each garbage collection of the form
 \preformatted{    Garbage collection 12 = 10+0+2 (level 0) ...
@@ -50,10 +47,12 @@ gcinfo(verbose)
 
 \value{
   \code{gc} returns a matrix with rows \code{"Ncells"} (\emph{cons
-    cells}), usually 28 bytes each on 32-bit systems and 56 bytes on
-  64-bit systems, and \code{"Vcells"} (\emph{vector cells}, 8 bytes
-  each), and columns \code{"used"} and \code{"gc trigger"},
+  cells}) and \code{"Vcells"} (\emph{vector cells}, and columns 
+  \code{"used"} and \code{"gc trigger"},
   each also interpreted in megabytes (rounded up to the next 0.1Mb).
+
+  See \code{\link{Memory}} for an explanation of \code{Ncells} and
+  \code{Vcells}.
 
   If maxima have been set for either \code{"Ncells"} or \code{"Vcells"},
   a fifth column is printed giving the current limits in Mb (with
@@ -72,6 +71,8 @@ gcinfo(verbose)
  
   \code{\link{reg.finalizer}} for actions to happen at garbage
   collection.
+
+  \code{gc.time} for time spent in garbage collection.
 }
 \examples{\donttest{
 gc() #- do it now

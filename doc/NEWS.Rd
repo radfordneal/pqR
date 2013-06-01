@@ -441,7 +441,8 @@
             and perhaps arbitrarily bizarre behaviour.
       \item Fixed a bug where LC_PAPER was not correctly set at startup.
       \item **20
-      \item **21
+      \item Fixed gc.time, which was producing grossly incorrect values
+            for user and system time.
       \item **22
       \item **23
       \item **24

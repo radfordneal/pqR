@@ -819,7 +819,7 @@ static SEXP NewLoadSpecialHook (SEXPTYPE type)
  *  be called after filling the tables and before using them to find
  *  indices.  LT */
 
-#define HASHSIZE 1099
+#define HASHSIZE_HERE 1099
 
 #define PTRHASH(obj) (((uintptr_t) (obj)) >> 2)
 
@@ -836,7 +836,7 @@ static SEXP NewLoadSpecialHook (SEXPTYPE type)
 
 static SEXP MakeHashTable(void)
 {
-    SEXP val = CONS(R_NilValue, allocVector(VECSXP, HASHSIZE));
+    SEXP val = CONS(R_NilValue, allocVector(VECSXP, HASHSIZE_HERE));
     SET_HASH_TABLE_COUNT(val, 0);
     return val;
 }

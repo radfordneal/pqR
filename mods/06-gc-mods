@@ -1,0 +1,27 @@
+Many changes were made to the garbage collector and associated
+routines in memory.c.  These do not change the general scheme, but
+improve it in many ways, some of which are noted below.
+
+Small nodes classes are now distinguished only by size, with CONS
+cells being allocated in the smallest class that can contain a CONS
+cell, not in a special class.  (Depending on the machine, it is
+possible for some vector objects to be smaller than CONS cells.)  See
+comments in memory.c for details, also the new version of the
+documentation obtained with help(Memory).
+
+Linking of nodes in pages is now done in forward order, not backwards
+as before, which should improve cache performance.
+
+The source file size.c has been merged into memory.c, where it
+logically belongs.
+
+The mkChar function and related routines were moved from envir.c to
+memory.c, where they belong, because of the special treatment of the
+global string cache by the garbage collector.
+
+HASHPRI was renamed to HASHSLOTSUSED.
+
+The scheme for using valgrind was revised, and a newer version of
+valgrind is now used.
+
+The gc.time function was fixed (see NEWS item).
