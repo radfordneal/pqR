@@ -1551,9 +1551,8 @@ static void tmp_cleanup(void *data)
 static R_INLINE SEXP installAssignFcnName(SEXP fun)
 {
     char buf[ASSIGNBUFSIZ];
-    if(strlen(CHAR(PRINTNAME(fun))) + 3 > ASSIGNBUFSIZ)
+    if (!copy_2_strings (buf, sizeof buf, CHAR(PRINTNAME(fun)), "<-"))
 	error(_("overlong name in '%s'"), CHAR(PRINTNAME(fun)));
-    sprintf(buf, "%s<-", CHAR(PRINTNAME(fun)));
     return install(buf);
 }
 
@@ -2440,7 +2439,8 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 }
 
 
-/* gr needs to be protected on return from this function */
+/* gr needs to be protected on return from this function.  buf must be 
+   512 characters long. */
 static void findmethod(SEXP Class, const char *group, const char *generic,
 		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
 		       char *buf, SEXP rho)
@@ -2455,18 +2455,16 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
     */
     for (whichclass = 0 ; whichclass < len ; whichclass++) {
 	const char *ss = translateChar(STRING_ELT(Class, whichclass));
-	if(strlen(generic) + strlen(ss) + 2 > 512)
+	if (!copy_3_strings (buf, 512, generic, ".", ss))
 	    error(_("class name too long in '%s'"), generic);
-	sprintf(buf, "%s.%s", generic, ss);
 	*meth = install(buf);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString("");
 	    break;
 	}
-	if(strlen(group) + strlen(ss) + 2 > 512)
+        if (!copy_3_strings (buf, 512, group, ".", ss))
 	    error(_("class name too long in '%s'"), group);
-	sprintf(buf, "%s.%s", group, ss);
 	*meth = install(buf);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
@@ -2484,7 +2482,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     int i, j, nargs, lwhich, rwhich, set;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
     SEXP rclass, rmeth, rgr, rsxp, value;
-    char lbuf[512], rbuf[512], generic[128], *pt;
+    char lbuf[512], rbuf[512], generic[128];
     Rboolean useS4 = TRUE, isOps = FALSE;
 
     /* pre-test to avoid string computations when there is nothing to
@@ -2517,14 +2515,15 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     /* check whether we are processing the default method */
     if ( isSymbol(CAR(call)) ) {
-	if(strlen(CHAR(PRINTNAME(CAR(call)))) >= 512)
-	   error(_("call name too long in '%s'"), CHAR(PRINTNAME(CAR(call))));
-	sprintf(lbuf, "%s", CHAR(PRINTNAME(CAR(call))) );
-	pt = strtok(lbuf, ".");
-	pt = strtok(NULL, ".");
-
-	if( pt != NULL && !strcmp(pt, "default") )
-	    return 0;
+        const char *pt;
+        pt = CHAR(PRINTNAME(CAR(call)));
+        while (*pt == '.') pt += 1;   /* duplicate previous behaviour exactly */
+        while (*pt != 0 && *pt != '.') pt += 1;
+        if (*pt != 0) {
+            while (*pt == '.') pt += 1;
+            if (strcmp(pt,"default") == 0)
+                return 0;
+        }
     }
 
     if(isOps)
@@ -2538,9 +2537,8 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if(!isObject(CAR(args)) && !isObject(CADR(args)))
 	return 0;
 
-    if(strlen(PRIMNAME(op)) >= 128)
+    if (!copy_1_string (generic, sizeof generic, PRIMNAME(op)))
 	error(_("generic name too long in '%s'"), PRIMNAME(op));
-    sprintf(generic, "%s", PRIMNAME(op) );
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
       : getAttrib(CAR(args), R_ClassSymbol);

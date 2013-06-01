@@ -608,6 +608,9 @@ SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
 SEXP Rf_classgets(SEXP, SEXP);
 SEXP Rf_cons_with_tag(SEXP, SEXP, SEXP);
 SEXP Rf_cons(SEXP, SEXP);
+Rboolean Rf_copy_1_string(char *, int, const char *);
+Rboolean Rf_copy_2_strings(char *, int, const char *, const char *);
+Rboolean Rf_copy_3_strings(char *, int, const char *, const char *, const char *);
 void Rf_copyMatrix(SEXP, SEXP, Rboolean);
 void Rf_copyMostAttrib(SEXP, SEXP);
 void Rf_copyVector(SEXP, SEXP);
@@ -907,6 +910,9 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define conformable		Rf_conformable
 #define cons_with_tag		Rf_cons_with_tag
 #define cons			Rf_cons
+#define copy_1_string		Rf_copy_1_string
+#define copy_2_strings		Rf_copy_2_strings
+#define copy_3_strings		Rf_copy_3_strings
 #define copyMatrix		Rf_copyMatrix
 #define copyMostAttrib		Rf_copyMostAttrib
 #define copyVector		Rf_copyVector
