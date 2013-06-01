@@ -459,13 +459,7 @@ done:
 }
 
 
-/*
-  This is a primitive SPECIALSXP with internal argument matching,
-  implementing seq.int.
-
-   'along' has to be used on an unevaluated argument, and evalList
-   tries to evaluate language objects.
- */
+/* do_seq implements seq.int, which dispatches on methods for seq. */
 
 #define FEPS 1e-10
 /* to match seq.default */

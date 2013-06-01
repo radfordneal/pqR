@@ -1,6 +1,7 @@
 % File src/library/base/man/Log.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{log}
@@ -68,7 +69,7 @@ expm1(x)
   (S3 or S4) methods are set for \code{log} they will be dispatched.
   Do not set S4 methods on \code{logb} itself.
   
-  All except \code{log} are \link{primitive} functions.
+  All except \code{logb} are \link{primitive} functions.
 }
 \section{S4 methods}{
   \code{exp}, \code{expm1}, \code{log}, \code{log10}, \code{log2} and

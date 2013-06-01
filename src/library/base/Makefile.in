@@ -46,6 +46,9 @@ Rsimple:
 	@WHICH="@WHICH@" $(MAKE) mkRbase mkRsimple
 
 Rlazy:
+	@rm -f $(top_builddir)/library/$(pkg)/R/$(pkg)
+	@rm -f $(top_builddir)/library/$(pkg)/R/$(pkg).rdb
+	@rm -f $(top_builddir)/library/$(pkg)/R/$(pkg).rdx
 	@WHICH="@WHICH@" $(MAKE) mkRbase
 	@cat $(srcdir)/makebasedb.R | \
 	  R_DEFAULT_PACKAGES=NULL LC_ALL=C $(R_EXE) > /dev/null

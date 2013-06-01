@@ -686,7 +686,7 @@ void setup_Rmainloop(void)
 #ifdef ENABLE_NLS
     char localedir[PATH_MAX+20];
 #endif
-    char deferred_warnings[6][250];
+    char deferred_warnings[8][250]; /* INCREASE AS NECESSARY! */
     volatile int ndeferred_warnings = 0;
 
     InitConnections(); /* needed to get any output at all */
@@ -696,9 +696,9 @@ void setup_Rmainloop(void)
 #ifdef HAVE_LOCALE_H
 #ifdef Win32
     {
-	char *p, Rlocale[1000]; /* Windows' locales can be very long */
+	char *p, Rlocale[1001]; /* Windows' locales can be very long */
 	p = getenv("LC_ALL");
-	strncpy(Rlocale, p ? p : "", 1000);
+	strncpy(Rlocale, p ? p : "", 1000); Rlocal[1000] = 0;
 	if(!(p = getenv("LC_CTYPE"))) p = Rlocale;
 	/* We'd like to use warning, but need to defer.
 	   Also cannot translate. */
@@ -747,10 +747,10 @@ void setup_Rmainloop(void)
 #ifdef LC_MONETARY
     if(!setlocale(LC_MONETARY, ""))
 	snprintf(deferred_warnings[ndeferred_warnings++], 250,
-		 "Setting LC_PAPER failed, using \"C\"\n");
+		 "Setting LC_MONETARY failed, using \"C\"\n");
 #endif
 #ifdef LC_PAPER
-    if(!setlocale(LC_MONETARY, ""))
+    if(!setlocale(LC_PAPER, ""))
 	snprintf(deferred_warnings[ndeferred_warnings++], 250,
 		 "Setting LC_PAPER failed, using \"C\"\n");
 #endif

@@ -3,6 +3,7 @@
 ### Process this file with autoconf to produce a configure script.
 ###
 ### Copyright (C) 1998-2011 R Core Team
+### Modifications for pqR copyright (C) 2012 Radford Neal
 ###
 ### This file is part of R.
 ###
@@ -2739,6 +2740,7 @@ R is now configured for ${host}
   Additional capabilities:   ${r_capabilities}
   Options enabled:           ${r_options}
 
+  Byte compile packages:     ${want_byte_compiled_packages}
   Recommended packages:      ${use_recommended_packages} 
 ])
 if test -n "${warn_f77_cc_double_complex}"; then

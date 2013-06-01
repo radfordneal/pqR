@@ -5,6 +5,10 @@
 R
 @end macro
 
+@macro pqR{}
+pqR
+@end macro
+
 @macro Sl{}
 S
 @end macro

@@ -55,7 +55,6 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 }
 
-#define isRaw(x) (TYPEOF(x) == RAWSXP)
 static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 {
 /* logical binary : "&" or "|" */
@@ -370,8 +369,6 @@ static int checkValues(int op, int na_rm, int * x, int n)
     }
     return NA_LOGICAL; /* -Wall */
 }
-
-extern SEXP fixup_NaRm(SEXP args); /* summary.c */
 
 /* all, any */
 SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)

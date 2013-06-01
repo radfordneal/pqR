@@ -8,6 +8,8 @@
  *  Copyright 2005--2007  The R Development Core Team
  *  Copyright 2006	  The R Foundation
  *
+ *  Bug fix in numeric_deriv by Radford Neal, 2012.
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
@@ -299,10 +301,10 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 
     PROTECT(pars = allocVector(VECSXP, LENGTH(theta)));
 
-    if (TYPEOF(expr) == SYMSXP)
-	PROTECT(ans = duplicate(eval(expr, rho)));
-    else
-	PROTECT(ans = eval(expr, rho));
+    ans = eval (expr, rho);
+    if (NAMED(ans) > 0)
+        ans = duplicate(ans);
+    PROTECT(ans);
 
     if(!isReal(ans)) {
 	SEXP temp = coerceVector(ans, REALSXP);

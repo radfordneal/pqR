@@ -165,6 +165,8 @@ Rboolean Rf_GetOptionDeviceAsk(void)
 static SEXP SetOption(SEXP tag, SEXP value)
 {
     SEXP opt, old, t;
+    if (value != R_NilValue) 
+        PROTECT(value);
     t = opt = SYMVALUE(Options());
     if (!isList(opt))
 	error(_("corrupted options list"));
@@ -185,14 +187,13 @@ static SEXP SetOption(SEXP tag, SEXP value)
     if (opt == R_NilValue) {
 	while (CDR(t) != R_NilValue)
 	    t = CDR(t);
-	PROTECT(value);
 	SETCDR(t, allocList(1));
-	UNPROTECT(1);
 	opt = CDR(t);
 	SET_TAG(opt, tag);
     }
     old = CAR(opt);
     SETCAR(opt, value);
+    UNPROTECT(1);
     return old;
 }
 
@@ -230,79 +231,91 @@ void attribute_hidden InitOptions(void)
     SEXP val, v;
     char *p;
 
-#ifdef HAVE_RL_COMPLETION_MATCHES
-    PROTECT(v = val = allocList(15));
-#else
-    PROTECT(v = val = allocList(14));
-#endif
+    PROTECT (val = CONS(R_NilValue,R_NilValue));
+    v = val;
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("prompt"));
     SETCAR(v, mkString("> "));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("continue"));
     SETCAR(v, mkString("+ "));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("expressions"));
     SETCAR(v, ScalarInteger(R_Expressions));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("width"));
     SETCAR(v, ScalarInteger(80));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("digits"));
     SETCAR(v, ScalarInteger(7));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("echo"));
     SETCAR(v, ScalarLogical(!R_Slave));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("verbose"));
     SETCAR(v, ScalarLogical(R_Verbose));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("check.bounds"));
     SETCAR(v, ScalarLogical(0));	/* no checking */
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     p = getenv("R_KEEP_PKG_SOURCE");
     R_KeepSource = (p && (strcmp(p, "yes") == 0)) ? 1 : 0;
-
     SET_TAG(v, install("keep.source")); /* overridden in common.R */
     SETCAR(v, ScalarLogical(R_KeepSource));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("keep.source.pkgs"));
     SETCAR(v, ScalarLogical(R_KeepSource));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("warning.length"));
     SETCAR(v, ScalarInteger(1000));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("nwarnings"));
     SETCAR(v, ScalarInteger(50));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("OutDec"));
     SETCAR(v, mkString("."));
-    v = CDR(v);
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("browserNLdisabled"));
     SETCAR(v, ScalarLogical(FALSE));
-    v = CDR(v);
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
     /* value from Rf_initialize_R */
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("rl_word_breaks"));
     SETCAR(v, mkString(" \t\n\"\\'`><=%;,|&{()}"));
     set_rl_word_breaks(" \t\n\"\\'`><=%;,|&{()}");
 #endif
 
-    SET_SYMVALUE(install(".Options"), val);
+    SET_SYMVALUE(install(".Options"), CDR(val));
     UNPROTECT(1);
 }
 

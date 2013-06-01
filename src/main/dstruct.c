@@ -65,6 +65,7 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
     if (result == R_NilValue) {
 	result = allocSExp(type);
 	SET_PRIMOFFSET(result, offset);
+        SET_VECTOR_ELT (PrimCache, offset, result);
     }
     else if (TYPEOF(result) != type)
 	error("requested primitive type is not consistent with cached value");
@@ -128,13 +129,9 @@ static int isDDName(SEXP name)
     char *endp;
 
     buf = CHAR(name);
-    if( !strncmp(buf, "..", 2) && strlen(buf) > 2 ) {
-	buf += 2;
-	strtol(buf, &endp, 10); // discard value
-	if( *endp != '\0')
-	    return 0;
-	else
-	    return 1;
+    if (buf[0]=='.' && buf[1]=='.' && buf[2]!=0) {
+	(void) strtol(buf+2, &endp, 10);
+        return *endp == 0;
     }
     return 0;
 }

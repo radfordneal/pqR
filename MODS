@@ -1,13 +1,26 @@
 This file records modifications in pqR that are of little interest to
 users, such as cleanups of source code.
 
-  1)
+   o Cleaned up inconsistencies in checks for arity of primitives in eval.c
+     Removed checks from functions implementing language features "repeat",
+     "while", and "function", consistent with other language features (lack
+     of checks does not cause a crash --- missing arguments just appear
+     to be NULL).  Changed the check in do_set to the standard form
+     using checkArity, with names.c changed to make the arity be 2 rather
+     than -1.
 
-  2)
+   o The "spare" bit in sxpinfo is renamed to "misc", and the documentation 
+     in the code and in R-ints.texi is changed to reflect this, and to 
+     document that this bit is actually used.
 
-  3)
+   o The documentation before do_seq in seq.c is changed to be correct
+     (seq.int is no longer SPECIAL), and the incorrect reference to
+     seq.int in R-ints.texi is removed.
 
-  4)
+   o The fixup_NaRm function defined in summary.c is moved to match.c,
+     where it belongs.  It is now properly declared in Rinternals.h,
+     rather than the definition in summary.c being surreptitiously
+     referenced as an extern from logic.c.
 
   5)
 
@@ -67,7 +80,9 @@ users, such as cleanups of source code.
 
  33)
 
- 34)
+   o Code in R-2.15.0 exists for maintaining a cache of primitive objects,
+     but this code forgets to ever actually enter a primitve into the cache.
+     This is now done (in mkPRIMSXP).
 
  35)
 

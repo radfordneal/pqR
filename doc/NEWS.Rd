@@ -46,7 +46,9 @@
       \item **2
       \item **3
       \item **4
-      \item **5
+      \item When installing from source, the output of ./configure 
+            now displays whether base and recommended packages will
+            be byte compiled.
       \item **6
       \item **7
       \item **8
@@ -205,9 +207,26 @@
       \item **2
       \item **3
       \item **4
-      \item **5
+      \item Fixed documentation error in R-admin regarding the
+            --disable-byte-compiled-packages configuration option, 
+            and changed the DESCRIPTION file for the recommended mgcv 
+            package to respect this option.
       \item **6
-      \item **7
+      \item Fixed a bug in numeric_deriv in stats/src/nls.c, where it
+            was not duplicating when it should, as illustrated below:
+\preformatted{
+  > x <- 5; y <- 2; f <- function (y) x
+  > numericDeriv(f(y),"y")
+   [1] 5
+   attr(,"gradient")
+        [,1]
+   [1,]    0
+   > x
+   [1] 5
+   attr(,"gradient")
+        [,1]
+   [1,]    0
+}
       \item **8
       \item **9
       \item **10
@@ -218,8 +237,10 @@
       \item **15
       \item **16
       \item **17
-      \item **18
-      \item **19
+      \item Fixed a bug where more than six warning messages at startup
+            would overwrite random memory, causing garbage output 
+            and perhaps arbitrarily bizarre behaviour.
+      \item Fixed a bug where LC_PAPER was not correctly set at startup.
       \item **20
       \item **21
       \item **22
