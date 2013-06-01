@@ -52,8 +52,16 @@ LibExtern int	 R_NaInt;	/* NA_INTEGER:= INT_MIN currently */
 #undef LibExtern
 #endif
 
-#define NA_LOGICAL	R_NaInt
-#define NA_INTEGER	R_NaInt
+#ifndef INT_MIN
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#else
+#define INT_MIN ((int)(1+((~(unsigned)0)>>1))) /* assumes 2's complement ints */
+#endif
+#endif
+
+#define NA_LOGICAL	INT_MIN	 /* used to refer to R_NaInt */
+#define NA_INTEGER	INT_MIN	 /* used to refer to R_NaInt */
 /* #define NA_FACTOR	R_NaInt  unused */
 #define NA_REAL		R_NaReal
 /* NA_STRING is a SEXP, so defined in Rinternals.h */

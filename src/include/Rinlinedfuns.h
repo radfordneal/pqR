@@ -508,10 +508,9 @@ INLINE_FUN Rboolean isNumber(SEXP s)
 /* As from R 2.4.0 we check that the value is allowed. */
 INLINE_FUN SEXP ScalarLogical(int x)
 {
-    SEXP ans = allocVector(LGLSXP, 1);
-    if (x == NA_LOGICAL) LOGICAL(ans)[0] = NA_LOGICAL;
-    else LOGICAL(ans)[0] = (x != 0);
-    return ans;
+    return x == 0 ? R_ScalarLogicalFALSE
+         : x == NA_LOGICAL ? R_ScalarLogicalNA
+         : R_ScalarLogicalTRUE;
 }
 
 INLINE_FUN SEXP ScalarInteger(int x)

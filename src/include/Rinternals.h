@@ -534,6 +534,12 @@ LibExtern SEXP	R_NilValue;	    /* The nil object */
 LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
+
+/* Logical Values */
+LibExtern SEXP  R_ScalarLogicalNA;    /* Vector of one logical NA value */
+LibExtern SEXP  R_ScalarLogicalFALSE; /* Vector of one FALSE value */
+LibExtern SEXP  R_ScalarLogicalTRUE;  /* Vector of one TRUE value */
+
 #ifdef __MAIN__
 attribute_hidden
 #else
