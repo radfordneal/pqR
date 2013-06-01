@@ -37,6 +37,34 @@
 #include <Fileio.h>
 
 
+/* Bit flags that say whether each SEXP type evaluates to itself.  Used via
+   SELF_EVAL(t), which says whether something of type t evaluates to itself. 
+   Relies on the type field being 5 bits, so that the shifts below will not
+   exceed the capacity of a 32-bit word.  (Also assumes, of course, that these
+   shifts and adds will be done at compile time.) */
+
+#define SELF_EVAL_TYPES ( \
+  (1<<NILSXP) + \
+  (1<<LISTSXP) + \
+  (1<<LGLSXP) + \
+  (1<<INTSXP) + \
+  (1<<REALSXP) + \
+  (1<<STRSXP) + \
+  (1<<CPLXSXP) + \
+  (1<<RAWSXP) + \
+  (1<<S4SXP) + \
+  (1<<SPECIALSXP) + \
+  (1<<BUILTINSXP) + \
+  (1<<ENVSXP) + \
+  (1<<CLOSXP) + \
+  (1<<VECSXP) + \
+  (1<<EXTPTRSXP) + \
+  (1<<WEAKREFSXP) + \
+  (1<<EXPRSXP) )
+
+#define SELF_EVAL(t) ((SELF_EVAL_TYPES>>(t))&1)
+
+
 #define ARGUSED(x) LEVELS(x)
 
 static SEXP applyClosure_v (SEXP, SEXP, SEXP, SEXP, SEXP, int);
@@ -349,7 +377,27 @@ SEXP Rf_eval(SEXP e, SEXP rho)
 SEXP evalv(SEXP e, SEXP rho, int variant)
 {
     SEXP op, tmp;
+    int typeof_e = TYPEOF(e);
     static int evalcount = 0;
+
+    R_Visible = TRUE;
+
+    if (++evalcount > 1000) { /* was 100 before 2.8.0 */
+	R_CheckUserInterrupt();
+	evalcount = 0 ;
+    }
+
+    /* Evaluate constants quickly, without the overhead that's necessary when
+       the computation might be complex. */
+
+    if (SELF_EVAL(typeof_e)) {
+	/* Make sure constants in expressions are NAMED before being
+	   used as values.  Setting NAMED to 2 makes sure weird calls
+	   to assignment functions won't modify constants in
+	   expressions.  */
+        SET_NAMED(e,2);
+        return e;
+    }
     
     /* Save the current srcref context. */
     
@@ -368,11 +416,8 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	errorcall(R_NilValue,
 		  _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
+
     R_CheckStack();
-    if (++evalcount > 1000) { /* was 100 before 2.8.0 */
-	R_CheckUserInterrupt();
-	evalcount = 0 ;
-    }
 
     tmp = R_NilValue;		/* -Wall */
 #ifdef Win32
@@ -383,35 +428,10 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     __asm__ ( "fninit" );
 #endif
 
-    R_Visible = TRUE;
-    switch (TYPEOF(e)) {
-    case NILSXP:
-    case LISTSXP:
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case STRSXP:
-    case CPLXSXP:
-    case RAWSXP:
-    case S4SXP:
-    case SPECIALSXP:
-    case BUILTINSXP:
-    case ENVSXP:
-    case CLOSXP:
-    case VECSXP:
-    case EXTPTRSXP:
-    case WEAKREFSXP:
-    case EXPRSXP:
-	tmp = e;
-	/* Make sure constants in expressions are NAMED before being
-	   used as values.  Setting NAMED to 2 makes sure weird calls
-	   to replacement functions won't modify constants in
-	   expressions.  */
-	if (NAMED(tmp) != 2) SET_NAMED(tmp, 2);
-	break;
+    switch (typeof_e) {
     case BCODESXP:
 	tmp = bcEval(e, rho, TRUE);
-	    break;
+	break;
     case SYMSXP:
 	if (e == R_DotsSymbol)
 	    error(_("'...' used in an incorrect context"));

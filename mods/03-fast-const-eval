@@ -1,0 +1,8 @@
+An "eval" of an expression that evaluates to itself (usually a
+constant in an expression) has been made faster by quickly checking
+for a self-evaluating value by a shift and mask operation, and if the
+expression is self-evaluating, returning it immediately, without the
+overhead of things like checking for stack overflow.  Depending on the
+machine and the compiler, it's possible that the subsequent switch on
+expresssion type for non-self-evaluating expressions will also be
+faster, due to it having many fewer cases.
