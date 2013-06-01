@@ -1428,14 +1428,33 @@ SEXP attribute_hidden do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+/* Parens are now a SPECIAL, to avoid overhead of creating an arg list. 
+   Also avoids overhead of calling checkArity when there is no error.  
+   Care is taken to allow (...) when ... is bound to exactly one argument, 
+   though it is debatable whether this should be considered valid. 
 
-SEXP attribute_hidden do_paren(SEXP call, SEXP op, SEXP args, SEXP rho)
+   The eval variant requested is passed on to the inner expression. */
+
+SEXP attribute_hidden do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                int variant)
 {
-    checkArity(op, args);
-    return CAR(args);
+    if (args!=R_NilValue && CAR(args)==R_DotsSymbol && CDR(args)==R_NilValue) {
+        args = findVar(R_DotsSymbol, rho);
+        if (TYPEOF(args) != DOTSXP)
+            args = R_NilValue;
+    }
+
+    if (args == R_NilValue || CDR(args) != R_NilValue)
+        checkArity(op, args);
+
+    return evalv (CAR(args), rho, variant);
 }
 
-SEXP attribute_hidden do_begin(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* Curly brackets.  Passes on the eval variant to the last expression.
+   Requests VARIANT_NULL for earlier expressions. */
+
+SEXP attribute_hidden do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
+                                int variant)
 {
     SEXP s = R_NilValue;
     if (args != R_NilValue) {
@@ -1448,7 +1467,8 @@ SEXP attribute_hidden do_begin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	        PrintValue(CAR(args));
 		do_browser(call, op, R_NilValue, rho);
 	    }
-	    s = eval(CAR(args), rho);
+	    s = evalv (CAR(args), rho, 
+                       isNull(CDR(args)) ? variant : VARIANT_NULL);
 	    UNPROTECT(1);
 	    args = CDR(args);
 	}
