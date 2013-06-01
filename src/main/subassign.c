@@ -144,17 +144,14 @@ static SEXP EnlargeVector(SEXP x, R_len_t newlen)
 	}
 	break;
     case STRSXP:
-	for (i = 0; i < len; i++)
-	    SET_STRING_ELT(newx, i, STRING_ELT(x, i));
+        copy_string_elements (newx, 0, x, 0, len);
 	for (i = len; i < newlen; i++)
 	    SET_STRING_ELT(newx, i, NA_STRING); /* was R_BlankString  < 1.6.0 */
 	break;
     case EXPRSXP:
     case VECSXP:
-	for (i = 0; i < len; i++)
-	    SET_VECTOR_ELT(newx, i, VECTOR_ELT(x, i));
-	for (i = len; i < newlen; i++)
-	    SET_VECTOR_ELT(newx, i, R_NilValue);
+        copy_vector_elements (newx, 0, x, 0, len);
+        /* elements after ones copied were set to R_NilValue by allocVector */
 	break;
     case RAWSXP:
 	for (i = 0; i < len; i++)
@@ -381,8 +378,37 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 {
     SEXP include, xnew, xnames, xnewnames;
     R_len_t i, ii, len, lenw;
+
     len = length(x);
     lenw = length(which);
+    if (len==0 || lenw==0) 
+        return x;
+
+    /* handle deletion of a contiguous block specially. */
+    for (i = 1; i < lenw; i++)
+        if (INTEGER(which)[i] != INTEGER(which)[i-1]+1) 
+            break;
+    if (i == lenw) {
+        int starti = INTEGER(which)[0] - 1;
+        int endi = INTEGER(which)[lenw-1];
+        if (starti < 0) starti = 0;
+        if (endi > len) endi = len;
+        PROTECT(xnew = allocVector(TYPEOF(x), len-(endi-starti)));
+        copy_vector_elements (xnew, 0, x, 0, starti);
+        copy_vector_elements (xnew, starti, x, endi, len-endi);
+        xnames = getAttrib(x, R_NamesSymbol);
+        if (xnames != R_NilValue) {
+            PROTECT(xnewnames = allocVector(STRSXP, len-(endi-starti)));
+            copy_string_elements (xnewnames, 0, xnames, 0, starti);
+            copy_string_elements (xnewnames, starti, xnames, endi, len-endi);
+            setAttrib(xnew, R_NamesSymbol, xnewnames);
+            UNPROTECT(1);
+        }
+        copyMostAttrib(x, xnew);
+        UNPROTECT(1);
+        return xnew;
+    }
+
     /* calculate the length of the result */
     PROTECT(include = allocVector(INTSXP, len));
     for (i = 0; i < len; i++)
@@ -1416,21 +1442,17 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP DeleteOneVectorListItem(SEXP x, int which)
 {
     SEXP y, xnames, ynames;
-    int i, k, n;
+    int n;
     n = length(x);
     if (0 <= which && which < n) {
 	PROTECT(y = allocVector(TYPEOF(x), n - 1));
-	k = 0;
-	for (i = 0 ; i < n; i++)
-	    if(i != which)
-		SET_VECTOR_ELT(y, k++, VECTOR_ELT(x, i));
+        copy_vector_elements (y, 0, x, 0, which);
+        copy_vector_elements (y, which, x, which+1, n-which-1);
 	xnames = getAttrib(x, R_NamesSymbol);
 	if (xnames != R_NilValue) {
 	    PROTECT(ynames = allocVector(STRSXP, n - 1));
-	    k = 0;
-	    for (i = 0 ; i < n; i++)
-		if(i != which)
-		    SET_STRING_ELT(ynames, k++, STRING_ELT(xnames, i));
+            copy_string_elements (ynames, 0, xnames, 0, which);
+            copy_string_elements (ynames, which, xnames, which+1, n-which-1);
 	    setAttrib(y, R_NamesSymbol, ynames);
 	    UNPROTECT(1);
 	}
@@ -1485,17 +1507,14 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    PROTECT(x = allocVector(VECSXP, 0));
     }
 
-    /* Ensure that the LHS is a local variable. */
-    /* If it is not, then make a local copy. */
-
-    if (NAMED(x) == 2)
-	SETCAR(args, x = duplicate(x));
-
-    xtop = xup = x; /* x will be the element which is assigned to */
+    xtop = xup = x; /* x will contain the element which is assigned to; */
+                    /*   xup may contain x; xtop is what is returned.  */ 
 
     dims = getAttrib(x, R_DimSymbol);
     ndims = length(dims);
     nsubs = length(subs);
+
+    /* Note: below, no duplication is necessary for environments. */
 
     /* code to allow classes to extend ENVSXP */
     if(TYPEOF(x) == S4SXP) {
@@ -1519,6 +1538,8 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	thesub = CAR(subs);
 	len = length(thesub);
 	if (len > 1) {
+            if (NAMED(x) == 2)
+                SETCAR(args, x = xtop = duplicate(x));
 	    xup = vectorIndex(x, thesub, 0, len-2, /*partial ok*/TRUE, call);
 	    /* OneIndex sets newname, but it will be overwritten before being used. */
 	    off = OneIndex(xup, thesub, length(xup), 0, &newname, len-2, R_NilValue);
@@ -1572,6 +1593,12 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 
 	which = SubassignTypeFix(&x, &y, stretch, 2, call);
+
+        if (NAMED(x) == 2) {
+            PROTECT(x);
+            x = duplicate(x);
+            UNPROTECT(1);
+        }
 
 	PROTECT(x);
 
