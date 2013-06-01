@@ -2290,8 +2290,6 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 	    ATTRIB(s) = R_NilValue;
 	    TYPEOF(s) = type;
 	    LENGTH(s) = length;
-	    TRUELENGTH(s) = 0;
-	    NAMED(s) = 0;
             if (R_IsMemReporting && !R_MemPagesReporting) {
                 R_ReportAllocation (sizeof(SEXPREC_ALIGN) + sizeof(VECREC),
                                     type, length);
@@ -2475,8 +2473,6 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 	GC_PROT(s = allocSExpNonCons(type));
     }
     LENGTH(s) = length;
-    TRUELENGTH(s) = 0;
-    NAMED(s) = 0;
 
     /* For EXPRSXP, VECSXP, and STRSXP, prevent disaster in the case */
     /* that an uninitialised list vector or string vector is marked */

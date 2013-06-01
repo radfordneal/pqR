@@ -57,7 +57,7 @@ extern "C" {
 typedef unsigned char Rbyte;
 
 /* type for length of vectors etc */
-typedef int R_len_t; /* will be long later, LONG64 or ssize_t on Win64 */
+typedef int R_len_t;  /* might later be unsigned or long */
 #define R_LEN_T_MAX INT_MAX
 
 /* Fundamental Data Types:  These are largely Lisp
@@ -74,16 +74,9 @@ typedef int R_len_t; /* will be long later, LONG64 or ssize_t on Win64 */
 /*  These exact numeric values are seldom used, but they are, e.g., in
  *  ../main/subassign.c
 */
-#ifndef enum_SEXPTYPE
-/* NOT YET using enum:
- *  1)	The SEXPREC struct below has 'SEXPTYPE type : 5'
- *	(making FUNSXP and CLOSXP equivalent in there),
- *	giving (-Wall only ?) warnings all over the place
- * 2)	Many switch(type) { case ... } statements need a final `default:'
- *	added in order to avoid warnings like [e.g. l.170 of ../main/util.c]
- *	  "enumeration value `FUNSXP' not handled in switch"
- */
-typedef unsigned int SEXPTYPE;
+
+typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
+                                   actual types */
 
 #define NILSXP	     0	  /* nil = NULL */
 #define SYMSXP	     1	  /* symbols */
@@ -119,41 +112,6 @@ typedef unsigned int SEXPTYPE;
 #define FUNSXP      99    /* Closure or Builtin or Special */
 
 
-#else /* NOT YET */
-/*------ enum_SEXPTYPE ----- */
-typedef enum {
-    NILSXP	= 0,	/* nil = NULL */
-    SYMSXP	= 1,	/* symbols */
-    LISTSXP	= 2,	/* lists of dotted pairs */
-    CLOSXP	= 3,	/* closures */
-    ENVSXP	= 4,	/* environments */
-    PROMSXP	= 5,	/* promises: [un]evaluated closure arguments */
-    LANGSXP	= 6,	/* language constructs (special lists) */
-    SPECIALSXP	= 7,	/* special forms */
-    BUILTINSXP	= 8,	/* builtin non-special forms */
-    CHARSXP	= 9,	/* "scalar" string type (internal only)*/
-    LGLSXP	= 10,	/* logical vectors */
-    INTSXP	= 13,	/* integer vectors */
-    REALSXP	= 14,	/* real variables */
-    CPLXSXP	= 15,	/* complex variables */
-    STRSXP	= 16,	/* string vectors */
-    DOTSXP	= 17,	/* dot-dot-dot object */
-    ANYSXP	= 18,	/* make "any" args work */
-    VECSXP	= 19,	/* generic vectors */
-    EXPRSXP	= 20,	/* expressions vectors */
-    BCODESXP	= 21,	/* byte code */
-    EXTPTRSXP	= 22,	/* external pointer */
-    WEAKREFSXP	= 23,	/* weak reference */
-    RAWSXP	= 24,	/* raw bytes */
-    S4SXP	= 25,	/* S4 non-vector */
-
-    NEWSXP      = 30,   /* fresh node creaed in new page */
-    FREESXP     = 31,   /* node released by GC */
-
-    FUNSXP	= 99	/* Closure or Builtin */
-} SEXPTYPE;
-#endif
-
 #ifdef USE_RINTERNALS
 /* This is intended for use only within R itself.
  * It defines internal structures that are otherwise only accessible
@@ -161,26 +119,34 @@ typedef enum {
  * (which are always defined).
  */
 
-/* Flags */
+/* Flags.  Order may be fiddled to try to improve performance.  Total
+   size is 64 bits = 8 bytes. */
+
 struct sxpinfo_struct {
-    SEXPTYPE type      :  5;/* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
-			     * -> warning: `type' is narrower than values
-			     *              of its type
-			     * when SEXPTYPE was an enum */
-    unsigned int obj   :  1;
-    unsigned int named :  2;
-    unsigned int gp    : 16;
-    unsigned int mark  :  1;
+    unsigned int type  :  5;  /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
+                               * -> warning: `type' is narrower than values
+                               *              of its type
+                               * when SEXPTYPE was an enum */
+    unsigned int nmcnt :  3;  /* count of "names" referring to object */
+    /* Garbage collector stuff - keep in one byte to maybe speed up access */
+    unsigned int gcgen :  1;  /* old generation number - may be best first */
+    unsigned int gcoton:  1;  /* 1 if already in old-to-new list */
+    unsigned int mark  :  1;  /* mark object as `in use' in garbage collector */
+    unsigned int gccls :  3;  /* node class for garbage collector */
+    /* debug/trace */
     unsigned int debug :  1;
     unsigned int trace :  1;  /* functions and memory tracing */
+    /* "general purpose" fields, used for miscellaneous purposes */
+    unsigned int gp    : 16;  /* old "gp" field */
+    unsigned int gp2   : 28;  /* new "gp" field, replaces old "truelength" */
+    /* other */
+    unsigned int obj   :  1;  /* set if this is an S3 or S4 object */
     unsigned int misc  :  1;  /* miscellaneous uses - eg, RSTEP */
-    unsigned int gcgen :  1;  /* old generation number */
-    unsigned int gccls :  3;  /* node class */
-}; /*		    Tot: 32 */
+    unsigned int unused:  2;  /* not currently in use */
+};
 
 struct vecsxp_struct {
     R_len_t	length;
-    R_len_t	truelength;
 };
 
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
@@ -224,16 +190,22 @@ struct promsxp_struct {
     struct SEXPREC *env;
 };
 
-/* Every node must start with a set of sxpinfo flags and an attribute
-   field. Under the generational collector these are followed by the
-   fields used to maintain the collector's linked list structures. */
+/* Every node must have a set of sxpinfo flags and an attribute field,
+   plus fields used to maintain the collector's linked list structures. */
+
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
     struct SEXPREC *attrib; \
     struct SEXPREC *gengc_next_node, *gengc_prev_node
 
 /* The standard node structure consists of a header followed by the
-   node data. */
+   node data.  The size varies with the size of a pointer, as follows
+   (assuming R_len_t is no bigger than a pointer):
+   
+       4-byte pointers:  32 bytes
+       8-byte pointers:  56 bytes
+*/
+
 typedef struct SEXPREC {
     SEXPREC_HEADER;
     union {
@@ -243,17 +215,20 @@ typedef struct SEXPREC {
 	struct envsxp_struct envsxp;
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
+        struct vecsxp_struct vecsxp; /* because used for 0-length vectors */
     } u;
 } SEXPREC, *SEXP;
 
-/* The generational collector uses a reduced version of SEXPREC as a
-   header in vector nodes.  The layout MUST be kept consistent with
-   the SEXPREC definition.  The standard SEXPREC takes up 7 words on
-   most hardware; this reduced version should take up only 6 words.
-   In addition to slightly reducing memory use, this can lead to more
-   favorable data alignment on 32-bit architectures like the Intel
-   Pentium III where odd word alignment of doubles is allowed but much
-   less efficient than even word alignment. */
+/* Reduced version of SEXPREC used as a header in vector nodes.  The 
+   layout MUST be kept consistent with the SEXPREC definition.  The size
+   varies with the size of a pointer, the size of R_len_T, and whether
+   alignment to a multiple of 8 bytes is done, as follows:
+   
+       4-byte pointers, 4-byte R_len_t:  24 bytes
+       8-byte pointers, 4-byte R_len_t:  36 bytes (40 bytes if aligned)
+       8-byte pointers, 8-byte R_len_t:  40 bytes
+*/
+
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
     struct vecsxp_struct vecsxp;
@@ -266,14 +241,18 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define OBJECT(x)	((x)->sxpinfo.obj)
 #define MARK(x)		((x)->sxpinfo.mark)
 #define TYPEOF(x)	((x)->sxpinfo.type)
-#define NAMED(x)	((x)->sxpinfo.named)
+#define NAMED(x)	((x)->sxpinfo.nmcnt)
 #define RTRACE(x)	((x)->sxpinfo.trace)
 #define LEVELS(x)	((x)->sxpinfo.gp)
 #define SET_OBJECT(x,v)	(((x)->sxpinfo.obj)=(v))
 #define SET_TYPEOF(x,v)	(((x)->sxpinfo.type)=(v))
-#define SET_NAMED(x,v)	(((x)->sxpinfo.named)=(v))
+#define SET_NAMED(x,v)	(((x)->sxpinfo.nmcnt)=(v))
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=(v))
+
+/* The TRUELENGTH is seldom used, and usually has no connection with length */
+#define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.gp2)
+#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.gp2)=(v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
 #define S4_OBJECT_MASK (1<<4)
@@ -283,9 +262,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 /* Vector Access Macros */
 #define LENGTH(x)	(((VECSEXP) (x))->vecsxp.length)
-#define TRUELENGTH(x)	(((VECSEXP) (x))->vecsxp.truelength)
 #define SETLENGTH(x,v)		((((VECSEXP) (x))->vecsxp.length)=(v))
-#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->vecsxp.truelength)=(v))
 
 /* Under the generational allocator the data for vector nodes comes
    immediately after the node structure, so the data address is a
