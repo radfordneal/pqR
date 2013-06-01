@@ -150,14 +150,12 @@ int Rf_initialize_R(int ac, char **av)
 #endif
 
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
-{
+
     struct rlimit rlim;
 
-    {
-	int ii;
-	/* 1 is downwards */
-	R_CStackDir = ((uintptr_t)&i > (uintptr_t)&ii) ? 1 : -1;
-    }
+    extern int R_stack_growth_direction (uintptr_t);
+    int tmp;
+    R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
 
     if(getrlimit(RLIMIT_STACK, &rlim) == 0) {
 	unsigned long lim1, lim2;
@@ -185,9 +183,15 @@ int Rf_initialize_R(int ac, char **av)
 #endif
     if(R_CStackStart == -1) R_CStackLimit = -1; /* never set */
 
-    /* printf("stack limit %ld, start %lx dir %d \n", R_CStackLimit,
-	      R_CStackStart, R_CStackDir); */
-}
+    R_CStackThreshold = 
+      R_CStackDir > 0 ? R_CStackStart - (uintptr_t) (0.95*R_CStackLimit)
+                      : R_CStackStart + (uintptr_t) (0.95*R_CStackLimit);
+
+#if 0 /* enable for debugging */
+    printf ("stack limit %ld, start %lx, dir %d, threshold %lx\n", 
+            R_CStackLimit, R_CStackStart, R_CStackDir, R_CStackThreshold); 
+#endif
+
 #endif
 
     ptr_R_Suicide = Rstd_Suicide;

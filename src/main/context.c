@@ -149,9 +149,9 @@ please bug.report() [R_run_onexits]"));
 	       we need to make sure there is enough room on the
 	       evaluation stack in case the jump is from handling a
 	       stack overflow. To be safe it is good to also call
-	       R_CheckStack. LT */
+	       R_CHECKSTACK. LT */
 	    R_Expressions = R_Expressions_keep + 500;
-	    R_CheckStack();
+	    R_CHECKSTACK();
 	    eval(s, c->cloenv);
 	    UNPROTECT(1);
 	}

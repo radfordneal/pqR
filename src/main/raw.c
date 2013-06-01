@@ -359,7 +359,7 @@ SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 	    tmp = Calloc(len+1, char);
 	} else {
 	    tmp = alloca(len+1); tmp[len] = '\0';
-	    R_CheckStack();
+	    R_CHECKSTACK();
 	}
 	for (i = 0, len = 0; i < nc; i++) {
 	    used = inttomb(buf, INTEGER(x)[i]);

@@ -157,31 +157,43 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
     return ans;
 }
 
-SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho,
-                               int variant)
-{
-    SEXP s1, s2;
-    double n1, n2;
+static SEXP do_fast_colon (SEXP call, SEXP op, SEXP s1, SEXP s2, SEXP rho,
+                           int variant)
+{   double n1, n2;
 
-    checkArity(op, args);
-    if (inherits(CAR(args), "factor") && inherits(CADR(args), "factor"))
-	return(cross_colon(call, CAR(args), CADR(args)));
+    if (inherits(s1, "factor") && inherits(s2, "factor"))
+	return cross_colon (call, s1, s2);
 
-    s1 = CAR(args);
-    s2 = CADR(args);
     n1 = length(s1);
     n2 = length(s2);
-    if (n1 > 1)
-	warningcall(call, _("numerical expression has %d elements: only the first used"), (int) n1);
-    else if (n1 == 0 || n2 == 0)
+
+    if (n1 == 0 || n2 == 0)
 	errorcall(call, _("argument of length 0"));
+    if (n1 > 1)
+	warningcall(call, 
+          _("numerical expression has %d elements: only the first used"), 
+          (int) n1);
     if (n2 > 1)
-	warningcall(call, _("numerical expression has %d elements: only the first used"), (int) n2);
+	warningcall(call, 
+          _("numerical expression has %d elements: only the first used"), 
+          (int) n2);
+
     n1 = asReal(s1);
     n2 = asReal(s2);
     if (ISNAN(n1) || ISNAN(n2))
 	errorcall(call, _("NA/NaN argument"));
+
     return seq_colon(n1, n2, call, variant);
+}
+
+SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho,
+                               int variant)
+{   checkArity(op, args);
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_BINARY (op, do_fast_colon, 0, 0, 0, 0, 0);
+
+    return do_fast_colon (call, op, CAR(args), CADR(args), rho, variant);
 }
 
 static SEXP rep2(SEXP s, SEXP ncopy)
@@ -696,19 +708,27 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho,
     return make_seq (1, len, variant);
 }
 
-SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                 int variant)
-{
-    int len;
+static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho, 
+                             int variant)
+{   int len;
 
-    checkArity(op, args);
-    check1arg(args, call, "length.out");
-    len = asInteger(CAR(args));
+    len = asInteger(arg);
     if(len == NA_INTEGER || len < 0)
 	errorcall(call, _("argument must be coercible to non-negative integer"));
-    if(length(CAR(args)) != 1)
+    if (length(arg) != 1)
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");
 
     return make_seq (1, len, variant);
+}
+
+SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                 int variant)
+{   checkArity(op, args);
+    check1arg(args, call, "length.out");
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_seq_len, 0, 0);
+
+    do_fast_seq_len (call, op, CAR(args), rho, variant);
 }

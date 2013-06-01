@@ -426,8 +426,25 @@ typedef struct {
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)
 
 #define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
-#define SET_PRIMFUN_FAST(x,f) \
-    ((x)->u.primsxp.primsxp_fast_cfun = (f))
+#define PRIMFUN_DSPTCH1(x) ((x)->u.primsxp.primsxp_dsptch1)
+#define PRIMFUN_DSPTCH2(x) ((x)->u.primsxp.primsxp_dsptch2)
+#define PRIMFUN_ARG1VAR(x) ((x)->sxpinfo.gp2 & 0x3fff)
+#define PRIMFUN_ARG2VAR(x) ((x)->sxpinfo.gp2 >> 14)
+#define PRIMFUN_UNI_TOO(x) ((x)->u.primsxp.primsxp_uni_too)
+
+#define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,var1) do { \
+    (x)->u.primsxp.primsxp_fast_cfun = (f); \
+    (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
+    (x)->sxpinfo.gp2 = (var1); \
+} while (0)
+
+#define SET_PRIMFUN_FAST_BINARY(x,f,dsptch1,dsptch2,var1,var2,uni_too) do { \
+    (x)->u.primsxp.primsxp_fast_cfun = (f); \
+    (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
+    (x)->u.primsxp.primsxp_dsptch2 = (dsptch2); \
+    (x)->u.primsxp.primsxp_uni_too = (uni_too); \
+    (x)->sxpinfo.gp2 = (var1) + ((var2)<<14); \
+} while (0)
 
 /* Symbols for eval variants.  Return of a variant result is indicated by 
    the attribute field being R_VariantResult. */
@@ -678,9 +695,10 @@ extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
-extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
-extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
+extern0 uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
+extern0 uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
 extern0 int	R_CStackDir	INI_as(1);	/* C stack direction */
+extern0 uintptr_t R_CStackThreshold;	/* Threshold for overflow detection */
 
 #ifdef R_USE_SIGNALS
 extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */
@@ -1060,7 +1078,7 @@ SEXP duplicated3(SEXP, SEXP, Rboolean);
 int any_duplicated(SEXP, Rboolean);
 int any_duplicated3(SEXP, SEXP, Rboolean);
 int envlength(SEXP);
-SEXP evalList(SEXP, SEXP, SEXP, int);
+SEXP evalList(SEXP, SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
 void findcontext(int, SEXP, SEXP);
@@ -1336,6 +1354,16 @@ extern char *locale2charset(const char *);
 extern void *alloca(size_t);
 # endif
 #endif
+
+
+/* Macro for fast stack checking */
+
+#define R_CHECKSTACK() do { \
+    int dummy; \
+    if (R_CStackDir > 0 ? (uintptr_t)&dummy < R_CStackThreshold \
+                        : (uintptr_t)&dummy > R_CStackThreshold) \
+        R_CheckStack(); \
+} while (0)
 
 
 /* Enable this by defining USE_FAST_PROTECT_MACROS before including Defn.h.

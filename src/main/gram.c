@@ -4401,7 +4401,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
     nb = cnt*6;
 #endif
     char s[nb];
-    R_CheckStack();
+    R_CHECKSTACK();
     memset(s, 0, nb); /* safety */
 #ifdef WC_NOT_UNICODE
     {

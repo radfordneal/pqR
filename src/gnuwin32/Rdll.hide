@@ -852,6 +852,7 @@
  do_math4
  do_matprod
  do_matrix
+ do_mean
  do_memCompress
  do_memDecompress
  do_memlimits

@@ -2011,7 +2011,7 @@ R_isMissing(SEXP symbol, SEXP rho)
 	return 1;
 
     /* check for infinite recursion */
-    R_CheckStack();
+    R_CHECKSTACK();
 
     if (DDVAL(symbol)) {
 	s = R_DotsSymbol;

@@ -1,0 +1,56 @@
+This mod combines several changes, loosely related by their all
+reducing interpretive overhead or speeding up primitive functions.
+
+The largest change is that a new scheme is used for quick dispatch of
+some unary and binary primitive functions, as described in the
+documentation in R-ints.texi.  In particular, this mod includes "fast"
+versions of the functions implementing the following primitives
+(called do_fast_XXX):
+  
+  arith (+, -, *, /, ^, %%, %/%)
+  math1 (exp, sin, etc.)
+  trunc
+  abs
+  length
+  dim
+  is (is.null, is.integer, etc.)
+  isna
+  isnan
+  isfinite
+  isinfinite
+  cmathfuns (Re, Im, etc.)
+  logic3 (any, all)
+  colon
+  seq_len
+  sum
+  prod
+
+But note that not all calls of such primitives will use the fast
+dispatch mechanism.
+
+The evalListKeepMissing function in eval.c now just calls evalList,
+with an indicative argument, eliminating code duplication.
+
+Calls of the R_CheckStack procedure in evalv and other places were
+replaced with a macro R_CHECKSTACK, which is faster.
+
+The LOCAL_COPY macro is used in several places to (hopefully) speed up
+references to R_NilValue.
+
+Evaluation of .Internal calls now pass on the "variant" desired.
+
+Expressions such as \code{all(v>0)} and \code{any(is.na(v))} where
+\code{v} is a real vector now avoid computing and storing a logical
+vector, instead computing the result of \code{any} or \code{all}
+without this intermediate, looking at only as much of \code{v} as is
+needed to determine the result.  This is done using the "variant
+result" framework.
+
+Similarly, when \code{sum} is applied to many mathematical functions
+of one vector argument, for example \code{sum(log(v))}, the sum is
+performed as the function is computed, without a vector being
+allocated to hold the function values.
+
+Several bugs were fixed, as described in NEWS items.  In particular,
+int_fast64_t variables are now used to accumulate integer sums for
+"sum" and "mean" in order to avoid overflow.

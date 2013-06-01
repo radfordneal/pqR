@@ -60,6 +60,20 @@ void attribute_hidden nl_Rdummy(void)
    src/gnuwin/front-ends/graphappmain.c on Windows, unless of course
    R is embedded */
 
+
+/* Detemine whether the stack grows down (+1) or up (-1).  Passed the
+   address of a local variable in the caller's stack frame.
+
+   This is put here, though called only from system.c, so that the compiler
+   will not be able to inline it. */
+
+int R_stack_growth_direction (uintptr_t cvaraddr)
+{ 
+    int dummy; 
+    return (uintptr_t) &dummy < cvaraddr ? 1 : -1; 
+}
+
+
 /* Global Variables:  For convenience, all interpeter global symbols
  * ================   are declared in Defn.h as extern -- and defined here.
  *

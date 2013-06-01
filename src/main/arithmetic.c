@@ -306,12 +306,22 @@ static SEXP lcall;
 
 /* Unary and Binary Operators */
 
+static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
+                           int variant)
+{
+    return arg2==NULL ? R_unary (call, op, arg1) 
+                      : R_binary (call, op, arg1, arg2);
+}
+
 SEXP attribute_hidden do_arith(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
 
     if (DispatchGroup("Ops", call, op, args, env, &ans))
 	return ans;
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_BINARY (op, do_fast_arith, 1, 1, 0, 0, 1);
 
     switch (length(args)) {
     case 1:
@@ -375,14 +385,8 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
     else yarray = yts = yattr = FALSE;
 
     /* If either x or y is a matrix with length 1 and the other is a
-       vector, we want to coerce the matrix to be a vector.
-       Do we want to?  We don't do it!  BDR 2004-03-06
-    */
+       vector, we want to coerce the matrix to be a vector. */
 
-    /* FIXME: Danger Will Robinson.
-     * -----  We might be trashing arguments here.
-     * If we have NAMED(x) or NAMED(y) we should duplicate!
-     */
     if (xarray != yarray) {
 	if (xarray && nx==1 && ny!=1) {
 	    REPROTECT(x = duplicate(x), xpi);
@@ -395,17 +399,9 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
     }
 
     if (xarray || yarray) {
-	if (xarray && yarray) {
-	    if (!conformable(x, y))
+	if (xarray && yarray && !conformable(x,y))
 		errorcall(lcall, _("non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
-	}
-	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
-	}
-	else {			/* (yarray) */
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
-	}
+        PROTECT(dims = getAttrib (xarray ? x : y, R_DimSymbol));
 	nprotect++;
 	if (xattr) {
 	    PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
@@ -1026,12 +1022,13 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 }
 
 
-/* Mathematical Functions of One Argument */
+/* Mathematical Functions of One Argument  Implements a variant return
+   of the sum of the vector result, rather than the vector itself. */
 
-static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall)
+static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall, int variant)
 {
     SEXP sy;
-    double *y, *a;
+    double *a;
     int i, n;
     int naflag;
 
@@ -1042,51 +1039,72 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall)
     /* coercion can lose the object bit */
     PROTECT(sa = coerceVector(sa, REALSXP));
 
-    sy = NAMED(sa)==0 ? sa : allocVector(REALSXP, n);
-    PROTECT(sy);
+    a = REAL(sa);
+    naflag = 0;
+
+    if (variant == VARIANT_SUM) {
+        long double s = 0.0;
+        double t;
+        for (i = 0; i < n; i++) {
+	    if (ISNAN(a[i]))
+	        s  += a[i];
+	    else {
+	        t = f(a[i]);
+	        if (ISNAN(t)) naflag = 1;
+                s += t;
+	    }
+        }
+        sy = allocVector(REALSXP, 1);
+        REAL(sy)[0] = (double) s;
+        SET_ATTRIB (sy, R_VariantResult);
+    }
+    else { /* non-variant return */
+        double *y;
+        sy = NAMED(sa)==0 ? sa : allocVector(REALSXP, n);
+        PROTECT(sy);
+        y = REAL(sy);
 
 #ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa)){
-       memtrace_report(sa, sy);
-       SET_RTRACE(sy, 1);
-    }
+        if (RTRACE(sa)){
+           memtrace_report(sa, sy);
+           SET_RTRACE(sy, 1);
+        }
 #endif
-    a = REAL(sa);
-    y = REAL(sy);
-    naflag = 0;
-    for (i = 0; i < n; i++) {
-	if (ISNAN(a[i]))
-	    y[i] = a[i];
-	else {
-	    y[i] = f(a[i]);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
+        for (i = 0; i < n; i++) {
+	    if (ISNAN(a[i]))
+	        y[i] = a[i];
+	    else {
+	        y[i] = f(a[i]);
+	        if (ISNAN(y[i])) naflag = 1;
+	    }
+        }
+
+        if (sa!=sy) 
+            DUPLICATE_ATTRIB(sy, sa);
+        UNPROTECT(1);
     }
-    if(naflag)
+
+    if (naflag)
 	warningcall(lcall, R_MSG_NA);
 
-    if (sa!=sy) 
-        DUPLICATE_ATTRIB(sy, sa);
+    UNPROTECT(1);
 
-    UNPROTECT(2);
     return sy;
 }
 
 
-SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
-    SEXP s;
+    if (isComplex(arg)) {
+        /* for the moment, keep the interface to complex_math1 the same */
+        SEXP tmp;
+        PROTECT(tmp = CONS(arg,R_NilValue));
+	tmp = complex_math1(call, op, tmp, env);
+        UNPROTECT(1);
+        return tmp;
+    }
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    if (DispatchGroup("Math", call, op, args, env, &s))
-	return s;
-
-    if (isComplex(CAR(args)))
-	return complex_math1(call, op, args, env);
-
-#define MATH1(x) math1(CAR(args), x, call);
+#define MATH1(x) math1(arg, x, call, variant);
     switch (PRIMVAL(op)) {
     case 1: return MATH1(floor);
     case 2: return MATH1(ceil);
@@ -1124,39 +1142,61 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* case 46: return MATH1(Rf_gamma_cody); removed in 2.8.0 */
 
     default:
+        /* log put here in case the compiler handles a sparse switch poorly */
+        if (PRIMVAL(op) == 10003) 
+            return MATH1(R_log);
+
 	errorcall(call, _("unimplemented real function of 1 argument"));
     }
-    return s; /* never used; to keep -Wall happy */
+    return R_NilValue; /* never used; to keep -Wall happy */
 }
 
-/* methods are allowed to have more than one arg */
+
+SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP s;
+
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    if (DispatchGroup("Math", call, op, args, env, &s))
+	return s;
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_math1, 1, 0);
+
+    return do_fast_math1 (call, op, CAR(args), env, 0);
+}
+
+/* Methods for trunc are allowed to have more than one arg */
+
+static SEXP do_fast_trunc (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+{
+    return math1(arg, trunc, call, variant);
+}
+
 SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s;
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
-    checkArity(op, args); /* but is -1 in names.c */
+
     check1arg_x (args, call);
     if (isComplex(CAR(args)))
 	errorcall(call, _("unimplemented complex function"));
-    return math1(CAR(args), trunc, call);
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_trunc, 1, 0);
+
+    return math1(CAR(args), trunc, call, 0);
 }
 
-/*
-   Note that this is slightly different from the do_math1 set,
-   both for integer/logical inputs and what it dispatches to for complex ones.
-*/
+/* Note that abs is slightly different from the do_math1 set, both
+   for integer/logical inputs and what it dispatches to for complex ones. */
 
-SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    SEXP x, s = R_NilValue /* -Wall */;
-
-    checkArity(op, args);
-    check1arg_x (args, call);
-    x = CAR(args);
-
-    if (DispatchGroup("Math", call, op, args, env, &s))
-	return s;
+static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
+{   
+    SEXP s;
 
     if (isInteger(x) || isLogical(x)) {
 	/* integer or logical ==> return integer,
@@ -1170,19 +1210,49 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
         }
     } else if (TYPEOF(x) == REALSXP) {
 	int n = LENGTH(x);
+        if (variant == VARIANT_SUM) {
+            long double r = 0.0;
+	    for (int i = 0 ; i < n ; i++)
+                r += fabs(REAL(x)[i]);
+            s = allocVector (REALSXP, 1);
+            REAL(s)[0] = (double) r;
+            SET_ATTRIB (s, R_VariantResult);
+            return s;
+        }
         s = NAMED(x)==0 ? x : allocVector(REALSXP, n);
 	for (int i = 0 ; i < n ; i++)
 	    REAL(s)[i] = fabs(REAL(x)[i]);
     } else if (isComplex(x)) {
-	return do_cmathfuns(call, op, args, env);
+        SEXP args;
+        PROTECT (args = CONS(x,R_NilValue));
+	s = do_cmathfuns(call, op, args, env);
+        UNPROTECT(1);
     } else
 	errorcall(call, R_MSG_NONNUM_MATH);
+
     if (x!=s) {
         PROTECT(s);
         DUPLICATE_ATTRIB(s, x);
         UNPROTECT(1);
     }
+
     return s;
+}
+
+SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP s;
+
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    if (DispatchGroup("Math", call, op, args, env, &s))
+	return s;
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_abs, 1, 0);
+
+    return do_fast_abs (call, op, CAR(args), env, 0);
 }
 
 /* Mathematical Functions of Two Numeric Arguments (plus 1 int) */
@@ -1538,20 +1608,46 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 /* This is a primitive SPECIALSXP with internal argument matching */
-SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_log (SEXP call, SEXP op, SEXP args, SEXP env,
+                              int variant)
 {
-    SEXP res, call2;
-    int n = length(args), nprotect = 2;
+    int nprotect = 2;
+    int n;
 
-    if (n >= 2 && isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
-#ifdef M_E
-	double e = M_E;
-#else
-	double e = exp(1.);
-#endif
-	PROTECT(args = list2(CAR(args), ScalarReal(e))); nprotect++;
+    /* Do the common case of one un-tagged, non-object, argument quickly. */
+    if (!isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) 
+          && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg) {
+        SEXP arg, ans;
+        PROTECT(arg = eval (CAR(args), env));
+        if (isObject(arg)) {
+            UNPROTECT(1);
+            PROTECT(args = CONS(arg, R_NilValue));
+            n = 1;
+        }
+        else {
+            ans = do_fast_math1 (call, op, arg, env, variant);
+            UNPROTECT(1);
+            return ans;
+        }
     }
-    PROTECT(args = evalListKeepMissing(args, env));
+    else {
+        n = length(args);
+
+        /* This seems like some sort of horrible kludge that can't possibly
+           be right in general (it ignores the argument names, and silently
+           discards arguments after the first two). */
+        if (n >= 2 && isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
+#ifdef M_E
+	    double e = M_E;
+#else
+	    double e = exp(1.);
+#endif
+	    PROTECT(args = list2(CAR(args), ScalarReal(e))); nprotect++;
+        }
+        PROTECT(args = evalListKeepMissing(args, env));
+    }
+
+    SEXP res, call2;
     PROTECT(call2 = lang2(CAR(call), R_NilValue));
     SETCDR(call2, args);
     n = length(args);
@@ -1559,10 +1655,11 @@ SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
     if (! DispatchGroup("Math", call2, op, args, env, &res)) {
 	switch (n) {
 	case 1:
+            check1arg_x (args, call);
 	    if (isComplex(CAR(args)))
 		res = complex_math1(call, op, args, env);
 	    else
-		res = math1(CAR(args), R_log, call);
+		res = math1(CAR(args), R_log, call, variant);
 	    break;
 	case 2:
 	{

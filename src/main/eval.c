@@ -322,6 +322,10 @@ SEXP attribute_hidden do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* NEEDED: A fixup is needed in browser, because it can trap errors,
  *	and currently does not reset the limit to the right value. */
 
+#define CHECK_STACK_BALANCE(o,s) do { \
+  if (s != R_PPStackTop) check_stack_balance(o,s); \
+} while (0)
+
 void attribute_hidden check_stack_balance(SEXP op, int save)
 {
     if(save == R_PPStackTop) return;
@@ -378,6 +382,7 @@ SEXP Rf_eval(SEXP e, SEXP rho)
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP op, tmp;
     int typeof_e = TYPEOF(e);
     static int evalcount = 0;
@@ -419,7 +424,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 		  _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
-    R_CheckStack();
+    R_CHECKSTACK();
 
     tmp = R_NilValue;		/* -Wall */
 #ifdef Win32
@@ -482,61 +487,164 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	    Rprintf("trace: ");
 	    PrintValue(e);
 	}
-	if (TYPEOF(op) == SPECIALSXP) {
-	    int save = R_PPStackTop, flag = PRIMPRINT(op);
+
+	if (TYPEOF(op) == SPECIALSXP || TYPEOF(op) == BUILTINSXP) {
+
+            int fast = FALSE;
+            SEXP args = CDR(e);
+	    int save = R_PPStackTop;
+            int flag = PRIMPRINT(op);
 	    const void *vmax = VMAXGET();
-	    PROTECT(CDR(e));
-	    R_Visible = flag != 1;
-            tmp = CALL_PRIMFUN(e, op, CDR(e), rho, variant);
+
+	    if (flag == 1) R_Visible = FALSE;
+
+            if (TYPEOF(op) == SPECIALSXP)
+
+                tmp = CALL_PRIMFUN(e, op, args, rho, variant);
+
+            else { /* BUILTINSXP */
+
+                SEXP arg1 = NULL, arg2 = NULL;
+
+                /* See if this may be a fast primitive.  All fast primitives
+                   should be BUILTIN.  We will not do a fast call if there 
+                   is a tag for any argument, or a missing argument, or a
+                   ... argument.  Otherwise, if PRIMARITY == 2, a fast call
+                   may be done if there are two arguments, or one argument if
+                   the uni_too flag is set. These arguments are stored in
+                   arg1 and in arg2 (which may be NULL if uni_too is set).  
+                   For any PRIMARITY other than 2, a fast call may be done 
+                   if there is exactly one argument, which is stored in arg1,
+                   with arg2 set to NULL.*/
+    
+                if (PRIMFUN_FAST(op) != 0) {
+                    if (args!=R_NilValue && TAG(args)==R_NilValue) {
+                        SEXP a1 = CAR(args);
+                        if (a1!=R_DotsSymbol && a1!=R_MissingArg) {
+                            if (PRIMARITY(op) != 2) {
+                                if (CDR(args)==R_NilValue) {
+                                    fast = TRUE;
+                                    arg1 = a1;
+                                }
+                            }
+                            else {
+                                if (CDR(args)==R_NilValue 
+                                 && PRIMFUN_UNI_TOO(op)) {
+                                    fast = TRUE;
+                                    arg1 = a1;
+                                }
+                                else if (TAG(CDR(args))==R_NilValue
+                                      && CDDR(args)==R_NilValue) {
+                                    SEXP a2 = CADR(args);
+                                    if (a2!=R_DotsSymbol && a2!=R_MissingArg){
+                                        fast = TRUE;
+                                        arg1 = a1;
+                                        arg2 = a2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                /* Evaluate arguments for a fast primitive, and check whether
+                   dispatching must be checked, in which case it won't be
+                   fast after all. */
+
+                if (fast) {
+                    PROTECT(arg1 = evalv (arg1, rho, PRIMFUN_ARG1VAR(op)));
+                    if (PRIMFUN_DSPTCH1(op) && isObject(arg1)) {
+                        args = CDR(args);
+                        arg2 = NULL;
+                        fast = FALSE;
+                    }
+                    else if (arg2 != NULL) {
+                        PROTECT(arg2 = evalv(arg2, rho, PRIMFUN_ARG2VAR(op)));
+                        if (PRIMFUN_DSPTCH2(op) && isObject(arg2)) {
+                            args = R_NilValue;  /* == CDDR(args) */
+                            fast = FALSE;
+                        }
+                    }
+                }
+
+                /* Evaluate arguments for a non-fast primitive.  If it can't
+                   be fast because of dispatching, arguments evaluated already
+                   have to be put on at the front of the argument list. */
+
+                if (!fast) { 
+                    args = evalList (args, rho, e);
+                    if (arg2 != NULL) {
+                        args = CONS(arg2,args);
+                        UNPROTECT(1);  /* arg2 */
+                    }
+                    if (arg1 != NULL) {
+                        args = CONS(arg1,args);
+                        UNPROTECT(1);  /* arg1 */
+                    }
+                    PROTECT(args);
+                }
+
+                /* Create a context if profiling, or calling outside function
+                   (.C, .Fortran, etc.), where it helps for tracebacks */
+
+                int used_cntxt = FALSE;
+                RCNTXT cntxt;
+                if (R_Profiling || PRIMFOREIGN(op)) {
+                    begincontext (&cntxt, CTXT_BUILTIN, e, R_BaseEnv, 
+                                  R_BaseEnv, R_NilValue, R_NilValue);
+                    used_cntxt = TRUE;
+                }
+
+                /* Call primitive, either the non-fast way with an argument
+                   list, or the fast way, passing arg1 or arg1 and arg2
+                   (but note that arg2 may be NULL). */
+
+                if (!fast) {
+                    tmp = CALL_PRIMFUN(e, op, args, rho, variant);
+                }
+                else if (PRIMARITY(op) != 2) {
+                    tmp = 
+                      ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
+                        (e, op, arg1, rho, variant);
+                }
+                else { /* PRIMARITY(op) == 2 */
+                    tmp = 
+                      ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
+                        (e, op, arg1, arg2, rho, variant);
+                    if (arg2!=NULL) UNPROTECT(1); /* arg2 */
+                }
+                UNPROTECT(1); /* either args or arg1 */
+
+                if (used_cntxt) endcontext(&cntxt);
+	    }
+
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
-		if(strcmp(nm, "for")
-		   && strcmp(nm, "repeat") && strcmp(nm, "while")
-		   && strcmp(nm, "[[<-") && strcmp(nm, "on.exit"))
+                if (TYPEOF(op) == BUILTINSXP)
+                    printf("vis: builtin %s\n", nm);
+		else if (strcmp(nm, "for") != 0
+                      && strcmp(nm, "repeat") != 0 
+                      && strcmp(nm, "while") != 0
+                      && strcmp(nm, "[[<-") != 0
+                      && strcmp(nm, "on.exit") != 0)
 		    printf("vis: special %s\n", nm);
 	    }
 #endif
-	    if (flag < 2) R_Visible = flag != 1;
-	    UNPROTECT(1);
-	    check_stack_balance(op, save);
+	    if (flag < 2) R_Visible = 1 - flag;
+	    CHECK_STACK_BALANCE(op, save);
 	    VMAXSET(vmax);
+	    UNPROTECT(1); /* op */
 	}
-	else if (TYPEOF(op) == BUILTINSXP) {
-	    int save = R_PPStackTop, flag = PRIMPRINT(op);
-	    const void *vmax = VMAXGET();
-	    RCNTXT cntxt;
-	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
-	    if (flag < 2) R_Visible = flag != 1;
-	    /* We used to insert a context only if profiling,
-	       but helps for tracebacks on .C etc. */
-	    if (R_Profiling || (PPINFO(op).kind == PP_FOREIGN)) {
-		begincontext(&cntxt, CTXT_BUILTIN, e,
-			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-                tmp = CALL_PRIMFUN(e, op, tmp, rho, variant);
-		endcontext(&cntxt);
-	    } else {
-                tmp = CALL_PRIMFUN(e, op, tmp, rho, variant);
-	    }
-#ifdef CHECK_VISIBILITY
-	    if(flag < 2 && R_Visible == flag) {
-		char *nm = PRIMNAME(op);
-		printf("vis: builtin %s\n", nm);
-	    }
-#endif
-	    if (flag < 2) R_Visible = flag != 1;
-	    UNPROTECT(1);
-	    check_stack_balance(op, save);
-	    VMAXSET(vmax);
-	}
+
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
 	    tmp = applyClosure_v (e, op, tmp, rho, R_BaseEnv, variant);
-	    UNPROTECT(1);
+	    UNPROTECT(2); /* op & tmp */
 	}
+
 	else
 	    error(_("attempt to apply non-function"));
-	UNPROTECT(1);
 	break;
     case DOTSXP:
 	error(_("'...' used in an incorrect context"));
@@ -719,6 +827,7 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
                             SEXP suppliedenv, int variant)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
     SEXP f, a, tmp;
@@ -900,6 +1009,7 @@ SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho)
 {
+    LOCAL_COPY(R_NilValue);
     volatile SEXP body;
     SEXP tmp;
     RCNTXT cntxt;
@@ -1871,18 +1981,23 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
    Used in eval and applyMethod (object.c) for builtin primitives,
    do_internal (names.c) for builtin .Internals and in evalArgs.
 
-   'n' is the number of arguments already evaluated and hence not
-   passed to evalArgs and hence to here.
+   The 'call' argument is used only for error reporting when an argument is
+   missing.  It is assumed that 'el' is a tail of the arguments in 'call', 
+   so the position of a missing argument can be found by searching 'call'.  
+   (Previously, an argument was passed saying how many arguments were dropped 
+   in 'el'.)
+
+   If the 'call' argument is NULL, missing arguments are retained.
  */
-SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
+SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP head, tail, ev, h;
 
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
     while (el != R_NilValue) {
-	n++;
 
 	if (CAR(el) == R_DotsSymbol) {
 	    /* If we have a ... symbol, we look to see what it is bound to.
@@ -1896,71 +2011,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-                    ev = cons_with_tag (eval(CAR(h), rho), R_NilValue, TAG(h));
-                    if (head==R_NilValue)
-                        PROTECT(head = ev);
-                    else
-                        SETCDR(tail, ev);
-                    tail = ev;
-		    h = CDR(h);
-		}
-	    }
-	    else if (h != R_MissingArg)
-		error(_("'...' used in an incorrect context"));
-	} else if (CAR(el) == R_MissingArg) {
-	    /* It was an empty element: most likely get here from evalArgs
-	       which may have been called on part of the args. */
-	    errorcall(call, _("argument %d is empty"), n);
-#if 0  /* OMITTED - this check is slow, and serves only to produce a less 
-          informative error message than letting the eval below happen. */
-	} else if (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) {
-	    /* It was missing */
-	    errorcall(call, _("'%s' is missing"), CHAR(PRINTNAME(CAR(el)))); 
-#endif
-	} else {
-            ev = cons_with_tag (eval(CAR(el), rho), R_NilValue, TAG(el));
-            if (head==R_NilValue)
-                PROTECT(head = ev);
-            else
-                SETCDR(tail, ev);
-            tail = ev;
-	}
-	el = CDR(el);
-    }
-
-    if (head!=R_NilValue) 
-        UNPROTECT(1);
-
-    return head;
-
-} /* evalList() */
-
-
-/* A slight variation of evaluating each expression in "el" in "rho". */
-
-/* used in evalArgs, arithmetic.c, seq.c */
-SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
-{
-    SEXP head, tail, ev, h;
-
-    head = R_NilValue;
-    tail = R_NilValue; /* to prevent uninitialized variable warnings */
-
-    while (el != R_NilValue) {
-
-	/* If we have a ... symbol, we look to see what it is bound to.
-	 * If its binding is Null (i.e. zero length)
-	 *	we just ignore it and return the cdr with all its expressions evaluated;
-	 * if it is bound to a ... list of promises,
-	 *	we force all the promises and then splice
-	 *	the list of resulting values into the return value.
-	 * Anything else bound to a ... symbol is an error
-	*/
-	if (CAR(el) == R_DotsSymbol) {
-	    h = findVar(CAR(el), rho);
-	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
-		while (h != R_NilValue) {
-                    ev = CAR(h) == R_MissingArg ? 
+                    ev = call == NULL && CAR(h) == R_MissingArg ? 
                          cons_with_tag (R_MissingArg, R_NilValue, TAG(h))
                        : cons_with_tag (eval(CAR(h),rho), R_NilValue, TAG(h));
                     if (head==R_NilValue)
@@ -1971,20 +2022,32 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 		    h = CDR(h);
 		}
 	    }
-	    else if(h != R_MissingArg)
+	    else if (h != R_MissingArg)
 		error(_("'...' used in an incorrect context"));
-	}
-	else {
-            ev = CAR(el) == R_MissingArg ||
-                 (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) ?
-                     cons_with_tag (R_MissingArg, R_NilValue, TAG(el))
-                   : cons_with_tag (eval(CAR(el), rho), R_NilValue, TAG(el));
+
+	} else if (CAR(el) == R_MissingArg && call != NULL) {
+            /* Report the missing argument as an error. */
+            int n = 1;
+            SEXP a;
+            for (a = CDR(call); a!=R_NilValue && CAR(a)!=CAR(el); a = CDR(a))
+                n += 1;
+            /* If for some reason we never found the missing argument, n will
+               indicate an argument past the end, which is fairly harmless. */
+	    errorcall(call, _("argument %d is empty"), n);
+
+	} else {
+            if (call == NULL && (CAR(el) == R_MissingArg ||
+                                 isSymbol(CAR(el)) && R_isMissing(CAR(el),rho)))
+                ev = cons_with_tag (R_MissingArg, R_NilValue, TAG(el));
+            else
+                ev = cons_with_tag (eval(CAR(el), rho), R_NilValue, TAG(el));
             if (head==R_NilValue)
                 PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
             tail = ev;
 	}
+
 	el = CDR(el);
     }
 
@@ -1992,6 +2055,15 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
         UNPROTECT(1);
 
     return head;
+
+} /* evalList() */
+
+/* A slight variation of evaluating each expression in "el" in "rho". */
+
+/* used in evalArgs, arithmetic.c, seq.c */
+SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
+{ 
+    return evalList (el, rho, NULL);
 }
 
 
@@ -2003,6 +2075,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
     SEXP head, tail, ev, h;
+    LOCAL_COPY(R_NilValue);
 
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
@@ -2314,10 +2387,9 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing, SEXP call, int n)
+static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing, SEXP call)
 {
-    if(dropmissing) return evalList(el, rho, call, n);
-    else return evalListKeepMissing(el, rho);
+    return evalList (el, rho, dropmissing ? call : NULL);
 }
 
 
@@ -2335,7 +2407,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	/* Rboolean hasS4 = FALSE; */ 
 	int nprotect = 0, dispatch;
 	if(!argsevald) {
-            PROTECT(argValue = evalArgs(args, rho, dropmissing, call, 0));
+            PROTECT(argValue = evalArgs(args, rho, dropmissing, call));
 	    nprotect++;
 	    argsevald = TRUE;
 	}
@@ -2451,10 +2523,10 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		*/
 		if (dots)
 		    PROTECT(argValue = evalArgs(argValue, rho, dropmissing,
-						call, 0));
+						call));
 		else {
 		    PROTECT(argValue = CONS(x, evalArgs(CDR(argValue), rho,
-							dropmissing, call, 1)));
+							dropmissing, call)));
 		    SET_TAG(argValue, CreateTag(TAG(args)));
 		}
 		nprotect++;
@@ -2510,9 +2582,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    /* The first call argument was ... and may contain more than the
 	       object, so it needs to be evaluated here.  The object should be
 	       in a promise, so evaluating it again should be no problem. */
-	    *ans = evalArgs(args, rho, dropmissing, call, 0);
+	    *ans = evalArgs(args, rho, dropmissing, call);
 	else {
-	    PROTECT(*ans = CONS(x, evalArgs(CDR(args), rho, dropmissing, call, 1)));
+	    PROTECT(*ans = CONS(x, evalArgs(CDR(args), rho, dropmissing, call)));
 	    SET_TAG(*ans, CreateTag(TAG(args)));
 	    UNPROTECT(1);
 	}
@@ -2568,6 +2640,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     SEXP rclass, rmeth, rgr, rsxp, value;
     char lbuf[512], rbuf[512], generic[128];
     Rboolean useS4 = TRUE, isOps = FALSE;
+    LOCAL_COPY(R_NilValue);
 
     /* pre-test to avoid string computations when there is nothing to
        dispatch on because either there is only one argument and it
@@ -2944,7 +3017,6 @@ enum {
 SEXP R_unary(SEXP, SEXP, SEXP);
 SEXP R_binary(SEXP, SEXP, SEXP, SEXP);
 SEXP do_math1(SEXP, SEXP, SEXP, SEXP);
-SEXP do_relop_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_logic(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
@@ -3080,7 +3152,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	}
 	UNPROTECT(1);
     }
-    return do_relop_dflt(call, op, x, y);
+    return do_fast_relop (call, op, x, y, rho, 0);
 }
 
 static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
@@ -4099,6 +4171,7 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
+  LOCAL_COPY(R_NilValue);
   SEXP value, constants;
   BCODE *pc, *codebase;
   int ftype = 0;

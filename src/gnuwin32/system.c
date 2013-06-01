@@ -690,6 +690,7 @@ void R_SetWin32(Rstart Rp)
 	/* printf("stackbase %lx, size %lx\n", top, top-bottom); */
 	R_CStackStart = top;
 	R_CStackLimit = top - bottom;
+	R_CStackThreshold = top - (uintptr_t)(0.95*R_CStackLimit);
     }
 
     R_CStackDir = 1;

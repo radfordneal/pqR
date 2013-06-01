@@ -75,27 +75,41 @@ static char * R_ConciseTraceback(SEXP call, int skip);
 
 static void reset_stack_limit(void *data)
 {
-    unsigned int *limit = (unsigned int *) data;
-    R_CStackLimit = *limit;
+    uintptr_t *limit = (uintptr_t *) data;
+    R_CStackLimit = limit[0];
+    R_CStackThreshold = limit[1];
 }
 
 void R_CheckStack(void)
 {
-    int dummy;
-    intptr_t usage = R_CStackDir * (R_CStackStart - (uintptr_t)&dummy);
+    if (R_CStackLimit == -1)
+        return;
 
-    /* printf("usage %ld\n", usage); */
-    if(R_CStackLimit != -1 && usage > 0.95 * R_CStackLimit) {
+    int dummy;
+    uintptr_t usage = R_CStackDir > 0 ? R_CStackStart - (uintptr_t)&dummy
+                                      : (uintptr_t)&dummy - R_CStackStart;
+
+    if (usage > 0.95 * R_CStackLimit) {
+#if 0 /* enable for debugging */
+        printf ("stack usage limit reached: %lu, dummy %lx, threshold %lx\n", 
+                usage, (uintptr_t)&dummy, R_CStackThreshold);
+#endif
 	/* We do need some stack space to process error recovery,
 	   so temporarily raise the limit.
 	 */
 	RCNTXT cntxt;
-	unsigned int stacklimit = R_CStackLimit;
+	uintptr_t stacklimit[2];
+        stacklimit[0] = R_CStackLimit;
+        stacklimit[1] = R_CStackThreshold;
 	R_CStackLimit += 0.05*R_CStackLimit;
+        if (R_CStackDir < 0)
+            R_CStackThreshold += (uintptr_t) (0.05*R_CStackLimit);
+        else
+            R_CStackThreshold -= (uintptr_t) (0.05*R_CStackLimit);
 	begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
 		     R_NilValue, R_NilValue);
 	cntxt.cend = &reset_stack_limit;
-	cntxt.cenddata = &stacklimit;
+	cntxt.cenddata = stacklimit;
 
 	errorcall(R_NilValue, "C stack usage is too close to the limit");
 	/* Do not translate this, to save stack space */
@@ -104,7 +118,7 @@ void R_CheckStack(void)
 
 void R_CheckUserInterrupt(void)
 {
-    R_CheckStack();
+    R_CHECKSTACK();
 
     /* Don't do any processing of interrupts, timing limits, or other
        asynchronous events if interrupts are suspended. */
@@ -879,7 +893,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	if(strlen(domain)) {
 	    buf = (char *) alloca(strlen(domain)+3);
-	    R_CheckStack();
+	    R_CHECKSTACK();
 	    sprintf(buf, "R-%s", domain);
 	    domain = buf;
 	}
@@ -894,7 +908,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    const char * This = translateChar(STRING_ELT(string, i));
 	    char *tmp, *head = NULL, *tail = NULL, *p, *tr;
 	    tmp = (char *) alloca(strlen(This) + 1);
-	    R_CheckStack();
+	    R_CHECKSTACK();
 	    strcpy(tmp, This);
 	    /* strip leading and trailing white spaces and
 	       add back after translation */
@@ -903,7 +917,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 		p++, ihead++) ;
 	    if(ihead > 0) {
 		head = (char *) alloca(ihead + 1);
-		R_CheckStack();
+		R_CHECKSTACK();
 		strncpy(head, tmp, ihead);
 		head[ihead] = '\0';
 		tmp += ihead;
@@ -914,7 +928,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    p--, itail++) ;
 	    if(itail > 0) {
 		tail = (char *) alloca(itail + 1);
-		R_CheckStack();
+		R_CHECKSTACK();
 		strcpy(tail, tmp+strlen(tmp)-itail);
 		tmp[strlen(tmp)-itail] = '\0';
 		}
@@ -924,7 +938,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 		tr = dgettext(domain, tmp);
 		tmp = (char *) alloca(strlen(tr) + ihead + itail + 1);
-		R_CheckStack();
+		R_CHECKSTACK();
 		tmp[0] ='\0';
 		if(ihead > 0) strcat(tmp, head);
 		strcat(tmp, tr);
@@ -980,7 +994,7 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	if(strlen(domain)) {
 	    buf = (char *) alloca(strlen(domain)+3);
-	    R_CheckStack();
+	    R_CHECKSTACK();
 	    sprintf(buf, "R-%s", domain);
 	    domain = buf;
 	}

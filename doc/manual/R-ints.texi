@@ -1148,6 +1148,24 @@ example, from an ``if'' statement to the evaluation of the chosen
 branch, or from a function call to the evaluation of the body of the
 function --- with any variant result propagated back.
 
+Primitive functions (objects of type BUILTINSXP and SPECIALSXP) are
+implemented using C functions that by convention have names of the
+form @code{do_XXX}.  These functions are associated with symbols by a
+table in @file{names.c}. This table also has other information, such
+as whether the primitive is BUILTIN or SPECIAL, and whether the
+variant argument of evalv is passed on to the @code{do_XXX} function.
+
+Arguments are passed to the @code{do_XXX} function as a pairlist.
+This is inefficient, since it requires that a CONS be allocated for
+every argument passed to a primitive.  In @pqR{}, a faster interface
+is provided for simple cases of unary or binary primitives, in which
+the arguments are unnamed, and are not S3 or S4 objects.  This
+interface is enabled by setting up a @code{do_fast_XXX} function to
+handle such simple cases, which receives the arguments of the
+primitive directly as C arguments.  For details, see the documentation
+in the code for @code{evalv}, and the definitions for PRIMFUN_FAST and
+related macros in @file{Rinternals.h}.
+
 @comment Just here to help with merging new section later...
 
 @node Reference counts and the nmcnt field, The write barrier, The eval function, R Internal Structures

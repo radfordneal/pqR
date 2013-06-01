@@ -103,11 +103,11 @@ static SEXP mkCharWLen(const wchar_t *wc, int nc)
 {
     int nb; char *xi; wchar_t *wt;
     wt = (wchar_t *) alloca((nc+1)*sizeof(wchar_t));
-    R_CheckStack();
+    R_CHECKSTACK();
     wcsncpy(wt, wc, nc); wt[nc] = 0;
     nb = wcstoutf8(NULL, wt, nc);
     xi = (char *) alloca((nb+1)*sizeof(char));
-    R_CheckStack();
+    R_CHECKSTACK();
     wcstoutf8(xi, wt, nb + 1);
     return mkCharLenCE(xi, nb, CE_UTF8);
 }
@@ -1370,13 +1370,13 @@ char *pcre_string_adj(char *target, const char *orig, const char *repl,
 		    char *xi, *p;
 		    wchar_t *wc;
 		    p = xi = (char *) alloca((nb+1)*sizeof(char));
-		    R_CheckStack();
+		    R_CHECKSTACK();
 		    for (j = 0; j < nb; j++) *p++ = orig[ovec[2*k]+j];
 		    *p = '\0';
 		    nc = utf8towcs(NULL, xi, 0);
 		    if (nc >= 0) {
 			wc = (wchar_t *) alloca((nc+1)*sizeof(wchar_t));
-			R_CheckStack();
+			R_CHECKSTACK();
 			utf8towcs(wc, xi, nc + 1);
 			for (j = 0; j < nc; j++) wc[j] = towctrans(wc[j], tr);
 			nb = wcstoutf8(NULL, wc, 0);
@@ -1884,7 +1884,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 static int getNc(const char *s, int st)
 {
     char *buf = alloca(st+1);
-    R_CheckStack();
+    R_CHECKSTACK();
     memcpy(buf, s, st);
     buf[st] = '\0';
     return utf8towcs(NULL, buf, 0);

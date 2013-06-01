@@ -388,7 +388,7 @@ static SEXP StripTerm(SEXP term, SEXP list)
     if (list == R_NilValue)
 	return list;
     /* This can be highly recursive */
-    R_CheckStack();
+    R_CHECKSTACK();
     tail = StripTerm(term, CDR(list));
     if (TermEqual(term, CAR(list)))
 	return tail;

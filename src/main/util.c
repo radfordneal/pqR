@@ -1360,7 +1360,7 @@ size_t Mbrtowc(wchar_t *wc, const char *s, size_t n, mbstate_t *ps)
 	/* let's try to print out a readable version */
 	char err[4*strlen(s) + 1], *q;
 	const char *p;
-	R_CheckStack();
+	R_CHECKSTACK();
 	for(p = s, q = err; *p; ) {
 	    /* don't do the first to keep ps state straight */
 	    if(p > s) used = mbrtowc(NULL, p, n, ps);
@@ -1962,7 +1962,7 @@ void attribute_hidden resetICUcollator(void) {}
 static int Rstrcoll(const char *s1, const char *s2)
 {
     wchar_t w1[strlen(s1)+1], w2[strlen(s2)+1];
-    R_CheckStack();
+    R_CHECKSTACK();
     utf8towcs(w1, s1, strlen(s1));
     utf8towcs(w2, s2, strlen(s2));
     return wcscoll(w1, w2);

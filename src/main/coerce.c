@@ -1626,104 +1626,82 @@ SEXP attribute_hidden do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* Define many of the <primitive> "is.xxx" functions :
    Note that  isNull, isNumeric, etc are defined in util.c or Rinlinedfuns.h
 */
-SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_fast_is(SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 {
     int log_ans;
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    /* These are all builtins, so we do not need to worry about
-       evaluating arguments in DispatchOrEval */
-    if(PRIMVAL(op) >= 100 && PRIMVAL(op) < 200 &&
-       isObject(CAR(args))) {
-        SEXP ans;
-	/* This used CHAR(PRINTNAME(CAR(call))), but that is not
-	   necessarily correct, e.g. when called from lapply() */
-	const char *nm;
-	switch(PRIMVAL(op)) {
-	case 100: nm = "is.numeric"; break;
-	case 101: nm = "is.matrix"; break;
-	case 102: nm = "is.array"; break;
-	default: nm = ""; /* -Wall */
-	}
-	if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1))
-	    return(ans);
-    }
-
     switch (PRIMVAL(op)) {
     case NILSXP:	/* is.null */
-	log_ans = isNull(CAR(args));
+	log_ans = isNull(arg);
 	break;
     case LGLSXP:	/* is.logical */
-	log_ans = (TYPEOF(CAR(args)) == LGLSXP);
+	log_ans = (TYPEOF(arg) == LGLSXP);
 	break;
     case INTSXP:	/* is.integer */
-	log_ans = (TYPEOF(CAR(args)) == INTSXP)
-	    && !inherits(CAR(args), "factor");
+	log_ans = (TYPEOF(arg) == INTSXP)
+	    && !inherits(arg, "factor");
 	break;
     case REALSXP:	/* is.double == is.real */
-	log_ans = (TYPEOF(CAR(args)) == REALSXP);
+	log_ans = (TYPEOF(arg) == REALSXP);
 	break;
     case CPLXSXP:	/* is.complex */
-	log_ans = (TYPEOF(CAR(args)) == CPLXSXP);
+	log_ans = (TYPEOF(arg) == CPLXSXP);
 	break;
     case STRSXP:	/* is.character */
-	log_ans = (TYPEOF(CAR(args)) == STRSXP);
+	log_ans = (TYPEOF(arg) == STRSXP);
 	break;
     case SYMSXP:	/* is.symbol === is.name */
-	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == S4SXP)) {
-	    SEXP dot_xData = R_getS4DataSlot(CAR(args), SYMSXP);
+	if(IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP)) {
+	    SEXP dot_xData = R_getS4DataSlot(arg, SYMSXP);
 	    log_ans = (TYPEOF(dot_xData) == SYMSXP);
 	}
 	else
-	    log_ans = (TYPEOF(CAR(args)) == SYMSXP);
+	    log_ans = (TYPEOF(arg) == SYMSXP);
 	break;
     case ENVSXP:	/* is.environment */
-	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == S4SXP)) {
-	    SEXP dot_xData = R_getS4DataSlot(CAR(args), ENVSXP);
+	if(IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP)) {
+	    SEXP dot_xData = R_getS4DataSlot(arg, ENVSXP);
 	    log_ans = (TYPEOF(dot_xData) == ENVSXP);
 	}
 	else
-	    log_ans = (TYPEOF(CAR(args)) == ENVSXP);
+	    log_ans = (TYPEOF(arg) == ENVSXP);
 	break;
     case VECSXP:	/* is.list */
-	log_ans = (TYPEOF(CAR(args)) == VECSXP ||
-			   TYPEOF(CAR(args)) == LISTSXP);
+	log_ans = (TYPEOF(arg) == VECSXP ||
+			   TYPEOF(arg) == LISTSXP);
 	break;
     case LISTSXP:	/* is.pairlist */
-	log_ans = (TYPEOF(CAR(args)) == LISTSXP ||
-			   TYPEOF(CAR(args)) == NILSXP);/* pairlist() -> NULL */
+	log_ans = (TYPEOF(arg) == LISTSXP ||
+			   TYPEOF(arg) == NILSXP);/* pairlist() -> NULL */
 	break;
     case EXPRSXP:	/* is.expression */
-	log_ans = TYPEOF(CAR(args)) == EXPRSXP;
+	log_ans = TYPEOF(arg) == EXPRSXP;
 	break;
     case RAWSXP:	/* is.raw */
-	log_ans = (TYPEOF(CAR(args)) == RAWSXP);
+	log_ans = (TYPEOF(arg) == RAWSXP);
 	break;
 
     case 50:		/* is.object */
-	log_ans = OBJECT(CAR(args));
+	log_ans = OBJECT(arg);
 	break;
 /* no longer used: is.data.frame is R code
     case 80:
-	log_ans = isFrame(CAR(args));
+	log_ans = isFrame(arg);
 	break;
 */
-
     case 100:		/* is.numeric */
-	log_ans = isNumeric(CAR(args)) &&
-	    !isLogical(CAR(args));  /* isNumeric excludes factors */
+	log_ans = 
+          isNumeric(arg) && !isLogical(arg);  /* isNumeric excludes factors */
 	break;
     case 101:		/* is.matrix */
-	log_ans = isMatrix(CAR(args));
+	log_ans = isMatrix(arg);
 	break;
     case 102:		/* is.array */
-	log_ans = isArray(CAR(args));
+	log_ans = isArray(arg);
 	break;
 
     case 200:		/* is.atomic */
-	switch(TYPEOF(CAR(args))) {
+	switch(TYPEOF(arg)) {
 	case NILSXP:
 	    /* NULL is atomic (S compatibly), but not in isVectorAtomic(.) */
 	case CHARSXP:
@@ -1741,7 +1719,7 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	break;
     case 201:		/* is.recursive */
-	switch(TYPEOF(CAR(args))) {
+	switch(TYPEOF(arg)) {
 	case VECSXP:
 	case LISTSXP:
 	case CLOSXP:
@@ -1765,15 +1743,14 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	break;
 
     case 300:		/* is.call */
-	log_ans = TYPEOF(CAR(args)) == LANGSXP;
+	log_ans = TYPEOF(arg) == LANGSXP;
 	break;
     case 301:		/* is.language */
-	log_ans = (TYPEOF(CAR(args)) == SYMSXP ||
-			   TYPEOF(CAR(args)) == LANGSXP ||
-			   TYPEOF(CAR(args)) == EXPRSXP);
+	log_ans = (TYPEOF(arg) == SYMSXP || TYPEOF(arg) == LANGSXP 
+                                         || TYPEOF(arg) == EXPRSXP);
 	break;
     case 302:		/* is.function */
-	log_ans = isFunction(CAR(args));
+	log_ans = isFunction(arg);
 	break;
 
     case 999:		/* is.single */
@@ -1783,6 +1760,37 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     return ScalarLogical(log_ans);
+}
+
+SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    /* These are all builtins, so we do not need to worry about
+       evaluating arguments in DispatchOrEval */
+    if (PRIMVAL(op) >= 100 && PRIMVAL(op) < 200) {
+        if (isObject(CAR(args))) {
+            SEXP ans;
+            /* This used CHAR(PRINTNAME(CAR(call))), but that is not
+               necessarily correct, e.g. when called from lapply() */
+            const char *nm;
+            switch(PRIMVAL(op)) {
+            case 100: nm = "is.numeric"; break;
+            case 101: nm = "is.matrix"; break;
+            case 102: nm = "is.array"; break;
+            default: nm = ""; /* -Wall */
+            }
+            if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1))
+                return(ans);
+        }
+        if (PRIMFUN_FAST(op)==0) 
+            SET_PRIMFUN_FAST_UNARY (op, do_fast_is, 1, 0);
+    }
+    else if (PRIMFUN_FAST(op)==0) 
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_is, 0, 0);
+
+    return do_fast_is (call, op, CAR(args), rho, 0);
 }
 
 /* What should is.vector do ?
@@ -1833,54 +1841,108 @@ SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarLogical(log_ans);
 }
 
-SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 {
-    SEXP ans, dims, names, x;
-    int i, n;
+    SEXP ans, dims, names;
+    int i, ret;
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 1, 1))
-	return(ans);
-    PROTECT(args = ans);
 #ifdef stringent_is
-    if (!isList(CAR(args)) && !isVector(CAR(args)))
+    if (!isList(x) && !isVector(x))
 	errorcall_return(call, "is.na " R_MSG_list_vec);
 
 #endif
-    x = CAR(args);
-    n = length(x);
-    PROTECT(ans = allocVector(LGLSXP, n));
-    if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
-	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
-	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+
+    int n = length(x);
+
+    if (!isVectorAtomic(x) || variant!=VARIANT_AND && variant!=VARIANT_OR) {
+        PROTECT(ans = allocVector(LGLSXP, n));
+        if (isVector(x)) {
+	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(names = 
+              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
+        }
     }
-    else dims = names = R_NilValue;
+
     switch (TYPEOF(x)) {
     case LGLSXP:
-       for (i = 0; i < n; i++)
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (LOGICAL(x)[i] != NA_LOGICAL) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (LOGICAL(x)[i] == NA_LOGICAL) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (LOGICAL(x)[i] == NA_LOGICAL);
 	break;
     case INTSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (INTEGER(x)[i] != NA_INTEGER) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (INTEGER(x)[i] == NA_INTEGER) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (INTEGER(x)[i] == NA_INTEGER);
 	break;
     case REALSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (!ISNAN(REAL(x)[i])) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (ISNAN(REAL(x)[i])) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = ISNAN(REAL(x)[i]);
 	break;
     case CPLXSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (! (ISNAN(COMPLEX(x)[i].r) 
+                    || ISNAN(COMPLEX(x)[i].i))) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (ISNAN(COMPLEX(x)[i].r) 
+                 || ISNAN(COMPLEX(x)[i].i)) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (ISNAN(COMPLEX(x)[i].r) ||
 			       ISNAN(COMPLEX(x)[i].i));
 	break;
     case STRSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (STRING_ELT(x,i) != NA_STRING) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (STRING_ELT(x,i) == NA_STRING) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (STRING_ELT(x, i) == NA_STRING);
+	break;
+    case RAWSXP:
+	/* no such thing as a raw NA */
+        if (variant == VARIANT_AND) { ret = n==0;  goto vret; }
+        if (variant == VARIANT_OR)  { ret = FALSE; goto vret; }
+	for (i = 0; i < n; i++)
+	    LOGICAL(ans)[i] = 0;
 	break;
 
 /* Same code for LISTSXP and VECSXP : */
@@ -1920,36 +1982,144 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    LIST_VEC_NA(s);
 	}
 	break;
-    case RAWSXP:
-	/* no such thing as a raw NA */
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
-	break;
     default:
 	warningcall(call, _("%s() applied to non-(list or vector) of type '%s'"),
 		    "is.na", type2char(TYPEOF(x)));
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = 0;
     }
-    if (dims != R_NilValue)
-	setAttrib(ans, R_DimSymbol, dims);
-    if (names != R_NilValue) {
-	if (isArray(x))
-	    setAttrib(ans, R_DimNamesSymbol, names);
-	else
-	    setAttrib(ans, R_NamesSymbol, names);
+
+    if (isVector(x)) {
+        if (dims != R_NilValue)
+            setAttrib (ans, R_DimSymbol, dims);
+        if (names != R_NilValue)
+	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
+                       names);
+	UNPROTECT(2); /* dims & names */
     }
-    if (isVector(x))
-	UNPROTECT(2);
-    UNPROTECT(1);
+
     UNPROTECT(1); /*ans*/
+    return ans;
+
+    /* Return variant result. */
+
+vret:
+    ans = allocVector (LGLSXP, 1);
+    LOGICAL(ans)[0] = ret;
+    SET_ATTRIB (ans, R_VariantResult);
     return ans;
 }
 
-SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_isna (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, dims, names, x;
-    int i, n;
+    SEXP ans;
+
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 1, 1))
+	return(ans);
+
+    if (PRIMFUN_FAST(op)==0) 
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_isna, 1, 0);
+
+    return do_fast_isna (call, op, CAR(args), rho, 0);
+}
+
+static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
+{
+    SEXP ans, dims, names;
+    int i, ret;
+
+#ifdef stringent_is
+    if (!isList(x) && !isVector(x))
+	errorcall_return(call, "is.nan " R_MSG_list_vec);
+
+#endif
+
+    int n = length(x);
+
+    if (variant != VARIANT_AND && variant != VARIANT_OR) {
+        PROTECT(ans = allocVector(LGLSXP, n));
+        if (isVector(x)) {
+	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(names = 
+              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
+        }
+    }
+
+    switch (TYPEOF(x)) {
+    case STRSXP:
+    case RAWSXP:
+    case NILSXP:
+    case LGLSXP:
+    case INTSXP:
+        if (variant == VARIANT_AND) { ret = n==0;  goto vret; }
+        if (variant == VARIANT_OR)  { ret = FALSE; goto vret; }
+	for (i = 0; i < n; i++)
+	    LOGICAL(ans)[i] = 0;
+	break;
+    case REALSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (!R_IsNaN(REAL(x)[i])) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (R_IsNaN(REAL(x)[i])) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
+            LOGICAL(ans)[i] = R_IsNaN(REAL(x)[i]);
+        break;
+    case CPLXSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (! (R_IsNaN(COMPLEX(x)[i].r)
+                    || R_IsNaN(COMPLEX(x)[i].i))) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (R_IsNaN(COMPLEX(x)[i].r)
+                 || R_IsNaN(COMPLEX(x)[i].i)) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
+            LOGICAL(ans)[i] = (R_IsNaN(COMPLEX(x)[i].r) ||
+                               R_IsNaN(COMPLEX(x)[i].i));
+        break;
+    default:
+        errorcall(call, 
+                  _("default method not implemented for type '%s'"), 
+                  type2char(TYPEOF(x)));
+    }
+
+    if (isVector(x)) {
+        if (dims != R_NilValue)
+            setAttrib (ans, R_DimSymbol, dims);
+        if (names != R_NilValue)
+	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
+                       names);
+	UNPROTECT(2); /* dims & names */
+    }
+
+    UNPROTECT(1); /*ans*/
+    return ans;
+
+    /* Return variant result. */
+
+vret:
+    ans = allocVector (LGLSXP, 1);
+    LOGICAL(ans)[0] = ret;
+    SET_ATTRIB (ans, R_VariantResult);
+    return ans;
+}
+
+SEXP attribute_hidden do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP ans;
 
     checkArity(op, args);
     check1arg_x (args, call);
@@ -1957,183 +2127,251 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 1, 1))
 	return(ans);
 
-    PROTECT(args = ans);
+    if (PRIMFUN_FAST(op)==0) 
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_isnan, 1, 0);
+
+    return do_fast_isnan (call, op, CAR(args), rho, 0);
+}
+
+static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, 
+                              int variant)
+{
+    SEXP ans, dims, names;
+    int i, ret;
+
 #ifdef stringent_is
-    if (!isList(CAR(args)) && !isVector(CAR(args)))
-	errorcall_return(call, "is.nan " R_MSG_list_vec);
+    if (!isList(x) && !isVector(x))
+	errorcall_return(call, "is.finite " R_MSG_list_vec);
+
 #endif
-    x = CAR(args);
-    n = length(x);
-    PROTECT(ans = allocVector(LGLSXP, n));
-    if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
-	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
-	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+
+    int n = length(x);
+
+    if (variant != VARIANT_AND && variant != VARIANT_OR) {
+        PROTECT(ans = allocVector(LGLSXP, n));
+        if (isVector(x)) {
+	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(names = 
+              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
+        }
     }
-    else dims = names = R_NilValue;
+
     switch (TYPEOF(x)) {
     case STRSXP:
     case RAWSXP:
     case NILSXP:
-    case LGLSXP:
-    case INTSXP:
+        if (variant == VARIANT_AND) { ret = n==0;  goto vret; }
+        if (variant == VARIANT_OR)  { ret = FALSE; goto vret; }
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = 0;
 	break;
+    case LGLSXP:
+    case INTSXP:
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (INTEGER(x)[i] == NA_INTEGER) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (INTEGER(x)[i] != NA_INTEGER) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
+            LOGICAL(ans)[i] = INTEGER(x)[i] != NA_INTEGER;
+        break;
     case REALSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = R_IsNaN(REAL(x)[i]);
-	break;
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (!R_FINITE(REAL(x)[i])) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (R_FINITE(REAL(x)[i])) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
+            LOGICAL(ans)[i] = R_FINITE(REAL(x)[i]);
+        break;
     case CPLXSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (R_IsNaN(COMPLEX(x)[i].r) ||
-			       R_IsNaN(COMPLEX(x)[i].i));
-	break;
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (! (R_FINITE(COMPLEX(x)[i].r)
+                    && R_FINITE(COMPLEX(x)[i].i))) { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (R_FINITE(COMPLEX(x)[i].r)
+                 && R_FINITE(COMPLEX(x)[i].i)) { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
+            LOGICAL(ans)[i] = R_FINITE(COMPLEX(x)[i].r)
+                               && R_FINITE(COMPLEX(x)[i].i);
+        break;
     default:
-        errorcall(call, _("default method not implemented for type '%s'"), type2char(TYPEOF(x)));
+        errorcall(call, 
+                  _("default method not implemented for type '%s'"), 
+                  type2char(TYPEOF(x)));
     }
-    if (dims != R_NilValue)
-	setAttrib(ans, R_DimSymbol, dims);
-    if (names != R_NilValue) {
-	if (isArray(x))
-	    setAttrib(ans, R_DimNamesSymbol, names);
-	else
-	    setAttrib(ans, R_NamesSymbol, names);
+
+    if (isVector(x)) {
+        if (dims != R_NilValue)
+            setAttrib (ans, R_DimSymbol, dims);
+        if (names != R_NilValue)
+	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
+                       names);
+	UNPROTECT(2); /* dims & names */
     }
-    if (isVector(x))
-	UNPROTECT(2);
-    UNPROTECT(1);
+
     UNPROTECT(1); /*ans*/
     return ans;
+
+    /* Return variant result. */
+
+vret:
+    ans = allocVector (LGLSXP, 1);
+    LOGICAL(ans)[0] = ret;
+    SET_ATTRIB (ans, R_VariantResult);
+    return ans;
 }
 
-SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, x, names, dims;
-    int i, n;
+    SEXP ans;
 
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 1, 1))
 	return(ans);
-#ifdef stringent_is
-    if (!isList(CAR(args)) && !isVector(CAR(args)))
-	errorcall_return(call, "is.finite " R_MSG_list_vec);
-#endif
-    x = CAR(args);
-    n = length(x);
-    ans = allocVector(LGLSXP, n);
-    if (isVector(x)) {
-	dims = getAttrib(x, R_DimSymbol);
-	if (isArray(x))
-	    names = getAttrib(x, R_DimNamesSymbol);
-	else
-	    names = getAttrib(x, R_NamesSymbol);
-    }
-    else dims = names = R_NilValue;
-    switch (TYPEOF(x)) {
-    case STRSXP:
-    case RAWSXP:
-    case NILSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
-	break;
-    case LGLSXP:
-    case INTSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (INTEGER(x)[i] != NA_INTEGER);
-	break;
-    case REALSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = R_FINITE(REAL(x)[i]);
-	break;
-    case CPLXSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (R_FINITE(COMPLEX(x)[i].r) && R_FINITE(COMPLEX(x)[i].i));
-	break;
-    default:
-        errorcall(call, _("default method not implemented for type '%s'"), type2char(TYPEOF(x)));
-    }
-    if (dims != R_NilValue)
-	setAttrib(ans, R_DimSymbol, dims);
-    if (names != R_NilValue) {
-	if (isArray(x))
-	    setAttrib(ans, R_DimNamesSymbol, names);
-	else
-	    setAttrib(ans, R_NamesSymbol, names);
-    }
-    return ans;
+
+    if (PRIMFUN_FAST(op)==0) 
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_isfinite, 1, 0);
+
+    return do_fast_isfinite (call, op, CAR(args), rho, 0);
 }
 
-SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho, 
+                                int variant)
 {
-    SEXP ans, x, names, dims;
+    SEXP ans, dims, names;
     double xr, xi;
-    int i, n;
+    int i, ret;
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 0, 1))
-	return(ans);
 #ifdef stringent_is
-    if (!isList(CAR(args)) && !isVector(CAR(args)))
+    if (!isList(x) && !isVector(x))
 	errorcall_return(call, "is.infinite " R_MSG_list_vec);
+
 #endif
-    x = CAR(args);
-    n = length(x);
-    ans = allocVector(LGLSXP, n);
-    if (isVector(x)) {
-	dims = getAttrib(x, R_DimSymbol);
-	if (isArray(x))
-	    names = getAttrib(x, R_DimNamesSymbol);
-	else
-	    names = getAttrib(x, R_NamesSymbol);
+
+    int n = length(x);
+
+    if (variant != VARIANT_AND && variant != VARIANT_OR) {
+        PROTECT(ans = allocVector(LGLSXP, n));
+        if (isVector(x)) {
+	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(names = 
+              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
+        }
     }
-    else	dims = names = R_NilValue;
+
     switch (TYPEOF(x)) {
     case STRSXP:
     case RAWSXP:
     case NILSXP:
     case LGLSXP:
     case INTSXP:
+        if (variant == VARIANT_AND) { ret = n==0;  goto vret; }
+        if (variant == VARIANT_OR)  { ret = FALSE; goto vret; }
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = 0;
 	break;
     case REALSXP:
-	for (i = 0; i < n; i++) {
-	    xr = REAL(x)[i];
-	    if (ISNAN(xr) || R_FINITE(xr))
-		LOGICAL(ans)[i] = 0;
-	    else
-		LOGICAL(ans)[i] = 1;
-	}
-	break;
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++)
+                if (ISNAN(REAL(x)[i]) || R_FINITE(REAL(x)[i]))
+                    { ret = FALSE; goto vret; }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++)
+                if (!ISNAN(REAL(x)[i]) && !R_FINITE(REAL(x)[i]))
+                    { ret = TRUE; goto vret; }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++)
+            LOGICAL(ans)[i] = !ISNAN(REAL(x)[i]) && !R_FINITE(REAL(x)[i]);
+        break;
     case CPLXSXP:
-	for (i = 0; i < n; i++) {
-	    xr = COMPLEX(x)[i].r;
-	    xi = COMPLEX(x)[i].i;
-	    if ((ISNAN(xr) || R_FINITE(xr)) && (ISNAN(xi) || R_FINITE(xi)))
-		LOGICAL(ans)[i] = 0;
-	    else
-		LOGICAL(ans)[i] = 1;
-	}
-	break;
+        if (variant == VARIANT_AND) {
+            for (i = 0; i < n; i++) {
+                xr = COMPLEX(x)[i].r;
+                xi = COMPLEX(x)[i].i;
+                if ((ISNAN(xr) || R_FINITE(xr)) 
+                 && (ISNAN(xi) || R_FINITE(xi))) { ret = FALSE; goto vret; }
+            }
+            ret = TRUE; goto vret;
+        }
+        if (variant == VARIANT_OR) {
+            for (i = 0; i < n; i++) {
+                xr = COMPLEX(x)[i].r;
+                xi = COMPLEX(x)[i].i;
+                if (!ISNAN(xr) && !R_FINITE(xr) 
+                 || !ISNAN(xi) && !R_FINITE(xi)) { ret = TRUE; goto vret; }
+            }
+            ret = FALSE; goto vret;
+        }
+        for (i = 0; i < n; i++) {
+            xr = COMPLEX(x)[i].r;
+            xi = COMPLEX(x)[i].i;
+            LOGICAL(ans)[i] = 
+              !ISNAN(xr) && !R_FINITE(xr) || !ISNAN(xi) && !R_FINITE(xi);
+        }
+        break;
     default:
-        errorcall(call, _("default method not implemented for type '%s'"), type2char(TYPEOF(x)));
+        errorcall(call, 
+                  _("default method not implemented for type '%s'"), 
+                  type2char(TYPEOF(x)));
     }
-    if (!isNull(dims))
-	setAttrib(ans, R_DimSymbol, dims);
-    if (!isNull(names)) {
-	if (isArray(x))
-	    setAttrib(ans, R_DimNamesSymbol, names);
-	else
-	    setAttrib(ans, R_NamesSymbol, names);
+
+    if (isVector(x)) {
+        if (dims != R_NilValue)
+            setAttrib (ans, R_DimSymbol, dims);
+        if (names != R_NilValue)
+	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
+                       names);
+	UNPROTECT(2); /* dims & names */
     }
+
+    UNPROTECT(1); /*ans*/
     return ans;
+
+    /* Return variant result. */
+
+vret:
+    ans = allocVector (LGLSXP, 1);
+    LOGICAL(ans)[0] = ret;
+    SET_ATTRIB (ans, R_VariantResult);
+    return ans;
+}
+
+SEXP attribute_hidden do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho) 
+{
+    SEXP ans;
+
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 1, 1))
+	return(ans);
+
+    if (PRIMFUN_FAST(op)==0) 
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_isinfinite, 1, 0);
+
+    return do_fast_isinfinite (call, op, CAR(args), rho, 0);
 }
 
 /* This is a primitive SPECIALSXP */

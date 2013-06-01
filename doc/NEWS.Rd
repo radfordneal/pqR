@@ -169,11 +169,22 @@
       \item **41
       \item **42
       \item **43
-      \item **44
+      \item Many unary and binary primitive functions are now usually
+            called using a faster internal interface that does not allocate
+            nodes for a pairlist of evaluated arguments. This change
+            substantially speeds up some programs.
       \item **45
       \item The \code{any} and \code{all} primitives have been substantially
-            speeded up for large vectors.
-      \item **47
+            speeded up for large vectors.  Also, expressions such as
+            \code{all(v>0)} and \code{any(is.na(v))} where \code{v} is a
+            real vector avoid computing and storing a logical vector,
+            instead computing the result of \code{any} or \code{all}
+            without this intermediate, looking at only as much of \code{v}
+            as is needed to determine the result.
+      \item When \code{sum} is applied to many mathematical functions
+            of one vector argument, for example \code{sum(log(v))}, the
+            sum is performed as the function is computed, without a
+            vector being allocated to hold the function values.  
       \item **48
       \item **49
       \item **50
@@ -404,11 +415,26 @@
       \item **9
       \item **10
       \item **11
-      \item **12
-      \item **13
-      \item **14
+      \item Fixed a minor error-reporting bug with
+            \code{(1:2):integer(0)} and similar expressions.
+      \item Fixed a bug that could lead to mis-identification of the 
+            direction of stack growth on a non-Windows system, causing
+            stack overflow to not be detected, and a segmentation fault 
+            to occur.  (I also reported this bug and how to fix it to the 
+            R Core Team, who included a fix in R-2.15.2.)
+      \item Fixed a bug where, for example, \code{log(base=4)} returned 
+            the natural log of 4, rather than signalling an error. 
       \item **15
-      \item **16
+      \item Fixed a bug in \code{sum}, where overflow is allowed (and not 
+            detected) where overflow can actually be avoided.  For example:
+\preformatted{
+> v<-c(3L,1000000000L:1010000000L,-(1000000000L:1010000000L))
+> sum(v)
+[1] 4629
+}
+            Also fixed a related bug in \code{mean}, applied to an integer
+            vector, which would arise only on a system where a long double 
+            is no bigger than a double.
       \item **17
       \item Fixed a bug where more than six warning messages at startup
             would overwrite random memory, causing garbage output 
