@@ -1084,123 +1084,170 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 #undef YDIMS_ET_CETERA
 
-SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
+void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
 {
-    SEXP a, r, dims, dimnames, dimnamesnames=R_NilValue,
-	ndimnamesnames, rnames, cnames;
-    int ldim, len = 0, ncol=0, nrow=0;
-    int i, j;
+    int nrow = EXTRACT_LENGTH1(op);
+    int ncol = EXTRACT_LENGTH2(op);
+    R_len_t len = LENGTH(a);
+    R_len_t l_1 = len-1;
+    R_len_t l_2 = len-2;
+    unsigned i, j, k;
 
-    checkArity(op, args);
-    a = CAR(args);
+    HELPERS_SETUP_OUT (8);
 
-    if (isVector(a)) {
-	dims = getAttrib(a, R_DimSymbol);
-	ldim = length(dims);
-	rnames = R_NilValue;
-	cnames = R_NilValue;
-	switch(ldim) {
-	case 0:
-	    nrow = len = length(a);
-	    ncol = 1;
-	    rnames = getAttrib(a, R_NamesSymbol);
-	    dimnames = rnames;/* for isNull() below*/
-	    break;
-	case 1:
-	    nrow = len = length(a);
-	    ncol = 1;
-	    dimnames = getAttrib(a, R_DimNamesSymbol);
-	    if (dimnames != R_NilValue) {
-		rnames = VECTOR_ELT(dimnames, 0);
-		dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
-	    }
-	    break;
-	case 2:
-	    ncol = ncols(a);
-	    nrow = nrows(a);
-	    len = length(a);
-	    dimnames = getAttrib(a, R_DimNamesSymbol);
-	    if (dimnames != R_NilValue) {
-		rnames = VECTOR_ELT(dimnames, 0);
-		cnames = VECTOR_ELT(dimnames, 1);
-		dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
-	    }
-	    break;
-	default:
-	    goto not_matrix;
-	}
-    }
-    else
-	goto not_matrix;
-
-    PROTECT(r = allocVector(TYPEOF(a), len));
-
-    int l_1 = len-1, l_2 = len-2;
     switch (TYPEOF(a)) {
+
     /* For LGL, INT, and REAL, access successive pairs from two rows, and 
        store in successive positions in two columns (except perhaps for the 
-       first row & column).  This improves memory access performance.*/
+       first row & column).  This improves memory access performance.
+
+       Keep in mind:  nrow & ncol are the number of rows and columns in the
+                      input - this is swapped for the output! */
+
     case LGLSXP:
     case INTSXP:
+        k = 0;
         i = 0;
-        if (nrow & 1) 
+        if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
                 INTEGER(r)[i] = INTEGER(a)[j];
+            HELPERS_BLOCK_OUT(k,ncol);
+        }
         j = nrow & 1;
         while (i < len) {
             INTEGER(r)[i] = INTEGER(a)[j]; 
             INTEGER(r)[i+ncol] = INTEGER(a)[j+1];
             i += 1; j += nrow;
-            if (j >= len) { i += ncol; j -= l_2; }
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+                HELPERS_BLOCK_OUT(k,2*ncol);
+            }
         }
         break;
+
     case REALSXP:
+        k = 0;
         i = 0;
-        if (nrow & 1) 
+        if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
                 REAL(r)[i] = REAL(a)[j];
+            HELPERS_BLOCK_OUT(k,ncol);
+        }
         j = nrow & 1;
         while (i < len) {
             REAL(r)[i] = REAL(a)[j]; 
             REAL(r)[i+ncol] = REAL(a)[j+1];
             i += 1; j += nrow;
-            if (j >= len) { i += ncol; j -= l_2; }
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+                HELPERS_BLOCK_OUT(k,2*ncol);
+            }
         }
         break;
+
     /* For less-used types below, just access row-wise and store column-wise. */
+
     case CPLXSXP:
-        for (i = 0, j = 0; i < len; i++, j += nrow) {
+        for (i = 0, j = 0; i < len; j += nrow) {
             if (j > l_1) j -= l_1;
             COMPLEX(r)[i] = COMPLEX(a)[j];
+            HELPERS_NEXT_OUT(i);
         }
         break;
-    case STRSXP:
-        for (i = 0, j = 0; i < len; i++, j += nrow) {
-            if (j > l_1) j -= l_1;
-            SET_STRING_ELT(r, i, STRING_ELT(a,j));
-        }
-        break;
-    case VECSXP:
-        for (i = 0, j = 0; i < len; i++, j += nrow) {
-            if (j > l_1) j -= l_1;
-            SET_VECTOR_ELT(r, i, VECTOR_ELT(a,j));
-        }
-        break;
+
     case RAWSXP:
-        for (i = 0, j = 0; i < len; i++, j += nrow) {
+        for (i = 0, j = 0; i < len; j += nrow) {
             if (j > l_1) j -= l_1;
             RAW(r)[i] = RAW(a)[j];
+            HELPERS_NEXT_OUT(i);
         }
         break;
-    default:
-        UNPROTECT(1);
-        goto not_matrix;
+
+    case STRSXP:
+        for (i = 0, j = 0; i < len; j += nrow) {
+            if (j > l_1) j -= l_1;
+            SET_STRING_ELT(r, i, STRING_ELT(a,j));
+            HELPERS_NEXT_OUT(i);
+        }
+        break;
+
+    case EXPRSXP:
+    case VECSXP:
+        for (i = 0, j = 0; i < len; j += nrow) {
+            if (j > l_1) j -= l_1;
+            SET_VECTOR_ELT(r, i, VECTOR_ELT(a,j));
+            HELPERS_NEXT_OUT(i);
+        }
+        break;
     }
+}
+
+#define T_transpose THRESHOLD_ADJUST(10)
+
+SEXP attribute_hidden do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho,
+                                    int variant)
+{
+    SEXP a, r, dims, dimnames, dimnamesnames, ndimnamesnames, rnames, cnames;
+    int ldim, len, ncol, nrow;
+
+    checkArity(op, args);
+    a = CAR(args);
+
+    if (!isVector(a)) goto not_matrix;
+
+    dims = getAttrib(a, R_DimSymbol);
+    ldim = length(dims); /* not LENGTH, since could be null */
+
+    if (ldim > 2) goto not_matrix;
+
+    len = LENGTH(a);
+    nrow = ldim == 2 ? nrows(a) : len;
+    ncol = ldim == 2 ? ncols(a) : 1;
+
+    PROTECT(r = allocVector(TYPEOF(a), len));
+
+    /* Start task.  Matrices with pointer elements must be done in master only.
+       Since we don't assume that writing a pointer to memory is atomic, the
+       garbage collector could read a garbage pointer if written in a helper. */
+
+    DO_NOW_OR_LATER1 (variant, LENGTH(a) >= T_transpose,
+        isVectorNonpointer(a) ? HELPERS_PIPE_OUT : HELPERS_MASTER_ONLY, 
+        task_transpose, COMBINE_LENGTHS(nrow,ncol), r, a);
+
+    rnames = R_NilValue;
+    cnames = R_NilValue;
+    dimnamesnames = R_NilValue;
+
+    switch(ldim) {
+    case 0:
+        rnames = getAttrib(a, R_NamesSymbol);
+        dimnames = rnames;/* for isNull() below*/
+        break;
+    case 1:
+        dimnames = getAttrib(a, R_DimNamesSymbol);
+        if (dimnames != R_NilValue) {
+            rnames = VECTOR_ELT(dimnames, 0);
+            dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+        }
+        break;
+    case 2:
+        dimnames = getAttrib(a, R_DimNamesSymbol);
+        if (dimnames != R_NilValue) {
+            rnames = VECTOR_ELT(dimnames, 0);
+            cnames = VECTOR_ELT(dimnames, 1);
+            dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+        }
+        break;
+    }
+
     PROTECT(dims = allocVector(INTSXP, 2));
     INTEGER(dims)[0] = ncol;
     INTEGER(dims)[1] = nrow;
     setAttrib(r, R_DimSymbol, dims);
     UNPROTECT(1);
+
     /* R <= 2.2.0: dropped list(NULL,NULL) dimnames :
      * if(rnames != R_NilValue || cnames != R_NilValue) */
     if(!isNull(dimnames)) {
@@ -1222,9 +1269,10 @@ SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
     copyMostAttrib(a, r);
     UNPROTECT(1);
     return r;
+
  not_matrix:
     error(_("argument is not a matrix"));
-    return call;/* never used; just for -Wall */
+    return R_NilValue;/* never used; just for -Wall */
 }
 
 /*

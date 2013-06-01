@@ -40,6 +40,7 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(rowSums_or_rowMeans);
     TASK_NAME(colSums_or_colMeans);
     /* b */
+    TASK_NAME(transpose);
     /* c */
     TASK_NAME(unary_minus);
     /* d */

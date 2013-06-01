@@ -93,6 +93,11 @@
   (1<<RAWSXP) + (1<<STRSXP) + (1<<CPLXSXP) \
 )
 
+#define NONPOINTER_VECTOR_TYPES ( \
+  (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) + \
+  (1<<RAWSXP) + (1<<CPLXSXP) \
+)
+
 #define NONATOMIC_VECTOR_TYPES ( \
   (1<<VECSXP) + (1<<EXPRSXP) \
 )
@@ -382,6 +387,11 @@ INLINE_FUN Rboolean isVectorList(SEXP s)
 INLINE_FUN Rboolean isVectorAtomic(SEXP s)
 {
     return (ATOMIC_VECTOR_TYPES >> TYPEOF(s)) & 1;
+}
+
+INLINE_FUN Rboolean isVectorNonpointer(SEXP s)
+{
+    return (NONPOINTER_VECTOR_TYPES >> TYPEOF(s)) & 1;
 }
 
 INLINE_FUN Rboolean isVector(SEXP s)/* === isVectorList() or isVectorAtomic() */
