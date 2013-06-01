@@ -86,9 +86,23 @@ static SEXP row_names_gets(SEXP vec , SEXP val)
 /* used in removeAttrib, commentgets and classgets */
 static SEXP stripAttrib(SEXP tag, SEXP lst)
 {
-    if(lst == R_NilValue) return lst;
-    if(tag == TAG(lst)) return stripAttrib(tag, CDR(lst));
-    SETCDR(lst, stripAttrib(tag, CDR(lst)));
+    SEXP last = R_NilValue;
+    SEXP next = lst;
+
+    while (next != R_NilValue) {
+        if (TAG(next) != tag) {
+            last = next;
+            next = CDR(next);
+        }
+        else {
+            next = CDR(next);
+            if (last == R_NilValue)
+                lst = next;
+            else
+                SETCDR(last,next);
+        }
+    }
+    
     return lst;
 }
 
@@ -242,8 +256,7 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
 /* 'name' should be 1-element STRSXP or SYMSXP */
 SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 {
-    PROTECT(vec);
-    PROTECT(name);
+    PROTECT2(vec,name);
 
     if (isString(name))
 	name = install(translateChar(STRING_ELT(name, 0)));
@@ -290,8 +303,7 @@ void copyMostAttrib(SEXP inp, SEXP ans)
     if (ans == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    PROTECT(ans);
-    PROTECT(inp);
+    PROTECT2(ans,inp);
     for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
 	if ((TAG(s) != R_NamesSymbol) &&
 	    (TAG(s) != R_DimSymbol) &&
@@ -312,8 +324,7 @@ void attribute_hidden copyMostAttribNoTs(SEXP inp, SEXP ans)
     if (ans == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    PROTECT(ans);
-    PROTECT(inp);
+    PROTECT2(ans,inp);
     for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
 	if ((TAG(s) != R_NamesSymbol) &&
 	    (TAG(s) != R_ClassSymbol) &&
@@ -351,30 +362,28 @@ void attribute_hidden copyMostAttribNoTs(SEXP inp, SEXP ans)
 
 static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
 {
-    SEXP s, t;
+    SEXP s, t, last;
 
     if(TYPEOF(vec) == CHARSXP)
 	error("cannot set attribute on a CHARSXP");
-    PROTECT(vec);
-    PROTECT(name);
-    PROTECT(val);
+
     for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
 	if (TAG(s) == name) {
 	    SETCAR(s, val);
-	    UNPROTECT(3);
 	    return val;
 	}
+        last = s;
     }
-    s = allocList(1);
-    SETCAR(s, val);
-    SET_TAG(s, name);
+
+    PROTECT(vec);
+    t = cons_with_tag (val, R_NilValue, name);
+    UNPROTECT(1);
+
     if (ATTRIB(vec) == R_NilValue)
-	SET_ATTRIB(vec, s);
-    else {
-	t = nthcdr(ATTRIB(vec), length(ATTRIB(vec)) - 1);
-	SETCDR(t, s);
-    }
-    UNPROTECT(3);
+	SET_ATTRIB(vec,t);
+    else
+	SETCDR(last,t);
+
     return val;
 }
 
@@ -820,8 +829,7 @@ SEXP namesgets(SEXP vec, SEXP val)
     int i;
     SEXP s, rval, tval;
 
-    PROTECT(vec);
-    PROTECT(val);
+    PROTECT2(vec,val);
 
     /* Ensure that the labels are indeed */
     /* a vector of character strings */
@@ -949,8 +957,7 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
     SEXP dims, top, newval;
     int i, k;
 
-    PROTECT(vec);
-    PROTECT(val);
+    PROTECT2(vec,val);
 
     if (!isArray(vec) && !isList(vec))
 	error(_("'dimnames' applied to non-array"));
@@ -1060,8 +1067,7 @@ SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP dimgets(SEXP vec, SEXP val)
 {
     int len, ndim, i, total;
-    PROTECT(vec);
-    PROTECT(val);
+    PROTECT2(vec,val);
     if ((!isVector(vec) && !isList(vec)))
 	error(_("invalid first argument"));
 
@@ -1585,7 +1591,7 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 		     * "pre-objects", currently only in makePrototypeFromClassDef() */
 	error(_("attempt to set slot on NULL object"));
 #endif
-    PROTECT(obj); PROTECT(value);
+    PROTECT2(obj,value);
 				/* Ensure that name is a symbol */
     if(isString(name) && LENGTH(name) == 1)
 	name = install(translateChar(STRING_ELT(name, 0)));
