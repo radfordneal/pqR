@@ -107,7 +107,8 @@
       \item **43
       \item **44
       \item **45
-      \item **46
+      \item The \code{any} and \code{all} primitives have been substantially
+            speeded up for large vectors.
       \item **47
       \item **48
       \item **49

@@ -391,26 +391,32 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 #define _OP_ALL 1
 #define _OP_ANY 2
 
-static int checkValues(int op, int na_rm, int * x, int n)
+static int checkValues(int op, int na_rm, int *x, int n)
 {
-    int i;
     int has_na = 0;
-    for (i = 0; i < n; i++) {
-        if (!na_rm && x[i] == NA_LOGICAL) has_na = 1;
-        else {
-            if (x[i] == TRUE && op == _OP_ANY) return TRUE;
-            if (x[i] == FALSE && op == _OP_ALL) return FALSE;
+
+    if (op == _OP_ANY) {
+        for (int i = 0; i<n; i++) {
+            if (x[i]!=FALSE) {
+                if (x[i]==TRUE) 
+                    return TRUE;
+                else 
+                    has_na = 1;
+            }
         }
+        return has_na && !na_rm ? NA_LOGICAL : FALSE;
     }
-    switch (op) {
-    case _OP_ANY:
-        return has_na ? NA_LOGICAL : FALSE;
-    case _OP_ALL:
-        return has_na ? NA_LOGICAL : TRUE;
-    default:
-        error("bad op value for do_logic3");
+    else { /* _OP_ALL */
+        for (int i = 0; i<n; i++) {
+            if (x[i]!=TRUE) {
+                if (x[i]==FALSE) 
+                    return FALSE;
+                else 
+                    has_na = 1;
+            }
+        }
+        return has_na && !na_rm ? NA_LOGICAL : TRUE;
     }
-    return NA_LOGICAL; /* -Wall */
 }
 
 /* all, any */
