@@ -1,8 +1,12 @@
 
-R version 2.13.0 Patched (2011-04-13 r55430)
-Copyright (C) 2011 The R Foundation for Statistical Computing
+pqR version 2.15.10 (2013-01-01), based on R 2.15.0 (2012-03-30)
+
+R is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
-Platform: x86_64-apple-darwin9.8.0/x86_64 (64-bit)
+
+Modifications to R in pqR are Copyright (C) 2013 Radford M. Neal
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -26,39 +30,42 @@ Type 'q()' to quit R.
 > ## large-sample approximation to the Kolmogorov-Smirnov statistic.
 > ##
 > 
-> 
-> superror <- function(rfoo,pfoo,sample.size,...) {
-+     x <- rfoo(sample.size,...)
-+     tx <- table(signif(x, 12)) # such that xi will be sort(unique(x))
-+     xi <- as.numeric(names(tx))
-+     f <- pfoo(xi,...)
-+     fhat <- cumsum(tx)/sample.size
-+     max(abs(fhat-f))
-+ }
-> 
 > pdkwbound <- function(n,t) 2*exp(-2*n*t*t)
 > 
 > qdkwbound <- function(n,p) sqrt(log(p/2)/(-2*n))
 > 
 > dkwtest <- function(stub = "norm", ...,
 +                     sample.size = 10000, pthreshold = 0.001,
-+                     print.result = TRUE, print.detail = FALSE,
++                     print.result = TRUE, print.detail = TRUE,
 +                     stop.on.failure = TRUE)
 + {
 +     rfoo <- eval(as.name(paste("r", stub, sep="")))
 +     pfoo <- eval(as.name(paste("p", stub, sep="")))
-+     s <- superror(rfoo, pfoo, sample.size, ...)
++     x <- rfoo(sample.size,...)
++     tx <- table(signif(x, 12)) # such that xi will be sort(unique(x))
++     xi <- as.numeric(names(tx))
++     f <- pfoo(xi,...)
++     fhat <- cumsum(tx)/sample.size
++     s <- max(abs(fhat-f))
 +     if (print.result || print.detail) {
 +         printargs <- substitute(list(...))
 +         printargs[[1]] <- as.name(stub)
 +         cat(deparse(printargs))
-+         if (print.detail)
-+             cat("\nsupremum error = ",signif(s,2),
-+                 " with p-value=",min(1,round(pdkwbound(sample.size,s),4)),"\n")
 +     }
 +     rval <- (s < qdkwbound(sample.size,pthreshold))
 +     if (print.result)
-+         cat(c(" FAILED\n"," PASSED\n")[rval+1])
++         cat(c(" FAILED\n"," PASSED")[rval+1])
++     if (print.detail || !rval)
++         cat ("\n",
++              " first =", round(x[4],1),
++              " last =", round(x[sample.size],1),
++              " median =", round(median(x),4),
++              " mean =", round(mean(x),4),
++              " sd =", round(sd(x),4),
++              "\n",
++              " supremum error = ", round(signif(s,2),4),
++              " with p-value =", min(1,round(pdkwbound(sample.size,s),4)))
++     cat("\n\n")
 +     if (stop.on.failure && !rval)
 +         stop("dkwtest failed")
 +     rval
@@ -66,219 +73,410 @@ Type 'q()' to quit R.
 > 
 > .proctime00 <- proc.time() # start timing
 > 
+> RNGkind("default","default")
+> set.seed(123456)
 > 
 > dkwtest("binom",size =   1,prob = 0.2)
 binom(size = 1, prob = 0.2) PASSED
+  first = 0  last = 0  median = 0  mean = 0.1986  sd = 0.399 
+  supremum error =  0.0014  with p-value = 1
+
 [1] TRUE
 > dkwtest("binom",size =   2,prob = 0.2)
 binom(size = 2, prob = 0.2) PASSED
+  first = 1  last = 0  median = 0  mean = 0.4079  sd = 0.5686 
+  supremum error =  0.007  with p-value = 0.7506
+
 [1] TRUE
 > dkwtest("binom",size = 100,prob = 0.2)
 binom(size = 100, prob = 0.2) PASSED
+  first = 20  last = 24  median = 20  mean = 20.0583  sd = 4.0271 
+  supremum error =  0.0083  with p-value = 0.4965
+
 [1] TRUE
 > dkwtest("binom",size = 1e4,prob = 0.2)
 binom(size = 10000, prob = 0.2) PASSED
+  first = 1966  last = 2020  median = 2000  mean = 1999.515  sd = 39.8507 
+  supremum error =  0.0055  with p-value = 1
+
 [1] TRUE
 > dkwtest("binom",size =   1,prob = 0.8)
 binom(size = 1, prob = 0.8) PASSED
+  first = 1  last = 1  median = 1  mean = 0.7986  sd = 0.4011 
+  supremum error =  0.0014  with p-value = 1
+
 [1] TRUE
 > dkwtest("binom",size = 100,prob = 0.8)
 binom(size = 100, prob = 0.8) PASSED
+  first = 83  last = 76  median = 80  mean = 80.0592  sd = 4.0083 
+  supremum error =  0.0073  with p-value = 0.69
+
 [1] TRUE
 > dkwtest("binom",size = 100,prob = 0.999)
 binom(size = 100, prob = 0.999) PASSED
+  first = 100  last = 100  median = 100  mean = 99.9024  sd = 0.3145 
+  supremum error =  0.0027  with p-value = 1
+
 [1] TRUE
 > 
 > dkwtest("pois",lambda =  0.095)
 pois(lambda = 0.095) PASSED
+  first = 0  last = 0  median = 0  mean = 0.0927  sd = 0.3028 
+  supremum error =  0.0017  with p-value = 1
+
 [1] TRUE
 > dkwtest("pois",lambda =  0.95)
 pois(lambda = 0.95) PASSED
+  first = 0  last = 0  median = 1  mean = 0.9454  sd = 0.9651 
+  supremum error =  0.0036  with p-value = 1
+
 [1] TRUE
 > dkwtest("pois",lambda =  9.5)
 pois(lambda = 9.5) PASSED
+  first = 4  last = 9  median = 9  mean = 9.5098  sd = 3.0546 
+  supremum error =  0.0048  with p-value = 1
+
 [1] TRUE
 > dkwtest("pois",lambda = 95)
 pois(lambda = 95) PASSED
+  first = 103  last = 101  median = 95  mean = 94.9089  sd = 9.6795 
+  supremum error =  0.0074  with p-value = 0.6592
+
 [1] TRUE
 > 
 > dkwtest("nbinom",size =   1,prob = 0.2)
 nbinom(size = 1, prob = 0.2) PASSED
+  first = 5  last = 2  median = 3  mean = 4.084  sd = 4.582 
+  supremum error =  0.0074  with p-value = 0.6689
+
 [1] TRUE
 > dkwtest("nbinom",size =   2,prob = 0.2)
 nbinom(size = 2, prob = 0.2) PASSED
+  first = 2  last = 16  median = 7  mean = 8.0241  sd = 6.2737 
+  supremum error =  0.0069  with p-value = 0.7753
+
 [1] TRUE
 > dkwtest("nbinom",size = 100,prob = 0.2)
 nbinom(size = 100, prob = 0.2) PASSED
+  first = 292  last = 334  median = 398  mean = 399.9624  sd = 44.7264 
+  supremum error =  0.0061  with p-value = 0.9393
+
 [1] TRUE
 > dkwtest("nbinom",size = 1e4,prob = 0.2)
 nbinom(size = 10000, prob = 0.2) PASSED
+  first = 40124  last = 39802  median = 39999  mean = 40001.87  sd = 447.9753 
+  supremum error =  0.0066  with p-value = 0.8292
+
 [1] TRUE
 > dkwtest("nbinom",size =   1,prob = 0.8)
 nbinom(size = 1, prob = 0.8) PASSED
+  first = 0  last = 0  median = 0  mean = 0.2491  sd = 0.5595 
+  supremum error =  0.0019  with p-value = 1
+
 [1] TRUE
 > dkwtest("nbinom",size = 100,prob = 0.8)
 nbinom(size = 100, prob = 0.8) PASSED
+  first = 34  last = 31  median = 25  mean = 25.0696  sd = 5.5813 
+  supremum error =  0.0083  with p-value = 0.4969
+
 [1] TRUE
 > dkwtest("nbinom",size = 100,prob = 0.999)
 nbinom(size = 100, prob = 0.999) PASSED
+  first = 0  last = 0  median = 0  mean = 0.0951  sd = 0.3151 
+  supremum error =  0.0063  with p-value = 0.9025
+
 [1] TRUE
 > 
 > dkwtest("norm")
 norm() PASSED
+  first = -0.2  last = -0.3  median = -0.0115  mean = -0.0113  sd = 0.9915 
+  supremum error =  0.0087  with p-value = 0.438
+
 [1] TRUE
 > dkwtest("norm",mean = 5,sd = 3)
 norm(mean = 5, sd = 3) PASSED
+  first = 2  last = 7.5  median = 5.0352  mean = 5.015  sd = 2.9852 
+  supremum error =  0.0071  with p-value = 0.7271
+
 [1] TRUE
 > 
 > dkwtest("gamma",shape =  0.1)
 gamma(shape = 0.1) PASSED
+  first = 0  last = 0  median = 6e-04  mean = 0.0989  sd = 0.3144 
+  supremum error =  0.01  with p-value = 0.2702
+
 [1] TRUE
 > dkwtest("gamma",shape =  0.2)
 gamma(shape = 0.2) PASSED
+  first = 0  last = 0  median = 0.0201  mean = 0.1986  sd = 0.4403 
+  supremum error =  0.0075  with p-value = 0.6527
+
 [1] TRUE
 > dkwtest("gamma",shape = 10)
 gamma(shape = 10) PASSED
+  first = 11.4  last = 12.8  median = 9.6384  mean = 9.9573  sd = 3.1708 
+  supremum error =  0.012  with p-value = 0.1321
+
 [1] TRUE
 > dkwtest("gamma",shape = 20)
 gamma(shape = 20) PASSED
+  first = 19.1  last = 15.4  median = 19.5803  mean = 19.9125  sd = 4.3847 
+  supremum error =  0.012  with p-value = 0.1205
+
 [1] TRUE
 > 
 > dkwtest("hyper",m = 40,n = 30,k = 20)
 hyper(m = 40, n = 30, k = 20) PASSED
+  first = 13  last = 10  median = 11  mean = 11.4406  sd = 1.9097 
+  supremum error =  0.0047  with p-value = 1
+
 [1] TRUE
 > dkwtest("hyper",m = 40,n =  3,k = 20)
 hyper(m = 40, n = 3, k = 20) PASSED
+  first = 20  last = 19  median = 19  mean = 18.6216  sd = 0.846 
+  supremum error =  0.014  with p-value = 0.038
+
 [1] TRUE
 > dkwtest("hyper",m =  6,n =  3,k =  2)
 hyper(m = 6, n = 3, k = 2) PASSED
+  first = 1  last = 1  median = 1  mean = 1.3413  sd = 0.6263 
+  supremum error =  0.0083  with p-value = 0.4987
+
 [1] TRUE
 > dkwtest("hyper",m =  5,n =  3,k =  2)
 hyper(m = 5, n = 3, k = 2) PASSED
+  first = 2  last = 2  median = 1  mean = 1.2518  sd = 0.6342 
+  supremum error =  0.0016  with p-value = 1
+
 [1] TRUE
 > dkwtest("hyper",m =  4,n =  3,k =  2)
 hyper(m = 4, n = 3, k = 2) PASSED
+  first = 1  last = 1  median = 1  mean = 1.1526  sd = 0.6332 
+  supremum error =  0.0071  with p-value = 0.7387
+
 [1] TRUE
 > 
 > 
 > dkwtest("signrank",n =  1)
 signrank(n = 1) PASSED
+  first = 0  last = 1  median = 1  mean = 0.5067  sd = 0.5 
+  supremum error =  0.0067  with p-value = 0.8149
+
 [1] TRUE
 > dkwtest("signrank",n =  2)
 signrank(n = 2) PASSED
+  first = 0  last = 2  median = 2  mean = 1.5068  sd = 1.1187 
+  supremum error =  0.0027  with p-value = 1
+
 [1] TRUE
 > dkwtest("signrank",n = 10)
 signrank(n = 10) PASSED
+  first = 24  last = 28  median = 28  mean = 27.5582  sd = 9.7091 
+  supremum error =  0.007  with p-value = 0.7506
+
 [1] TRUE
 > dkwtest("signrank",n = 30)
 signrank(n = 30) PASSED
+  first = 334  last = 165  median = 233  mean = 231.7841  sd = 48.6142 
+  supremum error =  0.013  with p-value = 0.0826
+
 [1] TRUE
 > 
 > dkwtest("wilcox",m = 40,n = 30)
 wilcox(m = 40, n = 30) PASSED
+  first = 640  last = 744  median = 599  mean = 599.2301  sd = 84.7449 
+  supremum error =  0.0084  with p-value = 0.4944
+
 [1] TRUE
 > dkwtest("wilcox",m = 40,n = 10)
 wilcox(m = 40, n = 10) PASSED
+  first = 189  last = 156  median = 200  mean = 200.3042  sd = 41.1792 
+  supremum error =  0.0062  with p-value = 0.9262
+
 [1] TRUE
 > dkwtest("wilcox",m =  6,n =  3)
 wilcox(m = 6, n = 3) PASSED
+  first = 6  last = 9  median = 9  mean = 9.0141  sd = 3.8106 
+  supremum error =  0.0098  with p-value = 0.2919
+
 [1] TRUE
 > dkwtest("wilcox",m =  5,n =  3)
 wilcox(m = 5, n = 3) PASSED
+  first = 3  last = 8  median = 8  mean = 7.5435  sd = 3.3898 
+  supremum error =  0.011  with p-value = 0.2127
+
 [1] TRUE
 > dkwtest("wilcox",m =  4,n =  3)
 wilcox(m = 4, n = 3) PASSED
+  first = 7  last = 4  median = 6  mean = 5.9955  sd = 2.8305 
+  supremum error =  0.0048  with p-value = 1
+
 [1] TRUE
 > 
 > dkwtest("chisq",df =  1)
 chisq(df = 1) PASSED
+  first = 2.1  last = 3  median = 0.4508  mean = 0.9905  sd = 1.4022 
+  supremum error =  0.0095  with p-value = 0.3247
+
 [1] TRUE
 > dkwtest("chisq",df = 10)
 chisq(df = 10) PASSED
+  first = 12.8  last = 2.6  median = 9.4171  mean = 10.0173  sd = 4.407 
+  supremum error =  0.008  with p-value = 0.5567
+
 [1] TRUE
 > 
 > dkwtest("logis")
 logis() PASSED
+  first = -1  last = -6  median = 0.0285  mean = 0.0199  sd = 1.7887 
+  supremum error =  0.01  with p-value = 0.2516
+
 [1] TRUE
 > dkwtest("logis",location = 4,scale = 2)
 logis(location = 4, scale = 2) PASSED
+  first = 0  last = 4.5  median = 3.9705  mean = 3.9972  sd = 3.6685 
+  supremum error =  0.014  with p-value = 0.0426
+
 [1] TRUE
 > 
 > dkwtest("t",df =  1)
 t(df = 1) PASSED
+  first = -1.4  last = 0.1  median = 0.0304  mean = 1.9747  sd = 224.1409 
+  supremum error =  0.016  with p-value = 0.014
+
 [1] TRUE
 > dkwtest("t",df = 10)
 t(df = 10) PASSED
+  first = 2.3  last = 0.7  median = -0.0126  mean = -0.0088  sd = 1.1314 
+  supremum error =  0.0086  with p-value = 0.463
+
 [1] TRUE
 > dkwtest("t",df = 40)
 t(df = 40) PASSED
+  first = -1.1  last = 0.6  median = 0.0046  mean = 0.0055  sd = 1.0248 
+  supremum error =  0.0091  with p-value = 0.3804
+
 [1] TRUE
 > 
 > dkwtest("beta",shape1 = 1, shape2 = 1)
 beta(shape1 = 1, shape2 = 1) PASSED
+  first = 0.6  last = 0.8  median = 0.5013  mean = 0.5023  sd = 0.2881 
+  supremum error =  0.0065  with p-value = 0.8612
+
 [1] TRUE
 > dkwtest("beta",shape1 = 2, shape2 = 1)
 beta(shape1 = 2, shape2 = 1) PASSED
+  first = 0.9  last = 0.4  median = 0.7061  mean = 0.6673  sd = 0.2337 
+  supremum error =  0.0052  with p-value = 1
+
 [1] TRUE
 > dkwtest("beta",shape1 = 1, shape2 = 2)
 beta(shape1 = 1, shape2 = 2) PASSED
+  first = 0.2  last = 0.2  median = 0.2941  mean = 0.3345  sd = 0.2362 
+  supremum error =  0.0074  with p-value = 0.6625
+
 [1] TRUE
 > dkwtest("beta",shape1 = 2, shape2 = 2)
 beta(shape1 = 2, shape2 = 2) PASSED
+  first = 0.2  last = 0.2  median = 0.5034  mean = 0.5009  sd = 0.2243 
+  supremum error =  0.0074  with p-value = 0.6786
+
 [1] TRUE
 > dkwtest("beta",shape1 = .2,shape2 = .2)
 beta(shape1 = 0.2, shape2 = 0.2) PASSED
+  first = 0  last = 1  median = 0.4745  mean = 0.4937  sd = 0.4229 
+  supremum error =  0.01  with p-value = 0.2217
+
 [1] TRUE
 > 
 > dkwtest("cauchy")
 cauchy() PASSED
+  first = -0.7  last = -0.9  median = -0.0386  mean = 0.2993  sd = 45.8794 
+  supremum error =  0.015  with p-value = 0.0228
+
 [1] TRUE
 > dkwtest("cauchy",location = 4,scale = 2)
 cauchy(location = 4, scale = 2) PASSED
+  first = 4.3  last = 8.9  median = 3.9659  mean = -3.573  sd = 401.8329 
+  supremum error =  0.0093  with p-value = 0.3557
+
 [1] TRUE
 > 
 > dkwtest("f",df1 =  1,df2 =  1)
 f(df1 = 1, df2 = 1) PASSED
+  first = 0.5  last = 0.5  median = 0.9804  mean = 43399.2  sd = 2975428 
+  supremum error =  0.0073  with p-value = 0.6801
+
 [1] TRUE
 > dkwtest("f",df1 =  1,df2 = 10)
 f(df1 = 1, df2 = 10) PASSED
+  first = 0  last = 0.3  median = 0.4886  mean = 1.2631  sd = 2.1683 
+  supremum error =  0.0075  with p-value = 0.6578
+
 [1] TRUE
 > dkwtest("f",df1 = 10,df2 = 10)
 f(df1 = 10, df2 = 10) PASSED
+  first = 1.1  last = 1  median = 1.0084  mean = 1.2572  sd = 1.0025 
+  supremum error =  0.0085  with p-value = 0.4779
+
 [1] TRUE
 > dkwtest("f",df1 = 30,df2 =  3)
 f(df1 = 30, df2 = 3) PASSED
+  first = 2.1  last = 3.7  median = 1.2716  mean = 3.366  sd = 19.9463 
+  supremum error =  0.013  with p-value = 0.056
+
 [1] TRUE
 > 
 > dkwtest("weibull",shape = 1)
 weibull(shape = 1) PASSED
+  first = 1.8  last = 0.1  median = 0.6968  mean = 1.001  sd = 0.997 
+  supremum error =  0.0056  with p-value = 1
+
 [1] TRUE
 > dkwtest("weibull",shape = 4,scale = 4)
 weibull(shape = 4, scale = 4) PASSED
+  first = 3  last = 2.9  median = 3.6647  mean = 3.6412  sd = 1.0141 
+  supremum error =  0.013  with p-value = 0.0605
+
 [1] TRUE
 > 
 > ## regression test for PR#7314
 > dkwtest("hyper", m=60, n=100, k=50)
 hyper(m = 60, n = 100, k = 50) PASSED
+  first = 18  last = 14  median = 19  mean = 18.8048  sd = 2.8515 
+  supremum error =  0.0076  with p-value = 0.6215
+
 [1] TRUE
 > dkwtest("hyper", m=6, n=10, k=5)
 hyper(m = 6, n = 10, k = 5) PASSED
+  first = 2  last = 4  median = 2  mean = 1.8867  sd = 0.9393 
+  supremum error =  0.0071  with p-value = 0.7211
+
 [1] TRUE
 > dkwtest("hyper", m=600, n=1000, k=500)
 hyper(m = 600, n = 1000, k = 500) PASSED
+  first = 193  last = 186  median = 187  mean = 187.3573  sd = 8.9358 
+  supremum error =  0.011  with p-value = 0.1999
+
 [1] TRUE
 > 
 > ## regression test for non-central t bug
 > dkwtest("t", df=20, ncp=3)
 t(df = 20, ncp = 3) PASSED
+  first = 2.5  last = 4.3  median = 3.0426  mean = 3.114  sd = 1.173 
+  supremum error =  0.0049  with p-value = 1
+
 [1] TRUE
 > ## regression test for non-central F bug
 > dkwtest("f", df1=10, df2=2, ncp=3)
 f(df1 = 10, df2 = 2, ncp = 3) PASSED
+  first = 0.8  last = 1  median = 1.7772  mean = 15.8316  sd = 382.4576 
+  supremum error =  0.0094  with p-value = 0.341
+
 [1] TRUE
 > 
 > 
 > cat('Time elapsed: ', proc.time() - .proctime00,'\n')
-Time elapsed:  4.649 0.299 5.422 0 0 
+Time elapsed:  1.628 0 1.633 0 0 
 > 
 > 
