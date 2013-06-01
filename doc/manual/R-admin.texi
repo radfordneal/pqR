@@ -53,7 +53,7 @@ notice identical to this one except for the removal of this paragraph
 @c @end ifnothtml
 
 @ifnottex
-@node Top, Obtaining R, (dir), (dir)
+@node Top, Obtaining pqR and R, (dir), (dir)
 @top R Installation and Administration
 
 This is a guide to installation and administration for R.
@@ -64,7 +64,7 @@ The current version of this document is @value{VERSION}.
 @end ifnottex
 
 @menu
-* Obtaining R::                 
+* Obtaining pqR and R::                 
 * Installing R under Unix-alikes::  
 * Installing R under Windows::  
 * Installing R under (Mac) OS X::  
@@ -82,9 +82,14 @@ The current version of this document is @value{VERSION}.
 * Environment variable index::  
 @end menu
 
-@node Obtaining R, Installing R under Unix-alikes, Top, Top
-@chapter Obtaining R
-@cindex Obtaining R
+@node Obtaining pqR and R, Installing R under Unix-alikes, Top, Top
+@chapter Obtaining pqR and R
+@cindex Obtaining pqR and R
+
+Sources, binaries, and documentation for pqR can be obtained from
+@uref{http://github.com/radfordneal/pqR/}.  The remainder of this
+section documents how to obtain versions of @R{} produced by the
+R Core Team.
 
 Sources, binaries and documentation for @R{} can be obtained via
 @acronym{CRAN}, the ``Comprehensive R Archive Network'' whose current
@@ -95,7 +100,7 @@ members are listed at @uref{http://cran.r-project.org/@/mirrors.html}.
 * Getting patched and development versions::  
 @end menu
 
-@node Getting and unpacking the sources, Getting patched and development versions, Obtaining R, Obtaining R
+@node Getting and unpacking the sources, Getting patched and development versions, Obtaining pqR and R, Obtaining pqR and R
 @section Getting and unpacking the sources
 @cindex Sources for R
 
@@ -144,7 +149,7 @@ by spaces.)
 
 
 
-@node Getting patched and development versions,  , Getting and unpacking the sources, Obtaining R
+@node Getting patched and development versions,  , Getting and unpacking the sources, Obtaining pqR and R
 @section Getting patched and development versions
 
 A patched version of the current release, @samp{r-patched}, and the
@@ -226,11 +231,16 @@ wget -r -l1 --no-parent -A\*.gz -nd -P src/library/Recommended \
 
 
 
-@node Installing R under Unix-alikes, Installing R under Windows, Obtaining R, Top
+@node Installing R under Unix-alikes, Installing R under Windows, Obtaining pqR and R, Top
 @chapter Installing R under Unix-alikes
 @cindex Installing under Unix-alikes
 
-@R{} will configure and build under most common Unix and Unix-alike
+pqR will configure and build under most common Unix and Unix-alike
+platforms, in the same way as R-2.15.0, on which pqR is based.
+Except as noted, the remainder of this section applies equally to 
+R-2.15.0 and pqR.
+
+R-2.15.0 will configure and build on most common Unix and Unix-alike
 platforms including @samp{@var{cpu}-*-linux-gnu} for the
 @cputype{alpha}, @cputype{arm}, @cputype{hppa}, @cputype{ix86},
 @cputype{ia64}, @cputype{m68k}, @cputype{mips}, @cputype{mipsel},
@@ -249,7 +259,9 @@ perhaps (it is tested less frequently on these platforms)
 
 @cindex Linux
 @cindex OS X
-In addition, binary distributions are available for some common Linux
+No binary distributions of pqR are available yet.  Versions of @R{}
+distributed by the R Core Team are available as binary distributions 
+for some common Linux
 distributions and for OS X (formerly Mac OS).  See the @acronym{FAQ} for
 current details.  These are installed in platform-specific ways, so for
 the rest of this chapter we consider only building from the sources.
@@ -282,8 +294,7 @@ Choose a place to install the @R{} tree (@R{} is not just a binary, but
 has additional data sets, help files, font metrics etc).  Let us call
 this place @var{R_HOME}.  Untar the source code.  This should create
 directories @file{src}, @file{doc}, and several more under a top-level
-directory: change to that top-level directory (At this point North
-American readers should consult @ref{Setting paper size}.)  Issue the
+directory: change to that top-level directory. Issue the
 following commands:
 
 @findex configure
@@ -303,8 +314,12 @@ Debian-based 64-bit systems@footnote{which use @file{lib} rather than
 make
 @end example
 
+Other options to @file{./configure} may also be useful (see 
+@ref{Configuration on a Unix-alike}).  In particular,
+North American users should consult @ref{Setting paper size}.
 
-Then check the built system works correctly by
+Once @code{make} has finished, you should check that the built system works 
+correctly by
 
 @example
 make check
@@ -968,6 +983,12 @@ LANGUAGE=en LC_TIME=C
 @chapter Installing R under Windows
 @cindex Installing under Windows
 
+The current version of pqR has not been tested under Windows.
+There is no known reason why it shouldn't work, but there has
+likely been some change that will cause problems.  This section
+is retained for future reference once this has been remedied.
+It applies at present only to R-2.15.0, not to pqR.
+
 The @file{bin/windows} directory of a @acronym{CRAN} site contains
 binaries for a base distribution and a large number of add-on packages
 from @acronym{CRAN} to run on Windows XP or later on ix86
@@ -1072,7 +1093,7 @@ or perhaps better, set the environment variable @env{TAR_OPTIONS} to the
 value @samp{--no-same-owner --no-same-permissions}.
 
 It is also possible to obtain the source code using Subversion; see 
-@ref{Obtaining R} for details.
+@ref{Obtaining pqR and R} for details.
 
 
 @item
@@ -1489,6 +1510,12 @@ given by @code{R.home()}).
 @node Installing R under (Mac) OS X, Running R, Installing R under Windows, Top
 @chapter Installing R under (Mac) OS X
 @cindex OS X
+
+The current version of pqR has not been tested under OS X.
+There is no known reason why it shouldn't work, but there has
+likely been some change that will cause problems.  This section
+is retained for future reference once this has been remedied.
+It applies at present only to R-2.15.0, not to pqR.
 
 The @file{bin/macosx} directory of a @acronym{CRAN} site contains
 binaries for OS X for a base distribution and a large number of
