@@ -454,7 +454,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
     stretch = 1;
-    PROTECT(indx = makeSubscript(x, s, &stretch, R_NilValue));
+    PROTECT(indx = makeSubscript(x, s, &stretch, R_NilValue, 1));
     n = length(indx);
     if(length(y) > 1)
 	for(i = 0; i < n; i++)
@@ -671,11 +671,11 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     default:
 	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
-    /* Check for additional named elements. */
+    /* Check for additional named elements, if subscripting with strings. */
     /* Note makeSubscript passes the additional names back as the use.names
        attribute (a vector list) of the generated subscript vector */
-    newnames = getAttrib(indx, R_UseNamesSymbol);
-    if (newnames != R_NilValue) {
+    if (TYPEOF(s)==STRSXP && 
+          (newnames = getAttrib(indx, R_UseNamesSymbol)) != R_NilValue) {
 	SEXP oldnames = getAttrib(x, R_NamesSymbol);
 	if (oldnames != R_NilValue) {
 	    for (i = 0; i < n; i++) {
@@ -1201,7 +1201,7 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
 	error(_("invalid number of subscripts to list assign"));
 
     PROTECT(sub = GetOneIndex(sub, ind));
-    PROTECT(indx = makeSubscript(x, sub, &stretch, R_NilValue));
+    PROTECT(indx = makeSubscript(x, sub, &stretch, R_NilValue, 1));
 
     n = length(indx);
     if (n > 1)
@@ -1247,7 +1247,7 @@ static SEXP listRemove(SEXP x, SEXP s, int ind)
     vmax = VMAXGET();
     nx = length(x);
     PROTECT(s = GetOneIndex(s, ind));
-    PROTECT(s = makeSubscript(x, s, &stretch, R_NilValue));
+    PROTECT(s = makeSubscript(x, s, &stretch, R_NilValue, 1));
     ns = length(s);
     indx = (int*)R_alloc(nx, sizeof(int));
     for (i = 0; i < nx; i++)
