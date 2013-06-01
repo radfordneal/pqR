@@ -3096,8 +3096,6 @@ enum {
 };
 
 
-SEXP R_unary(SEXP, SEXP, SEXP);
-SEXP R_binary(SEXP, SEXP, SEXP, SEXP);
 SEXP do_math1(SEXP, SEXP, SEXP, SEXP);
 SEXP do_logic(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
@@ -3250,7 +3248,7 @@ static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 	}
 	UNPROTECT(1);
     }
-    return R_unary(call, op, x);
+    return R_unary(call, op, x, 0);
 }
 
 static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
@@ -3271,7 +3269,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	}
 	UNPROTECT(1);
     }
-    return R_binary(call, op, x, y);
+    return R_binary(call, op, x, y, 0);
 }
 
 #define Builtin1(do_fun,which,rho) do { \

@@ -49,6 +49,8 @@ extern double Rf_gamma_cody(double);
 
 #include <errno.h>
 
+#include <helpers/helpers-app.h>
+
 #ifdef HAVE_MATHERR
 
 /* Override the SVID matherr function:
@@ -291,13 +293,6 @@ static double logbase(double x, double base)
     return R_log(x) / R_log(base);
 }
 
-SEXP R_unary(SEXP, SEXP, SEXP);
-SEXP R_binary(SEXP, SEXP, SEXP, SEXP);
-static SEXP integer_unary(ARITHOP_TYPE, SEXP, SEXP);
-static SEXP real_unary(ARITHOP_TYPE, SEXP, SEXP);
-static SEXP real_binary(ARITHOP_TYPE, SEXP, SEXP);
-static SEXP integer_binary(ARITHOP_TYPE, SEXP, SEXP, SEXP);
-
 #if 0
 static int naflag;
 static SEXP lcall;
@@ -324,6 +319,7 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 return arg1;
             case MINUSOP: ;
                 SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 : allocVector(type,1);
+                WAIT_UNTIL_COMPUTED(arg1);
                 if (type==REALSXP) 
                     *REAL(ans) = - *REAL(arg1);
                 else /* INTSXP */
@@ -339,6 +335,8 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 
                          : NAMEDCNT_EQ_0(arg2) ? arg2
                          : allocVector(type,1);
+
+                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
                 double a1 = *REAL(arg1), a2 = *REAL(arg2);
         
@@ -376,6 +374,8 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                          : NAMEDCNT_EQ_0(arg2) ? arg2
                          : allocVector(type,1);
 
+                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+
                 int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
 
                 if (a1==NA_INTEGER || a2==NA_INTEGER) {
@@ -400,11 +400,12 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
     /* Otherwise, handle the general case. */
 
-    return arg2==NULL ? R_unary (call, op, arg1) 
-                      : R_binary (call, op, arg1, arg2);
+    return arg2==NULL ? R_unary (call, op, arg1, variant) 
+                      : R_binary (call, op, arg1, arg2, variant);
 }
 
-SEXP attribute_hidden do_arith(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_arith (SEXP call, SEXP op, SEXP args, SEXP env,
+                                int variant)
 {
     SEXP ans;
 
@@ -412,262 +413,19 @@ SEXP attribute_hidden do_arith(SEXP call, SEXP op, SEXP args, SEXP env)
 	return ans;
 
     if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_BINARY (op, do_fast_arith, 1, 1, 0, 0, 1);
-
+        SET_PRIMFUN_FAST_BINARY (op, do_fast_arith, 1, 1, 0, 0, 
+                                 PRIMVAL(op)==PLUSOP || PRIMVAL(op)==MINUSOP);
     switch (length(args)) {
     case 1:
-	return R_unary(call, op, CAR(args));
+	return R_unary(call, op, CAR(args), variant);
     case 2:
-	return R_binary(call, op, CAR(args), CADR(args));
+	return R_binary(call, op, CAR(args), CADR(args), variant);
     default:
 	errorcall(call,_("operator needs one or two arguments"));
     }
     return ans;			/* never used; to keep -Wall happy */
 }
 
-#define COERCE_IF_NEEDED(v, tp, vpi) do { \
-    if (TYPEOF(v) != (tp)) { \
-	int __vo__ = OBJECT(v); \
-	REPROTECT(v = coerceVector(v, (tp)), vpi); \
-	if (__vo__) SET_OBJECT(v, 1); \
-    } \
-} while (0)
-
-#define FIXUP_NULL_AND_CHECK_TYPES(v, vpi) do { \
-    switch (TYPEOF(v)) { \
-    case NILSXP: REPROTECT(v = allocVector(REALSXP,0), vpi); break; \
-    case CPLXSXP: case REALSXP: case INTSXP: case LGLSXP: break; \
-    default: errorcall(lcall, _("non-numeric argument to binary operator")); \
-    } \
-} while (0)
-
-SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
-{
-    SEXP klass, dims, tsp, xnames, ynames, val;
-    int mismatch = 0, nx, ny, xarray, yarray, xts, yts, xS4 = 0, yS4 = 0;
-    int xattr, yattr;
-    SEXP lcall = call;
-    PROTECT_INDEX xpi, ypi;
-    ARITHOP_TYPE oper = (ARITHOP_TYPE) PRIMVAL(op);
-    int nprotect = 2; /* x and y */
-
-
-    PROTECT_WITH_INDEX(x, &xpi);
-    PROTECT_WITH_INDEX(y, &ypi);
-
-    FIXUP_NULL_AND_CHECK_TYPES(x, xpi);
-    FIXUP_NULL_AND_CHECK_TYPES(y, ypi);
-
-    nx = LENGTH(x);
-    if (ATTRIB(x) != R_NilValue) {
-	xattr = TRUE;
-	xarray = isArray(x);
-	xts = isTs(x);
-	xS4 = isS4(x);
-    }
-    else xarray = xts = xattr = FALSE;
-    ny = LENGTH(y);
-    if (ATTRIB(y) != R_NilValue) {
-	yattr = TRUE;
-	yarray = isArray(y);
-	yts = isTs(y);
-	yS4 = isS4(y);
-    }
-    else yarray = yts = yattr = FALSE;
-
-    /* If either x or y is a matrix with length 1 and the other is a
-       vector, we want to coerce the matrix to be a vector. */
-
-    if (xarray != yarray) {
-	if (xarray && nx==1 && ny!=1) {
-	    REPROTECT(x = duplicate(x), xpi);
-	    setAttrib(x, R_DimSymbol, R_NilValue);
-	}
-	if (yarray && ny==1 && nx!=1) {
-	    REPROTECT(y = duplicate(y), ypi);
-	    setAttrib(y, R_DimSymbol, R_NilValue);
-	}
-    }
-
-    if (xarray || yarray) {
-	if (xarray && yarray && !conformable(x,y))
-		errorcall(lcall, _("non-conformable arrays"));
-        PROTECT(dims = getAttrib (xarray ? x : y, R_DimSymbol));
-	nprotect++;
-	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
-	    nprotect++;
-	}
-	else xnames = R_NilValue;
-	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
-	    nprotect++;
-	}
-	else ynames = R_NilValue;
-    }
-    else {
-	dims = R_NilValue;
-	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
-	    nprotect++;
-	}
-	else xnames = R_NilValue;
-	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_NamesSymbol));
-	    nprotect++;
-	}
-	else ynames = R_NilValue;
-    }
-    if (nx == ny || nx == 1 || ny == 1) mismatch = 0;
-    else if (nx > 0 && ny > 0) {
-	if (nx > ny) mismatch = nx % ny;
-	else mismatch = ny % nx;
-    }
-
-    if (xts || yts) {
-	if (xts && yts) {
-	    if (!tsConform(x, y))
-		errorcall(lcall, _("non-conformable time-series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
-	}
-	else if (xts) {
-	    if (nx < ny)
-		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
-	}
-	else {			/* (yts) */
-	    if (ny < nx)
-		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
-	}
-	nprotect += 2;
-    }
-    else klass = tsp = NULL; /* -Wall */
-
-    if (mismatch)
-	warningcall(lcall,
-		    _("longer object length is not a multiple of shorter object length"));
-
-    /* need to preserve object here, as *_binary copies class attributes */
-    if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
-	COERCE_IF_NEEDED(x, CPLXSXP, xpi);
-	COERCE_IF_NEEDED(y, CPLXSXP, ypi);
-	val = complex_binary(oper, x, y);
-    }
-    else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
-         /* real_binary can handle REAL and INT, but not LOGICAL, operands */
-        if (TYPEOF(x) != INTSXP) COERCE_IF_NEEDED(x, REALSXP, xpi);
-        if (TYPEOF(y) != INTSXP) COERCE_IF_NEEDED(y, REALSXP, ypi);
-	val = real_binary(oper, x, y);
-    }
-    else {
-        /* integer_binary is assumed to work for LOGICAL too, which won't
-           be true if the aren't really the same */
-        val = integer_binary(oper, x, y, lcall);
-    }
-
-    /* quick return if there are no attributes */
-    if (! xattr && ! yattr) {
-	UNPROTECT(nprotect);
-	return val;
-    }
-
-    PROTECT(val);
-    nprotect++;
-
-    /* Don't set the dims if one argument is an array of size 0 and the
-       other isn't of size zero, cos they're wrong */
-    /* Not if the other argument is a scalar (PR#1979) */
-    if (dims != R_NilValue) {
-	if (!((xarray && (nx == 0) && (ny > 1)) ||
-	      (yarray && (ny == 0) && (nx > 1)))){
-	    setAttrib(val, R_DimSymbol, dims);
-	    if (xnames != R_NilValue)
-		setAttrib(val, R_DimNamesSymbol, xnames);
-	    else if (ynames != R_NilValue)
-		setAttrib(val, R_DimNamesSymbol, ynames);
-	}
-    }
-    else {
-	if (LENGTH(val) == length(xnames))
-	    setAttrib(val, R_NamesSymbol, xnames);
-	else if (LENGTH(val) == length(ynames))
-	    setAttrib(val, R_NamesSymbol, ynames);
-    }
-
-    if (xts || yts) {		/* must set *after* dims! */
-	setAttrib(val, R_TspSymbol, tsp);
-	setAttrib(val, R_ClassSymbol, klass);
-    }
-
-    if(xS4 || yS4) {   /* Only set the bit:  no method defined! */
-        val = asS4(val, TRUE, TRUE);
-    }
-    UNPROTECT(nprotect);
-    return val;
-}
-
-SEXP attribute_hidden R_unary(SEXP call, SEXP op, SEXP s1)
-{
-    ARITHOP_TYPE operation = (ARITHOP_TYPE) PRIMVAL(op);
-    switch (TYPEOF(s1)) {
-    case LGLSXP:
-    case INTSXP:
-	return integer_unary(operation, s1, call);
-    case REALSXP:
-	return real_unary(operation, s1, call);
-    case CPLXSXP:
-	return complex_unary(operation, s1, call);
-    default:
-	errorcall(call, _("invalid argument to unary operator"));
-    }
-    return s1;			/* never used; to keep -Wall happy */
-}
-
-static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
-{
-    int i, n, x;
-    SEXP ans;
-
-    switch (code) {
-    case PLUSOP:
-	return s1;
-    case MINUSOP:
-	n = LENGTH(s1);
-	ans = NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
-	SET_TYPEOF(ans, INTSXP);  /* Assumes LGLSXP is really the same... */
-	for (i = 0; i < n; i++) {
-	    x = INTEGER(s1)[i];
-	    INTEGER(ans)[i] = x==NA_INTEGER ? NA_INTEGER : -x;
-	}
-	return ans;
-    default:
-	errorcall(call, _("invalid unary operator"));
-    }
-    return s1;			/* never used; to keep -Wall happy */
-}
-
-static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
-{
-    int i, n;
-    SEXP ans;
-
-    switch (code) {
-    case PLUSOP: return s1;
-    case MINUSOP:
-	n = LENGTH(s1);
-        ans = NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = -REAL(s1)[i];
-	return ans;
-    default:
-	errorcall(lcall, _("invalid unary operator"));
-    }
-    return s1;			/* never used; to keep -Wall happy */
-}
 
 /* i1 = i % n1; i2 = i % n2;
  * this macro is quite a bit faster than having real modulo calls
@@ -678,7 +436,110 @@ static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
 	i2 = (++i2 == n2) ? 0 : i2,\
 	++i)
 
+#define add_func(a,b) ((a)+(b))
+#define sub_func(a,b) ((a)-(b))
+#define mul_func(a,b) ((a)*(b))
+#define div_func(a,b) ((a)/(b))
 
+/* Macro for pipelined arithmetic computation.  Arguments are as follows:
+
+       type     type of the result
+       func     function or macro for the arithmetic operation
+       result   address of array where results are stored
+       n        length of the result
+       fetch1   macro to fetch an element of the first operand
+       s1       address of first operand
+       n1       length of the first operand
+       fetch2   macro to fetch an element of the second operand
+       s2       address of second operand
+       n2       length of the second operand
+
+   Both n1 and n2 must be non-zero and no bigger than n, and at least one 
+   of n1 and n2 must be equal to n.  An operand of length one or with length 
+   less than n is assumed to already be available with no waiting.
+*/
+
+#define PIPEARITH(type,func,result,n,fetch1,s1,n1,fetch2,s2,n2) \
+    do { \
+        R_len_t i, i1, i2, a, a1, a2; \
+        i = 0; \
+        if (n2 == 1) { \
+            type tmp = fetch2(s2,0); \
+            while (i<n) { \
+                HELPERS_WAIT_IN1 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    do { \
+                        result[i] = func(fetch1(s1,i),tmp); \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+        else if (n1 == 1) { \
+            type tmp = fetch1(s1,0); \
+            while (i<n) { \
+                HELPERS_WAIT_IN2 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    do { \
+                        result[i] = func(tmp,fetch2(s2,i)); \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+        else if (n1 == n2) { \
+            while (i<n) { \
+                HELPERS_WAIT_IN1 (a1, i, n); \
+                HELPERS_WAIT_IN2 (a2, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
+                    do { \
+                        result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a1 && i<a2); \
+            } \
+        } \
+        else if (n1 > n2) { \
+            i2 = 0; \
+            while (i<n) { \
+                HELPERS_WAIT_IN1 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    do { \
+                        result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
+                        if (++i2 == n2) i2 = 0; \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+        else { /* n1 < n2 */ \
+            i1 = 0; \
+            while (i<n) { \
+                HELPERS_WAIT_IN2 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    do { \
+                        result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
+                        if (++i1 == n1) i1 = 0; \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+    } while (0)
+
+#define RFETCH(_s_,_i_) (REAL(_s_)[_i_])
+#define RIFETCH(_s_,_i_) \
+   ((double) (INTEGER(_s_)[_i_] == NA_INTEGER ? NA_REAL : INTEGER(_s_)[_i_]))
 
 /* The tests using integer comparisons are a bit faster than the tests
    using doubles, but they depend on a two's complement representation
@@ -711,405 +572,652 @@ static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
 # define GOODIDIFF(x, y, z) ((double) (x) - (double) (y) == (z))
 #endif
 #define GOODIPROD(x, y, z) ((double) (x) * (double) (y) == (z))
-#define INTEGER_OVERFLOW_WARNING _("NAs produced by integer overflow")
 #endif
 
-static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
+static int integer_overflow;  /* Set by task_arithmetic_op on integer overflow
+                                 (only in a master-now task or a direct call) */
+
+void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
     int i, i1, i2, n, n1, n2;
     int x1, x2;
-    SEXP ans;
-    Rboolean naflag = FALSE;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
-    /* S4-compatibility change: if n1 or n2 is 0, result is of length 0 */
-    n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
-
-    if (code == DIVOP || code == POWOP)
-	ans = allocVector(REALSXP, n);
-    else {
-        ans = can_save_alloc (s1, s2, INTSXP);
-	if (ans==R_NilValue) 
-            ans = allocVector(INTSXP, n);
-    }
-
-    if (n==0) return(ans);
-
-    PROTECT(ans);
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(s1) || RTRACE(s2)) {
-       if (RTRACE(s1) && RTRACE(s2)) {
-	  if (n1 > n2)
-	      memtrace_report(s1, ans);
-	  else
-	      memtrace_report(s2, ans);
-       } else if (RTRACE(s1))
-	   memtrace_report(s1, ans);
-       else /* only s2 */
-	   memtrace_report(s2, ans);
-       SET_RTRACE(ans, 1);
-    }
-#endif
+    n = n1>n2 ? n1 : n2;
 
     switch (code) {
     case PLUSOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		int val = x1 + x2;
-		if (val != NA_INTEGER && GOODISUM(x1, x2, val))
-		    INTEGER(ans)[i] = val;
-		else {
-		    INTEGER(ans)[i] = NA_INTEGER;
-		    naflag = TRUE;
-		}
-	    }
-	}
-	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER)
+                INTEGER(ans)[i] = NA_INTEGER;
+            else {
+                int val = x1 + x2;
+                if (val != NA_INTEGER && GOODISUM(x1, x2, val))
+                    INTEGER(ans)[i] = val;
+                else {
+                    INTEGER(ans)[i] = NA_INTEGER;
+                    integer_overflow = TRUE;
+                }
+            }
+        }
+        break;
     case MINUSOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		int val = x1 - x2;
-		if (val != NA_INTEGER && GOODIDIFF(x1, x2, val))
-		    INTEGER(ans)[i] = val;
-		else {
-		    naflag = TRUE;
-		    INTEGER(ans)[i] = NA_INTEGER;
-		}
-	    }
-	}
-	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER)
+                INTEGER(ans)[i] = NA_INTEGER;
+            else {
+                int val = x1 - x2;
+                if (val != NA_INTEGER && GOODIDIFF(x1, x2, val))
+                    INTEGER(ans)[i] = val;
+                else {
+                    integer_overflow = TRUE;
+                    INTEGER(ans)[i] = NA_INTEGER;
+                }
+            }
+        }
+        break;
     case TIMESOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		int val = x1 * x2;
-		if (val != NA_INTEGER && GOODIPROD(x1, x2, val))
-		    INTEGER(ans)[i] = val;
-		else {
-		    naflag = TRUE;
-		    INTEGER(ans)[i] = NA_INTEGER;
-		}
-	    }
-	}
-	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER)
+                INTEGER(ans)[i] = NA_INTEGER;
+            else {
+                int val = x1 * x2;
+                if (val != NA_INTEGER && GOODIPROD(x1, x2, val))
+                    INTEGER(ans)[i] = val;
+                else {
+                    integer_overflow = TRUE;
+                    INTEGER(ans)[i] = NA_INTEGER;
+                }
+            }
+        }
+        break;
     case DIVOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		    REAL(ans)[i] = NA_REAL;
-		else
-		    REAL(ans)[i] = (double) x1 / (double) x2;
-	}
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER)
+                    REAL(ans)[i] = NA_REAL;
+                else
+                    REAL(ans)[i] = (double) x1 / (double) x2;
+        }
+        break;
     case POWOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		REAL(ans)[i] = NA_REAL;
-	    else {
-		REAL(ans)[i] = R_POW((double) x1, x2);
-	    }
-	}
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER)
+                REAL(ans)[i] = NA_REAL;
+            else {
+                REAL(ans)[i] = R_POW((double) x1, x2);
+            }
+        }
+        break;
     case MODOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		INTEGER(ans)[i] = /* till 0.63.2:	x1 % x2 */
-		    (x1 >= 0 && x2 > 0) ? x1 % x2 :
-		    (int)myfmod((double)x1,(double)x2);
-	    }
-	}
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
+                INTEGER(ans)[i] = NA_INTEGER;
+            else {
+                INTEGER(ans)[i] = /* till 0.63.2: x1 % x2 */
+                    (x1 >= 0 && x2 > 0) ? x1 % x2 :
+                    (int)myfmod((double)x1,(double)x2);
+            }
+        }
+        break;
     case IDIVOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    /* This had x %/% 0 == 0 prior to 2.14.1, but
-	       it seems conventionally to be undefined */
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else
-		INTEGER(ans)[i] = floor((double)x1 / (double)x2);
-	}
-	break;
+        mod_iterate(n1, n2, i1, i2) {
+            x1 = INTEGER(s1)[i1];
+            x2 = INTEGER(s2)[i2];
+            /* This had x %/% 0 == 0 prior to 2.14.1, but
+               it seems conventionally to be undefined */
+            if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
+                INTEGER(ans)[i] = NA_INTEGER;
+            else
+                INTEGER(ans)[i] = floor((double)x1 / (double)x2);
+        }
+        break;
     }
-
-    /* Copy attributes from longer argument. */
-
-    if (ATTRIB(s2)!=R_NilValue && n2==n && ans!=s2)
-        copyMostAttrib(s2, ans);
-    if (ATTRIB(s1)!=R_NilValue && n1==n && ans!=s1)
-        copyMostAttrib(s1, ans); /* Done 2nd so s1's attrs overwrite s2's */
-
-    UNPROTECT(1);
-    return ans;
 }
 
-#define R_INTEGER(robj, i) (double) (INTEGER(robj)[i] == NA_INTEGER ? NA_REAL : INTEGER(robj)[i])
-
-static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
+void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
-    SEXP ans;
+    unsigned i, i1, i2, n, n1, n2, a, a1, a2;
 
-    /* Note: "s1" and "s2" are protected above. */
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
+    n = n1>n2 ? n1 : n2;
 
-    /* S4-compatibility change: if n1 or n2 is 0, result is of length 0 */
-    if (n1 == 0 || n2 == 0) return(allocVector(REALSXP, 0));
-    n = (n1 > n2) ? n1 : n2;
-
-    ans = can_save_alloc (s1, s2, REALSXP);
-    if (ans==R_NilValue)
-        ans = allocVector(REALSXP, n);
-
-    PROTECT(ans);
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(s1) || RTRACE(s2)) {
-       if (RTRACE(s1) && RTRACE(s2)) {
-	  if (n1 > n2)
-	      memtrace_report(s1, ans);
-	  else
-	      memtrace_report(s2, ans);
-       } else if (RTRACE(s1))
-	   memtrace_report(s1,ans);
-       else /* only s2 */
-	   memtrace_report(s2, ans);
-       SET_RTRACE(ans, 1);
-    }
-#endif
-
-/*    if (n1 < 1 || n2 < 1) {
-      for (i = 0; i < n; i++)
-      REAL(ans)[i] = NA_REAL;
-      return ans;
-      } */
+    HELPERS_SETUP_OUT (6);
 
     switch (code) {
     case PLUSOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-            if (n2 == 1) {
-                double tmp = REAL(s2)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] + tmp;
-            }
-            else if (n1 == 1) {
-                double tmp = REAL(s1)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = tmp + REAL(s2)[i];
-            }
-            else if (n1 == n2)
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] + REAL(s2)[i];
-            else
-                mod_iterate(n1, n2, i1, i2)
-		    REAL(ans)[i] = REAL(s1)[i1] + REAL(s2)[i2];
-	} else	if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_INTEGER(s1, i1) + REAL(s2)[i2];
-	     }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = REAL(s1)[i1] + R_INTEGER(s2, i2);
-	     }
-	}
-	break;
+        if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,add_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,add_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,add_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
     case MINUSOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-            if (n2 == 1) {
-                double tmp = REAL(s2)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] - tmp;
-            }
-            else if (n1 == 1) {
-                double tmp = REAL(s1)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = tmp - REAL(s2)[i];
-            }
-            else if (n1 == n2)
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] - REAL(s2)[i];
-            else
-                mod_iterate(n1, n2, i1, i2)
-		    REAL(ans)[i] = REAL(s1)[i1] - REAL(s2)[i2];
-	} else	if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_INTEGER(s1, i1) - REAL(s2)[i2];
-	   }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = REAL(s1)[i1] - R_INTEGER(s2, i2);
-	   }
-	}
-	break;
+        if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,sub_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,sub_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,sub_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
     case TIMESOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-            if (n2 == 1) {
-                double tmp = REAL(s2)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] * tmp;
-            }
-            else if (n1 == 1) {
-                double tmp = REAL(s1)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = tmp * REAL(s2)[i];
-            }
-            else if (n1 == n2)
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] * REAL(s2)[i];
-            else
-                mod_iterate(n1, n2, i1, i2)
-		    REAL(ans)[i] = REAL(s1)[i1] * REAL(s2)[i2];
-	} else if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_INTEGER(s1, i1) * REAL(s2)[i2];
-	   }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = REAL(s1)[i1] * R_INTEGER(s2, i2);
-	   }
-	}
-	break;
+        if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,mul_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,mul_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,mul_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
     case DIVOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-            if (n2 == 1) {
-                double tmp = REAL(s2)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] / tmp;
-            }
-            else if (n1 == 1) {
-                double tmp = REAL(s1)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = tmp / REAL(s2)[i];
-            }
-            else if (n1 == n2)
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = REAL(s1)[i] / REAL(s2)[i];
-            else
-                mod_iterate(n1, n2, i1, i2)
-		    REAL(ans)[i] = REAL(s1)[i1] / REAL(s2)[i2];
-	} else if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_INTEGER(s1, i1) / REAL(s2)[i2];
-	   }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = REAL(s1)[i1] / R_INTEGER(s2, i2);
-	   }
-	}
-	break;
+        if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,div_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,div_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,div_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
     case POWOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-            if (n2 == 1) {
-                double tmp = REAL(s2)[0];
-                if (tmp == 2.0)
-                    for (i = 0; i < n; i++) {
-                        double tmp2 = REAL(s1)[i];
-                        REAL(ans)[i] = tmp2 * tmp2;
-                    }
-                else if (tmp == 1.0)
-                    for (i = 0; i < n; i++)
-                        REAL(ans)[i] = REAL(s1)[i];
-                else if (tmp == 0.0)
-                    for (i = 0; i < n; i++)
-                        REAL(ans)[i] = 1.0;
-                else if (tmp == -1.0)
-                    for (i = 0; i < n; i++)
-                        REAL(ans)[i] = 1.0 / REAL(s1)[i];
-                else
-                    for (i = 0; i < n; i++)
-                        REAL(ans)[i] = R_pow(REAL(s1)[i], tmp); 
-            }
-            else if (n1 == 1) {
-                double tmp = REAL(s1)[0];
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = R_POW(tmp, REAL(s2)[i]);
-            }
-            else if (n1 == n2)
-                for (i = 0; i < n; i++)
-		    REAL(ans)[i] = R_POW(REAL(s1)[i], REAL(s2)[i]);
+        if (TYPEOF(s1) == REALSXP && n2 == 1) {
+            double tmp = TYPEOF(s2) == REALSXP ? RFETCH(s2,0) : RIFETCH(s2,0);
+            R_len_t i, a;
+            i = 0;
+            if (tmp == 2.0)
+                while (i<n) {
+                    HELPERS_WAIT_IN1 (a, i, n);
+                    do {
+                        R_len_t u = HELPERS_UP_TO(i,a);
+                        do {
+                            double tmp2 = RFETCH(s1,i);
+                            REAL(ans)[i] = tmp2 * tmp2;
+                            i += 1;
+                        } while (i<=u);
+                        helpers_amount_out(i);
+                    } while (i<a);
+                }
+            else if (tmp == 1.0)
+                while (i<n) {
+                    HELPERS_WAIT_IN1 (a, i, n);
+                    do {
+                        R_len_t u = HELPERS_UP_TO(i,a);
+                        do {
+                            REAL(ans)[i] = RFETCH(s1,i);
+                            i += 1;
+                        } while (i<=u);
+                        helpers_amount_out(i);
+                    } while (i<a);
+                }
+            else if (tmp == 0.0)
+                while (i<n) {
+                    HELPERS_WAIT_IN1 (a, i, n);
+                    do {
+                        R_len_t u = HELPERS_UP_TO(i,a);
+                        do {
+                            REAL(ans)[i] = 1.0;
+                            i += 1;
+                        } while (i<=u);
+                        helpers_amount_out(i);
+                    } while (i<a);
+                }
+            else if (tmp == -1.0)
+                while (i<n) {
+                    HELPERS_WAIT_IN1 (a, i, n);
+                    do {
+                        R_len_t u = HELPERS_UP_TO(i,a);
+                        do {
+                            REAL(ans)[i] = 1.0 / RFETCH(s1,i);
+                            i += 1;
+                        } while (i<=u);
+                        helpers_amount_out(i);
+                    } while (i<a);
+                }
             else
-	        mod_iterate(n1, n2, i1, i2) {
-	            REAL(ans)[i] = R_POW(REAL(s1)[i1], REAL(s2)[i2]);
-	        }
-	} else if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_POW( R_INTEGER(s1, i1), REAL(s2)[i2]);
-	   }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = R_POW(REAL(s1)[i1], R_INTEGER(s2, i2));
-	   }
-	}
-	break;
+                while (i<n) {
+                    HELPERS_WAIT_IN1 (a, i, n);
+                    do {
+                        R_len_t u = HELPERS_UP_TO(i,a);
+                        do {
+                            REAL(ans)[i] = R_pow (RFETCH(s1,i), tmp);
+                            i += 1;
+                        } while (i<=u);
+                        helpers_amount_out(i);
+                    } while (i<a);
+                }
+        }
+        else if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,R_POW,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,R_POW,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,R_POW,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
     case MODOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = myfmod(REAL(s1)[i1], REAL(s2)[i2]);
-	   }
-	} else if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = myfmod( R_INTEGER(s1, i1), REAL(s2)[i2]);
-	   }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = myfmod(REAL(s1)[i1], R_INTEGER(s2, i2));
-	   }
-	}
-	break;
+        if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,myfmod,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,myfmod,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,myfmod,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
     case IDIVOP:
-	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = myfloor(REAL(s1)[i1], REAL(s2)[i2]);
-	   }
-	} else if(TYPEOF(s1) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = myfloor(R_INTEGER(s1, i1), REAL(s2)[i2]);
-	   }
-	} else	if(TYPEOF(s2) == INTSXP ) {
-	   mod_iterate(n1, n2, i1, i2) {
-	       REAL(ans)[i] = myfloor(REAL(s1)[i1], R_INTEGER(s2,i2));
-	   }
-	}
-	break;
+        if (TYPEOF(s1) != REALSXP)
+            PIPEARITH(double,myfloor,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+        else if (TYPEOF(s2) != REALSXP)
+            PIPEARITH(double,myfloor,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+        else
+            PIPEARITH(double,myfloor,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+        break;
+    }
+}
+
+extern double complex R_cpow (double complex, double complex);
+
+void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
+{
+    int i,i1, i2, n, n1, n2;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = n1>n2 ? n1 : n2;
+
+    switch (code) {
+    case PLUSOP:
+        mod_iterate(n1, n2, i1, i2) {
+            Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
+            COMPLEX(ans)[i].r = x1.r + x2.r;
+            COMPLEX(ans)[i].i = x1.i + x2.i;
+        }
+        break;
+    case MINUSOP:
+        mod_iterate(n1, n2, i1, i2) {
+            Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
+            COMPLEX(ans)[i].r = x1.r - x2.r;
+            COMPLEX(ans)[i].i = x1.i - x2.i;
+        }
+        break;
+    case TIMESOP:
+        mod_iterate(n1, n2, i1, i2) {
+            R_from_C99_complex (COMPLEX(ans)+i,
+                                C99_from_R_complex(COMPLEX(s1)+i1) 
+                                 * C99_from_R_complex(COMPLEX(s2)+i2));
+        }
+        break;
+    case DIVOP:
+        mod_iterate(n1, n2, i1, i2) {
+            R_from_C99_complex (COMPLEX(ans)+i,
+                                C99_from_R_complex(COMPLEX(s1)+i1) 
+                                 / C99_from_R_complex(COMPLEX(s2)+i2));
+        }
+        break;
+    case POWOP:
+        mod_iterate(n1, n2, i1, i2) {
+            R_from_C99_complex (COMPLEX(ans)+i,
+                                R_cpow (C99_from_R_complex(COMPLEX(s1)+i1),
+                                        C99_from_R_complex(COMPLEX(s2)+i2)));
+        }
+        break;
+    }
+}
+
+#define COERCE_IF_NEEDED(v, tp, vpi) do { \
+    if (TYPEOF(v) != (tp)) { \
+        int __vo__ = OBJECT(v); \
+        WAIT_UNTIL_COMPUTED(v); \
+        REPROTECT(v = coerceVector(v, (tp)), vpi); \
+        if (__vo__) SET_OBJECT(v, 1); \
+    } \
+} while (0)
+
+#define FIXUP_NULL_AND_CHECK_TYPES(v, vpi) do { \
+    switch (TYPEOF(v)) { \
+    case NILSXP: REPROTECT(v = allocVector(REALSXP,0), vpi); break; \
+    case CPLXSXP: case REALSXP: case INTSXP: case LGLSXP: break; \
+    default: errorcall(call, _("non-numeric argument to binary operator")); \
+    } \
+} while (0)
+
+#define T_arithmetic THRESHOLD_ADJUST(24)  /* further adjusted below */
+
+SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
+{
+    LOCAL_COPY(R_NilValue);
+    helpers_task_proc *task;
+    SEXP klass, dims, tsp, xnames, ynames, ans;
+    int mismatch = 0, nx, ny, n, xarray, yarray, xts, yts, xS4 = 0, yS4 = 0;
+    int xattr, yattr;
+    PROTECT_INDEX xpi, ypi;
+    ARITHOP_TYPE oper = (ARITHOP_TYPE) PRIMVAL(op);
+    int threshold, flags, nprotect;
+
+    PROTECT_WITH_INDEX(x, &xpi);
+    PROTECT_WITH_INDEX(y, &ypi);
+    nprotect = 2;
+
+    FIXUP_NULL_AND_CHECK_TYPES(x, xpi);
+    FIXUP_NULL_AND_CHECK_TYPES(y, ypi);
+
+    nx = LENGTH(x);
+    if (ATTRIB(x) != R_NilValue) {
+        xattr = TRUE;
+        xarray = isArray(x);
+        xts = isTs(x);
+        xS4 = isS4(x);
+    }
+    else xarray = xts = xattr = FALSE;
+    ny = LENGTH(y);
+    if (ATTRIB(y) != R_NilValue) {
+        yattr = TRUE;
+        yarray = isArray(y);
+        yts = isTs(y);
+        yS4 = isS4(y);
+    }
+    else yarray = yts = yattr = FALSE;
+
+    /* If either x or y is a matrix with length 1 and the other is a
+       vector, we want to coerce the matrix to be a vector. */
+
+    if (xarray != yarray) {
+        if (xarray && nx==1 && ny!=1) {
+            REPROTECT(x = duplicate(x), xpi);
+            setAttrib(x, R_DimSymbol, R_NilValue);
+        }
+        if (yarray && ny==1 && nx!=1) {
+            REPROTECT(y = duplicate(y), ypi);
+            setAttrib(y, R_DimSymbol, R_NilValue);
+        }
+    }
+
+    if (xarray || yarray) {
+        if (xarray && yarray && !conformable(x,y))
+                errorcall(call, _("non-conformable arrays"));
+        PROTECT(dims = getAttrib (xarray ? x : y, R_DimSymbol));
+        nprotect++;
+        if (xattr) {
+            PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
+            nprotect++;
+        }
+        else xnames = R_NilValue;
+        if (yattr) {
+            PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
+            nprotect++;
+        }
+        else ynames = R_NilValue;
+    }
+    else {
+        dims = R_NilValue;
+        if (xattr) {
+            PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+            nprotect++;
+        }
+        else xnames = R_NilValue;
+        if (yattr) {
+            PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+            nprotect++;
+        }
+        else ynames = R_NilValue;
+    }
+    if (nx == ny || nx == 1 || ny == 1) mismatch = 0;
+    else if (nx > 0 && ny > 0) {
+        if (nx > ny) mismatch = nx % ny;
+        else mismatch = ny % nx;
+    }
+
+    if (xts || yts) {
+        if (xts && yts) {
+            if (!tsConform(x, y))
+                errorcall(call, _("non-conformable time-series"));
+            PROTECT(tsp = getAttrib(x, R_TspSymbol));
+            PROTECT(klass = getAttrib(x, R_ClassSymbol));
+        }
+        else if (xts) {
+            if (nx < ny)
+                ErrorMessage(call, ERROR_TSVEC_MISMATCH);
+            PROTECT(tsp = getAttrib(x, R_TspSymbol));
+            PROTECT(klass = getAttrib(x, R_ClassSymbol));
+        }
+        else {                        /* (yts) */
+            if (ny < nx)
+                ErrorMessage(call, ERROR_TSVEC_MISMATCH);
+            PROTECT(tsp = getAttrib(y, R_TspSymbol));
+            PROTECT(klass = getAttrib(y, R_ClassSymbol));
+        }
+        nprotect += 2;
+    }
+    else klass = tsp = NULL; /* -Wall */
+
+    if (mismatch)
+        warningcall (call,
+          _("longer object length is not a multiple of shorter object length"));
+
+    /* S4-compatibility change: if nx or ny is 0, result is of length 0 */
+
+    n = nx==0 || ny==0 ? 0 : nx>ny ? nx : ny;
+
+    if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
+        if (oper==IDIVOP || oper==MODOP)
+            errorcall(call,_("unimplemented complex operation"));
+        COERCE_IF_NEEDED(x, CPLXSXP, xpi);
+        COERCE_IF_NEEDED(y, CPLXSXP, ypi);
+        ans = can_save_alloc (x, y, CPLXSXP);
+        if (ans==R_NilValue)
+            ans = allocVector(CPLXSXP, n);
+        task = task_complex_arithmetic;
+        flags = 0;  /* Not bothering with pipelining yet. */
+    }
+    else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
+         /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
+            and assumes INT and LOGICAL are really the same. */
+        ans = can_save_alloc (x, y, REALSXP);
+        if (ans==R_NilValue)
+            ans = allocVector(REALSXP, n);
+        task = task_real_arithmetic;
+        flags = HELPERS_PIPE_OUT | HELPERS_PIPE_IN0;
+        if (n>1) {
+            if (nx==n) flags |= HELPERS_PIPE_IN1;
+            if (ny==n) flags |= HELPERS_PIPE_IN2;
+        }
+    }
+    else {
+        /* task_integer_arithmetic is assumed to work for LOGICAL too, though
+           this won't be true if they aren't really the same */
+        if (oper == DIVOP || oper == POWOP)
+            ans = allocVector(REALSXP, n);
+        else {
+            ans = can_save_alloc (x, y, INTSXP);
+            if (ans==R_NilValue) 
+                ans = allocVector(INTSXP, n);
+        }
+        task = task_integer_arithmetic;
+
+       /* Must do +, -, * in master in present version, because of possible 
+          integer overflow warning.  Not bothering with pipelining yet.*/
+
+        flags = oper <= TIMESOP ? HELPERS_MASTER_NOW : 0;
+    }
+
+    PROTECT(ans);
+    nprotect++;
+
+    /* Do the actual operation. */
+
+    if (n!=0) {
+
+#ifdef R_MEMORY_PROFILING
+        if (RTRACE(x) || RTRACE(y)) {
+           if (RTRACE(x) && RTRACE(y)) {
+              if (nx > ny)
+                  memtrace_report(x, ans);
+              else
+                  memtrace_report(y, ans);
+           } else if (RTRACE(x))
+               memtrace_report(x, ans);
+           else /* only y */
+               memtrace_report(y, ans);
+           SET_RTRACE(ans, 1);
+        }
+#endif
+        integer_overflow = 0;
+
+        threshold = T_arithmetic;
+        if (TYPEOF(ans)==CPLXSXP) threshold >>= 1;
+        if (oper!=PLUSOP && oper!=MINUSOP) threshold >>= 1;
+        if (oper==POWOP) threshold >>= 1;
+
+        DO_NOW_OR_LATER2 (variant, n > 1 && n >= threshold,
+                          flags, task, oper, ans, x, y);
+
+        if (integer_overflow)
+            warningcall(call, _("NAs produced by integer overflow"));
+    }
+
+    /* quick return if there are no attributes */
+
+    if (! xattr && ! yattr) {
+        UNPROTECT(nprotect);
+        return ans;
     }
 
     /* Copy attributes from arguments as needed. */
 
-    if (ATTRIB(s2)!=R_NilValue && n2==n && ans!=s2)
-        copyMostAttrib(s2, ans);
-    if (ATTRIB(s1)!=R_NilValue && n1==n && ans!=s1)
-        copyMostAttrib(s1, ans); /* Done 2nd so s1's attrs overwrite s2's */
+    if (yattr && ny==n && ans!=y)
+        copyMostAttrib(y, ans);
+    if (xattr && nx==n && ans!=x)
+        copyMostAttrib(x, ans); /* Done 2nd so x's attrs overwrite y's */
 
-    UNPROTECT(1);
+    /* Don't set the dims if one argument is an array of size 0 and the
+       other isn't of size zero, cos they're wrong */
+    /* Not if the other argument is a scalar (PR#1979) */
+    if (dims != R_NilValue) {
+        if (!((xarray && (nx == 0) && (ny > 1)) ||
+              (yarray && (ny == 0) && (nx > 1)))){
+            setAttrib(ans, R_DimSymbol, dims);
+            if (xnames != R_NilValue)
+                setAttrib(ans, R_DimNamesSymbol, xnames);
+            else if (ynames != R_NilValue)
+                setAttrib(ans, R_DimNamesSymbol, ynames);
+        }
+    }
+    else {
+        if (LENGTH(ans) == length(xnames))
+            setAttrib(ans, R_NamesSymbol, xnames);
+        else if (LENGTH(ans) == length(ynames))
+            setAttrib(ans, R_NamesSymbol, ynames);
+    }
+
+    if (xts || yts) {                /* must set *after* dims! */
+        setAttrib(ans, R_TspSymbol, tsp);
+        setAttrib(ans, R_ClassSymbol, klass);
+    }
+
+    if(xS4 || yS4) {   /* Only set the bit:  no method defined! */
+        ans = asS4(ans, TRUE, TRUE);
+    }
+
+    UNPROTECT(nprotect);
     return ans;
+}
+
+void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
+{
+    R_len_t n = LENGTH(s1);
+    R_len_t i = 0;
+    R_len_t a;
+
+    HELPERS_SETUP_OUT (8);
+
+    switch (TYPEOF(s1)) {
+
+    case LGLSXP:
+        /* Assume LGLSXP is really the same as INTSXP... */
+    case INTSXP:
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                R_len_t u = HELPERS_UP_TO(i,a);
+                do {
+                    int x = INTEGER(s1)[i];
+                    INTEGER(ans)[i] = x==NA_INTEGER ? NA_INTEGER : -x;
+                    i += 1;
+                } while (i<=u);
+                helpers_amount_out(i);
+            } while (i < a);
+        }
+        break;
+
+    case REALSXP:
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                R_len_t u = HELPERS_UP_TO(i,a);
+                do {
+                    REAL(ans)[i] = -REAL(s1)[i];
+                    i += 1;
+                } while (i<=u);
+                helpers_amount_out(i);
+            } while (i < a);
+        }
+        break;
+
+    case CPLXSXP:
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                R_len_t u = HELPERS_UP_TO(i,a);
+                do {
+                    COMPLEX(ans)[i].r = -COMPLEX(s1)[i].r;
+                    COMPLEX(ans)[i].i = -COMPLEX(s1)[i].i;
+                    i += 1;
+                } while (i<=u);
+                helpers_amount_out(i);
+            } while (i < a);
+        }
+        break;
+    }
+}
+
+#define T_unary_minus THRESHOLD_ADJUST(20)
+
+SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
+{
+    ARITHOP_TYPE operation = (ARITHOP_TYPE) PRIMVAL(op);
+    int type = TYPEOF(s1);
+    SEXP ans;
+    int n;
+
+    if ( ! ((NUMBER_TYPES >> type) & 1))
+        errorcall(call, _("invalid argument to unary operator"));
+
+    if (operation==PLUSOP) 
+        return s1;
+
+    n = LENGTH(s1);
+    ans = NAMEDCNT_EQ_0(s1) ? s1 : allocVector (type==LGLSXP?INTSXP:type, n);
+
+    if (operation==MINUSOP) {
+        DO_NOW_OR_LATER1 (variant, n >= T_unary_minus,
+          HELPERS_PIPE_IN01_OUT, task_unary_minus, 0, ans, s1);
+        if (ans != s1) {
+            PROTECT(ans);
+            DUPLICATE_ATTRIB(ans,s1);
+            UNPROTECT(1);
+        }
+        return ans;
+    }
+    else
+        errorcall(call, _("invalid argument to unary operator"));
 }
 
 
@@ -1147,21 +1255,104 @@ static char math1_err_table[44] = {
 /* 40 */        -2,     -2,     -1,     -1
 };
 
+void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
+{
+    double *ra = REAL(sa);
+    double *ry = REAL(sy);
+    R_len_t n = LENGTH(sa);
+    R_len_t i = 0;
+    R_len_t a;
+
+    double (*f)(double) = math1_func_table[opcode];
+
+    HELPERS_SETUP_OUT(5);
+
+    if (math1_err_table[opcode]==0) {
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    ry[i] = ra[i];
+                else
+                    ry[i] = f(ra[i]);
+                HELPERS_NEXT_OUT(i);
+            } while (i < a);
+        }
+    }
+    else {
+        int naflag = 0;
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    ry[i] = ra[i];
+                else {
+                    ry[i] = f(ra[i]);
+                    if (ISNAN(ry[i])) naflag = 1;
+                }
+                HELPERS_NEXT_OUT(i);
+            } while (i < a);
+        }
+        /* Warning below is only possible if this is being done in master */
+        if (naflag) warningcall(call, R_MSG_NA);
+    }
+}
+
+void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
+{
+    double *ra = REAL(sa);
+    long double s = 0.0;
+    R_len_t n = LENGTH(sa);
+    R_len_t i = 0;
+    R_len_t a;
+
+    double (*f)(double) = math1_func_table[opcode];
+
+    if (math1_err_table[opcode]==0) {
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    s += ra[i];
+                else
+                    s += f(ra[i]);
+                i += 1;
+            } while (i < a);
+        }
+    }
+    else {
+        int naflag = 0;
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    s += ra[i];
+                else {
+                    double t = f(ra[i]);
+                    if (ISNAN(t)) naflag = 1;
+                    s += t;
+                }
+                i += 1;
+            } while (i < a);
+        }
+        /* Warning below is only possible if this is being done in master */
+        if (naflag) warningcall(call, R_MSG_NA);
+    }
+
+    REAL(sy)[0] = (double) s;
+}
+
+#define T_math1 THRESHOLD_ADJUST(5)
+
 static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 {
     SEXP sy;
-    double *a;
-    int i, n;
-    int naflag;
-
-    double (*f)(double);
+    int n;
 
     if (opcode == 10003) /* horrible kludge for log */
         opcode = 13;
     else if (opcode >= 44)
         errorcall(call, _("unimplemented real function of 1 argument"));
-
-    f = math1_func_table[opcode];
 
     if (!isNumeric(sa))
         errorcall(call, R_MSG_NONNUM_MATH);
@@ -1170,74 +1361,32 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     /* coercion can lose the object bit */
     PROTECT(sa = coerceVector(sa, REALSXP));
 
-    a = REAL(sa);
-    naflag = 0;
-
     if (VARIANT_KIND(variant) == VARIANT_SUM) {
-        long double s = 0.0;
-        if (math1_err_table[opcode]==0) {
-            for (i = 0; i < n; i++) {
-                if (ISNAN(a[i]))
-                    s += a[i];
-                else
-                    s += f(a[i]);
-            }
-        }
-        else {
-            for (i = 0; i < n; i++) {
-                if (ISNAN(a[i]))
-                    s += a[i];
-                else {
-                    double t = f(a[i]);
-                    if (ISNAN(t)) naflag = 1;
-                    s += t;
-                }
-            }
-        }
-        sy = allocVector(REALSXP, 1);
-        REAL(sy)[0] = (double) s;
-        SET_ATTRIB (sy, R_VariantResult);
-    }
-    else { /* non-variant return */
-        double *y;
-        sy = NAMEDCNT_EQ_0(sa) ? sa : allocVector(REALSXP, n);
-        PROTECT(sy);
-        y = REAL(sy);
 
+        sy = allocVector(REALSXP, 1);
+        DO_NOW_OR_LATER2 (variant, 
+                       LENGTH(sa) >= T_math1 && math1_err_table[opcode] == 0,
+                       HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa, call);
+        SET_ATTRIB (sy, R_VariantResult);
+        UNPROTECT(1);
+    }
+
+    else { /* non-variant result */
+
+        PROTECT(sy = NAMEDCNT_EQ_0(sa) ? sa : allocVector(REALSXP, n));
 #ifdef R_MEMORY_PROFILING
         if (RTRACE(sa)){
            memtrace_report(sa, sy);
            SET_RTRACE(sy, 1);
         }
 #endif
-        if (math1_err_table[opcode]==0) {
-            for (i = 0; i < n; i++) {
-                if (ISNAN(a[i]))
-                    y[i] = a[i];
-                else
-                    y[i] = f(a[i]);
-            }
-        }
-        else {
-            for (i = 0; i < n; i++) {
-                if (ISNAN(a[i]))
-                    y[i] = a[i];
-                else {
-                    y[i] = f(a[i]);
-                    if (ISNAN(y[i])) naflag = 1;
-                }
-            }
-        }
-
+        DO_NOW_OR_LATER2 (variant,
+                       LENGTH(sa) >= T_math1 && math1_err_table[opcode] == 0,
+                       HELPERS_PIPE_IN01_OUT, task_math1, opcode, sy, sa, call);
         if (sa!=sy) 
             DUPLICATE_ATTRIB(sy, sa);
-        UNPROTECT(1);
+        UNPROTECT(2);
     }
-
-    if (naflag)
-        warningcall(call, R_MSG_NA);
-
-    UNPROTECT(1);
 
     return sy;
 }
@@ -1248,6 +1397,7 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         /* for the moment, keep the interface to complex_math1 the same */
         SEXP tmp;
         PROTECT(tmp = CONS(arg,R_NilValue));
+        WAIT_UNTIL_COMPUTED(arg);
         tmp = complex_math1(call, op, tmp, env);
         UNPROTECT(1);
         return tmp;
@@ -1299,6 +1449,41 @@ SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Note that abs is slightly different from the do_math1 set, both
    for integer/logical inputs and what it dispatches to for complex ones. */
 
+void task_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
+{
+    R_len_t n = LENGTH(x);
+    R_len_t i = 0;
+    R_len_t a;
+
+    HELPERS_SETUP_OUT(7);
+    while (i < n) {
+        HELPERS_WAIT_IN1 (a, i, n);
+        do {
+            REAL(s)[i] = fabs(REAL(x)[i]);
+            HELPERS_NEXT_OUT(i);
+        } while (i < a);
+    }
+}
+
+void task_sum_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
+{
+    R_len_t n = LENGTH(x);
+    R_len_t i = 0;
+    R_len_t a;
+    long double r = 0.0;
+
+    while (i < n) {
+        HELPERS_WAIT_IN1 (a, i, n);
+        do {
+            r += fabs(REAL(x)[i]);
+            i += 1;
+        } while (i < a);
+    }
+    REAL(s)[0] = (double) r;
+}
+
+#define T_abs THRESHOLD_ADJUST(10)
+
 static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
@@ -1308,6 +1493,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
 	s = NAMEDCNT_EQ_0(x) && TYPEOF(x)==INTSXP ? x : allocVector(INTSXP, n);
+        WAIT_UNTIL_COMPUTED(x);
 	/* Note: relying on INTEGER(.) === LOGICAL(.) : */
 	for (int i = 0 ; i < n ; i++) {
             int v = INTEGER(x)[i];
@@ -1316,20 +1502,20 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
     } else if (TYPEOF(x) == REALSXP) {
 	int n = LENGTH(x);
         if (VARIANT_KIND(variant) == VARIANT_SUM) {
-            long double r = 0.0;
-	    for (int i = 0 ; i < n ; i++)
-                r += fabs(REAL(x)[i]);
             s = allocVector (REALSXP, 1);
-            REAL(s)[0] = (double) r;
+            DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
+                              HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
             SET_ATTRIB (s, R_VariantResult);
-            return s;
         }
-        s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
-	for (int i = 0 ; i < n ; i++)
-	    REAL(s)[i] = fabs(REAL(x)[i]);
+        else {
+            s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
+            DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
+                              HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
+        }
     } else if (isComplex(x)) {
         SEXP args;
         PROTECT (args = CONS(x,R_NilValue));
+        WAIT_UNTIL_COMPUTED(x);
 	s = do_cmathfuns(call, op, args, env);
         UNPROTECT(1);
     } else
@@ -1658,8 +1844,9 @@ SEXP attribute_hidden do_log (SEXP call, SEXP op, SEXP args, SEXP env,
     if (!isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) 
           && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg) {
         SEXP arg, ans;
-        PROTECT(arg = eval (CAR(args), env));
+        PROTECT(arg = evalv (CAR(args), env, VARIANT_PENDING_OK));
         if (isObject(arg)) {
+            WAIT_UNTIL_COMPUTED(arg);
             UNPROTECT(1);
             PROTECT(args = CONS(arg, R_NilValue));
             n = 1;

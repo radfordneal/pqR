@@ -85,28 +85,13 @@
 
 /* 
    Note: this could use the C11 CMPLX() macro.
-   As could mycpow, z_tan and some of the substitutes.
+   As could R_cpow, z_tan and some of the substitutes.
  */
-static R_INLINE double complex toC99(Rcomplex *x)
-{
-#if __GNUC__
-    double complex ans = (double complex) 0; /* -Wall */
-    __real__ ans = x->r;
-    __imag__ ans = x->i;
-    return ans;
-#else
-    return x->r + x->i * I;
-#endif
-}
-#define C99_COMPLEX2(x, i) toC99(COMPLEX(x) + i)
 
-static R_INLINE void 
-SET_C99_COMPLEX(Rcomplex *x, int i, double complex value)
-{
-    Rcomplex *ans = x+i;
-    ans->r = creal(value);
-    ans->i = cimag(value);
-}
+#define C99_COMPLEX2(x,i) C99_from_R_complex(COMPLEX(x) + i)
+#define SET_C99_COMPLEX(x,i,value) R_from_C99_complex((x)+(i),(value))
+
+/* Procedure below is no longer used in arithmetic.c; kept here just in case.*/
 
 SEXP attribute_hidden complex_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 {
@@ -162,7 +147,7 @@ static R_INLINE double complex R_cpow_n(double complex X, int k)
   (C1x's CMPLX will eventually be possible.)
 */
 
-static double complex mycpow (double complex X, double complex Y)
+double complex R_cpow (double complex X, double complex Y)
 {
     double complex Z;
     double yr = creal(Y), yi = cimag(Y); 
@@ -205,6 +190,8 @@ static double complex mycpow (double complex X, double complex Y)
 	i1 = (++i1 == n1) ? 0 : i1,\
 	i2 = (++i2 == n2) ? 0 : i2,\
 	++i)
+
+/* Procedure below is no longer used in arithmetic.c; kept here just in case.*/
 
 SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 {
@@ -270,7 +257,7 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
     case POWOP:
 	mod_iterate(n1, n2, i1, i2) {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
-			    mycpow(C99_COMPLEX2(s1, i1), C99_COMPLEX2(s2, i2)));
+			    R_cpow(C99_COMPLEX2(s1, i1), C99_COMPLEX2(s2, i2)));
 	}
 	break;
     default:
@@ -449,7 +436,7 @@ static double complex clog(double complex x)
 /* FreeBSD does have this one */
 static double complex csqrt(double complex x)
 {
-    return mycpow(x, 0.5+0.0*I);
+    return R_cpow(x, 0.5+0.0*I);
 }
 #endif
 
@@ -633,7 +620,7 @@ static Rboolean cmath1(double complex (*f)(double complex),
 	if (ISNA(x[i].r) || ISNA(x[i].i)) {
 	    y[i].r = NA_REAL; y[i].i = NA_REAL;
 	} else {
-	    SET_C99_COMPLEX(y, i, f(toC99(x + i)));
+	    SET_C99_COMPLEX(y, i, f(C99_from_R_complex(x + i)));
 	    if ( (ISNAN(y[i].r) || ISNAN(y[i].i)) &&
 		!(ISNAN(x[i].r) || ISNAN(x[i].i)) ) naflag = TRUE;
 	}
@@ -697,13 +684,16 @@ static void z_prec(Rcomplex *r, Rcomplex *x, Rcomplex *p)
 
 static void z_logbase(Rcomplex *r, Rcomplex *z, Rcomplex *base)
 {
-    double complex dz = toC99(z), dbase = toC99(base);
+    double complex dz = C99_from_R_complex(z), 
+                   dbase = C99_from_R_complex(base);
     SET_C99_COMPLEX(r, 0, clog(dz)/clog(dbase));
 }
 
 static void z_atan2(Rcomplex *r, Rcomplex *csn, Rcomplex *ccs)
 {
-    double complex dr, dcsn = toC99(csn), dccs = toC99(ccs);
+    double complex dcsn = C99_from_R_complex(csn), 
+                   dccs = C99_from_R_complex(ccs);
+    double complex dr;
     if (dccs == 0) {
 	if(dcsn == 0) {
 	    r->r = NA_REAL; r->i = NA_REAL; /* Why not R_NaN? */

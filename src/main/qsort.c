@@ -115,6 +115,7 @@ void F77_SUB(qsort3)(double *v, int *ii, int *jj)
     R_qsort(v, *ii, *jj);
 }
 
+#undef I   /* defined in complex.h */
 
 #define qsort_Index
 #define NUMERIC double

@@ -105,7 +105,7 @@ SEXP do_anydf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_aperm(SEXP, SEXP, SEXP, SEXP);
 SEXP do_aregexec(SEXP, SEXP, SEXP, SEXP);
 SEXP do_args(SEXP, SEXP, SEXP, SEXP);
-SEXP do_arith(SEXP, SEXP, SEXP, SEXP);
+SEXP do_arith(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_arrows(SEXP, SEXP, SEXP, SEXP);
 SEXP do_asPOSIXct(SEXP, SEXP, SEXP, SEXP);
 SEXP do_asPOSIXlt(SEXP, SEXP, SEXP, SEXP);
@@ -622,4 +622,8 @@ SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho);
 SEXP do_tracemem(SEXP, SEXP, SEXP, SEXP);
 SEXP do_retracemem(SEXP, SEXP, SEXP, SEXP);
 SEXP do_untracemem(SEXP, SEXP, SEXP, SEXP);
+
+SEXP R_unary(SEXP, SEXP, SEXP, int);
+SEXP R_binary(SEXP, SEXP, SEXP, SEXP, int);
+
 #endif /* not R_INTERNAL_H */

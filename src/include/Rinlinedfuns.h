@@ -76,7 +76,7 @@
 
 
 #include <string.h> /* for strlen, strcmp */
-
+#include <complex.h>
 
 /* Sets of SEXTYPES, for fast testing with if ((set >> type) & 1) ... */
 
@@ -509,6 +509,27 @@ INLINE_FUN SEXP ScalarRaw(Rbyte x)
     RAW(ans)[0] = x;
     return ans;
 }
+
+/* Conversion between R and C99 complex values. */
+
+INLINE_FUN double complex C99_from_R_complex (Rcomplex *x)
+{
+#if __GNUC__
+    double complex ans = (double complex) 0; /* -Wall */
+    __real__ ans = x->r;
+    __imag__ ans = x->i;
+    return ans;
+#else
+    return x->r + x->i * I;
+#endif
+}
+
+INLINE_FUN void R_from_C99_complex (Rcomplex *x, double complex value)
+{
+    x->r = creal(value);
+    x->i = cimag(value);
+}
+
 
 /* Check to see if a list can be made into a vector. */
 /* it must have every element being a vector of length 1. */

@@ -39,11 +39,15 @@ char *Rf_task_name (helpers_task_proc *task)
     /* a */
     /* b */
     /* c */
+    TASK_NAME(unary_minus);
     /* d */
-    /* e */
-    /* f */
-    /* g */
-    /* h */
+    TASK_NAME(integer_arithmetic);
+    TASK_NAME(real_arithmetic);
+    TASK_NAME(complex_arithmetic);
+    TASK_NAME(abs);
+    TASK_NAME(sum_abs);
+    TASK_NAME(math1);
+    TASK_NAME(sum_math1);
     /* i */
     /* j */
     /* k */
