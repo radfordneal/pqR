@@ -2144,7 +2144,10 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 
   Create an environment by extending "rho" with a frame obtained by
   pairing the variable names given by the tags on "namelist" with
-  the values given by the elements of "valuelist".
+  the values given by the elements of "valuelist".  Note that "namelist" 
+  can be shorter than "valuelist" if the rest of "valuelist" already 
+  has tags. (In particular, "namelist" can be R_NilValue if all of
+  "valuelist" already has tags.)
 
   NewEnvironment is defined directly to avoid the need to protect its
   arguments unless a GC will actually occur.  This definition allows
@@ -3404,7 +3407,7 @@ SEXP attribute_hidden do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (args == R_NilValue)
         error(_("too few arguments"));
 
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     for (a = CDR(args); a != R_NilValue; a = CDR(a))
         if (!isString(CAR(a)))

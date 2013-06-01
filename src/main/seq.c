@@ -357,27 +357,23 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a primitive SPECIALSXP with internal argument matching */
 SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, x, ap, times = R_NilValue /* -Wall */, ind;
-    int i, lx, len = NA_INTEGER, each = 1, nt, nprotect = 4;
+    SEXP ans, x, times = R_NilValue /* -Wall */, ind;
+    int i, lx, len = NA_INTEGER, each = 1, nt, nprotect = 0;
+    static char *ap[5] = { "x", "times", "length.out", "each", "..." };
 
     if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
 	return(ans);
 
     /* This has evaluated all the non-missing arguments into ans */
     PROTECT(args = ans);
+    nprotect++;
 
     /* This is a primitive, and we have not dispatched to a method
        so we manage the argument matching ourselves.  We pretend this is
        rep(x, times, length.out, each, ...)
     */
-    PROTECT(ap = CONS(R_NilValue,
-		      list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue)));
-    SET_TAG(ap,  install("x"));
-    SET_TAG(CDR(ap), install("times"));
-    SET_TAG(CDDR(ap), install("length.out"));
-    SET_TAG(CDR(CDDR(ap)), install("each"));
-    SET_TAG(CDDR(CDDR(ap)), R_DotsSymbol);
-    PROTECT(args = matchArgs(ap, args, call));
+    PROTECT(args = matchArgs(R_NilValue, ap, 5, args, call));
+    nprotect++;
 
     x = CAR(args);
     lx = length(x);
@@ -397,7 +393,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(each == NA_INTEGER) each = 1;
 
     if(lx == 0) {
-	UNPROTECT(3);
+	UNPROTECT(nprotect);
 	if(len == NA_INTEGER) return x;
 	else return lengthgets(duplicate(x), len);
     }
@@ -428,6 +424,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
     PROTECT(ind = allocVector(INTSXP, len));
+    nprotect++;
     if(len > 0 && each == 0)
 	errorcall(call, _("invalid '%s' argument"), "each");
     if(nt == 1)
@@ -465,9 +462,11 @@ done:
 /* to match seq.default */
 SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans = R_NilValue /* -Wall */, ap, tmp, from, to, by, len, along;
+    SEXP ans = R_NilValue /* -Wall */, tmp, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
     Rboolean One = nargs == 1;
+    static char *ap[6] =
+        { "from", "to", "by", "length.out", "along.with", "..." };
 
     if (DispatchOrEval(call, op, "seq", args, rho, &ans, 0, 1))
 	return(ans);
@@ -476,18 +475,8 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
        We pretend this is
        seq(from, to, by, length.out, along.with, ...)
     */
-    PROTECT(ap = CONS(R_NilValue,
-		      CONS(R_NilValue,
-			   list4(R_NilValue, R_NilValue, R_NilValue,
-				 R_NilValue))));
-    tmp = ap;
-    SET_TAG(tmp, install("from")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("to")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("by")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("length.out")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("along.with")); tmp = CDR(tmp);
-    SET_TAG(tmp, R_DotsSymbol);
-    PROTECT(args = matchArgs(ap, args, call));
+
+    PROTECT(args = matchArgs(R_NilValue, ap, 6, args, call));
 
     from = CAR(args); args = CDR(args);
     to = CAR(args); args = CDR(args);
@@ -642,7 +631,7 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("too many arguments"));
 
 done:
-    UNPROTECT(2);
+    UNPROTECT(1);
     return ans;
 }
 

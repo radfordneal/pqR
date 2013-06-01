@@ -523,7 +523,7 @@ SEXP classgets(SEXP vec, SEXP klass)
 SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (NAMED(CAR(args)) == 2) SETCAR(args, duplicate(CAR(args)));
     if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
@@ -537,7 +537,7 @@ SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_class(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     SEXP x = CAR(args), s3class;
     if(IS_S4_OBJECT(x)) {
       if((s3class = S3Class(x)) != R_NilValue) {
@@ -744,7 +744,7 @@ SEXP attribute_hidden R_do_data_class(SEXP call, SEXP op, SEXP args, SEXP env)
       class = translateChar(STRING_ELT(klass, 0));
       return cache_class(class, CADR(args));
   }
-  check1arg(args, call, "x");
+  check1arg_x (args, call);
   return R_data_class(CAR(args), FALSE);
 }
 
@@ -753,7 +753,7 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1))
 	return(ans);
@@ -868,7 +868,7 @@ SEXP attribute_hidden do_names(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     if (DispatchOrEval(call, op, "names", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
@@ -886,7 +886,7 @@ SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
 	return(ans);
@@ -988,7 +988,7 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     if (DispatchOrEval(call, op, "dimnames", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
@@ -1001,7 +1001,7 @@ SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
@@ -1073,7 +1073,7 @@ SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     int nvalues;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     namesattr = R_NilValue;
     attrs = ATTRIB(CAR(args));
     nvalues = length(attrs);
@@ -1120,7 +1120,7 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1))
 	/* calls, e.g., levels<-.factor() */
@@ -1149,7 +1149,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Extract the arguments from the argument list */
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     object = CAR(args);
     attrs = CADR(args);
@@ -1245,22 +1245,19 @@ fairly minor.  LT */
 
 SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ap, argList, s, t, tag = R_NilValue, alist, ans;
+    SEXP argList, s, t, tag = R_NilValue, alist, ans;
     const char *str;
     size_t n;
     int nargs = length(args), exact = 0;
     enum { NONE, PARTIAL, PARTIAL2, FULL } match = NONE;
+    static char *ap[3] = { "x", "which", "exact" };
 
     if (nargs < 2 || nargs > 3)
 	errorcall(call, "either 2 or 3 arguments are required");
 
     /* argument matching */
-    PROTECT(ap = list3(R_NilValue, R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("x"));
-    SET_TAG(CDR(ap), install("which"));
-    SET_TAG(CDDR(ap), install("exact"));
-    argList = matchArgs(ap, args, call);
-    UNPROTECT(1); /* ap */
+    argList = matchArgs(R_NilValue, ap, 3, args, call);
+
     PROTECT(argList);
     s = CAR(argList);
     t = CADR(argList);
@@ -1359,7 +1356,8 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /*  attr(x, which = "<name>")  <-  value  */
-    SEXP obj, name, ap, argList;
+    SEXP obj, name, argList;
+    static char *ap[3] = { "x", "which", "value" };
 
     checkArity(op, args);
 
@@ -1370,12 +1368,8 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(obj);
 
     /* argument matching */
-    PROTECT(ap = list3(R_NilValue, R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("x"));
-    SET_TAG(CDR(ap), install("which"));
-    SET_TAG(CDDR(ap), install("value"));
-    argList = matchArgs(ap, args, call);
-    UNPROTECT(1); /* ap */
+    argList = matchArgs(R_NilValue, ap, 3, args, call);
+
     PROTECT(argList);
 
     name = CADR(argList);

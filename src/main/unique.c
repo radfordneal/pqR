@@ -1298,14 +1298,16 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
-    rlist = matchArgs(formals, actuals, call);
+    rlist = matchArgs(formals, NULL, 0, actuals, call);
+
+#if 0  /* No longer needed, since matchArgs attaches the tags itself.  */
 
     /* Attach the argument names as tags */
 
     for (f = formals, b = rlist; b != R_NilValue; b = CDR(b), f = CDR(f)) {
 	SET_TAG(b, TAG(f));
     }
-
+#endif
 
     /* Handle the dots */
 

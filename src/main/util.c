@@ -442,12 +442,17 @@ void attribute_hidden Rf_check1arg(SEXP arg, SEXP call, const char *formal)
 {
     SEXP tag = TAG(arg);
     if (tag != R_NilValue) {
-        const char *supplied = CHAR(PRINTNAME(tag));
-        if (ep_match_strings(formal,supplied) == 0) /* no exact/partial match */
-            errorcall (call,
-                       _("supplied argument name '%s' does not match '%s'"),
-                       supplied, formal);
+        if (ep_match_strings(formal,CHAR(PRINTNAME(tag))) == 0) 
+            Rf_check1arg_error (arg, call, formal); /*no exact/partial match*/
     }
+}
+
+/* called above, and in the check1arg_x macro */
+void attribute_hidden Rf_check1arg_error 
+    (SEXP arg, SEXP call, const char *formal)
+{
+    errorcall (call, _("supplied argument name '%s' does not match '%s'"),
+                     CHAR(PRINTNAME(TAG(arg))), formal);
 }
 
 
@@ -1603,7 +1608,7 @@ SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean duped = FALSE;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (!isString(CAR(args)))
 	errorcall(call, "argumemt is not a character vector");

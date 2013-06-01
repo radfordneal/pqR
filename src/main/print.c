@@ -112,7 +112,7 @@ SEXP attribute_hidden do_invisible(SEXP call, SEXP op, SEXP args, SEXP rho)
     case 0:
 	return R_NilValue;
     case 1:
-	check1arg(args, call, "x");
+	check1arg_x (args, call);
 	return CAR(args);
     default:
 	checkArity(op, args); /* must fail */

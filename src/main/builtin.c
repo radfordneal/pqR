@@ -125,13 +125,11 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *ctxt;
-    SEXP code, oldcode, tmp, ap, argList;
+    SEXP code, oldcode, tmp, argList;
+    static char *ap[2] = { "expr", "add" };
     int addit = 0;
 
-    PROTECT(ap = list2(R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("expr"));
-    SET_TAG(CDR(ap), install("add"));
-    PROTECT(argList =  matchArgs(ap, args, call));
+    PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
     if (CAR(argList) == R_MissingArg) code = R_NilValue;
     else code = CAR(argList);
     if (CADR(argList) != R_MissingArg) {
@@ -172,7 +170,7 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else
 	    ctxt->conexit = code;
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
     return R_NilValue;
 }
 
@@ -274,7 +272,7 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP env, s = CAR(args);
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     env = CADR(args);
 
@@ -864,7 +862,7 @@ SEXP attribute_hidden do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP x, ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     x = CAR(args);
     if(isObject(x) && DispatchOrEval(call, op, "length<-", args,

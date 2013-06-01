@@ -143,7 +143,33 @@ users, such as cleanups of source code.
 
  17)
 
- 18)
+   o The matchArgs function, used in the interpreter to match 
+     formal and actual arguments when calling functions has been
+     sped up, and given a new interface.
+
+     One interface change allows the formal arguments to either be
+     given as a list SEXP (as before), or as an array of C strings,
+     along with a count of how many strings are in the array.  (If
+     formals are given by C strings, the SEXP for the formals list
+     parameter should be NULL, whereas if the formals are given by a
+     list, the pointer for the C strings should be NULL and their
+     count should be 0.)
+
+     Numerous calls of matchArgs are changed to use the interface with
+     an array of C strings (for example, in the code implementing rep
+     and seq.int).  These calls were previously preceded by creation
+     of a list with calls to "install" for all the formal argument
+     names.  Using the new interface is cleaner and considerably
+     faster.
+
+     A second interface change is that if the formals are given by a
+     list SEXP, tags for the arguments are attached to the actuals
+     list by matchArgs.  Places where matchArgs is called are changed
+     to no longer do this themselves.  (Doing this in matchArgs is
+     both cleaner and faster.)
+
+     The new code is also faster in ways unrelated to these interface
+     changes.
 
  19)
 
@@ -170,7 +196,8 @@ users, such as cleanups of source code.
 
  29)
 
- 30)
+ 30) The 38 calls of check1arg(args,call,"x") were replaced with calls
+     of a new macro check1arg_x(args,call) that should be faster.
 
  31)
 
