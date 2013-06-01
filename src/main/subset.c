@@ -53,6 +53,8 @@
 #define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 
+#include <helpers/helpers-app.h>
+
 /* JMC convinced MM that this was not a good idea: */
 #undef _S4_subsettable
 
@@ -1015,7 +1017,7 @@ static R_INLINE R_len_t simple_index (SEXP s)
    valid integer or real subscript that is positive or negative (not zero, 
    NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
    so simple.  The arguments x and s do not need to be protected before 
-   this function is called. */
+   this function is called.  It's OK for x to still be being computed. */
 
 static SEXP one_vector_subscript (SEXP x, SEXP s)
 {
@@ -1034,13 +1036,19 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
         return R_NilValue;
 
     if (ix>0) {
+        R_len_t avail;
+        ix -= 1;
+        if (IS_BEING_COMPUTED_BY_TASK(x)) {
+            helpers_start_computing_var(x);
+            HELPERS_WAIT_IN_VAR (x, avail, ix, n);
+        }
         switch (typeofx) {
-        case LGLSXP:  return ScalarLogical (LOGICAL(x)[ix-1]);
-        case INTSXP:  return ScalarInteger (INTEGER(x)[ix-1]);
-        case REALSXP: return ScalarReal (REAL(x)[ix-1]);
-        case RAWSXP:  return ScalarRaw (RAW(x)[ix-1]);
-        case STRSXP:  return ScalarString (STRING_ELT(x,ix-1));
-        case CPLXSXP: return ScalarComplex (COMPLEX(x)[ix-1]);
+        case LGLSXP:  return ScalarLogical (LOGICAL(x)[ix]);
+        case INTSXP:  return ScalarInteger (INTEGER(x)[ix]);
+        case REALSXP: return ScalarReal (REAL(x)[ix]);
+        case RAWSXP:  return ScalarRaw (RAW(x)[ix]);
+        case STRSXP:  return ScalarString (STRING_ELT(x,ix));
+        case CPLXSXP: return ScalarComplex (COMPLEX(x)[ix]);
         }
     }
     else { /* ix < 0 */
@@ -1048,6 +1056,7 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
         R_len_t i, j, ex;
         SEXP r;
 
+        WAIT_UNTIL_COMPUTED(x);
         PROTECT(x);
         r = allocVector (typeofx, n-1);
 
@@ -1095,11 +1104,12 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
    valid integer or real subscript that are positive (not negative, zero, 
    NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
    so simple.  The arguments x, dim, s1, and s2 do not need to be 
-   protected before this function is called. */
+   protected before this function is called. It's OK for x to still be 
+   being computed. */
 
 static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
 {
-    R_len_t ix1, ix2, nrow, ncol, e;
+    R_len_t ix1, ix2, nrow, ncol, avail, e;
 
     if (!isVectorAtomic(x))
         return R_NilValue;
@@ -1115,6 +1125,11 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
         return R_NilValue;
 
     e = (ix1 - 1) + nrow * (ix2 - 1);
+
+    if (IS_BEING_COMPUTED_BY_TASK(x)) {
+        helpers_start_computing_var(x);
+        HELPERS_WAIT_IN_VAR (x, avail, e, LENGTH(x));
+    }
 
     switch (TYPEOF(x)) {
     case LGLSXP:  return ScalarLogical (LOGICAL(x)[e]);
@@ -1138,40 +1153,47 @@ SEXP attribute_hidden do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* If we can easily determine that this will be handled by subset_dflt
        and has one or two index arguments in total, evaluate the first index
-       with VARIANT_SEQ so it may come as a range rather than a vector. */
+       with VARIANT_SEQ so it may come as a range rather than a vector, and
+       evaluate the array with VARIANT_PENDING_OK. */
 
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
         SEXP ixlist = CDR(args);
         if (ixlist != R_NilValue && TAG(ixlist) == R_NilValue) {
-            SEXP idx = CAR(ixlist);
-            if (TYPEOF(idx) == LANGSXP) {
-                PROTECT(array = eval(array,rho));
-                nprotect++;
-                if (!isObject(array)) {
-                    int variant = 0;
-                    SEXP remargs = CDR(ixlist);
-                    if (remargs != R_NilValue) {
-                        PROTECT(remargs = evalListKeepMissing(remargs,rho));
-                        nprotect++;
-                    }
-                    if (remargs == R_NilValue || CDR(remargs) == R_NilValue) 
-                        variant = VARIANT_SEQ;
-                    args = CONS(array,CONS(evalv(idx,rho,variant),remargs));
-                    UNPROTECT(nprotect);
-                    return do_subset_dflt(call, op, args, rho); 
+            PROTECT(array = evalv(array,rho,VARIANT_PENDING_OK));
+            nprotect++;
+            if (isObject(array)) {
+                args = CONS(array,evalListPendingOK(ixlist,rho,NULL));
+                wait_until_arguments_computed(args);
+                UNPROTECT(nprotect);
+                argsevald = 1;
+            }
+            else if (TYPEOF(CAR(ixlist)) != LANGSXP) {
+                args = CONS(array,evalListKeepMissing(ixlist,rho));
+                UNPROTECT(nprotect);
+                return do_subset_dflt(call, op, args, rho); 
+            }
+            else {
+                SEXP remargs = CDR(ixlist);
+                int variant = remargs==R_NilValue || CDR(remargs)==R_NilValue
+                               ? VARIANT_SEQ : 0;
+                SEXP idx = evalv (CAR(ixlist), rho, variant|VARIANT_PENDING_OK);
+                if (remargs != R_NilValue) {
+                    PROTECT(idx);
+                    nprotect++;
+                    remargs = evalListPendingOK (remargs, rho, NULL);
                 }
-                else {
-                    args = CONS(array,evalListKeepMissing(ixlist,rho));
-                    UNPROTECT(nprotect);
-                    argsevald = 1;
-                }
+                args = CONS(idx,remargs);
+                wait_until_arguments_computed(args);
+                args = CONS(array,args);
+                UNPROTECT(nprotect);
+                return do_subset_dflt(call, op, args, rho); 
             }
         }
     }
 
     /* If the first argument is an object and there is an */
-    /* approriate method, we dispatch to that method, */
+    /* appropriate method, we dispatch to that method, */
     /* otherwise we evaluate the arguments and fall through */
     /* to the generic code below.  Note that evaluation */
     /* retains any missing argument indicators. */
@@ -1239,6 +1261,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
     }
 
+    WAIT_UNTIL_COMPUTED(CAR(args));
     PROTECT(args);
 
     drop = 1;

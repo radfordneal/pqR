@@ -1,0 +1,3 @@
+This mod changes simple forms of indexing of vectors to allow the
+vector to not be fully computed, as long as the elements accessed have
+been computed.
