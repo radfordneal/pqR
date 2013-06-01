@@ -120,7 +120,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
     else if (TYPEOF(op) == BUILTINSXP) {
 	int save = R_PPStackTop, flag = PRIMPRINT(op);
 	const void *vmax = VMAXGET();
-	PROTECT(args = evalList(args, rho, call, 0));
+	PROTECT(args = evalList(args, rho, call));
 	R_Visible = flag != 1;
 	ans = CALL_PRIMFUN(call, op, args, rho, 0);
 	if (flag < 2) R_Visible = flag != 1;

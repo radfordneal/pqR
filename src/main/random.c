@@ -342,7 +342,7 @@ walker_ProbSampleReplace(int n, double *p, int *a, int nans, int *ans)
 	/* might do this repeatedly, so speed matters */
 	HL = (int *)alloca(n * sizeof(int));
 	q = (double *) alloca(n * sizeof(double));
-	R_CheckStack();
+	R_CHECKSTACK();
     } else {
 	/* Slow enough anyway not to risk overflow */
 	HL = Calloc(n, int);

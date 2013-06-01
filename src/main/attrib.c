@@ -1022,22 +1022,32 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+static SEXP do_fast_dim (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+{
+    return getAttrib (arg, R_DimSymbol);
+}
+
 SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
+
     checkArity(op, args);
     check1arg_x (args, call);
+
     if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1))
 	return(ans);
-    PROTECT(args = ans);
-    ans = getAttrib(CAR(args), R_DimSymbol);
-    UNPROTECT(1);
-    return ans;
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_dim, 1, 0);
+
+    return do_fast_dim (call, op, CAR(args), env, 0);
 }
 
 SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x;
+    LOCAL_COPY(R_NilValue);
+
     checkArity(op, args);
     if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1))
 	return(ans);
@@ -1094,6 +1104,7 @@ SEXP dimgets(SEXP vec, SEXP val)
 
 SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP attrs, names, namesattr, value;
     int nvalues;
 
@@ -1168,6 +1179,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 /* brought to the front of the list.  This ensures that when both */
 /* "dim" and "dimnames" are set that the "dim" is attached first. */
 
+    LOCAL_COPY(R_NilValue);
     SEXP object, attrs, names = R_NilValue /* -Wall */;
     int i, i0 = -1, nattrs;
 
@@ -1270,6 +1282,7 @@ fairly minor.  LT */
 
 SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP argList, s, t, tag = R_NilValue, alist, ans;
     const char *str;
     size_t n;

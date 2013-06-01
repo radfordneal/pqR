@@ -926,7 +926,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
     }
 
  tailcall:
-    R_CheckStack();
+    R_CHECKSTACK();
     if ((t = GetPersistentName(stream, s)) != R_NilValue) {
 	R_assert(TYPEOF(t) == STRSXP && LENGTH(t) > 0);
 	PROTECT(t);

@@ -359,20 +359,27 @@ SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Length of Primitive Objects */
 
+static SEXP do_fast_length (SEXP call, SEXP op, SEXP arg, SEXP rho, 
+                            int variant)
+{   
+    R_len_t len = length(arg);
+    return ScalarInteger (len <= INT_MAX ? len : NA_INTEGER);
+}
+
 SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
-    R_len_t len;
 
-    checkArity(op, args);
+    checkArity (op, args);
     check1arg_x (args, call);
 
-    if(isObject(CAR(args)) && DispatchOrEval(call, op, "length", args,
-					     rho, &ans, 0, 1))
-      return(ans);
+    if (DispatchOrEval (call, op, "length", args, rho, &ans, 0, 1))
+        return(ans);
 
-    len = length(CAR(args));
-    return ScalarInteger((len <= INT_MAX) ? len : NA_INTEGER);
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_length, 1, 0);
+
+    return do_fast_length (call, op, CAR(args), rho, 0);
 }
 
 

@@ -158,6 +158,10 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
     unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
     unsigned int primsxp_foreign:1; /* primitive to call C/Fortran function */
+    /* bits below only for when fast_cfun!=NULL (last 2 only when arity==2) */
+    unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument       */
+    unsigned int primsxp_dsptch2:1; /* might dispatch on 2nd argument       */
+    unsigned int primsxp_uni_too:1; /* can be unary as well as binary       */
 };
 
 struct symsxp_struct {

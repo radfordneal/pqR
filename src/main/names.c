@@ -126,7 +126,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"browser",	do_browser,	0,	101,	4,	{PP_FUNCALL, PREC_FN,	  0}},
 {".primTrace",	do_trace,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".primUntrace",do_trace,	1,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
-{".Internal",	do_internal,	0,	200,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{".Internal",	do_internal,	0,	1200,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".Primitive",	do_primitive,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"call",	do_call,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"quote",	do_quote,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -272,7 +272,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 /* primitives: these are group generic and so need to eval args (possibly internally) */
 {"round",	do_Math2,	10001,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"signif",	do_Math2,	10004,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log",		do_log,		10003,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"abs",		do_abs,		6,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -479,7 +479,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"max",		do_summary,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"prod",	do_summary,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"mean",	do_summary,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"mean",	do_mean,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"range",	do_range,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"cov",		do_cov,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"cor",		do_cov,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1285,7 +1285,8 @@ SEXP install(const char *name)
 
 /*  do_internal - This is the code for .Internal(). */
 
-SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
+                                   int variant)
 {
     SEXP s, fun, ans;
     int save = R_PPStackTop;
@@ -1304,11 +1305,11 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 		  CHAR(PRINTNAME(fun)));
     args = CDR(s);
     if (TYPEOF(INTERNAL(fun)) == BUILTINSXP)
-	args = evalList(args, env, call, 0);
+	args = evalList(args, env, call);
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
-    ans = CALL_PRIMFUN(s, INTERNAL(fun), args, env, 0);
+    ans = CALL_PRIMFUN(s, INTERNAL(fun), args, env, variant);
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;

@@ -280,7 +280,8 @@ users, such as cleanups of source code.
 
  48)
 
- 49)
+ 49) The evalListKeepMissing function in eval.c now just calls evalList, with
+     an indicative argument, eliminating code duplication.
 
  50)
 

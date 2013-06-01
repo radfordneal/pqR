@@ -32,38 +32,45 @@
 #include "Defn.h"
 
 
-static SEXP lunary(SEXP, SEXP, SEXP);
-static SEXP lbinary(SEXP, SEXP, SEXP);
+static SEXP lunary (SEXP, SEXP, SEXP, SEXP, int);
+static SEXP lbinary (SEXP, SEXP, SEXP, SEXP, SEXP, int);
 static SEXP binaryLogic(int code, SEXP s1, SEXP s2);
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
 
 
 /* & | ! */
+
 SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
 
     if (DispatchGroup("Ops",call, op, args, env, &ans))
 	return ans;
+
+    if (PRIMFUN_FAST(op)==0) {
+        if (PRIMARITY(op) == 1) /* ! */
+           SET_PRIMFUN_FAST_UNARY (op, lunary, 1, 0);
+        else /* & and | */
+           SET_PRIMFUN_FAST_BINARY (op, lbinary, 1, 1, 0, 0, 0);
+    }
+
     switch (length(args)) {
     case 1:
-	return lunary(call, op, CAR(args));
+	return lunary(call, op, CAR(args), env, 0);
     case 2:
-	return lbinary(call, op, args);
+	return lbinary(call, op, CAR(args), CADR(args), env, 0);
     default:
 	error(_("binary operations require two arguments"));
 	return R_NilValue;	/* for -Wall */
     }
 }
 
-static SEXP lbinary(SEXP call, SEXP op, SEXP args)
+static SEXP lbinary(SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, int variant)
 {
 /* logical binary : "&" or "|" */
-    SEXP x, y, dims, tsp, klass, xnames, ynames;
+    SEXP dims, tsp, klass, xnames, ynames;
     int mismatch, nx, ny, xarray, yarray, xts, yts;
     mismatch = 0;
-    x = CAR(args);
-    y = CADR(args);
     if (isRaw(x) && isRaw(y)) {
     }
     else if (!isNumber(x) || !isNumber(y))
@@ -125,17 +132,20 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 	warningcall(call,
 		    _("longer object length is not a multiple of shorter object length"));
 
-    if (isRaw(x) && isRaw(y)) {
+    if (isLogical(x) && isLogical(y))
+	PROTECT(x = binaryLogic(PRIMVAL(op), x, y));
+    else if (isRaw(x) && isRaw(y))
 	PROTECT(x = binaryLogic2(PRIMVAL(op), x, y));
-    } else {
+    else {
 	if (!isNumber(x) || !isNumber(y))
 	    errorcall(call,
 		      _("operations are possible only for numeric, logical or complex types"));
-	x = SETCAR(args, coerceVector(x, LGLSXP));
-	y = SETCADR(args, coerceVector(y, LGLSXP));
-	PROTECT(x = binaryLogic(PRIMVAL(op), x, y));
+	PROTECT(x = coerceVector(x, LGLSXP));
+	PROTECT(y = coerceVector(y, LGLSXP));
+	x = binaryLogic(PRIMVAL(op), x, y);
+        UNPROTECT(2);
+        PROTECT(x);
     }
-
 
     if (dims != R_NilValue) {
 	setAttrib(x, R_DimSymbol, dims);
@@ -156,23 +166,26 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 	setAttrib(x, R_ClassSymbol, klass);
 	UNPROTECT(2);
     }
+
     UNPROTECT(4);
     return x;
 }
 
-/* Handles only the ! operator */
+/* Handles only the ! operator. Doesn't bother to check that it's really "!"*/
 
-static SEXP lunary(SEXP call, SEXP op, SEXP arg)
+static SEXP lunary(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
     SEXP x, dim, dimnames, names;
     int i, len;
 
-    len = LENGTH(arg);
     if (!isLogical(arg) && !isNumber(arg) && !isRaw(arg)) {
 	/* For back-compatibility */
-	if (!len) return allocVector(LGLSXP, 0);
-	errorcall(call, _("invalid argument type"));
+	if (length(arg)==0) 
+            return allocVector(LGLSXP, 0);
+	else
+            errorcall(call, _("invalid argument type"));
     }
+    len = LENGTH(arg);
 
     /* Quickly do scalar operation on logical with no attributes. */
 
@@ -420,6 +433,40 @@ static int checkValues(int op, int na_rm, int *x, int n)
 }
 
 /* all, any */
+
+/* fast version handles only one unnamed argument, so narm is FALSE. */
+
+static SEXP do_fast_logic3 (SEXP call, SEXP op, SEXP arg, SEXP env, 
+                            int variant)
+{
+    int val;
+
+    if (ATTRIB(arg) == R_VariantResult)
+        val = LOGICAL(arg)[0];
+
+    else if (length(arg) == 0)
+        /* Avoid memory waste from coercing empty inputs, and also
+           avoid warnings with empty lists coming from sapply */
+        val = PRIMVAL(op) == _OP_ALL ? TRUE : FALSE;
+
+    else {
+	if (TYPEOF(arg) != LGLSXP) {
+	    /* Coercion of integers seems reasonably safe, but for
+	       other types it is more often than not an error.
+	       One exception is perhaps the result of lapply, but
+	       then sapply was often what was intended. */
+	    if (TYPEOF(arg) != INTSXP)
+		warningcall(call,
+			    _("coercing argument of type '%s' to logical"),
+			    type2char(TYPEOF(arg)));
+	    arg = coerceVector(arg, LGLSXP);
+	}
+	val = checkValues (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
+    }
+
+    return ScalarLogical(val);
+}
+
 SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, s, t, call2;
@@ -438,6 +485,10 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
 	UNPROTECT(2);
 	return(ans);
     }
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_logic3, 1, 
+          PRIMVAL(op) == _OP_ALL ? VARIANT_AND : VARIANT_OR);
 
     ans = matchArgExact(R_NaRmSymbol, &args);
     narm = asLogical(ans);

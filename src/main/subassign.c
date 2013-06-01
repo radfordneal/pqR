@@ -453,13 +453,13 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 
 static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP dim, indx, newnames;
     int i, ii, iy, n, nx, ny, stretch, which;
     double ry;
 
-    if (isNull(x) && isNull(y)) {
+    if (x==R_NilValue && y==R_NilValue)
 	return R_NilValue;
-    }
 
     /* Check to see if we have special matrix subscripting. */
     /* If so, we manufacture a real subscript vector. */
@@ -1309,11 +1309,12 @@ static SEXP listRemove(SEXP x, SEXP s, int ind)
 
 static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP p;
-    if (length(args) < 2)
+    if (args==R_NilValue || CDR(args)==R_NilValue)
 	error(_("SubAssignArgs: invalid number of arguments"));
     *x = CAR(args);
-    if(length(args) == 2) {
+    if (CDDR(args)==R_NilValue) {
 	*s = R_NilValue;
 	*y = CADR(args);
     }
@@ -1839,7 +1840,9 @@ SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 /* used in "$<-" (above) and methods_list_dispatch.c */
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP t;
+
     PROTECT_INDEX pvalidx, pxidx;
     Rboolean maybe_duplicate=FALSE;
     Rboolean S4; SEXP xS4 = R_NilValue;

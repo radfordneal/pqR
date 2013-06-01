@@ -288,16 +288,11 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
     return ans;
 }
 
-SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_fast_cmathfuns (SEXP call, SEXP op, SEXP x, SEXP env, 
+                               int variant)
 {
-    SEXP x, y = R_NilValue;	/* -Wall*/
+    SEXP y = R_NilValue;	/* -Wall*/
     int i, n;
-
-    checkArity(op, args);
-    check1arg(args, call, "z");
-    if (DispatchGroup("Complex", call, op, args, env, &x))
-	return x;
-    x = CAR(args);
 
     if (isComplex(x)) {
         n = LENGTH(x);
@@ -383,6 +378,22 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
         UNPROTECT(2);
     }
     return y;
+}
+
+SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP ans;
+
+    checkArity(op, args);
+    check1arg(args, call, "z");
+
+    if (DispatchGroup("Complex", call, op, args, env, &ans))
+	return ans;
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_UNARY (op, do_fast_cmathfuns, 1, 0);
+    
+    return do_fast_cmathfuns (call, op, CAR(args), env, 0);
 }
 
 /* used in format.c and printutils.c */
@@ -641,7 +652,6 @@ SEXP attribute_hidden complex_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(y = allocVector(CPLXSXP, n));
 
     switch (PRIMVAL(op)) {
-    case 10003: naflag = cmath1(clog, COMPLEX(x), COMPLEX(y), n); break;
     case 3: naflag = cmath1(csqrt, COMPLEX(x), COMPLEX(y), n); break;
     case 10: naflag = cmath1(cexp, COMPLEX(x), COMPLEX(y), n); break;
     case 20: naflag = cmath1(ccos, COMPLEX(x), COMPLEX(y), n); break;
@@ -658,6 +668,12 @@ SEXP attribute_hidden complex_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     case 35: naflag = cmath1(z_atanh, COMPLEX(x), COMPLEX(y), n); break;
 
     default:
+        /* log put here in case the compiler handles a sparse switch poorly */
+        if (PRIMVAL(op) == 10003) {
+            naflag = cmath1(clog, COMPLEX(x), COMPLEX(y), n); 
+            break;
+        }
+
 	/* such as sign, gamma */
 	errorcall(call, _("unimplemented complex function"));
     }

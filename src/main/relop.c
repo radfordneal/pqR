@@ -36,21 +36,14 @@
 
 static SEXP integer_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP real_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
+static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
+static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP complex_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP raw_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 
-SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    SEXP ans;
-
-    if (DispatchGroup("Ops", call, op, args, env, &ans))
-	return ans;
-    checkArity(op, args);
-    return do_relop_dflt(call, op, CAR(args), CADR(args));
-}
-
-SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
+SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
+                                     SEXP env, int variant)
 {
     SEXP klass = R_NilValue, dims, tsp=R_NilValue;
     SEXP xnames, ynames, tmp, ans;
@@ -104,6 +97,11 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
                                                                : result);
         } 
         else {
+   	    if (((nx > ny) ? nx % ny : ny % nx) != 0) {
+                PROTECT(ans);
+    	        warningcall(call,_("longer object length is not a multiple of shorter object length"));
+                UNPROTECT(1);
+            }
             if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) 
                 ans = integer_relop (code, negate, x, y);
             else {
@@ -119,13 +117,18 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
                 }
                 PROTECT(x);
                 PROTECT(y);
-                ans = real_relop (code, negate, x, y);
+                switch (variant) {
+                case VARIANT_AND: 
+                    ans = real_relop_and (code, negate, x, y); 
+                    break;
+                case VARIANT_OR:
+                    ans = real_relop_or (code, negate, x, y);
+                    break;
+                default:
+                    ans = real_relop (code, negate, x, y);
+                    break;
+                }
                 UNPROTECT(2);
-            }
-   	    if (((nx > ny) ? nx % ny : ny % nx) != 0) {
-                PROTECT(ans);
-    	        warningcall(call, _("longer object length is not a multiple of shorter object length"));
-                UNPROTECT(1);
             }
             return ans;
         }
@@ -239,7 +242,21 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
     else if (isReal(x) || isReal(y)) {
 	REPROTECT(x = coerceVector(x, REALSXP), xpi);
 	REPROTECT(y = coerceVector(y, REALSXP), ypi);
-	ans = real_relop (code, negate, x, y);
+        switch (variant) {
+        case VARIANT_AND: 
+            ans = real_relop_and (code, negate, x, y); 
+            if (xts || yts) UNPROTECT(2);
+            UNPROTECT(5);
+            return ans;
+        case VARIANT_OR:
+            ans = real_relop_or (code, negate, x, y);
+            if (xts || yts) UNPROTECT(2);
+            UNPROTECT(5);
+            return ans;
+        default:
+            ans = real_relop (code, negate, x, y);
+            break;
+        }
     }
     else if (isInteger(x) || isInteger(y)) {
 	REPROTECT(x = coerceVector(x, INTSXP), xpi);
@@ -247,6 +264,7 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
 	ans = integer_relop (code, negate, x, y);
     }
     else if (isLogical(x) || isLogical(y)) {
+     /* assumes LOGICAL same as INTEGER */
 	REPROTECT(x = coerceVector(x, LGLSXP), xpi);
 	REPROTECT(y = coerceVector(y, LGLSXP), ypi);
 	ans = integer_relop (code, negate, x, y);
@@ -280,6 +298,21 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
 
     UNPROTECT(6);
     return ans;
+}
+
+SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP ans;
+
+    if (DispatchGroup("Ops", call, op, args, env, &ans))
+	return ans;
+
+    checkArity(op, args);
+
+    if (PRIMFUN_FAST(op)==0)
+        SET_PRIMFUN_FAST_BINARY (op, do_fast_relop, 1, 1, 0, 0, 0);
+
+    return do_fast_relop (call, op, CAR(args), CADR(args), env, 0);
 }
 
 /* i1 = i % n1; i2 = i % n2;
@@ -484,6 +517,244 @@ static SEXP real_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
 
+    return ans;
+}
+
+static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
+{
+    int i, i1, i2, n, n1, n2;
+    double x1, x2;
+    int T = !F;
+    SEXP ans;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = (n1 > n2) ? n1 : n2;
+
+    ans = allocVector(LGLSXP, 1);
+    SET_ATTRIB (ans, R_VariantResult);
+    LOGICAL(ans)[0] = TRUE;
+
+    if (code == EQOP) {
+        if (n2 == 1) {
+            x2 = REAL(s2)[0];
+            if (ISNAN(x2)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x1 = REAL(s1)[i];
+                    if (ISNAN(x1)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 == x2 ? F : T) 
+                        goto false;
+                }
+        }
+        else if (n1 == 1) {
+            x1 = REAL(s1)[0];
+            if (ISNAN(x1)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x2 = REAL(s2)[i];
+                    if (ISNAN(x2)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 == x2 ? F : T) 
+                        goto false;
+                }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = REAL(s1)[i];
+                x2 = REAL(s2)[i];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 == x2 ? F : T) 
+                    goto false;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = REAL(s1)[i1];
+                x2 = REAL(s2)[i2];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 == x2 ? F : T) 
+                    goto false;
+            }
+	}
+    }
+    else { /* LTOP */
+        if (n2 == 1) {
+            x2 = REAL(s2)[0];
+            if (ISNAN(x2)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x1 = REAL(s1)[i];
+                    if (ISNAN(x1)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 < x2 ? F : T) 
+                        goto false;
+                }
+        }
+        else if (n1 == 1) {
+            x1 = REAL(s1)[0];
+            if (ISNAN(x1)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x2 = REAL(s2)[i];
+                    if (ISNAN(x2)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 < x2 ? F : T) 
+                        goto false;
+                }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = REAL(s1)[i];
+                x2 = REAL(s2)[i];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 < x2 ? F : T) 
+                    goto false;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = REAL(s1)[i1];
+                x2 = REAL(s2)[i2];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 < x2 ? F : T) 
+                    goto false;
+            }
+	}
+    }
+
+    return ans;
+
+false:
+    LOGICAL(ans)[0] = FALSE;
+    return ans;
+}
+
+static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
+{
+    int i, i1, i2, n, n1, n2;
+    double x1, x2;
+    int T = !F;
+    SEXP ans;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = (n1 > n2) ? n1 : n2;
+
+    ans = allocVector(LGLSXP, 1);
+    SET_ATTRIB (ans, R_VariantResult);
+    LOGICAL(ans)[0] = FALSE;
+
+    if (code == EQOP) {
+        if (n2 == 1) {
+            x2 = REAL(s2)[0];
+            if (ISNAN(x2)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x1 = REAL(s1)[i];
+                    if (ISNAN(x1)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 == x2 ? T : F) 
+                        goto true;
+                }
+        }
+        else if (n1 == 1) {
+            x1 = REAL(s1)[0];
+            if (ISNAN(x1)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x2 = REAL(s2)[i];
+                    if (ISNAN(x2)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 == x2 ? T : F) 
+                        goto true;
+                }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = REAL(s1)[i];
+                x2 = REAL(s2)[i];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 == x2 ? T : F) 
+                    goto true;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = REAL(s1)[i1];
+                x2 = REAL(s2)[i2];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 == x2 ? T : F) 
+                    goto true;
+            }
+	}
+    }
+    else { /* LTOP */
+        if (n2 == 1) {
+            x2 = REAL(s2)[0];
+            if (ISNAN(x2)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x1 = REAL(s1)[i];
+                    if (ISNAN(x1)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 < x2 ? T : F) 
+                        goto true;
+                }
+        }
+        else if (n1 == 1) {
+            x1 = REAL(s1)[0];
+            if (ISNAN(x1)) 
+                LOGICAL(ans)[0] = NA_LOGICAL;
+            else 
+                for (i = 0; i<n; i++) {
+                    x2 = REAL(s2)[i];
+                    if (ISNAN(x2)) 
+                        LOGICAL(ans)[0] = NA_LOGICAL;
+                    else if (x1 < x2 ? T : F) 
+                        goto true;
+                }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = REAL(s1)[i];
+                x2 = REAL(s2)[i];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 < x2 ? T : F) 
+                    goto true;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = REAL(s1)[i1];
+                x2 = REAL(s2)[i2];
+                if (ISNAN(x1) || ISNAN(x2)) 
+                    LOGICAL(ans)[0] = NA_LOGICAL;
+                else if (x1 < x2 ? T : F) 
+                    goto true;
+            }
+	}
+    }
+
+    return ans;
+
+true:
+    LOGICAL(ans)[0] = TRUE;
     return ans;
 }
 
