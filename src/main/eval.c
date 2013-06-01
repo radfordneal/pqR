@@ -330,6 +330,7 @@ static SEXP forcePromise(SEXP e)
 	R_PendingPromises = prstack.next;
 	SET_PRSEEN(e, 0);
 	SET_PRVALUE(e, val);
+        SET_NAMED (val, NAMED(val)==0 ? 1 : 2);
 	SET_PRENV(e, R_NilValue);
     }
     return PRVALUE(e);
@@ -437,7 +438,6 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 		UNPROTECT(1);
 	    }
 	    else tmp = PRVALUE(tmp);
-	    SET_NAMED(tmp, 2);
 	}
 	else if (!isNull(tmp) && NAMED(tmp) < 1)
 	    SET_NAMED(tmp, 1);
@@ -449,19 +449,6 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	       promise is already evaluated. */
 	    forcePromise(e);
 	tmp = PRVALUE(e);
-	/* This does _not_ change the value of NAMED on the value tmp,
-	   in contrast to the handling of promises bound to symbols in
-	   the SYMSXP case above.  The reason is that one (typically
-	   the only) place promises appear in source code is as
-	   wrappers for the RHS value in replacement function calls for
-	   complex assignment expression created in applydefine().  If
-	   the RHS value is freshly created it will have NAMED = 0 and
-	   we want it to stay that way or a BUILTIN or SPECIAL
-	   replacement function might have to duplicate the value
-	   before inserting it to avoid creating cycles.  (Closure
-	   replacement functions will get the value via the SYMSXP case
-	   from evaluating their 'value' argument so the value will
-	   end up getting duplicated if NAMED = 2.) LT */
 	break;
     case LANGSXP:
 	if (TYPEOF(CAR(e)) == SYMSXP)
@@ -1633,6 +1620,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(lhs);
     PROTECT(rhsprom = mkPROMISE(CADR(args), rho));
     SET_PRVALUE(rhsprom, rhs);
+    SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
 
     while (isLanguage(CADR(expr))) {
 	nprot = 1; /* the PROTECT of rhs below from this iteration */
@@ -1657,6 +1645,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
+        SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
 	lhs = CDR(lhs);
@@ -1988,8 +1977,10 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
     PROTECT(s = promiseArgs(el, rho));
     if (length(s) != length(values)) error(_("dispatch error"));
     for (a = values, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
-        if (TYPEOF(CAR(b)) == PROMSXP)
+        if (TYPEOF(CAR(b)) == PROMSXP) {
             SET_PRVALUE(CAR(b), CAR(a));
+            SET_NAMED (CAR(a), NAMED(CAR(a))==0 ? 1 : 2);
+        }
     UNPROTECT(1);
     return s;
 }
@@ -2001,8 +1992,10 @@ SEXP attribute_hidden promiseArgsWith1Value(SEXP el, SEXP rho, SEXP value)
     SEXP s, a, b;
     PROTECT(s = promiseArgs(el, rho));
     if (s == R_NilValue) error(_("dispatch error"));
-    if (TYPEOF(CAR(s)) == PROMSXP)
+    if (TYPEOF(CAR(s)) == PROMSXP) {
         SET_PRVALUE(CAR(s), value);
+        SET_NAMED (value, NAMED(value)==0 ? 1 : 2);
+    }
     UNPROTECT(1);
     return s;
 }
@@ -3405,7 +3398,6 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
 	else value = forcePromise(value);
     }
     else value = PRVALUE(value);
-    SET_NAMED(value, 2);
     return value;
 }
 
@@ -3565,6 +3557,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	last = CDR(last);
     prom = mkPROMISE(CAR(last), rho);
     SET_PRVALUE(prom, rhs);
+    SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
     SETCAR(last, prom);
     result = tryDispatch(generic, ncall, lhs, rho, pv);
     UNPROTECT(1);
@@ -4624,6 +4617,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    SETCAR(CDDR(ncall), ScalarString(PRINTNAME(symbol)));
 	    prom = mkPROMISE(CADDDR(ncall), rho);
 	    SET_PRVALUE(prom, rhs);
+            SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
 	    SETCAR(CDR(CDDR(ncall)), prom);
 	    dispatched = tryDispatch("$<-", ncall, x, rho, &value);
 	    UNPROTECT(1);
@@ -4766,6 +4760,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* insert evaluated promise for LHS as first argument */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
+          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
 	  SETCAR(args, prom);
 	  /* insert evaluated promise for RHS as last argument */
 	  last = args;
@@ -4773,6 +4768,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      last = CDR(last);
 	  prom = mkPROMISE(vexpr, rho);
 	  SET_PRVALUE(prom, rhs);
+          SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
 	  SETCAR(last, prom);
 	  /* make the call */
           value = CALL_PRIMFUN(call, fun, args, rho, 0);
@@ -4781,11 +4777,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* push evaluated promise for RHS onto arguments with 'value' tag */
 	  prom = mkPROMISE(vexpr, rho);
 	  SET_PRVALUE(prom, rhs);
+          SET_NAMED (rhs, NAMED(rhs)==0 ? 1 : 2);
 	  PUSHCALLARG(prom);
 	  SET_TAG(GETSTACK(-1), R_valueSym);
 	  /* replace first argument with evaluated promise for LHS */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
+          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
@@ -4820,6 +4818,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* insert evaluated promise for LHS as first argument */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
+          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
 	  SETCAR(args, prom);
 	  /* make the call */
           value = CALL_PRIMFUN(call, fun, args, rho, 0);
@@ -4828,6 +4827,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* replace first argument with evaluated promise for LHS */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
+          SET_NAMED (lhs, NAMED(lhs)==0 ? 1 : 2);
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */

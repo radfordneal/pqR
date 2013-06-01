@@ -166,7 +166,9 @@ users, such as cleanups of source code.
 
  27)
 
- 28)
+   o Values of forced promises no longer have NAMED always set to 2.
+     Instead NAMED is incremented when an object that becomes the
+     value of a promise.  See new discussion in R-ints.
 
  29)
 
