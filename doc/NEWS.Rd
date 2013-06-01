@@ -557,6 +557,16 @@
 > testc()
 [1] "numeric"
 }
+      \item Fixed several bugs that produced wrong results 
+            such as the following:
+\preformatted{
+   a<-list(c(1,2),c(3,4),c(5,6))
+   b<-a[2:3]
+   a[[2]][2]<-9
+   print(b[[1]][2])
+}
+      I reported this to r-devel, and a (different) fix is in R-3.0.0 and 
+      later versions.
       \item **36
       \item **37
       \item **38
