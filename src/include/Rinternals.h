@@ -821,8 +821,9 @@ SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_evalv(SEXP, SEXP, int);
 SEXP Rf_findFun(SEXP, SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
+SEXP Rf_findVarPendingOK(SEXP, SEXP);
 SEXP Rf_findVarInFrame(SEXP, SEXP);
-SEXP Rf_findVarInFrame3(SEXP, SEXP, Rboolean);
+SEXP Rf_findVarInFrame3(SEXP, SEXP, int);
 SEXP Rf_fixup_NaRm(SEXP);
 SEXP Rf_getAttrib(SEXP, SEXP);
 SEXP Rf_getAttrib00(SEXP, SEXP);
@@ -1134,6 +1135,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define evalv			Rf_evalv
 #define findFun			Rf_findFun
 #define findVar			Rf_findVar
+#define findVarPendingOK	Rf_findVarPendingOK
 #define findVarInFrame		Rf_findVarInFrame
 #define findVarInFrame3		Rf_findVarInFrame3
 #define fixup_NaRm		Rf_fixup_NaRm

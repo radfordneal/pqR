@@ -1,0 +1,7 @@
+Changes symbol lookup routines to allow lookups that do not wait for
+the value to be computed.  Also does some cleanup of these routines.
+
+Modifies the implementation of assignments to use these modified
+lookups, and to temporarily increment NAMEDCNT for rhs of complex
+assignment to avoid problems when the value of the assignment
+expression is used (see bug described in NEWS).  Adds a test of this.
