@@ -308,7 +308,16 @@
       \item **22
       \item **23
       \item **24
-      \item **25
+      \item Fixed a bug where excess warning messages may be produced
+            on conversion to RAW.  For instance:
+\preformatted{
+  > as.raw(1e40)
+  [1] 00
+  Warning messages:
+  1: NAs introduced by coercion 
+  2: out-of-range values treated as 0 in coercion to raw 
+}
+            Now, only the second warning message is produced.
       \item **26
       \item **27
       \item **28

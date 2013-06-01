@@ -684,15 +684,22 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     nameData->seqno = nameData->seqno + saveseqno;
 }
 
-/* Code to extract the optional arguments to c().  We do it this */
-/* way, rather than having an interpreted front-end do the job, */
-/* because we want to avoid duplication at the top level. */
-/* FIXME : is there another possibility? */
+/* Code to process arguments to c().  Returns an arg list with the keyword
+   arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
+   *recurse and *usenames are set top the keyword arg values, if they are
+   present.  *anytags is set to whether any other args have tags.  *allsametype
+   is set to a type if all args are the same type, and to -1 if types differ,
+   and to NILSXP if there are no args other than the keyword args. */
 
-static SEXP ExtractOptionals(SEXP ans, int *recurse, int *usenames, SEXP call)
+static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
+                            int *anytags, int *allsametype)
 {
+    LOCAL_COPY(R_NilValue);
     SEXP a, n, last = NULL, next = NULL;
     int v, n_recurse = 0, n_usenames = 0;
+
+    *anytags = 0;
+    *allsametype = NILSXP;
 
     for (a = ans; a != R_NilValue; a = next) {
 	n = TAG(a);
@@ -719,7 +726,21 @@ static SEXP ExtractOptionals(SEXP ans, int *recurse, int *usenames, SEXP call)
 	    else
 		SETCDR(last, next);
 	}
-	else last = a;
+        else if (CAR(a) == R_NilValue) {
+	    if (last == NULL)
+		ans = next;
+	    else
+		SETCDR(last, next);
+        }
+	else {
+            if (n != R_NilValue) 
+                *anytags = 1;
+            if (*allsametype == NILSXP) 
+                *allsametype = TYPEOF(CAR(a));
+            else if (*allsametype != TYPEOF(CAR(a)))
+                *allsametype = -1;
+            last = a;
+        }
     }
     return ans;
 }
@@ -737,7 +758,6 @@ static SEXP ExtractOptionals(SEXP ans, int *recurse, int *usenames, SEXP call)
    argument.
 */
 
-/* This is a primitive SPECIALSXP */
 SEXP attribute_hidden do_c(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
@@ -754,7 +774,7 @@ SEXP attribute_hidden do_c(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, t;
-    int mode, recurse, usenames;
+    int mode, recurse, usenames, anytags, allsametype;
     struct BindData data;
     struct NameData nameData;
 
@@ -766,9 +786,43 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
 
     usenames = 1;
     recurse = 0;
-    /* this was only done for length(args) > 1 prior to 1.5.0,
-       _but_ `recursive' might be the only argument */
-    PROTECT(args = ExtractOptionals(args, &recurse, &usenames, call));
+
+    PROTECT(args = 
+      process_c_args(args, call, &recurse, &usenames, &anytags, &allsametype));
+
+    /* Quickly do the simple case where names don't exist or are ignored,
+       there's no recursion, and no type conversions are needed. */
+
+    if (allsametype > NILSXP && !(usenames && anytags)
+         && ((VECTOR_TYPES >> allsametype) & 1) != 0
+         && (!recurse || ((ATOMIC_VECTOR_TYPES >> allsametype) & 1) != 0)) {
+
+        R_len_t len = 0;
+        for (t = args; t != R_NilValue; t = CDR(t)) {
+            SEXP a = CAR(t);
+            R_len_t olen;
+            if (usenames && ATTRIB(a)!=R_NilValue /* quick pre-test */
+                         && getAttrib(a,R_NamesSymbol) != R_NilValue) 
+                break;
+            olen = len;
+            len += LENGTH(a);
+            if (len < olen) /* overflow */
+                break;
+        }
+
+        if (t == R_NilValue) { /* no arg with names, and no overflow with len */
+            R_len_t i = 0;
+            ans = allocVector (allsametype, len);
+            for (t = args; t != R_NilValue; t = CDR(t)) {
+                SEXP a = CAR(t);
+                R_len_t ln = LENGTH(a);
+                copy_elements (ans, i, a, 0, ln);
+                i += ln;
+            }
+            UNPROTECT(1); /* args */
+            return ans;
+        }
+    }
 
     /* Determine the type of the returned value. */
     /* The strategy here is appropriate because the */
@@ -1335,10 +1389,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			REAL(result)[n++] = REAL(u)[i % k];
 		} 
 		else { /* RAWSXP */
-		    /* FIXME: I'm not sure what the author intended when the sequence was
-		       defined as raw < logical -- it is possible to represent logical as
-		       raw losslessly but not vice versa. So due to the way this was
-		       defined the raw -> logical conversion is bound to be lossy .. */
+		    /* FIXME: I'm not sure what the author intended when the 
+                       sequence was defined as raw < logical -- it is possible 
+                       to represent logical as raw losslessly but not vice 
+                       versa. So due to the way this was defined the 
+                       raw -> logical conversion is bound to be lossy .. */
 		    if (mode == LGLSXP)
 			for (i = 0; i < idx; i++)
 			    LOGICAL(result)[n++] = RAW(u)[i % k] ? TRUE : FALSE;
@@ -1491,113 +1546,47 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	have_cnames = TRUE;
 
     PROTECT(result = allocMatrix(mode, rows, cols));
+
     n = 0;
 
-    if (mode == STRSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		u = coerceVector(u, STRSXP);
-		k = LENGTH(u);
-		idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		for (i = 0; i < idx; i++)
-		    for (j = 0; j < cols; j++)
-		      SET_STRING_ELT(result, i + n + (j * rows),
-				     STRING_ELT(u, (i + j * idx) % k));
-		n += idx;
-	    }
-	}
+    if (mode == VECSXP || mode == EXPRSXP) {
+        for (t = args; t != R_NilValue; t = CDR(t)) {
+            u = PRVALUE(CAR(t));
+            if (isMatrix(u) || length(u) >= lenmin) {
+                PROTECT(u = coerceVector(u, mode));
+                k = LENGTH(u);
+                if (k > 0) {
+                    idx = (isMatrix(u)) ? nrows(u) : 1;
+                    for (j = 0; j < cols; j++)
+                        copy_elements (result, n + j*rows, u, (j*idx)%k, idx);
+                    n += idx;
+                }
+                UNPROTECT(1);
+            }
+        }
     }
-    else if (mode == VECSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		PROTECT(u = coerceVector(u, mode));
-		k = LENGTH(u);
-		idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		for (i = 0; i < idx; i++)
-		    for (j = 0; j < cols; j++)
-		      SET_VECTOR_ELT(result, i + n + (j * rows),
-				     duplicate(VECTOR_ELT(u, (i + j * idx) % k)));
-		n += idx;
-		UNPROTECT(1);
-	    }
-	}
-    }
-    else if (mode == RAWSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		u = coerceVector(u, RAWSXP);
-		k = LENGTH(u);
-		idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		for (i = 0; i < idx; i++)
-		    for (j = 0; j < cols; j++)
-			RAW(result)[i + n + (j * rows)]
-			    = RAW(u)[(i + j * idx) % k];
-		n += idx;
-	    }
-	}
-    }
-    else if (mode == CPLXSXP) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t));
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		u = coerceVector(u, CPLXSXP);
-		k = LENGTH(u);
-		idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		for (i = 0; i < idx; i++)
-		    for (j = 0; j < cols; j++)
-			COMPLEX(result)[i + n + (j * rows)]
-			    = COMPLEX(u)[(i + j * idx) % k];
-		n += idx;
-	    }
-	}
-    }
-    else { /* everything else, currently REALSXP, INTSXP, LGLSXP */
-	for (t = args; t != R_NilValue; t = CDR(t)) {
-	    u = PRVALUE(CAR(t)); /* type of u can be any of: RAW, LGL, INT, REAL */
-	    if (isMatrix(u) || length(u) >= lenmin) {
-		k = LENGTH(u);
-		idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		if (TYPEOF(u) <= INTSXP) {
-		    if (mode <= INTSXP) {
-			for (i = 0; i < idx; i++)
-			    for (j = 0; j < cols; j++)
-				INTEGER(result)[i + n + (j * rows)]
-				    = INTEGER(u)[(i + j * idx) % k];
-			n += idx;
-		    }
-		    else {
-			for (i = 0; i < idx; i++)
-			    for (j = 0; j < cols; j++)
-				REAL(result)[i + n + (j * rows)]
-				    = (INTEGER(u)[(i + j * idx) % k]) == NA_INTEGER ? NA_REAL : INTEGER(u)[(i + j * idx) % k];
-			n += idx;
-		    }
-		}
-		else if (TYPEOF(u) == REALSXP) {
-		    for (i = 0; i < idx; i++)
-			for (j = 0; j < cols; j++)
-			    REAL(result)[i + n + (j * rows)]
-				= REAL(u)[(i + j * idx) % k];
-		    n += idx;
-		}
-		else { /* RAWSXP */
-		    if (mode == LGLSXP) {
-			for (i = 0; i < idx; i++)
-			    for (j = 0; j < cols; j++)
-				LOGICAL(result)[i + n + (j * rows)]
-				    = RAW(u)[(i + j * idx) % k] ? TRUE : FALSE;
-		    }
-		    else
-			for (i = 0; i < idx; i++)
-			    for (j = 0; j < cols; j++)
-				INTEGER(result)[i + n + (j * rows)]
-				    = (unsigned char) RAW(u)[(i + j * idx) % k];
-		}
-	    }
-	}
+    else {
+        for (t = args; t != R_NilValue; t = CDR(t)) {
+            u = PRVALUE(CAR(t));
+            if (isMatrix(u) || length(u) >= lenmin) {
+                k = LENGTH(u);
+                if (k > 0) {
+                    if (isMatrix(u)) {
+                        idx = nrows(u);
+                        for (j = 0; j < cols; j++)
+                            copy_numeric_or_string_elements (result, n + j*rows,
+                                                             u, (j*idx)%k, idx);
+                        n += idx;
+                    }
+                    else {
+                        for (j = 0; j < cols; j++)
+                            copy_numeric_or_string_elements (result, n + j*rows,
+                                                             u, j % k, 1);
+                        n += 1;
+                    }
+                }
+            }
+        }
     }
 
     /* Adjustment of dimnames attributes. */

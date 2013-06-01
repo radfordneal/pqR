@@ -42,12 +42,6 @@
 /* of data vectors.  Type coercion throughout R should use these */
 /* routines to ensure consistency. */
 
-/* Coercion warnings will be OR'ed : */
-#define WARN_NA	   1
-#define WARN_INACC 2
-#define WARN_IMAG  4
-#define WARN_RAW  8
-
 /* The following two macros copy or clear the attributes.  They also
    ensure that the object bit is properly set.  They avoid calling the
    assignment functions when possible, since the write barrier (and
@@ -70,6 +64,12 @@
   } \
 } while (0)
 
+/* Coercion warnings will be OR'ed : */
+#define WARN_NA	   1
+#define WARN_INACC 2
+#define WARN_IMAG  4
+#define WARN_RAW  8
+
 void attribute_hidden CoercionWarning(int warn)
 {
 /* FIXME: Use
@@ -86,29 +86,75 @@ void attribute_hidden CoercionWarning(int warn)
 	warning(_("out-of-range values treated as 0 in coercion to raw"));
 }
 
-int attribute_hidden
-LogicalFromInteger(int x, int *warn)
+int attribute_hidden RawFromLogical(int x, int *warn)
 {
-    return (x == NA_INTEGER) ?
-	NA_LOGICAL : (x != 0);
+    if (x == NA_LOGICAL) {
+        *warn |= WARN_RAW;
+        return 0;
+    }
+    return x;
 }
 
-int attribute_hidden
-LogicalFromReal(double x, int *warn)
+int attribute_hidden RawFromInteger(int x, int *warn)
 {
-    return ISNAN(x) ?
-	NA_LOGICAL : (x != 0);
+    if (x < 0 || x > 255) {
+        *warn |= WARN_RAW;
+        return 0;
+    }
+    return x;
 }
 
-int attribute_hidden
-LogicalFromComplex(Rcomplex x, int *warn)
+int attribute_hidden RawFromReal(double x, int *warn)
 {
-    return (ISNAN(x.r) || ISNAN(x.i)) ?
-	NA_LOGICAL : (x.r != 0 || x.i != 0);
+    if (ISNAN(x) || (int)x < 0 || (int)x > 255) {
+        *warn |= WARN_RAW;
+        return 0;
+    }
+    return (int)x;
 }
 
-int attribute_hidden
-LogicalFromString(SEXP x, int *warn)
+int attribute_hidden RawFromComplex(Rcomplex x, int *warn)
+{
+    if (ISNAN(x.r) || ISNAN(x.i) || (int)x.r < 0 || (int)x.r > 255) {
+        *warn |= WARN_RAW;
+        return 0;
+    }
+    if (x.i != 0)
+	*warn |= WARN_IMAG;
+    return (int)x.r;
+}
+
+int attribute_hidden RawFromString(SEXP x, int *warn)
+{
+    int tmp = IntegerFromString(x,warn);
+    if (tmp == NA_INTEGER || tmp < 0 || tmp > 255)
+    { *warn |= WARN_RAW;
+      return 0;
+    }
+    return tmp;
+}
+
+int attribute_hidden LogicalFromRaw(int x, int *warn)
+{
+    return x != 0;
+}
+
+int attribute_hidden LogicalFromInteger(int x, int *warn)
+{
+    return (x == NA_INTEGER) ? NA_LOGICAL : (x != 0);
+}
+
+int attribute_hidden LogicalFromReal(double x, int *warn)
+{
+    return ISNAN(x) ? NA_LOGICAL : (x != 0);
+}
+
+int attribute_hidden LogicalFromComplex(Rcomplex x, int *warn)
+{
+    return (ISNAN(x.r) || ISNAN(x.i)) ? NA_LOGICAL : (x.r != 0 || x.i != 0);
+}
+
+int attribute_hidden LogicalFromString(SEXP x, int *warn)
 {
     if (x != R_NaString) {
 	if (StringTrue(CHAR(x))) return 1;
@@ -117,15 +163,17 @@ LogicalFromString(SEXP x, int *warn)
     return NA_LOGICAL;
 }
 
-int attribute_hidden
-IntegerFromLogical(int x, int *warn)
+int attribute_hidden IntegerFromRaw(int x, int *warn)
 {
-    return (x == NA_LOGICAL) ?
-	NA_INTEGER : x;
+    return x;
 }
 
-int attribute_hidden
-IntegerFromReal(double x, int *warn)
+int attribute_hidden IntegerFromLogical(int x, int *warn)
+{
+    return (x == NA_LOGICAL) ? NA_INTEGER : x;
+}
+
+int attribute_hidden IntegerFromReal(double x, int *warn)
 {
     if (ISNAN(x))
 	return NA_INTEGER;
@@ -136,8 +184,7 @@ IntegerFromReal(double x, int *warn)
     return x;
 }
 
-int attribute_hidden
-IntegerFromComplex(Rcomplex x, int *warn)
+int attribute_hidden IntegerFromComplex(Rcomplex x, int *warn)
 {
     if (ISNAN(x.r) || ISNAN(x.i))
 	return NA_INTEGER;
@@ -150,9 +197,7 @@ IntegerFromComplex(Rcomplex x, int *warn)
     return x.r;
 }
 
-
-int attribute_hidden
-IntegerFromString(SEXP x, int *warn)
+int attribute_hidden IntegerFromString(SEXP x, int *warn)
 {
     double xdouble;
     char *endp;
@@ -175,15 +220,17 @@ IntegerFromString(SEXP x, int *warn)
     return NA_INTEGER;
 }
 
-double attribute_hidden
-RealFromLogical(int x, int *warn)
+double attribute_hidden RealFromRaw(int x, int *warn)
 {
-    return (x == NA_LOGICAL) ?
-	NA_REAL : x;
+    return x;
 }
 
-double attribute_hidden
-RealFromInteger(int x, int *warn)
+double attribute_hidden RealFromLogical(int x, int *warn)
+{
+    return (x == NA_LOGICAL) ? NA_REAL : x;
+}
+
+double attribute_hidden RealFromInteger(int x, int *warn)
 {
     if (x == NA_INTEGER)
 	return NA_REAL;
@@ -191,8 +238,7 @@ RealFromInteger(int x, int *warn)
 	return x;
 }
 
-double attribute_hidden
-RealFromComplex(Rcomplex x, int *warn)
+double attribute_hidden RealFromComplex(Rcomplex x, int *warn)
 {
     if (ISNAN(x.r) || ISNAN(x.i))
 	return NA_REAL;
@@ -201,8 +247,7 @@ RealFromComplex(Rcomplex x, int *warn)
     return x.r;
 }
 
-double attribute_hidden
-RealFromString(SEXP x, int *warn)
+double attribute_hidden RealFromString(SEXP x, int *warn)
 {
     double xdouble;
     char *endp;
@@ -216,8 +261,7 @@ RealFromString(SEXP x, int *warn)
     return NA_REAL;
 }
 
-Rcomplex attribute_hidden
-ComplexFromLogical(int x, int *warn)
+Rcomplex attribute_hidden ComplexFromRaw(int x, int *warn)
 {
     Rcomplex z;
     if (x == NA_LOGICAL) {
@@ -231,8 +275,21 @@ ComplexFromLogical(int x, int *warn)
     return z;
 }
 
-Rcomplex attribute_hidden
-ComplexFromInteger(int x, int *warn)
+Rcomplex attribute_hidden ComplexFromLogical(int x, int *warn)
+{
+    Rcomplex z;
+    if (x == NA_LOGICAL) {
+	z.r = NA_REAL;
+	z.i = NA_REAL;
+    }
+    else {
+	z.r = x;
+	z.i = 0;
+    }
+    return z;
+}
+
+Rcomplex attribute_hidden ComplexFromInteger(int x, int *warn)
 {
     Rcomplex z;
     if (x == NA_INTEGER) {
@@ -246,8 +303,7 @@ ComplexFromInteger(int x, int *warn)
     return z;
 }
 
-Rcomplex attribute_hidden
-ComplexFromReal(double x, int *warn)
+Rcomplex attribute_hidden ComplexFromReal(double x, int *warn)
 {
     Rcomplex z;
     if (ISNAN(x)) {
@@ -261,8 +317,7 @@ ComplexFromReal(double x, int *warn)
     return z;
 }
 
-Rcomplex attribute_hidden
-ComplexFromString(SEXP x, int *warn)
+Rcomplex attribute_hidden ComplexFromString(SEXP x, int *warn)
 {
     double xr, xi;
     Rcomplex z;
@@ -287,6 +342,13 @@ ComplexFromString(SEXP x, int *warn)
 	else *warn |= WARN_NA;
     }
     return z;
+}
+
+static SEXP StringFromRaw(Rbyte x, int *warn)
+{
+    char buf[3];
+    sprintf(buf, "%02x", x);
+    return mkChar(buf);
 }
 
 SEXP attribute_hidden StringFromLogical(int x, int *warn)
@@ -348,11 +410,151 @@ SEXP attribute_hidden StringFromComplex(Rcomplex x, int *warn)
 	return mkChar(EncodeComplex(x, wr, dr, er, wi, di, ei, OutDec));
 }
 
-static SEXP StringFromRaw(Rbyte x, int *warn)
+/* Copy n elements from a numeric (raw, logical, integer, real, or complex) 
+   or string vector v (starting at j) to a numeric or string vector x (starting 
+   at i), which is not necessarily of the same type.  The value returned is 
+   the OR of all warning flags produced as a result of conversions, zero if 
+   no warnings.  The arguments x and v are protected within this procedure. */
+
+int copy_numeric_or_string_elements (SEXP x, int i, SEXP v, int j, int n)
 {
-    char buf[3];
-    sprintf(buf, "%02x", x);
-    return mkChar(buf);
+    if (n == 0) 
+        return 0;
+
+    int typx = TYPEOF(x);
+    int typv = TYPEOF(v);
+
+    if (typx == typv) {
+        copy_elements(x,i,v,j,n);
+        return 0;
+    }
+
+    int L = i + n;
+    int w = 0;
+
+    PROTECT(x); 
+    PROTECT(v);
+
+    switch ((typx<<5) + typv) {
+
+    case (RAWSXP<<5) + LGLSXP:
+        do RAW(x)[i++] = RawFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        break;
+    case (RAWSXP<<5) + INTSXP:
+        do RAW(x)[i++] = RawFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        break;
+    case (RAWSXP<<5) + REALSXP:
+        do RAW(x)[i++] = RawFromReal(REAL(v)[j++],&w); while(i<L);
+        break;
+    case (RAWSXP<<5) + CPLXSXP:
+        do RAW(x)[i++] = RawFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        break;
+    case (RAWSXP<<5) + STRSXP:
+        do RAW(x)[i++] = 
+          RawFromString(STRING_ELT(v,j++),&w); while(i<L);
+        break;
+
+    case (LGLSXP<<5) + RAWSXP:
+        do LOGICAL(x)[i++] = LogicalFromRaw(RAW(v)[j++],&w); while(i<L);
+        break;
+    case (LGLSXP<<5) + INTSXP:
+        do LOGICAL(x)[i++] = LogicalFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        break;
+    case (LGLSXP<<5) + REALSXP:
+        do LOGICAL(x)[i++] = LogicalFromReal(REAL(v)[j++],&w); while(i<L);
+        break;
+    case (LGLSXP<<5) + CPLXSXP:
+        do LOGICAL(x)[i++] = LogicalFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        break;
+    case (LGLSXP<<5) + STRSXP:
+        do LOGICAL(x)[i++] = 
+          LogicalFromString(STRING_ELT(v,j++),&w); while(i<L);
+        break;
+
+    case (INTSXP<<5) + RAWSXP:
+        do INTEGER(x)[i++] = IntegerFromRaw(RAW(v)[j++],&w); while(i<L);
+        break;
+    case (INTSXP<<5) + LGLSXP:
+        do INTEGER(x)[i++] = IntegerFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        break;
+    case (INTSXP<<5) + REALSXP:
+        do INTEGER(x)[i++] = IntegerFromReal(REAL(v)[j++],&w); while(i<L);
+        break;
+    case (INTSXP<<5) + CPLXSXP:
+        do INTEGER(x)[i++] = IntegerFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        break;
+    case (INTSXP<<5) + STRSXP:
+        do INTEGER(x)[i++] = 
+          IntegerFromString(STRING_ELT(v,j++),&w); while(i<L);
+        break;
+
+    case (REALSXP<<5) + RAWSXP:
+        do REAL(x)[i++] = RealFromRaw(RAW(v)[j++],&w); while(i<L);
+        break;
+    case (REALSXP<<5) + LGLSXP:
+        do REAL(x)[i++] = RealFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        break;
+    case (REALSXP<<5) + INTSXP:
+        do REAL(x)[i++] = RealFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        break;
+    case (REALSXP<<5) + CPLXSXP:
+        do REAL(x)[i++] = RealFromComplex(COMPLEX(v)[j++],&w); while(i<L);
+        break;
+    case (REALSXP<<5) + STRSXP:
+        do REAL(x)[i++] = 
+          RealFromString(STRING_ELT(v,j++),&w); while(i<L);
+        break;
+
+    case (CPLXSXP<<5) + RAWSXP:
+        do COMPLEX(x)[i++] = ComplexFromRaw(RAW(v)[j++],&w); while(i<L);
+        break;
+    case (CPLXSXP<<5) + LGLSXP:
+        do COMPLEX(x)[i++] = ComplexFromLogical(LOGICAL(v)[j++],&w); while(i<L);
+        break;
+    case (CPLXSXP<<5) + INTSXP:
+        do COMPLEX(x)[i++] = ComplexFromInteger(INTEGER(v)[j++],&w); while(i<L);
+        break;
+    case (CPLXSXP<<5) + REALSXP:
+        do COMPLEX(x)[i++] = ComplexFromReal(REAL(v)[j++],&w); while(i<L);
+        break;
+    case (CPLXSXP<<5) + STRSXP:
+        do COMPLEX(x)[i++] = 
+          ComplexFromString(STRING_ELT(v,j++),&w); while(i<L);
+        break;
+
+    case (STRSXP<<5) + RAWSXP:
+        do {
+            SET_STRING_ELT (x, i++, StringFromRaw(RAW(v)[j++],&w)); 
+        } while (i<L);
+        break;
+    case (STRSXP<<5) + LGLSXP:
+        do {
+            SET_STRING_ELT (x, i++, StringFromLogical(LOGICAL(v)[j++],&w)); 
+        } while (i<L);
+        break;
+    case (STRSXP<<5) + INTSXP:
+        do {
+            SET_STRING_ELT (x, i++, StringFromInteger(INTEGER(v)[j++],&w)); 
+        } while (i<L);
+        break;
+    case (STRSXP<<5) + REALSXP:
+        do {
+            SET_STRING_ELT (x, i++, StringFromReal(REAL(v)[j++],&w)); 
+        } while (i<L);
+        break;
+    case (STRSXP<<5) + CPLXSXP:
+        do {
+            SET_STRING_ELT (x, i++, StringFromComplex(COMPLEX(v)[j++],&w)); 
+        } while (i<L);
+        break;
+
+    default:
+       UNIMPLEMENTED_TYPE("copy_numeric_elements", x);
+    }
+
+    UNPROTECT(2);
+
+    return w;
 }
 
 /* Conversion between the two list types (LISTSXP and VECSXP). */
@@ -442,289 +644,6 @@ static SEXP coerceToSymbol(SEXP v)
     ans = install(CHAR(ans));
     UNPROTECT(1);
     return ans;
-}
-
-static SEXP coerceToLogical(SEXP v)
-{
-    SEXP ans;
-    int i, n, warn = 0;
-    PROTECT(ans = allocVector(LGLSXP, n = length(v)));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
-    DUPLICATE_ATTRIB(ans, v);
-    switch (TYPEOF(v)) {
-    case INTSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = LogicalFromInteger(INTEGER(v)[i], &warn);
-	break;
-    case REALSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = LogicalFromReal(REAL(v)[i], &warn);
-	    break;
-    case CPLXSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = LogicalFromComplex(COMPLEX(v)[i], &warn);
-	break;
-    case STRSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = LogicalFromString(STRING_ELT(v, i), &warn);
-	break;
-    case RAWSXP:
-	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = LogicalFromInteger((int)RAW(v)[i], &warn);
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("coerceToLogical", v);
-    }
-    if (warn) CoercionWarning(warn);
-    UNPROTECT(1);
-    return ans;
-}
-
-static SEXP coerceToInteger(SEXP v)
-{
-    SEXP ans;
-    int i, n, warn = 0;
-    PROTECT(ans = allocVector(INTSXP, n = LENGTH(v)));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
-    DUPLICATE_ATTRIB(ans, v);
-    switch (TYPEOF(v)) {
-    case LGLSXP:
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = IntegerFromLogical(LOGICAL(v)[i], &warn);
-	    break;
-    case REALSXP:
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = IntegerFromReal(REAL(v)[i], &warn);
-	break;
-    case CPLXSXP:
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = IntegerFromComplex(COMPLEX(v)[i], &warn);
-	break;
-    case STRSXP:
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = IntegerFromString(STRING_ELT(v, i), &warn);
-	break;
-    case RAWSXP:
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = (int)RAW(v)[i];
-	    break;
-    default:
-	UNIMPLEMENTED_TYPE("coerceToInteger", v);
-    }
-    if (warn) CoercionWarning(warn);
-    UNPROTECT(1);
-    return ans;
-}
-
-static SEXP coerceToReal(SEXP v)
-{
-    SEXP ans;
-    int i, n, warn = 0;
-    PROTECT(ans = allocVector(REALSXP, n = LENGTH(v)));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
-    DUPLICATE_ATTRIB(ans, v);
-    switch (TYPEOF(v)) {
-    case LGLSXP:
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = RealFromLogical(LOGICAL(v)[i], &warn);
-	break;
-    case INTSXP:
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = RealFromInteger(INTEGER(v)[i], &warn);
-	break;
-    case CPLXSXP:
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = RealFromComplex(COMPLEX(v)[i], &warn);
-	break;
-    case STRSXP:
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = RealFromString(STRING_ELT(v, i), &warn);
-	break;
-    case RAWSXP:
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = RealFromInteger((int)RAW(v)[i], &warn);
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("coerceToReal", v);
-    }
-    if (warn) CoercionWarning(warn);
-    UNPROTECT(1);
-    return ans;
-}
-
-static SEXP coerceToComplex(SEXP v)
-{
-    SEXP ans;
-    int i, n, warn = 0;
-    PROTECT(ans = allocVector(CPLXSXP, n = LENGTH(v)));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
-    DUPLICATE_ATTRIB(ans, v);
-    switch (TYPEOF(v)) {
-    case LGLSXP:
-	for (i = 0; i < n; i++)
-	    COMPLEX(ans)[i] = ComplexFromLogical(LOGICAL(v)[i], &warn);
-	break;
-    case INTSXP:
-	for (i = 0; i < n; i++)
-	    COMPLEX(ans)[i] = ComplexFromInteger(INTEGER(v)[i], &warn);
-	break;
-    case REALSXP:
-	for (i = 0; i < n; i++)
-	    COMPLEX(ans)[i] = ComplexFromReal(REAL(v)[i], &warn);
-	break;
-    case STRSXP:
-	for (i = 0; i < n; i++)
-	    COMPLEX(ans)[i] = ComplexFromString(STRING_ELT(v, i), &warn);
-	break;
-    case RAWSXP:
-	for (i = 0; i < n; i++)
-	    COMPLEX(ans)[i] = ComplexFromInteger((int)RAW(v)[i], &warn);
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("coerceToComplex", v);
-    }
-    if (warn) CoercionWarning(warn);
-    UNPROTECT(1);
-    return ans;
-}
-
-static SEXP coerceToRaw(SEXP v)
-{
-    SEXP ans;
-    int i, n, warn = 0, tmp;
-
-    PROTECT(ans = allocVector(RAWSXP, n = LENGTH(v)));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
-    DUPLICATE_ATTRIB(ans, v);
-    switch (TYPEOF(v)) {
-    case LGLSXP:
-	for (i = 0; i < n; i++) {
-	    tmp = IntegerFromLogical(LOGICAL(v)[i], &warn);
-	    if(tmp == NA_INTEGER) {
-		tmp = 0;
-		warn |= WARN_RAW;
-	    }
-	    RAW(ans)[i] = (Rbyte) tmp;
-	}
-	break;
-    case INTSXP:
-	for (i = 0; i < n; i++) {
-	    tmp = INTEGER(v)[i];
-	    if(tmp == NA_INTEGER || tmp < 0 || tmp > 255) {
-		tmp = 0;
-		warn |= WARN_RAW;
-	    }
-	    RAW(ans)[i] = (Rbyte) tmp;
-	}
-	break;
-    case REALSXP:
-	for (i = 0; i < n; i++) {
-	    tmp = IntegerFromReal(REAL(v)[i], &warn);
-	    if(tmp == NA_INTEGER || tmp < 0 || tmp > 255) {
-		tmp = 0;
-		warn |= WARN_RAW;
-	    }
-	    RAW(ans)[i] = (Rbyte) tmp;
-	}
-	break;
-    case CPLXSXP:
-	for (i = 0; i < n; i++) {
-	    tmp = IntegerFromComplex(COMPLEX(v)[i], &warn);
-	    if(tmp == NA_INTEGER || tmp < 0 || tmp > 255) {
-		tmp = 0;
-		warn |= WARN_RAW;
-	    }
-	    RAW(ans)[i] = (Rbyte) tmp;
-	}
-	break;
-    case STRSXP:
-	for (i = 0; i < n; i++) {
-	    tmp = IntegerFromString(STRING_ELT(v, i), &warn);
-	    if(tmp == NA_INTEGER || tmp < 0 || tmp > 255) {
-		tmp = 0;
-		warn |= WARN_RAW;
-	    }
-	    RAW(ans)[i] = (Rbyte) tmp;
-	}
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("coerceToRaw", v);
-    }
-    if (warn) CoercionWarning(warn);
-    UNPROTECT(1);
-    return ans;
-}
-
-static SEXP coerceToString(SEXP v)
-{
-    SEXP ans;
-    int i, n, savedigits, warn = 0;
-    PROTECT(ans = allocVector(STRSXP, n = LENGTH(v)));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
-    DUPLICATE_ATTRIB(ans, v);
-    switch (TYPEOF(v)) {
-    case LGLSXP:
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(ans, i, StringFromLogical(LOGICAL(v)[i], &warn));
-	break;
-    case INTSXP:
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(ans, i, StringFromInteger(INTEGER(v)[i], &warn));
-	break;
-    case REALSXP:
-	PrintDefaults();
-	savedigits = R_print.digits; R_print.digits = DBL_DIG;/* MAX precision */
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(ans, i, StringFromReal(REAL(v)[i], &warn));
-	R_print.digits = savedigits;
-	break;
-    case CPLXSXP:
-	PrintDefaults();
-	savedigits = R_print.digits; R_print.digits = DBL_DIG;/* MAX precision */
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(ans, i, StringFromComplex(COMPLEX(v)[i], &warn));
-	R_print.digits = savedigits;
-	break;
-    case RAWSXP:
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(ans, i, StringFromRaw(RAW(v)[i], &warn));
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("coerceToString", v);
-    }
-    if (warn) CoercionWarning(warn);/*2000/10/23*/
-    UNPROTECT(1);
-    return (ans);
 }
 
 static SEXP coerceToExpression(SEXP v)
@@ -1077,6 +996,28 @@ static SEXP coerceSymbol(SEXP v, SEXPTYPE type)
     return rval;
 }
 
+static SEXP coerce_numeric_or_string (SEXP v, int type)
+{
+    int n = LENGTH(v);
+    int warn;
+    SEXP ans;
+
+    PROTECT(ans = allocVector(type,n));
+#ifdef R_MEMORY_PROFILING
+    if (RTRACE(v)){
+       memtrace_report(v,ans);
+       SET_RTRACE(ans,1);
+    }
+#endif
+    DUPLICATE_ATTRIB(ans, v);
+
+    warn = copy_numeric_or_string_elements (ans, 0, v, 0, n);
+    if (warn) CoercionWarning(warn);
+
+    UNPROTECT(1);
+    return ans;
+}
+
 SEXP coerceVector(SEXP v, SEXPTYPE type)
 {
     SEXP op, vp, ans = R_NilValue;	/* -Wall */
@@ -1149,12 +1090,12 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
     case ENVSXP:
 	error(_("environments cannot be coerced to other types"));
 	break;
+    case RAWSXP:
     case LGLSXP:
     case INTSXP:
     case REALSXP:
     case CPLXSXP:
     case STRSXP:
-    case RAWSXP:
 
 #define COERCE_ERROR_STRING "cannot coerce type '%s' to vector of type '%s'"
 
@@ -1163,25 +1104,36 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 
 	switch (type) {
 	case SYMSXP:
-	    ans = coerceToSymbol(v);	    break;
-	case LGLSXP:
-	    ans = coerceToLogical(v);	    break;
-	case INTSXP:
-	    ans = coerceToInteger(v);	    break;
-	case REALSXP:
-	    ans = coerceToReal(v);	    break;
-	case CPLXSXP:
-	    ans = coerceToComplex(v);	    break;
-	case RAWSXP:
-	    ans = coerceToRaw(v);	    break;
-	case STRSXP:
-	    ans = coerceToString(v);	    break;
+	    ans = coerceToSymbol(v);
+	    break;
 	case EXPRSXP:
-	    ans = coerceToExpression(v);    break;
+	    ans = coerceToExpression(v);
+	    break;
 	case VECSXP:
-	    ans = coerceToVectorList(v);    break;
+	    ans = coerceToVectorList(v);
+	    break;
 	case LISTSXP:
-	    ans = coerceToPairList(v);	    break;
+	    ans = coerceToPairList(v);
+	    break;
+	case RAWSXP:
+	case LGLSXP:
+	case INTSXP:
+	case REALSXP:
+	case CPLXSXP:
+            ans = coerce_numeric_or_string (v, type);
+	    break;
+	case STRSXP:
+            if (TYPEOF(v)==REALSXP || TYPEOF(v)==CPLXSXP) {
+                int savedigits;
+                PrintDefaults();
+                savedigits = R_print.digits; 
+                R_print.digits = DBL_DIG; /* MAX precision */
+                ans = coerce_numeric_or_string (v, type);
+                R_print.digits = savedigits;
+            }
+            else
+                ans = coerce_numeric_or_string (v, type);
+            break;
 	default:
 	    COERCE_ERROR;
 	}
