@@ -115,19 +115,16 @@ static SEXP DecideVectorOrRange(SEXP rng, int *start, int *end, SEXP call)
    according to the range given by start and end.  The caller will
    have allocated "result" to be at least the required length, and
    for VECSXP and EXPRSXP, the entries will be R_NilValue (done by
-   allocVector). */
+   allocVector).
 
-static SEXP ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
+   Arguments x and result must be protected by the caller. */
+
+static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
 {
+    int nx = length(x);
+
     SEXP tmp, tmp2;
-    int mode, nx, n, m, i;
-
-    if (x == R_NilValue)
-        return x;
-
-    mode = TYPEOF(x);
-
-    nx = length(x);
+    int n, m, i;
 
     start -= 1;
     n = end-start;
@@ -135,7 +132,7 @@ static SEXP ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
 
     tmp = result;
 
-    switch (mode) {
+    switch (TYPEOF(x)) {
     case LGLSXP:
         memcpy (LOGICAL(result), LOGICAL(x)+start, m * sizeof *LOGICAL(x));
         for (i = m; i<n; i++) LOGICAL(result)[i] = NA_LOGICAL;
@@ -161,7 +158,16 @@ static SEXP ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
         break;
     case VECSXP:
     case EXPRSXP:
-        copy_vector_elements (result, 0, x, start, m);
+        if (!DUPVE || NAMEDCNT_EQ_0(x)) {
+            copy_vector_elements (result, 0, x, start, m);
+            if (NAMEDCNT_GT_0(x))
+                for (i = 0; i<m; i++)
+                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(result,i));
+        }
+        else {
+            for (i = 0; i<m; i++)
+                SET_VECTOR_ELT (result, i, duplicate(VECTOR_ELT(x,start+i)));
+        }
         /* remaining elements already set to R_NilValue */
         break;
     case LISTSXP:
@@ -183,10 +189,8 @@ static SEXP ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
         for (i = m; i<n; i++) RAW(result)[i] = (Rbyte) 0;
         break;
     default:
-        errorcall(call, R_MSG_ob_nonsub, type2char(mode));
+        errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
     }
-
-    return result;
 }
 
 
@@ -194,21 +198,17 @@ static SEXP ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
    according to the integer subscripts given in "indx". The caller will
    have allocated "result" to be at least the required length, and
    for VECSXP and EXPRSXP, the entries will be R_NilValue (done by
-   allocVector). */
+   allocVector).
 
-static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
+   Arguments x and result must be protected by the caller. */
+
+static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 {
-    int i, ii, n, nx, mode;
-    SEXP tmp, tmp2;
-    mode = TYPEOF(x);
-    n = LENGTH(indx);
-    nx = length(x);
-    tmp = result;
+    int n = LENGTH(indx);
+    int nx = LENGTH(x);
+    int i, ii;
 
-    if (x == R_NilValue)
-	return x;
-
-    switch (mode) {
+    switch (TYPEOF(x)) {
     case LGLSXP:
         for (i = 0; i<n; i++)
             if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
@@ -248,15 +248,29 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         break;
     case VECSXP:
     case EXPRSXP:
-        for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
-                /* nothing, already R_NilValue */ ;
-            else
-                SET_VECTOR_ELT(result, i, VECTOR_ELT(x, ii));
+        if (NAMEDCNT_EQ_0(x)) {
+            for (i = 0; i<n; i++)
+                if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                    /* nothing, already R_NilValue */ ;
+                else {
+                    SEXP ve = VECTOR_ELT(x, ii);
+                    SET_VECTOR_ELT(result, i, ve);
+                    if (i > 0) INC_NAMEDCNT_0_AS_1(ve);
+                }
+        }
+        else {
+            for (i = 0; i<n; i++)
+                if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                    /* nothing, already R_NilValue */ ;
+                else 
+                    SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii);
+        }
         break;
     case LISTSXP:
 	    /* cannot happen: pairlists are coerced to lists */
-    case LANGSXP:
+    case LANGSXP: ;
+        SEXP tmp, tmp2;
+        tmp = result;
         for (i = 0; i<n; i++) {
             if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
                 SETCAR(tmp, R_NilValue);
@@ -276,10 +290,8 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
                 RAW(result)[i] = RAW(x)[ii];
         break;
     default:
-        errorcall(call, R_MSG_ob_nonsub, type2char(mode));
+        errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
     }
-
-    return result;
 }
 
 
@@ -287,7 +299,7 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
    matrix indexing of arrays */
 static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 {
-    int mode, spi, stretch = 1;
+    int spi, stretch = 1;
     SEXP result, attrib, nattrib;
     int start = 1, end = 0, n = 0;
     SEXP indx = R_NilValue;
@@ -329,41 +341,42 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
         n = LENGTH(indx);
     }
 
-    /* Allocate the result. */
+    /* Allocate and extract the result. */
 
-    mode = TYPEOF(x);
-    /* No protection needed as ExtractSubset and ExtractRange don't allocate */
-    result = allocVector(mode, n);
-    if (mode == VECSXP || mode == EXPRSXP)
-	/* we do not duplicate the values when extracting the subset,
-	   so to be conservative mark the result as NAMED = 2 */
-	SET_NAMEDCNT_MAX(result);
+    if (x == R_NilValue) {
+        result = R_NilValue;
+        UNPROTECT(1 + (s!=R_NilValue));
+    }
+    else {
 
-    PROTECT(result = s==R_NilValue ? ExtractRange(x, result, start, end, call)
-                                   : ExtractSubset(x, result, indx, call));
+        PROTECT (result = allocVector(TYPEOF(x),n));
+        if (s==R_NilValue) 
+            ExtractRange(x, result, start, end, call);
+        else 
+            ExtractSubset(x, result, indx, call);
 
-    if (result != R_NilValue) {
-	if (
-	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
+	if (((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
 	    ( /* here we might have an array.  Use row names if 1D */
 		isArray(x) && LENGTH(getAttrib(x, R_DimNamesSymbol)) == 1 &&
 		(attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue &&
 		(attrib = GetRowNames(attrib)) != R_NilValue
 		)
 	    ) {
-	    nattrib = allocVector(TYPEOF(attrib), n);
-	    PROTECT(nattrib = s==R_NilValue 
-                               ? ExtractRange(attrib, nattrib, start, end, call)
-                               : ExtractSubset(attrib, nattrib, indx, call));
+	    PROTECT(nattrib = allocVector(TYPEOF(attrib), n));
+	    if (s==R_NilValue)
+                ExtractRange(attrib, nattrib, start, end, call);
+            else
+                ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_NamesSymbol, nattrib);
 	    UNPROTECT(1);
 	}
 	if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
 	    TYPEOF(attrib) == VECSXP) {
-	    nattrib = allocVector(VECSXP, n);
-	    PROTECT(nattrib = s==R_NilValue 
-                               ? ExtractRange(attrib, nattrib, start, end, call)
-                               : ExtractSubset(attrib, nattrib, indx, call));
+	    PROTECT(nattrib = allocVector(VECSXP, n));
+	    if (s==R_NilValue)
+                ExtractRange(attrib, nattrib, start, end, call);
+            else
+                ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_SrcrefSymbol, nattrib);
 	    UNPROTECT(1);
 	}
@@ -374,9 +387,8 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	    SET_S4_OBJECT(result);
 	}
 #endif
+        UNPROTECT(2 + (s!=R_NilValue));
     }
-
-    UNPROTECT(2 + (s!=R_NilValue));
 
     return result;
 }
@@ -463,8 +475,8 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
         case STRSXP:
             SET_STRING_ELT(result, j, STRING_ELT(x, st+jj*nr));
             break;
-        case VECSXP:
-            SET_VECTOR_ELT(result, j, VECTOR_ELT(x, st+jj*nr));
+        case VECSXP: ;
+            SET_VECTOR_ELEMENT_FROM_VECTOR(result, j, x, st+jj*nr);
             break;
         case RAWSXP:
             RAW(result)[j] = RAW(x) [st+jj*nr];
@@ -531,7 +543,17 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
             copy_string_elements (result, ij, x, jjnr, nrs);
             break;
         case VECSXP:
-            copy_vector_elements (result, ij, x, jjnr, nrs);
+            if (!DUPVE || NAMEDCNT_EQ_0(x)) {
+                copy_vector_elements (result, ij, x, jjnr, nrs);
+                if (NAMEDCNT_GT_0(x))
+                    for (i = 0; i<nrs; i++)
+                        INC_NAMEDCNT_0_AS_1(VECTOR_ELT(result,ij+i));
+            }
+            else {
+                for (i = 0; i<nrs; i++)
+                    SET_VECTOR_ELT (result, ij+i, 
+                                    duplicate(VECTOR_ELT(x,jjnr+i)));
+            }
             break;
         case RAWSXP:
             memcpy (RAW(result)+ij, RAW(x)+jjnr, 
@@ -614,9 +636,20 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
                     SET_STRING_ELT(result, ij, STRING_ELT(x, (ii-1)+jjnr));
             break;
         case VECSXP:
-            for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
-                    SET_VECTOR_ELT(result, ij, VECTOR_ELT(x, (ii-1)+jjnr));
+            if (!DUPVE || NAMEDCNT_EQ_0(x)) {
+                for (i = 0; i < nrs; i++, ij++) 
+                    if ((ii = INTEGER(sr)[i]) != NA_INTEGER) {
+                        SEXP ve = VECTOR_ELT(x, (ii-1)+jjnr);
+                        SET_VECTOR_ELT (result, ij, ve);
+                        INC_NAMEDCNT_0_AS_1(ve);
+                    }
+            }
+            else {
+                for (i = 0; i < nrs; i++, ij++) 
+                    if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                        SET_VECTOR_ELT (result, ij, 
+                          duplicate(VECTOR_ELT(x,(ii-1)+jjnr)));
+            }
             break;
         case RAWSXP:
             for (i = 0; i < nrs; i++, ij++) 
@@ -704,31 +737,43 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
 	dimnames = getAttrib(x, R_DimNamesSymbol);
 	dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
 	if (!isNull(dimnames)) {
-	    PROTECT(newdimnames = allocVector(VECSXP, 2));
+            PROTECT(newdimnames = allocVector(VECSXP, 2));
             nprotect++;
-	    if (TYPEOF(dimnames) == VECSXP) {
-	      SET_VECTOR_ELT(newdimnames, 0, s0 == R_NilValue 
-		  ? ExtractRange (VECTOR_ELT(dimnames, 0),
-				  allocVector(STRSXP, nrs), start, end, call)
-		  : ExtractSubset(VECTOR_ELT(dimnames, 0),
-				  allocVector(STRSXP, nrs), sr, call));
-	      SET_VECTOR_ELT(newdimnames, 1, 
-                    ExtractSubset(VECTOR_ELT(dimnames, 1),
-				  allocVector(STRSXP, ncs), sc, call));
-	    }
-	    else {
-	      SET_VECTOR_ELT(newdimnames, 0, s0 == R_NilValue 
-		  ? ExtractRange (CAR(dimnames),
-				  allocVector(STRSXP, nrs), start, end, call)
-		  : ExtractSubset(CAR(dimnames),
-				  allocVector(STRSXP, nrs), sr, call));
-	      SET_VECTOR_ELT(newdimnames, 1,
-		    ExtractSubset(CADR(dimnames),
-				  allocVector(STRSXP, ncs), sc, call));
-	    }
-	    setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
-	    setAttrib(result, R_DimNamesSymbol, newdimnames);
-	}
+            if (TYPEOF(dimnames) == VECSXP) {
+                if (VECTOR_ELT(dimnames,0) != R_NilValue) {
+                    SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
+                    if (s0 == R_NilValue)
+                        ExtractRange (VECTOR_ELT(dimnames,0),
+                          VECTOR_ELT(newdimnames,0), start, end, call);
+                    else
+                        ExtractSubset(VECTOR_ELT(dimnames,0),
+                          VECTOR_ELT(newdimnames,0), sr, call);
+                }
+                if (VECTOR_ELT(dimnames,1) != R_NilValue) {
+                    SET_VECTOR_ELT (newdimnames, 1, allocVector(STRSXP, ncs));
+                    ExtractSubset(VECTOR_ELT(dimnames,1),
+                      VECTOR_ELT(newdimnames,1), sc, call);
+                }
+            }
+            else {
+                if (CAR(dimnames) != R_NilValue) {
+                    SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
+                    if (s0 == R_NilValue)
+                        ExtractRange (CAR(dimnames),
+                          VECTOR_ELT(newdimnames,0), start, end, call);
+                    else
+                        ExtractSubset(CAR(dimnames),
+                          VECTOR_ELT(newdimnames,0), sr, call);
+                }
+                if (CADR(dimnames) != R_NilValue) {
+                    SET_VECTOR_ELT (newdimnames, 1, allocVector(STRSXP, ncs));
+                    ExtractSubset(CADR(dimnames),
+                      VECTOR_ELT(newdimnames,1), sc, call);
+                }
+            }
+            setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
+            setAttrib(result, R_DimNamesSymbol, newdimnames);
+        }
     }
     /*  Probably should not do this:
     copyMostAttrib(x, result); */
@@ -832,7 +877,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	    break;
 	case VECSXP:
 	    if (ii != NA_INTEGER)
-		SET_VECTOR_ELT(result, i, VECTOR_ELT(x, ii));
+                SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii);
 	    else
 		SET_VECTOR_ELT(result, i, R_NilValue);
 	    break;
@@ -868,36 +913,17 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 
     dimnames = getAttrib(x, R_DimNamesSymbol);
     dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
-    if (dimnames != R_NilValue) {
-	/*SEXP xdims;
-	int */ j = 0;
+    if (TYPEOF(dimnames) == VECSXP) { /* broken code for others in R-2.15.0 */
+	SEXP xdims;
 	PROTECT(xdims = allocVector(VECSXP, k));
-	if (TYPEOF(dimnames) == VECSXP) {
-	    r = s;
-	    for (i = 0; i < k ; i++) {
-		if (bound[i] > 0) {
-		  SET_VECTOR_ELT(xdims, j++,
-			ExtractSubset(VECTOR_ELT(dimnames, i),
-				      allocVector(STRSXP, bound[i]),
-				      CAR(r), call));
-		} else { /* 0-length dims have NULL dimnames */
-		    SET_VECTOR_ELT(xdims, j++, R_NilValue);
-		}
-		r = CDR(r);
-	    }
-	}
-	else {
-	    p = dimnames;
-	    q = xdims;
-	    r = s;
-	    for(i = 0 ; i < k; i++) {
-		SETCAR(q, allocVector(STRSXP, bound[i]));
-		SETCAR(q, ExtractSubset(CAR(p), CAR(q), CAR(r), call));
-		p = CDR(p);
-		q = CDR(q);
-		r = CDR(r);
-	    }
-	}
+        for (i = 0, r = s; i < k ; i++, r = CDR(r)) {
+            if (bound[i] > 0 && VECTOR_ELT(dimnames,i) != R_NilValue) {
+                SET_VECTOR_ELT(xdims, i, allocVector(STRSXP, bound[i]));
+                ExtractSubset (VECTOR_ELT(dimnames, i), VECTOR_ELT(xdims,i),
+                               CAR(r), call);
+            } 
+            /* else leave as NULL for 0-length dims */
+        }
 	setAttrib(xdims, R_NamesSymbol, dimnamesnames);
 	setAttrib(result, R_DimNamesSymbol, xdims);
 	UNPROTECT(1);
@@ -1249,10 +1275,12 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    PROTECT(ax = allocVector(VECSXP, length(x)));
 	    setAttrib(ax, R_NamesSymbol, getAttrib(x, R_NamesSymbol));
 	}
+        SET_NAMEDCNT(ax,NAMEDCNT(x));
 	for(px = x, i = 0 ; px != R_NilValue ; px = CDR(px))
 	    SET_VECTOR_ELT(ax, i++, CAR(px));
     }
-    else errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+    else
+        errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
     /* This is the actual subsetting code. */
     /* The separation of arrays and matrices is purely an optimization. */
@@ -1479,10 +1507,9 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (named_x > NAMEDCNT(ans))
 	    SET_NAMEDCNT(ans, named_x);
     } else if(isVectorList(x)) {
-	/* did unconditional duplication before 2.4.0 */
 	ans = VECTOR_ELT(x, offset);
-	if (named_x > NAMEDCNT(ans))
-	    SET_NAMEDCNT(ans, named_x);
+	if (named_x>0 && NAMEDCNT_EQ_0(ans))
+            SET_NAMEDCNT(ans,1);
     } else {
 	ans = allocVector(TYPEOF(x), 1);
 	switch (TYPEOF(x)) {
@@ -1653,8 +1680,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	    mtch = ep_match_strings(ctarg, cinp);
             if (mtch>0) /* exact */ {
 		y = VECTOR_ELT(x, i);
-		if (NAMEDCNT(x) > NAMEDCNT(y))
-		    SET_NAMEDCNT(y, NAMEDCNT(x));
+                if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
+                    SET_NAMEDCNT(y,1);
 		return y;
             }
 	    else if (mtch<0) /* partial */ {
@@ -1663,9 +1690,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 		    /* partial matches can cause aliasing in eval.c:evalseq
 		       This is overkill, but alternative ways to prevent
 		       the aliasing appear to be even worse */
-		    y = VECTOR_ELT(x,i);
-		    SET_NAMEDCNT_MAX(y);
-		    SET_VECTOR_ELT(x,i,y);
+		    SET_NAMEDCNT_MAX(VECTOR_ELT(x,i));
 		}
 		imatch = i;
 	    }
@@ -1679,7 +1704,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 			    cinp, ctarg);
 	    }
 	    y = VECTOR_ELT(x, imatch);
-	    if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
+            if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
+                SET_NAMEDCNT(y,1);
 	    return y;
 	}
 	return R_NilValue;
