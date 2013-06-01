@@ -1,7 +1,7 @@
-
 % File src/library/base/man/debug.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2009 R Core Development Team
+% Modifications for pqR copyright (C) 2013 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{debug}
@@ -59,6 +59,16 @@ isdebugged(fun)
   disables the use of an empty line as a synonym for \code{n}.  If this
   is done, the user will be re-prompted for input until a valid command
   or an expression is entered.
+
+  When an \code{if} statement is executed, debugging will step to
+  the statement in either the if or the else part, or to each of the
+  statements of that part within curly brackets.  If there is no else
+  part, and the \code{if} condition is \code{FALSE}, debugging will 
+  step to the statement after the \code{if} statement.
+
+  When a \code{for}, \code{while}, or \code{repeat} loop is executed,
+  debugging will step to the loop statement for each repetition,
+  or to each of the statements within curly brackets making up the loop.
 
   To debug a function is defined inside a function, single-step though
   to the end of its definition, and then call \code{debug} on its name.

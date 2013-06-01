@@ -1,0 +1,3 @@
+Fixes the "debug" facility.  See NEWS item.
+
+Also cleans up code, and propagates evalv variant to branches of "if".

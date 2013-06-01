@@ -265,7 +265,12 @@
 
   \subsection{BUG FIXES}{
     \itemize{
-      \item **1
+      \item The "debug" facility has been fixed.  Its behaviour for if,
+            while, repeat, and for statements when the inner statement
+            was or was not one with curly brackets had made no sense,
+            and it had also displayed inappropriate expressions, and
+            displayed things at the wrong time.  The new behaviour is
+            now documented in help(debug).
       \item **2
       \item **3
       \item **4

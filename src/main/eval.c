@@ -1141,48 +1141,90 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
     return lang3(op, symbol, val);
 }
 
-
-static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
+                                  /* Caller needn't protect the s arg below */
+static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call) 
 {
-    Rboolean cond = NA_LOGICAL;
+    Rboolean cond;
+    int len;
 
-    if (length(s) > 1)
-	warningcall(call,
-		    _("the condition has length > 1 and only the first element will be used"));
-    if (length(s) > 0) {
-	/* inline common cases for efficiency */
-	switch(TYPEOF(s)) {
-	case LGLSXP:
-	    cond = LOGICAL(s)[0];
-	    break;
-	case INTSXP:
-	    cond = INTEGER(s)[0]; /* relies on NA_INTEGER == NA_LOGICAL */
-	    break;
-	default:
-	    cond = asLogical(s);
-	}
+    switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case LGLSXP:
+        len = LENGTH(s);
+        if (len > 0) 
+            cond = LOGICAL(s)[0];
+        break;
+    case INTSXP:
+        len = LENGTH(s);
+        if (len > 0) 
+            cond = INTEGER(s)[0] == NA_INTEGER ? NA_LOGICAL : INTEGER(s)[0]; 
+        break;
+    default:
+        len = length(s);
+        if (len > 0)
+            cond = asLogical(s);
+        break;
     }
 
-    if (cond == NA_LOGICAL) {
-	char *msg = length(s) ? (isLogical(s) ?
-				 _("missing value where TRUE/FALSE needed") :
-				 _("argument is not interpretable as logical")) :
-	    _("argument is of length zero");
-	errorcall(call, msg);
-    }
+    if (len == 0)
+        errorcall(call, _("argument is of length zero"));
+
+    if (len > 1)
+        warningcall(call,
+        _("the condition has length > 1 and only the first element will be used"));
+
+    if (cond == NA_LOGICAL)
+	errorcall(call, isLogical(s) ? 
+                          _("missing value where TRUE/FALSE needed") :
+                          _("argument is not interpretable as logical"));
+
     return cond;
 }
 
 
 #define BodyHasBraces(body) \
-    ((isLanguage(body) && CAR(body) == R_BraceSymbol) ? 1 : 0)
+    (isLanguage(body) && CAR(body) == R_BraceSymbol)
 
-#define DO_LOOP_RDEBUG(call, op, args, rho, bgn) do { \
-    if (bgn && RDEBUG(rho)) { \
+
+SEXP attribute_hidden do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
+                             int variant)
+{
+    SEXP Cond, Stmt;
+    int absent_else = 0;
+
+    Cond = CAR(args); args = CDR(args);
+    Stmt = CAR(args); args = CDR(args);
+
+    if (!asLogicalNoNA (eval(Cond,rho), call)) {  /* go to else part */
+        if (args != R_NilValue)
+            Stmt = CAR(args);
+        else {
+            absent_else = 1;
+            Stmt = R_NilValue;
+        }
+    }
+
+    if (RDEBUG(rho) && Stmt!=R_NilValue && !BodyHasBraces(Stmt)) {
+	SrcrefPrompt("debug", R_Srcref);
+        PrintValue(Stmt);
+        do_browser(call, op, R_NilValue, rho);
+    } 
+
+    if (absent_else) {
+        R_Visible = FALSE; /* case of no 'else' so return invisible NULL */
+        return R_NilValue;
+    }
+
+    return evalv (Stmt, rho, variant);
+}
+
+
+#define DO_LOOP_RDEBUG(call, op, body, rho, bgn) do { \
+    if (!bgn && RDEBUG(rho)) { \
 	SrcrefPrompt("debug", R_Srcref); \
-	PrintValue(CAR(args)); \
+	PrintValue(body); \
 	do_browser(call, op, R_NilValue, rho); \
     } } while (0)
+
 
 /* Allocate space for the loop variable value the first time through
    (when v == R_NilValue) and when the value has been assigned to
@@ -1194,33 +1236,6 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 	    SET_NAMED(v, 1); \
 	} \
     } while(0)
-
-SEXP attribute_hidden do_if(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP Cond, Stmt=R_NilValue;
-    int vis=0;
-
-    PROTECT(Cond = eval(CAR(args), rho));
-    if (asLogicalNoNA(Cond, call)) 
-        Stmt = CAR(CDR(args));
-    else {
-        if (length(args) > 2) 
-           Stmt = CAR(CDR(CDR(args)));
-        else
-           vis = 1;
-    } 
-    if( RDEBUG(rho) && !BodyHasBraces(Stmt)) {
-	SrcrefPrompt("debug", R_Srcref);
-        PrintValue(Stmt);
-        do_browser(call, op, R_NilValue, rho);
-    } 
-    UNPROTECT(1);
-    if( vis ) {
-        R_Visible = FALSE; /* case of no 'else' so return invisible NULL */
-        return Stmt;
-    }
-    return (eval(Stmt, rho));
-}
 
 SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1283,7 +1298,6 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     case CTXT_NEXT: goto for_next;
     }
     for (i = 0; i < n; i++) {
-	DO_LOOP_RDEBUG(call, op, args, rho, bgn);
 
 	switch (val_type) {
 
@@ -1336,6 +1350,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             defineVar(sym, v, rho);
 	}
 
+	DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+
 	eval(body, rho);
 
     for_next:
@@ -1361,7 +1377,6 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return R_NilValue;
     }
 
-
     dbg = RDEBUG(rho);
     body = CADR(args);
     bgn = BodyHasBraces(body);
@@ -1369,9 +1384,10 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
+
 	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
-	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
-	    eval(body, rho);
+	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+	    evalv (body, rho, VARIANT_NULL);
 	}
     }
     endcontext(&cntxt);
@@ -1399,9 +1415,10 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
+
 	for (;;) {
-	    DO_LOOP_RDEBUG(call, op, args, rho, bgn);
-	    eval(body, rho);
+	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+	    evalv (body, rho, VARIANT_NULL);
 	}
     }
     endcontext(&cntxt);

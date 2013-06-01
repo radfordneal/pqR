@@ -276,7 +276,7 @@ SEXP do_iconv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_ICUset(SEXP, SEXP, SEXP, SEXP);
 SEXP do_identical(SEXP, SEXP, SEXP, SEXP);
 SEXP do_identify(SEXP, SEXP, SEXP, SEXP);
-SEXP do_if(SEXP, SEXP, SEXP, SEXP);
+SEXP do_if(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_image(SEXP, SEXP, SEXP, SEXP);
 SEXP do_inherits(SEXP, SEXP, SEXP, SEXP);
 SEXP do_inspect(SEXP, SEXP, SEXP, SEXP);
