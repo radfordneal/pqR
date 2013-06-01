@@ -386,13 +386,11 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, generic = R_NilValue /* -Wall */, obj, val;
     SEXP callenv, defenv;
-    SEXP ap, argList;
+    SEXP argList;
     RCNTXT *cptr;
+    static char *ap[2] = { "generic", "object" };
 
-    PROTECT(ap = list2(R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("generic"));
-    SET_TAG(CDR(ap), install("object"));
-    PROTECT(argList =  matchArgs(ap, args, call));
+    PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
     if (CAR(argList) == R_MissingArg)
 	errorcall(call, _("there must be a 'generic' argument"));
     else
@@ -446,7 +444,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
 		  env, callenv, defenv, &ans) == 1) {
-	UNPROTECT(3); /* obj, ap, argList */
+	UNPROTECT(2); /* obj, argList */
 	PROTECT(ans);
 	findcontext(CTXT_RETURN, env, ans); /* does not return */
     }
@@ -565,26 +563,30 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 		  _("'function' is not a function, but of type %d"),
 		  TYPEOF(s));
     }
-    /* get formals and actuals; attach the names of the formals to
-       the actuals, expanding any ... that occurs */
+
+    /* Get formals and actuals; matchArgs attaches the names of the formals to
+       the actuals.  Then expand any ... that occurs. */
     formals = FORMALS(s);
-    PROTECT(actuals = matchArgs(formals, cptr->promargs, call));
+    PROTECT(actuals = matchArgs(formals, NULL, 0, cptr->promargs, call));
 
     i = 0;
-    for(s = formals, t = actuals; s != R_NilValue; s = CDR(s), t = CDR(t)) {
-	SET_TAG(t, TAG(s));
-	if(TAG(t) == R_DotsSymbol) i = length(CAR(t));
+    for(t = actuals; t != R_NilValue; t = CDR(t)) {
+	if(TAG(t) == R_DotsSymbol) {
+            i = length(CAR(t)); 
+            break;
+        }
     }
     if(i) {   /* we need to expand out the dots */
 	PROTECT(t = allocList(i+length(actuals)-1));
 	for(s = actuals, m = t; s != R_NilValue; s = CDR(s)) {
-	    if(TYPEOF(CAR(s)) == DOTSXP) {
+	    if(TYPEOF(CAR(s)) == DOTSXP && i!=0) {
 		for(i = 1, a = CAR(s); a != R_NilValue;
 		    a = CDR(a), i++, m = CDR(m)) {
 		    sprintf(tbuf, "..%d", i);
 		    SET_TAG(m, mkSYMSXP(mkChar(tbuf), R_UnboundValue));
 		    SETCAR(m, CAR(a));
 		}
+                i = 0; /* precaution just in case there are multiple ... args */
 	    } else {
 		SET_TAG(m, TAG(s));
 		SETCAR(m, CAR(s));
@@ -820,7 +822,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     switch(TYPEOF(CAR(args))) {
     case ENVSXP:

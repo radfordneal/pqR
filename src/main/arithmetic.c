@@ -1081,7 +1081,7 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP s;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
@@ -1139,7 +1139,7 @@ SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
     checkArity(op, args); /* but is -1 in names.c */
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     if (isComplex(CAR(args)))
 	errorcall(call, _("unimplemented complex function"));
     return math1(CAR(args), trunc, call);
@@ -1155,7 +1155,7 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP x, s = R_NilValue /* -Wall */;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
     x = CAR(args);
 
     if (DispatchGroup("Math", call, op, args, env, &s))
@@ -1468,7 +1468,7 @@ SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 /* This is a primitive SPECIALSXP with internal argument matching */
 SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP res, ap, call2;
+    SEXP res, call2;
     int n, nprotect = 2;
 
     if (length(args) >= 2 &&
@@ -1500,11 +1500,9 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	} else {
 	    /* If named, do argument matching by name */
 	    if (TAG(args) != R_NilValue || TAG(CDR(args)) != R_NilValue) {
-		PROTECT(ap = CONS(R_NilValue, list1(R_NilValue)));
-		SET_TAG(ap,  install("x"));
-		SET_TAG(CDR(ap), install("digits"));
-		PROTECT(args = matchArgs(ap, args, call));
-		nprotect +=2;
+                static char *ap[2] = { "x", "digits" };
+		PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+		nprotect += 1;
 	    }
 	    if (length(CADR(args)) == 0)
 		errorcall(call, _("invalid second argument of length 0"));
@@ -1521,7 +1519,7 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP res, call2, args2, tmp = R_NilValue /* -Wall */;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (DispatchGroup("Math", call, op, args, env, &res)) return res;
 
@@ -1544,7 +1542,7 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 /* This is a primitive SPECIALSXP with internal argument matching */
 SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP res, ap = args, call2;
+    SEXP res, call2;
     int n = length(args), nprotect = 2;
 
     if (n >= 2 && isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
@@ -1571,11 +1569,9 @@ SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
 	case 2:
 	{
 	    /* match argument names if supplied */
-	    PROTECT(ap = list2(R_NilValue, R_NilValue));
-	    SET_TAG(ap, install("x"));
-	    SET_TAG(CDR(ap), install("base"));
-	    PROTECT(args = matchArgs(ap, args, call));
-	    nprotect += 2;
+            static char *ap[2] = { "x", "base" };
+	    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+	    nprotect += 1;
 	    if (length(CADR(args)) == 0)
 		errorcall(call, _("invalid argument 'base' of length 0"));
 	    if (isComplex(CAR(args)) || isComplex(CADR(args)))

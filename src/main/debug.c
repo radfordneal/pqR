@@ -71,7 +71,7 @@ SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     find_char_fun
 
@@ -125,7 +125,7 @@ SEXP attribute_hidden do_tracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     char buffer[20];
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     object = CAR(args);
     if (TYPEOF(object) == CLOSXP ||
@@ -159,7 +159,7 @@ SEXP attribute_hidden do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP object;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     object=CAR(args);
     if (TYPEOF(object) == CLOSXP ||
@@ -209,13 +209,11 @@ void attribute_hidden memtrace_report(void * old, void * _new)
 SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #ifdef R_MEMORY_PROFILING
-    SEXP object, previous, ans, ap, argList;
+    SEXP object, previous, ans, argList;
     char buffer[20];
+    static char *ap[2] = { "x", "previous" };
 
-    PROTECT(ap = list2(R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("x"));
-    SET_TAG(CDR(ap), install("previous"));
-    PROTECT(argList =  matchArgs(ap, args, call));
+    PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
     if(CAR(argList) == R_MissingArg) SETCAR(argList, R_NilValue);
     if(CADR(argList) == R_MissingArg) SETCAR(CDR(argList), R_NilValue);
 
@@ -247,7 +245,7 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    memtrace_stack_dump();
 	}
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
     return ans;
 #else
     return R_NilValue;

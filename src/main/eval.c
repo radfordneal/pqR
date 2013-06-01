@@ -763,8 +763,9 @@ static SEXP applyClosure_v (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	contains the matched pairs.  Ideally this environment sould be
 	hashed.  */
 
-    PROTECT(actuals = matchArgs(formals, arglist, call));
-    PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
+    PROTECT(actuals = matchArgs(formals, NULL, 0, arglist, call));
+    PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
+        /* no longer passes formals, since matchArg now puts tags in actuals */
 
     /*  Use the default code for unbound formals.  FIXME: It looks like
 	this code should preceed the building of the environment so that

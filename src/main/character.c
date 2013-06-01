@@ -103,7 +103,7 @@ SEXP attribute_hidden do_nzchar(SEXP call, SEXP op, SEXP args, SEXP env)
     int i, len;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1arg_x (args, call);
 
     if (isFactor(CAR(args)))
 	error(_("'%s' requires a character vector"), "nzchar()");

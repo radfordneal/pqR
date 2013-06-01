@@ -572,6 +572,7 @@ LibExtern SEXP	R_ModeSymbol;	    /* "mode" */
 LibExtern SEXP	R_NameSymbol;	    /* "name" */
 LibExtern SEXP	R_NamesSymbol;	    /* "names" */
 LibExtern SEXP	R_NaRmSymbol;	    /* "na.rm" */
+LibExtern SEXP	R_xSymbol;          /* "x" */
 LibExtern SEXP  R_PackageSymbol;    /* "package" */
 LibExtern SEXP  R_QuoteSymbol;	    /* "quote" */
 LibExtern SEXP	R_RowNamesSymbol;   /* "row.names" */

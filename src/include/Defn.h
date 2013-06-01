@@ -479,6 +479,12 @@ typedef struct {
 #define LOCK_BINDING(b) ((b)->sxpinfo.gp |= BINDING_LOCK_MASK)
 #define UNLOCK_BINDING(b) ((b)->sxpinfo.gp &= (~BINDING_LOCK_MASK))
 
+#define check1arg_x(args,call) \
+    do { \
+        if (TAG(args) != R_NilValue && TAG(args) != R_xSymbol) \
+            check1arg_error (args, call, "x"); \
+    } while (0)
+
 #else /* USE_RINTERNALS */
 
 typedef struct VECREC *VECP;
@@ -815,6 +821,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define begincontext		Rf_begincontext
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
+# define check1arg_error	Rf_check1arg_error
 # define CheckFormals		Rf_CheckFormals
 # define CleanEd		Rf_CleanEd
 # define CoercionWarning       	Rf_CoercionWarning
@@ -1013,6 +1020,7 @@ SEXP Rf_EnsureString(SEXP);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 void check1arg(SEXP, SEXP, const char *);
+void check1arg_error(SEXP, SEXP, const char *);
 void Rf_checkArityCall(SEXP, SEXP, SEXP);
 void CheckFormals(SEXP);
 void R_check_locale(void);
@@ -1075,7 +1083,7 @@ SEXP markKnown(const char *, SEXP);
 SEXP mat2indsub(SEXP, SEXP, SEXP);
 SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
-SEXP matchArgs(SEXP, SEXP, SEXP);
+SEXP matchArgs(SEXP, char **, int, SEXP, SEXP);
 SEXP matchPar(const char *, SEXP*);
 void memtrace_report(void *, void *);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);

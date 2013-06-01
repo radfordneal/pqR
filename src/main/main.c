@@ -1068,16 +1068,11 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     RCNTXT *saveGlobalContext;
     RCNTXT thiscontext, returncontext, *cptr;
     int savestack, browselevel, tmp;
-    SEXP ap, topExp, argList;
+    SEXP topExp, argList;
+    static char *ap[4] = { "text", "condition", "expr", "skipCalls" };
 
     /* argument matching */
-    PROTECT(ap = list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("text"));
-    SET_TAG(CDR(ap), install("condition"));
-    SET_TAG(CDDR(ap), install("expr"));
-    SET_TAG(CDR(CDDR(ap)), install("skipCalls"));
-    argList = matchArgs(ap, args, call);
-    UNPROTECT(1);
+    argList = matchArgs(R_NilValue, ap, 4, args, call);
     PROTECT(argList);
     /* substitute defaults */
     if(CAR(argList) == R_MissingArg)
