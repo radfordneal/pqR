@@ -1,10 +1,14 @@
+c     DGEMV and DGEMM modified by Radford M. Neal, 2012, to improve memory
+c     performance in some cases.  Also, does not omit multiplies by a matrix
+c     element that is zero, so NaN, Inf, etc. will be properly propagated.
+c
       double precision function dasum(n,dx,incx)
 c
 c     takes the sum of the absolute values.
 c     jack dongarra, linpack, 3/11/78.
 c     modified 3/93 to return if incx .le. 0.
 c     modified 12/3/93, array(1) declarations changed to array(*)
-c
+
       double precision dx(*),dtemp
       integer i,incx,m,mp1,n,nincx
 c
@@ -628,7 +632,7 @@ c               END IF
 *     .. Local Scalars ..
       LOGICAL            NOTA, NOTB
       INTEGER            I, INFO, J, L, NCOLA, NROWA, NROWB
-      DOUBLE PRECISION   TEMP
+      DOUBLE PRECISION   TEMP, TEMP2
 *     .. Parameters ..
       DOUBLE PRECISION   ONE         , ZERO
       PARAMETER        ( ONE = 1.0D+0, ZERO = 0.0D+0 )
@@ -715,39 +719,88 @@ c               END IF
 *
 *           Form  C := alpha*A*B + beta*C.
 *
+c           Modified by R. M. Neal, 2012, to do two columns at once.
+c           Also, doesn't omit multiplies when an operand is zero.
+c
             DO 90, J = 1, N
-               IF( BETA.EQ.ZERO )THEN
-                  DO 50, I = 1, M
-                     C( I, J ) = ZERO
-   50             CONTINUE
-               ELSE IF( BETA.NE.ONE )THEN
-                  DO 60, I = 1, M
-                     C( I, J ) = BETA*C( I, J )
-   60             CONTINUE
+               IF( MOD(K,2).EQ.0 )THEN
+                  IF( BETA.EQ.ZERO )THEN
+                     DO 51, I = 1, M
+                        C( I, J ) = ZERO
+   51                CONTINUE
+                  ELSE IF( BETA.NE.ONE )THEN
+                     DO 52, I = 1, M
+                        C( I, J ) = BETA*C( I, J )
+   52                CONTINUE
+                  END IF
+               ELSE
+                  TEMP = ALPHA*B( 1, J )
+                  IF ( BETA.EQ.ZERO )THEN
+                     DO 61, I = 1, M
+                        C( I, J ) = TEMP*A( I, 1 )
+   61                CONTINUE
+                  ELSE IF ( BETA.NE.ONE )THEN
+                     DO 62, I = 1, M
+                        C( I, J ) = BETA*C( I, J ) + TEMP*A( I, 1 )
+   62                CONTINUE
+                  ELSE
+                     DO 63, I = 1, M
+                        C( I, J ) = C( I, J ) + TEMP*A( I, 1 )
+   63                CONTINUE
+                  END IF
                END IF
-               DO 80, L = 1, K
-c                  IF( B( L, J ).NE.ZERO )THEN
-                     TEMP = ALPHA*B( L, J )
-                     DO 70, I = 1, M
-                        C( I, J ) = C( I, J ) + TEMP*A( I, L )
-   70                CONTINUE
-c                  END IF
+               DO 80, L = MOD(K,2)+1, K, 2
+                  TEMP = ALPHA*B( L, J )
+                  TEMP2 = ALPHA*B( L+1, J )
+                  DO 70, I = 1, M
+                     C(I,J) = C(I,J) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+   70             CONTINUE
    80          CONTINUE
    90       CONTINUE
          ELSE
 *
 *           Form  C := alpha*A'*B + beta*C
 *
+c           Modified by R. M. Neal, 2012, to do produce C(I,J) and C(I+1,J)
+c           together (two dot products), each done with a loop unrolled to
+c           do two products at once.
+c
             DO 120, J = 1, N
-               DO 110, I = 1, M
-                  TEMP = ZERO
-                  DO 100, L = 1, K
-                     TEMP = TEMP + A( L, I )*B( L, J )
-  100             CONTINUE
+               IF ( MOD(M,2).NE.0 )THEN
+                  IF ( MOD(K,2).EQ.0 )THEN
+                     TEMP = ZERO
+                  ELSE
+                     TEMP = A( 1, 1 )*B( 1, J )
+                  END IF
+                  DO 101, L = MOD(K,2)+1, K, 2
+                     TEMP = TEMP + A(L,1)*B(L,J) + A(L+1,1)*B(L+1,J )
+  101             CONTINUE
+                  IF( BETA.EQ.ZERO )THEN
+                     C( 1, J ) = ALPHA*TEMP
+                  ELSE
+                     C( 1, J ) = ALPHA*TEMP + BETA*C( 1, J )
+                  END IF
+               END IF
+               DO 110, I = MOD(M,2)+1, M, 2
+                  IF ( MOD(K,2).EQ.0 )THEN
+                     TEMP = ZERO
+                     TEMP2 = ZERO
+                  ELSE
+                     TEMP = A( 1, I )*B( 1, J )
+                     TEMP2 = A( 1, I+1 )*B( 1, J )
+                  END IF
+                  DO 102, L = MOD(K,2)+1, K, 2
+                     TEMP = TEMP + A(L,I)*B(L,J) 
+     $                           + A(L+1,I)*B(L+1,J )
+                     TEMP2 = TEMP2 + A(L,I+1)*B(L,J) 
+     $                             + A(L+1,I+1)*B(L+1,J )
+  102             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( I, J ) = ALPHA*TEMP
+                     C( I+1, J ) = ALPHA*TEMP2
                   ELSE
                      C( I, J ) = ALPHA*TEMP + BETA*C( I, J )
+                     C( I+1, J ) = ALPHA*TEMP2 + BETA*C( I+1, J )
                   END IF
   110          CONTINUE
   120       CONTINUE
@@ -757,23 +810,42 @@ c                  END IF
 *
 *           Form  C := alpha*A*B' + beta*C
 *
+c           Modified by R. M. Neal, 2012, to do two columns at once.
+c           Also, doesn't omit multiplies when an operand is zero.
+c
             DO 170, J = 1, N
-               IF( BETA.EQ.ZERO )THEN
-                  DO 130, I = 1, M
-                     C( I, J ) = ZERO
-  130             CONTINUE
-               ELSE IF( BETA.NE.ONE )THEN
-                  DO 140, I = 1, M
-                     C( I, J ) = BETA*C( I, J )
-  140             CONTINUE
-               END IF
-               DO 160, L = 1, K
-c                  IF( B( J, L ).NE.ZERO )THEN
-                     TEMP = ALPHA*B( J, L )
-                     DO 150, I = 1, M
-                        C( I, J ) = C( I, J ) + TEMP*A( I, L )
-  150                CONTINUE
-c                  END IF
+               IF( MOD(K,2).EQ.0 )THEN
+                  IF( BETA.EQ.ZERO )THEN
+                     DO 131, I = 1, M
+                        C( I, J ) = ZERO
+  131                CONTINUE
+                  ELSE IF( BETA.NE.ONE )THEN
+                     DO 132, I = 1, M
+                        C( I, J ) = BETA*C( I, J )
+  132                CONTINUE
+                  END IF
+               ELSE
+                  TEMP = ALPHA*B( J, 1 )
+                  IF( BETA.EQ.ZERO )THEN
+                     DO 141, I = 1, M
+                        C( I, J ) = TEMP*A( I, 1 )
+  141                CONTINUE
+                  ELSE IF( BETA.NE.ONE )THEN
+                     DO 142, I = 1, M
+                        C( I, J ) = BETA*C( I, J ) + TEMP*A( I, 1 )
+  142                CONTINUE
+                  ELSE
+                     DO 143, I = 1, M
+                        C( I, J ) = C( I, J ) + TEMP*A( I, 1 )
+  143                CONTINUE
+                  END IF
+               ENDIF
+               DO 160, L = MOD(K,2)+1, K, 2
+                  TEMP = ALPHA*B( J, L )
+                  TEMP2 = ALPHA*B( J, L+1 )
+                  DO 150, I = 1, M
+                     C(I,J) = C(I,J ) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+  150             CONTINUE
   160          CONTINUE
   170       CONTINUE
          ELSE
@@ -906,7 +978,7 @@ c                  END IF
       DOUBLE PRECISION   ONE         , ZERO
       PARAMETER        ( ONE = 1.0D+0, ZERO = 0.0D+0 )
 *     .. Local Scalars ..
-      DOUBLE PRECISION   TEMP
+      DOUBLE PRECISION   TEMP, TEMP2
       INTEGER            I, INFO, IX, IY, J, JX, JY, KX, KY, LENX, LENY
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -1007,14 +1079,25 @@ c                  END IF
 *
          JX = KX
          IF( INCY.EQ.1 )THEN
-            DO 60, J = 1, N
-c               IF( X( JX ).NE.ZERO )THEN
-                  TEMP = ALPHA*X( JX )
-                  DO 50, I = 1, M
-                     Y( I ) = Y( I ) + TEMP*A( I, J )
-   50             CONTINUE
-c               END IF
+c
+c           Modified by R. M. Neal, 2012, to do two columns at once.
+c           Also, doesn't omit multiplies when an operand is zero.
+c
+            IF( MOD(N,2).NE.0 )THEN
+               TEMP = ALPHA*X( JX )
                JX = JX + INCX
+               DO 49, I = 1, M
+                  Y( I ) = Y( I ) + TEMP*A( I, 1 )
+   49          CONTINUE
+            END IF
+            DO 60, J = MOD(N,2)+1, N, 2
+               TEMP = ALPHA*X( JX )
+               JX = JX + INCX
+               TEMP2 = ALPHA*X( JX )
+               JX = JX + INCX
+               DO 50, I = 1, M
+                  Y( I ) = Y( I ) + TEMP*A( I, J ) + TEMP2*A( I, J+1 )
+   50          CONTINUE
    60       CONTINUE
          ELSE
             DO 80, J = 1, N
@@ -1035,12 +1118,39 @@ c               END IF
 *
          JY = KY
          IF( INCX.EQ.1 )THEN
-            DO 100, J = 1, N
-               TEMP = ZERO
-               DO 90, I = 1, M
-                  TEMP = TEMP + A( I, J )*X( I )
-   90          CONTINUE
+c
+c           Modified by R. M. Neal, 2012, to do two dot products each iteration,
+c           each done with a loop unrolled to do two products at once.
+c
+            IF ( MOD(N,2).NE.0 )THEN
+               IF ( MOD(M,2).EQ.0 )THEN
+                  TEMP = ZERO
+               ELSE
+                  TEMP = A (1, 1 )*X( 1 )
+               ENDIF
+               DO 91, I = MOD(M,2)+1, M, 2
+                  TEMP = TEMP + A( I, 1 )*X( I ) + A( I+1, 1 )*X( I+1 )
+   91          CONTINUE
                Y( JY ) = Y( JY ) + ALPHA*TEMP
+               JY      = JY      + INCY
+            END IF
+            DO 100, J = MOD(N,2)+1, N, 2
+               IF ( MOD(M,2).EQ.0 )THEN
+                  TEMP = ZERO
+                  TEMP2 = ZERO
+               ELSE
+                  TEMP = A (1, J )*X( 1 )
+                  TEMP2 = A (1, J+1 )*X( 1 )
+               ENDIF
+               DO 92, I = MOD(M,2)+1, M, 2
+                  TEMP = TEMP + A( I, J )*X( I ) 
+     $                        + A( I+1, J )*X( I+1 )
+                  TEMP2 = TEMP2 + A( I, J+1 )*X( I ) 
+     $                          + A( I+1, J+1 )*X( I+1 )
+   92          CONTINUE
+               Y( JY ) = Y( JY ) + ALPHA*TEMP
+               JY      = JY      + INCY
+               Y( JY ) = Y( JY ) + ALPHA*TEMP2
                JY      = JY      + INCY
   100       CONTINUE
          ELSE

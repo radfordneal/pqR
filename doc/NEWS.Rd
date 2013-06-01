@@ -67,7 +67,10 @@
       \item **12
       \item **13
       \item **14
-      \item **15
+      \item The BLAS routines supplied with R were modified to improve the 
+            performance of the routines DGEMM (matrix-matrix multiply) and 
+            DGEMV (matrix-vector multiply).  Also, proper propagation of NaN, 
+            Inf, etc. is done now.
       \item **16
       \item **17
       \item **18

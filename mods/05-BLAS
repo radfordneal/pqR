@@ -1,0 +1,8 @@
+The BLAS routines supplied with R were modified to improve the
+performance of the routines DGEMM (matrix-matrix multiply) and DGEMV
+(matrix-vector multiply).  Also, proper propagation of NaN, Inf,
+etc. is done now.
+
+These routines are probably still not as fast as those in a more
+sophisticated BLAS, but will be of benefit to users who do not 
+install a different BLAS.
