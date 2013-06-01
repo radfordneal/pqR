@@ -1818,16 +1818,9 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
    a naturally recursive algorithm, but we use the iterative form below
    because it is does not cause growth of the pointer protection stack,
    and because it is a little more efficient.
-*/
 
-#define COPY_TAG(to, from) do { \
-  SEXP __tag__ = TAG(from); \
-  if (__tag__ != R_NilValue) SET_TAG(to, __tag__); \
-} while (0)
-
-/* Used in eval and applyMethod (object.c) for builtin primitives,
-   do_internal (names.c) for builtin .Internals
-   and in evalArgs.
+   Used in eval and applyMethod (object.c) for builtin primitives,
+   do_internal (names.c) for builtin .Internals and in evalArgs.
 
    'n' is the number of arguments already evaluated and hence not
    passed to evalArgs and hence to here.
@@ -1854,12 +1847,11 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-                    ev = CONS(eval(CAR(h), rho), R_NilValue);
+                    ev = cons_with_tag (eval(CAR(h), rho), R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         PROTECT(head = ev);
                     else
                         SETCDR(tail, ev);
-                    COPY_TAG(ev, h);
                     tail = ev;
 		    h = CDR(h);
 		}
@@ -1874,12 +1866,11 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	    /* It was missing */
 	    errorcall(call, _("'%s' is missing"), CHAR(PRINTNAME(CAR(el)))); 
 	} else {
-            ev = CONS(eval(CAR(el), rho), R_NilValue);
+            ev = cons_with_tag (eval(CAR(el), rho), R_NilValue, TAG(el));
             if (head==R_NilValue)
                 PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
-            COPY_TAG(ev, el);
             tail = ev;
 	}
 	el = CDR(el);
@@ -1917,15 +1908,13 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-                    if (CAR(h) == R_MissingArg) 
-                        ev = CONS(R_MissingArg, R_NilValue);
-                    else
-                        ev = CONS(eval(CAR(h), rho), R_NilValue);
+                    ev = CAR(h) == R_MissingArg ? 
+                         cons_with_tag (R_MissingArg, R_NilValue, TAG(h))
+                       : cons_with_tag (eval(CAR(h),rho), R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         PROTECT(head = ev);
                     else
                         SETCDR(tail, ev);
-                    COPY_TAG(ev, h);
                     tail = ev;
 		    h = CDR(h);
 		}
@@ -1934,16 +1923,14 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 		error(_("'...' used in an incorrect context"));
 	}
 	else {
-            if (CAR(el) == R_MissingArg ||
-                 (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)))
-                ev = CONS(R_MissingArg, R_NilValue);
-            else
-                ev = CONS(eval(CAR(el), rho), R_NilValue);
+            ev = CAR(el) == R_MissingArg ||
+                 (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) ?
+                     cons_with_tag (R_MissingArg, R_NilValue, TAG(el))
+                   : cons_with_tag (eval(CAR(el), rho), R_NilValue, TAG(el));
             if (head==R_NilValue)
                 PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
-            COPY_TAG(ev, el);
             tail = ev;
 	}
 	el = CDR(el);
@@ -1963,9 +1950,10 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
-    SEXP ans, h, tail;
+    SEXP head, tail, ev, h;
 
-    PROTECT(ans = tail = CONS(R_NilValue, R_NilValue));
+    head = R_NilValue;
+    tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
     while(el != R_NilValue) {
 
@@ -1984,29 +1972,36 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    SETCDR(tail, CONS(mkPROMISE(CAR(h), rho), R_NilValue));
-		    tail = CDR(tail);
-		    COPY_TAG(tail, h);
+                    ev = 
+                      cons_with_tag (mkPROMISE(CAR(h),rho), R_NilValue, TAG(h));
+                    if (head==R_NilValue)
+                        PROTECT(head=ev);
+                    else
+                        SETCDR(tail,ev);
+                    tail = ev;
 		    h = CDR(h);
 		}
 	    }
 	    else if (h != R_MissingArg)
 		error(_("'...' used in an incorrect context"));
 	}
-	else if (CAR(el) == R_MissingArg) {
-	    SETCDR(tail, CONS(R_MissingArg, R_NilValue));
-	    tail = CDR(tail);
-	    COPY_TAG(tail, el);
-	}
-	else {
-	    SETCDR(tail, CONS(mkPROMISE(CAR(el), rho), R_NilValue));
-	    tail = CDR(tail);
-	    COPY_TAG(tail, el);
-	}
+        else {
+            ev = CAR(el) == R_MissingArg ?
+                   cons_with_tag (R_MissingArg, R_NilValue, TAG(el))
+                 : cons_with_tag (mkPROMISE(CAR(el), rho), R_NilValue, TAG(el));
+            if (head==R_NilValue)
+                PROTECT(head = ev);
+            else
+                SETCDR(tail, ev);
+            tail = ev;
+        }
 	el = CDR(el);
     }
-    UNPROTECT(1);
-    return CDR(ans);
+
+    if (head!=R_NilValue)
+        UNPROTECT(1);
+
+    return head;
 }
  
 /* Create promises for arguments, with values for promises filled in.  
