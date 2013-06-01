@@ -43,6 +43,7 @@ extern "C" {
 
 /* implementation of these : ../../main/arithmetic.c */
 LibExtern double R_NaN;		/* IEEE NaN */
+LibExtern double R_NaN_cast_to_int;  /* Set to (int) R_NaN */
 LibExtern double R_PosInf;	/* IEEE Inf */
 LibExtern double R_NegInf;	/* IEEE -Inf */
 LibExtern double R_NaReal;	/* NA_REAL: IEEE */
@@ -68,12 +69,16 @@ int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
    Also note that C++ math headers specifically undefine
    isnan if it is a macro (it is on OS X and in C99),
    hence the workaround.  This code also appears in Rmath.h
-*/
+
+   Changed to be faster for many non-NaN and non-NA numbers, relying 
+   on the result of converting NaN and NA to int being the same, which
+   is checked for in InitArithmetic. */
+
 #ifdef __cplusplus
   int R_isnancpp(double); /* in arithmetic.c */
-#  define ISNAN(x)     R_isnancpp(x)
+#  define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && R_isnancpp(x))
 #else
-#  define ISNAN(x)     (isnan(x)!=0)
+#  define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && isnan(x) != 0)
 #endif
 
 /* The following is only defined inside R */

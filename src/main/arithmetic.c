@@ -165,7 +165,10 @@ void attribute_hidden InitArithmetic()
 {
     R_NaInt = INT_MIN;
     R_NaN = 0.0/R_Zero_Hack;
+    R_NaN_cast_to_int = (int) R_NaN;
     R_NaReal = R_ValueOfNA();
+    if (R_NaN_cast_to_int != (int) R_NaReal)
+        error("Integer casts of NaN and NA are different!");
     R_PosInf = 1.0/R_Zero_Hack;
     R_NegInf = -1.0/R_Zero_Hack;
 }

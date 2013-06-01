@@ -52,7 +52,7 @@ extern "C" {
 /* Variables that need to be declared as firstprivate in omp parallel
    constructs, since they're used in macros such as NA_REAL. */
 
-#define R_OMP_FIRSTPRIVATE_VARS R_NaReal,R_NaInt
+#define R_OMP_FIRSTPRIVATE_VARS R_NaReal,R_NaInt,R_NaN_cast_to_int
 
 typedef unsigned char Rbyte;
 
