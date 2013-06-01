@@ -38,6 +38,7 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(row_or_col);
     /* a */
     /* b */
+    TASK_NAME(transpose);
     /* c */
     /* d */
     /* e */
