@@ -123,16 +123,16 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
    size is 64 bits = 8 bytes. */
 
 struct sxpinfo_struct {
+    unsigned int nmcnt :  3;  /* count of "names" referring to object */
     unsigned int type  :  5;  /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
                                * -> warning: `type' is narrower than values
                                *              of its type
                                * when SEXPTYPE was an enum */
-    unsigned int nmcnt :  3;  /* count of "names" referring to object */
     /* Garbage collector stuff - keep in one byte to maybe speed up access */
+    unsigned int gccls :  3;  /* node class for garbage collector */
     unsigned int gcgen :  1;  /* old generation number - may be best first */
     unsigned int gcoton:  1;  /* 1 if already in old-to-new list */
     unsigned int mark  :  1;  /* mark object as `in use' in garbage collector */
-    unsigned int gccls :  3;  /* node class for garbage collector */
     /* debug/trace */
     unsigned int debug :  1;
     unsigned int trace :  1;  /* functions and memory tracing */
@@ -236,17 +236,88 @@ typedef struct VECTOR_SEXPREC {
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
+/* Macros for accessing and changing NAMEDCNT. */
+
+#define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
+                           by the number of bits in the nmcnt sxpinfo field */
+
+/* Below is the obvious way of implementing these macros */
+
+#define NAMEDCNT(x)          ((x)->sxpinfo.nmcnt)
+#define NAMEDCNT_EQ_0(x)     ((x)->sxpinfo.nmcnt == 0)
+#define NAMEDCNT_GT_0(x)     ((x)->sxpinfo.nmcnt > 0)
+#define NAMEDCNT_GT_1(x)     ((x)->sxpinfo.nmcnt > 1)
+#define SET_NAMEDCNT(x,v)    ((x)->sxpinfo.nmcnt = (v))
+#define SET_NAMEDCNT_0(x)    ((x)->sxpinfo.nmcnt = 0)
+#define SET_NAMEDCNT_1(x)    ((x)->sxpinfo.nmcnt = 1)
+#define SET_NAMEDCNT_MAX(x)  ((x)->sxpinfo.nmcnt = MAX_NAMEDCNT)
+
+#define INC_NAMEDCNT(x) do { \
+    SEXP _p_ = (x); \
+    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
+        _p_->sxpinfo.nmcnt += 1; \
+  } while (0)
+
+#define INC_NAMEDCNT_0_AS_1(x) do { \
+    SEXP _p_ = (x); \
+    if (_p_->sxpinfo.nmcnt == 0) \
+        _p_->sxpinfo.nmcnt = 2; \
+    else if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
+        _p_->sxpinfo.nmcnt += 1; \
+  } while (0)
+
+#define DEC_NAMEDCNT(x) do { \
+    SEXP _p_ = (x); \
+    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT && _p_->sxpinfo.nmcnt > 0) \
+        _p_->sxpinfo.nmcnt -= 1; \
+  } while (0)
+
+/* Changes for an optimized implemention of the above macros.  The optimization
+   assumes MAX_NAMEDCNT is a power of 2 minus 1.  There's not much to gain with
+   gcc 4.6.3 on Intel - gcc is sometimes too smart to need help, and other times
+   too dumb to take advantage of hints. */
+
+#if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable these optimizations */
+
+#undef NAMEDCNT_GT_1
+#define NAMEDCNT_GT_1(x)     (((x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0)
+
+#endif
+
+/* Backward-compatible NAMED macros.  To mimic the 0/1/2 scheme, any nmcnt 
+   greater than 1 must be converted to 2, and a value of 2 must be convert back
+   to the maximum.  Furthermore, when NAMED returns 2, the actual nmcnt must 
+   be set to the maximum - this is necessary to mimic the effect such code as
+
+                      if (NAMED(v)<2) SET_NAMED(v,2)
+
+   which should have the effect of keeping v with maximum nmcnt even if later
+   a DEC_NAMEDCNT(v) is done.
+*/
+
+#if MAX_NAMEDCNT == 2	/* Gives the old scheme */
+
+#define NAMED(x)	NAMEDCNT((x))
+#define SET_NAMED(x,v)	SET_NAMEDCNT((x),(v))
+
+#else 			/* New scheme with MAX_NAMEDCNT > 2 */
+
+#define NAMED(x) \
+  ( (x)->sxpinfo.nmcnt > 1 ? (SET_NAMEDCNT_MAX((x)), 2) : NAMEDCNT((x)) )
+#define SET_NAMED(x,v) \
+  ( (v) > 1 ? SET_NAMEDCNT_MAX((x)) : SET_NAMEDCNT((x),(v)) )
+
+#endif
+
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)
 #define OBJECT(x)	((x)->sxpinfo.obj)
 #define MARK(x)		((x)->sxpinfo.mark)
 #define TYPEOF(x)	((x)->sxpinfo.type)
-#define NAMED(x)	((x)->sxpinfo.nmcnt)
 #define RTRACE(x)	((x)->sxpinfo.trace)
 #define LEVELS(x)	((x)->sxpinfo.gp)
 #define SET_OBJECT(x,v)	(((x)->sxpinfo.obj)=(v))
 #define SET_TYPEOF(x,v)	(((x)->sxpinfo.type)=(v))
-#define SET_NAMED(x,v)	(((x)->sxpinfo.nmcnt)=(v))
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=(v))
 

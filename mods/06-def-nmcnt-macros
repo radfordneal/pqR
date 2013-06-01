@@ -1,0 +1,10 @@
+Defines macros for using a three-bit nmcnt in the sxpinfo structure in
+the header for every object rather than the named field of R-2.15.0.
+These macros support a true reference counting scheme, which is
+documented in R-ints.texi.  
+
+New versions of NAMED and SET_NAMED are defined for compatibility.
+The new macros are actually used only in later mods, not in this one.
+
+The "inspect" and "pnamedcnt" funtions are updated to display nmcnt
+properly.
