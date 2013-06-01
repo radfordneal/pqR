@@ -647,15 +647,24 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* case 1915:  vector     <- complex    */
     /* case 1916:  vector     <- character  */
 
+    case 2019:	/* expression <- vector, needed if we have promoted a
+		   RHS  to a list */
+    case 2020:	/* expression <- expression */
     case 1919:  /* vector     <- vector     */
 
-	for (i = 0; i < n; i++) {
-	    ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    SET_VECTOR_ELT(x, ii, VECTOR_ELT(y, i % ny));
-	}
-	break;
+        for (i = 0; i < n; i++) {
+            ii = INTEGER(indx)[i];
+            if (ii == NA_INTEGER) continue;
+            if (i < ny) {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii-1, y, i);
+            }
+            else {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii-1, y, i % ny);
+                if (NAMEDCNT_EQ_0(y))
+                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii-1));
+            }
+        }
+        break;
 
     /* case 2001: */
     /* case 2006:  expression <- language   */
@@ -664,17 +673,6 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* case 2014:  expression <- real	    */
     /* case 2015:  expression <- complex    */
     /* case 2016:  expression <- character  */
-    case 2019:	/* expression <- vector, needed if we have promoted a
-		   RHS  to a list */
-    case 2020:	/* expression <- expression */
-
-	for (i = 0; i < n; i++) {
-	    ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    SET_VECTOR_ELT(x, ii, VECTOR_ELT(y, i % ny));
-	}
-	break;
 
     case 1900:  /* vector     <- null       */
     case 2000:  /* expression <- null       */
@@ -969,8 +967,15 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 		if (ii == NA_INTEGER) continue;
 		ii = ii - 1;
 		ij = ii + jj * nr;
-		SET_VECTOR_ELT(x, ij, VECTOR_ELT(y, k));
-		k = (k + 1) % ny;
+                if (k < ny) {
+                    SET_VECTOR_ELEMENT_FROM_VECTOR(x, ij, y, k);
+                }
+                else {
+                    SET_VECTOR_ELEMENT_FROM_VECTOR(x, ij, y, k % ny);
+                    if (NAMEDCNT_EQ_0(y))
+                        INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ij));
+                }
+		k += 1;
 	    }
 	}
 	break;
@@ -1168,7 +1173,14 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 	case 1919: /* vector <- vector */
 
-	    SET_VECTOR_ELT(x, ii, VECTOR_ELT(y, i % ny));
+            if (i < ny) {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
+            }
+            else {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i % ny);
+                if (NAMEDCNT_EQ_0(y))
+                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
+            }
 	    break;
 
 	case 2424: /* raw <- raw */

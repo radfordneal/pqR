@@ -30,6 +30,7 @@
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
+
 /* .Internal(lapply(X, FUN)) */
 
 /* This is a special .Internal, so has unevaluated arguments.  It is
@@ -76,10 +77,7 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	for(i = 0; i < n; i++) {
 	    INTEGER(ind)[0] = i + 1;
-	    tmp = eval(R_fcall, rho);
-	    if (NAMEDCNT_GT_0(tmp))
-		tmp = duplicate(tmp);
-	    SET_VECTOR_ELT(ans, i, tmp);
+	    SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
 	}
 	UNPROTECT(3);
     }
@@ -93,12 +91,15 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP R_fcall, ans, names=R_NilValue, rowNames=R_NilValue, X, XX, FUN, value, dim_v;
-    int i, n, commonLen, useNames,
-	rnk_v = -1; // = array_rank(value) := length(dim(value))
+    SEXP R_fcall, ans, X, XX, FUN, value, dim_v;
+    int i, n, commonLen, useNames;
     Rboolean array_value;
     SEXPTYPE commonType;
     PROTECT_INDEX index;
+    SEXP ind, tmp;
+
+    SEXP names=R_NilValue, rowNames=R_NilValue;
+    int rnk_v = -1; // = array_rank(value) := length(dim(value))
 
     checkArity(op, args);
     PROTECT(X = CAR(args));
@@ -128,72 +129,86 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 						: R_NamesSymbol),
 			   &index);
     }
-    /* The R level code has ensured that XX is a vector.
+
+    /* Build call: FUN(XX[[<ind>]], ...)
+
+       The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
        using the evaluated version.
+
+       Notice that it is OK to have one arg to LCONS do memory
+       allocation and not PROTECT the result (LCONS does memory
+       protection of its args internally), but not both of them,
+       since the computation of one may destroy the other.
     */
-    {
-	SEXP ind, tmp;
-	/* Build call: FUN(XX[[<ind>]], ...) */
 
-	/* Notice that it is OK to have one arg to LCONS do memory
-	   allocation and not PROTECT the result (LCONS does memory
-	   protection of its args internally), but not both of them,
-	   since the computation of one may destroy the other */
+    PROTECT(ind = allocVector(INTSXP, 1));
+    if(isVectorAtomic(XX))
+        PROTECT(tmp = LCONS(R_Bracket2Symbol,
+                            LCONS(XX, LCONS(ind, R_NilValue))));
+    else
+        PROTECT(tmp = LCONS(R_Bracket2Symbol,
+                            LCONS(X, LCONS(ind, R_NilValue))));
+    PROTECT(R_fcall = LCONS(FUN,
+                            LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
 
-	PROTECT(ind = allocVector(INTSXP, 1));
-	if(isVectorAtomic(XX))
-	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-				LCONS(XX, LCONS(ind, R_NilValue))));
-	else
-	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-				LCONS(X, LCONS(ind, R_NilValue))));
-	PROTECT(R_fcall = LCONS(FUN,
-				LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
-
-	for(i = 0; i < n; i++) {
-	    int j;
-	    SEXPTYPE tmpType;
-	    INTEGER(ind)[0] = i + 1;
-	    tmp = eval(R_fcall, rho);
-	    if (length(tmp) != commonLen)
-	    	error(_("values must be length %d,\n but FUN(X[[%d]]) result is length %d"),
-	               commonLen, i+1, length(tmp));
-	    tmpType = TYPEOF(tmp);
-	    if (tmpType != commonType) {
-	    	Rboolean okay = FALSE;
-	    	switch (commonType) {
-	    	case CPLXSXP: okay = (tmpType == REALSXP) || (tmpType == INTSXP)
-	    	                    || (tmpType == LGLSXP); break;
-	    	case REALSXP: okay = (tmpType == INTSXP) || (tmpType == LGLSXP); break;
-	    	case INTSXP:  okay = (tmpType == LGLSXP); break;
-	        }
-	        if (!okay)
-	            error(_("values must be type '%s',\n but FUN(X[[%d]]) result is type '%s'"),
-	            	  type2char(commonType), i+1, type2char(tmpType));
-	        tmp = coerceVector(tmp, commonType);
-	    }
-	    /* Take row names from the first result only */
-	    if (i == 0 && useNames && isNull(rowNames))
-	    	REPROTECT(rowNames = getAttrib(tmp,
-					       array_value ? R_DimNamesSymbol : R_NamesSymbol),
-			  index);
-	    for (j = 0; j < commonLen; j++) {
-	    	switch (commonType) {
-	    	case CPLXSXP: COMPLEX(ans)[i*commonLen + j] = COMPLEX(tmp)[j]; break;
-	    	case REALSXP: REAL(ans)[i*commonLen + j] = REAL(tmp)[j]; break;
-	    	case INTSXP:  INTEGER(ans)[i*commonLen + j] = INTEGER(tmp)[j]; break;
-	    	case LGLSXP:  LOGICAL(ans)[i*commonLen + j] = LOGICAL(tmp)[j]; break;
-	    	case RAWSXP:  RAW(ans)[i*commonLen + j] = RAW(tmp)[j]; break;
-	    	case STRSXP:  SET_STRING_ELT(ans, i*commonLen + j, STRING_ELT(tmp, j)); break;
-	    	case VECSXP:  SET_VECTOR_ELT(ans, i*commonLen + j, VECTOR_ELT(tmp, j)); break;
-	    	default:
-	    	    error(_("type '%s' is not supported"), type2char(commonType));
-	    	}
-	    }
-	}
-	UNPROTECT(3);
+    for(i = 0; i < n; i++) {
+        int j;
+        SEXPTYPE tmpType;
+        INTEGER(ind)[0] = i + 1;
+        tmp = eval(R_fcall, rho);
+        if (length(tmp) != commonLen)
+            error(_("values must be length %d,\n but FUN(X[[%d]]) result is length %d"),
+                  commonLen, i+1, length(tmp));
+        tmpType = TYPEOF(tmp);
+        if (tmpType != commonType) {
+            Rboolean okay = FALSE;
+            switch (commonType) {
+            case CPLXSXP: 
+                okay = (tmpType == REALSXP) || (tmpType == INTSXP)
+                         || (tmpType == LGLSXP); 
+                break;
+            case REALSXP: 
+                okay = (tmpType == INTSXP) || (tmpType == LGLSXP); 
+                break;
+            case INTSXP:  
+                okay = (tmpType == LGLSXP); 
+                break;
+            }
+            if (!okay)
+                error(_("values must be type '%s',\n but FUN(X[[%d]]) result is type '%s'"),
+                      type2char(commonType), i+1, type2char(tmpType));
+        }
+        /* Take row names from the first result only */
+        if (i == 0 && useNames && isNull(rowNames))
+            REPROTECT(rowNames = 
+              getAttrib (tmp, array_value ? R_DimNamesSymbol : R_NamesSymbol),
+              index);
+        if (tmpType != commonType)
+            copy_elements_coerced (ans, i*commonLen, 1, tmp, 0, 1, commonLen);
+        else {
+            switch (commonType) {
+            case CPLXSXP: 
+            case REALSXP: 
+            case INTSXP:  
+            case LGLSXP:
+            case RAWSXP:
+            case STRSXP:
+                copy_elements (ans, i*commonLen, 1, tmp, 0, 1, commonLen);
+                break;
+            case VECSXP:
+                if (NAMEDCNT_EQ_0(tmp))  /* needn't duplicate elements */
+                    copy_vector_elements (ans, i*commonLen, tmp, 0, commonLen);
+                else  /* need to duplicate elements */
+                    copy_elements (ans, i*commonLen, 1, tmp, 0, 1, commonLen);
+                break;
+            default:
+                error(_("type '%s' is not supported"), type2char(commonType));
+            }
+        }
     }
+
+    UNPROTECT(3);
 
     if (commonLen != 1) {
 	SEXP dim;
@@ -271,9 +286,10 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 	PROTECT(R_fcall = lang3(FUN, X, R_DotsSymbol));
 	ans = eval(R_fcall, rho);
 	UNPROTECT(1);
-	return(ans);
-    } else if(replace) return duplicate(X);
-    else return duplicate(deflt);
+        return NAMEDCNT_EQ_0(ans) ? ans : duplicate(ans);
+    } 
+    else
+        return duplicate (replace ? X : deflt);
 }
 
 SEXP attribute_hidden do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)

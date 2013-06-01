@@ -335,6 +335,35 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define DEC_NAMEDCNT_AND_PRVALUE(x) DEC_NAMEDCNT((x))
 #endif
 
+/* Set an element in VECSXP or EXPRSXP to a given value or to an element from
+   another vector.  The element is duplicated or namedcnt is adjusted as 
+   appropriate, and as specified by the setting of DUPVE. */
+
+#define DUPVE 0  /* Set to 1 to duplicate values, to 0 to adjust namedcnt */
+
+#define SET_VECTOR_ELEMENT_TO_VALUE(_dst_,_i_,_val_) do { \
+    SEXP _v_ = _val_; \
+    if (!DUPVE || NAMEDCNT_EQ_0(_v_)) { \
+        SET_VECTOR_ELT (_dst_, _i_, _v_); \
+        if (NAMEDCNT_GT_0(_v_)) \
+            INC_NAMEDCNT(_v_); \
+    } \
+    else \
+        SET_VECTOR_ELT (_dst_, _i_, duplicate(_v_)); \
+} while (0)
+
+#define SET_VECTOR_ELEMENT_FROM_VECTOR(_dst_,_i_,_src_,_j_) do { \
+    SEXP _s_ = _src_; \
+    SEXP _v_ = VECTOR_ELT(_s_,_j_); \
+    if (!DUPVE || NAMEDCNT_EQ_0(_s_)) { \
+        SET_VECTOR_ELT (_dst_, _i_, _v_); \
+        if (NAMEDCNT_GT_0(_s_)) \
+            INC_NAMEDCNT_0_AS_1(_v_); \
+    } \
+    else \
+        SET_VECTOR_ELT (_dst_, _i_, duplicate(_v_)); \
+} while (0)
+
 
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)

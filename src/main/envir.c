@@ -2029,9 +2029,9 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else
 	    ifnfnd = VECTOR_ELT(ifnotfound, i);
 
-	SET_VECTOR_ELT(ans, i,
-		       gfind(translateChar(STRING_ELT(x,i % nvals)), env,
-			     gmode, ifnfnd, ginherits, rho));
+        SET_VECTOR_ELEMENT_TO_VALUE (ans, i, 
+          gfind (translateChar(STRING_ELT(x,i % nvals)), 
+                 env, gmode, ifnfnd, ginherits, rho));
     }
 
     setAttrib(ans, R_NamesSymbol, duplicate(x));
@@ -2752,7 +2752,7 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     for(i = 0; i < k2; i++) {
 	INTEGER(ind)[0] = i+1;
-	SET_VECTOR_ELT(ans, i, eval(R_fcall, rho));
+        SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
     }
 
     if (useNms) {

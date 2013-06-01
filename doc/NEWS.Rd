@@ -477,8 +477,50 @@
             non-vector objects such as function closures, whereas
             cbind did handle them, and both were documented to do so.
       \item **28
-      \item **29
-      \item **30
+      \item Fixed a bug in vapply illustrated by the following:
+\preformatted{
+   X<-list(456)
+   f<-function(a)X
+   A<-list(1,2)  
+   B<-vapply(A,f,list(0))
+   print(B)
+   X[[1]][1]<-444
+   print(B)
+}
+            After the fix, the values in \code{B} are no long changed by the 
+            assignment to \code{X}. Similar bugs in mapply, eapply, and rapply 
+            have also been fixed.  I reported these bugs to r-devel, and
+            (different) fixes are in R-3.0.0 and later versions.
+      \item Fixed a but in rep.int illustrated by the following:
+\preformatted{
+   a<-list(1,2)
+   b<-rep.int(a,c(2,2))
+   b[[1]][1]<-9
+   print(a[[1]])
+}
+      \item Fixed a bug in mget, illustrated by the following code:
+\preformatted{
+   a <- numeric(1)
+   x <- mget("a",as.environment(1))
+   print(x)
+   a[1] <- 9
+   print(x)
+}
+      \item Fixed bugs that the R Core Team fixed (differently) for R-2.13.3,
+            illustrated by the following:
+\preformatted{
+   a <- list(c(1,2),c(3,4))
+   b <- list(1,2,3)
+   b[2:3] <- a
+   b[[2]][2] <- 99
+   print(a[[1]][2])
+
+   a <- list(1+1,1+1)
+   b <- list(1,1,1,1)
+   b[1:4] <- a
+   b[[1]][1] <- 1
+   print(b[2:4])
+}
       \item **31
       \item The documentation on what \code{MARGIN} arguments are allowed for
             \code{apply} has been clarified, and checks for validity added.

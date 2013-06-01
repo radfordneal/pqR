@@ -245,9 +245,14 @@ static SEXP rep2(SEXP s, SEXP ncopy)
 	break;
     case VECSXP:
     case EXPRSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
-		SET_VECTOR_ELT(a, n++, VECTOR_ELT(s, i));
+	for (i = 0; i < nc; i++) {
+	    for (j = 0; j < INTEGER(t)[i]; j++) {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(a, n, s, i);
+                if (j > 0 && NAMEDCNT_EQ_0(s))
+                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(a,n));
+                n += 1;
+            }
+        }
 	break;
     case LISTSXP:
 	u = a;
@@ -352,9 +357,15 @@ static SEXP rep1(SEXP s, SEXP ncopy)
 	    SETCAR(t, duplicate(CAR(nthcdr(s, (i % ns)))));
 	break;
     case VECSXP:
-	i = 0;
 	for (i = 0; i < na; i++)
-	    SET_VECTOR_ELT(a, i, duplicate(VECTOR_ELT(s, i% ns)));
+            if (i < ns) {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, i);
+            }
+            else {
+                SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, i % ns);
+                if (NAMEDCNT_EQ_0(s))
+                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(a,i));
+            }
 	break;
     case RAWSXP:
 	for (i = 0; i < na; i++)

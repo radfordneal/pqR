@@ -1,0 +1,6 @@
+Several bugs involving incorrect maintanence of NAMEDCNT/NAMED are
+fixed here, as detailed in NEWS items.  These fixes use new macros
+called SET_VECTOR_ELEMENT_TO_VALUE and SET_VECTOR_ELEMENT_FROM_VECTOR.
+Some speed improvements were made too.
+
+A new test script, tests/namedcnt.R, tests these fixes.
