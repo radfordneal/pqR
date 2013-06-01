@@ -69,7 +69,55 @@
       \item **14
       \item **15
       \item **16
-      \item **17
+      \item The handling of power operations has been improved (primarily 
+            for powers of reals, but slightly affecting powers of integers too).
+
+            I previously proposed a simple patch speeding up squaring,
+            which the R core team did not adopt.  Instead, in R-2.12.0
+            and continuing in R-2.13.0, they introduced an inline
+            function R_POW, that checks specially for a power of 2,
+            and does it as a multiply, otherwise calling the R_pow
+            function.  R_pow proceeds to check again for a power of 2
+            at the beginning, and then check again for a power of 2
+            just before calling the C pow function.  The R_pow
+            function also contains a check for a power of 0.5, but it
+            is disabled for recent versions of gcc, to bypass a bug
+            that according to a comment existed at one time.  Note
+            that the inline R_POW function will not necessarily be
+            actually inlined by the compiler, and that in any case the
+            check for a power of 2 is done over again for every
+            element of a vector being raised to that power, even if
+            the power is a scalar.
+
+            In this new patch, if the power is a scalar, I check for
+            it being 2, 1, 0, or -1, and if so handle it specially.
+            Otherwise, I call R_pow, which I changed to not bother
+            checking for powers of 2, and to actually check for a
+            power of 0.5.  (Since the relevant code has changed, any
+            buggy compilers still extant probably will compile the new
+            code OK; if not, they probably compile lots of stuff
+            incorrectly, since there is nothing unusual in the new
+            code.)
+
+            For non-scalar powers, I use R_POW, but change it to a
+            macro, so that it will definitely be inlined, and have it
+            check for powers of 2 and 1.  (If one is going to do this
+            check when the power is a vector, it makes sense to tailor
+            it to something other than a vector of powers that are all
+            the same, since this doesn't seem like a common case.
+            Some powers of 1 and some of 2 seems plausible in some
+            statistical applications.)  The macro also allows for the
+            power to be an integer, slightly speeding up some
+            integer^integer operations.
+
+            The speed improvement from this patch depends a lot on the
+            machine architecture and the compiler.  On machines where
+            memory is much slower than the processor, checking for a
+            power of 2 every time may mostly overlap with the a memory
+            fetch or store operation, but one would not expect this to
+            always be the case.  The check for a power of -1 will
+            greatly speed up code where the programmer had a stylistic
+            preference for (...)^(-1) over 1/(...).
       \item **18
       \item **19
       \item **20
