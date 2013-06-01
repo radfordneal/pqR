@@ -100,7 +100,20 @@
       \item **33
       \item **34
       \item **35
-      \item **36
+      \item The low-level routines for generation of uniform random
+            numbers have been improved.
+
+            The previous code copied the seed back and forth to
+            .Random.seed for every call of a random number generation
+            function, which is rather time consuming given that for
+            the default generator .Random.seed is 625 integers long.
+            It also allocated new space for .Random.seed every time.
+            I changed the code to use the seed in .Random.seed without
+            copying, except when the generator is user-supplied.  
+
+            The previous code had imposed an unnecessary limit on the
+            length of a seed for a user-supplied random number
+            generator, which I removed.
       \item **37
       \item **38
       \item **39

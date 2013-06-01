@@ -1,0 +1,12 @@
+Improves the performance of the uniform random number generation
+routines (which are also used as the base for other generators), and
+an unnecessary limitation.  See NEWS entry for details.
+
+The previous code was also rather messy - global references were mixed
+with references by argument to the same variables, sometimes concealed
+by macro definitions, and the seed was often referenced by pointers
+which actually always pointed to the same location, which was also in
+some places referenced directly.
+
+A bit of previous code that assumed R integers are exactly 32 bits was
+changed to assume only an R integer is at least 32 bits in size.

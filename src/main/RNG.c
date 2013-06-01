@@ -37,6 +37,9 @@
 #define RNG_DEFAULT MERSENNE_TWISTER
 #define N01_DEFAULT INVERSION
 
+#define LAST_RNG_TYPE LECUYER_CMRG
+#define LAST_N01_TYPE KINDERMAN_RAMAGE
+
 
 #include <R_ext/Rdynload.h>
 
@@ -58,45 +61,59 @@ extern N01type N01_kind; /* from ../nmath/snorm.c */
  * or           == (RNGkind) or missing  [--> Randomize]
  */
 
+
+/* Array of structures describing possible generators. */
+
 typedef struct {
     RNGtype kind;
     N01type Nkind;
     char *name; /* print name */
     int n_seed; /* length of seed vector */
-    Int32 *i_seed;
 } RNGTAB;
 
-
-static Int32 dummy[625];
-static
-RNGTAB RNG_Table[] =
+static RNGTAB RNG_Table[] =
 {
-/* kind Nkind	  name	           n_seed      i_seed */
-    { WICHMANN_HILL,        BUGGY_KINDERMAN_RAMAGE, "Wichmann-Hill",	     3,	dummy},
-    { MARSAGLIA_MULTICARRY, BUGGY_KINDERMAN_RAMAGE, "Marsaglia-MultiCarry",  2,	dummy},
-    { SUPER_DUPER,          BUGGY_KINDERMAN_RAMAGE, "Super-Duper",	     2,	dummy},
-    { MERSENNE_TWISTER,     BUGGY_KINDERMAN_RAMAGE, "Mersenne-Twister",  1+624,	dummy},
-    { KNUTH_TAOCP,          BUGGY_KINDERMAN_RAMAGE, "Knuth-TAOCP",       1+100,	dummy},
-    { USER_UNIF,            BUGGY_KINDERMAN_RAMAGE, "User-supplied",         0,	dummy},
-    { KNUTH_TAOCP2,         BUGGY_KINDERMAN_RAMAGE, "Knuth-TAOCP-2002",  1+100,	dummy},
-    { LECUYER_CMRG,         BUGGY_KINDERMAN_RAMAGE, "L'Ecuyer-CMRG",         6,	dummy},
+/*   kind                  Nkind                    name               n_seed */
+   { WICHMANN_HILL,        BUGGY_KINDERMAN_RAMAGE, "Wichmann-Hill",         3 },
+   { MARSAGLIA_MULTICARRY, BUGGY_KINDERMAN_RAMAGE, "Marsaglia-MultiCarry",  2 },
+   { SUPER_DUPER,          BUGGY_KINDERMAN_RAMAGE, "Super-Duper",           2 },
+   { MERSENNE_TWISTER,     BUGGY_KINDERMAN_RAMAGE, "Mersenne-Twister",  1+624 },
+   { KNUTH_TAOCP,          BUGGY_KINDERMAN_RAMAGE, "Knuth-TAOCP",       1+100 },
+   { USER_UNIF,            BUGGY_KINDERMAN_RAMAGE, "User-supplied",         0 },
+   { KNUTH_TAOCP2,         BUGGY_KINDERMAN_RAMAGE, "Knuth-TAOCP-2002",  1+100 },
+   { LECUYER_CMRG,         BUGGY_KINDERMAN_RAMAGE, "L'Ecuyer-CMRG",         6 },
 };
+
+
+/* Below is the pointer, i_seed, where the seed is stored, which will be the 
+   data part of the integer vector in s_seed, which will be what is stored
+   in .Random.seed.  It is assumed that an R integer is at least as big as 
+   an Int32. */
+
+static Int32 *i_seed;
+static SEXP s_seed;
+
+#define I1 i_seed[0]
+#define I2 i_seed[1]
+#define I3 i_seed[2]
+
+/* Location of seeds for the user-supplied generator, 0 when the generator 
+   doesn't provide a location.  These seeds are copied to and from i_seed. */
+
+static Int32 *u_seed;
 
 
 #define d2_32	4294967296./* = (double) */
 #define i2_32m1 2.328306437080797e-10/* = 1/(2^32 - 1) */
 #define KT      9.31322574615479e-10 /* = 2^-30 */
 
-#define I1 (RNG_Table[RNG_kind].i_seed[0])
-#define I2 (RNG_Table[RNG_kind].i_seed[1])
-#define I3 (RNG_Table[RNG_kind].i_seed[2])
-
-static void Randomize(RNGtype kind);
 static double MT_genrand(void);
 static Int32 KT_next(void);
 static void RNG_Init_R_KT(Int32);
 static void RNG_Init_KT2(Int32);
-#define KT_pos (RNG_Table[KNUTH_TAOCP].i_seed[100])
+#define KT_pos (i_seed[100])
+
+static void Randomize(RNGtype);
 
 static double fixup(double x)
 {
@@ -106,6 +123,8 @@ static double fixup(double x)
     return x;
 }
 
+
+/* This is the uniform(0,1) function called from outside. */
 
 double unif_rand(void)
 {
@@ -153,7 +172,7 @@ double unif_rand(void)
 	int k;
 	int_least64_t p1, p2;
 
-#define II(i) (RNG_Table[RNG_kind].i_seed[i])
+#define II(i) i_seed[i]
 #define m1    4294967087
 #define m2    4294944443
 #define normc  2.328306549295727688e-10
@@ -183,17 +202,11 @@ double unif_rand(void)
     }
 }
 
-/* we must mask global variable here, as I1-I3 hide RNG_kind
-   and we want the argument */
-static void FixupSeeds(RNGtype RNG_kind, int initial)
+static void FixupSeeds (int initial)
 {
 /* Depending on RNG, set 0 values to non-0, etc. */
 
     int j, notallzero = 0;
-
-    /* Set 0 to 1 :
-       for(j = 0; j <= RNG_Table[RNG_kind].n_seed - 1; j++)
-       if(!RNG_Table[RNG_kind].i_seed[j]) RNG_Table[RNG_kind].i_seed[j]++; */
 
     switch(RNG_kind) {
     case WICHMANN_HILL:
@@ -222,7 +235,7 @@ static void FixupSeeds(RNGtype RNG_kind, int initial)
 	if(I1 <= 0) I1 = 624;
 	/* check for all zeroes */
 	for (j = 1; j <= 624; j++)
-	    if(RNG_Table[RNG_kind].i_seed[j] != 0) {
+	    if(i_seed[j] != 0) {
 		notallzero = 1;
 		break;
 	    }
@@ -234,7 +247,7 @@ static void FixupSeeds(RNGtype RNG_kind, int initial)
 	if(KT_pos <= 0) KT_pos = 100;
 	/* check for all zeroes */
 	for (j = 0; j < 100; j++)
-	    if(RNG_Table[RNG_kind].i_seed[j] != 0) {
+	    if(i_seed[j] != 0) {
 		notallzero = 1;
 		break;
 	    }
@@ -249,15 +262,13 @@ static void FixupSeeds(RNGtype RNG_kind, int initial)
 	unsigned int tmp;
 	int allOK = 1;
 	for (j = 0; j < 3; j++) {
-	    tmp = RNG_Table[RNG_kind].i_seed[j];
-	    if(tmp != 0) notallzero = 1;
-	    if (tmp >= m1) allOK = 0;
+	    if(i_seed[j] != 0) notallzero = 1;
+	    if (i_seed[j] >= m1) allOK = 0;
 	}
 	if(!notallzero || !allOK) Randomize(RNG_kind);
 	for (j = 3; j < 6; j++) {
-	    tmp = RNG_Table[RNG_kind].i_seed[j];
-	    if(tmp != 0) notallzero = 1;
-	    if (tmp >= m2) allOK = 0;
+	    if(i_seed[j] != 0) notallzero = 1;
+	    if (i_seed[j] >= m2) allOK = 0;
 	}
 	if(!notallzero || !allOK) Randomize(RNG_kind);
     }
@@ -269,26 +280,71 @@ static void FixupSeeds(RNGtype RNG_kind, int initial)
 
 extern double BM_norm_keep; /* ../nmath/snorm.c */
 
-static void RNG_Init(RNGtype kind, Int32 seed)
-{
-    int j;
+/* Initialize generator. */
 
-    BM_norm_keep = 0.0; /* zap Box-Muller history */
+static void RNG_Init (RNGtype newkind, Int32 seed)
+{
+    int n_seed;
+    SEXP s;
+    int j;
 
     /* Initial scrambling */
     for(j = 0; j < 50; j++)
 	seed = (69069 * seed + 1);
-    switch(kind) {
+
+    if (newkind == USER_UNIF) {
+        User_unif_fun = R_FindSymbol("user_unif_rand", "", NULL);
+        if (!User_unif_fun) error(_("'user_unif_rand' not in load table"));
+
+        User_unif_init = (UnifInitFun) R_FindSymbol("user_unif_init", "", NULL);
+        if (User_unif_init) (void) User_unif_init(seed);
+
+        RNG_Table[newkind].n_seed = 0;
+
+        User_unif_nseed = R_FindSymbol("user_unif_nseed", "", NULL);
+        User_unif_seedloc = R_FindSymbol("user_unif_seedloc", "",  NULL);
+
+        if (User_unif_seedloc) {
+            if (!User_unif_nseed)
+                warning(_("cannot read seeds unless 'user_unif_nseed' is supplied"));
+            else {
+                n_seed = *((int *) User_unif_nseed());
+                if (n_seed < 0) n_seed = 0;
+                u_seed = (Int32 *) User_unif_seedloc();
+                RNG_Table[newkind].n_seed = n_seed;
+           }
+        }
+    }
+
+    /* Allocate vector for .Random.seed to hold seed. */
+    n_seed = RNG_Table[newkind].n_seed;
+    PROTECT(s = allocVector (INTSXP, n_seed + 1));
+    defineVar (R_SeedsSymbol, s, R_GlobalEnv);
+    SET_NAMED(s, 1);
+    UNPROTECT(1);
+
+    /* Switch to new kind - but only after we know alloc above hasn't failed. */
+    RNG_kind = newkind;
+    s_seed = s;
+    INTEGER(s_seed)[0] = RNG_kind + 100 * N01_kind;
+    i_seed = (Int32 *) (INTEGER(s_seed) + 1);
+
+    if (sizeof(int) > sizeof(Int32)) /* avoid garbage at end of .Random.seed */
+        for (j = 0; j < n_seed; j++) INTEGER(s_seed)[j+1] = 0;
+
+    BM_norm_keep = 0.0; /* zap Box-Muller history */
+
+    switch(RNG_kind) {
     case WICHMANN_HILL:
     case MARSAGLIA_MULTICARRY:
     case SUPER_DUPER:
     case MERSENNE_TWISTER:
 	/* i_seed[0] is mti, *but* this is needed for historical consistency */
-	for(j = 0; j < RNG_Table[kind].n_seed; j++) {
+	for(j = 0; j < n_seed; j++) {
 	    seed = (69069 * seed + 1);
-	    RNG_Table[kind].i_seed[j] = seed;
+	    i_seed[j] = seed;
 	}
-	FixupSeeds(kind, 1);
+	FixupSeeds(1);
 	break;
     case KNUTH_TAOCP:
 	RNG_Init_R_KT(seed);
@@ -297,52 +353,33 @@ static void RNG_Init(RNGtype kind, Int32 seed)
 	RNG_Init_KT2(seed);
 	break;
     case LECUYER_CMRG:
-	for(j = 0; j < RNG_Table[kind].n_seed; j++) {
+	for(j = 0; j < n_seed; j++) {
 	    seed = (69069 * seed + 1);
 	    while(seed >= m2) seed = (69069 * seed + 1);
-	    RNG_Table[kind].i_seed[j] = seed;
+	    i_seed[j] = seed;
 	}
 	break;
     case USER_UNIF:
-	User_unif_fun = R_FindSymbol("user_unif_rand", "", NULL);
-	if (!User_unif_fun) error(_("'user_unif_rand' not in load table"));
-	User_unif_init = (UnifInitFun) R_FindSymbol("user_unif_init", "", NULL);
-	if (User_unif_init) (void) User_unif_init(seed);
-	User_unif_nseed = R_FindSymbol("user_unif_nseed", "", NULL);
-	User_unif_seedloc = R_FindSymbol("user_unif_seedloc", "",  NULL);
-	if (User_unif_seedloc) {
-	    int ns = 0;
-	    if (!User_unif_nseed) {
-		warning(_("cannot read seeds unless 'user_unif_nseed' is supplied"));
-		break;
-	    }
-	    ns = *((int *) User_unif_nseed());
-	    if (ns < 0 || ns > 625) {
-		warning(_("seed length must be in 0...625; ignored"));
-		break;
-	    }
-	    RNG_Table[kind].n_seed = ns;
-	    RNG_Table[kind].i_seed = (Int32 *) User_unif_seedloc();
-	}
-	break;
+        break;
     default:
-	error(_("RNG_Init: unimplemented RNG kind %d"), kind);
+	error(_("RNG_Init: unimplemented RNG kind %d"), RNG_kind);
     }
 }
 
 unsigned int TimeToSeed(void); /* datetime.c */
 
-static void Randomize(RNGtype kind)
+static void Randomize(RNGtype newkind)
 {
-/* Only called by  GetRNGstate() when there is no .Random.seed */
-    RNG_Init(kind, TimeToSeed());
+    /* Only called by  GetRNGstate() when there is no .Random.seed */
+
+    RNG_Init (newkind, TimeToSeed());
 }
 
+/* Load RNG_kind, N01_kind from .Random.seed if present */
 static void GetRNGkind(SEXP seeds)
 {
-    /* Load RNG_kind, N01_kind from .Random.seed if present */
-    int tmp, *is;
     RNGtype newRNG; N01type newN01;
+    int tmp;
 
     if (isNull(seeds))
 	seeds = findVarInFrame(R_GlobalEnv, R_SeedsSymbol);
@@ -353,15 +390,14 @@ static void GetRNGkind(SEXP seeds)
 	error(_(".Random.seed is not an integer vector but of type '%s'"),
 		type2char(TYPEOF(seeds)));
     }
-    is = INTEGER(seeds);
-    tmp = is[0];
-    /* avoid overflow here: max current value is 705 */
-    if (tmp == NA_INTEGER || tmp < 0 || tmp > 1000)
+
+    if (LENGTH(seeds) == 0 || (tmp = INTEGER(seeds)[0]) == NA_INTEGER || tmp < 0)
 	error(_(".Random.seed[1] is not a valid integer"));
     newRNG = (RNGtype) (tmp % 100);
     newN01 = (N01type) (tmp / 100);
-    if (newN01 > KINDERMAN_RAMAGE)
+    if (newN01 > LAST_N01_TYPE)
 	error(_(".Random.seed[0] is not a valid Normal type"));
+
     switch(newRNG) {
     case WICHMANN_HILL:
     case MARSAGLIA_MULTICARRY:
@@ -378,60 +414,69 @@ static void GetRNGkind(SEXP seeds)
     default:
 	error(_(".Random.seed[1] is not a valid RNG kind (code)"));
     }
-    RNG_kind = newRNG; N01_kind = newN01;
-    return;
+
+    RNG_kind = newRNG; 
+    N01_kind = newN01;
 }
 
 
+/* Link to the data in .Random.seed for a built-in generator's seeds, or
+   copy from .Random.seed to the seeds for a user-supplied generator 
+   (if it has revealed its seed location).  Note: If NAMED is greater than
+   1 for the value in .Random.seed, it has to be replaced by a duplicate. */
+
 void GetRNGstate()
 {
-    /* Get  .Random.seed  into proper variables */
-    int len_seed;
+    int n_seed;
     SEXP seeds;
 
     /* look only in the workspace */
     seeds = findVarInFrame(R_GlobalEnv, R_SeedsSymbol);
-    if (seeds == R_UnboundValue) {
+
+    if (seeds == R_UnboundValue)
 	Randomize(RNG_kind);
-    } else {
+    else {
 	GetRNGkind(seeds);
-	len_seed = RNG_Table[RNG_kind].n_seed;
-	/* Not sure whether this test is needed: wrong for USER_UNIF */
-	if(LENGTH(seeds) > 1 && LENGTH(seeds) < len_seed + 1)
-	    error(_(".Random.seed has wrong length"));
-	if(LENGTH(seeds) == 1 && RNG_kind != USER_UNIF)
+	n_seed = RNG_Table[RNG_kind].n_seed;
+	if (LENGTH(seeds) == 1 && RNG_kind != USER_UNIF)
 	    Randomize(RNG_kind);
+	else if (LENGTH(seeds) < n_seed + 1)
+	    error(_(".Random.seed has wrong length"));
 	else {
-	    int j, *is = INTEGER(seeds);
-	    for(j = 1; j <= len_seed; j++)
-		RNG_Table[RNG_kind].i_seed[j - 1] = is[j];
-	    FixupSeeds(RNG_kind, 0);
+            if (NAMED(seeds) > 1) {
+                PROTECT(seeds = duplicate(seeds));
+                defineVar(R_SeedsSymbol, seeds, R_GlobalEnv);
+                SET_NAMED(seeds, 1);
+                UNPROTECT(1);
+            }
+            s_seed = seeds;
+            i_seed = (Int32 *) (INTEGER(s_seed) + 1);
+            if (RNG_kind == USER_UNIF) {
+                if (n_seed > 0)
+                    memcpy (u_seed, i_seed, n_seed * sizeof(Int32));
+            }
+            FixupSeeds(0);
 	}
     }
 }
 
+/* Ensure generator's type and seed is in .Random.seed.  The seed already will 
+   be, except for a user-supplied generator. */
+
 void PutRNGstate()
 {
-    /* Copy out seeds to  .Random.seed  */
-    int len_seed, j;
-    SEXP seeds;
-
-    if (RNG_kind > LECUYER_CMRG || N01_kind > KINDERMAN_RAMAGE) {
-	warning("Internal .Random.seed is corrupt: not saving");
-	return;
+    if (RNG_kind > LAST_RNG_TYPE || N01_kind > LAST_N01_TYPE) {
+        warning("Internal .Random.seed is corrupt: not saving");
+        return;
     }
 
-    len_seed = RNG_Table[RNG_kind].n_seed;
+    INTEGER(s_seed)[0] = RNG_kind + 100 * N01_kind;
 
-    PROTECT(seeds = allocVector(INTSXP, len_seed + 1));
-
-    INTEGER(seeds)[0] = RNG_kind + 100 * N01_kind;
-    for(j = 0; j < len_seed; j++)
-	INTEGER(seeds)[j+1] = RNG_Table[RNG_kind].i_seed[j];
-
-    /* assign only in the workspace */
-    defineVar(R_SeedsSymbol, seeds, R_GlobalEnv);
-    UNPROTECT(1);
+    if (RNG_kind == USER_UNIF) {
+        int n_seed = RNG_Table[RNG_kind].n_seed;
+        if (n_seed > 0)
+            memcpy (i_seed, u_seed, n_seed * sizeof(Int32));
+    }
 }
 
 static void RNGkind(RNGtype newkind)
@@ -439,6 +484,8 @@ static void RNGkind(RNGtype newkind)
 /* Choose a new kind of RNG.
  * Initialize its seed by calling the old RNG's unif_rand()
  */
+    Int32 start;
+
     if (newkind == -1) newkind = RNG_DEFAULT;
     switch(newkind) {
     case WICHMANN_HILL:
@@ -453,9 +500,10 @@ static void RNGkind(RNGtype newkind)
     default:
 	error(_("RNGkind: unimplemented RNG kind %d"), newkind);
     }
+
     GetRNGstate();
-    RNG_Init(newkind, unif_rand() * UINT_MAX);
-    RNG_kind = newkind;
+    start = unif_rand() * UINT_MAX;  /* call unif_rand with the old kind */
+    RNG_Init (newkind, start);       /*  ... then switch to the new kind */
     PutRNGstate();
 }
 
@@ -464,7 +512,7 @@ static void Norm_kind(N01type kind)
     /* N01type is an enumeration type, so this will probably get
        mapped to an unsigned integer type. */
     if (kind == -1) kind = N01_DEFAULT;
-    if (kind > KINDERMAN_RAMAGE)
+    if (kind > LAST_N01_TYPE)
 	error(_("invalid Normal type in RNGkind"));
     if (kind == USER_NORM) {
 	User_norm_fun = R_FindSymbol("user_norm_rand", "", NULL);
@@ -518,7 +566,7 @@ SEXP attribute_hidden do_setseed (SEXP call, SEXP op, SEXP args, SEXP env)
 			       .Random.seed if present */
     if (!isNull(skind)) RNGkind((RNGtype) asInteger(skind));
     if (!isNull(nkind)) Norm_kind((N01type) asInteger(nkind));
-    RNG_Init(RNG_kind, (Int32) seed); /* zaps BM history */
+    RNG_Init(RNG_kind, (Int32)seed);
     PutRNGstate();
     return R_NilValue;
 }
@@ -580,13 +628,13 @@ void seed_out(long *ignored)
 #define TEMPERING_SHIFT_T(y)  (y << 15)
 #define TEMPERING_SHIFT_L(y)  (y >> 18)
 
-static Int32 *mt = dummy+1; /* the array for the state vector  */
 static int mti=N+1; /* mti==N+1 means mt[N] is not initialized */
 
 /* Initializing the array with a seed */
 static void
 MT_sgenrand(Int32 seed)
 {
+    Int32 *mt = i_seed + 1;  /* the array for the state vector  */
     int i;
 
     for (i = 0; i < N; i++) {
@@ -609,11 +657,12 @@ MT_sgenrand(Int32 seed)
 
 static double MT_genrand(void)
 {
+    Int32 *mt = i_seed + 1;  /* the array for the state vector  */
     Int32 y;
     static Int32 mag01[2]={0x0, MATRIX_A};
     /* mag01[x] = x * MATRIX_A  for x=0,1 */
 
-    mti = dummy[0];
+    mti = i_seed[0];
 
     if (mti >= N) { /* generate N words at one time */
 	int kk;
@@ -640,7 +689,7 @@ static double MT_genrand(void)
     y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
     y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
     y ^= TEMPERING_SHIFT_L(y);
-    dummy[0] = mti;
+    i_seed[0] = mti;
 
     return ( (double)y * 2.3283064365386963e-10 ); /* reals: [0,1)-interval */
 }
@@ -657,7 +706,7 @@ static double MT_genrand(void)
 #define ran_arr_cycle     R_KT_ran_arr_cycle
 #define ran_arr_ptr       R_KT_ran_arr_ptr
 #define ran_arr_sentinel  R_KT_ran_arr_sentinel
-#define ran_x             dummy
+#define ran_x             i_seed
 
 #define KK 100                     /* the long lag */
 #define LL  37                     /* the short lag */
@@ -745,13 +794,17 @@ static Int32 KT_next(void)
 static void RNG_Init_R_KT(Int32 seed)
 {
     SEXP fun, sseed, call, ans;
+    int j;
     fun = findVar1(install(".TAOCP1997init"), R_BaseEnv, CLOSXP, FALSE);
     if(fun == R_UnboundValue)
 	error("function '.TAOCP1997init' is missing");
     PROTECT(sseed = ScalarInteger(seed % 1073741821));
     PROTECT(call = lang2(fun, sseed));
     ans = eval(call, R_GlobalEnv);
-    memcpy(dummy, INTEGER(ans), 100*sizeof(int));
+    if (sizeof i_seed[0] == sizeof INTEGER(ans)[0])
+        memcpy(i_seed, INTEGER(ans), 100*sizeof(int));
+    else
+        for (j = 0; j < 100; j++) i_seed[j] = INTEGER(ans)[j];
     UNPROTECT(2);
     KT_pos = 100;
 }
