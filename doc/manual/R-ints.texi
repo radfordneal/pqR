@@ -270,6 +270,12 @@ other objects when tracing duplications (see @code{tracemem}).
 The bit called @code{misc} in @pqR{} was called @code{spare} in R-2.15.0, 
 and was said to be unused, but this was not true.
 For closures, the @code{misc} bit is used as the @code{RSTEP} flag.
+The @code{misc} bit is used as the @code{SPEC_SYM} flag for the printnames of
+symbols, indicating that it is one a of set of special symbols (eg, @code{+}
+and @code{if}).  It is also used as the @code{NO_SPEC_SYM} flag for 
+environments, to indicate that the environment has no symbols with the 
+@code{SPEC_SYM} flag set (and has never had such a symbol), 
+so that it can be bypassed in searches for such symbols.
 
 @findex named bit
 @findex NAMED

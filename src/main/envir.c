@@ -48,6 +48,9 @@
  *  "value" slot is inspected for a value.  This "top-level"
  *  environment is where system functions and variables reside.
  *
+ *  Environments with the NO_SPEC_SYM flag are known to not contain any
+ *  special symbols, as indicated by the SPEC_SYM macro.  Lookup for
+ *  such a symbol can then bypass  this environment without searching it.
  */
 
 /* R 1.8.0: namespaces are no longer experimental, so the following
@@ -155,6 +158,26 @@ static SEXP getActiveValue(SEXP fun)
 
 /* Macro version of isNull for only the test against R_NilValue */
 #define ISNULL(x) ((x) == R_NilValue)
+
+/* Function to correctly set NO_SPEC_SYM flag for an (unhashed) environment. */
+
+void setNoSpecSymFlag (SEXP env)
+{
+    SEXP frame;
+   
+    if (HASHTAB(env)!=R_NilValue) {
+        SET_NO_SPEC_SYM (env, 0); 
+        return;
+    }
+
+    for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame))
+        if (SPEC_SYM(TAG(frame))) {
+            SET_NO_SPEC_SYM (env, 0); 
+            return;
+        }
+
+    SET_NO_SPEC_SYM (env, 1);
+}
 
 /*----------------------------------------------------------------------
 
@@ -1303,6 +1326,14 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 SEXP findFun(SEXP symbol, SEXP rho)
 {
     SEXP vl;
+
+    /* If it's a symbol starting with a special character, skip to the first
+       environment that might contain such a symbol. */
+    if (SPEC_SYM(symbol)) {
+        while (rho != R_EmptyEnv && NO_SPEC_SYM(rho))
+            rho = ENCLOS(rho);
+    }
+
     while (rho != R_EmptyEnv) {
 	/* This is not really right.  Any variable can mask a function */
 #ifdef USE_GLOBAL_CACHE
@@ -1371,6 +1402,10 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
 #endif
+
+        if (SPEC_SYM(symbol))
+            SET_NO_SPEC_SYM(rho,0);
+
 	if (HASHTAB(rho) == R_NilValue) {
 	    /* First check for an existing binding */
 	    frame = FRAME(rho);
@@ -2131,6 +2166,7 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 		    error(_("all elements of a list must be named"));
 	    PROTECT(s = allocSExp(ENVSXP));
 	    SET_FRAME(s, duplicate(CAR(args)));
+            setNoSpecSymFlag(s);
 	} else if (isEnvironment(CAR(args))) {
 	    SEXP p, loadenv = CAR(args);
 

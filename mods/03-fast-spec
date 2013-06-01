@@ -1,0 +1,5 @@
+Lookup of some builtin/special function symbols (eg, '+' and 'if') has
+been sped up by allowing fast bypass of non-global environments that
+do not contain (and have never contained) one of these symbols.  The
+symbols that are special for this purpose are specified in InitNames
+in names.c.
