@@ -127,7 +127,10 @@
       \item **16
       \item **17
       \item **18
-      \item **19
+      \item The creation of argument lists for closures was sped up 
+            by avoiding an unnecessary allocation of a CONS cell, in the 
+            same way as was done in my Sep 2010 patch for evalList, which 
+            was incorporated into 2.12.0 and later versions of R.
       \item **20
       \item **21
       \item **22
