@@ -427,54 +427,66 @@ void attribute_hidden copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
 
 void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 {
-    int i, j, k, nr, nc, nt;
+    int i, j, nr, nc, nt;
 
     nr = nrows(s);
     nc = ncols(s);
     nt = LENGTH(t);
-    k = 0;
 
-    if (byrow) {
-	switch (TYPEOF(s)) {
-	case STRSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    SET_STRING_ELT(s, i + j * nr, STRING_ELT(t, k++ % nt));
-	    break;
-	case LGLSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    LOGICAL(s)[i + j * nr] = LOGICAL(t)[k++ % nt];
-	    break;
-	case INTSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    INTEGER(s)[i + j * nr] = INTEGER(t)[k++ % nt];
-	    break;
-	case REALSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    REAL(s)[i + j * nr] = REAL(t)[k++ % nt];
-	    break;
-	case CPLXSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    COMPLEX(s)[i + j * nr] = COMPLEX(t)[k++ % nt];
-	    break;
-	case VECSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    SET_VECTOR_ELT(s, i + j * nr, VECTOR_ELT(t, k++ % nt));
-	    break;
-	case RAWSXP:
-	    for (i = 0; i < nr; i++)
-		for (j = 0; j < nc; j++)
-		    RAW(s)[i + j * nr] = RAW(t)[k++ % nt];
-	    break;
-	default:
-	    UNIMPLEMENTED_TYPE("copyMatrix", s);
-	}
+    if (nt == 1 && TYPEOF(s) != VECSXP)
+        copy_elements (s, 0, 1, t, 0, 0, nr*nc);
+
+    else if (!byrow)
+        copyVector(s, t);
+
+    else { /* byrow */
+        int len_1 = nr*nc - 1;
+        int nomod = nt > len_1;
+        switch (TYPEOF(s)) {
+        case RAWSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                RAW(s)[i] = RAW(t) [nomod ? j : j % nt];
+            }
+            break;
+        case LGLSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                LOGICAL(s)[i] = LOGICAL(t) [nomod ? j : j % nt];
+            }
+            break;
+        case INTSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                INTEGER(s)[i] = INTEGER(t) [nomod ? j : j % nt];
+            }
+            break;
+        case REALSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                REAL(s)[i] = REAL(t) [nomod ? j : j % nt];
+            }
+            break;
+        case CPLXSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                COMPLEX(s)[i] = COMPLEX(t) [nomod ? j : j % nt];
+            }
+            break;
+        case STRSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                SET_STRING_ELT (s, i, STRING_ELT (t, nomod ? j : j % nt));
+            }
+            break;
+        case VECSXP:
+            for (i = 0, j = 0; i <= len_1; i++, j += nc) {
+                if (j > len_1) j -= len_1;
+                SET_VECTOR_ELT (s, i, VECTOR_ELT (t, nomod ? j : j % nt));
+            }
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("copyMatrix", s);
+        }
     }
-    else
-	copyVector(s, t);
 }
