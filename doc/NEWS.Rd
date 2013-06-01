@@ -61,14 +61,23 @@
             used.  (Any such failure should now occur consistently, rather
             than appearing to be due to a non-deterministic bug.)
       \item **8
-      \item **9
+      \item Some options that can be set by arguments to the R command can
+            now also be set with environment variables, specifically, the
+            values of R_DEBUGGER, R_DEBUGGER_ARGS, and R_HELPERS give the
+            default when --debugger, --debugger-args, and --helpers are
+            not specified on the command line.  This feature is useful when
+            using a shell file or Makefile contains R commands that one would
+            rather not have to modify.
       \item **10
       \item A new primitive function \code{get_rm} has been added,
             which removes a variable while returning the value it
             had when removed.  See \code{help(get_rm)} for details,
             and how this can sometimes improve efficiency of R functions.
       \item **12
-      \item **13
+      \item Numerical computations can now be performed in parallel with
+            interpretation of R code using ``helper threads'', one machines
+            with multiple processors or multiple processor cores.  See
+            help(helpers) for details.
       \item **14
       \item The BLAS routines supplied with R were modified to improve the 
             performance of the routines DGEMM (matrix-matrix multiply) and 

@@ -117,7 +117,7 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
                 }
                 PROTECT(x);
                 PROTECT(y);
-                switch (variant) {
+                switch (VARIANT_KIND(variant)) {
                 case VARIANT_AND: 
                     ans = real_relop_and (code, negate, x, y); 
                     break;
@@ -242,7 +242,7 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     else if (isReal(x) || isReal(y)) {
 	REPROTECT(x = coerceVector(x, REALSXP), xpi);
 	REPROTECT(y = coerceVector(y, REALSXP), ypi);
-        switch (variant) {
+        switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
             ans = real_relop_and (code, negate, x, y); 
             if (xts || yts) UNPROTECT(2);

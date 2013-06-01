@@ -62,6 +62,12 @@
 # define extern0 extern
 #endif
 
+/* Define HELPERS_DISABLED if no helper support.  This has the effect of 
+   making helpers.h define stubs for the helpers routines. */
+
+#ifndef R_HELPER_THREADS
+#define HELPERS_DISABLED
+#endif
 
 #define MAXELTSIZE 8192 /* Used as a default for string buffer sizes,
 			   and occasionally as a limit. */
@@ -397,7 +403,7 @@ typedef struct {
 /* Primitive Access Macros */
 
 /* Set offset of primitive in table, and copy some of the information from
-   the table into the primsxp structure for fast access.  Note that 
+   the table into the primsxp structure (and misc) for fast access.  Note that 
    primsxp_fast_cfun will (possibly) be set by the slow function, not here. */
 
 #define SET_PRIMOFFSET(x,v) do { \
@@ -416,6 +422,8 @@ typedef struct {
         = (R_FunTab[setprim_value].eval/1000)&1; \
     setprim_ptr->u.primsxp.primsxp_internal \
         = (R_FunTab[setprim_value].eval/10)&1; \
+    setprim_ptr->sxpinfo.u.p.pending_ok \
+        = R_FunTab[setprim_value].eval/10000; \
 } while (0)
 
 #define PRIMOFFSET(x)	((x)->sxpinfo.gp)
@@ -434,40 +442,96 @@ typedef struct {
 #define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)
 
+#define PRIMFUN_PENDING_OK(x) ((x)->sxpinfo.u.p.pending_ok)
+
 #define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
 #define PRIMFUN_DSPTCH1(x) ((x)->u.primsxp.primsxp_dsptch1)
 #define PRIMFUN_DSPTCH2(x) ((x)->u.primsxp.primsxp_dsptch2)
-#define PRIMFUN_ARG1VAR(x) ((x)->sxpinfo.gp2 & 0x3fff)
-#define PRIMFUN_ARG2VAR(x) ((x)->sxpinfo.gp2 >> 14)
+#define PRIMFUN_ARG1VAR(x) ((x)->sxpinfo.u.p.var1)
+#define PRIMFUN_ARG2VAR(x) ((x)->sxpinfo.u.p.var2)
 #define PRIMFUN_UNI_TOO(x) ((x)->u.primsxp.primsxp_uni_too)
 
-#define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,var1) do { \
+#define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
     (x)->u.primsxp.primsxp_fast_cfun = (f); \
     (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
-    (x)->sxpinfo.gp2 = (var1); \
+    (x)->sxpinfo.u.p.var1 = (v1); \
 } while (0)
 
-#define SET_PRIMFUN_FAST_BINARY(x,f,dsptch1,dsptch2,var1,var2,uni_too) do { \
+#define SET_PRIMFUN_FAST_BINARY(x,f,dsptch1,dsptch2,v1,v2,uni_too) do { \
     (x)->u.primsxp.primsxp_fast_cfun = (f); \
     (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
     (x)->u.primsxp.primsxp_dsptch2 = (dsptch2); \
     (x)->u.primsxp.primsxp_uni_too = (uni_too); \
-    (x)->sxpinfo.gp2 = (var1) + ((var2)<<14); \
+    (x)->sxpinfo.u.p.var1 = (v1); \
+    (x)->sxpinfo.u.p.var2 = (v2); \
 } while (0)
 
-/* Symbols for eval variants.  Return of a variant result is indicated by 
-   the attribute field being R_VariantResult. */
+/* Symbols for eval variants.  The symbols with values less than 16 may be
+   OR'd with zero or more symbols with values 16, 32, 64, or 128.  The result
+   will fit in one unsigned char.
 
-#define VARIANT_NULL 1	/* May just return R_NilValue (but do side effects) */
+   Return of a variant result is usually indicated by the attribute field 
+   being R_VariantResult, but a VARIANT_NULL variant result can be just 
+   R_NilValue, and results with VARIANT_PENDING_OK may be ordinary vectors
+   marked as IS_BEING_COMPUTED_BY_TASK. */
+
+#define VARIANT_NULL 1  /* May just return R_NilValue (but do side effects) */
+                        /* (Should usually be OR'd with VARIANT_PENDING_OK) */
+
 #define VARIANT_SEQ  2  /* May return a sequence spec, rather than a vector */
 #define VARIANT_AND  3  /* May return AND of a logical vec rather than vec  */
 #define VARIANT_OR   4  /* May return OR of a logical vec rather than vec   */
 #define VARIANT_SUM  5  /* May return sum of vec elements rather than vec   */
 
+#define VARIANT_KIND(v) (v&15) /* Isolate low four bits to compare with symbols
+                                  defined above */
+
+#define VARIANT_PENDING_OK 16  /* Computation may be deferred pending completion
+                                  of a task (in a helper or the master) */
+
+#ifdef R_HELPER_THREADS
+
+/* Access to markers maintained with assistance of the helpers facility. */
+
+#define IS_BEING_COMPUTED_BY_TASK(x)  ((x)->sxpinfo.u.g.being_computed)
+#define IS_IN_USE_BY_TASK(x)          ((x)->sxpinfo.u.g.in_use)
+
+/* Macros to wait until variables(s) computed. */
+
+#ifndef HELPERS_DISABLED
+#define helpers_wait_until_not_being_computed(v) \
+  helpers_wait_until_not_being_computed2 ((v), (SEXP)0)
+extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
+#else
+#define helpers_wait_until_not_being_computed(v) 0
+#define helpers_wait_until_not_being_computed2(u,v) 0
+#endif
+
+#define WAIT_UNTIL_COMPUTED(x) \
+  ( ! IS_BEING_COMPUTED_BY_TASK(x) ? 0 \
+    : helpers_wait_until_not_being_computed(x) )
+
+#define WAIT_UNTIL_COMPUTED_2(x1,x2) \
+  ( ! IS_BEING_COMPUTED_BY_TASK(x1) && ! IS_BEING_COMPUTED_BY_TASK(x2) ? 0 \
+    : helpers_wait_until_not_being_computed2(x1,x2) ) \
+
+#else 
+
+#define IS_BEING_COMPUTED_BY_TASK(x) 0  /* Stub routines used when support */
+#define IS_IN_USE_BY_TASK(x) 0          /*   for helpers is not enabled    */
+
+#define WAIT_UNTIL_COMPUTED(x) 0
+#define WAIT_UNTIL_COMPUTED_2(x1,x2) 0
+
+#endif
+
 /* Promise Access Macros */
+#define PRVALUE(x) \
+  (WAIT_UNTIL_COMPUTED((x)->u.promsxp.value), ((x)->u.promsxp.value))
+#define PRVALUE_PENDING_OK(x) \
+  ((x)->u.promsxp.value)
 #define PRCODE(x)	((x)->u.promsxp.expr)
 #define PRENV(x)	((x)->u.promsxp.env)
-#define PRVALUE(x)	((x)->u.promsxp.value)
 #define PRSEEN(x)	((x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(((x)->sxpinfo.gp)=(v))
 
@@ -892,10 +956,12 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define ErrorMessage		Rf_ErrorMessage
 # define evalList		Rf_evalList
 # define evalListKeepMissing	Rf_evalListKeepMissing
+# define evalListPendingOK	Rf_evalListPendingOK
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findVar1		Rf_findVar1
 # define forcePromise		Rf_forcePromise
+# define forcePromisePendingOK	Rf_forcePromisePendingOK
 # define FrameClassFix		Rf_FrameClassFix
 # define framedepth		Rf_framedepth
 # define frameSubscript		Rf_frameSubscript
@@ -992,6 +1058,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define utf8towcs		Rf_utf8towcs
 # define vectorIndex		Rf_vectorIndex
 # define vectorSubscript	Rf_vectorSubscript
+# define wait_until_arguments_computed Rf_wait_until_arguments_computed
 # define warningcall		Rf_warningcall
 # define WarningMessage		Rf_WarningMessage
 # define wcstoutf8		Rf_wcstoutf8
@@ -1090,10 +1157,12 @@ int any_duplicated3(SEXP, SEXP, Rboolean);
 int envlength(SEXP);
 SEXP evalList(SEXP, SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
+SEXP evalListPendingOK(SEXP, SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
 void findcontext(int, SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
 SEXP forcePromise(SEXP);
+SEXP forcePromisePendingOK(SEXP);
 void FrameClassFix(SEXP);
 SEXP frameSubscript(int, SEXP, SEXP);
 int get1index(SEXP, SEXP, int, int, int, SEXP);
@@ -1195,10 +1264,11 @@ void unbindVar(SEXP, SEXP);
 void unmarkPhase(void);
 #endif
 SEXP R_LookupMethod(SEXP, SEXP, SEXP, SEXP);
-int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
+int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, int, SEXP*);
 SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP);
 SEXP Rf_vectorSubscript(int, SEXP, int*, SEXP (*)(SEXP,SEXP),
                         SEXP (*)(SEXP, int), SEXP, SEXP);
+void Rf_wait_until_arguments_computed (SEXP);
 
 #ifdef R_USE_SIGNALS
 void begincontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP);

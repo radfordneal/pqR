@@ -82,6 +82,7 @@ Options:
 			and 'Tk'.
   --arch=NAME		Specify a sub-architecture
   --args                Skip the rest of the command line
+  -p[=N], --helpers[=N] Use N helper threads (default 1 if present, 0 if not)
   -f FILE, --file=FILE  Take input from 'FILE'
   -e EXPR               Execute 'EXPR' and exit
 
@@ -113,6 +114,9 @@ the usage of 'command'.
 Options --arch, --no-environ, --no-init-file, --no-site-file and --vanilla
 can be placed between R and CMD, to apply to R processes run by 'command'
 
+Options can also be set by environment variables R_HELPERS, R_DEBUGGER, and
+R_DEBUGGER_ARGS.
+
 Report bugs at github.com/radfordneal/pqR/issues "
 
 ## some systems have a more portable sed, e.g. /usr/xpg4/bin/sed on Solaris,
@@ -127,8 +131,8 @@ error () {
 
 ### Argument loop
 args=
-debugger=
-debugger_args=
+debugger=$R_DEBUGGER
+debugger_args=$R_DEBUGGER_ARGS
 gui=
 while test -n "${1}"; do
   case ${1} in
@@ -225,6 +229,14 @@ while test -n "${1}"; do
       export R_ENVIRON_USER=''
       export R_PROFILE=''
       export R_PROFILE_USER=''
+      args="${args} ${1}"
+      ;;
+    -p|--helpers)
+      export R_HELPERS=1
+      args="${args} ${1}"
+      ;;
+    -p=*|--helpers=*)
+      export R_HELPERS=`echo ${1} | ${SED} -e 's/[^=]*=//' | ${SED} -e 's/[^0-9]//g'`
       args="${args} ${1}"
       ;;
     *)

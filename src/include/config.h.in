@@ -919,6 +919,9 @@
    compiler calls it, or to nothing if it is not supported. */
 #undef R_INLINE
 
+/* Define this to enable helper threads. */
+#undef R_HELPER_THREADS
+
 /* Define this to enable memory profiling. */
 #undef R_MEMORY_PROFILING
 

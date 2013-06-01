@@ -68,7 +68,10 @@
  * offset:	the 'op' (offset pointer) above; used for C functions
  *		which deal with more than one R function...
  *
- * eval:	= WXYZ (four digits) --- where e.g. '1' means '0001'
+ * eval:	= VWXYZ (five digits) --- where e.g. '1' means '00001'
+ *              V=1 says that the (builtin) primitive can handle operands
+ *                  whose computation by a task may be pending
+ *              V=0 says must not be passed operands still being computed
  *              W=1 says pass a "variant" argument to the c-entry procedure
  *                  (ignored if PPkind is PP_FOREIGN)
  *              W=0 says don't pass a "variant" argument
@@ -176,6 +179,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"^",		do_arith,	POWOP,	1,	2,	{PP_BINARY2, PREC_POWER,  1}},
 {"%%",		do_arith,	MODOP,	1,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 {"%/%",		do_arith,	IDIVOP,	1,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+/* -- matrix op -- */
 {"%*%",		do_matprod,	0,	1,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
 {"==",		do_relop,	EQOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
@@ -206,24 +210,24 @@ attribute_hidden FUNTAB R_FunTab[] =
 
 /* Primitives */
 
-{"length",	do_length,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"length",	do_length,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"c",/* bind.c:*/do_c,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"oldClass",	do_class,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
-{"class",	R_do_data_class,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"class",	R_do_data_class,0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {".cache_class",	R_do_data_class,	1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"unclass",	do_unclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"names",	do_names,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"names",	do_names,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names<-",	do_namesgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dimnames",	do_dimnames,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dim",		do_dim,		0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dim",		do_dim,		0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dim<-",	do_dimgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"attributes",	do_attributes,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"attributes",	do_attributes,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"attr",	do_attr,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
@@ -232,8 +236,8 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"vector",	do_makevector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"complex",	do_complex,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"matrix",	do_matrix,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"row",		do_rowscols,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"col",		do_rowscols,	2,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"row",		do_rowscols,	1,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"col",		do_rowscols,	2,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"unlist",	do_unlist,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -242,7 +246,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"get_rm",	do_get_rm,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"get_rm",	do_get_rm,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"exists",	do_get,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"assign",	do_assign,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
@@ -494,17 +498,17 @@ attribute_hidden FUNTAB R_FunTab[] =
 
 /* Type coercion */
 
-{"as.character",do_ascharacter,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.integer",	do_ascharacter,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.double",	do_ascharacter,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.complex",	do_ascharacter,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.logical",	do_ascharacter,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.raw",	do_ascharacter,	5,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.character",do_ascharacter,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.integer",	do_ascharacter,	1,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.double",	do_ascharacter,	2,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.complex",	do_ascharacter,	3,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.logical",	do_ascharacter,	4,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.raw",	do_ascharacter,	5,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.environment",do_as_environment,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"as.vector",	do_asvector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.vector",	do_asvector,	0,	10011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"paste",	do_paste,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"paste0",	do_paste,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"file.path",	do_filepath,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
@@ -555,32 +559,32 @@ attribute_hidden FUNTAB R_FunTab[] =
 
 /* Type Checking (typically implemented in ./coerce.c ) */
 
-{"is.null",	do_is,		NILSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.logical",	do_is,		LGLSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.integer",	do_is,		INTSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.real",	do_is,		REALSXP,1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.double",	do_is,		REALSXP,1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.complex",	do_is,		CPLXSXP,1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.character",do_is,		STRSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.symbol",	do_is,		SYMSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.environment",do_is,	ENVSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.list",	do_is,		VECSXP,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.pairlist",	do_is,		LISTSXP,1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.expression",do_is,		EXPRSXP,1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.raw",	do_is,		RAWSXP, 1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.null",	do_is,		NILSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.logical",	do_is,		LGLSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.integer",	do_is,		INTSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.real",	do_is,		REALSXP,10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.double",	do_is,		REALSXP,10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.complex",	do_is,		CPLXSXP,10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.character",do_is,		STRSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.symbol",	do_is,		SYMSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.environment",do_is,	ENVSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.list",	do_is,		VECSXP,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.pairlist",	do_is,		LISTSXP,10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.expression",do_is,		EXPRSXP,10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.raw",	do_is,		RAWSXP, 10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.object",	do_is,		50,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.object",	do_is,		50,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.numeric",	do_is,		100,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.matrix",	do_is,		101,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.array",	do_is,		102,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.numeric",	do_is,		100,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.matrix",	do_is,		101,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.array",	do_is,		102,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.atomic",	do_is,		200,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.recursive",do_is,		201,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.atomic",	do_is,		200,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.recursive",do_is,		201,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.call",	do_is,		300,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.language",	do_is,		301,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"is.function",	do_is,		302,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.call",	do_is,		300,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.language",	do_is,		301,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.function",	do_is,		302,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"is.single",	do_is,		999,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
@@ -607,7 +611,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"rep.int",	do_rep_int,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_len",	do_seq_len,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"seq_along",	do_seq_along,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"list",	do_makelist,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"enc2native",	do_enc2,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -717,9 +721,9 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"dyn.load",	do_dynload,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"dyn.unload",	do_dynunload,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ls",		do_ls,		1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"typeof",	do_typeof,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"eval",	do_eval,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"eval.with.vis",do_eval,	1,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"typeof",	do_typeof,	1,	10011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"eval",	do_eval,	0,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"eval.with.vis",do_eval,	1,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.parent",	do_sys,		1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.call",	do_sys,		2,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.frame",	do_sys,		3,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -909,9 +913,9 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"devCapture"  , do_devcapture,	0,	111,	1,      {PP_FUNCALL, PREC_FN,   0}},
 
 /* Objects */
-{"inherits",	do_inherits,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"UseMethod",	do_usemethod,	0,     200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"NextMethod",	do_nextmethod,	0,     210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"inherits",	do_inherits,	0,	10011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"UseMethod",	do_usemethod,	0,     1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"NextMethod",	do_nextmethod,	0,     1210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"standardGeneric",do_standardGeneric,0, 201,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Modelling Functionality */
@@ -1293,7 +1297,7 @@ SEXP install(const char *name)
 SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
                                    int variant)
 {
-    SEXP s, fun, ans;
+    SEXP s, fun, ifun, ans;
     int save = R_PPStackTop;
     int flag;
     const void *vmax = VMAXGET();
@@ -1305,16 +1309,23 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
     fun = CAR(s);
     if (!isSymbol(fun))
 	errorcall(call, _("invalid internal function"));
-    if (INTERNAL(fun) == R_NilValue)
+    ifun = INTERNAL(fun);
+    if (ifun == R_NilValue)
 	errorcall(call, _("no internal function \"%s\""),
 		  CHAR(PRINTNAME(fun)));
+
     args = CDR(s);
-    if (TYPEOF(INTERNAL(fun)) == BUILTINSXP)
-	args = evalList(args, env, call);
+    if (TYPEOF(ifun) == BUILTINSXP) {
+	args = PRIMFUN_PENDING_OK(ifun) ? evalListPendingOK (args, env, call)
+                                        : evalList (args, env, call);
+    }
     PROTECT(args);
-    flag = PRIMPRINT(INTERNAL(fun));
+
+    flag = PRIMPRINT(ifun);
     R_Visible = flag != 1;
-    ans = CALL_PRIMFUN(s, INTERNAL(fun), args, env, variant);
+
+    ans = CALL_PRIMFUN(s, ifun, args, env, variant);
+
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;
@@ -1329,7 +1340,7 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
     }
 #endif
     UNPROTECT(1);
-    check_stack_balance(INTERNAL(fun), save);
+    check_stack_balance(ifun, save);
     VMAXSET(vmax);
     return (ans);
 }

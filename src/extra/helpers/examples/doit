@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
+#           Shell File to Run the Example Program with Various Options
+#
+# Copyright (c) 2013 Radford M. Neal.
+# 
+#   The helpers library is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc.,
+#   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+# The definitions below may be changed to test whatever is desired.
+
+size=10000
+chunk=2000
+rep=1000
+eoptions=""
+poptions=""
+
+
+echo " "
+echo EXAMPLE WITH HELPERS DISABLED AND NO PIPELINING
+
+time example-d $eoptions 0 $size $rep
+
+echo " "
+echo EXAMPLE WITH NO PIPELINING
+
+time example $eoptions 0 $size $rep
+time example $eoptions 1 $size $rep
+time example $eoptions 2 $size $rep
+time example $eoptions 3 $size $rep
+
+echo " "
+echo EXAMPLE WITH HELPERS DISABLED AND PIPELINING
+
+time example-d $eoptions -p 0 $size $rep
+
+echo " "
+echo EXAMPLE WITH PIPELINING
+
+time example $eoptions -p 0 $size $rep
+time example $eoptions -p 1 $size $rep
+time example $eoptions -p 2 $size $rep
+time example $eoptions -p 3 $size $rep
+time example $eoptions -p 4 $size $rep
+time example $eoptions -p 5 $size $rep
+
+echo " "
+echo "PAREX WITH HELPERS DISABLED AND NO PIPELINING"
+
+time parex-d $poptions 0 $size $chunk 1 $rep
+
+echo " "
+echo "PAREX WITH NO PIPELINING"
+
+time parex $poptions 0 $size $chunk 1 $rep
+time parex $poptions 3 $size $chunk 2 $rep
+time parex $poptions 5 $size $chunk 3 $rep
+
+echo " "
+echo "PAREX WITH HELPERS DISABLED AND PIPELINING"
+
+time parex-d $poptions -p 0 $size $chunk 1 $rep
+
+echo " "
+echo "PAREX WITH PIPELINING"
+
+time parex $poptions -p 0 $size $chunk 1 $rep
+time parex $poptions -p 5 $size $chunk 2 $rep

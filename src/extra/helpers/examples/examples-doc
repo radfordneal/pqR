@@ -1,0 +1,199 @@
+HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
+          Documention on the Example Programs Demonstrating the Helpers Library
+
+Copyright (c) 2013 Radford M. Neal.
+
+  The helpers library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+Three example programs are provided that demonstrate the helpers
+facility - the program "example", which has many options for
+exercising different features, a simplified version of it called
+"simple" (better for a first look at how to write a program using the
+helpers facility), and a version that parallelizes individual
+computations, call "parex".
+
+All these programs perform the following four-step computation on
+vector variables A, B, and C, and scalar variable D:
+
+    1) A = exponential of a sequence of length vec-size from 0 to 1
+    2) B = sin(A), element-by-element
+    3) C = cos(A), element-by-element
+    4) D = average of B*B + C*C.
+
+This computation is repeated for a specified number of repetitions,
+and for the last repetition (or for the direct computation done if the
+-D option is specified for "example"), the program outputs the value
+of D.  This value should be one, but a very slightly different value
+might arise due to rounding errors.
+
+For the "example" and "simple" programs, in each repetition, the
+helpers_master procedure schedules four tasks that together perform
+the above computation (one task for each step above), and then waits
+for all computations to finish (unless the -u option is given for
+"example", as described below).  For the "parex" program, more than
+one task can be used for steps (2) and (3).
+
+The programs all include the same helpers-app.h header file.
+
+The program "example" is normally run with a command of the form
+
+    time example { option } n-helpers vec-size repetitions
+
+The number of helper threads to use, the size of the vectors operated
+on, and the number of repetitions of the computations are specified as
+command-line arguments, along with zero or more options, described
+below.  The "time" command will report the real (wall clock) time that
+the program takes to run, and the total cpu time for all threads of
+the program.  These times may be compared for different numbers of
+helpers, different vector sizes, and different option settings.
+
+The possible options are as follows:
+
+    -t    Produce trace output for the last repetition.
+
+    -T    Produce trace output for all repetitions.
+
+    -s    Output statistics at the end.
+
+    -D    After all repetitions, do one last computation by direct
+          calls of the task procedures in the master.
+
+    -v    Have the master verify that the computation for the last
+          repetition (or done directly, if -D specified) was correct, 
+          by recomputing it itself (with extra code).
+
+    -g    After scheduling tasks in the last repetition, print the
+          names of variables obtained by calling helpers_var_list.
+          Also, check that the variable list is empty after all tasks
+          have finished.
+
+    -u    Rather than wait for all tasks to finish after each 
+          repetition, wait for each variable to be unused before 
+          computing a new value for it.  This allows overlap of
+          computations with the previous iteration.
+
+    -c    Rather than wait for all tasks to finish after each 
+          repetition, wait until D has been computed, which should
+          have the same effect as waiting for all tasks to finish.
+
+    -o    In addition to whatever other waiting is done, immediately
+          after each repetition, wait for all master-only tasks.
+
+    -k    In the last repetition, print the values of the "in use" 
+          and "being computed" markers for variable B before and after 
+          scheduling the task for each of the four steps of the 
+          computation, and after waiting for all tasks to complete.
+
+    -C    After all tasks are scheduled for a repetition, have the
+          master thread compute the sum of the elements of C that 
+          are indexed (from 0) by vec_size/3 and vec_size/2, using 
+          helpers_start_computing_var and HELPERS_WAIT_IN_VAR.  On
+          the last repetition, print this sum.
+
+    -i    After all tasks are scheduled for the last repetition, print
+          the number of idle helpers, from helpers_idle, twenty times,
+          waiting a bit between each call of helpers_idle.
+
+    -mN   Schedule the task for step N of the computation (1, 2, 3, 
+          or 4) is as a master-only task.  More than one of these 
+          options for different N may be included.
+
+    -nN   Schedule the task for step N of the computation as a 
+          master-now task.  A -nN option takes precedence over -mN.
+
+    -lN   Slow the computation in step N above (1, 2, 3, or 4) by 
+          taking the logarithm of the exponential of each element of
+          the result (or each term in the average, for step 4), which
+          make the computation take longer, but has little other effect.  
+          If this option is included more than once for the same step,
+          each extra occurrence increments the number of times to take 
+          the logarithm of the exponential of the result, slowing the 
+          computation further.
+
+    -pN   Use a task procedure for step N of the computation that can
+          handle pipelining, and schedule that step with pipelined
+          input and output (except for output of the scalar D).
+
+    -p    Use task procedures for all steps that handle pipelining,
+          and schedule all tasks with pipelined input and output 
+          (except output of D).  This is equivalent to specifying 
+          -p1, -p2, -p3, and -p4.
+
+    -dh   Disable helpers at start.
+
+    -dp   Disable pipelining at start.
+
+The version of the example program called "example-d" is compiled with
+the helpers facility is disabled.  In "example-d", all computations
+are performed in the master thread (regardless of the n-helpers
+argument) with no overhead from calling helpers_do_task.  The time
+taken by "example-d" can be compared to the time taken by "example"
+with n-helpers set to 0 to measure this overhead.
+
+Performance of the example program without any pipelining should be
+better with one helper than with zero helpers, if vec-size is large
+enough (1000 is likely more than enough to see a benefit).  This
+results from the sin and cos computations being done concurrently.
+Larger benefits are possible with pipelining, with performance
+improving as the number of helpers increases up to three, for which
+all four steps can be done concurrently (assuming at least four
+processor cores are available).  When the -u option is specified the
+best performance (at least for some settings of other options) may
+come with even more helpers, since then computations for a repetition
+may be done concurrently with some computations for the previous and
+next repetitions.
+
+A version of the example program called "simple" is also provided,
+which is the same as "example" except that the only option that it
+implements is -t.  It is a more easily-read illustration of basic use
+of the helpers facility.
+
+The program "parex" is a modified version of "example" that allows the
+sin and cos computations (steps (2) and (3) above) to be done with
+more than one task.  The computation is split between "par" tasks by
+dividing the vectors into successive "chunks" of some size, with
+chunks 0, 1, ..., par-1 done in parallel by these tasks, and similarly
+for chunks par, par+1, ..., 2*par-1, and so forth.
+
+The "parex" program is called as follows:
+
+    time parex { option } n-helpers vec-size chunk-size par repetitions
+
+This is like the "example" program, but with the additional arguments
+"chunk-size" and "par".  Also, only the -t, -T, -s, -lN, -pN, and -p
+options are allowed.
+
+If no pipelining is done, computations with "par" tasks for step (2)
+and for step (3) will be maximally parallelized if n-helpers is
+2*par-1 and chunk-size is the floor of (vec-size + par - 1) / par.
+This will result in each task computing just one chunk.  It is
+possible that a smaller value for chunk-size might improve performance
+by improving locality of reference for caching and paging.
+
+If pipelining is done (with the -p option), parallelization will be
+maximal if n-helpers is 2*par+1.  Performance will get better as
+chunk-size is decreased, since pipelining will be more effective, up
+to the point where the larger overhead from a small chunk size becomes
+significant.
+
+Note that the "parex" program is written to strictly abide by the
+usual conventions for pipelined computation.  It is possible that some
+speed-up could be obtained (particularly if the time to compute one
+element is variable) by "cheating" somewhat - for example, by storing
+computed results in the output vector when an earlier task in the
+pipeline is still writing elements before that point.  This would need
+to be done with care, however, particularly if the final output is
+pipelined to another task.

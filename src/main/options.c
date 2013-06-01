@@ -32,6 +32,8 @@
 #include "Defn.h"
 #include "Print.h"
 
+#include <helpers/helpers-app.h>
+
 /* The global var. R_Expressions is in Defn.h */
 #define R_MIN_EXPRESSIONS_OPT	25
 #define R_MAX_EXPRESSIONS_OPT	500000
@@ -323,6 +325,23 @@ void attribute_hidden InitOptions(void)
     set_rl_word_breaks(" \t\n\"\\'`><=%;,|&{()}");
 #endif
 
+#ifdef R_HELPER_THREADS
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("helpers_disable"));
+    SETCAR(v, ScalarLogical(helpers_are_disabled));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("helpers_no_pipelining"));
+    SETCAR(v, ScalarLogical(helpers_are_not_pipelining));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("helpers_trace"));
+    SETCAR(v, ScalarLogical(getenv("R_HELPERS_TRACE")!=0));
+#endif
+
     SET_SYMVALUE(install(".Options"), CDR(val));
     UNPROTECT(1);
 }
@@ -556,6 +575,33 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		set_rl_word_breaks(CHAR(STRING_ELT(argi, 0)));
 #endif
 		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));
+	    }
+	    else if (streql(CHAR(namei), "helpers_disable")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+#ifdef R_HELPER_THREADS
+		helpers_disable(k);
+#endif
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
+	    else if (streql(CHAR(namei), "helpers_no_pipelining")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+#ifdef R_HELPER_THREADS
+		helpers_no_pipelining(k);
+#endif
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
+	    else if (streql(CHAR(namei), "helpers_trace")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+#ifdef R_HELPER_THREADS
+		helpers_trace(k);
+#endif
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
 	    else if (streql(CHAR(namei), "warnPartialMatchDollar")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)

@@ -113,6 +113,11 @@ void attribute_hidden reset_duplicate_counter(void)
 }
 #endif
 
+
+/* Duplicate object.  The argument need not be protected by the caller (will
+   be protected here if necessary).  Duplicate will also wait for it to be
+   computed if necessary. */
+
 SEXP duplicate(SEXP s){
     SEXP t;
 
@@ -131,12 +136,12 @@ SEXP duplicate(SEXP s){
     return t;
 }
 
-/*****************/
-
 static SEXP duplicate1(SEXP s)
 {
     SEXP h, t,  sp;
     int i, n;
+
+    WAIT_UNTIL_COMPUTED(s);
 
     switch (TYPEOF(s)) {
     case NILSXP:

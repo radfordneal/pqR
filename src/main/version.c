@@ -31,6 +31,7 @@
 #define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 #include <Rversion.h>
+#include <helpers/helpers-app.h>
 
 void attribute_hidden PrintGreeting(void)
 {
@@ -38,7 +39,12 @@ void attribute_hidden PrintGreeting(void)
 
     Rprintf("\n");
     PrintVersion_part_1(buf);
-    Rprintf("%s\n", buf);
+    Rprintf("%s", buf);
+
+    if (helpers_num > 0)
+        Rprintf (_("Using %d helper threads\n"), helpers_num);
+
+    Rprintf("\n");
 
     Rprintf(_("R is free software and comes with ABSOLUTELY NO WARRANTY.\n\
 You are welcome to redistribute it under certain conditions.\n\

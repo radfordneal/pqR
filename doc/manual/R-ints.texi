@@ -117,6 +117,7 @@ checked against the current version of the source code.
 * Modules::                     
 * Visibility::                  
 * Lazy loading::                
+* The helpers facility::        
 @end menu
 
 @node SEXPs, Environments and variable lookup, R Internal Structures, R Internal Structures
@@ -287,6 +288,9 @@ and @code{if}).  It is also used as the @code{NO_SPEC_SYM} flag for
 environments, to indicate that the environment has no symbols with the 
 @code{SPEC_SYM} flag set (and has never had such a symbol), 
 so that it can be bypassed in searches for such symbols.
+For builtin primitives, the @code{misc} bit is used to indicate that the 
+primitive can take operands that may be in the process of being computed by 
+a task.
 
 @findex nmcnt field
 @findex named field
@@ -2035,7 +2039,7 @@ other Windows compiler suites.
 It is only possible to check if this has been handled correctly by
 compiling the @R{} sources on Windows.
 
-@node Lazy loading,  , Visibility, R Internal Structures
+@node Lazy loading, The helpers facility, Visibility, R Internal Structures
 @section Lazy loading
 
 Lazy loading was introduced in @R{} 2.0.0, for code in packages and for
@@ -2089,6 +2093,61 @@ this was found necessary when using file systems with high latency
 The same database mechanism is used to store parsed @file{Rd} files.
 One or all of the parsed objects is fetched by a call to
 @code{tools:::fetchRdDB}.
+
+
+@node The helpers facility,  , Lazy loading, R Internal Structures
+@section Lazy loading
+
+The @pqR{} facility for doing computations in helper threads is
+supported by the ``helpers'' library in @file{src/extra/helpers},
+where documentation on it may be found.  The @file{helpers-app.h}
+and @file{helpers-app.c} files in that directory define how the
+helpers facility interfaces to the @pqR interpreter.
+
+At present, computations in helper threads are confined to numeric
+vectors.  Two bits in the headers of such objects (actually all
+objects) are check on how computations that may be done by helper
+threads are progressing.  These bits are accessed by the
+@code{IS_BEING_COMPUTED_BY_TASK} and @code{IS_IN_USE_BY_TASK} macros.
+An object is being computed by a task if computation of its data part
+was scheduled to be done by a task that has not been completed (or
+perhaps not even started).  An object is in use by a task if it is an
+input to a scheduled task for which it is not also the output.  Note
+that these bits are set only by the master thread (whenever the master
+thread looks to see what tasks performed by helpers have completed),
+so access to them does not raise any synchronization issues.
+
+The @code{WAIT_UNTIL_COMPUTED} and @code{WAIT_UNTIL_COMPUTED_2} macros
+wait until an object is not being computed, or two objects are both
+not being computed.
+
+Objects that may not have been computed yet should be visible only in
+code that has explicitly asked to see such ``pending'' objects.  For
+example, the result of calling @code{eval} will never be an object
+that is still being computed.  Code that wishes to receive a pending
+object as the result of evaluating an expression must instead call
+@code{evalv}, passing a variant argument with the
+@code{VARIANT_PENDING_OK} bit set.  Similarly, @code{PRVALUE} will
+never return a pending object, but @code{PRVALUE_PENDING_OK} may.
+
+Objects that are being used by a task that has not completed may be
+seen anywhere within the code for the interpeter, or in user-written C
+code.  Data in such objects may be accessed without regard to their
+possibly being used by a helper thread, but this data must not be
+changed.  This is ensured by making @code{NAMEDCNT} (and hence also
+@code{NAMED}) check whether the object is in use, and if so wait until
+it is not in use before returning the appropriate value (unless it is
+@code{MAX_NAMEDCNT}) --- in effect, @code{NAMEDCNT} is temporarily
+increased while the object is in use by a task.  Correct code that
+only alters objects after verifying that @code{NAMEDCNT} is zero will
+therefore work properly with objects that must not be altered until a
+task (or tasks) has completed.  However, the macro
+@code{NAMEDCNT_GT_0} is written to return @code{TRUE} if
+@code{NAMEDCNT} is greater than zero, without waiting until the object
+is not in use; similarly, @code{NAMEDCNT_EQ_0} and
+@code{NAMEDCNT_GT_1} return immediately when the comparison does not
+depend on whether the object is in use by a task.
+
 
 @node .Internal vs .Primitive, Internationalization in the R sources, R Internal Structures, Top
 @chapter @code{.Internal} vs @code{.Primitive}

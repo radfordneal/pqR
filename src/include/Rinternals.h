@@ -136,13 +136,30 @@ struct sxpinfo_struct {
     /* debug/trace */
     unsigned int debug :  1;
     unsigned int trace :  1;  /* functions and memory tracing */
-    /* "general purpose" fields, used for miscellaneous purposes */
+    /* "general purpose" field, used for miscellaneous purposes */
     unsigned int gp    : 16;  /* old "gp" field */
-    unsigned int gp2   : 28;  /* new "gp" field, replaces old "truelength" */
-    /* other */
-    unsigned int obj   :  1;  /* set if this is an S3 or S4 object */
-    unsigned int misc  :  1;  /* miscellaneous uses - eg, RSTEP */
-    unsigned int unused:  2;  /* not currently in use */
+    union { /* overlap some general fields with fields for primitives */
+      struct {
+        unsigned int gp2 : 28;   /* new "gp" field, replaces old "truelength" */
+        /* markers for use with the helpers facility */
+        unsigned int in_use: 1;  /* whether contents may be in use by a helper*/
+        unsigned int being_computed : 1; /* whether helper may be computing it*/
+        /* other */
+        unsigned int obj :  1;   /* set if this is an S3 or S4 object */
+        unsigned int misc:  1;   /* miscellaneous uses - eg, RSTEP */
+      } g;
+      struct {
+        unsigned char var1, var2;/* variants for evals of fast primitive args */
+        unsigned char pending_ok;/* whether args can have computation pending */
+        unsigned int unused:4;
+        /* markers for use with the helpers facility */
+        unsigned int in_use: 1;  /* whether contents may be in use by a helper*/
+        unsigned int being_computed : 1; /* whether helper may be computing it*/
+        /* other */
+        unsigned int obj :  1;   /* set if this is an S3 or S4 object */
+        unsigned int misc:  1;   /* miscellaneous uses - eg, RSTEP */
+      } p;
+    } u;
 };
 
 struct vecsxp_struct {
@@ -253,12 +270,39 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
                            by the number of bits in the nmcnt sxpinfo field */
 
-/* Below is the obvious way of implementing these macros */
+/* Below is the obvious way of implementing these macros. */
 
-#define NAMEDCNT(x)          ((x)->sxpinfo.nmcnt)
-#define NAMEDCNT_EQ_0(x)     ((x)->sxpinfo.nmcnt == 0)
-#define NAMEDCNT_GT_0(x)     ((x)->sxpinfo.nmcnt > 0)
-#define NAMEDCNT_GT_1(x)     ((x)->sxpinfo.nmcnt > 1)
+/* When a variable may be being used by a helper, it is treated as temporarily
+   having a nmcnt value that is greater than the value stored.  If the value
+   of a macro is the same regardless of whether this temporary increment is
+   counted, the value can be returned immediately.  Otherwise, it's necessary
+   to wait for the variable to not be in use, and then return the value based
+   on the stored nmcnt. */
+
+#ifndef HELPERS_DISABLED
+extern void helpers_wait_until_not_in_use(SEXP);/* Declare procedure from the */
+#else                                           /*  helpers module here so we */
+#define helpers_wait_until_not_in_use(v) 0      /*  needn't include helpers.h */
+#endif
+
+#define NAMEDCNT(x) \
+( (x)->sxpinfo.nmcnt == MAX_NAMEDCNT ? MAX_NAMEDCNT : \
+  (x)->sxpinfo.u.g.in_use \
+     ? (helpers_wait_until_not_in_use(x), (x)->sxpinfo.nmcnt) \
+     : (x)->sxpinfo.nmcnt )
+
+#define NAMEDCNT_EQ_0(x) \
+( (x)->sxpinfo.nmcnt != 0 ? 0 : !(x)->sxpinfo.u.g.in_use ? 1 \
+    : (helpers_wait_until_not_in_use(x), 1) )
+
+#define NAMEDCNT_GT_0(x) \
+( (x)->sxpinfo.nmcnt != 0 ? 1 : !(x)->sxpinfo.u.g.in_use ? 0 \
+    : (helpers_wait_until_not_in_use(x), 0) )
+
+#define NAMEDCNT_GT_1(x) \
+( (x)->sxpinfo.nmcnt > 1 ? 1 : !(x)->sxpinfo.u.g.in_use ? 0 \
+    : (helpers_wait_until_not_in_use(x), 0) )
+
 #define SET_NAMEDCNT(x,v)    ((x)->sxpinfo.nmcnt = (v))
 #define SET_NAMEDCNT_0(x)    ((x)->sxpinfo.nmcnt = 0)
 #define SET_NAMEDCNT_1(x)    ((x)->sxpinfo.nmcnt = 1)
@@ -280,7 +324,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 #define DEC_NAMEDCNT(x) do { \
     SEXP _p_ = (x); \
-    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT && _p_->sxpinfo.nmcnt > 0) \
+    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT && _p_->sxpinfo.nmcnt != 0) \
         _p_->sxpinfo.nmcnt -= 1; \
   } while (0)
 
@@ -292,7 +336,10 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable these optimizations */
 
 #undef NAMEDCNT_GT_1
-#define NAMEDCNT_GT_1(x)     (((x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0)
+#define NAMEDCNT_GT_1(x) \
+( ((x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
+    : !(x)->sxpinfo.u.g.in_use ? 0 \
+    : (helpers_wait_until_not_in_use(x), 0) )
 
 #endif
 
@@ -338,12 +385,12 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)
-#define OBJECT(x)	((x)->sxpinfo.obj)
+#define OBJECT(x)	((x)->sxpinfo.u.g.obj)
 #define MARK(x)		((x)->sxpinfo.mark)
 #define TYPEOF(x)	((x)->sxpinfo.type)
 #define RTRACE(x)	((x)->sxpinfo.trace)
 #define LEVELS(x)	((x)->sxpinfo.gp)
-#define SET_OBJECT(x,v)	(((x)->sxpinfo.obj)=(v))
+#define SET_OBJECT(x,v)	(((x)->sxpinfo.u.g.obj)=(v))
 #define SET_TYPEOF(x,v)	(((x)->sxpinfo.type)=(v))
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=(v))
@@ -351,8 +398,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 /* The TRUELENGTH is seldom used, and usually has no connection with length.
    Used to be a 32-bit "truelength" field in the vecsxp_struct, but is now 
    a 28-bit field in sxpinfo. */
-#define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.gp2)
-#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.gp2)=(v))
+#define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.u.g.gp2)
+#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.u.g.gp2)=(v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
 #define S4_OBJECT_MASK (1<<4)
@@ -407,8 +454,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define CLOENV(x)	((x)->u.closxp.env)
 #define RDEBUG(x)	((x)->sxpinfo.debug)
 #define SET_RDEBUG(x,v)	(((x)->sxpinfo.debug)=(v))
-#define RSTEP(x)	((x)->sxpinfo.misc)
-#define SET_RSTEP(x,v)	(((x)->sxpinfo.misc)=(v))
+#define RSTEP(x)	((x)->sxpinfo.u.g.misc)
+#define SET_RSTEP(x,v)	(((x)->sxpinfo.u.g.misc)=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	((x)->u.symsxp.pname)
@@ -419,12 +466,12 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) (((x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  ((x)->sxpinfo.misc) /*1 = base binding in global cache*/
-#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.misc = (v))
+#define BASE_CACHE(x)  ((x)->sxpinfo.u.g.misc)/*1=base binding in global cache*/
+#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.u.g.misc = (v))
 
 /* Flag indicating whether a symbol starts with a special character. */
-#define SPEC_SYM(x)	(PRINTNAME(x)->sxpinfo.misc)
-#define SET_SPEC_SYM(x,v) (PRINTNAME(x)->sxpinfo.misc = (v)) 
+#define SPEC_SYM(x)	(PRINTNAME(x)->sxpinfo.u.g.misc)
+#define SET_SPEC_SYM(x,v) (PRINTNAME(x)->sxpinfo.u.g.misc = (v)) 
 
 /* Environment Access Macros */
 #define FRAME(x)	((x)->u.envsxp.frame)
@@ -432,8 +479,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define HASHTAB(x)	((x)->u.envsxp.hashtab)
 #define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  ((x)->sxpinfo.misc) /* 1 = env has symbol w spec char*/
-#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.misc = (v))
+#define NO_SPEC_SYM(x)  ((x)->sxpinfo.u.g.misc)/*1=env has symbol w spec char*/
+#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.u.g.misc = (v))
 
 #else /* not USE_RINTERNALS */
 
@@ -716,6 +763,7 @@ SEXP Rf_allocVector(SEXPTYPE, R_len_t);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
 SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP Rf_applyClosure_v(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
                        SEXP (*)(SEXP, int), SEXP);
 SEXP Rf_classgets(SEXP, SEXP);
@@ -1018,6 +1066,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define any_duplicated		Rf_any_duplicated
 #define any_duplicated3		Rf_any_duplicated3
 #define applyClosure		Rf_applyClosure
+#define applyClosure_v		Rf_applyClosure_v
 #define arraySubscript		Rf_arraySubscript
 #define asChar			Rf_asChar
 #define asCharacterFactor	Rf_asCharacterFactor

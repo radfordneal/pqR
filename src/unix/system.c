@@ -365,6 +365,9 @@ int Rf_initialize_R(int ac, char **av)
 		    snprintf(msg, 1024, _("WARNING: '-e %s' omitted as input is too long\n"), *av);
 		    R_ShowMessage(msg);
 		}
+            } else if (strcmp(*av,"--helpers")==0 || strcmp(*av,"-p")==0 
+               || strncmp(*av,"--helpers=",10)==0 || strncmp(*av,"-p=",3)==0) {
+                ;
 	    } else if(!strcmp(*av, "--args")) {
 		break;
 	    } else if(!strcmp(*av, "--interactive")) {

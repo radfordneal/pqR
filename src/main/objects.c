@@ -37,6 +37,8 @@
 #include "Defn.h"
 #include <R_ext/RS.h> /* for Calloc, Realloc and for S4 object bit */
 
+#include <helpers/helpers-app.h>
+
 static SEXP GetObject(RCNTXT *cptr)
 {
     SEXP s, sysp, a, b, formals, funcall, tag;
@@ -105,22 +107,23 @@ static SEXP GetObject(RCNTXT *cptr)
 
     UNPROTECT(2);
     if (TYPEOF(s) == PROMSXP) {
-	if (PRVALUE(s) == R_UnboundValue)
-	    s = eval(s, R_BaseEnv);
+	if (PRVALUE_PENDING_OK(s) == R_UnboundValue)
+	    s = evalv (s, R_BaseEnv, VARIANT_PENDING_OK);
 	else
-	    s = PRVALUE(s);
+	    s = PRVALUE_PENDING_OK(s);
     }
     return(s);
 }
 
-static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
+static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
+                         int variant)
 {
     SEXP ans;
     if (TYPEOF(op) == SPECIALSXP) {
 	int save = R_PPStackTop, flag = PRIMPRINT(op);
 	const void *vmax = VMAXGET();
 	R_Visible = flag != 1;
-	ans = CALL_PRIMFUN(call, op, args, rho, 0);
+	ans = CALL_PRIMFUN(call, op, args, rho, variant);
 	if (flag < 2) R_Visible = flag != 1;
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
@@ -135,14 +138,14 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho)
 	const void *vmax = VMAXGET();
 	PROTECT(args = evalList(args, rho, call));
 	R_Visible = flag != 1;
-	ans = CALL_PRIMFUN(call, op, args, rho, 0);
+	ans = CALL_PRIMFUN(call, op, args, rho, variant);
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
     }
     else if (TYPEOF(op) == CLOSXP) {
-	ans = applyClosure(call, op, args, rho, newrho);
+	ans = applyClosure_v(call, op, args, rho, newrho, variant);
     }
     else
 	ans = R_NilValue;  /* for -Wall */
@@ -269,7 +272,7 @@ int isBasicClass(const char *ss) {
 
 
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
-	      SEXP rho, SEXP callrho, SEXP defrho, SEXP *ans)
+	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
     SEXP klass, method, sxp, t, s, matchedarg, sort_list;
     SEXP op, formals, newrho, newcall;
@@ -352,7 +355,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    t = newcall;
 	    SETCAR(t, method);
 	    R_GlobalContext->callflag = CTXT_GENERIC;
-	    *ans = applyMethod(t, sxp, matchedarg, rho, newrho);
+	    *ans = applyMethod(t, sxp, matchedarg, rho, newrho, variant);
 	    R_GlobalContext->callflag = CTXT_RETURN;
 	    UNPROTECT(nprotect);
 	    return 1;
@@ -375,7 +378,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	t = newcall;
 	SETCAR(t, method);
 	R_GlobalContext->callflag = CTXT_GENERIC;
-	*ans = applyMethod(t, sxp, matchedarg, rho, newrho);
+	*ans = applyMethod(t, sxp, matchedarg, rho, newrho, variant);
 	R_GlobalContext->callflag = CTXT_RETURN;
 	UNPROTECT(5);
 	return 1;
@@ -391,7 +394,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 */
 
 /* This is a primitive SPECIALSXP */
-SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
+                                    int variant)
 {
     SEXP ans, generic = R_NilValue /* -Wall */, obj, val;
     SEXP callenv, defenv;
@@ -451,7 +455,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call, _("first argument must be a generic name"));
 
     if (usemethod(translateChar(generic_name), obj, call, CDR(args),
-		  env, callenv, defenv, &ans) == 1) {
+		  env, callenv, defenv, variant, &ans) == 1) {
 	UNPROTECT(2); /* obj, argList */
 	PROTECT(ans);
 	findcontext(CTXT_RETURN, env, ans); /* does not return */
@@ -513,7 +517,8 @@ static SEXP fixcall(SEXP call, SEXP args)
 #define ARGUSED(x) LEVELS(x)
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
+                                     int variant)
 {
     char buf[512], b[512], bb[512], tbuf[10];
     const char *sb, *sg, *sk;
@@ -816,7 +821,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     defineVar(R_dot_Group, group, m);
 
     SETCAR(newcall, method);
-    ans = applyMethod(newcall, nextfun, matchedarg, env, m);
+    ans = applyMethod(newcall, nextfun, matchedarg, env, m, variant);
     UNPROTECT(10);
     return(ans);
 }
@@ -911,9 +916,14 @@ SEXP attribute_hidden do_inherits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
-    return inherits3(/* x = */ CAR(args),
-		     /* what = */ CADR(args),
-		     /* which = */ CADDR(args));
+    SEXP x = CAR(args);
+    SEXP what = CADR(args);
+    SEXP which = CADDR(args);
+
+    WAIT_UNTIL_COMPUTED(what);
+    WAIT_UNTIL_COMPUTED(which);
+
+    return inherits3(x,what,which);
 }
 
 
