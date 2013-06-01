@@ -37,6 +37,7 @@
 #include <R_ext/Applic.h> /* for dgemm */
 
 #include <helpers/helpers-app.h>
+#include <matprod/piped-matprod.h>
 
 /* "GetRowNames" and "GetColNames" are utility routines which
  * locate and return the row names and column names from the
@@ -452,60 +453,129 @@ SEXP attribute_hidden do_rowscols (SEXP call, SEXP op, SEXP args, SEXP rho,
     return allocMatrix1 (ans, nr, nc);
 }
 
-/* Real matrix product, using either one of the C routines in extra/matprod or
-   one of the BLAS routines, as determined by the mat_mult_with_BLAS option. */
-
-static void rmatprod(double *x, int nrx, int ncx,
-		    double *y, int nry, int ncy, double *z)
+void task_matprod_zero (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 {
-    char *transN1 = "N", *transN2 = "N", *transT1 = "T";
-    int i, int_1 = 1;
+  double *z = REAL(sz);
+  R_len_t u = LENGTH(sz);
+  R_len_t i;
+
+  for (i = 0; i < u; i++) z[i] = 0;
+}
+
+/* Real matrix product, using the routines in extra/matprod. */
+
+void task_matprod_vec_vec (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int n = LENGTH(sx);
+
+    z[0] = matprod_vec_vec (x, y, n);
+}
+
+void task_matprod_mat_vec (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nrx = LENGTH(sz);
+    int ncx = LENGTH(sy);
+
+    matprod_mat_vec (x, y, z, nrx, ncx);
+}
+
+void task_matprod_vec_mat (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nry = LENGTH(sx);
+    int ncy = LENGTH(sz);
+
+    matprod_vec_mat (x, y, z, nry, ncy);
+}
+
+void task_matprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int ncx_nry = op;
+    int nrx = LENGTH(sx) / ncx_nry;
+    int ncy = LENGTH(sy) / ncx_nry;
+
+    matprod (x, y, z, nrx, ncx_nry, ncy);
+}
+
+/* Real matrix product, using the BLAS routines. */
+
+void task_matprod_vec_vec_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int n = LENGTH(sx);
+    int int_1 = 1;
+
+    z[0] = F77_CALL(ddot) (&n, x, &int_1, y, &int_1);
+}
+
+void task_matprod_mat_vec_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nrx = LENGTH(sz);
+    int ncx = LENGTH(sy);
+    double one = 1.0, zero = 0.0;
+    char *transN1 = "N";
+    int int_1 = 1;
+
+    F77_CALL(dgemv) (transN1, &nrx, &ncx, &one, 
+                     x, &nrx, y, &int_1, &zero, z, &int_1);
+}
+
+void task_matprod_vec_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nry = LENGTH(sx);
+    int ncy = LENGTH(sz);
+    double one = 1.0, zero = 0.0;
+    char *transT1 = "T";
+    int int_1 = 1;
+
+    F77_CALL(dgemv) (transT1, &nry, &ncy, &one, 
+                     y, &nry, x, &int_1, &zero, z, &int_1);
+}
+
+void task_matprod_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int ncx_nry = op;
+    int nrx = LENGTH(sx) / ncx_nry;
+    int ncy = LENGTH(sy) / ncx_nry;
+    char *transN1 = "N", *transN2 = "N";
     double one = 1.0, zero = 0.0;
 
-    /* Note: ncx will be equal to nry. */
-
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-        if (nrx==1 && ncy==1) {
-            z[0] = R_mat_mult_with_BLAS[0]
-                     ? F77_CALL(ddot)(&ncx, x, &int_1, y, &int_1)
-                     : matprod_vec_vec (x, y, ncx);
-        }
-        else if (ncy==1)
-            if (R_mat_mult_with_BLAS[1])
-                F77_CALL(dgemv)(transN1, &nrx, &ncx, &one, x, &nrx, y, &int_1,
-                                &zero, z, &int_1);
-            else
-                matprod_mat_vec (x, y, z, nrx, ncx);
-        else if (nrx==1)
-            if (R_mat_mult_with_BLAS[2])
-                F77_CALL(dgemv)(transT1, &nry, &ncy, &one, y, &nry, x, &int_1,
-                                &zero, z, &int_1);
-            else
-                matprod_vec_mat (x, y, z, ncx, ncy);
-        else
-            if (R_mat_mult_with_BLAS[3])
-                F77_CALL(dgemm)(transN1, transN2, &nrx, &ncy, &ncx, &one,
-                                x, &nrx, y, &nry, &zero, z, &nrx);
-            else
-                matprod (x, y, z, nrx, ncx, ncy);
-    } else /* zero-extent operations should return zeroes */
-	for(i = 0; i < nrx*ncy; i++) z[i] = 0;
+    F77_CALL(dgemm) (transN1, transN2, &nrx, &ncy, &ncx_nry, &one,
+                      x, &nrx, y, &ncx_nry, &zero, z, &nrx);
 }
 
 /* Complex matrix product. */
 
-static void cmatprod(Rcomplex *x, int nrx, int ncx,
-		     Rcomplex *y, int nry, int ncy, Rcomplex *z)
+void task_cmatprod_zero (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 {
+  Rcomplex *z = COMPLEX(sz);
+  R_len_t u = LENGTH(sz);
+  R_len_t i;
+
+  for (i = 0; i < u; i++) z[i].r = z[i].i = 0;
+}
+
+void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    Rcomplex *z = COMPLEX(sz), *x = COMPLEX(sx), *y = COMPLEX(sy);
+    int ncx_nry = op;
+    int nrx = LENGTH(sx) / ncx_nry;
+    int ncy = LENGTH(sy) / ncx_nry;
+
 #ifdef HAVE_FORTRAN_DOUBLE_COMPLEX
     char *transa = "N", *transb = "N";
-    int i;
     Rcomplex one, zero;
-
+    int i;
     one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	F77_CALL(zgemm)(transa, transb, &nrx, &ncy, &ncx, &one,
-			x, &nrx, y, &nry, &zero, z, &nrx);
+    if (nrx > 0 && ncx_nry > 0 && ncy > 0) {
+	F77_CALL(zgemm)(transa, transb, &nrx, &ncy, &ncx_nry, &one,
+			x, &nrx, y, &ncx_nry, &zero, z, &nrx);
     } else { /* zero-extent operations should return zeroes */
 	for(i = 0; i < nrx*ncy; i++) z[i].r = z[i].i = 0;
     }
@@ -520,11 +590,11 @@ static void cmatprod(Rcomplex *x, int nrx, int ncx,
 	    z[i + k * nrx].i = NA_REAL;
 	    sum_r = 0.0;
 	    sum_i = 0.0;
-	    for (j = 0; j < ncx; j++) {
+	    for (j = 0; j < ncx_nry; j++) {
 		xij_r = x[i + j * nrx].r;
 		xij_i = x[i + j * nrx].i;
-		yjk_r = y[j + k * nry].r;
-		yjk_i = y[j + k * nry].i;
+		yjk_r = y[j + k * ncx_nry].r;
+		yjk_i = y[j + k * ncx_nry].i;
 		if (ISNAN(xij_r) || ISNAN(xij_i)
 		    || ISNAN(yjk_r) || ISNAN(yjk_i))
 		    goto next_ik;
@@ -629,9 +699,11 @@ static void tccrossprod(Rcomplex *x, int nrx, int ncx,
     }
 }
 
+#define T_matmult THRESHOLD_ADJUST(20)
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
-SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                  int variant)
 {
     int ldx, ldy, nrx, ncx, nry, ncy, mode;
     SEXP x = CAR(args), y = CADR(args), xdims, ydims, ans;
@@ -641,6 +713,7 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
        (IS_S4_OBJECT(x) || IS_S4_OBJECT(y))
        && R_has_methods(op)) {
 	SEXP s, value;
+        wait_until_arguments_computed(args);
 	/* Remove argument names to ensure positional matching */
 	for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG(s, R_NilValue);
 	value = R_possible_dispatch(call, op, args, rho, FALSE);
@@ -751,25 +824,104 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("non-conformable arguments"));
     }
 
-    if (isComplex(CAR(args)) || isComplex(CADR(args)))
-	mode = CPLXSXP;
-    else
-	mode = REALSXP;
-    SETCAR(args, coerceVector(CAR(args), mode));
-    SETCADR(args, coerceVector(CADR(args), mode));
+    mode = isComplex(x) || isComplex(y) ? CPLXSXP : REALSXP;
+   
+    if (TYPEOF(x)!=mode) {
+        WAIT_UNTIL_COMPUTED(x);
+        x = coerceVector(x, mode);
+    }
+    PROTECT(x);
+
+    if (TYPEOF(y)!=mode) {
+        WAIT_UNTIL_COMPUTED(y);
+        y = coerceVector(y, mode);
+    }
+    PROTECT(y);
 
     if (PRIMVAL(op) == 0) {			/* op == 0 : %*% */
 
-	PROTECT(ans = allocMatrix(mode, nrx, ncy));
-	if (mode == CPLXSXP)
-	    cmatprod(COMPLEX(CAR(args)), nrx, ncx,
-		     COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
-	else
-	    rmatprod(REAL(CAR(args)), nrx, ncx,
-		     REAL(CADR(args)), nry, ncy, REAL(ans));
+	ans = allocMatrix0 (mode, nrx, ncy);
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
-	PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+        if (LENGTH(ans) != 0) {
+
+            int inhlpr = nrx*(ncx+1)*ncy > T_matmult || 1; /* ALWAYS, FOR NOW */
+            int no_pipelining = !inhlpr || helpers_are_not_pipelining;
+            helpers_task_proc *task_proc;
+            int flags = 0;
+
+            if (mode == CPLXSXP) {
+                if (ncx==0) task_proc = task_cmatprod_zero;
+                else        task_proc = task_cmatprod;
+            }
+            else {
+                if (ncx==0) {
+                    task_proc = task_matprod_zero;
+                }
+                else if (nrx==1 && ncy==1) {
+                    if (R_mat_mult_with_BLAS[0]) {
+                        task_proc = task_matprod_vec_vec_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_vec_vec;
+                    else {
+                        task_proc = task_piped_matprod_vec_vec;
+                        flags = HELPERS_PIPE_IN2;
+                    }
+                }
+                else if (ncy==1) {
+                    if (R_mat_mult_with_BLAS[1]) {
+                        task_proc = task_matprod_mat_vec_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_mat_vec;
+                    else {
+                        task_proc = task_piped_matprod_mat_vec;
+                        flags = HELPERS_PIPE_IN2;
+                    }
+                }
+                else if (nrx==1) {
+                    if (R_mat_mult_with_BLAS[2]) {
+                        task_proc = task_matprod_vec_mat_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_vec_mat;
+                    else {
+                        task_proc = task_piped_matprod_vec_mat;
+                        flags = HELPERS_PIPE_IN2_OUT;
+                    }
+                }
+                else {
+                    if (R_mat_mult_with_BLAS[3]) {
+                        task_proc = task_matprod_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod;
+                    else {
+                        task_proc = task_piped_matprod;
+                        flags = HELPERS_PIPE_IN2_OUT;
+                    }
+                }
+            }
+
+            DO_NOW_OR_LATER2(variant, inhlpr, flags, task_proc, ncx, ans, x, y);
+        }
+
+        PROTECT(ans = allocMatrix1 (ans, nrx, ncy));
+
+	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
+	PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -821,26 +973,29 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (PRIMVAL(op) == 1) {	/* op == 1: crossprod() */
 
 	PROTECT(ans = allocMatrix(mode, ncx, ncy));
+
+        WAIT_UNTIL_COMPUTED_2(x,y);
+
 	if (mode == CPLXSXP)
 	    if(sym)
-		ccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			   COMPLEX(CAR(args)), nry, ncy, COMPLEX(ans));
+		ccrossprod(COMPLEX(x), nrx, ncx,
+			   COMPLEX(x), nry, ncy, COMPLEX(ans));
 	    else
-		ccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			   COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
+		ccrossprod(COMPLEX(x), nrx, ncx,
+			   COMPLEX(y), nry, ncy, COMPLEX(ans));
 	else {
 	    if(sym)
-		symcrossprod(REAL(CAR(args)), nrx, ncx, REAL(ans));
+		symcrossprod(REAL(x), nrx, ncx, REAL(ans));
 	    else
-		crossprod(REAL(CAR(args)), nrx, ncx,
-			  REAL(CADR(args)), nry, ncy, REAL(ans));
+		crossprod(REAL(x), nrx, ncx,
+			  REAL(y), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
+	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
 	if (sym)
 	    PROTECT(ydims = xdims);
 	else
-	    PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -866,26 +1021,29 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
     else {					/* op == 2: tcrossprod() */
 
 	PROTECT(ans = allocMatrix(mode, nrx, nry));
+
+        WAIT_UNTIL_COMPUTED_2(x,y);
+
 	if (mode == CPLXSXP)
 	    if(sym)
-		tccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			    COMPLEX(CAR(args)), nry, ncy, COMPLEX(ans));
+		tccrossprod(COMPLEX(x), nrx, ncx,
+			    COMPLEX(x), nry, ncy, COMPLEX(ans));
 	    else
-		tccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			    COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
+		tccrossprod(COMPLEX(x), nrx, ncx,
+			    COMPLEX(y), nry, ncy, COMPLEX(ans));
 	else {
 	    if(sym)
-		symtcrossprod(REAL(CAR(args)), nrx, ncx, REAL(ans));
+		symtcrossprod(REAL(x), nrx, ncx, REAL(ans));
 	    else
-		tcrossprod(REAL(CAR(args)), nrx, ncx,
-			   REAL(CADR(args)), nry, ncy, REAL(ans));
+		tcrossprod(REAL(x), nrx, ncx,
+			   REAL(y), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
+	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
 	if (sym)
 	    PROTECT(ydims = xdims);
 	else
-	    PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -921,7 +1079,7 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    UNPROTECT(2);
 	}
     }
-    UNPROTECT(3);
+    UNPROTECT(5);
     return ans;
 }
 #undef YDIMS_ET_CETERA
