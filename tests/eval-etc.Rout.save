@@ -1,7 +1,11 @@
 
-R version 2.15.0 alpha (2012-03-02 r58556)
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.10 (2013-01-01), based on R 2.15.0 (2012-03-30)
+
+R is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013 Radford M. Neal
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -171,4 +175,15 @@ mm =  chr "Bde"
 > mycaller <- function(x = 1, callme = pi) { callme(x) }
 > mycaller()## wrongly gave `mm = NULL'  now = "Abc"
 mm =  chr "Abc"
+> 
+> 
+> ## Test pqR fix to DispatchOrEval.
+> 
+> a <- 0
+> class(a) <- "fred"
+> seq.fred <- function (x, y) deparse(substitute(y))
+> seq(a,1+2)      # should both be "1 + 2"
+[1] "1 + 2"
+> seq.int(a,1+2)  # ...  but this one used to be "3"
+[1] "1 + 2"
 > 

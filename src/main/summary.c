@@ -708,9 +708,9 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(1);
 
     PROTECT(op = findFun(install("range.default"), env));
-    PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
-    for (a = args, b = prargs; a != R_NilValue; a = CDR(a), b = CDR(b))
-	SET_PRVALUE(CAR(b), CAR(a));
+    /* Below should really use CDR(call) for the unevaluated expressions, 
+       but it can't because args has been fiddled with by fixup_NaRm. */
+    PROTECT(prargs = promiseArgsWithValues(args, R_GlobalEnv, args));
     ans = applyClosure(call, op, prargs, env, R_BaseEnv);
     UNPROTECT(3);
     return(ans);

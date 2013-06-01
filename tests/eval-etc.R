@@ -116,3 +116,12 @@ callme()
 callme(mm="B")
 mycaller <- function(x = 1, callme = pi) { callme(x) }
 mycaller()## wrongly gave `mm = NULL'  now = "Abc"
+
+
+## Test pqR fix to DispatchOrEval.
+
+a <- 0
+class(a) <- "fred"
+seq.fred <- function (x, y) deparse(substitute(y))
+seq(a,1+2)      # should both be "1 + 2"
+seq.int(a,1+2)  # ...  but this one used to be "3"

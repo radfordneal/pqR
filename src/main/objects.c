@@ -1390,16 +1390,16 @@ void R_set_quick_method_check(R_stdGen_ptr_t value)
    the methods be set up to return a special object rather than trying
    to evaluate the default (which would get us into a loop). */
 
-/* called from DispatchOrEval, DispatchGroup, do_matprod
-   When called from the first the arguments have been enclosed in
-   promises, but not from the other two: there all the arguments have
-   already been evaluated.
- */
+/* The promisedArgs argument should be 1 if args is a list of promises, and
+   0 if not, in which case this function will create a list of promises to
+   pass to the method, using CDR(call) for the unevaluated arguments, and
+   args for their values. */
+
 SEXP attribute_hidden
 R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		    Rboolean promisedArgs)
 {
-    SEXP fundef, value, mlist=R_NilValue, s, a, b;
+    SEXP fundef, value, mlist=R_NilValue, s;
     int offset;
     prim_methods_t current;
     offset = PRIMOFFSET(op);
@@ -1429,10 +1429,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if(isFunction(value)) {
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
-		PROTECT(s = promiseArgs(CDR(call), rho));
-		if (length(s) != length(args)) error(_("dispatch error"));
-		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
-		    SET_PRVALUE(CAR(b), CAR(a));
+		PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
 		value =  applyClosure(call, value, s, rho, R_BaseEnv);
 		UNPROTECT(1);
 		return value;
@@ -1448,10 +1445,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
     /* To do:  arrange for the setting to be restored in case of an
        error in method search */
     if(!promisedArgs) {
-	PROTECT(s = promiseArgs(CDR(call), rho));
-	if (length(s) != length(args)) error(_("dispatch error"));
-	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
-	    SET_PRVALUE(CAR(b), CAR(a));
+	PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
 	value = applyClosure(call, fundef, s, rho, R_BaseEnv);
 	UNPROTECT(1);
     } else
