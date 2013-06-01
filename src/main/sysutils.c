@@ -790,8 +790,6 @@ const char *translateChar(SEXP x)
     const char *inbuf, *ans = CHAR(x);
     char *outbuf, *p;
     size_t inb, outb, res;
-    cetype_t ienc = getCharCE(x);
-    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
     if(TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateChar");
@@ -834,6 +832,8 @@ const char *translateChar(SEXP x)
 	obj = utf8_obj;
     }
 
+    cetype_t ienc = getCharCE(x);
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     R_AllocStringBuffer(0, &cbuff);
 top_of_loop:
     inbuf = ans; inb = strlen(inbuf);
@@ -904,7 +904,6 @@ const char *translateCharUTF8(SEXP x)
     const char *inbuf, *ans = CHAR(x);
     char *outbuf, *p;
     size_t inb, outb, res;
-    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
     if(TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateCharUTF8");
@@ -922,6 +921,7 @@ const char *translateCharUTF8(SEXP x)
 #else
        error(_("unsupported conversion from '%s' to '%s'"), "latin1", "UTF-8");
 #endif
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     R_AllocStringBuffer(0, &cbuff);
 top_of_loop:
     inbuf = ans; inb = strlen(inbuf);
