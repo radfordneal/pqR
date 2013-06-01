@@ -2275,6 +2275,18 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	errorcall(call, _("too many arguments, sorry"));
     }
+
+    /* Check whether the routine changed a logical constant. */
+
+    if (LOGICAL(R_ScalarLogicalTRUE)[0] != 1 
+     || LOGICAL(R_ScalarLogicalFALSE)[0] != 0
+     || LOGICAL(R_ScalarLogicalNA)[0] != NA_LOGICAL) {
+        LOGICAL(R_ScalarLogicalTRUE)[0] = 1;
+        LOGICAL(R_ScalarLogicalFALSE)[0] = 0;
+        LOGICAL(R_ScalarLogicalNA)[0] = NA_LOGICAL;
+        errorcall(call, _("Foreign routine changed TRUE, FALSE, or NA - reset"));
+    }
+
     PROTECT(ans = allocVector(VECSXP, nargs));
     havenames = 0;
     if (dup) {

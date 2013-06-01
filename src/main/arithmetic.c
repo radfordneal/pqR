@@ -164,7 +164,7 @@ int R_finite(double x)
 
 void attribute_hidden InitArithmetic()
 {
-    R_NaInt = INT_MIN;
+    R_NaInt = INT_MIN; /* now mostly unused: NA_INTEGER defined as INT_MIN */
     R_NaN = 0.0/R_Zero_Hack;
     R_NaN_cast_to_int = (int) R_NaN;
     R_NaReal = R_ValueOfNA();

@@ -120,7 +120,27 @@
             occurences of for (i = 0; i < length(...); i++) were replaced
             by code that doesn't call length numerous times.
       \item **8
-      \item **9
+      \item Global constants R_ScalarLogicalNA, R_ScalarLogicalTRUE, and
+            R_ScalarLogicalFALSE have been created, and the interpreter's
+            ScalarLogical function now returns one of these rather than
+            allocate new space for every logical value. 
+
+            To avoid problems with an external C or Fortran routine
+            changing one of these values (with an incorrect
+            specification of DUP=FALSE even though it modifies the
+            argument), the values of these constants are checked after
+            the return of an external function called with .C or
+            .Fortran, and if they have changed, their values are reset
+            and an error is signalled.
+
+            The bytecode interpreter sets up a similar set of logical
+            constants.  That facility should be merged with this one
+            (perhaps by just calling the ScalarLogical function in the
+            bytecode interpreter).
+
+            Various places in coerce.c were changed to use ScalarLogical
+            rather than allocate logical values themselve.  This is both
+            cleaner and now more efficient given the change above.
       \item **10
       \item **11
       \item **12
