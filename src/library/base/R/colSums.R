@@ -24,30 +24,30 @@ colSums <- function(x, na.rm = FALSE, dims = 1L)
     if(is.data.frame(x)) x <- as.matrix(x)
     if(!is.array(x) || length(dn <- dim(x)) < 2L)
         stop("'x' must be an array of at least two dimensions")
-    dimnames.x <- dimnames(x)
 
     if (dims==1L && length(dn)==2L) { # the common case
         z <- if (is.complex(x))
                .Internal(colSums(Re(x), dn[1L], dn[2L], na.rm)) +
                  1i * .Internal(colSums(Im(x), dn[1L], dn[2L], na.rm))
              else .Internal(colSums(x, dn[1L], dn[2L], na.rm))
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[2L]]
-        return (get_rm(z))
+        if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[2L]]
     }
-
-    if(dims < 1L || dims > length(dn) - 1L)
-        stop("invalid 'dims'")
-    n <- prod(dn[1L:dims])
-    dn <- dn[-(1L:dims)]
-    z <- if(is.complex(x))
-        .Internal(colSums(Re(x), n, prod(dn), na.rm)) +
-            1i * .Internal(colSums(Im(x), n, prod(dn), na.rm))
-    else .Internal(colSums(x, n, prod(dn), na.rm))
-    if(length(dn) > 1L) {
-        dim(z) <- dn
-        if (!is.null(dimnames.x)) dimnames(z) <- dimnames.x[-(1L:dims)]
-    } else 
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[dims+1]]
+    else { # most general case
+        if(dims < 1L || dims > length(dn) - 1L)
+            stop("invalid 'dims'")
+        n <- prod(dn[1L:dims])
+        dn <- dn[-(1L:dims)]
+        z <- if (is.complex(x))
+               .Internal(colSums(Re(x), n, prod(dn), na.rm)) +
+                 1i * .Internal(colSums(Im(x), n, prod(dn), na.rm))
+             else .Internal(colSums(x, n, prod(dn), na.rm))
+        if (length(dn) > 1L) {
+            dim(z) <- dn
+            dimnames(z) <- dimnames(x)[-(1L:dims)]
+        } 
+        else 
+            if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[dims+1]]
+    }
     get_rm(z)
 }
 
@@ -56,30 +56,30 @@ colMeans <- function(x, na.rm = FALSE, dims = 1L)
     if(is.data.frame(x)) x <- as.matrix(x)
     if(!is.array(x) || length(dn <- dim(x)) < 2L)
         stop("'x' must be an array of at least two dimensions")
-    dimnames.x <- dimnames(x)
 
     if (dims==1L && length(dn)==2L) { # the common case
         z <- if (is.complex(x))
                .Internal(colMeans(Re(x), dn[1L], dn[2L], na.rm)) +
                  1i * .Internal(colMeans(Im(x), dn[1L], dn[2L], na.rm))
              else .Internal(colMeans(x, dn[1L], dn[2L], na.rm))
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[2L]]
-        return (get_rm(z))
+        if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[2L]]
     }
-
-    if(dims < 1L || dims > length(dn) - 1L)
-        stop("invalid 'dims'")
-    n <- prod(dn[1L:dims])
-    dn <- dn[-(1L:dims)]
-    z <- if(is.complex(x))
-        .Internal(colMeans(Re(x), n, prod(dn), na.rm)) +
-            1i * .Internal(colMeans(Im(x), n, prod(dn), na.rm))
-    else .Internal(colMeans(x, n, prod(dn), na.rm))
-    if(length(dn) > 1L) {
-        dim(z) <- dn
-        if (!is.null(dimnames.x)) dimnames(z) <- dimnames.x[-(1L:dims)]
-    } else 
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[dims+1]]
+    else { # most general case
+        if(dims < 1L || dims > length(dn) - 1L)
+            stop("invalid 'dims'")
+        n <- prod(dn[1L:dims])
+        dn <- dn[-(1L:dims)]
+        z <- if (is.complex(x))
+               .Internal(colMeans(Re(x), n, prod(dn), na.rm)) +
+                 1i * .Internal(colMeans(Im(x), n, prod(dn), na.rm))
+             else .Internal(colMeans(x, n, prod(dn), na.rm))
+        if (length(dn) > 1L) {
+            dim(z) <- dn
+            dimnames(z) <- dimnames(x)[-(1L:dims)]
+        } 
+        else 
+            if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[dims+1]]
+    }
     get_rm(z)
 }
 
@@ -88,30 +88,30 @@ rowSums <- function(x, na.rm = FALSE, dims = 1L)
     if(is.data.frame(x)) x <- as.matrix(x)
     if(!is.array(x) || length(dn <- dim(x)) < 2L)
         stop("'x' must be an array of at least two dimensions")
-    dimnames.x <- dimnames(x)
 
     if (dims==1L && length(dn)==2L) { # the common case
         z <- if (is.complex(x))
                .Internal(rowSums(Re(x), dn[1L], dn[2L], na.rm)) +
                  1i * .Internal(rowSums(Im(x), dn[1L], dn[2L], na.rm))
              else .Internal(rowSums(x, dn[1L], dn[2L], na.rm))
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[1L]]
-        return (get_rm(z))
+        if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[1L]]
     }
-
-    if(dims < 1L || dims > length(dn) - 1L)
-        stop("invalid 'dims'")
-    p <- prod(dn[-(1L:dims)])
-    dn <- dn[1L:dims]
-    z <- if(is.complex(x))
-        .Internal(rowSums(Re(x), prod(dn), p, na.rm)) +
-            1i * .Internal(rowSums(Im(x), prod(dn), p, na.rm))
-    else .Internal(rowSums(x, prod(dn), p, na.rm))
-    if(length(dn) > 1L) {
-        dim(z) <- dn
-        if (!is.null(dimnames.x)) dimnames(z) <- dimnames.x[1L:dims]
-    } else  
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[1L]]
+    else { # most general case
+        if(dims < 1L || dims > length(dn) - 1L)
+            stop("invalid 'dims'")
+        p <- prod(dn[-(1L:dims)])
+        dn <- dn[1L:dims]
+        z <- if (is.complex(x))
+               .Internal(rowSums(Re(x), prod(dn), p, na.rm)) +
+                 1i * .Internal(rowSums(Im(x), prod(dn), p, na.rm))
+             else .Internal(rowSums(x, prod(dn), p, na.rm))
+        if(length(dn) > 1L) {
+            dim(z) <- dn
+            dimnames(z) <- dimnames(x)[1L:dims]
+        } 
+        else  
+            if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[1L]]
+    }
     get_rm(z)
 }
 
@@ -120,30 +120,30 @@ rowMeans <- function(x, na.rm = FALSE, dims = 1L)
     if(is.data.frame(x)) x <- as.matrix(x)
     if(!is.array(x) || length(dn <- dim(x)) < 2L)
         stop("'x' must be an array of at least two dimensions")
-    dimnames.x <- dimnames(x)
 
     if (dims==1L && length(dn)==2L) { # the common case
         z <- if (is.complex(x))
                .Internal(rowMeans(Re(x), dn[1L], dn[2L], na.rm)) +
                  1i * .Internal(rowMeans(Im(x), dn[1L], dn[2L], na.rm))
              else .Internal(rowMeans(x, dn[1L], dn[2L], na.rm))
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[1L]]
-        return (get_rm(z))
+        if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[1L]]
     }
-
-    if(dims < 1L || dims > length(dn) - 1L)
-        stop("invalid 'dims'")
-    p <- prod(dn[-(1L:dims)])
-    dn <- dn[1L:dims]
-    z <- if(is.complex(x))
-        .Internal(rowMeans(Re(x), prod(dn), p, na.rm)) +
-            1i * .Internal(rowMeans(Im(x), prod(dn), p, na.rm))
-    else .Internal(rowMeans(x, prod(dn), p, na.rm))
-    if(length(dn) > 1L) {
-        dim(z) <- dn
-        if (!is.null(dimnames.x)) dimnames(z) <- dimnames.x[1L:dims]
-    } else  
-        if (!is.null(dimnames.x)) names(z) <- dimnames.x[[1L]]
+    else { # most general case
+        if(dims < 1L || dims > length(dn) - 1L)
+            stop("invalid 'dims'")
+        p <- prod(dn[-(1L:dims)])
+        dn <- dn[1L:dims]
+        z <- if (is.complex(x))
+               .Internal(rowMeans(Re(x), prod(dn), p, na.rm)) +
+                 1i * .Internal(rowMeans(Im(x), prod(dn), p, na.rm))
+             else .Internal(rowMeans(x, prod(dn), p, na.rm))
+        if(length(dn) > 1L) {
+            dim(z) <- dn
+            dimnames(z) <- dimnames(x)[1L:dims]
+        } 
+        else  
+            if (!is.null(dimnames(x))) names(z) <- dimnames(x)[[1L]]
+    }
     get_rm(z)
 }
 
