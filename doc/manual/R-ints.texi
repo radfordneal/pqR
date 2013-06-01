@@ -2102,7 +2102,7 @@ The @pqR{} facility for doing computations in helper threads is
 supported by the ``helpers'' library in @file{src/extra/helpers},
 where documentation on it may be found.  The @file{helpers-app.h}
 and @file{helpers-app.c} files in that directory define how the
-helpers facility interfaces to the @pqR interpreter.
+helpers facility interfaces to the @pqR{} interpreter.
 
 At present, computations in helper threads are confined to numeric
 vectors.  Two bits in the headers of such objects (actually all
@@ -4162,8 +4162,60 @@ does not want to be tied to, for example, TeXLive 2007.
 @node Future directions, Function and variable index, Use of TeX dialects, Top
 @chapter Future directions
 
-This chapter is for notes about possible future changes to pqR.  There
-are no notes here at the moment.
+This chapter is for notes about possible future changes to pqR. 
+
+Immediate priorities include the following:
+
+@itemize @bullet
+@item Test @pqR{} on Windows and Mac systems, making whatever changes are
+      required.
+@item Incorporate useful features of R-2.15.1, R-2.15.2, and R-2.15.3,
+      so that @pqR{} will be compatible with packages designed for R-2.15.3.
+@item Implement additional operations as tasks that can be done in 
+      helper threads, and otherwise extend the use of the helpers
+      framework.  Document what operations are done in tasks, and
+      whether they can do pipelining, so that users can design programs
+      with this information in mind.
+@item Tune the constants used to decide when computations are large enough
+      that it is worthwhile to do them as tasks, and that control the size 
+      of a chunk of data forwarded when output is pipelined.
+@item Improve the method used by the interpreter for complex assignments,
+      to be as fast or faster as that currently used in code that has
+      been byte compiled.
+@item Make more extensive and consistent use of @pqR{}'s extended 
+      @code{NAMEDCNT} field, in order to reduce duplication of objects.  
+      Document the conventions to be followed in this respect.
+@end itemize
+
+In the longer term, extensions to @pqR{} may be implemented that:
+@itemize @bullet
+@item Allow C and Fortran procedures called with @code{.C} and @code{.Fortran}
+      to be done as tasks, so that these procedures can be done in helper 
+      threads (without any change to the C or Fortran code).
+@item Define an API for procedures called with @code{.Call} to explicitly
+      use the helpers facility, both internally, and when receiving inputs
+      and producing outputs.
+@item Extend the helpers library to better support parallelizing a 
+      single computation using more than one helper thread, and use this 
+      facility in @pqR{}.
+@item Address R's design flaws of unintended reversing sequences and 
+      unintended dropping of array dimensions by introducing a new
+      sequence operator, which will not reverse, and which will attach
+      a @code{dim} attribute that can signal that a dimension should not
+      be dropped.
+@item Address the inefficiency of call-by-value function arguments by
+      introducing the equivalent of the call-by-name facility found
+      in Algol 60.
+@item Address the unreliability of unrestricted global references from
+      within functions by introducing ``closed'' functions, in which
+      such global refernences are restricted.
+@item Address support for objects with more than @math{2^{31}-1} elements.
+      This might or might not be done in a way similar to R-3.0.0.
+@item Further reduce interpretive overhead.  If this is sufficiently 
+      successful that the advantage of byte code compilation is never
+      substantial, the byte code compiler could be discarded without regret,
+      simplifying maintainence.
+@end itemize
 
 @node Function and variable index, Concept index, Future directions, Top
 @unnumbered Function and variable index
