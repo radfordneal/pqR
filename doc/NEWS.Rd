@@ -83,8 +83,14 @@
       \item **28
       \item **29
       \item **30
-      \item **31
-      \item **32
+      \item Existing code for handling special cases of "[" in which there is
+            only one scalar index was replaced by cleaner code that handles 
+            more cases.   The old code handled only integer and real vectors, 
+            and only positive indexes.  The new code handles all atomic 
+            vectors (logical, integer, real, complex, raw, and string), and 
+            positive or negative indexes that are not out of bounds.
+      \item Extraction of subsets of vectors or matrices (eg, v[10:20]
+            or M[1:10,101:110]) has been sped up substantially.
       \item **33
       \item **34
       \item **35
