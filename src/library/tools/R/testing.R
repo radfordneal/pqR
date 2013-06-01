@@ -1,5 +1,6 @@
 #  File src/library/tools/R/testing.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -118,10 +119,14 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE, nullPointers=TRUE, L
     {
         if(!length(txt)) return(txt)
         ## remove R header
-        if(length(top <- grep("^(R version|R : Copyright|R Under development)",
-                              txt, perl = TRUE, useBytes = TRUE)) &&
-           length(bot <- grep("quit R.$", txt, perl = TRUE, useBytes = TRUE)))
+        if(length(top <- 
+            grep("^(pqR version|R version|R : Copyright|R Under development)",
+                 txt, perl = TRUE, useBytes = TRUE)) > 0
+        && length(bot <- 
+              grep("quit R.$", txt, perl = TRUE, useBytes = TRUE)) > 0) {
             txt <- txt[-(top[1L]:bot[1L])]
+        }
+
         ## remove BATCH footer
         nl <- length(txt)
         if(nl > 3L && grepl("^> proc.time()", txt[nl-2L])) txt <- txt[1:(nl-3L)]

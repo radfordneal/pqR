@@ -1,7 +1,7 @@
 \input texinfo
 @c %**start of header
 @setfilename R-exts.info
-@settitle Writing R Extensions
+@settitle Writing R Extensions - with modifications for pqR
 @setchapternewpage on
 @c %**end of header
 
@@ -21,7 +21,7 @@
 @include version.texi
 
 @ifinfo
-This is a guide to extending R.
+This is a guide to extending R - with modifications for pqR.
 
 @Rcopyright{1999}
 
@@ -38,9 +38,9 @@ notice identical to this one except for the removal of this paragraph
 @end ifinfo
 
 @titlepage
-@title Writing R Extensions
-@subtitle Version @value{VERSION}
-@author R Development Core Team
+@title Writing R Extensions - with modifications for pqR
+@subtitle R Version @value{VERSION}, pqR version @value{pqRVERSION}
+@author R Development Core Team, pqR modifications by Radford Neal
 @page
 @vskip 0pt plus 1filll
 @permission{}
@@ -48,6 +48,9 @@ notice identical to this one except for the removal of this paragraph
 @Rcopyright{1999}
 
 @value{ISBN-exts}
+
+Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
+
 @end titlepage
 
 @c @ifnothtml
@@ -62,9 +65,12 @@ This is a guide to extending @R{}, describing the process of creating
 @R{} add-on packages, writing @R{} documentation, @R{}'s system and
 foreign language interfaces, and the @R{} @acronym{API}.
 
-The current version of this document is @value{VERSION}.
+The current version of this document is for R @value{VERSION}.
 
 @value{ISBN-exts}
+
+Modifications for pqR are for pqR version @value{pqRVERSION}.
+
 @end ifnottex
 
 @menu

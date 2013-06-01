@@ -147,14 +147,19 @@ $(texinputs_RECOMMENDED): FORCE
 	    | LC_ALL=C $(R_EXE) ; \
 	fi)
 
-version.texi: Makefile $(top_srcdir)/VERSION $(SVN_REV)
+version.texi: Makefile $(top_srcdir)/VERSION $(SVN_REV) \
+              $(top_srcdir)/pqR-BASE-VERSION $(top_srcdir)/pqR-BASE-DATE 
 	@$(ECHO) "creating $(subdir)/$@"
 	@(vv=`sed 's/ *(.*//' $(top_srcdir)/VERSION`;v=`echo $${vv}| sed 's/\([^ ]*\).*/\1/'`; \
-	  $(ECHO) "@set VERSIONno $${v}" > $@; \
+	  $(ECHO) "@set pqRVERSIONno $${v}" > $@; \
 	  v="$${vv} (`sed -e 1d -e 's/^Last Changed Date: //' $(SVN_REV)`)"; \
-	  $(ECHO) "@set VERSION $${v}" >> $@; \
+	  $(ECHO) "@set pqRVERSION $${v}" >> $@; \
+	  $(ECHO) "@set pqRYEAR" `echo $${v} | sed s/.\*\(// | sed s/-.\*//` >> $@; \
 	  rwv=`$(R_EXE) -f $(top_srcdir)/src/gnuwin32/fixed/rwver.R`; \
-	  $(ECHO) "@set RWVERSION $${rwv}" >> $@ )
+	  $(ECHO) "@set RWVERSION $${rwv}" >> $@; \
+	  $(ECHO) "@set VERSIONno" `cat $(top_srcdir)/pqR-BASE-VERSION` >>$@;\
+	  $(ECHO) "@set VERSION" `cat $(top_srcdir)/pqR-BASE-VERSION` \
+	                \(`cat $(top_srcdir)/pqR-BASE-DATE`\) >> $@ )
 	@if test "$(R_PAPERSIZE)" = "a4"; then \
 	  $(ECHO) "@afourpaper" >> $@ ; \
 	fi

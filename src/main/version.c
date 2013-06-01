@@ -27,7 +27,7 @@
 
 void attribute_hidden PrintGreeting(void)
 {
-    char buf[384];
+    char buf[2000];
 
     Rprintf("\n");
     PrintVersion_part_1(buf);
@@ -47,11 +47,12 @@ Type 'q()' to quit R.\n\n"));
 SEXP attribute_hidden do_version(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP value, names;
-    char buf[128];
+    char buf[200];
 
     checkArity(op, args);
-    PROTECT(value = allocVector(VECSXP,14));
-    PROTECT(names = allocVector(STRSXP,14));
+
+    PROTECT(value = allocVector(VECSXP,17));
+    PROTECT(names = allocVector(STRSXP,17));
 
     SET_STRING_ELT(names, 0, mkChar("platform"));
     SET_VECTOR_ELT(value, 0, mkString(R_PLATFORM));
@@ -87,6 +88,13 @@ SEXP attribute_hidden do_version(SEXP call, SEXP op, SEXP args, SEXP env)
     SET_STRING_ELT(names, 13, mkChar("nickname"));
     SET_VECTOR_ELT(value, 13, mkString(R_NICK));
 
+    SET_STRING_ELT(names, 14, mkChar("pqR.base.version"));
+    SET_VECTOR_ELT(value, 14, mkString(pqR_BASE_VERSION));
+    SET_STRING_ELT(names, 15, mkChar("pqR.base.date"));
+    SET_VECTOR_ELT(value, 15, mkString(pqR_BASE_DATE));
+    SET_STRING_ELT(names, 16, mkChar("pqR.base.year"));
+    SET_VECTOR_ELT(value, 16, mkString(pqR_BASE_YEAR));
+
     setAttrib(value, R_NamesSymbol, names);
     UNPROTECT(2);
     return value;
@@ -114,7 +122,7 @@ void attribute_hidden PrintVersionString(char *s)
 		R_MAJOR, R_MINOR, R_YEAR, R_MONTH, R_DAY);
     } else if(strcmp(R_STATUS, "Under development (unstable)") == 0) {
 	sprintf(s, "R %s (%s-%s-%s r%s)",
-		R_STATUS, R_YEAR, R_MONTH, R_DAY, R_SVN_REVISION);	
+		R_STATUS, R_YEAR, R_MONTH, R_DAY, R_SVN_REVISION);
     } else {
 	sprintf(s, "R version %s.%s %s (%s-%s-%s r%s)",
 		R_MAJOR, R_MINOR, R_STATUS, R_YEAR, R_MONTH, R_DAY,
@@ -124,14 +132,32 @@ void attribute_hidden PrintVersionString(char *s)
 
 void attribute_hidden PrintVersion_part_1(char *s)
 {
-#define SPRINTF_2(_FMT, _OBJ) sprintf(tmp, _FMT, _OBJ); strcat(s, tmp)
-    char tmp[128];
+    char tmp[200];
 
-    PrintVersionString(s);
-    SPRINTF_2("\nCopyright (C) %s The R Foundation for Statistical Computing\n",
-	      R_YEAR);
-    strcat(s, "ISBN 3-900051-07-0\n");
-    SPRINTF_2("Platform: %s", R_PLATFORM);
-    if(strlen(R_ARCH)) { SPRINTF_2("/%s", R_ARCH); }
-    SPRINTF_2(" (%d-bit)\n", 8*(int)sizeof(void *));
+    strcpy(s,"pq"); 
+    PrintVersionString(tmp); 
+    strcat(s,tmp);
+
+    sprintf(tmp, ", based on R %s (%s)\n\n", pqR_BASE_VERSION, pqR_BASE_DATE);
+    strcat(s,tmp);
+
+    sprintf (tmp, 
+      "R is Copyright (C) %s The R Foundation for Statistical Computing\n", 
+      pqR_BASE_YEAR);
+    strcat(s,tmp);
+
+    strcat (s, "ISBN 3-900051-07-0\n\n");
+
+    sprintf (tmp, 
+      "Modifications to R in pqR are Copyright (C) %s Radford M. Neal\n\n",
+      R_YEAR);
+    strcat(s,tmp);
+
+    sprintf (tmp, "Platform: %s", R_PLATFORM);
+    strcat(s,tmp);
+
+    if (*R_ARCH) { sprintf(tmp,"/%s",R_ARCH); strcat(s,tmp); }
+
+    sprintf (tmp, " (%d-bit)\n", 8*(int)sizeof(void *));
+    strcat(s,tmp);
 }

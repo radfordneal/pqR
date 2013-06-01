@@ -1334,7 +1334,8 @@ stopifnot(!identical(
 
 
 ## getNamespaceVersion() etc
-stopifnot(getNamespaceVersion("stats") == getRversion())
+## DISABLED for pqR, since version of 'stats' needn't be the same.
+#stopifnot(getNamespaceVersion("stats") == getRversion())
 ## failed in R 2.11.x
 
 
