@@ -23,6 +23,8 @@
 #include <config.h>
 #endif
 
+/* Don't enable this, since many instances, but not time critical */
+/* #define USE_FAST_PROTECT_MACROS */ 
 #include "IOStuff.h"		/*-> Defn.h */
 #include "Fileio.h"
 #include "Parse.h"

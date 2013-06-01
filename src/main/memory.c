@@ -81,6 +81,7 @@
 #define VALGRIND_LEVEL 0
 #endif
 
+#define USE_FAST_PROTECT_MACROS   /* MUST be defined in this module! */
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <R_ext/GraphicsEngine.h> /* GEDevDesc, GEgetDevice */
@@ -2765,17 +2766,22 @@ SEXP attribute_hidden do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-/* "protect" push a single argument onto R_PPStack */
+/* "protect" push a single argument onto R_PPStack.
 
-/* In handling a stack overflow we have to be careful not to use
+   In handling a stack overflow we have to be careful not to use
    PROTECT. error("protect(): stack overflow") would call deparse1,
-   which uses PROTECT and segfaults.*/
+   which uses PROTECT and segfaults.
 
-/* However, the traceback creation in the normal error handler also
+   However, the traceback creation in the normal error handler also
    does a PROTECT, as does the jumping code, at least if there are
    cleanup expressions to handle on the way out.  So for the moment
    we'll allocate a slightly larger PP stack and only enable the added
-   red zone during handling of a stack overflow error.  LT */
+   red zone during handling of a stack overflow error.  LT 
+
+   The PROTECT, UNPROTECT, PROTECT_WITH_INDEX, and REPROTECT macros at 
+   the end of Defn.h do these things without procedure call overhead, and 
+   are used here to define these functions, to keep the code in sync. 
+*/
 
 static void reset_pp_stack(void *data)
 {
@@ -2783,40 +2789,59 @@ static void reset_pp_stack(void *data)
     R_PPStackSize =  *poldpps;
 }
 
+SEXP attribute_hidden Rf_protect_error (void) /* SEXP only so it will work    */
+{                                             /* with "?" in macros in Defn.h */
+    RCNTXT cntxt;
+    R_size_t oldpps = R_PPStackSize;
+
+    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+             R_NilValue, R_NilValue);
+    cntxt.cend = &reset_pp_stack;
+    cntxt.cenddata = &oldpps;
+
+    if (R_PPStackSize < R_RealPPStackSize)
+        R_PPStackSize = R_RealPPStackSize;
+    errorcall(R_NilValue, _("protect(): protection stack overflow"));
+
+    endcontext(&cntxt); /* not reached */
+    return R_NilValue;
+}
+
 SEXP protect(SEXP s)
 {
-    if (R_PPStackTop >= R_PPStackSize) {
-	RCNTXT cntxt;
-	R_size_t oldpps = R_PPStackSize;
+    return PROTECT (CHK(s));
+}
 
-	begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
-		     R_NilValue, R_NilValue);
-	cntxt.cend = &reset_pp_stack;
-	cntxt.cenddata = &oldpps;
 
-	if (R_PPStackSize < R_RealPPStackSize)
-	    R_PPStackSize = R_RealPPStackSize;
-	errorcall(R_NilValue, _("protect(): protection stack overflow"));
+/* Push 2 or 3 arguments onto protect stack.  BEWARE! All arguments will
+   be evaluated (in the C sense) before any are protected. */
 
-	endcontext(&cntxt); /* not reached */
-    }
-    R_PPStack[R_PPStackTop++] = CHK(s);
-    return s;
+void Rf_protect2 (SEXP s1, SEXP s2)
+{
+    PROTECT2 (CHK(s1), CHK(s2));
+}
+
+void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
+{
+    PROTECT3 (CHK(s1), CHK(s2), CHK(s3));
 }
 
 
 /* "unprotect" pop argument list from top of R_PPStack */
 
+void attribute_hidden Rf_unprotect_error (void)
+{
+    error(_("unprotect(): only %d protected items"), R_PPStackTop);
+}
+
 void unprotect(int l)
 {
-    if (R_PPStackTop >=  l)
-	R_PPStackTop -= l;
-    else
-	error(_("unprotect(): only %d protected items"), R_PPStackTop);
+    return UNPROTECT(l);
 }
 
 
-/* "unprotect_ptr" remove pointer from somewhere in R_PPStack */
+/* "unprotect_ptr" remove pointer from somewhere in R_PPStack.  Don't
+   try to combine use of this with use of ProtectWithIndex! */
 
 void unprotect_ptr(SEXP s)
 {
@@ -2837,15 +2862,14 @@ void unprotect_ptr(SEXP s)
     R_PPStackTop--;
 }
 
-void R_ProtectWithIndex(SEXP s, PROTECT_INDEX *pi)
+SEXP R_ProtectWithIndex(SEXP s, PROTECT_INDEX *pi)
 {
-    protect(s);
-    *pi = R_PPStackTop - 1;
+    return PROTECT_WITH_INDEX(CHK(s),pi);
 }
 
 void R_Reprotect(SEXP s, PROTECT_INDEX i)
 {
-    R_PPStack[i] = s;
+    REPROTECT(CHK(s),i);
 }
 
 /* remove all objects from the protection stack from index i upwards

@@ -63,6 +63,7 @@
 #undef HAVE_CPOW
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>		/* -> ../include/R_ext/Complex.h */
 #include <Rmath.h>
 #include <R_ext/Applic.h>	/* R_cpoly */

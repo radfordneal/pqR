@@ -27,6 +27,7 @@
 # include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
 
@@ -38,7 +39,8 @@ do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEXP rho)
     SEXP vnames, fcall = R_NilValue,  mindex, nindex, tmp1, tmp2, ans;
 
     m = length(varyingArgs);
-    vnames = PROTECT(getAttrib(varyingArgs, R_NamesSymbol));
+    PROTECT(vnames = getAttrib(varyingArgs, R_NamesSymbol));
+
     named = vnames != R_NilValue;
 
     lengths = (int *)  R_alloc(m, sizeof(int));
@@ -53,8 +55,8 @@ do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEXP rho)
     counters = (int *) R_alloc(m, sizeof(int));
     for(i = 0; i < m; counters[i++] = 0);
 
-    mindex = PROTECT(allocVector(VECSXP, m));
-    nindex = PROTECT(allocVector(VECSXP, m));
+    PROTECT(mindex = allocVector(VECSXP, m));
+    PROTECT(nindex = allocVector(VECSXP, m));
 
     /* build a call like
        f(dots[[1]][[4]], dots[[2]][[4]], dots[[3]][[4]], d=7)

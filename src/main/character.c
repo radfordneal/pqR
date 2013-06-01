@@ -74,6 +74,7 @@ abbreviate chartr make.names strtrim tolower toupper give error.
 # include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <errno.h>
 

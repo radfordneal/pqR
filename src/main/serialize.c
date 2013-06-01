@@ -30,6 +30,7 @@
 #endif
 
 #define NEED_CONNECTION_PSTREAMS
+#define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Rmath.h>

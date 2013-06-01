@@ -44,6 +44,8 @@
 # include <config.h>
 #endif
 
+/* Don't enable this, since many instances, but probably not time critical */
+/* #define USE_FAST_PROTECT_MACROS */ 
 #include <Defn.h>
 #include <Rinterface.h>
 #include <Fileio.h>

@@ -67,6 +67,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 #include "Print.h"
 #include "Fileio.h"
@@ -330,7 +331,8 @@ static void PrintGenericVector(SEXP s, SEXP env)
 	PROTECT(t = allocArray(STRSXP, dims));
 	/* FIXME: check (ns <= R_print.max +1) ? ns : R_print.max; */
 	for (i = 0; i < ns; i++) {
-	    switch(TYPEOF(PROTECT(tmp = VECTOR_ELT(s, i)))) {
+	    PROTECT(tmp = VECTOR_ELT(s, i));
+	    switch(TYPEOF(tmp)) {
 	    case NILSXP:
 		snprintf(pbuf, 115, "NULL");
 		break;

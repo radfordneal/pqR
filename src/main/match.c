@@ -66,6 +66,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 
 /* This is a horrible kludge used in logic.c and in summary.c (where 

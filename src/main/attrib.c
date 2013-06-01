@@ -28,6 +28,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <Rmath.h>
 
@@ -1550,7 +1551,7 @@ SEXP R_do_slot(SEXP obj, SEXP name) {
 		    TYPEOF(obj) == VECSXP) /* needed for namedList class */
 	        return value;
 	    if(isSymbol(name) ) {
-		input = PROTECT(ScalarString(PRINTNAME(name)));
+		PROTECT(input = ScalarString(PRINTNAME(name)));
 		classString = getAttrib(obj, R_ClassSymbol);
 		if(isNull(classString)) {
 		    UNPROTECT(1);

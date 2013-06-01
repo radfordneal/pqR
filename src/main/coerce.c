@@ -29,6 +29,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h> /*-- Maybe modularize into own Coerce.h ..*/
 #include <float.h> /* for DBL_DIG */
 #define R_MSG_mode	_("invalid 'mode' argument")

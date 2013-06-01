@@ -1312,6 +1312,52 @@ extern void *alloca(size_t);
 # endif
 #endif
 
+
+/* Enable this by defining USE_FAST_PROTECT_MACROS before including Defn.h.
+
+   Redefines PROTECT, UNPROTECT, PROTECT_WITH_INDEX, and REPROTECT for speed,
+   as is possible because the required variables are defined above.  The
+   macros below call procedure in memory.c for error handling.  PROTECT_PTR is 
+   not redefined, since it contains a significant amount of code.
+
+   Defining USE_FAST_PROTECT_MACROS in source files outside src/main may
+   cause problems at link time. */
+
+#ifdef USE_FAST_PROTECT_MACROS
+
+extern SEXP Rf_protect_error (void);    /* SEXP only so it will work with "?" */
+extern void Rf_unprotect_error (void);
+
+#undef  PROTECT
+#define PROTECT(s) \
+  ( R_PPStackTop < R_PPStackSize ? R_PPStack[R_PPStackTop++] = (s) \
+                                 : Rf_protect_error() )
+#undef  PROTECT2
+#define PROTECT2(s1,s2) \
+  ( R_PPStackTop+1 < R_PPStackSize ? (R_PPStack[R_PPStackTop++] = (s1), \
+                                      R_PPStack[R_PPStackTop++] = (s2)) \
+                                   : Rf_protect_error() )
+#undef  PROTECT3
+#define PROTECT3(s1,s2,s3) \
+  ( R_PPStackTop+2 < R_PPStackSize ? (R_PPStack[R_PPStackTop++] = (s1), \
+                                      R_PPStack[R_PPStackTop++] = (s2), \
+                                      R_PPStack[R_PPStackTop++] = (s3)) \
+                                   : Rf_protect_error() )
+#undef  UNPROTECT
+#define UNPROTECT(n) \
+  ( R_PPStackTop >= (n) ? (void) (R_PPStackTop -= (n)) \
+                        : Rf_unprotect_error() )
+
+#undef  PROTECT_WITH_INDEX
+#define PROTECT_WITH_INDEX(x,i) \
+  ( (*(i) = R_PPStackTop), PROTECT(x) )
+
+#undef  REPROTECT
+#define REPROTECT(x,i) \
+  ( (void) (R_PPStack[i] = x) )
+
+#endif
+
 #endif /* DEFN_H_ */
 /*
  *- Local Variables:

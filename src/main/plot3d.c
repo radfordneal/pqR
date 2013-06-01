@@ -29,6 +29,8 @@
 #include <config.h>
 #endif
 
+/* Don't enable this, since many instances, but probably not time critical */
+/* #define USE_FAST_PROTECT_MACROS */ 
 #include <Defn.h>
 #include <float.h>  /* for DBL_MAX */
 #include <Rmath.h>
@@ -647,7 +649,7 @@ static SEXP growList(SEXP oldlist) {
     int i, len;
     SEXP templist;
     len = LENGTH(oldlist);
-    templist = PROTECT(allocVector(VECSXP, len + CONTOUR_LIST_STEP));
+    PROTECT(templist = allocVector(VECSXP, len + CONTOUR_LIST_STEP));
     for (i=0; i<len; i++)
 	SET_VECTOR_ELT(templist, i, VECTOR_ELT(oldlist, i));
     UNPROTECT(1);
@@ -721,10 +723,10 @@ int addContourLines(double *x, int nx, double *y, int ny,
 		/*
 		 * "write" the contour locations into the list of contours
 		 */
-		ctr = PROTECT(allocVector(VECSXP, 3));
-		level = PROTECT(allocVector(REALSXP, 1));
-		xsxp = PROTECT(allocVector(REALSXP, ns + 1));
-		ysxp = PROTECT(allocVector(REALSXP, ns + 1));
+		PROTECT(ctr = allocVector(VECSXP, 3));
+		PROTECT(level = allocVector(REALSXP, 1));
+		PROTECT(xsxp = allocVector(REALSXP, ns + 1));
+		PROTECT(ysxp = allocVector(REALSXP, ns + 1));
 		REAL(level)[0] = zc;
 		SET_VECTOR_ELT(ctr, CONTOUR_LIST_LEVEL, level);
 		s = start;
@@ -819,7 +821,7 @@ SEXP GEcontourLines(double *x, int nx, double *y, int ny,
      * grow and it's awkward to get the PROTECTs/UNPROTECTs right
      * when you're in a loop and growing a list.
      */
-    container = PROTECT(allocVector(VECSXP, 1));
+    PROTECT(container = allocVector(VECSXP, 1));
     /*
      * Create "large" list (will trim excess at the end if necesary)
      */
@@ -852,7 +854,7 @@ SEXP GEcontourLines(double *x, int nx, double *y, int ny,
     len = LENGTH(VECTOR_ELT(container, 0));
     if (nlines < len) {
 	mainlist = VECTOR_ELT(container, 0);
-	templist = PROTECT(allocVector(VECSXP, nlines));
+	PROTECT(templist = allocVector(VECSXP, nlines));
 	for (i=0; i<nlines; i++)
 	    SET_VECTOR_ELT(templist, i, VECTOR_ELT(mainlist, i));
 	mainlist = templist;
@@ -936,11 +938,13 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
     double xStart, yStart;
     double dx, dy, dxy;
     double labelHeight;
-    SEXP label1 = PROTECT(allocVector(REALSXP, 8));
+    SEXP label1;
     SEXP label2;
     SEXP lab;
     Rboolean gotLabel = FALSE;
     Rboolean ddl;/* Don't draw label -- currently unused, i.e. always FALSE*/
+
+    PROTECT(label1 = allocVector(REALSXP, 8));
 
 #ifdef DEBUG_contour
     Rprintf("contour(lev = %g):\n", zc);
@@ -1231,7 +1235,7 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
 					xxx[indx], yyy[indx],
 					xxx[indx+range], yyy[indx+range], dd);
 			    UNPROTECT_PTR(labelList);
-			    labelList = PROTECT(CONS(label2, labelList));
+			    PROTECT(labelList = CONS(label2, labelList));
 
 			    ddl = FALSE;
 			    /* draw an extra bit of segment if the label
@@ -1479,7 +1483,7 @@ SEXP attribute_hidden do_contour(SEXP call, SEXP op, SEXP args, SEXP env)
     colsave = gpptr(dd)->col;
     lwdsave = gpptr(dd)->lwd;
     cexsave = gpptr(dd)->cex;
-    labelList = PROTECT(R_NilValue);
+    PROTECT(labelList = R_NilValue);
 
 
     /* draw contour for levels[i] */

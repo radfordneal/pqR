@@ -29,6 +29,8 @@
 # include <config.h>
 #endif
 
+/* Don't enable this, since many instances, but probably not time critical */
+/* #define USE_FAST_PROTECT_MACROS */ 
 #include <Defn.h>
 #include <float.h>  /* for DBL_MAX */
 #include <Graphics.h>
@@ -220,7 +222,7 @@ SEXP FixupCol(SEXP col, unsigned int dflt)
     if (n == 0) {
 	PROTECT(ans = ScalarInteger(dflt));
     } else {
-	ans = PROTECT(allocVector(INTSXP, n));
+	PROTECT(ans = allocVector(INTSXP, n));
 	if (isList(col))
 	    for (i = 0; i < n; i++) {
 		INTEGER(ans)[i] = RGBpar3(CAR(col), 0, bg);
@@ -3863,7 +3865,7 @@ SEXP attribute_hidden do_symbols(SEXP call, SEXP op, SEXP args, SEXP env)
     type = asInteger(CAR(args)); args = CDR(args);
 
     /* data: */
-    p = PROTECT(coerceVector(CAR(args), REALSXP)); args = CDR(args);
+    PROTECT(p = coerceVector(CAR(args), REALSXP)); args = CDR(args);
     CheckSymbolPar(call, p, &nr, &nc);
     if (LENGTH(x) != nr || LENGTH(y) != nr)
 	error(_("x/y/parameter length mismatch"));

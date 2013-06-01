@@ -33,6 +33,7 @@
 /* for definition of "struct exception" in math.h */
 # define __LIBM_PRIVATE
 #endif
+#define USE_FAST_PROTECT_MACROS
 #include "Defn.h"		/*-> Arith.h -> math.h */
 #ifdef __OpenBSD__
 # undef __LIBM_PRIVATE

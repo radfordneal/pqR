@@ -41,6 +41,7 @@
 #include <config.h>
 #endif
 
+#define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
 /* We might get a call with R_NilValue from subassignment code */
