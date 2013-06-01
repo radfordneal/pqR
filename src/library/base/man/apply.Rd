@@ -1,6 +1,7 @@
 % File src/library/base/man/apply.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{apply}
@@ -18,8 +19,10 @@ apply(X, MARGIN, FUN, \dots)
   \item{MARGIN}{a vector giving the subscripts which the function will
     be applied over.  E.g., for a matrix \code{1} indicates rows,
     \code{2} indicates columns, \code{c(1, 2)} indicates rows and
-    columns. Where \code{X} has named dimnames, it can be a character
-    vector selecting dimension names.}
+    columns.  In general, it must either be a vector of all positive 
+    integers, or a vector of all negative integers, or, where \code{X} 
+    has named dimnames, a character vector selecting dimension names.
+    Duplicate entries in \code{MARGIN} are not allowed.}
   \item{FUN}{the function to be applied: see \sQuote{Details}.
     In the case of functions like \code{+}, \code{\%*\%}, etc., the
     function name must be backquoted or quoted.}
@@ -40,14 +43,14 @@ apply(X, MARGIN, FUN, \dots)
   If each call to \code{FUN} returns a vector of length \code{n}, then
   \code{apply} returns an array of dimension \code{c(n, dim(X)[MARGIN])}
   if \code{n > 1}.  If \code{n} equals \code{1}, \code{apply} returns a
-  vector if \code{MARGIN} has length 1 and an array of dimension
+  vector if \code{MARGIN} selects one dimension and an array of dimension
   \code{dim(X)[MARGIN]} otherwise.
   If \code{n} is \code{0}, the result has length 0 but not necessarily
   the \sQuote{correct} dimension.
 
   If the calls to \code{FUN} return vectors of different lengths,
   \code{apply} returns a list of length \code{prod(dim(X)[MARGIN])} with
-  \code{dim} set to \code{MARGIN} if this has length greater than one.
+  dimensions set if \code{MARGIN} selects more than one dimension.
 
   In all cases the result is coerced by \code{\link{as.vector}} to one
   of the basic vector types before the dimensions are set, so that (for

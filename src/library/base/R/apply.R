@@ -1,5 +1,6 @@
 #  File src/library/base/R/apply.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,7 +28,7 @@ apply <- function(X, MARGIN, FUN, ...)
     ## (e.g. when a data frame contains a matrix).
     d <- dim(X)
     dn <- dimnames(X)
-    ds <- seq_len(dl)
+    ds <- seq_along(d)
 
     ## Extract the margins and associated dimnames
 
@@ -38,67 +39,106 @@ apply <- function(X, MARGIN, FUN, ...)
         if (any(is.na(MARGIN)))
             stop("not all elements of 'MARGIN' are names of dimensions")
     }
-    s.call <- ds[-MARGIN]
-    s.ans  <- ds[MARGIN]
-    d.call <- d[-MARGIN]
-    d.ans  <- d[MARGIN]
-    dn.call<- dn[-MARGIN]
-    dn.ans <- dn[MARGIN]
-    ## dimnames(X) <- NULL
 
-    ## do the calls
+    if (length(MARGIN) != length(unique(MARGIN))
+     || !all(MARGIN %in% ds) && !all(-MARGIN %in% ds))
+        stop("Bad 'MARGIN' argument")
+
+    s.ans  <- ds[MARGIN]
+    s.call <- if (length(s.ans)) ds[-s.ans] else ds
+
+    d.call <- d[s.call]
+    d.ans  <- d[s.ans]
+    dn.call<- dn[s.call]
+    dn.ans <- dn[s.ans]
 
     d2 <- prod(d.ans)
+
+    ## For arrays with some 0 extents: return ``empty result'' trying
+    ## to use proper mode and dimension:
+
     if(d2 == 0L) {
-        ## arrays with some 0 extents: return ``empty result'' trying
-        ## to use proper mode and dimension:
         ## The following is still a bit `hackish': use non-empty X
-        newX <- array(vector(typeof(X), 1L), dim = c(prod(d.call), 1L))
-        ans <- FUN(if(length(d.call) < 2L) newX[,1] else
-                   array(newX[, 1L], d.call, dn.call), ...)
+        X <- array(vector(typeof(X), 1L), dim = c(prod(d.call), 1L))
+        ans <- FUN(if(length(d.call) < 2L) X[,1] else
+                   array(X[, 1L], d.call, dn.call), ...)
         return(if(is.null(ans)) ans else if(length(d.ans) < 2L) ans[1L][-1L]
                else array(ans, d.ans, dn.ans))
     }
-    ## else
-    newX <- aperm(X, c(s.call, s.ans))
-    dim(newX) <- c(prod(d.call), d2)
+
+    # Make the function calls.
+
     ans <- vector("list", d2)
-    if(length(d.call) < 2L) {# vector
-        if (length(dn.call)) dimnames(newX) <- c(dn.call, list(NULL))
-        for(i in 1L:d2) {
-            tmp <- FUN(newX[,i], ...)
-            if(!is.null(tmp)) ans[[i]] <- tmp
-        }
-    } else
-       for(i in 1L:d2) {
-           tmp <- FUN(array(newX[,i], d.call, dn.call), ...)
-           if(!is.null(tmp)) ans[[i]] <- tmp
-        }
+
+    if (length(d) == 2 && length(s.ans) == 1) { # Quick version for a matrix
+
+        if (length(dn.call))
+            dimnames(X) <- 
+              if (s.call==1) c(dn.call, list(NULL)) else c(list(NULL), dn.call)
+
+        if (s.ans == 1)
+            for (i in 1L:d2) {
+                tmp <- FUN (X[i,], ...)
+                if (!is.null(tmp)) ans[[i]] <- tmp
+            }
+        else
+            for (i in 1L:d2) {
+                tmp <- FUN (X[,i], ...)
+                if (!is.null(tmp)) ans[[i]] <- tmp
+            }
+    }
+
+    else { # General version
+
+        if (any (c(s.call,s.ans) != ds)) 
+            X <- aperm(X, c(s.call, s.ans))
+        dim(X) <- c(prod(d.call), d2)
+    
+        if(length(d.call) < 2L) {# vector
+            if (length(dn.call)) 
+                dimnames(X) <- c(dn.call, list(NULL))
+            for (i in 1L:d2) {
+                tmp <- FUN(X[,i], ...)
+                if (!is.null(tmp)) ans[[i]] <- tmp
+            }
+        } 
+        else
+           for (i in 1L:d2) {
+               tmp <- FUN(array(X[,i], d.call, dn.call), ...)
+               if (!is.null(tmp)) ans[[i]] <- tmp
+            }
+    }
+
+    X <- NULL
 
     ## answer dims and dimnames
 
-    ans.list <- is.recursive(ans[[1L]])
-    l.ans <- length(ans[[1L]])
+    ans.list <- is.recursive(ans[[1L]]) ||
+                any (unlist(lapply(ans,length)) != length(ans[[1L]]))
 
-    ans.names <- names(ans[[1L]])
-    if(!ans.list)
-	ans.list <- any(unlist(lapply(ans, length)) != l.ans)
-    if(!ans.list && length(ans.names)) {
-        all.same <- vapply(ans, function(x) identical(names(x), ans.names), NA)
-        if (!all(all.same)) ans.names <- NULL
+    if (ans.list)
+        len.a <- d2
+    else {
+        ans.names <- names(ans[[1L]])
+        if (length(ans.names) &&
+             !all (vapply (ans, function(x) identical(names(x),ans.names), NA)))
+            ans.names <- NULL
+        ans <- unlist (ans, recursive = FALSE)
+        len.a <- length(ans)
     }
-    len.a <- if(ans.list) d2 else length(ans <- unlist(ans, recursive = FALSE))
-    if(length(MARGIN) == 1L && len.a == d2) {
-	names(ans) <- if(length(dn.ans[[1L]])) dn.ans[[1L]] # else NULL
-	return(ans)
+
+    if (len.a == d2) {
+        if (length(s.ans) == 1L)
+            names(ans) <- if (length(dn.ans[[1L]])) dn.ans[[1L]] else NULL
+        else
+            ans <- array(ans, d.ans, dn.ans)
     }
-    if(len.a == d2)
-	return(array(ans, d.ans, dn.ans))
-    if(len.a && len.a %% d2 == 0L) {
+    else if (len.a && len.a %% d2 == 0L) {
         if(is.null(dn.ans)) dn.ans <- vector(mode="list", length(d.ans))
         dn.ans <- c(list(ans.names), dn.ans)
-	return(array(ans, c(len.a %/% d2, d.ans),
-		     if(!all(vapply(dn.ans, is.null, NA))) dn.ans))
+        ans <- array (ans, c(len.a %/% d2, d.ans),
+                      if(!all(vapply(dn.ans, is.null, NA))) dn.ans)
     }
-    return(ans)
+
+    get_rm(ans)
 }

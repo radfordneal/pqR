@@ -475,6 +475,14 @@
       \item **29
       \item **30
       \item **31
+      \item The documentation on what \code{MARGIN} arguments are allowed for
+            \code{apply} has been clarified, and checks for validity added.
+            The call 
+\preformatted{
+  > apply(array(1:24,c(2,3,4)),-3,sum)
+}
+            now produces correct results (the same as when \code{MARGIN}
+            is \code{1:2}).
       \item **32
       \item Fixed a bug in which \code{Im(matrix(complex(0),3,4))} returned
             a matrix of zero elements rather than a matrix of NA elements.
