@@ -121,7 +121,12 @@
       \item **10
       \item **11
       \item **12
-      \item **13
+      \item A call of R_isMissing was removed in the interpeter's evalList 
+            function.  This check, done for every argument to a builtin 
+            primitive that is a symbol, is slow, and appears to serve only 
+            to produce an error message that is slightly different (and 
+            sometimes less informative) than simply letting the symbol be 
+            evaluated.
       \item **14
       \item **15
       \item **16

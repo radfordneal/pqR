@@ -1,0 +1,5 @@
+Removes a call of R_isMissing in the interpeter's evalList function.
+This check, done for every argument to a builtin primitive that is a
+symbol, is slow, and appears to serve only to produce an error message
+that is slightly different (and sometimes less informative) than
+simply letting the symbol be evaluated.

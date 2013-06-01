@@ -1838,9 +1838,12 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	    /* It was an empty element: most likely get here from evalArgs
 	       which may have been called on part of the args. */
 	    errorcall(call, _("argument %d is empty"), n);
+#if 0  /* OMITTED - this check is slow, and serves only to produce a less 
+          informative error message than letting the eval below happen. */
 	} else if (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) {
 	    /* It was missing */
 	    errorcall(call, _("'%s' is missing"), CHAR(PRINTNAME(CAR(el)))); 
+#endif
 	} else {
             ev = CONS(eval(CAR(el), rho), R_NilValue);
             if (head==R_NilValue)
