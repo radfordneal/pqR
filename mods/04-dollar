@@ -1,0 +1,9 @@
+Access via the $ operator to lists, pairlists, and environments has
+been sped up.  The speedup comes mainly from (a) avoiding the overhead
+of calling DispatchOrEval if there are no complexities, (b) passing on
+the field to extract as a symbol, or a name, or both, as available,
+and then converting only as necessary, (c) using the new ep_match
+functions instead of the previous local pstrmatch procedure, and (d)
+not translating a string multiple times.
+
+An error reporting bug in $ was also fixed.  See NEWS entry.

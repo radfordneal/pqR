@@ -160,7 +160,14 @@
             same way as was done in my Sep 2010 patch for evalList, which 
             was incorporated into 2.12.0 and later versions of R.
       \item **20
-      \item **21
+      \item Access via the $ operator to lists, pairlists, and environments 
+            has been sped up.  The speedup comes mainly from (a) avoiding the
+            overhead of calling DispatchOrEval if there are no complexities,
+            (b) passing on the field to extract as a symbol, or a name, or 
+            both, as available, and then converting only as necessary, 
+            (c) using the new ep_match functions instead of the previous local
+            pstrmatch procedure, and (d) not translating a string multiple 
+            times.
       \item **22
       \item **23
       \item **24
@@ -267,7 +274,16 @@
     \itemize{
       \item **1
       \item **2
-      \item **3
+      \item Fixed a small error-reporting bug with "$",
+            illustrated by the following output:
+\preformatted{
+    > options(warnPartialMatchDollar=TRUE)
+    > pl <- pairlist(abc=1,def=2)
+    > pl$ab
+    [1] 1
+    Warning message:
+    In pl$ab : partial match of 'ab' to ''
+}
       \item **4
       \item Fixed documentation error in R-admin regarding the
             --disable-byte-compiled-packages configuration option, 
