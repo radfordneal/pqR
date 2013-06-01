@@ -409,14 +409,7 @@ INLINE_FUN Rboolean isVector(SEXP s)/* === isVectorList() or isVectorAtomic() */
 
 INLINE_FUN Rboolean isFrame(SEXP s)
 {
-    SEXP klass;
-    int i;
-    if (OBJECT(s)) {
-	klass = getAttrib(s, R_ClassSymbol);
-	for (i = 0; i < length(klass); i++)
-	    if (!strcmp(CHAR(STRING_ELT(klass, i)), "data.frame")) return TRUE;
-    }
-    return FALSE;
+    return inherits (s, "data.frame");
 }
 
 INLINE_FUN Rboolean isLanguage(SEXP s)
@@ -468,9 +461,7 @@ INLINE_FUN Rboolean isFactor(SEXP s)
 
 INLINE_FUN int nlevels(SEXP f)
 {
-    if (!isFactor(f))
-	return 0;
-    return LENGTH(getAttrib(f, R_LevelsSymbol));
+    return isFactor(f) ? length(getAttrib(f, R_LevelsSymbol)) : 0;
 }
 
 /* Is an object of numeric type. */
