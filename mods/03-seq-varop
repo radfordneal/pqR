@@ -1,0 +1,6 @@
+Several primitive functions that can generate integer sequences (":",
+seq.int, seq_len, and seq_along) will now sometimes not generate an
+actual sequence, but rather just a description of its start and end
+points.  This is not visible to users (except in time and space
+savings), but allows for speed up (with other mods) of primitive
+operations such as "for" loops and indexing of vectors.
