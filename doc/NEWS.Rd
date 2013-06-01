@@ -311,7 +311,10 @@
             as \code{for (i in 1:1000000) ...}, and indexing of vectors
             such as \code{v[1000:2000]}.
       \item **39
-      \item **40
+      \item For loops in which the index variable goes through an
+            integer sequence, such as, \code{for (i in 1:10000000) ...},
+            are now done without actualy allocating a vector to hold
+            the sequence.  This saves both space and time.
       \item **41
       \item **42
       \item **43

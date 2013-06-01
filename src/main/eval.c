@@ -1316,7 +1316,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     int dbg, val_type;
     SEXP sym, body;
     RCNTXT cntxt;
-    PROTECT_INDEX vpi;
+    PROTECT_INDEX valpi, vpi;
+    int variant;
 
     sym = CAR(args);
     val = CADR(args);
@@ -1331,99 +1332,109 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(args);
     PROTECT(rho);
-    PROTECT(val = eval(val, rho));
-    defineVar(sym, R_NilValue, rho);
 
-    /* deal with the case where we are iterating over a factor
-       we need to coerce to character - then iterate */
+    PROTECT_WITH_INDEX(val = evalv (val, rho, VARIANT_SEQ), &valpi);
+    variant = ATTRIB(val) == R_VariantResult;
 
-    if ( inherits(val, "factor") ) {
-        SEXP tmp = asCharacterFactor(val);
-	UNPROTECT(1); /* val from above */
-        PROTECT(val = tmp);
+    if (variant) {
+        if (TYPEOF(val)!=INTSXP || LENGTH(val)!=2) /* shouldn't happen*/
+            errorcall(call, "internal inconsistency with variant op in for!");
+        n = INTEGER(val)[1] - INTEGER(val)[0] + 1;
+        val_type = INTSXP;
     }
+    else { /* non-variant return value */
 
-    if (isList(val) || isNull(val))
-	n = length(val);
-    else
-	n = LENGTH(val);
+        /* deal with the case where we are iterating over a factor
+           we need to coerce to character - then iterate */
 
-    val_type = TYPEOF(val);
+        if ( inherits(val, "factor") )
+            REPROTECT(val = asCharacterFactor(val), valpi);
+
+        /* increment NAMED for sequence to avoid modification by loop code */
+        if (NAMED(val) < 2) SET_NAMED(val, NAMED(val) + 1);
+
+        if (isList(val) || isNull(val))
+	    n = length(val);
+        else
+	    n = LENGTH(val);
+
+        val_type = TYPEOF(val);
+    }
 
     dbg = RDEBUG(rho);
     bgn = BodyHasBraces(body);
-
-    /* bump up NAMED count of sequence to avoid modification by loop code */
-    if (NAMED(val) < 2) SET_NAMED(val, NAMED(val) + 1);
 
     PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
+
     switch (SETJMP(cntxt.cjmpbuf)) {
     case CTXT_BREAK: goto for_break;
     case CTXT_NEXT: goto for_next;
     }
+
+    if (n == 0) 
+        defineVar (sym, R_NilValue, rho);  /* mimic previous behaviour */
+
     for (i = 0; i < n; i++) {
 
 	switch (val_type) {
 
 	case EXPRSXP:
 	case VECSXP:
+	    v = VECTOR_ELT(val, i);
 	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(VECTOR_ELT(val, i), 2);
-	    /* defineVar is used here and below rather than setVar in
-	       case the loop code removes the variable. */
-	    defineVar(sym, VECTOR_ELT(val, i), rho);
+	    SET_NAMED(v, 2);
 	    break;
 
 	case LISTSXP:
-	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(CAR(val), 2);
-	    defineVar(sym, CAR(val), rho);
+	    v = CAR(val);
 	    val = CDR(val);
+	    /* make sure loop variable is not modified via other vars */
+	    SET_NAMED(v, 2);
 	    break;
 
 	default:
 
+            ALLOC_LOOP_VAR(v, val_type, vpi);
+
             switch (val_type) {
             case LGLSXP:
-                ALLOC_LOOP_VAR(v, val_type, vpi);
                 LOGICAL(v)[0] = LOGICAL(val)[i];
                 break;
             case INTSXP:
-                ALLOC_LOOP_VAR(v, val_type, vpi);
-                INTEGER(v)[0] = INTEGER(val)[i];
+                INTEGER(v)[0] = variant ? INTEGER(val)[0] + i 
+                                        : INTEGER(val)[i];
                 break;
             case REALSXP:
-                ALLOC_LOOP_VAR(v, val_type, vpi);
                 REAL(v)[0] = REAL(val)[i];
                 break;
             case CPLXSXP:
-                ALLOC_LOOP_VAR(v, val_type, vpi);
                 COMPLEX(v)[0] = COMPLEX(val)[i];
                 break;
             case STRSXP:
-                ALLOC_LOOP_VAR(v, val_type, vpi);
                 SET_STRING_ELT(v, 0, STRING_ELT(val, i));
                 break;
             case RAWSXP:
-                ALLOC_LOOP_VAR(v, val_type, vpi);
                 RAW(v)[0] = RAW(val)[i];
                 break;
             default:
                 errorcall(call, _("invalid for() loop sequence"));
             }
-            defineVar(sym, v, rho);
-	}
 
-	DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+            break;
+	    }
 
-	eval(body, rho);
+        defineVar(sym, v, rho); /* define, not set, as it might be removed */
 
-    for_next:
-	; /* needed for strict ISO C compliance, according to gcc 2.95.2 */
+        DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+
+        evalv (body, rho, VARIANT_NULL);
+
+    for_next: ;  /* semi-colon needed for attaching label */
     }
+
  for_break:
     endcontext(&cntxt);
     UNPROTECT(4);
