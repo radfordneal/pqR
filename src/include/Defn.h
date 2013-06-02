@@ -508,11 +508,13 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 #endif
 
 #define WAIT_UNTIL_COMPUTED(x) \
-  ( ! IS_BEING_COMPUTED_BY_TASK(x) ? 0 \
+  ( ! IS_BEING_COMPUTED_BY_TASK(x) \
+    ? (void) 0 \
     : helpers_wait_until_not_being_computed(x) )
 
 #define WAIT_UNTIL_COMPUTED_2(x1,x2) \
-  ( ! IS_BEING_COMPUTED_BY_TASK(x1) && ! IS_BEING_COMPUTED_BY_TASK(x2) ? 0 \
+  ( ! IS_BEING_COMPUTED_BY_TASK(x1) && ! IS_BEING_COMPUTED_BY_TASK(x2) \
+    ? (void) 0 \
     : helpers_wait_until_not_being_computed2(x1,x2) ) \
 
 #else 
