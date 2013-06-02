@@ -1,4 +1,7 @@
-Changed the ISNAN macro to be faster for many common cases.  This
-change relies on the same result being produced when casting both NaN
-and NA to integer, which is true on systems I've tried (though the
-result for both can differ from system to system).
+IF ENABLE_ISNAN_TRICK is defined when pqR is configured (by including
+-DENABLE_ISNAN_TRICK in CFLAGS), the ISNAN macro is changed to be
+faster for many common cases.  This change relies on the same result
+being produced when casting NaN, -NaN, NA, and -NA to integer, which
+is true on Intel systems, but not on SPARC systems.  A fatal error is
+produced if this is seen to not be true (in which case the define of
+ENABLE_ISNANS_TRICK should of course be removed).
