@@ -78,15 +78,25 @@ int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
    isnan if it is a macro (it is on OS X and in C99),
    hence the workaround.  This code also appears in Rmath.h
 
-   Changed to be faster for many non-NaN and non-NA numbers, relying 
-   on the result of converting NaN and NA to int being the same, which
-   is checked for in InitArithmetic. */
+   May be changed in pqR to be faster for many non-NaN and non-NA numbers, 
+   when one can rely on the result of converting NaN, NA, -NaN, and -NA 
+   to int being the same, which is checked for in InitArithmetic.  This 
+   trick is enabled only when ENABLE_ISNAN_TRICK is defined (with a -D
+   argument in CFLAGS). */
 
 #ifdef __cplusplus
-  int R_isnancpp(double); /* in arithmetic.c */
-#  define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && R_isnancpp(x))
+   int R_isnancpp(double); /* in arithmetic.c */
+#  ifndef ENABLE_ISNAN_TRICK
+#    define ISNAN(x) (R_isnancpp(x))
+#  else
+#    define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && R_isnancpp(x))
+#  endif
 #else
-#  define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && isnan(x) != 0)
+#  ifndef ENABLE_ISNAN_TRICK
+#    define ISNAN(x) (isnan(x) != 0)
+#  else
+#    define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && isnan(x) != 0)
+#  endif
 #endif
 
 /* The following is only defined inside R */
