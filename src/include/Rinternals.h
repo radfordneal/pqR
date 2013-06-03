@@ -1280,6 +1280,11 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
   (1<<VECSXP) + (1<<EXPRSXP) \
 )
 
+#define NONPOINTER_VECTOR_TYPES ( \
+  (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) + \
+  (1<<RAWSXP) + (1<<CPLXSXP) \
+)
+
 #define VECTOR_TYPES ( \
   ATOMIC_VECTOR_TYPES + NONATOMIC_VECTOR_TYPES \
 )
