@@ -34,6 +34,8 @@
 # define __LIBM_PRIVATE
 #endif
 #define USE_FAST_PROTECT_MACROS
+
+#include <complex.h>
 #include "Defn.h"		/*-> Arith.h -> math.h */
 #ifdef __OpenBSD__
 # undef __LIBM_PRIVATE
