@@ -129,6 +129,12 @@ with the same version number are distinguished by release date.
             \code{--helpers} option to the command starting pqR. See 
             \code{help(helpers)} for details.
 
+            However, operations that are done within the interpreter
+            for byte-compiled code (eg, +, -, *, /) will not be done in 
+            helper threads.  This does not apply to computations in primitives
+            that are invoked from byte-compiled code, but not done by the
+            byte-code interpreter itself (eg, sum, exp).
+
             This facility is still undergoing rapid development.  Additional 
             documentation on which operations may be done in parallel will be 
             forthcoming.
