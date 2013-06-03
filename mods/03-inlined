@@ -1,6 +1,14 @@
-Various inlined procedures were changed to be more efficient, and
-"length" was un-inlined, since it's fairly long.  Numerous occurences
-of code like for (i = 0; i < length(...); i++) ... were replaced by
-code that doesn't call length numerous times, sometimes by saving the
-result of one call of length, sometimes by replacing length with
-LENGTH.  (Though note that LENGTH doesn't work for R_NilValue!)
+Various inlined procedures were changed to be more efficient.
+
+Several sets of types, represented by 32-bit words with "1" bits
+corresponding to included types, are now defined in Rinternals.h. These
+allow fast testing for set membership with if ((set >> type) & 1) ...
+This is sed heavily in the inlined functions, but may also be used 
+elsewhere.
+
+The "length" function was un-inlined, since it's fairly long.
+Numerous occurences of code like for (i = 0; i < length(...); i++)
+... were replaced by code that doesn't call length many times,
+sometimes by saving the result of one call of length, sometimes by
+replacing length with LENGTH.  (Though note that LENGTH doesn't work
+for R_NilValue!)
