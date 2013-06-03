@@ -78,50 +78,6 @@
 #include <string.h> /* for strlen, strcmp */
 #include <complex.h>
 
-/* Sets of SEXTYPES, for fast testing with if ((set >> type) & 1) ... */
-
-#define CONS_TYPES ( \
-  (1<<LISTSXP) + (1<<LANGSXP) + (1<<DOTSXP) \
-)
-
-#define PAIRLIST_TYPES ( \
-  (1<<NILSXP) + (1<<LISTSXP) + (1<<LANGSXP) \
-)
-
-#define ATOMIC_VECTOR_TYPES ( \
-  (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) + \
-  (1<<RAWSXP) + (1<<STRSXP) + (1<<CPLXSXP) \
-)
-
-#define NONATOMIC_VECTOR_TYPES ( \
-  (1<<VECSXP) + (1<<EXPRSXP) \
-)
-
-#define VECTOR_TYPES ( \
-  ATOMIC_VECTOR_TYPES + NONATOMIC_VECTOR_TYPES \
-)
-
-#define VECTOR_OR_CHAR_TYPES ( \
-  VECTOR_TYPES + (1<<CHARSXP) \
-)
-
-#define PRIMITIVE_FUN_TYPES ( \
-  (1<<BUILTINSXP) + (1<<SPECIALSXP) \
-)
-
-#define FUNCTION_TYPES ( \
-  PRIMITIVE_FUN_TYPES + (1<<CLOSXP) \
-)
-
-#define NUMERIC_TYPES ( \
-  (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) \
-)
-
-#define NUMBER_TYPES ( \
-  NUMERIC_TYPES + (1<<CPLXSXP) \
-)
-
-
 /* define inline-able functions */
 
 /* from list.c */
