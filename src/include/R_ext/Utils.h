@@ -56,9 +56,9 @@ void	cPsort(Rcomplex*, int, int);
 
 /* ../../main/qsort.c : */
 void R_qsort    (double *v,         int i, int j);
-void R_qsort_I  (double *v, int *I, int i, int j);
+void R_qsort_I  (double *, int *, int, int); /* avoid using "I", in complex.h */
 void R_qsort_int  (int *iv,         int i, int j);
-void R_qsort_int_I(int *iv, int *I, int i, int j);
+void R_qsort_int_I(int *, int *, int int);   /* avoid using "I", in complex.h */
 #ifdef R_RS_H
 void F77_NAME(qsort4)(double *v, int *indx, int *ii, int *jj);
 void F77_NAME(qsort3)(double *v,            int *ii, int *jj);
