@@ -1366,8 +1366,12 @@ SEXP	 Rf_ScalarLogical(int);
 SEXP	 Rf_ScalarRaw(Rbyte);
 SEXP	 Rf_ScalarReal(double);
 SEXP	 Rf_ScalarString(SEXP);
+
+#ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);
 void Rf_R_from_C99_complex(Rcomplex *, double complex);
+#endif
+
 #endif
 
 #ifdef USE_RINTERNALS
