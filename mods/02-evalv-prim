@@ -20,6 +20,12 @@ A procedure SET_PRIMFUN in memory.c was surreptitiously changing the
 function pointer for a primitive via the function pointer access
 macro, PRIMFUN.  A SET_PRIMFUN macro now does this properly.
 
+The types used for pointers for C functions implementing primitives
+have been make safer, taking account of C99's specification that one
+can convert between all types that are pointers to functions without
+loss of information, but not necessarily between a pointer to a
+function and a pointer to void.
+
 Code in saveload.c (for loading old workspaces?) creates a primitive
 directly, bypassing the mkPRIMSXP procedure.  This seems unwise, since
 creation via mkPRIMSXP is apparently needed to ensure protection of

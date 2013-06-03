@@ -382,7 +382,7 @@ typedef struct {
 /* This table can be found in ../main/names.c */
 typedef struct {
     char   *name;    /* print name */
-    void   *cfun;    /* c-code address */
+    SEXP   (*cfun)();/* c-code address, function pointer */
     int	   code;     /* offset within c-code */
     int	   eval;     /* evaluate args? (and other info) */
     int	   arity;    /* function arity */
@@ -404,7 +404,8 @@ typedef struct {
     SEXP setprim_ptr = (x); \
     int setprim_value = (v); \
     setprim_ptr->sxpinfo.gp = setprim_value; \
-    setprim_ptr->u.primsxp.primsxp_cfun   = R_FunTab[setprim_value].cfun; \
+    setprim_ptr->u.primsxp.primsxp_cfun = \
+      (void *(*)()) R_FunTab[setprim_value].cfun; \
     setprim_ptr->u.primsxp.primsxp_fast_cfun = 0; \
     setprim_ptr->u.primsxp.primsxp_code   = R_FunTab[setprim_value].code; \
     setprim_ptr->u.primsxp.primsxp_arity  = R_FunTab[setprim_value].arity; \
@@ -423,7 +424,8 @@ typedef struct {
 #define PRIMFUN(x)	((CCODE)((x)->u.primsxp.primsxp_cfun))
 #define PRIMFUNV(x)	((CCODEV)((x)->u.primsxp.primsxp_cfun))
 #define SET_PRIMFUN(x,f) \
-    ( (x)->u.primsxp.primsxp_cfun = R_FunTab[PRIMOFFSET(x)].cfun = (f), \
+    ( (x)->u.primsxp.primsxp_cfun = \
+        (void *(*)()) (R_FunTab[PRIMOFFSET(x)].cfun = (SEXP (*)()) (f)), \
       (x)->u.primsxp.primsxp_fast_cfun = 0 )
 #define PRIMVAL(x)	((x)->u.primsxp.primsxp_code)
 #define PRIMARITY(x)	((x)->u.primsxp.primsxp_arity)
@@ -436,7 +438,7 @@ typedef struct {
 
 #define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
 #define SET_PRIMFUN_FAST(x,f) \
-    ((x)->u.primsxp.primsxp_fast_cfun = (f))
+    ((x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f))
 
 /* Symbols for eval variants.  Return of a variant result is indicated by 
    the attribute field being R_VariantResult. */
