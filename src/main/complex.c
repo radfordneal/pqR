@@ -64,12 +64,13 @@
 #endif
 
 #define USE_FAST_PROTECT_MACROS
+
+#include <complex.h>
 #include <Defn.h>		/* -> ../include/R_ext/Complex.h */
 #include <Rmath.h>
 #include <R_ext/Applic.h>	/* R_cpoly */
 
 #include "arithmetic.h"		/* complex_*  */
-#include <complex.h>
 
 /* GCC has problems with header files on e.g. Solaris.
    That OS defines the imaginary type, but GCC does not.
