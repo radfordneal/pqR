@@ -1105,6 +1105,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define asLogical		Rf_asLogical
 #define asReal			Rf_asReal
 #define asS4			Rf_asS4
+#define C99_from_R_complex	Rf_C99_from_R_complex
 #define classgets		Rf_classgets
 #define coerceVector		Rf_coerceVector
 #define conformable		Rf_conformable
@@ -1224,6 +1225,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define psmatch			Rf_psmatch
 #define PrintValue		Rf_PrintValue
 #define protect			Rf_protect
+#define R_from_C99_complex	Rf_R_from_C99_complex
 #define reEnc			Rf_reEnc
 #define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
@@ -1357,6 +1359,8 @@ SEXP	 Rf_ScalarLogical(int);
 SEXP	 Rf_ScalarRaw(Rbyte);
 SEXP	 Rf_ScalarReal(double);
 SEXP	 Rf_ScalarString(SEXP);
+double complex Rf_C99_from_R_complex(Rcomplex *);
+void Rf_R_from_C99_complex(Rcomplex *, double complex);
 #endif
 
 #ifdef USE_RINTERNALS
