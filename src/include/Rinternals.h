@@ -167,8 +167,9 @@ struct vecsxp_struct {
 };
 
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
-    void *primsxp_cfun;        /* c-code address, cast as func, from table  */
-    void *primsxp_fast_cfun;   /* c-code address for fast interface, or NULL*/
+    /* The two function pointers below can't use SEXP, since not defined yet*/
+    void *(*primsxp_cfun)();   /* c-code address for prim fun, from table   */
+    void *(*primsxp_fast_cfun)(); /* c-code addr for fast interface, or NULL*/
     short primsxp_code;        /* operation code, from table                */
     signed char primsxp_arity; /* function arity (-1 for any), from table   */
     unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
