@@ -1220,7 +1220,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     Rboolean have_rnames = FALSE, have_cnames = FALSE, warned = FALSE;
     int nnames, mnames;
     int rows, cols, mrows, lenmin;
-    SEXP dn, t, u, result, dims, expr;
+    SEXP dn, t, u, result, expr;
 
     nargs = length(args);
 
@@ -1467,7 +1467,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     Rboolean have_rnames = FALSE, have_cnames = FALSE, warned = FALSE;
     int nnames, mnames;
     int rows, cols, mcols, lenmin;
-    SEXP dn, t, result, dims, expr;
+    SEXP dn, t, result, expr;
  
     nargs = length(args);
 
