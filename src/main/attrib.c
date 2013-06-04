@@ -271,7 +271,7 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 	error(_("attempt to set an attribute on NULL"));
 
     if (NAMEDCNT_GT_0(val)) val = duplicate(val);
-    SET_NAMED(val, NAMED(val) | NAMED(vec));  /* rather bizarre... */
+    SET_NAMEDCNT(val, NAMEDCNT(vec));  /* Is there something better to do? */
     UNPROTECT(2);
 
     if (name == R_NamesSymbol)
@@ -1630,7 +1630,7 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
 	PROTECT(name);
 	if (NAMEDCNT_GT_0(value)) value = duplicate(value);
-	SET_NAMED(value, NAMED(value) | NAMED(obj));  /* rather bizarre... */
+	SET_NAMEDCNT(value, NAMEDCNT(obj));/* is there something better to do?*/
 	UNPROTECT(1);
 	installAttrib(obj, name, value);
 #endif
