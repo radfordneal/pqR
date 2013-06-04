@@ -119,7 +119,7 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
 {
     int i, n, in1;
     double r;
-    SEXP ans, rng;
+    SEXP ans;
     Rboolean useInt;
 
     r = fabs(n2 - n1);
