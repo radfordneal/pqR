@@ -2832,7 +2832,7 @@ void attribute_hidden Rf_unprotect_error (void)
 
 void unprotect(int l)
 {
-    return UNPROTECT(l);
+    UNPROTECT(l);
 }
 
 
