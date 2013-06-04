@@ -232,11 +232,12 @@ double R_pow(double x, double y) /* = x ^ y */
 	else return(y); /* NA or NaN, we assert */
     }
 
-    if (R_FINITE(x) && R_FINITE(y))
+    if (R_FINITE(x) && R_FINITE(y)) {
         if (y == 0.5)
             return sqrt(x);
         else
             return pow(x, y);
+    }
 
     if (ISNAN(x) || ISNAN(y))
 	return(x + y);
@@ -696,7 +697,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    unsigned i, i1, i2, n, n1, n2, a, a1, a2;
+    unsigned n, n1, n2;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
