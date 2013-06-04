@@ -1710,7 +1710,6 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 SEXP attribute_hidden do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, 
                                  int variant)
 {
-    SEXP arg2, arg3, arg4;
     SEXP x, ans;
     int OP, n, p;
     Rboolean NaRm;
