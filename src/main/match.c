@@ -553,7 +553,7 @@ SEXP attribute_hidden matchArgs (
 
         if (n_matched < n_supplied) {
 
-            SEXP a, c;
+            SEXP a;
 
 	    PROTECT(a = actual[dots] = allocList(n_supplied-n_matched));
 	    SET_TYPEOF(a, DOTSXP);
