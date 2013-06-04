@@ -743,5 +743,5 @@ SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho,
     if (PRIMFUN_FAST(op)==0)
         SET_PRIMFUN_FAST_UNARY (op, do_fast_seq_len, 0, 0);
 
-    do_fast_seq_len (call, op, CAR(args), rho, variant);
+    return do_fast_seq_len (call, op, CAR(args), rho, variant);
 }
