@@ -153,7 +153,6 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
                             LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
 
     for(i = 0; i < n; i++) {
-        int j;
         SEXPTYPE tmpType;
         INTEGER(ind)[0] = i + 1;
         tmp = eval(R_fcall, rho);
