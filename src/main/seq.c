@@ -462,7 +462,7 @@ done:
 /* to match seq.default */
 SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans = R_NilValue /* -Wall */, tmp, from, to, by, len, along;
+    SEXP ans = R_NilValue /* -Wall */, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
     Rboolean One = nargs == 1;
     static char *ap[6] =
