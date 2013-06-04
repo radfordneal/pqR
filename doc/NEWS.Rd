@@ -76,15 +76,31 @@ with the same version number are distinguished by release date.
 
   \subsection{INSTALLATION AND TESTING}{
     \itemize{
+
       \item Testing of pqR has so far been done only on Linux/Unix
             systems, not on Windows or Mac systems.  There is no specific
             reason to believe that it will not work on Windows or Mac
             systems, but until tests have been done, trying to use it 
             on these systems is not recommended.
 
+      \item This release contains the versions of the standard and recommended
+            packages that were released with R-2.15.0.  Newer versions may
+            or may not be compatible (same as for R-2.15.0).
+
+      \item It is intended that this release will be fully compatible with
+            R-2.15.0, but you will need to recompile any packages (other
+            that those with only R code) that you had installed for R-2.15.0, 
+            and any other C code you use with R, since the format of internal 
+            data structures has changed.
+
       \item New configuration options relating to helper threads and
             to matrix multiplication now exist.  See doc/R-admin.html 
             (or R-admin.pdf) for details.
+
+      \item Including \code{-DENABLE_ISNAN_TRICK} in CFLAGS will speed up 
+            checks for NA and NaN on machines on which it works.  It works
+            on Intel processors (verified both empirically and by consulting
+            Intel documentation).  It does not work on SPARC machines.
 
       \item When installing from source, the output of ./configure 
             now displays whether base and recommended packages will
@@ -98,11 +114,11 @@ with the same version number are distinguished by release date.
             used.  (Any such failure should now occur consistently, rather
             than appearing to be due to a non-deterministic bug.)
 
-      \item Note that the output of \code{make check-all} for the boot 
-            package includes many warning messages regarding a non-integer
-            argument, and when byte compilation is enabled, these messages
-            identify the wrong function call as the source.  This appears to 
-            have no wider implications, and can be ignored.
+      \item Note that (as in R-2.15.0) the output of \code{make check-all} for 
+            the boot package includes many warning messages regarding a 
+            non-integer argument, and when byte compilation is enabled, these 
+            messages identify the wrong function call as the source.  This 
+            appears to have no wider implications, and can be ignored.
 
       \item The details of how valgrind is used have changed. See the source
             file \file{memory.c}.
@@ -129,11 +145,9 @@ with the same version number are distinguished by release date.
             \code{--helpers} option to the command starting pqR. See 
             \code{help(helpers)} for details.
 
-            However, operations that are done within the interpreter
-            for byte-compiled code (eg, +, -, *, /) will not be done in 
-            helper threads.  This does not apply to computations in primitives
-            that are invoked from byte-compiled code, but not done by the
-            byte-code interpreter itself (eg, sum, exp).
+            However, helper threads are not used for operations that are 
+            done within the interpreter for byte-compiled code or that are 
+            done in primitive functions invoked by the byte-code interpreter.
 
             This facility is still undergoing rapid development.  Additional 
             documentation on which operations may be done in parallel will be 
