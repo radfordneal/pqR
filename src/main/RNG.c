@@ -259,7 +259,6 @@ static void FixupSeeds (int initial)
 	/* first set: not all zero, in [0, m1)
 	   second set: not all zero, in [0, m2) */
     {
-	unsigned int tmp;
 	int allOK = 1;
 	for (j = 0; j < 3; j++) {
 	    if(i_seed[j] != 0) notallzero = 1;
