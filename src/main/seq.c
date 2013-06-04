@@ -120,7 +120,7 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
 {
     int i, n, in1;
     double r;
-    SEXP ans, rng;
+    SEXP ans;
     Rboolean useInt;
 
     r = fabs(n2 - n1);
@@ -488,7 +488,7 @@ done:
 SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho,
                              int variant)
 {
-    SEXP ans = R_NilValue /* -Wall */, tmp, from, to, by, len, along;
+    SEXP ans = R_NilValue /* -Wall */, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
     Rboolean One = nargs == 1;
     static char *ap[6] =
