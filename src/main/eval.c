@@ -340,7 +340,7 @@ static SEXP forcePromise(SEXP e)
 
 SEXP Rf_eval(SEXP e, SEXP rho)
 {
-    evalv(e,rho,0);
+    return evalv(e,rho,0);
 }
 
 /* Return value of "e" evalued in "rho", allowing the result to possibly 
