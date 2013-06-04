@@ -1720,7 +1720,6 @@ static void transfer_old_to_new (int num_old_gens_to_collect)
 
 static void unmark_and_move_to_new (int num_old_gens_to_collect)
 {   int gen, i;
-    SEXP s;
     for (gen = 0; gen < num_old_gens_to_collect; gen++) {
         for (i = 0; i < NUM_NODE_CLASSES; i++) {
             SEXP peg = R_GenHeap[i].Old[gen];
@@ -4410,9 +4409,9 @@ SEXP csduplicated(SEXP x);  /* from unique.c */
 static R_size_t objectsize(SEXP s)
 {
     int i;
-    R_size_t cnt = 0, vcnt = 0;
     SEXP tmp, dup;
     Rboolean isVec = FALSE;
+    R_size_t cnt = 0;
 
     switch (TYPEOF(s)) {
     case NILSXP:
@@ -4437,25 +4436,15 @@ static R_size_t objectsize(SEXP s)
     case SPECIALSXP:
     case BUILTINSXP:
 	break;
+    case RAWSXP:
     case CHARSXP:
-	vcnt = BYTE2VEC(LENGTH(s)+1);
-	isVec = TRUE;
-	break;
     case LGLSXP:
     case INTSXP:
-	vcnt = INT2VEC(LENGTH(s));
-	isVec = TRUE;
-	break;
     case REALSXP:
-	vcnt = FLOAT2VEC(LENGTH(s));
-	isVec = TRUE;
-	break;
     case CPLXSXP:
-	vcnt = COMPLEX2VEC(LENGTH(s));
 	isVec = TRUE;
 	break;
     case STRSXP:
-	vcnt = PTR2VEC(LENGTH(s));
 	dup = csduplicated(s);
 	for (i = 0; i < LENGTH(s); i++) {
 	    tmp = STRING_ELT(s, i);
@@ -4472,7 +4461,6 @@ static R_size_t objectsize(SEXP s)
     case EXPRSXP:
     case WEAKREFSXP:
 	/* Generic Vector Objects */
-	vcnt = PTR2VEC(length(s));
 	for (i = 0; i < length(s); i++)
 	    cnt += objectsize(VECTOR_ELT(s, i));
 	isVec = TRUE;
@@ -4483,10 +4471,6 @@ static R_size_t objectsize(SEXP s)
 #endif
 	cnt += objectsize(EXTPTR_PROT(s));
 	cnt += objectsize(EXTPTR_TAG(s));
-	break;
-    case RAWSXP:
-	vcnt = BYTE2VEC(length(s));
-	isVec = TRUE;
 	break;
     case S4SXP:
 	/* Has TAG and ATTRIB but no CAR nor CDR */
