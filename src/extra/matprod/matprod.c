@@ -309,8 +309,10 @@ void matprod_mat_vec (double *x, double *y, double *z, int n, int k)
         q = z;
         b = *y++;
         b2 = *y++;
-        for (i = n; i > 0; i--)
-            *q++ = (*q + (*x++ * b)) + (*p++ * b2);
+        for (i = n; i > 0; i--) {
+            *q = (*q + (*x++ * b)) + (*p++ * b2);
+            q += 1;
+        }
         x = p;
         k -= 2;
     }
@@ -430,8 +432,10 @@ void matprod (double *x, double *y, double *z, int n, int k, int m)
             q = z;
             b = *y++;
             b2 = *y++;
-            for (i = n; i > 0; i--)
-                *q++ = (*q + (*r++ * b)) + (*p++ * b2);
+            for (i = n; i > 0; i--) {
+                *q = (*q + (*r++ * b)) + (*p++ * b2);
+                q += 1;
+            }
             r = p;
             j -= 2;
         }
