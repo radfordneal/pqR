@@ -575,7 +575,7 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result, 
     SEXP sr, int nrs, int nr, SEXP sc, int ncs, int nc)
 {
-    int i, j, ii, jj, ij, iijj, jjnr;
+    int i, j, ii, jj, ij, jjnr;
 
     /* Set rows of result to NAs where there are NA row indexes.  Also check 
        for bad row indexes (once here rather than many times in loop). */
@@ -791,7 +791,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 {
     int i, j, k, ii, jj, mode, n;
     int **subs, *indx, *offset, *bound;
-    SEXP dimnames, dimnamesnames, p, q, r, result, xdims;
+    SEXP dimnames, dimnamesnames, r, result, xdims;
     const void *vmaxsave;
 
     mode = TYPEOF(x);
@@ -1053,14 +1053,13 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
     }
     else { /* ix < 0 */
 
-        R_len_t i, j, ex;
+        R_len_t ex;
         SEXP r;
 
         WAIT_UNTIL_COMPUTED(x);
         PROTECT(x);
         r = allocVector (typeofx, n-1);
 
-        j = 0;
         ix = -ix-1;
         ex = n-ix-1;
 
