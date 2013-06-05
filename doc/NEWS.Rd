@@ -94,15 +94,22 @@ with the same version number are distinguished by release date.
             data structures has changed.
 
       \item New configuration options relating to helper threads and
-            to matrix multiplication now exist.  See doc/R-admin.html 
-            (or R-admin.pdf) for details.
+            to matrix multiplication now exist.  For details, see 
+            doc/R-admin.html (or R-admin.pdf), or run \code{./configure --help}.
+
+            In particular, the \code{--disable-helper-threads} option
+            to configure will remove support for helper threads.  Use of
+            this option is advised if you know that multiple processors
+            or processor cores will not be available, or if you know that
+            the C compiler used does not support OpenMP 3.0 or 3.1 (which 
+            is used in the implementation of the helpers package).
 
       \item Including \code{-DENABLE_ISNAN_TRICK} in CFLAGS will speed up 
             checks for NA and NaN on machines on which it works.  It works
             on Intel processors (verified both empirically and by consulting
             Intel documentation).  It does not work on SPARC machines.
 
-      \item When installing from source, the output of ./configure 
+      \item When installing from source, the output of configure 
             now displays whether base and recommended packages will
             be byte compiled.
 
