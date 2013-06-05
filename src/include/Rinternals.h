@@ -1192,6 +1192,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define isVectorAtomic		Rf_isVectorAtomic
 #define isVectorizable		Rf_isVectorizable
 #define isVectorList		Rf_isVectorList
+#define isVectorNonpointer	Rf_isVectorNonpointer
 #define lang1			Rf_lang1
 #define lang2			Rf_lang2
 #define lang3			Rf_lang3
@@ -1342,6 +1343,7 @@ Rboolean Rf_isValidStringF(SEXP);
 Rboolean Rf_isVector(SEXP);
 Rboolean Rf_isVectorAtomic(SEXP);
 Rboolean Rf_isVectorList(SEXP);
+Rboolean Rf_isVectorNonpointer(SEXP);
 Rboolean Rf_isVectorizable(SEXP);
 SEXP	 Rf_lang1(SEXP);
 SEXP	 Rf_lang2(SEXP, SEXP);
