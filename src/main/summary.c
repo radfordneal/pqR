@@ -281,7 +281,6 @@ static double rprod(double *x, int n, Rboolean narm)
 {
     long double s = 1.0;
     int i;
-    Rboolean updated = FALSE;
 
     if (narm) {
         for (i = 0; i < n; i++) 
@@ -768,7 +767,7 @@ invalid_type:
 
 SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ans, a, b, prargs, call2;
+    SEXP ans, prargs, call2;
 
     PROTECT(args = fixup_NaRm(args));
     PROTECT(call2 = duplicate(call));
