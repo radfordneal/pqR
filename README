@@ -13,11 +13,14 @@ A git repository for this source code that include modification
 history is at github.com/radfordneal/pqR.
 
 This implementation of R is distributed under the GNU General Public
-Licence, version 2 or version 3.  See the files COPYING and
-doc/COPYRIGHTS for details.
+Licence, version 2 or version 3.  See the file COPYING for a copy of
+version 2 of the GNU General Public Licence, and the files in
+share/licenses for copies of other licenses.  See doc/COPYRIGHTS for
+futher details on copyright of this software.
 
-See INSTALL, NEWS, MODS, and the files in the doc sub-directory for
-more information.
+See the files INSTALL, NEWS, and MODS (or the directory "mods" if you
+are looking at a development version) for more information.  The "doc"
+directory contains much additional documentation.
 
 -----------------------------------------------------------------------------
 
