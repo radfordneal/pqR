@@ -60,6 +60,10 @@
             when by chance one of the p-values obtained was below the threshold
             used.  (Any such failure should now occur consistently, rather
             than appearing to be due to a non-deterministic bug.)
+
+      \item Testing of the "xz" compression method is now done with \code{try},
+            so that failure will be tolerated on machines that don't have enough
+            memory for these tests.
       \item **8
       \item Some options that can be set by arguments to the R command can
             now also be set with environment variables, specifically, the
