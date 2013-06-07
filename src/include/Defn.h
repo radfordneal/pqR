@@ -1345,29 +1345,34 @@ extern void *alloca(size_t);
    macros below call procedure in memory.c for error handling.  PROTECT_PTR is 
    not redefined, since it contains a significant amount of code.
 
+   Macros PROTECT2 and PROTECT3 for protecting 2 or 3 objects are also defined.
+
    Defining USE_FAST_PROTECT_MACROS in source files outside src/main may
    cause problems at link time. */
 
 #ifdef USE_FAST_PROTECT_MACROS
 
-extern SEXP Rf_protect_error (void);    /* SEXP only so it will work with "?" */
+extern void Rf_protect_error (void);
 extern void Rf_unprotect_error (void);
 
 #undef  PROTECT
 #define PROTECT(s) \
-  ( R_PPStackTop < R_PPStackSize ? R_PPStack[R_PPStackTop++] = (s) \
-                                 : Rf_protect_error() )
+( (R_PPStackTop >= R_PPStackSize ? Rf_protect_error() : (void)0), \
+   R_PPStack[R_PPStackTop++] = (s) )
+
 #undef  PROTECT2
 #define PROTECT2(s1,s2) \
-  ( R_PPStackTop+1 < R_PPStackSize ? (R_PPStack[R_PPStackTop++] = (s1), \
-                                      R_PPStack[R_PPStackTop++] = (s2)) \
-                                   : Rf_protect_error() )
+( (R_PPStackTop+1 >= R_PPStackSize ? Rf_protect_error() : (void)0), \
+   R_PPStack[R_PPStackTop++] = (s1), \
+   R_PPStack[R_PPStackTop++] = (s2) )
+
 #undef  PROTECT3
 #define PROTECT3(s1,s2,s3) \
-  ( R_PPStackTop+2 < R_PPStackSize ? (R_PPStack[R_PPStackTop++] = (s1), \
-                                      R_PPStack[R_PPStackTop++] = (s2), \
-                                      R_PPStack[R_PPStackTop++] = (s3)) \
-                                   : Rf_protect_error() )
+( (R_PPStackTop+2 >= R_PPStackSize ? Rf_protect_error() : (void)0), \
+   R_PPStack[R_PPStackTop++] = (s1), \
+   R_PPStack[R_PPStackTop++] = (s2), \
+   R_PPStack[R_PPStackTop++] = (s3) )
+
 #undef  UNPROTECT
 #define UNPROTECT(n) \
   ( R_PPStackTop >= (n) ? (void) (R_PPStackTop -= (n)) \
