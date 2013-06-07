@@ -77,6 +77,15 @@ with the same version number are distinguished by release date.
   \subsection{INSTALLATION AND TESTING}{
     \itemize{
 
+      \item The procedure for compiling and installing from source is largely 
+            unchanged from R-2.15.0.  In particular, the final result is a 
+            program called "R", not "pqR", though of course you can provide a 
+            link to it called "pqR".  Note that (as for R-2.15.0) it is not 
+            necessary to do an "install" after "make" --- one can just
+            run bin/R in the directory where you did "make".  This may be 
+            convenient if you wish to try out pqR along with your current 
+            version of R.
+
       \item Testing of pqR has so far been done only on Linux/Unix
             systems, not on Windows or Mac systems.  There is no specific
             reason to believe that it will not work on Windows or Mac
@@ -110,7 +119,7 @@ with the same version number are distinguished by release date.
             Intel documentation).  It does not work on SPARC machines.
 
       \item When installing from source, the output of configure 
-            now displays whether base and recommended packages will
+            now displays whether standard and recommended packages will
             be byte compiled.
 
       \item The tests of random number generation run with \code{make check-all}
@@ -468,6 +477,13 @@ with the same version number are distinguished by release date.
 
       \item Fixed \code{svd} so that it will not return a list with
             \code{NULL} elements.  This matches the behaviour of \code{La.svd}.
+
+      \item Fixed (by a kludge, not a proper fix) a bug in the "tre"
+            package for regular expression matching (eg, in \code{sub}),
+            which shows up when \code{WCHAR_MAX} doesn't fit in an
+            "int".  The kludge reduces \code{WCHAR_MAX} to fit, but really
+            the "int" variables ought to be bigger.  (This problem
+            showed up on a Raspberry Pi running Raspbian.)
 
       \item Fixed a minor error-reporting bug with
             \code{(1:2):integer(0)} and similar expressions.
