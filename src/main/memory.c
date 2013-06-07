@@ -3127,8 +3127,8 @@ static void reset_pp_stack(void *data)
     R_PPStackSize =  *poldpps;
 }
 
-SEXP attribute_hidden Rf_protect_error (void) /* SEXP only so it will work    */
-{                                             /* with "?" in macros in Defn.h */
+void attribute_hidden Rf_protect_error (void)
+{
     RCNTXT cntxt;
     R_size_t oldpps = R_PPStackSize;
 
@@ -3141,8 +3141,7 @@ SEXP attribute_hidden Rf_protect_error (void) /* SEXP only so it will work    */
         R_PPStackSize = R_RealPPStackSize;
     errorcall(R_NilValue, _("protect(): protection stack overflow"));
 
-    endcontext(&cntxt); /* not reached */
-    return R_NilValue;
+    /* endcontext(&cntxt); */ /* not reached */
 }
 
 SEXP protect(SEXP s)
