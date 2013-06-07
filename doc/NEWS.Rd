@@ -127,6 +127,10 @@ with the same version number are distinguished by release date.
             messages identify the wrong function call as the source.  This 
             appears to have no wider implications, and can be ignored.
 
+      \item Testing of the "xz" compression method is now done with \code{try},
+            so that failure will be tolerated on machines that don't have enough
+            memory for these tests.
+
       \item The details of how valgrind is used have changed. See the source
             file \file{memory.c}.
     }
