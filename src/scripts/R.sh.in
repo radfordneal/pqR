@@ -248,6 +248,12 @@ done
 . "${R_HOME}/etc${R_ARCH}/ldpaths"
 
 R_binary="${R_HOME}/bin/exec${R_ARCH}/R"
+if [ x$R_HELPERS = x -o x$R_HELPERS = x0 ]; then
+  if test -x "${R_HOME}/bin/exec${R_ARCH}/R0"; then
+    R_binary="${R_HOME}/bin/exec${R_ARCH}/R0"
+  fi
+fi
+
 export R_ARCH
 
 case "${gui}" in
