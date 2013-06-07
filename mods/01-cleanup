@@ -26,7 +26,11 @@ Miscellaneous code cleanups, including the following:
 
   o Fixed problem with recompilation with byte compilation not enabled.
 
-  o Fixed overflow bug in the "tre" package (in "extra").
+  o Fixed (by a kludge, not a proper fix) a bug in the "tre" package that
+    shows up when WCHAR_MAX doesn't fit in an "int".  The kludge reduces
+    WCHAR_MAX to fit, but really the "int" variables ought to be bigger.
+    (This problem shows up on a Raspberry Pi running Raspbian.)  Also fixed 
+    a going-past-end-of array bug (that probably never happened).
 
   o Code in R-2.15.0 exists for maintaining a cache of primitive objects,
     but this code forgets to ever actually enter a primitve into the cache.
