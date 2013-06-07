@@ -5,15 +5,16 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-05-31}{
+\section{CHANGES IN VERSION RELEASED 2013-06-07}{
 
 \subsection{INTRODUCTION}{
 
-\itemize{
-\item This is the initial public release of pqR.  It is based on R-2.15.0,
-distributed by the R Core Team, but improves on it in many ways,
-mostly ways that speed it up, but also by implementing some new
-features and fixing some bugs.  
+\itemize{ 
+\item This is the nearly-initial public release of pqR (there was an
+early unpublicised release on 2013-05-31, which this release updates
+with bug fixes, etc).  It is based on R-2.15.0, distributed by the R
+Core Team, but improves on it in many ways, mostly ways that speed it
+up, but also by implementing some new features and fixing some bugs.
 
 \item One notable improvement is that for systems with multiple
 processors or processor cores, pqR is able to do some numeric
