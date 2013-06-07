@@ -86,11 +86,13 @@ length(txt.bz2)
 txt3 <- strsplit(memDecompress(txt.bz2, asChar = TRUE), "\n")[[1]]
 stopifnot(identical(txt, txt3))
 
-## xz compression is only worthwhile for large objects
-txt.xz <- memCompress(txt, "x")
-length(txt.xz)
-txt3 <- strsplit(memDecompress(txt.xz, asChar = TRUE), "\n")[[1]]
-stopifnot(identical(txt, txt3))
+## xz compression is only worthwhile for large objects, and uses lots of memory
+try({
+  txt.xz <- memCompress(txt, "x")
+  print(length(txt.xz))
+  txt3 <- strsplit(memDecompress(txt.xz, asChar = TRUE), "\n")[[1]]
+  stopifnot(identical(txt, txt3))
+})
 }
 
 \keyword{file}
