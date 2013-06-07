@@ -39,7 +39,7 @@
     \textbf{Reference Index}
 
     \par\vspace*{6\medskipamount}
-    The \R\ Development Core Team
+    The \R\ Development Core Team (modifications for pqR by Radford M. Neal)
 
     \large
     \par\vspace*{3\medskipamount}
@@ -49,7 +49,8 @@
   \vfill
   \vfill
   \noindent
-  Copyright ({\copyright}) 1999--2010 R Foundation for Statistical Computing.
+  Copyright ({\copyright}) 1999--2010 R Foundation for Statistical Computing.\\
+  Modifications for pqR Copyright ({\copyright}) 2013 Radford M. Neal
   
   \noindent
   Permission is granted to make and distribute verbatim copies of this
