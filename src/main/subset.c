@@ -1137,12 +1137,12 @@ SEXP attribute_hidden do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
             PROTECT(array = evalv(array,rho,VARIANT_PENDING_OK));
             nprotect++;
             if (isObject(array)) {
-                args = CONS(array,evalListPendingOK(ixlist,rho,NULL));
-                wait_until_arguments_computed(args);
+                args = CONS(array,ixlist);
                 UNPROTECT(nprotect);
-                argsevald = 1;
+                argsevald = -1;
             }
             else if (TYPEOF(CAR(ixlist)) != LANGSXP) {
+                /* ... in particular, it might be missing ... */
                 args = CONS(array,evalListKeepMissing(ixlist,rho));
                 UNPROTECT(nprotect);
                 return do_subset_dflt(call, op, args, rho); 
