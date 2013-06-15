@@ -2486,6 +2486,7 @@ static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing, SEXP call)
  * any argument, not just the first.  Used in the code for `[` in
  * do_subset.  Differs in that all arguments are evaluated
  * immediately, rather than after the call to R_possible_dispatch.
+ * NOT ACTUALLY USED AT PRESENT.
  */
 attribute_hidden
 int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
@@ -2529,7 +2530,8 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
  * used to obtain the unevaluated arguments when creating promises, even
  * when argsevald is 1 (so args is the evaluated arguments).  Note also
  * that args must be protected before the call if argsevald is 0, but not 
- * if argsevald is 1.
+ * if argsevald is 1.  If argsevald is -1, only the first argument will
+ * have been evaluated, and only the unevaluated ones will have been protected.
  *
  * To call this an ugly hack would be to insult all existing ugly hacks
  * at large in the world.
@@ -2550,7 +2552,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     SEXP x = R_NilValue;
     int dots = FALSE, nprotect = 0;;
 
-    if (argsevald) {
+    if (argsevald != 0) {
 	PROTECT(x = CAR(args)); nprotect++;
     }
     else {
@@ -2590,13 +2592,15 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
 	    SEXP value, argValue;
 	    /* create a promise to pass down to applyClosure  */
-	    if(!argsevald)
+	    if (argsevald < 0)
+                argValue = promiseArgsWith1Value(CDR(call), rho, x);
+            else if (argsevald == 0)
 		argValue = promiseArgsWith1Value(args, rho, x);
 	    else 
                 argValue = args;
 	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
-	    value = R_possible_dispatch(call, op, argValue, rho, !argsevald);
+	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
 	    if(value) {
 		*ans = value;
 		UNPROTECT(nprotect);
@@ -2632,7 +2636,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    RCNTXT cntxt;
 	    SEXP pargs, rho1;
 
-            if (argsevald) {  /* handle as in R_possible_dispatch */
+            if (argsevald > 0) {  /* handle as in R_possible_dispatch */
                 PROTECT(args); nprotect++;
                 pargs = promiseArgsWithValues(CDR(call), rho, args);
             }
@@ -2666,7 +2670,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    endcontext(&cntxt);
 	}
     }
-    if(!argsevald) {
+    if (argsevald <= 0) {
 	if (dots)
 	    /* The first call argument was ... and may contain more than the
 	       object, so it needs to be evaluated here.  The object should be
