@@ -844,7 +844,7 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 
         if (LENGTH(ans) != 0) {
 
-            int inhlpr = nrx*(ncx+1)*ncy > T_matmult || 1; /* ALWAYS, FOR NOW */
+            int inhlpr = nrx*(ncx+1)*ncy > T_matmult;
             int no_pipelining = !inhlpr || helpers_are_not_pipelining;
             helpers_task_proc *task_proc;
             int flags = 0;
