@@ -278,12 +278,19 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
    of a macro is the same regardless of whether this temporary increment is
    counted, the value can be returned immediately.  Otherwise, it's necessary
    to wait for the variable to not be in use, and then return the value based
-   on the stored nmcnt. */
+   on the stored nmcnt. 
 
-#ifndef HELPERS_DISABLED
-extern void helpers_wait_until_not_in_use(SEXP);/* Declare procedure from the */
-#else                                           /*  helpers module here so we */
-#define helpers_wait_until_not_in_use(v) 0      /*  needn't include helpers.h */
+   A declaration for helpers_wait_until_not_in_use is put here, so that the
+   helpers.h file needn't be included. 
+
+   When helper threads are disabled, helpers_wait_until_not_in_use is normally
+   a null macro, but a stub for it will also be defined in main.c for linking 
+   to by any modules that don't know that helper threads are disabled. */
+
+#ifdef HELPERS_DISABLED
+#define helpers_wait_until_not_in_use(v) 0
+#else
+extern void helpers_wait_until_not_in_use(SEXP);
 #endif
 
 #define NAMEDCNT(x) \
