@@ -75,6 +75,14 @@ int R_stack_growth_direction (uintptr_t cvaraddr)
 }
 
 
+/* Define a stub for linking to by any module that doesn't know that helper
+   threads are disabled. */
+
+#ifdef HELPERS_DISABLED
+void helpers_wait_until_not_in_use (SEXP v) { /* no need to do anything */ }
+#endif
+
+
 /* WAIT FOR HELPERS BEOFRE FORK.  Should be called before a call of "fork", 
    so that the child will see memory that is not still being updated.   Will 
    be referenced with an 'extern' declaration in the referencing source file, 
