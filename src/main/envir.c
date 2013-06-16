@@ -349,7 +349,7 @@ static SEXP R_NewHashTable(int size)
 
     /* Allocate hash table in the form of a vector */
     PROTECT(table = allocVector(VECSXP, size));
-    SET_HASHSIZE(table, size);
+    /* SET_HASHSIZE(table, size); */
     SET_HASHSLOTSUSED(table, 0);
     UNPROTECT(1);
     return(table);

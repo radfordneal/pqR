@@ -137,7 +137,7 @@ extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
 #define HASHTABLEGROWTHRATE  1.2
 #define HASHMINSIZE	     29
-#define SET_HASHSIZE(x,v)    SETLENGTH(x,v)
+/* #define SET_HASHSIZE(x,v)    SETLENGTH(x,v) */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
