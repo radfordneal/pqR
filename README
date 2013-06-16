@@ -9,8 +9,9 @@ The modifications in pqR substantially improve the speed of R.  Some
 extensions to R are also implemented.  These modifications were
 written by Radford M. Neal, radfordneal@gmail.com.
 
-A git repository for this source code that include modification
-history is at github.com/radfordneal/pqR.
+A git repository for this source code that includes modification
+history is at github.com/radfordneal/pqR.  See the project pages at
+radfordneal.github.io/pqR as well.
 
 This implementation of R is distributed under the GNU General Public
 Licence, version 2 or version 3.  See the file COPYING for a copy of
