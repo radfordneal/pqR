@@ -304,8 +304,8 @@ void task_piped_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz,
             b = *y++;
             b2 = *y++;
             for (i = n; i > 0; i--) {
-                *q = (*q + (*x++ * b)) + (*p++ * b2);
-                q += 1;
+                double tmp = *q + (*x++ * b);  /* ensure order of addition */
+                *q++ = tmp + (*p++ * b2);
             }
             x = p;
         }
@@ -451,8 +451,8 @@ void task_piped_matprod (helpers_op_t op, helpers_var_ptr sz,
             b = *y++;
             b2 = *y++;
             for (i = n; i > 0; i--) {
-                *q = (*q + (*r++ * b)) + (*p++ * b2);
-                q += 1;
+                double tmp = *q + (*r++ * b);  /* ensure order of addition */
+                *q++ = tmp + (*p++ * b2);
             }
             r = p;
             j -= 2;
