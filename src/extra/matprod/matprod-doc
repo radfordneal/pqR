@@ -126,10 +126,10 @@ There are no alternative algorithms implemented for these procedures.
 Test programs:
 
 Test programs are provided for the matprod and piped-matprod routines,
-sharing a common framework, which can also be used to test matrix
-multiply routines in a BLAS or other library.  These test programs
-allow some checks on correctness, but are primarily intended for
-testing speed.
+in the directory "tests", which share a common framework, and which
+can also be used to test matrix multiply routines in a BLAS or other
+library.  These test programs allow some checks on correctness, but
+are primarily intended for testing speed.
 
 These programs are invoked by a command such as the following:
 
@@ -164,8 +164,8 @@ The matrices created by the test programs have elements that are set
 to the index of the matrix (from 0), plus the index of the element
 (from 0, down each column in succession), plus 0.1.
 
-Several test programs can be compiled using the supplied Makefile,
-as follows:
+Several test programs can be compiled using the supplied Makefile, as
+follows:
 
     matprod-test
 
