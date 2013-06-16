@@ -146,6 +146,38 @@ with the same version number are distinguished by release date.
     }
   }
 
+  \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
+    \itemize{
+      \item The internal structure of an object has changed.  The changes
+            are mostly upwards compatible, but do require recompilation.
+            The one exception to compatibility is that the TRUELENGTH
+            field has changed from a 32-bit signed integer to a 28-bit
+            unsigned integer.  Use of TRUELENGTH is in any case discouraged.
+
+      \item The sizes of objects have changed in some cases (though not most).
+            For a 32-bit configuration, the size of a cons cell increases
+            from 28 bytes to 32 bytes; for a 64-bit configuration, the
+            size of a cons cell remains at 56 bytes.  For a 32-bit 
+            configuration, the size of a vector of one double remains
+            at 32 bytes; for a 64-bit configuration (with 8-byte alignment), 
+            the size of a vector of one double remains at 48 bytes.
+
+      \item Note that the actual amount of memory occupied by an object
+            depends on the set of node classes defined (which may be tuned).
+            There is no longer a separate node class for cons cells and
+            zero-length vectors (as in R-2.15.0) --- instead, cons cells
+            share a node class with whatever vectors also fit in that
+            node class.
+
+      \item Setting the length of a vector to something less than its
+            allocated length using SETLENGTH is deprecated.  The LENGTH
+            field is used for memory allocation tracking by the garbage
+            collector (as is also the case in R-2.15.0), so setting it 
+            to the wrong value may cause problems.  (Setting the length
+            to more than the allocated length is of course even worse.)
+    }
+  }
+
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
       \item Many detailed improvements have been made that reduce
