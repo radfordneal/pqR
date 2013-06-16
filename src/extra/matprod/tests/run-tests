@@ -1,0 +1,79 @@
+#!/bin/bash
+#
+# MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
+#           Shell File to Run a Series of Tests
+#
+# Copyright (c) 2013 Radford M. Neal.
+# 
+#   The matprod library is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc.,
+#   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+prog=$1
+
+while [ x$2 != x ]; do
+  export $2
+  shift
+done
+
+echo " "; echo vec_vec
+
+echo " "; time $prog 200000 v 2222 v
+echo " "; time $prog 50000 v 12345 v
+
+echo " "; echo mat_vec
+
+echo " "; time $prog 200000 2 2222 v
+echo " "; time $prog 50000 2 12345 v
+
+echo " "; time $prog 200000 3 2222 v
+echo " "; time $prog 50000 3 10345 v
+
+echo " "; time $prog 2000 301 2222 v
+echo " "; time $prog 200 280 12345 v
+
+echo " "; echo vec_mat
+
+echo " "; time $prog 100000 v 1272 13
+echo " "; time $prog 10000 v 9345 14
+
+echo " "; echo general
+
+echo " "; time $prog 10000 23 222 34
+echo " "; time $prog 1000 50 445 62
+
+echo " "; time $prog 10000 43 72 64
+echo " "; time $prog 1000 100 155 112
+
+echo " "; time $prog 10 430 520 540
+echo " "; time $prog 2 800 1150 920
+
+echo " "; echo outer
+
+echo " "; time $prog 10000 230 1 341
+echo " "; time $prog 100 2031 1 3201
+
+echo " "; echo sequence
+
+echo " "; time $prog 20000 25 36 38 29 28
+echo " "; time $prog 500 55 145 81 93
+
+echo " "; time $prog 30 215 201 308 270 230
+echo " "; time $prog 3 487 691 570 399
+
+echo " "; time $prog 20000 v 25 36 38 29 28
+echo " "; time $prog 500 v 55 145 81 93
+
+echo " "; time $prog 300000 25 36 38 29 28 v
+echo " "; time $prog 50000 55 145 81 93 v
