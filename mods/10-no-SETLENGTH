@@ -1,0 +1,3 @@
+Remove the few uses of the deprecated SETLENGTH macro/function in the
+interpreter and in the stats package.  There is still one place it is
+used in the recommended Matrix package.
