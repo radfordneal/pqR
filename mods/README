@@ -34,3 +34,7 @@ release, but without the commits that produce these new versions being
 merged into the earlier release.  Once a release branch is created, it
 is modified only in exceptional circumstances (such as discovery that
 a file is missing).
+
+The "master" branch is used only for adding versions of R released by
+the R Core Team, starting with R-2.11.1, for each of which there is a
+tag.
