@@ -76,10 +76,10 @@ int R_stack_growth_direction (uintptr_t cvaraddr)
 
 
 /* Define a stub for linking to by any module that doesn't know that helper
-   threads are disabled. */
+   threads are disabled.  (The parentheses below suppress macro expansion.) */
 
 #ifdef HELPERS_DISABLED
-void helpers_wait_until_not_in_use (SEXP v) { /* no need to do anything */ }
+void (helpers_wait_until_not_in_use) (SEXP v) { /* no need to do anything */ }
 #endif
 
 
