@@ -28,6 +28,8 @@ defined in piped-matprod.h) contains versions that are structured as
 task procedures for use with the "helpers" library for parallel
 execution of tasks, with pipelining.
 
+The directory "tests" contains some test programs.
+
 See matprod-doc and comments in the source files for further
 documentation.
 
@@ -36,4 +38,4 @@ helpers library is available from github.com/radfordneal/helpers.
 
 Radford Neal may be contacted at radfordneal@gmail.com.
 
-This is the version of 2013-06-04.
+This is the version of 2013-06-15.
