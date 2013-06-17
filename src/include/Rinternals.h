@@ -123,47 +123,41 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
    size is 64 bits = 8 bytes. */
 
 struct sxpinfo_struct {
-    unsigned int nmcnt :  3;  /* count of "names" referring to object */
-    unsigned int type  :  5;  /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
+    /* Type and namedcnt in first byte */
+    unsigned int nmcnt : 3;   /* count of "names" referring to object */
+    unsigned int type : 5;    /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
                                * -> warning: `type' is narrower than values
                                *              of its type
                                * when SEXPTYPE was an enum */
     /* Garbage collector stuff - keep in one byte to maybe speed up access */
-    unsigned int gccls :  3;  /* node class for garbage collector */
-    unsigned int gcgen :  1;  /* old generation number - may be best first */
-    unsigned int gcoton:  1;  /* 1 if already in old-to-new list */
-    unsigned int mark  :  1;  /* mark object as `in use' in garbage collector */
-    /* debug/trace */
-    unsigned int debug :  1;
-    unsigned int trace :  1;  /* functions and memory tracing */
+    unsigned int gccls : 3;   /* node class for garbage collector */
+    unsigned int gcgen : 1;   /* old generation number - may be best first */
+    unsigned int mark : 1;    /* marks object as in use in garbage collector */
+    /*unsigned int gcoton:1; */ /* 1 if already in old-to-new list - DISABLED */
+    /* Object flag */
+    unsigned int obj : 1;     /* set if this is an S3 or S4 object */
+    /* Flags to synchronize with helper threads */
+    unsigned int in_use: 1;   /* whether contents may be in use by a helper */
+    unsigned int being_computed : 1;  /* whether helper may be computing this */
     /* "general purpose" field, used for miscellaneous purposes */
-    unsigned int gp    : 16;  /* old "gp" field */
-    union { /* overlap some general fields with fields for primitives */
-      struct {
-        unsigned int gp2 : 28;   /* new "gp" field, replaces old "truelength" */
-        /* markers for use with the helpers facility */
-        unsigned int in_use: 1;  /* whether contents may be in use by a helper*/
-        unsigned int being_computed : 1; /* whether helper may be computing it*/
-        /* other */
-        unsigned int obj :  1;   /* set if this is an S3 or S4 object */
-        unsigned int misc:  1;   /* miscellaneous uses - eg, RSTEP */
-      } g;
-      struct {
+    unsigned int gp : 16;     /* The "gp" field */
+    union {
+      R_len_t truelength;     /* for vectors only - may someday be defunct... */
+      struct {                /* fields below are for non-vectors only */
+        unsigned int debug : 1;  /* function (or env?) is being debugged */
+        unsigned int trace : 1;  /* function is being traced */
+        unsigned int basec : 1;  /* has base binding in global cache */
+        unsigned int spec_sym : 1; /* special symbol, or env with no spec sym */
+        unsigned int rstep : 1;
+        unsigned int unused : 3; /* not yet used */
         unsigned char var1, var2;/* variants for evals of fast primitive args */
         unsigned char pending_ok;/* whether args can have computation pending */
-        unsigned int unused:4;
-        /* markers for use with the helpers facility */
-        unsigned int in_use: 1;  /* whether contents may be in use by a helper*/
-        unsigned int being_computed : 1; /* whether helper may be computing it*/
-        /* other */
-        unsigned int obj :  1;   /* set if this is an S3 or S4 object */
-        unsigned int misc:  1;   /* miscellaneous uses - eg, RSTEP */
-      } p;
+      } nonvec;
     } u;
 };
 
 struct vecsxp_struct {
-    R_len_t	length;
+    R_len_t length;
 };
 
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
@@ -227,10 +221,8 @@ struct promsxp_struct {
        4-byte pointers:  32 bytes
        8-byte pointers:  56 bytes
 
-   Note, however, that the routines in memory.c may choose to allocate
-   64 bytes to hold a 56 byte SEXPREC record, to improve cache alignment, 
-   and to allow more vector nodes to share pages with SEXPREC nodes, which
-   also improves cache locality.  
+   Note, however, that the actual amount allocated could be greater, as
+   determined by the definitions of the node class sizes in memory.c.
 
    Standard nodes may be used to hold small vectors as well as cons cells
    and other fixed-size objects.
@@ -295,20 +287,20 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define NAMEDCNT(x) \
 ( (x)->sxpinfo.nmcnt == MAX_NAMEDCNT ? MAX_NAMEDCNT : \
-  (x)->sxpinfo.u.g.in_use \
+  (x)->sxpinfo.in_use \
      ? (helpers_wait_until_not_in_use(x), (x)->sxpinfo.nmcnt) \
      : (x)->sxpinfo.nmcnt )
 
 #define NAMEDCNT_EQ_0(x) \
-( (x)->sxpinfo.nmcnt != 0 ? 0 : !(x)->sxpinfo.u.g.in_use ? 1 \
+( (x)->sxpinfo.nmcnt != 0 ? 0 : !(x)->sxpinfo.in_use ? 1 \
     : (helpers_wait_until_not_in_use(x), 1) )
 
 #define NAMEDCNT_GT_0(x) \
-( (x)->sxpinfo.nmcnt != 0 ? 1 : !(x)->sxpinfo.u.g.in_use ? 0 \
+( (x)->sxpinfo.nmcnt != 0 ? 1 : !(x)->sxpinfo.in_use ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #define NAMEDCNT_GT_1(x) \
-( (x)->sxpinfo.nmcnt > 1 ? 1 : !(x)->sxpinfo.u.g.in_use ? 0 \
+( (x)->sxpinfo.nmcnt > 1 ? 1 : !(x)->sxpinfo.in_use ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #define SET_NAMEDCNT(x,v)    ((x)->sxpinfo.nmcnt = (v))
@@ -346,7 +338,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #undef NAMEDCNT_GT_1
 #define NAMEDCNT_GT_1(x) \
 ( ((x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
-    : !(x)->sxpinfo.u.g.in_use ? 0 \
+    : !(x)->sxpinfo.in_use ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #endif
@@ -432,11 +424,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
 #define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=(v))
 
-/* The TRUELENGTH is seldom used, and usually has no connection with length.
-   Used to be a 32-bit "truelength" field in the vecsxp_struct, but is now 
-   a 28-bit field in sxpinfo. */
-#define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.u.g.gp2)
-#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.u.g.gp2)=(v))
+/* The TRUELENGTH is seldom used, and usually has no connection with length. */
+#define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.u.truelength)
+#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.u.truelength)=(v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
 #define S4_OBJECT_MASK (1<<4)
@@ -446,7 +436,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 /* Vector Access Macros */
 #define LENGTH(x)	(((VECSEXP) (x))->vecsxp.length)
-#define SETLENGTH(x,v)		((((VECSEXP) (x))->vecsxp.length)=(v))
+#define SETLENGTH(x,v)	((((VECSEXP) (x))->vecsxp.length)=(v)) /* DEPRECATED */
 
 /* Under the generational allocator the data for vector nodes comes
    immediately after the node structure, so the data address is a
@@ -489,10 +479,10 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define FORMALS(x)	((x)->u.closxp.formals)
 #define BODY(x)		((x)->u.closxp.body)
 #define CLOENV(x)	((x)->u.closxp.env)
-#define RDEBUG(x)	((x)->sxpinfo.debug)
-#define SET_RDEBUG(x,v)	(((x)->sxpinfo.debug)=(v))
-#define RSTEP(x)	((x)->sxpinfo.u.g.misc)
-#define SET_RSTEP(x,v)	(((x)->sxpinfo.u.g.misc)=(v))
+#define RDEBUG(x)	((x)->sxpinfo.nonvec.debug)
+#define SET_RDEBUG(x,v)	(((x)->sxpinfo.nonvec.debug)=(v))
+#define RSTEP(x)	((x)->sxpinfo.nonvec.rstep)
+#define SET_RSTEP(x,v)	(((x)->sxpinfo.nonvec.rstep)=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	((x)->u.symsxp.pname)
@@ -503,12 +493,12 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) (((x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  ((x)->sxpinfo.u.g.misc)/*1=base binding in global cache*/
-#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.u.g.misc = (v))
+#define BASE_CACHE(x)  ((x)->sxpinfo.nonvec.basec) /* 1 = base binding in global cache*/
+#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.nonvec.basec = (v))
 
-/* Flag indicating whether a symbol starts with a special character. */
-#define SPEC_SYM(x)	(PRINTNAME(x)->sxpinfo.u.g.misc)
-#define SET_SPEC_SYM(x,v) (PRINTNAME(x)->sxpinfo.u.g.misc = (v)) 
+/* Flag indicating whether a symbol is special. */
+#define SPEC_SYM(x)	(PRINTNAME(x)->sxpinfo.nonvec.spec_sym)
+#define SET_SPEC_SYM(x,v) (PRINTNAME(x)->sxpinfo.nonvec.spec_sym = (v)) 
 
 /* Environment Access Macros */
 #define FRAME(x)	((x)->u.envsxp.frame)
@@ -516,8 +506,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define HASHTAB(x)	((x)->u.envsxp.hashtab)
 #define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  ((x)->sxpinfo.u.g.misc)/*1=env has symbol w spec char*/
-#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.u.g.misc = (v))
+#define NO_SPEC_SYM(x)  ((x)->sxpinfo.nonvec.spec_sym) /* 1 = env has no special symbol */
+#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.nonvec.spec_sym = (v))
 
 #else /* not USE_RINTERNALS */
 

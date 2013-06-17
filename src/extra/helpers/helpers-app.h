@@ -59,11 +59,11 @@ typedef SEXP helpers_var_ptr;
 
 /* MARKING MACROS. */
 
-#define helpers_mark_in_use(v)             ((v)->sxpinfo.u.g.in_use = 1)
-#define helpers_mark_not_in_use(v)         ((v)->sxpinfo.u.g.in_use = 0)
+#define helpers_mark_in_use(v)             ((v)->sxpinfo.in_use = 1)
+#define helpers_mark_not_in_use(v)         ((v)->sxpinfo.in_use = 0)
 
-#define helpers_mark_being_computed(v)     ((v)->sxpinfo.u.g.being_computed = 1)
-#define helpers_mark_not_being_computed(v) ((v)->sxpinfo.u.g.being_computed = 0)
+#define helpers_mark_being_computed(v)     ((v)->sxpinfo.being_computed = 1)
+#define helpers_mark_not_being_computed(v) ((v)->sxpinfo.being_computed = 0)
 
 
 /* TASK AND VARIABLE NAMES FOR TRACE OUTPUT.  Functions references are in

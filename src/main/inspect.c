@@ -123,9 +123,13 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
     if (MARK(v)) { if (a) Rprintf(","); Rprintf("MARK"); a = 1; }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
-    if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
-    if (RTRACE(v)) { if (a) Rprintf(","); Rprintf("TR"); a = 1; }
-    if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
+    if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
+        if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
+        if (RTRACE(v)) { if (a) Rprintf(","); Rprintf("TR"); a = 1; }
+        if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
+        if (BASE_CACHE(v)) { if (a) Rprintf(","); Rprintf("BC"); a = 1; }
+        if (SPEC_SYM(v)) { if (a) Rprintf(","); Rprintf("SS"); a = 1; }
+    }
     if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
 	if (IS_ACTIVE_BINDING(v)) { if (a) Rprintf(","); Rprintf("AB"); a = 1; }
