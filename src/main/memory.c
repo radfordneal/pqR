@@ -2645,16 +2645,13 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 SEXP allocVector(SEXPTYPE type, R_len_t length)
 {
     SEXP s;
-    R_len_t i;
-    R_size_t size = 0, alloc_size;
-    int node_class;
 
     if (length < 0 )
         errorcall(R_GlobalContext->call,
                   _("negative length vectors are not allowed"));
 
     /* Do numeric (not complex) vectors of length 1 and 0 specially, for speed.
-       These are guaranteed to fit in the first node class.  Do do this with
+       These are guaranteed to fit in the first node class.  Don't do this with
        VALGRIND_LEVEL>0, since that needs actual_size, etc. */
 
 #if VALGRIND_LEVEL==0
@@ -2734,12 +2731,14 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     /* Compute number of notional "vector cells" to allocate. */
 
-    size = actual_size == 0 ? 0 : (actual_size-1) / sizeof(VECREC) + 1;
+    R_size_t size = actual_size == 0 ? 0 : (actual_size-1) / sizeof(VECREC) + 1;
 
     /* Find the node class to use. */
 
-    node_class = LARGE_NODE_CLASS;
-    alloc_size = size;
+    int node_class = LARGE_NODE_CLASS;
+    R_size_t alloc_size = size;
+    R_len_t i;
+
     for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
         if (size <= NodeClassSize[i]) {
             node_class = i;
