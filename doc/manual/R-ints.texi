@@ -562,13 +562,12 @@ of this type.
 
 @cindex allocation classes
 As we have seen, the field @code{gccls} in the header is three bits to
-label up to 8 classes of nodes.  Non-vector nodes are of class 0, and
-`small' vector nodes are of classes 1 to 6, with `large' vector nodes
-being of class 7.  The `small' vector nodes are able to store vector
-data of up to 8, 16, 32, 48, 64 and 128 bytes: larger vectors are
-@code{malloc}-ed individually whereas the `small' nodes are allocated
-from pages of about 2000 bytes.
-
+label up to 8 classes of nodes.  The sizes of the small node classes 
+(all except class 7) are determined by code in memory.c; one will
+always be large enough for the non-vector nodes.  Nodes in these classes
+are allocated from pages of about 2000 bytes.  Vectors that do not
+fit in any small node class are given node class 7, and allocated
+individually.
 
 @node Environments and variable lookup, Attributes, SEXPs, R Internal Structures
 @section Environments and variable lookup
