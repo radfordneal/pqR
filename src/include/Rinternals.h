@@ -140,21 +140,30 @@ struct sxpinfo_struct {
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
     unsigned int being_computed : 1;  /* whether helper may be computing this */
     /* "general purpose" field, used for miscellaneous purposes */
-    unsigned int gp : 16;     /* The "gp" field */
+    unsigned int gp : 16;     /* The "general purpose" field */
     union {
-      R_len_t truelength;     /* for vectors only - may someday be defunct... */
+      struct {                /* field below is for vectors only */
+        R_len_t truelength    /* for old stuff - may someday be defunct... */
+      } vec;
       struct {                /* fields below are for non-vectors only */
-        unsigned int debug : 1;  /* function (or env?) is being debugged */
+        /* Debugging */
+        unsigned int debug : 1;  /* function/environment is being debugged */
+        unsigned int rstep : 1;  /* function is to be debugged, but only once */
         unsigned int trace : 1;  /* function is being traced */
-        unsigned int basec : 1;  /* has base binding in global cache */
-        unsigned int spec_sym : 1; /* special symbol, or env with no spec sym */
-        unsigned int rstep : 1;
-        unsigned int unused : 3; /* not yet used */
+        /* Symbol binding */
+        unsigned int basec : 1;       /* sym has base binding in global cache */
+        unsigned int spec_sym : 1;    /* this is a "special" symbol */
+        unsigned int no_spec_sym : 1; /* environment has no special symbols */
+        unsigned int unused : 2; /* not yet used */
+        /* Primitive operations */
         unsigned char var1, var2;/* variants for evals of fast primitive args */
         unsigned char pending_ok;/* whether args can have computation pending */
-      } nonvec;
+      } nonvec;                  /*  - only one bit, but maybe faster as byte */
     } u;
 };
+
+#define VEC_SXPINFO(x)    ((x)->sxpinfo.u.vec)
+#define NONVEC_SXPINFO(x) ((x)->sxpinfo.u.nonvec)
 
 struct vecsxp_struct {
     R_len_t length;
@@ -414,23 +423,23 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)
-#define OBJECT(x)	((x)->sxpinfo.u.g.obj)
+#define OBJECT(x)	((x)->sxpinfo.obj)
 #define MARK(x)		((x)->sxpinfo.mark)
 #define TYPEOF(x)	((x)->sxpinfo.type)
-#define RTRACE(x)	((x)->sxpinfo.trace)
+#define RTRACE(x)	(NONVEC_SXPINFO(x).trace)
 #define LEVELS(x)	((x)->sxpinfo.gp)
-#define SET_OBJECT(x,v)	(((x)->sxpinfo.u.g.obj)=(v))
-#define SET_TYPEOF(x,v)	(((x)->sxpinfo.type)=(v))
-#define SET_RTRACE(x,v)	(((x)->sxpinfo.trace)=(v))
-#define SETLEVELS(x,v)	(((x)->sxpinfo.gp)=(v))
+#define SET_OBJECT(x,v)	((x)->sxpinfo.obj=(v))
+#define SET_TYPEOF(x,v)	((x)->sxpinfo.type=(v))
+#define SET_RTRACE(x,v)	(NONVEC_SXPINFO(x).trace=(v))
+#define SETLEVELS(x,v)	((x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
-#define TRUELENGTH(x)	(((VECSEXP) (x))->sxpinfo.u.truelength)
-#define SET_TRUELENGTH(x,v)	((((VECSEXP) (x))->sxpinfo.u.truelength)=(v))
+#define TRUELENGTH(x)	(VEC_SXPINFO(x).truelength)
+#define SET_TRUELENGTH(x,v)  (VEC_SXPINFO(x).truelength = (v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
 #define S4_OBJECT_MASK (1<<4)
-#define IS_S4_OBJECT(x) ((x)->sxpinfo.gp & S4_OBJECT_MASK)
+#define IS_S4_OBJECT(x) (((x)->sxpinfo.gp & S4_OBJECT_MASK) != 0)
 #define SET_S4_OBJECT(x) (((x)->sxpinfo.gp) |= S4_OBJECT_MASK)
 #define UNSET_S4_OBJECT(x) (((x)->sxpinfo.gp) &= ~S4_OBJECT_MASK)
 
@@ -479,10 +488,10 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define FORMALS(x)	((x)->u.closxp.formals)
 #define BODY(x)		((x)->u.closxp.body)
 #define CLOENV(x)	((x)->u.closxp.env)
-#define RDEBUG(x)	((x)->sxpinfo.nonvec.debug)
-#define SET_RDEBUG(x,v)	(((x)->sxpinfo.nonvec.debug)=(v))
-#define RSTEP(x)	((x)->sxpinfo.nonvec.rstep)
-#define SET_RSTEP(x,v)	(((x)->sxpinfo.nonvec.rstep)=(v))
+#define RDEBUG(x)	(NONVEC_SXPINFO(x).debug)
+#define SET_RDEBUG(x,v)	(NONVEC_SXPINFO(x).debug=(v))
+#define RSTEP(x)	(NONVEC_SXPINFO(x).rstep)
+#define SET_RSTEP(x,v)	(NONVEC_SXPINFO(x).rstep=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	((x)->u.symsxp.pname)
@@ -493,12 +502,12 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) (((x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  ((x)->sxpinfo.nonvec.basec) /* 1 = base binding in global cache*/
-#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.nonvec.basec = (v))
+#define BASE_CACHE(x)  (NONVEC_SXPINFO(x).basec) /* 1 = base binding in global cache*/
+#define SET_BASE_CACHE(x,v) (NONVEC_SXPINFO(x).basec = (v))
 
 /* Flag indicating whether a symbol is special. */
-#define SPEC_SYM(x)	(PRINTNAME(x)->sxpinfo.nonvec.spec_sym)
-#define SET_SPEC_SYM(x,v) (PRINTNAME(x)->sxpinfo.nonvec.spec_sym = (v)) 
+#define SPEC_SYM(x)	(NONVEC_SXPINFO(x).spec_sym)
+#define SET_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).spec_sym = (v)) 
 
 /* Environment Access Macros */
 #define FRAME(x)	((x)->u.envsxp.frame)
@@ -506,8 +515,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define HASHTAB(x)	((x)->u.envsxp.hashtab)
 #define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  ((x)->sxpinfo.nonvec.spec_sym) /* 1 = env has no special symbol */
-#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.nonvec.spec_sym = (v))
+#define NO_SPEC_SYM(x)  (NONVEC_SXPINFO(x).no_spec_sym) /* 1 = env has no special symbol */
+#define SET_NO_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).no_spec_sym = (v))
 
 #else /* not USE_RINTERNALS */
 

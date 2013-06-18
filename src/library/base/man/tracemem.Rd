@@ -1,6 +1,7 @@
 % File src/library/base/man/tracemem.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Development Team
+% Modifications for pqR copyright (C) 2013 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{tracemem}
@@ -9,9 +10,14 @@
 \alias{retracemem}
 \title{Trace Copying of Objects}
 \description{
-This function marks an object so that a message is printed whenever the
-internal function \code{duplicate} is called.   This happens when two
-objects share the same memory  and one of them is modified.  It is a
+These functions are defunct in pqR, which does not allow them to be enabled.  
+The \code{retracemem} function remains, doing nothing, for compatibility.
+The \code{Rprofmemt} function provides an alternative method of tracking
+memory allocations, and the \code{pnamedcnt} function may also be useful.
+
+The \code{tracemem} function marks an object so that a message is printed 
+whenever the internal function \code{duplicate} is called.   This happens 
+when two objects share the same memory  and one of them is modified.  It is a
 major cause of hard-to-predict memory use in R.  
 }
 \usage{

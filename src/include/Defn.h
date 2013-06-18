@@ -423,7 +423,7 @@ typedef struct {
         = (R_FunTab[setprim_value].eval/1000)&1; \
     setprim_ptr->u.primsxp.primsxp_internal \
         = (R_FunTab[setprim_value].eval/10)&1; \
-    setprim_ptr->sxpinfo.u.nonvec.pending_ok \
+    NONVEC_SXPINFO(setprim_ptr).pending_ok \
         = R_FunTab[setprim_value].eval/10000; \
 } while (0)
 
@@ -444,19 +444,19 @@ typedef struct {
 #define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)
 
-#define PRIMFUN_PENDING_OK(x) ((x)->sxpinfo.u.nonvec.pending_ok)
+#define PRIMFUN_PENDING_OK(x) (NONVEC_SXPINFO(x).pending_ok)
 
 #define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
 #define PRIMFUN_DSPTCH1(x) ((x)->u.primsxp.primsxp_dsptch1)
 #define PRIMFUN_DSPTCH2(x) ((x)->u.primsxp.primsxp_dsptch2)
-#define PRIMFUN_ARG1VAR(x) ((x)->sxpinfo.u.nonvec.var1)
-#define PRIMFUN_ARG2VAR(x) ((x)->sxpinfo.u.nonvec.var2)
+#define PRIMFUN_ARG1VAR(x) (NONVEC_SXPINFO(x).var1)
+#define PRIMFUN_ARG2VAR(x) (NONVEC_SXPINFO(x).var2)
 #define PRIMFUN_UNI_TOO(x) ((x)->u.primsxp.primsxp_uni_too)
 
 #define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
     (x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
     (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
-    (x)->sxpinfo.u.nonvec.var1 = (v1); \
+    NONVEC_SXPINFO(x).var1 = (v1); \
 } while (0)
 
 #define SET_PRIMFUN_FAST_BINARY(x,f,dsptch1,dsptch2,v1,v2,uni_too) do { \
@@ -464,8 +464,8 @@ typedef struct {
     (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
     (x)->u.primsxp.primsxp_dsptch2 = (dsptch2); \
     (x)->u.primsxp.primsxp_uni_too = (uni_too); \
-    (x)->sxpinfo.u.nonvec.var1 = (v1); \
-    (x)->sxpinfo.u.nonvec.var2 = (v2); \
+    NONVEC_SXPINFO(x).var1 = (v1); \
+    NONVEC_SXPINFO(x).var2 = (v2); \
 } while (0)
 
 /* Symbols for eval variants.  The symbols with values less than 16 may be
@@ -495,8 +495,8 @@ typedef struct {
 
 /* Access to markers maintained with assistance of the helpers facility. */
 
-#define IS_BEING_COMPUTED_BY_TASK(x)  ((x)->sxpinfo.u.g.being_computed)
-#define IS_IN_USE_BY_TASK(x)          ((x)->sxpinfo.u.g.in_use)
+#define IS_BEING_COMPUTED_BY_TASK(x)  ((x)->sxpinfo.being_computed)
+#define IS_IN_USE_BY_TASK(x)          ((x)->sxpinfo.in_use)
 
 /* Macros to wait until variables(s) computed. */
 

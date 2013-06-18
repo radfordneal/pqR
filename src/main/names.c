@@ -1051,10 +1051,10 @@ attribute_hidden FUNTAB R_FunTab[] =
 };
 
 
-/* Table of special names.  There are marked as special with SET_SPEC_SYM.  
-   Environments that have never contained such a symbol are marked as such, 
-   so they can be quickly skipped when searching for a function named by such 
-   a special symbol. 
+/* Table of special names.  These are marked as special with SET_SPEC_SYM.  
+   Environments that have never contained such a symbol are marked as such,
+   with NO_SPEC_SYM, so they can be quickly skipped when searching for a 
+   function named by such a special symbol. 
 
    Any symbols can be put here, but ones that contain special characters, or are
    reserved words, are the ones unlikely to be defined in any environment other

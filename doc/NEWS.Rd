@@ -37,25 +37,25 @@ with the same version number are distinguished by release date.
 
 }}
 
-  \subsection{NEW FEATURES}{
+  \subsection{FEATURE CHANGES}{
     \itemize{
       \item A new primitive function \code{get_rm} has been added,
             which removes a variable while returning the value it
             had when removed.  See \code{help(get_rm)} for details,
             and how this can sometimes improve efficiency of R functions.
 
-      \item An enhanced version of the Rprofmem function for profiling
+      \item An enhanced version of the \code{Rprofmem} function for profiling
             allocation of vectors has been implemented, that can
             display more information, and can output to the terminal,
             allowing the source of allocations to more easily be
-            determined.  Also, Rprofmem has now been made accessible
-            even when the \code{--enable-memory-profiling} configuration
-            option is not used, since the overhead of making it
-            accessible is negligible.
+            determined.  Also, \code{Rprofmem} is now always accessible
+            (not requiring the \code{--enable-memory-profiling} configuration
+            option).  Its overhead when not in use is negligible.
  
             The new version allows records of memory allocation to be
             output to the terminal, where their position relative to
-            other output can be informative.  More identifying
+            other output can be informative (this is the default for the
+            new \code{Rprofmemt} variant).  More identifying
             information, including type, number of elements, and
             hexadecimal address, can also be output.  For more details on
             these and other changes, see \code{help(Rprofmem)}.
@@ -64,6 +64,18 @@ with the same version number are distinguished by release date.
             prints the NAMEDCNT/NAMED count for an R object, which is helpful
             in tracking when objects will have to be duplicated.  For
             details, see help(pnamedcnt).
+
+      \item The \code{tracemem} function is defunct.  What exactly it was
+            supposed to do in R-2.15.0 was unclear, and optimizations 
+            in pqR make it even less clear what it should do.  The bit
+            in object headers that was used to implement it has been
+            put to a better use in pqR.  The \code{--enable-memory-profiling}
+            configuration option used to enable it no longer exists.
+
+            The \code{retracemem} function remains for compatibility
+            (doing nothing).  The \code{Rprofmemt} and \code{pnamedcnt}
+            functions described above provide alternative ways of gaining
+            insight into memory allocation behaviour.
 
       \item Some options that can be set by arguments to the R command can
             now also be set with environment variables, specifically, the
@@ -148,11 +160,9 @@ with the same version number are distinguished by release date.
 
   \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
     \itemize{
-      \item The internal structure of an object has changed.  The changes
-            are mostly upwards compatible, but do require recompilation.
-            The one exception to compatibility is that the TRUELENGTH
-            field has changed from a 32-bit signed integer to a 28-bit
-            unsigned integer.  Use of TRUELENGTH is in any case discouraged.
+      \item The internal structure of an object has changed, in ways that 
+            should be compatible with R-2.15.0, but which do require 
+            re-compilation.
 
       \item The sizes of objects have changed in some cases (though not most).
             For a 32-bit configuration, the size of a cons cell increases

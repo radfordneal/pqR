@@ -59,8 +59,9 @@
 
 #define EXPEL_OLD_TO_NEW 0 /* Immediately expel, rather than use OldToNew? */
 
-#define FLAG_OLD_TO_NEW 1  /* Use gcoton in sxpinfo to flag nodes already moved
-                              to OldToNew?  (Only when EXPEL_OLD_TO_NEW is 0) */
+#define FLAG_OLD_TO_NEW 0  /* Use gcoton in sxpinfo to flag nodes already moved
+                              to OldToNew?  (Only when EXPEL_OLD_TO_NEW is 0).
+                              Can't be enabled if there's no gcoton field! */
 
 #define SORT_NODES 1  /* Sort free nodes in every page on each full GC? */
 

@@ -125,11 +125,10 @@ checked against the current version of the source code.
 
 @cindex SEXP
 @cindex SEXPRREC
-What @R{} users think of as @emph{variables} or @emph{objects} are
-symbols which are bound to a value.  The value can be thought of as
+The values of R variableso and other objects can be thought of as
 either a @code{SEXP} (a pointer), or the structure it points to, a
-@code{SEXPREC} (and there are alternative forms used for vectors, namely
-@code{VECSXP} pointing to @code{VECTOR_SEXPREC} structures).
+@code{SEXPREC} (and there are alternative forms used for vectors
+pointing to @code{VECTOR_SEXPREC} structures).
 So the basic building blocks of @R{} objects are often called
 @emph{nodes}, meaning @code{SEXPREC}s or @code{VECTOR_SEXPREC}s.
 
@@ -138,13 +137,11 @@ available to @R{} Extensions: rather @code{SEXP} is an opaque pointer,
 and the internals can only be accessed by the functions provided.
 
 @cindex node
-Both types of node structure have as their first three fields a 64-bit
-@code{sxpinfo} header and then three pointers (to the attributes and the
-previous and next node in a doubly-linked list), and then some further
-fields.
-
-The first five bits of the @code{sxpinfo} header specify one of up to 32
-@code{SEXPTYPE}s.
+Node structures of all types have as their first four fields a 64-bit
+@code{sxpinfo} header, a pointer to the attributes, and pointers
+to the previous and next node in a doubly-linked list (for garbage
+collection purposes). Additional fields vary by type (a @code{SEXPTYPE}), 
+which is specfied by a five-bit field in the @code{sxpinfo} header.
 
 @menu
 * SEXPTYPEs::                   
@@ -238,29 +235,48 @@ solely of a simple type such as an atomic vector or function.  Prior to
 @node Rest of header, The 'data', SEXPTYPEs, SEXPs
 @subsection Rest of header
 
-The @code{sxpinfo} header is defined as a 64-bit C structure by
+The @code{sxpinfo} header is defined as the 64-bit C structure below:
 
 @example
 struct sxpinfo_struct @{
-    unsigned int type  :  5;  /*@r{discussed above} */
-    unsigned int nmcnt :  3;  /* count of "names" referring to object */
+    /* Type and namedcnt in first byte */
+    unsigned int nmcnt : 3;   /* count of "names" referring to object */
+    unsigned int type : 5;    /* @r{discussed above} */
     /* Garbage collector stuff - keep in one byte to maybe speed up access */
-    unsigned int gcgen :  1;  /* old generation number - may be best first */
-    unsigned int gcoton:  1;  /* 1 if already in old-to-new list */
-    unsigned int mark  :  1;  /* mark object as `in use' in garbage collector */
-    unsigned int gccls :  3;  /* node class for garbage collector */
-    /* debug/trace */
-    unsigned int debug :  1;
-    unsigned int trace :  1;  /* functions and memory tracing */
-    /* "general purpose" fields, used for miscellaneous purposes */
-    unsigned int gp    : 16;  /* old "gp" field */
-    unsigned int gp2   : 28;  /* new "gp" field, replaces old "truelength" */
-    /* other */
-    unsigned int obj   :  1;  /* set if this is an S3 or S4 object */
-    unsigned int misc  :  1;  /* miscellaneous uses - eg, RSTEP */
-    unsigned int unused:  2;  /* not currently in use */
-@};  /*              Tot: 32 */
+    unsigned int gccls : 3;   /* node class for garbage collector */
+    unsigned int gcgen : 1;   /* old generation number - may be best first */
+    unsigned int mark : 1;    /* marks object as in use in garbage collector */
+    /* Object flag */
+    unsigned int obj : 1;     /* set if this is an S3 or S4 object */
+    /* Flags to synchronize with helper threads */
+    unsigned int in_use: 1;   /* whether contents may be in use by a helper */
+    unsigned int being_computed : 1;  /* whether helper may be computing this */
+    /* "general purpose" field, used for miscellaneous purposes */
+    unsigned int gp : 16;     /* The "general purpose" field */
+    union @{
+      struct @{                /* field below is for vectors only */
+        R_len_t truelength    /* for old stuff - may someday be defunct... */
+      @} vec;
+      struct @{                /* fields below are for non-vectors only */
+        /* Debugging */
+        unsigned int debug : 1;  /* function/environment is being debugged */
+        unsigned int rstep : 1;  /* function is to be debugged, but only once */
+        unsigned int trace : 1;  /* function is being traced */
+        /* Symbol binding */
+        unsigned int basec : 1;       /* sym has base binding in global cache */
+        unsigned int spec_sym : 1;    /* this is a "special" symbol */
+        unsigned int no_spec_sym : 1; /* environment has no special symbols */
+        unsigned int unused : 2; /* not yet used */
+        /* Primitive operations */
+        unsigned char var1, var2;/* variants for evals of fast primitive args */
+        unsigned char pending_ok;/* whether args can have computation pending */
+      @} nonvec;                  /*  - only one bit, but maybe faster as byte */
+    @} u;
+@};
 @end example
+
+Note that one field is for vectors only (including @code{CHARSXP}), while
+some other fields are for non-vectors only.
 
 @findex debug bit
 The @code{debug} bit is used for closures and environments.  For
@@ -269,28 +285,29 @@ indicates that evaluations of the function should be run under the
 browser.  For environments it indicates whether the browsing is in
 single-step mode.
 
-@findex trace bit
-The @code{trace} bit is used for functions for @code{trace()} and for
-other objects when tracing duplications (see @code{tracemem}).
-
-@findex misc bit
+@findex rstep bit
 @findex RSTEP
-The bit called @code{misc} in @pqR{} was called @code{spare} in R-2.15.0, 
-and was said to be unused, but this was not true.
-For symbols, the @code{misc} bit is used for the BASE_CACHE flag, that
+The @code{rstep} bit is used only for closures, to indicate "debugonce".
+
+@findex trace bit
+The @code{trace} bit is used for functions for @code{trace()}.
+
+@findex basec bit
+For symbols, the @code{basec} bit is used for the @code{BASE_CACHE} flag, that
 indicates that the symbol is in the global cache with a binding in the 
 base environment, allowing its value to be obtained directly without 
 looking in the hash table.
-For closures, the @code{misc} bit is used as the @code{RSTEP} flag.
-The @code{misc} bit is used as the @code{SPEC_SYM} flag for the printnames of
-symbols, indicating that it is one a of set of special symbols (eg, @code{+}
-and @code{if}).  It is also used as the @code{NO_SPEC_SYM} flag for 
-environments, to indicate that the environment has no symbols with the 
+
+@findex spec_sym bit
+The @code{spec_sym} bit is used as the @code{SPEC_SYM} flag for
+symbols, indicating that it is one of a set of special symbols (eg, @code{+}
+and @code{if}) for which an attempt is made to have function lookup be faster.  
+
+@findex no_spec_sym bit
+The @code{no_spec_sym} bit is used as the @code{NO_SPEC_SYM} flag for 
+environments to indicate that the environment has no symbols with the 
 @code{SPEC_SYM} flag set (and has never had such a symbol), 
 so that it can be bypassed in searches for such symbols.
-For builtin primitives, the @code{misc} bit is used to indicate that the 
-primitive can take operands that may be in the process of being computed by 
-a task.
 
 @findex nmcnt field
 @findex named field
@@ -424,9 +441,7 @@ The vector types are @code{RAWSXP}, @code{CHARSXP}, @code{LGLSXP},
 @code{VECSXP}, @code{EXPRSXP} and @code{WEAKREFSXP}.  Remember that such
 types are a @code{VECTOR_SEXPREC}, which again consists of the header
 and the same three pointers, but followed by an integer giving the
-length of the vector, and then followed by the data.@footnote{There 
-used to be a so-called `true length' field too,
-almost unused, which in pqR is partially replaced by @code{gp2}.}  
+length of the vector, and then followed by the data.
 The data is aligned as required for a double and/or a pointer (even
 when the actual data is integer, or some other type not requiring this
 alignment).
@@ -492,7 +507,7 @@ the offset is set with @code{SET_PRIMOFFSET}.
 
 @item CHARSXP
 @code{length} followed by a block of bytes (allowing
-for the @code{nul} terminator).  The @code{gp2} field holds a hash 
+for the @code{nul} terminator).  The @code{truelength} field holds a hash 
 value.
 
 @item LGLSXP
@@ -674,7 +689,7 @@ table.
 Environments in @R{} usually have a hash table, and nowadays that is the
 default in @code{new.env()}.  It is stored as a @code{VECSXP} where
 @code{length} is used for the allocated size of the table and
-@code{gp2} is the number of primary slots in use---the pointer to
+@code{truelength} is the number of primary slots in use---the pointer to
 the @code{VECSXP} is part of the header of a @code{SEXP} of type
 @code{ENVSXP}, and this points to @code{R_NilValue} if the environment
 is not hashed.
