@@ -143,7 +143,7 @@ struct sxpinfo_struct {
     unsigned int gp : 16;     /* The "general purpose" field */
     union {
       struct {                /* field below is for vectors only */
-        R_len_t truelength    /* for old stuff - may someday be defunct... */
+        R_len_t truelength;   /* for old stuff - may someday be defunct... */
       } vec;
       struct {                /* fields below are for non-vectors only */
         /* Debugging */
