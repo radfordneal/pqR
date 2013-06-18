@@ -1,0 +1,6 @@
+This mod changes sxpinfo in a major way, splitting 32 of the 64 bits
+into a union that differs for vector and non-vector nodes.  This
+allows the full 32-bit truelength field to be restored.  The diverse
+uses of the "misc" bit are now separated.  The use of the "trace" bit
+for memory tracing is no longer possible, since it doesn't exist in
+vectors, so the tracemem facility is defunct.

@@ -227,16 +227,16 @@ fi],
 [want_R_profiling=yes])
 
 ## Allow the user to specify support for memory profiling.
-AC_ARG_ENABLE([memory-profiling],
-[AS_HELP_STRING([--enable-memory-profiling],[attempt to compile support for tracemem() @<:@no@:>@])],
-[if test "${enableval}" = no; then
-  want_memory_profiling=no
-elif test "${enableval}" = yes; then
-  want_memory_profiling=yes
-else
-  want_memory_profiling=no
-fi],
-[want_memory_profiling=no])
+#AC_ARG_ENABLE([memory-profiling],
+#[AS_HELP_STRING([--enable-memory-profiling],[attempt to compile support for tracemem() @<:@no@:>@])],
+#[if test "${enableval}" = no; then
+#  want_memory_profiling=no
+#elif test "${enableval}" = yes; then
+#  want_memory_profiling=yes
+#else
+#  want_memory_profiling=no
+#fi],
+#[want_memory_profiling=no])
 
 ## Allow the user to specify building an R framework (Darwin).
 AC_ARG_ENABLE([R-framework],
