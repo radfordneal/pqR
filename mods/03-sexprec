@@ -1,3 +1,0 @@
-The basic sexprec structure for objects is modified here, to allow for
-a number of future modifications.  The new scheme is documented in
-R-ints.texi.

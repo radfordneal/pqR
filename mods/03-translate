@@ -1,2 +1,0 @@
-Speed up character translation a bit somtimes, by doing operations
-only when they are actually needed.
