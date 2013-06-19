@@ -131,6 +131,11 @@ with the same version number are distinguished by release date.
             on Intel processors (verified both empirically and by consulting
             Intel documentation).  It does not work on SPARC machines.
 
+      \item The \code{--enable-memory-profiling} option to configure
+            no longer exists.  In pqR, the \code{Rprofmem} function is always
+            enabled, and the \code{tracemem} function is defunct.  (See
+            discussion above.)
+
       \item When installing from source, the output of configure 
             now displays whether standard and recommended packages will
             be byte compiled.
