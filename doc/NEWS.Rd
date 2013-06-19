@@ -5,16 +5,17 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-06-07}{
+\section{CHANGES IN VERSION RELEASED 2013-06-18}{
 
 \subsection{INTRODUCTION}{
 
 \itemize{ 
-\item This is the nearly-initial public release of pqR (there was an
-early unpublicised release on 2013-05-31, which this release updates
-with bug fixes, etc).  It is based on R-2.15.0, distributed by the R
-Core Team, but improves on it in many ways, mostly ways that speed it
-up, but also by implementing some new features and fixing some bugs.
+\item This is the nearly-initial public release of pqR (there were
+early unpublicised releases on 2013-05-31 and 2013-06-07, which this 
+release updates with bug fixes, etc).  It is based on R-2.15.0, 
+distributed by the R Core Team, but improves on it in many ways, mostly 
+ways that speed it up, but also by implementing some new features and 
+fixing some bugs.
 
 \item One notable improvement is that for systems with multiple
 processors or processor cores, pqR is able to do some numeric
@@ -113,7 +114,7 @@ with the same version number are distinguished by release date.
             R-2.15.0, but you will need to recompile any packages (other
             that those with only R code) that you had installed for R-2.15.0, 
             and any other C code you use with R, since the format of internal 
-            data structures has changed.
+            data structures has changed (see below).
 
       \item New configuration options relating to helper threads and
             to matrix multiplication now exist.  For details, see 
@@ -184,6 +185,12 @@ with the same version number are distinguished by release date.
             share a node class with whatever vectors also fit in that
             node class.
 
+      \item The old two-bit NAMED field of an object is now a three-bit
+            NAMEDCNT field, to allow for a better attempt at reference
+            counting.  Versions of the the NAMED and SET_NAMED macros
+            are still defined for compatibility.  See the R-ints manual
+            for details.
+
       \item Setting the length of a vector to something less than its
             allocated length using SETLENGTH is deprecated.  The LENGTH
             field is used for memory allocation tracking by the garbage
@@ -220,6 +227,11 @@ with the same version number are distinguished by release date.
             This facility is still undergoing rapid development.  Additional 
             documentation on which operations may be done in parallel will be 
             forthcoming.
+
+      \item A better attempt at counting how many "names" an object has
+            is now made, which reduces how often objects are duplicated
+            unnecessarily.  This change is ongoing, with further improvements
+            and documentation forthcoming.
 
       \item Several primitive functions that can generate integer sequences
             --- ":", seq.int, seq_len, and seq_along --- will now sometimes
