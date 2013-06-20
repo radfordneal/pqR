@@ -1,3 +1,0 @@
-This fixes some bugs with subsetting of lists, as described in NEWS.
-Adds tests for these.
-
