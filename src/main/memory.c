@@ -4473,8 +4473,9 @@ SEXP attribute_hidden do_objectsize(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* .Internal function for debugging the valgrind instrumentation code... */
 
-volatile int R_valgrind_test_var;  /* places to store/access data */
-volatile int R_valgrind_test_var2;
+volatile int R_valgrind_test_int;   /* places to store/access data */
+volatile int R_valgrind_test_real;
+volatile int R_valgrind_test_real2;
 
 SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -4486,28 +4487,68 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
            VALGRIND_LEVEL);
         int *p = malloc(2*sizeof(int));
         REprintf("Undefined read for 'if'\n");
-        if (*p==0) R_valgrind_test_var = 987; else R_valgrind_test_var += 33;
+        if (*p==0) R_valgrind_test_real = 987; else R_valgrind_test_real += 33;
         REprintf("OK write\n");
-        *p = 7+R_valgrind_test_var2;
+        *p = 7+R_valgrind_test_real2;
         REprintf("OK read for 'if'\n");
-        if (*p==0) R_valgrind_test_var = 9876; else R_valgrind_test_var += 333;
+        if (*p==0) R_valgrind_test_real = 9876; else R_valgrind_test_real += 37;
         REprintf("OK write\n");
-        *(p+1) = 8+R_valgrind_test_var2;
+        *(p+1) = 8+R_valgrind_test_real2;
 #if VALGRIND_LEVEL>0
         VALGRIND_MAKE_MEM_NOACCESS(p,2*sizeof(int));
 #endif
         REprintf("Not OK write\n");
-        *p = 9+R_valgrind_test_var2;
+        *p = 9+R_valgrind_test_real2;
         REprintf("Not OK read\n");
-        R_valgrind_test_var = *(p+1);
+        R_valgrind_test_real = *(p+1);
 #if VALGRIND_LEVEL>0
         VALGRIND_MAKE_MEM_DEFINED(p+1,sizeof(int));
 #endif
         REprintf("Not OK read\n");
-        R_valgrind_test_var = *p;
+        R_valgrind_test_real = *p;
         REprintf("OK read\n");
-        R_valgrind_test_var = *(p+1);
+        R_valgrind_test_real = *(p+1);
         /* Note: p not freed */
+    }
+    else if (sizel<0) {
+        sizel = -sizel;
+        REprintf(
+          "Allocating integer vector of size %d for testvalgrind (level %d)\n",
+           sizel, VALGRIND_LEVEL);
+        SEXP vec = allocVector(INTSXP,sizel);
+
+        REprintf("Invalid read before start of object\n");
+        R_valgrind_test_int = ((int*)vec)[-1];
+        REprintf("Invalid read after end of object\n");
+        R_valgrind_test_int = INTEGER(vec)[sizel];
+
+        REprintf("Invalid read used for 'if' from beginning of vector\n");
+        if (INTEGER(vec)[0]>1) R_valgrind_test_int = 123; 
+        else R_valgrind_test_int += 456;
+        REprintf("Invalid read used for 'if' from end of vector\n");
+        if (INTEGER(vec)[sizel-1]>1) R_valgrind_test_int = 987; 
+        else R_valgrind_test_int += 654;
+
+        REprintf("Store at beginning of vector\n");
+        INTEGER(vec)[0] = 1234;
+        REprintf("Store at end of vector\n");
+        INTEGER(vec)[sizel-1] = 5678;
+
+        REprintf("Valid read used for 'if' from beginning of vector\n");
+        if (INTEGER(vec)[0]>1) R_valgrind_test_int = 123; 
+        else R_valgrind_test_int += 456;
+        REprintf("Valid read used for 'if' from end of vector\n");
+        if (INTEGER(vec)[sizel-1]>1) R_valgrind_test_int = 987; 
+        else R_valgrind_test_int += 654;
+
+        REprintf("Do a garbage collection\n");
+        R_gc();
+
+        REprintf("Invalid read at beginning of no-longer-existing vector\n");
+        R_valgrind_test_int = INTEGER(vec)[0];
+        REprintf("Invalid read at end of no-longer-existing vector\n");
+        R_valgrind_test_int = INTEGER(vec)[sizel-1];
+        REprintf("Done testvalgrind\n");
     }
     else {
         REprintf(
@@ -4516,16 +4557,16 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         SEXP vec = allocVector(REALSXP,sizel);
 
         REprintf("Invalid read before start of object\n");
-        R_valgrind_test_var = ((double*)vec)[-1];
+        R_valgrind_test_real = ((double*)vec)[-1];
         REprintf("Invalid read after end of object\n");
-        R_valgrind_test_var = REAL(vec)[sizel];
+        R_valgrind_test_real = REAL(vec)[sizel];
 
         REprintf("Invalid read used for 'if' from beginning of vector\n");
-        if (REAL(vec)[0]>1) R_valgrind_test_var = 123; 
-        else R_valgrind_test_var += 456;
+        if (REAL(vec)[0]>1) R_valgrind_test_real = 123; 
+        else R_valgrind_test_real += 456;
         REprintf("Invalid read used for 'if' from end of vector\n");
-        if (REAL(vec)[sizel-1]>1) R_valgrind_test_var = 987; 
-        else R_valgrind_test_var += 654;
+        if (REAL(vec)[sizel-1]>1) R_valgrind_test_real = 987; 
+        else R_valgrind_test_real += 654;
 
         REprintf("Store at beginning of vector\n");
         REAL(vec)[0] = 1234;
@@ -4533,19 +4574,19 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         REAL(vec)[sizel-1] = 5678;
 
         REprintf("Valid read used for 'if' from beginning of vector\n");
-        if (REAL(vec)[0]>1) R_valgrind_test_var = 123; 
-        else R_valgrind_test_var += 456;
+        if (REAL(vec)[0]>1) R_valgrind_test_real = 123; 
+        else R_valgrind_test_real += 456;
         REprintf("Valid read used for 'if' from end of vector\n");
-        if (REAL(vec)[sizel-1]>1) R_valgrind_test_var = 987; 
-        else R_valgrind_test_var += 654;
+        if (REAL(vec)[sizel-1]>1) R_valgrind_test_real = 987; 
+        else R_valgrind_test_real += 654;
 
         REprintf("Do a garbage collection\n");
         R_gc();
 
         REprintf("Invalid read at beginning of no-longer-existing vector\n");
-        R_valgrind_test_var = REAL(vec)[0];
+        R_valgrind_test_real = REAL(vec)[0];
         REprintf("Invalid read at end of no-longer-existing vector\n");
-        R_valgrind_test_var = REAL(vec)[sizel-1];
+        R_valgrind_test_real = REAL(vec)[sizel-1];
         REprintf("Done testvalgrind\n");
     }
 
