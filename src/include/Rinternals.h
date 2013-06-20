@@ -143,7 +143,7 @@ struct sxpinfo_struct {
     unsigned int gp : 16;     /* The "general purpose" field */
     union {
       struct {                /* field below is for vectors only */
-        R_len_t truelength;   /* for old stuff - may someday be defunct... */
+        R_len_t truelength;      /* for old stuff - may someday be defunct... */
       } vec;
       struct {                /* fields below are for non-vectors only */
         /* Debugging */
@@ -162,8 +162,19 @@ struct sxpinfo_struct {
     } u;
 };
 
+/* Macros to access the vector or non-vector part of the sxpinfo structure,
+   checking validity if CHECK_VEC_NONVEC is defined (it should not normally
+   be defined because it significantly degrades performance). */
+
+#ifdef CHECK_VEC_NONVEC
+extern struct sxpinfo_struct *Rf_verify_vec (void *);
+extern struct sxpinfo_struct *Rf_verify_nonvec (void *);
+#define VEC_SXPINFO(x)    (Rf_verify_vec((void*)x)->u.vec)
+#define NONVEC_SXPINFO(x) (Rf_verify_nonvec((void*)x)->u.nonvec)
+#else
 #define VEC_SXPINFO(x)    ((x)->sxpinfo.u.vec)
 #define NONVEC_SXPINFO(x) ((x)->sxpinfo.u.nonvec)
+#endif
 
 struct vecsxp_struct {
     R_len_t length;
