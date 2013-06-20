@@ -4457,7 +4457,7 @@ SEXP attribute_hidden do_objectsize(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-/* "Internal" function for debugging the valgrind instrumentation code... */
+/* .Internal function for debugging the valgrind instrumentation code... */
 
 volatile int R_valgrind_test_var;  /* places to store/access data */
 volatile int R_valgrind_test_var2;
@@ -4467,7 +4467,9 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
     R_len_t sizel = asInteger(CAR(args));
 
     if (sizel == NA_INTEGER) {
-        REprintf("Using malloc'd memory for testvalgrind (level %d)\n", VALGRIND_LEVEL);
+        REprintf(
+          "Using malloc'd memory for testvalgrind (level %d)\n", 
+           VALGRIND_LEVEL);
         int *p = malloc(2*sizeof(int));
         REprintf("Undefined read for 'if'\n");
         if (*p==0) R_valgrind_test_var = 987; else R_valgrind_test_var += 33;
@@ -4477,12 +4479,16 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         if (*p==0) R_valgrind_test_var = 9876; else R_valgrind_test_var += 333;
         REprintf("OK write\n");
         *(p+1) = 8+R_valgrind_test_var2;
+#if VALGRIND_LEVEL>0
         VALGRIND_MAKE_MEM_NOACCESS(p,2*sizeof(int));
+#endif
         REprintf("Not OK write\n");
         *p = 9+R_valgrind_test_var2;
         REprintf("Not OK read\n");
         R_valgrind_test_var = *(p+1);
+#if VALGRIND_LEVEL>0
         VALGRIND_MAKE_MEM_DEFINED(p+1,sizeof(int));
+#endif
         REprintf("Not OK read\n");
         R_valgrind_test_var = *p;
         REprintf("OK read\n");
@@ -4491,8 +4497,8 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else {
         REprintf(
-         "Allocating real vector of size %d for testvalgrind (level %d)\n",
-         sizel, VALGRIND_LEVEL);
+          "Allocating real vector of size %d for testvalgrind (level %d)\n",
+           sizel, VALGRIND_LEVEL);
         SEXP vec = allocVector(REALSXP,sizel);
 
         REprintf("Invalid read before start of object\n");
