@@ -167,7 +167,10 @@ with the same version number are distinguished by release date.
     \itemize{
       \item The internal structure of an object has changed, in ways that 
             should be compatible with R-2.15.0, but which do require 
-            re-compilation.
+            re-compilation.  The flags in the object header for \code{DEBUG},
+            \code{RSTEP}, and \code{TRACE} now exist only for non-vector 
+            objects, which is sufficient for their present use (now that 
+            \code{tracemem} is defunct).
 
       \item The sizes of objects have changed in some cases (though not most).
             For a 32-bit configuration, the size of a cons cell increases
