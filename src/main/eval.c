@@ -2528,13 +2528,11 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
  * arguments it comes in with (if argsevald is 0) and returns them so that
  * the generic built-in C code can continue.  Note that CDR(call) is
  * used to obtain the unevaluated arguments when creating promises, even
- * when argsevald is 1 (so args is the evaluated arguments).  Note also
- * that args must be protected before the call if argsevald is 0, but not 
- * if argsevald is 1.  If argsevald is -1, only the first argument will
- * have been evaluated, and only the unevaluated ones will have been protected.
+ * when argsevald is 1 (so args is the evaluated arguments).  If argsevald 
+ * is -1, only the first argument will have been evaluated.
  *
- * To call this an ugly hack would be to insult all existing ugly hacks
- * at large in the world.
+ * The caller must ensure the argument list is protected if arsevald is 0,
+ * but not if argsevald is 1 or -1.
  */
 attribute_hidden
 int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
@@ -2553,7 +2551,8 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     int dots = FALSE, nprotect = 0;;
 
     if (argsevald != 0) {
-	PROTECT(x = CAR(args)); nprotect++;
+        PROTECT(args); nprotect++;
+	x = CAR(args);
     }
     else {
 	/* Find the object to dispatch on, dropping any leading
