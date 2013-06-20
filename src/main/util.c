@@ -1999,3 +1999,19 @@ SEXP crc64ToString(SEXP in)
     snprintf(ans, 17, "%lx", (long unsigned int) crc);
     return mkString(ans);
 }
+
+#ifdef CHECK_VEC_NONVEC
+
+struct sxpinfo_struct *Rf_verify_vec (void *x)
+{
+    if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF((SEXP)x)) & 1)) abort();
+    return &((SEXP)x)->sxpinfo;
+}
+
+struct sxpinfo_struct *Rf_verify_nonvec (void *x)
+{
+    if ((VECTOR_OR_CHAR_TYPES >> TYPEOF((SEXP)x)) & 1) abort();
+    return &((SEXP)x)->sxpinfo;
+}
+
+#endif
