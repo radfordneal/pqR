@@ -1041,6 +1041,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"readRenviron",do_readEnviron,	0,      111,     1,     {PP_FUNCALL, PREC_FN,	0}},
 
 {"pnamedcnt",	do_pnamedcnt,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"testvalgrind",do_testvalgrind,0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 
