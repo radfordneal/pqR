@@ -1,0 +1,36 @@
+
+---- hlp-matrix.mult-small 
+
+Time:
+Time:
+[1] TRUE
+
+---- hlp-matrix.mult-large 
+
+Time:
+Time:
+[1] TRUE
+
+---- hlp-matrix.rowsum-small 
+
+Time:
+Time:
+[1] TRUE
+
+---- hlp-matrix.rowsum-large 
+
+Time:
+Time:
+[1] TRUE
+
+---- hlp-matrix.colsum-small 
+
+Time:
+Time:
+[1] TRUE
+
+---- hlp-matrix.colsum-large 
+
+Time:
+Time:
+[1] TRUE

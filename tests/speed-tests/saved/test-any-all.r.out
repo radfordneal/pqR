@@ -1,0 +1,89 @@
+
+---- any-all.any 
+
+Time:
+[1] TRUE
+Time:
+[1] TRUE
+Time:
+[1] NA
+
+---- any-all.all 
+
+Time:
+[1] FALSE
+Time:
+[1] FALSE
+Time:
+[1] NA
+
+---- any-all.relop-is 
+
+Time:
+[1] TRUE
+Time:
+[1] FALSE
+Time:
+[1] TRUE
+Time:
+[1] FALSE
+Time:
+[1] FALSE
+Time:
+[1] TRUE
+Time:
+[1] FALSE
+Time:
+[1] TRUE
+Time:
+[1] FALSE
+Warning message:
+NAs introduced by coercion 
+    [,1] [,2] [,3]  [,4]  [,5]
+ar FALSE TRUE TRUE FALSE FALSE
+ai FALSE TRUE TRUE FALSE  TRUE
+ac FALSE TRUE TRUE FALSE FALSE
+    [,1]  [,2]  [,3]  [,4]  [,5]
+ar FALSE FALSE  TRUE FALSE FALSE
+ai FALSE FALSE FALSE FALSE FALSE
+ac FALSE FALSE FALSE FALSE FALSE
+   [,1]  [,2]  [,3] [,4]  [,5]
+ar TRUE FALSE FALSE TRUE FALSE
+ai TRUE FALSE FALSE TRUE FALSE
+ac TRUE FALSE FALSE TRUE FALSE
+    [,1]  [,2]  [,3]  [,4]  [,5]
+ar FALSE FALSE FALSE FALSE  TRUE
+ai FALSE FALSE FALSE FALSE FALSE
+ac FALSE FALSE FALSE FALSE  TRUE
+  ar   ai   ac 
+TRUE TRUE TRUE 
+   ar    ai    ac 
+ TRUE FALSE FALSE 
+  ar   ai   ac 
+TRUE TRUE TRUE 
+   ar    ai    ac 
+ TRUE FALSE  TRUE 
+   ar    ai    ac 
+FALSE FALSE FALSE 
+   ar    ai    ac 
+FALSE FALSE FALSE 
+   ar    ai    ac 
+FALSE FALSE FALSE 
+   ar    ai    ac 
+FALSE FALSE FALSE 
+   br    bi    bc 
+FALSE FALSE FALSE 
+   br    bi    bc 
+FALSE FALSE FALSE 
+  br   bi   bc 
+TRUE TRUE TRUE 
+   br    bi    bc 
+FALSE FALSE FALSE 
+   br    bi    bc 
+FALSE FALSE FALSE 
+   br    bi    bc 
+FALSE FALSE FALSE 
+  br   bi   bc 
+TRUE TRUE TRUE 
+   br    bi    bc 
+FALSE FALSE FALSE 

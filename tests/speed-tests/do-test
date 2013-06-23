@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e
+
+for r in \
+  test-alloc.r \
+  test-any-all.r \
+  test-assign.r \
+  test-attr.r \
+  test-base.r \
+  test-bind.r \
+  test-class.r \
+  test-complex-expr.r \
+  test-dollar.r \
+  test-for.r \
+  test-matchArgs.r \
+  test-math1.r \
+  test-math234.r \
+  test-matprod-pqR.r \
+  test-matprod.r \
+  test-Matrix.r \
+  test-min-max.r \
+  test-parens.r \
+  test-pow.r \
+  test-rand.r \
+  test-relop-logic.r \
+  test-rowcolMeans.r \
+  test-rowcolSums.r \
+  test-seq-rep.r \
+  test-sum-prod.r \
+  test-transpose.r \
+  test-vec-arith.r \
+  test-vec-bool.r \
+  test-vec-str-en-del.r \
+  test-vec-subset.r \
+  test-zerolower.r
+do
+  do-one $r
+done

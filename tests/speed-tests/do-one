@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+mkdir -p out
+
+$version/bin/Rscript --vanilla $1 >& out/$1.out
+
+if [ -e saved/$1.out ]; then
+  if sed s/Time:.*/Time:/ < out/$1.out | diff -u saved/$1.out -; then
+    true # differences may be OK 
+  fi
+fi
+
+exit 0

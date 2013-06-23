@@ -1,0 +1,31 @@
+
+---- class.S3 
+
+Time:
+[[1]]
+[1] 5 0
+
+[[2]]
+[1] 0 7
+
+Time:
+[1] 5 0 9
+[1] "sqrt"
+Creating a generic function from function 'imsqrt' in the global environment
+[1] "imsqrt"
+[1] "imsqrt"
+Creating a generic function from function 'fiddle' in the global environment
+[1] "fiddle"
+[1] "fiddle"
+
+---- class.S4 
+
+Time:
+[1] 1.414214
+Time:
+[1] 266.8112
+Time:
+An object of class "gwen"
+Slot "a":
+[1] 2502-2495i
+
