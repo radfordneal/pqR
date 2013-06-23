@@ -1,0 +1,119 @@
+This directory contains timing tests for R, and timing support
+functions, written by Radford M. Neal, radfordneal@gmail.com.
+
+This version was released 2013-06-18.
+
+
+The tests in this collection are of three types.  
+
+The tests whose script files start with "prog-" are short functions or
+programs adapted from previous real or demo programs, or written as if
+they were real programs, and test the overall speed of "typical" short
+R programs, including both general interpretive overhead and whatever
+particular features happen to be used by these programs.
+
+The tests whose script files start with "test-" are designed to test
+the speed of specific operations, which are repeated many times.
+
+The tests whose script files start with "hlp-" are designed to test
+the speedup possible using helper threads in pqR.  The "prog-" tests
+may also be run with helper threads enabled, with the results being
+meaningful, but most of these tests operate only on small objects, for
+which there is not much scope for speedup using helper threads.
+Running the scripts starting with "test-" with helper threads enabled
+would produce meaningless results - the many repetitions of the
+operations tested could often be done in parallel, but real programs
+do not compute the same thing repeatedly and then ignore all but the
+last value computed.
+
+The time.r file contains the support apparatus for the tests.  It is
+sourced at the beginning of each test script.  Test scripts can be run
+by simply sourcing them in R, though usually they are run using the
+shell scripts described below.
+
+A test script may perform several sequences of tests.  Each sequence
+starts by setting test.name to a suitable string (the name of the
+test, perhaps followed by "." and a sub-test name).  Operations are
+then timed with the sys.time function.  The non-trivial parts of the
+operation should be in a function or functions, which should be
+defined as follows:
+
+    f <- test.cmp (function (...) {...})
+
+The test.cmp function will either be the identity, or cmpfun, if the
+function is to be compiled.
+
+Functions are compiled if the "cmp" environment variable is set to
+"T".  Note that this does not affect whether or not functions in the
+standard or other recommended packages are compiled, which will be
+determined by the R configuration that runs the test.
+
+The "rep" environment variable controls how many times the test
+operations are repeated (in order to get more accurate timing
+information).  The default is 1 if this environment variable is not
+set.
+
+The times in the output of a test script are preceded by "Time:", with
+additional information following that.  Most of the tests also output
+a few numbers as a correctness check while they're at it, so looking
+at a diff produced from two versions of R might reveal a bug.
+
+The times reported are in seconds, and the first time shown is the
+actual elapsed (wall-clock) time (followed by user and system CPU
+times), divided by "rep", so that results with different numbers of
+repetitions are comparable.  The tests were designed so that they all
+took roughly the same time (one second, with rep=1, uncompiled), on
+the system I used.  Of course, this will not necessarily be the case
+with other machines, versions, etc.
+
+Test results are also appended to the file "test-times", which is in a
+format that can be read by read.table.  It contains lines with the
+following data fields:
+
+  date      date the test finished running
+  time      time the test finished running
+
+  se        elapsed time for test, in seconds, divided by repetition count
+  su        user CPU time for test, in seconds, divided by repetition count
+  ss        system CPU time for test, in seconds, divided by repetition count
+  t         name of test sequence (from test.name)
+  n         number of test in sequence, from 1 up, counting from last 
+            time test.name was set
+
+  conf      version and configuration of R used, from the conf environment
+            variable, or the last component of the path returned by R.home()
+            if that variable is not set
+
+  hlp       number of helper threads (from R_HELPERS, relevant only for pqR)
+  cmp       T if functions were compiled, F otherwise
+
+  rep       repetition count
+
+All these values are printed after Time: in the output file as well,
+except for date and time.
+
+The analyse.r script contains a command to read the "test-times" file,
+into the variable "td", and attach column names for each item.  The
+analyse.r script also defines a function for selecting a subset of
+tests, a function for giving counts of runs of different types, and
+functions for calculating and plotting ratios of times.  The
+rel-plot.r script, when sourced after analyse.r, produces a plot of
+change in speed for successive releases of R and pqR.
+
+The shell script do-all runs all the test scripts.  The shell scripts
+do-prog, do-test, do-hlp, and do-prog-hlp run the just the test
+scripts of their type.  The shell script do-one runs a single test
+script, identified by the name of its script file.  All of these shell
+scripts run the tests using the version and configuration of R given
+by the "version" environment variable, which must be the path to an R
+home directory, within which bin/Rscript exists.  The output from test
+script X is put in the file out/X.out (the directory out is created if
+necessary), and is compared (ignoring "Time:" lines) to the
+corresponding output in saved/X.out (if this exists).  A difference
+may indicate a bug.  The mk-saved shell file copies output from "out"
+to "saved" for use in this comparison (while deleting the "Time:"
+lines).  In this distribution, "saved" contains results from R-2.15.0,
+without compilation, run on an Intel processor in 64-bit mode.
+
+The use of this testing apparatus is demonstrated by the example.sh
+shell script, which uses example.r to produce example.pdf.

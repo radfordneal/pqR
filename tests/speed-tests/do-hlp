@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+for r in \
+  hlp-matrix.r \
+  hlp-sub.r \
+  hlp-vec-arith.r \
+  hlp-write.r
+do 
+  do-one $r
+done

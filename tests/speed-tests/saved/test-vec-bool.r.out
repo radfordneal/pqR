@@ -1,0 +1,96 @@
+
+---- vec-bool.<= 
+
+Time:
+[1] 1
+Time:
+[1] 1000
+Time:
+[1] 1000
+Time:
+[1] 626
+Time:
+[1] 1000
+
+---- vec-bool.>= 
+
+Time:
+[1] 1000
+Time:
+[1] 1
+Time:
+[1] 0
+Time:
+[1] 375
+Time:
+[1] 0
+
+---- vec-bool.< 
+
+Time:
+[1] 0
+Time:
+[1] 999
+Time:
+[1] 1000
+Time:
+[1] 625
+Time:
+[1] 1000
+
+---- vec-bool.> 
+
+Time:
+[1] 999
+Time:
+[1] 0
+Time:
+[1] 0
+Time:
+[1] 374
+Time:
+[1] 0
+
+---- vec-bool.== 
+
+Time:
+[1] 1
+Time:
+[1] 1
+Time:
+[1] 0
+Time:
+[1] 1
+Time:
+[1] 0
+
+---- vec-bool.!= 
+
+Time:
+[1] 999
+Time:
+[1] 999
+Time:
+[1] 1000
+Time:
+[1] 999
+Time:
+[1] 1000
+
+---- vec-bool.& 
+
+Time:
+[1] 350
+Time:
+[1] 187
+Time:
+[1] 150
+
+---- vec-bool.| 
+
+Time:
+[1] 1000
+Time:
+[1] 813
+Time:
+[1] 700

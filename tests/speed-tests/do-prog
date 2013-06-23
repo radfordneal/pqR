@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+for r in \
+  prog-cholesky.r \
+  prog-cv-basisfun.r \
+  prog-em.r \
+  prog-hmc.r \
+  prog-kernel-PCA.r \
+  prog-lm-nn.r \
+  prog-matexp.r \
+  prog-matmult.r \
+  prog-mlp.r \
+  prog-Qlearn.r \
+  prog-near.r
+do 
+  do-one $r
+done

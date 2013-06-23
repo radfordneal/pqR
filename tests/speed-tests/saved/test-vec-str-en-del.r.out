@@ -1,0 +1,62 @@
+
+---- vec-str-en-del.enlarge 
+
+Time:
+[1] 30000 73000
+Time:
+[1] 30000 73000
+
+---- vec-str-en-del.delete 
+
+Time:
+[1] 12000 51400
+Time:
+[1] 12000 51400
+Time:
+[1] 12000 51400
+Time:
+[1] 2000 6100
+
+---- vec-str-en-del.str-cat 
+
+Time:
+[1]  3002 10209
+ [1] "abc" "def" "ghi" "xxx" NA    "yyy" "abc" "def" "ghi" "xxx"
+$a
+[1] 3
+
+$c
+[1] "aa"
+
+$d
+$d[[1]]
+[1] 1
+
+
+$e
+[1] 4
+
+$f
+[1] 3
+
+$g
+[1] 90
+
+$a
+[1] 3
+
+$e
+[1] 4
+
+$f
+[1] 3
+
+$g
+[1] 90
+
+$e
+[1] 4
+
+$f
+[1] 3
+

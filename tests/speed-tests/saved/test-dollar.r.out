@@ -1,0 +1,38 @@
+
+---- dollar.exact-name 
+
+Time:
+[1] 5
+Time:
+[1] 5
+Time:
+[1] 5
+
+---- dollar.exact-string 
+
+Time:
+[1] 5
+Time:
+[1] 5
+Time:
+[1] 5
+
+---- dollar.partial-name 
+
+Time:
+[1] 5
+Time:
+[1] 5
+
+---- dollar.partial-string 
+
+Time:
+[1] 5
+Time:
+[1] 5
+[1] 66
+[1] "9 a"
+[1] "9 b"
+[1] "a"
+[1] "9 a" "9 b"
+[1] 99 77

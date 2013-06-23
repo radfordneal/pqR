@@ -1,0 +1,23 @@
+
+---- relop-logic.three-loops 
+
+Time:
+Time:
+Time:
+
+---- relop-logic.two-loops 
+
+Time:
+[1] 180
+Time:
+[1] 180
+
+---- relop-logic.loop-if 
+
+Time:
+[1] 50974999
+Time:
+[1] 51019
+[1]  TRUE FALSE
+[1] FALSE  TRUE FALSE
+[1]  TRUE FALSE FALSE
