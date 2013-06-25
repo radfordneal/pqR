@@ -200,9 +200,9 @@ static void memtrace_stack_dump(void)
 
 void attribute_hidden memtrace_report(void * old, void * _new)
 {
-    if (!R_current_trace_state()) return;
+    /*if (!R_current_trace_state()) return;
     Rprintf("tracemem[%p -> %p]: ", (void *) old, _new);
-    memtrace_stack_dump();
+    memtrace_stack_dump();*/
 }
 
 #endif /* R_MEMORY_PROFILING */
@@ -210,7 +210,7 @@ void attribute_hidden memtrace_report(void * old, void * _new)
 SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #ifdef R_MEMORY_PROFILING
-    SEXP object, previous, ans, argList;
+/*    SEXP object, previous, ans, argList;
     char buffer[20];
     static char *ap[2] = { "x", "previous" };
 
@@ -241,13 +241,14 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (R_current_trace_state()) {
 	    /* FIXME: previous will have <0x....> whereas other values are
 	       without the < > */
-	    Rprintf("tracemem[%s -> %p]: ",
+	/*    Rprintf("tracemem[%s -> %p]: ",
 		    translateChar(STRING_ELT(previous, 0)), (void *) object);
 	    memtrace_stack_dump();
 	}
     }
     UNPROTECT(1);
-    return ans;
+    return ans;*/
+     return R_NilValue;	
 #else
     return R_NilValue;
 #endif
