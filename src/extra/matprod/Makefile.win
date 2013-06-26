@@ -3,14 +3,14 @@ include ../../gnuwin32/MkRules
 
 DEFS=-DHAVE_CONFIG_H
 
-CPPFLAGS=-I../../include -I. $(DEFS)
+CPPFLAGS=-I../../include -I.   -I../helpers $(DEFS)
 
 ## done this way for parallel make
 all:
 	$(MAKE) -f Makefile.win makeMakedeps
 	$(MAKE) -f Makefile.win libmatprod.a
 
-CSOURCES = matprod.c
+CSOURCES = matprod.c piped-matprod.c
 
 OBJS = $(CSOURCES:.c=.o)
 libmatprod.a: $(OBJS)
