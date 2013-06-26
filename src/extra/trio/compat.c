@@ -62,7 +62,7 @@ int vfprintf(FILE *file, const char *format, va_list args)
     return trio_vfprintf(file, format, args);
 }
 
-int snprintf(char *buffer, size_t max, const char *format, ...)
+/*int snprintf(char *buffer, size_t max, const char *format, ...)
 {
     int res;
     va_list(ap);
@@ -75,7 +75,7 @@ int snprintf(char *buffer, size_t max, const char *format, ...)
 int vsnprintf(char *buffer, size_t bufferSize, const char *format, va_list args)
 {
     return trio_vsnprintf(buffer, bufferSize, format, args);
-}
+}*/
 
 #ifndef _W64
 /* This is needed as MinGW's stdio.h has an inline vnsprintf mapping to
