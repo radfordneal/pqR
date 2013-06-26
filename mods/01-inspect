@@ -1,3 +1,4 @@
 The "inspect" .Internal function was changed to show some details of
 pairlist nodes, if SHOW_PAIRLIST_NODES is defined as 1 in inspect.c.
-Also, it no longer produces output with tabs (spaces instead).
+It also shows length and truelength (the hash) for CHARSXP nodes.
+Finally, it no longer produces output with tabs (spaces instead).
