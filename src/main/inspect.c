@@ -139,7 +139,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
     Rprintf("] ");
     switch (TYPEOF(v)) {
     case VECSXP: case STRSXP: case LGLSXP: case INTSXP: case RAWSXP:
-    case REALSXP: case CPLXSXP: case EXPRSXP:
+    case REALSXP: case CPLXSXP: case EXPRSXP: case CHARSXP:
 	Rprintf("(len=%d, tl=%d)", LENGTH(v), TRUELENGTH(v));
     }
     if (TYPEOF(v) == ENVSXP) /* NOTE: this is not a trivial OP since it involves looking up things
@@ -147,11 +147,11 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 				avoid it .. */
         PrintEnvironment(v);
     if (TYPEOF(v) == CHARSXP) {
-	if (IS_BYTES(v)) Rprintf("[bytes] ");
-	if (IS_LATIN1(v)) Rprintf("[latin1] ");
-	if (IS_UTF8(v)) Rprintf("[UTF8] ");
-	if (IS_ASCII(v)) Rprintf("[ASCII] ");
-	if (IS_CACHED(v)) Rprintf("[cached] ");
+	if (IS_BYTES(v)) Rprintf(" [bytes]");
+	if (IS_LATIN1(v)) Rprintf(" [latin1]");
+	if (IS_UTF8(v)) Rprintf(" [UTF8]");
+	if (IS_ASCII(v)) Rprintf(" [ASCII]");
+	if (IS_CACHED(v)) Rprintf(" [cached]");
 	Rprintf("\"%s\"", CHAR(v));
     }
     if (TYPEOF(v) == SYMSXP)
