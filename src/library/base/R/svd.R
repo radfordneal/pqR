@@ -25,10 +25,16 @@ svd <- function(x, nu = min(n,p), nv = min(n,p), LINPACK = FALSE)
 
     if (is.complex(x)) {
         res <- La.svd(x, nu, nv)
-        return(list(d = res$d, u = if(nu) res$u, v = if(nv) Conj(t(res$vt))))
+        ret <- list()
+        ret$d <- res$d
+        if (nu) ret$u <- res$u
+        if (nv) ret$v <- Conj(t(res$vt))
+        return (ret)
     }
-    if(!is.double(x))
+
+    if (!is.double(x))
 	storage.mode(x) <- "double"
+
     if (!LINPACK) {
         res <- La.svd(x, nu, nv)
         ret <- list()
