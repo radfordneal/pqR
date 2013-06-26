@@ -4132,11 +4132,14 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
          chain != R_NilValue; 
          chain = CXTAIL(chain)) {
 	SEXP val = CXHEAD(chain);
-	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))
-	     && LENGTH(val) == len && *CHAR(val) == *name /* quick pretest */
-	     && memcmp(CHAR(val), name, len) == 0) {
-	    cval = val;
-	    break;
+	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
+            if (LENGTH(val) == len) {
+                if (len == 0 || *CHAR(val) == *name /* quick pretest */
+                                   && memcmp(CHAR(val), name, len) == 0) {
+                    cval = val;
+                    break;
+                }
+            }
 	}
     }
 
