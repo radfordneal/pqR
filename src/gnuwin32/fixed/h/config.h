@@ -926,8 +926,8 @@
    compiler calls it, or to nothing if it is not supported. */
 #define R_INLINE inline
 
-/* Define this to enable memory profiling. */
-#define R_MEMORY_PROFILING 1
+/* Define this to enable memory profiling - DON'T, doesn't exist in pqR. */
+/* #define R_MEMORY_PROFILING 1 */
 
 /* NOTE: there is no unanimity on this.  Currently most autoconf-based
    systems need mingw32 */
