@@ -131,11 +131,10 @@ extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 #define HASHASH_MASK 1
 
 /* Symbol and string hash table declarations. */
-#define HASHMAXSIZE ((1<<28)-1)  /* so the count of entries used will fit
-                                    in the 28-bit gc2 (aka TRUELENGTH) field */
+#define HASHMAXSIZE          1000000
 #define HASHSIZE(x)	     LENGTH(x)
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
-#define HASHTABLEGROWTHRATE  1.2
+#define HASHTABLEGROWTHRATE  1.27
 #define HASHMINSIZE	     29
 /* #define SET_HASHSIZE(x,v)    SETLENGTH(x,v) */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
