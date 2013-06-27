@@ -870,8 +870,16 @@ int CheckStuff(SEXP x, SEXP n, int w, int g)
         err = 1;
     }
     if (w == 1 && x != NULL && NODE_GENERATION(x) < g && n != R_StringHash) {
-	REprintf("untraced old-to-new reference (%lx %lx %d %d %d %d)!\n",
-          n, x, NODE_GENERATION(x), g, n->sxpinfo.gcoton, x->sxpinfo.gcoton);
+	REprintf(
+          "untraced old-to-new reference (%lx %lx %d %d"
+#if FLAG_OLD_TO_NEW
+           "%d %d"
+#endif
+          "\n", n, x, NODE_GENERATION(x), g 
+#if FLAG_OLD_TO_NEW
+          , n->sxpinfo.gcoton, x->sxpinfo.gcoton
+#endif
+        );
         err = 1;
     }
     return err;
@@ -903,11 +911,13 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                 REprintf("Node in New list is marked!\n");
                 REprintf(" -- %s %d\n",type2char(TYPEOF(s)),i);
             }
+#if FLAG_OLD_TO_NEW
             if (s->sxpinfo.gcoton) {
                 REprintf("Node in New has gcoton set!\n");
                 REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                          i, NODE_CLASS(s));
             }
+#endif
 	}
 	for (gen = 0, OldCount = 0, OldToNewCount = 0;
 	     gen < NUM_OLD_GENERATIONS;
@@ -920,11 +930,13 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                     REprintf("Garbled links in Old list!\n");
                     REprintf(" -- %d %d %d\n",i,gen,OldCount);
                 }
+#if FLAG_OLD_TO_NEW
                 if (s->sxpinfo.gcoton) {
 		    REprintf("Node in Old has gcoton set!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                              i, NODE_CLASS(s));
                 }
+#endif
 		if (i != NODE_CLASS(s)) {
 		    REprintf("Inconsistent class assignment for node (2)!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
@@ -949,11 +961,13 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                     REprintf("Garbled links in OldToNew list!\n");
                     REprintf(" -- %d %d %d\n",i,gen,OldToNewCount);
                 }
-                if (FLAG_OLD_TO_NEW && !s->sxpinfo.gcoton) {
+#if FLAG_OLD_TO_NEW
+                if (!s->sxpinfo.gcoton) {
 		    REprintf("Node in OldToNew does not have gcoton set!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                              i, NODE_CLASS(s));
                 }
+#endif
 		if (i != NODE_CLASS(s)) {
 		    REprintf("Inconsistent class assignment for node (3)!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
