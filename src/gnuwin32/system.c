@@ -1015,7 +1015,10 @@ int cmdlineoptions(int ac, char **av)
 		breaktodebugger();
 	    } else if(!strcmp(*av, "--args")) {
 		break;
-	    } else if(CharacterMode == RTerm && !strcmp(*av, "-f")) {
+	    }  else if (strcmp(*av,"--helpers")==0 || strcmp(*av,"-p")==0 
+               || strncmp(*av,"--helpers=",10)==0 || strncmp(*av,"-p=",3)==0) {
+                ;
+	    }else if(CharacterMode == RTerm && !strcmp(*av, "-f")) {
 		ac--; av++;
 		Rp->R_Interactive = FALSE;
 		Rp->ReadConsole = FileReadConsole;

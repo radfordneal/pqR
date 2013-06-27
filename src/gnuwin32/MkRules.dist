@@ -88,7 +88,7 @@ BUILD_HTML = NO
 MIKTEX = TRUE
 
 # additional optimization flags
-EOPTS=-mtune=core2
+EOPTS=-mtune=core2 -DENABLE_ISNAN_TRICK 
 
 # define to -fopenmp if the toolchain has OpenMP support
 OPENMP = -fopenmp

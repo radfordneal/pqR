@@ -515,6 +515,7 @@
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR >= 2
 // has it, but it is too slow to be usable
  #define HAVE_OPENMP 1
+ #define SUPPORT_OPENMP 1
 #endif
 
 /* Define to 1 if you have pangocairo. */
@@ -928,6 +929,7 @@
 
 /* Define this to enable memory profiling. */
 #undef R_MEMORY_PROFILING 
+#undef HELPERS_DISABLED
 #define R_HELPER_THREADS 1
 #define R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK 1
 //#define R_MAT_MULT_WITH_BLAS_BY_DEFAULT 1
