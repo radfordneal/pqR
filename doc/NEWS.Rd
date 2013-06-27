@@ -5,14 +5,21 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-06-20}{
+\section{CHANGES IN VERSION RELEASED 2013-06-27}{
 
 \subsection{INTRODUCTION}{
 
 \itemize{ 
-\item This is the nearly-initial public release of pqR (there were
-early unpublicised releases, which this release updates with bug
-fixes, etc).  It is based on R-2.15.0, distributed by the R Core Team,
+\item This is the second publicised release of pqR (the first was
+on 2013-06-20, and there were early unpublicised releases). It fixes
+one significant bug (that could cause two empty strings to not compare
+as equal), and fixes some issues preventing pqR from being built in
+some situations.  Since the rest of the news is almost unchanged from 
+the previous release, I have not made a separate news section for this
+release. (New sectiions will be created once new releases have significant 
+differences.)
+
+\item This release of pqR is based on R-2.15.0, distributed by the R Core Team,
 but improves on it in many ways, mostly ways that speed it up, but
 also by implementing some new features and fixing some bugs.
 
@@ -34,6 +41,11 @@ uses the same version number, 2.15.0, as the version of R on which it
 is based. This allows checks for feature availability to continue to
 work.  This scheme will likely change in the future.  Releases of pqR
 with the same version number are distinguished by release date.
+
+\item See radfordneal.github.io/pqR for current information on pqR, including
+announcements of new releases, a link to the page for making and viewing
+reports of bugs and other issues, and a link to the wiki page containing
+information such as systems on which pqR has been tested.
 
 }}
 
@@ -103,7 +115,10 @@ with the same version number are distinguished by release date.
             systems, not on Windows or Mac systems.  There is no specific
             reason to believe that it will not work on Windows or Mac
             systems, but until tests have been done, trying to use it 
-            on these systems is not recommended.
+            on these systems is not recommended.  (However, some users
+            have reported that pqR can be built on Mac systems, as long
+            as a C compiler fully supporting OpenMP is used, or the
+            \code{--disable-helper-threads} configuration option isused.)
 
       \item This release contains the versions of the standard and recommended
             packages that were released with R-2.15.0.  Newer versions may
