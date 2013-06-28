@@ -328,7 +328,7 @@ SEXP do_makeunique(SEXP, SEXP, SEXP, SEXP);
 SEXP do_makevector(SEXP, SEXP, SEXP, SEXP);
 SEXP do_match(SEXP, SEXP, SEXP, SEXP);
 SEXP do_matchcall(SEXP, SEXP, SEXP, SEXP);
-SEXP do_matprod(SEXP, SEXP, SEXP, SEXP);
+SEXP do_matprod(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_Math2(SEXP, SEXP, SEXP, SEXP);
 SEXP do_matrix(SEXP, SEXP, SEXP, SEXP);
 SEXP do_mean(SEXP, SEXP, SEXP, SEXP);
