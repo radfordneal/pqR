@@ -699,7 +699,7 @@ static void tccrossprod(Rcomplex *x, int nrx, int ncx,
     }
 }
 
-#define T_matmult THRESHOLD_ADJUST(20)
+#define T_matmult THRESHOLD_ADJUST(30)
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
 SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, 
@@ -844,7 +844,7 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 
         if (LENGTH(ans) != 0) {
 
-            int inhlpr = nrx*(ncx+1)*ncy > T_matmult;
+            int inhlpr = nrx*(ncx+1.0)*ncy > T_matmult;
             int no_pipelining = !inhlpr || helpers_are_not_pipelining;
             helpers_task_proc *task_proc;
             int flags = 0;
