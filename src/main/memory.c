@@ -72,6 +72,10 @@
 #define MAX_NODE_CLASSES 8  /* Max number of node classes, from bits in gccls */
 #define NUM_NODE_CLASSES 8  /* At least 2, and no more than the max above */
 
+#define STRHASHINITSIZE (1<<16) /* Initial number of slots in string hash table
+                                   (must be a power of two) */
+#define STRHASHMAXSIZE (1<<21)  /* Maximum slots in the string hash table */
+
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
    "cons" cells (so it's necessary that one be big enough for this).  Note 
@@ -4009,10 +4013,10 @@ SEXP mkChar(const char *name)
 */
 
 /* char_hash_size MUST be a power of 2 and char_hash_mask == char_hash_size - 1
-   in order for x & char_hash_mask to be equivalent to x % char_hash_size.
-*/
-static unsigned int char_hash_size = 65536;
-static unsigned int char_hash_mask = 65535;
+   in order for x & char_hash_mask to be equivalent to x % char_hash_size. */
+
+static unsigned int char_hash_size = STRHASHINITSIZE;
+static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 static unsigned int char_hash(const char *s, int len)
 {
@@ -4195,7 +4199,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
 	/* Resize the hash table if desirable and possible. */
 	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
-             && 2*char_hash_size <= HASHMAXSIZE)
+             && 2*char_hash_size <= STRHASHMAXSIZE)
 	    R_StringHash_resize (2*char_hash_size);
     }
     return cval;
