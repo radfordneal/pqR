@@ -84,7 +84,7 @@ MAINLIBS = ../main/libmain.a ../appl/libappl.a ../nmath/libnmath.a
 EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
    ../extra/pcre/libpcre.a ../extra/bzip2/libbz2.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
-   ../extra/tre/libtre.a ../extra/xz/liblzma.a
+   ../extra/tre/libtre.a ../extra/xz/liblzma.a ../extra/helpers/libhelpers.a ../extra/matprod/libmatprod.a
 
 # flags to ensure that Doug Lea's malloc is used:
 ifdef LEA_MALLOC
@@ -205,6 +205,12 @@ front-ends:
 
 ../extra/xz/liblzma.a:
 	$(MK) -C ../extra/xz -f Makefile.win
+
+../extra/helpers/libhelpers.a:
+  $(MK) -C ../extra/helpers -f Makefile.win
+
+../extra/matprod/libmatprod.a:
+  $(MK) -C ../extra/matprod -f Makefile.win
 
 NEWSdocs:
 	@$(MK) -C ../../doc -f Makefile.win
