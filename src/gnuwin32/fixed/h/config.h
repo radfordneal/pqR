@@ -514,7 +514,8 @@
 /* Define if you have C OpenMP support. */
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR >= 2
 // has it, but it is too slow to be usable
-// #define HAVE_OPENMP 1
+ #define HAVE_OPENMP 1
+ #define SUPPORT_OPENMP 1
 #endif
 
 /* Define to 1 if you have pangocairo. */
@@ -889,7 +890,7 @@
 #define PACKAGE_NAME "R"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "R @VERSION@"
+#define PACKAGE_STRING "R 2.15.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "R"
@@ -898,7 +899,7 @@
 #define PACKAGE_URL "http://www.r-project.org"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "@VERSION@"
+#define PACKAGE_VERSION "2.15.0"
 
 /* Define if <inttypes.h> exists and defines unusable PRI* macros. (For intl)
    */
@@ -926,8 +927,12 @@
    compiler calls it, or to nothing if it is not supported. */
 #define R_INLINE inline
 
-/* Define this to enable memory profiling - DON'T, doesn't exist in pqR. */
-/* #define R_MEMORY_PROFILING 1 */
+/* Define this to enable memory profiling. */
+#undef R_MEMORY_PROFILING 
+#undef HELPERS_DISABLED
+#define R_HELPER_THREADS 1
+#define R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK 1
+//#define R_MAT_MULT_WITH_BLAS_BY_DEFAULT 1
 
 /* NOTE: there is no unanimity on this.  Currently most autoconf-based
    systems need mingw32 */
@@ -1043,7 +1048,7 @@
 #define VALGRIND_LEVEL 0
 
 /* Version number of package */
-#define VERSION "@VERSION@"
+#define VERSION "2.15.0"
 
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
