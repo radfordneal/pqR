@@ -16,7 +16,7 @@ OBJS = $(CSOURCES:.c=.o)
 libmatprod.a: $(OBJS)
 
 clean:
-	@$(RM) *.o *~ *.d Makedeps
+	@$(RM) *.o *.a *~ *.d Makedeps
 
 distclean: clean
 	@$(RM) libmatprod.a

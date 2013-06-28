@@ -16,7 +16,7 @@ OBJS = $(CSOURCES:.c=.o)
 libhelpers.a: $(OBJS)
 
 clean:
-	@$(RM) *.o *~ *.d Makedeps
+	@$(RM) *.o *.a *~ *.d Makedeps
 
 distclean: clean
 	@$(RM) libhelpers.a
