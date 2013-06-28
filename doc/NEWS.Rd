@@ -10,18 +10,20 @@
 \subsection{INTRODUCTION}{
 
 \itemize{ 
-\item This is the second publicised release of pqR (the first was
-on 2013-06-20, and there were early unpublicised releases). It fixes
-one significant bug (that could cause two empty strings to not compare
-as equal), and fixes some issues preventing pqR from being built in
-some situations.  Since the rest of the news is almost unchanged from 
-the previous release, I have not made a separate news section for this
-release. (New sectiions will be created once new releases have significant 
-differences.)
+\item This is the second publicised release of pqR (the first was on
+2013-06-20, and there were earlier unpublicised releases). It fixes
+one significant pqR bug (that could cause two empty strings to not
+compare as equal), fixes a memory expansion problem reported to R Core
+(PR 15363) that also existed in pqR, and fixes some issues preventing
+pqR from being built in some situations (including some partial fixes
+for Windows suggested by "armgong").  Since the rest of the news is
+almost unchanged from the previous release, I have not made a separate
+news section for this release. (New sections will be created once new
+releases have significant differences.)
 
-\item This release of pqR is based on R-2.15.0, distributed by the R Core Team,
-but improves on it in many ways, mostly ways that speed it up, but
-also by implementing some new features and fixing some bugs.
+\item This release of pqR is based on R-2.15.0, distributed by the R
+Core Team, but improves on it in many ways, mostly ways that speed it
+up, but also by implementing some new features and fixing some bugs.
 
 \item One notable improvement is that for systems with multiple
 processors or processor cores, pqR is able to do some numeric
@@ -118,7 +120,7 @@ information such as systems on which pqR has been tested.
             on these systems is not recommended.  (However, some users
             have reported that pqR can be built on Mac systems, as long
             as a C compiler fully supporting OpenMP is used, or the
-            \code{--disable-helper-threads} configuration option isused.)
+            \code{--disable-helper-threads} configuration option is used.)
 
       \item This release contains the versions of the standard and recommended
             packages that were released with R-2.15.0.  Newer versions may
