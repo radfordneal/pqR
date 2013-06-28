@@ -105,7 +105,8 @@
 #define FAST_BASE_CACHE_LOOKUP  /* Define to enable fast lookups of symbols */
                                 /*    in global cache from base environment */
 
-#define DEBUG_RESIZE 0
+#define DEBUG_OUTPUT 0          /* 0 to 2 for increasing debug output */
+#define DEBUG_CHECK 0           /* 1 to enable debug check of HASHSLOTSUSED */
 
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
@@ -263,8 +264,7 @@ static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
     if (chain == R_NilValue)
         SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
     /* Add the value into the chain */
-    new_chain = CONS(value, chain);
-    SET_TAG (new_chain, symbol);
+    new_chain = cons_with_tag (value, chain, symbol);
     SET_VECTOR_ELT (table, hashcode, new_chain);
     return;
 }
@@ -378,37 +378,6 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 
 /*----------------------------------------------------------------------
 
-  R_HashDelete
-
-  Hash table delete function.  Symbols are not removed from the table.
-  They have their value set to 'R_UnboundValue'.
-
-*/
-
-static SEXP DeleteItem(SEXP symbol, SEXP lst)
-{
-    if (lst != R_NilValue) {
-	SETCDR(lst, DeleteItem(symbol, CDR(lst)));
-	if (TAG(lst) == symbol) {
-	    SETCAR(lst, R_UnboundValue); /* in case binding is cached */
-	    LOCK_BINDING(lst);           /* in case binding is cached */
-	    lst = CDR(lst);
-	}
-    }
-    return lst;
-}
-
-static void R_HashDelete(int hashcode, SEXP symbol, SEXP table)
-{
-    SET_VECTOR_ELT(table, hashcode % HASHSIZE(table),
-	DeleteItem(symbol, VECTOR_ELT(table, hashcode % HASHSIZE(table))));
-    return;
-}
-
-
-
-/*----------------------------------------------------------------------
-
   R_HashResize
 
   Hash table resizing function. Increase the size of the hash table by
@@ -421,6 +390,9 @@ static SEXP R_HashResize(SEXP table)
 {
     SEXP new_table, chain, new_chain, tmp_chain;
     int new_size, counter, new_hashcode;
+#if DEBUG_OUTPUT
+    int n_entries = 0;
+#endif
 
     /* Do some checking */
     if (TYPEOF(table) != VECSXP)
@@ -440,8 +412,15 @@ static SEXP R_HashResize(SEXP table)
     for (counter = 0; counter < LENGTH(table); counter++) {
 	chain = VECTOR_ELT(table, counter);
 	while (chain != R_NilValue) {
-	    new_hashcode = R_Newhashpjw(CHAR(PRINTNAME(TAG(chain))))
-                             % HASHSIZE(new_table);
+            SEXP pnamtag = PRINTNAME(TAG(chain));
+#if DEBUG_OUTPUT
+            n_entries += 1;
+#endif
+            if (!HASHASH(pnamtag)) {
+                SET_HASHVALUE (pnamtag, R_Newhashpjw(CHAR(pnamtag)));
+                SET_HASHASH (pnamtag, 1);
+            }
+            new_hashcode = HASHVALUE(pnamtag) % HASHSIZE(new_table);
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
 	    if (new_chain == R_NilValue)
@@ -450,20 +429,19 @@ static SEXP R_HashResize(SEXP table)
 	    chain = CDR(chain);
 	    SETCDR(tmp_chain, new_chain);
 	    SET_VECTOR_ELT(new_table, new_hashcode,  tmp_chain);
-#if DEBUG_RESIZE
-	    fprintf (stdout, 
-             "HASHSIZE = %d\nHASHSLOTSUSED = %d\ncounter = %d\nHASHCODE = %d\n",
+#if DEBUG_OUTPUT>1
+	    Rprintf(
+             "HASHSIZE=%d HASHSLOTSUSED=%d counter=%d HASHCODE=%d\n",
               HASHSIZE(table), HASHSLOTSUSED(table), counter, new_hashcode);
 #endif
 	}
     }
 
     /* Some debugging statements */
-#if DEBUG_RESIZE
-    fprintf(stdout, "Resized O.K.\n");
-    fprintf(stdout, "Old size: %d, New size: %d\n",
-	    HASHSIZE(table), HASHSIZE(new_table));
-    fprintf(stdout, "Old slotsused: %d, New slotsused: %d\n",
+#if DEBUG_OUTPUT
+    Rprintf("RESIZED TABLE WITH %d ENTRIES O.K.\n",n_entries);
+    Rprintf("Old size: %d, New size: %d\n",HASHSIZE(table),HASHSIZE(new_table));
+    Rprintf("Old slotsused: %d, New slotsused: %d\n",
 	    HASHSLOTSUSED(table), HASHSLOTSUSED(new_table));
 #endif
 
@@ -488,6 +466,20 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
     /* Do some checking */
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, R_HashSizeCheck");
+
+#if DEBUG_CHECK
+    int slotsused = 0;
+    int i;
+    for (i = 0; i<LENGTH(table); i++) {
+        if (VECTOR_ELT(table,i) != R_NilValue) 
+            slotsused += 1;
+    }
+    if (HASHSLOTSUSED(table) != slotsused) {
+        REprintf("WRONG SLOTSUSED IN HASH TABLE! %d %d\n",
+                HASHSLOTSUSED(table), slotsused);
+        abort();
+    }
+#endif
 
     return HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
 }
@@ -516,12 +508,12 @@ static SEXP R_HashFrame(SEXP rho)
     table = HASHTAB(rho);
     frame = FRAME(rho);
     while (frame != R_NilValue) {
-	if( !HASHASH(PRINTNAME(TAG(frame))) ) {
-	    SET_HASHVALUE(PRINTNAME(TAG(frame)),
-			  R_Newhashpjw(CHAR(PRINTNAME(TAG(frame)))));
-	    SET_HASHASH(PRINTNAME(TAG(frame)), 1);
+        SEXP pnamtag = PRINTNAME(TAG(frame));
+	if (!HASHASH(pnamtag)) {
+	    SET_HASHVALUE (pnamtag, R_Newhashpjw(CHAR(pnamtag)));
+	    SET_HASHASH (pnamtag, 1);
 	}
-	hashcode = HASHVALUE(PRINTNAME(TAG(frame))) % HASHSIZE(table);
+	hashcode = HASHVALUE(pnamtag) % HASHSIZE(table);
 	chain = VECTOR_ELT(table, hashcode);
 	/* If using a previously-unused slot then increase HASHSLOTSUSED */
 	if (chain == R_NilValue) 
@@ -825,14 +817,15 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
   Remove a value from an environment. This happens only in the frame
   of the specified environment.
 
-  FIXME ? should this also unbind the symbol value slot when rho is
-  R_BaseEnv.
-  This is only called from eval.c in applydefine and bcEval
-  (and applydefine only works for unhashed environments, so not base).
+  FIXME ? should this also unbind the symbol value slot when rho is R_BaseEnv?
+  Only called from eval.c in applydefine and bcEval, which don't (?) call it
+  on the base environment...?
 */
 
 void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 {
+    SEXP list, value;
+
     if (rho == R_BaseNamespace)
 	error(_("cannot unbind in the base namespace"));
     if (rho == R_BaseEnv)
@@ -844,29 +837,31 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	R_FlushGlobalCache(symbol);
 #endif
     if (HASHTAB(rho) == R_NilValue) {
-	SEXP list, value;
 	list = RemoveFromList(symbol, FRAME(rho), &value);
-	if (value != NULL) {
-	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
+	if (value != NULL)
 	    SET_FRAME(rho, list);
-	}
     }
     else {
-	/* This case is currently unused */
-        int hashcode;
-        SEXP c;
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	R_HashDelete(hashcode, symbol, HASHTAB(rho));
-	/* we have no record here if deletion worked */
-	if (rho == R_GlobalEnv) R_DirtyImage = 1;
+	SEXP hashtab = HASHTAB(rho);
+        int hashcode = HASHASH(PRINTNAME(symbol)) ? HASHVALUE(PRINTNAME(symbol))
+                        : R_Newhashpjw(CHAR(PRINTNAME(symbol)));
+	int idx = hashcode % HASHSIZE(hashtab);
+	list = RemoveFromList (symbol, VECTOR_ELT(hashtab,idx), &value);
+	if (value != NULL) {
+	    SET_VECTOR_ELT (hashtab, idx, list);
+            if (list == R_NilValue)
+                SET_HASHSLOTSUSED(hashtab,HASHSLOTSUSED(hashtab)-1);
+        }
+    }
+
+    if (value != NULL) {
+        if (rho == R_GlobalEnv) R_DirtyImage = 1;
+#ifdef USE_GLOBAL_CACHE
+	if (IS_GLOBAL_FRAME(rho))
+            R_FlushGlobalCache(symbol);
+#endif
     }
 }
-
 
 
 /*----------------------------------------------------------------------
@@ -1750,8 +1745,11 @@ static SEXP RemoveVariable(SEXP name, SEXP env)
                         : R_Newhashpjw(CHAR(PRINTNAME(name)));
 	int idx = hashcode % HASHSIZE(hashtab);
 	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
-	if (value != NULL) 
+	if (value != NULL) {
 	    SET_VECTOR_ELT(hashtab, idx, list);
+            if (list == R_NilValue)
+                SET_HASHSLOTSUSED(hashtab,HASHSLOTSUSED(hashtab)-1);
+        }
     }
     else {
 	list = RemoveFromList(name, FRAME(env), &value);
