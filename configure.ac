@@ -272,6 +272,18 @@ if test "${want_R_framework}" != no; then
 fi
 AM_CONDITIONAL(WANT_R_FRAMEWORK, [test "x${want_R_framework}" = xyes])
 
+## Allow specification of whether BLAS matrix multiplies are allowed in helpers.
+AC_ARG_ENABLE([mat-mult-with-BLAS-in-helpers],
+[AS_HELP_STRING([--enable-mat-mult-with-BLAS-in-helpers],[allow %*% with BLAS to be done in helpers @<:@yes@:>@])],
+[if test "${enableval}" = no; then
+  mat_mult_with_BLAS_in_helpers=no
+elif test "${enableval}" = yes; then
+  mat_mult_with_BLAS_in_helpers=yes
+else
+  mat_mult_with_BLAS_in_helpers=yes
+fi],
+[mat_mult_with_BLAS_in_helpers=yes])
+
 ## Allow speciication of the default for mat_mult_with_BLAS
 AC_ARG_ENABLE([mat-mult-with-BLAS-by-default],
 [AS_HELP_STRING([--enable-mat-mult-with-BLAS-by-default],[default to using BLAS for %*% @<:@no@:>@])],
@@ -2204,6 +2216,11 @@ AC_SUBST(R_PROFILING)
 ## R profiling.
 if test "${want_memory_profiling}" = yes; then
   AC_DEFINE(R_MEMORY_PROFILING, 1, [Define this to enable memory profiling.])
+fi
+
+## Whether matrix multiply with BLAS in helpers allowed
+if test "${mat_mult_with_BLAS_in_helpers}" = yes; then
+  AC_DEFINE(R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK, 1, [Define if BLAS matrix multiply is thread safe.])
 fi
 
 ## Default for mat_mult_with_BLAS
