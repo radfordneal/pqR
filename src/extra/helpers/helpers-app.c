@@ -48,13 +48,21 @@ char *Rf_task_name (helpers_task_proc *task)
     /* i */
     /* j */
     /* k */
-    /* l */
-    /* m */
-    /* n */
-    /* o */
-    /* p */
-    /* q */
-    /* r */
+    TASK_NAME(matprod_zero);
+    TASK_NAME(matprod_vec_vec);
+    TASK_NAME(matprod_mat_vec);
+    TASK_NAME(matprod_vec_mat);
+    TASK_NAME(matprod);
+    TASK_NAME(matprod_vec_vec_BLAS);
+    TASK_NAME(matprod_mat_vec_BLAS);
+    TASK_NAME(matprod_vec_mat_BLAS);
+    TASK_NAME(matprod_BLAS);
+    TASK_NAME(cmatprod_zero);
+    TASK_NAME(cmatprod);
+    TASK_NAME(piped_matprod_vec_vec);
+    TASK_NAME(piped_matprod_mat_vec);
+    TASK_NAME(piped_matprod_vec_mat);
+    TASK_NAME(piped_matprod);
     /* s */
     /* t */
     /* u */
