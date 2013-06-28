@@ -1864,8 +1864,6 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     RCNTXT cntxt;
     int nprot;
 
-    /*  NOTE:  This code only works for unhashed ones. */
-
     if (rho == R_BaseNamespace)
 	errorcall(call, _("cannot do complex assignments in base namespace"));
     if (rho == R_BaseEnv)
