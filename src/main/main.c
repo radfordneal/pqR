@@ -745,7 +745,7 @@ void setup_Rmainloop(void)
     {
 	char *p, Rlocale[1001]; /* Windows' locales can be very long */
 	p = getenv("LC_ALL");
-	strncpy(Rlocale, p ? p : "", 1000); Rlocal[1000] = 0;
+	strncpy(Rlocale, p ? p : "", 1000); Rlocale[1000] = 0;
 	if(!(p = getenv("LC_CTYPE"))) p = Rlocale;
 	/* We'd like to use warning, but need to defer.
 	   Also cannot translate. */
