@@ -5,30 +5,30 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-06-27}{
+\section{CHANGES IN VERSION RELEASED 2013-06-28}{
 
 \subsection{INTRODUCTION}{
 
 \itemize{ 
-\item This is the second publicised release of pqR (the first was on
-2013-06-20, and there were earlier unpublicised releases). It fixes
-one significant pqR bug (that could cause two empty strings to not
-compare as equal), fixes a bug reported to R Core (PR 15363) that also
-existed in pqR (see below), and fixes some issues preventing pqR from
-being built in some situations (including some partial fixes for
-Windows suggested by "armgong").  Since the rest of the news is almost
-unchanged from the previous release, I have not made a separate news
-section for this release. (New sections will be created once new
-releases have significant differences.)
-
 \item This release of pqR is based on R-2.15.0, distributed by the R
 Core Team, but improves on it in many ways, mostly ways that speed it
 up, but also by implementing some new features and fixing some bugs.
-
-\item One notable improvement is that for systems with multiple
+One notable speed improvement in pqR is that for systems with multiple
 processors or processor cores, pqR is able to do some numeric
 computations in parallel with other operations of the interpreter, and
 with other numeric computations.
+
+\item This is the second publicised release of pqR (the first was on
+2013-06-20, and there were earlier unpublicised releases). It fixes one
+significant pqR bug (that could cause two empty strings to not compare
+as equal, reported by Jon Clayden), fixes a bug reported to R Core (PR
+15363) that also existed in pqR (see below), fixes a bug in deciding
+when matrix multiplies are best done in a helper thread, and fixes some
+issues preventing pqR from being built in some situations (including
+some partial fixes for Windows suggested by "armgong").  Since the
+rest of the news is almost unchanged from the previous release, I have
+not made a separate news section for this release. (New sections will
+be created once new releases have significant differences.)
 
 \item This section documents changes in pqR from R-2.15.0 that are of
 direct interest to users.  For changes from earlier version of R to
