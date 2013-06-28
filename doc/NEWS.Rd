@@ -13,12 +13,12 @@
 \item This is the second publicised release of pqR (the first was on
 2013-06-20, and there were earlier unpublicised releases). It fixes
 one significant pqR bug (that could cause two empty strings to not
-compare as equal), fixes a memory expansion problem reported to R Core
-(PR 15363) that also existed in pqR, and fixes some issues preventing
-pqR from being built in some situations (including some partial fixes
-for Windows suggested by "armgong").  Since the rest of the news is
-almost unchanged from the previous release, I have not made a separate
-news section for this release. (New sections will be created once new
+compare as equal), fixes a bug reported to R Core (PR 15363) that also
+existed in pqR (see below), and fixes some issues preventing pqR from
+being built in some situations (including some partial fixes for
+Windows suggested by "armgong").  Since the rest of the news is almost
+unchanged from the previous release, I have not made a separate news
+section for this release. (New sections will be created once new
 releases have significant differences.)
 
 \item This release of pqR is based on R-2.15.0, distributed by the R
@@ -581,6 +581,11 @@ information such as systems on which pqR has been tested.
             \code{--disable-byte-compiled-packages} configuration option, 
             and changed the DESCRIPTION file for the recommended mgcv 
             package to respect this option.
+
+      \item Fixed a bug reported to R Core (PR 15363, 2013-006-26) that
+            also existed in pqR-2013-06-20.  This bug sometimes caused memory
+            expansion when many complex assignments or removals were done
+            in the global environment.
     }
   }
 }
