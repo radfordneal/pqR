@@ -125,8 +125,7 @@ See also entries in NEWS for other mods that merit description there.
  
 The "inspect" .Internal function was changed to show some details of
 pairlist nodes, if SHOW_PAIRLIST_NODES is defined as 1 in inspect.c.
-It also shows length and truelength (the hash) for CHARSXP nodes.
-Finally, it no longer produces output with tabs (spaces instead).
+Also, it no longer produces output with tabs (spaces instead).
  
  
 01-omp:
@@ -1105,15 +1104,6 @@ be computed only when that element is the next to be written.
 This mod adds comments on future directions for pqR to R-ints.
  
  
-10-hash:
- 
-Fixes a memory expansion bug reported to R Core (PR 15363), and the
-similar problem with rm and get_rm.  Also cleans up the code some
-(more cleanup is needed), and uses HASHASH to avoid hash computations
-consistently.  Defines a maximum size for the string hash table in
-memory.c separately from the maximum size for other hash tables.
- 
- 
 10-no-SETLENGTH:
  
 Remove the few uses of the deprecated SETLENGTH macro/function in the
@@ -1145,10 +1135,3 @@ allows the full 32-bit truelength field to be restored.  The diverse
 uses of the "misc" bit are now separated.  The use of the "trace" bit
 for memory tracing is no longer possible, since it doesn't exist in
 vectors, so the tracemem facility is defunct.
- 
- 
-12-contributed:
- 
-This branch is intended as starting place for people wishing to
-contribute mods to pqR.  Will later be replaced by a higher-numbered
-DD-contributed branch, when appropriate.
