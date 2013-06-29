@@ -1,7 +1,7 @@
 #-*- Makefile -*-
 include ../../gnuwin32/MkRules
 
-DEFS=-DHAVE_CONFIG_H
+DEFS=-DHAVE_CONFIG_H -fopenmp
 
 CPPFLAGS=-I../../include -I. $(DEFS)
 
