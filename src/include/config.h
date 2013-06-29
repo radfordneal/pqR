@@ -932,7 +932,7 @@
 #undef HELPERS_DISABLED
 #define R_HELPER_THREADS 1
 #define R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK 1
-//#define R_MAT_MULT_WITH_BLAS_BY_DEFAULT 1
+#define R_MAT_MULT_WITH_BLAS_BY_DEFAULT 1
 
 /* NOTE: there is no unanimity on this.  Currently most autoconf-based
    systems need mingw32 */
