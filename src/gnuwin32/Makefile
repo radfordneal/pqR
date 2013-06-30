@@ -84,7 +84,7 @@ MAINLIBS = ../main/libmain.a ../appl/libappl.a ../nmath/libnmath.a
 EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
    ../extra/pcre/libpcre.a ../extra/bzip2/libbz2.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
-   ../extra/tre/libtre.a ../extra/xz/liblzma.a
+   ../extra/tre/libtre.a ../extra/xz/liblzma.a ../extra/helpers/libhelpers.a ../extra/matprod/libmatprod.a
 
 # flags to ensure that Doug Lea's malloc is used:
 ifdef LEA_MALLOC
@@ -122,7 +122,7 @@ rlibs:
 	$(MK) -C ../nmath CFLAGS='$(CFLAGS)' FFLAGS='${FFLAGS}' -f Makefile.win
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
-	@for ex in graphapp pcre bzip2 zlib xdr tre trio tzone win_iconv xz; do \
+	@for ex in graphapp pcre bzip2 zlib xdr tre trio tzone win_iconv xz helpers matprod; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
 
@@ -144,19 +144,23 @@ fixed/fixdesc:
 
 dllversion.o: ../include/Rversion.h
 
+ifeq "$(WIN)" "64"
 R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
 	@$(ECHO) EXPORTS > R.def
-	@$(NM) $^ | $(SED) -n  $(SYMPAT)  | $(SORT) | uniq > R0.def
-	@comm -23 R0.def Rdll.hide >> R.def
+	@$(NM) $^ | $(SED) -n  $(SYMPAT) | LC_COLLATE=C $(SORT) | uniq > R0.def
+	@$(SED) -e's/@.*//' Rdll.hide | LC_COLLATE=C $(SORT) > R1.def
+	@comm -23 R0.def R1.def >> R.def
 	$(DLL) -shared $(DLLFLAGS) $($*-DLLFLAGS) -o $@ R.def $^ $($*-DLLLIBS) $(DLLLIBS)
-	@$(RM) R.def R0.def
-
-R.exp: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
-	@$(ECHO) LIBRARY R.dll > R.exp
-	@$(ECHO) EXPORTS >> R.exp
-	@$(NM) $^ | $(SED) -n $(SYMPAT) | $(SORT) | uniq > R0.def
-	@comm -23 R0.def Rdll.hide >> R.exp
-	@$(RM) R0.def
+	@$(RM) R.def R0.def R1.def
+else
+R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
+	@$(ECHO) EXPORTS > R.def
+	@$(NM) $^ | $(SED) -n  $(SYMPAT) | LC_COLLATE=C $(SORT) | uniq > R0.def
+	@LC_COLLATE=C $(SORT) Rdll.hide > R1.def
+	@comm -23 R0.def R1.def >> R.def
+	$(DLL) -shared $(DLLFLAGS) $($*-DLLFLAGS) -o $@ R.def $^ $($*-DLLLIBS) $(DLLLIBS)
+	@$(RM) R.def R0.def R1.def
+endif
 
 
 Rdll: makeMakedeps libRblas.dll.a ../../$(BINDIR)/R.dll
@@ -206,6 +210,12 @@ front-ends:
 ../extra/xz/liblzma.a:
 	$(MK) -C ../extra/xz -f Makefile.win
 
+../extra/helpers/libhelpers.a:
+	$(MK) -C ../extra/helpers -f Makefile.win
+
+../extra/matprod/libmatprod.a:
+	$(MK) -C ../extra/matprod -f Makefile.win
+
 NEWSdocs:
 	@$(MK) -C ../../doc -f Makefile.win
 
@@ -235,7 +245,7 @@ PKGDIR=../library
 pkgclean-%:
 	@(cd $(PKGDIR)/$*/src; rm -f *.d *.o *.dll *_res.rc Makedeps)
 
-EXTRA_DIRS = blas bzip2 graphapp intl pcre tre trio tzone xdr xz win_iconv zlib
+EXTRA_DIRS = blas bzip2 graphapp intl pcre tre trio tzone xdr xz win_iconv zlib helpers matprod
 
 clean: cleanwin
 	@$(MAKE) -C ../library -f Makefile.win clean

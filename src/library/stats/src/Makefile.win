@@ -34,8 +34,8 @@ SHLIB = $(pkg).dll
 RESFLAGS = -I $(R_HOME)/include
 
 # OpenMP is too slow to be useful.
-PKG_CPPFLAGS = -DHAVE_CONFIG_H -I$(R_HOME)/src/include
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+PKG_CPPFLAGS = -DHAVE_CONFIG_H -I$(R_HOME)/src/include -fopenmp
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -fopenmp
 
 all: makeMakedeps shlib
 

@@ -48,7 +48,8 @@
 
 /* Wide characters. */
 typedef wint_t tre_cint_t;
-#define TRE_CHAR_MAX (WCHAR_MAX & 0x7fffffff) /* KLUDGE NEEDED SINCE USES INT */
+ /* KLUDGE NEEDED HERE SINCE TRE USES AN INT TO STORE THEM. */
+#define TRE_CHAR_MAX (WCHAR_MAX>0x7fffffff ? 0x7fffffff : WCHAR_MAX)
 
 #ifdef TRE_MULTIBYTE
 #define TRE_MB_CUR_MAX MB_CUR_MAX

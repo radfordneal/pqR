@@ -73,6 +73,10 @@
 #define MAX_NODE_CLASSES 8  /* Max number of node classes, from bits in gccls */
 #define NUM_NODE_CLASSES 8  /* At least 2, and no more than the max above */
 
+#define STRHASHINITSIZE (1<<16) /* Initial number of slots in string hash table
+                                   (must be a power of two) */
+#define STRHASHMAXSIZE (1<<21)  /* Maximum slots in the string hash table */
+
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
    "cons" cells (so it's necessary that one be big enough for this).  Note 
@@ -873,8 +877,16 @@ int CheckStuff(SEXP x, SEXP n, int w, int g)
         err = 1;
     }
     if (w == 1 && x != NULL && NODE_GENERATION(x) < g && n != R_StringHash) {
-	REprintf("untraced old-to-new reference (%lx %lx %d %d %d %d)!\n",
-          n, x, NODE_GENERATION(x), g, n->sxpinfo.gcoton, x->sxpinfo.gcoton);
+	REprintf(
+          "untraced old-to-new reference (%lx %lx %d %d"
+#if FLAG_OLD_TO_NEW
+           "%d %d"
+#endif
+          "\n", n, x, NODE_GENERATION(x), g 
+#if FLAG_OLD_TO_NEW
+          , n->sxpinfo.gcoton, x->sxpinfo.gcoton
+#endif
+        );
         err = 1;
     }
     return err;
@@ -906,11 +918,13 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                 REprintf("Node in New list is marked!\n");
                 REprintf(" -- %s %d\n",type2char(TYPEOF(s)),i);
             }
+#if FLAG_OLD_TO_NEW
             if (s->sxpinfo.gcoton) {
                 REprintf("Node in New has gcoton set!\n");
                 REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                          i, NODE_CLASS(s));
             }
+#endif
 	}
 	for (gen = 0, OldCount = 0, OldToNewCount = 0;
 	     gen < NUM_OLD_GENERATIONS;
@@ -923,11 +937,13 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                     REprintf("Garbled links in Old list!\n");
                     REprintf(" -- %d %d %d\n",i,gen,OldCount);
                 }
+#if FLAG_OLD_TO_NEW
                 if (s->sxpinfo.gcoton) {
 		    REprintf("Node in Old has gcoton set!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                              i, NODE_CLASS(s));
                 }
+#endif
 		if (i != NODE_CLASS(s)) {
 		    REprintf("Inconsistent class assignment for node (2)!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
@@ -952,11 +968,13 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                     REprintf("Garbled links in OldToNew list!\n");
                     REprintf(" -- %d %d %d\n",i,gen,OldToNewCount);
                 }
-                if (FLAG_OLD_TO_NEW && !s->sxpinfo.gcoton) {
+#if FLAG_OLD_TO_NEW
+                if (!s->sxpinfo.gcoton) {
 		    REprintf("Node in OldToNew does not have gcoton set!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                              i, NODE_CLASS(s));
                 }
+#endif
 		if (i != NODE_CLASS(s)) {
 		    REprintf("Inconsistent class assignment for node (3)!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
@@ -3996,10 +4014,10 @@ SEXP mkChar(const char *name)
 */
 
 /* char_hash_size MUST be a power of 2 and char_hash_mask == char_hash_size - 1
-   in order for x & char_hash_mask to be equivalent to x % char_hash_size.
-*/
-static unsigned int char_hash_size = 65536;
-static unsigned int char_hash_mask = 65535;
+   in order for x & char_hash_mask to be equivalent to x % char_hash_size. */
+
+static unsigned int char_hash_size = STRHASHINITSIZE;
+static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 static unsigned int char_hash(const char *s, int len)
 {
@@ -4133,11 +4151,14 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
          chain != R_NilValue; 
          chain = CXTAIL(chain)) {
 	SEXP val = CXHEAD(chain);
-	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))
-	     && LENGTH(val) == len && *CHAR(val) == *name /* quick pretest */
-	     && memcmp(CHAR(val), name, len) == 0) {
-	    cval = val;
-	    break;
+	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
+            if (LENGTH(val) == len) {
+                if (len == 0 || *CHAR(val) == *name /* quick pretest */
+                                   && memcmp(CHAR(val), name, len) == 0) {
+                    cval = val;
+                    break;
+                }
+            }
 	}
     }
 
@@ -4179,7 +4200,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
 	/* Resize the hash table if desirable and possible. */
 	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
-             && 2*char_hash_size <= HASHMAXSIZE)
+             && 2*char_hash_size <= STRHASHMAXSIZE)
 	    R_StringHash_resize (2*char_hash_size);
     }
     return cval;

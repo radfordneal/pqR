@@ -41,7 +41,7 @@ TOOL_PATH =
 # prefix for 32-bit: path or i686-w64-mingw32-
 BINPREF =
 # prefix for 64-bit: path or x86_64-w64-mingw32-
-BINPREF64 = x86_64-w64-mingw32-
+BINPREF64 =
 
 # Others use a -m64 or -m32 option to select architectures
 M_ARCH =
@@ -53,7 +53,7 @@ RC_ARCH =
 DT_ARCH =
 
 # 32- or 64-bit Windows?
-WIN = 32
+WIN = 64
 
 # We normally link directly against DLLs, 
 # but this macro forces the use of import libs
@@ -88,7 +88,7 @@ BUILD_HTML = NO
 MIKTEX = TRUE
 
 # additional optimization flags
-EOPTS=-mtune=core2
+EOPTS=-march=native -mtune=native -DENABLE_ISNAN_TRICK -fopenmp 
 
 # define to -fopenmp if the toolchain has OpenMP support
 OPENMP = -fopenmp
