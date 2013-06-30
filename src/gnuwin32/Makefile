@@ -122,7 +122,7 @@ rlibs:
 	$(MK) -C ../nmath CFLAGS='$(CFLAGS)' FFLAGS='${FFLAGS}' -f Makefile.win
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
-	@for ex in graphapp pcre bzip2 zlib xdr tre trio tzone win_iconv xz; do \
+	@for ex in graphapp pcre bzip2 zlib xdr tre trio tzone win_iconv xz helpers matprod; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
 
