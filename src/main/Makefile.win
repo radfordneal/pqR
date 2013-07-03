@@ -53,7 +53,7 @@ gramLatex.c: gramLatex.y
 	$(RM) gramLatex.tab.c
 endif
 
-platform-CPPFLAGS=-I../gnuwin32 -I../extra -I../extra/helper -DPLATFORM_PKGTYPE='"win.binary"'
+platform-CPPFLAGS=-I../gnuwin32 -I../extra -I../extra/helpers -DPLATFORM_PKGTYPE='"win.binary"'
 
 agrep-CPPFLAGS=-I../extra
 # array-CPPFLAGS=$(OPENMP) # too slow to be useful.

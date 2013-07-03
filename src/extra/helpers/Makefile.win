@@ -10,7 +10,7 @@ all:
 	$(MAKE) -f Makefile.win makeMakedeps
 	$(MAKE) -f Makefile.win libhelpers.a
 
-CSOURCES = helpers.c
+CSOURCES = helpers.c helpers--app.c
 
 OBJS = $(CSOURCES:.c=.o)
 libhelpers.a: $(OBJS)
