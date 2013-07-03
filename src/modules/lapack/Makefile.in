@@ -25,7 +25,7 @@ LIBOBJECTS = $(LIBSOURCES:.f=.o)
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 DISTFILES = \
-	README Makefile.in Makefile.win \
+	README Makefile.in Makefile.win init_win.c \
 	Rlapackrc.rc dllversion.rc \
 	$(HEADERS) Lapack.c \
 	vecLibg95c.c vecLibg95f.f \
