@@ -514,8 +514,17 @@
 /* Define if you have C OpenMP support. */
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR >= 2
 // has it, but it is too slow to be usable
-// #define HAVE_OPENMP 1
+#define HAVE_OPENMP 1
 #endif
+
+/* Define this if BLAS matrix multiplies are thread-safe. */
+#define R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK 1
+
+/* Define this to make mat_mult_with_BLAS default to TRUE. */
+/* #undef R_MAT_MULT_WITH_BLAS_BY_DEFAULT */
+
+/* Define this to enable helper threads. */
+#define R_HELPER_THREADS 1
 
 /* Define to 1 if you have pangocairo. */
 /* #undef HAVE_PANGOCAIRO */
