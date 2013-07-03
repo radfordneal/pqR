@@ -1,4 +1,4 @@
-BINDING_IS_LOCKED
+ BINDING_IS_LOCKED
  BM_norm_keep
  BZ2_blockSort
  BZ2_bsInitWrite
@@ -397,6 +397,7 @@ BINDING_IS_LOCKED
  Rf_unbindVar
  Rf_utf8toucs
  Rf_vectorSubscript
+ Rf_wait_until_arguments_computed
  Rf_wcstoutf8
  Rf_yychar
  Rf_yylval
@@ -441,7 +442,6 @@ BINDING_IS_LOCKED
  UTF8in
  UTF8out
  UseInternet2
- Rf_wait_until_arguments_computed
  WinCheckUTF8
  WinUTF8out
  WrongArgCount
