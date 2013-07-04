@@ -1613,7 +1613,7 @@ static void setup_Math2
         y[i] = fncall; \
         if (ISNAN(y[i])) naflag = 1; \
     } \
-    if (naflag) warningcall(lcall, R_MSG_NA); \
+    if (naflag) warning(R_MSG_NA); \
     if (n == na)  DUPLICATE_ATTRIB(sy, sa); \
     else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
     UNPROTECT(3); \
@@ -1981,7 +1981,7 @@ static void setup_Math3
         y[i] = fncall; \
         if (ISNAN(y[i])) naflag = 1; \
     } \
-    if (naflag) warningcall(lcall, R_MSG_NA); \
+    if (naflag) warning(R_MSG_NA); \
     if (n == na) DUPLICATE_ATTRIB(sy, sa); \
     else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
     else if (n == nc) DUPLICATE_ATTRIB(sy, sc); \
@@ -2190,7 +2190,7 @@ static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy,
         y[i] = fncall; \
         if (ISNAN(y[i])) naflag = 1; \
     } \
-    if (naflag) warningcall(lcall, R_MSG_NA); \
+    if (naflag) warning(R_MSG_NA); \
     if (n == na) DUPLICATE_ATTRIB(sy, sa); \
     else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
     else if (n == nc) DUPLICATE_ATTRIB(sy, sc); \
@@ -2374,7 +2374,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
 
 #define FINISH_Math5				\
     if(naflag)					\
-	warningcall(lcall, R_MSG_NA);		\
+	warning(R_MSG_NA);		\
 						\
     if (n == na) DUPLICATE_ATTRIB(sy, sa);	\
     else if (n == nb) DUPLICATE_ATTRIB(sy, sb);	\
