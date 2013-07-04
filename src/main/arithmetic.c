@@ -660,7 +660,9 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         mod_iterate(n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
-            if (x1 == NA_INTEGER || x2 == NA_INTEGER)
+            if (x1 == 1 || x2 == 0)
+                REAL(ans)[i] = 1.0;
+            else if (x1 == NA_INTEGER || x2 == NA_INTEGER)
                 REAL(ans)[i] = NA_REAL;
             else {
                 REAL(ans)[i] = R_POW((double) x1, x2);
