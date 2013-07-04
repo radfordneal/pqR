@@ -2117,7 +2117,7 @@ One or all of the parsed objects is fetched by a call to
 
 
 @node The helpers facility,  , Lazy loading, R Internal Structures
-@section Lazy loading
+@section The helpers facility
 
 The @pqR{} facility for doing computations in helper threads is
 supported by the ``helpers'' library in @file{src/extra/helpers},
@@ -2127,7 +2127,7 @@ helpers facility interfaces to the @pqR{} interpreter.
 
 At present, computations in helper threads are confined to numeric
 vectors.  Two bits in the headers of such objects (actually all
-objects) are check on how computations that may be done by helper
+objects) allow checks on how computations that may be done by helper
 threads are progressing.  These bits are accessed by the
 @code{IS_BEING_COMPUTED_BY_TASK} and @code{IS_IN_USE_BY_TASK} macros.
 An object is being computed by a task if computation of its data part
