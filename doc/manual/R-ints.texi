@@ -1231,13 +1231,20 @@ but when appropriate, macros for testing its value called
 should be used, since they may be more efficient than a comparison
 with the value returned by @code{NAMEDCNT}.
 
+When helper threads are enabled, an object that is being used by a task
+has not yet completed must not be modified, even if its @code{NAMEDCNT} field
+is such that it could otherwise be modified.  This constraint is implemented
+by having the @code{NAMEDCNT} macro wait until no task is using the
+object.
+
 The @code{nmcnt} field can be set with the @code{SET_NAMEDCNT} macro,
 but when possible, it is better to use the @code{SET_NAMEDCNT_0},
 @code{SET_NAMEDCNT_1}, @code{SET_NAMEDCNT_MAX}, @code{INC_NAMEDCNT},
 @code{DEC_NAMEDCNT}, and @code{INC_NAMEDCNT_0_AS_1} macros, since they
 may be more efficient.  The @code{INC_NAMEDCNT} and
 @code{DEC_NAMEDCNT} macros increment and decrement @code{nmcnt},
-except that they do not change its value if it is @code{MAX_NAMEDCNT}.
+except that they do not change its value if it is @code{MAX_NAMEDCNT},
+and @code{DEC_NAMEDCNT} does not change a value of zero.
 The @code{INC_NAMEDCNT_0_AS_1} macro first changes @code{nmcnt} to 1
 if it is 0, and then increments the value (unless it is
 @code{MAX_NAMEDCNT}).
