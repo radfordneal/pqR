@@ -1650,6 +1650,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
     /* Or should this be allocVector(VECSXP, 0)? */
 
     if (isPairList(x)) {
+
 	SEXP xmatch = R_NilValue;
 	int havematch;
         if (name!=R_NilValue) {
@@ -1657,8 +1658,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
             for (y = x; y != R_NilValue; y = CDR(y))
                 if (TAG(y)==name) {
                     y = CAR(y);
-                    if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
-    	            return y;
+                    goto found_pairlist;
                 }
         }
         cinp = input==R_NilValue ? CHAR(PRINTNAME(name)) : translateChar(input);
@@ -1668,8 +1668,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	    mtch = ep_match_strings(ctarg, cinp);
 	    if (mtch>0) /* exact */ {
 		y = CAR(y);
-		if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
-		return y;
+                goto found_pairlist;
             }
             else if (mtch<0) /* partial */ {
 		havematch++;
@@ -1683,12 +1682,18 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 			    cinp, ctarg);
             }
 	    y = CAR(xmatch);
-	    if (NAMEDCNT(x) > NAMEDCNT(y)) SET_NAMEDCNT(y, NAMEDCNT(x));
-	    return y;
+            goto found_pairlist;
 	}
+
 	return R_NilValue;
+
+      found_pairlist:
+        SET_NAMEDCNT_MAX(y);
+        return y;
     }
+
     else if (isVectorList(x)) {
+
 	int i, n, havematch, imatch=-1;
         SEXP str_elt;
         SEXP nlist = getAttrib(x, R_NamesSymbol);
@@ -1702,9 +1707,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	    mtch = ep_match_strings(ctarg, cinp);
             if (mtch>0) /* exact */ {
 		y = VECTOR_ELT(x, i);
-                if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
-                    SET_NAMEDCNT(y,1);
-		return y;
+                goto found_veclist;
             }
 	    else if (mtch<0) /* partial */ {
 		havematch++;
@@ -1726,11 +1729,15 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 			    cinp, ctarg);
 	    }
 	    y = VECTOR_ELT(x, imatch);
-            if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
-                SET_NAMEDCNT(y,1);
-	    return y;
+	    goto found_veclist;
 	}
+
 	return R_NilValue;
+
+      found_veclist:
+        if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
+            SET_NAMEDCNT(y,1);
+        return y;
     }
     else if( isEnvironment(x) ){
         if (name==R_NilValue) 
@@ -1743,7 +1750,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	}
         if (y == R_UnboundValue)
             return R_NilValue;
-        SET_NAMEDCNT_MAX(y); /* Likely overkill but 2.13.0 does the equivalent*/
+        if (NAMEDCNT_EQ_0(y))
+            SET_NAMEDCNT_1(y);
         return y;
     }
     else if( isVectorAtomic(x) ){
