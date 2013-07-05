@@ -321,14 +321,11 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     case STRSXP:
         if (s==1 && t==1) 
             copy_string_elements (x, i, v, j, n);
-        else {
-            PROTECT(x); PROTECT(v);
+        else
             do { 
                 SET_STRING_ELT (x, i, STRING_ELT(v,j));
                 i += s; j += t; 
             } while (--n>0);
-            UNPROTECT(2);
-        }
         break;
     case VECSXP:
     case EXPRSXP:
