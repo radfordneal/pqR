@@ -1037,6 +1037,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define RealFromInteger	Rf_RealFromInteger
 # define RealFromLogical	Rf_RealFromLogical
 # define RealFromString		Rf_RealFromString
+# define RemoveVariable		Rf_RemoveVariable
 # define revisecontext          Rf_revisecontext
 # define Seql			Rf_Seql
 # define Scollate		Rf_Scollate
@@ -1054,7 +1055,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define tsConform		Rf_tsConform
 # define tspgets		Rf_tspgets
 # define type2symbol		Rf_type2symbol
-# define unbindVar		Rf_unbindVar
 # define usemethod		Rf_usemethod
 # define ucstomb		Rf_ucstomb
 # define ucstoutf8		Rf_ucstoutf8
@@ -1234,6 +1234,7 @@ SEXP promiseArgs(SEXP, SEXP);
 SEXP promiseArgsWithValues(SEXP, SEXP, SEXP);
 SEXP promiseArgsWith1Value(SEXP, SEXP, SEXP);
 void Rcons_vprintf(const char *, va_list);
+SEXP RemoveVariable(SEXP, SEXP);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
@@ -1263,7 +1264,6 @@ SEXP substituteList(SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);
 SEXP tspgets(SEXP, SEXP);
 SEXP type2symbol(SEXPTYPE);
-void unbindVar(SEXP, SEXP);
 #ifdef ALLOW_OLD_SAVE
 void unmarkPhase(void);
 #endif
