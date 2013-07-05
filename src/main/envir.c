@@ -810,59 +810,6 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
     return list;
 }
 
-/*----------------------------------------------------------------------
-
-  unbindVar
-
-  Remove a value from an environment. This happens only in the frame
-  of the specified environment.
-
-  FIXME ? should this also unbind the symbol value slot when rho is R_BaseEnv?
-  Only called from eval.c in applydefine and bcEval, which don't (?) call it
-  on the base environment...?
-*/
-
-void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
-{
-    SEXP list, value;
-
-    if (rho == R_BaseNamespace)
-	error(_("cannot unbind in the base namespace"));
-    if (rho == R_BaseEnv)
-	error(_("unbind in the base environment is unimplemented"));
-    if (FRAME_IS_LOCKED(rho))
-	error(_("cannot remove bindings from a locked environment"));
-#ifdef USE_GLOBAL_CACHE
-    if (IS_GLOBAL_FRAME(rho))
-	R_FlushGlobalCache(symbol);
-#endif
-    if (HASHTAB(rho) == R_NilValue) {
-	list = RemoveFromList(symbol, FRAME(rho), &value);
-	if (value != NULL)
-	    SET_FRAME(rho, list);
-    }
-    else {
-	SEXP hashtab = HASHTAB(rho);
-        int hashcode = HASHASH(PRINTNAME(symbol)) ? HASHVALUE(PRINTNAME(symbol))
-                        : R_Newhashpjw(CHAR(PRINTNAME(symbol)));
-	int idx = hashcode % HASHSIZE(hashtab);
-	list = RemoveFromList (symbol, VECTOR_ELT(hashtab,idx), &value);
-	if (value != NULL) {
-	    SET_VECTOR_ELT (hashtab, idx, list);
-            if (list == R_NilValue)
-                SET_HASHSLOTSUSED(hashtab,HASHSLOTSUSED(hashtab)-1);
-        }
-    }
-
-    if (value != NULL) {
-        if (rho == R_GlobalEnv) R_DirtyImage = 1;
-#ifdef USE_GLOBAL_CACHE
-	if (IS_GLOBAL_FRAME(rho))
-            R_FlushGlobalCache(symbol);
-#endif
-    }
-}
-
 
 /*----------------------------------------------------------------------
 
@@ -1718,7 +1665,7 @@ SEXP attribute_hidden do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
    For a user database, R_NilValue is returned when the variable exists, 
    rather than the value. */
 
-static SEXP RemoveVariable(SEXP name, SEXP env)
+SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 {
     SEXP list, value;
 
