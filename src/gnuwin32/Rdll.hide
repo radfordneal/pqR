@@ -326,6 +326,7 @@
  Rf_RealFromInteger
  Rf_RealFromLogical
  Rf_RealFromString
+ Rf_RemoveVariable
  Rf_SrcrefPrompt
  Rf_StringFromComplex
  Rf_StringFromInteger
@@ -394,7 +395,6 @@
  Rf_strmat2intmat
  Rf_substituteList
  Rf_ucstomb
- Rf_unbindVar
  Rf_utf8toucs
  Rf_vectorSubscript
  Rf_wait_until_arguments_computed

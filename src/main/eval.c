@@ -1811,7 +1811,7 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 
 static void tmp_cleanup(void *data)
 {
-    unbindVar(R_TmpvalSymbol, (SEXP) data);
+    (void) RemoveVariable (R_TmpvalSymbol, (SEXP) data);
 }
 
 /* This macro stores the current assignment target in the saved
@@ -1971,7 +1971,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     expr = eval(expr, rho);
     UNPROTECT(nprot);
     endcontext(&cntxt); /* which does not run the remove */
-    unbindVar(R_TmpvalSymbol, rho);
+    (void) RemoveVariable (R_TmpvalSymbol, rho);
 }
 
 
