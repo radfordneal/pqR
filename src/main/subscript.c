@@ -27,10 +27,9 @@
  *
  *  OneIndex()        -- used for "[[<-" in ./subassign.c
  *  get1index()       -- used for "[["   in ./subassign.c & subset.c
- *  vectorIndex()     -- used for "[[" with a vector arg
-
+ *
  *  mat2indsub()      -- for "mat[i]"     "    "            "
-
+ *
  *  makeSubscript()   -- for "[" and "[<-" in ./subset.c and ./subassign.c,
  *			 and "[[<-" with a scalar in ./subassign.c
  *  arraySubscript()  -- for "[i,j,..." and "[<-..." in ./subset.c, ./subassign.c

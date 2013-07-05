@@ -1200,7 +1200,7 @@ SEXP attribute_hidden do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(DispatchOrEval(call, op, "[", args, rho, &ans, 0, argsevald)) {
 /*     if(DispatchAnyOrEval(call, op, "[", args, rho, &ans, 0, 0)) */
 	if (NAMEDCNT_GT_0(ans))
-	    SET_NAMEDCNT_MAX(ans);
+	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
 	return(ans);
     }
 
@@ -1473,12 +1473,31 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!(isVector(x) || isList(x) || isLanguage(x)))
 	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
+    int any_named = NAMEDCNT_GT_0(x);
+
     if(nsubs == 1) { /* vector indexing */
+
 	SEXP thesub = CAR(subs);
 	int len = length(thesub);
+        int i;
 
-	if (len > 1)
-	    x = vectorIndex(x, thesub, 0, len-1, pok, call);
+        for (i = 1; i < len; i++) {
+            if (!isVectorList(x) && !isPairList(x))
+                errorcall(call,_("recursive indexing failed at level %d\n"),i);
+            offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
+                               length(x), pok, i-1, call);
+            if (offset < 0 || offset >= length(x))
+                errorcall(call, _("no such index at level %d\n"), i);
+            if (isPairList(x)) {
+                x = CAR(nthcdr(x, offset));
+                any_named = 1;
+            } 
+            else {
+                x = VECTOR_ELT(x, offset);
+                if (NAMEDCNT_GT_0(x))
+                   any_named = 1;
+            }
+        }
 	    
 	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
 			   length(x), pok, len > 1 ? len-1 : -1, call);
@@ -1526,8 +1545,8 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         SET_NAMEDCNT_MAX(ans);
     } else if(isVectorList(x)) {
 	ans = VECTOR_ELT(x, offset);
-	if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(ans))
-            SET_NAMEDCNT(ans,1);
+	if (any_named && NAMEDCNT_EQ_0(ans))
+            SET_NAMEDCNT_1(ans);
     } else {
 	ans = allocVector(TYPEOF(x), 1);
         copy_elements (ans, 0, 0, x, offset, 0, 1);
