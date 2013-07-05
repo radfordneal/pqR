@@ -1257,14 +1257,17 @@ be set, and when an object may be modifedi:
 @itemize
 
 @item Pairlists, language constructs, and closures (@code{LISTSXP},
-@code{LANGSXP}, and @code{CLOSXP} objects) should never be modified
---- all changes must be implemented by duplicating all or part of the
-object --- except for internal uses of such objects that are never
-visible to user R code (eg, lists of bindings in environments and lists
-of attributes), and when such objects are first being constructed.
-Accordingly, @code{NAMEDCNT} is not meaningful for such objects.
+@code{LANGSXP}, @code{DOTSXP}, @code{CLOSXP}, and @code{BCODESXP}
+objects) should never be modified --- all changes must be implemented
+by duplicating all or part of the object --- except for internal uses
+of such objects that are never visible to user R code (eg, lists of
+bindings in environments and lists of attributes), and when such
+objects are first being constructed.  This immutability is necessary
+to, for example, ensure that expressions being evaluated are not
+changing during the course of their evaluation.  Accordingly,
+@code{NAMEDCNT} is not meaningful for such objects.
 
-A atomic or non-atomic vector that is referenced from an object of one
+An atomic or non-atomic vector that is referenced from an object of one
 of these types (eg, a numeric constant in a language construct) should
 have its @code{NAMECNT} set to @code{MAX_NAMEDCNT} whenever it becomes
 visible elsewhere (eg, as the result of @code{eval}) to ensure that it
@@ -1314,8 +1317,17 @@ a list that has @code{NAMEDCNT} of zero (either because it was always
 zero, or because it became zero after @code{NAMEDCNT} was decremented,
 for example in @code{get_rm}).
 
+Note that this convention applies recursively.  For example, when a
+list with a non-zero @code{NAMEDCNT} contains a list with zero
+@code{NAMEDCNT} which in turn contains a real vector with zero
+@code{NAMEDCNT}, the list and real vector with zero @code{NAMEDCNT}
+are considered to really have @code{NAMEDCNT} of 1, and must have
+@code{NAMEDCNT} set to 1 if they become visible elsewhere.
+
 @item @code{NAMEDCNT} is not meaningful for the remaining types of
-objects (eg, @code{CHARSXP} or @code{BUILTINSXP}).
+objects (@code{NILSXP}, @code{SYMSXP}, @code{SPECIALSXP},
+@code{BUILTINSXP}, @code{CHARSXP}, @code{EXTPTRSXP}, @code{WEAKREFSXP},
+and @code{S4SXP}).
 
 @end itemize
 It is always permissible (though undesirable) to set @code{NAMEDCNT}
