@@ -252,10 +252,16 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
     return indx;
 }
 
+/* Indexes down through lists given a vector of offsets. Sets elements
+   found with NAMEDCNT of zero to have NAMEDCNT of one if any earlier
+   element had NAMEDCNT greater than zero (or was a pairlist). */
+
 SEXP attribute_hidden
 vectorIndex(SEXP x, SEXP thesub, int start, int stop, int pok, SEXP call) 
 {
-    int i, offset;
+    int i, offset, named;
+
+    named = isPairList(x) || NAMEDCNT_GT_0(x);
 
     for(i = start; i < stop; i++) {
 	if(!isVectorList(x) && !isPairList(x)) {
@@ -270,8 +276,14 @@ vectorIndex(SEXP x, SEXP thesub, int start, int stop, int pok, SEXP call)
 	    errorcall(call, _("no such index at level %d\n"), i+1);
 	if(isPairList(x)) {
 	    x = CAR(nthcdr(x, offset));
+            SET_NAMEDCNT_MAX(x);
+            named = 1;
 	} else {
 	    x = VECTOR_ELT(x, offset);
+            if (NAMEDCNT_GT_0(x))
+               named = 1;
+            else if (named) 
+               SET_NAMEDCNT_1(x);
     	}
     }
     return x;
