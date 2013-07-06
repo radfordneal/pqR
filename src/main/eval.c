@@ -1288,26 +1288,21 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 {
     SEXP vl;
 
-    if ((vl = findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
+    if (findVarInFrame3(rho, symbol, TRUE) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
-	if(NAMEDCNT_GT_1(vl)) {
-	    PROTECT(vl = duplicate(vl));
-	    set_var_in_frame (symbol, vl, rho, TRUE, 3);
-	    UNPROTECT(1);
-	}
-	return vl;
+	if (!NAMEDCNT_GT_1(vl)) 
+            return vl;
+    }
+    else {
+        vl = eval(symbol, ENCLOS(rho));
+        if (vl == R_UnboundValue)
+            error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
     }
 
-    vl = eval(symbol, ENCLOS(rho));
-    if (vl == R_UnboundValue)
-	error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
-
-    PROTECT(vl = duplicate(vl));
+    vl = dup_top_level(vl);
     set_var_in_frame (symbol, vl, rho, TRUE, 3);
-    UNPROTECT(1);
     return vl;
 }
-
 
                                   /* Caller needn't protect the s arg below */
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)

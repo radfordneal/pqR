@@ -494,15 +494,19 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 }
 
 
-/* Duplicate a LISTSXP or EXPRSXP at top level only (including duplicating
-   attributes).  The NAMEDCNT field of each element is incremented to account 
-   for the extra reference.  The argument needn't be protected by the caller. */
+/* Duplicates object, including attributes, except that a LISTSXP or EXPRSXP 
+   is duplicated at the top level only, and the NAMEDCNT field of each element 
+   is incremented to account for the extra reference.  The argument needn't be 
+   protected by the caller. */
 
 SEXP attribute_hidden dup_top_level (SEXP x)
 {
     R_len_t n;
     SEXP r;
     int i;
+
+    if (!isVectorList(x))
+        return duplicate(x);
 
     PROTECT(x);
     n = LENGTH(x);
