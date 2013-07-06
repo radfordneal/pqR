@@ -251,43 +251,6 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
     return indx;
 }
 
-/* Indexes down through lists given a vector of offsets. Sets elements
-   found with NAMEDCNT of zero to have NAMEDCNT of one if any earlier
-   element had NAMEDCNT greater than zero (or was a pairlist). */
-
-SEXP attribute_hidden
-vectorIndex(SEXP x, SEXP thesub, int start, int stop, int pok, SEXP call) 
-{
-    int i, offset, named;
-
-    named = isPairList(x) || NAMEDCNT_GT_0(x);
-
-    for(i = start; i < stop; i++) {
-	if(!isVectorList(x) && !isPairList(x)) {
-	    if (i)
-		errorcall(call, _("recursive indexing failed at level %d\n"), i+1);
-	    else
-		errorcall(call, _("attempt to select more than one element"));
-	}
-	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
-		           length(x), pok, i, call);
-	if(offset < 0 || offset >= length(x))
-	    errorcall(call, _("no such index at level %d\n"), i+1);
-	if(isPairList(x)) {
-	    x = CAR(nthcdr(x, offset));
-            SET_NAMEDCNT_MAX(x);
-            named = 1;
-	} else {
-	    x = VECTOR_ELT(x, offset);
-            if (NAMEDCNT_GT_0(x))
-               named = 1;
-            else if (named) 
-               SET_NAMEDCNT_1(x);
-    	}
-    }
-    return x;
-}
-
 /* Special Matrix Subscripting: Handles the case x[i] where */
 /* x is an n-way array and i is a matrix with n columns. */
 /* This code returns a vector containing the integer subscripts */
