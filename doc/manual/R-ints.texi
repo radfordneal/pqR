@@ -1262,9 +1262,9 @@ objects) should never be modified --- all changes must be implemented
 by duplicating all or part of the object --- except for internal uses
 of such objects that are never visible to user R code (eg, lists of
 bindings in environments and lists of attributes), and when such
-objects are first being constructed.  This immutability is necessary
-to, for example, ensure that expressions being evaluated are not
-changing during the course of their evaluation.  Accordingly,
+objects are in the process of being constructed.  This immutability is
+necessary to, for example, ensure that expressions being evaluated are
+not changing during the course of their evaluation.  Accordingly,
 @code{NAMEDCNT} is not meaningful for such objects.
 
 An atomic or non-atomic vector that is referenced from an object of one
@@ -1286,13 +1286,14 @@ is not attempted at present.)
 @item Promises (@code{PROMSXP} objects) should have @code{NAMEDCNT}
 set to the number of bindings of the promise in an environment.  This
 count will usually be one, but may be greater as a result of method
-dispatch.  (This count is not yet maintained properly in pqR, so at
+dispatch.  (This count is not yet properly maintained in pqR, so at
 present it must always be assumed to be greater than one.)
 
 @item @code{NAMEDCNT} for atomic and non-atomic vectors (objects of
-type @code{LGLSXP}, @code{INTSXP}, @code{REALSXP}, @code{CPLXSXP}, @code{STRSX},
-@code{RAWSXP}, @code{VECSXP}, and @code{EXPRSXP}) should be set to
-the count how many references exist to the object in any of the following ways:
+type @code{LGLSXP}, @code{INTSXP}, @code{REALSXP}, @code{CPLXSXP},
+@code{STRSX}, @code{RAWSXP}, @code{VECSXP}, and @code{EXPRSXP}) and
+for objects of type @code{S4SXP} should be set to the count how many
+references exist to the object in any of the following ways:
 @itemize
 
 @item as the value bound to a name in an environment.
@@ -1304,18 +1305,18 @@ the count how many references exist to the object in any of the following ways:
 
 @end itemize
 
-However, @code{NAMEDCNT} for a vector is allowed to be zero if there
-is only a single reference to it as an attribute or a list element.
-If such a vector is made visible otherwise (eg, as the value returned
-by @code{eval}), and @code{NAMEDCNT} for the object referencing it is
-still non-zero, its @code{NAMEDCNT} must be set to 1, so that it will
-be correctly seen and maintained later.  This convention is convenient
-because it sometimes avoids the need to set @code{NAMEDCNT} to 1 for
-all elements when creating a list, and because it sometimes
-automatically results in @code{NAMEDCNT} being zero for an element of
-a list that has @code{NAMEDCNT} of zero (either because it was always
-zero, or because it became zero after @code{NAMEDCNT} was decremented,
-for example in @code{get_rm}).
+However, @code{NAMEDCNT} for a vector or @code{S4SXP} objects is allowed 
+to be zero if there is only a single reference to it as an attribute
+or a list element.  If such a vector is made visible otherwise (eg, as
+the value returned by @code{eval}), and @code{NAMEDCNT} for the object
+referencing it is still non-zero, its @code{NAMEDCNT} must be set to
+1, so that it will be correctly seen and maintained later.  This
+convention is convenient because it sometimes avoids the need to set
+@code{NAMEDCNT} to 1 for all elements when creating a list, and
+because it sometimes automatically results in @code{NAMEDCNT} being
+zero for an element of a list that has @code{NAMEDCNT} of zero (either
+because it was always zero, or because it became zero after
+@code{NAMEDCNT} was decremented, for example in @code{get_rm}).
 
 Note that this convention applies recursively.  For example, when a
 list with a non-zero @code{NAMEDCNT} contains a list with zero
@@ -1326,8 +1327,9 @@ are considered to really have @code{NAMEDCNT} of 1, and must have
 
 @item @code{NAMEDCNT} is not meaningful for the remaining types of
 objects (@code{NILSXP}, @code{SYMSXP}, @code{SPECIALSXP},
-@code{BUILTINSXP}, @code{CHARSXP}, @code{EXTPTRSXP}, @code{WEAKREFSXP},
-and @code{S4SXP}).
+@code{BUILTINSXP}, @code{CHARSXP}, @code{EXTPTRSXP}, and
+@code{WEAKREFSXP}).  These objects are either never modified, or
+modifications are intended to be visible everywhere.
 
 @end itemize
 It is always permissible (though undesirable) to set @code{NAMEDCNT}
@@ -4315,7 +4317,7 @@ In the longer term, extensions to @pqR{} may be implemented that:
       in Algol 60.
 @item Address the unreliability of unrestricted global references from
       within functions by introducing ``closed'' functions, in which
-      such global refernences are restricted.
+      such global references are restricted.
 @item Address support for objects with more than @math{2^{31}-1} elements.
       This might or might not be done in a way similar to R-3.0.0.
 @item Further reduce interpretive overhead.  If this is sufficiently 
