@@ -1376,7 +1376,7 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Shouldn't x be protected?  It is (as args is)! */
 
     if (NAMEDCNT_GT_1(CAR(args)))
-	SETCAR(args, duplicate(CAR(args)));
+	SETCAR(args, dup_top_level(CAR(args)));
 
     SubAssignArgs(args, &x, &subs, &y);
     S4 = IS_S4_OBJECT(x);
@@ -1880,7 +1880,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     S4 = IS_S4_OBJECT(x);
 
     if (NAMEDCNT_GT_1(x))
-	REPROTECT(x = duplicate(x), pxidx);
+	REPROTECT(x = dup_top_level(x), pxidx);
 
     /* If we aren't creating a new entry and NAMED>0
        we need to duplicate to prevent cycles.
