@@ -1263,9 +1263,9 @@ by duplicating all or part of the object --- except for internal uses
 of such objects that are never visible to user R code (eg, lists of
 bindings in environments and lists of attributes), and when such
 objects are in the process of being constructed.  This immutability is
-necessary to, for example, ensure that expressions being evaluated are
-not changing during the course of their evaluation.  Accordingly,
-@code{NAMEDCNT} is not meaningful for such objects.
+the easiest way of, for example, ensuring that expressions being
+evaluated are not changing during the course of their evaluation.
+Accordingly, @code{NAMEDCNT} is not meaningful for such objects.
 
 An atomic or non-atomic vector that is referenced from an object of one
 of these types (eg, a numeric constant in a language construct) should
@@ -1324,6 +1324,12 @@ list with a non-zero @code{NAMEDCNT} contains a list with zero
 @code{NAMEDCNT}, the list and real vector with zero @code{NAMEDCNT}
 are considered to really have @code{NAMEDCNT} of 1, and must have
 @code{NAMEDCNT} set to 1 if they become visible elsewhere.
+
+Note also that an object may reference another object more than once,
+in which case @code{NAMEDCNT} for the referenced object must account
+for all such references.  For example, an object that appears twice in
+a list, and is otherwise unreferenced, should have its @code{NAMEDCNT}
+field set to 2.
 
 @item @code{NAMEDCNT} is not meaningful for the remaining types of
 objects (@code{NILSXP}, @code{SYMSXP}, @code{SPECIALSXP},
