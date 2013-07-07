@@ -1,0 +1,4 @@
+This mod documents a set of conventions regarding modification of
+objects and use of NAMEDCNT in R-ints, and implements changes that
+bring pqR closer to following them.  These changes also fix bugs, and
+improve performance by avoiding some duplications.

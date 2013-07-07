@@ -27,10 +27,9 @@
  *
  *  OneIndex()        -- used for "[[<-" in ./subassign.c
  *  get1index()       -- used for "[["   in ./subassign.c & subset.c
- *  vectorIndex()     -- used for "[[" with a vector arg
-
+ *
  *  mat2indsub()      -- for "mat[i]"     "    "            "
-
+ *
  *  makeSubscript()   -- for "[" and "[<-" in ./subset.c and ./subassign.c,
  *			 and "[[<-" with a scalar in ./subassign.c
  *  arraySubscript()  -- for "[i,j,..." and "[<-..." in ./subset.c, ./subassign.c
@@ -250,31 +249,6 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 		      type2char(TYPEOF(s)));
     }
     return indx;
-}
-
-SEXP attribute_hidden
-vectorIndex(SEXP x, SEXP thesub, int start, int stop, int pok, SEXP call) 
-{
-    int i, offset;
-
-    for(i = start; i < stop; i++) {
-	if(!isVectorList(x) && !isPairList(x)) {
-	    if (i)
-		errorcall(call, _("recursive indexing failed at level %d\n"), i+1);
-	    else
-		errorcall(call, _("attempt to select more than one element"));
-	}
-	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
-		           length(x), pok, i, call);
-	if(offset < 0 || offset >= length(x))
-	    errorcall(call, _("no such index at level %d\n"), i+1);
-	if(isPairList(x)) {
-	    x = CAR(nthcdr(x, offset));
-	} else {
-	    x = VECTOR_ELT(x, offset);
-    	}
-    }
-    return x;
 }
 
 /* Special Matrix Subscripting: Handles the case x[i] where */

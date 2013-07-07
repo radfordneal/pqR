@@ -2706,32 +2706,40 @@ static int class2type(const char *s)
 }
 
 static SEXP do_unsetS4(SEXP obj, SEXP newClass) {
-  if(isNull(newClass))  { /* NULL class is only valid for S3 objects */
-    warning(_("Setting class(x) to NULL;   result will no longer be an S4 object"));
-  }
-  else if(length(newClass) > 1)
-    warning(_("Setting class(x) to multiple strings (\"%s\", \"%s\", ...); result will no longer be an S4 object"), translateChar(STRING_ELT(newClass, 0)), translateChar(STRING_ELT(newClass, 1)));
-  else
-    warning(_("Setting class(x) to \"%s\" sets attribute to NULL; result will no longer be an S4 object"), CHAR(asChar(newClass)));
-  UNSET_S4_OBJECT(obj);
-  return obj;
+    if(isNull(newClass))  { /* NULL class is only valid for S3 objects */
+        warning(
+         _("Setting class(x) to NULL;   result will no longer be an S4 object"));
+    }
+    else if(length(newClass) > 1)
+        warning(
+           _("Setting class(x) to multiple strings (\"%s\", \"%s\", ...); result will no longer be an S4 object"), 
+              translateChar(STRING_ELT(newClass, 0)), 
+              translateChar(STRING_ELT(newClass, 1)));
+    else
+        warning(
+          _("Setting class(x) to \"%s\" sets attribute to NULL; result will no longer be an S4 object"), 
+             CHAR(asChar(newClass)));
+    UNSET_S4_OBJECT(obj);
+    return obj;
 }
 
-/* set the class to value, and return the modified object.  This is
-   NOT a primitive assignment operator , because there is no code in R
-   that changes type in place. */
+/* Set the class to value, return the modified object - implementing "class<-".
+   The following comment appears in R-2.15.0, but seems to make no sense:
+    "This is NOT a primitive assignment operator, because there is no 
+     code in R that changes type in place." */
+
 static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 {
     int nProtect = 0;
-    if(isNull(value)) {
+    /* change from NULL check to zero-length check, as in R-3.0.1. */
+    if(length(value)==0) { /* usually NULL */
 	setAttrib(obj, R_ClassSymbol, value);
 	if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
-	  do_unsetS4(obj, value);
+            do_unsetS4(obj, value);
 	return obj;
     }
     if(TYPEOF(value) != STRSXP) {
 	SEXP dup;
-	/* assumes value is protected, which it is in R_do_set_class */
 	PROTECT(dup = duplicate(value));
 	PROTECT(value = coerceVector(dup, STRSXP));
 	nProtect += 2;
@@ -2739,10 +2747,9 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
     if(length(value) > 1) {
 	setAttrib(obj, R_ClassSymbol, value);
 	if(IS_S4_OBJECT(obj)) /*  multiple strings only valid for S3 objects */
-	  do_unsetS4(obj, value);
+            do_unsetS4(obj, value);
     }
     else if(length(value) == 0) {
-	UNPROTECT(nProtect); nProtect = 0;
 	error(_("invalid replacement object to be a class string"));
     }
     else {
@@ -2758,7 +2765,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	if(valueType != -1) {
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
-	      do_unsetS4(obj, value);
+                do_unsetS4(obj, value);
 	    if(classTable[whichType].canChange) {
 		PROTECT(obj = ascommon(call, obj, valueType));
 		nProtect++;
@@ -2771,7 +2778,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	else if(!strcmp("numeric", valueString)) {
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
-	      do_unsetS4(obj, value);
+                do_unsetS4(obj, value);
 	    switch(TYPEOF(obj)) {
 	    case INTSXP: case REALSXP: break;
 	    default: PROTECT(obj = coerceVector(obj, REALSXP));
@@ -2786,14 +2793,14 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 		 length(getAttrib(obj, R_DimSymbol)));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj))
-	      do_unsetS4(obj, value);
+                do_unsetS4(obj, value);
 	}
 	else if(!strcmp("array", valueString)) {
 	    if(length(getAttrib(obj, R_DimSymbol)) <= 0)
 		error(_("cannot set class to \"array\" unless the dimension attribute has length > 0"));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
-	      UNSET_S4_OBJECT(obj);
+                UNSET_S4_OBJECT(obj);
 	}
 	else { /* set the class but don't do the coercion; that's
 		  supposed to be done by an as() method */
@@ -2808,6 +2815,9 @@ SEXP attribute_hidden R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     check1arg_x (args, call);
+
+    if (NAMEDCNT_GT_1(CAR(args)))
+        SETCAR(args,dup_top_level(CAR(args)));
 
     return R_set_class(CAR(args), CADR(args), call);
 }

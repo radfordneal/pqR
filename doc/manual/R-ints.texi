@@ -1231,16 +1231,117 @@ but when appropriate, macros for testing its value called
 should be used, since they may be more efficient than a comparison
 with the value returned by @code{NAMEDCNT}.
 
+When helper threads are enabled, an object that is being used by a
+task that has not yet completed must not be modified, even if its
+@code{NAMEDCNT} field is such that it could otherwise be modified.
+This constraint is implemented by having the @code{NAMEDCNT} macro
+wait until no task is using the object before returning the value.
+See @ref{The helpers facility} for details.
+
 The @code{nmcnt} field can be set with the @code{SET_NAMEDCNT} macro,
 but when possible, it is better to use the @code{SET_NAMEDCNT_0},
 @code{SET_NAMEDCNT_1}, @code{SET_NAMEDCNT_MAX}, @code{INC_NAMEDCNT},
 @code{DEC_NAMEDCNT}, and @code{INC_NAMEDCNT_0_AS_1} macros, since they
 may be more efficient.  The @code{INC_NAMEDCNT} and
 @code{DEC_NAMEDCNT} macros increment and decrement @code{nmcnt},
-except that they do not change its value if it is @code{MAX_NAMEDCNT}.
+except that they do not change its value if it is @code{MAX_NAMEDCNT},
+and @code{DEC_NAMEDCNT} does not change a value of zero.
 The @code{INC_NAMEDCNT_0_AS_1} macro first changes @code{nmcnt} to 1
 if it is 0, and then increments the value (unless it is
 @code{MAX_NAMEDCNT}).
+
+In detail, pqR aims to follow (but may not yet fully follow) the
+(tentative) conventions below regarding how @code{NAMEDCNT} should
+be set, and when an object may be modifedi:
+
+@itemize
+
+@item Pairlists, language constructs, and closures (@code{LISTSXP},
+@code{LANGSXP}, @code{DOTSXP}, @code{CLOSXP}, and @code{BCODESXP}
+objects) should never be modified --- all changes must be implemented
+by duplicating all or part of the object --- except for internal uses
+of such objects that are never visible to user R code (eg, lists of
+bindings in environments and lists of attributes), and when such
+objects are in the process of being constructed.  This immutability is
+the easiest way of, for example, ensuring that expressions being
+evaluated are not changing during the course of their evaluation.
+Accordingly, @code{NAMEDCNT} is not meaningful for such objects.
+
+An atomic or non-atomic vector that is referenced from an object of one
+of these types (eg, a numeric constant in a language construct) should
+have its @code{NAMECNT} set to @code{MAX_NAMEDCNT} whenever it becomes
+visible elsewhere (eg, as the result of @code{eval}) to ensure that it
+is never changed.
+
+@item Environments (@code{ENVSXP} objects) may always be modified (ie,
+bindings within them created, deleted, or changed), since their
+specified semantics is that the same environment may be referenced in
+several ways, with changes to the environment seen via all references.
+Accordingly, @code{NAMEDCNT} is not meaningful for environments.  (It
+is possible that in future @code{NAMEDCNT} will be maintained for 
+environemnts so that when it is decremented to zero the @code{NAMEDCNT}
+in all values bound in the environment can be decremented, but this
+is not attempted at present.)
+
+@item Promises (@code{PROMSXP} objects) should have @code{NAMEDCNT}
+set to the number of bindings of the promise in an environment.  This
+count will usually be one, but may be greater as a result of method
+dispatch.  (This count is not yet properly maintained in pqR, so at
+present it must always be assumed to be greater than one.)
+
+@item @code{NAMEDCNT} for atomic and non-atomic vectors (objects of
+type @code{LGLSXP}, @code{INTSXP}, @code{REALSXP}, @code{CPLXSXP},
+@code{STRSX}, @code{RAWSXP}, @code{VECSXP}, and @code{EXPRSXP}) and
+for objects of type @code{S4SXP} should be set to the count how many
+references exist to the object in any of the following ways:
+@itemize
+
+@item as the value bound to a name in an environment.
+@item as the value of an attibute of an object for which 
+      @code{NAMEDCNT} is non-zero.
+@item as an element in a list (@code{VECSXP} or @code{EXPRSXP}) for
+      which @code{NAMEDCNT} is non-zero.
+@item as the value of a promise for which @code{NAMEDCNT} is non-zero.
+
+@end itemize
+
+However, @code{NAMEDCNT} for a vector or @code{S4SXP} objects is allowed 
+to be zero if there is only a single reference to it as an attribute
+or a list element.  If such a vector is made visible otherwise (eg, as
+the value returned by @code{eval}), and @code{NAMEDCNT} for the object
+referencing it is still non-zero, its @code{NAMEDCNT} must be set to
+1, so that it will be correctly seen and maintained later.  This
+convention is convenient because it sometimes avoids the need to set
+@code{NAMEDCNT} to 1 for all elements when creating a list, and
+because it sometimes automatically results in @code{NAMEDCNT} being
+zero for an element of a list that has @code{NAMEDCNT} of zero (either
+because it was always zero, or because it became zero after
+@code{NAMEDCNT} was decremented, for example in @code{get_rm}).
+
+Note that this convention applies recursively.  For example, when a
+list with a non-zero @code{NAMEDCNT} contains a list with zero
+@code{NAMEDCNT} which in turn contains a real vector with zero
+@code{NAMEDCNT}, the list and real vector with zero @code{NAMEDCNT}
+are considered to really have @code{NAMEDCNT} of 1, and must have
+@code{NAMEDCNT} set to 1 if they become visible elsewhere.
+
+Note also that an object may reference another object more than once,
+in which case @code{NAMEDCNT} for the referenced object must account
+for all such references.  For example, an object that appears twice in
+a list, and is otherwise unreferenced, should have its @code{NAMEDCNT}
+field set to 2.
+
+@item @code{NAMEDCNT} is not meaningful for the remaining types of
+objects (@code{NILSXP}, @code{SYMSXP}, @code{SPECIALSXP},
+@code{BUILTINSXP}, @code{CHARSXP}, @code{EXTPTRSXP}, and
+@code{WEAKREFSXP}).  These objects are either never modified, or
+modifications are intended to be visible everywhere.
+
+@end itemize
+It is always permissible (though undesirable) to set @code{NAMEDCNT}
+to a value greater than it needs to be according to the above
+conventions.  Also, note that setting and accessing @code{NAMEDCNT} is
+permitted for all objects, even those for which it is not meaningful,
 
 @node The write barrier, Serialization Formats, Reference counts and the nmcnt field, R Internal Structures
 @section The write barrier and the garbage collector
@@ -4222,7 +4323,7 @@ In the longer term, extensions to @pqR{} may be implemented that:
       in Algol 60.
 @item Address the unreliability of unrestricted global references from
       within functions by introducing ``closed'' functions, in which
-      such global refernences are restricted.
+      such global references are restricted.
 @item Address support for objects with more than @math{2^{31}-1} elements.
       This might or might not be done in a way similar to R-3.0.0.
 @item Further reduce interpretive overhead.  If this is sufficiently 

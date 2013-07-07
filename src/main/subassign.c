@@ -1376,7 +1376,7 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Shouldn't x be protected?  It is (as args is)! */
 
     if (NAMEDCNT_GT_1(CAR(args)))
-	SETCAR(args, duplicate(CAR(args)));
+	SETCAR(args, dup_top_level(CAR(args)));
 
     SubAssignArgs(args, &x, &subs, &y);
     S4 = IS_S4_OBJECT(x);
@@ -1504,25 +1504,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     SubAssignArgs(args, &x, &subs, &y);
     S4 = IS_S4_OBJECT(x);
 
-    /* Handle NULL left-hand sides.  If the right-hand side */
-    /* is NULL, just return the left-hand size otherwise, */
-    /* convert to a zero length list (VECSXP). */
-
-    if (isNull(x)) {
-	if (isNull(y)) {
-	    UNPROTECT(1);
-	    return x;
-	}
-	UNPROTECT(1);
-	if (length(y) == 1)
-	    PROTECT(x = allocVector(TYPEOF(y), 0));
-	else
-	    PROTECT(x = allocVector(VECSXP, 0));
-    }
-
-    xtop = xup = x; /* x will contain the element which is assigned to; */
-                    /*   xup may contain x; xtop is what is returned.  */ 
-
     dims = getAttrib(x, R_DimSymbol);
     ndims = length(dims);
     nsubs = length(subs);
@@ -1546,19 +1527,58 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return(S4 ? xOrig : x);
     }
 
-    /* new case in 1.7.0, one vector index for a list, more general as of 2.10.0 */
-    if (nsubs == 1) {
+    if (isNull(x)) {
+        /* Handle NULL left-hand sides.  If the right-hand side is NULL,
+           just return NULL, otherwise replace x by a zero length list 
+           (VECSXP) or vector of type of y (if y of length one).  (This
+           dependence on the length of y is of dubious wisdom!) */
+	if (isNull(y)) {
+	    UNPROTECT(1);
+	    return R_NilValue;
+	}
+	if (length(y) == 1)
+	    x = allocVector(TYPEOF(y), 0);
+	else
+	    x = allocVector(VECSXP, 0);
+    }
+    else if (isPairList(x))
+        x = duplicate(x);
+    else if (isVectorList(x) && NAMEDCNT_GT_1(x))
+        x = dup_top_level(x);
+
+    xtop = xup = x; /* x will contain the element which is assigned to; */
+                    /*   xup may contain x; xtop is what is returned.  */ 
+    PROTECT(xtop);
+
+    if (nsubs == 1) { /* One vector index for a list. */
 	thesub = CAR(subs);
 	len = length(thesub);
-	if (len > 1) {
-            if (NAMEDCNT_GT_1(x))
-                SETCAR(args, x = xtop = duplicate(x));
-	    xup = vectorIndex(x, thesub, 0, len-2, /*partial ok*/TRUE, call);
-	    /* OneIndex sets newname, but it will be overwritten before being used. */
-	    off = OneIndex(xup, thesub, length(xup), 0, &newname, len-2, R_NilValue);
-	    x = vectorIndex(xup, thesub, len-2, len-1, TRUE, call);
-	    recursed = TRUE;
-	}
+        if (len > 1) {
+            for (int i = 0; i < len-1; i++) {
+                if (!isVectorList(x) && !isPairList(x))
+                    errorcall (call, 
+                      _("recursive indexing failed at level %d\n"), i+1);
+                off = get1index(thesub, getAttrib(x, R_NamesSymbol),
+                                   length(x), TRUE, i, call);
+                if (off < 0 || off >= length(x))
+                    errorcall(call, _("no such index at level %d\n"), i+1);
+                xup = x;
+                if (isPairList(xup))
+                    x = CAR (nthcdr (xup, off));
+                else {
+                    x = VECTOR_ELT (xup, off);
+                    if (isPairList(x)) {
+                        x = duplicate(x);
+                        SET_VECTOR_ELT (xup, off, x);
+                    }
+                    else if (isVectorList(x) && NAMEDCNT_GT_1(x)) {
+                        x = dup_top_level(x);
+                        SET_VECTOR_ELT (xup, off, x);
+                    }
+                }
+            }
+            recursed = TRUE;
+        }
     }
 
     stretch = 0;
@@ -1575,7 +1595,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 		x = DeleteOneVectorListItem(x, offset);
 		if(recursed) SET_VECTOR_ELT(xup, off, x);
 		else xtop = x;
-		UNPROTECT(1);
+		UNPROTECT(2);
 		return xtop;
 	    }
 	    if (offset < 0)
@@ -1607,11 +1627,8 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	which = SubassignTypeFix(&x, &y, stretch, 2, call);
 
-        if (NAMEDCNT_GT_1(x)) {
-            PROTECT(x);
+        if (NAMEDCNT_GT_1(x))
             x = duplicate(x);
-            UNPROTECT(1);
-        }
 
 	PROTECT(x);
 
@@ -1726,8 +1743,8 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 1919:      /* vector     <- vector     */
 	case 2020:	/* expression <- expression */
 
-	    if (NAMEDCNT_GT_0(y)) y = duplicate(y);
 	    SET_VECTOR_ELT(x, offset, y);
+            if (NAMEDCNT_GT_0(y)) INC_NAMEDCNT(y);
 	    break;
 
 	case 2424:      /* raw <- raw */
@@ -1754,7 +1771,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    else
 		SET_STRING_ELT(names, offset, newname);
 	}
-	UNPROTECT(1);
     }
     else if (isPairList(x)) {
 	/* if (NAMED(y)) */
@@ -1790,7 +1806,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    /* FIXME: add name */
 	    UNPROTECT(1);
 	}
-	UNPROTECT(1);
     }
     else error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
@@ -1805,9 +1820,10 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else xtop = x;
 
-    UNPROTECT(1);
     SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
+
+    UNPROTECT(3);
     return xtop;
 }
 
@@ -1864,7 +1880,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     S4 = IS_S4_OBJECT(x);
 
     if (NAMEDCNT_GT_1(x))
-	REPROTECT(x = duplicate(x), pxidx);
+	REPROTECT(x = dup_top_level(x), pxidx);
 
     /* If we aren't creating a new entry and NAMED>0
        we need to duplicate to prevent cycles.

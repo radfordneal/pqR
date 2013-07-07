@@ -270,32 +270,35 @@ SEXP attribute_hidden do_envir(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP env, s = CAR(args);
-
     checkArity(op, args);
     check1arg_x (args, call);
 
-    env = CADR(args);
+    SEXP s = CAR(args);
+    SEXP env = CADR(args);
 
-    if (TYPEOF(CAR(args)) == CLOSXP
-	&& (isEnvironment(env) || 
-	    isEnvironment(env = simple_as_environment(env)) ||
-	    isNull(env))) {
+    if (!isNull(env) && !isEnvironment(env)
+                     && !isEnvironment(env = simple_as_environment(env)))
+	error(_("replacement object is not an environment"));
+
+    PROTECT(env);
+
+    /* For closures, below will dup top level, but not args or code. 
+       For formulas, will dup whole thing. */
+
+    PROTECT(s = dup_top_level(s));
+
+    if (TYPEOF(CAR(args)) == CLOSXP) {
 	if (isNull(env))
 	    error(_("use of NULL environment is defunct"));
-	if(NAMEDCNT_GT_1(s))
-	    /* this copies but does not duplicate args or code */
-	    s = duplicate(s);
 	if (TYPEOF(BODY(s)) == BCODESXP)
 	    /* switch to interpreted version if compiled */
 	    SET_BODY(s, R_ClosureExpr(CAR(args)));
 	SET_CLOENV(s, env);
     }
-    else if (isNull(env) || isEnvironment(env) ||
-	isEnvironment(env = simple_as_environment(env)))
-	setAttrib(s, R_DotEnvSymbol, env);
     else
-	error(_("replacement object is not an environment"));
+	setAttrib(s, R_DotEnvSymbol, env);
+
+    UNPROTECT(2);
     return s;
 }
 

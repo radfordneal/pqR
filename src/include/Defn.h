@@ -950,6 +950,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define DispatchGroup		Rf_DispatchGroup
 # define DispatchOrEval		Rf_DispatchOrEval
 # define DispatchAnyOrEval      Rf_DispatchAnyOrEval
+# define dup_top_level		Rf_dup_to_level
 # define dynamicfindVar		Rf_dynamicfindVar
 # define EncodeRaw              Rf_EncodeRaw
 # define EncodeString           Rf_EncodeString
@@ -1059,7 +1060,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define ucstoutf8		Rf_ucstoutf8
 # define utf8toucs		Rf_utf8toucs
 # define utf8towcs		Rf_utf8towcs
-# define vectorIndex		Rf_vectorIndex
 # define vectorSubscript	Rf_vectorSubscript
 # define wait_until_arguments_computed Rf_wait_until_arguments_computed
 # define warningcall		Rf_warningcall
@@ -1153,6 +1153,7 @@ SEXP deparse1s(SEXP call);
 int DispatchAnyOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*);
+SEXP dup_top_level(SEXP);
 SEXP duplicated(SEXP, Rboolean);
 SEXP duplicated3(SEXP, SEXP, Rboolean);
 int any_duplicated(SEXP, Rboolean);
@@ -1268,7 +1269,6 @@ void unmarkPhase(void);
 #endif
 SEXP R_LookupMethod(SEXP, SEXP, SEXP, SEXP);
 int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, int, SEXP*);
-SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP);
 SEXP Rf_vectorSubscript(int, SEXP, int*, SEXP (*)(SEXP,SEXP),
                         SEXP (*)(SEXP, int), SEXP, SEXP);
 void Rf_wait_until_arguments_computed (SEXP);

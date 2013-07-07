@@ -113,3 +113,25 @@ x[[1,1,1]] <- 1
 y <- x[1:2,2:3,1:2]
 x[[1,2,1]][1] <- 9
 stopifnot(y[[1,1,1]]==1)
+
+# Vector index for lists.
+
+l = list(list(1))           # PR #15374 at r-project.org
+l1 = l[[1]]
+l[[c(1, 1)]] = 2
+stopifnot(l1 == 1)
+
+x <- pairlist(pairlist(pairlist(1)))  # version in PR #15379
+x11 <- x[[1]][[1]]
+x[[c(1, 1, 1)]] <- 2
+stopifnot(x11[[1]]==1)
+
+l = list(list(list(1)))     # extended version of above, pqR issue #13
+l1 = l[[1]]
+l[[c(1,1,1)]] <- 2
+stopifnot(l1[[1]] == 1)
+
+a <- list(c(1,2))
+b <- list(a)[[c(1,1)]]
+a[[1]][1] <- 9
+stopifnot(b[1]==1)

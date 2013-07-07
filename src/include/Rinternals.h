@@ -306,8 +306,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #endif
 
 #define NAMEDCNT(x) \
-( (x)->sxpinfo.nmcnt == MAX_NAMEDCNT ? MAX_NAMEDCNT : \
-  (x)->sxpinfo.in_use \
+( (x)->sxpinfo.in_use && (x)->sxpinfo.nmcnt != MAX_NAMEDCNT \
      ? (helpers_wait_until_not_in_use(x), (x)->sxpinfo.nmcnt) \
      : (x)->sxpinfo.nmcnt )
 
