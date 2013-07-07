@@ -395,6 +395,8 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
     if (ATTRIB(arg) == R_VariantResult) {
         SET_ATTRIB (arg, R_NilValue);
+        if (! (variant & VARIANT_PENDING_OK) )
+            WAIT_UNTIL_COMPUTED(arg);
         return arg;
     }
 
@@ -616,6 +618,8 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		break;/*--- end of  min() / max() ---*/
 
 	    case 0:/* sum */
+
+                WAIT_UNTIL_COMPUTED(a);
 
 		switch(TYPEOF(a)) {
 		case LGLSXP:

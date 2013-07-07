@@ -1516,6 +1516,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
             SET_ATTRIB (s, R_VariantResult);
+            return s;
         }
         else {
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
