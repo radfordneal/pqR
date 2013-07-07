@@ -296,7 +296,7 @@ src/extra/xdr/*
 
 src/extra/zlib/README, *.c, *.h
 
-  Taken from zlib-1.2.6 (C) 1995-2012 Jean-loup Gailly and Mark Adler
+  Taken from zlib-1.2.8 (C) 1995-2013 Jean-loup Gailly and Mark Adler
   See src/extra/zlib/README for the licence.
 
 src/main/connections.c, src/main/gzio.h
@@ -314,9 +314,9 @@ src/extra/pcre/LICENCE
 src/extra/pcre/*.[ch]
 src/main/valid_utf8.h
 
-   Copyright (c) 1997-2012 University of Cambridge
+   Copyright (c) 1997-2013 University of Cambridge
    All rights reserved.
-   Copyright(c) 2009-2012 Zoltan Herczeg
+   Copyright(c) 2009-2013 Zoltan Herczeg
 
 See file src/extra/pcre/LICENCE.  For binary builds of R that requires
 us to include
