@@ -5,6 +5,132 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
+\section{CHANGES IN VERSION RELEASED 2013-07-07}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+
+\item pqR is based on R-2.15.0, distributed by the R Core Team, but
+improves on it in many ways, mostly ways that speed it up, but also by
+implementing some new features and fixing some bugs.  See the notes
+below on the release of 2013-06-28 for general discussion of pqR.
+
+\item This updated release of pqR is largely to provide some
+performance enhancements and bug fixes, including some from R Core
+releases after R-2.15.0.  More work is still needed to incorporate
+improvements in R-2.15.1 and later R Core releases into pqR.
+
+  }}
+
+  \subsection{INSTALLATION AND TESTING}{
+    \itemize{
+
+\item Note that any previosly-installed packages must be re-installed for 
+      use with pqR (as is generally the case with new versions of R), except
+      for those written purely in R.
+
+\item Several users have reported that pqR can be successfully installed
+      under Mac OS X.  For helper threads to work, a C compiler that
+      fully supports OpenMP is needed (the one supplied by Apple is not
+      suitable). Additional testing is desirable, however.  Compiled binary 
+      versions of pqR for Max OS X are not yet being supplied.
+
+\item Success has also been reported in installing pqR on a Windows
+      system, including with helper threads, but various tweaks were
+      required.  Some of these tweaks are incorporated in this release,
+      but they are probably not sufficient for installation "out of the box".
+      Attempting to install pqR on Windows is recommended only for
+      adventurous users.
+
+  }}
+
+  \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
+    \itemize{
+
+\item The R internals manual now documents a set of conventions that
+      pqR follows (not yet perfectly) regarding when objects may be
+      modified, and how NAMEDCNT should be maintained.  The conventions
+      followed by R-2.15.0 were unclear.
+
+\item The documentation in the R internals manual on how helper threads are
+      implemented in pqR now has the correct title.  (It would previously
+      have been rather hard to notice.)
+
+  }}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+    \itemize{
+\item Some unnecessary duplication of objects has been eliminated.  For
+      example, in the following code, the assignment to \code{b$x}, no longer
+      causes duplication of the 10000 elements of \code{y}:
+\preformatted{   a <- list (x=1, y=seq(0,1,length=10000))
+   b <- a
+   b$x <- 2
+}
+Instead, a single vector of 10000 elements is shared between \code{a$y} and
+\code{b$y}, and will be duplicated later only if necessary.
+
+\item Pending summations of one-argument mathematical functions are now
+      passed on by \code{sum}.  So, for example, in 
+      \code{sum(exp(a)) + sum(exp(b))}, the two
+      summations of exponentials can now potentially be done in parallel.
+  }}
+
+  \subsection{FEATURES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item From R-2.15.1: On Windows, there are two new environment variables which
+      control the defaults for command-line options.
+
+      If \env{R_WIN_INTERNET2} is set to a non-empty value, it is as if
+      \option{--internet2} was used.
+
+      If \env{R_MAX_MEM_SIZE} is set, it gives the default memory limit
+      if \option{--max-mem-size} is not specified: invalid values being
+      ignored.
+
+\item From R-2.15.1: The NA warning messages from e.g. \code{pchisq()} now 
+      report the call to the closure and not that of the \code{.Internal}.
+
+\item The following included software has been updated to new versions:
+      zlib to 1.2.8, LZMA to 5.0.4, and PCRE to 8.33.
+  }}
+
+  \subsection{BUG FIXES}{
+    \itemize{
+\item A bug that could have affected the result of \code{sum(abs(v))} when
+      it is done by a helper thread has been fixed.
+\item The bug illustrated below (pqR issue \#13) has been fixed:
+\preformatted{   > l = list(list(list(1)))
+   > l1 = l[[1]]
+   > l[[c(1,1,1)]] <- 2
+   > l1
+   [[1]]
+   [[1]][[1]]
+   [1] 2
+}
+  }}
+
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item From R-2.15.1: \code{formatC()} uses the C entry point \code{str_signif}
+      which could write beyond the length allocated for the output string.
+
+\item From R-2.15.1: \code{plogis(x, lower = FALSE, log.p = TRUE)} no longer
+      underflows early for large x (e.g. 800).
+
+\item From R-2.15.1: \code{?Arithmetic}'s \dQuote{\code{1 ^ y} and \code{y ^ 0}
+	are \code{1}, \emph{always}} now also applies for \code{integer}
+      vectors \code{y}.
+
+\item From R-2.15.1: X11-based pixmap devices like \code{png(type = "Xlib")} 
+      were trying to set the cursor style, which triggered some warnings and
+      hangs.
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2013-06-28}{
 
 \subsection{INTRODUCTION}{
