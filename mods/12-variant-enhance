@@ -1,0 +1,3 @@
+This branch enhances/fixes some things to do with variant returns.
+A pending result can now be passed on from sum_math through "sum".
+A bug in sum(abs(...)) with helper threads enabled is fixed.
