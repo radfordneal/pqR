@@ -6,7 +6,7 @@ include ../gnuwin32/MkRules
 all: makeMakedeps libmain.a
 
 ## there are headers and include files in this directory
-CPPFLAGS=-I. -I../include -DHAVE_CONFIG_H -DR_DLL_BUILD $(arch_DEFS)
+CPPFLAGS=-I. -I../include -I../extra -DHAVE_CONFIG_H -DR_DLL_BUILD $(arch_DEFS)
 
 CSOURCES=\
 	CConverters.c CommandLineArgs.c \
@@ -53,7 +53,7 @@ gramLatex.c: gramLatex.y
 	$(RM) gramLatex.tab.c
 endif
 
-platform-CPPFLAGS=-I../gnuwin32 -I../extra -DPLATFORM_PKGTYPE='"win.binary"'
+platform-CPPFLAGS=-I../gnuwin32 -I../extra -I../extra/helpers -DPLATFORM_PKGTYPE='"win.binary"'
 
 agrep-CPPFLAGS=-I../extra
 # array-CPPFLAGS=$(OPENMP) # too slow to be useful.
