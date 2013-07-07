@@ -502,8 +502,10 @@ static SEXP commentgets(SEXP vec, SEXP comment)
 SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    if (NAMEDCNT_GT_1(CAR(args))) SETCAR(args, duplicate(CAR(args)));
-    if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
+    if (NAMEDCNT_GT_1(CAR(args))) 
+        SETCAR(args, dup_top_level(CAR(args)));
+    if (length(CADR(args)) == 0) 
+        SETCADR(args, R_NilValue);
     setAttrib(CAR(args), R_CommentSymbol, CADR(args));
     return CAR(args);
 }
@@ -560,10 +562,12 @@ SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (NAMEDCNT_GT_1(CAR(args))) SETCAR(args, duplicate(CAR(args)));
-    if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
+    if (NAMEDCNT_GT_1(CAR(args))) 
+        SETCAR(args, dup_top_level(CAR(args)));
+    if (length(CADR(args)) == 0) 
+        SETCADR(args, R_NilValue);
     if(IS_S4_OBJECT(CAR(args)))
-      UNSET_S4_OBJECT(CAR(args));
+        UNSET_S4_OBJECT(CAR(args));
     setAttrib(CAR(args), R_ClassSymbol, CADR(args));
     return CAR(args);
 }
@@ -798,7 +802,7 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	return CAR(args);
     PROTECT(args = ans);
     if (NAMEDCNT_GT_1(CAR(args)))
-	SETCAR(args, duplicate(CAR(args)));
+	SETCAR(args, dup_top_level(CAR(args)));
     if(IS_S4_OBJECT(CAR(args))) {
 	const char *klass = CHAR(STRING_ELT(R_data_class(CAR(args), FALSE), 0));
 	if(getAttrib(CAR(args), R_NamesSymbol) == R_NilValue) {
@@ -925,7 +929,8 @@ SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
-    if (NAMEDCNT_GT_1(CAR(args))) SETCAR(args, duplicate(CAR(args)));
+    if (NAMEDCNT_GT_1(CAR(args))) 
+        SETCAR(args, dup_top_level(CAR(args)));
     setAttrib(CAR(args), R_DimNamesSymbol, CADR(args));
     UNPROTECT(1);
     return CAR(args);
@@ -1065,10 +1070,12 @@ SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	SEXP s;
 	for (s = ATTRIB(x); s != R_NilValue; s = CDR(s))
 	    if (TAG(s) == R_DimSymbol || TAG(s) == R_NamesSymbol) break;
-	if (s == R_NilValue) return x;
+	if (s == R_NilValue) 
+            return x;
     }
     PROTECT(args = ans);
-    if (NAMEDCNT_GT_1(x)) { SETCAR(args, duplicate(x)); x = CAR(args); }
+    if (NAMEDCNT_GT_1(x)) 
+        SETCAR(args, x = dup_top_level(x));
     setAttrib(x, R_DimSymbol, CADR(args));
     setAttrib(x, R_NamesSymbol, R_NilValue);
     UNPROTECT(1);
@@ -1168,11 +1175,15 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1))
 	/* calls, e.g., levels<-.factor() */
 	return(ans);
-    if(!isNull(CADR(args)) && any_duplicated(CADR(args), FALSE))
-	warningcall(call, _("duplicated levels will not be allowed in factors anymore"));
-/* TODO errorcall(call, _("duplicated levels are not allowed in factors anymore")); */
+
     PROTECT(args = ans);
-    if (NAMEDCNT_GT_1(CAR(args))) SETCAR(args, duplicate(CAR(args)));
+    if(!isNull(CADR(args)) && any_duplicated(CADR(args), FALSE))
+	warningcall(call, 
+          _("duplicated levels will not be allowed in factors anymore"));
+         /* TODO errorcall(call, 
+             _("duplicated levels are not allowed in factors anymore")); */
+    if (NAMEDCNT_GT_1(CAR(args))) 
+        SETCAR(args, dup_top_level(CAR(args)));
     setAttrib(CAR(args), R_LevelsSymbol, CADR(args));
     UNPROTECT(1);
     return CAR(args);
@@ -1225,7 +1236,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	   setting any attributes as an error later on would leave
 	   'obj' changed */
 	if (NAMEDCNT_GT_1(object) || (NAMEDCNT_GT_0(object) && nattrs > 0))
-	    object = duplicate(object);
+	    object = dup_top_level(object);
 	PROTECT(object);
     }
 
@@ -1408,7 +1419,7 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
     obj = CAR(args);
     if (NAMEDCNT_GT_1(obj))
-	PROTECT(obj = duplicate(obj));
+	PROTECT(obj = dup_top_level(obj));
     else
 	PROTECT(obj);
 
