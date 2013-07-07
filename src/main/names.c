@@ -479,7 +479,7 @@ attribute_hidden FUNTAB R_FunTab[] =
 
 /* Data Summaries */
 /* these four are group generic and so need to eval args */
-{"sum",		do_summary,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sum",		do_summary,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"min",		do_summary,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"max",		do_summary,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"prod",	do_summary,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
