@@ -1,5 +1,5 @@
 
-R version 2.15.0 alpha (2012-03-02 r58556)
+R version 2.15.0 alpha (2012-03-02 r58556) modified
 Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 Platform: x86_64-unknown-linux-gnu (64-bit)
@@ -167,7 +167,8 @@ lxhalf  1.6615  6.4794
 > ll <- function(ymax=15, xhalf=6)
 +     -sum(stats::dpois(y, lambda=ymax/(1+x/xhalf), log=TRUE))
 > fit <- mle(ll)
-Warning in dpois(x, lambda, log) : NaNs produced
+Warning in stats::dpois(y, lambda = ymax/(1 + x/xhalf), log = TRUE) :
+  NaNs produced
 > ## note the recorded call contains ..1, a problem with S4 dispatch
 > update(fit, fixed=list(xhalf=3))
 
