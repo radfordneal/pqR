@@ -547,8 +547,8 @@ void attribute_hidden Rf_check1arg_error
 
 SEXP nthcdr(SEXP s, int n)
 {
-    if (isList(s) || isLanguage(s) || isFrame(s) || TYPEOF(s) == DOTSXP ) {
-	while( n-- > 0 ) {
+    if ((CONS_TYPES >> TYPEOF(s)) & 1) {
+	for (int i = 0; i<n; i++) {
 	    if (s == R_NilValue)
 		error(_("'nthcdr' list shorter than %d"), n);
 	    s = CDR(s);
