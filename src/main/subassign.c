@@ -1833,7 +1833,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP nlist, ans, input;
+    SEXP name, ans, input;
     int iS;
 
     checkArity(op, args);
@@ -1842,14 +1842,14 @@ SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 
     input = allocVector(STRSXP, 1);
 
-    nlist = CADR(args);
-    iS = isSymbol(nlist);
+    name = CADR(args);
+    iS = isSymbol(name);
     if (iS)
-	SET_STRING_ELT(input, 0, PRINTNAME(nlist));
-    else if(isString(nlist) )
-	SET_STRING_ELT(input, 0, STRING_ELT(nlist, 0));
+	SET_STRING_ELT(input, 0, PRINTNAME(name));
+    else if(isString(name) )
+	SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
     else {
-	error(_("invalid subscript type '%s'"), type2char(TYPEOF(nlist)));
+	error(_("invalid subscript type '%s'"), type2char(TYPEOF(name)));
 	return R_NilValue; /*-Wall*/
     }
 
@@ -1857,100 +1857,73 @@ SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
     SETCADR(args, input);
 
     if(DispatchOrEval(call, op, "$<-", args, env, &ans, 0, 0))
-      return(ans);
+        return(ans);
 
-    if (! iS)
-	nlist = install(translateChar(STRING_ELT(input, 0)));
+    if (!iS)
+	name = install(translateChar(STRING_ELT(input, 0)));
 
-    return R_subassign3_dflt(call, CAR(ans), nlist, CADDR(ans));
+    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
 }
 
 /* used in "$<-" (above) and methods_list_dispatch.c */
-SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
+SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 {
     LOCAL_COPY(R_NilValue);
     SEXP t;
 
     PROTECT_INDEX pvalidx, pxidx;
-    Rboolean maybe_duplicate=FALSE;
     Rboolean S4; SEXP xS4 = R_NilValue;
 
     PROTECT_WITH_INDEX(x, &pxidx);
     PROTECT_WITH_INDEX(val, &pvalidx);
     S4 = IS_S4_OBJECT(x);
 
-    if (NAMEDCNT_GT_1(x))
-	REPROTECT(x = dup_top_level(x), pxidx);
-
-    /* If we aren't creating a new entry and NAMED>0
-       we need to duplicate to prevent cycles.
-       If we are creating a new entry we could duplicate
-       or increase NAMED. We duplicate if NAMED==1, but
-       not if NAMED==2 */
-    if (NAMEDCNT_GT_1(val))
-	maybe_duplicate=TRUE;
-    else if (NAMEDCNT_GT_0(val))
-	REPROTECT(val = duplicate(val), pvalidx);
-
     /* code to allow classes to extend ENVSXP */
-    if(TYPEOF(x) == S4SXP) {
+    if (TYPEOF(x) == S4SXP) {
 	xS4 = x;
         x = R_getS4DataSlot(x, ANYSXP);
-	if(x == R_NilValue)
-	  errorcall(call, _("no method for assigning subsets of this S4 class"));
+	if (x == R_NilValue)
+            errorcall (call, 
+              _("no method for assigning subsets of this S4 class"));
     }
 
     if ((isList(x) || isLanguage(x)) && !isNull(x)) {
-	/* Here we do need to duplicate */
-	if (maybe_duplicate)
-	    REPROTECT(val = duplicate(val), pvalidx);
-	if (TAG(x) == nlist) {
-	    if (val == R_NilValue) {
-		SET_ATTRIB(CDR(x), ATTRIB(x));
-		IS_S4_OBJECT(x) ?  SET_S4_OBJECT(CDR(x)) : UNSET_S4_OBJECT(CDR(x));
-		SET_OBJECT(CDR(x), OBJECT(x));
-		SET_NAMEDCNT(CDR(x), NAMEDCNT(x));
-		x = CDR(x);
-	    }
-	    else
-		SETCAR(x, val);
-	}
-	else {
-	    for (t = x; t != R_NilValue; t = CDR(t))
-		if (TAG(CDR(t)) == nlist) {
-		    if (val == R_NilValue)
-			SETCDR(t, CDDR(t));
-		    else
-			SETCAR(CDR(t), val);
-		    break;
-		}
-		else if (CDR(t) == R_NilValue && val != R_NilValue) {
-		    SETCDR(t, allocSExp(LISTSXP));
-		    SET_TAG(CDR(t), nlist);
-		    SETCADR(t, val);
-		    break;
-		}
-	}
-	if (x == R_NilValue && val != R_NilValue) {
-	    x = allocList(1);
-	    SETCAR(x, val);
-	    SET_TAG(x, nlist);
-	}
+
+        int is_S4 = IS_S4_OBJECT(x);
+        int ix = tag_index(x,name);
+
+        if (ix == 0) {
+            if (val != R_NilValue) {
+                x = with_new_at_end (x, name, val);
+                is_S4 ? SET_S4_OBJECT(x) : UNSET_S4_OBJECT(x);
+                INC_NAMEDCNT(val);
+            }
+        }
+        else if (val == R_NilValue) {
+            x = with_no_nth (x, ix);
+            is_S4 ? SET_S4_OBJECT(x) : UNSET_S4_OBJECT(x);
+        }
+        else {
+            x = with_changed_nth (x, ix, val);
+            is_S4 ? SET_S4_OBJECT(x) : UNSET_S4_OBJECT(x);
+            INC_NAMEDCNT(val);
+        }
     }
+
     /* cannot use isEnvironment since we do not want NULL here */
     else if( TYPEOF(x) == ENVSXP ) {
-	defineVar(nlist, val, x);
+	defineVar(name, val, x);
     }
+
     else if( TYPEOF(x) == SYMSXP || /* Used to 'work' in R < 2.8.0 */
 	     TYPEOF(x) == CLOSXP ||
 	     TYPEOF(x) == SPECIALSXP ||
 	     TYPEOF(x) == BUILTINSXP) {
 	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
     }
+
     else {
-	int i, imatch, nx;
-	SEXP names;
-	int type = VECSXP;
+        int type = VECSXP;
 
 	if (isExpression(x)) 
 	    type = EXPRSXP;
@@ -1958,76 +1931,76 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	    warning(_("Coercing LHS to a list"));
 	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
 	}
-	names = getAttrib(x, R_NamesSymbol);
-	nx = length(x);
-	nlist = PRINTNAME(nlist);
-	if (isNull(val)) {
-	    /* If "val" is NULL, this is an element deletion */
-	    /* if there is a match to "nlist" otherwise "x" */
-	    /* is unchanged.  The attributes need adjustment. */
-	    if (names != R_NilValue) {
-		imatch = -1;
-		for (i = 0; i < nx; i++)
-		    if (NonNullStringMatch(STRING_ELT(names, i), nlist)) {
-			imatch = i;
-			break;
-		    }
-		if (imatch >= 0) {
-		    SEXP ans, ansnames;
-		    int ii;
-		    PROTECT(ans = allocVector(type, nx - 1));
-		    PROTECT(ansnames = allocVector(STRSXP, nx - 1));
-		    for (i = 0, ii = 0; i < nx; i++)
-			if (i != imatch) {
-			    SET_VECTOR_ELT(ans, ii, VECTOR_ELT(x, i));
-			    SET_STRING_ELT(ansnames, ii, STRING_ELT(names, i));
-			    ii++;
-			}
-		    setAttrib(ans, R_NamesSymbol, ansnames);
-		    copyMostAttrib(x, ans);
-		    UNPROTECT(2);
-		    x = ans;
-		}
-		/* else x is unchanged */
-	    }
-	}
-	else {
+
+        if (NAMEDCNT_GT_1(x) || x == val)
+            REPROTECT(x = dup_top_level(x), pxidx);
+
+        SEXP pname = PRINTNAME(name);
+	SEXP names = getAttrib(x, R_NamesSymbol);
+	R_len_t nx = length(x);  /* x could be R_NilValue */
+
+        /* set imatch to the index of the selected element, -1 if not present */
+
+        int imatch = -1;
+        if (names != R_NilValue) {
+            for (int i = 0; i < nx; i++) {
+                if (NonNullStringMatch(STRING_ELT(names, i), pname)) {
+                    imatch = i;
+                    break;
+                }
+            }
+        }
+
+        if (isNull(val)) {
+            /* If "val" is NULL, this is an element deletion */
+            /* if there is a match to "name" otherwise "x" */
+            /* is unchanged.  The attributes need adjustment. */
+            if (imatch >= 0) {
+                SEXP ans, ansnames;
+                PROTECT(ans = allocVector(type, nx - 1));
+                PROTECT(ansnames = allocVector(STRSXP, nx - 1));
+                DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
+                if (imatch > 0) {
+                    copy_vector_elements (ans, 0, x, 0, imatch);
+                    copy_string_elements (ansnames, 0, names, 0, imatch);
+                }
+                if (imatch+1 < nx) {
+                    copy_vector_elements (ans, imatch, x, imatch+1, 
+                                          nx-imatch-1);
+                    copy_string_elements (ansnames, imatch, names, imatch+1,
+                                          nx-imatch-1);
+                }
+                setAttrib(ans, R_NamesSymbol, ansnames);
+                copyMostAttrib(x, ans);
+                UNPROTECT(2);
+                x = ans;
+            }
+            /* else x is unchanged */
+        }
+        else {
 	    /* If "val" is non-NULL, we are either replacing */
 	    /* an existing list element or we are adding a new */
 	    /* element. */
-	    imatch = -1;
-	    if (!isNull(names)) {
-		for (i = 0; i < nx; i++)
-		    if (NonNullStringMatch(STRING_ELT(names, i), nlist)) {
-			imatch = i;
-			break;
-		    }
-	    }
 	    if (imatch >= 0) {
 		/* We are just replacing an element */
-		if (maybe_duplicate)
-		    REPROTECT(val = duplicate(val), pvalidx);
-		SET_VECTOR_ELT(x, imatch, val);
+                DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
+		SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
 	    }
 	    else {
-		/* We are introducing a new element (=> *no* duplication) */
-		/* Enlarge the list, add the new element */
-		/* and finally, adjust the attributes. */
+		/* We are introducing a new element.
+		   Enlarge the list, add the new element,
+		   and finally, adjust the attributes. */
 		SEXP ans, ansnames;
 		PROTECT(ans = allocVector(VECSXP, nx + 1));
 		PROTECT(ansnames = allocVector(STRSXP, nx + 1));
-		for (i = 0; i < nx; i++)
-		    SET_VECTOR_ELT(ans, i, VECTOR_ELT(x, i));
-		if (isNull(names)) {
-		    for (i = 0; i < nx; i++)
+                copy_vector_elements (ans, 0, x, 0, nx);
+		if (isNull(names))
+		    for (int i = 0; i < nx; i++)
 			SET_STRING_ELT(ansnames, i, R_BlankString);
-		}
-		else {
-		    for (i = 0; i < nx; i++)
-			SET_STRING_ELT(ansnames, i, STRING_ELT(names, i));
-		}
-		SET_VECTOR_ELT(ans, nx, val);
-		SET_STRING_ELT(ansnames, nx,  nlist);
+		else
+                    copy_string_elements (ansnames, 0, names, 0, nx);
+		SET_VECTOR_ELEMENT_TO_VALUE(ans, nx, val);
+		SET_STRING_ELT(ansnames, nx, pname);
 		setAttrib(ans, R_NamesSymbol, ansnames);
 		copyMostAttrib(x, ans);
 		UNPROTECT(2);
@@ -2035,6 +2008,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	    }
 	}
     }
+
     UNPROTECT(2);
     if(xS4 != R_NilValue)
 	x = xS4; /* x was an env't, the data slot of xS4 */
