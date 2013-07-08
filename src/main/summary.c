@@ -400,6 +400,8 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         return arg;
     }
 
+    WAIT_UNTIL_COMPUTED(arg);
+
     switch (TYPEOF(arg)) {
 
     case NILSXP:  
