@@ -498,17 +498,17 @@ attribute_hidden FUNTAB R_FunTab[] =
 
 /* Type coercion */
 
-{"as.character",do_ascharacter,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.integer",	do_ascharacter,	1,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.double",	do_ascharacter,	2,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.complex",	do_ascharacter,	3,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.logical",	do_ascharacter,	4,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.raw",	do_ascharacter,	5,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.character",do_ascharacter,	0,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.integer",	do_ascharacter,	1,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.double",	do_ascharacter,	2,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.complex",	do_ascharacter,	3,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.logical",	do_ascharacter,	4,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.raw",	do_ascharacter,	5,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.environment",do_as_environment,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"as.vector",	do_asvector,	0,	10011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.vector",	do_asvector,	0,	11011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"paste",	do_paste,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"paste0",	do_paste,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"file.path",	do_filepath,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
