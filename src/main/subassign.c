@@ -1991,7 +1991,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 		   Enlarge the list, add the new element,
 		   and finally, adjust the attributes. */
 		SEXP ans, ansnames;
-		PROTECT(ans = allocVector(VECSXP, nx + 1));
+		PROTECT(ans = allocVector(type, nx + 1));
 		PROTECT(ansnames = allocVector(STRSXP, nx + 1));
                 copy_vector_elements (ans, 0, x, 0, nx);
 		if (isNull(names))

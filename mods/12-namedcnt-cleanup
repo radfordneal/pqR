@@ -6,3 +6,6 @@ improve performance by avoiding some duplications.
 The KalmanLike and KalmanFore functions were also changed to not
 modify shared objects, even if "fast" is TRUE.  This was necessitated
 by other changes that broadened when objects are shared.
+
+The bugs fixed include pqR issues #14 and #15, which also occur in
+R-2.15.0 and R-3.0.1.
