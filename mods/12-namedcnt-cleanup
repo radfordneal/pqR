@@ -2,3 +2,7 @@ This mod documents a set of conventions regarding modification of
 objects and use of NAMEDCNT in R-ints, and implements changes that
 bring pqR closer to following them.  These changes also fix bugs, and
 improve performance by avoiding some duplications.
+
+The KalmanLike and KalmanFore functions were also changed to not
+modify shared objects, even if "fast" is TRUE.  This was necessitated
+by other changes that broadened when objects are shared.
