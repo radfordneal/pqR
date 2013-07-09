@@ -887,6 +887,7 @@ void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
+int Rf_tag_index(SEXP,SEXP);
 const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
@@ -894,6 +895,9 @@ const char * Rf_type2char(SEXPTYPE);
 SEXP Rf_type2str(SEXPTYPE);
 void Rf_unprotect(int);
 void Rf_unprotect_ptr(SEXP);
+SEXP Rf_with_changed_nth(SEXP,int,SEXP);
+SEXP Rf_with_new_at_end(SEXP,SEXP,SEXP);
+SEXP Rf_with_no_nth(SEXP,int);
 
 SEXP R_ProtectWithIndex(SEXP, PROTECT_INDEX *);
 void R_Reprotect(SEXP, PROTECT_INDEX);
@@ -1264,6 +1268,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute
+#define tag_index		Rf_tag_index
 #define translateChar		Rf_translateChar
 #define translateChar0		Rf_translateChar0
 #define translateCharUTF8      	Rf_translateCharUTF8
@@ -1274,6 +1279,9 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define VectorToPairList	Rf_VectorToPairList
 #define warningcall		Rf_warningcall
 #define warningcall_immediate	Rf_warningcall_immediate
+#define with_changed_nth	Rf_with_changed_nth
+#define with_new_at_end		Rf_with_new_at_end
+#define with_no_nth		Rf_with_no_nth
 
 #endif
 
