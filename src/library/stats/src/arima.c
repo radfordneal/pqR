@@ -65,17 +65,21 @@ KalmanLike(SEXP sy, SEXP sZ, SEXP sa, SEXP sP, SEXP sT,
     if (TYPEOF(sy) != REALSXP || TYPEOF(sZ) != REALSXP ||
 	TYPEOF(sa) != REALSXP || TYPEOF(sP) != REALSXP ||
 	TYPEOF(sPn) != REALSXP ||
-	TYPEOF(sT) != REALSXP || TYPEOF(sV) != REALSXP)
+	TYPEOF(sT) != REALSXP || TYPEOF(sV) != REALSXP || 
+        TYPEOF(fast) != LGLSXP)
 	error(_("invalid argument type"));
     n = LENGTH(sy); p = LENGTH(sa);
     y = REAL(sy); Z = REAL(sZ); T = REAL(sT); V = REAL(sV);
 
-    /* Avoid modifying arguments unless fast=TRUE */
-    if (!LOGICAL(fast)[0]){
-	    PROTECT(sP = duplicate(sP));
-	    PROTECT(sa = duplicate(sa));
-	    PROTECT(sPn = duplicate(sPn));
-    }
+    /* Avoid modifying arguments unless fast=TRUE.  Never modify if shared
+       with other objects even if fast=TRUE. */
+
+    int dup = LENGTH(fast) != 1 || LOGICAL(fast)[0] != 1;
+
+    PROTECT (sP = dup || NAMED(sP) > 1 ? duplicate(sP) : sP);
+    PROTECT (sa = dup || NAMED(sa) > 1 ? duplicate(sa) : sa);
+    PROTECT (sPn = dup || NAMED(sPn) > 1 ? duplicate(sPn) : sPn);
+
     P = REAL(sP); a = REAL(sa); Pnew = REAL(sPn);
 
     anew = (double *) R_alloc(p, sizeof(double));
@@ -149,15 +153,12 @@ KalmanLike(SEXP sy, SEXP sZ, SEXP sa, SEXP sP, SEXP sT,
     if(lop) {
 	SET_VECTOR_ELT(ans, 0, res=allocVector(REALSXP, 2));
 	REAL(res)[0] = ssq; REAL(res)[1] = sumlog;
-	UNPROTECT(1);
-	if (!LOGICAL(fast)[0])
-	    UNPROTECT(3);
+	UNPROTECT(4);
 	return ans;
     } else {
 	res = allocVector(REALSXP, 2);
 	REAL(res)[0] = ssq; REAL(res)[1] = sumlog;
-	if (!LOGICAL(fast)[0])
-	    UNPROTECT(3);
+        UNPROTECT(3);
 	return res;
     }
 }
@@ -166,6 +167,11 @@ SEXP
 KalmanSmooth(SEXP sy, SEXP sZ, SEXP sa, SEXP sP, SEXP sT,
 	     SEXP sV, SEXP sh, SEXP sPn, SEXP sUP)
 {
+    if (TYPEOF(sy) != REALSXP || TYPEOF(sZ) != REALSXP ||
+	TYPEOF(sa) != REALSXP || TYPEOF(sP) != REALSXP ||
+	TYPEOF(sT) != REALSXP || TYPEOF(sV) != REALSXP)
+	error(_("invalid argument type"));
+
     SEXP ssa, ssP, ssPn, res, states = R_NilValue, sN;
     int n = LENGTH(sy), p = LENGTH(sa);
     double *y = REAL(sy), *Z = REAL(sZ), *a, *P,
@@ -174,13 +180,6 @@ KalmanSmooth(SEXP sy, SEXP sZ, SEXP sa, SEXP sP, SEXP sT,
     double *at, *rt, *Pt, *gains, *resids, *Mt, *L, gn, *Nt;
     int i, j, k, l;
     Rboolean var = TRUE;
-
-    /* It would be better to check types before using LENGTH and REAL
-       on these, but should still work this way.  LT */
-    if (TYPEOF(sy) != REALSXP || TYPEOF(sZ) != REALSXP ||
-	TYPEOF(sa) != REALSXP || TYPEOF(sP) != REALSXP ||
-	TYPEOF(sT) != REALSXP || TYPEOF(sV) != REALSXP)
-	error(_("invalid argument type"));
 
     PROTECT(ssa = duplicate(sa)); a = REAL(ssa);
     PROTECT(ssP = duplicate(sP)); P = REAL(ssP);
@@ -344,19 +343,17 @@ SEXP
 KalmanFore(SEXP nahead, SEXP sZ, SEXP sa0, SEXP sP0, SEXP sT, SEXP sV,
 	   SEXP sh, SEXP fast)
 {
+    if (TYPEOF(sZ) != REALSXP ||
+	TYPEOF(sa0) != REALSXP || TYPEOF(sP0) != REALSXP ||
+	TYPEOF(sT) != REALSXP || TYPEOF(sV) != REALSXP ||
+        TYPEOF(fast) != LGLSXP)
+	error(_("invalid argument type"));
+
     SEXP res, forecasts, se;
-    int  n = asReal(nahead), p = LENGTH(sa0);
-    double *Z = REAL(sZ), *a = REAL(sa0), *P = REAL(sP0), *T = REAL(sT),
-	*V = REAL(sV), h = asReal(sh);
     int i, j, k, l;
     double fc, tmp, *mm, *anew, *Pnew;
 
-    /* It would be better to check types before using LENGTH and REAL
-       on these, but should still work this way.  LT */
-    if (TYPEOF(sZ) != REALSXP ||
-	TYPEOF(sa0) != REALSXP || TYPEOF(sP0) != REALSXP ||
-	TYPEOF(sT) != REALSXP || TYPEOF(sV) != REALSXP)
-	error(_("invalid argument type"));
+    int  n = asReal(nahead), p = LENGTH(sa0);
 
     anew = (double *) R_alloc(p, sizeof(double));
     Pnew = (double *) R_alloc(p * p, sizeof(double));
@@ -364,12 +361,19 @@ KalmanFore(SEXP nahead, SEXP sZ, SEXP sa0, SEXP sP0, SEXP sT, SEXP sV,
     PROTECT(res = allocVector(VECSXP, 2));
     SET_VECTOR_ELT(res, 0, forecasts = allocVector(REALSXP, n));
     SET_VECTOR_ELT(res, 1, se = allocVector(REALSXP, n));
-    if (!LOGICAL(fast)[0]){
-	PROTECT(sa0=duplicate(sa0));
-	a=REAL(sa0);
-	PROTECT(sP0=duplicate(sP0));
-	P=REAL(sP0);
-    }
+
+    /* Avoid modifying arguments unless fast=TRUE.  Never modify if shared
+       with other objects even if fast=TRUE. */
+
+    int dup = LENGTH(fast) != 1 || LOGICAL(fast)[0] != 1;
+
+    PROTECT (sP0 = dup || NAMED(sP0) > 1 ? duplicate(sP0) : sP0);
+    PROTECT (sa0 = dup || NAMED(sa0) > 1 ? duplicate(sa0) : sa0);
+
+    double *Z = REAL(sZ),  *a = REAL(sa0), 
+           *P = REAL(sP0), *T = REAL(sT),
+           *V = REAL(sV),   h = asReal(sh);
+
     for (l = 0; l < n; l++) {
 	fc = 0.0;
 	for (i = 0; i < p; i++) {
@@ -405,7 +409,7 @@ KalmanFore(SEXP nahead, SEXP sZ, SEXP sa0, SEXP sP0, SEXP sT, SEXP sV,
 	    }
 	REAL(se)[l] = tmp;
     }
-    UNPROTECT(1);
+    UNPROTECT(3);
     return res;
 }
 

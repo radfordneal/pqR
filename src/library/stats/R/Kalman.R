@@ -17,7 +17,8 @@
 
 KalmanLike <- function(y, mod, nit = 0, fast=TRUE)
 {
-    ## next call changes objects a, P, Pn if fast==TRUE: beware!
+    ## Beware:  Next call changes elements a, P, Pn of mod if fast==TRUE
+    ##          (unless they are shared with other objects)
     x <- .Call(C_KalmanLike, y, mod$Z, mod$a, mod$P, mod$T, mod$V, mod$h,
                mod$Pn, as.integer(nit), FALSE, fast=fast, PACKAGE = "stats")
     names(x) <- c("ssq", "sumlog")
@@ -27,7 +28,8 @@ KalmanLike <- function(y, mod, nit = 0, fast=TRUE)
 
 KalmanRun <- function(y, mod, nit = 0, fast=TRUE)
 {
-    ## next call changes objects a, P, Pn if fast==TRUE: beware!
+    ## Beware:  Next call changes elements a, P, Pn of mod if fast==TRUE
+    ##          (unless they are shared with other objects)
     z <- .Call(C_KalmanLike, y, mod$Z, mod$a, mod$P, mod$T, mod$V, mod$h,
                mod$Pn, as.integer(nit), TRUE, fast=fast, PACKAGE = "stats")
     names(z) <- c("values", "resid", "states")
@@ -37,15 +39,16 @@ KalmanRun <- function(y, mod, nit = 0, fast=TRUE)
     z
 }
 
-KalmanForecast <- function(n.ahead = 10, mod, fast=TRUE)
+KalmanForecast <- function(n.ahead = 10, mod, fast=TRUE)  # "fast" is ignored
 {
-    a <- numeric(p <- length(mod$a))
-    P <- matrix(0, p, p)
+    a <- numeric(p <- length(mod$a))  # "a" not shared anywhere
+    P <- matrix(0, p, p)              # "P" not shared anywhere
     a[] <- mod$a
     P[] <- mod$P
-    ## next call changes objects a, P if fast==TRUE
+    ## Next call changes elements a, P of mod if fast==TRUE, but since 
+    ## they aren't shared anywhere, this doesn't matter...
     x <- .Call(C_KalmanFore, as.integer(n.ahead), mod$Z, a, P,
-               mod$T, mod$V, mod$h, fast=fast, PACKAGE = "stats")
+               mod$T, mod$V, mod$h, fast=TRUE, PACKAGE = "stats")
     names(x) <- c("pred", "var")
     x
 }

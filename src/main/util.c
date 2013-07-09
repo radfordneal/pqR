@@ -559,6 +559,160 @@ SEXP nthcdr(SEXP s, int n)
     return R_NilValue;/* for -Wall */
 }
 
+
+/* Find the index (from one) of the first element in a pairlist having a 
+   given tag.  Returns zero if the tag isn't present. */
+
+int tag_index (SEXP s, SEXP tag)
+{
+    int n = 1;
+
+    for (;;) {
+        if (s == R_NilValue)
+            return 0;
+        if (TAG(s) == tag)
+            return n;
+        s = CDR(s);
+        n += 1;
+    }
+}
+
+
+/* Create a new pairlist (of same type as first arg) with the nth item
+   (counting from one) changed to val.  Silently returns the same list if the
+   list isn't at least n long.  The new list will share CONS cells with the 
+   old after the point of deletion.  No existing CONS cells are altered. */
+
+SEXP with_changed_nth (SEXP s, int n, SEXP val)
+{
+    SEXP original = s;
+    SEXP head, tail, new;
+    LOCAL_COPY(R_NilValue);
+
+    if (s == R_NilValue)
+        return R_NilValue;
+
+    PROTECT(head = tail = cons_with_tag (CAR(s), R_NilValue, TAG(s)));
+    SET_ATTRIB (head, ATTRIB(s));
+    SET_OBJECT (head, OBJECT(s));
+    SET_TYPEOF (head, TYPEOF(s));
+
+    while (n > 1) {
+        if (s == R_NilValue) {
+            UNPROTECT(1);
+            return original;
+        }
+        s = CDR(s);
+        new = cons_with_tag (CAR(s), R_NilValue, TAG(s));
+        SET_ATTRIB (new, ATTRIB(s));
+        SET_OBJECT (new, OBJECT(s));
+        SET_TYPEOF (new, TYPEOF(s));
+        SETCDR (tail, new);
+        tail = new;
+        n -= 1;
+    }
+
+    SETCAR(tail,val);
+    SETCDR(tail,CDR(s));
+
+    UNPROTECT(1);
+    return head;
+}
+
+
+/* Create a new pairlist (of same type as first arg, or LISTSXP if it is 
+   R_NilValue) with a new item added at the end.  No existing CONS cells
+   are altered. */
+
+SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
+{
+    SEXP head, tail, new;
+
+    if (s == R_NilValue)
+	return cons_with_tag (val, R_NilValue, tag);
+
+    PROTECT(head = tail = cons_with_tag (CAR(s), R_NilValue, TAG(s)));
+    SET_ATTRIB (head, ATTRIB(s));
+    SET_OBJECT (head, OBJECT(s));
+    SET_TYPEOF (head, TYPEOF(s));
+
+    for (;;) {
+        s = CDR(s);
+        if (s == R_NilValue)
+            break;
+        new = cons_with_tag (CAR(s), R_NilValue, TAG(s));
+        SET_ATTRIB (new, ATTRIB(s));
+        SET_OBJECT (new, OBJECT(s));
+        SET_TYPEOF (new, TYPEOF(s));
+        SETCDR (tail, new);
+        tail = new;
+    }
+
+    SETCDR (tail, cons_with_tag (val, R_NilValue, tag));
+
+    UNPROTECT(1);
+    return head;
+}
+
+
+/* Create a new pairlist (of same type as first arg, or R_NilValue if becomes
+   empty) with the nth item (counting from one) deleted.  Silently returns the
+   same list if the list isn't at least n long.  The new list will share CONS 
+   cells with the old after the point of deletion.  No existing CONS cells are 
+   altered. */
+
+SEXP with_no_nth (SEXP s, int n)
+{
+    SEXP original = s;
+    SEXP head, tail, new;
+    LOCAL_COPY(R_NilValue);
+
+    if (s == R_NilValue || n == 1 && CDR(s) == R_NilValue)
+        return R_NilValue;
+
+    if (n == 1) {
+        s = CDR(s);
+        if (TYPEOF(s) == TYPEOF(original) 
+             && ATTRIB(s)==ATTRIB(original) 
+             && OBJECT(s)==OBJECT(original))
+            return s;
+        else {
+            head = cons_with_tag (CAR(s), CDR(s), TAG(s));
+            SET_ATTRIB (head, ATTRIB(s));
+            SET_OBJECT (head, OBJECT(s));
+            SET_TYPEOF (head, TYPEOF(s));
+            return head;
+        }
+    }
+
+    PROTECT(head = tail = cons_with_tag (CAR(s), R_NilValue, TAG(s)));
+    SET_ATTRIB (head, ATTRIB(s));
+    SET_OBJECT (head, OBJECT(s));
+    SET_TYPEOF (head, TYPEOF(s));
+
+    for (;;) {
+        s = CDR(s);
+        n -= 1;
+        if (n <= 1)
+            break;
+        if (s == R_NilValue) {
+            UNPROTECT(1);
+            return original;
+        }
+        new = cons_with_tag (CAR(s), R_NilValue, TAG(s));
+        SET_ATTRIB (new, ATTRIB(s));
+        SET_OBJECT (new, OBJECT(s));
+        SET_TYPEOF (new, TYPEOF(s));
+        SETCDR (tail, new);
+        tail = new;
+    }
+
+    SETCDR(tail,CDR(s));
+
+    UNPROTECT(1);
+    return head;
+}
+
 /* TODO: a  Length(.) {say} which is  length() + dispatch (S3 + S4) if needed
          for one approach, see do_seq_along() in ../main/seq.c
 */

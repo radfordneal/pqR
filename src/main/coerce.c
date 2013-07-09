@@ -1322,7 +1322,8 @@ SEXP asCharacterFactor(SEXP x)
 
 /* the "ascharacter" name is a historical anomaly: as.character used to be the
  * only primitive;  now, all these ops are : */
-SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
+                                      int variant)
 {
     SEXP ans, x;
 
@@ -1353,6 +1354,8 @@ SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     x = CAR(args);
     if(TYPEOF(x) == type) {
+        if (! (variant & VARIANT_PENDING_OK) )
+            WAIT_UNTIL_COMPUTED(x);
         if(ATTRIB(x) == R_NilValue) 
             return x;
         if (NAMEDCNT_EQ_0(x))
@@ -1372,7 +1375,8 @@ SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* NB: as.vector is used for several other as.xxxx, including
    as.expression, as.list, as.pairlist, as.symbol, (as.single) */
-SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                   int variant)
 {
     SEXP x, ans;
     int type;
@@ -1396,6 +1400,8 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* "any" case added in 2.13.0 */
     if(type == ANYSXP || TYPEOF(x) == type) {
+        if (! (variant & VARIANT_PENDING_OK) )
+            WAIT_UNTIL_COMPUTED(x);
 	switch(TYPEOF(x)) {
 	case LGLSXP:
 	case INTSXP:
@@ -1403,7 +1409,7 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case CPLXSXP:
 	case STRSXP:
 	case RAWSXP:
-	    if(ATTRIB(x) == R_NilValue) 
+	    if(ATTRIB(x) == R_NilValue)
                 return x;
             if (NAMEDCNT_EQ_0(x))
                 ans = x;
