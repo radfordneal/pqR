@@ -1632,130 +1632,14 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	PROTECT(x);
 
-	switch (which) {
-	    /* as from 2.3.0 'which' is after conversion */
-
-	case 1010:	/* logical   <- logical	  */
-	case 1310:	/* integer   <- logical	  */
-	/* case 1013:	   logical   <- integer	  */
-	case 1313:	/* integer   <- integer	  */
-
-	    INTEGER(x)[offset] = INTEGER(y)[0];
-	    break;
-
-	case 1410:	/* real	     <- logical	  */
-	case 1413:	/* real	     <- integer	  */
-
-	    if (INTEGER(y)[0] == NA_INTEGER)
-		REAL(x)[offset] = NA_REAL;
-	    else
-		REAL(x)[offset] = INTEGER(y)[0];
-	    break;
-	/* case 1014:	   logical   <- real	  */
-	/* case 1314:	   integer   <- real	  */
-	case 1414:	/* real	     <- real	  */
-
-	    REAL(x)[offset] = REAL(y)[0];
-	    break;
-
-	case 1510:	/* complex   <- logical	  */
-	case 1513:	/* complex   <- integer	  */
-
-	    if (INTEGER(y)[0] == NA_INTEGER) {
-		COMPLEX(x)[offset].r = NA_REAL;
-		COMPLEX(x)[offset].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(x)[offset].r = INTEGER(y)[0];
-		COMPLEX(x)[offset].i = 0.0;
-	    }
-	    break;
-
-	case 1514:	/* complex   <- real	  */
-
-	    if (ISNA(REAL(y)[0])) {
-		COMPLEX(x)[offset].r = NA_REAL;
-		COMPLEX(x)[offset].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(x)[offset].r = REAL(y)[0];
-		COMPLEX(x)[offset].i = 0.0;
-	    }
-	    break;
-
-	/* case 1015:	   logical   <- complex	  */
-	/* case 1315:	   integer   <- complex	  */
-	/* case 1415:	   real	     <- complex	  */
-	case 1515:	/* complex   <- complex	  */
-
-	    COMPLEX(x)[offset] = COMPLEX(y)[0];
-	    break;
-
-	case 1610:	/* character <- logical	  */
-	case 1613:	/* character <- integer	  */
-	case 1614:	/* character <- real	  */
-	case 1615:	/* character <- complex	  */
-	case 1616:	/* character <- character */
-	/* case 1016:	   logical   <- character */
-	/* case 1316:	   integer   <- character */
-	/* case 1416:	   real	     <- character */
-	/* case 1516:	   complex   <- character */
-
-	    SET_STRING_ELT(x, offset, STRING_ELT(y, 0));
-	    break;
-
-	case 1019:      /* logical    <- vector     */
-	case 1319:      /* integer    <- vector     */
-	case 1419:      /* real       <- vector     */
-	case 1519:      /* complex    <- vector     */
-	case 1619:      /* character  <- vector     */
-
-	case 1901:  /* vector     <- symbol     */
-	case 1902:  /* vector	  <- pairlist   */
-	case 1904:  /* vector     <- environment*/
-	case 1905:  /* vector     <- promise    */
-	case 1906:  /* vector     <- language   */
-	case 1910:  /* vector     <- logical    */
-	case 1913:  /* vector     <- integer    */
-	case 1914:  /* vector     <- real       */
-	case 1915:  /* vector     <- complex    */
-	case 1916:  /* vector     <- character  */
-	case 1920:  /* vector     <- expression */
-	case 1921:  /* vector     <- bytecode   */
-	case 1922:  /* vector     <- external pointer */
-	case 1923:  /* vector     <- weak reference */
-	case 1924:  /* vector     <- raw */
-	case 1925:  /* vector     <- S4 */
-	case 1903: case 1907: case 1908: case 1999: /* functions */
-
-	    /* drop through: vectors and expressions are treated the same */
-
-	case 2001:	/* expression <- symbol	    */
-	case 2002:	/* expression <- pairlist   */
-	case 2006:	/* expression <- language   */
-	case 2010:	/* expression <- logical    */
-	case 2013:	/* expression <- integer    */
-	case 2014:	/* expression <- real	    */
-	case 2015:	/* expression <- complex    */
-	case 2016:	/* expression <- character  */
-	case 2024:  /* expression     <- raw */
-	case 2025:  /* expression     <- S4 */
-	case 1919:      /* vector     <- vector     */
-	case 2020:	/* expression <- expression */
-
-	    SET_VECTOR_ELT(x, offset, y);
-            if (NAMEDCNT_GT_0(y)) INC_NAMEDCNT(y);
-	    break;
-
-	case 2424:      /* raw <- raw */
-
-	   RAW(x)[offset] = RAW(y)[0];
-	   break;
-
-	default:
+        if (isVectorAtomic(x))
+            copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
+        else if (isVectorList(x))
+            SET_VECTOR_ELEMENT_TO_VALUE(x, offset, y);
+        else
 	    error(_("incompatible types (from %s to %s) in [[ assignment"),
 		  type2char(which%100), type2char(which/100));
-	}
+
 	/* If we stretched, we may have a new name. */
 	/* In this case we must create a names attribute */
 	/* (if it doesn't already exist) and set the new */
