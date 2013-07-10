@@ -596,6 +596,7 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
     SET_ATTRIB (head, ATTRIB(s));
     SET_OBJECT (head, OBJECT(s));
     SET_TYPEOF (head, TYPEOF(s));
+    SETLEVELS (head, LEVELS(s));
 
     while (n > 1) {
         if (s == R_NilValue) {
@@ -607,6 +608,7 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
         SET_ATTRIB (new, ATTRIB(s));
         SET_OBJECT (new, OBJECT(s));
         SET_TYPEOF (new, TYPEOF(s));
+        SETLEVELS (head, LEVELS(s));
         SETCDR (tail, new);
         tail = new;
         n -= 1;
@@ -635,6 +637,7 @@ SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
     SET_ATTRIB (head, ATTRIB(s));
     SET_OBJECT (head, OBJECT(s));
     SET_TYPEOF (head, TYPEOF(s));
+    SETLEVELS (head, LEVELS(s));
 
     for (;;) {
         s = CDR(s);
@@ -644,6 +647,7 @@ SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
         SET_ATTRIB (new, ATTRIB(s));
         SET_OBJECT (new, OBJECT(s));
         SET_TYPEOF (new, TYPEOF(s));
+        SETLEVELS (head, LEVELS(s));
         SETCDR (tail, new);
         tail = new;
     }
@@ -681,6 +685,7 @@ SEXP with_no_nth (SEXP s, int n)
             SET_ATTRIB (head, ATTRIB(s));
             SET_OBJECT (head, OBJECT(s));
             SET_TYPEOF (head, TYPEOF(s));
+            SETLEVELS (head, LEVELS(s));
             return head;
         }
     }
@@ -689,6 +694,7 @@ SEXP with_no_nth (SEXP s, int n)
     SET_ATTRIB (head, ATTRIB(s));
     SET_OBJECT (head, OBJECT(s));
     SET_TYPEOF (head, TYPEOF(s));
+    SETLEVELS (head, LEVELS(s));
 
     for (;;) {
         s = CDR(s);
@@ -703,6 +709,7 @@ SEXP with_no_nth (SEXP s, int n)
         SET_ATTRIB (new, ATTRIB(s));
         SET_OBJECT (new, OBJECT(s));
         SET_TYPEOF (new, TYPEOF(s));
+        SETLEVELS (head, LEVELS(s));
         SETCDR (tail, new);
         tail = new;
     }

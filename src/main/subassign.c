@@ -1889,24 +1889,20 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
     if ((isList(x) || isLanguage(x)) && !isNull(x)) {
 
-        int is_S4 = IS_S4_OBJECT(x);
         int ix = tag_index(x,name);
 
         if (ix == 0) {
             if (val != R_NilValue) {
                 x = with_new_at_end (x, name, val);
-                is_S4 ? SET_S4_OBJECT(x) : UNSET_S4_OBJECT(x);
-                INC_NAMEDCNT(val);
+                SET_NAMEDCNT_MAX(val);
             }
         }
         else if (val == R_NilValue) {
             x = with_no_nth (x, ix);
-            is_S4 ? SET_S4_OBJECT(x) : UNSET_S4_OBJECT(x);
         }
         else {
             x = with_changed_nth (x, ix, val);
-            is_S4 ? SET_S4_OBJECT(x) : UNSET_S4_OBJECT(x);
-            INC_NAMEDCNT(val);
+            SET_NAMEDCNT_MAX(val);
         }
     }
 
