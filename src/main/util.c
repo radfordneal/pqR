@@ -579,7 +579,7 @@ int tag_index (SEXP s, SEXP tag)
 
 
 #define DUP_CONS(dst,src) do { \
-    dst = cons_with_tag (cAR(src), R_NilValue, TAG(src)); \
+    dst = cons_with_tag (CAR(src), R_NilValue, TAG(src)); \
     SET_TYPEOF (dst, TYPEOF(src)); \
     SET_ATTRIB (dst, ATTRIB(src)); \
     SET_OBJECT (dst, OBJECT(src)); \
