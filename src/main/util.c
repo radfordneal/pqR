@@ -578,7 +578,16 @@ int tag_index (SEXP s, SEXP tag)
 }
 
 
-/* Create a new pairlist (of same type as first arg) with the nth item
+#define DUP_CONS(dst,src) do { \
+    dst = cons_with_tag (cAR(src), R_NilValue, TAG(src)); \
+    SET_TYPEOF (dst, TYPEOF(src)); \
+    SET_ATTRIB (dst, ATTRIB(src)); \
+    SET_OBJECT (dst, OBJECT(src)); \
+    SETLEVELS  (dst, LEVELS(src)); \
+} while (0)
+  
+
+/* Create a dst pairlist (of same type as first arg) with the nth item
    (counting from one) changed to val.  Silently returns the same list if the
    list isn't at least n long.  The new list will share CONS cells with the 
    old after the point of deletion.  No existing CONS cells are altered. */
@@ -592,11 +601,9 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
     if (s == R_NilValue)
         return R_NilValue;
 
-    PROTECT(head = tail = cons_with_tag (CAR(s), R_NilValue, TAG(s)));
-    SET_ATTRIB (head, ATTRIB(s));
-    SET_OBJECT (head, OBJECT(s));
-    SET_TYPEOF (head, TYPEOF(s));
-    SETLEVELS (head, LEVELS(s));
+    DUP_CONS(head,s);
+    PROTECT(head);
+    tail = head;
 
     while (n > 1) {
         if (s == R_NilValue) {
@@ -604,11 +611,7 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
             return original;
         }
         s = CDR(s);
-        new = cons_with_tag (CAR(s), R_NilValue, TAG(s));
-        SET_ATTRIB (new, ATTRIB(s));
-        SET_OBJECT (new, OBJECT(s));
-        SET_TYPEOF (new, TYPEOF(s));
-        SETLEVELS (head, LEVELS(s));
+        DUP_CONS(new,s);
         SETCDR (tail, new);
         tail = new;
         n -= 1;
@@ -633,21 +636,15 @@ SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
     if (s == R_NilValue)
 	return cons_with_tag (val, R_NilValue, tag);
 
-    PROTECT(head = tail = cons_with_tag (CAR(s), R_NilValue, TAG(s)));
-    SET_ATTRIB (head, ATTRIB(s));
-    SET_OBJECT (head, OBJECT(s));
-    SET_TYPEOF (head, TYPEOF(s));
-    SETLEVELS (head, LEVELS(s));
+    DUP_CONS(head,s);
+    PROTECT(head);
+    tail = head;
 
     for (;;) {
         s = CDR(s);
         if (s == R_NilValue)
             break;
-        new = cons_with_tag (CAR(s), R_NilValue, TAG(s));
-        SET_ATTRIB (new, ATTRIB(s));
-        SET_OBJECT (new, OBJECT(s));
-        SET_TYPEOF (new, TYPEOF(s));
-        SETLEVELS (head, LEVELS(s));
+        DUP_CONS(new,s);
         SETCDR (tail, new);
         tail = new;
     }
@@ -681,20 +678,14 @@ SEXP with_no_nth (SEXP s, int n)
              && OBJECT(s)==OBJECT(original))
             return s;
         else {
-            head = cons_with_tag (CAR(s), CDR(s), TAG(s));
-            SET_ATTRIB (head, ATTRIB(s));
-            SET_OBJECT (head, OBJECT(s));
-            SET_TYPEOF (head, TYPEOF(s));
-            SETLEVELS (head, LEVELS(s));
+            DUP_CONS(head,s);
             return head;
         }
     }
 
-    PROTECT(head = tail = cons_with_tag (CAR(s), R_NilValue, TAG(s)));
-    SET_ATTRIB (head, ATTRIB(s));
-    SET_OBJECT (head, OBJECT(s));
-    SET_TYPEOF (head, TYPEOF(s));
-    SETLEVELS (head, LEVELS(s));
+    DUP_CONS(head,s);
+    PROTECT(head);
+    tail = head;
 
     for (;;) {
         s = CDR(s);
@@ -705,11 +696,7 @@ SEXP with_no_nth (SEXP s, int n)
             UNPROTECT(1);
             return original;
         }
-        new = cons_with_tag (CAR(s), R_NilValue, TAG(s));
-        SET_ATTRIB (new, ATTRIB(s));
-        SET_OBJECT (new, OBJECT(s));
-        SET_TYPEOF (new, TYPEOF(s));
-        SETLEVELS (head, LEVELS(s));
+        DUP_CONS(new,s);
         SETCDR (tail, new);
         tail = new;
     }
