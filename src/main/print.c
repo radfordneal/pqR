@@ -522,6 +522,7 @@ static void printList(SEXP s, SEXP env)
     const char *rn, *cn;
 
     if ((dims = getAttrib(s, R_DimSymbol)) != R_NilValue && length(dims) > 1) {
+        SEXP original_s = s;
 	PROTECT(dims);
 	PROTECT(t = allocArray(STRSXP, dims));
 	i = 0;
@@ -571,12 +572,12 @@ static void printList(SEXP s, SEXP env)
 	}
 	if (LENGTH(dims) == 2) {
 	    SEXP rl, cl;
-	    GetMatrixDimnames(s, &rl, &cl, &rn, &cn);
+	    GetMatrixDimnames(original_s, &rl, &cl, &rn, &cn);
 	    printMatrix(t, 0, dims, R_print.quote, R_print.right, rl, cl,
 			rn, cn);
 	}
 	else {
-	    dimnames = getAttrib(s, R_DimNamesSymbol);
+	    dimnames = getAttrib(original_s, R_DimNamesSymbol);
 	    printArray(t, dims, 0, Rprt_adj_left, dimnames);
 	}
 	UNPROTECT(2);
@@ -629,7 +630,6 @@ static void printList(SEXP s, SEXP env)
 	Rprintf("\n");
 	UNPROTECT(1);
     }
-    printAttributes(s, env, FALSE);
 }
 
 static void PrintExpression(SEXP s)
