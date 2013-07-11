@@ -25,7 +25,6 @@
  *
  * EXPORTS:
  *
- *  OneIndex()        -- used for "[[<-" in ./subassign.c
  *  get1index()       -- used for "[["   in ./subassign.c & subset.c
  *
  *  mat2indsub()      -- for "mat[i]"     "    "            "
@@ -43,7 +42,10 @@
 #include <Defn.h>
 
 /* We might get a call with R_NilValue from subassignment code */
-#define ECALL(call, yy) if(call == R_NilValue) error(yy); else errorcall(call, yy);
+#define ECALL(call, yy) do { \
+  if (call == R_NilValue) error(yy); \
+  else errorcall(call, yy); \
+} while (0)
 
 static int integerOneIndex(int i, int len, SEXP call)
 {
@@ -61,9 +63,11 @@ static int integerOneIndex(int i, int len, SEXP call)
     return(indx);
 }
 
-/* Utility used (only in) do_subassign2_dflt(), i.e. "[[<-" in ./subassign.c : */
+/* Utility formerly used (only in) do_subassign2_dflt(), 
+   i.e. "[[<-" in ./subassign.c.  NOW UNUSED: replaced by use of get1index. */
+#if 0
 int attribute_hidden
-OneIndex(SEXP x, SEXP s, int len, int partial, SEXP *newname, int pos, SEXP call)
+OneIndex(SEXP x, SEXP s, int len, SEXP *newname, int pos, SEXP call)
 {
     SEXP names;
     int i, indx, nx;
@@ -87,48 +91,22 @@ OneIndex(SEXP x, SEXP s, int len, int partial, SEXP *newname, int pos, SEXP call
     case REALSXP:
 	indx = integerOneIndex(REAL(s)[pos], len, call);
 	break;
+    case SYMSXP:
     case STRSXP:
+        const char *sbname = TYPEOF(s)==SYMSXP ? translateChar(PRINTNAME(s))
+                              : translateChar(STRING_ELT(s,pos)) :
 	nx = length(x);
 	names = getAttrib(x, R_NamesSymbol);
 	if (names != R_NilValue) {
-	    /* Try for exact match */
+	    /* Exact match only */
 	    for (i = 0; i < nx; i++) {
 		const char *tmp = translateChar(STRING_ELT(names, i));
 		if (!tmp[0]) continue;
-		if (streql(tmp, translateChar(STRING_ELT(s, pos)))) {
+		if (streql(tmp,sbname)) {
 		    indx = i;
 		    break;
 		}
 	    }
-	    /* Try for partial match */
-	    if (partial && indx < 0) {
-		len = strlen(translateChar(STRING_ELT(s, pos)));
-		for(i = 0; i < nx; i++) {
-		    const char *tmp = translateChar(STRING_ELT(names, i));
-		    if (!tmp[0]) continue;
-		    if(!strncmp(tmp, translateChar(STRING_ELT(s, pos)), len)) {
-			if(indx == -1 )
-			    indx = i;
-			else
-			    indx = -2;
-		    }
-		}
-	    }
-	}
-	if (indx == -1)
-	    indx = nx;
-	*newname = STRING_ELT(s, pos);
-	break;
-    case SYMSXP:
-	nx = length(x);
-	names = getAttrib(x, R_NamesSymbol);
-	if (names != R_NilValue) {
-	    for (i = 0; i < nx; i++)
-		if (streql(translateChar(STRING_ELT(names, i)),
-			   translateChar(PRINTNAME(s)))) {
-		    indx = i;
-		    break;
-		}
 	}
 	if (indx == -1)
 	    indx = nx;
@@ -143,6 +121,7 @@ OneIndex(SEXP x, SEXP s, int len, int partial, SEXP *newname, int pos, SEXP call
     }
     return indx;
 }
+#endif
 
 int attribute_hidden
 get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
@@ -152,48 +131,58 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
    pok : is "partial ok" ?
 	 if pok is -1, warn if partial matching occurs
 */
-    int indx, i, warn_pok = 0;
-    double dblind;
+    int indx, i, warn_pok, len_names;
     const char *ss, *cur_name;
-    int len_names = length(names);
+    double dblind;
+    SEXP se;
 
+    warn_pok = 0;
     if (pok == -1) {
 	pok = 1;
 	warn_pok = 1;
     }
 
     if (pos < 0 && length(s) != 1) {
-	if (length(s) > 1) {
+	if (length(s) > 1)
 	    ECALL(call, _("attempt to select more than one element"));
-	} else {
+	else
 	    ECALL(call, _("attempt to select less than one element"));
-	}
-    } else
-	if(pos >= length(s)) {
+    } 
+    else {
+	if(pos >= length(s))
 	    ECALL(call, _("internal error in use of recursive indexing"));
-	}
-    if(pos < 0) pos = 0;
+    }
+
+    if (pos < 0) pos = 0;
     indx = -1;
+
     switch (TYPEOF(s)) {
+
     case LGLSXP:
+        /* REALLY???  But it falls through in R-2.15.0, so keep doing so... */
     case INTSXP:
 	i = INTEGER(s)[pos];
-	if(i != NA_INTEGER)
+	if (i != NA_INTEGER)
 	    indx = integerOneIndex(i, len, call);
 	break;
+
     case REALSXP:
 	dblind = REAL(s)[pos];
-	if(!ISNAN(dblind))
+	if (!ISNAN(dblind))
 	    indx = integerOneIndex((int)dblind, len, call);
 	break;
+
     case STRSXP:
+
+	se = STRING_ELT(s,pos);
 	/* NA matches nothing */
-	if(STRING_ELT(s, pos) == NA_STRING) break;
+	if (se == NA_STRING) break;
 	/* "" matches nothing: see names.Rd */
-	if(!CHAR(STRING_ELT(s, pos))[0]) break;
+	if (CHAR(se)[0] == 0) break;
 
 	/* Try for exact match */
-	ss = translateChar(STRING_ELT(s, pos));
+	ss = translateChar(se);
+        len_names = length(names);
 	for (i = 0; i < len_names; i++)
 	    if (STRING_ELT(names, i) != NA_STRING) {
 		if (streql(translateChar(STRING_ELT(names, i)), ss)) {
@@ -201,6 +190,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 		    break;
 		}
 	    }
+
 	/* Try for partial match */
 	if (pok && indx < 0) {
 	    len = strlen(ss);
@@ -216,16 +206,16 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 					    ss, cur_name);
 				else
 				    warningcall(call,
-						_("partial match of '%s' to '%s'"),
-						ss, cur_name);
+					_("partial match of '%s' to '%s'"),
+					ss, cur_name);
 			    }
 			}
 			else {
 			    indx = -2;/* more than one partial match */
 			    if (warn_pok) /* already given context */
 				warningcall(R_NilValue,
-					    _("further partial match of '%s' to '%s'"),
-					    ss, cur_name);
+				    _("further partial match of '%s' to '%s'"),
+				    ss, cur_name);
 			    break;
 			}
 		    }
@@ -233,14 +223,19 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	    }
 	}
 	break;
+
     case SYMSXP:
-	for (i = 0; i < len_names; i++)
-	    if (STRING_ELT(names, i) != NA_STRING &&
-		streql(translateChar(STRING_ELT(names, i)),
-		       CHAR(PRINTNAME(s)))) {
+        len_names = length(names);
+	for (i = 0; i < len_names; i++) {
+	    if (STRING_ELT(names,i) != NA_STRING
+                 && streql (translateChar(STRING_ELT(names,i)), 
+                            CHAR(PRINTNAME(s)))) {
 		indx = i;
 		break;
 	    }
+        }
+        break;
+
     default:
 	if (call == R_NilValue)
 	    error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));

@@ -313,7 +313,6 @@ BINDING_IS_LOCKED
  Rf_LogicalFromInteger
  Rf_LogicalFromReal
  Rf_LogicalFromString
- Rf_OneIndex
  Rf_PrintDefaults
  Rf_PrintGreeting
  Rf_PrintValueEnv
