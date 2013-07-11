@@ -122,7 +122,6 @@ bound to \code{b}, allowing it to be changed without duplication.
    [[1]][[1]]
    [1] 2
 }
-  }}
 \item Fixed a bug (also present in R-2.15.0 and R-3.0.1) illustrated by the
 following code:
 \preformatted{   a <- list(x=c(1,2),y=c(3,4))
@@ -154,6 +153,7 @@ by the code below (see pqR issue \#16):
    
    a[["a","x"]] <- 0     # seg faults
 }
+  }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
