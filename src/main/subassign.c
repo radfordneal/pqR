@@ -1345,9 +1345,10 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
     int n;
     n = length(x);
     if (0 <= which && which < n) {
-	PROTECT(y = allocVector(TYPEOF(x), n - 1));
+	PROTECT(y = allocVector(TYPEOF(x), n-1));
         copy_vector_elements (y, 0, x, 0, which);
         copy_vector_elements (y, which, x, which+1, n-which-1);
+        DEC_NAMEDCNT(VECTOR_ELT(x,which));
 	xnames = getAttrib(x, R_NamesSymbol);
 	if (xnames != R_NilValue) {
 	    PROTECT(ynames = allocVector(STRSXP, n - 1));
@@ -1525,14 +1526,16 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
             which = SubassignTypeFix(&x, &y, stretch, 2, call);
     
             if (NAMEDCNT_GT_1(x))
-                x = duplicate(x);
+                x = dup_top_level(x);
     
             PROTECT(x);
     
             if (isVectorAtomic(x))
                 copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
-            else if (isVectorList(x))
-                SET_VECTOR_ELEMENT_TO_VALUE(x, offset, y);
+            else if (isVectorList(x)) {
+                DEC_NAMEDCNT (VECTOR_ELT(x, offset));
+                SET_VECTOR_ELEMENT_TO_VALUE (x, offset, y);
+            }
             else
                 error(_("incompatible types (from %s to %s) in [[ assignment"),
                       type2char(which%100), type2char(which/100));
