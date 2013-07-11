@@ -1591,8 +1591,10 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (recursed) {
 	if (isVectorList(xup))
 	    SET_VECTOR_ELT(xup, off, x);
-	else
+	else {
             SETCAR(nthcdr(xup,off),x); /* xup was duplicated, so this is safe */
+            SET_NAMEDCNT_MAX(x);
+        }
     }
     else
         xtop = x;
