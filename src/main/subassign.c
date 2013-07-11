@@ -1207,118 +1207,6 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     return x;
 }
 
-static SEXP GetOneIndex(SEXP sub, int ind)
-{
-    if (ind < 0 || ind+1 > length(sub))
-    	error("internal error: index %d from length %d", ind, length(sub));
-    if (length(sub) > 1) {
-    	switch (TYPEOF(sub)) {
-    	case INTSXP:
-    	    sub = ScalarInteger(INTEGER(sub)[ind]);
-    	    break;
-    	case REALSXP:
-    	    sub = ScalarReal(REAL(sub)[ind]);
-    	    break;
-    	case STRSXP:
-    	    sub = ScalarString(STRING_ELT(sub, ind));
-    	    break;
-    	default:
-    	    error(_("invalid subscript in list assign"));
-    	}
-    }
-    return sub;
-}
-
-/* This is only used for [[<-, so only adding one element */
-static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
-{
-    SEXP indx, xi, yi, sub = CAR(s);
-    int ii, n, nx, stretch = 1;
-
-    if (length(s) > 1)
-	error(_("invalid number of subscripts to list assign"));
-
-    PROTECT(sub = GetOneIndex(sub, ind));
-    PROTECT(indx = makeSubscript(x, sub, &stretch, R_NilValue, 1));
-
-    n = length(indx);
-    if (n > 1)
-    	error(_("invalid subscript in list assign"));
-
-    nx = length(x);
-
-    if (stretch) {
-	SEXP t = CAR(s);
-	yi = allocList(stretch - nx);
-	/* This is general enough for only usage */
-	if(isString(t) && length(t) == stretch - nx) {
-	    SEXP z = yi;
-	    int i;
-	    for(i = 0; i < LENGTH(t); i++, z = CDR(z))
-		SET_TAG(z, install(translateChar(STRING_ELT(t, i))));
-	}
-	PROTECT(x = listAppend(x, yi));
-	nx = stretch;
-    }
-    else PROTECT(x);
-
-    if (n == 1) {
-	ii = INTEGER(indx)[0];
-	if (ii != NA_INTEGER) {
-	    ii = ii - 1;
-	    xi = nthcdr(x, ii % nx);
-	    SETCAR(xi, y);
-	}
-    }
-    UNPROTECT(3);
-    return x;
-}
-
-/* This is for x[[s[ind]]] <- NULL */
-
-static SEXP listRemove(SEXP x, SEXP s, int ind)
-{
-    SEXP a, pa, px;
-    int i, ii, *indx, ns, nx, stretch=0;
-    const void *vmax;
-
-    vmax = VMAXGET();
-    nx = length(x);
-    PROTECT(s = GetOneIndex(s, ind));
-    PROTECT(s = makeSubscript(x, s, &stretch, R_NilValue, 1));
-    ns = length(s);
-    indx = (int*)R_alloc(nx, sizeof(int));
-    for (i = 0; i < nx; i++)
-	indx[i] = 1;
-    for (i = 0; i < ns; i++) {
-	ii = INTEGER(s)[i];
-	if (ii != NA_INTEGER)
-	    indx[ii - 1] = 0;
-    }
-    PROTECT(a = CONS(R_NilValue, R_NilValue));
-    px = x;
-    pa = a;
-    for (i = 0; i < nx; i++) {
-	if (indx[i]) {
-	    SETCDR(pa, px);
-	    px = CDR(px);
-	    pa = CDR(pa);
-	    SETCDR(pa, R_NilValue);
-	}
-	else {
-	    px = CDR(px);
-	}
-    }
-    SET_ATTRIB(CDR(a), ATTRIB(x));
-    IS_S4_OBJECT(x) ?  SET_S4_OBJECT(CDR(a)) : UNSET_S4_OBJECT(CDR(a));
-    SET_OBJECT(CDR(a), OBJECT(x));
-    SET_NAMEDCNT(CDR(a), NAMEDCNT(x));
-    UNPROTECT(3);
-    VMAXSET(vmax);
-    return CDR(a);
-}
-
-
 static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 {
     LOCAL_COPY(R_NilValue);
@@ -1338,7 +1226,6 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 	SETCDR(p, R_NilValue);
     }
 }
-
 
 /* The [<- operator.  "x" is the vector that is to be assigned into, */
 /* y is the vector that is going to provide the new values and subs is */
@@ -1495,9 +1382,10 @@ SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden
 do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP dims, indx, names, newname, subs, x, xtop, xup, y, thesub = R_NilValue, xOrig = R_NilValue;
+    SEXP dims, names, newname, subs, x, xtop, xup, y;
+    SEXP thesub = R_NilValue, xOrig = R_NilValue;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, which, len = 0 /* -Wall */;
-    Rboolean S4, recursed=FALSE;
+    Rboolean S4, recursed;
 
     PROTECT(args);
 
@@ -1550,6 +1438,8 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
                     /*   xup may contain x; xtop is what is returned.  */ 
     PROTECT(xtop);
 
+    recursed = FALSE;
+
     if (nsubs == 1) { /* One vector index for a list. */
 	thesub = CAR(subs);
 	len = length(thesub);
@@ -1558,8 +1448,8 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
                 if (!isVectorList(x) && !isPairList(x))
                     errorcall (call, 
                       _("recursive indexing failed at level %d\n"), i+1);
-                off = get1index(thesub, getAttrib(x, R_NamesSymbol),
-                                   length(x), TRUE, i, call);
+                off = get1index (thesub, getAttrib(x, R_NamesSymbol),
+                                 length(x), TRUE, i, call);
                 if (off < 0 || off >= length(x))
                     errorcall(call, _("no such index at level %d\n"), i+1);
                 xup = x;
@@ -1581,128 +1471,128 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
     }
 
-    stretch = 0;
     if (isVector(x)) {
-	if (!isVectorList(x) && LENGTH(y) == 0)
+        R_len_t leny = length(y);
+	if (!isVectorList(x) && leny == 0)
 	    error(_("replacement has length zero"));
-	if (!isVectorList(x) && LENGTH(y) > 1)
+	if (!isVectorList(x) && leny > 1)
 	    error(_("more elements supplied than there are to replace"));
 	if (nsubs == 0 || CAR(subs) == R_MissingArg)
 	    error(_("[[ ]] with missing subscript"));
-	if (nsubs == 1) {
-	    offset = OneIndex(x, thesub, length(x), 0, &newname, recursed ? len-1 : -1, R_NilValue);
-	    if (isVectorList(x) && isNull(y)) {
-		x = DeleteOneVectorListItem(x, offset);
-		if(recursed) SET_VECTOR_ELT(xup, off, x);
-		else xtop = x;
-		UNPROTECT(2);
-		return xtop;
-	    }
-	    if (offset < 0)
-		error(_("[[ ]] subscript out of bounds"));
-	    if (offset >= LENGTH(x))
-		    stretch = offset + 1;
-	}
-	else {
-	    if (ndims != nsubs)
-		error(_("[[ ]] improper number of subscripts"));
-	    PROTECT(indx = allocVector(INTSXP, ndims));
-	    names = getAttrib(x, R_DimNamesSymbol);
-	    for (i = 0; i < ndims; i++) {
-		INTEGER(indx)[i] = get1index(CAR(subs), isNull(names) ?
-					      R_NilValue : VECTOR_ELT(names, i),
-					      INTEGER(dims)[i],
-					      /*partial ok*/FALSE, -1, call);
-		subs = CDR(subs);
-		if (INTEGER(indx)[i] < 0 ||
-		    INTEGER(indx)[i] >= INTEGER(dims)[i])
-		    error(_("[[ ]] subscript out of bounds"));
-	    }
-	    offset = 0;
-	    for (i = (ndims - 1); i > 0; i--)
-		offset = (offset + INTEGER(indx)[i]) * INTEGER(dims)[i - 1];
-	    offset += INTEGER(indx)[0];
-	    UNPROTECT(1);
-	}
-
-	which = SubassignTypeFix(&x, &y, stretch, 2, call);
-
-        if (NAMEDCNT_GT_1(x))
-            x = duplicate(x);
-
-	PROTECT(x);
-
-        if (isVectorAtomic(x))
-            copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
-        else if (isVectorList(x))
-            SET_VECTOR_ELEMENT_TO_VALUE(x, offset, y);
-        else
-	    error(_("incompatible types (from %s to %s) in [[ assignment"),
-		  type2char(which%100), type2char(which/100));
-
-	/* If we stretched, we may have a new name. */
-	/* In this case we must create a names attribute */
-	/* (if it doesn't already exist) and set the new */
-	/* value in the names attribute. */
-	if (stretch && newname != R_NilValue) {
-	    names = getAttrib(x, R_NamesSymbol);
-	    if (names == R_NilValue) {
-		PROTECT(names = allocVector(STRSXP, length(x)));
-		SET_STRING_ELT(names, offset, newname);
-		setAttrib(x, R_NamesSymbol, names);
-		UNPROTECT(1);
-	    }
-	    else
-		SET_STRING_ELT(names, offset, newname);
-	}
     }
+
+    stretch = 0;
+    newname = R_NilValue;
+
+    if (nsubs == 1) {
+        offset = get1index (thesub, getAttrib(x,R_NamesSymbol), length(x), 
+                            FALSE, (recursed ? len-1 : -1), R_NilValue);
+        if (offset < 0) {
+            if (isString(thesub) || isSymbol(thesub))
+                offset = length(x);
+            else
+                error(_("[[ ]] subscript out of bounds"));
+        }
+        if (offset >= length(x)) {
+            stretch = offset + 1;
+            newname = isString(thesub) ? STRING_ELT(thesub,len-1)
+                    : isSymbol(thesub) ? PRINTNAME(thesub) : R_NilValue;
+        }
+    }
+    else {
+        if (ndims != nsubs)
+            error(_("[[ ]] improper number of subscripts"));
+        names = getAttrib(x, R_DimNamesSymbol);
+        offset = 0;
+        for (i = ndims-1; i >= 0; i--) {
+            R_len_t ix = get1index (CAR(nthcdr(subs,i)),
+                           isNull(names) ? R_NilValue : VECTOR_ELT(names, i),
+                           INTEGER(dims)[i],/*partial ok*/ FALSE, -1, call);
+            if (ix < 0 || ix >= INTEGER(dims)[i])
+                error(_("[[ ]] subscript out of bounds"));
+            offset += ix;
+            if (i > 0) offset *= INTEGER(dims)[i-1];
+        }
+    }
+
+    if (isVector(x)) {
+
+        if (nsubs == 1 && isVectorList(x) && isNull(y)) {
+            PROTECT(x = DeleteOneVectorListItem(x, offset));
+        }
+        else {
+
+            which = SubassignTypeFix(&x, &y, stretch, 2, call);
+    
+            if (NAMEDCNT_GT_1(x))
+                x = duplicate(x);
+    
+            PROTECT(x);
+    
+            if (isVectorAtomic(x))
+                copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
+            else if (isVectorList(x))
+                SET_VECTOR_ELEMENT_TO_VALUE(x, offset, y);
+            else
+                error(_("incompatible types (from %s to %s) in [[ assignment"),
+                      type2char(which%100), type2char(which/100));
+    
+            /* If we stretched, we may have a new name. */
+            /* In this case we must create a names attribute */
+            /* (if it doesn't already exist) and set the new */
+            /* value in the names attribute. */
+            if (stretch && newname != R_NilValue) {
+                names = getAttrib(x, R_NamesSymbol);
+                if (names == R_NilValue) {
+                    PROTECT(names = allocVector(STRSXP, length(x)));
+                    SET_STRING_ELT(names, offset, newname);
+                    setAttrib(x, R_NamesSymbol, names);
+                    UNPROTECT(1);
+                }
+                else
+                    SET_STRING_ELT(names, offset, newname);
+            }
+        }
+    }
+
     else if (isPairList(x)) {
-	/* if (NAMED(y)) */
-	y = duplicate(y);
-	PROTECT(y);
+
+        SET_NAMEDCNT_MAX(y);
 	if (nsubs == 1) {
-	    if (isNull(y)) {
-		x = listRemove(x, CAR(subs), len-1);
-	    }
+	    if (isNull(y))
+		PROTECT(x = with_no_nth(x,offset+1));
+	    else if (!stretch)
+		PROTECT(x = with_changed_nth(x,offset+1,y));
 	    else {
-		x = SimpleListAssign(call, x, subs, y, len-1);
-	    }
+                SEXP append = 
+                  cons_with_tag (y, R_NilValue, newname == R_NilValue ? 
+                                  R_NilValue : install(translateChar(newname)));
+                for (i = length(x)+1; i < stretch; i++)
+                    append = CONS(R_NilValue,append);
+                PROTECT(x = with_pairlist_appended(x,append));
+            }
 	}
 	else {
-	    if (ndims != nsubs)
-		error(_("[[ ]] improper number of subscripts"));
-	    PROTECT(indx = allocVector(INTSXP, ndims));
-	    names = getAttrib(x, R_DimNamesSymbol);
-	    for (i = 0; i < ndims; i++) {
-		INTEGER(indx)[i] = get1index(CAR(subs), CAR(names),
-					     INTEGER(dims)[i],
-					     /*partial ok*/FALSE, -1, call);
-		subs = CDR(subs);
-		if (INTEGER(indx)[i] < 0 ||
-		    INTEGER(indx)[i] >= INTEGER(dims)[i])
-		    error(_("[[ ]] subscript (%d) out of bounds"), i+1);
-	    }
-	    offset = 0;
-	    for (i = (ndims - 1); i > 0; i--)
-		offset = (offset + INTEGER(indx)[i]) * INTEGER(dims)[i - 1];
-	    offset += INTEGER(indx)[0];
-	    SETCAR(nthcdr(x, offset), duplicate(y));
-	    /* FIXME: add name */
-	    UNPROTECT(1);
+            SEXP nth = nthcdr(x,offset);
+	    SETCAR(nth,y);
+            PROTECT(x);
 	}
     }
-    else error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
-    if(recursed) {
-	if (isVectorList(xup)) {
+    else 
+        error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+
+    /* The modified "x" may now be a different object, due to deletion or
+       extension, so we need to update the reference to it. */
+
+    if (recursed) {
+	if (isVectorList(xup))
 	    SET_VECTOR_ELT(xup, off, x);
-	} else {
-	    xup = SimpleListAssign(call, xup, subs, x, len-2);
-	}
-	if (len == 2)
-	    xtop = xup;
+	else
+            SETCAR(nthcdr(xup,off),x); /* xup was duplicated, so this is safe */
     }
-    else xtop = x;
+    else
+        xtop = x;
 
     SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
@@ -1777,7 +1667,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
         if (ix == 0) {
             if (val != R_NilValue) {
-                x = with_new_at_end (x, name, val);
+                x = with_pairlist_appended (x,
+                      cons_with_tag (val, R_NilValue, name));
                 SET_NAMEDCNT_MAX(val);
             }
         }

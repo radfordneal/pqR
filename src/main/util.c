@@ -590,7 +590,8 @@ int tag_index (SEXP s, SEXP tag)
 /* Create a dst pairlist (of same type as first arg) with the nth item
    (counting from one) changed to val.  Silently returns the same list if the
    list isn't at least n long.  The new list will share CONS cells with the 
-   old after the point of deletion.  No existing CONS cells are altered. */
+   old after the point of deletion.  No existing CONS cells are altered. 
+   The arguments needn't be protected by the caller. */
 
 SEXP with_changed_nth (SEXP s, int n, SEXP val)
 {
@@ -601,13 +602,14 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
     if (s == R_NilValue)
         return R_NilValue;
 
+    PROTECT2(s,val);
     DUP_CONS(head,s);
     PROTECT(head);
     tail = head;
 
     while (n > 1) {
         if (s == R_NilValue) {
-            UNPROTECT(1);
+            UNPROTECT(3);
             return original;
         }
         s = CDR(s);
@@ -620,22 +622,23 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
     SETCAR(tail,val);
     SETCDR(tail,CDR(s));
 
-    UNPROTECT(1);
+    UNPROTECT(3);
     return head;
 }
 
 
-/* Create a new pairlist (of same type as first arg, or LISTSXP if it is 
-   R_NilValue) with a new item added at the end.  No existing CONS cells
-   are altered. */
+/* Create a new pairlist (of same type as first arg, or of the second if the
+   first is R_NilValue) with a pairlist appended at the end.  No existing CONS 
+   cells are altered.  The arguments needn't be protected by the caller. */
 
-SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
+SEXP with_pairlist_appended (SEXP s, SEXP t)
 {
     SEXP head, tail, new;
 
     if (s == R_NilValue)
-	return cons_with_tag (val, R_NilValue, tag);
+        return t;
 
+    PROTECT2(s,t);
     DUP_CONS(head,s);
     PROTECT(head);
     tail = head;
@@ -649,9 +652,9 @@ SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
         tail = new;
     }
 
-    SETCDR (tail, cons_with_tag (val, R_NilValue, tag));
+    SETCDR (tail, t);
 
-    UNPROTECT(1);
+    UNPROTECT(3);
     return head;
 }
 
@@ -660,7 +663,7 @@ SEXP with_new_at_end (SEXP s, SEXP tag, SEXP val)
    empty) with the nth item (counting from one) deleted.  Silently returns the
    same list if the list isn't at least n long.  The new list will share CONS 
    cells with the old after the point of deletion.  No existing CONS cells are 
-   altered. */
+   altered.  The first argument needn't be protected by the caller. */
 
 SEXP with_no_nth (SEXP s, int n)
 {
@@ -671,6 +674,8 @@ SEXP with_no_nth (SEXP s, int n)
     if (s == R_NilValue || n == 1 && CDR(s) == R_NilValue)
         return R_NilValue;
 
+    PROTECT(s);
+
     if (n == 1) {
         s = CDR(s);
         if (TYPEOF(s) == TYPEOF(original) 
@@ -679,6 +684,7 @@ SEXP with_no_nth (SEXP s, int n)
             return s;
         else {
             DUP_CONS(head,s);
+            UNPROTECT(1);
             return head;
         }
     }
@@ -693,7 +699,7 @@ SEXP with_no_nth (SEXP s, int n)
         if (n <= 1)
             break;
         if (s == R_NilValue) {
-            UNPROTECT(1);
+            UNPROTECT(2);
             return original;
         }
         DUP_CONS(new,s);
@@ -703,7 +709,7 @@ SEXP with_no_nth (SEXP s, int n)
 
     SETCDR(tail,CDR(s));
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     return head;
 }
 
