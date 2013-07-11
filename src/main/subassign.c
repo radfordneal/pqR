@@ -395,6 +395,8 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
         if (endi > len) endi = len;
         PROTECT(xnew = allocVector(TYPEOF(x), len-(endi-starti)));
         copy_vector_elements (xnew, 0, x, 0, starti);
+        for (i = starti; i < endi; i++)
+            DEC_NAMEDCNT (VECTOR_ELT (x, i));
         copy_vector_elements (xnew, starti, x, endi, len-endi);
         xnames = getAttrib(x, R_NamesSymbol);
         if (xnames != R_NilValue) {
@@ -432,6 +434,8 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 	    SET_VECTOR_ELT(xnew, ii, VECTOR_ELT(x, i));
 	    ii++;
 	}
+        else
+            DEC_NAMEDCNT (VECTOR_ELT (x, i));
     }
     xnames = getAttrib(x, R_NamesSymbol);
     if (xnames != R_NilValue) {
