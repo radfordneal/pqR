@@ -165,7 +165,7 @@ static SEXP EnlargeVector(SEXP x, R_len_t newlen)
 
     /* Adjust the attribute list. */
     names = getAttrib(x, R_NamesSymbol);
-    if (!isNull(names)) {
+    if (names != R_NilValue) {
 	PROTECT(newnames = allocVector(STRSXP, newlen));
 	for (i = 0; i < len; i++)
 	    SET_STRING_ELT(newnames, i, STRING_ELT(names, i));
@@ -1281,7 +1281,8 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	else {
 	    /* bug PR#2590 coerce only if null */
-	    if(isNull(x)) PROTECT(x = coerceVector(x, TYPEOF(y)));
+	    if (x == R_NilValue) 
+                PROTECT(x = coerceVector(x, TYPEOF(y)));
 	    else PROTECT(x);
 	}
     }
@@ -1383,10 +1384,13 @@ SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden
 do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    LOCAL_COPY(R_NilValue);
+
     SEXP dims, names, newname, subs, x, xtop, xup, y;
-    SEXP thesub = R_NilValue, xOrig = R_NilValue;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, which, len = 0 /* -Wall */;
     Rboolean S4, recursed;
+
+    SEXP thesub = R_NilValue, xOrig = R_NilValue;
 
     PROTECT(args);
 
@@ -1416,12 +1420,12 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return(S4 ? xOrig : x);
     }
 
-    if (isNull(x)) {
+    if (x == R_NilValue) {
         /* Handle NULL left-hand sides.  If the right-hand side is NULL,
            just return NULL, otherwise replace x by a zero length list 
            (VECSXP) or vector of type of y (if y of length one).  (This
            dependence on the length of y is of dubious wisdom!) */
-	if (isNull(y)) {
+	if (y == R_NilValue) {
 	    UNPROTECT(1);
 	    return R_NilValue;
 	}
@@ -1507,7 +1511,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         offset = 0;
         for (i = ndims-1; i >= 0; i--) {
             R_len_t ix = get1index (CAR(nthcdr(subs,i)),
-                           isNull(names) ? R_NilValue : VECTOR_ELT(names, i),
+                           names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
                            INTEGER(dims)[i],/*partial ok*/ FALSE, -1, call);
             if (ix < 0 || ix >= INTEGER(dims)[i])
                 error(_("[[ ]] subscript out of bounds"));
@@ -1518,7 +1522,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (isVector(x)) {
 
-        if (nsubs == 1 && isVectorList(x) && isNull(y)) {
+        if (nsubs == 1 && isVectorList(x) && y == R_NilValue) {
             PROTECT(x = DeleteOneVectorListItem(x, offset));
         }
         else {
@@ -1562,7 +1566,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
         SET_NAMEDCNT_MAX(y);
 	if (nsubs == 1) {
-	    if (isNull(y))
+	    if (y == R_NilValue)
 		PROTECT(x = with_no_nth(x,offset+1));
 	    else if (!stretch)
 		PROTECT(x = with_changed_nth(x,offset+1,y));
@@ -1666,7 +1670,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
               _("no method for assigning subsets of this S4 class"));
     }
 
-    if ((isList(x) || isLanguage(x)) && !isNull(x)) {
+    if ((isList(x) || isLanguage(x)) && x != R_NilValue) {
 
         int ix = tag_index(x,name);
 
@@ -1727,7 +1731,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
             }
         }
 
-        if (isNull(val)) {
+        if (val == R_NilValue) {
             /* If "val" is NULL, this is an element deletion */
             /* if there is a match to "name" otherwise "x" */
             /* is unchanged.  The attributes need adjustment. */
@@ -1770,7 +1774,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 		PROTECT(ans = allocVector(type, nx + 1));
 		PROTECT(ansnames = allocVector(STRSXP, nx + 1));
                 copy_vector_elements (ans, 0, x, 0, nx);
-		if (isNull(names))
+		if (names == R_NilValue)
 		    for (int i = 0; i < nx; i++)
 			SET_STRING_ELT(ansnames, i, R_BlankString);
 		else
