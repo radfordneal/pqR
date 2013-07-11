@@ -2,6 +2,8 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2002-2011   The R Development Core Team.
  *
+ *  Changes to KalmanLike, KalmanSmooth, and KalmanFore by Radford Neal, 2013.
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
