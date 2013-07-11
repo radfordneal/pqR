@@ -63,66 +63,6 @@ static int integerOneIndex(int i, int len, SEXP call)
     return(indx);
 }
 
-/* Utility formerly used (only in) do_subassign2_dflt(), 
-   i.e. "[[<-" in ./subassign.c.  NOW UNUSED: replaced by use of get1index. */
-#if 0
-int attribute_hidden
-OneIndex(SEXP x, SEXP s, int len, SEXP *newname, int pos, SEXP call)
-{
-    SEXP names;
-    int i, indx, nx;
-
-    if (pos < 0 && length(s) > 1) {
-	ECALL(call, _("attempt to select more than one element"));
-    }
-    if (pos < 0 && length(s) < 1) {
-	ECALL(call, _("attempt to select less than one element"));
-    }
-
-    if(pos < 0) pos = 0;
-
-    indx = -1;
-    *newname = R_NilValue;
-    switch(TYPEOF(s)) {
-    case LGLSXP:
-    case INTSXP:
-	indx = integerOneIndex(INTEGER(s)[pos], len, call);
-	break;
-    case REALSXP:
-	indx = integerOneIndex(REAL(s)[pos], len, call);
-	break;
-    case SYMSXP:
-    case STRSXP:
-        const char *sbname = TYPEOF(s)==SYMSXP ? translateChar(PRINTNAME(s))
-                              : translateChar(STRING_ELT(s,pos)) :
-	nx = length(x);
-	names = getAttrib(x, R_NamesSymbol);
-	if (names != R_NilValue) {
-	    /* Exact match only */
-	    for (i = 0; i < nx; i++) {
-		const char *tmp = translateChar(STRING_ELT(names, i));
-		if (!tmp[0]) continue;
-		if (streql(tmp,sbname)) {
-		    indx = i;
-		    break;
-		}
-	    }
-	}
-	if (indx == -1)
-	    indx = nx;
-	*newname = STRING_ELT(s, pos);
-	break;
-    default:
-	if (call == R_NilValue)
-	    error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
-	else
-	    errorcall(call, _("invalid subscript type '%s'"),
-		      type2char(TYPEOF(s)));
-    }
-    return indx;
-}
-#endif
-
 int attribute_hidden
 get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 {
