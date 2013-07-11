@@ -113,54 +113,21 @@ static SEXP EnlargeVector(SEXP x, R_len_t newlen)
 	error(_("attempt to enlarge non-vector"));
 
     /* Enlarge the vector itself. */
-    len = length(x);
+    len = LENGTH(x);
     if (LOGICAL(GetOption1(install("check.bounds")))[0])
 	warning(_("assignment outside vector/list limits (extending from %d to %d)"),
 		len, newlen);
     PROTECT(x);
     PROTECT(newx = allocVector(TYPEOF(x), newlen));
 
-    /* Copy the elements into place. */
-    switch(TYPEOF(x)) {
-    case LGLSXP:
-    case INTSXP:
-	for (i = 0; i < len; i++)
-	    INTEGER(newx)[i] = INTEGER(x)[i];
-	for (i = len; i < newlen; i++)
-	    INTEGER(newx)[i] = NA_INTEGER;
-	break;
-    case REALSXP:
-	for (i = 0; i < len; i++)
-	    REAL(newx)[i] = REAL(x)[i];
-	for (i = len; i < newlen; i++)
-	    REAL(newx)[i] = NA_REAL;
-	break;
-    case CPLXSXP:
-	for (i = 0; i < len; i++)
-	    COMPLEX(newx)[i] = COMPLEX(x)[i];
-	for (i = len; i < newlen; i++) {
-	    COMPLEX(newx)[i].r = NA_REAL;
-	    COMPLEX(newx)[i].i = NA_REAL;
-	}
-	break;
-    case STRSXP:
-        copy_string_elements (newx, 0, x, 0, len);
-	for (i = len; i < newlen; i++)
-	    SET_STRING_ELT(newx, i, NA_STRING); /* was R_BlankString  < 1.6.0 */
-	break;
-    case EXPRSXP:
-    case VECSXP:
+    if (isVectorList(x)) {
+        /* should be OK to copy without adjusting NAMEDCNT (x won't be used) */
         copy_vector_elements (newx, 0, x, 0, len);
         /* elements after ones copied were set to R_NilValue by allocVector */
-	break;
-    case RAWSXP:
-	for (i = 0; i < len; i++)
-	    RAW(newx)[i] = RAW(x)[i];
-	for (i = len; i < newlen; i++)
-	    RAW(newx)[i] = (Rbyte) 0;
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("EnlargeVector", x);
+    }
+    else {
+        copy_elements (newx, 0, 1, x, 0, 1, len);
+        set_elements_to_NA_or_NULL (newx, len, newlen-len);
     }
 
     /* Adjust the attribute list. */
