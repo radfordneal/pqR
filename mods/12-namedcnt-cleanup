@@ -11,5 +11,7 @@ by other changes that broadened when objects are shared.
 More types are compatible for [[<-, such as assigning a raw to a real,
 and a function to an expression.
 
-The bugs fixed include pqR issues #14 and #15, which also occur in
-R-2.15.0 and R-3.0.1.
+The bugs fixed include pqR issues #14 and #15, and all of #16 except
+about printing dimnames, which also occur in R-2.15.0 and R-3.0.1.
+Also makes illegal constructs like v <- pairlist(1,2,3); v[[-2]] <- NULL,
+which are documented to be illegal.
