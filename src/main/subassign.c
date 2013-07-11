@@ -33,48 +33,8 @@
  */
 
 /*
- *
- *  Subset Mutation for Lists and Vectors
- *
- *  The following table shows the codes which have been assigned to the
- *  type combinations in assignments of the form "x[s] <- y".  Here the
- *  type of y is given across the top of the table and the type of x at
- *  the side.  (Note: the lack of 11 and 12 indices here is due to the
- *  removal of built-in factors).
- *
- *  NB these tables are out of date, and exclude types 21, 22, 23, 24 ...
- *
- x \ y   NIL  SYM CLOS  ENV PROM LANG SPE- BUI-  LGL  INT REAL CPLX  STR  VEC EXPR  FUN
-				      CIAL LTIN
- LANG    600  601  603  604  605  606  607  608  610  613  614  615  616  619  620  699
- LGL    1000 1001 1003 1004 1005 1006 1007 1008 1010 1013 1014 1015 1016 1019 1020 1099
- INT    1300 1301 1303 1304 1305 1306 1307 1308 1310 1313 1314 1315 1316 1319 1320 1399
- REAL   1400 1401 1403 1404 1405 1406 1407 1408 1410 1413 1414 1415 1416 1419 1420 1499
- CPLX   1500 1501 1503 1504 1505 1506 1507 1508 1510 1513 1514 1515 1516 1519 1520 1599
- STR    1600 1601 1603 1604 1605 1606 1607 1608 1610 1613 1614 1615 1616 1619 1620 1699
- VEC    1900 1901 1903 1904 1905 1906 1907 1908 1910 1913 1914 1915 1916 1919 1920 1999
- EXPR   2000 2001 2003 2004 2005 2006 2007 2008 2010 2013 2014 2015 2016 2019 2020 2099
- *
- *
- *  The following table (which is laid out as described above) contains
- *  "*" for those combinations where the assignment has been implemented.
- *  Some assignments do not make a great deal of sense and we have chosen
- *  to leave them unimplemented, although the addition of new assignment
- *  combinations represents no great difficulty.
- *
- *       NIL   SYM CLOS  ENV PROM LANG SPE- BUI-  LGL  INT REAL CPLX  STR  VEC EXPR  FUN
- *				       CIAL LTIN
- LANG
- LGL						   *    *    *    *    *    *    *
- INT						   *    *    *    *    *    *    *
- REAL						   *    *    *    *    *    *    *
- CPLX						   *    *    *    *    *    *    *
- STR						   *    *    *    *    *    *    *
- VEC      *     *    *    *    *    *    *    *    *    *    *    *    *    *    *    *
- EXPR     *     *                   *		   *    *    *    *    *    *    *
- *
- *  The reason for the LGL row and column are because we want to allow any
- *  assignment of the form "x[s] <- NA" (col) and because the interpreted
+ *  Regarding logical objects, note that we want to allow any assignment
+ *  of the form "x[s] <- NA" (here NA is logical), and the interpreted
  *  "ifelse" requires assignment into a logical object.
  */
 
@@ -95,10 +55,6 @@
 #include <R_ext/RS.h> /* for test of S4 objects */
 
 
-#if 0
-static SEXP gcall;
-#endif
-
 /* EnlargeVector() takes a vector "x" and changes its length to "newlen".
    This allows to assign values "past the end" of the vector or list.
    Note that, unlike S, we only extend as much as is necessary.
@@ -113,59 +69,26 @@ static SEXP EnlargeVector(SEXP x, R_len_t newlen)
 	error(_("attempt to enlarge non-vector"));
 
     /* Enlarge the vector itself. */
-    len = length(x);
+    len = LENGTH(x);
     if (LOGICAL(GetOption1(install("check.bounds")))[0])
 	warning(_("assignment outside vector/list limits (extending from %d to %d)"),
 		len, newlen);
     PROTECT(x);
     PROTECT(newx = allocVector(TYPEOF(x), newlen));
 
-    /* Copy the elements into place. */
-    switch(TYPEOF(x)) {
-    case LGLSXP:
-    case INTSXP:
-	for (i = 0; i < len; i++)
-	    INTEGER(newx)[i] = INTEGER(x)[i];
-	for (i = len; i < newlen; i++)
-	    INTEGER(newx)[i] = NA_INTEGER;
-	break;
-    case REALSXP:
-	for (i = 0; i < len; i++)
-	    REAL(newx)[i] = REAL(x)[i];
-	for (i = len; i < newlen; i++)
-	    REAL(newx)[i] = NA_REAL;
-	break;
-    case CPLXSXP:
-	for (i = 0; i < len; i++)
-	    COMPLEX(newx)[i] = COMPLEX(x)[i];
-	for (i = len; i < newlen; i++) {
-	    COMPLEX(newx)[i].r = NA_REAL;
-	    COMPLEX(newx)[i].i = NA_REAL;
-	}
-	break;
-    case STRSXP:
-        copy_string_elements (newx, 0, x, 0, len);
-	for (i = len; i < newlen; i++)
-	    SET_STRING_ELT(newx, i, NA_STRING); /* was R_BlankString  < 1.6.0 */
-	break;
-    case EXPRSXP:
-    case VECSXP:
+    if (isVectorList(x)) {
+        /* should be OK to copy without adjusting NAMEDCNT (x won't be used) */
         copy_vector_elements (newx, 0, x, 0, len);
         /* elements after ones copied were set to R_NilValue by allocVector */
-	break;
-    case RAWSXP:
-	for (i = 0; i < len; i++)
-	    RAW(newx)[i] = RAW(x)[i];
-	for (i = len; i < newlen; i++)
-	    RAW(newx)[i] = (Rbyte) 0;
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("EnlargeVector", x);
+    }
+    else {
+        copy_elements (newx, 0, 1, x, 0, 1, len);
+        set_elements_to_NA_or_NULL (newx, len, newlen-len);
     }
 
     /* Adjust the attribute list. */
     names = getAttrib(x, R_NamesSymbol);
-    if (!isNull(names)) {
+    if (names != R_NilValue) {
 	PROTECT(newnames = allocVector(STRSXP, newlen));
 	for (i = 0; i < len; i++)
 	    SET_STRING_ELT(newnames, i, STRING_ELT(names, i));
@@ -395,6 +318,8 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
         if (endi > len) endi = len;
         PROTECT(xnew = allocVector(TYPEOF(x), len-(endi-starti)));
         copy_vector_elements (xnew, 0, x, 0, starti);
+        for (i = starti; i < endi; i++)
+            DEC_NAMEDCNT (VECTOR_ELT (x, i));
         copy_vector_elements (xnew, starti, x, endi, len-endi);
         xnames = getAttrib(x, R_NamesSymbol);
         if (xnames != R_NilValue) {
@@ -432,6 +357,8 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 	    SET_VECTOR_ELT(xnew, ii, VECTOR_ELT(x, i));
 	    ii++;
 	}
+        else
+            DEC_NAMEDCNT (VECTOR_ELT (x, i));
     }
     xnames = getAttrib(x, R_NamesSymbol);
     if (xnames != R_NilValue) {
@@ -1269,61 +1196,49 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     S4 = IS_S4_OBJECT(x);
     nsubs = length(subs);
 
-    oldtype = 0;
+    oldtype = NILSXP;
     if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
 	oldtype = TYPEOF(x);
-	PROTECT(x = PairToVectorList(x));
+	x = PairToVectorList(x);
     }
-    else if (length(x) == 0) {
+    else if (x == R_NilValue) {
 	if (length(y) == 0) {
 	    UNPROTECT(1);
 	    return(x);
 	}
-	else {
-	    /* bug PR#2590 coerce only if null */
-	    if(isNull(x)) PROTECT(x = coerceVector(x, TYPEOF(y)));
-	    else PROTECT(x);
-	}
+        x = coerceVector(x, TYPEOF(y));
     }
-    else {
-	PROTECT(x);
+    else if (!isVector(x))
+	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+    else if (LENGTH(x) == 0) {
+	if (length(y) == 0) {
+	    UNPROTECT(1);
+	    return(x);
+	}
     }
 
-    switch (TYPEOF(x)) {
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case EXPRSXP:
-    case VECSXP:
-    case RAWSXP:
-	switch (nsubs) {
-	case 0:
-	    x = VectorAssign(call, x, R_MissingArg, y);
-	    break;
-	case 1:
-	    x = VectorAssign(call, x, CAR(subs), y);
-	    break;
-	case 2:
-	    x = MatrixAssign(call, x, subs, y);
-	    break;
-	default:
-	    x = ArrayAssign(call, x, subs, y);
-	    break;
-	}
-	break;
+    PROTECT(x);
+
+    switch (nsubs) {
+    case 0:
+        x = VectorAssign(call, x, R_MissingArg, y);
+        break;
+    case 1:
+        x = VectorAssign(call, x, CAR(subs), y);
+        break;
+    case 2:
+        x = MatrixAssign(call, x, subs, y);
+        break;
     default:
-	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
-	break;
+        x = ArrayAssign(call, x, subs, y);
+        break;
     }
 
     if (oldtype == LANGSXP) {
-	if(length(x)) {
-	    x = VectorToPairList(x);
-	    SET_TYPEOF(x, LANGSXP);
-	} else
+	if (LENGTH(x)==0)
 	    error(_("result is zero-length and so cannot be a language object"));
+        x = VectorToPairList(x);
+        SET_TYPEOF (x, LANGSXP);
     }
 
     /* Note the setting of NAMED(x) to zero here.  This means */
@@ -1383,10 +1298,14 @@ SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden
 do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    LOCAL_COPY(R_NilValue);
+
     SEXP dims, names, newname, subs, x, xtop, xup, y;
-    SEXP thesub = R_NilValue, xOrig = R_NilValue;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, which, len = 0 /* -Wall */;
     Rboolean S4, recursed;
+    R_len_t length_x;
+
+    SEXP thesub = R_NilValue, xOrig = R_NilValue;
 
     PROTECT(args);
 
@@ -1416,12 +1335,12 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return(S4 ? xOrig : x);
     }
 
-    if (isNull(x)) {
+    if (x == R_NilValue) {
         /* Handle NULL left-hand sides.  If the right-hand side is NULL,
            just return NULL, otherwise replace x by a zero length list 
            (VECSXP) or vector of type of y (if y of length one).  (This
            dependence on the length of y is of dubious wisdom!) */
-	if (isNull(y)) {
+	if (y == R_NilValue) {
 	    UNPROTECT(1);
 	    return R_NilValue;
 	}
@@ -1449,9 +1368,10 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
                 if (!isVectorList(x) && !isPairList(x))
                     errorcall (call, 
                       _("recursive indexing failed at level %d\n"), i+1);
+                length_x = length(x);
                 off = get1index (thesub, getAttrib(x, R_NamesSymbol),
-                                 length(x), TRUE, i, call);
-                if (off < 0 || off >= length(x))
+                                 length_x, TRUE, i, call);
+                if (off < 0 || off >= length_x)
                     errorcall(call, _("no such index at level %d\n"), i+1);
                 xup = x;
                 if (isPairList(xup))
@@ -1473,10 +1393,10 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     if (isVector(x)) {
-        R_len_t leny = length(y);
-	if (!isVectorList(x) && leny == 0)
+        R_len_t length_y = length(y);
+	if (!isVectorList(x) && length_y == 0)
 	    error(_("replacement has length zero"));
-	if (!isVectorList(x) && leny > 1)
+	if (!isVectorList(x) && length_y > 1)
 	    error(_("more elements supplied than there are to replace"));
 	if (nsubs == 0 || CAR(subs) == R_MissingArg)
 	    error(_("[[ ]] with missing subscript"));
@@ -1485,16 +1405,18 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     stretch = 0;
     newname = R_NilValue;
 
+    length_x = length(x);
+
     if (nsubs == 1) {
-        offset = get1index (thesub, getAttrib(x,R_NamesSymbol), length(x), 
+        offset = get1index (thesub, getAttrib(x,R_NamesSymbol), length_x, 
                             FALSE, (recursed ? len-1 : -1), R_NilValue);
         if (offset < 0) {
             if (isString(thesub) || isSymbol(thesub))
-                offset = length(x);
+                offset = length_x;
             else
                 error(_("[[ ]] subscript out of bounds"));
         }
-        if (offset >= length(x)) {
+        if (offset >= length_x) {
             stretch = offset + 1;
             newname = isString(thesub) ? STRING_ELT(thesub,len-1)
                     : isSymbol(thesub) ? PRINTNAME(thesub) : R_NilValue;
@@ -1507,7 +1429,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         offset = 0;
         for (i = ndims-1; i >= 0; i--) {
             R_len_t ix = get1index (CAR(nthcdr(subs,i)),
-                           isNull(names) ? R_NilValue : VECTOR_ELT(names, i),
+                           names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
                            INTEGER(dims)[i],/*partial ok*/ FALSE, -1, call);
             if (ix < 0 || ix >= INTEGER(dims)[i])
                 error(_("[[ ]] subscript out of bounds"));
@@ -1518,7 +1440,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (isVector(x)) {
 
-        if (nsubs == 1 && isVectorList(x) && isNull(y)) {
+        if (nsubs == 1 && isVectorList(x) && y == R_NilValue) {
             PROTECT(x = DeleteOneVectorListItem(x, offset));
         }
         else {
@@ -1547,7 +1469,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
             if (stretch && newname != R_NilValue) {
                 names = getAttrib(x, R_NamesSymbol);
                 if (names == R_NilValue) {
-                    PROTECT(names = allocVector(STRSXP, length(x)));
+                    PROTECT(names = allocVector(STRSXP, LENGTH(x)));
                     SET_STRING_ELT(names, offset, newname);
                     setAttrib(x, R_NamesSymbol, names);
                     UNPROTECT(1);
@@ -1562,24 +1484,24 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
         SET_NAMEDCNT_MAX(y);
 	if (nsubs == 1) {
-	    if (isNull(y))
-		PROTECT(x = with_no_nth(x,offset+1));
+	    if (y == R_NilValue)
+		x = with_no_nth(x,offset+1);
 	    else if (!stretch)
-		PROTECT(x = with_changed_nth(x,offset+1,y));
+		x = with_changed_nth(x,offset+1,y);
 	    else {
                 SEXP append = 
                   cons_with_tag (y, R_NilValue, newname == R_NilValue ? 
                                   R_NilValue : install(translateChar(newname)));
-                for (i = length(x)+1; i < stretch; i++)
+                for (i = length_x + 1; i < stretch; i++)
                     append = CONS(R_NilValue,append);
-                PROTECT(x = with_pairlist_appended(x,append));
+                x = with_pairlist_appended(x,append);
             }
 	}
 	else {
             SEXP nth = nthcdr(x,offset);
 	    SETCAR(nth,y);
-            PROTECT(x);
 	}
+        PROTECT(x);
     }
 
     else 
@@ -1591,8 +1513,10 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (recursed) {
 	if (isVectorList(xup))
 	    SET_VECTOR_ELT(xup, off, x);
-	else
+	else {
             SETCAR(nthcdr(xup,off),x); /* xup was duplicated, so this is safe */
+            SET_NAMEDCNT_MAX(x);
+        }
     }
     else
         xtop = x;
@@ -1664,7 +1588,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
               _("no method for assigning subsets of this S4 class"));
     }
 
-    if ((isList(x) || isLanguage(x)) && !isNull(x)) {
+    if ((isList(x) || isLanguage(x)) && x != R_NilValue) {
 
         int ix = tag_index(x,name);
 
@@ -1725,7 +1649,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
             }
         }
 
-        if (isNull(val)) {
+        if (val == R_NilValue) {
             /* If "val" is NULL, this is an element deletion */
             /* if there is a match to "name" otherwise "x" */
             /* is unchanged.  The attributes need adjustment. */
@@ -1768,7 +1692,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 		PROTECT(ans = allocVector(type, nx + 1));
 		PROTECT(ansnames = allocVector(STRSXP, nx + 1));
                 copy_vector_elements (ans, 0, x, 0, nx);
-		if (isNull(names))
+		if (names == R_NilValue)
 		    for (int i = 0; i < nx; i++)
 			SET_STRING_ELT(ansnames, i, R_BlankString);
 		else
