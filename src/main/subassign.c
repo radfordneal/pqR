@@ -264,7 +264,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     LOCAL_COPY(R_NilValue);
     SEXP dim, indx, newnames;
-    int i, ii, iy, n, nx, ny, stretch, which;
+    int i, ii, iy, n, nx, ny, stretch;
     double ry;
 
     if (x==R_NilValue && y==R_NilValue)
@@ -299,8 +299,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Here we make sure that the LHS has */
     /* been coerced into a form which can */
     /* accept elements from the RHS. */
-    which = SubassignTypeFix(&x, &y, stretch, 1, call);
-    /* = 100 * TYPEOF(x) + TYPEOF(y);*/
+    SubassignTypeFix(&x, &y, stretch, 1, call);
     if (n == 0) {
 	UNPROTECT(2);
 	return x;
@@ -328,19 +327,15 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     else
 	PROTECT(y);
 
-    /* Note that we are now committed. */
-    /* Since we are mutating existing objects, */
-    /* any changes we make now are (likely to be) permanent.  Beware! */
+    /* Do the actual assignment... Note that assignments to string vectors
+       from non-string vectors and from raw vectors to non-raw vectors are
+       not handled here, but are avoided by coercion in SubassignTypeFix. */
 
-    switch(which) {
-	/* because we have called SubassignTypeFix the commented
-	   values cannot occur (and would be unsafe) */
+    switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
 
-    case 1010:	/* logical   <- logical	  */
-    case 1310:	/* integer   <- logical	  */
-    /* case 1013:  logical   <- integer	  */
-    case 1313:	/* integer   <- integer	  */
-
+    case (LGLSXP<<5) + LGLSXP:
+    case (INTSXP<<5) + LGLSXP:
+    case (INTSXP<<5) + INTSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -349,9 +344,8 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1410:	/* real	     <- logical	  */
-    case 1413:	/* real	     <- integer	  */
-
+    case (REALSXP<<5) + LGLSXP:
+    case (REALSXP<<5) + INTSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -364,10 +358,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    /* case 1014:  logical   <- real	  */
-    /* case 1314:  integer   <- real	  */
-    case 1414:	/* real	     <- real	  */
-
+    case (REALSXP<<5) + REALSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -376,9 +367,8 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1510:	/* complex   <- logical	  */
-    case 1513:	/* complex   <- integer	  */
-
+    case (CPLXSXP<<5) + LGLSXP:
+    case (CPLXSXP<<5) + INTSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -395,8 +385,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1514:	/* complex   <- real	  */
-
+    case (CPLXSXP<<5) + REALSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -413,11 +402,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    /* case 1015:  logical   <- complex	  */
-    /* case 1315:  integer   <- complex	  */
-    /* case 1415:  real	     <- complex	  */
-    case 1515:	/* complex   <- complex	  */
-
+    case (CPLXSXP<<5) + CPLXSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -426,16 +411,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1610:	/* character <- logical	  */
-    case 1613:	/* character <- integer	  */
-    case 1614:	/* character <- real	  */
-    case 1615:	/* character <- complex	  */
-    case 1616:	/* character <- character */
-    /* case 1016:  logical   <- character */
-    /* case 1316:  integer   <- character */
-    /* case 1416:  real	     <- character */
-    /* case 1516:  complex   <- character */
-
+    case (STRSXP<<5) + STRSXP:
 	for (i = 0; i < n; i++) {
 	    ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -444,23 +420,19 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    /* case 1019:  logial     <- vector   */
-    /* case 1319:  integer    <- vector   */
-    /* case 1419:  real       <- vector   */
-    /* case 1519:  complex    <- vector   */
-    /* case 1619:  character  <- vector   */
+    case (RAWSXP<<5) + RAWSXP:
+	for (i = 0; i < n; i++) {
+	    ii = INTEGER(indx)[i];
+	    if (ii == NA_INTEGER) continue;
+	    ii = ii - 1;
+	    RAW(x)[ii] = RAW(y)[i % ny];
+	}
+	break;
 
-    /* case 1910:  vector     <- logical    */
-    /* case 1913:  vector     <- integer    */
-    /* case 1914:  vector     <- real       */
-    /* case 1915:  vector     <- complex    */
-    /* case 1916:  vector     <- character  */
-
-    case 2019:	/* expression <- vector, needed if we have promoted a
-		   RHS  to a list */
-    case 2020:	/* expression <- expression */
-    case 1919:  /* vector     <- vector     */
-
+    case (EXPRSXP<<5) + VECSXP:
+    case (EXPRSXP<<5) + EXPRSXP:
+    case (VECSXP<<5)  + EXPRSXP:
+    case (VECSXP<<5)  + VECSXP:
         for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i];
             if (ii == NA_INTEGER) continue;
@@ -475,35 +447,17 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         }
         break;
 
-    /* case 2001: */
-    /* case 2006:  expression <- language   */
-    /* case 2010:  expression <- logical    */
-    /* case 2013:  expression <- integer    */
-    /* case 2014:  expression <- real	    */
-    /* case 2015:  expression <- complex    */
-    /* case 2016:  expression <- character  */
-
-    case 1900:  /* vector     <- null       */
-    case 2000:  /* expression <- null       */
-
+    case (EXPRSXP<<5) + NILSXP:
+    case (VECSXP<<5)  + NILSXP:
 	x = DeleteListElements(x, indx);
 	UNPROTECT(4);
 	return x;
 	break;
 
-    case 2424:	/* raw   <- raw	  */
-
-	for (i = 0; i < n; i++) {
-	    ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    RAW(x)[ii] = RAW(y)[i % ny];
-	}
-	break;
-
     default:
 	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
+
     /* Check for additional named elements, if subscripting with strings. */
     /* Note makeSubscript passes the additional names back as the use.names
        attribute (a vector list) of the generated subscript vector */
@@ -542,7 +496,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
-    int i, j, ii, jj, ij, iy, k, n, which;
+    int i, j, ii, jj, ij, iy, k, n;
     double ry;
     int nr, ny;
     int nrs, ncs;
@@ -585,7 +539,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     if (n > 0 && n % ny)
 	error(_("number of items to replace is not a multiple of replacement length"));
 
-    which = SubassignTypeFix(&x, &y, 0, 1, call);
+    SubassignTypeFix(&x, &y, 0, 1, call);
     if (n == 0) return x;
 
     PROTECT(x);
@@ -600,20 +554,16 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     else
 	PROTECT(y);
 
-    /* Note that we are now committed.  Since we are mutating */
-    /* existing objects any changes we make now are permanent. */
-    /* Beware! */
+    /* Do the actual assignment... Note that assignments to string vectors
+       from non-string vectors and from raw vectors to non-raw vectors are
+       not handled here, but are avoided by coercion in SubassignTypeFix. */
 
     k = 0;
-    switch (which) {
-	/* because we have called SubassignTypeFix the commented
-	   values cannot occur (and would be unsafe) */
+    switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
 
-    case 1010:	/* logical   <- logical	  */
-    case 1310:	/* integer   <- logical	  */
-    /* case 1013: logical   <- integer	  */
-    case 1313:	/* integer   <- integer	  */
-
+    case (LGLSXP<<5) + LGLSXP:
+    case (INTSXP<<5) + LGLSXP:
+    case (INTSXP<<5) + INTSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -629,9 +579,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1410:	/* real	     <- logical	  */
-    case 1413:	/* real	     <- integer	  */
-
+    case (REALSXP<<5) + LGLSXP:
+    case (REALSXP<<5) + INTSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -651,10 +600,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    /* case 1014:  logical   <- real	  */
-    /* case 1314:  integer   <- real	  */
-    case 1414:	/* real	     <- real	  */
-
+    case (REALSXP<<5) + REALSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -670,9 +616,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1510:	/* complex   <- logical	  */
-    case 1513:	/* complex   <- integer	  */
-
+    case (CPLXSXP<<5) + LGLSXP:
+    case (CPLXSXP<<5) + INTSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -696,8 +641,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1514:	/* complex   <- real	  */
-
+    case (CPLXSXP<<5) + REALSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -721,11 +665,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    /* case 1015:  logical   <- complex	  */
-    /* case 1315:  integer   <- complex	  */
-    /* case 1415:  real	     <- complex	  */
-    case 1515:	/* complex   <- complex	  */
-
+    case (CPLXSXP<<5) + CPLXSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -741,16 +681,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 1610:	/* character <- logical	  */
-    case 1613:	/* character <- integer	  */
-    case 1614:	/* character <- real	  */
-    case 1615:	/* character <- complex	  */
-    case 1616:	/* character <- character */
-    /* case 1016:  logical   <- character */
-    /* case 1316:  integer   <- character */
-    /* case 1416:  real	     <- character */
-    /* case 1516:  complex   <- character */
-
+    case (STRSXP<<5) + STRSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -765,8 +696,27 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    }
 	}
 	break;
-    case 1919: /* vector <- vector */
 
+    case (RAWSXP<<5) + RAWSXP:
+	for (j = 0; j < ncs; j++) {
+	    jj = INTEGER(sc)[j];
+	    if (jj == NA_INTEGER) continue;
+	    jj = jj - 1;
+	    for (i = 0; i < nrs; i++) {
+		ii = INTEGER(sr)[i];
+		if (ii == NA_INTEGER) continue;
+		ii = ii - 1;
+		ij = ii + jj * nr;
+		RAW(x)[ij] = RAW(y)[k];
+		k = (k + 1) % ny;
+	    }
+	}
+	break;
+
+    case (EXPRSXP<<5) + VECSXP:
+    case (EXPRSXP<<5) + EXPRSXP:
+    case (VECSXP<<5)  + EXPRSXP:
+    case (VECSXP<<5)  + VECSXP:
 	for (j = 0; j < ncs; j++) {
 	    jj = INTEGER(sc)[j];
 	    if (jj == NA_INTEGER) continue;
@@ -789,26 +739,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	}
 	break;
 
-    case 2424: /* raw   <- raw   */
-
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
-		ij = ii + jj * nr;
-		RAW(x)[ij] = RAW(y)[k];
-		k = (k + 1) % ny;
-	    }
-	}
-	break;
-
     default:
-	error(_("incompatible types (from %s to %s) in matrix subset assignment"),
-		  type2char(which%100), type2char(which/100));
+	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
     UNPROTECT(2);
     return x;
@@ -817,7 +749,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
-    int i, j, ii, iy, jj, k=0, n, ny, which;
+    int i, j, ii, iy, jj, k=0, n, ny;
     int **subs, *indx, *bound, *offset;
     SEXP dims, tmp;
     double ry;
@@ -874,7 +806,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
 
-    which = SubassignTypeFix(&x, &y, 0, 1, call);/* = 100 * TYPEOF(x) + TYPEOF(y);*/
+    SubassignTypeFix(&x, &y, 0, 1, call);
 
     if (n == 0) {
 	UNPROTECT(1);
@@ -893,9 +825,9 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     else
 	PROTECT(y);
 
-    /* Note that we are now committed.  Since we are mutating */
-    /* existing objects any changes we make now are permanent. */
-    /* Beware! */
+    /* Do the actual assignment... Note that assignments to string vectors
+       from non-string vectors and from raw vectors to non-raw vectors are
+       not handled here, but are avoided by coercion in SubassignTypeFix. */
 
     for (i = 0; i < n; i++) {
 	ii = 0;
@@ -905,19 +837,16 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    ii += (jj - 1) * offset[j];
 	}
 
-	switch (which) {
+	switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
 
-	case 1010:	/* logical   <- logical	  */
-	case 1310:	/* integer   <- logical	  */
-	/* case 1013:	   logical   <- integer	  */
-	case 1313:	/* integer   <- integer	  */
-
+        case (LGLSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + INTSXP:
 	    INTEGER(x)[ii] = INTEGER(y)[i % ny];
 	    break;
 
-	case 1410:	/* real	     <- logical	  */
-	case 1413:	/* real	     <- integer	  */
-
+        case (REALSXP<<5) + LGLSXP:
+        case (REALSXP<<5) + INTSXP:
 	    iy = INTEGER(y)[i % ny];
 	    if (iy == NA_INTEGER)
 		REAL(x)[ii] = NA_REAL;
@@ -925,16 +854,12 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 		REAL(x)[ii] = iy;
 	    break;
 
-	/* case 1014:	   logical   <- real	  */
-	/* case 1314:	   integer   <- real	  */
-	case 1414:	/* real	     <- real	  */
-
+        case (REALSXP<<5) + REALSXP:
 	    REAL(x)[ii] = REAL(y)[i % ny];
 	    break;
 
-	case 1510:	/* complex   <- logical	  */
-	case 1513:	/* complex   <- integer	  */
-
+        case (CPLXSXP<<5) + LGLSXP:
+        case (CPLXSXP<<5) + INTSXP:
 	    iy = INTEGER(y)[i % ny];
 	    if (iy == NA_INTEGER) {
 		COMPLEX(x)[ii].r = NA_REAL;
@@ -946,8 +871,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    }
 	    break;
 
-	case 1514:	/* complex   <- real	  */
-
+        case (CPLXSXP<<5) + REALSXP:
 	    ry = REAL(y)[i % ny];
 	    if (ISNA(ry)) {
 		COMPLEX(x)[ii].r = NA_REAL;
@@ -959,29 +883,22 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    }
 	    break;
 
-	/* case 1015:	   logical   <- complex	  */
-	/* case 1315:	   integer   <- complex	  */
-	/* case 1415:	   real	     <- complex	  */
-	case 1515:	/* complex   <- complex	  */
-
+        case (CPLXSXP<<5) + CPLXSXP:
 	    COMPLEX(x)[ii] = COMPLEX(y)[i % ny];
 	    break;
 
-	case 1610:	/* character <- logical	  */
-	case 1613:	/* character <- integer	  */
-	case 1614:	/* character <- real	  */
-	case 1615:	/* character <- complex	  */
-	case 1616:	/* character <- character */
-	/* case 1016:	   logical   <- character */
-	/* case 1316:	   integer   <- character */
-	/* case 1416:	   real	     <- character */
-	/* case 1516:	   complex   <- character */
-
+        case (STRSXP<<5) + STRSXP:
 	    SET_STRING_ELT(x, ii, STRING_ELT(y, i % ny));
 	    break;
 
-	case 1919: /* vector <- vector */
+        case (RAWSXP<<5) + RAWSXP:
+	    RAW(x)[ii] = RAW(y)[i % ny];
+	    break;
 
+        case (EXPRSXP<<5) + VECSXP:
+        case (EXPRSXP<<5) + EXPRSXP:
+        case (VECSXP<<5)  + EXPRSXP:
+        case (VECSXP<<5)  + VECSXP:
             if (i < ny) {
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             }
@@ -992,15 +909,10 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             }
 	    break;
 
-	case 2424: /* raw <- raw */
-
-	    RAW(x)[ii] = RAW(y)[i % ny];
-	    break;
-
 	default:
-	error(_("incompatible types (from %s to %s) in array subset assignment"),
-		  type2char(which%100), type2char(which/100));
+            warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
 	}
+
     next_i:
 	;
 	if (n > 1) {
