@@ -115,7 +115,8 @@ static SEXP embedInVector(SEXP v)
 }
 
 /* Level 1 is used in VectorAssign, MatrixAssign, ArrayAssign.
-   That coerces RHS to a list or expression.
+   That coerces RHS to a list or expression.  Also, code for
+   level 1 doesn't handle conversions from RAWSXP or to STRSXP.
 
    Level 2 is used in do_subassign2_dflt.
    This does not coerce when assigning into a list.
@@ -124,164 +125,48 @@ static SEXP embedInVector(SEXP v)
 static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
 			    SEXP call)
 {
-    /* A rather pointless optimization, but level 2 used to be handled
-       differently */
-    Rboolean redo_which = TRUE;
-    int which = 100 * TYPEOF(*x) + TYPEOF(*y);
-    /* coercion can lose the object bit */
-    Rboolean x_is_object = OBJECT(*x);
+    Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
 
-    switch (which) {
-    case 1000:	/* logical    <- null       */
-    case 1300:	/* integer    <- null       */
-    case 1400:	/* real	      <- null       */
-    case 1500:	/* complex    <- null       */
-    case 1600:	/* character  <- null       */
-    case 1900:  /* vector     <- null       */
-    case 2000:  /* expression <- null       */
-    case 2400:	/* raw        <- null       */
+    const int type_x = TYPEOF(*x), 
+              type_y = TYPEOF(*y);
+    const int atom_x = isVectorAtomic(*x),
+              atom_y = isVectorAtomic(*y);
 
-    case 1010:	/* logical    <- logical    */
-    case 1310:	/* integer    <- logical    */
-    case 1410:	/* real	      <- logical    */
-    case 1510:	/* complex    <- logical    */
-    case 1313:	/* integer    <- integer    */
-    case 1413:	/* real	      <- integer    */
-    case 1513:	/* complex    <- integer    */
-    case 1414:	/* real	      <- real	    */
-    case 1514:	/* complex    <- real	    */
-    case 1515:	/* complex    <- complex    */
-    case 1616:	/* character  <- character  */
-    case 1919:  /* vector     <- vector     */
-    case 2020:	/* expression <- expression */
-    case 2424:	/* raw        <- raw        */
-
-	redo_which = FALSE;
-	break;
-
-    case 1013:	/* logical    <- integer    */
-
-	*x = coerceVector(*x, INTSXP);
-	break;
-
-    case 1014:	/* logical    <- real	    */
-    case 1314:	/* integer    <- real	    */
-
-	*x = coerceVector(*x, REALSXP);
-	break;
-
-    case 1015:	/* logical    <- complex    */
-    case 1315:	/* integer    <- complex    */
-    case 1415:	/* real	      <- complex    */
-
-	*x = coerceVector(*x, CPLXSXP);
-	break;
-
-    case 1610:	/* character  <- logical    */
-    case 1613:	/* character  <- integer    */
-    case 1614:	/* character  <- real	    */
-    case 1615:	/* character  <- complex    */
-
-	*y = coerceVector(*y, STRSXP);
-	break;
-
-    case 1016:	/* logical    <- character  */
-    case 1316:	/* integer    <- character  */
-    case 1416:	/* real	      <- character  */
-    case 1516:	/* complex    <- character  */
-
-	*x = coerceVector(*x, STRSXP);
-	break;
-
-    case 1901:  /* vector     <- symbol   */
-    case 1902:	/* vector     <- pairlist */
-    case 1904:  /* vector     <- environment   */
-    case 1905:  /* vector     <- promise   */
-    case 1906:  /* vector     <- language   */
-    case 1910:  /* vector     <- logical    */
-    case 1913:  /* vector     <- integer    */
-    case 1914:  /* vector     <- real       */
-    case 1915:  /* vector     <- complex    */
-    case 1916:  /* vector     <- character  */
-    case 1920:  /* vector     <- expression  */
-    case 1921:  /* vector     <- bytecode   */
-    case 1922:  /* vector     <- external pointer */
-    case 1923:  /* vector     <- weak reference */
-    case 1924:  /* vector     <- raw */
-    case 1903: case 1907: case 1908: case 1999: /* functions */
-
-	if (level == 1) {
-	    /* Coerce the RHS into a list */
-	    *y = coerceVector(*y, VECSXP);
-	} else {
-	    /* Nothing to do here: duplicate when used (if needed) */
-	    redo_which = FALSE;
-	}
-	break;
-
-    case 1925: /* vector <- S4 */
-
-	if (level == 1) {
-	    /* Embed the RHS into a list */
-	    *y = embedInVector(*y);
-	} else {
-	    /* Nothing to do here: duplicate when used (if needed) */
-	    redo_which = FALSE;
-	}
-	break;
-
-    case 1019:  /* logical    <- vector     */
-    case 1319:  /* integer    <- vector     */
-    case 1419:  /* real       <- vector     */
-    case 1519:  /* complex    <- vector     */
-    case 1619:  /* character  <- vector     */
-    case 2419:  /* raw        <- vector     */
-	*x = coerceVector(*x, VECSXP);
-	break;
-
-    case 1020:  /* logical    <- expression */
-    case 1320:  /* integer    <- expression */
-    case 1420:  /* real       <- expression */
-    case 1520:  /* complex    <- expression */
-    case 1620:  /* character  <- expression */
-    case 2420:  /* raw        <- expression */
-	*x = coerceVector(*x, EXPRSXP);
-	break;
-
-    case 2001:	/* expression <- symbol	    */
-    case 2002:  /* expression <- pairlist   */
-    case 2006:	/* expression <- language   */
-    case 2010:	/* expression <- logical    */
-    case 2013:	/* expression <- integer    */
-    case 2014:	/* expression <- real	    */
-    case 2015:	/* expression <- complex    */
-    case 2016:	/* expression <- character  */
-    case 2019:  /* expression <- vector     */
-
-	if (level == 1) {
-	    /* Coerce the RHS into a list */
-	    *y = coerceVector(*y, VECSXP);
-	} else {
-	    /* Note : No coercion is needed here. */
-	    /* We just insert the RHS into the LHS. */
-	    redo_which = FALSE;
-	}
-	break;
-
-    case 2025: /* expression <- S4 */
-
-	if (level == 1) {
-	    /* Embed the RHS into a list */
-	    *y = embedInVector(*y);
-	} else {
-	    /* Nothing to do here: duplicate when used (if needed) */
-	    redo_which = FALSE;
-	}
-	break;
-
-    default:
+    if (type_x == type_y || type_y == NILSXP) {
+        /* nothing to do */
+    }
+    else if (atom_x && atom_y) { 
+        /* Follow STR > CPLX > REAL > INT > LGL > RAW conversion hierarchy, 
+           which never produces warnings. */
+        if (type_x == CPLXSXP
+              && type_y == STRSXP
+         || type_x == REALSXP
+              && ((((1<<STRSXP) + (1<<CPLXSXP)) >> type_y) & 1)
+         || type_x == INTSXP 
+              && ((((1<<STRSXP) + (1<<CPLXSXP) + (1<<REALSXP)) >> type_y) & 1)
+         || type_x == LGLSXP
+              && ((((1<<STRSXP) + (1<<CPLXSXP) + (1<<REALSXP) + (1<<INTSXP))
+                   >> type_y) & 1)
+         || type_x == RAWSXP
+              && type_y != RAWSXP)
+            *x = coerceVector (*x, type_y);
+        if (level == 1) { 
+            /* The code for [<- doesn't handle these. */
+            if (type_y == RAWSXP && type_x != RAWSXP
+             || type_y != STRSXP && type_x == STRSXP)
+                *y = coerceVector (*y, type_x);
+        }
+    }
+    else if (atom_x && isVectorList(*y)) {
+        *x = coerceVector (*x, type_y);
+    }
+    else if (isVectorList(*x)) {
+        if (level == 1)
+	    *y = type_y==S4SXP ? embedInVector(*y) : coerceVector (*y, type_x);
+    }
+    else {
 	error(_("incompatible types (from %s to %s) in subassignment type fix"),
-	      type2char(which%100), type2char(which/100));
+	      type2char(type_y), type2char(type_x));
     }
 
     if (stretch) {
@@ -291,10 +176,7 @@ static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
     }
     SET_OBJECT(*x, x_is_object);
 
-    if(redo_which)
-	return(100 * TYPEOF(*x) + TYPEOF(*y));
-    else
-	return(which);
+    return 100*TYPEOF(*x) + TYPEOF(*y);
 }
 
 static SEXP DeleteListElements(SEXP x, SEXP which)

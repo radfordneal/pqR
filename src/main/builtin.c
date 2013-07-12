@@ -654,67 +654,36 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+/* This is BUILTIN for "list" (op 0) and SPECIAL for "expression" (op 1). */
+
 SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP list, names;
-    int i, n, havenames;
-    havenames = 0;
+    int i, n;
+
     n = length(args);
-    PROTECT(list = allocVector(VECSXP, n));
-    PROTECT(names = allocVector(STRSXP, n));
+    names = R_NilValue;
+
+    PROTECT (list = allocVector (PRIMVAL(op)==0 ? VECSXP : EXPRSXP, n));
+
     for (i = 0; i < n; i++) {
 	if (TAG(args) != R_NilValue) {
+            if (names == R_NilValue)
+                PROTECT(names = allocVector(STRSXP,n)); /* R_BlankStrings */
 	    SET_STRING_ELT(names, i, PRINTNAME(TAG(args)));
-	    havenames = 1;
 	}
-	else {
-	    SET_STRING_ELT(names, i, R_BlankString);
-	}
-	if (NAMEDCNT_GT_0(CAR(args)))
-	    SET_VECTOR_ELT(list, i, duplicate(CAR(args)));
-	else
-	    SET_VECTOR_ELT(list, i, CAR(args));
+        SET_VECTOR_ELEMENT_TO_VALUE (list, i, CAR(args));
 	args = CDR(args);
     }
-    if (havenames) {
-	setAttrib(list, R_NamesSymbol, names);
-    }
-    UNPROTECT(2);
-    return list;
-}
 
-/* This is a primitive SPECIALSXP */
-SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP a, ans, nms;
-    int i, n, named;
-    named = 0;
-    n = length(args);
-    PROTECT(ans = allocVector(EXPRSXP, n));
-    a = args;
-    for (i = 0; i < n; i++) {
-	if(NAMEDCNT_GT_0(CAR(a)))
-	    SET_VECTOR_ELT(ans, i, duplicate(CAR(a)));
-	else
-	    SET_VECTOR_ELT(ans, i, CAR(a));
-	if (TAG(a) != R_NilValue) named = 1;
-	a = CDR(a);
+    if (names != R_NilValue) {
+	setAttrib(list, R_NamesSymbol, names);
+        UNPROTECT(2);
     }
-    if (named) {
-	PROTECT(nms = allocVector(STRSXP, n));
-	a = args;
-	for (i = 0; i < n; i++) {
-	    if (TAG(a) != R_NilValue)
-		SET_STRING_ELT(nms, i, PRINTNAME(TAG(a)));
-	    else
-		SET_STRING_ELT(nms, i, R_BlankString);
-	    a = CDR(a);
-	}
-	setAttrib(ans, R_NamesSymbol, nms);
-	UNPROTECT(1);
-    }
-    UNPROTECT(1);
-    return ans;
+    else
+        UNPROTECT(1);
+
+    return list;
 }
 
 /* vector(mode="logical", length=0) */
