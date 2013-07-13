@@ -186,6 +186,8 @@ void attribute_hidden InitArithmetic()
 /* Keep these two in step */
 /* FIXME: consider using
     tmp = (long double)x1 - floor(q) * (long double)x2;
+    
+   WARNING:  myfmod may call "warning", and hence may allocate storage.
  */
 static double myfmod(double x1, double x2)
 {
@@ -245,8 +247,16 @@ double R_pow(double x, double y) /* = x ^ y */
 	if(x > 0)		/* Inf ^ y */
 	    return (y < 0.)? 0. : R_PosInf;
 	else {			/* (-Inf) ^ y */
-	    if(R_FINITE(y) && y == floor(y)) /* (-Inf) ^ n */
-		return (y < 0.) ? 0. : (myfmod(y, 2.) ? x  : -x);
+	    if (R_FINITE(y) && y == floor(y)) { /* (-Inf) ^ n */
+                if (y < 0.)
+                    return 0.;
+                /* Return x (= -Inf) if power is odd, -x if power is even. */
+                /* Note that all the really, really big integers are even. */
+                if (y < (((int_fast64_t)1)<<62) && (((int_fast64_t)y) & 1))
+                    return x;
+                else
+                    return -x;
+            }
 	}
     }
     if(!R_FINITE(y)) {
@@ -369,7 +379,9 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                     else                 *REAL(ans) = R_pow(a1,a2);
                     return ans;
                 case MODOP:
+                    PROTECT(ans);
                     *REAL(ans) = myfmod(a1,a2);
+                    UNPROTECT(1);
                     return ans;
                 case IDIVOP:
                     *REAL(ans) = myfloor(a1,a2);
@@ -397,7 +409,9 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
                 if (a1>0 ? (a2>0 && *INTEGER(ans)<0) 
                          : (a2<0 && *INTEGER(ans)>0)) {
+                    PROTECT(ans);
                     warningcall(call, _("NAs produced by integer overflow"));
+                    UNPROTECT(1);
                     *INTEGER(ans) = NA_INTEGER;
                 }
 
@@ -1050,10 +1064,12 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
         }
         task = task_integer_arithmetic;
 
-       /* Must do +, -, * in master in present version, because of possible 
-          integer overflow warning.  Not bothering with pipelining yet.*/
+       /* Only ^, /, and %/% can be done in helpers at present - others must be
+          in the master because of possible integer overflow or myfmod warning.
+          Not bothering with pipelining yet. */
 
-        flags = oper <= TIMESOP ? HELPERS_MASTER_NOW : 0;
+        flags = oper == POWOP || oper == DIVOP || oper == IDIVOP ? 0 
+              : HELPERS_MASTER_NOW;
     }
 
     PROTECT(ans);
@@ -1212,20 +1228,21 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
         return s1;
 
     n = LENGTH(s1);
-    ans = NAMEDCNT_EQ_0(s1) ? s1 : allocVector (type==LGLSXP?INTSXP:type, n);
+    PROTECT(ans = NAMEDCNT_EQ_0(s1) ? s1 
+                : allocVector (type==LGLSXP ? INTSXP : type, n));
 
     if (operation==MINUSOP) {
         DO_NOW_OR_LATER1 (variant, n >= T_unary_minus,
           HELPERS_PIPE_IN01_OUT, task_unary_minus, 0, ans, s1);
         if (ans != s1) {
-            PROTECT(ans);
             DUPLICATE_ATTRIB(ans,s1);
-            UNPROTECT(1);
         }
-        return ans;
     }
     else
         errorcall(call, _("invalid argument to unary operator"));
+
+    UNPROTECT(1);
+    return ans;
 }
 
 
@@ -1371,12 +1388,12 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_SUM) {
 
-        sy = allocVector(REALSXP, 1);
+        PROTECT(sy = allocVector(REALSXP, 1));
         DO_NOW_OR_LATER2 (variant, 
                        LENGTH(sa) >= T_math1 && math1_err_table[opcode] == 0,
                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa, call);
         SET_ATTRIB (sy, R_VariantResult);
-        UNPROTECT(1);
+        UNPROTECT(2);
     }
 
     else { /* non-variant result */
