@@ -1,0 +1,2 @@
+More cleanup in subassign.c, include using VARIANT_SEQ for 
+subscripts of vectors.
