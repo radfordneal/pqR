@@ -61,7 +61,7 @@
 /* Convert range to vector. The caller must ensure that its size won't 
    overflow. */
 
-static SEXP VectorFromRange(int rng0, int rng1)
+SEXP attribute_hidden Rf_VectorFromRange (int rng0, int rng1)
 { 
     SEXP vec;
     int i, n;
@@ -78,15 +78,16 @@ static SEXP VectorFromRange(int rng0, int rng1)
 
 /* Take a pointer to a range, check for validity, and either extract
    a range (possibly empty) of positive subscripts into start and end
-   and return R_NilValue, or convert the range to a vector of negative
+   and return NULL, or convert the range to a vector of negative
    integer subscripts that is returned. */
 
-static SEXP DecideVectorOrRange(SEXP rng, int *start, int *end, SEXP call)
+SEXP attribute_hidden Rf_DecideVectorOrRange (SEXP rng, int *start, int *end, 
+                                              SEXP call)
 {
     int rng0, rng1;
 
     if (TYPEOF(rng)!=INTSXP || LENGTH(rng)!=2) /* shouldn't happen*/
-        errorcall(call, "internal inconsistency with variant op in subset!");
+        errorcall(call, "internal inconsistency subsetting with VARIANT_SEQ!");
 
     rng0 = INTEGER(rng)[0];
     rng1 = INTEGER(rng)[1];
@@ -105,10 +106,10 @@ static SEXP DecideVectorOrRange(SEXP rng, int *start, int *end, SEXP call)
     if (rng0>0) {
         *start = rng0;
         *end = rng1;
-        return R_NilValue;
+        return NULL;
     }
     else {
-        return VectorFromRange(rng0,rng1);
+        return Rf_VectorFromRange(rng0,rng1);
     }
 }
 
@@ -299,60 +300,61 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
+static SEXP VectorSubset(SEXP x, SEXP sb, SEXP call)
 {
     int spi, stretch = 1;
     SEXP result, attrib, nattrib;
     int start = 1, end = 0, n = 0;
     SEXP indx = R_NilValue;
 
-    if (s == R_MissingArg) return duplicate(x);
+    if (sb == R_MissingArg) 
+        return duplicate(x);
 
-    PROTECT_WITH_INDEX (s, &spi);
+    PROTECT_WITH_INDEX (sb, &spi);
     attrib = getAttrib(x, R_DimSymbol);
 
     /* Check for variant result, which will be a range rather than a vector, 
        and if we have a range, see whether it can be used directly, or must
        be converted to a vector to be handled as other vectors. */
 
-    if (ATTRIB(s) == R_VariantResult) {
-        REPROTECT(s = DecideVectorOrRange(s,&start,&end,call), spi);
-        if (s == R_NilValue)
+    if (ATTRIB(sb) == R_VariantResult) {
+        REPROTECT(sb = Rf_DecideVectorOrRange(sb,&start,&end,call), spi);
+        if (sb == NULL)
             n = end - start + 1;
     }
 
     /* Check to see if we have special matrix subscripting. */
     /* If we do, make a real subscript vector and protect it. */
 
-    if (s != R_NilValue 
-          && isMatrix(s) && isArray(x) && ncols(s) == length(attrib)) {
-        if (isString(s)) {
-            s = strmat2intmat(s, GetArrayDimnames(x), call);
-            REPROTECT(s,spi);
+    if (sb != NULL && isMatrix(sb) && isArray(x) 
+                   && ncols(sb) == length(attrib)) {
+        if (isString(sb)) {
+            sb = strmat2intmat(sb, GetArrayDimnames(x), call);
+            REPROTECT(sb,spi);
         }
-        if (isInteger(s) || isReal(s)) {
-            s = mat2indsub(attrib, s, call);
-            REPROTECT(s,spi);
+        if (isInteger(sb) || isReal(sb)) {
+            sb = mat2indsub(attrib, sb, call);
+            REPROTECT(sb,spi);
         }
     }
 
-    /* Convert s to a vector of integer subscripts */
+    /* Convert sb to a vector of integer subscripts (unless we have a range) */
 
-    if (s != R_NilValue) {
-        PROTECT(indx = makeSubscript(x, s, &stretch, call, 0));
-        n = LENGTH(indx);
+    if (sb != NULL) {
+        PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
+        n = length(indx);
     }
 
     /* Allocate and extract the result. */
 
     if (x == R_NilValue) {
         result = R_NilValue;
-        UNPROTECT(1 + (s!=R_NilValue));
+        UNPROTECT(1 + (sb!=NULL));
     }
     else {
 
         PROTECT (result = allocVector(TYPEOF(x),n));
-        if (s==R_NilValue) 
+        if (sb==NULL)
             ExtractRange(x, result, start, end, call);
         else 
             ExtractSubset(x, result, indx, call);
@@ -365,7 +367,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 		)
 	    ) {
 	    PROTECT(nattrib = allocVector(TYPEOF(attrib), n));
-	    if (s==R_NilValue)
+	    if (sb==NULL)
                 ExtractRange(attrib, nattrib, start, end, call);
             else
                 ExtractSubset(attrib, nattrib, indx, call);
@@ -375,7 +377,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
 	    TYPEOF(attrib) == VECSXP) {
 	    PROTECT(nattrib = allocVector(VECSXP, n));
-	    if (s==R_NilValue)
+	    if (sb==NULL)
                 ExtractRange(attrib, nattrib, start, end, call);
             else
                 ExtractSubset(attrib, nattrib, indx, call);
@@ -389,7 +391,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	    SET_S4_OBJECT(result);
 	}
 #endif
-        UNPROTECT(2 + (s!=R_NilValue));
+        UNPROTECT(2 + (sb!=NULL));
     }
 
     return result;
@@ -680,20 +682,22 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
     nr = INTEGER(dim)[0];
     nc = INTEGER(dim)[1];
 
+    /* s0 is set to NULL when we have a range for the first subscript */
+
     if (s0 == R_MissingArg) {
-        s0 = R_NilValue;
+        s0 = NULL;
         start = 1;
         end = nr;
         nrs = nr;
     }
     else if (ATTRIB(s0) == R_VariantResult) {
-        PROTECT(s0 = DecideVectorOrRange(s0,&start,&end,call));
+        PROTECT(s0 = Rf_DecideVectorOrRange(s0,&start,&end,call));
         nprotect++;
-        if (s0 == R_NilValue)
+        if (s0 == NULL)
             nrs = end - start + 1;
     }
 
-    if (s0 != R_NilValue) {
+    if (s0 != NULL) {
         PROTECT (sr = arraySubscript(0, s0, dim, getAttrib, (STRING_ELT), x));
         nprotect++;
         nrs = LENGTH(sr);
@@ -712,7 +716,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
 
     /* Extract elements from matrix x to result. */
 
-    if (s0 == R_NilValue) 
+    if (s0 == NULL)
         range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc, ncs, nc);
     else if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER 
                       && ii >= 0 && ii <= nr)
@@ -744,7 +748,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
             if (TYPEOF(dimnames) == VECSXP) {
                 if (VECTOR_ELT(dimnames,0) != R_NilValue) {
                     SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
-                    if (s0 == R_NilValue)
+                    if (s0 == NULL)
                         ExtractRange (VECTOR_ELT(dimnames,0),
                           VECTOR_ELT(newdimnames,0), start, end, call);
                     else
@@ -760,7 +764,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
             else {
                 if (CAR(dimnames) != R_NilValue) {
                     SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
-                    if (s0 == R_NilValue)
+                    if (s0 == NULL)
                         ExtractRange (CAR(dimnames),
                           VECTOR_ELT(newdimnames,0), start, end, call);
                     else
