@@ -1146,6 +1146,7 @@ void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);
 SEXP ddfindVar(SEXP, SEXP);
+SEXP Rf_DecideVectorOrRange (SEXP, int *, int *, SEXP);
 SEXP deparse1(SEXP,Rboolean,int);
 SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
@@ -1262,6 +1263,7 @@ SEXP substituteList(SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);
 SEXP tspgets(SEXP, SEXP);
 SEXP type2symbol(SEXPTYPE);
+SEXP Rf_VectorFromRange (int, int);
 #ifdef ALLOW_OLD_SAVE
 void unmarkPhase(void);
 #endif
