@@ -5,7 +5,7 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-07-07}{
+\section{CHANGES IN VERSION RELEASED 2013-07-15}{
 
   \subsection{INTRODUCTION}{
 
@@ -14,35 +14,85 @@
 \item pqR is based on R-2.15.0, distributed by the R Core Team, but
 improves on it in many ways, mostly ways that speed it up, but also by
 implementing some new features and fixing some bugs.  See the notes
-below on the release of 2013-06-28 for general discussion of pqR.
+below on the release of 2013-06-28 for general discussion of pqR,
+and for specific aspects that have not changed in this release.
 
-\item This updated release of pqR is largely to provide some
+\item This updated release of pqR is provides some
 performance enhancements and bug fixes, including some from R Core
 releases after R-2.15.0.  More work is still needed to incorporate
 improvements in R-2.15.1 and later R Core releases into pqR.
 
   }}
 
+  \subsection{FEATURE CHANGES}{
+    \itemize{
+      \item Assignment to parts of a vector via code such as 
+            \code{v[[i]]<-value} and \code{v[i]<-value} now automatically 
+            converts raw values to the appropriate type
+            for assignment into numeric or string vectors, and assignment
+            of numeric or string values into a raw vector now results in the
+            raw vector being first converted to the corresponding type.  This
+            is consistent with the existing behaviour with other types.
+      \item The allowed values for assignment to an element of an "expression" 
+            list has been expanded to match the allowed values for ordinary
+            lists.  These values (such as function closures) could previously 
+            occur in expression lists as a result of other operations (such
+            as creation with the \code{expression} primitive).
+      \item An error is now raised for operations such as
+            \code{v <- pairlist(1,2,3); v[[-2]] <- NULL}.
+            These operations were previously documented as being illegal, and
+            they are illegal for ordinary lists.  The proper way to do
+            this deletion is \code{v <- pairlist(1,2,3); v[-2] <- NULL}.
+      \item Raising \code{-Inf} to a large value (eg, \code{(-Inf)^(1e16)})
+            no longer produces an incomprehensible warning.  As before, the 
+            value returned is \code{Inf}, since (due to their 
+            limited-precision floating-point representation) all such large 
+            numbers are even integers.
+  }}
+
   \subsection{INSTALLATION AND TESTING}{
     \itemize{
+
+\item See the pqR wiki at \code{https://github.com/radfordneal/pqR/wiki}
+      for the latest news regarding systems and packages that do or do not
+      work with pqR.
 
 \item Note that any previosly-installed packages must be re-installed for 
       use with pqR (as is generally the case with new versions of R), except
       for those written purely in R.
 
-\item Several users have reported that pqR can be successfully installed
-      under Mac OS X.  For helper threads to work, a C compiler that
-      fully supports OpenMP is needed (the one supplied by Apple is not
-      suitable). Additional testing is desirable, however.  Compiled binary 
-      versions of pqR for Max OS X are not yet being supplied.
+\item Several users have reported that pqR can be successfully
+      installed under Mac OS X for use via the command line.  For
+      helper threads to work, a C compiler that fully supports OpenMP
+      is needed, such as gcc 4.7.3.  The gcc 4.2 compiler supplied by
+      Apple with Xcode works when helper threads are disabled, but
+      does not have the OpenMP support required for helper threads.
+
+      The Apple BLAS and LAPACK
+      routines can be used if the \code{--with-blas='-framework vecLib'}
+      and \code{--withlapack} options are given to \code{configure}.
+
+      The R Mac GUI would need to be recompiled for use with pqR, and by
+      one report there are problems when doing this unless helper threads
+      are disabled.
+
+      Compiled binary versions of pqR for Mac OS X are not yet being supplied.
+      Installation on a Mac is recommended only for users experienced
+      in installation of R from source code.
 
 \item Success has also been reported in installing pqR on a Windows
       system, including with helper threads, but various tweaks were
       required.  Some of these tweaks are incorporated in this release,
       but they are probably not sufficient for installation "out of the box".
       Attempting to install pqR on Windows is recommended only for
-      adventurous users.
+      users who are both experienced and adventurous.
 
+\item Compilation using the \code{-O3} option for gcc is not recommended.
+      It speeds up some operations, but slows down others.  With gcc 4.7.3
+      on a 32-bit Intel system running Ubuntu 13.04, compiling with 
+      \code{-O3} causes compiled functions to crash. (This is not a
+      pqR issue, since the same thing happens when R-2.15.0 is compiled 
+      with \code{-O3}).
   }}
 
   \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
@@ -63,7 +113,16 @@ improvements in R-2.15.1 and later R Core releases into pqR.
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
 \item Some unnecessary duplication of objects has been eliminated.  Here
-      are two examples:  Below, the assignment to \code{b$x}, no longer
+      are three examples:  
+      Creation of lists no longer duplicates all the elements put in the
+      list, but instead increments \code{NAMEDCNT} for these elements, so
+      that
+\preformatted{   a <- numeric(10000)
+   k <- list(1,a)
+}
+no longer duplicates \code{a} when \code{k} is created (though a duplication
+will be needed later if either \code{a} or \code{k[[2]]} is modified).
+      Furthermore, the assignment below to \code{b$x}, no longer
       causes duplication of the 10000 elements of \code{y}:
 \preformatted{   a <- list (x=1, y=seq(0,1,length=10000))
    b <- a
@@ -81,13 +140,22 @@ assigned to the code below:
 The assignment to \code{a$y} now reduces \code{NAMEDCNT} for the vector
 bound to \code{b}, allowing it to be changed without duplication.
 
+\item Assignments to parts of vectors using code such as \code{v[1001:2000]<-0}
+      will now not actually create a vector of 1000 indexes, but will instead
+      simply change the elements with indexes 1001 to 200 without creating
+      an index vector.  This optimization has not yet been implemented for
+      matrix or array indexing.
+
+      Assignments to vectors and matrices using "[" has been
+      speeded up in other respects as well.
+
 \item Pending summations of one-argument mathematical functions are now
       passed on by \code{sum}.  So, for example, in 
       \code{sum(exp(a)) + sum(exp(b))}, the two
       summations of exponentials can now potentially be done in parallel.
   }}
 
-  \subsection{FEATURES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
 \item From R-2.15.1: On Windows, there are two new environment variables which
       control the defaults for command-line options.
@@ -132,8 +200,8 @@ following code:
 The value printed for a has a$x[1] changed to 9, when it should still be 1.
 See pqR issue \#14.
 \item Fixed a bug (also present in R-2.15.0 and R-3.0.1) in which extending
-      an "expression" by assigning to a new element changes it to a list.
-      See pqR issue \#15.
+      an "expression" by assigning to a new element changes it to an ordinary
+      list.  See pqR issue \#15.
 \item Fixed several bugs (also present in R-2.15.0 and R-3.0.1) illustrated
 by the code below (see pqR issue \#16):
 \preformatted{   v <- c(10,20,30)
@@ -151,7 +219,7 @@ by the code below (see pqR issue \#16):
    dimnames(a) <- list(c("a","b"),c("x","y","z"))
    print(a)              # doesn't print names
    
-   a[["a","x"]] <- 0     # seg faults
+   a[["a","x"]] <- 0     # crashes with a segmentation fault
 }
   }}
 
