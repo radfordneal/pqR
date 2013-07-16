@@ -580,13 +580,22 @@ arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
     return int_arraySubscript(dim, s, dims, dng, strg, x, R_NilValue);
 }
 
-/* Subscript creation.  
-   x is the object being subscripted; s is the R subscript value.
-   If stretch is zero on entry then the vector x cannot be "stretched",
+/* Subscript creation.  x is the object being subscripted; s is the 
+   R subscript value.  
+
+   If stretch is zero on entry then the vector x cannot be "stretched", 
    otherwise, stretch returns the new required length for x.
-   The used_to_replace arguement is 1 if the subscript is used to replace 
-   items (hence subscript may need to be duplicated in case it itself 
-   would be modified), and 0 if the subscript is only for extracting items.
+
+   The used_to_replace argument should be 1 if the subscript is used to 
+   replace items and 0 if the subscript is only for extracting items.
+   This is used to reduce how often the subscript vector needs to be
+   duplicated.
+
+   The value returned may have a R_UseNamesSymbol attribute containing
+   new names to use.  The caller should look for this only if the subscripts
+   were strings.
+
+   The arguments x and s are protected within this function.
 */
 
 SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call, 
@@ -603,18 +612,13 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
     nx = length(x);
     ns = length(s);
 
-#if 0 /* In r52822, checked for no attributes of s, but only potential */
-      /* problem seems to be an R_UseNamesSymbol attribute, which can  */
-      /* be ignored if the subscripts aren't strings.                  */
-    /* special case for simple indices -- does not duplicate */
-    if (ns == 1 && ATTRIB(s) == R_NilValue) 
-#else
-    /* Handle single positive index (real or integer), not out of bounds.  */
-    /* Note that we don't have to worry about a length one subscript being */
-    /* modified in a replace operation, since even if it is,  we don't use */
-    /* it anymore after the modification.                                  */
-    if (ns == 1) 
-#endif
+    /* Handle single positive index (real or integer), not out of bounds.
+       Note that we don't have to worry about a length one subscript being
+       modified in a replace operation, since even if it is,  we don't use
+       it anymore after the modification.  Since it is of length one, we
+       can return a vector that is in use (caller shouldn't modify it). */
+
+    if (ns == 1) {
         if (TYPEOF(s) == INTSXP) {
             int i = INTEGER(s)[0];
             if (0 < i && i <= nx) {
@@ -630,21 +634,9 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
                 return ScalarInteger(i);
             }
         }
+    }
 
-#if 0 /* Duplicated in r52822, but seems unnecessary as long as callers ignore
-         any R_UseNamesSymbol attribute when not subscripting with strings,
-         and the subscript will not be modified in a replacement operation
-         that it is supplying the subscripts for. */
-    PROTECT(s = duplicate(s));
-    SET_ATTRIB(s, R_NilValue);
-    SET_OBJECT(s, 0);
-#else
-    /* Duplicate if the subscript might be being used to replace elements of
-       itself. */
-    if (used_to_replace && NAMEDCNT_GT_0(s)) 
-        s = duplicate(s);
-    PROTECT(s);
-#endif
+    PROTECT2(x,s);
 
     switch (TYPEOF(s)) {
     case NILSXP:
@@ -652,7 +644,6 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 	ans = allocVector(INTSXP, 0);
 	break;
     case LGLSXP:
-	/* *stretch = 0; */
 	ans = logicalSubscript(s, ns, nx, stretch, call);
 	break;
     case INTSXP:
@@ -665,7 +656,6 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 	break;
     case STRSXP: {
 	SEXP names = getAttrib(x, R_NamesSymbol);
-	/* *stretch = 0; */
 	ans = stringSubscript(s, ns, nx, names, (STRING_ELT), stretch, call);
         break;
     }
@@ -682,6 +672,13 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 	    errorcall(call, _("invalid subscript type '%s'"),
 		      type2char(TYPEOF(s)));
     }
-    UNPROTECT(1);
+
+    /* If ans is being used for replacement, duplicate it if it is the same 
+       as s, to avoid problems with assignments like p[p] <- ... */
+
+    if (used_to_replace && ans == s)
+        ans = duplicate(ans);
+
+    UNPROTECT(2);
     return ans;
 }

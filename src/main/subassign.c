@@ -380,7 +380,6 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     if (isMatrix(s) && isArray(x)) {
         SEXP dim = getAttrib(x, R_DimSymbol);
-if (TYPEOF(dim)!=INTSXP) abort();
         if (ncols(s) == LENGTH(dim)) {
             if (isString(s)) {
                 s = strmat2intmat(s, GetArrayDimnames(x), call);
@@ -396,7 +395,9 @@ if (TYPEOF(dim)!=INTSXP) abort();
     }
 
     stretch = 1;
-    PROTECT(indx = makeSubscript(x, s, &stretch, R_NilValue, 1));
+    int pindx;
+    PROTECT_WITH_INDEX(indx = makeSubscript(x, s, &stretch, R_NilValue, 1), 
+                       &pindx);
     n = length(indx);
 
     /* Here we make sure that the LHS has */
@@ -416,16 +417,20 @@ if (TYPEOF(dim)!=INTSXP) abort();
     /* Remove NA subscripts.  Report error if any NAs, except when doing
        replacement by a scalar or empty vector. */
 
-    ii = 0;
-    for (i = 0; i < n; i++) {
-        if (INTEGER(indx)[i] != NA_INTEGER) {
-            INTEGER(indx)[ii] = INTEGER(indx)[i];
-            ii += 1;
+    for (ii = 0; ii < n && INTEGER(indx)[ii] != NA_INTEGER; ii++) ;
+
+    if (ii < n) {
+        if (length(y) > 1)
+            error(_("NAs are not allowed in subscripted assignments"));
+        if (NAMEDCNT_GT_0(indx))
+            REPROTECT(indx = duplicate(indx), pindx);
+        for (i = ii + 1 ; i < n; i++) {
+            if (INTEGER(indx)[i] != NA_INTEGER) {
+                INTEGER(indx)[ii] = INTEGER(indx)[i];
+                ii += 1;
+            }
         }
     }
-
-    if (ii != n && length(y) > 1)
-        error(_("NAs are not allowed in subscripted assignments"));
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
 	if (n > 0 && ny == 0)
@@ -640,11 +645,6 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
     n = nrs * ncs;
-
-    /* <TSL> 21Oct97
-       if (length(y) == 0)
-       error("Replacement length is zero");
-       </TSL>  */
 
     if (n > 0 && ny == 0)
 	error(_("replacement has length zero"));
