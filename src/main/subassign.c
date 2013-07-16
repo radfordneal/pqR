@@ -363,6 +363,34 @@ static SEXP VectorAssignSeq
     return x;
 }
 
+/* If "err" is 1, raise an error if any NAs are present in "indx", and
+   otherwise return "indx" unchanged.  If "err" is 0, return an index
+   vector (possibly newly allocated) with any NAs removed, updating "n"
+   to its new length. */
+
+static SEXP NA_check_remove (SEXP indx, int *n, int err)
+{
+    int ii, i;
+
+    for (ii = 0; ii < *n && INTEGER(indx)[ii] != NA_INTEGER; ii++) ;
+
+    if (ii < *n) {
+        if (err)
+            error(_("NAs are not allowed in subscripted assignments"));
+        if (NAMEDCNT_GT_0(indx))
+            indx = duplicate(indx);
+        for (i = ii + 1 ; i < *n; i++) {
+            if (INTEGER(indx)[i] != NA_INTEGER) {
+                INTEGER(indx)[ii] = INTEGER(indx)[i];
+                ii += 1;
+            }
+        }
+        *n = ii;
+    }
+
+    return indx;
+}
+
 static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     LOCAL_COPY(R_NilValue);
@@ -414,32 +442,16 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     ny = length(y);
     nx = length(x);
 
-    /* Remove NA subscripts.  Report error if any NAs, except when doing
-       replacement by a scalar or empty vector. */
+    int oldn = n;
 
-    for (ii = 0; ii < n && INTEGER(indx)[ii] != NA_INTEGER; ii++) ;
-
-    if (ii < n) {
-        if (length(y) > 1)
-            error(_("NAs are not allowed in subscripted assignments"));
-        if (NAMEDCNT_GT_0(indx))
-            REPROTECT(indx = duplicate(indx), pindx);
-        for (i = ii + 1 ; i < n; i++) {
-            if (INTEGER(indx)[i] != NA_INTEGER) {
-                INTEGER(indx)[ii] = INTEGER(indx)[i];
-                ii += 1;
-            }
-        }
-    }
+    REPROTECT (indx = NA_check_remove (indx, &n, length(y) > 1), pindx);
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
-	if (n > 0 && ny == 0)
+	if (oldn > 0 && ny == 0)
 	    error(_("replacement has length zero"));
-	if (n > 0 && n % ny)
+	if (oldn > 0 && n % ny)
 	    warning(_("number of items to replace is not a multiple of replacement length"));
     }
-
-    n = ii;
 
     /* When array elements are being permuted the RHS */
     /* must be duplicated or the elements get trashed. */
@@ -635,7 +647,9 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 				   (STRING_ELT), x));
     nrs = LENGTH(sr);
     ncs = LENGTH(sc);
-    if(ny > 1) {
+    n = nrs * ncs;
+
+    if (ny > 1) {
 	for(i = 0; i < nrs; i++)
 	    if(INTEGER(sr)[i] == NA_INTEGER)
 		error(_("NAs are not allowed in subscripted assignments"));
@@ -643,8 +657,6 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    if(INTEGER(sc)[i] == NA_INTEGER)
 		error(_("NAs are not allowed in subscripted assignments"));
     }
-
-    n = nrs * ncs;
 
     if (n > 0 && ny == 0)
 	error(_("replacement has length zero"));
