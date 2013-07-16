@@ -14,20 +14,20 @@
 \item pqR is based on R-2.15.0, distributed by the R Core Team, but
 improves on it in many ways, mostly ways that speed it up, but also by
 implementing some new features and fixing some bugs.  See the notes
-below on the release of 2013-06-28 for general discussion of pqR,
-and for specific aspects that have not changed in this release.
+below, on the release of 2013-06-28, for general discussion of pqR,
+and for information on pqR that has not changed since that release.
 
-\item This updated release of pqR is provides some
-performance enhancements and bug fixes, including some from R Core
-releases after R-2.15.0.  More work is still needed to incorporate
-improvements in R-2.15.1 and later R Core releases into pqR.
+\item This updated release of pqR is provides some performance
+enhancements and bug fixes, including some from R Core releases after
+R-2.15.0.  More work is still needed to incorporate improvements in
+R-2.15.1 and later R Core releases into pqR.
 
   }}
 
   \subsection{FEATURE CHANGES}{
     \itemize{
       \item Assignment to parts of a vector via code such as 
-            \code{v[[i]]<-value} and \code{v[i]<-value} now automatically 
+            \code{v[[i]]<-value} and \code{v[ix]<-values} now automatically 
             converts raw values to the appropriate type
             for assignment into numeric or string vectors, and assignment
             of numeric or string values into a raw vector now results in the
@@ -38,14 +38,14 @@ improvements in R-2.15.1 and later R Core releases into pqR.
             lists.  These values (such as function closures) could previously 
             occur in expression lists as a result of other operations (such
             as creation with the \code{expression} primitive).
-      \item An error is now raised for operations such as
-            \code{v <- pairlist(1,2,3); v[[-2]] <- NULL}.
+      \item Operations such as
+            \code{v <- pairlist(1,2,3); v[[-2]] <- NULL} now raise an error.
             These operations were previously documented as being illegal, and
             they are illegal for ordinary lists.  The proper way to do
             this deletion is \code{v <- pairlist(1,2,3); v[-2] <- NULL}.
       \item Raising \code{-Inf} to a large value (eg, \code{(-Inf)^(1e16)})
             no longer produces an incomprehensible warning.  As before, the 
-            value returned is \code{Inf}, since (due to their 
+            value returned is \code{Inf}, because (due to their 
             limited-precision floating-point representation) all such large 
             numbers are even integers.
   }}
@@ -68,9 +68,9 @@ improvements in R-2.15.1 and later R Core releases into pqR.
       Apple with Xcode works when helper threads are disabled, but
       does not have the OpenMP support required for helper threads.
 
-      The Apple BLAS and LAPACK
-      routines can be used if the \code{--with-blas='-framework vecLib'}
-      and \code{--withlapack} options are given to \code{configure}.
+      The Apple BLAS and LAPACK routines can be used by giving the
+      \code{--with-blas='-framework vecLib'} and \code{--withlapack}
+      options to \code{configure}.
 
       The R Mac GUI would need to be recompiled for use with pqR, and by
       one report there are problems when doing this unless helper threads
@@ -131,7 +131,7 @@ will be needed later if either \code{a} or \code{k[[2]]} is modified).
 Instead, a single vector of 10000 elements is shared between \code{a$y} and
 \code{b$y}, and will be duplicated later only if necessary.  Unnecessary
 duplication of a 10000-element vector is also avoided when \code{b[1]} is 
-assigned to the code below:
+assigned to in the code below:
 \preformatted{   a <- list (x=1, y=seq(0,1,length=10000))
    b <- a$y
    a$y <- 0
@@ -140,9 +140,9 @@ assigned to the code below:
 The assignment to \code{a$y} now reduces \code{NAMEDCNT} for the vector
 bound to \code{b}, allowing it to be changed without duplication.
 
-\item Assignments to parts of vectors using code such as \code{v[1001:2000]<-0}
-      will now not actually create a vector of 1000 indexes, but will instead
-      simply change the elements with indexes 1001 to 200 without creating
+\item Assignment to part of a vector using code such as \code{v[101:200]<-0}
+      will now not actually create a vector of 100 indexes, but will instead
+      simply change the elements with indexes 101 to 200 without creating
       an index vector.  This optimization has not yet been implemented for
       matrix or array indexing.
 
@@ -179,7 +179,7 @@ bound to \code{b}, allowing it to be changed without duplication.
 \item A bug that could have affected the result of \code{sum(abs(v))} when
       it is done by a helper thread has been fixed.
 \item A bug that could have allowed \code{as.vector}, \code{as.integer}, etc.
-      to pass on an object still being computed to someplace not expecting
+      to pass on an object still being computed to a caller not expecting
       such a pending object has been fixed.
 \item The bug illustrated below (pqR issue \#13) has been fixed:
 \preformatted{   > l = list(list(list(1)))
@@ -212,7 +212,7 @@ by the code below (see pqR issue \#16):
                          # of the internal SET_VECTOR_ELT procedure
    
    v<-list(1)
-   v[[quote(abc)]] <- 2  # another internal error, this time for SET_STRING_ELT
+   v[[quote(abc)]] <- 2  # internal error, this time for SET_STRING_ELT
    
    a <- pairlist(10,20,30,40,50,60)
    dim(a) <- c(2,3)
