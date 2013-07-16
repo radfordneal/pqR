@@ -649,14 +649,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     ncs = LENGTH(sc);
     n = nrs * ncs;
 
-    if (ny > 1) {
-	for(i = 0; i < nrs; i++)
-	    if(INTEGER(sr)[i] == NA_INTEGER)
-		error(_("NAs are not allowed in subscripted assignments"));
-	for(i = 0; i < ncs; i++)
-	    if(INTEGER(sc)[i] == NA_INTEGER)
-		error(_("NAs are not allowed in subscripted assignments"));
-    }
+    SETCAR (s, sr = NA_check_remove (sr, &nrs, ny > 1));
+    SETCADR (s, sc = NA_check_remove (sc, &ncs, ny > 1));
 
     if (n > 0 && ny == 0)
 	error(_("replacement has length zero"));
@@ -689,16 +683,12 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (INTSXP<<5) + LGLSXP:
     case (INTSXP<<5) + INTSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		INTEGER(x)[ij] = INTEGER(y)[k];
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
@@ -706,36 +696,28 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (REALSXP<<5) + LGLSXP:
     case (REALSXP<<5) + INTSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		iy = INTEGER(y)[k];
 		if (iy == NA_INTEGER)
 		    REAL(x)[ij] = NA_REAL;
 		else
 		    REAL(x)[ij] = iy;
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
 
     case (REALSXP<<5) + REALSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] -1 ;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] -1 ;
 		ij = ii + jj * nr;
 		REAL(x)[ij] = REAL(y)[k];
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
@@ -743,13 +725,9 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (CPLXSXP<<5) + LGLSXP:
     case (CPLXSXP<<5) + INTSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		iy = INTEGER(y)[k];
 		if (iy == NA_INTEGER) {
@@ -760,20 +738,16 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 		    COMPLEX(x)[ij].r = iy;
 		    COMPLEX(x)[ij].i = 0.0;
 		}
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
 
     case (CPLXSXP<<5) + REALSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		ry = REAL(y)[k];
 		if (ISNA(ry)) {
@@ -784,55 +758,43 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 		    COMPLEX(x)[ij].r = ry;
 		    COMPLEX(x)[ij].i = 0.0;
 		}
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
 
     case (CPLXSXP<<5) + CPLXSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		COMPLEX(x)[ij] = COMPLEX(y)[k];
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
 
     case (STRSXP<<5) + STRSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		SET_STRING_ELT(x, ij, STRING_ELT(y, k));
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
 
     case (RAWSXP<<5) + RAWSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
 		RAW(x)[ij] = RAW(y)[k];
-		k = (k + 1) % ny;
+		if (++k == ny) k = 0;
 	    }
 	}
 	break;
@@ -842,13 +804,9 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (VECSXP<<5)  + EXPRSXP:
     case (VECSXP<<5)  + VECSXP:
 	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
-	    if (jj == NA_INTEGER) continue;
-	    jj = jj - 1;
+	    jj = INTEGER(sc)[j] - 1;
 	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i];
-		if (ii == NA_INTEGER) continue;
-		ii = ii - 1;
+		ii = INTEGER(sr)[i] - 1;
 		ij = ii + jj * nr;
                 if (k < ny) {
                     SET_VECTOR_ELEMENT_FROM_VECTOR(x, ij, y, k);
