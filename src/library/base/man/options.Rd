@@ -147,7 +147,7 @@ getOption(x, default = NULL)
 
     \item{\code{helpers_no_pipelining}:}{A logical value set to \code{TRUE} 
       to disable pipelining of data between helper threads.  Initially
-      \code{FALSE}.}
+      \code{FALSE}, unless there are no helper threads.}
 
     \item{\code{helpers_trace}:}{A logical value set to \code{TRUE} 
       to enable tracing of tasks that are done (or might have been done)
