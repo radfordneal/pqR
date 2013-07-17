@@ -1895,17 +1895,31 @@ static void RunGenCollect(R_size_t size_needed)
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++) /* Byte code stack */
         FORWARD_NODE(*sp);
 
-    /* Forward vars used by scheduled tasks last, so there's more time for
-       tasks to finish.  For a full collection, we wait for all tasks to
-       complete, so we can collect all variables that they used. */
-
-    if (num_old_gens_to_collect == NUM_OLD_GENERATIONS)
-        helpers_wait_for_all();
-    else
-        for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
-            FORWARD_NODE(*var_list);
-
     /* main processing loop */
+    process_nodes (forwarded_nodes, no_snap); 
+    forwarded_nodes = NULL;
+
+    /* Forward vars used by scheduled tasks last, so there's more time for
+       tasks to finish.  For a full collection, we wait for large variables 
+       that are task inputs or output and that haven't already been marked to 
+       become free, so we can collect them. */
+
+    if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
+        for (SEXP *var_list = helpers_var_list(); *var_list; var_list++) {
+            SEXP v = *var_list;
+            if (!NODE_IS_MARKED(v) && NODE_CLASS(v) == LARGE_NODE_CLASS) {
+                if (IS_BEING_COMPUTED_BY_TASK(v))
+                    helpers_wait_until_not_being_computed(v);
+                if (IS_IN_USE_BY_TASK(v))
+                    helpers_wait_until_not_in_use(v);
+            }
+        }
+    }
+
+    for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
+        FORWARD_NODE(*var_list);
+
+    /* process any forwarded task vars. */
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
