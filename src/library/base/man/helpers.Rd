@@ -63,7 +63,7 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab If real op
                    \tab Integer +,-,*\cr
                    \tab
-                   \tab 
+                   \tab (see below)
                    \tab done by master\cr
 \tab\tab\tab\cr
 \%\%               \tab No
@@ -98,7 +98,7 @@ digamma, trigramma \tab\tab\tab\cr
 \tab\tab\tab\cr
 t (transpose)      \tab If numeric
                    \tab No
-                   \tab Non-numeric \cr
+                   \tab If non-numeric \cr
 \tab\tab           \tab done by master\cr
 \tab\tab\tab\cr
 rowSums, rowMeans  \tab Yes
@@ -108,6 +108,10 @@ rowSums, rowMeans  \tab Yes
 colSums, colMeans  \tab Yes
                    \tab Yes
                    \tab \cr
+\tab\tab\tab\cr
+sum                \tab N/A (scalar)
+                   \tab (see below)
+                   \tab (see below)\cr
 \tab\tab\tab\cr
 row, col           \tab Yes
                    \tab N/A (ignored)
@@ -125,7 +129,14 @@ write.table        \tab N/A (NULL)
 
 For +, -, *, /, ^, and \%\/\%, pipelining is done only for real
 operations, in which at least one operand is real, and neither
-operand is complex (but one may be integer or logical).
+operand is complex (but one may be integer or logical), and only
+for operands whose length is equal to the length of the result.
+
+The \code{sum} function will currently pass on a result computed by a
+task that sums the results of a function of one argument in the first
+group above (using pqR's internal ``variant result'' mechanism), with
+pipelining, but \code{sum} does not operate as a task otherwise.
+
 }
 
 \seealso{
