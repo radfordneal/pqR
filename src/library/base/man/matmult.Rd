@@ -38,14 +38,23 @@ x \%*\% y
   \code{--enable-mat-mult-with-BLAS-by-default} option is used 
   when configuring R.
 
-  One reason one might wish to use the 
-  built-in C routines is that they guarantee correct behaviour when some 
-  elements are \code{NA}, \code{NaN}, or infinite, which may not be the case 
-  with all BLAS packages. It's also conceivable that a built-in C routine
-  might be faster.  Note that some other linear algebra operations make use 
-  of the BLAS matrix multiply routines, regardless of how this option is set.
-  The BLAS routines are also always used for \code{crossprod} and 
-  \code{tcrossprod} (which combine a transpose with a matrix multiply).
+  If the builtin C routines are used when helper threads are enabled,
+  they will take piplelined input for their second operand, and produce
+  pipelined output for vector-matrix and matrix-matrix products.  Matrix
+  multiplication with the BLAS routines can be done in helper threads
+  (though this can be disabled when configuring pqR with the 
+  \code{--disable-mat-mult-with-BLAS-in-helpers} option), 
+  but with no pipelining of inputs or output.
+
+  Another reason one might wish to use the built-in C routines is that
+  they guarantee correct behaviour when some elements are \code{NA},
+  \code{NaN}, or infinite, which may not be the case with all BLAS
+  packages. It's also conceivable that a built-in C routine might be
+  faster.  Note that some other linear algebra operations make use of
+  the BLAS matrix multiply routines, regardless of how this option is
+  set.  The BLAS routines are also always used for \code{crossprod}
+  and \code{tcrossprod} (which combine a transpose with a matrix
+  multiply).
 }
 \value{
   A double or complex matrix product.  Use \code{\link{drop}} to remove
