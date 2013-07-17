@@ -5,7 +5,7 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-07-15}{
+\section{CHANGES IN VERSION RELEASED 2013-07-17}{
 
   \subsection{INTRODUCTION}{
 
