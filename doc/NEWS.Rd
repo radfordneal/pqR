@@ -24,8 +24,10 @@ R-2.15.1 and later R Core releases into pqR.
 
   }}
 
-  \subsection{FEATURE CHANGES}{
+  \subsection{FEATURE AND DOCUMENTATION CHANGES}{
     \itemize{
+      \item Detailed information on what operations can be done in helper
+            threads is now provided by help(helpers).
       \item Assignment to parts of a vector via code such as 
             \code{v[[i]]<-value} and \code{v[ix]<-values} now automatically 
             converts raw values to the appropriate type
@@ -146,8 +148,9 @@ bound to \code{b}, allowing it to be changed without duplication.
       an index vector.  This optimization has not yet been implemented for
       matrix or array indexing.
 
-      Assignments to vectors and matrices using "[" has been
-      speeded up in other respects as well.
+\item Assignments to vectors and matrices using "[" has been
+      sped up by detailed code improvements, substantially in some
+      cases.
 
 \item Pending summations of one-argument mathematical functions are now
       passed on by \code{sum}.  So, for example, in 
@@ -181,6 +184,8 @@ bound to \code{b}, allowing it to be changed without duplication.
 \item A bug that could have allowed \code{as.vector}, \code{as.integer}, etc.
       to pass on an object still being computed to a caller not expecting
       such a pending object has been fixed.
+\item Some bugs in which production of warnings at inopportune times could 
+      have caused serious problems have been fixed.
 \item The bug illustrated below (pqR issue \#13) has been fixed:
 \preformatted{   > l = list(list(list(1)))
    > l1 = l[[1]]
