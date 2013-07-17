@@ -1,0 +1,4 @@
+Changed the garbage collector so it doesn't always wait for all tasks
+to complete on full collections.  Instead, it waits only until all
+large variables that aren't otherwise marked are not in use and not
+being computed.
