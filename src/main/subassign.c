@@ -905,7 +905,8 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     int which = (TYPEOF(x)<<5) + TYPEOF(y);
 
-    for (i = 0; ; i++) {
+    i = 0;
+    for (;;) {
 
         jj = subs[0][indx[0]];
         if (jj == NA_INTEGER) goto next;
@@ -921,12 +922,12 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         case (LGLSXP<<5) + LGLSXP:
         case (INTSXP<<5) + LGLSXP:
         case (INTSXP<<5) + INTSXP:
-	    INTEGER(x)[ii] = INTEGER(y)[i % ny];
+	    INTEGER(x)[ii] = INTEGER(y)[i];
 	    break;
 
         case (REALSXP<<5) + LGLSXP:
         case (REALSXP<<5) + INTSXP:
-	    iy = INTEGER(y)[i % ny];
+	    iy = INTEGER(y)[i];
 	    if (iy == NA_INTEGER)
 		REAL(x)[ii] = NA_REAL;
 	    else
@@ -934,12 +935,12 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    break;
 
         case (REALSXP<<5) + REALSXP:
-	    REAL(x)[ii] = REAL(y)[i % ny];
+	    REAL(x)[ii] = REAL(y)[i];
 	    break;
 
         case (CPLXSXP<<5) + LGLSXP:
         case (CPLXSXP<<5) + INTSXP:
-	    iy = INTEGER(y)[i % ny];
+	    iy = INTEGER(y)[i];
 	    if (iy == NA_INTEGER) {
 		COMPLEX(x)[ii].r = NA_REAL;
 		COMPLEX(x)[ii].i = NA_REAL;
@@ -951,7 +952,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    break;
 
         case (CPLXSXP<<5) + REALSXP:
-	    ry = REAL(y)[i % ny];
+	    ry = REAL(y)[i];
 	    if (ISNA(ry)) {
 		COMPLEX(x)[ii].r = NA_REAL;
 		COMPLEX(x)[ii].i = NA_REAL;
@@ -963,15 +964,15 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    break;
 
         case (CPLXSXP<<5) + CPLXSXP:
-	    COMPLEX(x)[ii] = COMPLEX(y)[i % ny];
+	    COMPLEX(x)[ii] = COMPLEX(y)[i];
 	    break;
 
         case (STRSXP<<5) + STRSXP:
-	    SET_STRING_ELT(x, ii, STRING_ELT(y, i % ny));
+	    SET_STRING_ELT(x, ii, STRING_ELT(y, i));
 	    break;
 
         case (RAWSXP<<5) + RAWSXP:
-	    RAW(x)[ii] = RAW(y)[i % ny];
+	    RAW(x)[ii] = RAW(y)[i];
 	    break;
 
         case (EXPRSXP<<5) + VECSXP:
@@ -982,7 +983,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             }
             else {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i % ny);
+                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
                 if (NAMEDCNT_EQ_0(y))
                     INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
             }
@@ -998,6 +999,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             indx[j] = 0;
             if (++j >= k) goto done;
         }
+        if (++i == ny) i = 0;
     }
 
   done:
