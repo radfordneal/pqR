@@ -123,8 +123,8 @@ static SEXP embedInVector(SEXP v)
    Level 2 is used for [[<-.  It does not coerce when assigning into a list.
 */
 
-static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
-			    SEXP call)
+static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level, 
+                              SEXP call)
 {
     Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
 
@@ -176,8 +176,6 @@ static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
 	UNPROTECT(1);
     }
     SET_OBJECT(*x, x_is_object);
-
-    return 100*TYPEOF(*x) + TYPEOF(*y);
 }
 
 /* Returns list made from x (a LISTSXP, EXPRSXP, or NILSXP) with elements 
@@ -832,40 +830,25 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     int i, j, ii, iy, jj, k=0, n, ny;
-    int **subs, *indx, *bound, *offset;
     SEXP dims, tmp;
     double ry;
-    const void *vmax = VMAXGET();
 
     PROTECT(dims = getAttrib(x, R_DimSymbol));
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	error(_("incorrect number of subscripts"));
 
-    subs = (int**)R_alloc(k, sizeof(int*));
-    indx = (int*)R_alloc(k, sizeof(int));
-    bound = (int*)R_alloc(k, sizeof(int));
-    offset = (int*)R_alloc(k, sizeof(int));
+    int *subs[k], indx[k], nsubs[k], offset[k];
 
     ny = LENGTH(y);
 
-    /* Expand the list of subscripts. */
-    /* s is protected, so no GC problems here */
-
-    tmp = s;
-    for (i = 0; i < k; i++) {
-	SETCAR(tmp, arraySubscript(i, CAR(tmp), dims, getAttrib,
-				   (STRING_ELT), x));
-	tmp = CDR(tmp);
-    }
-
     n = 1;
-    tmp = s;
     for (i = 0; i < k; i++) {
-	indx[i] = 0;
-	subs[i] = INTEGER(CAR(tmp));
-	bound[i] = LENGTH(CAR(tmp));
-	n *= bound[i];
-	tmp = CDR(tmp);
+        PROTECT(tmp = arraySubscript (i,CAR(s),dims,getAttrib,(STRING_ELT),x));
+        subs[i] = INTEGER(tmp);
+	nsubs[i] = LENGTH(tmp);
+        n *= nsubs[i];
+        indx[i] = 0;
+	s = CDR(s);
     }
 
     if (n > 0 && ny == 0)
@@ -875,15 +858,14 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     if (ny > 1) { /* check for NAs in indices */
 	for (i = 0; i < k; i++)
-	    for (j = 0; j < bound[i]; j++)
+	    for (j = 0; j < nsubs[i]; j++)
 		if (subs[i][j] == NA_INTEGER)
 		    error(_("NAs are not allowed in subscripted assignments"));
     }
 
-    offset[0] = 1;
-    for (i = 1; i < k; i++)
-	offset[i] = offset[i - 1] * INTEGER(dims)[i - 1];
-
+    offset[1] = INTEGER(dims)[0];  /* offset[0] is not used */
+    for (i = 2; i < k; i++)
+        offset[i] = offset[i-1] * INTEGER(dims)[i-1];
 
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
@@ -911,25 +893,31 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        from non-string vectors and from raw vectors to non-raw vectors are
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
-    for (i = 0; i < n; i++) {
-	ii = 0;
-	for (j = 0; j < k; j++) {
+    int which = (TYPEOF(x)<<5) + TYPEOF(y);
+
+    i = 0;
+    for (;;) {
+
+        jj = subs[0][indx[0]];
+        if (jj == NA_INTEGER) goto next;
+	ii = jj-1;
+	for (j = 1; j < k; j++) {
 	    jj = subs[j][indx[j]];
-	    if (jj == NA_INTEGER) goto next_i;
-	    ii += (jj - 1) * offset[j];
+	    if (jj == NA_INTEGER) goto next;
+	    ii += (jj-1) * offset[j];
 	}
 
-	switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
+	switch (which) {
 
         case (LGLSXP<<5) + LGLSXP:
         case (INTSXP<<5) + LGLSXP:
         case (INTSXP<<5) + INTSXP:
-	    INTEGER(x)[ii] = INTEGER(y)[i % ny];
+	    INTEGER(x)[ii] = INTEGER(y)[i];
 	    break;
 
         case (REALSXP<<5) + LGLSXP:
         case (REALSXP<<5) + INTSXP:
-	    iy = INTEGER(y)[i % ny];
+	    iy = INTEGER(y)[i];
 	    if (iy == NA_INTEGER)
 		REAL(x)[ii] = NA_REAL;
 	    else
@@ -937,12 +925,12 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    break;
 
         case (REALSXP<<5) + REALSXP:
-	    REAL(x)[ii] = REAL(y)[i % ny];
+	    REAL(x)[ii] = REAL(y)[i];
 	    break;
 
         case (CPLXSXP<<5) + LGLSXP:
         case (CPLXSXP<<5) + INTSXP:
-	    iy = INTEGER(y)[i % ny];
+	    iy = INTEGER(y)[i];
 	    if (iy == NA_INTEGER) {
 		COMPLEX(x)[ii].r = NA_REAL;
 		COMPLEX(x)[ii].i = NA_REAL;
@@ -954,7 +942,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    break;
 
         case (CPLXSXP<<5) + REALSXP:
-	    ry = REAL(y)[i % ny];
+	    ry = REAL(y)[i];
 	    if (ISNA(ry)) {
 		COMPLEX(x)[ii].r = NA_REAL;
 		COMPLEX(x)[ii].i = NA_REAL;
@@ -966,15 +954,15 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    break;
 
         case (CPLXSXP<<5) + CPLXSXP:
-	    COMPLEX(x)[ii] = COMPLEX(y)[i % ny];
+	    COMPLEX(x)[ii] = COMPLEX(y)[i];
 	    break;
 
         case (STRSXP<<5) + STRSXP:
-	    SET_STRING_ELT(x, ii, STRING_ELT(y, i % ny));
+	    SET_STRING_ELT(x, ii, STRING_ELT(y, i));
 	    break;
 
         case (RAWSXP<<5) + RAWSXP:
-	    RAW(x)[ii] = RAW(y)[i % ny];
+	    RAW(x)[ii] = RAW(y)[i];
 	    break;
 
         case (EXPRSXP<<5) + VECSXP:
@@ -985,7 +973,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             }
             else {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i % ny);
+                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
                 if (NAMEDCNT_EQ_0(y))
                     INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
             }
@@ -995,38 +983,38 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
 	}
 
-    next_i:
-	;
-	if (n > 1) {
-	    j = 0;
-	    while (++indx[j] >= bound[j]) {
-		indx[j] = 0;
-		j = (j + 1) % k;
-	    }
-	}
+      next:
+        j = 0;
+        while (++indx[j] >= nsubs[j]) {
+            indx[j] = 0;
+            if (++j >= k) goto done;
+        }
+        if (++i == ny) i = 0;
     }
-    UNPROTECT(3);
-    VMAXSET(vmax);
+
+  done:
+    UNPROTECT(k+3);
     return x;
 }
 
 static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 {
     LOCAL_COPY(R_NilValue);
-    SEXP p;
-    if (args==R_NilValue || CDR(args)==R_NilValue)
+
+    *x = CAR(args); /* OK even if args is R_NilValue */
+    if (args == R_NilValue || (args = CDR(args)) == R_NilValue)
 	error(_("SubAssignArgs: invalid number of arguments"));
-    *x = CAR(args);
-    if (CDDR(args)==R_NilValue) {
+
+    if (CDR(args) == R_NilValue) {
 	*s = R_NilValue;
-	*y = CADR(args);
+	*y = CAR(args);
     }
     else {
-	*s = p = CDR(args);
-	while (CDDR(p) != R_NilValue)
-	    p = CDR(p);
-	*y = CADR(p);
-	SETCDR(p, R_NilValue);
+        *s = args;
+	while (CDDR(args) != R_NilValue)
+	    args = CDR(args);
+	*y = CADR(args);
+	SETCDR(args, R_NilValue);
     }
 }
 
@@ -1082,15 +1070,6 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(args);
 
-    /* If there are multiple references to an object we must */
-    /* duplicate it so that only the local version is mutated. */
-    /* This will duplicate more often than necessary, but saves */
-    /* over always duplicating. */
-    /* Shouldn't x be protected?  It is (as args is)! */
-
-    if (NAMEDCNT_GT_1(CAR(args)))
-	SETCAR(args, dup_top_level(CAR(args)));
-
     SubAssignArgs(args, &x, &subs, &y);
 
     Rboolean S4 = IS_S4_OBJECT(x);
@@ -1103,18 +1082,22 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (x == R_NilValue) {
 	if (length(y) == 0) {
 	    UNPROTECT(1);
-	    return(x);
+	    return x;
 	}
         x = coerceVector(x, TYPEOF(y));
     }
-    else if (!isVector(x))
-	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
-    else if (LENGTH(x) == 0) {
-	if (length(y) == 0) {
-	    UNPROTECT(1);
-	    return(x);
+    else if (isVector(x)) {
+        if (LENGTH(x) == 0) {
+            if (length(y) == 0) {
+                UNPROTECT(1);
+                return x;
+            }
 	}
+        else if (NAMEDCNT_GT_1(x))
+            x = dup_top_level(x);
     }
+    else
+	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
     PROTECT(x);
 
@@ -1216,7 +1199,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOCAL_COPY(R_NilValue);
 
     SEXP dims, names, newname, subs, x, xtop, xup, y;
-    int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, which, len = 0 /* -Wall */;
+    int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
     Rboolean S4, recursed;
     R_len_t length_x;
 
@@ -1360,7 +1343,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
         else {
 
-            which = SubassignTypeFix(&x, &y, stretch, 2, call);
+            SubassignTypeFix(&x, &y, stretch, 2, call);
     
             if (NAMEDCNT_GT_1(x))
                 x = dup_top_level(x);
@@ -1375,7 +1358,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
             else
                 error(_("incompatible types (from %s to %s) in [[ assignment"),
-                      type2char(which%100), type2char(which/100));
+                      type2char(TYPEOF(y)), type2char(TYPEOF(x)));
     
             /* If we stretched, we may have a new name. */
             /* In this case we must create a names attribute */
