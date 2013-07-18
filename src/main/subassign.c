@@ -123,8 +123,8 @@ static SEXP embedInVector(SEXP v)
    Level 2 is used for [[<-.  It does not coerce when assigning into a list.
 */
 
-static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
-			    SEXP call)
+static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level, 
+                              SEXP call)
 {
     Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
 
@@ -176,8 +176,6 @@ static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
 	UNPROTECT(1);
     }
     SET_OBJECT(*x, x_is_object);
-
-    return 100*TYPEOF(*x) + TYPEOF(*y);
 }
 
 /* Returns list made from x (a LISTSXP, EXPRSXP, or NILSXP) with elements 
@@ -1002,20 +1000,21 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 {
     LOCAL_COPY(R_NilValue);
-    SEXP p;
-    if (args==R_NilValue || CDR(args)==R_NilValue)
+
+    *x = CAR(args); /* OK even if args is R_NilValue */
+    if (args == R_NilValue || (args = CDR(args)) == R_NilValue)
 	error(_("SubAssignArgs: invalid number of arguments"));
-    *x = CAR(args);
-    if (CDDR(args)==R_NilValue) {
+
+    if (CDR(args) == R_NilValue) {
 	*s = R_NilValue;
-	*y = CADR(args);
+	*y = CAR(args);
     }
     else {
-	*s = p = CDR(args);
-	while (CDDR(p) != R_NilValue)
-	    p = CDR(p);
-	*y = CADR(p);
-	SETCDR(p, R_NilValue);
+        *s = args;
+	while (CDDR(args) != R_NilValue)
+	    args = CDR(args);
+	*y = CADR(args);
+	SETCDR(args, R_NilValue);
     }
 }
 
@@ -1205,7 +1204,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOCAL_COPY(R_NilValue);
 
     SEXP dims, names, newname, subs, x, xtop, xup, y;
-    int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, which, len = 0 /* -Wall */;
+    int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
     Rboolean S4, recursed;
     R_len_t length_x;
 
@@ -1349,7 +1348,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
         else {
 
-            which = SubassignTypeFix(&x, &y, stretch, 2, call);
+            SubassignTypeFix(&x, &y, stretch, 2, call);
     
             if (NAMEDCNT_GT_1(x))
                 x = dup_top_level(x);
@@ -1364,7 +1363,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
             else
                 error(_("incompatible types (from %s to %s) in [[ assignment"),
-                      type2char(which%100), type2char(which/100));
+                      type2char(TYPEOF(y)), type2char(TYPEOF(x)));
     
             /* If we stretched, we may have a new name. */
             /* In this case we must create a names attribute */
