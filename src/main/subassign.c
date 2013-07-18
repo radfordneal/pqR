@@ -1070,15 +1070,6 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(args);
 
-    /* If there are multiple references to an object we must */
-    /* duplicate it so that only the local version is mutated. */
-    /* This will duplicate more often than necessary, but saves */
-    /* over always duplicating. */
-    /* Shouldn't x be protected?  It is (as args is)! */
-
-    if (NAMEDCNT_GT_1(CAR(args)))
-	SETCAR(args, dup_top_level(CAR(args)));
-
     SubAssignArgs(args, &x, &subs, &y);
 
     Rboolean S4 = IS_S4_OBJECT(x);
@@ -1091,18 +1082,22 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (x == R_NilValue) {
 	if (length(y) == 0) {
 	    UNPROTECT(1);
-	    return(x);
+	    return x;
 	}
         x = coerceVector(x, TYPEOF(y));
     }
-    else if (!isVector(x))
-	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
-    else if (LENGTH(x) == 0) {
-	if (length(y) == 0) {
-	    UNPROTECT(1);
-	    return(x);
+    else if (isVector(x)) {
+        if (LENGTH(x) == 0) {
+            if (length(y) == 0) {
+                UNPROTECT(1);
+                return x;
+            }
 	}
+        else if (NAMEDCNT_GT_1(x))
+            x = dup_top_level(x);
     }
+    else
+	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
     PROTECT(x);
 
