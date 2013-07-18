@@ -843,22 +843,14 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     ny = LENGTH(y);
 
-    /* Expand the list of subscripts. */
-    /* s is protected, so no GC problems here */
-
-    tmp = s;
-    for (i = 0; i < k; i++) {
-	SETCAR(tmp, arraySubscript(i, CAR(tmp), dims, getAttrib,
-				   (STRING_ELT), x));
-	tmp = CDR(tmp);
-    }
-
     n = 1;
-    for (i = 0, tmp = s; i < k; i++, tmp = CDR(tmp)) {
-        indx[i] = 0;
-        subs[i] = INTEGER(CAR(tmp));
-	nsubs[i] = LENGTH(CAR(tmp));
+    for (i = 0; i < k; i++) {
+        PROTECT(tmp = arraySubscript (i,CAR(s),dims,getAttrib,(STRING_ELT),x));
+        subs[i] = INTEGER(tmp);
+	nsubs[i] = LENGTH(tmp);
         n *= nsubs[i];
+        indx[i] = 0;
+	s = CDR(s);
     }
 
     if (n > 0 && ny == 0)
@@ -1003,7 +995,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
   done:
-    UNPROTECT(3);
+    UNPROTECT(k+3);
     return x;
 }
 
