@@ -832,19 +832,14 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     int i, j, ii, iy, jj, k=0, n, ny;
-    int **subs, *indx, *bound, *offset;
     SEXP dims, tmp;
     double ry;
-    const void *vmax = VMAXGET();
 
     PROTECT(dims = getAttrib(x, R_DimSymbol));
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	error(_("incorrect number of subscripts"));
 
-    subs = (int**)R_alloc(k, sizeof(int*));
-    indx = (int*)R_alloc(k, sizeof(int));
-    bound = (int*)R_alloc(k, sizeof(int));
-    offset = (int*)R_alloc(k, sizeof(int));
+    int *subs[k], indx[k], nsubs[k], offset[k];
 
     ny = LENGTH(y);
 
@@ -859,13 +854,11 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
     n = 1;
-    tmp = s;
-    for (i = 0; i < k; i++) {
-	indx[i] = 0;
-	subs[i] = INTEGER(CAR(tmp));
-	bound[i] = LENGTH(CAR(tmp));
-	n *= bound[i];
-	tmp = CDR(tmp);
+    for (i = 0, tmp = s; i < k; i++, tmp = CDR(tmp)) {
+        indx[i] = 0;
+        subs[i] = INTEGER(CAR(tmp));
+	nsubs[i] = LENGTH(CAR(tmp));
+        n *= nsubs[i];
     }
 
     if (n > 0 && ny == 0)
@@ -875,15 +868,14 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     if (ny > 1) { /* check for NAs in indices */
 	for (i = 0; i < k; i++)
-	    for (j = 0; j < bound[i]; j++)
+	    for (j = 0; j < nsubs[i]; j++)
 		if (subs[i][j] == NA_INTEGER)
 		    error(_("NAs are not allowed in subscripted assignments"));
     }
 
-    offset[0] = 1;
-    for (i = 1; i < k; i++)
-	offset[i] = offset[i - 1] * INTEGER(dims)[i - 1];
-
+    offset[1] = INTEGER(dims)[0];  /* offset[0] is not used */
+    for (i = 2; i < k; i++)
+        offset[i] = offset[i-1] * INTEGER(dims)[i-1];
 
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
@@ -911,15 +903,20 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        from non-string vectors and from raw vectors to non-raw vectors are
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
-    for (i = 0; i < n; i++) {
-	ii = 0;
-	for (j = 0; j < k; j++) {
+    int which = (TYPEOF(x)<<5) + TYPEOF(y);
+
+    for (i = 0; ; i++) {
+
+        jj = subs[0][indx[0]];
+        if (jj == NA_INTEGER) goto next;
+	ii = jj-1;
+	for (j = 1; j < k; j++) {
 	    jj = subs[j][indx[j]];
-	    if (jj == NA_INTEGER) goto next_i;
-	    ii += (jj - 1) * offset[j];
+	    if (jj == NA_INTEGER) goto next;
+	    ii += (jj-1) * offset[j];
 	}
 
-	switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
+	switch (which) {
 
         case (LGLSXP<<5) + LGLSXP:
         case (INTSXP<<5) + LGLSXP:
@@ -995,18 +992,16 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
 	}
 
-    next_i:
-	;
-	if (n > 1) {
-	    j = 0;
-	    while (++indx[j] >= bound[j]) {
-		indx[j] = 0;
-		j = (j + 1) % k;
-	    }
-	}
+      next:
+        j = 0;
+        while (++indx[j] >= nsubs[j]) {
+            indx[j] = 0;
+            if (++j >= k) goto done;
+        }
     }
+
+  done:
     UNPROTECT(3);
-    VMAXSET(vmax);
     return x;
 }
 
