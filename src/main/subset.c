@@ -787,62 +787,66 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
 }
 
 
-static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
+static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 {
-    int i, j, k, ii, jj, mode, n;
-    int **subs, *indx, *offset, *bound;
-    SEXP dimnames, dimnamesnames, r, result, xdims;
-    const void *vmaxsave;
+    int i, j, ii, jj, n;
+    SEXP dimnames, dimnamesnames, r, result;
+    int mode = TYPEOF(x);
 
-    mode = TYPEOF(x);
-    xdims = getAttrib(x, R_DimSymbol);
-    k = length(xdims);
+    int *subs[k], indx[k], nsubs[k], offset[k];
+    SEXP subv[k];
 
-    vmaxsave = VMAXGET();
-    subs = (int**)R_alloc(k, sizeof(int*));
-    indx = (int*)R_alloc(k, sizeof(int));
-    offset = (int*)R_alloc(k, sizeof(int));
-    bound = (int*)R_alloc(k, sizeof(int));
-
-    /* Construct a vector to contain the returned values. */
-    /* Store its extents. */
-
-    n = 1;
-    r = s;
+    n = 1; r = s;
     for (i = 0; i < k; i++) {
-	SETCAR(r, arraySubscript(i, CAR(r), xdims, getAttrib,
-				 (STRING_ELT), x));
-	bound[i] = LENGTH(CAR(r));
-	n *= bound[i];
+        PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
+                                       (STRING_ELT), x));
+        subs[i] = INTEGER(subv[i]);
+	nsubs[i] = LENGTH(subv[i]);
+        n *= nsubs[i];
+        indx[i] = 0;
 	r = CDR(r);
     }
+
+    offset[1] = INTEGER(xdims)[0];  /* offset[0] is not used */
+    for (i = 2; i < k; i++)
+        offset[i] = offset[i-1] * INTEGER(xdims)[i-1];
+
+    /* Check for out-of-bounds indexes.  MAYBE UNNECESSARY?? */
+
+    for (j = 0; j < k; j++) {
+        for (i = 0; i < nsubs[j]; i++) {
+            jj = subs[j][i];
+            if (jj != NA_INTEGER && (jj < 1 || jj > INTEGER(xdims)[j])) {
+REprintf("bounds error found here...\n");
+                errorcall(call, R_MSG_subs_o_b);
+            }
+        }
+    }
+
+    /* Vector to contain the returned values. */
+
     PROTECT(result = allocVector(mode, n));
-    r = s;
-    for (i = 0; i < k; i++) {
-	indx[i] = 0;
-	subs[i] = INTEGER(CAR(r));
-	r = CDR(r);
-    }
-    offset[0] = 1;
-    for (i = 1; i < k; i++)
-	offset[i] = offset[i - 1] * INTEGER(xdims)[i - 1];
 
     /* Transfer the subset elements from "x" to "a". */
 
-    for (i = 0; i < n; i++) {
-	ii = 0;
-	for (j = 0; j < k; j++) {
+    if (n > 0) for (i = 0; ; i++) {
+
+        jj = subs[0][indx[0]];
+        if (jj == NA_INTEGER) {
+            ii = NA_INTEGER;
+            goto assign;
+        }
+	ii = jj-1;
+	for (j = 1; j < k; j++) {
 	    jj = subs[j][indx[j]];
 	    if (jj == NA_INTEGER) {
-		ii = NA_INTEGER;
-		goto assignLoop;
-	    }
-	    if (jj < 1 || jj > INTEGER(xdims)[j])
-		errorcall(call, R_MSG_subs_o_b);
-	    ii += (jj - 1) * offset[j];
+                ii = NA_INTEGER;
+                goto assign;
+            }
+	    ii += (jj-1) * offset[j];
 	}
 
-      assignLoop:
+      assign:
 	switch (mode) {
 	case LGLSXP:
 	    if (ii != NA_INTEGER)
@@ -893,18 +897,18 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	    errorcall(call, _("array subscripting not handled for this type"));
 	    break;
 	}
-	if (n > 1) {
-	    j = 0;
-	    while (++indx[j] >= bound[j]) {
-		indx[j] = 0;
-		j = (j + 1) % k;
-	    }
-	}
+
+        j = 0;
+        while (++indx[j] >= nsubs[j]) {
+            indx[j] = 0;
+            if (++j >= k) goto done;
+        }
     }
 
+  done:
     PROTECT(xdims = allocVector(INTSXP, k));
     for(i = 0 ; i < k ; i++)
-	INTEGER(xdims)[i] = bound[i];
+	INTEGER(xdims)[i] = nsubs[i];
     setAttrib(result, R_DimSymbol, xdims);
     UNPROTECT(1);
 
@@ -916,27 +920,26 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     dimnames = getAttrib(x, R_DimNamesSymbol);
     dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
     if (TYPEOF(dimnames) == VECSXP) { /* broken code for others in R-2.15.0 */
-	SEXP xdims;
-	PROTECT(xdims = allocVector(VECSXP, k));
-        for (i = 0, r = s; i < k ; i++, r = CDR(r)) {
-            if (bound[i] > 0 && VECTOR_ELT(dimnames,i) != R_NilValue) {
-                SET_VECTOR_ELT(xdims, i, allocVector(STRSXP, bound[i]));
-                ExtractSubset (VECTOR_ELT(dimnames, i), VECTOR_ELT(xdims,i),
-                               CAR(r), call);
+	SEXP new_xdims;
+	PROTECT(new_xdims = allocVector(VECSXP, k));
+        for (i = 0; i < k ; i++) {
+            if (nsubs[i] > 0 && VECTOR_ELT(dimnames,i) != R_NilValue) {
+                SET_VECTOR_ELT(new_xdims, i, allocVector(STRSXP, nsubs[i]));
+                ExtractSubset (VECTOR_ELT(dimnames, i), VECTOR_ELT(new_xdims,i),
+                               subv[i], call);
             } 
             /* else leave as NULL for 0-length dims */
         }
-	setAttrib(xdims, R_NamesSymbol, dimnamesnames);
-	setAttrib(result, R_DimNamesSymbol, xdims);
+	setAttrib(new_xdims, R_NamesSymbol, dimnamesnames);
+	setAttrib(result, R_DimNamesSymbol, new_xdims);
 	UNPROTECT(1);
     }
+
     /* This was removed for matrices in 1998
        copyMostAttrib(x, result); */
-    /* Free temporary memory */
-    VMAXSET(vmaxsave);
     if (drop)
 	DropDims(result);
-    UNPROTECT(1);
+    UNPROTECT(k+1);
     return result;
 }
 
@@ -1337,12 +1340,13 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
     } else {
-	if (nsubs != length(getAttrib(x, R_DimSymbol)))
+        SEXP xdims = getAttrib(x, R_DimSymbol);
+	if (nsubs != length(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
 	    ans = MatrixSubset(ax, CAR(subs), CADR(subs), call, drop);
 	else
-	    ans = ArraySubset(ax, subs, call, drop);
+	    ans = ArraySubset(ax, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);
     }
 
