@@ -148,7 +148,7 @@ bound to \code{b}, allowing it to be changed without duplication.
       an index vector.  This optimization has not yet been implemented for
       matrix or array indexing.
 
-\item Assignments to vectors and matrices using "[" has been
+\item Assignments to vectors, matrices, and arrays using "[" has been
       sped up by detailed code improvements, substantially in some
       cases.
 
@@ -156,10 +156,11 @@ bound to \code{b}, allowing it to be changed without duplication.
       passed on by \code{sum}.  So, for example, in 
       \code{sum(exp(a)) + sum(exp(b))}, the two
       summations of exponentials can now potentially be done in parallel.
+
 \item A full garbage collection now does not wait for all tasks being
       done by helpers to complete.  Instead, only tasks that are using
       or computing variables that are not otherwise referenced are 
-      waited for.
+      waited for (so that this storage can be reclaimed).
   }}
 
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
