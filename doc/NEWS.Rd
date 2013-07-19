@@ -98,7 +98,7 @@ R-2.15.1 and later R Core releases into pqR.
 
       The R Mac GUI would need to be recompiled for use with pqR.
       There are problems doing this unless helper threads
-      are disabled (see pqR issue \#17 for discussion).
+      are disabled (see pqR issue #17 for discussion).
 
       Compiled binary versions of pqR for Mac OS X are not yet being supplied.
       Installation on a Mac is recommended only for users experienced
@@ -197,7 +197,7 @@ bound to \code{b}, allowing it to be changed without duplication.
       such a pending object has been fixed.
 \item Some bugs in which production of warnings at inopportune times could 
       have caused serious problems have been fixed.
-\item The bug illustrated below (pqR issue \#13) has been fixed:
+\item The bug illustrated below (pqR issue #13) has been fixed:
 \preformatted{   > l = list(list(list(1)))
    > l1 = l[[1]]
    > l[[c(1,1,1)]] <- 2
@@ -219,12 +219,12 @@ following code:
    [1] 3 4
 }
 The value printed for a has a$x[1] changed to 9, when it should still be 1.
-See pqR issue \#14.
+See pqR issue #14.
 \item Fixed a bug (also present in R-2.15.0 and R-3.0.1) in which extending
       an "expression" by assigning to a new element changes it to an ordinary
-      list.  See pqR issue \#15.
+      list.  See pqR issue #15.
 \item Fixed several bugs (also present in R-2.15.0 and R-3.0.1) illustrated
-by the code below (see pqR issue \#16):
+by the code below (see pqR issue #16):
 \preformatted{   v <- c(10,20,30)
    v[[2]] <- NULL        # wrong error message
    
