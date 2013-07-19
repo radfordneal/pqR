@@ -63,20 +63,22 @@ R-2.15.1 and later R Core releases into pqR.
       use with pqR (as is generally the case with new versions of R), except
       for those written purely in R.
 
-\item Several users have reported that pqR can be successfully
-      installed under Mac OS X for use via the command line.  For
-      helper threads to work, a C compiler that fully supports OpenMP
-      is needed, such as gcc 4.7.3.  The gcc 4.2 compiler supplied by
-      Apple with Xcode works when helper threads are disabled, but
-      does not have the OpenMP support required for helper threads.
+\item It is now known that pqR can be successfully installed under Mac
+      OS X for use via the command line (at least with some versions
+      of OS X).  For helper threads to work, a C compiler that fully
+      supports OpenMP is needed, such as gcc 4.7.3.  The gcc 4.2
+      compiler supplied by Apple with Xcode works when helper threads
+      are disabled, but does not have the OpenMP support required for
+      helper threads.
 
       The Apple BLAS and LAPACK routines can be used by giving the
       \code{--with-blas='-framework vecLib'} and \code{--withlapack}
-      options to \code{configure}.
+      options to \code{configure}.  This speeds up some operations
+      but slows down others.
 
-      The R Mac GUI would need to be recompiled for use with pqR, and by
-      one report there are problems when doing this unless helper threads
-      are disabled.
+      The R Mac GUI would need to be recompiled for use with pqR.
+      There are problems doing this unless helper threads
+      are disabled (see pqR issue \#17).
 
       Compiled binary versions of pqR for Mac OS X are not yet being supplied.
       Installation on a Mac is recommended only for users experienced
@@ -149,8 +151,11 @@ bound to \code{b}, allowing it to be changed without duplication.
       matrix or array indexing.
 
 \item Assignments to vectors, matrices, and arrays using "[" has been
-      sped up by detailed code improvements, substantially in some
+      sped up by detailed code improvements, quite substantially in some
       cases.
+
+\item Subsetting of arrays of three or more dimensions using "[" has
+      been sped up by detailed code improvements.
 
 \item Pending summations of one-argument mathematical functions are now
       passed on by \code{sum}.  So, for example, in 
@@ -202,10 +207,15 @@ bound to \code{b}, allowing it to be changed without duplication.
 }
 \item Fixed a bug (also present in R-2.15.0 and R-3.0.1) illustrated by the
 following code:
-\preformatted{   a <- list(x=c(1,2),y=c(3,4))
-   b <- as.pairlist(a)
-   b$x[1] <- 9
-   print(a)
+\preformatted{   > a <- list(x=c(1,2),y=c(3,4))
+   > b <- as.pairlist(a)
+   > b$x[1] <- 9
+   > print(a)
+   $x
+   [1] 9 2
+   
+   $y
+   [1] 3 4
 }
 The value printed for a has a$x[1] changed to 9, when it should still be 1.
 See pqR issue \#14.
