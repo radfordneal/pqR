@@ -5,7 +5,7 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-07-17}{
+\section{CHANGES IN VERSION RELEASED 2013-07-19}{
 
   \subsection{INTRODUCTION}{
 
@@ -52,6 +52,25 @@ R-2.15.1 and later R Core releases into pqR.
             numbers are even integers.
   }}
 
+  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item From R-2.15.1: On Windows, there are two new environment variables which
+      control the defaults for command-line options.
+
+      If \env{R_WIN_INTERNET2} is set to a non-empty value, it is as if
+      \option{--internet2} was used.
+
+      If \env{R_MAX_MEM_SIZE} is set, it gives the default memory limit
+      if \option{--max-mem-size} is not specified: invalid values being
+      ignored.
+
+\item From R-2.15.1: The NA warning messages from e.g. \code{pchisq()} now 
+      report the call to the closure and not that of the \code{.Internal}.
+
+\item The following included software has been updated to new versions:
+      zlib to 1.2.8, LZMA to 5.0.4, and PCRE to 8.33.
+  }}
+
   \subsection{INSTALLATION AND TESTING}{
     \itemize{
 
@@ -65,11 +84,12 @@ R-2.15.1 and later R Core releases into pqR.
 
 \item It is now known that pqR can be successfully installed under Mac
       OS X for use via the command line (at least with some versions
-      of OS X).  For helper threads to work, a C compiler that fully
-      supports OpenMP is needed, such as gcc 4.7.3.  The gcc 4.2
+      of OS X).  The gcc 4.2
       compiler supplied by Apple with Xcode works when helper threads
-      are disabled, but does not have the OpenMP support required for
-      helper threads.
+      are disabled, but does not have the full OpenMP support required for
+      helper threads.   For helper threads to work, a C compiler that fully
+      supports OpenMP is needed, such as gcc 4.7.3 (available via 
+      macports.org).
 
       The Apple BLAS and LAPACK routines can be used by giving the
       \code{--with-blas='-framework vecLib'} and \code{--withlapack}
@@ -78,7 +98,7 @@ R-2.15.1 and later R Core releases into pqR.
 
       The R Mac GUI would need to be recompiled for use with pqR.
       There are problems doing this unless helper threads
-      are disabled (see pqR issue \#17).
+      are disabled (see pqR issue \#17 for discussion).
 
       Compiled binary versions of pqR for Mac OS X are not yet being supplied.
       Installation on a Mac is recommended only for users experienced
@@ -150,7 +170,7 @@ bound to \code{b}, allowing it to be changed without duplication.
       an index vector.  This optimization has not yet been implemented for
       matrix or array indexing.
 
-\item Assignments to vectors, matrices, and arrays using "[" has been
+\item Assignments to parts of vectors, matrices, and arrays using "[" has been
       sped up by detailed code improvements, quite substantially in some
       cases.
 
@@ -166,25 +186,6 @@ bound to \code{b}, allowing it to be changed without duplication.
       done by helpers to complete.  Instead, only tasks that are using
       or computing variables that are not otherwise referenced are 
       waited for (so that this storage can be reclaimed).
-  }}
-
-  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
-    \itemize{
-\item From R-2.15.1: On Windows, there are two new environment variables which
-      control the defaults for command-line options.
-
-      If \env{R_WIN_INTERNET2} is set to a non-empty value, it is as if
-      \option{--internet2} was used.
-
-      If \env{R_MAX_MEM_SIZE} is set, it gives the default memory limit
-      if \option{--max-mem-size} is not specified: invalid values being
-      ignored.
-
-\item From R-2.15.1: The NA warning messages from e.g. \code{pchisq()} now 
-      report the call to the closure and not that of the \code{.Internal}.
-
-\item The following included software has been updated to new versions:
-      zlib to 1.2.8, LZMA to 5.0.4, and PCRE to 8.33.
   }}
 
   \subsection{BUG FIXES}{
