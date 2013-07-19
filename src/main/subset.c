@@ -811,13 +811,13 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     for (i = 2; i < k; i++)
         offset[i] = offset[i-1] * INTEGER(xdims)[i-1];
 
-    /* Check for out-of-bounds indexes.  MAYBE UNNECESSARY?? */
+    /* Check for out-of-bounds indexes.  Disabled, since it seems unnecessary,
+       given that arraySubscript checks bounds. */
 
     for (j = 0; j < k; j++) {
         for (i = 0; i < nsubs[j]; i++) {
             jj = subs[j][i];
             if (jj != NA_INTEGER && (jj < 1 || jj > INTEGER(xdims)[j])) {
-REprintf("bounds error found here...\n");
                 errorcall(call, R_MSG_subs_o_b);
             }
         }
@@ -832,71 +832,72 @@ REprintf("bounds error found here...\n");
     if (n > 0) for (i = 0; ; i++) {
 
         jj = subs[0][indx[0]];
-        if (jj == NA_INTEGER) {
-            ii = NA_INTEGER;
-            goto assign;
-        }
+        if (jj == NA_INTEGER) goto assign;
 	ii = jj-1;
 	for (j = 1; j < k; j++) {
 	    jj = subs[j][indx[j]];
-	    if (jj == NA_INTEGER) {
-                ii = NA_INTEGER;
-                goto assign;
-            }
+	    if (jj == NA_INTEGER) goto assign;
 	    ii += (jj-1) * offset[j];
 	}
 
       assign:
-	switch (mode) {
-	case LGLSXP:
-	    if (ii != NA_INTEGER)
-		LOGICAL(result)[i] = LOGICAL(x)[ii];
-	    else
-		LOGICAL(result)[i] = NA_LOGICAL;
-	    break;
-	case INTSXP:
-	    if (ii != NA_INTEGER)
-		INTEGER(result)[i] = INTEGER(x)[ii];
-	    else
-		INTEGER(result)[i] = NA_INTEGER;
-	    break;
-	case REALSXP:
-	    if (ii != NA_INTEGER)
-		REAL(result)[i] = REAL(x)[ii];
-	    else
-		REAL(result)[i] = NA_REAL;
-	    break;
-	case CPLXSXP:
-	    if (ii != NA_INTEGER) {
-		COMPLEX(result)[i] = COMPLEX(x)[ii];
-	    }
-	    else {
-		COMPLEX(result)[i].r = NA_REAL;
-		COMPLEX(result)[i].i = NA_REAL;
-	    }
-	    break;
-	case STRSXP:
-	    if (ii != NA_INTEGER)
-		SET_STRING_ELT(result, i, STRING_ELT(x, ii));
-	    else
-		SET_STRING_ELT(result, i, NA_STRING);
-	    break;
-	case VECSXP:
-	    if (ii != NA_INTEGER)
+        if (jj != NA_INTEGER) {
+            switch (mode) {
+            case LGLSXP:
+                LOGICAL(result)[i] = LOGICAL(x)[ii];
+                break;
+            case INTSXP:
+                INTEGER(result)[i] = INTEGER(x)[ii];
+                break;
+            case REALSXP:
+                REAL(result)[i] = REAL(x)[ii];
+                break;
+            case CPLXSXP:
+                COMPLEX(result)[i] = COMPLEX(x)[ii];
+                break;
+            case STRSXP:
+                SET_STRING_ELT(result, i, STRING_ELT(x, ii));
+                break;
+            case VECSXP:
                 SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii);
-	    else
-		SET_VECTOR_ELT(result, i, R_NilValue);
-	    break;
-	case RAWSXP:
-	    if (ii != NA_INTEGER)
-		RAW(result)[i] = RAW(x)[ii];
-	    else
-		RAW(result)[i] = (Rbyte) 0;
-	    break;
-	default:
-	    errorcall(call, _("array subscripting not handled for this type"));
-	    break;
-	}
+                break;
+            case RAWSXP:
+                RAW(result)[i] = RAW(x)[ii];
+                break;
+            default:
+                errorcall(call, _("array subscripting not handled for this type"));
+                break;
+            }
+        }
+        else { /* jj == NA_INTEGER */
+            switch (mode) {
+            case LGLSXP:
+                LOGICAL(result)[i] = NA_LOGICAL;
+                break;
+            case INTSXP:
+                INTEGER(result)[i] = NA_INTEGER;
+                break;
+            case REALSXP:
+                REAL(result)[i] = NA_REAL;
+                break;
+            case CPLXSXP:
+                COMPLEX(result)[i].r = NA_REAL;
+                COMPLEX(result)[i].i = NA_REAL;
+                break;
+            case STRSXP:
+                SET_STRING_ELT(result, i, NA_STRING);
+                break;
+            case VECSXP:
+                SET_VECTOR_ELT(result, i, R_NilValue);
+                break;
+            case RAWSXP:
+                RAW(result)[i] = (Rbyte) 0;
+                break;
+            default:
+                errorcall(call, _("array subscripting not handled for this type"));
+                break;
+            }
+        }
 
         j = 0;
         while (++indx[j] >= nsubs[j]) {
