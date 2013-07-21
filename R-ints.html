@@ -127,7 +127,7 @@ p {
 <li><a href="#Variables-in-Windows-DLLs">1.18.2 Variables in Windows DLLs</a>
 </li></ul>
 <li><a href="#Lazy-loading">1.19 Lazy loading</a>
-<li><a href="#The-helpers-facility">1.20 Lazy loading</a>
+<li><a href="#The-helpers-facility">1.20 The helpers facility</a>
 </li></ul>
 <li><a name="toc__002eInternal-vs-_002ePrimitive" href="#_002eInternal-vs-_002ePrimitive">2 <code>.Internal</code> vs <code>.Primitive</code></a>
 <ul>
@@ -200,7 +200,7 @@ the core team working on R itself.
 
    <p>ISBN 3-900051-14-3
 
-   <p>Modifications for pqR are for pqR version 2.15.0 (2013-06-28).
+   <p>Modifications for pqR are for pqR version 2.15.0 (2013-07-19).
 
 <ul class="menu">
 <li><a accesskey="1" href="#R-Internal-Structures">R Internal Structures</a>
@@ -1371,16 +1371,115 @@ but when appropriate, macros for testing its value called
 should be used, since they may be more efficient than a comparison
 with the value returned by <code>NAMEDCNT</code>.
 
+   <p>When helper threads are enabled, an object that is being used by a
+task that has not yet completed must not be modified, even if its
+<code>NAMEDCNT</code> field is such that it could otherwise be modified. 
+This constraint is implemented by having the <code>NAMEDCNT</code> macro
+wait until no task is using the object before returning the value. 
+See <a href="#The-helpers-facility">The helpers facility</a> for details.
+
    <p>The <code>nmcnt</code> field can be set with the <code>SET_NAMEDCNT</code> macro,
 but when possible, it is better to use the <code>SET_NAMEDCNT_0</code>,
 <code>SET_NAMEDCNT_1</code>, <code>SET_NAMEDCNT_MAX</code>, <code>INC_NAMEDCNT</code>,
 <code>DEC_NAMEDCNT</code>, and <code>INC_NAMEDCNT_0_AS_1</code> macros, since they
 may be more efficient.  The <code>INC_NAMEDCNT</code> and
 <code>DEC_NAMEDCNT</code> macros increment and decrement <code>nmcnt</code>,
-except that they do not change its value if it is <code>MAX_NAMEDCNT</code>. 
+except that they do not change its value if it is <code>MAX_NAMEDCNT</code>,
+and <code>DEC_NAMEDCNT</code> does not change a value of zero. 
 The <code>INC_NAMEDCNT_0_AS_1</code> macro first changes <code>nmcnt</code> to 1
 if it is 0, and then increments the value (unless it is
 <code>MAX_NAMEDCNT</code>).
+
+   <p>In detail, pqR aims to follow (but may not yet fully follow) the
+(tentative) conventions below regarding how <code>NAMEDCNT</code> should
+be set, and when an object may be modifedi:
+
+     <ul>
+<li>Pairlists, language constructs, and closures (<code>LISTSXP</code>,
+<code>LANGSXP</code>, <code>DOTSXP</code>, <code>CLOSXP</code>, and <code>BCODESXP</code>
+objects) should never be modified &mdash; all changes must be implemented
+by duplicating all or part of the object &mdash; except for internal uses
+of such objects that are never visible to user R code (eg, lists of
+bindings in environments and lists of attributes), and when such
+objects are in the process of being constructed.  This immutability is
+the easiest way of, for example, ensuring that expressions being
+evaluated are not changing during the course of their evaluation. 
+Accordingly, <code>NAMEDCNT</code> is not meaningful for such objects.
+
+     <p>An atomic or non-atomic vector that is referenced from an object of one
+of these types (eg, a numeric constant in a language construct) should
+have its <code>NAMECNT</code> set to <code>MAX_NAMEDCNT</code> whenever it becomes
+visible elsewhere (eg, as the result of <code>eval</code>) to ensure that it
+is never changed.
+
+     <li>Environments (<code>ENVSXP</code> objects) may always be modified (ie,
+bindings within them created, deleted, or changed), since their
+specified semantics is that the same environment may be referenced in
+several ways, with changes to the environment seen via all references. 
+Accordingly, <code>NAMEDCNT</code> is not meaningful for environments.  (It
+is possible that in future <code>NAMEDCNT</code> will be maintained for
+environemnts so that when it is decremented to zero the <code>NAMEDCNT</code>
+in all values bound in the environment can be decremented, but this
+is not attempted at present.)
+
+     <li>Promises (<code>PROMSXP</code> objects) should have <code>NAMEDCNT</code>
+set to the number of bindings of the promise in an environment.  This
+count will usually be one, but may be greater as a result of method
+dispatch.  (This count is not yet properly maintained in pqR, so at
+present it must always be assumed to be greater than one.)
+
+     <li><code>NAMEDCNT</code> for atomic and non-atomic vectors (objects of
+type <code>LGLSXP</code>, <code>INTSXP</code>, <code>REALSXP</code>, <code>CPLXSXP</code>,
+<code>STRSX</code>, <code>RAWSXP</code>, <code>VECSXP</code>, and <code>EXPRSXP</code>) and
+for objects of type <code>S4SXP</code> should be set to the count how many
+references exist to the object in any of the following ways:
+          <ul>
+<li>as the value bound to a name in an environment. 
+<li>as the value of an attibute of an object for which
+      <code>NAMEDCNT</code> is non-zero. 
+<li>as an element in a list (<code>VECSXP</code> or <code>EXPRSXP</code>) for
+      which <code>NAMEDCNT</code> is non-zero. 
+<li>as the value of a promise for which <code>NAMEDCNT</code> is non-zero.
+
+     </ul>
+
+     <p>However, <code>NAMEDCNT</code> for a vector or <code>S4SXP</code> objects is allowed
+to be zero if there is only a single reference to it as an attribute
+or a list element.  If such a vector is made visible otherwise (eg, as
+the value returned by <code>eval</code>), and <code>NAMEDCNT</code> for the object
+referencing it is still non-zero, its <code>NAMEDCNT</code> must be set to
+1, so that it will be correctly seen and maintained later.  This
+convention is convenient because it sometimes avoids the need to set
+<code>NAMEDCNT</code> to 1 for all elements when creating a list, and
+because it sometimes automatically results in <code>NAMEDCNT</code> being
+zero for an element of a list that has <code>NAMEDCNT</code> of zero (either
+because it was always zero, or because it became zero after
+<code>NAMEDCNT</code> was decremented, for example in <code>get_rm</code>).
+
+     <p>Note that this convention applies recursively.  For example, when a
+list with a non-zero <code>NAMEDCNT</code> contains a list with zero
+<code>NAMEDCNT</code> which in turn contains a real vector with zero
+<code>NAMEDCNT</code>, the list and real vector with zero <code>NAMEDCNT</code>
+are considered to really have <code>NAMEDCNT</code> of 1, and must have
+<code>NAMEDCNT</code> set to 1 if they become visible elsewhere.
+
+     <p>Note also that an object may reference another object more than once,
+in which case <code>NAMEDCNT</code> for the referenced object must account
+for all such references.  For example, an object that appears twice in
+a list, and is otherwise unreferenced, should have its <code>NAMEDCNT</code>
+field set to 2.
+
+     <li><code>NAMEDCNT</code> is not meaningful for the remaining types of
+objects (<code>NILSXP</code>, <code>SYMSXP</code>, <code>SPECIALSXP</code>,
+<code>BUILTINSXP</code>, <code>CHARSXP</code>, <code>EXTPTRSXP</code>, and
+<code>WEAKREFSXP</code>).  These objects are either never modified, or
+modifications are intended to be visible everywhere.
+
+   </ul>
+   It is always permissible (though undesirable) to set <code>NAMEDCNT</code>
+to a value greater than it needs to be according to the above
+conventions.  Also, note that setting and accessing <code>NAMEDCNT</code> is
+permitted for all objects, even those for which it is not meaningful,
 
 <div class="node">
 <a name="The-write-barrier"></a>
@@ -2333,7 +2432,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#R-Internal-Structures">R Internal Stru
 
 </div>
 
-<h3 class="section">1.20 Lazy loading</h3>
+<h3 class="section">1.20 The helpers facility</h3>
 
 <p>The pqR facility for doing computations in helper threads is
 supported by the &ldquo;helpers&rdquo; library in <samp><span class="file">src/extra/helpers</span></samp>,
@@ -2343,7 +2442,7 @@ helpers facility interfaces to the pqR interpreter.
 
    <p>At present, computations in helper threads are confined to numeric
 vectors.  Two bits in the headers of such objects (actually all
-objects) are check on how computations that may be done by helper
+objects) allow checks on how computations that may be done by helper
 threads are progressing.  These bits are accessed by the
 <code>IS_BEING_COMPUTED_BY_TASK</code> and <code>IS_IN_USE_BY_TASK</code> macros. 
 An object is being computed by a task if computation of its data part
@@ -4478,7 +4577,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
       in Algol 60. 
 <li>Address the unreliability of unrestricted global references from
       within functions by introducing &ldquo;closed&rdquo; functions, in which
-      such global refernences are restricted. 
+      such global references are restricted. 
 <li>Address support for objects with more than 2^31-1 elements. 
       This might or might not be done in a way similar to R-3.0.0. 
 <li>Further reduce interpretive overhead.  If this is sufficiently

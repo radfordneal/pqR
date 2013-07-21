@@ -1,5 +1,259 @@
 pqR News
 
+CHANGES IN VERSION RELEASED 2013-07-19:
+
+  INTRODUCTION:
+
+    o pqR is based on R-2.15.0, distributed by the R Core Team, but
+      improves on it in many ways, mostly ways that speed it up, but
+      also by implementing some new features and fixing some bugs.  See
+      the notes below, on the release of 2013-06-28, for general
+      discussion of pqR, and for information on pqR that has not
+      changed since that release.
+
+    o This updated release of pqR is provides some performance
+      enhancements and bug fixes, including some from R Core releases
+      after R-2.15.0.  More work is still needed to incorporate
+      improvements in R-2.15.1 and later R Core releases into pqR.
+
+  FEATURE AND DOCUMENTATION CHANGES:
+
+    o Detailed information on what operations can be done in helper
+      threads is now provided by help(helpers).
+
+    o Assignment to parts of a vector via code such as v[[i]]<-value
+      and v[ix]<-values now automatically converts raw values to the
+      appropriate type for assignment into numeric or string vectors,
+      and assignment of numeric or string values into a raw vector now
+      results in the raw vector being first converted to the
+      corresponding type.  This is consistent with the existing
+      behaviour with other types.
+
+    o The allowed values for assignment to an element of an
+      "expression" list has been expanded to match the allowed values
+      for ordinary lists.  These values (such as function closures)
+      could previously occur in expression lists as a result of other
+      operations (such as creation with the expression primitive).
+
+    o Operations such as v <- pairlist(1,2,3); v[[-2]] <- NULL now
+      raise an error.  These operations were previously documented as
+      being illegal, and they are illegal for ordinary lists.  The
+      proper way to do this deletion is v <- pairlist(1,2,3); v[-2] <-
+      NULL.
+
+    o Raising -Inf to a large value (eg, (-Inf)^(1e16)) no longer
+      produces an incomprehensible warning.  As before, the value
+      returned is Inf, because (due to their limited-precision
+      floating-point representation) all such large numbers are even
+      integers.
+
+  FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES:
+
+    o From R-2.15.1: On Windows, there are two new environment
+      variables which control the defaults for command-line options.
+
+      If R_WIN_INTERNET2 is set to a non-empty value, it is as if
+      --internet2 was used.
+
+      If R_MAX_MEM_SIZE is set, it gives the default memory limit if
+      --max-mem-size is not specified: invalid values being ignored.
+
+    o From R-2.15.1: The NA warning messages from e.g. pchisq() now
+      report the call to the closure and not that of the .Internal.
+
+    o The following included software has been updated to new versions:
+      zlib to 1.2.8, LZMA to 5.0.4, and PCRE to 8.33.
+
+  INSTALLATION AND TESTING:
+
+    o See the pqR wiki at https://github.com/radfordneal/pqR/wiki for
+      the latest news regarding systems and packages that do or do not
+      work with pqR.
+
+    o Note that any previosly-installed packages must be re-installed
+      for use with pqR (as is generally the case with new versions of
+      R), except for those written purely in R.
+
+    o It is now known that pqR can be successfully installed under Mac
+      OS X for use via the command line (at least with some versions of
+      OS X).  The gcc 4.2 compiler supplied by Apple with Xcode works
+      when helper threads are disabled, but does not have the full
+      OpenMP support required for helper threads.  For helper threads
+      to work, a C compiler that fully supports OpenMP is needed, such
+      as gcc 4.7.3 (available via macports.org).
+
+      The Apple BLAS and LAPACK routines can be used by giving the
+      --with-blas='-framework vecLib' and --withlapack options to
+      configure.  This speeds up some operations but slows down others.
+
+      The R Mac GUI would need to be recompiled for use with pqR.
+      There are problems doing this unless helper threads are disabled
+      (see pqR issue #17 for discussion).
+
+      Compiled binary versions of pqR for Mac OS X are not yet being
+      supplied.  Installation on a Mac is recommended only for users
+      experienced in installation of R from source code.
+
+    o Success has also been reported in installing pqR on a Windows
+      system, including with helper threads, but various tweaks were
+      required.  Some of these tweaks are incorporated in this release,
+      but they are probably not sufficient for installation "out of the
+      box".  Attempting to install pqR on Windows is recommended only
+      for users who are both experienced and adventurous.
+
+    o Compilation using the -O3 option for gcc is not recommended.  It
+      speeds up some operations, but slows down others.  With gcc 4.7.3
+      on a 32-bit Intel system running Ubuntu 13.04, compiling with -O3
+      causes compiled functions to crash. (This is not a pqR issue,
+      since the same thing happens when R-2.15.0 is compiled with -O3).
+
+  INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE:
+
+    o The R internals manual now documents (in Section 1.8) a
+      preliminary set of conventions that pqR follows (not yet
+      perfectly) regarding when objects may be modified, and how
+      NAMEDCNT should be maintained.  R-2.15.0 did not follow any clear
+      conventions.
+
+    o The documentation in the R internals manual on how helper threads
+      are implemented in pqR now has the correct title.  (It would
+      previously have been rather hard to notice.)
+
+  PERFORMANCE IMPROVEMENTS:
+
+    o Some unnecessary duplication of objects has been eliminated.
+      Here are three examples: Creation of lists no longer duplicates
+      all the elements put in the list, but instead increments NAMEDCNT
+      for these elements, so that
+      
+         a <- numeric(10000)
+         k <- list(1,a)
+
+      no longer duplicates a when k is created (though a duplication
+      will be needed later if either a or k[[2]] is modified).
+      Furthermore, the assignment below to b$x, no longer causes
+      duplication of the 10000 elements of y:
+      
+         a <- list (x=1, y=seq(0,1,length=10000))
+         b <- a
+         b$x <- 2
+
+      Instead, a single vector of 10000 elements is shared between a$y
+      and b$y, and will be duplicated later only if necessary.
+      Unnecessary duplication of a 10000-element vector is also avoided
+      when b[1] is assigned to in the code below:
+      
+         a <- list (x=1, y=seq(0,1,length=10000))
+         b <- a$y
+         a$y <- 0
+         b[1] <- 1
+
+      The assignment to a$y now reduces NAMEDCNT for the vector bound
+      to b, allowing it to be changed without duplication.
+
+    o Assignment to part of a vector using code such as v[101:200]<-0
+      will now not actually create a vector of 100 indexes, but will
+      instead simply change the elements with indexes 101 to 200
+      without creating an index vector.  This optimization has not yet
+      been implemented for matrix or array indexing.
+
+    o Assignments to parts of vectors, matrices, and arrays using "["
+      has been sped up by detailed code improvements, quite
+      substantially in some cases.
+
+    o Subsetting of arrays of three or more dimensions using "[" has
+      been sped up by detailed code improvements.
+
+    o Pending summations of one-argument mathematical functions are now
+      passed on by sum.  So, for example, in sum(exp(a)) + sum(exp(b)),
+      the two summations of exponentials can now potentially be done in
+      parallel.
+
+    o A full garbage collection now does not wait for all tasks being
+      done by helpers to complete.  Instead, only tasks that are using
+      or computing variables that are not otherwise referenced are
+      waited for (so that this storage can be reclaimed).
+
+  BUG FIXES:
+
+    o A bug that could have affected the result of sum(abs(v)) when it
+      is done by a helper thread has been fixed.
+
+    o A bug that could have allowed as.vector, as.integer, etc.  to
+      pass on an object still being computed to a caller not expecting
+      such a pending object has been fixed.
+
+    o Some bugs in which production of warnings at inopportune times
+      could have caused serious problems have been fixed.
+
+    o The bug illustrated below (pqR issue #13) has been fixed:
+      
+         > l = list(list(list(1)))
+         > l1 = l[[1]]
+         > l[[c(1,1,1)]] <- 2
+         > l1
+         [[1]]
+         [[1]][[1]]
+         [1] 2
+
+    o Fixed a bug (also present in R-2.15.0 and R-3.0.1) illustrated by
+      the following code:
+      
+         > a <- list(x=c(1,2),y=c(3,4))
+         > b <- as.pairlist(a)
+         > b$x[1] <- 9
+         > print(a)
+         $x
+         [1] 9 2
+         
+         $y
+         [1] 3 4
+
+      The value printed for a has a$x[1] changed to 9, when it should
+      still be 1. See pqR issue #14.
+
+    o Fixed a bug (also present in R-2.15.0 and R-3.0.1) in which
+      extending an "expression" by assigning to a new element changes
+      it to an ordinary list.  See pqR issue #15.
+
+    o Fixed several bugs (also present in R-2.15.0 and R-3.0.1)
+      illustrated by the code below (see pqR issue #16):
+      
+         v <- c(10,20,30)
+         v[[2]] <- NULL        # wrong error message
+         
+         x <- pairlist(list(1,2))
+         x[[c(1,2)]] <- NULL   # wrongly gives an error, referring to misuse
+                               # of the internal SET_VECTOR_ELT procedure
+         
+         v<-list(1)
+         v[[quote(abc)]] <- 2  # internal error, this time for SET_STRING_ELT
+         
+         a <- pairlist(10,20,30,40,50,60)
+         dim(a) <- c(2,3)
+         dimnames(a) <- list(c("a","b"),c("x","y","z"))
+         print(a)              # doesn't print names
+         
+         a[["a","x"]] <- 0     # crashes with a segmentation fault
+
+  BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES:
+
+    o From R-2.15.1: formatC() uses the C entry point str_signif which
+      could write beyond the length allocated for the output string.
+
+    o From R-2.15.1: plogis(x, lower = FALSE, log.p = TRUE) no longer
+      underflows early for large x (e.g. 800).
+
+    o From R-2.15.1: ?Arithmetic's "1 ^ y and y ^ 0 are 1, _always_"
+      now also applies for integer vectors y.
+
+    o From R-2.15.1: X11-based pixmap devices like png(type = "Xlib")
+      were trying to set the cursor style, which triggered some
+      warnings and hangs.
+
+    o From R-3.0.1 patched: Fixed comment-out bug in BLAS, as per PR
+      14964.
+
 CHANGES IN VERSION RELEASED 2013-06-28:
 
   INTRODUCTION:
