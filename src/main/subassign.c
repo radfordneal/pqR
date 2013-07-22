@@ -184,8 +184,8 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
 
 static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
 {
-    SEXP include, xnew, xnames, xnewnames;
-    R_len_t i, ii, len, lenw;
+    SEXP xnew, xnames, xnewnames;
+    R_len_t i, len;
 
     len = length(x);
     if (end > len) 
@@ -293,9 +293,7 @@ static SEXP VectorAssignSeq
               (SEXP call, SEXP x, R_len_t start, R_len_t end, SEXP y)
 {
     LOCAL_COPY(R_NilValue);
-    SEXP indx;
-    int i, ii, iy, n, nx, ny;
-    double ry;
+    int i, n, ny;
 
     if (x==R_NilValue && y==R_NilValue)
 	return R_NilValue;
@@ -310,7 +308,6 @@ static SEXP VectorAssignSeq
 
     PROTECT(x);
 
-    nx = length(x);
     ny = length(y);
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
@@ -1468,7 +1465,6 @@ SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 {
     LOCAL_COPY(R_NilValue);
-    SEXP t;
 
     PROTECT_INDEX pvalidx, pxidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
