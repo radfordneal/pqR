@@ -1,2 +1,0 @@
-Reorder RCNTXT structure and code in begincontext to maybe make saving
-a context faster.
