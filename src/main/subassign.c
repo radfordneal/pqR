@@ -203,7 +203,7 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
 
     xnames = getAttrib(x, R_NamesSymbol);
     if (xnames != R_NilValue) {
-        PROTECT(xnewnames = allocVector(STRSXP, len-(end-start)));
+        PROTECT(xnewnames = allocVector(STRSXP, len-(end-start+1)));
         if (start>1) 
             copy_string_elements (xnewnames, 0, xnames, 0, start-1);
         if (end<len) 
