@@ -5,7 +5,7 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
-\section{CHANGES IN VERSION RELEASED 2013-07-19}{
+\section{CHANGES IN VERSION RELEASED 2013-07-22}{
 
   \subsection{INTRODUCTION}{
 
@@ -17,10 +17,14 @@ implementing some new features and fixing some bugs.  See the notes
 below, on the release of 2013-06-28, for general discussion of pqR,
 and for information on pqR that has not changed since that release.
 
-\item This updated release of pqR is provides some performance
+\item This updated release of pqR provides some performance
 enhancements and bug fixes, including some from R Core releases after
 R-2.15.0.  More work is still needed to incorporate improvements in
 R-2.15.1 and later R Core releases into pqR.
+
+\item This release is the same as the briefly-released version of
+2013-17-19, except that it fixes one bug introduced in that release,
+and tweaks the Windows Makefiles (which are not yet fully tested).
 
   }}
 
