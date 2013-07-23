@@ -232,6 +232,17 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
     if (len==0 || lenw==0) 
         return x;
 
+    /* handle deletion of a contiguous block (incl. one element) specially. */
+    for (i = 1; i < lenw; i++)
+        if (INTEGER(which)[i] != INTEGER(which)[i-1]+1)
+            break;
+    if (i == lenw) {
+        int start = INTEGER(which)[0];
+        int end = INTEGER(which)[lenw-1];
+        if (start < 1) start = 1;
+        return DeleteListElementsSeq (x, start, end);
+    }
+
     /* create vector indicating which to delete */
     PROTECT(include = allocVector(INTSXP, len));
     for (i = 0; i < len; i++)
