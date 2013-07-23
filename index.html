@@ -17,16 +17,14 @@ computations in parallel with each other, and with other operations of
 the interpreter, on systems with multiple processors or processor
 cores.
 
-<P>For a list of new features in the current release of
-2013-07-19, see the <a href="NEWS.txt">NEWS file<a>.  
+<h3>The current release of pqR</h3>
 
-<P>NOTE! I've just found a bug in this release, which I expect will be
-fixed soon, and a new version released.  If you're in a hurry, maybe
-you want the <a href="pqR-2013-06-28.tar.gz">previous release of
-2013-06-28</a>.
+Features of the current release of 2013-07-22 are described in the <a
+href="NEWS.txt">NEWS file<a> (which is also included in the
+distribution below).
 
 <P>To install pqR on a Linux/Unix system, download <a
-HREF="http://github.com/radfordneal/pqR/archive/2013-07-19.tar.gz">this
+HREF="http://github.com/radfordneal/pqR/archive/2013-07-22.tar.gz">this
 gzipped tar file</a> and unpack it with the "tar" command.
 Configuration, compilation, and installation can then be done in the
 same way as for R-2.15.0 (see <a href="INSTALL.txt">here</a>), but
@@ -34,12 +32,17 @@ there are some additional options for pqR, explained in the <a
 href="NEWS.txt">NEWS file</a>.
 
 <P>Installation on a Mac system is recommended only for those who are
-experienced in installing R from source.  See the NEWS file for some
-information.  Trying to install pqR on a Windows system is not
-currently recommended (some success on Windows has been reported, but
-tweaks are required that aren't yet all in the current version).
+experienced in installing R from source.  See the <a
+href="NEWS.txt">NEWS file</a> for some further information.
 
-<P>For more information, see the following manuals (in HTML or PDF format):
+<P>Trying to install pqR on a Windows system is not currently
+recommended (some success on Windows has been reported, but tweaks may
+be required that aren't yet all in the current version).
+
+<h3>More information</h3>
+
+<P>For more information on pqR and R in general, see the following manuals 
+(in HTML or PDF format):
 <ul>
 <li> <a href="R-intro.html">Introduction to R</a> (or as
      <a href="R-intro.pdf">PDF</a>).
@@ -57,26 +60,37 @@ tweaks are required that aren't yet all in the current version).
 There is also a <a href="R-FAQ.html">FAQ</a> (or as <a
 href="R-FAQ.pdf">PDF</a>), which has not been updated for pqR.
 
-<P>Further information (eg, systems on which pqR has been tested) is
-on the <a href="http://github.com/radfordneal/pqR/wiki">pqR wiki</a>.
-You can see and report bugs at the <a
-href="http://github.com/radfordneal/pqR/issues">pqR issues page</A>.
+<P>The <a href="http://github.com/radfordneal/pqR/wiki">pqR wiki</a>
+has additional current information on pqR (eg, systems on which pqR
+has been tested).
 
-<P>I am writing a series of posts discussing pqR on my blog, at <a
-href="http://radfordneal.wordpress.com">radfordneal.wordpress.com</A>.
-These posts refer to a set of speed tests for R that are available
-<a href="http://www.cs.utoronto.ca/~radford/R-speed.html">here</a>.
+<P>The <a href="http://github.com/radfordneal/pqR/issues">pqR issues
+page</A> has reports of bugs and other issues.  Please report bugs you
+find there.
+
+<P>My blog, at <a
+href="http://radfordneal.wordpress.com">radfordneal.wordpress.com</A>,
+has a series of posts discussing pqR, including the following:
+<ul>
+<li> <a href="http://radfordneal.wordpress.com/2013/06/22/announcing-pqr-a-faster-version-of-r/">Announcing pqR: A faster version of R</a>.
+<li> <a href="http://radfordneal.wordpress.com/2013/06/23/parallel-computation-with-helper-threads-in-pqr/">Parallel computation with helper threads in pqR</a>.
+<li> <a href="http://radfordneal.wordpress.com/2013/06/24/comparing-the-speed-of-pqr-with-r-2-15-0-and-r-3-0-1/">Comparing the speed of pqR with R-2.15.0 and R-3.0.1</a>.
+<li> <a href="http://radfordneal.wordpress.com/2013/06/30/how-pqr-makes-programs-faster-by-not-doing-things/">How pqR makes programs faster by not doing things</a>.
+<li> <a href="http://radfordneal.wordpress.com/2013/07/02/fixing-rs-named-problems-in-pqr/">Fixing R's NAMED problems in pqR</a>.
+</ul>
+
+<P>Some of these posts refer to my <a
+href="http://www.cs.utoronto.ca/~radford/R-speed.html">set of speed
+tests for R</a>.
+
+<h3>Source code repository</h3>
 
 <P>The git repository for the source code and development history of
 pqR is at <a href="http://github.com/radfordneal/pqR">
 http://github.com/radfordneal/pqR</a>.  The current release is on
-branch Release-2013-07-19.  See the MODS file in that branch (or mods
+branch Release-2013-07-22.  See the MODS file in that branch (or mods
 directory in development branches) for information on how branches in
 the git repository are organized.  These branches also document how
 pqR differs from R-2.15.0.
-
-<P>Upcoming release (for testing only): <a
-HREF="http://github.com/radfordneal/pqR/archive/2013-07-22.tar.gz">
-gzipped tar file</a>
 
 </body></html>
