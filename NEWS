@@ -17,9 +17,9 @@ CHANGES IN VERSION RELEASED 2013-07-22:
       improvements in R-2.15.1 and later R Core releases into pqR.
 
     o This release is the same as the briefly-released version of
-      2013-17-19, except that it fixes one bug introduced in that
-      release, and tweaks the Windows Makefiles (which are not yet
-      fully tested).
+      2013-17-19, except that it fixes one bug and one reversion of an
+      optimization that were introduced in that release, and tweaks the
+      Windows Makefiles (which are not yet fully tested).
 
   FEATURE AND DOCUMENTATION CHANGES:
 
