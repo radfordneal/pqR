@@ -23,8 +23,9 @@ R-2.15.0.  More work is still needed to incorporate improvements in
 R-2.15.1 and later R Core releases into pqR.
 
 \item This release is the same as the briefly-released version of
-2013-17-19, except that it fixes one bug introduced in that release,
-and tweaks the Windows Makefiles (which are not yet fully tested).
+2013-17-19, except that it fixes one bug and one reversion of an
+optimization that were introduced in that release, and tweaks the
+Windows Makefiles (which are not yet fully tested).
 
   }}
 
