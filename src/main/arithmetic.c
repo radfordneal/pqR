@@ -1049,7 +1049,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
             ans = allocVector(REALSXP, n);
         task = task_real_arithmetic;
         if (oper == MODOP)
-            flags = HELPERS_MASTER_NOW; /* since it can produce a warning msg */
+            flags = HELPERS_PIPE_IN0 |
+                    HELPERS_MASTER_NOW; /* since it can produce a warning msg */
         else
             flags = HELPERS_PIPE_OUT | HELPERS_PIPE_IN0;
         if (n>1) {
