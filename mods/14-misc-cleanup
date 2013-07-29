@@ -1,0 +1,5 @@
+Miscellaneous cleanups/optimizations.  
+
+Gets rid of task_abs in favour of using math1 (modified to know about abs).
+
+Fixes glitch that would prevent pipelining into MODOP.
