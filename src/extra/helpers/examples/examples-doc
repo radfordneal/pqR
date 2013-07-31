@@ -132,9 +132,12 @@ The possible options are as follows:
           (except output of D).  This is equivalent to specifying 
           -p1, -p2, -p3, and -p4.
 
-    -dh   Disable helpers at start.
+    -dh   Disable helpers before first repetition.
 
-    -dp   Disable pipelining at start.
+    -dp   Disable pipelining before first repetition.
+
+    -dt   Disable multithreading one third of the way through the
+          repetitions, and re-enable it two-thirds of the way through.
 
 The version of the example program called "example-d" is compiled with
 the helpers facility is disabled.  In "example-d", all computations

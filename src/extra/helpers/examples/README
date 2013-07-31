@@ -36,7 +36,8 @@ All the programs are compiled with "make".  The Makefile provided is
 set up to use gcc, but it can be modified to use a different compiler.
 (Options suitable for a SPARC system not using gcc are in the Makefile
 but disabled.)  The program "example-d" is "example" compiled with
-helpers disabled.
+helpers disabled.  The program "example-m" is "example" compiled with
+multithreading disabled.
 
 The shell file "doit" runs "example" and "parex" with various numbers
 of helpers, with and without pipelining.
