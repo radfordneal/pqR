@@ -2023,7 +2023,7 @@ void helpers_disable (int a)
   }
   helpers_are_disabled = a!=0;
   if (trace) 
-  { helpers_printf ("HELPERS: Helpers facility %s\n",
+  { helpers_printf ("HELPERS: Task deferral %s\n",
                     helpers_are_disabled ? "disabled" : "enabled");
   }
 }
