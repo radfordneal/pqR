@@ -202,7 +202,19 @@ AC_SUBST(config_opts)
 
 ### ** Optional features.
 
-## Allow the user to specify support for helper threads.
+## Allow the user to specify support for deferred evaluation & helpers apparatus.
+AC_ARG_ENABLE([deferred-evaluation],
+[AS_HELP_STRING([--enable-deferred-evaluation],[support deferred evaluation / helpers @<:@yes@:>@])],
+[if test "${enableval}" = no; then
+  want_deferred_eval=no
+elif test "${enableval}" = yes; then
+  want_deferred_eval=yes
+else
+  want_deferred_eval=yes
+fi],
+[want_deferred_eval=yes])
+
+## Allow the user to specify that the helpers apparatus can use multithreading.
 AC_ARG_ENABLE([helper_threads],
 [AS_HELP_STRING([--enable-helper-threads],[support use of helper threads @<:@yes@:>@])],
 [if test "${enableval}" = no; then
@@ -2198,6 +2210,11 @@ R_SYS_POSIX_LEAPSECONDS
 
 ## stat times
 gl_STAT_TIME
+
+## helper threads.
+if test "${want_deferred_eval}" = yes; then
+  AC_DEFINE(R_DEFERRED_EVAL, 1, [Define this to enable deferred evaluation / helpers.])
+fi
 
 ## helper threads.
 if test "${want_helper_threads}" = yes; then

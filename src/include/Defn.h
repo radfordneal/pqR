@@ -63,11 +63,17 @@
 #endif
 
 /* Define HELPERS_DISABLED if no helper support.  This has the effect of 
-   making helpers.h define stubs for the helpers routines. */
+   making helpers.h define stubs for the helpers routines.  Also define
+   HELPERS_NO_MULTITHREADING if helpers not disabled, but R_HELPER_THREADS
+   is not defined. */
 
-#ifndef R_HELPER_THREADS
-#define HELPERS_DISABLED
-#endif
+# ifdef R_DEFERRED_EVAL
+#   ifndef R_HELPER_THREADS
+#     define HELPERS_NO_MULTITHREADING
+#   endif
+# else
+#   define HELPERS_DISABLED
+# endif
 
 #define MAXELTSIZE 8192 /* Used as a default for string buffer sizes,
 			   and occasionally as a limit. */
@@ -490,7 +496,7 @@ typedef struct {
 #define VARIANT_PENDING_OK 16  /* Computation may be deferred pending completion
                                   of a task (in a helper or the master) */
 
-#ifdef R_HELPER_THREADS
+#ifdef R_DEFERRED_EVAL
 
 /* Access to markers maintained with assistance of the helpers facility. */
 
@@ -499,14 +505,9 @@ typedef struct {
 
 /* Macros to wait until variables(s) computed. */
 
-#ifndef HELPERS_DISABLED
 #define helpers_wait_until_not_being_computed(v) \
   helpers_wait_until_not_being_computed2 ((v), (SEXP)0)
 extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
-#else
-#define helpers_wait_until_not_being_computed(v) 0
-#define helpers_wait_until_not_being_computed2(u,v) 0
-#endif
 
 #define WAIT_UNTIL_COMPUTED(x) \
   ( ! IS_BEING_COMPUTED_BY_TASK(x) \

@@ -142,8 +142,14 @@ getOption(x, default = NULL)
       where it is possible you may want to increase that.}
 
     \item{\code{helpers_disable}:}{A logical value set to \code{TRUE} to disable
-      helper threads.  It will also be \code{TRUE} when there are no helper
-      threads.  Initially \code{FALSE} unless there are no helper threads.}
+      the helpers apparatus, including deferred evaluation using only the
+      master thread.  Initially \code{FALSE}, even if there are no
+      helper threads, unless the helpers apparatus is not supported.}
+
+    \item{\code{helpers_no_multithreading}:}{A logical value set to \code{TRUE} 
+      to disable use of helper threads (but not the entire helpers apparatus
+      supporting deferred evaluation).  Initially \code{FALSE}, unless there 
+      are no helper threads.}
 
     \item{\code{helpers_no_pipelining}:}{A logical value set to \code{TRUE} 
       to disable pipelining of data between helper threads.  Initially

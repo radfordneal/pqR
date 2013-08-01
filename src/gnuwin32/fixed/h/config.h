@@ -523,6 +523,9 @@
 /* Define this to make mat_mult_with_BLAS default to TRUE. */
 /* #undef R_MAT_MULT_WITH_BLAS_BY_DEFAULT */
 
+/* Define this to enable deferred evaluation / helpers. */
+#define R_DEFERRED_EVAL 1
+
 /* Define this to enable helper threads. */
 #define R_HELPER_THREADS 1
 

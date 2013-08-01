@@ -325,11 +325,16 @@ void attribute_hidden InitOptions(void)
     set_rl_word_breaks(" \t\n\"\\'`><=%;,|&{()}");
 #endif
 
-#ifdef R_HELPER_THREADS
+#ifdef R_DEFERRED_EVAL
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
     SET_TAG(v, install("helpers_disable"));
     SETCAR(v, ScalarLogical(helpers_are_disabled));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("helpers_no_multithreading"));
+    SETCAR(v, ScalarLogical(helpers_not_multithreading));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
@@ -580,8 +585,17 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_HELPER_THREADS
+#ifdef R_DEFERRED_EVAL
 		helpers_disable(k);
+#endif
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
+	    else if (streql(CHAR(namei), "helpers_no_multithreading")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+#ifdef R_DEFERRED_EVAL
+		helpers_no_multithreading(k);
 #endif
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
@@ -589,7 +603,7 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_HELPER_THREADS
+#ifdef R_DEFERRED_EVAL
 		helpers_no_pipelining(k);
 #endif
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
@@ -598,7 +612,7 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_HELPER_THREADS
+#ifdef R_DEFERRED_EVAL
 		helpers_trace(k);
 #endif
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
