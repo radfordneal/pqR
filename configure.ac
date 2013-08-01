@@ -202,18 +202,6 @@ AC_SUBST(config_opts)
 
 ### ** Optional features.
 
-## Allow the user to specify support for deferred evaluation & helpers apparatus.
-AC_ARG_ENABLE([deferred-evaluation],
-[AS_HELP_STRING([--enable-deferred-evaluation],[support deferred evaluation / helpers @<:@yes@:>@])],
-[if test "${enableval}" = no; then
-  want_deferred_eval=no
-elif test "${enableval}" = yes; then
-  want_deferred_eval=yes
-else
-  want_deferred_eval=yes
-fi],
-[want_deferred_eval=yes])
-
 ## Allow the user to specify that the helpers apparatus can use multithreading.
 AC_ARG_ENABLE([helper_threads],
 [AS_HELP_STRING([--enable-helper-threads],[support use of helper threads @<:@yes@:>@])],
@@ -225,6 +213,20 @@ else
   want_helper_threads=yes
 fi],
 [want_helper_threads=yes])
+
+## Allow the user to specify support for deferred evaluation & helpers apparatus
+## with lack of support implying also no helper threads.
+AC_ARG_ENABLE([deferred-evaluation],
+[AS_HELP_STRING([--enable-deferred-evaluation],[support deferred evaluation / helpers @<:@yes@:>@])],
+[if test "${enableval}" = no; then
+  want_deferred_eval=no
+  want_helper_threads=no
+elif test "${enableval}" = yes; then
+  want_deferred_eval=yes
+else
+  want_deferred_eval=yes
+fi],
+[want_deferred_eval=yes])
 
 ## Allow the user to specify support for R profiling.
 AC_ARG_ENABLE([R-profiling],
@@ -2761,6 +2763,8 @@ fi
 r_options=
 if test "${want_helper_threads}" = yes; then
   R_SH_VAR_ADD(r_options, [helper threads], [, ])
+elif test "${want_deferred_eval}" = yes; then
+  R_SH_VAR_ADD(r_options, [deferred eval], [, ])
 fi
 if test "${want_R_framework}" = yes; then
   R_SH_VAR_ADD(r_options, [framework], [, ])

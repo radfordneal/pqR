@@ -72,14 +72,14 @@ typedef void helpers_task_proc \
 void helpers_master (void);          /* The master procedure, does it all */
 
 
-#ifndef HELPERS_DISABLED
+/* PROCEDURES/MACROS/VARIABLE DEFINED BY THE HELPERS MODULE.  Some of these 
+   are replaced by stubs when HELPERS_DISABLED or HELPERS_NO_MULTITHREADING
+   are defined. */
 
 
-/* PROCEDURES/MACROS/VARIABLE DEFINED BY THE HELPERS MODULE. */
+#if defined(HELPERS_DISABLED) || defined(HELPERS_NO_MULTITHREADING)
 
-#ifdef HELPERS_NO_MULTITHREADING
-
-/* STUBS FOR THINGS THAT AREN'T NEEDED WHEN THERE ARE NO HELPER THREADS. */
+/* STUBS FOR THINGS THAT DO NOTHING MUCH WHEN THERE ARE NO HELPER THREADS. */
 
 #define helpers_num 0
 #define helpers_not_multithreading 1
@@ -111,9 +111,10 @@ void helpers_master (void);          /* The master procedure, does it all */
 
 #define HELPERS_WAIT_IN_VAR(_v_,_avail_,_prev_,_len_) \
                                                do {_avail_ = (_len_);} while (0)
+
 #else
 
-/* NON_STUB PROCEDURES FOR WHEN THERE MAY BE HELPER THREADS. */
+/* NON_STUB PROCEDURES/MACROS FOR WHEN THERE MAY BE HELPER THREADS. */
 
 extern int helpers_num;              /* Number of helper threads */
 extern int helpers_not_multithreading; /* 1 if tasks done only by master */
@@ -132,14 +133,6 @@ int helpers_idle (void);             /* Estimate of number of idle helpers */
 
 void helpers_no_multithreading (int);/* Disable/re-enable tasks in helpers */
 void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
-
-/* Conditionally schedule task with helpers_do_task or call it directly. */
-
-#define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
- ((_c1_)? helpers_do_task((_flags_),(_proc_),(_op_),(_out_),(_in1_),(_in2_)) : \
-  (_c2_)? helpers_do_task((_flags_) | HELPERS_MASTER_NOW, \
-                                    (_proc_),(_op_),(_out_),(_in1_),(_in2_)) : \
-          ((_proc_)((_op_),(_out_),(_in1_),(_in2_))))
 
 /* Set up for pipelined output in a task procedure. */
 
@@ -198,10 +191,44 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 
 #endif
 
+
+#if defined(HELPERS_DISABLED)
+
+/* STUBS FOR WHEN THE HELPERS FACILITY (NOT JUST HELPER THREADS) IS DISABLED. */
+
+#define helpers_tasks 0
+#define helpers_are_disabled 1
+
+#define helpers_startup(n)           (helpers_master())
+
+#define helpers_do_task(_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
+  ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
+
+#define helpers_start_computing_var(v)              0
+#define helpers_wait_until_not_in_use(v)            0
+#define helpers_wait_until_not_being_computed2(u,v) 0
+#define helpers_wait_until_not_being_computed(v)    0
+#define helpers_wait_for_all_master_only()          0
+#define helpers_wait_for_all()                      0
+
+static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
+
+#define helpers_var_list()           helpers_var_list_null
+
+#define helpers_trace(f)             0
+#define helpers_stats()              0
+#define helpers_disable(a)           0
+
+#define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
+  ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
+
+
+#else
+
 /* NON-STUBS NEEDED WHEN HELPERS NOT DISABLED, EVEN IF NO MULTITHREADING. */
 
-extern int helpers_are_disabled;     /* 1 if helpers are not enabled */
 extern int helpers_tasks;            /* Number of outstanding tasks */
+extern int helpers_are_disabled;     /* 1 if helpers are not enabled */
 
 void helpers_startup (int);          /* Set up and then call master procedure */
 
@@ -230,65 +257,12 @@ void helpers_trace (int);            /* Set whether trace info is written */
 void helpers_stats (void);           /* Print statistics */
 void helpers_disable (int);          /* Disable/re-enable helpers */
 
-
-#else  
-
-
-/* STUBS FOR PROCEDURES/MACROS/VARIABLES ABOVE FOR WHEN HELPERS ARE DISABLED. */
-
-#define helpers_num 0
-#define helpers_tasks 0
-#define helpers_are_disabled 1
-#define helpers_not_multithreading 1
-#define helpers_not_pipelining 1
-
-#define helpers_startup(n)           (helpers_master())
-
-#define helpers_do_task(_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
-  ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
-
-#define helpers_start_computing_var(v)              0
-#define helpers_wait_until_not_in_use(v)            0
-#define helpers_wait_until_not_being_computed2(u,v) 0
-#define helpers_wait_until_not_being_computed(v)    0
-#define helpers_wait_for_all_master_only()          0
-#define helpers_wait_for_all()                      0
-
-#define helpers_amount_out(p)        0
-
-#define helpers_avail0(mx)           (mx)
-#define helpers_avail1(mx)           (mx)
-#define helpers_avail1(mx)           (mx)
-
-#define helpers_avail_var(v,mx)      (mx)
-
-#define helpers_idle()               0
-
-static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
-
-#define helpers_var_list()           helpers_var_list_null
-
-#define helpers_trace(f)             0
-#define helpers_stats()              0
-#define helpers_disable(a)           0
-#define helpers_no_multithreading(a) 0
-#define helpers_no_pipelining(a)     0
+/* Conditionally schedule task with helpers_do_task or call it directly. */
 
 #define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
-  ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
-
-#define HELPERS_SETUP_OUT(_pow2_)    do {} while (0)
-#define HELPERS_NEXT_OUT(_i_)        do { _i_ += 1; } while (0)
-#define HELPERS_BLOCK_OUT(_i_,_k_)   do { _i_ += _k_; } while (0)
-
-#define HELPERS_UP_TO(_i_,_a_)       ((_a_)-1)
-#define HELPERS_UP_TO2(_i,_a1_,_a2_) ((_a1_) > (_a2_) ? (_a2_)-1 : (_a1_)-1)
-
-#define HELPERS_WAIT_IN0(_avail_,_prev_,_len_) do {_avail_ = (_len_);} while (0)
-#define HELPERS_WAIT_IN1(_avail_,_prev_,_len_) do {_avail_ = (_len_);} while (0)
-#define HELPERS_WAIT_IN2(_avail_,_prev_,_len_) do {_avail_ = (_len_);} while (0)
-
-#define HELPERS_WAIT_IN_VAR(_v_,_avail_,_prev_,_len_) \
-                                               do {_avail_ = (_len_);} while (0)
+ ((_c1_)? helpers_do_task((_flags_),(_proc_),(_op_),(_out_),(_in1_),(_in2_)) : \
+  (_c2_)? helpers_do_task((_flags_) | HELPERS_MASTER_NOW, \
+                                    (_proc_),(_op_),(_out_),(_in1_),(_in2_)) : \
+          ((_proc_)((_op_),(_out_),(_in1_),(_in2_))))
 
 #endif
