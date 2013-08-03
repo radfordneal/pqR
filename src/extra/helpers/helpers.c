@@ -53,7 +53,7 @@
    increasing overhead (more for 3 than 2) even when tracing is not enabled. */
 
 #ifndef ENABLE_TRACE   /* Allow value from compile option to override below's */
-#define ENABLE_TRACE 1 /* 0, 1, 2, or 3 for no, normal, extra... trace output */
+#define ENABLE_TRACE 3 /* 0, 1, 2, or 3 for no, normal, extra... trace output */
 #endif
 
 
@@ -415,6 +415,29 @@ static void trace_task_list (void)
 }
 
 
+/* PRINT FLAGS FOR TASK. */
+
+static void trace_flags (int flags)
+{
+  if (flags & HELPERS_MASTER_ONLY) helpers_printf(" MASTER_ONLY");
+  if (flags & HELPERS_MASTER_NOW)  helpers_printf(" MASTER_NOW");
+
+  if ((flags & HELPERS_MERGE_IN_OUT) == HELPERS_MERGE_IN_OUT) 
+  { helpers_printf(" MERGE_IN_OUT");
+  }
+  else if ((flags & HELPERS_MERGE_IN))  helpers_printf(" MERGE_IN");
+  else if ((flags & HELPERS_MERGE_OUT)) helpers_printf(" MERGE_OUT");
+
+  if ((flags & HELPERS_PIPE_IN012_OUT) != 0)
+  { helpers_printf ((flags & HELPERS_PIPE_IN012) != 0 ? " PIPE_IN" : "PIPE");
+    if (flags & HELPERS_PIPE_IN0) helpers_printf("0");
+    if (flags & HELPERS_PIPE_IN1) helpers_printf("1");
+    if (flags & HELPERS_PIPE_IN2) helpers_printf("2");
+    if (flags & HELPERS_PIPE_OUT) helpers_printf("_OUT");
+  }
+}
+
+
 /* TRACE OUTPUT FOR STARTING A TASK.  The task index is the first argument,
    with 0 indicating that the task will be done in the master without giving
    it a task index.  The remaining arguments are from helpers_do_task. */
@@ -432,17 +455,11 @@ static void trace_started
   else
   { helpers_printf (
       "HELPERS: Task %d scheduled: %s(%"PRIuMAX",%s,%s,%s)", t,
-      helpers_task_name(task_to_do), 
-      (uintmax_t) op, 
+      helpers_task_name(task_to_do), (uintmax_t) op, 
       var_name(out), var_name(in1), var_name(in2));
   }
 
-  if (flags & HELPERS_MASTER_ONLY) helpers_printf(" MASTER_ONLY");
-  if (flags & HELPERS_MASTER_NOW)  helpers_printf(" MASTER_NOW");
-  if (flags & HELPERS_PIPE_OUT)    helpers_printf(" PIPE_OUT");
-  if (flags & HELPERS_PIPE_IN0)    helpers_printf(" PIPE_IN0");
-  if (flags & HELPERS_PIPE_IN1)    helpers_printf(" PIPE_IN1");
-  if (flags & HELPERS_PIPE_IN2)    helpers_printf(" PIPE_IN2");
+  trace_flags(flags);
 
   if (ENABLE_TRACE>1)
   { struct task_info *info = &task[t].info;
@@ -455,7 +472,49 @@ static void trace_started
   helpers_printf("\n");
 
   if (ENABLE_TRACE>1)
-  { helpers_printf("HELPERS: Current tasks:");
+  { helpers_printf("HELPERS:   current tasks:");
+    trace_task_list();
+    helpers_printf("\n");
+  }
+}
+
+
+/* TRACE OUTPUT FOR MERGING WITH A TASK.  The index of the task merged with
+   is the first argument, followed by the arguments of helpers_do_task. */
+
+static void trace_merged
+  (tix t, int flags, helpers_task_proc *task_to_do, helpers_op_t op, 
+   helpers_var_ptr out, helpers_var_ptr in1, helpers_var_ptr in2)
+{ 
+  struct task_info *info = &task[t].info;
+
+  helpers_printf (
+    "HELPERS: Task %d merged with new task %s(%"PRIuMAX",%s,%s,%s)", t,
+    helpers_task_name(task_to_do), (uintmax_t) op, 
+    var_name(out), var_name(in1), var_name(in2));
+
+  trace_flags(flags);
+
+  helpers_printf("\n");
+
+  helpers_printf (
+    "HELPERS:   merged task is %s(%"PRIuMAX",%s,%s,%s)",
+    helpers_task_name(info->task_to_do), (uintmax_t) info->op, 
+    var_name(info->var[0]), var_name(info->var[1]), var_name(info->var[2]));
+
+  trace_flags(info->flags);
+
+  if (ENABLE_TRACE>1)
+  { helpers_printf (" : %d %d %d", info->pipe[0], info->pipe[1], info->pipe[2]);
+    if (ENABLE_TRACE>2)
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
+    }
+  }
+
+  helpers_printf("\n");
+
+  if (ENABLE_TRACE>1)
+  { helpers_printf("HELPERS:   current tasks:");
     trace_task_list();
     helpers_printf("\n");
   }
@@ -972,7 +1031,7 @@ static void notice_completed (void)
   /* Output new task list, if that's enabled. */
 
   if (ENABLE_TRACE>1 && trace)
-  { helpers_printf("HELPERS: Current tasks:");
+  { helpers_printf("HELPERS:   current tasks:");
     trace_task_list();
     helpers_printf("\n");
   }
@@ -1131,7 +1190,7 @@ static void do_task_in_master (int only_needed)
   /* Do the task in the master. */
 
   this_task_info = &task[this_task].info;
-  ATOMIC_WRITE_CHAR (this_task_info->helper = 0);
+  this_task_info->helper = 0;
 
   FLUSH;
   run_this_task();
@@ -1245,6 +1304,7 @@ void helpers_do_task
    helpers_var_ptr out, helpers_var_ptr in1, helpers_var_ptr in2)
 {
   struct task_info *info;
+  tix pipe0;
   int i;
   tix t;
   hix h;
@@ -1263,15 +1323,173 @@ void helpers_do_task
 
   notice_completed();
 
+  /* Find the most-recently-scheduled task (if any) that outputs the output
+     variable of this new task, setting pipe0 to the task index, or zero. 
+     If one is found, "i" is left pointing to its position in "used". */
+
+  pipe0 = 0;
+  if (out!=null)
+  { i = helpers_tasks;
+    while (i>0)
+    { tix u = used[--i];
+      if (task[u].info.var[0]==out)
+      { pipe0 = u;
+        break;
+      }
+    }
+  }
+
+  /* Perhaps try to merge the new task with the task, indexed by pipe0, that 
+     pipes into its output variable.  If a merge can be done, we need to
+     move to the master-only queue if the new task is master-only, or
+     do the task now, if the new task is master-now, or we just return
+     otherwise, with the merged task in the untaken queue where the old
+     one was.  
+
+     Note that a new task is allowed to merged with an old one only if none
+     of its inputs have not been computed, and the task merged with must
+     not have any of its uncomputed inputs changed.  So we don't need to 
+     update the merged task's pipe fields. */
+
+# ifdef helpers_can_merge
+
+  if (pipe0!=0 && (flags & HELPERS_MERGE_IN))
+  { struct task_info *m = &task[pipe0].info;
+    if ((m->flags & HELPERS_MERGE_OUT) && !(m->flags & HELPERS_MASTER_ONLY)
+          && helpers_can_merge (out, task_to_do, op, in1, in2, 
+                                m->task_to_do, m->op, m->in1, m->in2))
+    { FLUSH;
+      ATOMIC_READ_CHAR (h = m->helper);
+      if (h==-1) /* the task to merge with is not being run, but of course */
+      {          /*  this could change at any time (if any helper threads) */
+        int merged;
+
+#       ifndef HELPERS_NO_MULTITHREADING
+        if (!helpers_not_multithreading)
+        { 
+          /* We need to set start_lock to be sure that we don't merge with a
+             task that has started, and so we can if necessary remove it from
+             the untaken queue.  The lock will usually be unset, since there
+             is an untaken task, but it may be set for a prolonged time if no
+             untaken task can be run until some master-only task has run. */
+
+          while (!omp_test_lock (&start_lock))
+          { ATOMIC_READ_CHAR (h = m->helper);
+            if (h!=-1)
+            { goto out_of_merge;
+            }
+            do_task_in_master(0);
+          }
+        }
+#       endif
+
+        if (m->helper!=-1)
+        { merged = 0;
+        }
+        else
+        { 
+          /* Merge the new task with the existing task, indexed by pipe0. */
+
+          helpers_merge (out, task_to_do, op, in1, in2, 
+                         &m->task_to_do, &m->op, &m->in1, &m->in2);
+
+          m->flags &= ~HELPERS_MERGE_IN_OUT;
+          m->flags |= (flags & HELPERS_MERGE_OUT);
+
+          if (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
+          { 
+            /* Remove the merged task from the untaken queue. */
+
+            int j;
+
+            for (j = untaken_out; untaken[j]!=pipe0; j = (j+1) & QMask)
+            { if (j==untaken_in)
+              { helpers_printf("MERGED TASK NOT IN UNTAKEN QUEUE!\n");
+                exit(1);
+              }
+            }
+
+            untaken[j] = untaken[untaken_out];
+            untaken_out = (untaken_out + 1) & QMask;
+
+            if (flags & HELPERS_MASTER_ONLY)
+            { 
+              m->flags |= HELPERS_MASTER_ONLY;
+
+              /* Insert the merged task in the master-only queue. */
+
+              master_only[master_only_in] = pipe0;
+              master_only_in = (master_only_in + 1) & QMask;
+
+              merged = 1;
+            }
+            else /* flags & HELPERS_MASTER_NOW */
+            { 
+              m->flags |= HELPERS_MASTER_NOW;
+              if (trace) 
+              { trace_merged (pipe0, flags, task_to_do, op, out, in1, in2);
+              }
+
+              /* Replace arguments of this function by merged task's values. */
+
+              flags      = m->flags | HELPERS_MASTER_NOW;
+              task_to_do = m->task_to_do;
+              op         = m->op;
+              in1        = m->var[1];
+              in2        = m->var[2];
+
+              /* Remove the merged task from "used".  The position of the
+                 merged task in "used" was left in "i" by code above. */
+
+              helpers_tasks -= 1;
+              for (j = i; j<helpers_tasks; j++)
+              { used[j] = used[j+1];
+              }
+              used[helpers_tasks] = pipe0;
+
+              /* Update pipe0 to be the task producing output for the merged 
+                 task (or zero). */
+
+              pipe0 = m->pipe[0];
+
+              /* Set flag to process as new task after unsetting the lock. */
+
+              merged = 2;
+            }
+          }
+          else
+          {
+            merged = 1;
+          }
+        }
+
+#       ifndef HELPERS_NO_MULTITHREADING
+        if (!helpers_not_multithreading)
+        { omp_unset_lock (&start_lock);
+        }
+#       endif
+
+        if (merged==1)
+        { if (trace) trace_merged (pipe0, flags, task_to_do, op, out, in1, in2);
+          return;
+        }
+      }
+    }
+  }
+
+out_of_merge:
+
+# endif
+
   /* Set up for task - either master-now or another kind. */
 
   if (flags & HELPERS_MASTER_NOW)
   { 
     /* Use the pseudo-entry 0 for this master-now task, which will be done
        directly in the master.  Don't bother setting task_to_do, op, out, 
-       in1, and in2 in info, since they are unused.  Note that pipe0, pipe1, 
-       pipe2, last_amt0, last_amt1, last_amt2, and helper should already be 
-       zero. */
+       in1, and in2 in info, since they are unused.  Note that pipe[0], 
+       pipe[1], pipe[2], last_amt[0], last_amt[1], last_amt[2], and helper 
+       should already be zero. */
 
     t = 0;
     info = &task[0].info;
@@ -1376,19 +1594,39 @@ void helpers_do_task
     info->amt_out = 0;
   }
 
-  /* For each input or output variable in the new task, find the previous task
-     (if any) outputting that variable.  When more than one task has the same 
-     output variable, the one scheduled most recently takes precedence. */
+  /* Record the previous task (if any) outputting the output variable of
+     the new task. */
 
-  info->pipe[0] = info->pipe[1] = info->pipe[2] = 0;
+  info->pipe[0] = pipe0;
 
-  for (i = 0; i<helpers_tasks; i++)
-  { tix u = used[i];
-    helpers_var_ptr v = task[used[i]].info.var[0];
-    if (v!=null)
-    { if (v==out) info->pipe[0] = u;
-      if (v==in1) info->pipe[1] = u;
-      if (v==in2) info->pipe[2] = u;
+  /* For each input variable in the new task, find the task (if any) that is
+     outputting that variable.  When more than one task has the same output
+     variable, the one scheduled most recently takes precedence. */
+
+  info->pipe[1] = info->pipe[2] = 0;
+
+  if (helpers_tasks>0)
+  { 
+    if (in1!=null)
+    { i = helpers_tasks;
+      do
+      { tix u = used[--i];
+        if (task[u].info.var[0]==in1)
+        { info->pipe[1] = u;
+          break;
+        }
+      } while (i>0);
+    }
+
+    if (in2!=null)
+    { i = helpers_tasks;
+      do
+      { tix u = used[--i];
+        if (task[u].info.var[0]==in2)
+        { info->pipe[2] = u;
+          break;
+        }
+      } while (i>0);
     }
   }
 
