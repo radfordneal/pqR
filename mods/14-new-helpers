@@ -1,0 +1,7 @@
+This mod includes a new version of the helpers module that supports
+deferred task evaluation even when there are no helper threads, and
+associated mods to pqR to accomodate it (with various options for
+enabling/disabling).
+
+This is preparation for a later mod that will be able to merge some
+deferred tasks.
