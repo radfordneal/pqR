@@ -75,8 +75,8 @@ int R_stack_growth_direction (uintptr_t cvaraddr)
 }
 
 
-/* Define a stub for linking to by any module that doesn't know that helper
-   threads are disabled.  (The parentheses below suppress macro expansion.) */
+/* Define a stub for linking to by any module that doesn't know that the helpers
+   apparatus is disabled.  (The parentheses below suppress macro expansion.) */
 
 #ifdef HELPERS_DISABLED
 void (helpers_wait_until_not_in_use) (SEXP v) { /* no need to do anything */ }
@@ -1052,6 +1052,10 @@ void mainloop(void)
     int n;
 
     n = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
+    if (n < 0)
+    { helpers_disable(1);
+      n = 0;
+    }
 
     helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
     helpers_startup(n);  /* will call helpers_master above */

@@ -21,14 +21,22 @@
 
   To use this facility, it must have been enabled when pqR was
   configured, with the \code{--enable-helper-threads} option (though
-  this is the default).  If it was enabled, the number of helper
-  threads is specified with the \code{--helpers} option (short form
-  \code{-p}) to the command starting pqR.  A \code{--helpers} option
-  with no argument specifies that one helper thread will be used (two
-  threads total, counting the thread for the interpreter).  An option
-  of \code{--helpers=N} specifies that the number of helper threads
-  should be \code{N} (silently reduced to 127 if it is larger than
-  this maximum).  
+  this is the default).  The deferred evaluation apparatus must also
+  be enabled (with \code{--enable-deferred-evaluation}), but this also
+  is the default.
+
+  The number of helper threads is specified with the \code{--helpers}
+  option (short form \code{-p}) to the command starting pqR.  A
+  \code{--helpers} option with no argument specifies that one helper
+  thread will be used (two threads total, counting the master thread
+  runnign the interpreter).  An option of \code{--helpers=N} specifies
+  that the number of helper threads should be \code{N} (silently
+  reduced to 127 if it is larger than this maximum).  If no
+  \code{--helpers} or \code{-p} argument is given, zero helper threads
+  are used. An argument of \code{--helpers=-1} or \code{-p=-1}
+  specifies zero helper threads and also disables deferred evaluation
+  (so all tasks are done by the master thread immediately, rather than
+  being scheduled and possibly done later).
 
   Only some computations are structured as ``tasks'' that may be done in
   helper threads.  A computational task will be scheduled by the
@@ -141,9 +149,9 @@ pipelining, but \code{sum} does not operate as a task otherwise.
 
 \seealso{
   \code{\link{options}} for information on the options \code{helpers_disable},
-  \code{helpers_no_pipelining}, and \code{helpers_trace}.
-  \code{\link{\%*\%}} for information on matrix multiplication with
-  or without the BLAS.
+  \code{helpers_no_multithreading}, \code{helpers_no_pipelining}, and 
+  \code{helpers_trace}.  \code{\link{\%*\%}} for information on matrix 
+  multiplication with or without the BLAS.
 }
 
 \keyword{arith}

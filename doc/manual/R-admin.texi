@@ -3490,7 +3490,15 @@ Support for computations in helper threads is enabled by default, and
 may be disabled with the @code{--disable-helper-threads} configuration
 option.  Disabling support for helper threads will produce a small
 speed improvement, compared to running @pqR{} with helper thread
-support enabled, but with no helper threads.
+support enabled, but with no helper threads.  The
+@code{--disable-helper-threads} option will also allow pqR to be built
+on a system that does not support OpenMP.
+
+The whole helpers apparatus, including deferred evaluation even with
+no helper threads, can be disabled with the
+@code{--disable-deferred-evaluation} configuraton option. This will
+produce a further slight speed improvement in situations where
+deferred evaluation / helper threads are not useful.
 
 If the BLAS routines used for matrix multiplication are not thread-safe,
 the @code{--disable-mat-mult-with-BLAS-in-helpers} option should be

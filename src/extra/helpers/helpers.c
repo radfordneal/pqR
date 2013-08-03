@@ -26,7 +26,9 @@
 
 #ifndef HELPERS_DISABLED
 
+#ifndef HELPERS_NO_MULTITHREADING
 #include <omp.h>
+#endif
 
 
 /* -----------------------------  OPTIONS  ---------------------------------- */
@@ -107,8 +109,10 @@
 
 #define ATOMIC_READ_CHAR(_stmt_) _stmt_   /* First define macros for use with */
 #define ATOMIC_WRITE_CHAR(_stmt_) _stmt_  /*   OpenMP 3.0, or when use of the */
-#define ATOMIC_READ_SIZE(_stmt_) _stmt_   /*   atomic directives is disabled. */
-#define ATOMIC_WRITE_SIZE(_stmt_) _stmt_
+#define ATOMIC_READ_SIZE(_stmt_) _stmt_   /*   atomic directives is disabled, */
+#define ATOMIC_WRITE_SIZE(_stmt_) _stmt_  /*   or when no multithreading.     */
+
+#ifndef HELPERS_NO_MULTITHREADING
 
 #if _OPENMP>=201107  /* Redefine macros for OpenMP version 3.1 or later, if use
                         of an atomic directive isn't disabled in the context. */
@@ -146,14 +150,33 @@
 #endif
 
 #endif
+#endif
 
 
 /* MACRO FOR OMP FLUSH DIRECTIVE.  Can be used followed by a semicolon anywhere
    a statement is syntactically allowed. */
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 #define FLUSH do { \
   _Pragma("omp flush"); \
 } while (0)
+
+#else
+
+#define FLUSH do { } while (0)
+
+#endif
+
+
+/* MACRO FOR OMP WTIME FUNCTION.  Just returns zero if multithreading is
+   disabled, so we don't depend on OpenMP being implemented. */
+
+#ifndef HELPERS_NO_MULTITHREADING
+#define WTIME() omp_get_wtime()
+#else
+#define WTIME() 0
+#endif
 
 
 /* NUMBER OF HELPERS.  Declared as extern in helpers.h, defined here.  Helpers 
@@ -161,9 +184,15 @@
    identify the master.  The value of helpers_num will not exceed HELPERS_MAX, 
    which will be no more than 127, to allow a helper index to be stored in an 
    signed char.  A helper index of -1 is sometimes used to indicate no helper 
-   (nor the master) is assigned. */
+   (nor the master) is assigned. 
+
+   Defined as the constant 0 if HELPERS_NO_MULTITHREADING defined */
+
+#ifndef HELPERS_NO_MULTITHREADING
 
 int helpers_num;          /* Number of helpers */
+
+#endif
 
 typedef signed char hix;  /* Type of a helper index (0 = master, -1 = none) */
 
@@ -245,7 +274,7 @@ static union task_entry
    remaining entries are unused, and in arbitrary order. */
 
 static tix used[MAX_TASKS];  /* All task indexes; first helpers_tasks in use */
-int helpers_tasks;           /* Number of tasks outstanding = indexes in use */
+int helpers_tasks = 0;       /* Number of tasks outstanding = indexes in use */
 
 
 /* QUEUES OF TASK INDEXES.  These are circular queues, with in/out pointers
@@ -271,17 +300,27 @@ static tix master_only[QSize], master_only_in, master_only_out;
 
 static tix untaken[QSize], untaken_in, untaken_out;
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 static omp_lock_t untaken_lock;   /* Lock to set for accessing untaken queue */
+
+#endif
 
 
 /* LOCK SET FOR STARTING A TASK.  Set by a helper or the master when looking
    for a task to start.  When there's nothing to do, other helpers will block
    trying to set this lock. */
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 static omp_lock_t start_lock;  /* Lock set by thread looking for task to start*/
+
+#endif
 
 
 /* PAIR OF LOCKS USED FOR SUSPENDING A HELPER. */
+
+#ifndef HELPERS_NO_MULTITHREADING
 
 static hix suspended;      /* Helper that has suspended, or 0 if none */
 
@@ -291,6 +330,8 @@ static int which_suspends; /* Which lock a helper sets to suspend itself */
 static int which_wakes;    /* Which lock the master unsets to wake helper */
 
 static int suspend_initialized;  /* Set to 1 when master has done initial set */
+
+#endif
 
 
 /* VARIABLE LIST.  Storage for an array of variables used by current tasks. 
@@ -310,13 +351,21 @@ static tix this_task;     /* The task this thread is doing, undefined if none,
 
 static struct task_info *this_task_info;  /* Pointer to info for this_task */
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 #pragma omp threadprivate (this_thread, this_task, this_task_info)
+
+#endif
 
 
 /* VARIABLES HOLDING DISABLING OPTIONS. */
 
-int helpers_are_disabled = 0;       /* 1 if helpers disabled, or no helpers */
-int helpers_are_not_pipelining = 0; /* 1 if pipelining currently disabled */
+int helpers_are_disabled = 0;    /* 1 if helpers currently disabled */
+
+#ifndef HELPERS_NO_MULTITHREADING
+int helpers_not_pipelining;      /* 1 if pipelining currently disabled */
+int helpers_not_multithreading;  /* 1 if currently all tasks done by master */
+#endif
 
 
 /* TRACE VARIABLES. */
@@ -399,7 +448,7 @@ static void trace_started
   { struct task_info *info = &task[t].info;
     helpers_printf (" : %d %d %d", info->pipe[0], info->pipe[1], info->pipe[2]);
     if (ENABLE_TRACE>2)
-    { helpers_printf (" @ %.3f", omp_get_wtime()-init_wtime);
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
     }
   }
 
@@ -448,7 +497,7 @@ static void trace_completed (tix t)
       else
       { helpers_printf (" @ %.3f>%.3f>%.3f", info->start_wtime - init_wtime,
                                              info->done_wtime - init_wtime,
-                                             omp_get_wtime() - init_wtime);
+                                             WTIME() - init_wtime);
       }
     }
   }
@@ -503,7 +552,7 @@ static void trace_wait_until_not_being_computed
   { helpers_printf(" :");
     trace_task_list();
     if (ENABLE_TRACE>2)
-    { helpers_printf (" @ %.3f", omp_get_wtime()-init_wtime);
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
     }
   }
 
@@ -526,7 +575,7 @@ static void trace_wait_until_not_in_use (int any, helpers_var_ptr v)
   { helpers_printf(" :");
     trace_task_list();
     if (ENABLE_TRACE>2)
-    { helpers_printf (" @ %.3f", omp_get_wtime()-init_wtime);
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
     }
   }
 
@@ -549,7 +598,7 @@ static void trace_wait_for_all_master_only (void)
   { helpers_printf(" :");
     trace_task_list();
     if (ENABLE_TRACE>2)
-    { helpers_printf (" @ %.3f", omp_get_wtime()-init_wtime);
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
     }
   }
 
@@ -572,7 +621,7 @@ static void trace_wait_for_all (void)
   { helpers_printf(" :");
     trace_task_list();
     if (ENABLE_TRACE>2)
-    { helpers_printf (" @ %.3f", omp_get_wtime()-init_wtime);
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
     }
   }
 
@@ -589,7 +638,7 @@ static void trace_done_waiting (void)
   { helpers_printf(" :");
     trace_task_list();
     if (ENABLE_TRACE>2)
-    { helpers_printf (" @ %.3f", omp_get_wtime()-init_wtime);
+    { helpers_printf (" @ %.3f", WTIME()-init_wtime);
     }
   }
   helpers_printf("\n");
@@ -612,7 +661,7 @@ static void run_this_task (void)
     this_task_info->first_amt[1] = 0;
     this_task_info->first_amt[2] = 0;
     if (ENABLE_TRACE>2)
-    { this_task_info->start_wtime = omp_get_wtime();
+    { this_task_info->start_wtime = WTIME();
     }
   }
 
@@ -620,7 +669,7 @@ static void run_this_task (void)
                               this_task_info->var[1], this_task_info->var[2]);
 
   if (ENABLE_TRACE>2) 
-  { this_task_info->done_wtime = omp_get_wtime();
+  { this_task_info->done_wtime = WTIME();
   }
 
   FLUSH;  /* ensure data and info is up-to-date when 'done' flag is set */
@@ -1023,36 +1072,56 @@ static void do_task_in_master (int only_needed)
   { 
     hix h;
  
-    ATOMIC_READ_CHAR (h = suspended);
+#   ifndef HELPERS_NO_MULTITHREADING
 
-    FLUSH;  /* ensures seeing h>0 below after seeing untaken_in!=untaken_out
-               does really mean the queue is non-empty (but shouldn't be) */
+    if (!helpers_not_multithreading)
+    {
+      ATOMIC_READ_CHAR (h = suspended);
+
+      FLUSH;  /* ensures that h>0 below after seeing untaken_in!=untaken_out
+                 does really mean the queue is non-empty (but shouldn't be) */
+    }
+
+#   endif
 
     ATOMIC_READ_CHAR (u_out = untaken_out);
     if (untaken_in==u_out)
     { return; 
     }
 
-    if (!omp_test_lock (&start_lock))
+#   ifndef HELPERS_NO_MULTITHREADING
+
+    if (!helpers_not_multithreading)
     { 
-      /* See if a helper is supended - it shouldn't be! - and wake it up
-         if it is. */
+      if (!omp_test_lock (&start_lock))
+      { 
+        /* See if a helper is supended - it shouldn't be! - and wake it up
+           if it is. */
 
-      if (h>0)
-      { omp_set_lock (&suspend_lock[!which_wakes]);
-        suspended = 0;
-        omp_unset_lock (&suspend_lock[which_wakes]);
-        which_wakes = !which_wakes;
-        if (ENABLE_STATS) stats[h].times_woken += 1;
-        helpers_printf("HELPER WAS SUSPENDED WHEN IT SHOULDN'T HAVE BEEN!\n");
+        if (h>0)
+        { omp_set_lock (&suspend_lock[!which_wakes]);
+          suspended = 0;
+          omp_unset_lock (&suspend_lock[which_wakes]);
+          which_wakes = !which_wakes;
+          if (ENABLE_STATS) stats[h].times_woken += 1;
+          helpers_printf("HELPER WAS SUSPENDED WHEN IT SHOULDN'T HAVE BEEN!\n");
+        }
+
+        return;
       }
-
-      return;
     }
+
+#   endif
 
     this_task = find_untaken_runnable(only_needed);
 
-    omp_unset_lock (&start_lock);
+#   ifndef HELPERS_NO_MULTITHREADING
+
+    if (!helpers_not_multithreading)
+    { omp_unset_lock (&start_lock);
+    }
+
+#   endif
 
     if (this_task==0)
     { return;
@@ -1078,6 +1147,8 @@ static void do_task_in_master (int only_needed)
 /* PROCEDURE EXECUTED IN HELPER THREADS.  Loops looking for something for 
    this helper to do. */
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 static void helper_proc (void)
 {
   /* Set lock for becoming the helper that looks for a task to start. */
@@ -1092,11 +1163,14 @@ static void helper_proc (void)
     int count;
     tix u_in;
 
-    /* Loop up to SPIN_EMPTY times, or until there is an untaken task. */
+    /* Loop up to SPIN_EMPTY times, or until there is an untaken task
+       (and multithreading hasn't been disabled). */
 
     for (count = 0; count<SPIN_EMPTY; count++)
     { ATOMIC_READ_CHAR (u_in = untaken_in);
-      if (u_in!=untaken_out) break;
+      if (u_in!=untaken_out && !helpers_not_multithreading)
+      { break;
+      }
       FLUSH;
     }
 
@@ -1111,7 +1185,7 @@ static void helper_proc (void)
       omp_set_lock (&untaken_lock);
 
       ATOMIC_READ_CHAR (u_in = untaken_in);
-      if (u_in==untaken_out) 
+      if (u_in==untaken_out || helpers_not_multithreading) 
       { ATOMIC_WRITE_CHAR (suspended = this_thread);
         will_suspend = 1;
       }
@@ -1127,7 +1201,8 @@ static void helper_proc (void)
            to unsuspend, it may have already unset it). 
 
            The master will unsuspend this suspended helper when it next puts
-           a task in the untaken queue. */
+           a task in the untaken queue (when multithreading hasn't been 
+           disabled). */
 
         omp_set_lock (&suspend_lock[which_suspends]);
         omp_unset_lock (&suspend_lock[which_suspends]);
@@ -1158,6 +1233,8 @@ static void helper_proc (void)
   }
 }
 
+#endif
+
 
 /* -------------------------  TASK SCHEDULING  ------------------------------ */
 
@@ -1172,10 +1249,9 @@ void helpers_do_task
   tix t;
   hix h;
 
-  /* If helpers disabled (including when no helpers), do the task directly.
-     There's no possible need to wait.  Note that task[0].info will be 
-     set to all zeros (either from initialization or clearing when helpers
-     were disabled). */
+  /* If helpers are disabled, do the task directly.  There's no possible need 
+     to wait.  Note that task[0].info will be set to all zeros (either from 
+     initialization or clearing when helpers were disabled). */
 
   if (helpers_are_disabled)
   { info = &task[0].info;
@@ -1240,11 +1316,11 @@ void helpers_do_task
 
         if (needed != 0) mark_as_needed (uinfo, needed);       
       }
-    }
 
-    /* Wait for the tasks marked as needed above to start or complete. */
+      /* Wait for the tasks marked as needed above to start or complete. */
   
-    wait_while_any_needed();
+      wait_while_any_needed();
+    }
   }
 
   else /* not master-now */
@@ -1274,7 +1350,7 @@ void helpers_do_task
     { info->last_amt[0] = info->last_amt[1] = info->last_amt[2] = 0;
     }
 
-    info->flags = helpers_are_not_pipelining ? flags&~HELPERS_PIPE_OUT : flags;
+    info->flags = helpers_not_pipelining ? flags&~HELPERS_PIPE_OUT : flags;
 
     info->helper = -1; /* nobody is doing the task yet */
     info->needed = 0;  /* master isn't currently waiting for task to finish */
@@ -1340,28 +1416,42 @@ void helpers_do_task
   }
 
   /* For a non-master-only task, put it in the untaken queue, where it may 
-     then be noticed by a helper looking for a task to start.  Set the lock 
-     when incrementing untaken_in, and find out if a helper has suspended
-     while the lock is set. */
+     then be noticed by a helper looking for a task to start (or eventually
+     be done by the master thread). Set the lock when incrementing untaken_in,
+     and find out if a helper has suspended while the lock is set.  (But
+     don't unsuspend a helper if multithreading is currently disabled.) */
 
   untaken[untaken_in] = t;
 
-  omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
+# ifndef HELPERS_NO_MULTITHREADING
 
-  h = suspended;
+  if (!helpers_not_multithreading)
+  { omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
+    h = suspended;
+  }
+
+# endif
+
   ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
 
-  omp_unset_lock (&untaken_lock);  /* does an implicit FLUSH */
+# ifndef HELPERS_NO_MULTITHREADING
 
-  /* Wake the suspended helper, if there is one. */
+  if (!helpers_not_multithreading)
+  { 
+    omp_unset_lock (&untaken_lock);  /* does an implicit FLUSH */
 
-  if (h!=0)
-  { omp_set_lock (&suspend_lock[!which_wakes]);
-    suspended = 0;
-    omp_unset_lock (&suspend_lock[which_wakes]);
-    which_wakes = !which_wakes;
-    if (ENABLE_STATS) stats[h].times_woken += 1;
+    /* Wake the suspended helper, if there is one. */
+
+    if (h!=0)
+    { omp_set_lock (&suspend_lock[!which_wakes]);
+      suspended = 0;
+      omp_unset_lock (&suspend_lock[which_wakes]);
+      which_wakes = !which_wakes;
+      if (ENABLE_STATS) stats[h].times_woken += 1;
+    }
   }
+
+# endif
 
   return;
 
@@ -1383,14 +1473,14 @@ direct:
     this_task_info->first_amt[1] = 0;
     this_task_info->first_amt[2] = 0;
     if (ENABLE_TRACE>2)
-    { this_task_info->start_wtime = omp_get_wtime();
+    { this_task_info->start_wtime = WTIME();
     }
   }
 
   task_to_do (op, out, in1, in2);
 
   if (ENABLE_TRACE>2) 
-  { this_task_info->done_wtime = omp_get_wtime();
+  { this_task_info->done_wtime = WTIME();
   }
 
   if (trace) trace_completed (0);
@@ -1720,6 +1810,8 @@ void helpers_wait_for_all (void)
    the new value for amt_out will be flushed on the next call, or when the
    task finished. */
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 void helpers_amount_out (helpers_size_t amt)
 { 
   if (this_task_info->flags & HELPERS_PIPE_OUT)
@@ -1727,6 +1819,8 @@ void helpers_amount_out (helpers_size_t amt)
     ATOMIC_WRITE_SIZE (this_task_info->amt_out = amt);
   }
 }
+
+#endif
 
 
 /* GET THE AMOUNT OF AN INPUT THAT HAS BEEN PRODUCED SO FAR.  Care is needed to
@@ -1739,6 +1833,8 @@ void helpers_amount_out (helpers_size_t amt)
    for that input task, not some later task.  If the input task has terminated,
    the maximum passed is returned.  No flush is done at the beginning - at 
    worst, fresh values will be obtained on the next call. */
+
+#ifndef HELPERS_NO_MULTITHREADING
 
 helpers_size_t helpers_avail0 (helpers_size_t mx)
 {
@@ -1818,12 +1914,16 @@ helpers_size_t helpers_avail2 (helpers_size_t mx)
   return n;
 }
 
+#endif
+
 
 /* GET THE AMOUNT OF A VARIABLE THAT HAS BEEN PRODUCED SO FAR.  Searches for the
    most recently scheduled task that has that variable as its output, and 
    returns its amt_out value.  Returns the maximum passed if no task is 
    outputting the variable.  Note that there is no need to worry about
    the task with some id changing, since this is called only by the master. */
+
+#ifndef HELPERS_NO_MULTITHREADING
 
 helpers_size_t helpers_avail_var (helpers_var_ptr v, helpers_size_t mx)
 {
@@ -1845,12 +1945,16 @@ helpers_size_t helpers_avail_var (helpers_var_ptr v, helpers_size_t mx)
   return mx;
 }
 
+#endif
+
 
 /* -------------  MISCELLANEOUS PROCEDURES USED BY APPLICATIONS  ------------ */
 
 
 /* RETURN AN ESTIMATE OF THE NUMBER OF IDLE HELPERS.  Note that it calls
    notice_completed to start (unless helpers are disabled). */
+
+#ifndef HELPERS_NO_MULTITHREADING
 
 int helpers_idle (void)
 {
@@ -1871,6 +1975,8 @@ int helpers_idle (void)
 
   return c;
 }
+
+#endif
 
 
 /* RETURN A LIST OF ALL VARIABLES USED BY UNCOMPLETED TASKS. */
@@ -1896,10 +2002,14 @@ helpers_var_ptr *helpers_var_list (void)
 
 /* DISABLE / RE-ENABLE PIPELINING. */
 
+#ifndef HELPERS_NO_MULTITHREADING
+
 void helpers_no_pipelining (int a)
 {
-  helpers_are_not_pipelining = a!=0 || helpers_num==0;
+  helpers_not_pipelining = a!=0 || helpers_num==0;
 }
+
+#endif
 
 
 /* DISABLE / RE-ENABLE HELPERS.  Before disabling, wait for all tasks to 
@@ -1911,17 +2021,40 @@ void helpers_disable (int a)
   { helpers_wait_for_all();
     memset (&task[0].info, 0, sizeof task[0].info);
   }
-  helpers_are_disabled = a!=0 || helpers_num==0;
+  helpers_are_disabled = a!=0;
+  if (trace) 
+  { helpers_printf ("HELPERS: Task deferral %s\n",
+                    helpers_are_disabled ? "disabled" : "enabled");
+  }
 }
+
+
+/* DISABLE / RE-ENABLE USE OF HELPER THREADS.  Before setting, wait for
+   all tasks to complete. */
+
+#ifndef HELPERS_NO_MULTITHREADING
+
+void helpers_no_multithreading (int a)
+{
+  helpers_wait_for_all();
+  helpers_not_multithreading = a!=0;
+  FLUSH;
+  if (trace) 
+  { helpers_printf ("HELPERS: Multithreading %s\n",
+                    helpers_not_multithreading ? "disabled" : "enabled");
+  }
+}
+
+#endif
 
 
 /* CHANGE WHETHER OR NOT TRACE OUTPUT IS PRODUCED. */
 
 void helpers_trace (int f)
 {
-#if ENABLE_TRACE!=0
-  trace = f;
-#endif
+# if ENABLE_TRACE!=0
+    trace = f;
+# endif
 }
 
 
@@ -1977,16 +2110,7 @@ void helpers_startup (int n)
   /* Record initial wall clock time, if ENABLE_TRACE is 3. */
 
   if (ENABLE_TRACE>2)
-  { init_wtime = omp_get_wtime();
-  }
-
-  /* Set the number of helpers desired. */
-
-  helpers_num = n<0 ? 0 : n>HELPERS_MAX ? HELPERS_MAX : n;
-
-  if (helpers_num==0) 
-  { helpers_are_disabled = 1;
-    helpers_are_not_pipelining = 1;
+  { init_wtime = WTIME();
   }
 
   /* Initialize for there being no tasks yet. */
@@ -2000,12 +2124,31 @@ void helpers_startup (int n)
   this_task = 0;
   this_task_info = &task[this_task].info;
 
-  /* If no helpers are wanted, just call the master procedure. */
+  /* Set the number of helpers desired, always zero if no multithreading. */
 
-  if (helpers_num == 0) {
+# ifndef HELPERS_NO_MULTITHREADING
+    helpers_num = n<0 ? 0 : n>HELPERS_MAX ? HELPERS_MAX : n;
+# endif
+
+  /* If no helpers are wanted, just call the master procedure, then exit. */
+
+  if (helpers_num==0) 
+  { 
+#   ifndef HELPERS_NO_MULTITHREADING
+      helpers_not_multithreading = 1;
+      helpers_not_pipelining = 1;
+#   endif
+
     helpers_master();
     exit(0);
   }
+
+  /* Otherwise, set up for using helper threads. */
+
+# ifndef HELPERS_NO_MULTITHREADING
+
+  helpers_not_multithreading = 0;
+  helpers_not_pipelining = 0;
 
   /* Initialize all locks. */
 
@@ -2039,6 +2182,8 @@ void helpers_startup (int n)
       /* Run the user-supplied master procedure. */
 
       helpers_master();
+
+      exit(0);
     }
     else
     {
@@ -2054,10 +2199,10 @@ void helpers_startup (int n)
   
       helper_proc();
     }
-
-    exit(0);
   }
-}
 
+# endif
+
+}
 
 #endif

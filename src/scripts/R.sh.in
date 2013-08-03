@@ -236,7 +236,7 @@ while test -n "${1}"; do
       args="${args} ${1}"
       ;;
     -p=*|--helpers=*)
-      export R_HELPERS=`echo ${1} | ${SED} -e 's/[^=]*=//' | ${SED} -e 's/[^0-9]//g'`
+      export R_HELPERS=`echo ${1} | ${SED} -e 's/[^=]*=//'`
       args="${args} ${1}"
       ;;
     *)

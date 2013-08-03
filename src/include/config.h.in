@@ -922,6 +922,9 @@
    compiler calls it, or to nothing if it is not supported. */
 #undef R_INLINE
 
+/* Define this to enable deferred evaluation / helpers. */
+#undef R_DEFERRED_EVAL
+
 /* Define this to enable helper threads. */
 #undef R_HELPER_THREADS
 
