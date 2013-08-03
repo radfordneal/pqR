@@ -106,3 +106,16 @@ extern char *Rf_var_name (helpers_var_ptr);
    a task, with the adjustment applying to all the thresholds set this way. */
 
 #define THRESHOLD_ADJUST(a) (a*10)
+
+
+/* MACROS FOR TASK MERGING. */
+
+#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
+  ((op_b) < (1 << 6))
+
+extern helpers_task_proc task_math1_merged;
+                             
+#define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
+                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
+  (*(proc_b_ptr) = task_math1_merged, \
+   *(op_b_ptr) = (1 << 12) + (*(op_b_ptr) << 6) + (op_a))

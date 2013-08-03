@@ -41,8 +41,12 @@ void attribute_hidden PrintGreeting(void)
     PrintVersion_part_1(buf);
     Rprintf("%s", buf);
 
-    if (helpers_num > 0)
-        Rprintf (_("Using %d helper threads\n"), helpers_num);
+    if (helpers_are_disabled)
+        Rprintf (_("No helper threads and no deferred evaluation.\n"));
+    else if (helpers_num == 0)
+        Rprintf (_("Using deferred evaluation with 0 helper threads.\n"));
+    else
+        Rprintf (_("Using %d helper threads.\n"), helpers_num);
 
     Rprintf("\n");
 
