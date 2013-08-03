@@ -42,11 +42,12 @@ typedef SEXP helpers_var_ptr;
 #include "helpers.h"
 
 
-/* TRACE OUTPUT */
+/* TRACE AND STATISTICS OUTPUT */
 
 #define helpers_printf Rprintf
 
 #define ENABLE_TRACE 1
+#define ENABLE_STATS 0
 
 
 /* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
