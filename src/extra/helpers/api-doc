@@ -29,7 +29,10 @@ finished.  Alternatively, a task may be capable of taking pipelined
 inputs, in which case it can start as soon as the tasks producing its
 inputs have started, and process parts of those inputs as soon as they
 are produced.  It is also possible to use more than one task for a
-single computation.
+single computation.  Finally, a task that has not yet started may be
+merged with a newly-scheduled task that takes its output as input.
+This task merging facility can be useful even when no helper threads
+are used.
 
 A C interface for this facility is provided, and summarized at the end
 of this document.  Interfaces for other languages might be possible.
@@ -42,8 +45,10 @@ facility using something other than OpenMP would be possible.
 
 This helpers facility is designed for use implementing an interpretive
 language that provides parallel computations without the programmer
-needing to write any explicitly parallel code.  It is potentially
-useful for many other applications as well.
+needing to write any explicitly parallel code, and/or that allows
+operations to be deferred so that they may possibly be combined with
+later operations.  It is potentially useful for many other
+applications as well.
 
 
 USING THE HELPERS FACILITY
@@ -93,7 +98,9 @@ compiled in whatever way is needed for OpenMP (eg, with the -fopenmp
 option for gcc).  It should work with OpenMP 3.0 or 3.1 on most
 machines, but see the file imp-doc for more information on the
 concurrent memory model that is assumed, options regarding atomic
-reads and writes, and performance issues.
+reads and writes, and performance issues.  However, OpenMP support is
+not required if multithreading is disabled (see below), with the
+helpers facility being used only to support task merging.
 
 After any necessary initialization, an application program using the
 helpers facility should call the helpers_startup procedure, passing it
@@ -707,6 +714,78 @@ version of the helpers facility will provide a more convenient and
 efficient way of parallelizing a single computation.
 
 
+TASK MERGING
+
+An application can arrange that when some tasks are scheduled they may
+be merged with a previously-scheduled task that provides input to the
+new task, so that both operations can be done at once, possibly
+reducing computation time.
+
+When a new task, A, is scheduled, it will be merged with a task, B,
+that was previously scheduled if all the following conditions hold:
+
+  1) Task A has the HELPERS_MERGE_IN bit set in its flags (which are
+     given by an argument to helpers_do_task).
+
+  2) Task B has the HELPERS_MERGE_OUT bit set in its flags.
+
+  3) Task B does not have the HELPERS_MASTER_ONLY bit set in its flags.
+
+  4) Task B has not started to run in some helper thread.
+
+  5) The output variable of task A is not null, and is the same as the
+     output variable of task B.  Furthermore, no task scheduled after 
+     task B has this variable as its output variable.
+
+  6) The helpers_can_merge macro supplied by the application returns
+     a non-zero value when given as arguments these tasks' output 
+     variable, the task procedure for task A, the operation for task
+     A, the two input variables for task A, the task procedure for
+     task B, the operation for task B, and the two input variables
+     for task B.
+
+For convenience, the symbol HELPER_MERGE_IN_OUT is defined to be
+HELPERS_MERGE_IN | HELPERS_MERGE_OUT.
+
+If the application does not define a helpers_can_merge macro, in
+helpers-app.h, no task merging is done.  If this macro is defined, a
+helpers_merge macro or function must also be defined, which will
+modify the task information for task B to merge in the operation of
+task A.  If defined as a function, the prototype for helpers_merge
+should be as follows:
+
+  void helpers_merge (helpers_var_ptr out, 
+     helpers_task_proc *proc_A, helpers_op_t op_A, 
+     helpers_var_ptr in1_A, helpers_var_ptr in2_A,
+     helpers_task_proc **proc_B, helpers_op_t *op_B, 
+     helpers_var_ptr *in1_B, helpers_var_ptr *in2_B);
+
+The first argument is the output variable shared by tasks A and B.
+The next four arguments are as passed to helpers_do_task when task A
+was scheduled. The final four arguments are pointers to where the
+corresponding information for task B is stored.  The helpers_merge
+function (or macro) may alter this information in order to produce a
+specification for a task that will have the effect of doing both task
+A and task B, subject to the following restrictions:
+
+  1) If either in1_B or in2_B points to a variable that has not
+     yet been computed (ie, is the output of some other task that 
+     has not finished), that variable reference must not be altered.
+
+  2) Neither in1_B or in2_B may be changed to refer to a variable
+     that has not yet been computed.
+
+If necessary, the helpers_can_merge macro should check that the merge
+can be done without violating these restrictions, and return zero if
+it can't be.
+
+The task resulting from merging a new and an old task will have the
+HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
+HELPERS_PIPE_OUT flag if new task had the corresponding flag, and will
+have the HELPERS_PIPE_IN0, HELPERS_PIPE_IN1, or HELPERS_PIPE_IN2 flag
+if the old task had the corresponding flag.
+
+
 INFORMATION FUNCTIONS AND VARIABLES
 
 Information about the configuration or state is available to the
@@ -862,9 +941,9 @@ defined.  If HELPERS_NO_MULTITHREADING is defined but HELPERS_DISABLED
 is not, the helpers.c module must be linked with the application
 program, but compiling helpers.c will not require support for OpenMP.
 
-At present, defining HELPERS_NO_MULTITHREADING is useful only for
-testing, but this may change in the future if task merging is
-implemented.
+Defining HELPERS_NO_MULTITHREADING is useful (apart from testing) only
+if the application is using the helpers facility in order to support
+task merging, as described above.
 
 Use of helper threads can be disabled temporarily, without disabling
 the whole helpers facility, by calling the helpers_no_multithreading
@@ -1023,6 +1102,9 @@ The following constants are defined in helpers.h:
   HELPERS_PIPE_IN02_OUT
   HELPERS_PIPE_IN12_OUT
   HELPERS_PIPE_IN012_OUT
+  HELPERS_MERGE_IN
+  HELPERS_MERGE_OUT
+  HELPERS_MERGE_IN_OUT
 
 The following macro is provided as a convenience for conditionally
 calling a procedure via helpers_do_task or calling it directly:

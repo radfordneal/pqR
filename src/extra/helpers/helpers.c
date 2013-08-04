@@ -1393,8 +1393,8 @@ void helpers_do_task
           helpers_merge (out, task_to_do, op, in1, in2, 
                          &m->task_to_do, &m->op, &m->in1, &m->in2);
 
-          m->flags &= ~HELPERS_MERGE_IN_OUT;
-          m->flags |= (flags & HELPERS_MERGE_OUT);
+          m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
+          m->flags |= (flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT));
 
           if (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
           { 

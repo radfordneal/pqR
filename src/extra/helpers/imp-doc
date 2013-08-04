@@ -184,7 +184,8 @@ The "untaken" queue holds indexes of scheduled tasks that are not
 master-only and which have not yet been started, in arbitrary order.
 Tasks are added to this queue only by the master thread.  Tasks may be
 taken from the "untaken" queue by the master or a helper thread, with
-exclusive access (to take a task to start) controlled by "start_lock".
+exclusive access (to take a task to start, or for a merge operation)
+controlled by "start_lock".
 
 Two locks are maintained for use in a scheme that allows the helper
 thread that has set start_lock to suspend itself, and later be woken
@@ -264,6 +265,12 @@ start the needed tasks, so that the master can return as soon as
 possible (and presumably use the data now being computed) - except
 that it will do tasks itself if no helpers are idle or a master-only
 task is needed.
+
+When the master thread tries to merge tasks, it sets start_lock in
+order to reliably check that the old task to merge with has not
+started running, and to have exclusive access to the untaken queue
+when removing a task that has become master-only or master-now after
+the merge.
 
 
 OPERATION OF A HELPER THREAD
