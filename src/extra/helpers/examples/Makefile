@@ -43,9 +43,6 @@ simple:		simple.c helpers-app.h ../helpers.c ../helpers.h
 merge:		merge.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. -DMERGE merge.c ../helpers.c -lm -o merge
 
-merge2:		merge2.c helpers-app.h ../helpers.c ../helpers.h
-	${COMPILE} -I.. -I. -DMERGE merge2.c ../helpers.c -lm -o merge2
-
 parex:		parex.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. parex.c ../helpers.c -lm -o parex
 

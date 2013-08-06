@@ -18,15 +18,16 @@ Copyright (c) 2013 Radford M. Neal.
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-Three example programs are provided that demonstrate the helpers
-facility - the program "example", which has many options for
-exercising different features, a simplified version of it called
-"simple" (better for a first look at how to write a program using the
-helpers facility), and a version that parallelizes individual
-computations, call "parex".
+For example programs are provided that demonstrate the helpers
+facility.  The program "example" has many options for exercising
+different features.  There is a simplified version of it called
+"simple", which is better for a first look at how to write a program
+using the helpers facility.  A version of it that parallelizes
+individual computations is called "parex".  Finally, there is a
+separate program called "merge" that tests the ability to merge tasks.
 
-All these programs perform the following four-step computation on
-vector variables A, B, and C, and scalar variable D:
+All these programs except "merge" perform the following four-step
+computation on vector variables A, B, and C, and scalar variable D:
 
     1) A = exponential of a sequence of length vec-size from 0 to 1
     2) B = sin(A), element-by-element
@@ -200,3 +201,26 @@ computed results in the output vector when an earlier task in the
 pipeline is still writing elements before that point.  This would need
 to be done with care, however, particularly if the final output is
 pipelined to another task.
+
+The "merge" program computes s * 1.3 + 2.1, where s is a vector with
+equally-spaced values from 0 to just below 1, using three tasks - one
+to produce the sequence, one to multiply it by 1.3, and one to add 2.1
+to it.  The last two tasks can be merged into a multiply-add task.
+
+The "merge" program is called as follows:
+
+    time merge { option } n-helpers vec-size repetitions
+
+The possible options are as follows:
+
+    -t    Produce trace output for the last repetition.
+
+    -d    Disable the task merging facility
+
+    -m    Schedule the add task with the HELPERS_MASTER_ONLY flag.
+
+    -n    Schedule the add task with the HELPERS_MASTER_NOW flag.
+
+Note that when the number of helpers threads is greater than 0, the
+multiply and add tasks will be merged only if the multiply has not
+started yet when the add task is scheduled.
