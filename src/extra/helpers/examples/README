@@ -32,6 +32,8 @@ a better place to start looking.
 The program "parex" is another version that demonstrates how a single
 vector computation can be parallelized.
 
+The program "merge" demonstrates merging of scheduled tasks.
+
 All the programs are compiled with "make".  The Makefile provided is
 set up to use gcc, but it can be modified to use a different compiler.
 (Options suitable for a SPARC system not using gcc are in the Makefile

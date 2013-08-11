@@ -23,7 +23,9 @@ version 2.
 The helpers library provides facilities by which a "master" thread can
 schedule tasks to be done, perhaps by a "helper" thread, or perhaps by
 the master itself.  Interaction of the master and helpers is currently
-implemented using OpenMP, version 3.0 or 3.1.
+implemented using OpenMP, version 3.0 or 3.1.  This facility can also
+be used to improve performance by merging deferred tasks even if no
+multithreading is not used.
 
 The C interface is defined by helpers.h.  The C routines implementing
 the helpers facility are in helpers.c.  Documentation regarding how an
@@ -38,4 +40,4 @@ This software is available at github.com/radfordneal/helpers.
 
 Radford Neal may be contacted at radfordneal@gmail.com.
 
-This is the version of 2013-08-03.
+This is the version of 2013-08-10.

@@ -981,41 +981,35 @@ static void notice_completed (void)
          all other current tasks to see if some other task is still using
          or computing the variable. */
   
-#ifdef helpers_mark_not_being_computed
-      v = info->var[0];
-      if (v!=null)
-      { for (j = 0; j<helpers_tasks; j++)
-        { struct task_info *einfo = &task[used[j]].info;
-          if (einfo->var[0]==v) 
-          { ATOMIC_READ_CHAR (d = einfo->done);
-            if (!d) 
+#     ifdef helpers_mark_not_being_computed
+        v = info->var[0];
+        if (v!=null)
+        { for (j = 0; j<helpers_tasks; j++)
+          { struct task_info *einfo = &task[used[j]].info;
+            if (einfo->var[0]==v) 
             { goto done_c;
             }
           }
+          helpers_mark_not_being_computed(v);
         }
-        helpers_mark_not_being_computed(v);
-      }
-    done_c: ;
-#endif
+      done_c: ;
+#     endif
   
-#ifdef helpers_mark_not_in_use
-      for (w = 1; w<=2; w++)
-      { v = info->var[w];
-        if (v!=null && v!=info->var[0])
-        { for (j = 0; j<helpers_tasks; j++)
-          { struct task_info *einfo = &task[used[j]].info;
-            if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
-            { ATOMIC_READ_CHAR (d = einfo->done);
-              if (!d) 
+#     ifdef helpers_mark_not_in_use
+        for (w = 1; w<=2; w++)
+        { v = info->var[w];
+          if (v!=null && v!=info->var[0])
+          { for (j = 0; j<helpers_tasks; j++)
+            { struct task_info *einfo = &task[used[j]].info;
+              if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
               { goto done_u;
               }
             }
+            helpers_mark_not_in_use(v);
           }
-          helpers_mark_not_in_use(v);
+        done_u: ;
         }
-      done_u: ;
-      }
-#endif
+#     endif
     }
   }
 
@@ -1391,7 +1385,7 @@ void helpers_do_task
           /* Merge the new task with the existing task, indexed by pipe0. */
 
           helpers_merge (out, task_to_do, op, in1, in2, 
-                         &m->task_to_do, &m->op, &m->in1, &m->in2);
+                         &m->task_to_do, &m->op, &m->var[1], &m->var[2]);
 
           m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
           m->flags |= (flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT));
@@ -1451,6 +1445,32 @@ void helpers_do_task
                  task (or zero). */
 
               pipe0 = m->pipe[0];
+
+              /* Mark output as not being computed, since it won't be after
+                 this task is done (immediately) in the master thread.   
+                 Similarly, mark inputs as not in use, if they aren't used 
+                 by another task. */
+
+#             ifdef helpers_mark_not_being_computed
+                helpers_mark_not_being_computed (out);
+#             endif
+
+#             ifdef helpers_mark_not_in_use
+                for (int w = 1; w<=2; w++)
+                { helpers_var_ptr v = m->var[w];
+                  if (v!=null && v!=m->var[0])
+                  { for (int j = 0; j<helpers_tasks; j++)
+                    { struct task_info *einfo = &task[used[j]].info;
+                      if (einfo->var[0]!=v 
+                           && (einfo->var[1]==v || einfo->var[2]==v))
+                      { goto done_u;
+                      }
+                    }
+                    helpers_mark_not_in_use(v);
+                  }
+                done_u: ;
+                }
+#             endif
 
               /* Set flag to process as new task after unsetting the lock. */
 
@@ -1578,14 +1598,14 @@ out_of_merge:
        this if the task is done directly in the master, since the flags
        could never be consulted until unset anyway.) */
 
-#ifdef helpers_mark_in_use
-    if (in1!=null && in1!=out) helpers_mark_in_use(in1);
-    if (in2!=null && in2!=out) helpers_mark_in_use(in2);
-#endif
+#   ifdef helpers_mark_in_use
+      if (in1!=null && in1!=out) helpers_mark_in_use(in1);
+      if (in2!=null && in2!=out) helpers_mark_in_use(in2);
+#   endif
 
-#ifdef helpers_mark_being_computed
-    if (out!=null) helpers_mark_being_computed(out);
-#endif
+#   ifdef helpers_mark_being_computed
+      if (out!=null) helpers_mark_being_computed(out);
+#   endif
 
     /* Clear 'done' and 'amt_out' in the task info for the new task.  Not
        necessary in a task done directly in the master (since never seen). */

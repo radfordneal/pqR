@@ -222,9 +222,9 @@ static R_INLINE double R_log(double x) {
 
 double R_pow(double x, double y) /* = x ^ y */
 {
-    /* Don't optimize for powers of 1 or 2, since we assume most calls are
+    /* Don't optimize for power of 2, since we assume most calls are
        via R_POW, which already does that, or from some other place making
-       similar checks. */
+       a similar check. */
 
     if(x == 1. || y == 0.)
 	return(1.);
@@ -235,7 +235,9 @@ double R_pow(double x, double y) /* = x ^ y */
     }
 
     if (R_FINITE(x) && R_FINITE(y)) {
-        if (y == 0.5)
+        if (y == 1.)
+            return x;
+        else if (y == 0.5)
             return sqrt(x);
         else
             return pow(x, y);
@@ -310,11 +312,6 @@ static double logbase(double x, double base)
 #endif
     return R_log(x) / R_log(base);
 }
-
-#if 0
-static int naflag;
-static SEXP lcall;
-#endif
 
 
 /* Unary and Binary Operators */
@@ -1259,7 +1256,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
    and R_log are not called via do_math1 like the others, but from special
    primitives. */
 
-double (*math1_func_table[44])(double) = {
+double (*R_math1_func_table[44])(double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        fabs,   floor,  ceil,   sqrt,   sign,   trunc,  0,0,0,0,
 /* 10 */        exp,    expm1,  log1p,  R_log,  0,      0,      0,0,0,0,
@@ -1275,9 +1272,9 @@ double (*math1_func_table[44])(double) = {
       -1:  NA/NaN possible for finite argument as well as NA/NaN or +- Inf
       -2:  may produce warning message, not just NA/NaN
 
-   Entries correspond to those in math1_func_table above. */
+   Entries correspond to those in R_math1_func_table above. */
 
-char math1_err_table[44] = {
+char R_math1_err_table[44] = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        0,      0,      0,      -1,     0,      0,      0,0,0,0,
 /* 10 */        0,      0,      -1,     -1,     0,      0,      0,0,0,0,
@@ -1286,7 +1283,9 @@ char math1_err_table[44] = {
 /* 40 */        -2,     -2,     -1,     -1
 };
 
-void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
+int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
+
+void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 {
     double *ra = REAL(sa);
     double *ry = REAL(sy);
@@ -1294,11 +1293,11 @@ void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
     R_len_t i = 0;
     R_len_t a;
 
-    double (*f)(double) = math1_func_table[opcode];
+    double (*f)(double) = R_math1_func_table[opcode];
 
     HELPERS_SETUP_OUT(5);
 
-    if (math1_err_table[opcode]==0) {
+    if (R_math1_err_table[opcode]==0) {
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1311,7 +1310,6 @@ void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
         }
     }
     else {
-        int naflag = 0;
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1319,17 +1317,17 @@ void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
                     ry[i] = ra[i];
                 else {
                     ry[i] = f(ra[i]);
-                    if (ISNAN(ry[i])) naflag = 1;
+                    if (ISNAN(ry[i])) {
+                        R_naflag = 1; /* only done in master thread */
+                    }
                 }
                 HELPERS_NEXT_OUT(i);
             } while (i < a);
         }
-        /* Warning below is only possible if this is being done in master */
-        if (naflag) warningcall(call, R_MSG_NA);
     }
 }
 
-void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
+void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 {
     double *ra = REAL(sa);
     long double s = 0.0;
@@ -1337,9 +1335,9 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
     R_len_t i = 0;
     R_len_t a;
 
-    double (*f)(double) = math1_func_table[opcode];
+    double (*f)(double) = R_math1_func_table[opcode];
 
-    if (math1_err_table[opcode]==0) {
+    if (R_math1_err_table[opcode]==0) {
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1352,7 +1350,6 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
         }
     }
     else {
-        int naflag = 0;
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1360,14 +1357,14 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP call)
                     s += ra[i];
                 else {
                     double t = f(ra[i]);
-                    if (ISNAN(t)) naflag = 1;
+                    if (ISNAN(t)) {
+                        R_naflag = 1; /* only done in master thread */
+                    }
                     s += t;
                 }
                 i += 1;
             } while (i < a);
         }
-        /* Warning below is only possible if this is being done in master */
-        if (naflag) warningcall(call, R_MSG_NA);
     }
 
     REAL(sy)[0] = (double) s;
@@ -1392,14 +1389,16 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     /* coercion can lose the object bit */
     PROTECT(sa = coerceVector(sa, REALSXP));
 
+    R_naflag = 0;
+
     /* Note: need to protect sy below because some ops may produce a warning. */
 
     if (VARIANT_KIND(variant) == VARIANT_SUM) {
 
         PROTECT(sy = allocVector(REALSXP, 1));
-        DO_NOW_OR_LATER2 (variant, 
-                       LENGTH(sa) >= T_math1 && math1_err_table[opcode] == 0,
-                       HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa, call);
+        DO_NOW_OR_LATER1 (variant, 
+                       LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
+                       HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
         SET_ATTRIB (sy, R_VariantResult);
         UNPROTECT(2);
     }
@@ -1413,14 +1412,16 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
            SET_RTRACE(sy, 1);
         }
 #endif
-        DO_NOW_OR_LATER2 (variant,
-                       LENGTH(sa) >= T_math1 && math1_err_table[opcode] == 0,
+        DO_NOW_OR_LATER1 (variant,
+                       LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
                        HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
-                       task_math1, opcode, sy, sa, call);
+                       task_math1, opcode, sy, sa);
         if (sa!=sy) 
             DUPLICATE_ATTRIB(sy, sa);
         UNPROTECT(2);
     }
+
+    if (R_naflag) warningcall (call, R_MSG_NA);
 
     return sy;
 }
@@ -2396,6 +2397,7 @@ SEXP attribute_hidden do_math5(SEXP call, SEXP op, SEXP args, SEXP env)
 } /* do_math5() */
 
 #endif /* Math5 is there */
+
 
 /* This is used for experimenting with parallelized nmath functions -- LT */
 CCODE R_get_arith_function(int which)

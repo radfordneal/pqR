@@ -110,12 +110,20 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 /* MACROS FOR TASK MERGING. */
 
-#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
-  ((op_b) < (1 << 6))
+#define MAX_OPS_MERGED 3  /* Must be from 2 to 6; if changed must change code */
 
-extern helpers_task_proc task_math1_merged;
-                             
+extern helpers_task_proc task_merged_arith_math1;
+
+#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
+  ((proc_b) != task_merged_arith_math1 || ((op_b) & (1<<MAX_OPS_MERGED)) == 0)
+
+extern void helpers_merge_proc ( /* helpers_var_ptr out, */
+  helpers_task_proc *proc_A, helpers_op_t op_A, 
+  helpers_var_ptr in1_A, helpers_var_ptr in2_A,
+  helpers_task_proc **proc_B, helpers_op_t *op_B, 
+  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B);
+
 #define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
                           proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
-  (*(proc_b_ptr) = task_math1_merged, \
-   *(op_b_ptr) = (1 << 12) + (*(op_b_ptr) << 6) + (op_a))
+  helpers_merge_proc (/*out,*/proc_a,op_a,in1_a,in2_a, \
+                      proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr)

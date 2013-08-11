@@ -68,7 +68,7 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(piped_matprod_vec_mat);
     TASK_NAME(piped_matprod);
     /* s */
-    TASK_NAME(math1_merged);
+    TASK_NAME(merged_arith_math1);
     /* u */
     /* v */
     /* w */
