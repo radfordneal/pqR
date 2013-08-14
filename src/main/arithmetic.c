@@ -1045,11 +1045,14 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
         if (ans==R_NilValue)
             ans = allocVector(REALSXP, n);
         task = task_real_arithmetic;
-        if (oper == MODOP)
+        flags = HELPERS_PIPE_IN0_OUT;
+        if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
+            if (TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP)
+                flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
+        }
+        else if (oper == MODOP)
             flags = HELPERS_PIPE_IN0 |
                     HELPERS_MASTER_NOW; /* since it can produce a warning msg */
-        else
-            flags = HELPERS_PIPE_OUT | HELPERS_PIPE_IN0;
         if (n>1) {
             if (nx==n) flags |= HELPERS_PIPE_IN1;
             if (ny==n) flags |= HELPERS_PIPE_IN2;
@@ -1236,7 +1239,9 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
 
     if (operation==MINUSOP) {
         DO_NOW_OR_LATER1 (variant, n >= T_unary_minus,
-          HELPERS_PIPE_IN01_OUT, task_unary_minus, 0, ans, s1);
+          TYPEOF(s1)==REALSXP ? HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT
+                              : HELPERS_PIPE_IN01_OUT,
+          task_unary_minus, 0, ans, s1);
         if (ans != s1) {
             DUPLICATE_ATTRIB(ans,s1);
         }

@@ -1216,6 +1216,12 @@ void InitNames()
     LOGICAL(R_ScalarLogicalTRUE)[0] = TRUE;
     SET_NAMEDCNT_MAX(R_ScalarLogicalTRUE);
 
+    /* Real values */
+
+    R_ScalarRealZero = allocVector(REALSXP, 1);
+    REAL(R_ScalarRealZero)[0] = 0.0;
+    SET_NAMEDCNT_MAX(R_ScalarRealZero);
+
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
        mkChar("NA") is distinct from NA_STRING */

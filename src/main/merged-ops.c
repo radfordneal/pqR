@@ -127,7 +127,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     break;
                 op = ops & 0xff;
 
-                if (op & 0x80) /* math1 operation */
+                if (op & 0x80) { /* math1 operation */
                     op -= 0x80;
                     if (!ISNAN(v)) {
                         v = R_math1_func_table[op](v);
@@ -137,6 +137,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                             }
                         }
                     }
+                }
                 else { /* arithmetic operation */
                     double c = scp[ai++];
                     switch (op) {
@@ -209,13 +210,17 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         }
         else { /* binary or unary arithmetic operation */
             ops = MERGED_ARITH_OP (*proc_B, *op_B, *in1_B, *in2_B);
-            if (LENGTH(*in2_B) == 1) {
+            if (*in2_B == 0) { /* unary minus */
+                which = 0;
+                sv = *in2_B = R_ScalarRealZero;
+            }
+            else if (LENGTH(*in2_B) == 1) {
                 which = 0;
                 sv = *in2_B;
             }
             else {
                 which = 1;
-                sv = in1_A;
+                sv = *in1_B;
             }
         }
         *proc_B = task_merged_arith_math1;
@@ -229,17 +234,19 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         newop = op_A + 0x80;
     }
     else { /* binary or unary arithmetic operation */
-        SEXP scalar = LENGTH(in1_A) == 1 ? in1_A : in2_A;
+        SEXP scalar = in2_A == 0 ? R_ScalarRealZero /* for unary minus */
+                    : LENGTH(in2_A) == 1 ? in2_A : in1_A;
         double *p;
-        if (sv == 0) {
+        if (sv == 0) { /* will also have which == 0 */
             sv = scalar;
             *in2_B = sv;
             helpers_mark_in_use(sv);
         }
         else if (LENGTH(sv) == 1) {
+            double tmp = *REAL(sv);
             sv = allocVector (REALSXP, MAX_OPS_MERGED);
             * (which ? in1_B : in2_B) = sv;
-            helpers_mark_in_use(sv);
+            REAL(sv)[0] = tmp;
             REAL(sv)[1] = *REAL(scalar);
         }
         else {

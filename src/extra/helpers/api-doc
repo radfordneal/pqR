@@ -780,7 +780,8 @@ necessary, the helpers_can_merge macro must ensure can be satisfied):
 Furthermore, if in1_B or in2_B is changed to refer to a different
 variable (including in1_A or in2_A), the helpers_mark_in_use macro
 defined by the application (if it defines one) must be called to mark
-the variable as in use.
+the variable as in use (unless the application knows that the mark
+will never be consulted).
 
 The task resulting from merging a new and an old task will have the
 HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or

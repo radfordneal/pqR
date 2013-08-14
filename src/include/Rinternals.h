@@ -726,6 +726,10 @@ LibExtern SEXP  R_ScalarLogicalNA;    /* Vector of one logical NA value */
 LibExtern SEXP  R_ScalarLogicalFALSE; /* Vector of one FALSE value */
 LibExtern SEXP  R_ScalarLogicalTRUE;  /* Vector of one TRUE value */
 
+/* Real Values */
+LibExtern SEXP  R_ScalarRealZero;     /* Vector of one 0.0 value */
+
+
 #ifdef __MAIN__
 attribute_hidden
 #else
