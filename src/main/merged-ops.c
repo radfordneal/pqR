@@ -62,35 +62,37 @@ extern helpers_task_proc task_unary_minus, task_math1;
 
 
 /* Codes for binary (and unary minus with 0 op) arithmetic operations.  Note
-   that PLUS, MINUS, and TIMES are not assumed to be commutative, since it's
-   not clear that they are when one or both operands are NaN or NA.  We want
-   exactly the same result as is obtained without merging operations.  A scalar
-   to a vector power is not handled, just to reduce the number of operations.  
-   Squaring is handled specially for speed. */
+   that PLUS, MINUS, and TIMES are not assumed to be commutative, since they
+   aren't always when one or both operands are NaN or NA, and we want exactly 
+   the same result as is obtained without merging operations.  
 
-#define ARITH_OP_C_PLUS_V  0
-#define ARITH_OP_V_PLUS_C  1
-#define ARITH_OP_C_MINUS_V 2
-#define ARITH_OP_V_MINUS_C 3
-#define ARITH_OP_C_TIMES_V 4
-#define ARITH_OP_V_TIMES_C 5
-#define ARITH_OP_C_DIV_V   6
-#define ARITH_OP_V_DIV_C   7
-#define ARITH_OP_V_POW_C   8
-#define ARITH_OP_V_SQUARED 9
+   Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Codes from
+   0x80 to 0xff are math1 codes plus 0x80.  Code 0 is for empty slots. */
 
-#define N_ARITH_OPS 10
+#define ARITH_OP_C_PLUS_V  (2*PLUSOP - 1)
+#define ARITH_OP_V_PLUS_C  (2*PLUSOP)
+#define ARITH_OP_C_MINUS_V (2*MINUSOP - 1)
+#define ARITH_OP_V_MINUS_C (2*MINUSOP)
+#define ARITH_OP_C_TIMES_V (2*TIMESOP - 1)
+#define ARITH_OP_V_TIMES_C (2*TIMESOP)
+#define ARITH_OP_C_DIV_V   (2*DIVOP - 1)
+#define ARITH_OP_V_DIV_C   (2*DIVOP)
+#define ARITH_OP_C_POW_V   (2*POWOP - 1)
+#define ARITH_OP_V_POW_C   (2*POWOP)
+
+#define ARITH_OP_V_SQUARED 11  /* Created from ARITH_OP_V_POW_C */
 
 
 /* Task for performing a set of merged arithmetic/math1 operations. */
 
-/* Slow version for testing. */
+#if USE_SLOW_MERGED_OP
+
+/* Slow version for testing.  Doesn't treat powers of -1, 0, 1, and 2 
+   specially.  Inefficiently does switch inside loop. */
 
 void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    int flags = code & 0x7f;
-    int which = code & 0x80;
-    helpers_op_t ops = code >> 8;
+    int which = code & 1;
 
     SEXP vec, scalars;
 
@@ -115,19 +117,28 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         HELPERS_WAIT_IN1 (a, i, n);
         do {
             double v = REAL(vec)[i];
+            helpers_op_t ops = code; 
             int ai = 0;
-            int j = 0;
+            int op;
 
-            for (int f = flags; f != 1; f >>= 1) j += 1;
+            for (;;) {
+                ops >>= 8;
+                if (ops == 0)
+                    break;
+                op = ops & 0xff;
 
-            while (j > 0) {
-
-                j -= 1;
-
-                int op = (ops >> (j<<3)) & 0xff;
-
-                if ((flags>>j) & 1) { /* arithmetic operation */
-                    double c = scp[ai];
+                if (op & 0x80) /* math1 operation */
+                    op -= 0x80;
+                    if (!ISNAN(v)) {
+                        v = R_math1_func_table[op](v);
+                        if (R_math1_err_table[op] != 0) {
+                            if (ISNAN(v)) {
+                                R_naflag = 1; /* only done in master thread */
+                            }
+                        }
+                    }
+                else { /* arithmetic operation */
+                    double c = scp[ai++];
                     switch (op) {
                     case ARITH_OP_C_PLUS_V:   v = c + v;       break;
                     case ARITH_OP_V_PLUS_C:   v = v + c;       break;
@@ -137,19 +148,8 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     case ARITH_OP_V_TIMES_C:  v = v * c;       break;
                     case ARITH_OP_C_DIV_V:    v = c / v;       break;
                     case ARITH_OP_V_DIV_C:    v = v / c;       break;
+                    case ARITH_OP_C_POW_V:    v = R_pow(c,v);  break;
                     case ARITH_OP_V_POW_C:    v = R_pow(v,c);  break;
-                    case ARITH_OP_V_SQUARED:  v = v * v;       break;
-                    }
-                    ai += 1;
-                }
-                else { /* math1 operation */
-                    if (!ISNAN(v)) {
-                        v = R_math1_func_table[op](v);
-                        if (R_math1_err_table[op] != 0) {
-                            if (ISNAN(v)) {
-                                R_naflag = 1; /* only done in master thread */
-                            }
-                        }
                     }
                 }
             }
@@ -160,37 +160,28 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     }
 }
 
+#else 
 
-/* Find what arithmetic operation is to be merged. */
+/* Fast version. Treats powers of -1, 0, 1, and 2 specially, replacing
+   the ARITH_OP_V_POW_C code with another.  Uses a big switch over all
+   combinations of operations.  
 
-static int merged_arith_op (helpers_task_proc *proc, helpers_op_t op,
-                            helpers_var_ptr in1, helpers_var_ptr in2)
-{
-    if (proc == task_unary_minus) {
-        return ARITH_OP_C_MINUS_V;
-    }
-    else if (LENGTH(in1) == 1) {
-        switch (op) {
-        case PLUSOP:  return ARITH_OP_C_PLUS_V; 
-        case MINUSOP: return ARITH_OP_C_MINUS_V;
-        case TIMESOP: return ARITH_OP_C_TIMES_V;
-        case DIVOP:   return ARITH_OP_C_DIV_V;  
-        }
-    }
-    else {
-        switch (op) {
-        case PLUSOP:  return ARITH_OP_V_PLUS_C; 
-        case MINUSOP: return ARITH_OP_V_MINUS_C;
-        case TIMESOP: return ARITH_OP_V_TIMES_C;
-        case DIVOP:   return ARITH_OP_V_DIV_C;  
-        case POWOP:   return *REAL(in2)==2.0 ? ARITH_OP_V_SQUARED 
-                                             : ARITH_OP_V_POW_C;
-        }
-    }
-}
+   Works only when MAX_OPS_MERGED is 3. */
+
+#if MAX_OPS_MERGE != 3
+#error Fast merged operations are implemented only when MAX_OPS_MERGED is 3
+#endif
+
+#error Fast merged operations are not implemented yet
+
+#endif
 
 
 /* Procedure for merging arithmetic/math1 operations. */
+
+#define MERGED_ARITH_OP(proc,op,in1,in2) \
+ ((proc)==task_unary_minus ? ARITH_OP_C_MINUS_V \
+          : LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op))
 
 void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
@@ -198,35 +189,32 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc **proc_B, helpers_op_t *op_B, 
   helpers_var_ptr *in1_B, helpers_var_ptr *in2_B)
 {
-    int flags, which;
     helpers_op_t ops;
+    int which;
     SEXP sv;
   
     /* Set flags, which, ops, and sv according to operations other than 
        operation A. */
   
     if (*proc_B == task_merged_arith_math1) {
-        flags = *op_B & 0x7f;
-        which = *op_B & 0x80;
+        which = *op_B & 1;
         ops = *op_B >> 8;
         sv = which ? *in1_B : *in2_B; 
     }
     else { /* create "merge" of just operation B */
         if (*proc_B == task_math1) {
-            flags = 0x02;
-            which = 0x00;
-            ops = *op_B;
+            which = 0;
+            ops = *op_B + 0x80;
             sv = 0;
         }
         else { /* binary or unary arithmetic operation */
-            ops = merged_arith_op (*proc_B, *op_B, *in1_B, *in2_B);
-            flags = 0x03;
+            ops = MERGED_ARITH_OP (*proc_B, *op_B, *in1_B, *in2_B);
             if (LENGTH(*in2_B) == 1) {
-                which = 0x00;
+                which = 0;
                 sv = *in2_B;
             }
             else {
-                which = 0x80;
+                which = 1;
                 sv = in1_A;
             }
         }
@@ -234,10 +222,11 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
     }
   
     /* Merge operation A into other operations. */
-  
+
+    helpers_op_t newop, o;
+
     if (proc_A == task_math1) {
-        ops = (ops << 8) | op_A;
-        flags = (flags << 1);
+        newop = op_A + 0x80;
     }
     else { /* binary or unary arithmetic operation */
         SEXP scalar = LENGTH(in1_A) == 1 ? in1_A : in2_A;
@@ -245,23 +234,29 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         if (sv == 0) {
             sv = scalar;
             *in2_B = sv;
+            helpers_mark_in_use(sv);
         }
         else if (LENGTH(sv) == 1) {
             sv = allocVector (REALSXP, MAX_OPS_MERGED);
             * (which ? in1_B : in2_B) = sv;
+            helpers_mark_in_use(sv);
             REAL(sv)[1] = *REAL(scalar);
         }
         else {
             p = REAL(sv);
-            for (int f = flags; f != 1; f >>= 1) p += f&1;
+            for (o = ops; o != 0; o >>= 8) {
+                if (! (o&0x80)) p += 1;
+            }
             *p = *REAL(scalar);
         }
-        ops = (ops << 8) | merged_arith_op (proc_A, op_A, in1_A, in2_A);
-        flags = (flags << 1) | 1;
+        newop = MERGED_ARITH_OP (proc_A, op_A, in1_A, in2_A);
     }
+  
+    for (o = ops; o != 0; o >>= 8) newop <<= 8;
+    ops |= newop;
   
     /* Store the new operation specification in *op_B (*proc_B and *in1_B or
        *in2_B may have been updated above). */
   
-    *op_B = (ops<<8) | which | flags;
+    *op_B = (ops<<8) | which;
 }

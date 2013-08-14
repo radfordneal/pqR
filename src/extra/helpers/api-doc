@@ -742,7 +742,8 @@ that was previously scheduled if all the following conditions hold:
      variable, the task procedure for task A, the operation for task
      A, the two input variables for task A, the task procedure for
      task B, the operation for task B, and the two input variables
-     for task B.
+     for task B.  Note that this macro is invoked only if (1) to (5)
+     above are true.
 
 For convenience, the symbol HELPER_MERGE_IN_OUT is defined to be
 HELPERS_MERGE_IN | HELPERS_MERGE_OUT.
@@ -766,7 +767,8 @@ was scheduled. The final four arguments are pointers to where the
 corresponding information for task B is stored.  The helpers_merge
 function (or macro) may alter this information in order to produce a
 specification for a task that will have the effect of doing both task
-A and task B, subject to the following restrictions:
+A and task B, subject to the following restrictions (which, when
+necessary, the helpers_can_merge macro must ensure can be satisfied):
 
   1) If either in1_B or in2_B points to a variable that has not
      yet been computed (ie, is the output of some other task that 
@@ -775,9 +777,10 @@ A and task B, subject to the following restrictions:
   2) Neither in1_B or in2_B may be changed to refer to a variable
      that has not yet been computed.
 
-If necessary, the helpers_can_merge macro should check that the merge
-can be done without violating these restrictions, and return zero if
-it can't be.
+Furthermore, if in1_B or in2_B is changed to refer to a different
+variable (including in1_A or in2_A), the helpers_mark_in_use macro
+defined by the application (if it defines one) must be called to mark
+the variable as in use.
 
 The task resulting from merging a new and an old task will have the
 HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or

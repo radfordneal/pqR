@@ -46,7 +46,7 @@ typedef SEXP helpers_var_ptr;
 
 #define helpers_printf Rprintf
 
-#define ENABLE_TRACE 1
+#define ENABLE_TRACE 3
 #define ENABLE_STATS 0
 
 
@@ -110,12 +110,15 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 /* MACROS FOR TASK MERGING. */
 
-#define MAX_OPS_MERGED 3  /* Must be from 2 to 6; if changed must change code */
+#define USE_SLOW_MERGED_OP 1  /* 1 for slow test version, 0 for fast version */
+
+#define MAX_OPS_MERGED 3      /* Must be from 2 to 6 */
 
 extern helpers_task_proc task_merged_arith_math1;
 
 #define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
-  ((proc_b) != task_merged_arith_math1 || ((op_b) & (1<<MAX_OPS_MERGED)) == 0)
+  ((proc_b) != task_merged_arith_math1 || \
+   ((op_b) & (0xff<<(8*MAX_OPS_MERGED))) == 0)
 
 extern void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 

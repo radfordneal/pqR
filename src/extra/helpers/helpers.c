@@ -253,7 +253,7 @@ static union task_entry
 
     tix pipe_at_start[3];          /* Value of "pipe" when task is started */
     helpers_size_t first_amt[3];   /* First non-zero value from helpers_availN*/
-    helpers_size_t last_amt[3];    /* Last value from helpers_amount */
+    helpers_size_t last_amt[3];    /* Last value from helpers_amount_out */
 
     /* The fields below are used only when ENABLE_TRACE is 3. */
 
@@ -978,13 +978,12 @@ static void notice_completed (void)
   
       /* Unset the in-use and being-computed flags as appropriate, if the 
          application defined the required macros.  This requires scanning
-         all other current tasks to see if some other task is still using
-         or computing the variable. */
+         other tasks to see if one is still using or computing the variable. */
   
 #     ifdef helpers_mark_not_being_computed
         v = info->var[0];
         if (v!=null)
-        { for (j = 0; j<helpers_tasks; j++)
+        { for (j = i+1; j<helpers_tasks; j++)
           { struct task_info *einfo = &task[used[j]].info;
             if (einfo->var[0]==v) 
             { goto done_c;
@@ -1002,7 +1001,10 @@ static void notice_completed (void)
           { for (j = 0; j<helpers_tasks; j++)
             { struct task_info *einfo = &task[used[j]].info;
               if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
-              { goto done_u;
+              { ATOMIC_READ_CHAR (d = einfo->done);
+                if (!d) 
+                { goto done_u;
+                }
               }
             }
             helpers_mark_not_in_use(v);
@@ -1419,6 +1421,8 @@ void helpers_do_task
             }
             else /* flags & HELPERS_MASTER_NOW */
             { 
+              int w;
+
               m->flags |= HELPERS_MASTER_NOW;
               if (trace) 
               { trace_merged (pipe0, flags, task_to_do, op, out, in1, in2);
@@ -1456,10 +1460,11 @@ void helpers_do_task
 #             endif
 
 #             ifdef helpers_mark_not_in_use
-                for (int w = 1; w<=2; w++)
+                for (w = 1; w<=2; w++)
                 { helpers_var_ptr v = m->var[w];
                   if (v!=null && v!=m->var[0])
-                  { for (int j = 0; j<helpers_tasks; j++)
+                  { int j;
+                    for (j = 0; j<helpers_tasks; j++)
                     { struct task_info *einfo = &task[used[j]].info;
                       if (einfo->var[0]!=v 
                            && (einfo->var[1]==v || einfo->var[2]==v))
