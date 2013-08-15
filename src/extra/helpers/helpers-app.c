@@ -48,7 +48,6 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(real_arithmetic);
     TASK_NAME(complex_arithmetic);
     TASK_NAME(math1);
-    TASK_NAME(sum_math1);
     /* i */
     /* j */
     /* k */

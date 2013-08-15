@@ -1293,86 +1293,86 @@ int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
 void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 {
     double *ra = REAL(sa);
-    double *ry = REAL(sy);
     R_len_t n = LENGTH(sa);
     R_len_t i = 0;
     R_len_t a;
 
-    double (*f)(double) = R_math1_func_table[opcode];
+    if (opcode & 0x40) { /* just want the sum */
 
-    HELPERS_SETUP_OUT(5);
+        opcode &= 0x3f;
 
-    if (R_math1_err_table[opcode]==0) {
-        while (i < n) {
-            HELPERS_WAIT_IN1 (a, i, n);
-            do {
-                if (ISNAN(ra[i]))
-                    ry[i] = ra[i];
-                else
-                    ry[i] = f(ra[i]);
-                HELPERS_NEXT_OUT(i);
-            } while (i < a);
+        double (*f)(double) = R_math1_func_table[opcode];
+        long double s = 0.0;
+    
+        if (R_math1_err_table[opcode]==0) {
+            while (i < n) {
+                HELPERS_WAIT_IN1 (a, i, n);
+                do {
+                    if (ISNAN(ra[i]))
+                        s += ra[i];
+                    else
+                        s += f(ra[i]);
+                    i += 1;
+                } while (i < a);
+            }
         }
-    }
-    else {
-        while (i < n) {
-            HELPERS_WAIT_IN1 (a, i, n);
-            do {
-                if (ISNAN(ra[i]))
-                    ry[i] = ra[i];
-                else {
-                    ry[i] = f(ra[i]);
-                    if (ISNAN(ry[i])) {
-                        R_naflag = 1; /* only done in master thread */
+        else {
+            while (i < n) {
+                HELPERS_WAIT_IN1 (a, i, n);
+                do {
+                    if (ISNAN(ra[i]))
+                        s += ra[i];
+                    else {
+                        double t = f(ra[i]);
+                        if (ISNAN(t)) {
+                            R_naflag = 1; /* only done in master thread */
+                        }
+                        s += t;
                     }
-                }
-                HELPERS_NEXT_OUT(i);
-            } while (i < a);
+                    i += 1;
+                } while (i < a);
+            }
         }
+    
+        REAL(sy)[0] = (double) s;
+
     }
-}
+    else { /* not just for the sum */
 
-void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
-{
-    double *ra = REAL(sa);
-    long double s = 0.0;
-    R_len_t n = LENGTH(sa);
-    R_len_t i = 0;
-    R_len_t a;
-
-    double (*f)(double) = R_math1_func_table[opcode];
-
-    if (R_math1_err_table[opcode]==0) {
-        while (i < n) {
-            HELPERS_WAIT_IN1 (a, i, n);
-            do {
-                if (ISNAN(ra[i]))
-                    s += ra[i];
-                else
-                    s += f(ra[i]);
-                i += 1;
-            } while (i < a);
+        double (*f)(double) = R_math1_func_table[opcode];
+        double *ry = REAL(sy);
+    
+        HELPERS_SETUP_OUT(5);
+    
+        if (R_math1_err_table[opcode]==0) {
+            while (i < n) {
+                HELPERS_WAIT_IN1 (a, i, n);
+                do {
+                    if (ISNAN(ra[i]))
+                        ry[i] = ra[i];
+                    else
+                        ry[i] = f(ra[i]);
+                    HELPERS_NEXT_OUT(i);
+                } while (i < a);
+            }
         }
-    }
-    else {
-        while (i < n) {
-            HELPERS_WAIT_IN1 (a, i, n);
-            do {
-                if (ISNAN(ra[i]))
-                    s += ra[i];
-                else {
-                    double t = f(ra[i]);
-                    if (ISNAN(t)) {
-                        R_naflag = 1; /* only done in master thread */
+        else {
+            while (i < n) {
+                HELPERS_WAIT_IN1 (a, i, n);
+                do {
+                    if (ISNAN(ra[i]))
+                        ry[i] = ra[i];
+                    else {
+                        ry[i] = f(ra[i]);
+                        if (ISNAN(ry[i])) {
+                            R_naflag = 1; /* only done in master thread */
+                        }
                     }
-                    s += t;
-                }
-                i += 1;
-            } while (i < a);
+                    HELPERS_NEXT_OUT(i);
+                } while (i < a);
+            }
         }
     }
-
-    REAL(sy)[0] = (double) s;
 }
 
 #define T_math1 THRESHOLD_ADJUST(5)
@@ -1403,7 +1403,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
         PROTECT(sy = allocVector(REALSXP, 1));
         DO_NOW_OR_LATER1 (variant, 
                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
-                       HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
+                       HELPERS_PIPE_IN1 | HELPERS_MERGE_IN, 
+                       task_math1, opcode | 0x40, sy, sa);
         SET_ATTRIB (sy, R_VariantResult);
         UNPROTECT(2);
     }
