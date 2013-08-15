@@ -94,6 +94,9 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
     int which = code & 1;
 
+    int nops = 0;
+    for (helpers_op_t o = code>>8; o != 0; o >>= 8) nops += 1;
+
     SEXP vec, scalars;
 
     if (which) {
@@ -121,14 +124,12 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             int ai = 0;
             int op;
 
-            for (;;) {
-                ops >>= 8;
-                if (ops == 0)
-                    break;
-                op = ops & 0xff;
+            for (int shft = 8*nops; shft != 0; shft -= 8) {
+
+                op = (ops >> shft) & 0xff;
 
                 if (op & 0x80) { /* math1 operation */
-                    op -= 0x80;
+                    op &= ~0x80;
                     if (!ISNAN(v)) {
                         v = R_math1_func_table[op](v);
                         if (R_math1_err_table[op] != 0) {
@@ -169,7 +170,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
    Works only when MAX_OPS_MERGED is 3. */
 
-#if MAX_OPS_MERGE != 3
+#if MAX_OPS_MERGED != 3
 #error Fast merged operations are implemented only when MAX_OPS_MERGED is 3
 #endif
 
@@ -228,10 +229,10 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
   
     /* Merge operation A into other operations. */
 
-    helpers_op_t newop, o;
+    helpers_op_t newop;
 
     if (proc_A == task_math1) {
-        newop = op_A + 0x80;
+        newop = op_A | 0x80;
     }
     else { /* binary or unary arithmetic operation */
         SEXP scalar = in2_A == 0 ? R_ScalarRealZero /* for unary minus */
@@ -251,19 +252,23 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         }
         else {
             p = REAL(sv);
-            for (o = ops; o != 0; o >>= 8) {
-                if (! (o&0x80)) p += 1;
-            }
+#           if MAX_OPS_MERGED==3
+                if ((ops&0x80) == 0) p += 1;
+                if ((ops>>8) != 0 && (ops&0x8000) == 0) p += 1;
+#           else
+                for (helpers_op_t o = ops; o != 0; o >>= 8) {
+                    if (! (o&0x80)) p += 1;
+                }
+#           endif
             *p = *REAL(scalar);
         }
         newop = MERGED_ARITH_OP (proc_A, op_A, in1_A, in2_A);
     }
-  
-    for (o = ops; o != 0; o >>= 8) newop <<= 8;
-    ops |= newop;
+
+    ops = (ops << 8) | newop;
   
     /* Store the new operation specification in *op_B (*proc_B and *in1_B or
        *in2_B may have been updated above). */
   
-    *op_B = (ops<<8) | which;
+    *op_B = (ops << 8) | which;
 }
