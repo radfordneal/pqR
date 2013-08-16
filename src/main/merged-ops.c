@@ -261,7 +261,11 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 #   define SWITCH_CASE(o1,S1,o2,S2,o3,S3) \
         case o1*N_MERGED_OPS*N_MERGED_OPS + o2*N_MERGED_OPS + o3: \
-            do { v = vecp[i]; S1; S2; S3; ansp[i] = v; } while (++i < u); \
+            do { \
+                R_len_t u = HELPERS_UP_TO(i,a); \
+                do { v = vecp[i]; S1; S2; S3; ansp[i] = v; } while (++i < u); \
+                helpers_amount_out(i); \
+            } while (i < a); \
             break;
 
 #   define SWITCH_CASES2(o1,S1,o2,S2) \
@@ -299,26 +303,22 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     while (i < n) {
         HELPERS_WAIT_IN1 (a, i, n);
-        do {
-            R_len_t u = HELPERS_UP_TO(i,a);
-            switch (switch_value) {
-                SWITCH_CASES1(MERGED_OP_NULL, ;)
-                SWITCH_CASES1(MERGED_OP_C_PLUS_V,  v = c1 + v)
-                SWITCH_CASES1(MERGED_OP_V_PLUS_C,  v = v + c1)
-                SWITCH_CASES1(MERGED_OP_C_MINUS_V, v = c1 - v)
-                SWITCH_CASES1(MERGED_OP_V_MINUS_C, v = v - c1)
-                SWITCH_CASES1(MERGED_OP_C_TIMES_V, v = c1 * v)
-                SWITCH_CASES1(MERGED_OP_V_TIMES_C, v = v * c1)
-                SWITCH_CASES1(MERGED_OP_C_DIV_V,   v = c1 / v)
-                SWITCH_CASES1(MERGED_OP_V_DIV_C,   v = v / c1)
-                SWITCH_CASES1(MERGED_OP_C_POW_V,   v = R_pow(c1,v))
-                SWITCH_CASES1(MERGED_OP_V_POW_C,   v = R_pow(v,c1))
-                SWITCH_CASES1(MERGED_OP_V_SQUARED, v = v * v)
-                SWITCH_CASES1(MERGED_OP_CONSTANT,  v = c1)
-                SWITCH_CASES1(MERGED_OP_MATH1,     if (!ISNAN(v)) v = f1(v) )
-            }
-            helpers_amount_out(i);
-        } while (i < a);
+        switch (switch_value) {
+            SWITCH_CASES1(MERGED_OP_NULL, ;)
+            SWITCH_CASES1(MERGED_OP_C_PLUS_V,  v = c1 + v)
+            SWITCH_CASES1(MERGED_OP_V_PLUS_C,  v = v + c1)
+            SWITCH_CASES1(MERGED_OP_C_MINUS_V, v = c1 - v)
+            SWITCH_CASES1(MERGED_OP_V_MINUS_C, v = v - c1)
+            SWITCH_CASES1(MERGED_OP_C_TIMES_V, v = c1 * v)
+            SWITCH_CASES1(MERGED_OP_V_TIMES_C, v = v * c1)
+            SWITCH_CASES1(MERGED_OP_C_DIV_V,   v = c1 / v)
+            SWITCH_CASES1(MERGED_OP_V_DIV_C,   v = v / c1)
+            SWITCH_CASES1(MERGED_OP_C_POW_V,   v = R_pow(c1,v))
+            SWITCH_CASES1(MERGED_OP_V_POW_C,   v = R_pow(v,c1))
+            SWITCH_CASES1(MERGED_OP_V_SQUARED, v = v * v)
+            SWITCH_CASES1(MERGED_OP_CONSTANT,  v = c1)
+            SWITCH_CASES1(MERGED_OP_MATH1,     if (!ISNAN(v)) v = f1(v) )
+        }
     }
 }
 
