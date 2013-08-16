@@ -1314,6 +1314,13 @@ void helpers_do_task
     goto direct;
   }
 
+  /* If there is no multithreading, clear the pipe flags to reduce overhead
+     (since no piping is possible). */
+
+  if (helpers_not_multithreading)
+  { flags &= ~HELPERS_PIPE_IN012_OUT;
+  }
+
   /* Notice tasks that have now completed.  Note that this does a flush
      (unless there are no tasks). */
 
