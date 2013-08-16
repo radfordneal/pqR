@@ -210,6 +210,15 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int switch_value;
     int op;
 
+#   define POW_SPECIAL(op,c) do { \
+        if (op == MERGED_OP_V_POW_C) { \
+            if (c == -1.0)     { op = MERGED_OP_C_DIV_V; c = 1.0; } \
+            else if (c == 0.0) { op = MERGED_OP_CONSTANT; c = 1.0; } \
+            else if (c == 1.0) { op = MERGED_OP_NULL; } \
+            else if (c == 2.0) { op = MERGED_OP_V_SQUARED; } \
+        } \
+    } while (0)
+
     if ((ops & 0xff0000) == 0) {
         switch_value = MERGED_OP_NULL * (N_MERGED_OPS*N_MERGED_OPS);
     }
@@ -222,8 +231,9 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             f1 = R_math1_func_table[op];
         }
         else {
-            switch_value = op * (N_MERGED_OPS*N_MERGED_OPS);
             c1 = *scp++;
+            POW_SPECIAL(op,c1);
+            switch_value = op * (N_MERGED_OPS*N_MERGED_OPS);
         }
     }
 
@@ -234,8 +244,9 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         f2 = R_math1_func_table[op];
     }
     else {
-        switch_value += op * N_MERGED_OPS;
         c2 = *scp++;
+        POW_SPECIAL(op,c2);
+        switch_value += op * N_MERGED_OPS;
     }
 
     op = ops & 0xff;
@@ -246,8 +257,9 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         e3 = R_math1_err_table[op];
     }
     else {
-        switch_value += op;
         c3 = *scp;
+        POW_SPECIAL(op,c3);
+        switch_value += op;
     }
 
     /* Do the operations. */
@@ -263,7 +275,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         case o1*N_MERGED_OPS*N_MERGED_OPS + o2*N_MERGED_OPS + o3: \
             do { \
                 R_len_t u = HELPERS_UP_TO(i,a); \
-                do { v = vecp[i]; S1; S2; S3; ansp[i] = v; } while (++i < u); \
+                do { v = vecp[i]; S1; S2; S3; ansp[i] = v; } while (++i <= u); \
                 helpers_amount_out(i); \
             } while (i < a); \
             break;
