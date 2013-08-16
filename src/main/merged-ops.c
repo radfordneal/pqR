@@ -33,6 +33,7 @@
 /* for definition of "struct exception" in math.h */
 # define __LIBM_PRIVATE
 #endif
+
 #define USE_FAST_PROTECT_MACROS
 
 #include <complex.h>
@@ -61,27 +62,33 @@ extern int R_naflag;
 extern helpers_task_proc task_unary_minus, task_math1;
 
 
-/* Codes for binary (and unary minus with 0 op) arithmetic operations.  Note
-   that PLUS, MINUS, and TIMES are not assumed to be commutative, since they
+/* Codes for merged arithmetic operations and math1 functions.  Note that
+   PLUS, MINUS, and TIMES are not assumed to be commutative, since they
    aren't always when one or both operands are NaN or NA, and we want exactly 
    the same result as is obtained without merging operations.  
 
    Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Codes from
-   0x80 to 0xff are math1 codes plus 0x80.  Code 0 is for empty slots. */
+   0x80 to 0xff are math1 codes plus 0x80.  Code 0 is for empty slots.
+   Additional operation code are created within the fast routine. */
 
-#define ARITH_OP_C_PLUS_V  (2*PLUSOP - 1)
-#define ARITH_OP_V_PLUS_C  (2*PLUSOP)
-#define ARITH_OP_C_MINUS_V (2*MINUSOP - 1)
-#define ARITH_OP_V_MINUS_C (2*MINUSOP)
-#define ARITH_OP_C_TIMES_V (2*TIMESOP - 1)
-#define ARITH_OP_V_TIMES_C (2*TIMESOP)
-#define ARITH_OP_C_DIV_V   (2*DIVOP - 1)
-#define ARITH_OP_V_DIV_C   (2*DIVOP)
-#define ARITH_OP_C_POW_V   (2*POWOP - 1)
-#define ARITH_OP_V_POW_C   (2*POWOP)
+#define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
 
-#define ARITH_OP_V_SQUARED 11  /* Created from ARITH_OP_V_POW_C */
+#define MERGED_OP_C_PLUS_V  (2*PLUSOP - 1)
+#define MERGED_OP_V_PLUS_C  (2*PLUSOP)
+#define MERGED_OP_C_MINUS_V (2*MINUSOP - 1)
+#define MERGED_OP_V_MINUS_C (2*MINUSOP)
+#define MERGED_OP_C_TIMES_V (2*TIMESOP - 1)
+#define MERGED_OP_V_TIMES_C (2*TIMESOP)
+#define MERGED_OP_C_DIV_V   (2*DIVOP - 1)
+#define MERGED_OP_V_DIV_C   (2*DIVOP)
+#define MERGED_OP_C_POW_V   (2*POWOP - 1)
+#define MERGED_OP_V_POW_C   (2*POWOP)
 
+#define MERGED_OP_V_SQUARED 11  /* Created for V_POW_C when power is 2 */
+#define MERGED_OP_CONSTANT 12   /* Created for V_POW_C when power is 0 */
+#define MERGED_OP_MATH1 13      /* Created for any math1 op */
+
+#define N_MERGED_OPS 14         /* Number of operation codes above */
 
 /* Task for performing a set of merged arithmetic/math1 operations. */
 
@@ -142,16 +149,16 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                 else { /* arithmetic operation */
                     double c = scp[ai++];
                     switch (op) {
-                    case ARITH_OP_C_PLUS_V:   v = c + v;       break;
-                    case ARITH_OP_V_PLUS_C:   v = v + c;       break;
-                    case ARITH_OP_C_MINUS_V:  v = c - v;       break;
-                    case ARITH_OP_V_MINUS_C:  v = v - c;       break;
-                    case ARITH_OP_C_TIMES_V:  v = c * v;       break;
-                    case ARITH_OP_V_TIMES_C:  v = v * c;       break;
-                    case ARITH_OP_C_DIV_V:    v = c / v;       break;
-                    case ARITH_OP_V_DIV_C:    v = v / c;       break;
-                    case ARITH_OP_C_POW_V:    v = R_pow(c,v);  break;
-                    case ARITH_OP_V_POW_C:    v = R_pow(v,c);  break;
+                    case MERGED_OP_C_PLUS_V:   v = c + v;       break;
+                    case MERGED_OP_V_PLUS_C:   v = v + c;       break;
+                    case MERGED_OP_C_MINUS_V:  v = c - v;       break;
+                    case MERGED_OP_V_MINUS_C:  v = v - c;       break;
+                    case MERGED_OP_C_TIMES_V:  v = c * v;       break;
+                    case MERGED_OP_V_TIMES_C:  v = v * c;       break;
+                    case MERGED_OP_C_DIV_V:    v = c / v;       break;
+                    case MERGED_OP_V_DIV_C:    v = v / c;       break;
+                    case MERGED_OP_C_POW_V:    v = R_pow(c,v);  break;
+                    case MERGED_OP_V_POW_C:    v = R_pow(v,c);  break;
                     }
                 }
             }
@@ -165,7 +172,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 #else 
 
 /* Fast version. Treats powers of -1, 0, 1, and 2 specially, replacing
-   the ARITH_OP_V_POW_C code with another.  Uses a big switch over all
+   the MERGED_OP_V_POW_C code with another.  Uses a big switch over all
    combinations of operations.  
 
    Works only when MAX_OPS_MERGED is 3. */
@@ -174,7 +181,146 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 #error Fast merged operations are implemented only when MAX_OPS_MERGED is 3
 #endif
 
-#error Fast merged operations are not implemented yet
+void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
+{
+    /* Get vector to operate on and pointer to scalar operands (if any). */
+
+    double *ansp, *vecp, *scp;
+
+    ansp = REAL(ans);
+
+    if (code & 1) {
+        vecp = REAL(s2);
+        scp = REAL(s1);
+    }
+    else {
+        vecp = REAL(s1);
+        if (s2 != NULL) scp = REAL(s2);
+    }
+
+    /* Set up switch value encoding all operations and the functions and
+       scalar constants used by all operations. */
+
+    int ops = code >> 8;
+
+    double (*f1)(double), (*f2)(double), (*f3)(double);
+    double c1, c2, c3;
+    int e3;
+
+    int switch_value;
+    int op;
+
+    if ((ops & 0xff0000) == 0) {
+        switch_value = MERGED_OP_NULL * (N_MERGED_OPS*N_MERGED_OPS);
+    }
+    else {
+        op = ops >> 16;
+        ops &= 0xffff;
+        if (op & 0x80) {
+            op &= 0x7f;
+            switch_value = MERGED_OP_MATH1 * (N_MERGED_OPS*N_MERGED_OPS);
+            f1 = R_math1_func_table[op];
+        }
+        else {
+            switch_value = op * (N_MERGED_OPS*N_MERGED_OPS);
+            c1 = *scp++;
+        }
+    }
+
+    op = ops >> 8;
+    if (op & 0x80) {
+        op &= 0x7f;
+        switch_value += MERGED_OP_MATH1 * N_MERGED_OPS;
+        f2 = R_math1_func_table[op];
+    }
+    else {
+        switch_value += op * N_MERGED_OPS;
+        c2 = *scp++;
+    }
+
+    op = ops & 0xff;
+    if (op & 0x80) {
+        op &= 0x7f;
+        switch_value += MERGED_OP_MATH1;
+        f3 = R_math1_func_table[op];
+        e3 = R_math1_err_table[op];
+    }
+    else {
+        switch_value += op;
+        c3 = *scp;
+    }
+
+    /* Do the operations. */
+
+    R_len_t n = LENGTH(ans);
+    R_len_t i = 0;
+    R_len_t a;
+    double v;
+
+    HELPERS_SETUP_OUT(6);
+
+#   define SWITCH_CASE(o1,S1,o2,S2,o3,S3) \
+        case o1*N_MERGED_OPS*N_MERGED_OPS + o2*N_MERGED_OPS + o3: \
+            do { v = vecp[i]; S1; S2; S3; ansp[i] = v; } while (++i < u); \
+            break;
+
+#   define SWITCH_CASES2(o1,S1,o2,S2) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_NULL, ;) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_C_PLUS_V,  v = c3 + v) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_V_PLUS_C,  v = v + c3) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_C_MINUS_V, v = c3 - v) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_V_MINUS_C, v = v - c3) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_C_TIMES_V, v = c3 * v) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_V_TIMES_C, v = v * c3) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_C_DIV_V,   v = c3 / v) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_V_DIV_C,   v = v / c3) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_C_POW_V,   v = R_pow(c3,v)) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_V_POW_C,   v = R_pow(v,c3)) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_V_SQUARED, v = v * v) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_CONSTANT,  v = c3) \
+        SWITCH_CASE(o1,S1,o2,S2, MERGED_OP_MATH1, \
+            if (!ISNAN(v)) v = f3(v); if (e3 && ISNAN(v)) R_naflag = 1 )
+
+#   define SWITCH_CASES1(o1,S1) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_NULL, ;) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_C_PLUS_V,  v = c2 + v) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_V_PLUS_C,  v = v + c2) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_C_MINUS_V, v = c2 - v) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_V_MINUS_C, v = v - c2) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_C_TIMES_V, v = c2 * v) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_V_TIMES_C, v = v * c2) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_C_DIV_V,   v = c2 / v) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_V_DIV_C,   v = v / c2) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_C_POW_V,   v = R_pow(c2,v)) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_V_POW_C,   v = R_pow(v,c2)) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_V_SQUARED, v = v * v) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_CONSTANT,  v = c2) \
+        SWITCH_CASES2(o1,S1, MERGED_OP_MATH1,     if (!ISNAN(v)) v = f2(v) )
+
+    while (i < n) {
+        HELPERS_WAIT_IN1 (a, i, n);
+        do {
+            R_len_t u = HELPERS_UP_TO(i,a);
+            switch (switch_value) {
+                SWITCH_CASES1(MERGED_OP_NULL, ;)
+                SWITCH_CASES1(MERGED_OP_C_PLUS_V,  v = c1 + v)
+                SWITCH_CASES1(MERGED_OP_V_PLUS_C,  v = v + c1)
+                SWITCH_CASES1(MERGED_OP_C_MINUS_V, v = c1 - v)
+                SWITCH_CASES1(MERGED_OP_V_MINUS_C, v = v - c1)
+                SWITCH_CASES1(MERGED_OP_C_TIMES_V, v = c1 * v)
+                SWITCH_CASES1(MERGED_OP_V_TIMES_C, v = v * c1)
+                SWITCH_CASES1(MERGED_OP_C_DIV_V,   v = c1 / v)
+                SWITCH_CASES1(MERGED_OP_V_DIV_C,   v = v / c1)
+                SWITCH_CASES1(MERGED_OP_C_POW_V,   v = R_pow(c1,v))
+                SWITCH_CASES1(MERGED_OP_V_POW_C,   v = R_pow(v,c1))
+                SWITCH_CASES1(MERGED_OP_V_SQUARED, v = v * v)
+                SWITCH_CASES1(MERGED_OP_CONSTANT,  v = c1)
+                SWITCH_CASES1(MERGED_OP_MATH1,     if (!ISNAN(v)) v = f1(v) )
+            }
+            helpers_amount_out(i);
+        } while (i < a);
+    }
+}
 
 #endif
 
@@ -182,7 +328,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 /* Procedure for merging arithmetic/math1 operations. */
 
 #define MERGED_ARITH_OP(proc,op,in1,in2) \
- ((proc)==task_unary_minus ? ARITH_OP_C_MINUS_V \
+ ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V \
           : LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op))
 
 void helpers_merge_proc ( /* helpers_var_ptr out, */

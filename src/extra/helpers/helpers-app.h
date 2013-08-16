@@ -110,9 +110,9 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 /* MACROS FOR TASK MERGING. */
 
-#define USE_SLOW_MERGED_OP 1  /* 1 for slow test version, 0 for fast version */
+#define USE_SLOW_MERGED_OP 0  /* 1 for slow test version, 0 for fast version */
 
-#define MAX_OPS_MERGED 3      /* Must be from 2 to 6 */
+#define MAX_OPS_MERGED 3      /* From 2 to 6, must be 3 for fast version */
 
 extern helpers_task_proc task_merged_arith_math1,
                          task_real_arithmetic,

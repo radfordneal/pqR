@@ -593,7 +593,7 @@ SEXP attribute_hidden do_arith (SEXP call, SEXP op, SEXP args, SEXP env,
 #define GOODIPROD(x, y, z) ((double) (x) * (double) (y) == (z))
 #endif
 
-static int integer_overflow;  /* Set by task_arithmetic_op on integer overflow
+static int integer_overflow;  /* Set by task_integer_arithmetic on overflow
                                  (only in a master-now task or a direct call) */
 
 void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
