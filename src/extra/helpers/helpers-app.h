@@ -46,7 +46,7 @@ typedef SEXP helpers_var_ptr;
 
 #define helpers_printf Rprintf
 
-#define ENABLE_TRACE 3
+#define ENABLE_TRACE 1
 #define ENABLE_STATS 0
 
 
