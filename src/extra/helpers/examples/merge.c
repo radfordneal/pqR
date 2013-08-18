@@ -40,7 +40,7 @@ static helpers_size_t size; /* Size of vectors */
 static int rep;             /* Number of repetitions */
 static int trace;           /* Trace last repetition? */
 static int no_merge;        /* Don't merge? */
-static int extra_flags;     /* Extra flags for scheduling final task */
+static int extra_flags[3];  /* Extra flags for scheduling each task */
 
 
 /* SET OUTPUT VECTOR TO A SEQUENCE GOING FROM 0 TO 1. */
@@ -118,11 +118,11 @@ void helpers_master (void)
     { helpers_trace(1);
     }
 
-    helpers_do_task (no_merge ? 0 : HELPERS_MERGE_OUT,
+    helpers_do_task (extra_flags[0] | (no_merge ? 0 : HELPERS_MERGE_OUT),
                      seq_task, 0, A, NULL, NULL);
-    helpers_do_task (no_merge ? 0 : HELPERS_MERGE_IN_OUT,
+    helpers_do_task (extra_flags[1] | (no_merge ? 0 : HELPERS_MERGE_IN_OUT),
                      mul_task, 0, A, A, NULL);
-    helpers_do_task (no_merge ? 0 : extra_flags | HELPERS_MERGE_IN,
+    helpers_do_task (extra_flags[2] | (no_merge ? 0 : HELPERS_MERGE_IN),
                      add_task, 0, A, A, NULL);
 
     helpers_wait_for_all();
@@ -148,7 +148,7 @@ int main (int argc, char **argv)
   char junk;
   int s, n;
 
-  trace = no_merge = extra_flags = 0;
+  trace = no_merge = 0;
 
   /* Process arguments. */
 
@@ -159,11 +159,23 @@ int main (int argc, char **argv)
     else if (strcmp(argv[1],"-d")==0)
     { no_merge = 1;
     }
-    else if (strcmp(argv[1],"-m")==0)
-    { extra_flags |= HELPERS_MASTER_ONLY;
+    else if (strcmp(argv[1],"-m1")==0)
+    { extra_flags[0] |= HELPERS_MASTER_ONLY;
     }
-    else if (strcmp(argv[1],"-n")==0)
-    { extra_flags |= HELPERS_MASTER_NOW;
+    else if (strcmp(argv[1],"-m2")==0)
+    { extra_flags[1] |= HELPERS_MASTER_ONLY;
+    }
+    else if (strcmp(argv[1],"-m3")==0)
+    { extra_flags[2] |= HELPERS_MASTER_ONLY;
+    }
+    else if (strcmp(argv[1],"-n1")==0)
+    { extra_flags[0] |= HELPERS_MASTER_NOW;
+    }
+    else if (strcmp(argv[1],"-n2")==0)
+    { extra_flags[1] |= HELPERS_MASTER_NOW;
+    }
+    else if (strcmp(argv[1],"-n3")==0)
+    { extra_flags[2] |= HELPERS_MASTER_NOW;
     }
     else
     { break;
@@ -177,7 +189,7 @@ int main (int argc, char **argv)
    || sscanf(argv[2],"%d%c",&s,&junk)!=1 || s<0
    || sscanf(argv[3],"%d%c",&rep,&junk)!=1 || rep<1)
   { fprintf (stderr, 
-    "Usage:  merge [ -t ] [ -d ] [ -m ] [ -n ] n-helpers vec-size repetitions\n"
+ "Usage:  merge [ -t ] [ -d ] [ -mN ] [ -nN ] n-helpers vec-size repetitions\n"
     );
     exit(1);
   }

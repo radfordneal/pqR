@@ -217,9 +217,10 @@ The possible options are as follows:
 
     -d    Disable the task merging facility
 
-    -m    Schedule the add task with the HELPERS_MASTER_ONLY flag.
+    -mN   Schedule the N'th task with the HELPERS_MASTER_ONLY flag
+          (N=1 is seq, N=2 is mul, N=3 is add).
 
-    -n    Schedule the add task with the HELPERS_MASTER_NOW flag.
+    -nN   Schedule the N'th task with the HELPERS_MASTER_NOW flag.
 
 Note that when the number of helpers threads is greater than 0, the
 multiply and add tasks will be merged only if the multiply has not

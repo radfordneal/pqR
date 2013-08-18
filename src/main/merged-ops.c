@@ -399,7 +399,6 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         if (sv == 0) { /* will also have which == 0 */
             sv = scalar;
             *in2_B = sv;
-            helpers_mark_in_use(sv);
         }
         else if (LENGTH(sv) == 1) {
             double tmp = *REAL(sv);

@@ -361,12 +361,15 @@ static struct task_info *this_task_info;  /* Pointer to info for this_task */
 /* VARIABLES HOLDING DISABLING OPTIONS. */
 
 int helpers_are_disabled = 0;    /* 1 if helpers currently disabled */
+int helpers_not_merging = 0;     /* 1 if task merging is not enabled */
 
 #ifndef HELPERS_NO_MULTITHREADING
 int helpers_not_pipelining;      /* 1 if pipelining currently disabled */
 int helpers_not_multithreading;  /* 1 if currently all tasks done by master */
 #endif
 
+static int flag_mask = ~0;       /* Mask used to clear task flags according
+                                    to the settings of the above options */
 
 /* TRACE VARIABLES. */
 
@@ -903,6 +906,26 @@ static tix find_untaken_runnable (int only_needed)
 }
 
 
+/* MARK A VARIABLE AS NOT IN USE, IF NOT USED BY AN UNCOMPLETED TASK. */
+
+#ifdef helpers_mark_not_in_use
+
+static inline void maybe_mark_not_in_use (helpers_var_ptr v)
+{ char d;
+  int j;
+  for (j = 0; j<helpers_tasks; j++)
+  { struct task_info *einfo = &task[used[j]].info;
+    if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
+    { ATOMIC_READ_CHAR (d = einfo->done);
+      if (!d) return;
+    }
+  }
+  helpers_mark_not_in_use(v);
+}
+
+#endif
+
+
 /* NOTICE COMPLETED TASKS.  Called only from the master thread.  Note that it
    starts and ends with FLUSH operations (except when there are no tasks). */
 
@@ -998,18 +1021,8 @@ static void notice_completed (void)
         for (w = 1; w<=2; w++)
         { v = info->var[w];
           if (v!=null && v!=info->var[0])
-          { for (j = 0; j<helpers_tasks; j++)
-            { struct task_info *einfo = &task[used[j]].info;
-              if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
-              { ATOMIC_READ_CHAR (d = einfo->done);
-                if (!d) 
-                { goto done_u;
-                }
-              }
-            }
-            helpers_mark_not_in_use(v);
+          { maybe_mark_not_in_use(v);
           }
-        done_u: ;
         }
 #     endif
     }
@@ -1296,9 +1309,11 @@ static void helper_proc (void)
 /* DO A TASK OR SCHEDULE IT TO BE DONE. */
 
 void helpers_do_task 
-  (int flags, helpers_task_proc *task_to_do, helpers_op_t op, 
+  (int flags0, helpers_task_proc *task_to_do, helpers_op_t op, 
    helpers_var_ptr out, helpers_var_ptr in1, helpers_var_ptr in2)
 {
+  int flags = flags0 & flag_mask;  /* Flags with disabled features removed */
+
   struct task_info *info;
   tix pipe0;
   int i;
@@ -1312,13 +1327,6 @@ void helpers_do_task
   if (helpers_are_disabled)
   { info = &task[0].info;
     goto direct;
-  }
-
-  /* If there is no multithreading, clear the pipe flags to reduce overhead
-     (since no piping is possible). */
-
-  if (helpers_not_multithreading)
-  { flags &= ~HELPERS_PIPE_IN012_OUT;
   }
 
   /* Notice tasks that have now completed.  Note that this does a flush
@@ -1347,25 +1355,36 @@ void helpers_do_task
      move to the master-only queue if the new task is master-only, or
      do the task now, if the new task is master-now, or we just return
      otherwise, with the merged task in the untaken queue where the old
-     one was.  
-
-     Note that a new task is allowed to merged with an old one only if none
-     of its inputs have not been computed, and the task merged with must
-     not have any of its uncomputed inputs changed.  So we don't need to 
-     update the merged task's pipe fields. */
+     one was. */
 
 # ifdef helpers_can_merge
 
   if (pipe0!=0 && (flags & HELPERS_MERGE_IN))
   { struct task_info *m = &task[pipe0].info;
-    if ((m->flags & HELPERS_MERGE_OUT) && !(m->flags & HELPERS_MASTER_ONLY)
+    if ((m->flags & HELPERS_MERGE_OUT) 
+          && (! (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
+               || ! (m->flags & HELPERS_MASTER_ONLY) 
+               || pipe0==master_only[master_only_out])
           && helpers_can_merge (out, task_to_do, op, in1, in2, 
                                 m->task_to_do, m->op, m->in1, m->in2))
-    { FLUSH;
-      ATOMIC_READ_CHAR (h = m->helper);
-      if (h==-1) /* the task to merge with is not being run, but of course */
-      {          /*  this could change at any time (if any helper threads) */
-        int merged;
+    { 
+      /* Set "merge" to 1 if we can merge with "m" (hasn't started running)
+         and later to 2 if the merged task can be done immediately.  Set 
+         "locked" to 1 if start_lock needs to be unset later. */
+
+      int merge = 1, locked = 0;
+      int w;
+
+      if (! (m->flags & HELPERS_MASTER_ONLY))
+      { 
+        FLUSH;
+        ATOMIC_READ_CHAR (h = m->helper);
+
+        /* Don't merge if the task to merge with has started to run. */
+
+        if (h!=-1)
+        { goto out_of_merge;
+        }
 
 #       ifndef HELPERS_NO_MULTITHREADING
         if (!helpers_not_multithreading)
@@ -1383,128 +1402,166 @@ void helpers_do_task
             }
             do_task_in_master(0);
           }
+
+          locked = 1;
         }
 #       endif
 
-        if (m->helper!=-1)
-        { merged = 0;
+        if (h!=-1) 
+        { merge = 0;
         }
-        else
-        { 
-          /* Merge the new task with the existing task, indexed by pipe0. */
+      }
 
-          helpers_merge (out, task_to_do, op, in1, in2, 
-                         &m->task_to_do, &m->op, &m->var[1], &m->var[2]);
+      if (merge)
+      { 
+        /* Merge the new task with the existing task, with info at "m"
+           and indexed by "pipe0".  Save previous in1 and in2 values. */
 
-          m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
-          m->flags |= (flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT));
+        helpers_var_ptr old_var[3];
 
-          if (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
+        old_var[1] = m->var[1];
+        old_var[2] = m->var[2];
+
+        helpers_merge (out, task_to_do, op, in1, in2, 
+                       &m->task_to_do, &m->op, &m->var[1], &m->var[2]);
+
+        m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
+        m->flags |= (flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT));
+
+        /* Remove and/or add merged task from/to queues.  Nothing needs to
+           be done if the task merged into is master-only and the new task
+           isn't master-now, or if the task merged into is not master-only
+           and the new task is neither master-only nor master-now.  When
+           the new task is master-now, the task merged into is removed from
+           its queue, then done immediately without being added to a queue. */
+
+        if (m->flags & HELPERS_MASTER_ONLY)
+        { if (flags & HELPERS_MASTER_NOW)
           { 
-            /* Remove the merged task from the untaken queue. */
+            /* Remove the task to merge into from the master-only queue. */
 
-            int j;
+            master_only_out = (master_only_out + 1) & QMask;
+          }
+        }
+        else if (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
+        { 
+          /* Remove the task to merge into from the untaken queue. */
 
-            for (j = untaken_out; untaken[j]!=pipe0; j = (j+1) & QMask)
-            { if (j==untaken_in)
-              { helpers_printf("MERGED TASK NOT IN UNTAKEN QUEUE!\n");
-                exit(1);
-              }
-            }
+          int j;
 
-            untaken[j] = untaken[untaken_out];
-            untaken_out = (untaken_out + 1) & QMask;
-
-            if (flags & HELPERS_MASTER_ONLY)
-            { 
-              m->flags |= HELPERS_MASTER_ONLY;
-
-              /* Insert the merged task in the master-only queue. */
-
-              master_only[master_only_in] = pipe0;
-              master_only_in = (master_only_in + 1) & QMask;
-
-              merged = 1;
-            }
-            else /* flags & HELPERS_MASTER_NOW */
-            { 
-              int w;
-
-              m->flags |= HELPERS_MASTER_NOW;
-              if (trace) 
-              { trace_merged (pipe0, flags, task_to_do, op, out, in1, in2);
-              }
-
-              /* Replace arguments of this function by merged task's values. */
-
-              flags      = m->flags | HELPERS_MASTER_NOW;
-              task_to_do = m->task_to_do;
-              op         = m->op;
-              in1        = m->var[1];
-              in2        = m->var[2];
-
-              /* Remove the merged task from "used".  The position of the
-                 merged task in "used" was left in "i" by code above. */
-
-              helpers_tasks -= 1;
-              for (j = i; j<helpers_tasks; j++)
-              { used[j] = used[j+1];
-              }
-              used[helpers_tasks] = pipe0;
-
-              /* Update pipe0 to be the task producing output for the merged 
-                 task (or zero). */
-
-              pipe0 = m->pipe[0];
-
-              /* Mark output as not being computed, since it won't be after
-                 this task is done (immediately) in the master thread.   
-                 Similarly, mark inputs as not in use, if they aren't used 
-                 by another task. */
-
-#             ifdef helpers_mark_not_being_computed
-                helpers_mark_not_being_computed (out);
-#             endif
-
-#             ifdef helpers_mark_not_in_use
-                for (w = 1; w<=2; w++)
-                { helpers_var_ptr v = m->var[w];
-                  if (v!=null && v!=m->var[0])
-                  { int j;
-                    for (j = 0; j<helpers_tasks; j++)
-                    { struct task_info *einfo = &task[used[j]].info;
-                      if (einfo->var[0]!=v 
-                           && (einfo->var[1]==v || einfo->var[2]==v))
-                      { goto done_u;
-                      }
-                    }
-                    helpers_mark_not_in_use(v);
-                  }
-                done_u: ;
-                }
-#             endif
-
-              /* Set flag to process as new task after unsetting the lock. */
-
-              merged = 2;
+          for (j = untaken_out; untaken[j]!=pipe0; j = (j+1) & QMask)
+          { if (j==untaken_in)
+            { helpers_printf("MERGED TASK NOT IN UNTAKEN QUEUE!\n");
+              exit(1);
             }
           }
-          else
-          {
-            merged = 1;
+
+          untaken[j] = untaken[untaken_out];
+          untaken_out = (untaken_out + 1) & QMask;
+
+          if (! (flags & HELPERS_MASTER_NOW))
+          { 
+            /* Insert the merged task in the master-only queue. */
+
+            m->flags |= HELPERS_MASTER_ONLY;
+
+            master_only[master_only_in] = pipe0;
+            master_only_in = (master_only_in + 1) & QMask;
           }
         }
 
-#       ifndef HELPERS_NO_MULTITHREADING
-        if (!helpers_not_multithreading)
-        { omp_unset_lock (&start_lock);
-        }
-#       endif
+        if (flags & HELPERS_MASTER_NOW)
+        { 
+          /* Set things up so the merged task can be done immediately. */
 
-        if (merged==1)
-        { if (trace) trace_merged (pipe0, flags, task_to_do, op, out, in1, in2);
-          return;
+          int j;
+
+          m->flags |= HELPERS_MASTER_NOW;
+
+          if (trace) 
+          { trace_merged (pipe0, flags0, task_to_do, op, out, in1, in2);
+          }
+
+          /* Replace arguments of this function by merged task's values. */
+
+          flags      = m->flags;
+          task_to_do = m->task_to_do;
+          op         = m->op;
+          in1        = m->var[1];
+          in2        = m->var[2];
+
+          /* Remove the merged task from "used".  The position of the
+             merged task in "used" was left in "i" by code above. */
+
+          helpers_tasks -= 1;
+          for (j = i; j<helpers_tasks; j++)
+          { used[j] = used[j+1];
+          }
+          used[helpers_tasks] = pipe0;
+
+          /* Update pipe0 to be the task producing output for the merged 
+             task (or zero). */
+
+          pipe0 = m->pipe[0];
+
+          /* Mark the output as not being computed, since it won't be after
+             this task is done (immediately) in the master thread. */
+
+#         ifdef helpers_mark_not_being_computed
+            helpers_mark_not_being_computed (out);
+#         endif
+
+          /* Mark the inputs previously in use as not in use, if they aren't 
+             used by another task. */
+
+#         ifdef helpers_mark_not_in_use
+            for (w = 1; w<=2; w++)
+            { helpers_var_ptr v = old_var[w];
+              if (v!=null && v!=out)
+              { maybe_mark_not_in_use(v);
+              }
+            }
+#         endif
+
+          /* Set flag to process as a new task after unsetting the lock. */
+
+          merge = 2;
         }
+        else /* not master-now */
+        {
+          helpers_var_ptr in1_m = m->var[1],
+                          in2_m = m->var[2];
+
+          /* Mark the inputs previously in use as not in use, if they aren't
+             the same as new inputs, and aren't used by another task. */
+
+#         ifdef helpers_mark_not_in_use
+            for (w = 1; w<=2; w++)
+            { helpers_var_ptr v = old_var[w];
+              if (v!=null && v!=out && v!=in1_m && v!=in2_m)
+              { maybe_mark_not_in_use(v);
+              }
+            }
+#         endif
+
+          /* Mark the new inputs as in use. */
+
+#         ifdef helpers_mark_in_use
+            if (in1_m!=null && in1_m!=out) helpers_mark_in_use(in1_m);
+            if (in2_m!=null && in2_m!=out) helpers_mark_in_use(in2_m);
+#         endif
+        }
+      }
+  
+#     ifndef HELPERS_NO_MULTITHREADING
+      if (locked)
+      { omp_unset_lock (&start_lock);
+      }
+#     endif
+
+      if (merge==1)
+      { if (trace) trace_merged(pipe0, flags0, task_to_do, op, out, in1, in2);
+        return;
       }
     }
   }
@@ -1675,7 +1732,7 @@ out_of_merge:
 
   /* Write trace output showing task scheduled, if trace enabled. */
 
-  if (trace) trace_started (t, flags, task_to_do, op, out, in1, in2);
+  if (trace) trace_started (t, flags0, task_to_do, op, out, in1, in2);
 
   /* If this is a master-only task, just put it in the master_only queue. */
 
@@ -1729,7 +1786,7 @@ direct:
 
   /* Do this task in the master without scheduling it. */
 
-  if (trace) trace_started (0, flags, task_to_do, op, out, in1, in2);
+  if (trace) trace_started (0, flags0, task_to_do, op, out, in1, in2);
 
   /* Code below is like in run_this_task, except this procedure's arguments
      are used without their being stored in the task info structure, and
@@ -1855,8 +1912,8 @@ void helpers_start_computing_var (helpers_var_ptr v)
 
   /* If computing v does not require running a master-only task, loop until
      the computation of v has started (in which case return), or it looks 
-     like no helpers are idle.  It is possible that it will look like no 
-     helpers are idle when actually one is (since a helper might quickly
+     like no helpers are idle.  It is possible that it will look like a
+     helper is idle when actually none are (since a helper might quickly
      finish a task and start on a new one), but it should not be possible for 
      the loop to continue for very long when there are no idle helpers. */
 
@@ -2221,8 +2278,8 @@ helpers_size_t helpers_avail_var (helpers_var_ptr v, helpers_size_t mx)
 /* -------------  MISCELLANEOUS PROCEDURES USED BY APPLICATIONS  ------------ */
 
 
-/* RETURN AN ESTIMATE OF THE NUMBER OF IDLE HELPERS.  Note that it calls
-   notice_completed to start (unless helpers are disabled). */
+/* RETURN AN ESTIMATE OF THE NUMBER OF IDLE HELPERS.  Note that it starts by 
+   calling notice_completed (unless no multithreading or helpers disabled). */
 
 #ifndef HELPERS_NO_MULTITHREADING
 
@@ -2231,7 +2288,7 @@ int helpers_idle (void)
   int i, c;
   hix h;
 
-  if (helpers_are_disabled) return 0;
+  if (helpers_not_multithreading || helpers_are_disabled) return 0;
 
   notice_completed();
 
@@ -2270,6 +2327,25 @@ helpers_var_ptr *helpers_var_list (void)
 }
 
 
+/* SET FLAG MASK ACCORDING TO CURRENT OPTIONS. */
+
+static void set_flag_mask (void)
+{
+  flag_mask = ~0;
+
+  if (helpers_are_disabled
+   || helpers_not_multithreading
+   || helpers_not_pipelining) 
+  { flag_mask &= ~HELPERS_PIPE_IN012_OUT;
+  }
+
+  if (helpers_are_disabled 
+   || helpers_not_merging)   
+  { flag_mask &= ~HELPERS_MERGE_IN_OUT;
+  }
+}
+
+
 /* DISABLE / RE-ENABLE PIPELINING. */
 
 #ifndef HELPERS_NO_MULTITHREADING
@@ -2277,9 +2353,29 @@ helpers_var_ptr *helpers_var_list (void)
 void helpers_no_pipelining (int a)
 {
   helpers_not_pipelining = a!=0 || helpers_num==0;
+  set_flag_mask();
+
+  if (trace) 
+  { helpers_printf ("HELPERS: Pipelining %s\n",
+                    helpers_not_pipelining ? "disabled" : "enabled");
+  }
 }
 
 #endif
+
+
+/* DISABLE / RE-ENABLE TASK MERGING. */
+
+void helpers_no_merging (int a)
+{
+  helpers_not_merging = a!=0;
+  set_flag_mask();
+
+  if (trace) 
+  { helpers_printf ("HELPERS: Task merging %s\n",
+                    helpers_not_merging ? "disabled" : "enabled");
+  }
+}
 
 
 /* DISABLE / RE-ENABLE HELPERS.  Before disabling, wait for all tasks to 
@@ -2292,6 +2388,9 @@ void helpers_disable (int a)
     memset (&task[0].info, 0, sizeof task[0].info);
   }
   helpers_are_disabled = a!=0;
+  set_flag_mask();
+  FLUSH;
+
   if (trace) 
   { helpers_printf ("HELPERS: Task deferral %s\n",
                     helpers_are_disabled ? "disabled" : "enabled");
@@ -2307,8 +2406,10 @@ void helpers_disable (int a)
 void helpers_no_multithreading (int a)
 {
   helpers_wait_for_all();
-  helpers_not_multithreading = a!=0;
+  helpers_not_multithreading = a!=0 || helpers_num==0;
+  set_flag_mask();
   FLUSH;
+
   if (trace) 
   { helpers_printf ("HELPERS: Multithreading %s\n",
                     helpers_not_multithreading ? "disabled" : "enabled");
@@ -2409,11 +2510,14 @@ void helpers_startup (int n)
       helpers_not_pipelining = 1;
 #   endif
 
+    set_flag_mask();
     helpers_master();
     exit(0);
   }
 
-  /* Otherwise, set up for using helper threads. */
+  /* Otherwise, set up for using helper threads.  If HELPERS_NO_MULTITHREADING
+     is defined, helpers_num will be zero, so this will code not be reached,
+     and is disabled so that OpenMP support will not be needed. */
 
 # ifndef HELPERS_NO_MULTITHREADING
 
@@ -2430,7 +2534,7 @@ void helpers_startup (int n)
   which_suspends = which_wakes = 0;
   suspend_initialized = 0;
 
-  #pragma omp parallel num_threads(n+1)
+  #pragma omp parallel num_threads(helpers_num+1)
   {
     this_thread = omp_get_thread_num();
 
@@ -2441,6 +2545,13 @@ void helpers_startup (int n)
       /* Find out how many helpers we really have. */
 
       helpers_num = omp_get_num_threads() - 1;
+
+      if (helpers_num==0) 
+      { helpers_not_multithreading = 1;
+        helpers_not_pipelining = 1;
+      }
+
+      set_flag_mask();
 
       /* Set suspend_lock[0] so helpers will be able to suspend themselves. */
 

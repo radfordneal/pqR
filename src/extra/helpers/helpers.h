@@ -203,6 +203,7 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 
 #define helpers_tasks 0
 #define helpers_are_disabled 1
+#define helpers_not_merging 1
 
 #define helpers_startup(n)           (helpers_master())
 
@@ -223,6 +224,7 @@ static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 #define helpers_trace(f)             0
 #define helpers_stats()              0
 #define helpers_disable(a)           0
+#define helpers_no_merging(a)        0
 
 #define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
   ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
@@ -234,6 +236,7 @@ static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 
 extern int helpers_tasks;            /* Number of outstanding tasks */
 extern int helpers_are_disabled;     /* 1 if helpers are not enabled */
+extern int helpers_not_merging;      /* 1 if task merging is not enabled */
 
 void helpers_startup (int);          /* Set up and then call master procedure */
 
@@ -261,6 +264,7 @@ helpers_var_ptr *helpers_var_list(void);  /* Return list of variables in use */
 void helpers_trace (int);            /* Set whether trace info is written */
 void helpers_stats (void);           /* Print statistics */
 void helpers_disable (int);          /* Disable/re-enable helpers */
+void helpers_no_merging (int);       /* Disable/re-enable task merging */
 
 /* Conditionally schedule task with helpers_do_task or call it directly. */
 

@@ -436,18 +436,19 @@ scheduled until the master-now task has finished.  However, scheduling
 a master-now task with pipelined inputs may be useful.
 
 Pipelining can be disabled by calling helpers_no_pipelining with
-argument 1 (can be re-enabled by calling helpers_no_pipelining with
-argument 0).  When pipelining is disabled, the HELPERS_PIPE_OUT flag
-will be disregarded when a task is scheduled.  (Existing tasks are not
-affected.)  Disabling pipelining slightly decreases overhead for tasks
-scheduled with HELPERS_PIPE_OUT, when no process is receiving the
-piped output, and may also be desirable when the number of helper
+argument 1 (and can be re-enabled by calling helpers_no_pipelining
+with argument 0).  When pipelining is disabled, the HELPERS_PIPE_OUT
+flag will be disregarded when a task is scheduled.  (Existing tasks
+are not affected.)  Disabling pipelining slightly decreases overhead
+for tasks scheduled with HELPERS_PIPE_OUT when no process is receiving
+the piped output, and may also be desirable when the number of helper
 threads may exceed the number of available processor cores (as could
 happen uncontrollably in a time-shared environment), since a wait for
 pipelined input uses a spin-loop that occupies a processor core.  When
 pipelining is disabled, the global variable helpers_not_pipelining
 will be set to 1 (versus 0 otherwise).  Pipelining is always disabled
-when there are no helper threads (and hence pipelining is impossible).
+when there are no helper threads, or multithreading has been disabled
+(see below), and hence pipelining is impossible.
 
 
 WRITING PIPELINED TASK PROCEDURES
@@ -724,26 +725,31 @@ reducing computation time.
 When a new task, A, is scheduled, it will be merged with a task, B,
 that was previously scheduled if all the following conditions hold:
 
-  1) Task A has the HELPERS_MERGE_IN bit set in its flags (which are
-     given by an argument to helpers_do_task).
-
-  2) Task B has the HELPERS_MERGE_OUT bit set in its flags.
-
-  3) Task B does not have the HELPERS_MASTER_ONLY bit set in its flags.
-
-  4) Task B has not started to run in some helper thread.
-
-  5) The output variable of task A is not null, and is the same as the
+  1) The output variable of task A is not null, and is the same as the
      output variable of task B.  Furthermore, no task scheduled after 
      task B has this variable as its output variable.
+
+  2) Task A has the HELPERS_MERGE_IN bit set in its flags (which are
+     given by an argument to helpers_do_task).
+
+  3) Task B has the HELPERS_MERGE_OUT bit set in its flags.
+
+  4) If task B has the HELPERS_MASTER_ONLY bit set in its flags,
+     either task B is the most recently scheduled master-only task, or
+     task A does not have either the HELPERS_MASTER_ONLY bit or the
+     HELPERS_MASTER_NOW bit set in its flags.  (Otherwise, merging
+     these tasks would cause master-only operations to be performed
+     out of order.)
+
+  5) Task B has not started to run in some helper thread.
 
   6) The helpers_can_merge macro supplied by the application returns
      a non-zero value when given as arguments these tasks' output 
      variable, the task procedure for task A, the operation for task
      A, the two input variables for task A, the task procedure for
      task B, the operation for task B, and the two input variables
-     for task B.  Note that this macro is invoked only if (1) to (5)
-     above are true.
+     for task B.  This macro is invoked only if (1) to (4) above are 
+     true, but it may be invoked when (5) is not true.
 
 For convenience, the symbol HELPER_MERGE_IN_OUT is defined to be
 HELPERS_MERGE_IN | HELPERS_MERGE_OUT.
@@ -777,17 +783,20 @@ necessary, the helpers_can_merge macro must ensure can be satisfied):
   2) Neither in1_B or in2_B may be changed to refer to a variable
      that has not yet been computed.
 
-Furthermore, if in1_B or in2_B is changed to refer to a different
-variable (including in1_A or in2_A), the helpers_mark_in_use macro
-defined by the application (if it defines one) must be called to mark
-the variable as in use (unless the application knows that the mark
-will never be consulted).
-
 The task resulting from merging a new and an old task will have the
 HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
 HELPERS_PIPE_OUT flag if new task had the corresponding flag, and will
 have the HELPERS_PIPE_IN0, HELPERS_PIPE_IN1, or HELPERS_PIPE_IN2 flag
 if the old task had the corresponding flag.
+
+Task merging can be disabled by calling helpers_no_merging with
+argument 1 (and can be re-enabled by calling helpers_no_merging with
+argument 0).  When task merging is disabled, the HELPERS_MERGE_IN and
+HELPERS_MERGE_OUT flags will be disregarded when a task is scheduled.
+(Existing tasks are not affected.)  When task merging is disabled, the
+global variable helpers_not_merging will be set to 1 (versus 0
+otherwise).  Task merging is always disabled when the helpers facility
+is disabled (eg, with helpers_disable).
 
 
 INFORMATION FUNCTIONS AND VARIABLES
@@ -808,9 +817,11 @@ being computed, without checking them individually.
 To help the master decide how many tasks should be created to do a
 computation in parallel, the helpers_idle function is provided, which
 takes no arguments, and returns an estimate of how many helper threads
-are currently idle.  This estimate is not guaranteed to be correct
-(but will be in the range from 0 the helpers_num), and of course may
-soon be out-of-date, so it should be used only as a rough guide.
+are currently available to perform tasks.  This estimate is not
+guaranteed to be correct (but will be in the range from 0 the
+helpers_num), and of course may soon be out-of-date, so it should be
+used only as a rough guide.  When multithreading is disabled,
+helpers_idle will always return zero.
 
 
 OBTAINING A LIST OF VARIABLES
@@ -1043,6 +1054,8 @@ along with the context in which they may be called.
                     void           int
   helpers_no_pipelining                                  master
                     void           int
+  helpers_no_merging                                     master
+                    void           int
 
 An application program using the helpers facility must define the
 following types in helpers-app.h:
@@ -1082,6 +1095,7 @@ available in the master:
   helpers_num                Number of helper threads
   helpers_tasks              Number of tasks currently outstanding
   helpers_not_pipelining     Set to 1 if pipelining is disabled, 0 otherwise
+  helpers_not_merging        Set to 1 if task merging is disabled, 0 otherwise
   helpers_not_multithreading Set to 1 if tasks done only in master, 0 otherwise
   helpers_are_disabled       Set to 1 if helpers not enabled, 0 otherwise
 
