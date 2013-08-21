@@ -1047,8 +1047,10 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
         if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
-            if (TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP)
+            if (n > 1 && (nx == 1 || ny == 1)
+                  && TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP) {
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
+            }
         }
         else if (oper == MODOP)
             flags = HELPERS_PIPE_IN0 |
