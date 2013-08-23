@@ -1107,7 +1107,7 @@ static void wait_while_any_needed (void)
 /* MAYBE DO A NEEDED TASK IN THE MASTER.  Does the next master-only task if it
    is runnable (and is needed, if only_needed is 1), and otherwise tries to do 
    a task from the untaken queue (provided it is needed, if only_needed is 1).
-   Returns without waiting if no task is sutiable, or if it can't set 
+   Returns without waiting if no task is suitable, or if it can't set 
    start_lock (so a helper must currently be looking for a task to run). */
 
 static void do_task_in_master (int only_needed)
@@ -1315,7 +1315,7 @@ void helpers_do_task
   int flags = flags0 & flag_mask;  /* Flags with disabled features removed */
 
   struct task_info *info;
-  tix pipe0;
+  int pipe0;
   int i;
   tix t;
   hix h;
@@ -1590,6 +1590,8 @@ out_of_merge:
       /* Mark tasks that are master-only or that compute variables needed by 
          the master-now task as needing to be started or completed.  Also mark 
          as needed those tasks needed to do those tasks, etc.*/
+
+      int any_needed = 0;
   
       for (i = helpers_tasks-1; i>=0; i--)
       {
@@ -1621,12 +1623,18 @@ out_of_merge:
           }
         }
 
-        if (needed != 0) mark_as_needed (uinfo, needed);       
+        if (needed != 0)
+        { mark_as_needed (uinfo, needed);
+          any_needed = 1;
+        }
       }
 
       /* Wait for the tasks marked as needed above to start or complete. */
   
-      wait_while_any_needed();
+      if (any_needed)
+      { wait_while_any_needed();
+        if (pipe0!=0) pipe0 = -1; /* task pipe0 might have finished, look again */
+      }
     }
   }
 
@@ -1636,9 +1644,12 @@ out_of_merge:
        an entry is free, while doing master-only tasks that are runnable now,
        or any other tasks in the master if no runnable master-only tasks. */
 
-    while (helpers_tasks==MAX_TASKS)
-    { do_task_in_master(0);
-      notice_completed();
+    if (helpers_tasks==MAX_TASKS)
+    { do 
+      { do_task_in_master(0);
+        notice_completed();
+      } while (helpers_tasks==MAX_TASKS);
+      if (pipe0!=0) pipe0 = -1; /* task pipe0 might have finished, look again */
     }
 
     /* Store info about the new task in a new task entry (t and info).  But 
@@ -1683,8 +1694,22 @@ out_of_merge:
     info->amt_out = 0;
   }
 
-  /* Record the previous task (if any) outputting the output variable of
-     the new task. */
+  /* Record the previous task (if any) outputting the output variable of the
+     new task.  This was found earlier, and stored in pipe0, but if tasks
+     tasks had to be done in the master, it might have changed, so look again. */
+
+  if (pipe0==-1) 
+  { /* "pipe0" was previously non-zero, so "out" must not be null */
+    pipe0 = 0;
+    i = helpers_tasks;
+    while (i>0)
+    { tix u = used[--i];
+      if (task[u].info.var[0]==out)
+      { pipe0 = u;
+        break;
+      }
+    }
+  }
 
   info->pipe[0] = pipe0;
 
