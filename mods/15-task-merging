@@ -1,0 +1,3 @@
+This mod implements a limited facility for sometimes merging a
+newly-scheduled task with an existing task.  A new version of the
+helpers module that supports this is included.
