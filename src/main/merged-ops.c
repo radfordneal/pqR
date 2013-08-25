@@ -124,7 +124,10 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     HELPERS_SETUP_OUT(5);
 
     while (i < n) {
-        HELPERS_WAIT_IN1 (a, i, n);
+        if (which) 
+            HELPERS_WAIT_IN2 (a, i, n); 
+        else 
+            HELPERS_WAIT_IN1 (a, i, n);
         do {
             double v = REAL(vec)[i];
             helpers_op_t ops = code; 
@@ -183,13 +186,17 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
+    /* Record which is the vector operand. */
+
+    int which = code & 1;
+
     /* Get vector to operate on and pointer to scalar operands (if any). */
 
     double *ansp, *vecp, *scp;
 
     ansp = REAL(ans);
 
-    if (code & 1) {
+    if (which) {
         vecp = REAL(s2);
         scp = REAL(s1);
     }
@@ -314,7 +321,10 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         SWITCH_CASES2(o1,S1, MERGED_OP_MATH1,     if (!ISNAN(v)) v = f2(v) )
 
     while (i < n) {
-        HELPERS_WAIT_IN1 (a, i, n);
+        if (which) 
+            HELPERS_WAIT_IN2 (a, i, n); 
+        else 
+            HELPERS_WAIT_IN1 (a, i, n);
         switch (switch_value) {
             SWITCH_CASES1(MERGED_OP_NULL, ;)
             SWITCH_CASES1(MERGED_OP_C_PLUS_V,  v = c1 + v)
