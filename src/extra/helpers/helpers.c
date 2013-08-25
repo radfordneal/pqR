@@ -1375,20 +1375,20 @@ void helpers_do_task
       int merge = 1, locked = 0;
       int w;
 
-      if (! (m->flags & HELPERS_MASTER_ONLY))
-      { 
-        FLUSH;
-        ATOMIC_READ_CHAR (h = m->helper);
-
-        /* Don't merge if the task to merge with has started to run. */
-
-        if (h!=-1)
-        { goto out_of_merge;
-        }
-
-#       ifndef HELPERS_NO_MULTITHREADING
-        if (!helpers_not_multithreading)
+#     ifndef HELPERS_NO_MULTITHREADING
+      if (!helpers_not_multithreading)
+      {
+        if (! (m->flags & HELPERS_MASTER_ONLY))
         { 
+          FLUSH;
+          ATOMIC_READ_CHAR (h = m->helper);
+
+          /* Don't merge if the task to merge with has started to run. */
+
+          if (h!=-1)
+          { goto out_of_merge;
+          }
+
           /* We need to set start_lock to be sure that we don't merge with a
              task that has started, and so we can if necessary remove it from
              the untaken queue.  The lock will usually be unset, since there
@@ -1402,15 +1402,15 @@ void helpers_do_task
             }
             do_task_in_master(0);
           }
-
           locked = 1;
-        }
-#       endif
 
-        if (h!=-1) 
-        { merge = 0;
+          ATOMIC_READ_CHAR (h = m->helper);
+          if (h!=-1) 
+          { merge = 0;
+          }
         }
       }
+#     endif
 
       if (merge)
       { 
@@ -1452,7 +1452,7 @@ void helpers_do_task
           for (j = untaken_out; untaken[j]!=pipe0; j = (j+1) & QMask)
           { if (j==untaken_in)
             { helpers_printf("MERGED TASK NOT IN UNTAKEN QUEUE!\n");
-              exit(1);
+              abort(); /*exit(1);*/
             }
           }
 
