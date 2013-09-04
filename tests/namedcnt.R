@@ -114,6 +114,22 @@ y <- x[1:2,2:3,1:2]
 x[[1,2,1]][1] <- 9
 stopifnot(y[[1,1,1]]==1)
 
+x <- list(1,2,3)
+{ x[2:3] <- list(mk2(1)); 0 }
+x[[2]][1] <- 7
+stopifnot(x[[3]]==2)
+
+x <- matrix(list(1,2,3,4),2,2)
+{ x[1,1:2] <- list(mk2(1)); 0 }
+x[[1,1]][1] <- 7
+stopifnot(x[[1,2]]==2)
+
+x <- array(list(1,2,3,4),c(1,2,2))
+{ x[1,1,1:2] <- list(mk2(1)); 0 }
+x[[1,1,1]][1] <- 7
+stopifnot(x[[1,1,2]]==2)
+
+
 # Vector index for lists.
 
 l = list(list(1))           # PR #15374 at r-project.org
