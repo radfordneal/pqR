@@ -573,12 +573,12 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             if (i < ny) {
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             }
-            else {
+            else { /* first time we get here, k is and should be 0 */
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, k);
                 if (NAMEDCNT_EQ_0(y))
                     INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
+                if (++k == ny) k = 0;
             }
-            if (++k == ny) k = 0;
         }
         break;
 
@@ -838,6 +838,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     int i, j, ii, iy, jj, k=0, n, ny;
+    int rep_assign = 0; /* 1 if elements assigned repeatedly into list array */
     SEXP dims, tmp;
     double ry;
 
@@ -977,11 +978,12 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         case (EXPRSXP<<5) + EXPRSXP:
         case (VECSXP<<5)  + EXPRSXP:
         case (VECSXP<<5)  + VECSXP:
-            if (i < ny) {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
+            SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
+            if (!rep_assign) {
+                if (i == ny - 1) 
+                    rep_assign = 1;
             }
             else {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
                 if (NAMEDCNT_EQ_0(y))
                     INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
             }
