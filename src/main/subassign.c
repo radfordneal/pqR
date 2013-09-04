@@ -573,12 +573,12 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             if (i < ny) {
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             }
-            else {
+            else { /* first time we get here, k is and should be 0 */
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, k);
                 if (NAMEDCNT_EQ_0(y))
                     INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
+                if (++k == ny) k = 0;
             }
-            if (++k == ny) k = 0;
         }
         break;
 
