@@ -114,17 +114,14 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 #define MAX_OPS_MERGED 3      /* From 2 to 6, must be 3 for fast version */
 
-extern helpers_task_proc task_merged_arith_math1,
-                         task_real_arithmetic,
-                         task_unary_minus;
+extern helpers_task_proc task_merged_arith_math1, task_math1;
 
 #define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
   ( ((proc_b) != task_merged_arith_math1 \
        || ((op_b) & (0xff<<(8*MAX_OPS_MERGED))) == 0) && \
     (helpers_not_multithreading \
-       || (proc_a) == task_real_arithmetic && op_a <= MINUSOP \
-       || (proc_b) == task_real_arithmetic && op_b <= MINUSOP \
-       || (proc_a) == task_unary_minus || (proc_b) == task_unary_minus) )
+       || (proc_a) != task_math1 && op_a <= MINUSOP \
+       || (proc_b) != task_math1 && op_b <= MINUSOP) )
 
 extern void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
