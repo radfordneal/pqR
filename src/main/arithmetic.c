@@ -1259,9 +1259,10 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
 /* MATHEMATICAL FUNCTIONS OF ONE ARGUMENT.  Implements a variant return
    of the sum of the vector result, rather than the vector itself. */
 
-/* Table to map math1 operation code to function.  The entries for fabs, trunc,
+/* Table to map math1 operation code to function.  The entries for trunc
    and R_log are not called via do_math1 like the others, but from special
-   primitives. */
+   primitives.  The entry for fabs is currently not used, since the compiler
+   may be able to inline fabs when it's called directly from task_abs. */
 
 double (*R_math1_func_table[44])(double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
@@ -1489,17 +1490,48 @@ SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* Note that abs is slightly different from the do_math1 set, both
-   for integer/logical inputs and what it dispatches to for complex ones,
-   but uses math1 when the argument is real. */
+   for integer/logical inputs and what it dispatches to for complex ones. */
+
+void task_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
+{
+    R_len_t n = LENGTH(x);
+    R_len_t i = 0;
+    R_len_t a;
+
+    HELPERS_SETUP_OUT(7);
+    while (i < n) {
+        HELPERS_WAIT_IN1 (a, i, n);
+        do {
+            REAL(s)[i] = fabs(REAL(x)[i]);
+            HELPERS_NEXT_OUT(i);
+        } while (i < a);
+    }
+}
+
+void task_sum_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
+{
+    R_len_t n = LENGTH(x);
+    R_len_t i = 0;
+    R_len_t a;
+    long double r = 0.0;
+
+    while (i < n) {
+        HELPERS_WAIT_IN1 (a, i, n);
+        do {
+            r += fabs(REAL(x)[i]);
+            i += 1;
+        } while (i < a);
+    }
+    REAL(s)[0] = (double) r;
+}
+
+#define T_abs THRESHOLD_ADJUST(10)
 
 static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
 
-    if (TYPEOF(x) == REALSXP)
-        return math1 (x, 0, call, variant);
-
-    else if (isInteger(x) || isLogical(x)) {
+    if (isInteger(x) || isLogical(x)) {
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
@@ -1510,7 +1542,23 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             int v = INTEGER(x)[i];
 	    INTEGER(s)[i] = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
         }
-    }
+    } 
+
+    else if (TYPEOF(x) == REALSXP) {
+	int n = LENGTH(x);
+        if (VARIANT_KIND(variant) == VARIANT_SUM) {
+            s = allocVector (REALSXP, 1);
+            DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
+                              HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
+            SET_ATTRIB (s, R_VariantResult);
+            return s;
+        }
+        else {
+            s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
+            DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
+                              HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
+        }
+    } 
 
     else if (isComplex(x)) {
         SEXP args;
@@ -1518,7 +1566,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         WAIT_UNTIL_COMPUTED(x);
 	s = do_cmathfuns(call, op, args, env);
         UNPROTECT(1);
-    }
+    } 
 
     else
 	errorcall(call, R_MSG_NONNUM_MATH);
