@@ -100,12 +100,12 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab If real op
                    \tab Done by master\cr
 \tab\tab\tab\cr
-floor, ceil, sign, \tab Yes
+abs, floor, ceil,  \tab Yes
                    \tab Yes
                    \tab \cr
-trunc, exp, expm1, \tab\tab\tab\cr
-atan, cosh, sinh,  \tab\tab\tab\cr
-tanh, asinh        \tab\tab\tab\cr
+sign, trunc, exp,  \tab\tab\tab\cr
+expm1, atan, cosh, \tab\tab\tab\cr
+sinh, tanh, asinh  \tab\tab\tab\cr
 \tab\tab\tab\cr
 sqrt, log, log1p,  \tab No
                    \tab Yes
@@ -164,11 +164,12 @@ for operands whose length is equal to the length of the result.
 
 The \code{sum} function will currently pass on a result computed by a
 task that sums the results of a function of one argument in the first
-group above (using pqR's internal ``variant result'' mechanism), with
-pipelining, but \code{sum} does not operate as a task otherwise.
+group above (\code{abs}, \code{floor}, etc.) using pqR's internal
+``variant result'' mechanism, with pipelining, but \code{sum} does not
+operate as a task otherwise.
 
 Task merging is currently done only for mathematical functions of one
-real argument (eg, \code{exp}) and the +, -, *, /, and ^ operators
+real argument (except \code{abs}) and the +, -, *, /, and ^ operators
 when one of their operands is a real vector and one is a real scalar
 (or missing, for unary -).  When helper threads are in use, tasks are
 merged only when one of the tasks is for the + operator or - operator
