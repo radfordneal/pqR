@@ -1,8 +1,9 @@
 Miscellaneous cleanups/optimizations, including:
 
-Gets rid of task_abs in favour of using math1 (modified to know about abs).
-
 Fixes glitch that would prevent pipelining into MODOP.
 
 Fixed bug in assignment of repeated elements to a list array; added
 tests for such cases.
+
+Fixed ifelse bug introduced earlier in pqR, and sped it up a bit more.
+
