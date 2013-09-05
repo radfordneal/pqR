@@ -15,22 +15,34 @@
 #  A copy of the GNU General Public License is available at
 #  http://www.r-project.org/Licenses/
 
-ifelse <-
-    function (test, yes, no)
+ifelse <- function (test, yes, no)
 {
     storage.mode(test) <- "logical"
-    if (length(test)==1)
-        return (if (is.na(test)) NA else if (test) yes else no)
-    ans <- test
-    na <- is.na(test)
-    test.and.not.na <- test & !na
-    not.test.and.not.na <- !test & !na
-    if (any(test.and.not.na))
-        ans [test.and.not.na] <-
-           rep (yes, length.out = length(ans)) [test.and.not.na]
-    if (any(not.test.and.not.na))
-        ans [not.test.and.not.na] <- 
-           rep(no, length.out = length(ans)) [not.test.and.not.na]
-    ans[na] <- NA
-    get_rm(ans)
+    len <- length(test)
+
+    if (len==1) {
+        if (!is.na(test)) {
+            if (test)
+                test[1] <- yes[1]
+            else
+                test[1] <- no[1]
+        }
+    }
+    else {
+        not.na <- !is.na(test)
+        test.and.not.na <- test & not.na
+        not.test.and.not.na <- !test & not.na
+        if (any(test.and.not.na)) {
+            if (length(yes) != len)
+                yes <- rep (yes, length.out = len)
+            test [test.and.not.na] <- yes [test.and.not.na]
+        }
+        if (any(not.test.and.not.na)) {
+            if (length(no) != len)
+                no <- rep (no, length.out = len)
+            test [not.test.and.not.na] <- no [not.test.and.not.na]
+        }
+    }
+
+    get_rm(test)
 }
