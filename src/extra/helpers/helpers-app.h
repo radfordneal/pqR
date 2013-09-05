@@ -93,19 +93,19 @@ extern char *Rf_var_name (helpers_var_ptr);
    There are two macros, for when there are two inputs or only one. */
 
 #define DO_NOW_OR_LATER2(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
-  HELPERS_NOW_OR_LATER( (((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
-                         && !helpers_no_merging || !helpers_no_multithreading) \
-                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
-                        IS_BEING_COMPUTED_BY_TASK(_in1_) || \
-                        IS_BEING_COMPUTED_BY_TASK(_in2_), \
-                        _flags_, _proc_, _op_, _out_, _in1_, _in2_)
+ HELPERS_NOW_OR_LATER((((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
+                       && !helpers_not_merging || !helpers_not_multithreading) \
+                       && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
+                      IS_BEING_COMPUTED_BY_TASK(_in1_) || \
+                      IS_BEING_COMPUTED_BY_TASK(_in2_), \
+                      _flags_, _proc_, _op_, _out_, _in1_, _in2_)
 
 #define DO_NOW_OR_LATER1(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in_) \
-  HELPERS_NOW_OR_LATER( (((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
-                         && !helpers_no_merging || !helpers_no_multithreading) \
-                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
-                        IS_BEING_COMPUTED_BY_TASK(_in_), \
-                        _flags_, _proc_, _op_, _out_, _in_, NULL)
+ HELPERS_NOW_OR_LATER((((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
+                       && !helpers_not_merging || !helpers_not_multithreading) \
+                       && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
+                      IS_BEING_COMPUTED_BY_TASK(_in_), \
+                      _flags_, _proc_, _op_, _out_, _in_, NULL)
 
 
 /* ADJUSTMENT OF THRESHOLDS FOR SCHEDULING COMPUTATIONS AS TASKS.  The 
