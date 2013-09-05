@@ -84,19 +84,26 @@ extern char *Rf_var_name (helpers_var_ptr);
 #define EXTRACT_LENGTH2(_x_) ((_x_)&0xffffffff)
 
 
-/* MACRO TO DO TASK NOW OR LATER.  Looks at whether a pending result is allowed
+/* MACROS TO DO TASK NOW OR LATER.  Looks at whether a pending result is allowed
    given the variant (pass 0 if no variant), whether the inputs are being
-   computed, and a condition given as the second argument.  There are two forms,
-   for when there are two inputs or only one. */
+   computed, and a condition given as the second argument.  Also, if there is
+   no multithreading, tasks are done directly unless task merging is possible
+   or the inputs are being computed.
+
+   There are two macros, for when there are two inputs or only one. */
 
 #define DO_NOW_OR_LATER2(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
-  HELPERS_NOW_OR_LATER( (_variant_ & VARIANT_PENDING_OK) && (_c_), \
+  HELPERS_NOW_OR_LATER( (((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
+                         && !helpers_no_merging || !helpers_no_multithreading) \
+                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
                         IS_BEING_COMPUTED_BY_TASK(_in1_) || \
                         IS_BEING_COMPUTED_BY_TASK(_in2_), \
                         _flags_, _proc_, _op_, _out_, _in1_, _in2_)
 
 #define DO_NOW_OR_LATER1(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in_) \
-  HELPERS_NOW_OR_LATER( (_variant_ & VARIANT_PENDING_OK) && (_c_), \
+  HELPERS_NOW_OR_LATER( (((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
+                         && !helpers_no_merging || !helpers_no_multithreading) \
+                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
                         IS_BEING_COMPUTED_BY_TASK(_in_), \
                         _flags_, _proc_, _op_, _out_, _in_, NULL)
 
@@ -105,7 +112,7 @@ extern char *Rf_var_name (helpers_var_ptr);
    factor below can be adjusted to account for the overhead of scheduling
    a task, with the adjustment applying to all the thresholds set this way. */
 
-#define THRESHOLD_ADJUST(a) (a*10)
+#define THRESHOLD_ADJUST(a) ((a)*10)
 
 
 /* MACROS FOR TASK MERGING. */
