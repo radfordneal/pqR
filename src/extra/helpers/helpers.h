@@ -90,6 +90,8 @@ void helpers_master (void);          /* The master procedure, does it all */
 #define helpers_not_multithreading 1
 #define helpers_not_pipelining 1
 
+#define helpers_output_perhaps_pipelined() 0
+
 #define helpers_amount_out(p)        0
 
 #define helpers_avail0(mx)           (mx)
@@ -125,7 +127,9 @@ extern int helpers_num;              /* Number of helper threads */
 extern int helpers_not_multithreading; /* 1 if tasks done only by master */
 extern int helpers_not_pipelining;   /* 1 if pipelining is disabled */
 
-void helpers_amount_out (helpers_size_t); /* Set how much of output produced */
+int helpers_output_perhaps_pipelined(void); /* Other might get piped output? */
+
+void helpers_amount_out (helpers_size_t);  /* Set how much of output produced */
 
 helpers_size_t helpers_avail0 (helpers_size_t); /* Get how much available */
 helpers_size_t helpers_avail1 (helpers_size_t);

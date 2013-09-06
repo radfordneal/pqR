@@ -34,7 +34,9 @@
 /* -----------------------------  OPTIONS  ---------------------------------- */
 
 /* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
-   minus one, and no more than 255 (to fit in an unsigned char). */
+   minus one, and no more than 255 (to fit in an unsigned char).  (Setting 
+   MAX_TASKS to exactly 255 may produce faster code, since masking will then
+   be unnecessary if an unsigned char is 8 bits in size.) */
 
 #ifndef MAX_TASKS    /* Allow value from compile option to override below's */
 #define MAX_TASKS 255
@@ -926,20 +928,18 @@ static inline void maybe_mark_not_in_use (helpers_var_ptr v)
 #endif
 
 
-/* NOTICE COMPLETED TASKS.  Called only from the master thread.  Note that it
-   starts and ends with FLUSH operations (except when there are no tasks). */
+/* NOTICE COMPLETED TASKS.  Called only from the master thread.  Note that 
+   it starts and ends with FLUSH operations.  The notice_completed_proc
+   procedure is called only via the notice_completed macro. */
 
-static void notice_completed (void)
+#define notice_completed() \
+  do { if (helpers_tasks!=0) notice_completed_proc(); } while (0)
+
+static void notice_completed_proc (void)
 {
   helpers_var_ptr v;
   int i, j, k, w;
   char d;
-
-  /* Quick exit when no tasks. */
-
-  if (helpers_tasks==0)
-  { return;
-  }
 
   /* Flush so that 'done' flags will be visible. */
 
@@ -1167,10 +1167,10 @@ static void do_task_in_master (int only_needed)
            if it is. */
 
         if (h>0)
-        { omp_set_lock (&suspend_lock[!which_wakes]);
+        { omp_set_lock (&suspend_lock[1-which_wakes]);
           suspended = 0;
           omp_unset_lock (&suspend_lock[which_wakes]);
-          which_wakes = !which_wakes;
+          which_wakes = 1-which_wakes;
           if (ENABLE_STATS) stats[h].times_woken += 1;
           helpers_printf("HELPER WAS SUSPENDED WHEN IT SHOULDN'T HAVE BEEN!\n");
         }
@@ -1200,8 +1200,8 @@ static void do_task_in_master (int only_needed)
 
   this_task_info = &task[this_task].info;
   this_task_info->helper = 0;
-
   FLUSH;
+
   run_this_task();
 
   /* Set this_task to indicate that nothing is being done in the master,
@@ -1274,7 +1274,7 @@ static void helper_proc (void)
 
         omp_set_lock (&suspend_lock[which_suspends]);
         omp_unset_lock (&suspend_lock[which_suspends]);
-        which_suspends = !which_suspends;
+        which_suspends = 1-which_suspends;
 
         /* Go back to the start of the main loop, looking again at whether
            the queue is empty. */
@@ -1296,7 +1296,9 @@ static void helper_proc (void)
     ATOMIC_WRITE_CHAR (this_task_info->helper = this_thread);
 
     omp_unset_lock (&start_lock);  /* implies a flush */
+
     run_this_task();
+
     omp_set_lock (&start_lock);  /* implies a flush */
   }
 }
@@ -1312,9 +1314,8 @@ void helpers_do_task
   (int flags0, helpers_task_proc *task_to_do, helpers_op_t op, 
    helpers_var_ptr out, helpers_var_ptr in1, helpers_var_ptr in2)
 {
-  int flags = flags0 & flag_mask;  /* Flags with disabled features removed */
-
   struct task_info *info;
+  int flags;
   int pipe0;
   int i;
   tix t;
@@ -1328,6 +1329,10 @@ void helpers_do_task
   { info = &task[0].info;
     goto direct;
   }
+
+  /* Set flags to flags0 with disabled features removed. */
+
+  flags = flags0 & flag_mask;
 
   /* Notice tasks that have now completed.  Note that this does a flush
      (unless there are no tasks). */
@@ -1668,7 +1673,7 @@ out_of_merge:
     { info->last_amt[0] = info->last_amt[1] = info->last_amt[2] = 0;
     }
 
-    info->flags = helpers_not_pipelining ? flags&~HELPERS_PIPE_OUT : flags;
+    info->flags = flags;
 
     info->helper = -1; /* nobody is doing the task yet */
     info->needed = 0;  /* master isn't currently waiting for task to finish */
@@ -1696,7 +1701,7 @@ out_of_merge:
 
   /* Record the previous task (if any) outputting the output variable of the
      new task.  This was found earlier, and stored in pipe0, but if tasks
-     tasks had to be done in the master, it might have changed, so look again. */
+     had to be done in the master, it might have changed, so look again. */
 
   if (pipe0==-1) 
   { /* "pipe0" was previously non-zero, so "out" must not be null */
@@ -1775,30 +1780,32 @@ out_of_merge:
 
   untaken[untaken_in] = t;
 
-# ifndef HELPERS_NO_MULTITHREADING
+# ifdef HELPERS_NO_MULTITHREADING
 
-  if (!helpers_not_multithreading)
-  { omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
-    h = suspended;
-  }
+  untaken_in = (untaken_in+1) & QMask;
 
-# endif
+# else
 
-  ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
-
-# ifndef HELPERS_NO_MULTITHREADING
-
-  if (!helpers_not_multithreading)
+  if (helpers_not_multithreading)
   { 
+    ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
+  }
+  else
+  { 
+    omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
+    h = suspended;
+
+    ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
+
     omp_unset_lock (&untaken_lock);  /* does an implicit FLUSH */
 
     /* Wake the suspended helper, if there is one. */
 
     if (h!=0)
-    { omp_set_lock (&suspend_lock[!which_wakes]);
+    { omp_set_lock (&suspend_lock[1-which_wakes]);
       suspended = 0;
       omp_unset_lock (&suspend_lock[which_wakes]);
-      which_wakes = !which_wakes;
+      which_wakes = 1-which_wakes;
       if (ENABLE_STATS) stats[h].times_woken += 1;
     }
   }
@@ -2154,21 +2161,34 @@ void helpers_wait_for_all (void)
 
 /* -----------------------  PIPELINING PROCEDURES  -------------------------- */
 
+/* CHECK WHETHER THERE'S ANY NEED FOR PIPELINING OUTPUT. */
+
+#ifndef HELPERS_NO_MULTITHREADING
+
+int helpers_output_perhaps_pipelined (void)
+{ 
+  return (this_task_info->flags & HELPERS_PIPE_OUT) != 0;
+}
+
+#endif
+
 /* SAY HOW MUCH OF THE OUTPUT HAS BEEN PRODUCED SO FAR.  Changes the 
    amt_out field for this task - without synchronization, on the assumption 
    that reading and writing are atomic operations.  A flush is done before
    to ensure that the new data is there before the updated value for amt_out
    indicates that it is there.  No flush is done after the update - at worst,
    the new value for amt_out will be flushed on the next call, or when the
-   task finished. */
+   task finishes. */
 
 #ifndef HELPERS_NO_MULTITHREADING
 
 void helpers_amount_out (helpers_size_t amt)
 { 
-  if (this_task_info->flags & HELPERS_PIPE_OUT)
+  struct task_info *info = this_task_info;
+
+  if (info->flags & HELPERS_PIPE_OUT)
   { FLUSH;
-    ATOMIC_WRITE_SIZE (this_task_info->amt_out = amt);
+    ATOMIC_WRITE_SIZE (info->amt_out = amt);
   }
 }
 
@@ -2190,11 +2210,13 @@ void helpers_amount_out (helpers_size_t amt)
 
 helpers_size_t helpers_avail0 (helpers_size_t mx)
 {
+  struct task_info *info = this_task_info;
+
   helpers_size_t n;
   char d;
   tix p;
 
-  ATOMIC_READ_CHAR (p = this_task_info->pipe[0]);
+  ATOMIC_READ_CHAR (p = info->pipe[0]);
   if (p == 0) return mx;
 
   ATOMIC_READ_CHAR (d = task[p].info.done);
@@ -2204,11 +2226,11 @@ helpers_size_t helpers_avail0 (helpers_size_t mx)
 
   FLUSH;
 
-  ATOMIC_READ_CHAR (p = this_task_info->pipe[0]);
+  ATOMIC_READ_CHAR (p = info->pipe[0]);
   if (p==0) return mx;
 
   if (ENABLE_TRACE>1)
-  { if (this_task_info->first_amt[0]==0) this_task_info->first_amt[0] = n;
+  { if (info->first_amt[0]==0) info->first_amt[0] = n;
   }
 
   return n;
@@ -2216,11 +2238,13 @@ helpers_size_t helpers_avail0 (helpers_size_t mx)
 
 helpers_size_t helpers_avail1 (helpers_size_t mx)
 {
+  struct task_info *info = this_task_info;
+
   helpers_size_t n;
   char d;
   tix p;
 
-  ATOMIC_READ_CHAR (p = this_task_info->pipe[1]);
+  ATOMIC_READ_CHAR (p = info->pipe[1]);
   if (p == 0) return mx;
 
   ATOMIC_READ_CHAR (d = task[p].info.done);
@@ -2230,11 +2254,11 @@ helpers_size_t helpers_avail1 (helpers_size_t mx)
 
   FLUSH;
 
-  ATOMIC_READ_CHAR (p = this_task_info->pipe[1]);
+  ATOMIC_READ_CHAR (p = info->pipe[1]);
   if (p==0) return mx;
 
   if (ENABLE_TRACE>1)
-  { if (this_task_info->first_amt[1]==0) this_task_info->first_amt[1] = n;
+  { if (info->first_amt[1]==0) info->first_amt[1] = n;
   }
 
   return n;
@@ -2242,11 +2266,13 @@ helpers_size_t helpers_avail1 (helpers_size_t mx)
 
 helpers_size_t helpers_avail2 (helpers_size_t mx)
 {
+  struct task_info *info = this_task_info;
+
   helpers_size_t n;
   char d;
   tix p;
 
-  ATOMIC_READ_CHAR (p = this_task_info->pipe[2]);
+  ATOMIC_READ_CHAR (p = info->pipe[2]);
   if (p == 0) return mx;
 
   ATOMIC_READ_CHAR (d = task[p].info.done);
@@ -2256,11 +2282,11 @@ helpers_size_t helpers_avail2 (helpers_size_t mx)
 
   FLUSH;
 
-  ATOMIC_READ_CHAR (p = this_task_info->pipe[2]);
+  ATOMIC_READ_CHAR (p = info->pipe[2]);
   if (p==0) return mx;
 
   if (ENABLE_TRACE>1)
-  { if (this_task_info->first_amt[2]==0) this_task_info->first_amt[2] = n;
+  { if (info->first_amt[2]==0) info->first_amt[2] = n;
   }
 
   return n;
@@ -2561,6 +2587,8 @@ void helpers_startup (int n)
 
   #pragma omp parallel num_threads(helpers_num+1)
   {
+    /* Get thread number, with master being zero. */
+
     this_thread = omp_get_thread_num();
 
     if (this_thread==0)
