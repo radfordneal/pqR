@@ -55,6 +55,11 @@ extern double Rf_gamma_cody(double);
 #include <helpers/helpers-app.h>
 
 
+/* Suppress all this if task merging isn't enabled. */
+
+#ifdef helpers_can_merge
+
+
 extern double (*R_math1_func_table[44])(double);
 extern char R_math1_err_table[44];
 extern int R_naflag;
@@ -439,3 +444,5 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
   
     *op_B = (ops << 8) | which;
 }
+
+#endif

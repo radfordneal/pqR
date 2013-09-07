@@ -115,7 +115,11 @@ extern char *Rf_var_name (helpers_var_ptr);
 #define THRESHOLD_ADJUST(a) ((a)*10)
 
 
-/* MACROS FOR TASK MERGING. */
+/* MACROS FOR TASK MERGING.  They are defined here only if R_TASK_MERGING is 
+   defined and HELPERS_DISABLED is not. */
+
+#ifndef HELPERS_DISABLED
+#ifdef R_TASK_MERGING
 
 #define USE_SLOW_MERGED_OP 0  /* 1 for slow test version, 0 for fast version */
 
@@ -140,3 +144,6 @@ extern void helpers_merge_proc ( /* helpers_var_ptr out, */
                           proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
   helpers_merge_proc (/*out,*/proc_a,op_a,in1_a,in2_a, \
                       proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr)
+
+#endif
+#endif

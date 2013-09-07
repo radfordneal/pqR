@@ -928,6 +928,9 @@
 /* Define this to enable helper threads. */
 #undef R_HELPER_THREADS
 
+/* Define this to enable task merging. */
+#undef R_TASK_MERGING
+
 /* Define this to enable memory profiling. */
 #undef R_MEMORY_PROFILING
 

@@ -214,8 +214,20 @@ else
 fi],
 [want_helper_threads=yes])
 
+## Allow the user to specify that task merging will be attempted.
+AC_ARG_ENABLE([task_merging],
+[AS_HELP_STRING([--enable-task-merging],[support merging of tasks @<:@yes@:>@])],
+[if test "${enableval}" = no; then
+  want_task_merging=no
+elif test "${enableval}" = yes; then
+  want_task_merging=yes
+else
+  want_task_merging=yes
+fi],
+[want_task_merging=yes])
+
 ## Allow the user to specify support for deferred evaluation & helpers apparatus
-## with lack of support implying also no helper threads.
+## with lack of support implying also no helper threads and no task merging.
 AC_ARG_ENABLE([deferred-evaluation],
 [AS_HELP_STRING([--enable-deferred-evaluation],[support deferred evaluation / helpers @<:@yes@:>@])],
 [if test "${enableval}" = no; then
@@ -2213,7 +2225,7 @@ R_SYS_POSIX_LEAPSECONDS
 ## stat times
 gl_STAT_TIME
 
-## helper threads.
+## deferred evaluation.
 if test "${want_deferred_eval}" = yes; then
   AC_DEFINE(R_DEFERRED_EVAL, 1, [Define this to enable deferred evaluation / helpers.])
 fi
@@ -2221,6 +2233,11 @@ fi
 ## helper threads.
 if test "${want_helper_threads}" = yes; then
   AC_DEFINE(R_HELPER_THREADS, 1, [Define this to enable helper threads.])
+fi
+
+## task merging.
+if test "${want_task_merging}" = yes; then
+  AC_DEFINE(R_TASK_MERGING, 1, [Define this to enable task merging.])
 fi
  
 ## R profiling.
