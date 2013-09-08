@@ -316,7 +316,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         SWITCH_CASE((o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, S; v = v * v) \
         SWITCH_CASE((o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  S; v = c3) \
         SWITCH_CASE((o)*N_MERGED_OPS+MERGED_OP_MATH1, \
-            S; if (!ISNAN(v)) v = f3(v); if (e3 && ISNAN(v)) R_naflag = 1 )
+            S; if (!ISNAN(v)) { v = f3(v); if (e3 && ISNAN(v)) R_naflag = 1; } )
 
 #   define SWITCH_CASES1(o,S) \
         SWITCH_CASES2((o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
