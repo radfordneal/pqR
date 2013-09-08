@@ -123,7 +123,7 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 #define USE_SLOW_MERGED_OP 0  /* 1 for slow test version, 0 for fast version */
 
-#define MAX_OPS_MERGED 3      /* From 2 to 6, must be 3 for fast version */
+#define MAX_OPS_MERGED 3      /* From 2 to 7, must be 3 for fast version */
 
 extern helpers_task_proc task_merged_arith_math1, task_math1;
 

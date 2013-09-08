@@ -74,7 +74,16 @@ extern helpers_task_proc task_unary_minus, task_math1;
 
    Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Codes from
    0x80 to 0xff are math1 codes plus 0x80.  Code 0 is for empty slots.
-   Additional operation code are created within the fast routine. */
+   Additional operation code are created within the fast routine. 
+
+   The opcode for the merged task procedure encodes two or more operations
+   plus a flag saying which operand is scalar.  The flag is in the low-order
+   byte.  The codes for the operations follow in higher-order bytes, with
+   the last operation in lowest position.  The code for the null  operation 
+   is zero, so null operations occur naturally in higher-order bytes.  The
+   64 bits in task operations codes could accommodate up to seven merged
+   operations, but the limit for the fast procedure is three. 
+*/
 
 #define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
 
