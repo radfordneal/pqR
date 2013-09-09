@@ -933,7 +933,7 @@ static inline void maybe_mark_not_in_use (helpers_var_ptr v)
    procedure is called only via the notice_completed macro. */
 
 #define notice_completed() \
-  do { if (helpers_tasks!=0) notice_completed_proc(); } while (0)
+  do { if (helpers_tasks>0) notice_completed_proc(); } while (0)
 
 static void notice_completed_proc (void)
 {
@@ -1314,10 +1314,10 @@ void helpers_do_task
   (int flags0, helpers_task_proc *task_to_do, helpers_op_t op, 
    helpers_var_ptr out, helpers_var_ptr in1, helpers_var_ptr in2)
 {
+  union task_entry *tsk0;
   struct task_info *info;
   int flags;
   int pipe0;
-  int i;
   tix t;
   hix h;
 
@@ -1344,15 +1344,15 @@ void helpers_do_task
      If one is found, "i" is left pointing to its position in "used". */
 
   pipe0 = 0;
-  if (out!=null)
-  { i = helpers_tasks;
-    while (i>0)
-    { tix u = used[--i];
-      if (task[u].info.var[0]==out)
-      { pipe0 = u;
+  if (helpers_tasks>0 && out!=null)
+  { tsk0 = &task[helpers_tasks-1];
+    do
+    { if (tsk0->info.var[0]==out)
+      { pipe0 = tsk0-task;
         break;
       }
-    }
+      tsk0 -= 1;
+    } while (tsk0>=task);
   }
 
   /* Perhaps try to merge the new task with the task, indexed by pipe0, that 
@@ -1496,10 +1496,10 @@ void helpers_do_task
           in2        = m->var[2];
 
           /* Remove the merged task from "used".  The position of the
-             merged task in "used" was left in "i" by code above. */
+             merged task in "used" was left in "tsk0" by code above. */
 
           helpers_tasks -= 1;
-          for (j = i; j<helpers_tasks; j++)
+          for (j = tsk0-task; j<helpers_tasks; j++)
           { used[j] = used[j+1];
           }
           used[helpers_tasks] = pipe0;
@@ -1597,6 +1597,7 @@ out_of_merge:
          as needed those tasks needed to do those tasks, etc.*/
 
       int any_needed = 0;
+      int i;
   
       for (i = helpers_tasks-1; i>=0; i--)
       {
@@ -1704,15 +1705,17 @@ out_of_merge:
      had to be done in the master, it might have changed, so look again. */
 
   if (pipe0==-1) 
-  { /* "pipe0" was previously non-zero, so "out" must not be null */
-    pipe0 = 0;
-    i = helpers_tasks;
-    while (i>0)
-    { tix u = used[--i];
-      if (task[u].info.var[0]==out)
-      { pipe0 = u;
-        break;
-      }
+  { pipe0 = 0;
+    /* "pipe0" was previously non-zero, so "out" must not be null. */
+    if (helpers_tasks>0)
+    { union task_entry *tsk = &task[helpers_tasks-1];
+      do
+      { if (tsk->info.var[0]==out)
+        { pipe0 = tsk-task;
+          break;
+        }
+        tsk -= 1;
+      } while (tsk>=task);
     }
   }
 
@@ -1726,26 +1729,28 @@ out_of_merge:
 
   if (helpers_tasks>0)
   { 
+    union task_entry *tsk;
+
     if (in1!=null)
-    { i = helpers_tasks;
+    { tsk = &task[helpers_tasks-1];
       do
-      { tix u = used[--i];
-        if (task[u].info.var[0]==in1)
-        { info->pipe[1] = u;
+      { if (tsk->info.var[0]==in1)
+        { info->pipe[1] = tsk-task;
           break;
         }
-      } while (i>0);
+        tsk -= 1;
+      } while (tsk>=task);
     }
 
     if (in2!=null)
-    { i = helpers_tasks;
+    { tsk = &task[helpers_tasks-1];
       do
-      { tix u = used[--i];
-        if (task[u].info.var[0]==in2)
-        { info->pipe[2] = u;
+      { if (tsk->info.var[0]==in2)
+        { info->pipe[2] = tsk-task;
           break;
         }
-      } while (i>0);
+        tsk -= 1;
+      } while (tsk>=task);
     }
   }
 
