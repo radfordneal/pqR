@@ -202,9 +202,16 @@ typedef signed char hix;  /* Type of a helper index (0 = master, -1 = none) */
 /* DECLARATION OF TASK INDEXES.  Task indexes range from 1 to MAX_TASKS.
    An index of 0 either indicates no task, or sometimes a master-now task
    that hasn't really been scheduled.  Task indexes are stored in an unsigned
-   char, so MAX_TASKS is limited to be at most 255. */
+   char, so MAX_TASKS is limited to be at most 255. 
+
+   The mtix type is for use in data structure accessed only by a single 
+   thread (so atomicity of access is not an issue).  It may either be the 
+   same as tix, or be some larger integer type, if that is more efficient 
+   (and can be tuned for a particular implementation). */
 
 typedef unsigned char tix;  /* Type of a task index, or of a count of tasks */
+
+typedef int mtix;           /* Task index for use in one thread only */
 
 
 /* TABLE OF TASKS.  The "info" fields in an entry in the "task" array are 
@@ -275,7 +282,7 @@ static union task_entry
    are currently being used, and are in the order they were scheduled.  The
    remaining entries are unused, and in arbitrary order. */
 
-static tix used[MAX_TASKS];  /* All task indexes; first helpers_tasks in use */
+static mtix used[MAX_TASKS]; /* All task indexes; first helpers_tasks in use */
 int helpers_tasks = 0;       /* Number of tasks outstanding = indexes in use */
 
 
@@ -292,7 +299,7 @@ int helpers_tasks = 0;       /* Number of tasks outstanding = indexes in use */
    Tasks in this queue are in the order they were scheduled, which is the
    order in which they must be done. */
 
-static tix master_only[QSize], master_only_in, master_only_out;
+static mtix master_only[QSize], master_only_in, master_only_out;
 
 /* Queue of tasks not yet taken by a helper (or master), in arbitrary order.  
    The untaken_in pointer is modified only by the master; the untaken_out 
@@ -347,7 +354,7 @@ static helpers_var_ptr var_list[3*MAX_TASKS+1] = { (helpers_var_ptr) 0 };
 
 static int this_thread;   /* What thread we are: 0 = master, other = helper # */
 
-static tix this_task;     /* The task this thread is doing, undefined if none,
+static mtix this_task;    /* The task this thread is doing, undefined if none,
                              except 0 in the master when it's not doing a task
                              so directly-called pipelined task procedures work*/
 
@@ -398,7 +405,7 @@ static struct stats
 /* FORWARD DECLARATIONS OF STATIC PROCEDURES. */
 
 static void do_task_in_master (int);
-static int runnable (tix);
+static int runnable (mtix);
 
 
 /* -------------------------  TRACE PROCEDURES  ----------------------------- */
@@ -413,7 +420,7 @@ static void trace_task_list (void)
 { int i;
   for (i = 0; i<helpers_tasks; i++) 
   { struct task_info *info = &task[used[i]].info;
-    helpers_printf(" %d%s%s", used[i], 
+    helpers_printf(" %d%s%s", (int) used[i], 
       info->needed>0 ? "*" : info->needed<0 ? "+" : ".",
       info->done ? "F" : info->helper>=0 ? "X" : runnable(used[i]) ? "R" : "");
   }
@@ -754,7 +761,7 @@ static void run_this_task (void)
    producing one of the inputs finishes around this time and a new task 
    with the same task id quickly starts up. */
 
-static int runnable (tix t)
+static int runnable (mtix t)
 {
   struct task_info *info = &task[t].info;
   int f, r;
@@ -840,10 +847,11 @@ static int runnable (tix t)
    The value of untaken_in is therefore fetched once, followed by a flush
    to ensure that data accessed in the queue before that is up-to-date. */
 
-static tix find_untaken_runnable (int only_needed)
+static mtix find_untaken_runnable (int only_needed)
 {
   int i, f, p, r, n;
-  tix u_in, t;
+  tix u_in;
+  mtix t;
 
   /* We assume a flush has been done recently (explicitly, or implicity from
      setting start_lock), so the value seen for untaken_in is recent.  We flush
@@ -964,7 +972,7 @@ static void notice_completed_proc (void)
   k = i;
   for ( ; i<helpers_tasks; i++)
   { 
-    tix t = used[i];
+    mtix t = used[i];
     struct task_info *info = &task[t].info;
 
     ATOMIC_READ_CHAR (d = info->done);
@@ -1123,7 +1131,7 @@ static void do_task_in_master (int only_needed)
 
   if (master_only_in!=master_only_out)
   { 
-    tix m = master_only[master_only_out];
+    mtix m = master_only[master_only_out];
 
     if ((!only_needed || task[m].info.needed) && runnable(m))
     { master_only_out = (master_only_out + 1) & QMask;
@@ -1314,11 +1322,12 @@ void helpers_do_task
   (int flags0, helpers_task_proc *task_to_do, helpers_op_t op, 
    helpers_var_ptr out, helpers_var_ptr in1, helpers_var_ptr in2)
 {
-  union task_entry *tsk0;
   struct task_info *info;
   int flags;
   int pipe0;
-  tix t;
+  mtix *uh;
+  mtix t;
+  int i;
   hix h;
 
   /* If helpers are disabled, do the task directly.  There's no possible need 
@@ -1341,18 +1350,17 @@ void helpers_do_task
 
   /* Find the most-recently-scheduled task (if any) that outputs the output
      variable of this new task, setting pipe0 to the task index, or zero. 
-     If one is found, "i" is left pointing to its position in "used". */
+     If one is found, "uh" is left pointing to its position in "used". */
 
   pipe0 = 0;
-  if (helpers_tasks>0 && out!=null)
-  { tsk0 = &task[helpers_tasks-1];
+  if (out!=null && helpers_tasks>0)
+  { uh = &used[helpers_tasks-1];
     do
-    { if (tsk0->info.var[0]==out)
-      { pipe0 = tsk0-task;
+    { if (task[*uh].info.var[0]==out)
+      { pipe0 = *uh;
         break;
       }
-      tsk0 -= 1;
-    } while (tsk0>=task);
+    } while (--uh>=used);
   }
 
   /* Perhaps try to merge the new task with the task, indexed by pipe0, that 
@@ -1496,13 +1504,15 @@ void helpers_do_task
           in2        = m->var[2];
 
           /* Remove the merged task from "used".  The position of the
-             merged task in "used" was left in "tsk0" by code above. */
+             merged task in "used" was left in "uh" by code above. */
 
           helpers_tasks -= 1;
-          for (j = tsk0-task; j<helpers_tasks; j++)
-          { used[j] = used[j+1];
+          mtix *ue = &used[helpers_tasks];
+          while (uh!=ue) 
+          { *uh = *(uh+1);
+            uh += 1;
           }
-          used[helpers_tasks] = pipe0;
+          *uh = pipe0;
 
           /* Update pipe0 to be the task producing output for the merged 
              task (or zero). */
@@ -1597,7 +1607,6 @@ out_of_merge:
          as needed those tasks needed to do those tasks, etc.*/
 
       int any_needed = 0;
-      int i;
   
       for (i = helpers_tasks-1; i>=0; i--)
       {
@@ -1706,16 +1715,15 @@ out_of_merge:
 
   if (pipe0==-1) 
   { pipe0 = 0;
-    /* "pipe0" was previously non-zero, so "out" must not be null. */
+    /* "pipe0" was previously non-zero, so "out" must not be null */
     if (helpers_tasks>0)
-    { union task_entry *tsk = &task[helpers_tasks-1];
+    { uh = &used[helpers_tasks-1];
       do
-      { if (tsk->info.var[0]==out)
-        { pipe0 = tsk-task;
+      { if (task[*uh].info.var[0]==out)
+        { pipe0 = *uh;
           break;
         }
-        tsk -= 1;
-      } while (tsk>=task);
+      } while (--uh>=used);
     }
   }
 
@@ -1727,31 +1735,45 @@ out_of_merge:
 
   info->pipe[1] = info->pipe[2] = 0;
 
-  if (helpers_tasks>0)
+  if (helpers_tasks>0 && (in1!=null || in2!=null))
   { 
-    union task_entry *tsk;
+    uh = &used[helpers_tasks-1];
 
-    if (in1!=null)
-    { tsk = &task[helpers_tasks-1];
-      do
-      { if (tsk->info.var[0]==in1)
-        { info->pipe[1] = tsk-task;
-          break;
-        }
-        tsk -= 1;
-      } while (tsk>=task);
-    }
+    if (in1==null) goto search_in2;
+    if (in2==null) goto search_in1;
+	
+    do
+    { if (task[*uh].info.var[0]==in1)
+      { info->pipe[1] = *uh;
+        goto search_in2;
+      }
+      if (task[*uh].info.var[0]==in2)
+      { info->pipe[2] = *uh;
+        goto search_in1;
+      }
+    } while (--uh>=used);
 
-    if (in2!=null)
-    { tsk = &task[helpers_tasks-1];
-      do
-      { if (tsk->info.var[0]==in2)
-        { info->pipe[2] = tsk-task;
-          break;
-        }
-        tsk -= 1;
-      } while (tsk>=task);
-    }
+    goto search_done;
+
+  search_in1:
+    do
+    { if (task[*uh].info.var[0]==in1)
+      { info->pipe[1] = *uh;
+        goto search_done;
+      }
+    } while (--uh>=used);
+
+    goto search_done;
+
+  search_in2:
+    do
+    { if (task[*uh].info.var[0]==in2)
+      { info->pipe[2] = *uh;
+        goto search_done;
+      }
+    } while (--uh>=used);
+
+  search_done: ;
   }
 
   /* Do a master-now task directly. */
@@ -2532,7 +2554,7 @@ void helpers_stats (void)
 
 void helpers_startup (int n)
 {
-  tix i;
+  mtix i;
 
   /* Record initial wall clock time, if ENABLE_TRACE is 3. */
 
