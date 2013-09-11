@@ -17,16 +17,17 @@
 
 ifelse <- function (test, yes, no)
 {
-    storage.mode(test) <- "logical"
+    if (is.atomic(test)) 
+        storage.mode(test) <- "logical"
+    else 
+        test <- if (isS4(test)) as(test,"logical") else as.logical(test)
+
     len <- length(test)
 
     if (len==1) {
-        if (!is.na(test)) {
-            if (test)
-                test[1] <- yes[1]
-            else
-                test[1] <- no[1]
-        }
+        if (!is.na(test))
+            test[1] <- if (test) yes[1] else no[1]
+        test
     }
     else {
         not.na <- !is.na(test)
@@ -42,7 +43,6 @@ ifelse <- function (test, yes, no)
                 no <- rep (no, length.out = len)
             test [not.test.and.not.na] <- no [not.test.and.not.na]
         }
+        get_rm(test)
     }
-
-    get_rm(test)
 }
