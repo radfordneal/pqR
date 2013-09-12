@@ -314,6 +314,9 @@ all scheduled tasks have completed.  Calling this procedure may be
 advisable before terminating the program, if some pending tasks may
 have desired side effects (such as writing data to files).
 
+
+FAST CHECKS FOR VARIABLES BEING IN USE OR BEING COMPUTED
+
 Programs may sometimes wish to quickly check (in the master thread)
 whether a variable is currently in use or is being computed, without
 the overhead of a procedure call.  This can be arranged by providing
@@ -339,15 +342,33 @@ and "not in use".
 
 When one of these macros is not defined in helpers-app.h, the
 corresponding marker will not be set or cleared, which is sensible
-only if this marker is not used.
+only if this marker is not used by the application.
 
 These macros will be invoked only in the master thread, when a task is
 scheduled by helpers_do_task, or when helpers_do_task or one of the
 other procedures notices that a task has completed.  Consequently, a
 variable may remain marked as in-use or being-computed when it no
-longer is, if the master thread has not yet noticed the change.  These
-markers should be examined only from the master thread, so that no
-synchronization will be required when accessing them.
+longer is, if the master thread has not yet noticed the change.  
+
+These markers may be accessed by the application in whatever way is
+convenient, but they should only be accessed from the master thread,
+so that no synchronization will be required when accessing them.  An
+application may choose to make access to these markers available to
+the helpers implementation, by defining one or both of the following
+macros:
+
+  helpers_is_in_use
+  helpers_is_being_computed
+
+These take one argument of type helpers_var_ptr.  The helpers
+implementation will use these macros, if they are defined, to avoid
+some computations.  For correct operation, these macros must return a
+non-zero value if the variable given is in use or is being computed.
+They may return a non-zero value even if the variable is not in use or
+is not being computed, though this will slow down some operations.
+
+All the macros described in this section will never be invoked by
+the helpers implementation with a null pointer argument.
 
 
 SETTING UP PIPELINED COMPUTATIONS
@@ -1084,17 +1105,23 @@ The application program must also define the following procedure:
 
   helpers_master                    void      void
 
-The following macros may be defined in helpers-app.h, but will default
-to stubs if they are not defined there:
+The following macros may be defined in helpers-app.h by the
+application (but need not be defined for correct operation of the
+helpers facility):
 
   -----------------------------------------------------------
   macro                             returns   arguments
   -----------------------------------------------------------
 
+  helpers_can_merge                 int       see documentation above
+  helpers_merge                     void        regarding these macros
+
   helpers_mark_in_use               void      helpers_var_ptr
   helpers_mark_not_in_use           void      helpers_var_ptr
   helpers_mark_being_computed       void      helpers_var_ptr
   helpers_mark_not_being_computed   void      helpers_var_ptr
+  helpers_is_in_use                 int       helpers_var_ptr
+  helpers_is_being_computed         int       helpers_var_ptr
 
   helpers_var_name                  char *    helpers_var_ptr
   helpers_task_name                 char *    helpers_var_ptr
@@ -1161,3 +1188,6 @@ options when building the helpers facility:
 
   HELPERS_DISABLED
   HELPERS_NO_MULTITHREADING
+
+Note that the task merging facility is disabled if the application
+does not define the helpers_can_merge macro.

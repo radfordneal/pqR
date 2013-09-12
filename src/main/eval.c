@@ -343,7 +343,7 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
         if (helpers_tasks > 0) { \
             SEXP _a_ = (_args_); \
             while (_a_ != R_NilValue) { \
-                if (IS_BEING_COMPUTED_BY_TASK(CAR(_a_))) { \
+                if (helpers_is_being_computed(CAR(_a_))) { \
                     wait_until_arguments_computed (_a_); \
                     break; \
                 } \
@@ -362,7 +362,7 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
 
     for (a = args; a != R_NilValue; a = CDR(a)) {
         SEXP this_arg = CAR(a);
-        if (IS_BEING_COMPUTED_BY_TASK(this_arg)) {
+        if (helpers_is_being_computed(this_arg)) {
             if (wait_for == NULL)
                 wait_for = this_arg;
             else {

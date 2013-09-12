@@ -306,20 +306,20 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #endif
 
 #define NAMEDCNT(x) \
-( (x)->sxpinfo.in_use && (x)->sxpinfo.nmcnt != MAX_NAMEDCNT \
+( helpers_is_in_use(x) && (x)->sxpinfo.nmcnt != MAX_NAMEDCNT \
      ? (helpers_wait_until_not_in_use(x), (x)->sxpinfo.nmcnt) \
      : (x)->sxpinfo.nmcnt )
 
 #define NAMEDCNT_EQ_0(x) \
-( (x)->sxpinfo.nmcnt != 0 ? 0 : !(x)->sxpinfo.in_use ? 1 \
+( (x)->sxpinfo.nmcnt != 0 ? 0 : !helpers_is_in_use(x) ? 1 \
     : (helpers_wait_until_not_in_use(x), 1) )
 
 #define NAMEDCNT_GT_0(x) \
-( (x)->sxpinfo.nmcnt != 0 ? 1 : !(x)->sxpinfo.in_use ? 0 \
+( (x)->sxpinfo.nmcnt != 0 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #define NAMEDCNT_GT_1(x) \
-( (x)->sxpinfo.nmcnt > 1 ? 1 : !(x)->sxpinfo.in_use ? 0 \
+( (x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #define SET_NAMEDCNT(x,v)    ((x)->sxpinfo.nmcnt = (v))
@@ -357,7 +357,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #undef NAMEDCNT_GT_1
 #define NAMEDCNT_GT_1(x) \
 ( ((x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
-    : !(x)->sxpinfo.in_use ? 0 \
+    : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #endif

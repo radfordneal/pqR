@@ -1046,7 +1046,7 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
     if (ix>0) {
         R_len_t avail;
         ix -= 1;
-        if (IS_BEING_COMPUTED_BY_TASK(x)) {
+        if (helpers_is_being_computed(x)) {
             helpers_start_computing_var(x);
             HELPERS_WAIT_IN_VAR (x, avail, ix, n);
         }
@@ -1133,7 +1133,7 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
 
     e = (ix1 - 1) + nrow * (ix2 - 1);
 
-    if (IS_BEING_COMPUTED_BY_TASK(x)) {
+    if (helpers_is_being_computed(x)) {
         helpers_start_computing_var(x);
         HELPERS_WAIT_IN_VAR (x, avail, e, LENGTH(x));
     }

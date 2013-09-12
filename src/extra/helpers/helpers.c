@@ -93,6 +93,14 @@
 #define helpers_printf printf
 #endif
 
+#ifndef helpers_is_being_computed
+#define helpers_is_being_computed(v) 1
+#endif
+
+#ifndef helpers_is_in_use
+#define helpers_is_in_use(v) 1
+#endif
+
 
 /* NULL VARIABLE POINTER, AND VARIABLE NAME MACRO HANDLING NULL. */
 
@@ -1012,7 +1020,7 @@ static void notice_completed_proc (void)
          other tasks to see if one is still using or computing the variable. */
   
 #     ifdef helpers_mark_not_being_computed
-        v = info->var[0];
+      { v = info->var[0];
         if (v!=null)
         { for (j = i+1; j<helpers_tasks; j++)
           { struct task_info *einfo = &task[used[j]].info;
@@ -1023,15 +1031,17 @@ static void notice_completed_proc (void)
           helpers_mark_not_being_computed(v);
         }
       done_c: ;
+      }
 #     endif
   
 #     ifdef helpers_mark_not_in_use
-        for (w = 1; w<=2; w++)
+      { for (w = 1; w<=2; w++)
         { v = info->var[w];
           if (v!=null && v!=info->var[0])
           { maybe_mark_not_in_use(v);
           }
         }
+      }
 #     endif
     }
   }
@@ -1324,7 +1334,7 @@ void helpers_do_task
 {
   struct task_info *info;
   int flags;
-  int pipe0;
+  mtix pipe0;
   mtix *uh;
   mtix t;
   int i;
@@ -1353,7 +1363,7 @@ void helpers_do_task
      If one is found, "uh" is left pointing to its position in "used". */
 
   pipe0 = 0;
-  if (out!=null && helpers_tasks>0)
+  if (out!=null && helpers_is_being_computed(out) && helpers_tasks>0)
   { uh = &used[helpers_tasks-1];
     do
     { if (task[*uh].info.var[0]==out)
@@ -1648,7 +1658,7 @@ out_of_merge:
   
       if (any_needed)
       { wait_while_any_needed();
-        if (pipe0!=0) pipe0 = -1; /* task pipe0 might have finished, look again */
+        if (pipe0!=0) pipe0 = -1; /* task pipe0 might've finished, look again */
       }
     }
   }
@@ -1660,11 +1670,13 @@ out_of_merge:
        or any other tasks in the master if no runnable master-only tasks. */
 
     if (helpers_tasks==MAX_TASKS)
-    { do 
+    { 
+      do 
       { do_task_in_master(0);
         notice_completed();
       } while (helpers_tasks==MAX_TASKS);
-      if (pipe0!=0) pipe0 = -1; /* task pipe0 might have finished, look again */
+
+      if (pipe0!=0) pipe0 = -1; /* task pipe0 might've finished, look again */
     }
 
     /* Store info about the new task in a new task entry (t and info).  But 
@@ -1688,20 +1700,6 @@ out_of_merge:
     info->helper = -1; /* nobody is doing the task yet */
     info->needed = 0;  /* master isn't currently waiting for task to finish */
 
-    /* Set the in-use and being-computed flags as appropriate, if the 
-       application defined the required macros.  (Note that we don't do
-       this if the task is done directly in the master, since the flags
-       could never be consulted until unset anyway.) */
-
-#   ifdef helpers_mark_in_use
-      if (in1!=null && in1!=out) helpers_mark_in_use(in1);
-      if (in2!=null && in2!=out) helpers_mark_in_use(in2);
-#   endif
-
-#   ifdef helpers_mark_being_computed
-      if (out!=null) helpers_mark_being_computed(out);
-#   endif
-
     /* Clear 'done' and 'amt_out' in the task info for the new task.  Not
        necessary in a task done directly in the master (since never seen). */
 
@@ -1709,7 +1707,7 @@ out_of_merge:
     info->amt_out = 0;
   }
 
-  /* Record the previous task (if any) outputting the output variable of the
+  /* Look for the previous task (if any) outputting the output variable of the
      new task.  This was found earlier, and stored in pipe0, but if tasks
      had to be done in the master, it might have changed, so look again. */
 
@@ -1731,16 +1729,31 @@ out_of_merge:
 
   /* For each input variable in the new task, find the task (if any) that is
      outputting that variable.  When more than one task has the same output
-     variable, the one scheduled most recently takes precedence. */
+     variable, the one scheduled most recently takes precedence.  If an
+     input variable is the same as the output variable, we can use pipe0. 
+     If helpers_is_being_computed is false, we don't need to search. */
 
   info->pipe[1] = info->pipe[2] = 0;
 
-  if (helpers_tasks>0 && (in1!=null || in2!=null))
+  if (helpers_tasks>0)
   { 
     uh = &used[helpers_tasks-1];
 
-    if (in1==null) goto search_in2;
-    if (in2==null) goto search_in1;
+    if (in1==out) info->pipe[1] = pipe0;
+    if (in2==out) info->pipe[2] = pipe0;
+
+    if (in1==null || in1==out || !helpers_is_being_computed(in1))
+    { if (in2==null || in2==out || !helpers_is_being_computed(in2))
+      { goto search_done;
+      }
+      else
+      { goto search_in2;
+      }
+    }
+
+    if (in2==null || in2==out || !helpers_is_being_computed(in2))
+    { goto search_in1;
+    }
 	
     do
     { if (task[*uh].info.var[0]==in1)
@@ -1782,6 +1795,20 @@ out_of_merge:
   {
     goto direct;
   }
+
+  /* Set the in-use and being-computed flags as appropriate, if the 
+     application defined the required macros.  (Note that we don't do
+     this if the task is done directly in the master, since the flags
+     could never be consulted until unset anyway.) */
+
+# ifdef helpers_mark_in_use
+    if (in1!=null && in1!=out) helpers_mark_in_use(in1);
+    if (in2!=null && in2!=out) helpers_mark_in_use(in2);
+# endif
+
+# ifdef helpers_mark_being_computed
+    if (out!=null) helpers_mark_being_computed(out);
+# endif
 
   /* Mark the new task entry as being in use. */
 
@@ -2010,7 +2037,7 @@ void helpers_wait_until_not_in_use (helpers_var_ptr v)
 
   notice_completed();
 
-  if (helpers_tasks==0) 
+  if (v==null || !helpers_is_in_use(v) || helpers_tasks==0)
   { if (trace) trace_wait_until_not_in_use(0,v);
     return;
   }
@@ -2071,7 +2098,8 @@ void helpers_wait_until_not_being_computed2
 
   notice_completed();
 
-  if (helpers_tasks==0)
+  if (helpers_tasks==0 || (v1==null || !helpers_is_being_computed(v1)) 
+                            && (v2==null || !helpers_is_being_computed(v2)))
   { if (trace) trace_wait_until_not_being_computed (0,v1,v2);
     return;
   }

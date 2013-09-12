@@ -480,7 +480,7 @@ typedef struct {
    Return of a variant result is usually indicated by the attribute field 
    being R_VariantResult, but a VARIANT_NULL variant result can be just 
    R_NilValue, and results with VARIANT_PENDING_OK may be ordinary vectors
-   marked as IS_BEING_COMPUTED_BY_TASK. */
+   marked as being computed. */
 
 #define VARIANT_NULL 1  /* May just return R_NilValue (but do side effects) */
                         /* (Should usually be OR'd with VARIANT_PENDING_OK) */
@@ -498,10 +498,16 @@ typedef struct {
 
 #ifdef R_DEFERRED_EVAL
 
-/* Access to markers maintained with assistance of the helpers facility. */
+/* Markers maintained in conjunction with the helpers facility. */
 
-#define IS_BEING_COMPUTED_BY_TASK(x)  ((x)->sxpinfo.being_computed)
-#define IS_IN_USE_BY_TASK(x)          ((x)->sxpinfo.in_use)
+#define helpers_is_being_computed(x)       ((x)->sxpinfo.being_computed)
+#define helpers_is_in_use(x)               ((x)->sxpinfo.in_use)
+
+#define helpers_mark_in_use(v)             ((v)->sxpinfo.in_use = 1)
+#define helpers_mark_not_in_use(v)         ((v)->sxpinfo.in_use = 0)
+
+#define helpers_mark_being_computed(v)     ((v)->sxpinfo.being_computed = 1)
+#define helpers_mark_not_being_computed(v) ((v)->sxpinfo.being_computed = 0)
 
 /* Macros to wait until variables(s) computed. */
 
@@ -510,19 +516,19 @@ typedef struct {
 extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 
 #define WAIT_UNTIL_COMPUTED(x) \
-  ( ! IS_BEING_COMPUTED_BY_TASK(x) \
+  ( ! helpers_is_being_computed(x) \
     ? (void) 0 \
     : helpers_wait_until_not_being_computed(x) )
 
 #define WAIT_UNTIL_COMPUTED_2(x1,x2) \
-  ( ! IS_BEING_COMPUTED_BY_TASK(x1) && ! IS_BEING_COMPUTED_BY_TASK(x2) \
+  ( ! helpers_is_being_computed(x1) && ! helpers_is_being_computed(x2) \
     ? (void) 0 \
     : helpers_wait_until_not_being_computed2(x1,x2) ) \
 
 #else 
 
-#define IS_BEING_COMPUTED_BY_TASK(x) 0  /* Stub routines used when support */
-#define IS_IN_USE_BY_TASK(x) 0          /*   for helpers is not enabled    */
+#define helpers_is_being_computed(x) 0  /* Stub routines used when support */
+#define helpers_is_in_use(x) 0          /*   for helpers is not enabled    */
 
 #define WAIT_UNTIL_COMPUTED(x) 0
 #define WAIT_UNTIL_COMPUTED_2(x1,x2) 0

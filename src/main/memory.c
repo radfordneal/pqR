@@ -1909,9 +1909,9 @@ static void RunGenCollect(R_size_t size_needed)
         for (SEXP *var_list = helpers_var_list(); *var_list; var_list++) {
             SEXP v = *var_list;
             if (!NODE_IS_MARKED(v) && NODE_CLASS(v) == LARGE_NODE_CLASS) {
-                if (IS_BEING_COMPUTED_BY_TASK(v))
+                if (helpers_is_being_computed(v))
                     helpers_wait_until_not_being_computed(v);
-                if (IS_IN_USE_BY_TASK(v))
+                if (helpers_is_in_use(v))
                     helpers_wait_until_not_in_use(v);
             }
         }

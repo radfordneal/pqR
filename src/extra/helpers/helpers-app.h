@@ -23,6 +23,10 @@
 
 #include <Defn.h>
 
+/* Defn.h defines the macros helpers_mark_in_use, helpers_mark_being_computed,
+   helpers_mark_not_in_use, helpers_mark_not_being_computed, helpers_is_in_use,
+   and helpers_is_being_computed. */
+
 #undef helpers_wait_until_not_being_computed  /* May've been def'd in Defn.h */
 #undef helpers_wait_until_not_being_computed2 /* so helpers.h not always req */
 
@@ -58,15 +62,6 @@ typedef SEXP helpers_var_ptr;
 #define MAX_TASKS 31
 
 
-/* MARKING MACROS. */
-
-#define helpers_mark_in_use(v)             ((v)->sxpinfo.in_use = 1)
-#define helpers_mark_not_in_use(v)         ((v)->sxpinfo.in_use = 0)
-
-#define helpers_mark_being_computed(v)     ((v)->sxpinfo.being_computed = 1)
-#define helpers_mark_not_being_computed(v) ((v)->sxpinfo.being_computed = 0)
-
-
 /* TASK AND VARIABLE NAMES FOR TRACE OUTPUT.  Functions references are in
    helpers-app.c. */
 
@@ -96,15 +91,15 @@ extern char *Rf_var_name (helpers_var_ptr);
  HELPERS_NOW_OR_LATER((((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
                        && !helpers_not_merging || !helpers_not_multithreading) \
                        && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
-                      IS_BEING_COMPUTED_BY_TASK(_in1_) || \
-                      IS_BEING_COMPUTED_BY_TASK(_in2_), \
+                      helpers_is_being_computed(_in1_) || \
+                      helpers_is_being_computed(_in2_), \
                       _flags_, _proc_, _op_, _out_, _in1_, _in2_)
 
 #define DO_NOW_OR_LATER1(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in_) \
  HELPERS_NOW_OR_LATER((((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
                        && !helpers_not_merging || !helpers_not_multithreading) \
                        && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
-                      IS_BEING_COMPUTED_BY_TASK(_in_), \
+                      helpers_is_being_computed(_in_), \
                       _flags_, _proc_, _op_, _out_, _in_, NULL)
 
 
