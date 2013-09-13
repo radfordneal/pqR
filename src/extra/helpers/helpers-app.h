@@ -41,9 +41,53 @@ typedef uint_fast64_t helpers_op_t;    /* "fast" since no reason shouldn't be */
 typedef SEXP helpers_var_ptr;
 
 
+/* MACROS FOR TASK MERGING.  They are defined here only if R_TASK_MERGING is 
+   defined and HELPERS_DISABLED is not. */
+
+#ifndef HELPERS_DISABLED
+#ifdef R_TASK_MERGING
+
+#define USE_SLOW_MERGED_OP 0  /* 1 for slow test version, 0 for fast version */
+
+#define MAX_OPS_MERGED 3      /* From 2 to 7, must be 3 for fast version */
+
+#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
+  ( ((proc_b) != task_merged_arith_math1 \
+       || ((op_b) & (0xff<<(8*MAX_OPS_MERGED))) == 0) && \
+    (helpers_not_multithreading \
+       || (proc_a) != task_math1 && op_a <= MINUSOP \
+       || (proc_b) != task_math1 && op_b <= MINUSOP) )
+
+#define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
+                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
+  helpers_merge_proc (/*out,*/proc_a,op_a,in1_a,in2_a, \
+                      proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr)
+
+#endif
+#endif
+
+
 /* INCLUDE HELPERS.H AFTER ABOVE TYPE DEFINITIONS. */
 
 #include "helpers.h"
+
+
+/* PROCEDURES FOR TASK MERGING.  They are declared here only if R_TASK_MERGING
+   is defined and HELPERS_DISABLED is not. */
+
+#ifndef HELPERS_DISABLED
+#ifdef R_TASK_MERGING
+
+extern helpers_task_proc task_merged_arith_math1, task_math1;
+
+extern void helpers_merge_proc ( /* helpers_var_ptr out, */
+  helpers_task_proc *proc_A, helpers_op_t op_A, 
+  helpers_var_ptr in1_A, helpers_var_ptr in2_A,
+  helpers_task_proc **proc_B, helpers_op_t *op_B, 
+  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B);
+
+#endif
+#endif
 
 
 /* TRACE AND STATISTICS OUTPUT */
@@ -108,37 +152,3 @@ extern char *Rf_var_name (helpers_var_ptr);
    a task, with the adjustment applying to all the thresholds set this way. */
 
 #define THRESHOLD_ADJUST(a) ((a)*10)
-
-
-/* MACROS FOR TASK MERGING.  They are defined here only if R_TASK_MERGING is 
-   defined and HELPERS_DISABLED is not. */
-
-#ifndef HELPERS_DISABLED
-#ifdef R_TASK_MERGING
-
-#define USE_SLOW_MERGED_OP 0  /* 1 for slow test version, 0 for fast version */
-
-#define MAX_OPS_MERGED 3      /* From 2 to 7, must be 3 for fast version */
-
-extern helpers_task_proc task_merged_arith_math1, task_math1;
-
-#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
-  ( ((proc_b) != task_merged_arith_math1 \
-       || ((op_b) & (0xff<<(8*MAX_OPS_MERGED))) == 0) && \
-    (helpers_not_multithreading \
-       || (proc_a) != task_math1 && op_a <= MINUSOP \
-       || (proc_b) != task_math1 && op_b <= MINUSOP) )
-
-extern void helpers_merge_proc ( /* helpers_var_ptr out, */
-  helpers_task_proc *proc_A, helpers_op_t op_A, 
-  helpers_var_ptr in1_A, helpers_var_ptr in2_A,
-  helpers_task_proc **proc_B, helpers_op_t *op_B, 
-  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B);
-
-#define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
-                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
-  helpers_merge_proc (/*out,*/proc_a,op_a,in1_a,in2_a, \
-                      proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr)
-
-#endif
-#endif

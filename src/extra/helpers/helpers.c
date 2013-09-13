@@ -378,7 +378,10 @@ static struct task_info *this_task_info;  /* Pointer to info for this_task */
 /* VARIABLES HOLDING DISABLING OPTIONS. */
 
 int helpers_are_disabled = 0;    /* 1 if helpers currently disabled */
+
+#ifdef helpers_can_merge
 int helpers_not_merging = 0;     /* 1 if task merging is not enabled */
+#endif
 
 #ifndef HELPERS_NO_MULTITHREADING
 int helpers_not_pipelining;      /* 1 if pipelining currently disabled */
@@ -2472,6 +2475,8 @@ void helpers_no_pipelining (int a)
 
 /* DISABLE / RE-ENABLE TASK MERGING. */
 
+#ifdef helpers_can_merge
+
 void helpers_no_merging (int a)
 {
   helpers_not_merging = a!=0;
@@ -2482,6 +2487,8 @@ void helpers_no_merging (int a)
                     helpers_not_merging ? "disabled" : "enabled");
   }
 }
+
+#endif
 
 
 /* DISABLE / RE-ENABLE HELPERS.  Before disabling, wait for all tasks to 

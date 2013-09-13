@@ -240,7 +240,6 @@ static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 
 extern int helpers_tasks;            /* Number of outstanding tasks */
 extern int helpers_are_disabled;     /* 1 if helpers are not enabled */
-extern int helpers_not_merging;      /* 1 if task merging is not enabled */
 
 void helpers_startup (int);          /* Set up and then call master procedure */
 
@@ -268,7 +267,18 @@ helpers_var_ptr *helpers_var_list(void);  /* Return list of variables in use */
 void helpers_trace (int);            /* Set whether trace info is written */
 void helpers_stats (void);           /* Print statistics */
 void helpers_disable (int);          /* Disable/re-enable helpers */
+
+#ifdef helpers_can_merge
+
+extern int helpers_not_merging;      /* 1 if task merging is not enabled */
 void helpers_no_merging (int);       /* Disable/re-enable task merging */
+
+#else
+
+#define helpers_not_merging 1        /* Stubs for when merging not supported */
+#define helpers_no_merging(a) 0
+
+#endif
 
 /* Conditionally schedule task with helpers_do_task or call it directly. */
 

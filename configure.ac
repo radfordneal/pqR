@@ -229,10 +229,11 @@ fi],
 ## Allow the user to specify support for deferred evaluation & helpers apparatus
 ## with lack of support implying also no helper threads and no task merging.
 AC_ARG_ENABLE([deferred-evaluation],
-[AS_HELP_STRING([--enable-deferred-evaluation],[support deferred evaluation / helpers @<:@yes@:>@])],
+[AS_HELP_STRING([--enable-deferred-evaluation],[support deferred evaluation @<:@yes@:>@])],
 [if test "${enableval}" = no; then
   want_deferred_eval=no
   want_helper_threads=no
+  want_task_merging=no
 elif test "${enableval}" = yes; then
   want_deferred_eval=yes
 else
@@ -2227,7 +2228,7 @@ gl_STAT_TIME
 
 ## deferred evaluation.
 if test "${want_deferred_eval}" = yes; then
-  AC_DEFINE(R_DEFERRED_EVAL, 1, [Define this to enable deferred evaluation / helpers.])
+  AC_DEFINE(R_DEFERRED_EVAL, 1, [Define this to enable deferred evaluation.])
 fi
 
 ## helper threads.
@@ -2761,6 +2762,7 @@ fi
 if test "${have_lzma}" = yes; then
   R_SH_VAR_ADD(r_external_libs, [lzma], [, ])
 fi
+
 r_capabilities=
 if test "${have_png}" = yes; then
   R_SH_VAR_ADD(r_capabilities, [PNG], [, ])
@@ -2777,11 +2779,18 @@ fi
 if test "${r_cv_cairo_works}" = yes; then
   R_SH_VAR_ADD(r_capabilities, [cairo], [, ])
 fi
+
 r_options=
 if test "${want_helper_threads}" = yes; then
   R_SH_VAR_ADD(r_options, [helper threads], [, ])
-elif test "${want_deferred_eval}" = yes; then
-  R_SH_VAR_ADD(r_options, [deferred eval], [, ])
+fi
+if test "${want_task_merging}" = yes; then
+  R_SH_VAR_ADD(r_options, [task merging], [, ])
+fi
+if test "${want_helper_threads}" = no -a \
+        "${want_task_merging}" = no -a \
+        "${want_deferred_eval}" = yes; then
+  R_SH_VAR_ADD(r_options, [deferred evaluation], [, ])
 fi
 if test "${want_R_framework}" = yes; then
   R_SH_VAR_ADD(r_options, [framework], [, ])

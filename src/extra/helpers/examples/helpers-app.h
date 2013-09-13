@@ -55,10 +55,33 @@ extern int B_in_use, B_being_computed;
   do { if ((v)==B) B_being_computed = 0; } while (0)
 
 
+/* Macros for task merging, defined only for the "merge" program. */
+
+#ifdef MERGE
+
+#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
+  ((proc_a)==add_task && (proc_b)==mul_task && (in1_a)==(out))
+                             
+#define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
+                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
+  (*(proc_b_ptr) = mul_add_task)
+
+#endif
+
+
 /* Include the helpers.h file here, so declarations below can use types
    defined in it.  */
 
 #include "helpers.h"
+
+
+/* Procedure involved in task merging, declared only for the "merge" program. */
+
+#ifdef MERGE
+
+extern helpers_task_proc mul_task, add_task, mul_add_task;
+
+#endif
 
 
 /* Macro giving the name of a variable. */
@@ -72,19 +95,3 @@ extern int B_in_use, B_being_computed;
 extern char *my_task_name (helpers_task_proc *);
 
 #define helpers_task_name(p) my_task_name(p)
-
-
-/* Macros for task merging, defined only for the "merge" program. */
-
-#ifdef MERGE
-
-extern helpers_task_proc mul_task, add_task, mul_add_task;
-
-#define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
-  ((proc_a)==add_task && (proc_b)==mul_task && (in1_a)==(out))
-                             
-#define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
-                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
-  (*(proc_b_ptr) = mul_add_task)
-
-#endif
