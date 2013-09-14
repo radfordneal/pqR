@@ -471,15 +471,6 @@ will be set to 1 (versus 0 otherwise).  Pipelining is always disabled
 when there are no helper threads, or multithreading has been disabled
 (see below), and hence pipelining is impossible.
 
-A task procedure can check whether calling the helpers_amount_out
-procedure is useful with the helpers_output_perhaps_pipelined
-function, which takes no arguments, and returns 1 if the output may be
-pipelined to another task, and 0 if not.  Note that this is based
-solely on whether or not pipelining is disabled, and on whether the
-task was scheduled with the HELPERS_PIPE_OUT flag, not on whether
-another task is currently looking for such pipelined output (which may
-change as the task runs).
-
 
 WRITING PIPELINED TASK PROCEDURES
 
@@ -522,16 +513,16 @@ number of elements in the vector.
 
 A task scheduled with HELPERS_PIPE_IN0 must not finish before the task
 (if any) supplying the input for its output variable has finished
-computing that variable.  Similarly if the output variable for a task
-is the same as one of its other input variables, which was scheduled
-with pipelined input, the task must not finish before the task (if
-any) supplying that input.  For example, a task that computes the
-result of changing all leading zeros in an input vector to ones
-(leaving later elements unchanged) is not allowed to finish when it
-finds a non-zero element, without waiting until the rest of the input
-is computed, since if it did so, a task that receives its output might
-incorrectly believe that the computation was finished, when elements
-after the first non-zero element are still being computed.
+computing that variable.  (This includes cases where the output
+variable is the same as one of the other input variables, with both
+being pipelined.)  For example, a task that computes the result of
+changing all leading zeros in an input vector to ones (leaving later
+elements unchanged) is not allowed to finish when it finds a non-zero
+element, without waiting until the rest of the input is computed,
+since if it did so, a task that receives its output might incorrectly
+believe that the computation was finished when this task finished,
+when actually elements after the first non-zero element are still
+being computed.
 
 After a task procedure has called helpers_amount_out, it should not
 change the part of the output variable that it has indicated has been
@@ -555,6 +546,15 @@ argument.  Assuming that an input is not pipelined therefore allows
 overhead in the task procedure to be reduced - but of course, a task
 procedure written with this assumption must never be scheduled with
 that input flagged for pipelining.
+
+A task procedure can check whether calling the helpers_amount_out
+procedure is useful with the helpers_output_perhaps_pipelined
+function, which takes no arguments, and returns 1 if the output may be
+pipelined to another task, and 0 if not.  Note that this is based
+solely on whether or not pipelining is disabled, and on whether the
+task was scheduled with the HELPERS_PIPE_OUT flag, not on whether
+another task is currently looking for such pipelined output (which may
+change as the task runs).
 
 
 PIPELINING FOR ELEMENT-BY-ELEMENT VECTOR COMPUTATIONS
