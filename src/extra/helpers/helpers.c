@@ -52,10 +52,12 @@
    output is obtained when the option is set to 1, with only a small overhead
    when trace output has not been enabled by helpers_trace.  Setting this 
    option to 2 or 3 produces more informative trace output, but at the cost of
-   increasing overhead (more for 3 than 2) even when tracing is not enabled. */
+   increasing overhead (more for 3 than 2) even when tracing is not enabled. 
+   Setting this option to 4 produces lots of additional information on the 
+   task list. */
 
 #ifndef ENABLE_TRACE   /* Allow value from compile option to override below's */
-#define ENABLE_TRACE 1 /* 0, 1, 2, or 3 for no, normal, extra... trace output */
+#define ENABLE_TRACE 1 /* 0, 1, 2, 3, 4 for no, normal, extra... trace output */
 #endif
 
 
@@ -433,15 +435,85 @@ static int runnable (mtix);
    the task is flagged as needing to complete, "+" if the task is flagged
    as needing to start, and "." if the task is not needed, and then by "F"
    if the task has finished, "X" if the task is executing, "R" if the task is 
-   not executing but is runnable, and nothing otherwise. */
+   not executing but is runnable, and nothing otherwise. 
+
+   The 'used' array is also check to make sure that it contains a permutation
+   of the integers from 1 to MAX_TASKS.
+
+   If ENABLE_TRACE is greater than 3, extensive additional information on each 
+   task is printed. */
 
 static void trace_task_list (void)
-{ int i;
+{ 
+  char b[MAX_TASKS+1];
+  int i;
+
+  /* Check that 'used' has the right stuff in it. */
+
+  for (i = 1; i<=MAX_TASKS; i++) 
+  { b[i] = 0;
+  }
+  for (i = 0; i<MAX_TASKS; i++)
+  { if (used[i]<1 || used[i]>MAX_TASKS)
+    { helpers_printf("The 'used' array contains a bad entry (%d)!\n",used[i]);
+      break;
+    }
+    if (b[used[i]]!=0)
+    { helpers_printf("The 'used' array has id %d more than once!\n",used[i]);
+      break;
+    }
+    b[used[i]] = 1;
+  }
+
+  /* Print short task list. */
+  
   for (i = 0; i<helpers_tasks; i++) 
   { struct task_info *info = &task[used[i]].info;
     helpers_printf(" %d%s%s", (int) used[i], 
       info->needed>0 ? "*" : info->needed<0 ? "+" : ".",
       info->done ? "F" : info->helper>=0 ? "X" : runnable(used[i]) ? "R" : "");
+  }
+
+  /* Print lots of stuff about tasks if enabled. */
+
+  if (ENABLE_TRACE>3)
+  { for (i = 0; i<helpers_tasks; i++) 
+    { struct task_info *info = &task[used[i]].info;
+      helpers_printf("\nused[%d], task[%d]:\n", i, (int) used[i]);
+      helpers_printf("  amt_out: %"PRIuMAX"\n", (uintmax_t) info->amt_out);
+      helpers_printf("  helper: %d\n",        (int) info->helper);
+      helpers_printf("  done: %d\n",          (int) info->done);
+      helpers_printf("  needed: %d\n",        (int) info->needed);
+      helpers_printf("  pipe[]: %d %d %d\n",  (int) info->pipe[0],
+                                              (int) info->pipe[1],
+                                              (int) info->pipe[2]);
+      helpers_printf("  flags: %x\n",         (int) info->flags);
+      helpers_printf("  task_to_do: %s\n", helpers_task_name(info->task_to_do));
+      helpers_printf("  op: %"PRIuMAX"\n",    (uintmax_t) info->op);
+#     define var_marks(v) \
+        (v==null || helpers_is_in_use(v) && helpers_is_being_computed(v) ? "" \
+          : helpers_is_in_use(v) ? " c" : helpers_is_being_computed(v) ? " u" \
+          : " uc")
+      helpers_printf("  var[]: %s%s / %s%s / %s%s\n",   
+                          var_name(info->var[0]), var_marks(info->var[0]),
+                          var_name(info->var[1]), var_marks(info->var[1]),
+                          var_name(info->var[2]), var_marks(info->var[2]));
+      helpers_printf("  out_used: %d\n",      (int) info->out_used);
+      helpers_printf("  not_in_use_before[]: %d %d %d\n", 
+                                              (int) info->not_in_use_before[0],
+                                              (int) info->not_in_use_before[1],
+                                              (int) info->not_in_use_before[2]);
+      helpers_printf("  pipe_at_start[]: %d %d %d\n",
+                                              (int) info->pipe_at_start[0],
+                                              (int) info->pipe_at_start[1],
+                                              (int) info->pipe_at_start[2]);
+      helpers_printf("  last_amt[]: %d %d %d\n",
+                                              (int) info->last_amt[0],
+                                              (int) info->last_amt[1],
+                                              (int) info->last_amt[2]);
+      helpers_printf("  start_wtime: %f\n",   (double) info->start_wtime);
+      helpers_printf("  done_wtime: %f\n",    (double) info->done_wtime);
+    }
   }
 }
 
@@ -1520,8 +1592,10 @@ void helpers_do_task
           old_var[1] = m->var[1];
           old_var[2] = m->var[2];
 
-          old_not_in_use_before[1] = m->not_in_use_before[1];
-          old_not_in_use_before[2] = m->not_in_use_before[2];
+#         ifdef helpers_mark_not_in_use
+            old_not_in_use_before[1] = m->not_in_use_before[1];
+            old_not_in_use_before[2] = m->not_in_use_before[2];
+#         endif
         }
 
         /* Merge the new task with the existing task (which is indexed by
@@ -1618,41 +1692,45 @@ void helpers_do_task
         }
         else /* not master-now */
         {
-          helpers_var_ptr m_out = m->var[0];
           helpers_var_ptr m_in1 = m->var[1];
           helpers_var_ptr m_in2 = m->var[2];
 
-          /* Unmark old inputs if they're not also among the new inputs, and are
-             not in use by other tasks (mimic code in maybe_mark_not_in_use). */
+#         ifdef helpers_mark_not_in_use
 
-          int w;
+            /* Unmark old inputs if they're not also among the inputs used in
+               the new merged task, and are also not in use by other tasks 
+               (mimicking code in maybe_mark_not_in_use). */
 
-          for (w = 1; w<=2; w++)
-          { helpers_var_ptr v = old_var[w];
-            int j;
-            if (v!=null && v!=m_out && v!=m_in1 && v!=m_in2)
-            { for (j = (old_not_in_use_before[w] ? pipe0+1 : 0); 
-                   j<helpers_tasks; j++)
-              { struct task_info *einfo = &task[used[j]].info;
-                if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
-                { char d;
-                  ATOMIC_READ_CHAR (d = einfo->done);
-                  if (!d) goto next;
+            int w;
+
+            for (w = 1; w<=2; w++)
+            { helpers_var_ptr v = old_var[w];
+              int j;
+              if (v!=null && v!=out && v!=m_in1 && v!=m_in2)
+              { for (j = (old_not_in_use_before[w] ? pipe0+1 : 0); 
+                     j<helpers_tasks; j++)
+                { struct task_info *einfo = &task[used[j]].info;
+                  if (einfo->var[0]!=v && (einfo->var[1]==v||einfo->var[2]==v))
+                  { char d;
+                    ATOMIC_READ_CHAR (d = einfo->done);
+                    if (!d) goto next;
+                  }
                 }
+                helpers_mark_not_in_use(v);
               }
-              helpers_mark_not_in_use(v);
+            next: ;
             }
-          next: ;
-          }
 
-          /* Mark the new inputs as in use. */
+            /* Mark the new inputs as in use. */
 
-          m->not_in_use_before[1] = m_in1==null || !helpers_is_in_use(m_in1)
-              || m_in1==old_var[1] && old_not_in_use_before[1]
-              || m_in1==old_var[2] && old_not_in_use_before[2];
-          m->not_in_use_before[2] = m_in2==null || !helpers_is_in_use(m_in2)
-              || m_in2==old_var[1] && old_not_in_use_before[1]
-              || m_in2==old_var[2] && old_not_in_use_before[2];
+            m->not_in_use_before[1] = m_in1==null || !helpers_is_in_use(m_in1)
+                || m_in1==old_var[1] && old_not_in_use_before[1]
+                || m_in1==old_var[2] && old_not_in_use_before[2];
+            m->not_in_use_before[2] = m_in2==null || !helpers_is_in_use(m_in2)
+                || m_in2==old_var[1] && old_not_in_use_before[1]
+                || m_in2==old_var[2] && old_not_in_use_before[2];
+
+#         endif
 
 #         ifdef helpers_mark_in_use
             if (m_in1!=null && m_in1!=out) helpers_mark_in_use(m_in1);
@@ -1774,12 +1852,17 @@ out_of_merge:
     info->var[2] = in2;
     info->out_used = 0;
 
-    info->not_in_use_before[1] = in1==null || !helpers_is_in_use(in1);
-    info->not_in_use_before[2] = in2==null || !helpers_is_in_use(in2);
+#   ifdef helpers_mark_not_in_use
+      info->not_in_use_before[1] = in1==null || !helpers_is_in_use(in1);
+      info->not_in_use_before[2] = in2==null || !helpers_is_in_use(in2);
+#   endif
 
     info->pipe[0] = info->pipe[1] = info->pipe[2] = 0;
     if (ENABLE_TRACE>1)
     { info->last_amt[0] = info->last_amt[1] = info->last_amt[2] = 0;
+    }
+    if (ENABLE_TRACE>2)
+    { info->start_wtime = info->done_wtime = 0.0;
     }
 
     info->flags = flags;
