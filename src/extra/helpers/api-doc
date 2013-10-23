@@ -340,9 +340,11 @@ uncompleted task, unless it is also the output of that task.  It can
 therefore happen that a variable is simultaneously "being computed"
 and "not in use".
 
-When one of these macros is not defined in helpers-app.h, the
+When one pair of these macros is not defined in helpers-app.h, the
 corresponding marker will not be set or cleared, which is sensible
-only if this marker is not used by the application.
+only if this marker is not used by the application.  An application
+should either define both a "mark" macro and the corresponding
+"mark_not" macro, or define neither macro in the pair.
 
 These macros will be invoked only in the master thread, when a task is
 scheduled by helpers_do_task, or when helpers_do_task or one of the
@@ -813,11 +815,15 @@ necessary, the helpers_can_merge macro must ensure can be satisfied):
   2) Neither in1_B or in2_B may be changed to refer to a variable
      that has not yet been computed.
 
-The task resulting from merging a new and an old task will have the
-HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
-HELPERS_PIPE_OUT flag if new task had the corresponding flag, and will
-have the HELPERS_PIPE_IN0, HELPERS_PIPE_IN1, or HELPERS_PIPE_IN2 flag
-if the old task had the corresponding flag.
+The task resulting from merging a new and an old task will have flag
+bits HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
+HELPERS_PIPE_OUT if the new task had the corresponding flag bit, and
+it will also have flag bits HELPERS_PIPE_IN0, HELPERS_PIPE_IN1,
+HELPERS_PIPE_IN2, or HELPERS_MASTER_ONLY if the old task had the
+corresponding flag bit (except HELPERS_MASTER_ONLY will be overridden
+by HELPERS_MASTER_NO in the new task).  The HELPERS_MERGE_IN flag bit
+will not be set for the merged task (it would have no effect in any
+case).
 
 Task merging can be disabled by calling helpers_no_merging with
 argument 1 (and can be re-enabled by calling helpers_no_merging with
