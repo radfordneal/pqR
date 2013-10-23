@@ -2632,7 +2632,7 @@ int helpers_idle (void)
 
 /* RETURN A LIST OF ALL VARIABLES USED BY UNCOMPLETED TASKS. */
 
-helpers_var_ptr *helpers_var_list (void)
+helpers_var_ptr *helpers_var_list (int out_only)
 {
   int i, j;
 
@@ -2641,8 +2641,10 @@ helpers_var_ptr *helpers_var_list (void)
   for (i = 0, j = 0; i<helpers_tasks; i++)
   { struct task_info *info = &task[used[i]].info;
     if (info->var[0]!=null) var_list[j++] = info->var[0];
-    if (info->var[1]!=null) var_list[j++] = info->var[1];
-    if (info->var[2]!=null) var_list[j++] = info->var[2];
+    if (!out_only)
+    { if (info->var[1]!=null) var_list[j++] = info->var[1];
+      if (info->var[2]!=null) var_list[j++] = info->var[2];
+    }
   }
 
   var_list[j] = (helpers_var_ptr) 0;

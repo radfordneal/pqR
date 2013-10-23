@@ -868,12 +868,14 @@ variables are currently referenced by scheduled tasks, if it is
 possible that some such variables are no longer referenced elsewhere.
 
 The helpers_var_list function is provided for this purpose.  It takes
-no arguments, and returns a pointer to an array of pointers to all
-input and output variables for tasks that have been scheduled with
-helpers_do_task, but which the master thread has not yet noticed have
-completed.  (The helpers_var_list function will start by looking for
-completed tasks, but of course a task might complete just after this,
-before the list is produced.)  
+one argument that should be zero or one.  If the argument is zero, it
+returns a pointer to an array of pointers to all non-null input and
+output variables for tasks that have been scheduled, but which the
+master thread has not yet noticed have completed.  If the argument is
+one, the array will contain pointers only to output variables (which
+might also be input variables).  The helpers_var_list function will
+start by looking for completed tasks, but of course a task might
+complete just after this, before the list is produced.
 
 The array returned by helpers_var_list has elements of type
 helpers_var_ptr and is terminated by a null pointer.  The order of

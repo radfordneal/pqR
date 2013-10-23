@@ -1896,17 +1896,34 @@ static void RunGenCollect(R_size_t size_needed)
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++) /* Byte code stack */
         FORWARD_NODE(*sp);
 
-    /* main processing loop */
+
+    /* MAIN PROCESSING STEP.  Marks most nodes that are in use. */
+
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
-    /* Forward vars used by scheduled tasks last, so there's more time for
-       tasks to finish.  For a full collection, we wait for large variables 
-       that are task inputs or output and that haven't already been marked to 
-       become free, so we can collect them. */
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (1)");
+
+
+    /* HANDLE INPUTS AND OUTPUTS OF TASKS. */
+
+    /* Wait for all tasks whose output variable is no longer referenced
+       (ie, not marked above) and is not in use by another task, to ensure
+       they don't stay around for a long time.  This should rarely be needed 
+       in real programs. */
+
+    for (SEXP *var_list = helpers_var_list(1); *var_list; var_list++) {
+        SEXP v = *var_list;
+        if (!NODE_IS_MARKED(v) && !helpers_is_in_use(v))
+            helpers_wait_until_not_being_computed(v);
+    }
+
+    /* For a full collection, wait for tasks that have large variables
+       as inputs or outputs that haven't already been marked above, so
+       we can then collect these variables. */
 
     if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
-        for (SEXP *var_list = helpers_var_list(); *var_list; var_list++) {
+        for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
             SEXP v = *var_list;
             if (!NODE_IS_MARKED(v) && NODE_CLASS(v) == LARGE_NODE_CLASS) {
                 if (helpers_is_being_computed(v))
@@ -1917,16 +1934,18 @@ static void RunGenCollect(R_size_t size_needed)
         }
     }
 
+    /* Forward and then process all inputs and outputs of scheduled tasks. */
+
     for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
         FORWARD_NODE(*var_list);
 
-    /* process any forwarded task vars. */
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
-    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (1)");
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (2)");
 
-    /* identify weakly reachable nodes */
+
+    /* IDENTIFY WEAKLY REACHABLE NODES */
     {
 	Rboolean recheck_weak_refs;
 	do {
@@ -1961,7 +1980,7 @@ static void RunGenCollect(R_size_t size_needed)
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
-    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (2)");
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (3)");
 
     /* process CHARSXP cache */
     if (R_StringHash != NULL) /* in case of GC during initialization */
@@ -2002,7 +2021,7 @@ static void RunGenCollect(R_size_t size_needed)
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
-    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (3)");
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (4)");
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){

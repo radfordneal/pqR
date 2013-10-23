@@ -223,7 +223,7 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 
 static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 
-#define helpers_var_list()           helpers_var_list_null
+#define helpers_var_list(a)          helpers_var_list_null
 
 #define helpers_trace(f)             0
 #define helpers_stats()              0
@@ -262,7 +262,7 @@ void helpers_wait_until_not_being_computed2 /* Wait till two vars not outputs */
 void helpers_wait_for_all_master_only (void);/* Wait for all master-only tasks*/
 void helpers_wait_for_all (void);     /* Wait till all tasks have finished */
 
-helpers_var_ptr *helpers_var_list(void);  /* Return list of variables in use */
+helpers_var_ptr *helpers_var_list(int);  /* Return list of variables in use */
 
 void helpers_trace (int);            /* Set whether trace info is written */
 void helpers_stats (void);           /* Print statistics */
