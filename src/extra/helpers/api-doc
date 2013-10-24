@@ -815,6 +815,10 @@ necessary, the helpers_can_merge macro must ensure can be satisfied):
   2) Neither in1_B or in2_B may be changed to refer to a variable
      that has not yet been computed.
 
+The helpers_merge function or macro must not do anything that affects
+the state of the helpers module (eg, it must not wait until a variable
+is not in use).
+
 The task resulting from merging a new and an old task will have flag
 bits HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
 HELPERS_PIPE_OUT if the new task had the corresponding flag bit, and

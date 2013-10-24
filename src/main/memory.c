@@ -1909,8 +1909,8 @@ static void RunGenCollect(R_size_t size_needed)
 
     /* Wait for all tasks whose output variable is no longer referenced
        (ie, not marked above) and is not in use by another task, to ensure
-       they don't stay around for a long time.  This should rarely be needed 
-       in real programs. */
+       they don't stay around for a long time.  (Such unreferenced outputs
+       should rarely arise in real programs.) */
 
     for (SEXP *var_list = helpers_var_list(1); *var_list; var_list++) {
         SEXP v = *var_list;
@@ -1920,7 +1920,7 @@ static void RunGenCollect(R_size_t size_needed)
 
     /* For a full collection, wait for tasks that have large variables
        as inputs or outputs that haven't already been marked above, so
-       we can then collect these variables. */
+       that we can then collect these variables. */
 
     if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
         for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
@@ -1936,7 +1936,7 @@ static void RunGenCollect(R_size_t size_needed)
 
     /* Forward and then process all inputs and outputs of scheduled tasks. */
 
-    for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
+    for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++)
         FORWARD_NODE(*var_list);
 
     process_nodes (forwarded_nodes, no_snap); 

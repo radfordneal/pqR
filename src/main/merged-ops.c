@@ -463,7 +463,10 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         }
         else if (LENGTH(sv) == 1) {
             double tmp = *REAL(sv);
-            sv = allocVector (REALSXP, MAX_OPS_MERGED);
+            int k;
+            for (k = 0; helpers_is_in_use(R_merge_const_vec[k]); k++)
+                if (k == MAX_TASKS-1) abort();
+            sv = R_merge_const_vec[k];
             * (which ? in1_B : in2_B) = sv;
             REAL(sv)[0] = tmp;
             REAL(sv)[1] = *REAL(scalar);

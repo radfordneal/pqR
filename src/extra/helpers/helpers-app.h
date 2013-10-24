@@ -31,6 +31,14 @@
 #undef helpers_wait_until_not_being_computed2 /* so helpers.h not always req */
 
 
+/* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
+   minus one, and no more than 255 (to fit in an unsigned char).  A lower
+   value may be desirable to prevent large numbers of outstanding tasks
+   when some values are computed but never used. */
+
+#define MAX_TASKS 31
+
+
 /* TYPES DEFINED BY THE APPLICATION. */
 
 #include <stdint.h>
@@ -62,6 +70,10 @@ typedef SEXP helpers_var_ptr;
                           proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
   helpers_merge_proc (/*out,*/proc_a,op_a,in1_a,in2_a, \
                       proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr)
+
+/* Vectors used to hold scalar operands of merged task procedures. */
+
+extern SEXP R_merge_const_vec[MAX_TASKS];  /* numeric(MAX_OPS_MERGED) vectors */
 
 #endif
 #endif
@@ -96,14 +108,6 @@ extern void helpers_merge_proc ( /* helpers_var_ptr out, */
 
 #define ENABLE_TRACE 1
 #define ENABLE_STATS 0
-
-
-/* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
-   minus one, and no more than 255 (to fit in an unsigned char).  A lower
-   value may be desirable to prevent large numbers of outstanding tasks
-   when some values are computed but never used. */
-
-#define MAX_TASKS 31
 
 
 /* TASK AND VARIABLE NAMES FOR TRACE OUTPUT.  Functions references are in
