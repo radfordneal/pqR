@@ -30,13 +30,15 @@
   configuration option \code{--enable-deferred-evaluation}, though
   this is the default.  To use helper threads, pqR must also be
   configured with the \code{--enable-helper-threads} option, which is
-  also the default.
+  also the default.  Task merging is supported if pqR is build with
+  the configuration option \code{--enable-task-merging}, which is
+  again the default.
 
   The number of helper threads is specified with the \code{--helpers}
   option (short form \code{-p}) to the command starting pqR.  A
   \code{--helpers} option with no argument specifies that one helper
   thread will be used (two threads total, counting the master thread
-  runnign the interpreter).  An option of \code{--helpers=N} specifies
+  running the interpreter).  An option of \code{--helpers=N} specifies
   that the number of helper threads should be \code{N} (silently
   reduced to 127 if it is larger than this maximum).  If no
   \code{--helpers} or \code{-p} argument is given, zero helper threads
@@ -45,11 +47,11 @@
   (so all tasks are done by the master thread immediately, with no
   task merging performed).
 
-  Only some computations are structured as ``tasks'' that may be done
-  in helper threads, and possibly merged with other tasked.  A
-  computational task will be scheduled by the master thread (which
-  does all the interpretation of R code), at which point it may be
-  noticed and done by a helper thread.  The master thread will
+  Some but not all computations are structured as ``tasks'' that may
+  be done in helper threads, and possibly merged with other tasked.
+  Such computational tasks will be scheduled by the master thread
+  (which does all the interpretation of R code), at which point it may
+  be noticed and done by a helper thread.  The master thread will
   (usually) need the result of the task at some point, and will then
   wait for it to be completed by the helper thread, or do the task
   itself if no helper thread has started work on it.

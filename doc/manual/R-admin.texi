@@ -3416,7 +3416,7 @@ gfortran}.
 
 @menu
 * Configuration options::       
-* Helper threads::              
+* Helper threads and task merging::              
 * Internationalization support::  
 * Configuration variables::     
 * Setting the shell::           
@@ -3425,7 +3425,7 @@ gfortran}.
 * Compile and load flags::      
 @end menu
 
-@node Configuration options, Helper threads, Configuration on a Unix-alike, Configuration on a Unix-alike
+@node Configuration options, Helper threads and task merging, Configuration on a Unix-alike, Configuration on a Unix-alike
 @section Configuration options
 
 @command{configure} has many options: running
@@ -3483,29 +3483,39 @@ If you need to re-configure @R{} with different options you may need to run
 @code{make clean} or even @code{make distclean} before doing so.
 
 
-@node Helper threads, Internationalization support, Configuration options, Configuration on a Unix-alike
-@section Helper threads
+@node Helper threads and task merging, Internationalization support, Configuration options, Configuration on a Unix-alike
+@section Helper threads and task merging
 
-Support for computations in helper threads is enabled by default, and
-may be disabled with the @code{--disable-helper-threads} configuration
-option.  Disabling support for helper threads will produce a small
-speed improvement, compared to running @pqR{} with helper thread
-support enabled, but with no helper threads.  The
-@code{--disable-helper-threads} option will also allow pqR to be built
-on a system that does not support OpenMP.
+Support for computations in helper threads and for merging of tasks is
+enabled by default.  
+
+Use of helper and may be disabled with the
+@code{--disable-helper-threads} configuration option.  Disabling
+support for helper threads will produce a small speed improvement,
+compared to running @pqR{} with helper thread support enabled, but
+with no helper threads.  The @code{--disable-helper-threads} option
+will also allow pqR to be built on a system that does not support
+OpenMP.
+
+Merging of tasks may be disabled with the
+@code{--disable-task-merging} configuration option.  Currently, code
+for all possible merged tasks (2744 of them) is generated at compile
+time.  This code occupies space at run time, and takes time and space
+to generate when pqR is compiled.  On small systems, it may therefore
+be desirable (or essential) to disable task merging.
 
 The whole helpers apparatus, including deferred evaluation even with
-no helper threads, can be disabled with the
+no helper threads and no task merging, can be disabled with the
 @code{--disable-deferred-evaluation} configuraton option. This will
-produce a further slight speed improvement in situations where
-deferred evaluation / helper threads are not useful.
+produce a further slight speed improvement in situations where neither
+helper threads nor task merging are useful.
 
 If the BLAS routines used for matrix multiplication are not thread-safe,
 the @code{--disable-mat-mult-with-BLAS-in-helpers} option should be
 used, to prevent tasks that call the BLAS from being run in helper threads.
 
 
-@node Internationalization support, Configuration variables, Helper threads, Configuration on a Unix-alike
+@node Internationalization support, Configuration variables, Helper threads and task merging, Configuration on a Unix-alike
 @section Internationalization support
 
 Translation of messages is supported via @acronym{GNU} @code{gettext}

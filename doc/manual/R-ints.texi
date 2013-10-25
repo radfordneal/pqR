@@ -117,7 +117,7 @@ checked against the current version of the source code.
 * Modules::                     
 * Visibility::                  
 * Lazy loading::                
-* The helpers facility::        
+* Helper threads and task merging::        
 @end menu
 
 @node SEXPs, Environments and variable lookup, R Internal Structures, R Internal Structures
@@ -1231,12 +1231,13 @@ but when appropriate, macros for testing its value called
 should be used, since they may be more efficient than a comparison
 with the value returned by @code{NAMEDCNT}.
 
-When helper threads are enabled, an object that is being used by a
-task that has not yet completed must not be modified, even if its
-@code{NAMEDCNT} field is such that it could otherwise be modified.
-This constraint is implemented by having the @code{NAMEDCNT} macro
-wait until no task is using the object before returning the value.
-See @ref{The helpers facility} for details.
+When use of helper threads or task merging is enabled, an object that
+is being used by a task that has not yet completed must not be
+modified, even if its @code{NAMEDCNT} field is such that it could
+otherwise be modified.  This constraint is implemented by having the
+@code{NAMEDCNT} macro wait until no task is using the object before
+returning the value.  See @ref{Helper threads and task merging} for
+details.
 
 The @code{nmcnt} field can be set with the @code{SET_NAMEDCNT} macro,
 but when possible, it is better to use the @code{SET_NAMEDCNT_0},
@@ -2154,7 +2155,7 @@ other Windows compiler suites.
 It is only possible to check if this has been handled correctly by
 compiling the @R{} sources on Windows.
 
-@node Lazy loading, The helpers facility, Visibility, R Internal Structures
+@node Lazy loading, Helper threads and task merging, Visibility, R Internal Structures
 @section Lazy loading
 
 Lazy loading was introduced in @R{} 2.0.0, for code in packages and for
@@ -2210,19 +2211,21 @@ One or all of the parsed objects is fetched by a call to
 @code{tools:::fetchRdDB}.
 
 
-@node The helpers facility,  , Lazy loading, R Internal Structures
-@section The helpers facility
+@node Helper threads and task merging,  , Lazy loading, R Internal Structures
+@section Helper threads and task merging
 
-The @pqR{} facility for doing computations in helper threads is
-supported by the ``helpers'' library in @file{src/extra/helpers},
-where documentation on it may be found.  The @file{helpers-app.h}
-and @file{helpers-app.c} files in that directory define how the
-helpers facility interfaces to the @pqR{} interpreter.
+The @pqR{} facility for doing computations in helper threads and/or
+deferred evaluation for task merging is supported by the ``helpers''
+library in @file{src/extra/helpers}, where documentation on it may be
+found.  The @file{helpers-app.h} and @file{helpers-app.c} files in
+that directory define how the helpers facility interfaces to the
+@pqR{} interpreter.
 
-At present, computations in helper threads are confined to numeric
-vectors.  Two bits in the headers of such objects (actually all
-objects) allow checks on how computations that may be done by helper
-threads are progressing.  These bits are accessed by the
+At present, computation in helper threads (or in other deferred tasks)
+is confined to numeric vectors.  Two bits in the headers of such
+objects (actually all objects) allow checks on how computations that
+may be done by helper threads or otherwise are deferred are
+progressing.  These bits are accessed by the
 @code{IS_BEING_COMPUTED_BY_TASK} and @code{IS_IN_USE_BY_TASK} macros.
 An object is being computed by a task if computation of its data part
 was scheduled to be done by a task that has not been completed (or
@@ -2233,8 +2236,8 @@ thread looks to see what tasks performed by helpers have completed),
 so access to them does not raise any synchronization issues.
 
 The @code{WAIT_UNTIL_COMPUTED} and @code{WAIT_UNTIL_COMPUTED_2} macros
-wait until an object is not being computed, or two objects are both
-not being computed.
+wait until an object is not being computed, or until two objects are
+both not being computed.
 
 Objects that may not have been computed yet should be visible only in
 code that has explicitly asked to see such ``pending'' objects.  For
