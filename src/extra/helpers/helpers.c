@@ -1020,9 +1020,10 @@ static mtix find_untaken_runnable (int only_needed)
 
 /* MARK INPUTS AS NOT IN USE, IF NOT USED BY AN UNCOMPLETED TASK.  Looks at 
    whether the input variables of a task are used by any task that does not
-   have 'done' set.  Note that this may result in a variable being marked as 
-   not in use when a task that used it has finished but not yet been noticed
-   to have finished by the master thread, but this should be OK.
+   have 'done' set (excluding the task given as the argument).  Note that this
+   may result in a variable being marked as not in use when a task that used
+   it has finished but not yet been noticed to have finished by the master 
+   thread, but this should be OK.
 
    The 'i' argument is the index in 'used' of the task whose input variables
    are to (maybe) be unmarked. */
@@ -1038,7 +1039,8 @@ static inline void maybe_mark_not_in_use (int i)
   { helpers_var_ptr v = info->var[w];
     if (v!=null && v!=info->var[0])
     { for (j = (info->not_in_use_before[w] ? i+1 : 0); j<helpers_tasks; j++)
-      { struct task_info *einfo = &task[used[j]].info;
+      { if (j==i) continue;
+        struct task_info *einfo = &task[used[j]].info;
         if (einfo->var[0]!=v && (einfo->var[1]==v || einfo->var[2]==v))
         { char d;
           ATOMIC_READ_CHAR (d = einfo->done);
@@ -1583,10 +1585,11 @@ void helpers_do_task
             helpers_mark_not_being_computed (out);
 #         endif
 
-          /* Mark inputs as not being used, if not used by another task. */
+          /* Mark inputs of task being merged into as not being used, if
+             not in use by another task. */
 
 #         ifdef helpers_mark_not_in_use
-            maybe_mark_not_in_use (pipe0);
+            maybe_mark_not_in_use (uh-used);
 #         endif
         }
 
