@@ -5,6 +5,85 @@
 \title{ pqR News}
 \encoding{UTF-8}
 
+
+\section{CHANGES IN VERSION RELEASED 2013-??-??}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+
+\item pqR is based on R-2.15.0, distributed by the R Core Team, but
+improves on it in many ways, mostly ways that speed it up, but also by
+implementing some new features and fixing some bugs.  See the notes
+below on earlier pqR releases for general discussion of pqR, and for
+information that has not changed from previous releases of pqR.
+
+  }}
+
+  \subsection{FEATURE AND DOCUMENTATION CHANGES}{
+    \itemize{
+      \item .
+  }}
+
+  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item .
+  }}
+
+  \subsection{INSTALLATION AND TESTING}{
+    \itemize{
+
+\item See the pqR wiki at \code{https://github.com/radfordneal/pqR/wiki}
+      for the latest news regarding systems and packages that do or do not
+      work with pqR.
+
+\item Note that any previosly-installed packages must be re-installed for 
+      use with pqR (as is generally the case with new versions of R), except
+      for those written purely in R (no C, C++, or Fortran).
+
+  }}
+
+  \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
+    \itemize{
+
+\item .
+
+  }}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+    \itemize{
+\item 
+\item During all garbage collections, any tasks whose outputs are not
+      referenced are now waited for, to allow memory used by their outputs to be
+      recovered.  (Such unreferenced outputs should be rare in real 
+      programs.)  In a full garbage collection, tasks with large inputs
+      or outputs that are referenced only as task inputs
+      are also waited for, so that the memory they occupy can be recovered.
+
+\item Speed of \code{ifelse} has been improved (though it's now slower when the
+      condition is scalar due to the bug fix mentioned below).
+
+\item Inputs to the mod operator can now be piped. (Previously, this was 
+      inadvertently prevented in some cases.)
+  }}
+
+  \subsection{BUG FIXES}{
+    \itemize{
+\item Fixed a bug in \code{ifelse} with scalar condition but other
+      operands with length greater than one.  (Pointed out by Luke Tierney.)
+
+\item Fixed a bug in keeping track of references when assigning 
+      repeated elements into a list array.
+}
+  }}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item .
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2013-07-22}{
 
   \subsection{INTRODUCTION}{
