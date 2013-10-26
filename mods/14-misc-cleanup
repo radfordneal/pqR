@@ -1,4 +1,5 @@
-Miscellaneous cleanups/optimizations, including:
+Miscellaneous cleanups/optimizations, along with start of new NEWS.
+
 
 Fixed glitch that would prevent pipelining into MODOP.
 
