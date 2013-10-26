@@ -6,7 +6,7 @@
 \name{helpers}
 \alias{helpers}
 \alias{merging}
-\title{Helper threads}
+\title{Helper threads and task merging}
 \description{
   How some numerical computations may be done in helper threads, or
   deferred until they can be merged with other operations.
@@ -173,9 +173,17 @@ operate as a task otherwise.
 Task merging is currently done only for mathematical functions of one
 real argument (except \code{abs}) and the +, -, *, /, and ^ operators
 when one of their operands is a real vector and one is a real scalar
-(or missing, for unary -).  When helper threads are in use, tasks are
-merged only when one of the tasks is for the + operator or - operator
-(including unary -).
+(or missing, for unary -).  A maximum of three such operations can be
+merged.  Operations listed above as being done by the master thread
+can only be merged as the last of a series of operations.  For example,
+\code{exp(v+1)-1} can be computed by a single merged task, but
+\code{sqrt(v+1)-1} will be done using two tasks, because \code{sqrt}
+may produce a warning message that must appear immediately.
+
+When helper threads are in use, tasks are merged only when one of the
+tasks is for the + operator or - operator (including unary -), since
+other operations may be faster done in parallel by a helper thread
+without merging.
 
 }
 
