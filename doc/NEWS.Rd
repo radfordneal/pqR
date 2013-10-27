@@ -21,10 +21,10 @@ information that has not changed from previous releases of pqR.
 \item This release implements ``task merging'', which can speed up sequences
       of vector operations by merging several operations into one, which 
       reduces time spent writing and later reading data in memory.  For
-      example, when \code{v} is a long vector, the expression \code(exp(v+1)} 
+      example, when \code{v} is a long vector, the expression \code{exp(v+1)} 
       can be merged into one task, which will compute \code{exp(v[i]+1)} for
-      each element, \code{i], of \code{v} in a single loop.  See
-      \code{help(mergin)} for more details.
+      each element, \code{i}, of \code{v} in a single loop.  See
+      \code{help(merging)} for more details.
   }}
 
   \subsection{FEATURE AND DOCUMENTATION CHANGES}{
