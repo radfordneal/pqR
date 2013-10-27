@@ -1,4 +1,4 @@
-c     DGEMV and DGEMM modified by Radford M. Neal, 2012, to improve memory
+c     DGEMV and DGEMM modified by Radford M. Neal, 2012/2013, to improve memory
 c     performance in some cases.  Also, does not omit multiplies by a matrix
 c     element that is zero, so NaN, Inf, etc. will be properly propagated.
 c
@@ -632,7 +632,7 @@ c               END IF
 *     .. Local Scalars ..
       LOGICAL            NOTA, NOTB
       INTEGER            I, INFO, J, L, NCOLA, NROWA, NROWB
-      DOUBLE PRECISION   TEMP, TEMP2
+      DOUBLE PRECISION   TEMP, TEMP2, TEMP00, TEMP01, TEMP10, TEMP11
 *     .. Parameters ..
       DOUBLE PRECISION   ONE         , ZERO
       PARAMETER        ( ONE = 1.0D+0, ZERO = 0.0D+0 )
@@ -761,46 +761,74 @@ c
 *
 *           Form  C := alpha*A'*B + beta*C
 *
-c           Modified by R. M. Neal, 2012, to do produce C(I,J) and C(I+1,J)
-c           together (two dot products), each done with a loop unrolled to
-c           do two products at once.
+c           Modified by R. M. Neal, 2013, to do produce C(I,J), C(I+1,J),
+c           C(I,J+1), and C(I+1,J+1) together (four dot products).
 c
-            DO 120, J = 1, N
+            IF (MOD(N,2).NE.0) THEN
                IF ( MOD(M,2).NE.0 )THEN
-                  IF ( MOD(K,2).EQ.0 )THEN
-                     TEMP = ZERO
+                  TEMP = ZERO
+                  DO 103, L = 1, K
+                     TEMP = TEMP + A(L,1) * B(L,1)
+  103             CONTINUE
+                  IF( BETA.EQ.ZERO )THEN
+                     C( 1, 1 ) = ALPHA*TEMP
                   ELSE
-                     TEMP = A( 1, 1 )*B( 1, J )
+                     C( 1, 1 ) = ALPHA*TEMP + BETA*C( 1, 1 )
                   END IF
-                  DO 101, L = MOD(K,2)+1, K, 2
-                     TEMP = TEMP + A(L,1)*B(L,J) + A(L+1,1)*B(L+1,J )
-  101             CONTINUE
+               END IF
+               DO 105, I = MOD(M,2)+1, M, 2
+                  TEMP00 = ZERO
+                  TEMP10 = ZERO
+                  DO 104, L = 1, K
+                     TEMP00 = TEMP00 + A(L,I) * B(L,1) 
+                     TEMP10 = TEMP10 + A(L,I+1) * B(L,1) 
+  104             CONTINUE
+                  IF( BETA.EQ.ZERO )THEN
+                     C( I, 1 ) = ALPHA*TEMP00
+                     C( I+1, 1 ) = ALPHA*TEMP10
+                  ELSE
+                     C( I, 1 ) = ALPHA*TEMP00 + BETA*C( I, 1 )
+                     C( I+1, 1 ) = ALPHA*TEMP10 + BETA*C( I+1, 1 )
+                  END IF
+  105          CONTINUE
+            ENDIF
+            DO 120, J = MOD(N,2)+1, N, 2
+               IF ( MOD(M,2).NE.0 )THEN
+                  TEMP = ZERO
+                  TEMP2 = ZERO
+                  DO 108, L = 1, K
+                     TEMP = TEMP + A(L,1) * B(L,J)
+                     TEMP2 = TEMP2 + A(L,1) * B(L,J+1)
+  108             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( 1, J ) = ALPHA*TEMP
+                     C( 1, J+1 ) = ALPHA*TEMP2
                   ELSE
                      C( 1, J ) = ALPHA*TEMP + BETA*C( 1, J )
+                     C( 1, J+1 ) = ALPHA*TEMP + BETA*C( 1, J+1 )
                   END IF
                END IF
                DO 110, I = MOD(M,2)+1, M, 2
-                  IF ( MOD(K,2).EQ.0 )THEN
-                     TEMP = ZERO
-                     TEMP2 = ZERO
-                  ELSE
-                     TEMP = A( 1, I )*B( 1, J )
-                     TEMP2 = A( 1, I+1 )*B( 1, J )
-                  END IF
-                  DO 102, L = MOD(K,2)+1, K, 2
-                     TEMP = TEMP + A(L,I)*B(L,J) 
-     $                           + A(L+1,I)*B(L+1,J )
-                     TEMP2 = TEMP2 + A(L,I+1)*B(L,J) 
-     $                             + A(L+1,I+1)*B(L+1,J )
-  102             CONTINUE
+                  TEMP00 = ZERO
+                  TEMP01 = ZERO
+                  TEMP10 = ZERO
+                  TEMP11 = ZERO
+                  DO 109, L = 1, K
+                     TEMP00 = TEMP00 + A(L,I) * B(L,J) 
+                     TEMP01 = TEMP01 + A(L,I) * B(L,J+1) 
+                     TEMP10 = TEMP10 + A(L,I+1) * B(L,J) 
+                     TEMP11 = TEMP11 + A(L,I+1) * B(L,J+1) 
+  109             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
-                     C( I, J ) = ALPHA*TEMP
-                     C( I+1, J ) = ALPHA*TEMP2
+                     C( I, J ) = ALPHA*TEMP00
+                     C( I, J+1 ) = ALPHA*TEMP01
+                     C( I+1, J ) = ALPHA*TEMP10
+                     C( I+1, J+1 ) = ALPHA*TEMP11
                   ELSE
-                     C( I, J ) = ALPHA*TEMP + BETA*C( I, J )
-                     C( I+1, J ) = ALPHA*TEMP2 + BETA*C( I+1, J )
+                     C( I, J ) = ALPHA*TEMP00 + BETA*C( I, J )
+                     C( I, J+1 ) = ALPHA*TEMP01 + BETA*C( I, J+1 )
+                     C( I+1, J ) = ALPHA*TEMP10 + BETA*C( I+1, J )
+                     C( I+1, J+1 ) = ALPHA*TEMP11 + BETA*C( I+1, J+1 )
                   END IF
   110          CONTINUE
   120       CONTINUE
