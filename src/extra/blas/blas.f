@@ -766,22 +766,33 @@ c           C(I,J+1), and C(I+1,J+1) together (four dot products).
 c
             IF (MOD(N,2).NE.0) THEN
                IF ( MOD(M,2).NE.0 )THEN
-                  TEMP = ZERO
-                  DO 103, L = 1, K
-                     TEMP = TEMP + A(L,1) * B(L,1)
+                  IF ( MOD(K,2).EQ.0 )THEN
+                     TEMP = ZERO
+                  ELSE
+                     TEMP = A(1,1) * B(1,1)
+                  END IF
+                  DO 103, L = MOD(K,2)+1, K, 2
+                     TEMP = TEMP + A(L,1) * B(L,1) + A(L+1,1) * B(L+1,1)
   103             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
-                     C( 1, 1 ) = ALPHA*TEMP
+                     C(1,1) = ALPHA*TEMP
                   ELSE
-                     C( 1, 1 ) = ALPHA*TEMP + BETA*C( 1, 1 )
+                     C(1,1) = ALPHA*TEMP + BETA*C(1,1)
                   END IF
                END IF
                DO 105, I = MOD(M,2)+1, M, 2
-                  TEMP00 = ZERO
-                  TEMP10 = ZERO
-                  DO 104, L = 1, K
+                  IF ( MOD(K,2).EQ.0 )THEN
+                     TEMP00 = ZERO
+                     TEMP10 = ZERO
+                  ELSE
+                     TEMP00 = A(1,I) * B(1,1)
+                     TEMP10 = A(1,I+1) * B(1,1)
+                  END IF
+                  DO 104, L = MOD(K,2)+1, K, 2
                      TEMP00 = TEMP00 + A(L,I) * B(L,1) 
+     $                               + A(L+1,I) * B(L+1,1)
                      TEMP10 = TEMP10 + A(L,I+1) * B(L,1) 
+     $                               + A(L+1,I+1) * B(L+1,1)
   104             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( I, 1 ) = ALPHA*TEMP00
@@ -794,11 +805,18 @@ c
             ENDIF
             DO 120, J = MOD(N,2)+1, N, 2
                IF ( MOD(M,2).NE.0 )THEN
-                  TEMP = ZERO
-                  TEMP2 = ZERO
-                  DO 108, L = 1, K
-                     TEMP = TEMP + A(L,1) * B(L,J)
-                     TEMP2 = TEMP2 + A(L,1) * B(L,J+1)
+                  IF ( MOD(K,2).EQ.0 )THEN
+                     TEMP = ZERO
+                     TEMP2 = ZERO
+                  ELSE
+                     TEMP = A(1,1) * B(1,J)
+                     TEMP2 = A(1,1) * B(1,J+1)
+                  END IF
+                  DO 108, L = MOD(K,2)+1, K, 2
+                     TEMP = TEMP + A(L,1) * B(L,J) 
+     $                           + A(L+1,1) * B(L+1,J)
+                     TEMP2 = TEMP2 + A(L,1) * B(L,J+1) 
+     $                             + A(L+1,1) * B(L+1,J+1)
   108             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( 1, J ) = ALPHA*TEMP
@@ -809,15 +827,26 @@ c
                   END IF
                END IF
                DO 110, I = MOD(M,2)+1, M, 2
-                  TEMP00 = ZERO
-                  TEMP01 = ZERO
-                  TEMP10 = ZERO
-                  TEMP11 = ZERO
-                  DO 109, L = 1, K
+                  IF ( MOD(K,2).EQ.0 )THEN
+                     TEMP00 = ZERO
+                     TEMP01 = ZERO
+                     TEMP10 = ZERO
+                     TEMP11 = ZERO
+                  ELSE
+                     TEMP00 = A(1,I) * B(1,J)
+                     TEMP01 = A(1,I) * B(1,J+1)
+                     TEMP10 = A(1,I+1) * B(1,J) 
+                     TEMP11 = A(1,I+1) * B(1,J+1) 
+                  ENDIF
+                  DO 109, L = MOD(K,2)+1, K, 2
                      TEMP00 = TEMP00 + A(L,I) * B(L,J) 
+     $                               + A(L+1,I) * B(L+1,J) 
                      TEMP01 = TEMP01 + A(L,I) * B(L,J+1) 
+     $                               + A(L+1,I) * B(L+1,J+1)
                      TEMP10 = TEMP10 + A(L,I+1) * B(L,J) 
+     $                               + A(L+1,I+1) * B(L+1,J)
                      TEMP11 = TEMP11 + A(L,I+1) * B(L,J+1) 
+     $                               + A(L+1,I+1) * B(L+1,J+1)
   109             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( I, J ) = ALPHA*TEMP00
