@@ -81,7 +81,6 @@ information that has not changed from previous releases of pqR.
 
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
-}
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
