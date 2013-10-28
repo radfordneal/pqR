@@ -1,0 +1,8 @@
+Further improvements in the reference BLAS routimes.
+
+Also fixes the bug illustrate below:
+
+  a <- matrix(c(NA,1,0,1),2,2,byrow=T)
+  print(a%*%t(a))
+  print(tcrossprod(a,a))
+  print(tcrossprod(a))
