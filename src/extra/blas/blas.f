@@ -4484,44 +4484,87 @@ c
 *
 *        Form  C := alpha*A*A' + beta*C.
 *
+c        Modified by R. M. Neal, 2013, to sum two columns at once, to save
+c        memory accesses.
+c
          IF( UPPER )THEN
             DO 130, J = 1, N
                IF( BETA.EQ.ZERO )THEN
-                  DO 90, I = 1, J
-                     C( I, J ) = ZERO
-   90             CONTINUE
+                  IF (MOD(K,2).EQ.0) THEN
+                     DO 92, I = 1, J
+                        C( I, J ) = ZERO
+   92                CONTINUE
+                  ELSE
+                     TEMP = ALPHA * A(J,1)
+                     DO 94, I = 1, J
+                        C( I, J ) = TEMP * A(I,1)
+   94                CONTINUE
+                  END IF
                ELSE IF( BETA.NE.ONE )THEN
-                  DO 100, I = 1, J
-                     C( I, J ) = BETA*C( I, J )
-  100             CONTINUE
+                  IF (MOD(K,2).EQ.0) THEN
+                     DO 102, I = 1, J
+                       C( I, J ) = BETA*C( I, J )
+  102                CONTINUE
+                  ELSE
+                     TEMP = ALPHA * A(J,1)
+                     DO 104, I = 1, J
+                       C( I, J ) = BETA * C( I, J ) +  TEMP * A(I,1)
+  104                CONTINUE
+                  END IF
+               ELSE
+                  IF (MOD(K,2).NE.0) THEN
+                     TEMP = ALPHA * A(J,1)
+                     DO 106, I = 1, J
+                       C( I, J ) = C( I, J ) +  TEMP * A(I,1)
+  106                CONTINUE
+                  END IF
                END IF
-               DO 120, L = 1, K
-c                 IF( A( J, L ).NE.ZERO )THEN
-                     TEMP = ALPHA*A( J, L )
-                     DO 110, I = 1, J
-                        C( I, J ) = C( I, J ) + TEMP*A( I, L )
-  110                CONTINUE
-c                 END IF
+               DO 120, L = MOD(K,2)+1, K, 2
+                  TEMP = ALPHA * A(J,L)
+                  TEMP2 = ALPHA * A(J,L+1)
+                  DO 110, I = 1, J
+                     C(I,J) = C(I,J) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+  110             CONTINUE
   120          CONTINUE
   130       CONTINUE
          ELSE
             DO 180, J = 1, N
                IF( BETA.EQ.ZERO )THEN
-                  DO 140, I = J, N
-                     C( I, J ) = ZERO
-  140             CONTINUE
+                  IF (MOD(K,2).EQ.0) THEN
+                     DO 142, I = J, N
+                        C( I, J ) = ZERO
+  142                CONTINUE
+                  ELSE
+                     TEMP = ALPHA * A(J,1)
+                     DO 144, I = J, N
+                        C( I, J ) = TEMP * A(I,1)
+  144                CONTINUE
+                  END IF
                ELSE IF( BETA.NE.ONE )THEN
-                  DO 150, I = J, N
-                     C( I, J ) = BETA*C( I, J )
-  150             CONTINUE
+                  IF (MOD(K,2).EQ.0) THEN
+                     DO 152, I = J, N
+                       C( I, J ) = BETA*C( I, J )
+  152                CONTINUE
+                  ELSE
+                     TEMP = ALPHA * A(J,1)
+                     DO 154, I = J, N
+                       C( I, J ) = BETA * C( I, J ) +  TEMP * A(I,1)
+  154                CONTINUE
+                  END IF
+               ELSE
+                  IF (MOD(K,2).NE.0) THEN
+                     TEMP = ALPHA * A(J,1)
+                     DO 156, I = J, N
+                       C( I, J ) = C( I, J ) +  TEMP * A(I,1)
+  156                CONTINUE
+                  END IF
                END IF
-               DO 170, L = 1, K
-c                 IF( A( J, L ).NE.ZERO )THEN
-                     TEMP = ALPHA*A( J, L )
-                     DO 160, I = J, N
-                        C( I, J ) = C( I, J ) + TEMP*A( I, L )
-  160                CONTINUE
-c                 END IF
+               DO 170, L = MOD(K,2)+1, K, 2
+                  TEMP = ALPHA * A(J,L)
+                  TEMP2 = ALPHA * A(J,L+1)
+                  DO 160, I = J, N
+                     C(I,J) = C(I,J) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+  160             CONTINUE
   170          CONTINUE
   180       CONTINUE
          END IF
@@ -4529,7 +4572,7 @@ c                 END IF
 *
 *        Form  C := alpha*A'*A + beta*C.
 *
-c        Modified by R. M. Neal, 2012, to do two of the dot products at once,
+c        Modified by R. M. Neal, 2013, to do two of the dot products at once,
 c        with a common column, to save on fetching that column a second time.
 c
          IF( UPPER )THEN
