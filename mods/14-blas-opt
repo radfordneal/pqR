@@ -1,4 +1,5 @@
-Further improvements in the reference BLAS routines.
+Further improvements in the reference BLAS routines.  Also slight
+improvements in array.c in code using BLAS.
 
 DSYRK improved, which affects performance of R crossprod and tcrossprod.
 
