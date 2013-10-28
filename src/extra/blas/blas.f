@@ -806,7 +806,7 @@ c
                      C( 1, J+1 ) = ALPHA*TEMP2
                   ELSE
                      C( 1, J ) = ALPHA*TEMP + BETA*C( 1, J )
-                     C( 1, J+1 ) = ALPHA*TEMP + BETA*C( 1, J+1 )
+                     C( 1, J+1 ) = ALPHA*TEMP2 + BETA*C( 1, J+1 )
                   END IF
                END IF
                DO 110, I = MOD(M,2)+1, M, 2
@@ -4379,7 +4379,7 @@ c
 *     .. Local Scalars ..
       LOGICAL            UPPER
       INTEGER            I, INFO, J, L, NROWA
-      DOUBLE PRECISION   TEMP
+      DOUBLE PRECISION   TEMP, TEMP2
 *     .. Parameters ..
       DOUBLE PRECISION   ONE ,         ZERO
       PARAMETER        ( ONE = 1.0D+0, ZERO = 0.0D+0 )
@@ -4497,7 +4497,7 @@ c                 END IF
                END IF
                DO 170, L = 1, K
 c                 IF( A( J, L ).NE.ZERO )THEN
-                     TEMP      = ALPHA*A( J, L )
+                     TEMP = ALPHA*A( J, L )
                      DO 160, I = J, N
                         C( I, J ) = C( I, J ) + TEMP*A( I, L )
   160                CONTINUE
@@ -4509,31 +4509,64 @@ c                 END IF
 *
 *        Form  C := alpha*A'*A + beta*C.
 *
+c        Modified by R. M. Neal, 2012, to do two of the dot products at once,
+c        with a common column, to save on fetching that column a second time.
+c
          IF( UPPER )THEN
             DO 210, J = 1, N
-               DO 200, I = 1, J
+               IF (MOD(J,2).NE.0) THEN
                   TEMP = ZERO
-                  DO 190, L = 1, K
+                  DO 191, L = 1, K
+                     TEMP = TEMP + A( L, 1 )*A( L, J )
+  191             CONTINUE
+                  IF( BETA.EQ.ZERO )THEN
+                     C( 1, J ) = ALPHA*TEMP
+                  ELSE
+                     C( 1, J ) = ALPHA*TEMP + BETA*C( 1, J )
+                  END IF
+               END IF
+               DO 200, I = MOD(J,2)+1, J, 2
+                  TEMP = ZERO
+                  TEMP2 = ZERO
+                  DO 192, L = 1, K
                      TEMP = TEMP + A( L, I )*A( L, J )
-  190             CONTINUE
+                     TEMP2 = TEMP2 + A( L, I+1 )*A( L, J )
+  192             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( I, J ) = ALPHA*TEMP
+                     C( I+1, J ) = ALPHA*TEMP2
                   ELSE
                      C( I, J ) = ALPHA*TEMP + BETA*C( I, J )
+                     C( I+1, J ) = ALPHA*TEMP2 + BETA*C( I+1, J )
                   END IF
   200          CONTINUE
   210       CONTINUE
          ELSE
             DO 240, J = 1, N
-               DO 230, I = J, N
+               IF (MOD(N-J,2).EQ.0) THEN
                   TEMP = ZERO
-                  DO 220, L = 1, K
+                  DO 221, L = 1, K
+                     TEMP = TEMP + A( L, J )*A( L, J )
+  221             CONTINUE
+                  IF( BETA.EQ.ZERO )THEN
+                     C( J, J ) = ALPHA*TEMP
+                  ELSE
+                     C( J, J ) = ALPHA*TEMP + BETA*C( J, J )
+                  END IF
+               END IF
+               DO 230, I = J+1-MOD(N-J,2), N, 2
+                  TEMP = ZERO
+                  TEMP2 = ZERO
+                  DO 222, L = 1, K
                      TEMP = TEMP + A( L, I )*A( L, J )
-  220             CONTINUE
+                     TEMP2 = TEMP2 + A( L, I+1 )*A( L, J )
+  222             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( I, J ) = ALPHA*TEMP
+                     C( I+1, J ) = ALPHA*TEMP2
                   ELSE
                      C( I, J ) = ALPHA*TEMP + BETA*C( I, J )
+                     C( I+1, J ) = ALPHA*TEMP2 + BETA*C( I+1, J )
                   END IF
   230          CONTINUE
   240       CONTINUE
