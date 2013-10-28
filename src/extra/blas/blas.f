@@ -881,16 +881,36 @@ c
 *
 *           Form  C := alpha*A'*B' + beta*C
 *
-            DO 200, J = 1, N
+c           Modified by R. M. Neal, 2013, to do two columns at once, which
+c           may improve cache performance when accessing elements of B.
+c
+            IF (MOD(N,2).NE.0) THEN
+               DO 182, I = 1, M
+                  TEMP = ZERO
+                  DO 181, L = 1, K
+                     TEMP = TEMP + A( L, I )*B( 1, L )
+  181             CONTINUE
+                  IF( BETA.EQ.ZERO )THEN
+                     C( I, 1 ) = ALPHA*TEMP
+                  ELSE
+                     C( I, 1 ) = ALPHA*TEMP + BETA*C( I, 1 )
+                  END IF
+  182          CONTINUE
+            END IF
+            DO 200, J = MOD(N,2)+1, N, 2
                DO 190, I = 1, M
                   TEMP = ZERO
-                  DO 180, L = 1, K
+                  TEMP2 = ZERO
+                  DO 189, L = 1, K
                      TEMP = TEMP + A( L, I )*B( J, L )
-  180             CONTINUE
+                     TEMP2 = TEMP2 + A( L, I )*B( J+1, L )
+  189             CONTINUE
                   IF( BETA.EQ.ZERO )THEN
                      C( I, J ) = ALPHA*TEMP
+                     C( I, J+1 ) = ALPHA*TEMP2
                   ELSE
                      C( I, J ) = ALPHA*TEMP + BETA*C( I, J )
+                     C( I, J+1 ) = ALPHA*TEMP2 + BETA*C( I, J+1 )
                   END IF
   190          CONTINUE
   200       CONTINUE
