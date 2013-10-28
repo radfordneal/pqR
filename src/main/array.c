@@ -609,12 +609,38 @@ void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 #endif
 }
 
+/* Fill the lower triangle of an n-by-n matrix from the upper triangle.  Fills
+   two rows at once to improve cache performance. */
+
 static void fill_lower (double *z, int n)
 {
-    int i, j;
-    for (i = 1; i < n; i++)
-        for (j = 0; j < i; j++) 
-            z[i + n*j] = z[j + n*i];
+   int i, e, ii, jj;
+
+    /* This loop fills two rows of the lower triangle each iteration. 
+       Since there's nothing to fill for the first row, we can either 
+       start with it or with the next row, so that the number of rows 
+       we fill will be a multiple of two. */
+
+    e = 0;  /* last spot to fill in first row of pair (on diagonal) */
+
+    for (i = (n&1); i < n; i += 2) {
+
+        ii = i;    /* first position to fill in the first row of the pair */
+        jj = i*n;  /* first position to fetch from */
+
+        /* This loop fills in the pair of rows, also filling the diagonal
+           element of the first (which is unnecessary but innocuous). */
+
+        for (;;) {
+            z[ii] = z[jj];
+            z[ii+1] = z[jj+n];
+            if (ii==e) break;
+            ii += n;
+            jj += 1;
+        }
+
+        e += n+n+2;  /* move two spots down the diagonal */
+    }
 }
 
 static void symcrossprod(double *x, int nr, int nc, double *z)
