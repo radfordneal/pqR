@@ -1,6 +1,7 @@
-c     DGEMV and DGEMM modified by Radford M. Neal, 2012/2013, to improve memory
-c     performance in some cases.  Also, does not omit multiplies by a matrix
-c     element that is zero, so NaN, Inf, etc. will be properly propagated.
+c     DGEMV, DGEMM, and DSYRK modified by Radford M. Neal, 2012 and 2013, to 
+c     improve memory performance in some cases.  Also changed to not omit
+c     multiplies by matrix elements that are zero, so NaN, Inf, etc. will be
+c     properly propagated.
 c
       double precision function dasum(n,dx,incx)
 c
@@ -4475,12 +4476,12 @@ c
   100             CONTINUE
                END IF
                DO 120, L = 1, K
-                  IF( A( J, L ).NE.ZERO )THEN
+c                 IF( A( J, L ).NE.ZERO )THEN
                      TEMP = ALPHA*A( J, L )
                      DO 110, I = 1, J
                         C( I, J ) = C( I, J ) + TEMP*A( I, L )
   110                CONTINUE
-                  END IF
+c                 END IF
   120          CONTINUE
   130       CONTINUE
          ELSE
@@ -4495,12 +4496,12 @@ c
   150             CONTINUE
                END IF
                DO 170, L = 1, K
-                  IF( A( J, L ).NE.ZERO )THEN
+c                 IF( A( J, L ).NE.ZERO )THEN
                      TEMP      = ALPHA*A( J, L )
                      DO 160, I = J, N
                         C( I, J ) = C( I, J ) + TEMP*A( I, L )
   160                CONTINUE
-                  END IF
+c                 END IF
   170          CONTINUE
   180       CONTINUE
          END IF
