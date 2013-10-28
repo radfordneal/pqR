@@ -810,26 +810,47 @@ c
                   END IF
                END IF
                DO 110, I = MOD(M,2)+1, M, 2
-                  TEMP00 = ZERO
-                  TEMP01 = ZERO
-                  TEMP10 = ZERO
-                  TEMP11 = ZERO
-                  DO 109, L = 1, K
-                     TEMP00 = TEMP00 + A(L,I) * B(L,J) 
-                     TEMP01 = TEMP01 + A(L,I) * B(L,J+1) 
-                     TEMP10 = TEMP10 + A(L,I+1) * B(L,J) 
-                     TEMP11 = TEMP11 + A(L,I+1) * B(L,J+1) 
-  109             CONTINUE
-                  IF( BETA.EQ.ZERO )THEN
-                     C( I, J ) = ALPHA*TEMP00
-                     C( I, J+1 ) = ALPHA*TEMP01
-                     C( I+1, J ) = ALPHA*TEMP10
-                     C( I+1, J+1 ) = ALPHA*TEMP11
+                  IF (K.EQ.1) THEN
+                     TEMP00 = A(1,I) * B(1,J) 
+                     TEMP01 = A(1,I) * B(1,J+1) 
+                     TEMP10 = A(1,I+1) * B(1,J) 
+                     TEMP11 = A(1,I+1) * B(1,J+1) 
                   ELSE
-                     C( I, J ) = ALPHA*TEMP00 + BETA*C( I, J )
-                     C( I, J+1 ) = ALPHA*TEMP01 + BETA*C( I, J+1 )
-                     C( I+1, J ) = ALPHA*TEMP10 + BETA*C( I+1, J )
-                     C( I+1, J+1 ) = ALPHA*TEMP11 + BETA*C( I+1, J+1 )
+                     TEMP00 = ZERO
+                     TEMP01 = ZERO
+                     TEMP10 = ZERO
+                     TEMP11 = ZERO
+                     DO 109, L = 1, K
+                        TEMP00 = TEMP00 + A(L,I) * B(L,J) 
+                        TEMP01 = TEMP01 + A(L,I) * B(L,J+1) 
+                        TEMP10 = TEMP10 + A(L,I+1) * B(L,J) 
+                        TEMP11 = TEMP11 + A(L,I+1) * B(L,J+1) 
+  109                CONTINUE
+                  END IF
+                  IF( BETA.EQ.ZERO )THEN
+                     IF (ALPHA.EQ.ONE) THEN
+                        C( I, J ) = TEMP00
+                        C( I, J+1 ) = TEMP01
+                        C( I+1, J ) = TEMP10
+                        C( I+1, J+1 ) = TEMP11
+                     ELSE
+                        C( I, J ) = ALPHA*TEMP00
+                        C( I, J+1 ) = ALPHA*TEMP01
+                        C( I+1, J ) = ALPHA*TEMP10
+                        C( I+1, J+1 ) = ALPHA*TEMP11
+                     END IF
+                  ELSE
+                     IF (ALPHA.EQ.ONE) THEN
+                        C( I, J ) = TEMP00 + BETA*C( I, J )
+                        C( I, J+1 ) = TEMP01 + BETA*C( I, J+1 )
+                        C( I+1, J ) = TEMP10 + BETA*C( I+1, J )
+                        C( I+1, J+1 ) = TEMP11 + BETA*C( I+1, J+1 )
+                     ELSE
+                        C( I, J ) = ALPHA*TEMP00 + BETA*C( I, J )
+                        C( I, J+1 ) = ALPHA*TEMP01 + BETA*C( I, J+1 )
+                        C( I+1, J ) = ALPHA*TEMP10 + BETA*C( I+1, J )
+                        C( I+1, J+1 ) = ALPHA*TEMP11 + BETA*C( I+1, J+1)
+                     END IF
                   END IF
   110          CONTINUE
   120       CONTINUE
