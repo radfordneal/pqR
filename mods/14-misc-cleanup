@@ -1,6 +1,5 @@
 Miscellaneous cleanups/optimizations, along with start of new NEWS.
 
-
 Fixed glitch that would prevent pipelining into MODOP.
 
 Fixed NAMEDCNT bug in assignment of repeated elements to a list array;
@@ -8,3 +7,6 @@ added tests for such cases.
 
 Fixed ifelse bug introduced earlier in pqR, and sped it up a bit more.
 Also put in S4 check from R-3.0.0.
+
+Now pay attention to MAT_MULT_WITH_BLAS_IN_HELPERS_OK for complex
+matrix multiplication.
