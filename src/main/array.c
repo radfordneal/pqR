@@ -850,8 +850,15 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
             int flags = 0;
 
             if (mode == CPLXSXP) {
-                if (ncx==0) task_proc = task_cmatprod_zero;
-                else        task_proc = task_cmatprod;
+                if (ncx==0) {
+                    task_proc = task_cmatprod_zero;
+                }
+                else {
+                    task_proc = task_cmatprod;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                    inhlpr = 0;
+#endif
+                }
             }
             else {
                 if (ncx==0) {
