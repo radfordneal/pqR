@@ -70,6 +70,10 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(piped_matprod_vec_mat);
     TASK_NAME(piped_matprod);
     /* s */
+    TASK_NAME(matprod_trans1_BLAS);
+    TASK_NAME(matprod_trans2_BLAS);
+    TASK_NAME(cmatprod_trans1);
+    TASK_NAME(cmatprod_trans2);
     /* t */
     /* u */
     /* v */
