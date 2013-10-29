@@ -1,4 +1,9 @@
-Further improvements in the reference BLAS routimes.
+Further improvements in the reference BLAS routines.
+
+DSYRK improved, which affects performance of R crossprod and tcrossprod.
+
+DGEMM improved for the case where the first operand is transposed, and
+for the case where both operands are transposed.
 
 Also fixes the bug illustrate below:
 
