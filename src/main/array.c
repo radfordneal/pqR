@@ -641,15 +641,15 @@ static void fill_lower (double *z, int n)
     }
 }
 
-static void crossprod (double *x, int ncx, 
-                       double *y, int ncy, int nr, double *z)
-{
+void task_matprod_trans1_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nr = op;
+    int ncx = LENGTH(sx) / nr;
+    int ncy = LENGTH(sy) / nr;
     double one = 1.0, zero = 0.0;
-    if (ncx == 0 || ncy == 0 || nr == 0) { /* zero-extent ops return zeroes */
-        int sz = ncx*ncy;
-	for (int i = 0; i < sz; i++) z[i] = 0;
-    }
-    else if (x == y && nr > 10) { /* using dsyrk may be slower if nr is small */
+
+    if (x == y && nr > 10) { /* using dsyrk may be slower if nr is small */
         char *trans = "T", *uplo = "U";
 	F77_CALL(dsyrk)(uplo, trans, &ncx, &nr, &one, x, &nr, &zero, z, &ncx);
         fill_lower(z,ncx);
@@ -661,31 +661,29 @@ static void crossprod (double *x, int ncx,
     }
 }
 
-static void ccrossprod (Rcomplex *x, int ncx,
-		        Rcomplex *y, int ncy, int nr, Rcomplex *z)
-{
-    if (ncx == 0 || ncy == 0 || nr == 0) { /* zero-extent ops return zeroes */
-        int sz = ncx*ncy;
-	for (int i = 0; i < sz; i++) z[i].r = z[i].i = 0;
-    }
-    else {
-        char *transa = "T", *transb = "N";
-        Rcomplex one, zero;
-        one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-	F77_CALL(zgemm)(transa, transb, &ncx, &ncy, &nr, &one,
-			x, &nr, y, &nr, &zero, z, &ncx);
-    }
+void task_cmatprod_trans1 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    Rcomplex *z = COMPLEX(sz), *x = COMPLEX(sx), *y = COMPLEX(sy);
+    int nr = op;
+    int ncx = LENGTH(sx) / nr;
+    int ncy = LENGTH(sy) / nr;
+    char *transa = "T", *transb = "N";
+    Rcomplex one, zero;
+    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+
+    F77_CALL(zgemm) (transa, transb, &ncx, &ncy, &nr, &one,
+                     x, &nr, y, &nr, &zero, z, &ncx);
 }
 
-static void tcrossprod (double *x, int nrx,
-		        double *y, int nry, int nc, double *z)
-{
+void task_matprod_trans2_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nc = op;
+    int nrx = LENGTH(sx) / nc;
+    int nry = LENGTH(sy) / nc;
     double one = 1.0, zero = 0.0;
-    if (nrx == 0 || nry == 0 || nc == 0) { /* zero-extent ops return zeroes */
-        int sz = nrx*nry;
-	for (int i = 0; i < sz; i++) z[i] = 0;
-    }
-    else if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
+
+    if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
         char *trans = "N", *uplo = "U";
 	F77_CALL(dsyrk)(uplo, trans, &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
         fill_lower(z,nrx);
@@ -697,20 +695,18 @@ static void tcrossprod (double *x, int nrx,
     }
 }
 
-static void tccrossprod(Rcomplex *x, int nrx,
-			Rcomplex *y, int nry, int nc, Rcomplex *z)
-{
-    if (nrx == 0 || nry == 0 || nc == 0) { /* zero-extent ops return zeroes */
-        int sz = nrx*nry;
-	for (int i = 0; i < sz; i++) z[i].r = z[i].i = 0;
-    }
-    else {
-        char *transa = "N", *transb = "T";
-        Rcomplex one, zero;
-        one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-	F77_CALL(zgemm)(transa, transb, &nrx, &nry, &nc, &one,
-			x, &nrx, y, &nry, &zero, z, &nrx);
-    }
+void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    Rcomplex *z = COMPLEX(sz), *x = COMPLEX(sx), *y = COMPLEX(sy);
+    int nc = op;
+    int nrx = LENGTH(sx) / nc;
+    int nry = LENGTH(sy) / nc;
+
+    char *transa = "N", *transb = "T";
+    Rcomplex one, zero;
+    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+    F77_CALL(zgemm) (transa, transb, &nrx, &nry, &nc, &one,
+                     x, &nrx, y, &nry, &zero, z, &nrx);
 }
 
 #define T_matmult THRESHOLD_ADJUST(30)
@@ -960,7 +956,7 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 		}
 	    }
 
-#define YDIMS_ET_CETERA							\
+#define YDIMS_ET_CETERA	do {						\
 	    if (ydims != R_NilValue) {					\
 		if (ldy == 2) {						\
 		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 1));	\
@@ -984,23 +980,56 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 		if (dnx != R_NilValue || dny != R_NilValue)		\
 		    setAttrib(dimnames, R_NamesSymbol, dimnamesnames);	\
 		setAttrib(ans, R_DimNamesSymbol, dimnames);		\
-	    }								\
-	    UNPROTECT(2)
+	    } } while (0)
 
 	    YDIMS_ET_CETERA;
+	    UNPROTECT(2);
 	}
     }
 
-    else if (PRIMVAL(op) == 1) {	/* op == 1: crossprod() */
+    else {  /* crossprod or tcrossprod */
 
-	PROTECT(ans = allocMatrix(mode, ncx, ncy));
+        int cross = PRIMVAL(op)==1;
+        int nrows = cross ? ncx : nrx;
+        int ncols = cross ? ncy : nry;
+        int k = cross ? nrx : ncx;
 
-        WAIT_UNTIL_COMPUTED_2(x,y);
+	ans = allocMatrix0(mode,nrows,ncols);
 
-	if (mode == CPLXSXP)
-	    ccrossprod (COMPLEX(x), ncx, COMPLEX(y), ncy, nrx, COMPLEX(ans));
-	else
-	    crossprod (REAL(x), ncx, REAL(y), ncy, nrx, REAL(ans));
+        if (LENGTH(ans) != 0) {
+
+            int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
+            helpers_task_proc *task_proc;
+
+            if (mode == CPLXSXP) {
+                if (k==0) {
+                    task_proc = task_cmatprod_zero;
+                }
+                else {
+                    task_proc = cross ? task_cmatprod_trans1
+                                      : task_cmatprod_trans2;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                    inhlpr = 0;
+#endif
+                }
+            }
+            else {
+                if (k==0) {
+                    task_proc = task_matprod_zero;
+                }
+                else {
+                    task_proc = cross ? task_matprod_trans1_BLAS 
+                                      : task_matprod_trans2_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                    inhlpr = 0;
+#endif
+                }
+            }
+
+            DO_NOW_OR_LATER2(variant, inhlpr, 0, task_proc, k, ans, x, y);
+        }
+
+        PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
 
 	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
 	PROTECT(ydims = sym ? xdims : getAttrib(y, R_DimNamesSymbol));
@@ -1015,64 +1044,35 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 
 	    if (xdims != R_NilValue) {
 		if (ldx == 2) {/* not nrx==1 : .. fixed, ihaka 2003-09-30 */
-		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 1));
+		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims,cross));
 		    dnx = getAttrib(xdims, R_NamesSymbol);
 		    if(!isNull(dnx))
-			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 1));
+			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx,cross));
 		}
 	    }
 
-	    YDIMS_ET_CETERA;
-	}
+            if (cross) {
+                YDIMS_ET_CETERA;
+            }
+            else {
+                if (ydims != R_NilValue) {
+                    if (ldy == 2) {
+                        SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));
+                        dny = getAttrib(ydims, R_NamesSymbol);
+                        if(!isNull(dny))
+                            SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0));
+                    }
+                }
+                if (VECTOR_ELT(dimnames,0) != R_NilValue ||
+                    VECTOR_ELT(dimnames,1) != R_NilValue) {
+                    if (dnx != R_NilValue || dny != R_NilValue)
+                        setAttrib(dimnames, R_NamesSymbol, dimnamesnames);
+                    setAttrib(ans, R_DimNamesSymbol, dimnames);
+                }
+            }
 
-    }
-    else {					/* op == 2: tcrossprod() */
-
-	PROTECT(ans = allocMatrix(mode, nrx, nry));
-
-        WAIT_UNTIL_COMPUTED_2(x,y);
-
-	if (mode == CPLXSXP)
-	    tccrossprod (COMPLEX(x), nrx, COMPLEX(y), nry, ncx, COMPLEX(ans));
-	else
-	    tcrossprod (REAL(x), nrx, REAL(y), nry, ncx, REAL(ans));
-
-	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ydims = sym ? xdims : getAttrib(y, R_DimNamesSymbol));
-
-	if (xdims != R_NilValue || ydims != R_NilValue) {
-	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
-
-	    /* allocate dimnames and dimnamesnames */
-
-	    PROTECT(dimnames = allocVector(VECSXP, 2));
-	    PROTECT(dimnamesnames = allocVector(STRSXP, 2));
-
-	    if (xdims != R_NilValue) {
-		if (ldx == 2) {
-		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 0));
-		    dnx = getAttrib(xdims, R_NamesSymbol);
-		    if(!isNull(dnx))
-			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 0));
-		}
-	    }
-	    if (ydims != R_NilValue) {
-		if (ldy == 2) {
-		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));
-		    dny = getAttrib(ydims, R_NamesSymbol);
-		    if(!isNull(dny))
-			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0));
-		}
-	    }
-	    if (VECTOR_ELT(dimnames,0) != R_NilValue ||
-		VECTOR_ELT(dimnames,1) != R_NilValue) {
-		if (dnx != R_NilValue || dny != R_NilValue)
-		    setAttrib(dimnames, R_NamesSymbol, dimnamesnames);
-		setAttrib(ans, R_DimNamesSymbol, dimnames);
-	    }
-
-	    UNPROTECT(2);
-	}
+            UNPROTECT(2);
+        }
     }
     UNPROTECT(5);
     return ans;
