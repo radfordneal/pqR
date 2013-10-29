@@ -609,22 +609,15 @@ void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 #endif
 }
 
-static void fill_lower (double *z, int n)
-{
-    int i, j;
-    for (i = 1; i < n; i++)
-        for (j = 0; j < i; j++) 
-            z[i + n*j] = z[j + n*i];
-}
-
 static void symcrossprod(double *x, int nr, int nc, double *z)
 {
     char *trans = "T", *uplo = "U";
     double one = 1.0, zero = 0.0;
-    int i;
+    int i, j;
     if (nr > 0 && nc > 0) {
 	F77_CALL(dsyrk)(uplo, trans, &nc, &nr, &one, x, &nr, &zero, z, &nc);
-        fill_lower(z,nc);
+	for (i = 1; i < nc; i++)
+	    for (j = 0; j < i; j++) z[i + nc *j] = z[j + nc * i];
     } else { /* zero-extent operations should return zeroes */
 	for(i = 0; i < nc*nc; i++) z[i] = 0;
     }
@@ -665,10 +658,11 @@ static void symtcrossprod(double *x, int nr, int nc, double *z)
 {
     char *trans = "N", *uplo = "U";
     double one = 1.0, zero = 0.0;
-    int i;
+    int i, j;
     if (nr > 0 && nc > 0) {
 	F77_CALL(dsyrk)(uplo, trans, &nr, &nc, &one, x, &nr, &zero, z, &nr);
-        fill_lower(z,nr);
+	for (i = 1; i < nr; i++)
+	    for (j = 0; j < i; j++) z[i + nr *j] = z[j + nr * i];
     } else { /* zero-extent operations should return zeroes */
 	for(i = 0; i < nr*nr; i++) z[i] = 0;
     }
