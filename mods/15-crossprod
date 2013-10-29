@@ -1,0 +1,2 @@
+Changes in how crossprod and tcrossprod are implemented.  (Also note
+the improved BLAS routines in 14-blas-opt.)

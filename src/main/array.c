@@ -609,93 +609,107 @@ void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 #endif
 }
 
-static void symcrossprod(double *x, int nr, int nc, double *z)
+/* Fill the lower triangle of an n-by-n matrix from the upper triangle.  Fills
+   two rows at once to improve cache performance. */
+
+static void fill_lower (double *z, int n)
 {
-    char *trans = "T", *uplo = "U";
-    double one = 1.0, zero = 0.0;
-    int i, j;
-    if (nr > 0 && nc > 0) {
-	F77_CALL(dsyrk)(uplo, trans, &nc, &nr, &one, x, &nr, &zero, z, &nc);
-	for (i = 1; i < nc; i++)
-	    for (j = 0; j < i; j++) z[i + nc *j] = z[j + nc * i];
-    } else { /* zero-extent operations should return zeroes */
-	for(i = 0; i < nc*nc; i++) z[i] = 0;
-    }
+   int i, ii, jj, e;
 
-}
+    /* This loop fills two rows of the lower triangle each iteration. 
+       Since there's nothing to fill for the first row, we can either 
+       start with it or with the next row, so that the number of rows 
+       we fill will be a multiple of two. */
 
-static void crossprod(double *x, int nrx, int ncx,
-		      double *y, int nry, int ncy, double *z)
-{
-    char *transa = "T", *transb = "N";
-    double one = 1.0, zero = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	F77_CALL(dgemm)(transa, transb, &ncx, &ncy, &nrx, &one,
-			x, &nrx, y, &nry, &zero, z, &ncx);
-    } else { /* zero-extent operations should return zeroes */
-	int i;
-	for(i = 0; i < ncx*ncy; i++) z[i] = 0;
-    }
-}
+    for (i = (n&1); i < n; i += 2) {
 
-static void ccrossprod(Rcomplex *x, int nrx, int ncx,
-		       Rcomplex *y, int nry, int ncy, Rcomplex *z)
-{
-    char *transa = "T", *transb = "N";
-    Rcomplex one, zero;
+        ii = i;    /* first position to fill in the first row of the pair */
+        jj = i*n;  /* first position to fetch from */
 
-    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	F77_CALL(zgemm)(transa, transb, &ncx, &ncy, &nrx, &one,
-			x, &nrx, y, &nry, &zero, z, &ncx);
-    } else { /* zero-extent operations should return zeroes */
-	int i;
-	for(i = 0; i < ncx*ncy; i++) z[i].r = z[i].i = 0;
+        /* This loop fills in the pair of rows, also filling the diagonal
+           element of the first (which is unnecessary but innocuous). */
+
+        e = jj+i;
+
+        for (;;) {
+            z[ii] = z[jj];
+            z[ii+1] = z[jj+n];
+            if (jj == e) break;
+            ii += n;
+            jj += 1;
+        }
     }
 }
 
-static void symtcrossprod(double *x, int nr, int nc, double *z)
+static void crossprod (double *x, int ncx, 
+                       double *y, int ncy, int nr, double *z)
 {
-    char *trans = "N", *uplo = "U";
     double one = 1.0, zero = 0.0;
-    int i, j;
-    if (nr > 0 && nc > 0) {
-	F77_CALL(dsyrk)(uplo, trans, &nr, &nc, &one, x, &nr, &zero, z, &nr);
-	for (i = 1; i < nr; i++)
-	    for (j = 0; j < i; j++) z[i + nr *j] = z[j + nr * i];
-    } else { /* zero-extent operations should return zeroes */
-	for(i = 0; i < nr*nr; i++) z[i] = 0;
+    if (ncx == 0 || ncy == 0 || nr == 0) { /* zero-extent ops return zeroes */
+        int sz = ncx*ncy;
+	for (int i = 0; i < sz; i++) z[i] = 0;
     }
-
+    else if (x == y && nr > 10) { /* using dsyrk may be slower if nr is small */
+        char *trans = "T", *uplo = "U";
+	F77_CALL(dsyrk)(uplo, trans, &ncx, &nr, &one, x, &nr, &zero, z, &ncx);
+        fill_lower(z,ncx);
+    }
+    else {
+        char *transa = "T", *transb = "N";
+	F77_CALL(dgemm)(transa, transb, &ncx, &ncy, &nr, &one,
+			x, &nr, y, &nr, &zero, z, &ncx);
+    }
 }
 
-static void tcrossprod(double *x, int nrx, int ncx,
-		      double *y, int nry, int ncy, double *z)
+static void ccrossprod (Rcomplex *x, int ncx,
+		        Rcomplex *y, int ncy, int nr, Rcomplex *z)
 {
-    char *transa = "N", *transb = "T";
+    if (ncx == 0 || ncy == 0 || nr == 0) { /* zero-extent ops return zeroes */
+        int sz = ncx*ncy;
+	for (int i = 0; i < sz; i++) z[i].r = z[i].i = 0;
+    }
+    else {
+        char *transa = "T", *transb = "N";
+        Rcomplex one, zero;
+        one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+	F77_CALL(zgemm)(transa, transb, &ncx, &ncy, &nr, &one,
+			x, &nr, y, &nr, &zero, z, &ncx);
+    }
+}
+
+static void tcrossprod (double *x, int nrx,
+		        double *y, int nry, int nc, double *z)
+{
     double one = 1.0, zero = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	F77_CALL(dgemm)(transa, transb, &nrx, &nry, &ncx, &one,
+    if (nrx == 0 || nry == 0 || nc == 0) { /* zero-extent ops return zeroes */
+        int sz = nrx*nry;
+	for (int i = 0; i < sz; i++) z[i] = 0;
+    }
+    else if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
+        char *trans = "N", *uplo = "U";
+	F77_CALL(dsyrk)(uplo, trans, &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
+        fill_lower(z,nrx);
+    }
+    else {
+        char *transa = "N", *transb = "T";
+	F77_CALL(dgemm)(transa, transb, &nrx, &nry, &nc, &one,
 			x, &nrx, y, &nry, &zero, z, &nrx);
-    } else { /* zero-extent operations should return zeroes */
-	int i;
-	for(i = 0; i < nrx*nry; i++) z[i] = 0;
     }
 }
 
-static void tccrossprod(Rcomplex *x, int nrx, int ncx,
-			Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void tccrossprod(Rcomplex *x, int nrx,
+			Rcomplex *y, int nry, int nc, Rcomplex *z)
 {
-    char *transa = "N", *transb = "T";
-    Rcomplex one, zero;
-
-    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	F77_CALL(zgemm)(transa, transb, &nrx, &nry, &ncx, &one,
+    if (nrx == 0 || nry == 0 || nc == 0) { /* zero-extent ops return zeroes */
+        int sz = nrx*nry;
+	for (int i = 0; i < sz; i++) z[i].r = z[i].i = 0;
+    }
+    else {
+        char *transa = "N", *transb = "T";
+        Rcomplex one, zero;
+        one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+	F77_CALL(zgemm)(transa, transb, &nrx, &nry, &nc, &one,
 			x, &nrx, y, &nry, &zero, z, &nrx);
-    } else { /* zero-extent operations should return zeroes */
-	int i;
-	for(i = 0; i < nrx*nry; i++) z[i].r = z[i].i = 0;
     }
 }
 
@@ -726,9 +740,9 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 	errorcall(call, _("requires numeric/complex matrix/vector arguments"));
 
     xdims = getAttrib(x, R_DimSymbol);
-    ydims = getAttrib(y, R_DimSymbol);
     ldx = length(xdims);
-    ldy = length(ydims);
+    ydims = sym ? xdims : getAttrib(y, R_DimSymbol);
+    ldy = sym ? ldx : length(ydims);
 
     if (ldx != 2 && ldy != 2) {		/* x and y non-matrices */
 	if (PRIMVAL(op) == 0) {
@@ -977,25 +991,12 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
         WAIT_UNTIL_COMPUTED_2(x,y);
 
 	if (mode == CPLXSXP)
-	    if(sym)
-		ccrossprod(COMPLEX(x), nrx, ncx,
-			   COMPLEX(x), nry, ncy, COMPLEX(ans));
-	    else
-		ccrossprod(COMPLEX(x), nrx, ncx,
-			   COMPLEX(y), nry, ncy, COMPLEX(ans));
-	else {
-	    if(sym)
-		symcrossprod(REAL(x), nrx, ncx, REAL(ans));
-	    else
-		crossprod(REAL(x), nrx, ncx,
-			  REAL(y), nry, ncy, REAL(ans));
-	}
+	    ccrossprod (COMPLEX(x), ncx, COMPLEX(y), ncy, nrx, COMPLEX(ans));
+	else
+	    crossprod (REAL(x), ncx, REAL(y), ncy, nrx, REAL(ans));
 
 	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
-	if (sym)
-	    PROTECT(ydims = xdims);
-	else
-	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
+	PROTECT(ydims = sym ? xdims : getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -1025,25 +1026,12 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
         WAIT_UNTIL_COMPUTED_2(x,y);
 
 	if (mode == CPLXSXP)
-	    if(sym)
-		tccrossprod(COMPLEX(x), nrx, ncx,
-			    COMPLEX(x), nry, ncy, COMPLEX(ans));
-	    else
-		tccrossprod(COMPLEX(x), nrx, ncx,
-			    COMPLEX(y), nry, ncy, COMPLEX(ans));
-	else {
-	    if(sym)
-		symtcrossprod(REAL(x), nrx, ncx, REAL(ans));
-	    else
-		tcrossprod(REAL(x), nrx, ncx,
-			   REAL(y), nry, ncy, REAL(ans));
-	}
+	    tccrossprod (COMPLEX(x), nrx, COMPLEX(y), nry, ncx, COMPLEX(ans));
+	else
+	    tcrossprod (REAL(x), nrx, REAL(y), nry, ncx, REAL(ans));
 
 	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
-	if (sym)
-	    PROTECT(ydims = xdims);
-	else
-	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
+	PROTECT(ydims = sym ? xdims : getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
