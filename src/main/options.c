@@ -343,6 +343,11 @@ void attribute_hidden InitOptions(void)
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
+    SET_TAG(v, install("helpers_no_merging"));
+    SETCAR(v, ScalarLogical(helpers_not_merging));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("helpers_trace"));
     SETCAR(v, ScalarLogical(getenv("R_HELPERS_TRACE")!=0));
 #endif
@@ -605,6 +610,15 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		k = asLogical(argi);
 #ifdef R_DEFERRED_EVAL
 		helpers_no_pipelining(k);
+#endif
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
+	    else if (streql(CHAR(namei), "helpers_no_merging")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+#ifdef R_DEFERRED_EVAL
+		helpers_no_merging(k);
 #endif
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }

@@ -155,10 +155,15 @@ getOption(x, default = NULL)
       to disable pipelining of data between helper threads.  Initially
       \code{FALSE}, unless there are no helper threads.}
 
+    \item{\code{helpers_no_merging}:}{A logical value set to \code{TRUE} 
+      to disable merging of tasks.  Initially \code{FALSE}, unless the
+      helpers apparatus is disabled.}
+
     \item{\code{helpers_trace}:}{A logical value set to \code{TRUE} 
-      to enable tracing of tasks that are done (or might have been done)
-      in helper threads.  Initially \code{FALSE}, unless the environment
-      variable \code{R_HELPERS_TRACE} was defined at startup.}
+      to enable tracing of tasks that are scheduled to be done, either
+      in helper threads or the master thread.  Initially \code{FALSE}, 
+      unless the environment variable \code{R_HELPERS_TRACE} was defined 
+      at startup.}
 
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
       functions (newly defined or loaded) is stored internally

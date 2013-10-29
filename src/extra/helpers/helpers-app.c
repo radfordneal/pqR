@@ -19,6 +19,7 @@
 
 #include "helpers-app.h"
 
+#ifndef HELPERS_DISABLED
 
 /* NAMES OF TASKS.  The list below has to be manually updated when new 
    task procedures are defined. */
@@ -82,6 +83,10 @@ char *Rf_task_name (helpers_task_proc *task)
     /* y */
     /* z */
 
+# ifdef R_TASK_MERGING
+    TASK_NAME(merged_arith_math1);
+# endif
+
     return "?";
 }
 
@@ -103,3 +108,5 @@ char *Rf_var_name (helpers_var_ptr var)
     strcpy(p,s);
     return p;
 }
+
+#endif

@@ -1834,7 +1834,7 @@ SEXP attribute_hidden do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(len != nr * nc) /* quick integrity check */
 	    error(_("corrupt matrix -- dims not not match length"));
 
-        if (IS_BEING_COMPUTED_BY_TASK(x)) {
+        if (helpers_is_being_computed(x)) {
             helpers_start_computing_var(x);
             avail = 0;
         }

@@ -184,7 +184,8 @@ The "untaken" queue holds indexes of scheduled tasks that are not
 master-only and which have not yet been started, in arbitrary order.
 Tasks are added to this queue only by the master thread.  Tasks may be
 taken from the "untaken" queue by the master or a helper thread, with
-exclusive access (to take a task to start) controlled by "start_lock".
+exclusive access (to take a task to start, or for a merge operation)
+controlled by "start_lock".
 
 Two locks are maintained for use in a scheme that allows the helper
 thread that has set start_lock to suspend itself, and later be woken
@@ -264,6 +265,12 @@ start the needed tasks, so that the master can return as soon as
 possible (and presumably use the data now being computed) - except
 that it will do tasks itself if no helpers are idle or a master-only
 task is needed.
+
+When the master thread tries to merge tasks, it sets start_lock in
+order to reliably check that the old task to merge with has not
+started running, and to have exclusive access to the untaken queue
+when removing a task that has become master-only or master-now after
+the merge.
 
 
 OPERATION OF A HELPER THREAD
@@ -355,15 +362,17 @@ two minus one) will prevent there being a large number of pending
 tasks, which might sometimes be undesirable (eg, if these pending
 tasks are preventing memory reclamation).
 
-The ENABLE_TRACE symbol can be defined as 0, 1, 2, or 3, to control
+The ENABLE_TRACE symbol can be defined as 0, 1, 2, 3, or 4 to control
 how much output is produced when tracing has been requested (by
 calling helpers_trace).  A value of 0 disables all trace output, 1
 produces normal output, 2 produces additional information (that can be
-understood only by referring to the source code in helpers.c), and 3
-produces this additional information plus timing information.  Setting
-ENABLE_TRACE to 0 will save a small amount of time when tracing is not
-enabled.  Value of 2 or 3 slow down operations, even when tracing is
-not enabled (3 more so than 2).
+understood only by referring to the source code in helpers.c), 3
+produces this additional information plus timing information, and 4
+produces additional information on the entire set of tasks whenever a
+task list is displayed.  Setting ENABLE_TRACE to 0 will save a small
+amount of time when tracing is not enabled.  Value greater than 1 slow
+down operations, even when tracing is not enabled (with 3 or 4
+producing greater slowdown than 2).
 
 The ENABLE_STATS symbol can be defined as 0 or 1, with 0 disabling
 statistics output (when helpers_stats is called), which saves a small

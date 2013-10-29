@@ -1828,6 +1828,7 @@ static void RunGenCollect(R_size_t size_needed)
         &R_ScalarLogicalNA,
         &R_ScalarLogicalFALSE,
         &R_ScalarLogicalTRUE,
+        &R_ScalarRealZero,
 
         &R_GlobalEnv,	          /* Global environment */
         &R_BaseEnv,
@@ -1895,37 +1896,56 @@ static void RunGenCollect(R_size_t size_needed)
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++) /* Byte code stack */
         FORWARD_NODE(*sp);
 
-    /* main processing loop */
-    process_nodes (forwarded_nodes, no_snap); 
-    forwarded_nodes = NULL;
 
-    /* Forward vars used by scheduled tasks last, so there's more time for
-       tasks to finish.  For a full collection, we wait for large variables 
-       that are task inputs or output and that haven't already been marked to 
-       become free, so we can collect them. */
+    /* MAIN PROCESSING STEP.  Marks most nodes that are in use. */
 
-    if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
-        for (SEXP *var_list = helpers_var_list(); *var_list; var_list++) {
-            SEXP v = *var_list;
-            if (!NODE_IS_MARKED(v) && NODE_CLASS(v) == LARGE_NODE_CLASS) {
-                if (IS_BEING_COMPUTED_BY_TASK(v))
-                    helpers_wait_until_not_being_computed(v);
-                if (IS_IN_USE_BY_TASK(v))
-                    helpers_wait_until_not_in_use(v);
-            }
-        }
-    }
-
-    for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
-        FORWARD_NODE(*var_list);
-
-    /* process any forwarded task vars. */
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
     DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (1)");
 
-    /* identify weakly reachable nodes */
+
+    /* HANDLE INPUTS AND OUTPUTS OF TASKS. */
+
+    /* Wait for all tasks whose output variable is no longer referenced
+       (ie, not marked above) and is not in use by another task, to ensure
+       they don't stay around for a long time.  (Such unreferenced outputs
+       should rarely arise in real programs.) */
+
+    for (SEXP *var_list = helpers_var_list(1); *var_list; var_list++) {
+        SEXP v = *var_list;
+        if (!NODE_IS_MARKED(v) && !helpers_is_in_use(v))
+            helpers_wait_until_not_being_computed(v);
+    }
+
+    /* For a full collection, wait for tasks that have large variables
+       as inputs or outputs that haven't already been marked above, so
+       that we can then collect these variables. */
+
+    if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
+        for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
+            SEXP v = *var_list;
+            if (!NODE_IS_MARKED(v) && NODE_CLASS(v) == LARGE_NODE_CLASS) {
+                if (helpers_is_being_computed(v))
+                    helpers_wait_until_not_being_computed(v);
+                if (helpers_is_in_use(v))
+                    helpers_wait_until_not_in_use(v);
+            }
+        }
+    }
+
+    /* Forward and then process all inputs and outputs of scheduled tasks. */
+
+    for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++)
+        FORWARD_NODE(*var_list);
+
+    process_nodes (forwarded_nodes, no_snap); 
+    forwarded_nodes = NULL;
+
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (2)");
+
+
+    /* IDENTIFY WEAKLY REACHABLE NODES */
     {
 	Rboolean recheck_weak_refs;
 	do {
@@ -1960,7 +1980,7 @@ static void RunGenCollect(R_size_t size_needed)
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
-    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (2)");
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (3)");
 
     /* process CHARSXP cache */
     if (R_StringHash != NULL) /* in case of GC during initialization */
@@ -2001,7 +2021,7 @@ static void RunGenCollect(R_size_t size_needed)
     process_nodes (forwarded_nodes, no_snap); 
     forwarded_nodes = NULL;
 
-    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (3)");
+    DEBUG_CHECK_NODE_COUNTS("after processing forwarded list (4)");
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){

@@ -66,6 +66,11 @@ typedef void helpers_task_proc \
 
 #define HELPERS_PIPE_IN012_OUT (HELPERS_PIPE_IN012 + HELPERS_PIPE_OUT)
 
+#define HELPERS_MERGE_IN   64
+#define HELPERS_MERGE_OUT 128
+
+#define HELPERS_MERGE_IN_OUT (HELPERS_MERGE_IN + HELPERS_MERGE_OUT)
+
 
 /* MASTER PROCEDURE DEFINED BY THE USER. */
 
@@ -84,6 +89,8 @@ void helpers_master (void);          /* The master procedure, does it all */
 #define helpers_num 0
 #define helpers_not_multithreading 1
 #define helpers_not_pipelining 1
+
+#define helpers_output_perhaps_pipelined() 0
 
 #define helpers_amount_out(p)        0
 
@@ -120,7 +127,9 @@ extern int helpers_num;              /* Number of helper threads */
 extern int helpers_not_multithreading; /* 1 if tasks done only by master */
 extern int helpers_not_pipelining;   /* 1 if pipelining is disabled */
 
-void helpers_amount_out (helpers_size_t); /* Set how much of output produced */
+int helpers_output_perhaps_pipelined(void); /* Other might get piped output? */
+
+void helpers_amount_out (helpers_size_t);  /* Set how much of output produced */
 
 helpers_size_t helpers_avail0 (helpers_size_t); /* Get how much available */
 helpers_size_t helpers_avail1 (helpers_size_t);
@@ -198,6 +207,7 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 
 #define helpers_tasks 0
 #define helpers_are_disabled 1
+#define helpers_not_merging 1
 
 #define helpers_startup(n)           (helpers_master())
 
@@ -213,11 +223,12 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 
 static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 
-#define helpers_var_list()           helpers_var_list_null
+#define helpers_var_list(a)          helpers_var_list_null
 
 #define helpers_trace(f)             0
 #define helpers_stats()              0
 #define helpers_disable(a)           0
+#define helpers_no_merging(a)        0
 
 #define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
   ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
@@ -251,11 +262,23 @@ void helpers_wait_until_not_being_computed2 /* Wait till two vars not outputs */
 void helpers_wait_for_all_master_only (void);/* Wait for all master-only tasks*/
 void helpers_wait_for_all (void);     /* Wait till all tasks have finished */
 
-helpers_var_ptr *helpers_var_list(void);  /* Return list of variables in use */
+helpers_var_ptr *helpers_var_list(int);  /* Return list of variables in use */
 
 void helpers_trace (int);            /* Set whether trace info is written */
 void helpers_stats (void);           /* Print statistics */
 void helpers_disable (int);          /* Disable/re-enable helpers */
+
+#ifdef helpers_can_merge
+
+extern int helpers_not_merging;      /* 1 if task merging is not enabled */
+void helpers_no_merging (int);       /* Disable/re-enable task merging */
+
+#else
+
+#define helpers_not_merging 1        /* Stubs for when merging not supported */
+#define helpers_no_merging(a) 0
+
+#endif
 
 /* Conditionally schedule task with helpers_do_task or call it directly. */
 

@@ -5,9 +5,11 @@
 
 \name{helpers}
 \alias{helpers}
-\title{Helper threads}
+\alias{merging}
+\title{Helper threads and task merging}
 \description{
-  How some numerical computations may be done in helper threads.
+  How some numerical computations may be done in helper threads, or
+  deferred until they can be merged with other operations.
 }
 \details{
   In pqR, it is possible for some computations to be done in ``helpers
@@ -19,32 +21,40 @@
   the program's structure.  The numerical results obtained should be 
   exactly the same as when no helper threads are used.
 
-  To use this facility, it must have been enabled when pqR was
-  configured, with the \code{--enable-helper-threads} option (though
-  this is the default).  The deferred evaluation apparatus must also
-  be enabled (with \code{--enable-deferred-evaluation}), but this also
-  is the default.
+  Deferring some computations also allows them to sometimes be merged
+  with other computations, which can reduce the total computation time, 
+  even if only one processor core is used.
+
+  Use of helper threads or task merging requires that the deferred
+  evaluation apparatus be enabled when pqR is built, with the
+  configuration option \code{--enable-deferred-evaluation}, though
+  this is the default.  To use helper threads, pqR must also be
+  configured with the \code{--enable-helper-threads} option, which is
+  also the default.  Task merging is supported if pqR is build with
+  the configuration option \code{--enable-task-merging}, which is
+  again the default.
 
   The number of helper threads is specified with the \code{--helpers}
   option (short form \code{-p}) to the command starting pqR.  A
   \code{--helpers} option with no argument specifies that one helper
   thread will be used (two threads total, counting the master thread
-  runnign the interpreter).  An option of \code{--helpers=N} specifies
+  running the interpreter).  An option of \code{--helpers=N} specifies
   that the number of helper threads should be \code{N} (silently
   reduced to 127 if it is larger than this maximum).  If no
   \code{--helpers} or \code{-p} argument is given, zero helper threads
   are used. An argument of \code{--helpers=-1} or \code{-p=-1}
   specifies zero helper threads and also disables deferred evaluation
-  (so all tasks are done by the master thread immediately, rather than
-  being scheduled and possibly done later).
+  (so all tasks are done by the master thread immediately, with no
+  task merging performed).
 
-  Only some computations are structured as ``tasks'' that may be done in
-  helper threads.  A computational task will be scheduled by the
-  master thread (which does all the interpretation of R code), at
-  which point it may be noticed and done by a helper thread.  The
-  master thread will (usually) need the result of the task at some
-  point, and will then wait for it to be completed by the helper thread, or
-  do the task itself if no helper thread has started work on it.
+  Some but not all computations are structured as ``tasks'' that may
+  be done in helper threads, and possibly merged with other tasked.
+  Such computational tasks will be scheduled by the master thread
+  (which does all the interpretation of R code), at which point it may
+  be noticed and done by a helper thread.  The master thread will
+  (usually) need the result of the task at some point, and will then
+  wait for it to be completed by the helper thread, or do the task
+  itself if no helper thread has started work on it.
 
   Tasks can be scheduled even when one or more of their inputs are the
   outputs of other tasks that have not completed.  If both these
@@ -60,11 +70,25 @@
   produce a warning message), but can still take pipelined input
   produced by tasks executing concurrently in a helper thread.
 
-  The following table summarizes what operations can currently be done
-  in helper threads, or can take pipelined input (even if they are
-  always done in the master thread):
+  When the output of one task is the input of another task, these
+  tasks can sometimes be merged into one task, when the second task is
+  scheduled.  The merged task can take less computation time on a
+  single processor core than would the two separate tasks, since there
+  is less loop overhead, and the intermediate results need not be
+  stored in main memory.  However, when helper threads are available,
+  two separate tasks exectured in parallel might take less time than a
+  merged task done on one processor core.  Accordingly, when helper
+  threads are in use, pqR merges tasks only when at least one is a
+  simple task taking little computation time.
 
-\tabular{llll}{
+  The table below summarizes what operations can currently be deferred,
+  to be done in a helper thread, or merged with another operation,
+  and which can take pipelined input (even if they are
+  always done in the master thread).  Note that these operations will
+  be done as separate tasks only if their operands (vectors or matrices)
+  are larger than some minimum (which varies from operation to operation).
+
+\tabular{lllll}{
 Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
 \tab\tab\tab\cr
 +, -, *, /, ^, \%/\% \tab If real op
@@ -78,12 +102,12 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab If real op
                    \tab Done by master\cr
 \tab\tab\tab\cr
-floor, ceil, sign, \tab Yes
+abs, floor, ceil,  \tab Yes
                    \tab Yes
                    \tab \cr
-trunc, exp, expm1, \tab\tab\tab\cr
-atan, cosh, sinh,  \tab\tab\tab\cr
-tanh, asinh        \tab\tab\tab\cr
+sign, trunc, exp,  \tab\tab\tab\cr
+expm1, atan, cosh, \tab\tab\tab\cr
+sinh, tanh, asinh  \tab\tab\tab\cr
 \tab\tab\tab\cr
 sqrt, log, log1p,  \tab No
                    \tab Yes
@@ -142,14 +166,31 @@ for operands whose length is equal to the length of the result.
 
 The \code{sum} function will currently pass on a result computed by a
 task that sums the results of a function of one argument in the first
-group above (using pqR's internal ``variant result'' mechanism), with
-pipelining, but \code{sum} does not operate as a task otherwise.
+group above (\code{abs}, \code{floor}, etc.) using pqR's internal
+``variant result'' mechanism, with pipelining, but \code{sum} does not
+operate as a task otherwise.
+
+Task merging is currently done only for mathematical functions of one
+real argument (except \code{abs}) and the +, -, *, /, and ^ operators
+when one of their operands is a real vector and one is a real scalar
+(or missing, for unary -).  A maximum of three such operations can be
+merged.  Operations listed above as being done by the master thread
+can only be merged as the last of a series of operations.  For example,
+\code{exp(v+1)-1} can be computed by a single merged task, but
+\code{sqrt(v+1)-1} will be done using two tasks, because \code{sqrt}
+may produce a warning message that must appear immediately.
+
+When helper threads are in use, tasks are merged only when one of the
+tasks is for the + operator or - operator (including unary -), since
+other operations may be faster done in parallel by a helper thread
+without merging.
 
 }
 
 \seealso{
   \code{\link{options}} for information on the options \code{helpers_disable},
-  \code{helpers_no_multithreading}, \code{helpers_no_pipelining}, and 
+  \code{helpers_no_multithreading}, \code{helpers_no_pipelining}, 
+  \code{helpers_no_merging}, and 
   \code{helpers_trace}.  \code{\link{\%*\%}} for information on matrix 
   multiplication with or without the BLAS.
 }

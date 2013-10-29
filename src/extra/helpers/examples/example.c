@@ -283,7 +283,7 @@ void helpers_master (void)
     if (get_var_list && r==rep)
     { helpers_var_ptr *list;
       printf("Variable list:");
-      for (list = helpers_var_list(); *list != NULL; list++)
+      for (list = helpers_var_list(0); *list != NULL; list++)
       { printf(" %s",helpers_var_name(*list));
       }
       printf("\n");
@@ -330,7 +330,7 @@ void helpers_master (void)
            B_in_use, B_being_computed);
   }
   
-  if (get_var_list && r==rep && *helpers_var_list()!=NULL)
+  if (get_var_list && r==rep && *helpers_var_list(0)!=NULL)
   { printf("Variable list isn't empty at end!\n");
   }
 
