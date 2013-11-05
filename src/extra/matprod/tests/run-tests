@@ -27,12 +27,12 @@ while [ x$2 != x ]; do
   shift
 done
 
-echo " "; echo vec_vec
+echo " "; echo VEC_VEC
 
 echo " "; time $prog 200000 v 2222 v
 echo " "; time $prog 50000 v 12345 v
 
-echo " "; echo mat_vec
+echo " "; echo MAT_VEC
 
 echo " "; time $prog 200000 2 2222 v
 echo " "; time $prog 50000 2 12345 v
@@ -43,12 +43,21 @@ echo " "; time $prog 50000 3 10345 v
 echo " "; time $prog 2000 301 2222 v
 echo " "; time $prog 200 280 12345 v
 
-echo " "; echo vec_mat
+echo " "; echo VEC_MAT
 
 echo " "; time $prog 100000 v 1272 13
 echo " "; time $prog 10000 v 9345 14
 
-echo " "; echo general
+echo " "; echo VEC VIA GENERAL
+
+echo " "; time $prog 200000 1 2222 1
+echo " "; time $prog 2000 301 2222 1
+echo " "; time $prog 10000 1 9345 14
+
+echo " "; echo GENERAL
+
+echo " "; time $prog 100000 2 522 34
+echo " "; time $prog 10000 3 1445 62
 
 echo " "; time $prog 10000 23 222 34
 echo " "; time $prog 1000 50 445 62
@@ -58,19 +67,51 @@ echo " "; time $prog 1000 100 155 112
 
 echo " "; time $prog 10 430 520 540
 echo " "; time $prog 2 800 1150 920
+echo " "; time $prog 1 1271 1341 1013
 
-echo " "; echo outer
+echo " "; time $prog 1 1271 1341 1271
+
+echo " "; echo OUTER
 
 echo " "; time $prog 10000 230 1 341
 echo " "; time $prog 100 2031 1 3201
 
-echo " "; echo sequence
+echo " "; echo TRANS1
+
+echo " "; time $prog 100000 t 2 522 34
+echo " "; time $prog 10000 t 3 1445 62
+
+echo " "; time $prog 10 t 430 520 540
+echo " "; time $prog 2 t 800 1150 920
+echo " "; time $prog 1 t 1271 1341 1013
+
+echo " "; time $prog 1 t 1271 1341 1271
+echo " "; time $prog 1 T 1271 1341 1271
+
+echo " "; echo TRANS2
+
+echo " "; time $prog 100000 2 522 34 t
+echo " "; time $prog 10000 3 1445 62 t
+
+echo " "; time $prog 10 430 520 540 t
+echo " "; time $prog 2 800 1150 920 t
+echo " "; time $prog 1 1271 1341 1013 t
+
+echo " "; time $prog 1 1271 1341 1271 t
+echo " "; time $prog 1 1271 1341 1271 T
+
+echo " "; echo SEQUENCE
+
+echo " "; time $prog 40000 2 2 40 381
 
 echo " "; time $prog 20000 25 36 38 29 28
 echo " "; time $prog 500 55 145 81 93
 
 echo " "; time $prog 30 215 201 308 270 230
-echo " "; time $prog 3 487 691 570 399
+echo " "; time $prog 4 487 691 570 399
+echo " "; time $prog 1 1287 1201 670 499
+
+echo " "; time $prog 1 t 1287 1201 670 499 t
 
 echo " "; time $prog 20000 v 25 36 38 29 28
 echo " "; time $prog 500 v 55 145 81 93

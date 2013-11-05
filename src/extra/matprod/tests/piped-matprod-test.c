@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "helpers-app.h"
-#include "piped-matprod.h"
+
 
 char *prog_name = "piped-matprod-test";
 
@@ -80,25 +80,32 @@ void helpers_master (void)
     for (i = nmat-2; i>=0; i--)
     { v |= vec[i+1];
       if (vec[i] && v && matrows[i]==1 && matcols[nmat-1]==1) 
-      { helpers_do_task (HELPERS_PIPE_IN2, task_piped_matprod_vec_vec, 0,
-                         -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      { helpers_do_task (HELPERS_PIPE_IN2, task_piped_matprod_vec_vec,
+                         0, -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
       }
       else if (v && matcols[nmat-1]==1)
-      { helpers_do_task (HELPERS_PIPE_IN2, task_piped_matprod_mat_vec, 0,
-                         -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      { helpers_do_task (HELPERS_PIPE_IN2, task_piped_matprod_mat_vec,
+                         0, -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
       }
       else if (vec[i] && matrows[i]==1)
-      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_vec_mat, 0,
-                         -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_vec_mat,
+                         0, -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      }
+      else if (i==0 && trans1)
+      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_trans1, 
+                         matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      }
+      else if (i==nmat-2 && trans2)
+      { helpers_do_task (HELPERS_PIPE_OUT, task_piped_matprod_trans2, 
+                         matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
       }
       else
-      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod, matcols[i],
-                         -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod, 
+                         matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
       }
     }
     helpers_wait_for_all();
   }  
 
-  if (prodlen[0]!=1) printf ("%.16g ", product[0][0]);
-  printf ("%.16g\n", product[0][prodlen[0]-1]);
+  print_result();
 }
