@@ -22,22 +22,32 @@ The matprod library provides double-precision real matrix/vector by
 matrix/vector multiplication routines.  These routines are written
 with some attention to cache performance and other efficiency issues,
 but they are probably not as efficient as some other matrix
-multiplication packages.  However, they do not bypass multiplications
-by zero, and therefore propagate Inf and NaN values properly, and the
-pipelined versions allow for possible parallel operation in the
-context of a program using the helpers library.
+multiplication packages.  
 
-There are two implementations of these routines, with different
-interfaces.  One set, in matprod.c, are called in ordinary C fashion.
-The other set, in piped-matprod.c, are task procedures for use with
-the helpers library for parallel computation.  These task procedures
-support pipelined input for the second operand, and pipelined output
-in the case of matrix-matrix and vector-matrix multiplication.
+However, these routines have been written to produce the same results
+as the obvious matrix multiplication algorithms.  They do not bypass
+multiplications by zero, and therefore propagate Inf and NaN values
+properly.  They do not re-group additions assuming associativity
+holds, so round-off errors will be the same as for the obvious
+algorithms.
+
+There are pipelined versions of these routines that allow for possible
+parallel operation in the context of a program using the helpers
+library.
+
+The non-pipelined routines, in matprod.c, are called in ordinary C
+fashion.  The pipelined routines, in piped-matprod.c, are task
+procedures for use with the helpers library for parallel computation.
+These task procedures support pipelined input for the second operand
+(except for the matrix times transposed matrix operation), and
+pipelined output in the case of matrix-matrix and vector-matrix
+multiplication.
 
 Note that matrices are assumed to be stored in FORTRAN memory order,
 proceeding down columns (not across rows).  To use the matprod
 routines with matrices stored in standard C (row-major) order, just
-reverse the order of the operands.
+reverse the order of the operands (and exchange matprod_trans1 and
+matprod_trans2).
 
 
 Procedures in matprod.c:
@@ -64,20 +74,31 @@ The procedures below are in matprod.c, with declarations in matprod.h:
       Multiply matrix x, of dimension n x k, and matrix y, of dimension
       k x m, storing the result in matrix z, of dimension n x m.
 
+    void matprod_trans1 (double *x, double *y, double *z, int n, int k, int m);
+
+      Multiply transpose of matrix x, of dimension k x n, and matrix y, 
+      of dimension k x m, storing the result in matrix z, of dimension n x m.
+
+    void matprod_trans2 (double *x, double *y, double *z, int n, int k, int m);
+
+      Multiply matrix x, of dimension n x k, and the transpose of matrix y, 
+      of dimension m x k, storing the result in matrix z, of dimension n x m.
+
 For the above procedures, the result matrix, z, must have no overlap
 with the operands, x and y.  However, the operands may be the same or
 may overlap.
 
 See the comments in matprod.c for details on the algorithms used,
 including compile options for selecting an alternative algorithm for
-each procedure.
+most of the procedures.
 
 
 Task procedures in piped-matprod.c:
 
 In this version, the matprod routines are task procedures for use with
-the "helpers" facility, with pipelining of the second operand and, for
-matrix-matrix and vector-matrix procedures, of the output.
+the "helpers" facility, with pipelining of the second operand (except
+for matprod_trans2) and pipelining of the output for matrix-matrix and
+vector-matrix operations.
 
 Using these routines requires the helpers.h and helpers.c files from
 the helpers library, available at github.com/radfordneal/helpers.  A
@@ -107,18 +128,34 @@ non-pipelined procedures above, and are as follows:
 
       Vector-matrix multiply, with column-by-column pipelining of the
       second operand, and element-by-element pipelining of the output.
-      (However, to reduce overhead, an element of the output may not
-      always be made available immediately after it is computed.)
 
     task_piped_matprod_mat_vec
 
       Matrix-vector multiply, with element-by-element pipelining of
       the second operand.
 
-    task_piped_matprod_mat_mat
+    task_piped_matprod
 
-      Vector-matrix multiply, with column-by-column pipelining of the
+      Matrix-matrix multiply, with column-by-column pipelining of the
       second operand, and column-by-column pipelining of the output.
+
+    task_piped_matprod_trans1
+
+      Multiplies the transpose of first operand matrix and the second
+      operand matrix, with column-by-column pipelining of the second
+      operand, and column-by-column pipelining of the output.
+
+    task_piped_matprod_trans2
+
+      Multiplies the first operand matrix and the transpose of the
+      second operand matrix, with column-by-column pipelining of the
+      output, but no pipelining of the operands.  (However, this task
+      procedure does explicitly wait for the second operand to become
+      available, in case it has been scheduled with pipelining of this 
+      operand, since it is pipelined for all the other task procedures.)
+
+Note that, to reduce overhead, columns or elements of pipelined output
+may not always be made available immediately after being computed.
 
 There are no alternative algorithms implemented for these procedures.
 
@@ -133,22 +170,40 @@ are primarily intended for testing speed.
 
 These programs are invoked by a command such as the following:
 
-    matprod-test rep A B C D
+    matprod-test rep [ "t" | "T" ] A B C D [ "t" | "T" ]
 
-Where the arguments are positive integers.  In this example, three
-matrices of dimensions AxB, BxC, and CxD are created, and the product
-of the first of these matrices with the product of the second and
-third matrices is computed (note the right associativity), with this
-computation repeated rep times (with identical results each time, one
-hopes).  The upper-right and lower-left elements of the result are
-then printed on standard output (except that only one element is
-printed if the result is scalar, that is of dimensions 1x1).
+Where the arguments (other than the optional "t" arguments) are
+positive integers.  In this example, three matrices of dimensions AxB,
+BxC, and CxD are created, and the product of the first of these
+matrices with the product of the second and third matrices is computed
+(note the right associativity), with this computation repeated rep
+times (with identical results each time, one hopes).  The first,
+second, second-to-last, and last elements of the result are then
+printed on standard output, with elements ordered downwards by column,
+except that fewer elements are printed when only fewer exist.
 
-In general, n>2 arguments must follow the rep argument, defining the
-dimensions of n-1 matrices, which are used as operands in n-2 matrix
-multiplication operations, which associate to the right.  The result
-of each of these products will be a matrix with number of columns
-equal to the last argument.
+In general, n>2 arguments (other than "t" or "T") follow the rep
+argument, defining the dimensions of n-1 matrices, which are used as
+operands in n-2 matrix multiplication operations, which associate to
+the right.  The result of each of these products will be a matrix with
+number of columns equal to the last argument.
+
+If the optional "t" or "T" argument precedes the matrix dimensions,
+the final multiply (by the AxB matrix in the example above) is done by
+multiplying by the transpose of this matrix (eg, with matprod_trans1).
+Similarly, if the optional final "t" or "T" argument is present, the
+first multiply (of a CxD matrix in the example above) is done on the
+transpose of this matrix (eg, using matprod_trans2).  If only one
+multiplication is done (ie, only three matrix dimensions are
+specified), "t" or "T" must not be on both the left and right (ie, a
+multiply with both operands transposed is not allowed).
+
+If "T" is specified instead of "t" on either the right or left, the
+result of the multiply must be a square matrix (eg, for "T" on the
+right, B must be the same as D in the example above).  The two
+operands of this multiply will then be set to be the same matrix,
+which may allow for the multiply to be done more quickly (eg, by
+exploiting the fact that the result is symmetric).  
 
 An argument after rep with the value "1" may be replaced with the
 argument "v" or "V", which has the same effect as "1", except that the
@@ -161,8 +216,15 @@ mat_vec procedure, except if the first operand was also specified
 using "v" or "V", in which case the vec_vec procedure will be used.
 
 The matrices created by the test programs have elements that are set
-to the index of the matrix (from 0), plus the index of the element
-(from 0, down each column in succession), plus 0.1.
+to 0.1 times the sum of the number of rows and columns in the matrix,
+plus 0.01 times the product of the number of rows and columns in the
+matrix, plus 0.01 times the product of the row and column indexes for
+each element.  A matrix whose transpose will be used as an operand
+will be initialized so that this is its value after transposition, so
+the results obtained should be the same with or without the "t"
+option, on either the left or right.  Since the initialization is
+invariant to transposition, the result with "T" instead of "t" is also
+the same.
 
 Several test programs can be compiled using the supplied Makefile, as
 follows:
@@ -184,7 +246,7 @@ follows:
       is defined, trace output from the helpers library is enabled.
       See below for the special role of a last argument of "V".
 
-    piped-matprod-test-d
+    piped-matprod-d-test
 
       The same as piped-matprod-test, except that helper threads are
       disabled, which allows the overhead of providing for helper
@@ -193,9 +255,11 @@ follows:
 
     blas-test
 
-      Uses BLAS routines in ddot.f, dgemm.f, dgemv.f, and lsame.f.  
-      A xerbla routine for BLAS error reporting is provided as part 
-      of the test program.
+      Uses BLAS routines in ddot.f, dgemv.f, dgemm.f, dsyrk.f, and
+      lsame.f.  A xerbla routine for BLAS error reporting is provided
+      as part of the test program.  The dsyrk routine is used when the
+      "T" option is specified, along with a C routine for filling in
+      the lower triangle of the matrix from the upper triangle.
 
     blas2-test
 
@@ -211,10 +275,11 @@ If the last argument to piped-matprod-test is "V" (only, not "v"), the
 final matrix (a column vector) will be supplied as pipelined output
 from a task procedure that delivers elements in groups of 17 (or fewer
 for the last group), with variable time lags.  This allows pipelining
-to be tested for the mat_vec and vec_vec procedures, for which pipeled
-input cannot otherwise be arranged.  (Of course, this is slower than
-just accessing the already-initialized matrix.)
+to be tested for the mat_vec and vec_vec procedures, for which
+pipelined input cannot otherwise be arranged.  (Of course, this is
+slower than just accessing the already-initialized matrix.)
 
 The shell file run-tests runs a series of tests, with the test program
 specified by its first argument (eg, matprod-test) and a setting of an
 environment variable given by its optional second argument.
+

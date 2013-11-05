@@ -21,12 +21,13 @@ version 2.
 
 
 The matprod library contains procedures for vector-vector,
-matrix-vector, vector-matrix, and matrix-matrix multiplication.  The
-file matprod.c (interface defined in matprod.h) contains conventional
-versions of these procedures.  The file piped-matprod.c (interface
-defined in piped-matprod.h) contains versions that are structured as
-task procedures for use with the "helpers" library for parallel
-execution of tasks, with pipelining.
+matrix-vector, vector-matrix, and matrix-matrix multiplication (plus
+version of matrix-matrix multiplication where one operand is
+transposed).  The file matprod.c (interface defined in matprod.h)
+contains conventional versions of these procedures.  The file
+piped-matprod.c (interface defined in piped-matprod.h) contains
+versions that are structured as task procedures for use with the
+"helpers" library for parallel execution of tasks, with pipelining.
 
 The directory "tests" contains some test programs.
 
@@ -38,4 +39,4 @@ helpers library is available from github.com/radfordneal/helpers.
 
 Radford Neal may be contacted at radfordneal@gmail.com.
 
-This is the version of 2013-06-15.
+This is the version of 2013-11-05.
