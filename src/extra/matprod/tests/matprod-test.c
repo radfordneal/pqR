@@ -45,6 +45,14 @@ void do_test (int rep)
       { matprod_vec_mat (matrix[i], product[i+1], product[i],
                          matcols[i], matcols[nmat-1]);
       }
+      else if (i==0 && trans1)
+      { matprod_trans1 (matrix[i], product[i+1], product[i],
+                        matrows[i], matcols[i], matcols[nmat-1]);
+      }
+      else if (i==nmat-2 && trans2)
+      { matprod_trans2 (matrix[i], product[i+1], product[i],
+                        matrows[i], matcols[i], matcols[nmat-1]);
+      }
       else
       { matprod (matrix[i], product[i+1], product[i],
                  matrows[i], matcols[i], matcols[nmat-1]);
@@ -52,6 +60,5 @@ void do_test (int rep)
     }
   }  
 
-  if (prodlen[0]!=1) printf ("%.16g ", product[0][0]);
-  printf ("%.16g\n", product[0][prodlen[0]-1]);
+  print_result();
 }

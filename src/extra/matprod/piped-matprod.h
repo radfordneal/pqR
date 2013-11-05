@@ -22,3 +22,5 @@ helpers_task_proc task_piped_matprod_vec_vec;
 helpers_task_proc task_piped_matprod_vec_mat;
 helpers_task_proc task_piped_matprod_mat_vec;
 helpers_task_proc task_piped_matprod;
+helpers_task_proc task_piped_matprod_trans1;
+helpers_task_proc task_piped_matprod_trans2;
