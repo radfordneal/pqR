@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for i in blas blas2 matprod matprod-alt piped-matprod piped-matprod-d; do
+  run-tests $i-test >& $i.out
+  tim $i
+done
