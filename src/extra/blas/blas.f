@@ -634,6 +634,7 @@ c               END IF
       LOGICAL            NOTA, NOTB
       INTEGER            I, INFO, J, L, NCOLA, NROWA, NROWB
       DOUBLE PRECISION   TEMP, TEMP2, TEMP00, TEMP01, TEMP10, TEMP11
+      DOUBLE PRECISION   T, T2
 *     .. Parameters ..
       DOUBLE PRECISION   ONE         , ZERO
       PARAMETER        ( ONE = 1.0D+0, ZERO = 0.0D+0 )
@@ -720,41 +721,93 @@ c               END IF
 *
 *           Form  C := alpha*A*B + beta*C.
 *
-c           Modified by R. M. Neal, 2012, to do two columns at once.
-c           Also, doesn't omit multiplies when an operand is zero.
+c           Modified by R. M. Neal, 2012, to compute two columns of
+c           the result at once, each found by summing products with
+c           two columns of the right operand at once.
 c
-            DO 90, J = 1, N
+c           Also, it doesn't omit multiplies when an operand is zero.
+c
+            IF (MOD(N,2).NE.0) THEN
                IF( MOD(K,2).EQ.0 )THEN
                   IF( BETA.EQ.ZERO )THEN
                      DO 51, I = 1, M
-                        C( I, J ) = ZERO
+                        C( I, 1 ) = ZERO
    51                CONTINUE
                   ELSE IF( BETA.NE.ONE )THEN
                      DO 52, I = 1, M
-                        C( I, J ) = BETA*C( I, J )
+                        C( I, 1 ) = BETA*C( I, 1 )
    52                CONTINUE
                   END IF
                ELSE
-                  TEMP = ALPHA*B( 1, J )
+                  TEMP = ALPHA*B( 1, 1 )
                   IF ( BETA.EQ.ZERO )THEN
-                     DO 61, I = 1, M
-                        C( I, J ) = TEMP*A( I, 1 )
-   61                CONTINUE
+                     DO 53, I = 1, M
+                        C( I, 1 ) = TEMP*A( I, 1 )
+   53                CONTINUE
                   ELSE IF ( BETA.NE.ONE )THEN
-                     DO 62, I = 1, M
-                        C( I, J ) = BETA*C( I, J ) + TEMP*A( I, 1 )
-   62                CONTINUE
+                     DO 54, I = 1, M
+                        C( I, 1 ) = BETA*C( I, 1 ) + TEMP*A( I, 1 )
+   54                CONTINUE
                   ELSE
+                     DO 55, I = 1, M
+                        C( I, 1 ) = C( I, 1 ) + TEMP*A( I, 1 )
+   55                CONTINUE
+                  END IF
+               END IF
+               DO 57, L = MOD(K,2)+1, K, 2
+                  TEMP = ALPHA*B( L, 1 )
+                  TEMP2 = ALPHA*B( L+1, 1 )
+                  DO 56, I = 1, M
+                     C(I,1) = C(I,1) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+   56             CONTINUE
+   57          CONTINUE
+            END IF
+            DO 90, J = MOD(N,2)+1, N, 2
+               IF( MOD(K,2).EQ.0 )THEN
+                  IF( BETA.EQ.ZERO )THEN
+                     DO 61, I = 1, M
+                        C( I, J ) = ZERO
+                        C( I, J+1 ) = ZERO
+   61                CONTINUE
+                  ELSE IF( BETA.NE.ONE )THEN
+                     DO 62, I = 1, M
+                        C( I, J ) = BETA*C( I, J )
+                        C( I, J+1 ) = BETA*C( I, J+1 )
+   62                CONTINUE
+                  END IF
+               ELSE
+                  TEMP = ALPHA*B( 1, J )
+                  TEMP2 = ALPHA*B( 1, J+1 )
+                  IF ( BETA.EQ.ZERO )THEN
                      DO 63, I = 1, M
-                        C( I, J ) = C( I, J ) + TEMP*A( I, 1 )
+                        T = A(I,1)
+                        C(I,J) = TEMP * T
+                        C(I,J+1) = TEMP2 * T
    63                CONTINUE
+                  ELSE IF ( BETA.NE.ONE )THEN
+                     DO 64, I = 1, M
+                        T = A(I,1)
+                        C(I,J) = BETA*C(I,J) + TEMP * T
+                        C(I,J+1) = BETA*C(I,J+1) + TEMP2 * T
+   64                CONTINUE
+                  ELSE
+                     DO 65, I = 1, M
+                        T = A(I,1)
+                        C(I,J) = C(I,J) + TEMP * T
+                        C(I,J+1) = C(I,J+1) + TEMP2 * T
+   65                CONTINUE
                   END IF
                END IF
                DO 80, L = MOD(K,2)+1, K, 2
-                  TEMP = ALPHA*B( L, J )
-                  TEMP2 = ALPHA*B( L+1, J )
+                  TEMP00 = ALPHA * B(L,J)
+                  TEMP01 = ALPHA * B(L+1,J)
+                  TEMP10 = ALPHA * B(L,J+1)
+                  TEMP11 = ALPHA * B(L+1,J+1)
                   DO 70, I = 1, M
-                     C(I,J) = C(I,J) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+                     T = A(I,L)
+                     T2 = A(I,L+1)
+                     C(I,J) = C(I,J) + T * TEMP00 + T2 * TEMP01
+                     C(I,J+1) = C(I,J+1) + T * TEMP10 + T2 * TEMP11
    70             CONTINUE
    80          CONTINUE
    90       CONTINUE
@@ -860,41 +913,92 @@ c
 *
 *           Form  C := alpha*A*B' + beta*C
 *
-c           Modified by R. M. Neal, 2012, to do two columns at once.
+c           Modified by R. M. Neal, 2012, to produce two columns of
+c           the result at once, while accessing two rows of B at once.
+c
 c           Also, doesn't omit multiplies when an operand is zero.
 c
-            DO 170, J = 1, N
+            IF (MOD(N,2).NE.0) THEN
                IF( MOD(K,2).EQ.0 )THEN
                   IF( BETA.EQ.ZERO )THEN
                      DO 131, I = 1, M
-                        C( I, J ) = ZERO
+                        C( I, 1 ) = ZERO
   131                CONTINUE
                   ELSE IF( BETA.NE.ONE )THEN
                      DO 132, I = 1, M
-                        C( I, J ) = BETA*C( I, J )
+                        C( I, 1 ) = BETA*C( I, 1 )
   132                CONTINUE
                   END IF
                ELSE
-                  TEMP = ALPHA*B( J, 1 )
+                  TEMP = ALPHA*B( 1, 1 )
+                  IF( BETA.EQ.ZERO )THEN
+                     DO 133, I = 1, M
+                        C( I, 1 ) = TEMP*A( I, 1 )
+  133                CONTINUE
+                  ELSE IF( BETA.NE.ONE )THEN
+                     DO 134, I = 1, M
+                        C( I, 1 ) = BETA*C( I, 1 ) + TEMP*A( I, 1 )
+  134                CONTINUE
+                  ELSE
+                     DO 135, I = 1, M
+                        C( I, 1 ) = C( I, 1 ) + TEMP*A( I, 1 )
+  135                CONTINUE
+                  END IF
+               ENDIF
+               DO 137, L = MOD(K,2)+1, K, 2
+                  TEMP = ALPHA*B( 1, L )
+                  TEMP2 = ALPHA*B( 1, L+1 )
+                  DO 136, I = 1, M
+                     C(I,1) = C(I,1 ) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+  136             CONTINUE
+  137          CONTINUE
+            END IF
+            DO 170, J = MOD(N,2)+1, N, 2
+               IF( MOD(K,2).EQ.0 )THEN
                   IF( BETA.EQ.ZERO )THEN
                      DO 141, I = 1, M
-                        C( I, J ) = TEMP*A( I, 1 )
+                        C( I, J ) = ZERO
+                        C( I, J+1 ) = ZERO
   141                CONTINUE
                   ELSE IF( BETA.NE.ONE )THEN
                      DO 142, I = 1, M
-                        C( I, J ) = BETA*C( I, J ) + TEMP*A( I, 1 )
+                        C( I, J ) = BETA*C( I, J )
+                        C( I, J+1 ) = BETA*C( I, J+1 )
   142                CONTINUE
+                  END IF
+               ELSE
+                  TEMP = ALPHA*B( J, 1 )
+                  TEMP2 = ALPHA*B( J+1, 1 )
+                  IF( BETA.EQ.ZERO )THEN
+                     DO 145, I = 1, M
+                        T = A(I,1)
+                        C( I, J ) = TEMP * T
+                        C( I, J+1 ) = TEMP2 * T
+  145                CONTINUE
+                  ELSE IF( BETA.NE.ONE )THEN
+                     DO 146, I = 1, M
+                        T = A(I,1)
+                        C( I, J ) = BETA * C( I, J ) + TEMP * T
+                        C( I, J+1 ) = BETA * C( I, J+1 ) + TEMP2 * T
+  146                CONTINUE
                   ELSE
-                     DO 143, I = 1, M
-                        C( I, J ) = C( I, J ) + TEMP*A( I, 1 )
-  143                CONTINUE
+                     DO 147, I = 1, M
+                        T = A(I,1)
+                        C( I, J ) = C( I, J ) + TEMP * T
+                        C( I, J+1 ) = C( I, J+1 ) + TEMP2 * T
+  147                CONTINUE
                   END IF
                ENDIF
                DO 160, L = MOD(K,2)+1, K, 2
-                  TEMP = ALPHA*B( J, L )
-                  TEMP2 = ALPHA*B( J, L+1 )
+                  TEMP00 = ALPHA*B( J, L )
+                  TEMP01 = ALPHA*B( J, L+1 )
+                  TEMP10 = ALPHA*B( J+1, L )
+                  TEMP11 = ALPHA*B( J+1, L+1 )
                   DO 150, I = 1, M
-                     C(I,J) = C(I,J ) + TEMP*A(I,L) + TEMP2*A(I,L+1)
+                     T = A(I,L)
+                     T2 = A(I,L+1)
+                     C(I,J) = C(I,J ) + TEMP00 * T + TEMP01 * T2
+                     C(I,J+1) = C(I,J+1 ) + TEMP10 * T + TEMP11 * T2
   150             CONTINUE
   160          CONTINUE
   170       CONTINUE
