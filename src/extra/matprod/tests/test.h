@@ -34,9 +34,13 @@ EXTERN int matlen[MAX_MATRICES];     /* Length of each matrix (rows x cols) */
 
 EXTERN int vec[MAX_MATRICES+1];      /* Indicator to treat as a vector */
 EXTERN int last_V;                   /* Whether last argument is "V" */
+EXTERN int trans1;                   /* Treat first matrix as its transpose? */
+EXTERN int trans2;                   /* Treat last matrix as its transpose? */
 
 EXTERN double *product[MAX_MATRICES];/* Pointers to storage for products */
 EXTERN int prodlen[MAX_MATRICES];    /* Length of each product matrix */
 
 extern char *prog_name;              /* Name of test program (for usage msg) */
+
 extern void do_test(int);            /* Procedure to do the test (repeatedly) */
+extern void print_result (void);     /* Print part of final result matrix */

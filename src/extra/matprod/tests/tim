@@ -1,0 +1,1 @@
+fgrep real $1.out$2 | sed "s/real *//" | sed "s/0m//" | sed "s/s//" >$1.tim$2
