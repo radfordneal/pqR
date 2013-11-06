@@ -453,13 +453,56 @@ SEXP attribute_hidden do_rowscols (SEXP call, SEXP op, SEXP args, SEXP rho,
     return allocMatrix1 (ans, nr, nc);
 }
 
-void task_matprod_zero (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+/* Fill the lower triangle of an n-by-n matrix from the upper triangle.  Fills
+   two rows at once to improve cache performance. */
+
+static void fill_lower (double *z, int n)
+{
+   int i, ii, jj, e;
+
+    /* This loop fills two rows of the lower triangle each iteration. 
+       Since there's nothing to fill for the first row, we can either 
+       start with it or with the next row, so that the number of rows 
+       we fill will be a multiple of two. */
+
+    for (i = (n&1); i < n; i += 2) {
+
+        ii = i;    /* first position to fill in the first row of the pair */
+        jj = i*n;  /* first position to fetch from */
+
+        /* This loop fills in the pair of rows, also filling the diagonal
+           element of the first (which is unnecessary but innocuous). */
+
+        e = jj+i;
+
+        for (;;) {
+            z[ii] = z[jj];
+            z[ii+1] = z[jj+n];
+            if (jj == e) break;
+            ii += n;
+            jj += 1;
+        }
+    }
+}
+
+/* Fill vector/matrix with zeros. */
+
+void task_fill_zeros (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 {
   double *z = REAL(sz);
   R_len_t u = LENGTH(sz);
   R_len_t i;
 
   for (i = 0; i < u; i++) z[i] = 0;
+}
+
+void task_cfill_zeros (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{
+  Rcomplex *z = COMPLEX(sz);
+  R_len_t u = LENGTH(sz);
+  R_len_t i;
+
+  for (i = 0; i < u; i++) z[i].r = z[i].i = 0;
 }
 
 /* Real matrix product, using the routines in extra/matprod. */
@@ -498,6 +541,26 @@ void task_matprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     int ncy = LENGTH(sy) / ncx_nry;
 
     matprod (x, y, z, nrx, ncx_nry, ncy);
+}
+
+void task_matprod_trans1 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int k = op;
+    int nr = LENGTH(sx) / k;
+    int nc = LENGTH(sy) / k;
+
+    matprod_trans1 (x, y, z, nr, k, nc);
+}
+
+void task_matprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int k = op;
+    int nr = LENGTH(sx) / k;
+    int nc = LENGTH(sy) / k;
+
+    matprod_trans2 (x, y, z, nr, k, nc);
 }
 
 /* Real matrix product, using the BLAS routines. */
@@ -550,16 +613,47 @@ void task_matprod_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
                       x, &nrx, y, &ncx_nry, &zero, z, &nrx);
 }
 
-/* Complex matrix product. */
+void task_matprod_trans1_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nr = op;
+    int ncx = LENGTH(sx) / nr;
+    int ncy = LENGTH(sy) / nr;
+    double one = 1.0, zero = 0.0;
 
-void task_cmatprod_zero (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
-{
-  Rcomplex *z = COMPLEX(sz);
-  R_len_t u = LENGTH(sz);
-  R_len_t i;
-
-  for (i = 0; i < u; i++) z[i].r = z[i].i = 0;
+    if (x == y && nr > 10) { /* using dsyrk may be slower if nr is small */
+        char *trans = "T", *uplo = "U";
+	F77_CALL(dsyrk)(uplo, trans, &ncx, &nr, &one, x, &nr, &zero, z, &ncx);
+        fill_lower(z,ncx);
+    }
+    else {
+        char *transa = "T", *transb = "N";
+	F77_CALL(dgemm)(transa, transb, &ncx, &ncy, &nr, &one,
+			x, &nr, y, &nr, &zero, z, &ncx);
+    }
 }
+
+void task_matprod_trans2_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+{ 
+    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
+    int nc = op;
+    int nrx = LENGTH(sx) / nc;
+    int nry = LENGTH(sy) / nc;
+    double one = 1.0, zero = 0.0;
+
+    if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
+        char *trans = "N", *uplo = "U";
+	F77_CALL(dsyrk)(uplo, trans, &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
+        fill_lower(z,nrx);
+    }
+    else {
+        char *transa = "N", *transb = "T";
+	F77_CALL(dgemm)(transa, transb, &nrx, &nry, &nc, &one,
+			x, &nrx, y, &nry, &zero, z, &nrx);
+    }
+}
+
+/* Complex matrix product. */
 
 void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 { 
@@ -609,58 +703,6 @@ void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 #endif
 }
 
-/* Fill the lower triangle of an n-by-n matrix from the upper triangle.  Fills
-   two rows at once to improve cache performance. */
-
-static void fill_lower (double *z, int n)
-{
-   int i, ii, jj, e;
-
-    /* This loop fills two rows of the lower triangle each iteration. 
-       Since there's nothing to fill for the first row, we can either 
-       start with it or with the next row, so that the number of rows 
-       we fill will be a multiple of two. */
-
-    for (i = (n&1); i < n; i += 2) {
-
-        ii = i;    /* first position to fill in the first row of the pair */
-        jj = i*n;  /* first position to fetch from */
-
-        /* This loop fills in the pair of rows, also filling the diagonal
-           element of the first (which is unnecessary but innocuous). */
-
-        e = jj+i;
-
-        for (;;) {
-            z[ii] = z[jj];
-            z[ii+1] = z[jj+n];
-            if (jj == e) break;
-            ii += n;
-            jj += 1;
-        }
-    }
-}
-
-void task_matprod_trans1_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
-{ 
-    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
-    int nr = op;
-    int ncx = LENGTH(sx) / nr;
-    int ncy = LENGTH(sy) / nr;
-    double one = 1.0, zero = 0.0;
-
-    if (x == y && nr > 10) { /* using dsyrk may be slower if nr is small */
-        char *trans = "T", *uplo = "U";
-	F77_CALL(dsyrk)(uplo, trans, &ncx, &nr, &one, x, &nr, &zero, z, &ncx);
-        fill_lower(z,ncx);
-    }
-    else {
-        char *transa = "T", *transb = "N";
-	F77_CALL(dgemm)(transa, transb, &ncx, &ncy, &nr, &one,
-			x, &nr, y, &nr, &zero, z, &ncx);
-    }
-}
-
 void task_cmatprod_trans1 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 { 
     Rcomplex *z = COMPLEX(sz), *x = COMPLEX(sx), *y = COMPLEX(sy);
@@ -673,26 +715,6 @@ void task_cmatprod_trans1 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 
     F77_CALL(zgemm) (transa, transb, &ncx, &ncy, &nr, &one,
                      x, &nr, y, &nr, &zero, z, &ncx);
-}
-
-void task_matprod_trans2_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
-{ 
-    double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
-    int nc = op;
-    int nrx = LENGTH(sx) / nc;
-    int nry = LENGTH(sy) / nc;
-    double one = 1.0, zero = 0.0;
-
-    if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
-        char *trans = "N", *uplo = "U";
-	F77_CALL(dsyrk)(uplo, trans, &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
-        fill_lower(z,nrx);
-    }
-    else {
-        char *transa = "N", *transb = "T";
-	F77_CALL(dgemm)(transa, transb, &nrx, &nry, &nc, &one,
-			x, &nrx, y, &nry, &zero, z, &nrx);
-    }
 }
 
 void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
@@ -861,7 +883,7 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
 
             if (mode == CPLXSXP) {
                 if (ncx==0) {
-                    task_proc = task_cmatprod_zero;
+                    task_proc = task_cfill_zeros;
                 }
                 else {
                     task_proc = task_cmatprod;
@@ -872,7 +894,7 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
             }
             else {
                 if (ncx==0) {
-                    task_proc = task_matprod_zero;
+                    task_proc = task_fill_zeros;
                 }
                 else if (nrx==1 && ncy==1) {
                     if (R_mat_mult_with_BLAS[0]) {
@@ -999,11 +1021,13 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
         if (LENGTH(ans) != 0) {
 
             int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
+            int no_pipelining = !inhlpr || helpers_not_pipelining;
             helpers_task_proc *task_proc;
+            int flags = 0;
 
             if (mode == CPLXSXP) {
                 if (k==0) {
-                    task_proc = task_cmatprod_zero;
+                    task_proc = task_cfill_zeros;
                 }
                 else {
                     task_proc = cross ? task_cmatprod_trans1
@@ -1015,18 +1039,33 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
             }
             else {
                 if (k==0) {
-                    task_proc = task_matprod_zero;
+                    task_proc = task_fill_zeros;
                 }
                 else {
-                    task_proc = cross ? task_matprod_trans1_BLAS 
-                                      : task_matprod_trans2_BLAS;
+                    if (R_mat_mult_with_BLAS[3]) {
+                        task_proc = cross ? task_matprod_trans1_BLAS 
+                                          : task_matprod_trans2_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                    inhlpr = 0;
+                        inhlpr = 0;
 #endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = cross ? task_matprod_trans1 
+                                          : task_matprod_trans2;
+                    else {
+                        if (cross) {
+                            task_proc = task_piped_matprod_trans1;
+                            flags = HELPERS_PIPE_IN2_OUT;
+                        }
+                        else {
+                            task_proc = task_piped_matprod_trans2;
+                            flags = HELPERS_PIPE_OUT;
+                        }
+                    }
                 }
             }
 
-            DO_NOW_OR_LATER2(variant, inhlpr, 0, task_proc, k, ans, x, y);
+            DO_NOW_OR_LATER2(variant, inhlpr, flags, task_proc, k, ans, x, y);
         }
 
         PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
