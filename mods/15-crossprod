@@ -1,2 +1,4 @@
-Changes in how crossprod and tcrossprod are implemented.  (Also note
-the improved BLAS routines in 14-blas-opt.)
+Changes in how crossprod and tcrossprod are implemented, to make them
+similar to regular matrix multiplies (including pipelining, except no
+input pipelining for tcrossprod).  Takes advantage of the new version
+of 'matprod'.  (Also note the improved BLAS routines in 14-blas-opt.)
