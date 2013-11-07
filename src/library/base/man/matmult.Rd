@@ -27,16 +27,16 @@ x \%*\% y
   This operator is S4 generic but not S3 generic.  S4 methods need to be
   written for a function of two arguments named \code{x} and \code{y}.
 
-  The default method for real matrices uses either built-in
-  C routines or the appropriate BLAS routine, as controlled by the 
-  \code{mat_mult_with_BLAS} option.  This option is a vector of four 
-  logical values, specifying whether a BLAS routine should be used when 
-  the operands of \code{\%*\%} result in the operation being a vector dot 
-  product, a product of a matrix and column vector, a product of a row vector 
-  and a matrix, or a general matrix-matrix product.  The default is to use
-  the builtin C routines for all operations, unless the 
-  \code{--enable-mat-mult-with-BLAS-by-default} option is used 
-  when configuring R.
+  The default method for real matrices uses either built-in C routines
+  or the appropriate BLAS routine, as controlled by the
+  \code{mat_mult_with_BLAS} option.  This option is a vector of four
+  logical values, specifying whether a BLAS routine should be used
+  when the operands of \code{\%*\%} result in the operation being a
+  vector dot product, a product of a matrix and column vector, a
+  product of a row vector and a matrix, or a general matrix-matrix
+  product.  The default is to use the builtin C routines for all operations, 
+  unless the \code{--enable-mat-mult-with-BLAS-by-default} option is used
+  when configuring pqR.
 
   If the builtin C routines are used when helper threads are enabled,
   they will take piplelined input for their second operand, and produce
@@ -49,12 +49,19 @@ x \%*\% y
   Another reason one might wish to use the built-in C routines is that
   they guarantee correct behaviour when some elements are \code{NA},
   \code{NaN}, or infinite, which may not be the case with all BLAS
-  packages. It's also conceivable that a built-in C routine might be
-  faster.  Note that some other linear algebra operations make use of
-  the BLAS matrix multiply routines, regardless of how this option is
-  set.  The BLAS routines are also always used for \code{crossprod}
-  and \code{tcrossprod} (which combine a transpose with a matrix
-  multiply).
+  packages.  Also, the order of addition in the C routines is the same
+  as for the obvious matrix multiplication algorithm, whereas it may
+  differ in some BLAS implementations, which affects roundoff errors.
+  It's also conceivable that a built-in C routine might be
+  faster than the corresponding BLAS routine.
+
+  The default method for complex matrices uses a BLAS routine, unless
+  such a routine does not exist because Fortran double complex values
+  are not supported, in which case a C routine is used.
+
+  Note that some other linear algebra operations make use of
+  the BLAS matrix multiply routines, regardless of how the 
+  \code{mat_mult_with_BLAS} option is set.
 }
 \value{
   A double or complex matrix product.  Use \code{\link{drop}} to remove

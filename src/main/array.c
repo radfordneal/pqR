@@ -1041,6 +1041,48 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
                 if (k==0) {
                     task_proc = task_fill_zeros;
                 }
+                else if (nrows==1 && ncols==1) {
+                    if (R_mat_mult_with_BLAS[0]) {
+                        task_proc = task_matprod_vec_vec_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_vec_vec;
+                    else {
+                        task_proc = task_piped_matprod_vec_vec;
+                        flags = HELPERS_PIPE_IN2;
+                    }
+                }
+                else if (ncols==1) {
+                    if (R_mat_mult_with_BLAS[1]) {
+                        task_proc = task_matprod_mat_vec_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_mat_vec;
+                    else {
+                        task_proc = task_piped_matprod_mat_vec;
+                        flags = HELPERS_PIPE_IN2;
+                    }
+                }
+                else if (nrows==1) {
+                    if (R_mat_mult_with_BLAS[2]) {
+                        task_proc = task_matprod_vec_mat_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_vec_mat;
+                    else {
+                        task_proc = task_piped_matprod_vec_mat;
+                        flags = HELPERS_PIPE_IN2_OUT;
+                    }
+                }
                 else {
                     if (R_mat_mult_with_BLAS[3]) {
                         task_proc = cross ? task_matprod_trans1_BLAS 
