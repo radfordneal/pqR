@@ -16,6 +16,7 @@ test-src-gct = \
 test-src-strict-1 = \
 	$(test-src-gct) \
 	namedcnt.R \
+	matprod.R \
 	d-p-q-r-tests.R
 test-src-strict-auto =
 test-src-sloppy-1 = \
