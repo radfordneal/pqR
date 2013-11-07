@@ -1,0 +1,143 @@
+
+pqR version 2.15.0 (2013-07-22), based on R 2.15.0 (2012-03-30)
+
+R is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013 Radford M. Neal
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
+Deferred evaluation disabled (no helpers, no merging).
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Test matrix multiplication, with %*%, crossprod, and tcrossprod, by
+> # BLAS and 'matprod' routines.
+> #
+> # Added for pqR, 2013, Radford M. Neal.
+> 
+> # Check matrix multiplication with various sizes of matrices, setting
+> # matrix elements to random values that are integer multiples of 1/8 so
+> # that floating point arithmetic will be exact (but accidental conversions
+> # to integer will be detected).  The crossprod and tcrossprod routines
+> # are also checked when give one argument (producing a symmetric result).
+> #
+> # Returns the last (largest) result matrix.
+> 
+> check_matprod <- function ()
++ {  
++   # Matrix multiply the hard way, to check results.
++ 
++   matmult <- function (A,B)
++   { n <- nrow(A)
++     m <- ncol(B)
++     k <- ncol(A)
++     stopifnot(nrow(B)==k)
++     C <- matrix(0,n,m)
++     for (i in seq_len(n))
++     { for (j in seq_len(m))
++       { C[i,j] <- sum (A[i,] * B[,j])
++       }
++     }
++     C
++   }
++ 
++   # Set seed to get consistent results.
++ 
++   set.seed(1)
++ 
++   # Try various sizes.
++ 
++   for (n in 0:11)
++   { for (m in 0:11)
++     { for (k in 0:11)
++       { A <- matrix (rgeom(n*k,0.1)/8, n, k)
++         B <- matrix (rgeom(k*m,0.1)/8, k, m)
++         C <- matmult(A,B)
++         At <- t(A)
++         Bt <- t(B)
++         stopifnot(identical(A%*%B,C))
++         stopifnot(identical(crossprod(At,B),C))
++         stopifnot(identical(tcrossprod(A,Bt),C))
++         if (n==m) 
++         { D <- matmult(At,A)
++           stopifnot(identical(crossprod(A),D))
++           stopifnot(identical(tcrossprod(At),D))
++         }
++       }
++     }
++   }
++ 
++   C
++ }
+> 
+> # Check matrix products using BLAS and using 'matprod' routines.
+> 
+> sv <- getOption("mat_mult_with_BLAS")
+> 
+> options(mat_mult_with_BLAS=F)
+> print(check_matprod())
+          [,1]      [,2]     [,3]      [,4]     [,5]      [,6]      [,7]
+ [1,] 6.859375  8.890625 15.98438 15.484375  9.78125  6.781250  7.781250
+ [2,] 3.500000  7.921875 12.25000 13.421875  9.21875  8.406250 10.265625
+ [3,] 3.375000 10.328125 49.25000 21.859375 40.85938 14.953125 21.718750
+ [4,] 1.000000 10.687500 31.53125 22.625000 20.98438 12.281250 23.859375
+ [5,] 4.875000 10.265625 34.32812 25.171875 36.50000 13.968750 12.015625
+ [6,] 1.593750  8.656250 16.65625 18.484375 16.64062  9.406250 24.296875
+ [7,] 2.406250  4.109375 14.06250  6.312500 11.81250  4.703125  6.203125
+ [8,] 2.171875  7.468750 14.48438 23.593750 16.35938  8.046875 10.609375
+ [9,] 3.906250  7.281250 26.96875 20.218750 27.60938  9.281250 12.671875
+[10,] 2.750000  7.781250 19.46875  7.390625 22.39062 11.812500  7.453125
+[11,] 2.437500  7.281250 21.40625 18.312500 29.15625  8.140625  9.796875
+           [,8]      [,9]     [,10]     [,11]
+ [1,] 11.796875 10.281250 13.546875  5.140625
+ [2,]  6.203125 10.937500 11.578125  5.609375
+ [3,]  4.484375 25.421875 15.984375 21.546875
+ [4,]  8.546875 22.468750 15.359375 18.234375
+ [5,]  5.703125 30.281250 24.937500 18.296875
+ [6,]  7.000000 13.937500 11.218750 11.015625
+ [7,]  3.500000  8.828125  4.421875  6.093750
+ [8,]  2.859375 18.437500 35.046875  7.718750
+ [9,]  7.984375 17.375000 15.796875 15.984375
+[10,]  2.968750 15.406250  5.000000 11.921875
+[11,] 16.500000 19.500000  8.953125 22.812500
+> 
+> options(mat_mult_with_BLAS=T)
+> print(check_matprod())
+          [,1]      [,2]     [,3]      [,4]     [,5]      [,6]      [,7]
+ [1,] 6.859375  8.890625 15.98438 15.484375  9.78125  6.781250  7.781250
+ [2,] 3.500000  7.921875 12.25000 13.421875  9.21875  8.406250 10.265625
+ [3,] 3.375000 10.328125 49.25000 21.859375 40.85938 14.953125 21.718750
+ [4,] 1.000000 10.687500 31.53125 22.625000 20.98438 12.281250 23.859375
+ [5,] 4.875000 10.265625 34.32812 25.171875 36.50000 13.968750 12.015625
+ [6,] 1.593750  8.656250 16.65625 18.484375 16.64062  9.406250 24.296875
+ [7,] 2.406250  4.109375 14.06250  6.312500 11.81250  4.703125  6.203125
+ [8,] 2.171875  7.468750 14.48438 23.593750 16.35938  8.046875 10.609375
+ [9,] 3.906250  7.281250 26.96875 20.218750 27.60938  9.281250 12.671875
+[10,] 2.750000  7.781250 19.46875  7.390625 22.39062 11.812500  7.453125
+[11,] 2.437500  7.281250 21.40625 18.312500 29.15625  8.140625  9.796875
+           [,8]      [,9]     [,10]     [,11]
+ [1,] 11.796875 10.281250 13.546875  5.140625
+ [2,]  6.203125 10.937500 11.578125  5.609375
+ [3,]  4.484375 25.421875 15.984375 21.546875
+ [4,]  8.546875 22.468750 15.359375 18.234375
+ [5,]  5.703125 30.281250 24.937500 18.296875
+ [6,]  7.000000 13.937500 11.218750 11.015625
+ [7,]  3.500000  8.828125  4.421875  6.093750
+ [8,]  2.859375 18.437500 35.046875  7.718750
+ [9,]  7.984375 17.375000 15.796875 15.984375
+[10,]  2.968750 15.406250  5.000000 11.921875
+[11,] 16.500000 19.500000  8.953125 22.812500
+> 
+> options(mat_mult_with_BLAS=sv)
+> 
