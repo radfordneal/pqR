@@ -1,6 +1,7 @@
 % File src/library/base/man/crossprod.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{crossprod}
@@ -9,7 +10,7 @@
 \title{Matrix Crossproduct}
 \description{
   Given matrices \code{x} and \code{y} as arguments, return a matrix
-  cross-product.  This is formally equivalent to (but usually slightly
+  cross-product.  This is formally equivalent to (but usually
   faster than) the call \code{t(x) \%*\% y} (\code{crossprod}) or
   \code{x \%*\% t(y)} (\code{tcrossprod}).
 }
@@ -27,7 +28,27 @@ tcrossprod(x, y = NULL)
   A double or complex matrix, with appropriate \code{dimnames} taken
   from \code{x} and \code{y}.
 }
-\note{
+\details{
+  The multiplication is done either by a BLAS routine or by a C routine,
+  in the same way as for \code{\link{\%*\%}}, referring to the setting of
+  the \code{mat_mult_with_BLAS} option.
+
+  When the C routines are used for the multiplication, and helper 
+  threads are enabled, \code{crossprod} and \code{tcrossprod} will
+  produce pipelined output, and \code{crossprod} but not \code{tcrossprod}
+  will take pipelined input for the second operand.  When a BLAS
+  routine is used, the multiplication can be done in helper threads
+  (unless this is disabled when configuring pqR with the 
+  \code{--disable-mat-mult-with-BLAS-in-helpers} option), 
+  but with no pipelining of inputs or output.
+
+  When \code{crossprod} or \code{tcrossprod} is given only one
+  argument (the second defaulting to be the same as the first), or the
+  two arguments are recognizable as being identical because they are
+  stored in the same memory location, the multiplication may be done
+  more quickly by exploiting the fact that the result will be a
+  symmetric matrix.
+
   When \code{x} or \code{y} are not matrices, they are treated as column or
   row matrices, but their \code{\link{names}} are usually \bold{not}
   promoted to \code{\link{dimnames}}.  Hence, currently, the last
@@ -43,7 +64,9 @@ tcrossprod(x, y = NULL)
   Wadsworth & Brooks/Cole.
 }
 \seealso{
-  \code{\link{\%*\%}} and outer product \code{\link{\%o\%}}.
+  matrix multiplication operator \code{\link{\%*\%}}, 
+  outer product operator \code{\link{\%o\%}},
+  \code{\link{options}}.
 }
 \examples{
 (z <- crossprod(1:4))    # = sum(1 + 2^2 + 3^2 + 4^2)

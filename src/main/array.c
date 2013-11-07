@@ -580,11 +580,9 @@ void task_matprod_mat_vec_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     int nrx = LENGTH(sz);
     int ncx = LENGTH(sy);
     double one = 1.0, zero = 0.0;
-    char *transN1 = "N";
-    int int_1 = 1;
+    int i1 = 1;
 
-    F77_CALL(dgemv) (transN1, &nrx, &ncx, &one, 
-                     x, &nrx, y, &int_1, &zero, z, &int_1);
+    F77_CALL(dgemv) ("N", &nrx, &ncx, &one, x, &nrx, y, &int_1, &zero, z, &i1);
 }
 
 void task_matprod_vec_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
@@ -593,11 +591,9 @@ void task_matprod_vec_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     int nry = LENGTH(sx);
     int ncy = LENGTH(sz);
     double one = 1.0, zero = 0.0;
-    char *transT1 = "T";
-    int int_1 = 1;
+    int i1 = 1;
 
-    F77_CALL(dgemv) (transT1, &nry, &ncy, &one, 
-                     y, &nry, x, &int_1, &zero, z, &int_1);
+    F77_CALL(dgemv) ("T", &nry, &ncy, &one, y, &nry, x, &int_1, &zero, z, &i1);
 }
 
 void task_matprod_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
@@ -606,10 +602,9 @@ void task_matprod_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     int ncx_nry = op;
     int nrx = LENGTH(sx) / ncx_nry;
     int ncy = LENGTH(sy) / ncx_nry;
-    char *transN1 = "N", *transN2 = "N";
     double one = 1.0, zero = 0.0;
 
-    F77_CALL(dgemm) (transN1, transN2, &nrx, &ncy, &ncx_nry, &one,
+    F77_CALL(dgemm) ("N", "N", &nrx, &ncy, &ncx_nry, &one,
                       x, &nrx, y, &ncx_nry, &zero, z, &nrx);
 }
 
@@ -622,14 +617,12 @@ void task_matprod_trans1_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     double one = 1.0, zero = 0.0;
 
     if (x == y && nr > 10) { /* using dsyrk may be slower if nr is small */
-        char *trans = "T", *uplo = "U";
-	F77_CALL(dsyrk)(uplo, trans, &ncx, &nr, &one, x, &nr, &zero, z, &ncx);
+        F77_CALL(dsyrk)("U", "T", &ncx, &nr, &one, x, &nr, &zero, z, &ncx);
         fill_lower(z,ncx);
     }
     else {
-        char *transa = "T", *transb = "N";
-	F77_CALL(dgemm)(transa, transb, &ncx, &ncy, &nr, &one,
-			x, &nr, y, &nr, &zero, z, &ncx);
+        F77_CALL(dgemm)("T", "N", &ncx, &ncy, &nr, &one, 
+                        x, &nr, y, &nr, &zero, z, &ncx);
     }
 }
 
@@ -642,14 +635,13 @@ void task_matprod_trans2_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     double one = 1.0, zero = 0.0;
 
     if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
-        char *trans = "N", *uplo = "U";
-	F77_CALL(dsyrk)(uplo, trans, &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
+        F77_CALL(dsyrk)("U", "N" &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
         fill_lower(z,nrx);
     }
     else {
         char *transa = "N", *transb = "T";
-	F77_CALL(dgemm)(transa, transb, &nrx, &nry, &nc, &one,
-			x, &nrx, y, &nry, &zero, z, &nrx);
+        F77_CALL(dgemm)("N", "T", &nrx, &nry, &nc, &one,
+                        x, &nrx, y, &nry, &zero, z, &nrx);
     }
 }
 
@@ -663,12 +655,11 @@ void task_cmatprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     int ncy = LENGTH(sy) / ncx_nry;
 
 #ifdef HAVE_FORTRAN_DOUBLE_COMPLEX
-    char *transa = "N", *transb = "N";
     Rcomplex one, zero;
     int i;
     one.r = 1.0; one.i = zero.r = zero.i = 0.0;
     if (nrx > 0 && ncx_nry > 0 && ncy > 0) {
-	F77_CALL(zgemm)(transa, transb, &nrx, &ncy, &ncx_nry, &one,
+	F77_CALL(zgemm)("N", "N", &nrx, &ncy, &ncx_nry, &one,
 			x, &nrx, y, &ncx_nry, &zero, z, &nrx);
     } else { /* zero-extent operations should return zeroes */
 	for(i = 0; i < nrx*ncy; i++) z[i].r = z[i].i = 0;
@@ -1040,6 +1031,48 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
             else {
                 if (k==0) {
                     task_proc = task_fill_zeros;
+                }
+                else if (nrows==1 && ncols==1) {
+                    if (R_mat_mult_with_BLAS[0]) {
+                        task_proc = task_matprod_vec_vec_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_vec_vec;
+                    else {
+                        task_proc = task_piped_matprod_vec_vec;
+                        flags = HELPERS_PIPE_IN2;
+                    }
+                }
+                else if (ncols==1) {
+                    if (R_mat_mult_with_BLAS[1]) {
+                        task_proc = task_matprod_mat_vec_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_mat_vec;
+                    else {
+                        task_proc = task_piped_matprod_mat_vec;
+                        flags = HELPERS_PIPE_IN2;
+                    }
+                }
+                else if (nrows==1) {
+                    if (R_mat_mult_with_BLAS[2]) {
+                        task_proc = task_matprod_vec_mat_BLAS;
+#ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
+                        inhlpr = 0;
+#endif
+                    }
+                    else if (no_pipelining)
+                        task_proc = task_matprod_vec_mat;
+                    else {
+                        task_proc = task_piped_matprod_vec_mat;
+                        flags = HELPERS_PIPE_IN2_OUT;
+                    }
                 }
                 else {
                     if (R_mat_mult_with_BLAS[3]) {
