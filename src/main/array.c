@@ -582,7 +582,7 @@ void task_matprod_mat_vec_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     double one = 1.0, zero = 0.0;
     int i1 = 1;
 
-    F77_CALL(dgemv) ("N", &nrx, &ncx, &one, x, &nrx, y, &int_1, &zero, z, &i1);
+    F77_CALL(dgemv) ("N", &nrx, &ncx, &one, x, &nrx, y, &i1, &zero, z, &i1);
 }
 
 void task_matprod_vec_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
@@ -593,7 +593,7 @@ void task_matprod_vec_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     double one = 1.0, zero = 0.0;
     int i1 = 1;
 
-    F77_CALL(dgemv) ("T", &nry, &ncy, &one, y, &nry, x, &int_1, &zero, z, &i1);
+    F77_CALL(dgemv) ("T", &nry, &ncy, &one, y, &nry, x, &i1, &zero, z, &i1);
 }
 
 void task_matprod_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
@@ -635,7 +635,7 @@ void task_matprod_trans2_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     double one = 1.0, zero = 0.0;
 
     if (x == y && nc > 10) { /* using dsyrk may be slower if nc is small */
-        F77_CALL(dsyrk)("U", "N" &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
+        F77_CALL(dsyrk)("U", "N", &nrx, &nc, &one, x, &nrx, &zero, z, &nrx);
         fill_lower(z,nrx);
     }
     else {
@@ -1014,6 +1014,7 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
             int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
             int no_pipelining = !inhlpr || helpers_not_pipelining;
             helpers_task_proc *task_proc;
+            SEXP op1 = x, op2 = y;
             int flags = 0;
 
             if (mode == CPLXSXP) {
@@ -1046,32 +1047,36 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
                         flags = HELPERS_PIPE_IN2;
                     }
                 }
-                else if (ncols==1) {
-                    if (R_mat_mult_with_BLAS[1]) {
-                        task_proc = task_matprod_mat_vec_BLAS;
+                else if (nrows==1 || ncols==1) {
+                    if (cross) {
+                        if (ncols==1) { op1 = y; op2 = x; }
+                        if (R_mat_mult_with_BLAS[2]) {
+                            task_proc = task_matprod_vec_mat_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                        inhlpr = 0;
+                            inhlpr = 0;
 #endif
+                        }
+                        else if (no_pipelining)
+                            task_proc = task_matprod_vec_mat;
+                        else {
+                            task_proc = task_piped_matprod_vec_mat;
+                            flags = HELPERS_PIPE_IN2_OUT;
+                        }
                     }
-                    else if (no_pipelining)
-                        task_proc = task_matprod_mat_vec;
                     else {
-                        task_proc = task_piped_matprod_mat_vec;
-                        flags = HELPERS_PIPE_IN2;
-                    }
-                }
-                else if (nrows==1) {
-                    if (R_mat_mult_with_BLAS[2]) {
-                        task_proc = task_matprod_vec_mat_BLAS;
+                        if (nrows==1) { op1 = y; op2 = x; }
+                        if (R_mat_mult_with_BLAS[1]) {
+                            task_proc = task_matprod_mat_vec_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                        inhlpr = 0;
+                            inhlpr = 0;
 #endif
-                    }
-                    else if (no_pipelining)
-                        task_proc = task_matprod_vec_mat;
-                    else {
-                        task_proc = task_piped_matprod_vec_mat;
-                        flags = HELPERS_PIPE_IN2_OUT;
+                        }
+                        else if (no_pipelining)
+                            task_proc = task_matprod_mat_vec;
+                        else {
+                            task_proc = task_piped_matprod_mat_vec;
+                            flags = HELPERS_PIPE_IN2;
+                        }
                     }
                 }
                 else {
@@ -1098,7 +1103,8 @@ SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho,
                 }
             }
 
-            DO_NOW_OR_LATER2(variant, inhlpr, flags, task_proc, k, ans, x, y);
+            DO_NOW_OR_LATER2(variant, inhlpr, flags, task_proc, k, 
+                             ans, op1, op2);
         }
 
         PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
