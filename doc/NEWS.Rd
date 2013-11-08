@@ -18,13 +18,11 @@ implementing some new features and fixing some bugs.  See the notes
 below on earlier pqR releases for general discussion of pqR, and for
 information that has not changed from previous releases of pqR.
 
-\item This release implements ``task merging'', which can speed up sequences
+\item The most notable change in this release is that ``task merging''
+      is now implemented.  This can speed up sequences
       of vector operations by merging several operations into one, which 
-      reduces time spent writing and later reading data in memory.  For
-      example, when \code{v} is a long vector, the expression \code{exp(v+1)} 
-      can be merged into one task, which will compute \code{exp(v[i]+1)} for
-      each element, \code{i}, of \code{v} in a single loop.  See
-      \code{help(merging)} for more details.
+      reduces time spent writing and later reading data in memory. 
+      See \code{help(merging)} and the item below for more details.
   }}
 
   \subsection{FEATURE AND DOCUMENTATION CHANGES}{
@@ -39,6 +37,17 @@ information that has not changed from previous releases of pqR.
 
   \subsection{INSTALLATION AND TESTING}{
     \itemize{
+
+\item Additional configuration options are now present to allow
+      enabling and disabling of task merging, and more generally, of the
+      deferred evaluation framework needed for both task merging and
+      use of helper threads.  By default, these facilities are enabled.
+      The \code{--disable-task-merging} option to \code{./configure}
+      disables task merging, \code{--disable-helper-threads} disables
+      support for helper threads (as before), and 
+      \code{--disable-deferred-evaluation} disables both of these
+      features, along with the whole deferred evaluation framework.
+      See the \code{R-admin} manual for more details.
 
 \item See the pqR wiki at \code{https://github.com/radfordneal/pqR/wiki}
       for the latest news regarding systems and packages that do or do not
@@ -59,7 +68,21 @@ information that has not changed from previous releases of pqR.
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
-\item 
+\item Some sequences of vector operations can now be merged into a single
+      operation, which can speed them up by eliminating memory operations
+      to store and fetch intermediate results.  Currently, this ``task
+      merging'' is done only for some simple scalar operations. When
+      helper threads are present (which might be able to do some operations 
+      even faster in parallel) merging is done only when one of the operations
+      is a simple addition or subtraction.
+
+      For example, when \code{v} is a long vector, the expression 
+      \code{exp(v+1)} can be merged into one task, which will compute 
+      \code{exp(v[i]+1)} for each element, \code{i}, of \code{v} in a 
+      single loop.  
+
+      See \code{help(merging)} for more details.
+
 \item During all garbage collections, any tasks whose outputs are not
       referenced are now waited for, to allow memory used by their outputs to be
       recovered.  (Such unreferenced outputs should be rare in real 
