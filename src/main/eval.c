@@ -1348,7 +1348,7 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     (isLanguage(body) && CAR(body) == R_BraceSymbol)
 
 
-SEXP attribute_hidden do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
+static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
                              int variant)
 {
     SEXP Cond, Stmt;
@@ -1390,7 +1390,7 @@ SEXP attribute_hidden do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
 	do_browser(call, op, R_NilValue, rho); \
     } } while (0)
 
-SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Need to declare volatile variables whose values are relied on
        after for_next or for_break longjmps and might change between
@@ -1539,7 +1539,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* While statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int dbg;
     volatile int bgn;
@@ -1572,7 +1572,7 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Repeat statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int dbg;
     volatile int bgn;
@@ -1603,7 +1603,7 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     findcontext(PRIMVAL(op), rho, R_NilValue);
     return R_NilValue;
@@ -1616,7 +1616,7 @@ SEXP attribute_hidden do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 
    The eval variant requested is passed on to the inner expression. */
 
-SEXP attribute_hidden do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, 
+static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, 
                                 int variant)
 {
     if (args!=R_NilValue && CAR(args)==R_DotsSymbol && CDR(args)==R_NilValue) {
@@ -1634,7 +1634,7 @@ SEXP attribute_hidden do_paren (SEXP call, SEXP op, SEXP args, SEXP rho,
 /* Curly brackets.  Passes on the eval variant to the last expression.
    Evaluates earlier expresstions with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-SEXP attribute_hidden do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
+static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
                                 int variant)
 {
     LOCAL_COPY(R_NilValue);
@@ -1660,7 +1660,7 @@ SEXP attribute_hidden do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 
-SEXP attribute_hidden do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP v;
 
@@ -1679,7 +1679,7 @@ SEXP attribute_hidden do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* Declared with a variable number of args in names.c */
-SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rval, srcref;
 
@@ -1972,7 +1972,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 
 /*  Assignment in its various forms  */
 
-SEXP attribute_hidden do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
+static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
                               int variant)
 {
     SEXP a, lhs, rhs;
@@ -5591,3 +5591,25 @@ SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rh
     }
     return ScalarInteger(old);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_eval1[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"if",		do_if,		0,	1200,	-1,	{PP_IF,	     PREC_FN,	  1}},
+{"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
+{"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
+{"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
+{"break",	do_break, CTXT_BREAK,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
+{"next",	do_break, CTXT_NEXT,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
+{"return",	do_return,	0,	0,	-1,	{PP_RETURN,  PREC_FN,	  0}},
+{"function",	do_function,	0,	0,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
+{"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
+{"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
+{"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
+{"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
+{"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+};
