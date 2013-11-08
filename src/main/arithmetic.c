@@ -2639,7 +2639,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
-/*slow func	fast func,     op (or -1)  uni/bi/both dsptch  variants */
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
 { do_arith,	do_fast_arith,	PLUSOP,		3,	1, 1,  0, 0 },
 { do_arith,	do_fast_arith,	MINUSOP,	3,	1, 1,  0, 0 },
 { do_arith,	do_fast_arith,	-1,		2,	1, 1,  0, 0 },
