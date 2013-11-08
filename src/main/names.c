@@ -99,10 +99,9 @@
    files where the functions are defined, and copied to the table below on
    initialization.  Some entries are defined in this source file (names.c). */
 
-#define MAX_FUNTAB_ENTRIES 1000  /* Increase as needed (may have spare slots) */
+#define MAX_FUNTAB_ENTRIES 1000  /* Increase as needed (may be spare slots) */
 
 attribute_hidden FUNTAB R_FunTab[MAX_FUNTAB_ENTRIES+1]; /* terminated by NULL */
-
 
 /* Pointers to the FUNTAB tables in the various source files, to be copied to
    R_FunTab.  Their names have the form R_FunTab_srcfilename, sometimes with
@@ -117,6 +116,18 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_eval1,
     R_FunTab_arithmetic, 
     R_FunTab_names,
+    NULL
+};
+
+
+/* Tables of fast built-in functions.  These tables are found in various
+   source files, with names having thee form R_FastFunTab_srcfilename. */
+
+extern FASTFUNTAB 
+    R_FastFunTab_arithmetic[];
+
+static FASTFUNTAB *FastFunTab_ptrs[] = { 
+    R_FastFunTab_arithmetic, 
     NULL
 };
 
@@ -955,18 +966,6 @@ int StrToInternal(const char *s)
     return 0;
 }
 
-static void installFunTab(int i)
-{
-    SEXP prim;
-    /* prim needs to be protected since install can (and does here) allocate */
-    PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
-    if ((R_FunTab[i].eval % 100 )/10)
-	SET_INTERNAL(install(R_FunTab[i].name), prim);
-    else
-	SET_SYMVALUE(install(R_FunTab[i].name), prim);
-    UNPROTECT(1);
-}
-
 static void SymbolShortcuts(void)
 {  /* ../include/Rinternals.h : */
     R_Bracket2Symbol = install("[[");
@@ -1025,13 +1024,16 @@ static void SymbolShortcuts(void)
     R_dot_GenericDefEnv = install(".GenericDefEnv");
 }
 
-/* Setup builtin functions from R_FunTab, which it creates from smaller
-   tables in the various source files.  Also sets the SPEC_SYM flag for 
-   those functions that are unlikely to be redefined outside "base". */
+/* Set up built-in functions from R_FunTab and the FastFunTab_srcfile tables.
+   The R_FunTab tables is created from smaller tables in the various source 
+   files.  Also sets the SPEC_SYM flag for those functions that are unlikely 
+   to be redefined outside "base". */
 
 static void SetupBuiltins(void)
 {
     int i, j, k;
+
+    /* Combine tables in various source files into one table here. */
 
     i = 0;
 
@@ -1048,8 +1050,37 @@ static void SetupBuiltins(void)
 
     R_FunTab[i].name = NULL;
 
-    for (i = 0; R_FunTab[i].name!=NULL; i++) 
-        installFunTab(i);
+    /* Install the primitive and internal functions.  Look for fast versions
+       of each one. */
+
+    for (i = 0; R_FunTab[i].name!=NULL; i++) {
+        SEXP (*this_cfun)() = R_FunTab[i].cfun;
+        int this_code = R_FunTab[i].code;
+        SEXP prim;
+        /* prim needs protect since install can (and does here) allocate */
+        PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+        if ((R_FunTab[i].eval % 100 )/10)
+            SET_INTERNAL(install(R_FunTab[i].name), prim);
+        else
+            SET_SYMVALUE(install(R_FunTab[i].name), prim);
+        for (j = 0; FastFunTab_ptrs[j]!=NULL; j++) {
+            for (k = 0; FastFunTab_ptrs[j][k].slow!=0; k++) {
+                FASTFUNTAB *f = &FastFunTab_ptrs[j][k];
+                if (f->slow==this_cfun && (f->code==-1 || f->code==this_code)) {
+                    if (f->arity==1)
+                        SET_PRIMFUN_FAST_UNARY(prim,f->fast,f->dsptch1,f->var1);
+                    else
+                        SET_PRIMFUN_FAST_BINARY(prim,f->fast,
+                           f->dsptch1,f->dsptch2,f->var1,f->var2,f->arity==3);
+                    goto found;
+                }
+            }
+        }
+      found:
+        UNPROTECT(1);
+    }
+
+    /* Flag "special" symbols. */
 
     for (i = 0; Spec_name[i]; i++)
         SET_SPEC_SYM (install(Spec_name[i]), 1);
