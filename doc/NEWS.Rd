@@ -70,16 +70,18 @@ information that has not changed from previous releases of pqR.
     \itemize{
 \item Some sequences of vector operations can now be merged into a single
       operation, which can speed them up by eliminating memory operations
-      to store and fetch intermediate results.  Currently, this ``task
-      merging'' is done only for some simple scalar operations. When
-      helper threads are present (which might be able to do some operations 
-      even faster in parallel) merging is done only when one of the operations
-      is a simple addition or subtraction.
-
-      For example, when \code{v} is a long vector, the expression 
+      to store and fetch intermediate results.  For example, when \code{v} is 
+      a long vector, the expression 
       \code{exp(v+1)} can be merged into one task, which will compute 
       \code{exp(v[i]+1)} for each element, \code{i}, of \code{v} in a 
       single loop.  
+
+      Currently, such ``task
+      merging'' is done only for (some) operations in which only one operand
+      is a vector. When there are helper threads (which might be able to 
+      do some operations even faster, in parallel) merging is done only when 
+      one of the operations merged is a simple addition or subtraction (with
+      vector and a scaler operands).
 
       See \code{help(merging)} for more details.
 
