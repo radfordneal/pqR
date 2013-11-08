@@ -426,17 +426,13 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                       : R_binary (call, op, arg1, arg2, variant);
 }
 
-SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env,
-                                int variant)
+SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
 
     if (DispatchGroup("Ops", call, op, args, env, &ans))
 	return ans;
 
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_BINARY (op, do_fast_arith, 1, 1, 0, 0, 
-                                 PRIMVAL(op)==PLUSOP || PRIMVAL(op)==MINUSOP);
     switch (length(args)) {
     case 1:
 	return R_unary(call, op, CAR(args), variant);
@@ -1447,9 +1443,6 @@ SEXP do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
 
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_math1, 1, 0);
-
     return do_fast_math1 (call, op, CAR(args), env, 0);
 }
 
@@ -1467,17 +1460,14 @@ SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 	return s;
 
     check1arg_x (args, call);
-    if (isComplex(CAR(args)))
-	errorcall(call, _("unimplemented complex function"));
 
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_trunc, 1, 0);
-
-    return math1(CAR(args), 5, call, 0);
+    return do_fast_trunc (call, op, CAR(args), env, 0);
 }
 
 /* Note that abs is slightly different from the do_math1 set, both
-   for integer/logical inputs and what it dispatches to for complex ones. */
+   for integer/logical inputs and what it dispatches to for complex ones. 
+   Also, the compiler is more likely to generate inline code for fabs
+   than for other math functions, so treating it specially may be good. */
 
 void task_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
 {
@@ -1570,9 +1560,6 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
-
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_abs, 1, 0);
 
     return do_fast_abs (call, op, CAR(args), env, 0);
 }
@@ -2627,4 +2614,17 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"qtukey",	do_math4,	12,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
+/*slow func	fast func,     op (or -1)  uni/bi/both dsptch  variants */
+{ do_arith,	do_fast_arith,	PLUSOP,		3,	1, 1,  0, 0 },
+{ do_arith,	do_fast_arith,	MINUSOP,	3,	1, 1,  0, 0 },
+{ do_arith,	do_fast_arith,	-1,		2,	1, 1,  0, 0 },
+{ do_math1,	do_fast_math1,	-1,		1,	1, 0,  0, 0 },
+{ do_trunc,	do_fast_trunc,	-1,		1,	1, 0,  0, 0 },
+{ do_abs,	do_fast_abs,	-1,		1,	1, 0,  0, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
 };
