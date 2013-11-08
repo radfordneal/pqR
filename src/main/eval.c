@@ -613,10 +613,11 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                                 }
                             }
                             else {
-                                if (CDR(args)==R_NilValue 
-                                 && PRIMFUN_UNI_TOO(op)) {
-                                    fast = TRUE;
-                                    arg1 = a1;
+                                if (CDR(args)==R_NilValue) {
+                                    if (PRIMFUN_UNI_TOO(op)) {
+                                        fast = TRUE;
+                                        arg1 = a1;
+                                    }
                                 }
                                 else if (TAG(CDR(args))==R_NilValue
                                       && CDDR(args)==R_NilValue) {
