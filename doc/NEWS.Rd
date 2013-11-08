@@ -57,6 +57,10 @@ information that has not changed from previous releases of pqR.
       use with pqR (as is generally the case with new versions of R), except
       for those written purely in R (no C, C++, or Fortran).
 
+\item Additional tests of matrix multiplication (\code{%*%}, \code{crossprod},
+      and \code{tcrossprod}) have been written.  They are run with
+      \code{make check} or \code{make check-all}.
+
   }}
 
   \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
