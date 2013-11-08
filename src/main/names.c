@@ -40,8 +40,8 @@
 
 #include <Rinterface.h>
 
-/* Table of  .Internal(.) and .Primitive(.)  R functions
- * =====     =========	      ==========
+
+/* Table of .Internal(.) and .Primitive(.) R functions
  *
  * Each entry is a line with
  *
@@ -92,9 +92,38 @@
  * precedence: Operator precedence (-> PPprec in ../include/Defn.h )
  *
  * rightassoc: Right (1) or left (0) associative operator
- *
  */
-attribute_hidden FUNTAB R_FunTab[] =
+
+
+/* Entries for the FUNTAB table are defined in smaller tables in the source 
+   files where the functions are defined, and copied to the table below on
+   initialization.  Some entries are defined in this source file (names.c). */
+
+#define MAX_FUNTAB_ENTRIES 1000  /* Increase as needed (may have spare slots) */
+
+attribute_hidden FUNTAB R_FunTab[MAX_FUNTAB_ENTRIES+1]; /* terminated by NULL */
+
+
+/* Pointers to the FUNTAB tables in the various source files, to be copied to
+   R_FunTab.  Their names have the form R_FunTab_srcfilename, sometimes with
+   a following digit if more than one table is in a source file. */
+
+extern FUNTAB 
+    R_FunTab_eval1[], 
+    R_FunTab_arithmetic[], 
+    R_FunTab_names[];
+
+static FUNTAB *FunTab_ptrs[] = { 
+    R_FunTab_eval1,
+    R_FunTab_arithmetic, 
+    R_FunTab_names,
+    NULL
+};
+
+
+/* FUNTAB entries defined in this source file. */
+
+attribute_hidden FUNTAB R_FunTab_names[] =
 {
 
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc
@@ -103,19 +132,6 @@ attribute_hidden FUNTAB R_FunTab[] =
 /* Language Related Constructs */
 
 /* Primitives */
-{"if",		do_if,		0,	1200,	-1,	{PP_IF,	     PREC_FN,	  1}},
-{"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
-{"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
-{"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
-{"break",	do_break, CTXT_BREAK,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
-{"next",	do_break, CTXT_NEXT,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
-{"return",	do_return,	0,	0,	-1,	{PP_RETURN,  PREC_FN,	  0}},
-{"function",	do_function,	0,	0,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
-{"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
-{"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
-{"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
-{"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
-{"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
 {".subset",	do_subset_dflt,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".subset2",	do_subset2_dflt,2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"[",		do_subset,	1,	0,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
@@ -172,13 +188,6 @@ attribute_hidden FUNTAB R_FunTab[] =
 
 /* Binary Operators, all primitives */
 /* these are group generic and so need to eval args */
-{"+",		do_arith,	PLUSOP,	11001,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"-",		do_arith,	MINUSOP,11001,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"*",		do_arith,	TIMESOP,11001,	2,	{PP_BINARY,  PREC_PROD,	  0}},
-{"/",		do_arith,	DIVOP,	11001,	2,	{PP_BINARY2, PREC_PROD,	  0}},
-{"^",		do_arith,	POWOP,	11001,	2,	{PP_BINARY2, PREC_POWER,  1}},
-{"%%",		do_arith,	MODOP,	11001,	2,	{PP_BINARY2, PREC_PERCENT,0}},
-{"%/%",		do_arith,	IDIVOP,	11001,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 /* -- matrix op -- */
 {"%*%",		do_matprod,	0,	11001,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
@@ -273,84 +282,6 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"search",	do_search,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 
 
-/* Mathematical Functions */
-/* primitives: these are group generic and so need to eval args (possibly internally) */
-{"round",	do_Math2,	10001,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"signif",	do_Math2,	10004,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"abs",		do_abs,		6,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"floor",	do_math1,	1,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ceiling",	do_math1,	2,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sqrt",	do_math1,	3,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sign",	do_math1,	4,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"trunc",	do_trunc,	5,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"exp",		do_math1,	10,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"expm1",	do_math1,	11,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log1p",	do_math1,	12,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"cos",		do_math1,	20,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sin",		do_math1,	21,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"tan",		do_math1,	22,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"acos",	do_math1,	23,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"asin",	do_math1,	24,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"atan",	do_math1,	25,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"cosh",	do_math1,	30,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sinh",	do_math1,	31,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"tanh",	do_math1,	32,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"acosh",	do_math1,	33,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"asinh",	do_math1,	34,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"atanh",	do_math1,	35,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"lgamma",	do_math1,	40,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"gamma",	do_math1,	41,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"digamma",	do_math1,	42,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"trigamma",	do_math1,	43,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-/* see "psigamma" below !*/
-
-/* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
-
-{"atan2",	do_math2,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"lbeta",	do_math2,	2,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"beta",	do_math2,	3,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"lchoose",	do_math2,	4,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"choose",	do_math2,	5,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dchisq",	do_math2,	6,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pchisq",	do_math2,	7,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qchisq",	do_math2,	8,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dexp",	do_math2,	9,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pexp",	do_math2,	10,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qexp",	do_math2,	11,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dgeom",	do_math2,	12,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgeom",	do_math2,	13,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgeom",	do_math2,	14,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dpois",	do_math2,	15,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ppois",	do_math2,	16,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qpois",	do_math2,	17,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dt",		do_math2,	18,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pt",		do_math2,	19,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qt",		do_math2,	20,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dsignrank",	do_math2,	21,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"psignrank",	do_math2,	22,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qsignrank",	do_math2,	23,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"besselJ",	do_math2,	24,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselY",	do_math2,	25,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"psigamma",	do_math2,	26,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-
-
 /* Mathematical Functions of a Complex Argument */
 /* these are group generic and so need to eval args */
 
@@ -359,91 +290,6 @@ attribute_hidden FUNTAB R_FunTab[] =
 {"Mod",		do_cmathfuns,	3,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"Arg",		do_cmathfuns,	4,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"Conj",	do_cmathfuns,	5,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-
-/* Mathematical Functions of Three Numeric (+ 1-2 int) Variables */
-
-{"dbeta",	do_math3,	1,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbeta",	do_math3,	2,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qbeta",	do_math3,	3,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dbinom",	do_math3,	4,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbinom",	do_math3,	5,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qbinom",	do_math3,	6,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dcauchy",	do_math3,	7,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pcauchy",	do_math3,	8,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qcauchy",	do_math3,	9,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"df",		do_math3,	10,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pf",		do_math3,	11,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qf",		do_math3,	12,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dgamma",	do_math3,	13,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgamma",	do_math3,	14,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgamma",	do_math3,	15,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dlnorm",	do_math3,	16,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"plnorm",	do_math3,	17,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qlnorm",	do_math3,	18,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dlogis",	do_math3,	19,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"plogis",	do_math3,	20,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qlogis",	do_math3,	21,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnbinom",	do_math3,	22,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbinom",	do_math3,	23,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbinom",	do_math3,	24,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnorm",	do_math3,	25,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnorm",	do_math3,	26,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnorm",	do_math3,	27,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dunif",	do_math3,	28,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"punif",	do_math3,	29,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qunif",	do_math3,	30,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dweibull",	do_math3,	31,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pweibull",	do_math3,	32,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qweibull",	do_math3,	33,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnchisq",	do_math3,	34,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnchisq",	do_math3,	35,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnchisq",	do_math3,	36,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnt",		do_math3,	37,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnt",		do_math3,	38,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnt",		do_math3,	39,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dwilcox",	do_math3,	40,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pwilcox",	do_math3,	41,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qwilcox",	do_math3,	42,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"besselI",	do_math3,	43,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselK",	do_math3,	44,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnbinom_mu",	do_math3,	45,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbinom_mu",	do_math3,	46,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbinom_mu",	do_math3,	47,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-
-/* Mathematical Functions of Four Numeric (+ 1-2 int) Variables */
-
-{"dhyper",	do_math4,	1,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"phyper",	do_math4,	2,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qhyper",	do_math4,	3,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnbeta",	do_math4,	4,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbeta",	do_math4,	5,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbeta",	do_math4,	6,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dnf",		do_math4,	7,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnf",		do_math4,	8,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnf",		do_math4,	9,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"dtukey",	do_math4,	10,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ptukey",	do_math4,	11,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qtukey",	do_math4,	12,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Random Numbers */
 
@@ -1179,6 +1025,36 @@ static void SymbolShortcuts(void)
     R_dot_GenericDefEnv = install(".GenericDefEnv");
 }
 
+/* Setup builtin functions from R_FunTab, which it creates from smaller
+   tables in the various source files.  Also sets the SPEC_SYM flag for 
+   those functions that are unlikely to be redefined outside "base". */
+
+static void SetupBuiltins(void)
+{
+    int i, j, k;
+
+    i = 0;
+
+    for (j = 0; FunTab_ptrs[j]!=NULL; j++) {
+        for (k = 0; FunTab_ptrs[j][k].name!=NULL; k++) {
+            if (i > MAX_FUNTAB_ENTRIES) {
+                REprintf(
+                  "Too many builtin functions - increase MAX_FUNTAB_ENTRIES\n");
+                exit(1);
+            }
+            R_FunTab[i++] = FunTab_ptrs[j][k];
+        }
+    }
+
+    R_FunTab[i].name = NULL;
+
+    for (i = 0; R_FunTab[i].name!=NULL; i++) 
+        installFunTab(i);
+
+    for (i = 0; Spec_name[i]; i++)
+        SET_SPEC_SYM (install(Spec_name[i]), 1);
+}
+
 extern SEXP framenames; /* from model.c */
 
 /* initialize the symbol table */
@@ -1234,10 +1110,8 @@ void InitNames()
        avoided when matching something like dim or dimnames. */
     SymbolShortcuts();
 
-    /*  Builtin Functions */
-    for (int i = 0; R_FunTab[i].name; i++) installFunTab(i);
-    for (int i = 0; Spec_name[i]; i++)
-        SET_SPEC_SYM (install(Spec_name[i]), 1);
+    /* Set up built-in functions. */
+    SetupBuiltins();
 
     framenames = R_NilValue;
 

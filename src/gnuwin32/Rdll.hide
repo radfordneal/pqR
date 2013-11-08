@@ -564,7 +564,6 @@
  do_External
  do_Externalgr
  do_ICUset
- do_Math2
  do_POSIXlt2D
  do_RGB2hsv
  do_RNGkind
@@ -573,7 +572,6 @@
  do_Rprofmem
  do_abbrev
  do_abline
- do_abs
  do_addCondHands
  do_addRestart
  do_addTryHandlers
@@ -584,7 +582,6 @@
  do_aperm
  do_aregexec
  do_args
- do_arith
  do_arrangeWindows
  do_arrows
  do_asPOSIXct
@@ -606,7 +603,6 @@
  do_basename
  do_bcclose
  do_bcversion
- do_begin
  do_bind
  do_bindtextdomain
  do_bndIsActive
@@ -614,7 +610,6 @@
  do_body
  do_bodyCode
  do_box
- do_break
  do_bringtotop
  do_browser
  do_builtins
@@ -735,12 +730,10 @@
  do_flush
  do_flushconsole
  do_fmin
- do_for
  do_formals
  do_format
  do_formatPOSIXlt
  do_formatinfo
- do_function
  do_gc
  do_gcinfo
  do_gctime
@@ -834,8 +827,6 @@
  do_locator
  do_lockBnd
  do_lockEnv
- do_log
- do_log1arg
  do_logic
  do_logic2
  do_logic3
@@ -849,10 +840,6 @@
  do_mapply
  do_match
  do_matchcall
- do_math1
- do_math2
- do_math3
- do_math4
  do_matprod
  do_matrix
  do_mean
@@ -898,7 +885,6 @@
  do_packBits
  do_palette
  do_par
- do_paren
  do_parentenv
  do_parentenvgets
  do_parentframe
@@ -968,7 +954,6 @@
  do_remove
  do_rep
  do_rep_int
- do_repeat
  do_resetCondHands
  do_restart
  do_retracemem
@@ -990,7 +975,6 @@
  do_seq_along
  do_seq_len
  do_serializeToConn
- do_set
  do_setGraphicsEventEnv
  do_setInternet2
  do_setSessionTimeLimit
@@ -1070,7 +1054,6 @@
  do_trace
  do_tracemem
  do_transpose
- do_trunc
  do_truncate
  do_typecvt
  do_typeof
@@ -1091,7 +1074,6 @@
  do_version
  do_warning
  do_which
- do_while
  do_windialog
  do_windialogstring
  do_wingetmenuitems

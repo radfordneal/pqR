@@ -426,7 +426,7 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                       : R_binary (call, op, arg1, arg2, variant);
 }
 
-SEXP attribute_hidden do_arith (SEXP call, SEXP op, SEXP args, SEXP env,
+SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env,
                                 int variant)
 {
     SEXP ans;
@@ -1437,7 +1437,7 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 }
 
 
-SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s;
 
@@ -1460,7 +1460,7 @@ static SEXP do_fast_trunc (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return math1(arg, 5, call, variant);
 }
 
-SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s;
     if (DispatchGroup("Math", call, op, args, env, &s))
@@ -1561,7 +1561,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
     return s;
 }
 
-SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s;
 
@@ -1734,7 +1734,7 @@ static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
 #define Math2_2(A, FUN) math2_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call)
 #define Math2B(A, FUN)	  math2B(CAR(A), CADR(A), FUN, call)
 
-SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
@@ -1795,7 +1795,7 @@ SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* The S4 Math2 group, round and signif */
 /* This is a primitive SPECIALSXP with internal argument matching */
-SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP res, call2;
     int n, nprotect = 2;
@@ -1840,7 +1840,7 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* log{2,10} are builtins */
-SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP res, call2, args2, tmp = R_NilValue /* -Wall */;
 
@@ -1866,7 +1866,7 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 /* This is a primitive SPECIALSXP with internal argument matching */
-SEXP attribute_hidden do_log (SEXP call, SEXP op, SEXP args, SEXP env,
+SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env,
                               int variant)
 {
     int nprotect = 2;
@@ -2084,7 +2084,7 @@ static SEXP math3B(SEXP sa, SEXP sb, SEXP sc,
 #define Math3_2(A, FUN) math3_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), CAD4R(A), FUN, call)
 #define Math3B(A, FUN)  math3B (CAR(A), CADR(A), CADDR(A), FUN, call)
 
-SEXP attribute_hidden do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
@@ -2288,7 +2288,7 @@ static SEXP math4_2 (SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ,
 				CAD5R(A), FUN, call)
 
 
-SEXP attribute_hidden do_math4(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_math4(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
@@ -2412,7 +2412,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
 #define Math5(A, FUN) \
 	math5(CAR(A), CADR(A), CADDR(A), CAD3R(A), CAD4R(A), FUN);
 
-SEXP attribute_hidden do_math5(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_math5(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     lcall = call;
@@ -2447,3 +2447,184 @@ CCODE R_get_arith_function(int which)
     default: error("bad arith function index"); return NULL;
     }
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_arithmetic[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+/* Binary Operators, all primitives */
+/* these are group generic and so need to eval args */
+{"+",		do_arith,	PLUSOP,	11001,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"-",		do_arith,	MINUSOP,11001,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"*",		do_arith,	TIMESOP,11001,	2,	{PP_BINARY,  PREC_PROD,	  0}},
+{"/",		do_arith,	DIVOP,	11001,	2,	{PP_BINARY2, PREC_PROD,	  0}},
+{"^",		do_arith,	POWOP,	11001,	2,	{PP_BINARY2, PREC_POWER,  1}},
+{"%%",		do_arith,	MODOP,	11001,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+{"%/%",		do_arith,	IDIVOP,	11001,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+
+/* Mathematical Functions */
+/* primitives: these are group generic and so need to eval args (possibly internally) */
+{"round",	do_Math2,	10001,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"signif",	do_Math2,	10004,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"abs",		do_abs,		6,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"floor",	do_math1,	1,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ceiling",	do_math1,	2,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sqrt",	do_math1,	3,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sign",	do_math1,	4,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"trunc",	do_trunc,	5,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"exp",		do_math1,	10,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"expm1",	do_math1,	11,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log1p",	do_math1,	12,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"cos",		do_math1,	20,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sin",		do_math1,	21,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"tan",		do_math1,	22,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"acos",	do_math1,	23,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"asin",	do_math1,	24,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"atan",	do_math1,	25,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"cosh",	do_math1,	30,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sinh",	do_math1,	31,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"tanh",	do_math1,	32,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"acosh",	do_math1,	33,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"asinh",	do_math1,	34,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"atanh",	do_math1,	35,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"lgamma",	do_math1,	40,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"gamma",	do_math1,	41,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"digamma",	do_math1,	42,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"trigamma",	do_math1,	43,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+/* see "psigamma" below !*/
+
+/* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
+
+{"atan2",	do_math2,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"lbeta",	do_math2,	2,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"beta",	do_math2,	3,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"lchoose",	do_math2,	4,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"choose",	do_math2,	5,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dchisq",	do_math2,	6,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pchisq",	do_math2,	7,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qchisq",	do_math2,	8,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dexp",	do_math2,	9,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pexp",	do_math2,	10,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qexp",	do_math2,	11,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dgeom",	do_math2,	12,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgeom",	do_math2,	13,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgeom",	do_math2,	14,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dpois",	do_math2,	15,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ppois",	do_math2,	16,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qpois",	do_math2,	17,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dt",		do_math2,	18,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pt",		do_math2,	19,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qt",		do_math2,	20,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dsignrank",	do_math2,	21,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"psignrank",	do_math2,	22,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qsignrank",	do_math2,	23,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"besselJ",	do_math2,	24,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselY",	do_math2,	25,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"psigamma",	do_math2,	26,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+
+/* Mathematical Functions of Three Numeric (+ 1-2 int) Variables */
+
+{"dbeta",	do_math3,	1,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbeta",	do_math3,	2,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qbeta",	do_math3,	3,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dbinom",	do_math3,	4,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbinom",	do_math3,	5,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qbinom",	do_math3,	6,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dcauchy",	do_math3,	7,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pcauchy",	do_math3,	8,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qcauchy",	do_math3,	9,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"df",		do_math3,	10,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pf",		do_math3,	11,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qf",		do_math3,	12,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dgamma",	do_math3,	13,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgamma",	do_math3,	14,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgamma",	do_math3,	15,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dlnorm",	do_math3,	16,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"plnorm",	do_math3,	17,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qlnorm",	do_math3,	18,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dlogis",	do_math3,	19,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"plogis",	do_math3,	20,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qlogis",	do_math3,	21,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnbinom",	do_math3,	22,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbinom",	do_math3,	23,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbinom",	do_math3,	24,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnorm",	do_math3,	25,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnorm",	do_math3,	26,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnorm",	do_math3,	27,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dunif",	do_math3,	28,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"punif",	do_math3,	29,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qunif",	do_math3,	30,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dweibull",	do_math3,	31,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pweibull",	do_math3,	32,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qweibull",	do_math3,	33,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnchisq",	do_math3,	34,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnchisq",	do_math3,	35,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnchisq",	do_math3,	36,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnt",		do_math3,	37,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnt",		do_math3,	38,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnt",		do_math3,	39,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dwilcox",	do_math3,	40,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pwilcox",	do_math3,	41,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qwilcox",	do_math3,	42,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"besselI",	do_math3,	43,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselK",	do_math3,	44,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnbinom_mu",	do_math3,	45,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbinom_mu",	do_math3,	46,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbinom_mu",	do_math3,	47,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+
+/* Mathematical Functions of Four Numeric (+ 1-2 int) Variables */
+
+{"dhyper",	do_math4,	1,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"phyper",	do_math4,	2,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qhyper",	do_math4,	3,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnbeta",	do_math4,	4,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbeta",	do_math4,	5,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbeta",	do_math4,	6,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dnf",		do_math4,	7,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnf",		do_math4,	8,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnf",		do_math4,	9,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"dtukey",	do_math4,	10,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ptukey",	do_math4,	11,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qtukey",	do_math4,	12,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+};
