@@ -1184,8 +1184,6 @@ primitive directly as C arguments.  For details, see the documentation
 in the code for @code{evalv}, and the definitions for PRIMFUN_FAST and
 related macros in @file{Rinternals.h}.
 
-@comment Just here to help with merging new section later...
-
 @node Reference counts and the nmcnt field, The write barrier, The eval function, R Internal Structures
 @section Reference counts and the nmcnt field
 
@@ -1252,7 +1250,7 @@ if it is 0, and then increments the value (unless it is
 
 In detail, pqR aims to follow (but may not yet fully follow) the
 (tentative) conventions below regarding how @code{NAMEDCNT} should
-be set, and when an object may be modifedi:
+be set, and when an object may be modified:
 
 @itemize
 
