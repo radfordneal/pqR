@@ -709,6 +709,7 @@
  do_erase
  do_eval
  do_expression
+ do_fast_relop
  do_fft
  do_fifo
  do_fileaccess
@@ -949,8 +950,6 @@
  do_regNS
  do_regexec
  do_regexpr
- do_relop
- do_relop_dflt
  do_remove
  do_rep
  do_rep_int
