@@ -435,12 +435,13 @@ SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     switch (length(args)) {
     case 1:
-	return R_unary(call, op, CAR(args), variant);
+        return do_fast_arith (call, op, CAR(args), R_NilValue, env, variant);
     case 2:
-	return R_binary(call, op, CAR(args), CADR(args), variant);
+        return do_fast_arith (call, op, CAR(args), CADR(args), env, variant);
     default:
 	errorcall(call,_("operator needs one or two arguments"));
     }
+
     return ans;			/* never used; to keep -Wall happy */
 }
 
