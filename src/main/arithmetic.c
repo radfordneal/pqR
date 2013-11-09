@@ -1873,8 +1873,7 @@ SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 /* This is a primitive SPECIALSXP with internal argument matching */
-SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env,
-                              int variant)
+SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     int nprotect = 2;
     int n;
@@ -2634,7 +2633,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"ptukey",	do_math4,	11,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qtukey",	do_math4,	12,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
 
 /* Fast built-in functions in this file. See names.c for documentation */

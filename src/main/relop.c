@@ -300,7 +300,7 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     return ans;
 }
 
-SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
 
@@ -309,10 +309,7 @@ SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
 
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_BINARY (op, do_fast_relop, 1, 1, 0, 0, 0);
-
-    return do_fast_relop (call, op, CAR(args), CADR(args), env, 0);
+    return do_fast_relop (call, op, CAR(args), CADR(args), env, variant);
 }
 
 /* i1 = i % n1; i2 = i % n2;
@@ -936,3 +933,30 @@ SEXP bitwiseXor(SEXP a, SEXP b)
 	INTEGER(ans)[i] = INTEGER(a)[i%m] ^ INTEGER(b)[i%n];
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_relop[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+/* Relational Operators, all primitives */
+/* these are group generic and so need to eval args */
+
+{"==",		do_relop,	EQOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"!=",		do_relop,	NEOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<",		do_relop,	LTOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<=",		do_relop,	LEOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">=",		do_relop,	GEOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">",		do_relop,	GTOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_relop[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+{ do_relop,	do_fast_relop,	-1,		2,	1, 1,  0, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};
