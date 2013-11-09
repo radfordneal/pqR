@@ -432,7 +432,7 @@ SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     switch (length(args)) {
     case 1:
-        return do_fast_arith (call, op, CAR(args), R_NilValue, env, variant);
+        return do_fast_arith (call, op, CAR(args), NULL, env, variant);
     case 2:
         return do_fast_arith (call, op, CAR(args), CADR(args), env, variant);
     default:
