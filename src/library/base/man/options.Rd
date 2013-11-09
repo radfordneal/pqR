@@ -187,7 +187,7 @@ getOption(x, default = NULL)
       and column vector, a product of a row vector and a matrix, or a 
       general matrix-matrix product.  May be set using a single logical 
       value, which is replicated to give four values.  Defaults to all 
-      \code{TRUE} unless the \code{--enable-mat-mult-with-BLAS-by-default}
+      \code{FALSE} unless the \code{--enable-mat-mult-with-BLAS-by-default}
       option is used when configuring pqR.}
 
     \item{\code{max.print}:}{integer, defaulting to \code{99999}.
