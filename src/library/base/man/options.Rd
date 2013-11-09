@@ -142,9 +142,10 @@ getOption(x, default = NULL)
       where it is possible you may want to increase that.}
 
     \item{\code{helpers_disable}:}{A logical value set to \code{TRUE} to disable
-      the helpers apparatus, including deferred evaluation using only the
-      master thread.  Initially \code{FALSE}, even if there are no
-      helper threads, unless the helpers apparatus is not supported.}
+      the helpers apparatus, including deferred evaluation and task merging
+      using only the master thread.  Initially \code{FALSE}, even if there are
+      no helper threads, unless the helpers apparatus was disabled when pqR
+      was configured.}
 
     \item{\code{helpers_no_multithreading}:}{A logical value set to \code{TRUE} 
       to disable use of helper threads (but not the entire helpers apparatus
@@ -156,8 +157,9 @@ getOption(x, default = NULL)
       \code{FALSE}, unless there are no helper threads.}
 
     \item{\code{helpers_no_merging}:}{A logical value set to \code{TRUE} 
-      to disable merging of tasks.  Initially \code{FALSE}, unless the
-      helpers apparatus is disabled.}
+      to disable merging of tasks.  Initially \code{FALSE}, unless task
+      merging (or the entire helpers apparatus) was disabled when pqR
+      was configured.}
 
     \item{\code{helpers_trace}:}{A logical value set to \code{TRUE} 
       to enable tracing of tasks that are scheduled to be done, either
