@@ -111,12 +111,14 @@ extern FUNTAB
     R_FunTab_eval1[], 
     R_FunTab_arithmetic[], 
     R_FunTab_relop[], 
+    R_FunTab_logic[], 
     R_FunTab_names[];
 
 static FUNTAB *FunTab_ptrs[] = { 
     R_FunTab_eval1,
     R_FunTab_arithmetic, 
     R_FunTab_relop,
+    R_FunTab_logic,
     R_FunTab_names,
     NULL
 };
@@ -127,11 +129,13 @@ static FUNTAB *FunTab_ptrs[] = {
 
 extern FASTFUNTAB 
     R_FastFunTab_arithmetic[],
-    R_FastFunTab_relop[];
+    R_FastFunTab_relop[],
+    R_FastFunTab_logic[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
     R_FastFunTab_relop,
+    R_FastFunTab_logic,
     NULL
 };
 
@@ -206,22 +210,11 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 /* -- matrix op -- */
 {"%*%",		do_matprod,	0,	11001,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
-{"&",		do_logic,	1,	1,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"|",		do_logic,	2,	1,	2,	{PP_BINARY,  PREC_OR,	  0}},
-{"!",		do_logic,	3,	1,	1,	{PP_UNARY,   PREC_NOT,	  0}},
-
 /* specials as conditionally evaluate second arg */
-{"&&",		do_logic2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"||",		do_logic2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
 {":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
+
 /* does not evaluate */
 {"~",		do_tilde,	0,	0,	2,	{PP_BINARY,  PREC_TILDE,  0}},
-
-
-/* Logic Related Functions */
-/* these are group generic and so need to eval args */
-{"all",		do_logic3,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-{"any",		do_logic3,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 
 
 /* Vectors, Matrices and Arrays */

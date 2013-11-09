@@ -1432,7 +1432,8 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 }
 
 
-SEXP do_math1(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env, 
+                               int variant)
 {
     SEXP s;
 

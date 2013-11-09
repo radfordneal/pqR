@@ -3099,8 +3099,9 @@ enum {
 };
 
 
-SEXP do_math1(SEXP, SEXP, SEXP, SEXP);
-SEXP do_logic(SEXP, SEXP, SEXP, SEXP);
+SEXP do_math1(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_andor(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
@@ -3279,7 +3280,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SETSTACK(-1, CONS(GETSTACK(-1), R_NilValue));		     \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP), \
-		      GETSTACK(-1), rho));		     \
+		      GETSTACK(-1), rho, 0));		     \
   NEXT(); \
 } while(0)
 
@@ -3289,7 +3290,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SETSTACK(-2, CONS(GETSTACK(-2), tmp));     \
   R_BCNodeStackTop--; \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP),	\
-		      GETSTACK(-1), rho));			\
+		      GETSTACK(-1), rho, 0));			\
   NEXT(); \
 } while(0)
 
@@ -4772,9 +4773,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(LE, 1): FastRelop2(<=, LEOP, R_LeSym);
     OP(GE, 1): FastRelop2(>=, GEOP, R_GeSym);
     OP(GT, 1): FastRelop2(>, GTOP, R_GtSym);
-    OP(AND, 1): Builtin2(do_logic, R_AndSym, rho);
-    OP(OR, 1): Builtin2(do_logic, R_OrSym, rho);
-    OP(NOT, 1): Builtin1(do_logic, R_NotSym, rho);
+    OP(AND, 1): Builtin2(do_andor, R_AndSym, rho);
+    OP(OR, 1): Builtin2(do_andor, R_OrSym, rho);
+    OP(NOT, 1): Builtin1(do_not, R_NotSym, rho);
     OP(DOTSERR, 0): error(_("'...' used in an incorrect context"));
     OP(STARTASSIGN, 1):
       {

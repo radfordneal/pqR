@@ -828,9 +828,6 @@
  do_locator
  do_lockBnd
  do_lockEnv
- do_logic
- do_logic2
- do_logic3
  do_ls
  do_machine
  do_makelazy
