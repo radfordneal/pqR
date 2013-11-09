@@ -579,7 +579,6 @@
  do_adist
  do_agrep
  do_allnames
- do_aperm
  do_aregexec
  do_args
  do_arrangeWindows
@@ -635,7 +634,6 @@
  do_col2RGB
  do_colon
  do_colors
- do_colsum
  do_commandArgs
  do_comment
  do_commentgets
@@ -688,7 +686,6 @@
  do_dotcallgr
  do_download
  do_dput
- do_drop
  do_dump
  do_duplicated
  do_dynload
@@ -812,7 +809,6 @@
  do_lapply
  do_layout
  do_lazyLoadDBfetch
- do_length
  do_lengthgets
  do_levelsgets
  do_libfixup
@@ -838,8 +834,6 @@
  do_mapply
  do_match
  do_matchcall
- do_matprod
- do_matrix
  do_mean
  do_memCompress
  do_memDecompress
@@ -956,7 +950,6 @@
  do_return
  do_rgb
  do_rmultinom
- do_rowscols
  do_sample
  do_save
  do_saveToConn
@@ -1049,7 +1042,6 @@
  do_tolower
  do_trace
  do_tracemem
- do_transpose
  do_truncate
  do_typecvt
  do_typeof

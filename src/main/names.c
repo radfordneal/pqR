@@ -112,6 +112,7 @@ extern FUNTAB
     R_FunTab_arithmetic[], 
     R_FunTab_relop[], 
     R_FunTab_logic[], 
+    R_FunTab_array[], 
     R_FunTab_names[];
 
 static FUNTAB *FunTab_ptrs[] = { 
@@ -119,6 +120,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_arithmetic, 
     R_FunTab_relop,
     R_FunTab_logic,
+    R_FunTab_array,
     R_FunTab_names,
     NULL
 };
@@ -130,12 +132,14 @@ static FUNTAB *FunTab_ptrs[] = {
 extern FASTFUNTAB 
     R_FastFunTab_arithmetic[],
     R_FastFunTab_relop[],
-    R_FastFunTab_logic[];
+    R_FastFunTab_logic[],
+    R_FastFunTab_array[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
     R_FastFunTab_relop,
     R_FastFunTab_logic,
+    R_FastFunTab_array,
     NULL
 };
 
@@ -206,9 +210,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 
 
 /* Binary Operators, all primitives */
-/* these are group generic and so need to eval args */
-/* -- matrix op -- */
-{"%*%",		do_matprod,	0,	11001,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
 /* specials as conditionally evaluate second arg */
 {":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
@@ -221,7 +222,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 
 /* Primitives */
 
-{"length",	do_length,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"c",/* bind.c:*/do_c,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass",	do_class,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -246,13 +246,9 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 
 {"vector",	do_makevector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"complex",	do_complex,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"matrix",	do_matrix,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"row",		do_rowscols,	1,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"col",		do_rowscols,	2,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"unlist",	do_unlist,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"drop",	do_drop,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"all.names",	do_allnames,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
@@ -276,8 +272,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"charmatch",	do_charmatch,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"complete.cases",do_compcases,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"crossprod",	do_matprod,	1,	11011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
-{"tcrossprod",	do_matprod,	2,	11011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
 
 {"attach",	do_attach,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"detach",	do_detach,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -596,8 +590,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"scan",	do_scan,	0,	11,	18,	{PP_FUNCALL, PREC_FN,	0}},
 {"count.fields",do_countfields,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"readTableHead",do_readtablehead,0,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
-{"t.default",	do_transpose,	0,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"aperm",	do_aperm,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"builtins",	do_builtins,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"edit",	do_edit,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"dataentry",	do_dataentry,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
@@ -615,10 +607,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"sink.number",	do_sinknumber,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rapply",	do_rapply,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"islistfactor",do_islistfactor,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"colSums",	do_colsum,	0,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"colMeans",	do_colsum,	1,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"rowSums",	do_colsum,	2,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"rowMeans",	do_colsum,	3,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"Rprof",	do_Rprof,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"Rprofmem",	do_Rprofmem,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
 {"tracemem",    do_tracemem,    0,      1,	1,      {PP_FUNCALL, PREC_FN,	0}},
