@@ -428,21 +428,19 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
 SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans;
+    SEXP ans, a1, a2;
 
     if (DispatchGroup("Ops", call, op, args, env, &ans))
 	return ans;
 
-    switch (length(args)) {
-    case 1:
-        return do_fast_arith (call, op, CAR(args), NULL, env, variant);
-    case 2:
-        return do_fast_arith (call, op, CAR(args), CADR(args), env, variant);
-    default:
-	errorcall(call,_("operator needs one or two arguments"));
-    }
+    a1 = CAR(args); args = CDR(args); a2 = CAR(args);
 
-    return ans;			/* never used; to keep -Wall happy */
+    if (a1==R_NilValue || CDR(args)!=R_NilValue)
+	errorcall(call,_("operator needs one or two arguments"));
+    else if (a2==R_NilValue)
+        return do_fast_arith (call, op, a1, NULL, env, variant);
+    else
+        return do_fast_arith (call, op, a1, a2, env, variant);
 }
 
 
