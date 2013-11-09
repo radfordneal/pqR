@@ -110,6 +110,7 @@ attribute_hidden FUNTAB R_FunTab[MAX_FUNTAB_ENTRIES+1]; /* terminated by NULL */
 extern FUNTAB 
     R_FunTab_eval1[], 
     R_FunTab_arithmetic[], 
+    R_FunTab_complex[], 
     R_FunTab_relop[], 
     R_FunTab_logic[], 
     R_FunTab_array[], 
@@ -120,6 +121,7 @@ extern FUNTAB
 static FUNTAB *FunTab_ptrs[] = { 
     R_FunTab_eval1,
     R_FunTab_arithmetic, 
+    R_FunTab_complex, 
     R_FunTab_relop,
     R_FunTab_logic,
     R_FunTab_array,
@@ -135,6 +137,7 @@ static FUNTAB *FunTab_ptrs[] = {
 
 extern FASTFUNTAB 
     R_FastFunTab_arithmetic[],
+    R_FastFunTab_complex[],
     R_FastFunTab_relop[],
     R_FastFunTab_logic[],
     R_FastFunTab_array[],
@@ -143,6 +146,7 @@ extern FASTFUNTAB
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
+    R_FastFunTab_complex, 
     R_FastFunTab_relop,
     R_FastFunTab_logic,
     R_FastFunTab_array,
@@ -248,7 +252,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 /* .Internals */
 
 {"vector",	do_makevector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"complex",	do_complex,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"unlist",	do_unlist,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -273,16 +276,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"attach",	do_attach,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"detach",	do_detach,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"search",	do_search,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
-
-
-/* Mathematical Functions of a Complex Argument */
-/* these are group generic and so need to eval args */
-
-{"Re",		do_cmathfuns,	1,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"Im",		do_cmathfuns,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"Mod",		do_cmathfuns,	3,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"Arg",		do_cmathfuns,	4,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"Conj",	do_cmathfuns,	5,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Random Numbers */
 
@@ -658,7 +651,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"fft",		do_fft,		0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"mvfft",	do_mvfft,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"nextn",	do_nextn,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"polyroot",	do_polyroot,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Device Drivers */
 
