@@ -408,7 +408,6 @@ SEXP do_raster(SEXP, SEXP, SEXP, SEXP);
 SEXP do_regexec(SEXP, SEXP, SEXP, SEXP);
 SEXP do_regexpr(SEXP, SEXP, SEXP, SEXP);
 SEXP do_regFinaliz(SEXP, SEXP, SEXP, SEXP);
-SEXP do_relop(SEXP, SEXP, SEXP, SEXP);
 SEXP do_fast_relop(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_remove(SEXP, SEXP, SEXP, SEXP);
 SEXP do_rep(SEXP, SEXP, SEXP, SEXP);
