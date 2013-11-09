@@ -317,7 +317,7 @@ static Rcomplex cprod(Rcomplex *x, int n, Rboolean narm)
     return s;
 }
 
-SEXP attribute_hidden do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     long double s, si, t, ti;
     int_fast64_t smi;
@@ -444,7 +444,7 @@ static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     }
 }
 
-SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, a, stmp = NA_STRING /* -Wall */, scum = NA_STRING, call2;
     double tmp = 0.0, s;
@@ -457,17 +457,6 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
     int updated;
 	/* updated := 1 , as soon as (i)tmp (do_summary),
 	   or *value ([ir]min / max) is assigned */
-
-    if (PRIMFUN_FAST(op)==0) {
-        switch (PRIMVAL(op)) {
-        case 0: /* sum */
-            SET_PRIMFUN_FAST_UNARY (op, do_fast_sum, 1, VARIANT_SUM);
-            break;
-        case 4: /* prod */
-            SET_PRIMFUN_FAST_UNARY (op, do_fast_prod, 1, 0);
-            break;
-        }
-    }
 
     /* match to foo(..., na.rm=FALSE) */
     PROTECT(args = fixup_NaRm(args));
@@ -771,7 +760,7 @@ invalid_type:
 }/* do_summary */
 
 
-SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_range(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, prargs, call2;
 
@@ -795,7 +784,7 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* which.min(x) : The index (starting at 1), of the first min(x) in x */
-SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP sx, ans;
     double s, *r;
@@ -840,7 +829,7 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* which(x) : indices of non-NA TRUE values in x */
-SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP v, v_nms, ans, ans_nms = R_NilValue;
     int i, j = 0, len, *buf;
@@ -877,7 +866,7 @@ SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* complete.cases(.) */
-SEXP attribute_hidden do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP s, t, u, rval;
     int i, len;
@@ -1068,7 +1057,7 @@ SEXP attribute_hidden do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
    It seems that NULL and logicals are supposed to be handled as
    if they have been coerced to integer.
  */
-SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP a, x, ans;
     int i, n, len, narm;
@@ -1239,3 +1228,36 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(1);
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_summary[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"mean",	do_mean,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"range",	do_range,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"which.min",	do_first_min,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"which.max",	do_first_min,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"which",	do_which,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"complete.cases",do_compcases,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmin",	do_pmin,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmax",	do_pmin,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+/* these four are group generic and so need to eval args */
+{"sum",		do_summary,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"min",		do_summary,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"max",		do_summary,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"prod",	do_summary,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_summary[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+{ do_summary,	do_fast_sum,	0,		1,	1, 0,  VARIANT_SUM, 0 },
+{ do_summary,	do_fast_prod,	4,		1,	1, 0,  0, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};

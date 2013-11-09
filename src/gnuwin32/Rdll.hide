@@ -637,7 +637,6 @@
  do_commandArgs
  do_comment
  do_commentgets
- do_compcases
  do_compilepkgs
  do_complex
  do_contour
@@ -724,7 +723,6 @@
  do_fileshow
  do_filesymlink
  do_filledcontour
- do_first_min
  do_flush
  do_flushconsole
  do_fmin
@@ -834,7 +832,6 @@
  do_mapply
  do_match
  do_matchcall
- do_mean
  do_memCompress
  do_memDecompress
  do_memlimits
@@ -894,7 +891,6 @@
  do_plot_window
  do_plot_xy
  do_pmatch
- do_pmin
  do_polygon
  do_polyroot
  do_pos2env
@@ -915,7 +911,6 @@
  do_random1
  do_random2
  do_random3
- do_range
  do_rank
  do_rapply
  do_raster
@@ -1018,7 +1013,6 @@
  do_substr
  do_substrgets
  do_sumconnection
- do_summary
  do_switch
  do_symbols
  do_sys
@@ -1061,7 +1055,6 @@
  do_vapply
  do_version
  do_warning
- do_which
  do_windialog
  do_windialogstring
  do_wingetmenuitems

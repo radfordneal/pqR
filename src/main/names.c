@@ -113,6 +113,7 @@ extern FUNTAB
     R_FunTab_relop[], 
     R_FunTab_logic[], 
     R_FunTab_array[], 
+    R_FunTab_summary[], 
     R_FunTab_names[];
 
 static FUNTAB *FunTab_ptrs[] = { 
@@ -121,6 +122,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_relop,
     R_FunTab_logic,
     R_FunTab_array,
+    R_FunTab_summary,
     R_FunTab_names,
     NULL
 };
@@ -133,13 +135,15 @@ extern FASTFUNTAB
     R_FastFunTab_arithmetic[],
     R_FastFunTab_relop[],
     R_FastFunTab_logic[],
-    R_FastFunTab_array[];
+    R_FastFunTab_array[],
+    R_FastFunTab_summary[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
     R_FastFunTab_relop,
     R_FastFunTab_logic,
     R_FastFunTab_array,
+    R_FastFunTab_summary,
     NULL
 };
 
@@ -262,16 +266,10 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"duplicated",	do_duplicated,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"unique",	do_duplicated,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"anyDuplicated",do_duplicated,	2,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"which",	do_which,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"which.min",	do_first_min,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmin",	do_pmin,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmax",	do_pmin,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"which.max",	do_first_min,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"match",	do_match,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmatch",	do_pmatch,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"charmatch",	do_charmatch,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"complete.cases",do_compcases,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"attach",	do_attach,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"detach",	do_detach,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -319,15 +317,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"RNGkind",	do_RNGkind,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"set.seed",	do_setseed,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
-/* Data Summaries */
-/* these four are group generic and so need to eval args */
-{"sum",		do_summary,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"min",		do_summary,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"max",		do_summary,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"prod",	do_summary,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"mean",	do_mean,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"range",	do_range,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"cov",		do_cov,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"cor",		do_cov,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 
