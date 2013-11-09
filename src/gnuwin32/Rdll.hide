@@ -632,7 +632,6 @@
  do_closewinprogressbar
  do_cmathfuns
  do_col2RGB
- do_colon
  do_colors
  do_commandArgs
  do_comment
@@ -937,8 +936,6 @@
  do_regexec
  do_regexpr
  do_remove
- do_rep
- do_rep_int
  do_resetCondHands
  do_restart
  do_retracemem
@@ -955,9 +952,6 @@
  do_seek
  do_segments
  do_selectlist
- do_seq
- do_seq_along
- do_seq_len
  do_serializeToConn
  do_setGraphicsEventEnv
  do_setInternet2

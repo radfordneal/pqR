@@ -114,6 +114,7 @@ extern FUNTAB
     R_FunTab_logic[], 
     R_FunTab_array[], 
     R_FunTab_summary[], 
+    R_FunTab_seq[], 
     R_FunTab_names[];
 
 static FUNTAB *FunTab_ptrs[] = { 
@@ -123,6 +124,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_logic,
     R_FunTab_array,
     R_FunTab_summary,
+    R_FunTab_seq,
     R_FunTab_names,
     NULL
 };
@@ -136,7 +138,8 @@ extern FASTFUNTAB
     R_FastFunTab_relop[],
     R_FastFunTab_logic[],
     R_FastFunTab_array[],
-    R_FastFunTab_summary[];
+    R_FastFunTab_summary[],
+    R_FastFunTab_seq[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
@@ -144,6 +147,7 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
     R_FastFunTab_logic,
     R_FastFunTab_array,
     R_FastFunTab_summary,
+    R_FastFunTab_seq,
     NULL
 };
 
@@ -212,11 +216,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"makeLazy",	do_makelazy,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
 {"identical",	do_identical,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	  0}},
 
-
-/* Binary Operators, all primitives */
-
-/* specials as conditionally evaluate second arg */
-{":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
 
 /* does not evaluate */
 {"~",		do_tilde,	0,	0,	2,	{PP_BINARY,  PREC_TILDE,  0}},
@@ -438,11 +437,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"expression",	do_makelist,	1,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"interactive",	do_interactive,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"invisible",	do_invisible,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"rep",		do_rep,		0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"rep.int",	do_rep_int,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"seq_len",	do_seq_len,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"list",	do_makelist,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"enc2native",	do_enc2,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
