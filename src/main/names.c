@@ -110,11 +110,13 @@ attribute_hidden FUNTAB R_FunTab[MAX_FUNTAB_ENTRIES+1]; /* terminated by NULL */
 extern FUNTAB 
     R_FunTab_eval1[], 
     R_FunTab_arithmetic[], 
+    R_FunTab_relop[], 
     R_FunTab_names[];
 
 static FUNTAB *FunTab_ptrs[] = { 
     R_FunTab_eval1,
     R_FunTab_arithmetic, 
+    R_FunTab_relop,
     R_FunTab_names,
     NULL
 };
@@ -124,10 +126,12 @@ static FUNTAB *FunTab_ptrs[] = {
    source files, with names having thee form R_FastFunTab_srcfilename. */
 
 extern FASTFUNTAB 
-    R_FastFunTab_arithmetic[];
+    R_FastFunTab_arithmetic[],
+    R_FastFunTab_relop[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
+    R_FastFunTab_relop,
     NULL
 };
 
@@ -202,12 +206,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 /* -- matrix op -- */
 {"%*%",		do_matprod,	0,	11001,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
-{"==",		do_relop,	EQOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"!=",		do_relop,	NEOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"<",		do_relop,	LTOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"<=",		do_relop,	LEOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{">=",		do_relop,	GEOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{">",		do_relop,	GTOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
 {"&",		do_logic,	1,	1,	2,	{PP_BINARY,  PREC_AND,	  0}},
 {"|",		do_logic,	2,	1,	2,	{PP_BINARY,  PREC_OR,	  0}},
 {"!",		do_logic,	3,	1,	1,	{PP_UNARY,   PREC_NOT,	  0}},
@@ -904,7 +902,7 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"pnamedcnt",	do_pnamedcnt,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"testvalgrind",do_testvalgrind,0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 
 };
 
