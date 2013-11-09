@@ -1433,7 +1433,7 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 }
 
 
-SEXP do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_math1(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP s;
 
@@ -1443,7 +1443,7 @@ SEXP do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
 
-    return do_fast_math1 (call, op, CAR(args), env, 0);
+    return do_fast_math1 (call, op, CAR(args), env, variant);
 }
 
 /* Methods for trunc are allowed to have more than one arg */
@@ -1453,7 +1453,7 @@ static SEXP do_fast_trunc (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return math1(arg, 5, call, variant);
 }
 
-SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP s;
     if (DispatchGroup("Math", call, op, args, env, &s))
@@ -1461,7 +1461,7 @@ SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 
     check1arg_x (args, call);
 
-    return do_fast_trunc (call, op, CAR(args), env, 0);
+    return do_fast_trunc (call, op, CAR(args), env, variant);
 }
 
 /* Note that abs is slightly different from the do_math1 set, both
@@ -1551,7 +1551,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
     return s;
 }
 
-SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP s;
 
@@ -1561,7 +1561,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
 
-    return do_fast_abs (call, op, CAR(args), env, 0);
+    return do_fast_abs (call, op, CAR(args), env, variant);
 }
 
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
@@ -2458,36 +2458,36 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"abs",		do_abs,		6,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"floor",	do_math1,	1,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ceiling",	do_math1,	2,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sqrt",	do_math1,	3,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sign",	do_math1,	4,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"trunc",	do_trunc,	5,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"abs",		do_abs,		6,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"floor",	do_math1,	1,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ceiling",	do_math1,	2,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sqrt",	do_math1,	3,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sign",	do_math1,	4,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"trunc",	do_trunc,	5,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"exp",		do_math1,	10,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"expm1",	do_math1,	11,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log1p",	do_math1,	12,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"exp",		do_math1,	10,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"expm1",	do_math1,	11,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log1p",	do_math1,	12,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"cos",		do_math1,	20,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sin",		do_math1,	21,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"tan",		do_math1,	22,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"acos",	do_math1,	23,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"asin",	do_math1,	24,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"atan",	do_math1,	25,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cos",		do_math1,	20,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sin",		do_math1,	21,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"tan",		do_math1,	22,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"acos",	do_math1,	23,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"asin",	do_math1,	24,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"atan",	do_math1,	25,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"cosh",	do_math1,	30,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sinh",	do_math1,	31,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"tanh",	do_math1,	32,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"acosh",	do_math1,	33,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"asinh",	do_math1,	34,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"atanh",	do_math1,	35,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cosh",	do_math1,	30,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sinh",	do_math1,	31,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"tanh",	do_math1,	32,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"acosh",	do_math1,	33,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"asinh",	do_math1,	34,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"atanh",	do_math1,	35,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"lgamma",	do_math1,	40,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"gamma",	do_math1,	41,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"lgamma",	do_math1,	40,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"gamma",	do_math1,	41,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"digamma",	do_math1,	42,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"trigamma",	do_math1,	43,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"digamma",	do_math1,	42,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"trigamma",	do_math1,	43,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 /* see "psigamma" below !*/
 
 /* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
