@@ -1545,8 +1545,7 @@ void attribute_hidden resetTimeLimits()
 	cpuLimit = cpuLimit2;
 }
 
-SEXP attribute_hidden
-do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     double cpu, elapsed, old_cpu = cpuLimitValue,
 	old_elapsed = elapsedLimitValue;
@@ -1572,8 +1571,7 @@ do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden
-do_setSessionTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_setSessionTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     double cpu, elapsed, data[5];
 

@@ -4575,8 +4575,7 @@ void attribute_hidden InitConnections()
     SinkCons[0] = 1; R_ErrorCon = 2;
 }
 
-SEXP attribute_hidden
-do_getallconnections(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getallconnections(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i, j=0, n=0;
     SEXP ans;
@@ -4591,8 +4590,7 @@ do_getallconnections(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden
-do_getconnection(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getconnection(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, class;
     int what;
@@ -5459,8 +5457,7 @@ SEXP R_decompress3(SEXP in)
     return ans;
 }
 
-SEXP attribute_hidden
-do_memCompress(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_memCompress(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, from;
     int type, res;
@@ -5537,8 +5534,7 @@ do_memCompress(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden
-do_memDecompress(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_memDecompress(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, from;
     int type, subtype = 0;

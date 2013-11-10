@@ -2887,8 +2887,7 @@ static SEXP matchEnvir(SEXP call, const char *what)
 }
 
 /* This is primitive */
-SEXP attribute_hidden
-do_as_environment(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_as_environment(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP arg = CAR(args), ans;
     checkArity(op, args);
