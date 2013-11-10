@@ -348,7 +348,7 @@ void attribute_hidden InitOptions(void)
 
 
 /* This needs to manage R_Visible */
-SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP argi= R_NilValue, argnames= R_NilValue, namei= R_NilValue,
 	names, options, s, tag, value; /* = R_Nil..: -Wall */
@@ -696,3 +696,14 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(2);
     return value;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_options[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"options",	do_options,	0,	211,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

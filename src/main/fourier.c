@@ -37,7 +37,7 @@
 
 /* Fourier Transform for Univariate Spatial and Time Series */
 
-SEXP attribute_hidden do_fft(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_fft(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP z, d;
     int i, inv, maxf, maxmaxf, maxmaxp, maxp, n, ndims, nseg, nspn;
@@ -122,7 +122,7 @@ SEXP attribute_hidden do_fft(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Fourier Transform for Vector-Valued ("multivariate") Series */
 /* Not to be confused with the spatial case (in do_fft). */
 
-SEXP attribute_hidden do_mvfft(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_mvfft(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP z, d;
     int i, inv, maxf, maxp, n, p;
@@ -195,7 +195,7 @@ static int nextn(int n, int *f, int nf)
     return n;
 }
 
-SEXP attribute_hidden do_nextn(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_nextn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP n, f, ans;
     int i, nn, nf;
@@ -224,3 +224,16 @@ SEXP attribute_hidden do_nextn(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(2);
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_fourier[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"fft",		do_fft,		0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"mvfft",	do_mvfft,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"nextn",	do_nextn,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

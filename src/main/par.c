@@ -1116,7 +1116,7 @@ static SEXP Query(const char *what, pGEDevDesc dd)
     return value;
 }
 
-SEXP attribute_hidden do_par(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_par(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP value;
     SEXP originalArgs = args;
@@ -1194,7 +1194,7 @@ SEXP attribute_hidden do_par(SEXP call, SEXP op, SEXP args, SEXP env)
  *  )
  */
 
-SEXP attribute_hidden do_layout(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_layout(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i, j, nrow, ncol, ncmrow, ncmcol;
     SEXP originalArgs = args;
@@ -1317,3 +1317,15 @@ void ProcessInlinePars(SEXP s, pGEDevDesc dd, SEXP call)
 /*= kept-old-versions: 12 **/
 /*= kept-new-versions: 30 **/
 /*= End: **/
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_par[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"par",		do_par,		0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"layout",	do_layout,	0,	111,	10,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
