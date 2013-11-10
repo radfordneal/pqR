@@ -116,6 +116,7 @@ extern FUNTAB
     R_FunTab_array[], 
     R_FunTab_summary[], 
     R_FunTab_seq[], 
+    R_FunTab_attrib[], 
     R_FunTab_eval2[], 
     R_FunTab_names[];
 
@@ -128,6 +129,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_array,
     R_FunTab_summary,
     R_FunTab_seq,
+    R_FunTab_attrib,
     R_FunTab_eval2,
     R_FunTab_names,
     NULL
@@ -144,7 +146,8 @@ extern FASTFUNTAB
     R_FastFunTab_logic[],
     R_FastFunTab_array[],
     R_FastFunTab_summary[],
-    R_FastFunTab_seq[];
+    R_FastFunTab_seq[],
+    R_FastFunTab_attrib[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
@@ -154,6 +157,7 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
     R_FastFunTab_array,
     R_FastFunTab_summary,
     R_FastFunTab_seq,
+    R_FastFunTab_attrib,
     NULL
 };
 
@@ -174,7 +178,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"[",		do_subset,	1,	0,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"[[",		do_subset2,	2,	0,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"$",		do_subset3,	3,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
-{"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 {"[<-",		do_subassign,	0,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"[[<-",	do_subassign2,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"$<-",		do_subassign3,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
@@ -232,23 +235,10 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"c",/* bind.c:*/do_c,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"oldClass",	do_class,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
 {"class",	R_do_data_class,0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {".cache_class",	R_do_data_class,	1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"unclass",	do_unclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"names",	do_names,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"names<-",	do_namesgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dimnames",	do_dimnames,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dim",		do_dim,		0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"dim<-",	do_dimgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"attributes",	do_attributes,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"attr",	do_attr,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
 /* .Internals */
 
@@ -257,8 +247,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"all.names",	do_allnames,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"get_rm",	do_get_rm,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},

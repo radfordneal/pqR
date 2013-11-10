@@ -499,7 +499,7 @@ static SEXP commentgets(SEXP vec, SEXP comment)
     return R_NilValue;/*- just for -Wall */
 }
 
-SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     if (NAMEDCNT_GT_1(CAR(args))) 
@@ -510,7 +510,7 @@ SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
     return CAR(args);
 }
 
-SEXP attribute_hidden do_comment(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_comment(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     return getAttrib(CAR(args), R_CommentSymbol);
@@ -557,7 +557,7 @@ SEXP classgets(SEXP vec, SEXP klass)
 }
 
 /* oldClass<-(), primitive */
-SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     check1arg_x (args, call);
@@ -573,7 +573,7 @@ SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* oldClass, primitive */
-SEXP attribute_hidden do_class(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_class(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     check1arg_x (args, call);
@@ -788,7 +788,7 @@ SEXP attribute_hidden R_do_data_class(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* names(object) <- name */
-SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
@@ -902,7 +902,7 @@ SEXP namesgets(SEXP vec, SEXP val)
     return vec;
 }
 
-SEXP attribute_hidden do_names(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
@@ -919,7 +919,7 @@ SEXP attribute_hidden do_names(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
 
@@ -1022,7 +1022,7 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
     return vec;
 }
 
-SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
@@ -1040,7 +1040,7 @@ static SEXP do_fast_dim (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return getAttrib (arg, R_DimSymbol);
 }
 
-SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dim(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
 
@@ -1050,13 +1050,10 @@ SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1))
 	return(ans);
 
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_dim, 1, 0);
-
-    return do_fast_dim (call, op, CAR(args), env, 0);
+    return do_fast_dim (call, op, CAR(args), env, variant);
 }
 
-SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x;
     LOCAL_COPY(R_NilValue);
@@ -1116,7 +1113,7 @@ SEXP dimgets(SEXP vec, SEXP val)
     return vec;
 }
 
-SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     LOCAL_COPY(R_NilValue);
     SEXP attrs, names, namesattr, value;
@@ -1165,7 +1162,7 @@ SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     return value;
 }
 
-SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
 
@@ -1190,7 +1187,7 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* attributes(object) <- attrs */
-SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* NOTE: The following code ensures that when an attribute list */
 /* is attached to an object, that the "dim" attibute is always */
@@ -1298,7 +1295,7 @@ benchmarks.  There is still some inefficiency since using getAttrib
 means the attributes list will be searched twice, but this seems
 fairly minor.  LT */
 
-SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     LOCAL_COPY(R_NilValue);
     SEXP argList, s, t, tag = R_NilValue, alist, ans;
@@ -1409,7 +1406,7 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /*  attr(x, which = "<name>")  <-  value  */
     SEXP obj, name, argList;
@@ -1650,7 +1647,7 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
     return obj;
 }
 
-SEXP attribute_hidden do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP  nlist, object, ans, klass;
 
@@ -1736,3 +1733,38 @@ R_getS4DataSlot(SEXP obj, SEXPTYPE type)
   else
      return R_NilValue;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_attrib[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"oldClass",	do_class,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
+{"names",	do_names,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"names<-",	do_namesgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"dimnames",	do_dimnames,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"dim",		do_dim,		0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dim<-",	do_dimgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"attributes",	do_attributes,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"attr",	do_attr,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+
+{"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_attrib[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+{ do_dim,	do_fast_dim,	-1,		1,	1, 0,  0, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};

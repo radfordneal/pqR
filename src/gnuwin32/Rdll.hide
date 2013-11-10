@@ -557,7 +557,6 @@
  dblep0_
  deleditordata
  det_ge_real
- do_AT
  do_Cstack_info
  do_D
  do_D2POSIXlt
@@ -592,10 +591,6 @@
  do_asvector
  do_atan
  do_attach
- do_attr
- do_attrgets
- do_attributes
- do_attributesgets
  do_axis
  do_baseenv
  do_basename
@@ -621,8 +616,6 @@
  do_chartr
  do_chooseDir
  do_chooseFiles
- do_class
- do_classgets
  do_clearpushback
  do_clip
  do_close
@@ -631,8 +624,6 @@
  do_col2RGB
  do_colors
  do_commandArgs
- do_comment
- do_commentgets
  do_complex
  do_contour
  do_contourLines
@@ -667,8 +658,6 @@
  do_dfltWarn
  do_dim
  do_dimgets
- do_dimnames
- do_dimnamesgets
  do_dirchmod
  do_dircreate
  do_dirname
@@ -797,7 +786,6 @@
  do_layout
  do_lazyLoadDBfetch
  do_lengthgets
- do_levelsgets
  do_libfixup
  do_list2env
  do_listdirs
@@ -839,8 +827,6 @@
  do_msgwindow
  do_mtext
  do_mvfft
- do_names
- do_namesgets
  do_nargs
  do_nchar
  do_newenv
