@@ -276,8 +276,8 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
     return ans;
 }
 
-static SEXP do_fast_cmathfuns (SEXP call, SEXP op, SEXP x, SEXP env, 
-                               int variant)
+SEXP attribute_hidden do_fast_cmathfuns (SEXP call, SEXP op, SEXP x, SEXP env, 
+                                         int variant)
 {
     SEXP y = R_NilValue;	/* -Wall*/
     int i, n;
@@ -368,7 +368,7 @@ static SEXP do_fast_cmathfuns (SEXP call, SEXP op, SEXP x, SEXP env,
     return y;
 }
 
-SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
 
@@ -377,11 +377,8 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (DispatchGroup("Complex", call, op, args, env, &ans))
 	return ans;
-
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_cmathfuns, 1, 0);
     
-    return do_fast_cmathfuns (call, op, CAR(args), env, 0);
+    return do_fast_cmathfuns (call, op, CAR(args), env, variant);
 }
 
 /* used in format.c and printutils.c */
@@ -857,3 +854,32 @@ SEXP attribute_hidden do_polyroot(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     return r;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_complex[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+/* these are group generic and so need to eval args */
+
+{"Re",		do_cmathfuns,	1,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"Im",		do_cmathfuns,	2,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"Mod",		do_cmathfuns,	3,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"Arg",		do_cmathfuns,	4,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"Conj",	do_cmathfuns,	5,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"complex",	do_complex,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"polyroot",	do_polyroot,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_complex[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+
+{ do_cmathfuns,	do_fast_cmathfuns, -1,		1,	1, 0,  0, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};
