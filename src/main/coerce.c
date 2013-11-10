@@ -1325,8 +1325,8 @@ SEXP asCharacterFactor(SEXP x)
 
 /* the "ascharacter" name is a historical anomaly: as.character used to be the
  * only primitive;  now, all these ops are : */
-SEXP attribute_hidden do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
-                                      int variant)
+static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                            int variant)
 {
     SEXP ans, x;
 
@@ -1378,8 +1378,7 @@ SEXP attribute_hidden do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
 
 /* NB: as.vector is used for several other as.xxxx, including
    as.expression, as.list, as.pairlist, as.symbol, (as.single) */
-SEXP attribute_hidden do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                   int variant)
+static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x, ans;
     int type;
@@ -1471,7 +1470,7 @@ SEXP attribute_hidden do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 
-SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP arglist, envir, names, pargs, body;
     int i, n;
@@ -1523,7 +1522,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /* primitive */
-SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ap, ans, names;
     int i, n;
@@ -1702,7 +1701,7 @@ Rcomplex asComplex(SEXP x)
 
 
 /* return the type (= "detailed mode") of the SEXP */
-SEXP attribute_hidden do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     return ScalarString(type2str(TYPEOF(CAR(args))));
@@ -1847,14 +1846,15 @@ static SEXP do_fast_is(SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
     return ScalarLogical(log_ans);
 }
 
-SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_is(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     checkArity(op, args);
     check1arg_x (args, call);
 
     /* These are all builtins, so we do not need to worry about
        evaluating arguments in DispatchOrEval */
-    if (PRIMVAL(op) >= 100 && PRIMVAL(op) < 200) {
+    if (PRIMVAL(op) >= 100 && PRIMVAL(op) <= 102) { 
+        /* update FASTFUNTAB at end of this file if above range expanded */
         if (isObject(CAR(args))) {
             SEXP ans;
             /* This used CHAR(PRINTNAME(CAR(call))), but that is not
@@ -1869,13 +1869,9 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
             if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1))
                 return(ans);
         }
-        if (PRIMFUN_FAST(op)==0) 
-            SET_PRIMFUN_FAST_UNARY (op, do_fast_is, 1, 0);
     }
-    else if (PRIMFUN_FAST(op)==0) 
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_is, 0, 0);
 
-    return do_fast_is (call, op, CAR(args), rho, 0);
+    return do_fast_is (call, op, CAR(args), rho, variant);
 }
 
 /* What should is.vector do ?
@@ -1883,7 +1879,7 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
  * It seems to make more sense to check for a dim attribute.
  */
 
-SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int log_ans;
     SEXP a, x;
@@ -2096,7 +2092,7 @@ vret:
     return ans;
 }
 
-SEXP attribute_hidden do_isna (SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_isna (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
@@ -2106,10 +2102,7 @@ SEXP attribute_hidden do_isna (SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 1, 1))
 	return(ans);
 
-    if (PRIMFUN_FAST(op)==0) 
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_isna, 1, 0);
-
-    return do_fast_isna (call, op, CAR(args), rho, 0);
+    return do_fast_isna (call, op, CAR(args), rho, variant);
 }
 
 static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
@@ -2204,7 +2197,7 @@ vret:
     return ans;
 }
 
-SEXP attribute_hidden do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
@@ -2214,14 +2207,10 @@ SEXP attribute_hidden do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 1, 1))
 	return(ans);
 
-    if (PRIMFUN_FAST(op)==0) 
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_isnan, 1, 0);
-
-    return do_fast_isnan (call, op, CAR(args), rho, 0);
+    return do_fast_isnan (call, op, CAR(args), rho, variant);
 }
 
-static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, 
-                              int variant)
+static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 {
     SEXP ans, dims, names;
     int i, ret;
@@ -2326,7 +2315,7 @@ vret:
     return ans;
 }
 
-SEXP attribute_hidden do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
@@ -2336,10 +2325,7 @@ SEXP attribute_hidden do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 1, 1))
 	return(ans);
 
-    if (PRIMFUN_FAST(op)==0) 
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_isfinite, 1, 0);
-
-    return do_fast_isfinite (call, op, CAR(args), rho, 0);
+    return do_fast_isfinite (call, op, CAR(args), rho, variant);
 }
 
 static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho, 
@@ -2447,7 +2433,8 @@ vret:
     return ans;
 }
 
-SEXP attribute_hidden do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho) 
+static SEXP do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                           int variant) 
 {
     SEXP ans;
 
@@ -2457,14 +2444,11 @@ SEXP attribute_hidden do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 1, 1))
 	return(ans);
 
-    if (PRIMFUN_FAST(op)==0) 
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_isinfinite, 1, 0);
-
-    return do_fast_isinfinite (call, op, CAR(args), rho, 0);
+    return do_fast_isinfinite (call, op, CAR(args), rho, variant);
 }
 
 /* This is a primitive SPECIALSXP */
-SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rest, evargs, rfun;
 
@@ -2485,7 +2469,7 @@ SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
     return (rfun);
 }
 
-SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP c, fun, names, envir;
     int i, n;
@@ -2631,7 +2615,7 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 
 
 /* This is a primitive SPECIALSXP */
-SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP argList, env, s, t;
     static char *ap[2] = { "expr", "env" };
@@ -2661,7 +2645,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* This is a primitive SPECIALSXP */
-SEXP attribute_hidden do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     check1arg(args, call, "expr");
@@ -2832,7 +2816,7 @@ SEXP attribute_hidden R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* primitive */
-SEXP attribute_hidden do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* storage.mode(obj) <- value */
     SEXP obj, value, ans;
@@ -2864,3 +2848,82 @@ SEXP attribute_hidden do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(1);
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_coerce[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"as.character",do_ascharacter,	0,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.integer",	do_ascharacter,	1,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.double",	do_ascharacter,	2,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.complex",	do_ascharacter,	3,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.logical",	do_ascharacter,	4,	11001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.raw",	do_ascharacter,	5,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"as.vector",	do_asvector,	0,	11011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.function.default",do_asfunction,0,	11,	2,	{PP_FUNCTION,PREC_FN,	  0}},
+{"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"typeof",	do_typeof,	1,	10011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"is.null",	do_is,		NILSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.logical",	do_is,		LGLSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.integer",	do_is,		INTSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.real",	do_is,		REALSXP,11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.double",	do_is,		REALSXP,11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.complex",	do_is,		CPLXSXP,11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.character",do_is,		STRSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.symbol",	do_is,		SYMSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.environment",do_is,	ENVSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.list",	do_is,		VECSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.pairlist",	do_is,		LISTSXP,11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.expression",do_is,		EXPRSXP,11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.raw",	do_is,		RAWSXP, 11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.object",	do_is,		50,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"is.numeric",	do_is,		100,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.matrix",	do_is,		101,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.array",	do_is,		102,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"is.atomic",	do_is,		200,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.recursive",do_is,		201,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.call",	do_is,		300,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.language",	do_is,		301,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.function",	do_is,		302,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.single",	do_is,		999,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"is.vector",	do_isvector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"is.na",	do_isna,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.nan",	do_isnan,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.finite",	do_isfinite,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.infinite",	do_isinfinite,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"call",	do_call,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"do.call",	do_docall,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"substitute",	do_substitute,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"quote",	do_quote,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_coerce[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+
+{ do_is,	do_fast_is,	100,		1,	1, 0,  0, 0 },
+{ do_is,	do_fast_is,	101,		1,	1, 0,  0, 0 },
+{ do_is,	do_fast_is,	102,		1,	1, 0,  0, 0 },
+{ do_is,	do_fast_is,	-1,		1,	0, 0,  0, 0 },
+
+{ do_isna,	do_fast_isna,	    -1,		1,	1, 0,  0, 0 },
+{ do_isnan,	do_fast_isnan,	    -1,		1,	1, 0,  0, 0 },
+{ do_isfinite,	do_fast_isfinite,   -1,		1,	1, 0,  0, 0 },
+{ do_isinfinite,do_fast_isinfinite, -1,		1,	1, 0,  0, 0 },
+
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};

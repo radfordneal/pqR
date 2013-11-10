@@ -584,11 +584,7 @@
  do_asPOSIXct
  do_asPOSIXlt
  do_as_environment
- do_ascall
- do_ascharacter
- do_asfunction
  do_assign
- do_asvector
  do_atan
  do_attach
  do_axis
@@ -607,7 +603,6 @@
  do_bzfile
  do_c
  do_c_dflt
- do_call
  do_capabilities
  do_capabilitiesX11
  do_cat
@@ -662,7 +657,6 @@
  do_dircreate
  do_dirname
  do_dllversion
- do_docall
  do_dotCode
  do_dotcall
  do_dotcallgr
@@ -767,20 +761,14 @@
  do_interruptsSuspended
  do_invisible
  do_invokeRestart
- do_is
  do_isNSEnv
  do_isatty
- do_isfinite
  do_isincomplete
- do_isinfinite
  do_islistfactor
  do_isloaded
- do_isna
- do_isnan
  do_isopen
  do_isseekable
  do_isunsorted
- do_isvector
  do_l10n_info
  do_lapply
  do_layout
@@ -878,7 +866,6 @@
  do_pushbacklength
  do_qsort
  do_quit
- do_quote
  do_radixsort
  do_random1
  do_random2
@@ -955,7 +942,6 @@
  do_stdout
  do_stop
  do_stopHTTPD
- do_storage_mode
  do_strheight
  do_strptime
  do_strsplit
@@ -972,7 +958,6 @@
  do_subset2_dflt
  do_subset3
  do_subset_dflt
- do_substitute
  do_substr
  do_substrgets
  do_sumconnection
@@ -1001,7 +986,6 @@
  do_tracemem
  do_truncate
  do_typecvt
- do_typeof
  do_unclass
  do_unlink
  do_unlist
