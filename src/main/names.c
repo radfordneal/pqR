@@ -116,6 +116,7 @@ extern FUNTAB
     R_FunTab_array[], 
     R_FunTab_summary[], 
     R_FunTab_seq[], 
+    R_FunTab_eval2[], 
     R_FunTab_names[];
 
 static FUNTAB *FunTab_ptrs[] = { 
@@ -127,6 +128,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_array,
     R_FunTab_summary,
     R_FunTab_seq,
+    R_FunTab_eval2,
     R_FunTab_names,
     NULL
 };
@@ -215,7 +217,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"undebug",	do_debug,	1,	111,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"isdebugged",	do_debug,	2,	11,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"debugonce",	do_debug,	3,	111,	3,	{PP_FUNCALL, PREC_FN,	  0}},
-{"Recall",	do_recall,	0,	210,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"delayedAssign",do_delayed,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	  0}},
 {"makeLazy",	do_makelazy,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
 {"identical",	do_identical,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	  0}},
@@ -426,7 +427,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 #if 0
 {"visibleflag", do_visibleflag,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 #endif
-{"withVisible", do_withVisible,	1,	10,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"expression",	do_makelist,	1,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"interactive",	do_interactive,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"invisible",	do_invisible,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -540,8 +540,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"dyn.unload",	do_dynunload,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ls",		do_ls,		1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"typeof",	do_typeof,	1,	10011,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"eval",	do_eval,	0,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"eval.with.vis",do_eval,	1,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.parent",	do_sys,		1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.call",	do_sys,		2,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.frame",	do_sys,		3,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -583,7 +581,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"sink.number",	do_sinknumber,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rapply",	do_rapply,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"islistfactor",do_islistfactor,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"Rprof",	do_Rprof,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"Rprofmem",	do_Rprofmem,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
 {"tracemem",    do_tracemem,    0,      1,	1,      {PP_FUNCALL, PREC_FN,	0}},
 {"retracemem",  do_retracemem,  0,      201,     -1,      {PP_FUNCALL, PREC_FN,	0}},
@@ -758,22 +755,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"strptime",	do_strptime,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"Date2POSIXlt",do_D2POSIXlt,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"POSIXlt2Date",do_POSIXlt2D,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"mkCode",     do_mkcode,       0,      11,     2,      {PP_FUNCALL, PREC_FN, 0}},
-{"bcClose",    do_bcclose,      0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
-{"is.builtin.internal",    do_is_builtin_internal,      0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"disassemble", do_disassemble, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"bcVersion", do_bcversion,     0,      11,     0,      {PP_FUNCALL, PREC_FN, 0}},
-{"load.from.file", do_loadfile, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"save.to.file", do_savefile,   0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
-{"growconst", do_growconst,     0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"putconst", do_putconst,       0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
-{"getconst", do_getconst,       0,      11,     2,      {PP_FUNCALL, PREC_FN, 0}},
-{"enableJIT",    do_enablejit,  0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"compilePKGS", do_compilepkgs, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-
-{"setNumMathThreads", do_setnumthreads,      0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"setMaxNumMathThreads", do_setmaxnumthreads,      0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
 
 /* Connections */
 {"stdin",	do_stdin,	0,      11,     0,      {PP_FUNCALL, PREC_FN,	0}},

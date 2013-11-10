@@ -568,7 +568,6 @@
  do_RGB2hsv
  do_RNGkind
  do_Rhome
- do_Rprof
  do_Rprofmem
  do_abbrev
  do_abline
@@ -600,8 +599,6 @@
  do_axis
  do_baseenv
  do_basename
- do_bcclose
- do_bcversion
  do_bind
  do_bindtextdomain
  do_bndIsActive
@@ -636,7 +633,6 @@
  do_commandArgs
  do_comment
  do_commentgets
- do_compilepkgs
  do_complex
  do_contour
  do_contourLines
@@ -676,7 +672,6 @@
  do_dirchmod
  do_dircreate
  do_dirname
- do_disassemble
  do_dllversion
  do_docall
  do_dotCode
@@ -691,7 +686,6 @@
  do_eapply
  do_edit
  do_emptyenv
- do_enablejit
  do_enc2
  do_encodeString
  do_encoding
@@ -702,7 +696,6 @@
  do_envirgets
  do_envprofile
  do_erase
- do_eval
  do_expression
  do_fast_relop
  do_fft
@@ -751,7 +744,6 @@
  do_getWindowTitle
  do_getallconnections
  do_getconnection
- do_getconst
  do_getenv
  do_geterrmessage
  do_getlocale
@@ -764,7 +756,6 @@
  do_gregexpr
  do_grep
  do_grepraw
- do_growconst
  do_gsub
  do_gzcon
  do_gzfile
@@ -789,7 +780,6 @@
  do_invokeRestart
  do_is
  do_isNSEnv
- do_is_builtin_internal
  do_isatty
  do_isfinite
  do_isincomplete
@@ -815,7 +805,6 @@
  do_load
  do_loadFromConn2
  do_loadRconsole
- do_loadfile
  do_loadhistory
  do_localeconv
  do_locator
@@ -845,7 +834,6 @@
  do_missing
  do_mkActiveBnd
  do_mkUnbound
- do_mkcode
  do_modelframe
  do_modelmatrix
  do_msgwindow
@@ -902,7 +890,6 @@
  do_psort
  do_pushback
  do_pushbacklength
- do_putconst
  do_qsort
  do_quit
  do_quote
@@ -928,7 +915,6 @@
  do_readlink
  do_readln
  do_readtablehead
- do_recall
  do_recordGraphics
  do_rect
  do_regFinaliz
@@ -945,7 +931,6 @@
  do_sample
  do_save
  do_saveToConn
- do_savefile
  do_savehistory
  do_scan
  do_search
@@ -964,8 +949,6 @@
  do_setenv
  do_seterrmessage
  do_setlocale
- do_setmaxnumthreads
- do_setnumthreads
  do_setseed
  do_setwd
  do_setwinprogressbar
@@ -1057,7 +1040,6 @@
  do_winmenunames
  do_winprogressbar
  do_winver
- do_withVisible
  do_writeClipboard
  do_writebin
  do_writechar
