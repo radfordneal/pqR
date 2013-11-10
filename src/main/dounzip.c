@@ -306,7 +306,7 @@ static SEXP ziplist(const char *zipname)
 }
 
 
-SEXP attribute_hidden do_unzip(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_unzip(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP  fn, ans, names = R_NilValue;
     char  zipname[PATH_MAX], dest[PATH_MAX];
@@ -2215,3 +2215,14 @@ static int ferror_func (voidpf stream)
     ret = ferror((FILE *)stream);
     return ret;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_dounzip[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"unzip",	do_unzip,	0,	111,    7,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

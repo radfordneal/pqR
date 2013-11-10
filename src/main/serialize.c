@@ -2030,8 +2030,7 @@ static void con_cleanup(void *data)
 /* Used from saveRDS().
    This became public in R 2.13.0, and that version added support for
    connections internally */
-SEXP attribute_hidden
-do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* serializeToConn(object, conn, ascii, version, hook) */
 
@@ -2099,8 +2098,7 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Used from readRDS().
    This became public in R 2.13.0, and that version added support for
    connections internally */
-SEXP attribute_hidden
-do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* unserializeFromConn(conn, hook) */
 
@@ -2669,8 +2667,7 @@ R_lazyLoadDBinsertValue(SEXP value, SEXP file, SEXP ascii,
    from a file, optionally decompresses, and unserializes the bytes.
    If the result is a promise, then the promise is forced. */
 
-SEXP attribute_hidden
-do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP key, file, compsxp, hook;
     PROTECT_INDEX vpi;

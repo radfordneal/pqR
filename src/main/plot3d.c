@@ -865,7 +865,7 @@ SEXP GEcontourLines(double *x, int nx, double *y, int ny,
     return mainlist;
 }
 
-SEXP attribute_hidden do_contourLines(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_contourLines(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP c, x, y, z;
     int nx, ny, nc;
@@ -1332,7 +1332,7 @@ SEXP attribute_hidden Rg_contourDef(void)
 /* contour(x, y, z, levels, labels, labcex, drawlabels,
  *         method, vfont, col = col, lty = lty, lwd = lwd)
  */
-SEXP attribute_hidden do_contour(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_contour(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP oargs, c, x, y, z, vfont, col, rawcol, lty, lwd, labels;
     int i, j, nx, ny, nc, ncol, nlty, nlwd;
@@ -1647,7 +1647,7 @@ FindPolygonVertices(double low, double high,
 */
 
 /* filledcontour(x, y, z, levels, col) */
-SEXP attribute_hidden do_filledcontour(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_filledcontour(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP oargs, sx, sy, sz, sc, scol;
     double *x, *y, *z, *c;
@@ -1763,7 +1763,7 @@ SEXP attribute_hidden do_filledcontour(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 /* image(x, y, z, col, breaks) */
-SEXP attribute_hidden do_image(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_image(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP oargs, sx, sy, sz, sc;
     double *x, *y;
@@ -2435,7 +2435,7 @@ static void PerspAxes(double *x, double *y, double *z,
     gpptr(dd)->xpd = xpdsave;
 }
 
-SEXP attribute_hidden do_persp(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_persp(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, y, z, xlim, ylim, zlim;
     SEXP depth, indx, originalArgs;
@@ -2636,3 +2636,18 @@ SEXP attribute_hidden do_persp(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(2);
     return x;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_plot3d[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"contourLines",do_contourLines,0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"contour",	do_contour,	0,	11,	12,	{PP_FUNCALL, PREC_FN,	0}},
+{"filledcontour",do_filledcontour,0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"image",	do_image,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"persp",	do_persp,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

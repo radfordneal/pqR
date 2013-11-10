@@ -100,7 +100,7 @@ static void internet_Init(void)
 }
 
 
-SEXP attribute_hidden do_download(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_download(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     if(!initialized) internet_Init();
     if(initialized > 0)
@@ -112,7 +112,7 @@ SEXP attribute_hidden do_download(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 #ifdef Win32
-SEXP attribute_hidden do_setInternet2(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_setInternet2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int newUseInternet2;
     SEXP newval, retval;
@@ -245,7 +245,7 @@ void R_HTTPDStop(void)
 	error(_("internet routines cannot be loaded"));
 }
 
-SEXP attribute_hidden do_startHTTPD(SEXP call, SEXP op, SEXP args, SEXP env) 
+static SEXP do_startHTTPD(SEXP call, SEXP op, SEXP args, SEXP env) 
 {
     const char *ip = 0;
     SEXP sIP, sPort;
@@ -259,7 +259,7 @@ SEXP attribute_hidden do_startHTTPD(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarInteger(R_HTTPDCreate(ip, asInteger(sPort)));
 }
 
-SEXP attribute_hidden do_stopHTTPD(SEXP call, SEXP op, SEXP args, SEXP env) 
+static SEXP do_stopHTTPD(SEXP call, SEXP op, SEXP args, SEXP env) 
 {
     checkArity(op, args);
     R_HTTPDStop();
@@ -338,3 +338,19 @@ int Rsockselect(int nsock, int *insockfd, int *ready, int *write,
 	return 0;
     }
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_internet[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"download",	do_download,	0,      11,     5,      {PP_FUNCALL, PREC_FN,	0}},
+#ifdef Win32
+{"useInternet2",do_setInternet2,0,	211,	1,	{PP_FUNCALL, PREC_FN,	0}},
+#endif
+{"startHTTPD",  do_startHTTPD,  0,      11,     2,      {PP_FUNCALL, PREC_FN,   0}},
+{"stopHTTPD",	do_stopHTTPD,	0,      11,     0,      {PP_FUNCALL, PREC_FN,   0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

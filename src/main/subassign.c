@@ -1032,7 +1032,7 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
    y is the vector that is going to provide the new values and subs is
    the vector of subscripts that are going to be replaced. */
 
-SEXP attribute_hidden do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, a1, a2, a3;
     int argsevald = 0;
@@ -1192,7 +1192,7 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
  * args[1] = object being subscripted
  * args[2] = list of subscripts
  * args[3] = replacement values */
-SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
 
@@ -1203,8 +1203,7 @@ SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
     return do_subassign2_dflt(call, op, ans, rho);
 }
 
-SEXP attribute_hidden
-do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     LOCAL_COPY(R_NilValue);
 
@@ -1440,7 +1439,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
    to get DispatchOrEval to work we need to first translate it
    to a string
 */
-SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP name, ans, input;
     int iS;
@@ -1621,3 +1620,16 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
     if(S4) SET_S4_OBJECT(x);
     return x;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_subassign[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"[<-",		do_subassign,	0,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"[[<-",	do_subassign2,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"$<-",		do_subassign3,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

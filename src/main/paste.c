@@ -54,7 +54,7 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 /* Note that NA_STRING is not handled separately here.  This is
    deliberate -- see ?paste -- and implicitly coerces it to "NA"
 */
-SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, collapse, sep, x;
     int i, j, k, maxlen, nx, pwidth, sepw, u_sepw, ienc;
@@ -277,7 +277,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, sep, x;
     int i, j, k, ln, maxlen, nx, nzero, pwidth, sepw;
@@ -356,7 +356,7 @@ SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* format.default(x, trim, digits, nsmall, width, justify, na.encode,
 		  scientific) */
-SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP l, x, y, swd;
     int i, il, n, digits, trim = 0, nsmall = 0, wd = 0, adj = -1, na, sci = 0;
@@ -571,7 +571,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
  * for complex : 2 x 3 integers for (Re, Im)
  */
 
-SEXP attribute_hidden do_formatinfo(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_formatinfo(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x;
     int n, digits, nsmall, no = 1, w, d, e, wi, di, ei;
@@ -648,3 +648,18 @@ SEXP attribute_hidden do_formatinfo(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     return x;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_paste[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"paste",	do_paste,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"paste0",	do_paste,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"file.path",	do_filepath,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"format",	do_format,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"format.info",	do_formatinfo,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
