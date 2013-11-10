@@ -32,40 +32,12 @@
 #include "Defn.h"
 
 
-static SEXP lunary (SEXP, SEXP, SEXP, SEXP, int);
-static SEXP lbinary (SEXP, SEXP, SEXP, SEXP, SEXP, int);
 static SEXP binaryLogic(int code, SEXP s1, SEXP s2);
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
 
 
-/* & | ! */
-
-SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    SEXP ans;
-
-    if (DispatchGroup("Ops",call, op, args, env, &ans))
-	return ans;
-
-    if (PRIMFUN_FAST(op)==0) {
-        if (PRIMARITY(op) == 1) /* ! */
-           SET_PRIMFUN_FAST_UNARY (op, lunary, 1, 0);
-        else /* & and | */
-           SET_PRIMFUN_FAST_BINARY (op, lbinary, 1, 1, 0, 0, 0);
-    }
-
-    switch (length(args)) {
-    case 1:
-	return lunary(call, op, CAR(args), env, 0);
-    case 2:
-	return lbinary(call, op, CAR(args), CADR(args), env, 0);
-    default:
-	error(_("binary operations require two arguments"));
-	return R_NilValue;	/* for -Wall */
-    }
-}
-
-static SEXP lbinary(SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, int variant)
+static SEXP do_fast_andor (SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, 
+                           int variant)
 {
 /* logical binary : "&" or "|" */
     SEXP dims, tsp, klass, xnames, ynames;
@@ -74,8 +46,8 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, int variant)
     if (isRaw(x) && isRaw(y)) {
     }
     else if (!isNumber(x) || !isNumber(y))
-    	errorcall(call,
-    		  _("operations are possible only for numeric, logical or complex types"));
+        errorcall(call,
+          _("operations are possible only for numeric, logical or complex types"));
     tsp = R_NilValue;		/* -Wall */
     klass = R_NilValue;		/* -Wall */
     xarray = isArray(x);
@@ -139,7 +111,7 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, int variant)
     else {
 	if (!isNumber(x) || !isNumber(y))
 	    errorcall(call,
-		      _("operations are possible only for numeric, logical or complex types"));
+              _("operations are possible only for numeric, logical or complex types"));
 	PROTECT(x = coerceVector(x, LGLSXP));
 	PROTECT(y = coerceVector(y, LGLSXP));
 	x = binaryLogic(PRIMVAL(op), x, y);
@@ -171,9 +143,25 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, int variant)
     return x;
 }
 
-/* Handles only the ! operator. Doesn't bother to check that it's really "!"*/
 
-static SEXP lunary(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+/* & | */
+
+SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
+                               int variant)
+{
+    SEXP ans;
+
+    if (DispatchGroup("Ops",call, op, args, env, &ans))
+	return ans;
+
+    checkArity (op, args);
+
+    return do_fast_andor (call, op, CAR(args), CADR(args), env, variant);
+}
+
+/* Handles the ! operator. */
+
+static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
     SEXP x, dim, dimnames, names;
     int i, len;
@@ -226,7 +214,7 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 	    RAW(x)[i] = 0xFF ^ RAW(arg)[i];
 	break;
     default:
-	UNIMPLEMENTED_TYPE("lunary", arg);
+	UNIMPLEMENTED_TYPE("do_fast_not", arg);
     }
     if(names != R_NilValue) setAttrib(x, R_NamesSymbol, names);
     if(dim != R_NilValue) setAttrib(x, R_DimSymbol, dim);
@@ -235,9 +223,24 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return x;
 }
 
+/* ! */
+
+SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env, 
+                             int variant)
+{
+    SEXP ans;
+
+    if (DispatchGroup("Ops", call, op, args, env, &ans))
+	return ans;
+
+    checkArity (op, args);
+
+    return do_fast_not (call, op, CAR(args), env, variant);
+}
+
 /* Does && (op 1) and || (op 2). */
 
-SEXP attribute_hidden do_logic2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s1, s2;
     int x1, x2;
@@ -401,14 +404,14 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
     return ans;
 }
 
-#define _OP_ALL 1
-#define _OP_ANY 2
+#define OP_ALL 1
+#define OP_ANY 2
 
 static int checkValues(int op, int na_rm, int *x, int n)
 {
     int has_na = 0;
 
-    if (op == _OP_ANY) {
+    if (op == OP_ANY) {
         for (int i = 0; i<n; i++) {
             if (x[i]!=FALSE) {
                 if (x[i]==TRUE) 
@@ -419,7 +422,7 @@ static int checkValues(int op, int na_rm, int *x, int n)
         }
         return has_na && !na_rm ? NA_LOGICAL : FALSE;
     }
-    else { /* _OP_ALL */
+    else { /* OP_ALL */
         for (int i = 0; i<n; i++) {
             if (x[i]!=TRUE) {
                 if (x[i]==FALSE) 
@@ -432,11 +435,10 @@ static int checkValues(int op, int na_rm, int *x, int n)
     }
 }
 
-/* all, any */
 
 /* fast version handles only one unnamed argument, so narm is FALSE. */
 
-static SEXP do_fast_logic3 (SEXP call, SEXP op, SEXP arg, SEXP env, 
+static SEXP do_fast_allany (SEXP call, SEXP op, SEXP arg, SEXP env, 
                             int variant)
 {
     int val;
@@ -447,7 +449,7 @@ static SEXP do_fast_logic3 (SEXP call, SEXP op, SEXP arg, SEXP env,
     else if (length(arg) == 0)
         /* Avoid memory waste from coercing empty inputs, and also
            avoid warnings with empty lists coming from sapply */
-        val = PRIMVAL(op) == _OP_ALL ? TRUE : FALSE;
+        val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
 
     else {
 	if (TYPEOF(arg) != LGLSXP) {
@@ -467,7 +469,7 @@ static SEXP do_fast_logic3 (SEXP call, SEXP op, SEXP arg, SEXP env,
     return ScalarLogical(val);
 }
 
-SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, s, t, call2;
     int narm, has_na = 0;
@@ -475,7 +477,7 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
        all(logical(0)) -> TRUE
        any(logical(0)) -> FALSE
      */
-    Rboolean val = PRIMVAL(op) == _OP_ALL ? TRUE : FALSE;
+    Rboolean val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
 
     PROTECT(args = fixup_NaRm(args));
     PROTECT(call2 = duplicate(call));
@@ -485,10 +487,6 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
 	UNPROTECT(2);
 	return(ans);
     }
-
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_logic3, 1, 
-          PRIMVAL(op) == _OP_ALL ? VARIANT_AND : VARIANT_OR);
 
     ans = matchArgExact(R_NaRmSymbol, &args);
     narm = asLogical(ans);
@@ -512,16 +510,50 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
 	    t = coerceVector(t, LGLSXP);
 	}
 	val = checkValues(PRIMVAL(op), narm, LOGICAL(t), LENGTH(t));
-        if (val != NA_LOGICAL) {
-            if ((PRIMVAL(op) == _OP_ANY && val)
-                || (PRIMVAL(op) == _OP_ALL && !val)) {
+        if (val == NA_LOGICAL)
+            has_na = 1;
+        else {
+            if (PRIMVAL(op) == OP_ANY && val || PRIMVAL(op) == OP_ALL && !val) {
                 has_na = 0;
                 break;
             }
-        } else has_na = 1;
+        } 
     }
     UNPROTECT(2);
     return has_na ? ScalarLogical(NA_LOGICAL) : ScalarLogical(val);
 }
-#undef _OP_ALL
-#undef _OP_ANY
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_logic[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+/* Logical Operators, all primitives */
+
+/* these are group generic and so need to eval args */
+{"&",		do_andor,	1,	1001,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"|",		do_andor,	2,	1001,	2,	{PP_BINARY,  PREC_OR,	  0}},
+{"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
+
+/* specials as conditionally evaluate second arg */
+{"&&",		do_andor2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"||",		do_andor2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
+
+/* these are group generic and so need to eval args */
+{"all",		do_allany,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"any",		do_allany,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_logic[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+{ do_andor,	do_fast_andor,	-1,		2,	1, 1,  0, 0 },
+{ do_not,	do_fast_not,	-1,		1,	1, 0,  0, 0 },
+{ do_allany,	do_fast_allany,	OP_ALL,		1,	1, 0,  VARIANT_AND, 0 },
+{ do_allany,	do_fast_allany,	OP_ANY,		1,	1, 0,  VARIANT_OR, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};

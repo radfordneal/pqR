@@ -17,7 +17,7 @@
  *  http://www.r-project.org/Licenses/
  */
 
-SEXP do_cmathfuns(SEXP, SEXP, SEXP, SEXP);
+SEXP do_fast_cmathfuns(SEXP, SEXP, SEXP, SEXP, int);
 
 SEXP complex_math1(SEXP, SEXP, SEXP, SEXP);
 SEXP complex_math2(SEXP, SEXP, SEXP, SEXP);
