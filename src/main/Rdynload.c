@@ -898,7 +898,7 @@ static void GetFullDLLPath(SEXP call, char *buf, const char *const path)
   call routines from "incomplete" DLLs.
  */
 
-SEXP attribute_hidden do_dynload(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dynload(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     char buf[2 * PATH_MAX];
     DllInfo *info;
@@ -915,7 +915,7 @@ SEXP attribute_hidden do_dynload(SEXP call, SEXP op, SEXP args, SEXP env)
     return(Rf_MakeDLLInfo(info));
 }
 
-SEXP attribute_hidden do_dynunload(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dynunload(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     char buf[2 * PATH_MAX];
 
@@ -1339,13 +1339,13 @@ DL_FUNC R_FindSymbol(char const *name, char const *pkg,
     return (DL_FUNC) 0;
 }
 
-SEXP attribute_hidden do_dynload(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dynload(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     error(_("no dyn.load support in this R version"));
     return(R_NilValue);
 }
 
-SEXP attribute_hidden do_dynunload(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dynunload(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     error(_("no dyn.load support in this R version"));
     return(R_NilValue);
@@ -1416,3 +1416,15 @@ DL_FUNC R_GetCCallable(const char *package, const char *name)
 	error(_("table entry must be an external pointer"));
     return R_ExternalPtrAddrFn(eptr);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_Rdynload[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"dyn.load",	do_dynload,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"dyn.unload",	do_dynunload,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

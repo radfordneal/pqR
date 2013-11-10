@@ -542,7 +542,7 @@ double currentTime(void)
     return ans;
 }
 
-SEXP attribute_hidden do_systime(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_systime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     return ScalarReal(currentTime());
 }
@@ -665,7 +665,7 @@ static void makelt(struct tm *tm, SEXP ans, int i, int valid, double frac_secs)
 }
 
 
-SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP stz, x, ans, ansnames, klass, tzone;
     int i, n, isgmt = 0, valid, settz = 0;
@@ -731,7 +731,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP stz, x, ans;
     int i, n = 0, isgmt = 0, nlen[9], settz = 0;
@@ -811,7 +811,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, sformat, ans, tz;
     int i, n = 0, m, N, nlen[9], UseTZ, settz = 0;
@@ -981,7 +981,7 @@ static void glibc_fix(struct tm *tm, int *invalid)
 }
 
 
-SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, sformat, ans, ansnames, klass, stz, tzone;
     int i, n, m, N, invalid, isgmt = 0, settz = 0, offset;
@@ -1089,7 +1089,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, ans, ansnames, klass;
     int n, i, valid;
@@ -1149,7 +1149,7 @@ SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, ans, klass;
     int i, n = 0, nlen[9];
@@ -1197,3 +1197,20 @@ SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(3);
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_datetime[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"Sys.time",	do_systime,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.POSIXlt",	do_asPOSIXlt,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.POSIXct",	do_asPOSIXct,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"format.POSIXlt",do_formatPOSIXlt,0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"strptime",	do_strptime,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"Date2POSIXlt",do_D2POSIXlt,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"POSIXlt2Date",do_POSIXlt2D,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

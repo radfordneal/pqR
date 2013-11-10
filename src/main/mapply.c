@@ -31,8 +31,7 @@
 #include <Defn.h>
 
 
-SEXP attribute_hidden
-do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEXP rho)
+SEXP attribute_hidden do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEXP rho)
 {
 
     int i, j, m, *lengths, *counters, named, longest = 0, zero = 0;

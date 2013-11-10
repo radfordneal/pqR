@@ -79,7 +79,7 @@ static double fcn1(double x, struct callinfo *info)
 }
 
 /* fmin(f, xmin, xmax tol) */
-SEXP attribute_hidden do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     double xmin, xmax, tol;
     SEXP v, res;
@@ -168,7 +168,7 @@ static double fcn2(double x, struct callinfo *info)
 }
 
 /* zeroin(f, xmin, xmax, tol, maxiter) */
-SEXP attribute_hidden do_zeroin(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_zeroin(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #define DO_ZEROIN_part_1				\
     double xmin, xmax, tol;				\
@@ -229,7 +229,7 @@ SEXP attribute_hidden do_zeroin(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* zeroin2(f, ax, bx, f.ax, f.bx, tol, maxiter) */
-SEXP attribute_hidden do_zeroin2(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_zeroin2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     double f_ax, f_bx;
     DO_ZEROIN_part_1;
@@ -570,7 +570,7 @@ from above in some direction,\n"\
 
 /* NOTE: The actual Dennis-Schnabel algorithm `optif9' is in ../appl/uncmin.c */
 
-SEXP attribute_hidden do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP value, names, v, R_gradientSymbol, R_hessianSymbol;
 
@@ -786,3 +786,17 @@ SEXP attribute_hidden do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(3);
     return value;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_optimize[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"fmin",	do_fmin,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"zeroin",	do_zeroin,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"zeroin2",	do_zeroin2,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"nlm",		do_nlm,		0,	11,	11,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

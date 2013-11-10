@@ -394,7 +394,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 */
 
 /* This is a primitive SPECIALSXP */
-SEXP attribute_hidden do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
+static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
                                     int variant)
 {
     SEXP ans, generic = R_NilValue /* -Wall */, obj, val;
@@ -517,7 +517,7 @@ static SEXP fixcall(SEXP call, SEXP args)
 #define ARGUSED(x) LEVELS(x)
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
+static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
                                      int variant)
 {
     char buf[512], b[512], bb[512], tbuf[10];
@@ -827,7 +827,7 @@ SEXP attribute_hidden do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 }
 
 /* primitive */
-SEXP attribute_hidden do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     check1arg_x (args, call);
@@ -912,7 +912,7 @@ SEXP inherits3(SEXP x, SEXP what, SEXP which)
     return rval;
 }
 
-SEXP attribute_hidden do_inherits(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_inherits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
@@ -1127,7 +1127,7 @@ static SEXP dispatchNonGeneric(SEXP name, SEXP env, SEXP fdef)
 
 static SEXP get_this_generic(SEXP args);
 
-SEXP attribute_hidden do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP arg, value, fdef; R_stdGen_ptr_t ptr = R_get_standardGeneric_ptr();
 
@@ -1604,3 +1604,18 @@ SEXP asS4(SEXP s, Rboolean flag, int complete)
     }
     return s;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_objects[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"UseMethod",	do_usemethod,	0,     1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"NextMethod",	do_nextmethod,	0,     1210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"unclass",	do_unclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"inherits",	do_inherits,	0,	10011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"standardGeneric",do_standardGeneric,0, 201,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

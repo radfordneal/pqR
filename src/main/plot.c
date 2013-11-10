@@ -409,7 +409,7 @@ GetTextArg(SEXP call, SEXP spec, SEXP *ptxt,
     /* GRAPHICS FUNCTION ENTRY POINTS */
 
 
-SEXP attribute_hidden do_plot_new(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_plot_new(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* plot.new() - create a new plot "frame" */
 
@@ -462,7 +462,7 @@ SEXP attribute_hidden do_plot_new(SEXP call, SEXP op, SEXP args, SEXP env)
  *	full computation is captured in the display list.
  */
 
-SEXP attribute_hidden do_plot_window(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_plot_window(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP xlim, ylim, logarg;
     double asp, xmin, xmax, ymin, ymax;
@@ -903,7 +903,7 @@ static void getylimits(double *y, pGEDevDesc dd) {
     }
 }
 
-SEXP attribute_hidden do_axis(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_axis(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* axis(side, at, labels, tick, line, pos,
      	    outer, font, lty, lwd, lwd.ticks, col, col.ticks,
@@ -1448,7 +1448,7 @@ SEXP attribute_hidden do_axis(SEXP call, SEXP op, SEXP args, SEXP env)
 }/* do_axis */
 
 
-SEXP attribute_hidden do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /*	plot.xy(xy, type, pch, lty, col, bg, cex, lwd, ...)
 
@@ -1780,7 +1780,7 @@ static void xypoints(SEXP call, SEXP args, int *n)
 }
 
 
-SEXP attribute_hidden do_segments(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_segments(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* segments(x0, y0, x1, y1, col, lty, lwd, ...) */
     SEXP sx0, sx1, sy0, sy1, col, lty, lwd;
@@ -1849,7 +1849,7 @@ SEXP attribute_hidden do_segments(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_rect(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_rect(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* rect(xl, yb, xr, yt, col, border, lty, ...) */
     SEXP sxl, sxr, syb, syt, col, lty, lwd, border;
@@ -1923,7 +1923,7 @@ SEXP attribute_hidden do_rect(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_path(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_path(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* path(x, y, col, border, lty, ...) */
     SEXP sx, sy, nper, rule, col, border, lty;
@@ -1994,7 +1994,7 @@ SEXP attribute_hidden do_path(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_raster(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_raster(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* raster(image, xl, yb, xr, yt, angle, interpolate, ...) */
     const void *vmax;
@@ -2068,7 +2068,7 @@ SEXP attribute_hidden do_raster(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_arrows(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_arrows(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* arrows(x0, y0, x1, y1, length, angle, code, col, lty, lwd, ...) */
     SEXP sx0, sx1, sy0, sy1, col, lty, lwd;
@@ -2165,7 +2165,7 @@ static void drawPolygon(int n, double *x, double *y,
     GPolygon(n, x, y, USER, fill, border, dd);
 }
 
-SEXP attribute_hidden do_polygon(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_polygon(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* polygon(x, y, col, border, lty, ...) */
     SEXP sx, sy, col, border, lty;
@@ -2241,7 +2241,7 @@ SEXP attribute_hidden do_polygon(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_text(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_text(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* text(xy, labels, adj, pos, offset,
  *	vfont, cex, col, font, ...)
@@ -2524,7 +2524,7 @@ static double ComputeAtValue(double at, double adj,
 	 font = NA,
 	 ...) */
 
-SEXP attribute_hidden do_mtext(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_mtext(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP text, side, line, outer, at, adj, padj, cex, col, font, string;
     SEXP rawcol;
@@ -2699,7 +2699,7 @@ SEXP attribute_hidden do_mtext(SEXP call, SEXP op, SEXP args, SEXP env)
 }/* do_mtext */
 
 
-SEXP attribute_hidden do_title(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_title(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* Annotation for plots :
 
@@ -2925,7 +2925,7 @@ SEXP attribute_hidden do_title(SEXP call, SEXP op, SEXP args, SEXP env)
 /*  abline(a, b, h, v, col, lty, lwd, ...)
     draw lines in intercept/slope form.	 */
 
-SEXP attribute_hidden do_abline(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_abline(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP a, b, h, v, untf, col, lty, lwd;
     int i, ncol, nlines, nlty, nlwd, lstart, lstop;
@@ -3109,7 +3109,7 @@ SEXP attribute_hidden do_abline(SEXP call, SEXP op, SEXP args, SEXP env)
 } /* do_abline */
 
 
-SEXP attribute_hidden do_box(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_box(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /*     box(which="plot", lty="solid", ...)
        --- which is coded, 1 = plot, 2 = figure, 3 = inner, 4 = outer.
@@ -3162,7 +3162,7 @@ static void drawPointsLines(double xp, double yp, double xold, double yold,
 	GLine(xold, yold, xp, yp, DEVICE, dd);
 }
 
-SEXP attribute_hidden do_locator(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_locator(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, y, nobs, ans, saveans, stype = R_NilValue;
     int i, n, type='p';
@@ -3275,7 +3275,7 @@ static void drawLabel(double xi, double yi, int pos, double offset,
 }
 
 /* This manages R_Visible */
-SEXP attribute_hidden do_identify(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_identify(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x, y, l, ind, pos, Offset, draw, saveans;
     double xi, yi, xp, yp, d, dmin, offset, tol;
@@ -3531,10 +3531,10 @@ SEXP attribute_hidden do_identify(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;								\
 }
 
-SEXP attribute_hidden do_strheight(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_strheight(SEXP call, SEXP op, SEXP args, SEXP env)
 DO_STR_DIM(Height)
 
-SEXP attribute_hidden do_strwidth (SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_strwidth (SEXP call, SEXP op, SEXP args, SEXP env)
 DO_STR_DIM(Width)
 
 #undef DO_STR_DIM
@@ -3594,7 +3594,7 @@ static void drawdend(int node, double *x, double *y, SEXP dnd_llabels,
 }
 
 
-SEXP attribute_hidden do_dend(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dend(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     double x, y;
     int n;
@@ -3674,7 +3674,7 @@ SEXP attribute_hidden do_dend(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;/* never used; to keep -Wall happy */
 }
 
-SEXP attribute_hidden do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i, imax, n;
     double pin, *ll, tmp, yval, *y, ymin, ymax, yrange, m;
@@ -3785,7 +3785,7 @@ SEXP attribute_hidden do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_erase(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_erase(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP col;
     pGEDevDesc dd = GEcurrentDevice();
@@ -3841,7 +3841,7 @@ static void CheckSymbolPar(SEXP call, SEXP p, int *nr, int *nc)
 }
 
 /* Internal  symbols(x, y, type, data, inches, bg, fg, ...) */
-SEXP attribute_hidden do_symbols(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_symbols(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, y, p, fg, bg;
     int i, j, nr, nc, nbg, nfg, type;
@@ -4120,7 +4120,7 @@ SEXP attribute_hidden do_symbols(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_xspline(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_xspline(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP sx, sy, ss, col, border, res, ans = R_NilValue;
     int i, nx;
@@ -4223,7 +4223,7 @@ SEXP attribute_hidden do_xspline(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* clip(x1, x2, y1, y2) */
-SEXP attribute_hidden do_clip(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_clip(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans = R_NilValue;
     double x1, x2, y1, y2;
@@ -4256,7 +4256,7 @@ SEXP attribute_hidden do_clip(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* convert[XY](x, from to) */
-SEXP attribute_hidden do_convertXY(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_convertXY(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans = R_NilValue, x;
     int from, to, i, n;
@@ -4285,3 +4285,40 @@ SEXP attribute_hidden do_convertXY(SEXP call, SEXP op, SEXP args, SEXP env)
 
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_plot[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"plot.new",	do_plot_new,	0,	111,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"plot.window",	do_plot_window,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"axis",	do_axis,	0,	111,   13,	{PP_FUNCALL, PREC_FN,	0}},
+{"plot.xy",	do_plot_xy,	0,	111,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"segments",	do_segments,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rect",	do_rect,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"path",	do_path,	0,	111,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"raster",	do_raster,	0,	111,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"arrows",	do_arrows,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"polygon",	do_polygon,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"text",	do_text,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"mtext",	do_mtext,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"title",	do_title,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"abline",	do_abline,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"box",		do_box,		0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"locator",	do_locator,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"identify",	do_identify,	0,	211,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"strheight",	do_strheight,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"strwidth",	do_strwidth,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dend",	do_dend,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"dend.window",	do_dendwindow,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"erase",	do_erase,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"symbols",	do_symbols,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"xspline",	do_xspline,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"clip",	do_clip,	0,	111,	4,      {PP_FUNCALL, PREC_FN,   0}},
+{"grconvertX",	do_convertXY,	0,	11,	3,      {PP_FUNCALL, PREC_FN,   0}},
+{"grconvertY",	do_convertXY,	1,	11,	3,      {PP_FUNCALL, PREC_FN,   0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

@@ -99,7 +99,7 @@ static unsigned int CheckAlpha(int x)
 }
 
 
-SEXP attribute_hidden do_hsv(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_hsv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP c, h, s, v, a;
     double hh, ss, vv, aa, r=0., g=0., b=0.; /* -Wall */
@@ -208,7 +208,7 @@ hcl2rgb(double h, double c, double l, double *R, double *G, double *B)
     *B = gtrans(( 0.055648 * X - 0.204043 * Y + 1.057311 * Z) / WHITE_Y);
 }
 
-SEXP attribute_hidden do_hcl(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_hcl(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP h, c, l, a, ans;
     double H, C, L, A, r, g, b;
@@ -258,7 +258,7 @@ SEXP attribute_hidden do_hcl(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_rgb(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_rgb(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP c, r, g, b, a, nam;
     int OP, i, l_max, nr, ng, nb, na;
@@ -325,7 +325,7 @@ SEXP attribute_hidden do_rgb(SEXP call, SEXP op, SEXP args, SEXP env)
     return c;
 }
 
-SEXP attribute_hidden do_gray(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_gray(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP lev, ans;
     double level;
@@ -347,7 +347,7 @@ SEXP attribute_hidden do_gray(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_col2RGB(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_col2RGB(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* colorname, "#rrggbb" or "col.number" to (r,g,b) conversion */
 
@@ -419,7 +419,7 @@ SEXP attribute_hidden do_col2RGB(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_RGB2hsv(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_RGB2hsv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* (r,g,b) -> (h,s,v) conversion */
     SEXP rgb, dd, ans, names, dmns;
@@ -1266,7 +1266,7 @@ static void setpalette(const char **palette)
     R_ColorTableSize = i;
 }
 
-SEXP attribute_hidden do_palette(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_palette(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP val, ans;
     unsigned int color[COLOR_TABLE_SIZE];
@@ -1296,7 +1296,7 @@ SEXP attribute_hidden do_palette(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_colors(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_colors(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
     int n;
@@ -1551,3 +1551,22 @@ void attribute_hidden InitColors(void)
 	R_ColorTable[i] = name2col(DefaultPalette[i]);
     R_ColorTableSize = i;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_colors[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"hsv",		do_hsv,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"hcl",		do_hcl,		0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgb",		do_rgb,		0,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgb256",	do_rgb,		1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"gray",	do_gray,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"col2rgb",	do_col2RGB,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgb2hsv",	do_RGB2hsv,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"palette",	do_palette,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"colors",	do_colors,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

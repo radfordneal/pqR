@@ -2606,7 +2606,7 @@ static int yylex(void)
  If there is text then that is read and the other arguments are ignored.
 */
 
-SEXP attribute_hidden do_parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s = R_NilValue, source, text;
     ParseStatus status;
@@ -2632,3 +2632,14 @@ SEXP attribute_hidden do_parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_gramLatex[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"parseLatex",  do_parseLatex,  0,      11,     4,      {PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

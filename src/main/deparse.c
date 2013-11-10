@@ -148,7 +148,7 @@ static void vec2buff(SEXP, LocalParseData *);
 static void linebreak(Rboolean *lbreak, LocalParseData *);
 static void deparse2(SEXP, SEXP, LocalParseData *);
 
-SEXP attribute_hidden do_deparse(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_deparse(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ca1;
     int  cut0, backtick, opts, nlines;
@@ -309,7 +309,7 @@ static void con_cleanup(void *data)
     if(con->isopen) con->close(con);
 }
 
-SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP saveenv, tval;
     int i, ifile, res;
@@ -369,7 +369,7 @@ SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
     return (CAR(args));
 }
 
-SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP file, names, o, objs, tval, source, outnames;
     int i, j, nobjs, nout, res;
@@ -1518,3 +1518,16 @@ static void printtab2buff(int ntab, LocalParseData *d)
 	else
 	    print2buff("  ", d);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_deparse[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"deparse",	do_deparse,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"dput",	do_dput,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"dump",	do_dump,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

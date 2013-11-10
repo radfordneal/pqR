@@ -1919,7 +1919,7 @@ static void saveload_cleanup(void *data)
 }
 
 /* Only used for version 1 saves */
-SEXP attribute_hidden do_save(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_save(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* save(list, file, ascii, version, environment) */
 
@@ -2046,7 +2046,7 @@ static SEXP R_LoadSavedData(FILE *fp, SEXP aenv)
 }
 
 /* This is only used for version 1 or earlier formats */
-SEXP attribute_hidden do_load(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_load(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP fname, aenv, val;
     FILE *fp;
@@ -2214,7 +2214,7 @@ static void con_cleanup(void *data)
    with either a pairlist or list.
 */
 
-SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* saveToConn(list, conn, ascii, version, environment) */
 
@@ -2318,7 +2318,7 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* Read and checks the magic number, open the connection if needed */
 
-SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* loadFromConn2(conn, environment) */
 
@@ -2373,3 +2373,17 @@ SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("the input does not start with a magic number compatible with loading from a connection"));
     return res;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_saveload[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"save",	do_save,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"load",	do_load,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"saveToConn",	do_saveToConn,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"loadFromConn2",do_loadFromConn2,0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

@@ -35,7 +35,7 @@
 
 /* This is a special .Internal, so has unevaluated arguments.  It is
    called from a closure wrapper, so X and FUN are promises. */
-SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP R_fcall, ans, names, X, XX, FUN;
     int i, n;
@@ -89,7 +89,7 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* .Internal(vapply(X, FUN, FUN.VALUE, USE.NAMES)) */
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP R_fcall, ans, X, XX, FUN, value, dim_v;
     int i, n, commonLen, useNames;
@@ -291,7 +291,7 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
         return duplicate (replace ? X : deflt);
 }
 
-SEXP attribute_hidden do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP X, FUN, classes, deflt, how, ans, names;
     int i, n;
@@ -338,7 +338,7 @@ static Rboolean islistfactor(SEXP X)
 
 /* is this a tree with only factor leaves? */
 
-SEXP attribute_hidden do_islistfactor(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_islistfactor(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP X;
     Rboolean lans = TRUE, recursive;
@@ -375,3 +375,17 @@ SEXP attribute_hidden do_islistfactor(SEXP call, SEXP op, SEXP args, SEXP rho)
 do_ans:
     return ScalarLogical(lans);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_apply[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"lapply",	do_lapply,	0,	10,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"vapply",	do_vapply,	0,	10,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rapply",	do_rapply,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"islistfactor",do_islistfactor,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
