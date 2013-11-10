@@ -766,7 +766,7 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     return sy;
 }
 
-SEXP attribute_hidden do_complex(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_complex(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* complex(length, real, imaginary) */
     SEXP ans, re, im;
@@ -800,7 +800,7 @@ SEXP attribute_hidden do_complex(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_polyroot(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_polyroot(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP z, zr, zi, r, rr, ri;
     Rboolean fail;
