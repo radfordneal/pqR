@@ -630,7 +630,7 @@ static SEXP AddParens(SEXP expr)
     return expr;
 }
 
-SEXP attribute_hidden do_D(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_D(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP expr, var;
     checkArity(op, args);
@@ -910,7 +910,7 @@ static SEXP Prune(SEXP lst)
     else return lst ;
 }
 
-SEXP attribute_hidden do_deriv(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_deriv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* deriv.default(expr, namevec, function.arg, tag, hessian) */
     SEXP ans, ans2, expr, funarg, names, s;
@@ -1113,3 +1113,15 @@ SEXP attribute_hidden do_deriv(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(2);
     return funarg;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_deriv[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"D",		do_D,		0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"deriv.default",do_deriv,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

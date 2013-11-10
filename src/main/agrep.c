@@ -96,7 +96,7 @@ amatch_regaparams(regaparams_t *params, int patlen,
     }
 }
 
-SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP pat, vec, ind, ans;
     SEXP opt_costs, opt_bounds;
@@ -469,7 +469,7 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
 
 #define OFFSETS(I, J, K)	INTEGER(offsets)[I + J * nx + K * nxy]
 
-SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, y;
     SEXP ans, counts, offsets, dimnames, names, elt;
@@ -716,7 +716,7 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP pat, vec, ans, matchpos, matchlen;
     SEXP opt_bounds, opt_costs;
@@ -894,3 +894,16 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_agrep[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"agrep",	do_agrep,	1,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"adist",	do_adist,	1,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"aregexec",	do_aregexec,	1,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

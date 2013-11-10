@@ -557,449 +557,77 @@
  dblep0_
  deleditordata
  det_ge_real
- do_Cstack_info
- do_D
- do_D2POSIXlt
- do_External
- do_Externalgr
- do_ICUset
- do_POSIXlt2D
- do_RGB2hsv
- do_RNGkind
- do_Rhome
- do_Rprofmem
- do_abbrev
- do_abline
- do_addCondHands
- do_addRestart
- do_addTryHandlers
  do_addhistory
- do_adist
- do_agrep
- do_allnames
- do_aregexec
- do_args
  do_arrangeWindows
- do_arrows
- do_asPOSIXct
- do_asPOSIXlt
- do_as_environment
- do_assign
  do_atan
- do_attach
- do_axis
- do_baseenv
- do_basename
- do_bind
- do_bindtextdomain
- do_bndIsActive
- do_bndIsLocked
- do_body
- do_bodyCode
- do_box
- do_bringtotop
  do_browser
- do_builtins
+ do_bringtotop
  do_bzfile
- do_c
  do_c_dflt
- do_capabilities
- do_capabilitiesX11
- do_cat
- do_charToRaw
- do_charmatch
- do_chartr
  do_chooseDir
  do_chooseFiles
- do_clearpushback
- do_clip
- do_close
  do_closewinprogressbar
  do_cmathfuns
- do_col2RGB
- do_colors
- do_commandArgs
- do_contour
- do_contourLines
- do_convertXY
- do_countfields
- do_cov
- do_cum
  do_dataentry
  do_dataviewer
- do_date
- do_debug
- do_delayed
- do_dend
- do_dendwindow
- do_deparse
- do_deparseRd
- do_deriv
- do_detach
- do_devAskNewPage
- do_devcap
- do_devcapture
- do_devcontrol
- do_devcopy
- do_devcur
- do_devholdflush
- do_devnext
- do_devoff
- do_devprev
- do_devset
- do_devsize
- do_dfltStop
- do_dfltWarn
  do_dim
  do_dimgets
- do_dirchmod
- do_dircreate
- do_dirname
  do_dllversion
- do_dotCode
- do_dotcall
- do_dotcallgr
- do_download
- do_dput
- do_dump
- do_duplicated
- do_dynload
- do_dynunload
- do_eapply
  do_edit
- do_emptyenv
- do_enc2
- do_encodeString
- do_encoding
- do_env2list
- do_envIsLocked
- do_envir
- do_envirName
- do_envirgets
- do_envprofile
- do_erase
  do_expression
  do_fast_relop
- do_fft
- do_fifo
- do_fileaccess
- do_fileappend
- do_filechoose
- do_filecopy
- do_filecreate
- do_fileedit
- do_fileexists
- do_fileinfo
- do_filelink
- do_filepath
- do_fileremove
- do_filerename
- do_fileshow
- do_filesymlink
- do_filledcontour
- do_flush
  do_flushconsole
- do_fmin
- do_formals
- do_format
- do_formatPOSIXlt
- do_formatinfo
- do_gc
- do_gcinfo
- do_gctime
- do_gctorture
- do_gctorture2
- do_get
  do_getClipboardFormats
  do_getGraphicsEvent
  do_getGraphicsEventEnv
  do_getIdentification
- do_getNSRegistry
  do_getNumRtoCConverters
- do_getRegNS
- do_getRestart
  do_getRtoCConverterDescriptions
  do_getRtoCConverterStatus
- do_getSnapshot
  do_getWindowHandle
  do_getWindowHandles
  do_getWindowTitle
- do_getallconnections
- do_getconnection
- do_getenv
- do_geterrmessage
- do_getlocale
- do_gettext
- do_getwd
- do_glob
- do_globalenv
  do_gpregexpr
- do_gray
  do_gregexpr
- do_grep
- do_grepraw
- do_gsub
- do_gzcon
- do_gzfile
- do_hcl
- do_hsv
- do_iconv
- do_identical
- do_identify
  do_if
- do_image
- do_importIntoEnv
  do_indexsearch
- do_inherits
- do_inspect
- do_intToBits
- do_intToUtf8
  do_int_unzip
- do_interactive
  do_internal
- do_interruptsSuspended
- do_invisible
- do_invokeRestart
- do_isNSEnv
- do_isatty
- do_isincomplete
- do_islistfactor
- do_isloaded
- do_isopen
- do_isseekable
- do_isunsorted
- do_l10n_info
- do_lapply
- do_layout
  do_lazyLoadDBfetch
- do_lengthgets
  do_libfixup
- do_list2env
- do_listdirs
- do_listfiles
- do_load
- do_loadFromConn2
  do_loadRconsole
  do_loadhistory
- do_localeconv
- do_locator
- do_lockBnd
- do_lockEnv
- do_ls
  do_machine
- do_makelazy
- do_makelist
- do_makenames
- do_makeunique
- do_makevector
  do_mapply
- do_match
- do_matchcall
- do_memCompress
- do_memDecompress
- do_memlimits
- do_memoryprofile
  do_memretrace
  do_memsize
  do_memtrace
  do_memuntrace
- do_menu
- do_merge
- do_mget
- do_missing
- do_mkActiveBnd
- do_mkUnbound
- do_modelframe
- do_modelmatrix
  do_msgwindow
- do_mtext
- do_mvfft
- do_nargs
- do_nchar
- do_newenv
- do_nextmethod
- do_nextn
- do_ngettext
- do_nlm
- do_normalizepath
- do_nsl
- do_nzchar
- do_objectsize
- do_onexit
- do_open
- do_optim
- do_optimhess
- do_options
- do_order
- do_packBits
- do_palette
- do_par
- do_parentenv
- do_parentenvgets
- do_parentframe
- do_parse
- do_parseLatex
- do_parseRd
- do_paste
- do_path
- do_pathexpand
- do_persp
  do_pgsub
- do_pipe
- do_playSnapshot
- do_plot_new
- do_plot_window
- do_plot_xy
- do_pmatch
- do_polygon
- do_pos2env
  do_primitive
- do_printDeferredWarnings
- do_printdefault
- do_printfunction
- do_prmatrix
- do_proctime
- do_psort
- do_pushback
- do_pushbacklength
- do_qsort
- do_quit
- do_radixsort
- do_random1
- do_random2
- do_random3
- do_rank
- do_rapply
- do_raster
- do_rawShift
- do_rawToBits
- do_rawToChar
- do_rawconnection
- do_rawconvalue
  do_readClipboard
- do_readDCF
- do_readEnviron
- do_readLines
  do_readRegistry
- do_readbin
- do_readchar
- do_readlink
- do_readln
- do_readtablehead
- do_recordGraphics
- do_rect
- do_regFinaliz
- do_regNS
- do_regexec
- do_regexpr
- do_remove
- do_resetCondHands
- do_restart
- do_retracemem
  do_return
- do_rgb
- do_rmultinom
- do_sample
- do_save
- do_saveToConn
  do_savehistory
- do_scan
- do_search
- do_seek
- do_segments
  do_selectlist
  do_serializeToConn
  do_setGraphicsEventEnv
- do_setInternet2
- do_setSessionTimeLimit
  do_setStatusBar
- do_setTimeLimit
  do_setTitle
  do_setToCConverterActiveStatus
- do_setencoding
- do_setenv
- do_seterrmessage
- do_setlocale
- do_setseed
- do_setwd
  do_setwinprogressbar
  do_shellexec
  do_shortpath
- do_signalCondition
- do_sink
- do_sinknumber
- do_sockconn
- do_sockselect
- do_sort
- do_split
- do_sprintf
- do_standardGeneric
- do_startHTTPD
- do_stderr
- do_stdin
- do_stdout
- do_stop
- do_stopHTTPD
- do_strheight
- do_strptime
- do_strsplit
- do_strtoi
- do_strtrim
- do_strwidth
- do_subassign
- do_subassign2
  do_subassign2_dflt
- do_subassign3
  do_subassign_dflt
- do_subset
- do_subset2
  do_subset2_dflt
- do_subset3
  do_subset_dflt
- do_substr
- do_substrgets
- do_sumconnection
- do_switch
- do_symbols
- do_sys
- do_sysbrowser
- do_syschmod
- do_sysgetpid
  do_sysinfo
  do_syssleep
  do_system
- do_systime
- do_sysumask
  do_syswhich
- do_tempdir
- do_tempfile
- do_termsform
- do_text
- do_textconnection
- do_textconvalue
- do_tilde
- do_title
- do_tolower
- do_trace
- do_tracemem
- do_truncate
- do_typecvt
- do_unclass
- do_unlink
- do_unlist
- do_unregNS
  do_unserializeFromConn
- do_unsetenv
- do_untracemem
- do_unz
- do_unzip
- do_updateform
- do_url
- do_usemethod
- do_utf8ToInt
- do_vapply
- do_version
- do_warning
  do_windialog
  do_windialogstring
  do_wingetmenuitems
@@ -1009,14 +637,6 @@
  do_winprogressbar
  do_winver
  do_writeClipboard
- do_writebin
- do_writechar
- do_writelines
- do_writetable
- do_xspline
- do_xtfrm
- do_zeroin
- do_zeroin2
  dos_wglob
  dos_wglobfree
  dpois_raw

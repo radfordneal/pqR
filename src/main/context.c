@@ -474,7 +474,7 @@ SEXP attribute_hidden R_sysfunction(int n, RCNTXT *cptr)
    then get the context of the call that owns the environment.  As it
    is, it will restart the wrong function if used in a promise.
    L.T. */
-SEXP attribute_hidden do_restart(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_restart(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *cptr;
 
@@ -519,7 +519,7 @@ int countContexts(int ctxttype, int browser) {
 /* functions to support looking up information about the browser */
 /* contexts that are in the evaluation stack */
 
-SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rval=R_NilValue;
     RCNTXT *cptr;
@@ -586,7 +586,7 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* We don't want to count the closure that do_sys is contained in, so the */
 /* indexing is adjusted to handle this. */
 
-SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int i, n  = -1, nframe;
     SEXP rval, t;
@@ -662,7 +662,7 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 }
 
-SEXP attribute_hidden do_parentframe(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_parentframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int n;
     SEXP t;
@@ -803,3 +803,27 @@ SEXP R_tryEvalSilent(SEXP e, SEXP env, int *ErrorOccurred)
     R_ShowErrorMessages = oldshow;
     return val;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_context[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"restart",	do_restart,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"browserText", do_sysbrowser,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"browserCondition", do_sysbrowser,	2,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"browserSetDebug", do_sysbrowser,	3,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.parent",	do_sys,		1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.call",	do_sys,		2,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.frame",	do_sys,		3,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.nframe",	do_sys,		4,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.calls",	do_sys,		5,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.frames",	do_sys,		6,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.on.exit",	do_sys,		7,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.parents",	do_sys,		8,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sys.function",do_sys,		9,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"parent.frame",do_parentframe,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

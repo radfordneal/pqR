@@ -1663,7 +1663,7 @@ void R_RegisterCFinalizer(SEXP s, R_CFinalizer_t fun)
 
 /* R interface function */
 
-SEXP attribute_hidden do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int onexit;
 
@@ -2126,7 +2126,7 @@ void R_gc_torture(int gap, int wait, Rboolean inhibit)
 #endif
 }
 
-SEXP attribute_hidden do_gctorture(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_gctorture(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int gap;
     SEXP old = ScalarLogical(gc_force_wait > 0);
@@ -2146,7 +2146,7 @@ SEXP attribute_hidden do_gctorture(SEXP call, SEXP op, SEXP args, SEXP rho)
     return old;
 }
 
-SEXP attribute_hidden do_gctorture2(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_gctorture2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int gap, wait;
     Rboolean inhibit;
@@ -2187,7 +2187,7 @@ static void init_gctorture(void)
     }
 }
 
-SEXP attribute_hidden do_gcinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_gcinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int i;
     SEXP old = ScalarLogical(gc_reporting);
@@ -2211,7 +2211,7 @@ void attribute_hidden get_current_mem(unsigned long *smallvsize,
     return;
 }
 
-SEXP attribute_hidden do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP value;
     int ogc, reset_max;
@@ -2915,7 +2915,7 @@ static double gctimes[5], gcstarttimes[5];
 static Rboolean gctime_enabled = FALSE;
 
 /* this is primitive */
-SEXP attribute_hidden do_gctime(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_gctime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
 
@@ -3055,7 +3055,7 @@ static void R_gc_internal(R_size_t size_needed)
     }
 }
 
-SEXP attribute_hidden do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     double nsize, vsize;
@@ -3082,7 +3082,7 @@ SEXP attribute_hidden do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, nms;
     int i, tmp;
@@ -3821,7 +3821,7 @@ void Rf_code_gen_test_func (void)
 
 /* ------------------------------------------------------------------------ */
 
-SEXP attribute_hidden do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {   SEXP a;
     int j;
 
@@ -3955,7 +3955,7 @@ static void R_InitMemReporting(SEXP filename, int append)
     return;
 }
 
-SEXP attribute_hidden do_Rprofmem(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_Rprofmem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP filename, ap;
     int append_mode;
@@ -4499,7 +4499,7 @@ static R_size_t objectsize(SEXP s)
 }
 
 
-SEXP attribute_hidden do_objectsize(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_objectsize(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     return ScalarReal( (double) objectsize(CAR(args)) );
@@ -4512,7 +4512,7 @@ volatile int R_valgrind_test_int;   /* places to store/access data */
 volatile int R_valgrind_test_real;
 volatile int R_valgrind_test_real2;
 
-SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     R_len_t sizel = asInteger(CAR(args));
 
@@ -4627,3 +4627,25 @@ SEXP attribute_hidden do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
 
     return R_NilValue;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_memory[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"reg.finalizer",do_regFinaliz,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"gctorture",	do_gctorture,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"gctorture2",	do_gctorture2,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"gcinfo",	do_gcinfo,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"gc",		do_gc,		0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"gc.time",	do_gctime,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"mem.limits",	do_memlimits,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"memory.profile",do_memoryprofile, 0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnamedcnt",	do_pnamedcnt,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"Rprofmem",	do_Rprofmem,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"object.size",	do_objectsize,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"testvalgrind",do_testvalgrind,0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

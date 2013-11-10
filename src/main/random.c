@@ -64,7 +64,7 @@ static Rboolean random1(double (*f) (double), double *a, int na, double *x, int 
 /* "do_random1" - random sampling from 1 parameter families. */
 /* See switch below for distributions. */
 
-SEXP attribute_hidden do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, a;
     int i, n, na;
@@ -135,7 +135,7 @@ static Rboolean random2(double (*f) (double, double), double *a, int na, double 
 /* "do_random2" - random sampling from 2 parameter families. */
 /* See switch below for distributions. */
 
-SEXP attribute_hidden do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, a, b;
     int i, n, na, nb;
@@ -221,7 +221,7 @@ static Rboolean random3(double (*f) (double, double, double), double *a, int na,
 /* "do_random3" - random sampling from 3 parameter families. */
 /* See switch below for distributions. */
 
-SEXP attribute_hidden do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, a, b, c;
     int i, n, na, nb, nc;
@@ -461,7 +461,7 @@ void FixupProb(double *p, int n, int require_k, Rboolean replace)
 /* do_sample - probability sampling with/without replacement.
    .Internal(sample(n, size, replace, prob))
 */
-SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, y, prob, sreplace;
     int k, n, replace;
@@ -518,7 +518,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
     return y;
 }
 
-SEXP attribute_hidden do_rmultinom(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rmultinom(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP prob, ans, nms;
     int n, size, k, i, ik;
@@ -617,3 +617,36 @@ R_r2dtable(SEXP n, SEXP r, SEXP c)
 
     return(ans);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_random[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"rchisq",	do_random1,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rexp",	do_random1,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgeom",	do_random1,	2,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rpois",	do_random1,	3,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rt",		do_random1,	4,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rsignrank",	do_random1,	5,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rbeta",	do_random2,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rbinom",	do_random2,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rcauchy",	do_random2,	2,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rf",		do_random2,	3,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgamma",	do_random2,	4,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rlnorm",	do_random2,	5,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rlogis",	do_random2,	6,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnbinom",	do_random2,	7,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnbinom_mu",	do_random2,	13,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnchisq",	do_random2,	12,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnorm",	do_random2,	8,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"runif",	do_random2,	9,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rweibull",	do_random2,	10,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rwilcox",	do_random2,	11,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rhyper",	do_random3,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"sample",	do_sample,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rmultinom",	do_rmultinom,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

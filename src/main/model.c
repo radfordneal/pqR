@@ -725,7 +725,7 @@ static int TermCode(SEXP termlist, SEXP thisterm, int whichbit, SEXP term)
 
 static SEXP ExpandDots(SEXP object, SEXP value);
 
-SEXP attribute_hidden do_termsform(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_termsform(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP a, ans, v, pattern, formula, varnames, term, termlabs, ord;
     SEXP specials, t, data, rhs;
@@ -1198,7 +1198,7 @@ static SEXP ExpandDots(SEXP object, SEXP value)
     return R_NilValue; /*NOTREACHED*/
 }
 
-SEXP attribute_hidden do_updateform(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_updateform(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP _new, old, lhs, rhs;
 
@@ -1302,7 +1302,7 @@ SEXP attribute_hidden do_updateform(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* .Internal(model.frame(terms, rownames, variables, varnames, */
 /*           dots, dotnames, subset, na.action)) */
 
-SEXP attribute_hidden do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP terms, data, names, variables, varnames, dots, dotnames, na_action;
     SEXP ans, row_names, subset, tmp;
@@ -1464,7 +1464,7 @@ SEXP attribute_hidden do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/* Just returns the unevaluated call */
 	/* No longer needed??? */
 
-SEXP attribute_hidden do_tilde(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_tilde(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     if (isObject(call))
 	return duplicate(call);
@@ -1571,7 +1571,7 @@ static SEXP ColumnNames(SEXP x)
 	return VECTOR_ELT(dn, 1);
 }
 
-SEXP attribute_hidden do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP expr, factors, terms, vars, vnames, assign;
     SEXP xnames, tnames, rnames;
@@ -2000,3 +2000,18 @@ SEXP attribute_hidden do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(14);
     return x;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_model[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"terms.formula",do_termsform,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"update.formula",do_updateform,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"model.frame",	do_modelframe,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"~",		do_tilde,	0,	0,	2,	{PP_BINARY,  PREC_TILDE,  0}},
+{"model.matrix",do_modelmatrix,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

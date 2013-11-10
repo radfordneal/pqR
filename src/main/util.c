@@ -747,7 +747,7 @@ R_len_t length(SEXP s)
 }
 
 /* This is a primitive (with no arguments) */
-SEXP attribute_hidden do_nargs(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_nargs(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *cptr;
     int nargs = NA_INTEGER;
@@ -845,7 +845,7 @@ static void isort_with_index(int *x, int *indx, int n)
    The return value is a list with 4 elements (xi, yi, x.alone, y.alone),
    which are index vectors for rows of x or y.
 */
-SEXP attribute_hidden do_merge(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_merge(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP xi, yi, ansx, ansy, ans, x_lone, y_lone;
     int nx = 0, ny = 0, i, j, k, nans = 0, nx_lone = 0, ny_lone = 0;
@@ -955,7 +955,7 @@ SEXP static intern_getwd(void)
     return(rval);
 }
 
-SEXP attribute_hidden do_getwd(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_getwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
 
@@ -967,7 +967,7 @@ SEXP attribute_hidden do_getwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 # include <direct.h> /* for chdir, via io.h */
 #endif
 
-SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP s = R_NilValue, wd = R_NilValue;	/* -Wall */
 
@@ -1000,7 +1000,7 @@ SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* remove portion of path before file separator if one exists */
 
 #ifdef Win32
-SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
     char sp[PATH_MAX];
@@ -1035,7 +1035,7 @@ SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 #else
-SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
     char  buf[PATH_MAX], *p, fsp = FILESEP[0];
@@ -1075,7 +1075,7 @@ SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
    */
 
 #ifdef Win32
-SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
     wchar_t buf[PATH_MAX], *p;
@@ -1116,7 +1116,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 #else
-SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
     char buf[PATH_MAX], *p, fsp = FILESEP[0];
@@ -1158,7 +1158,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 extern char *realpath(const char *path, char *resolved_path);
 #endif
 
-SEXP attribute_hidden do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, paths = CAR(args);
     int i, n = LENGTH(paths);
@@ -1223,7 +1223,7 @@ SEXP attribute_hidden do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /* encodeString(x, w, quote, justify) */
-SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x, s;
     int i, len, w, quote = 0, justify, na;
@@ -1274,7 +1274,7 @@ SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_encoding(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_encoding(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x;
     int i, n;
@@ -1296,7 +1296,7 @@ SEXP attribute_hidden do_encoding(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_setencoding(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_setencoding(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, enc, tmp;
     int i, m, n;
@@ -1876,7 +1876,7 @@ double R_atof(const char *str)
 
 /* enc2native and enc2utf8, but they are the same in a UTF-8 locale */
 /* primitive */
-SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, el;
     int i;
@@ -2027,7 +2027,7 @@ static const struct {
 };
 
 
-SEXP attribute_hidden do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x;
     UErrorCode  status = U_ZERO_ERROR;
@@ -2103,7 +2103,7 @@ int Scollate(SEXP a, SEXP b)
 
 #else /* not USE_ICU */
 
-SEXP attribute_hidden do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     warning(_("ICU is not supported on this build"));
     return R_NilValue;
@@ -2169,3 +2169,26 @@ struct sxpinfo_struct *Rf_verify_nonvec (void *x)
 }
 
 #endif
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_util[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"nargs",	do_nargs,	1,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"merge",	do_merge,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"getwd",	do_getwd,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"setwd",	do_setwd,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"basename",	do_basename,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dirname",	do_dirname,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"normalizePath",do_normalizepath,0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"encodeString",do_encodeString,1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"Encoding",	do_encoding,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"setEncoding",	do_setencoding,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"enc2native",	do_enc2,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"enc2utf8",	do_enc2,	1,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"icuSetCollate",do_ICUset,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

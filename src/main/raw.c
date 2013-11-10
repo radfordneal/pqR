@@ -31,7 +31,7 @@
 #include <Defn.h>
 
 /* charToRaw works at byte level, ignores encoding */
-SEXP attribute_hidden do_charToRaw(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_charToRaw(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args);
     int nc;
@@ -48,7 +48,7 @@ SEXP attribute_hidden do_charToRaw(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* <UTF8>  rawToChar should work at byte level */
-SEXP attribute_hidden do_rawToChar(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_rawToChar(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args);
     int i, j, nc = LENGTH(x), multiple;
@@ -82,7 +82,7 @@ SEXP attribute_hidden do_rawToChar(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_rawShift(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_rawShift(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args);
     int i, shift = asInteger(CADR(args));
@@ -102,7 +102,7 @@ SEXP attribute_hidden do_rawShift(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_rawToBits(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_rawToBits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args);
     int i, j = 0, k;
@@ -120,7 +120,7 @@ SEXP attribute_hidden do_rawToBits(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_intToBits(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_intToBits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x;
     int i, j = 0, k;
@@ -139,7 +139,7 @@ SEXP attribute_hidden do_intToBits(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_packBits(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_packBits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args), stype = CADR(args);
     Rboolean useRaw;
@@ -264,7 +264,7 @@ static int mbrtoint(int *w, const char *s)
     /* return -2; not reached */
 }
 
-SEXP attribute_hidden do_utf8ToInt(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_utf8ToInt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args);
     int i, j, nc, *ians, tmp, used = 0; /* -Wall */
@@ -316,7 +316,7 @@ static size_t inttomb(char *s, const int wc)
 
 #include <R_ext/RS.h>  /* for Calloc/Free */
 
-SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x;
     int i, nc, multiple, len, used;
@@ -373,3 +373,21 @@ SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(2);
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_raw[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"charToRaw",	do_charToRaw,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rawToChar",	do_rawToChar,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rawShift",	do_rawShift,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rawToBits",	do_rawToBits,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"intToBits",	do_intToBits,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"packBits",	do_packBits,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"utf8ToInt",	do_utf8ToInt,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"intToUtf8",	do_intToUtf8,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
