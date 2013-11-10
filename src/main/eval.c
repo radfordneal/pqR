@@ -287,7 +287,7 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval, int mem
     R_Profiling = 1;
 }
 
-SEXP attribute_hidden do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP filename;
     int append_mode, mem_profiling;
@@ -313,7 +313,7 @@ SEXP attribute_hidden do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 #else /* not R_PROFILING */
-SEXP attribute_hidden do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     error(_("R profiling is not available on this system"));
     return R_NilValue;		/* -Wall */
@@ -874,7 +874,7 @@ static SEXP R_compileAndExecute(SEXP call, SEXP rho)
     return val;
 }
 
-SEXP attribute_hidden do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int old = R_jit_enabled, new;
     checkArity(op, args);
@@ -885,7 +885,7 @@ SEXP attribute_hidden do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int old = R_compile_pkgs, new;
     checkArity(op, args);
@@ -2292,8 +2292,7 @@ static SEXP VectorToPairListNamed(SEXP x)
 /* "eval" and "eval.with.vis" : Evaluate the first argument */
 /* in the environment specified by the second argument. */
 
-SEXP attribute_hidden do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, 
-                               int variant)
+static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP encl, x, xptr;
     volatile SEXP expr, env, tmp;
@@ -2408,7 +2407,7 @@ SEXP attribute_hidden do_eval (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, nm, ret;
 
@@ -2428,7 +2427,7 @@ SEXP attribute_hidden do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *cptr;
     SEXP s, ans ;
@@ -3100,8 +3099,9 @@ enum {
 };
 
 
-SEXP do_math1(SEXP, SEXP, SEXP, SEXP);
-SEXP do_logic(SEXP, SEXP, SEXP, SEXP);
+SEXP do_math1(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_andor(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
@@ -3280,7 +3280,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SETSTACK(-1, CONS(GETSTACK(-1), R_NilValue));		     \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP), \
-		      GETSTACK(-1), rho));		     \
+		      GETSTACK(-1), rho, 0));		     \
   NEXT(); \
 } while(0)
 
@@ -3290,7 +3290,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SETSTACK(-2, CONS(GETSTACK(-2), tmp));     \
   R_BCNodeStackTop--; \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP),	\
-		      GETSTACK(-1), rho));			\
+		      GETSTACK(-1), rho, 0));			\
   NEXT(); \
 } while(0)
 
@@ -4773,9 +4773,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(LE, 1): FastRelop2(<=, LEOP, R_LeSym);
     OP(GE, 1): FastRelop2(>=, GEOP, R_GeSym);
     OP(GT, 1): FastRelop2(>, GTOP, R_GtSym);
-    OP(AND, 1): Builtin2(do_logic, R_AndSym, rho);
-    OP(OR, 1): Builtin2(do_logic, R_OrSym, rho);
-    OP(NOT, 1): Builtin1(do_logic, R_NotSym, rho);
+    OP(AND, 1): Builtin2(do_andor, R_AndSym, rho);
+    OP(OR, 1): Builtin2(do_andor, R_OrSym, rho);
+    OP(NOT, 1): Builtin1(do_not, R_NotSym, rho);
     OP(DOTSERR, 0): error(_("'...' used in an incorrect context"));
     OP(STARTASSIGN, 1):
       {
@@ -5226,7 +5226,7 @@ SEXP R_bcEncode(SEXP x) { return x; }
 SEXP R_bcDecode(SEXP x) { return duplicate(x); }
 #endif
 
-SEXP attribute_hidden do_mkcode(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_mkcode(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP bytes, consts, ans;
 
@@ -5238,7 +5238,7 @@ SEXP attribute_hidden do_mkcode(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_bcclose(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_bcclose(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP forms, body, env;
 
@@ -5262,7 +5262,7 @@ SEXP attribute_hidden do_bcclose(SEXP call, SEXP op, SEXP args, SEXP rho)
     return mkCLOSXP(forms, body, env);
 }
 
-SEXP attribute_hidden do_is_builtin_internal(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_is_builtin_internal(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP symbol, i;
 
@@ -5307,7 +5307,7 @@ static SEXP disassemble(SEXP bc)
   return ans;
 }
 
-SEXP attribute_hidden do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
   SEXP code;
 
@@ -5318,14 +5318,14 @@ SEXP attribute_hidden do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
   return disassemble(code);
 }
 
-SEXP attribute_hidden do_bcversion(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_bcversion(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
   SEXP ans = allocVector(INTSXP, 1);
   INTEGER(ans)[0] = R_bcVersion;
   return ans;
 }
 
-SEXP attribute_hidden do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP file, s;
     FILE *fp;
@@ -5347,7 +5347,7 @@ SEXP attribute_hidden do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
-SEXP attribute_hidden do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     FILE *fp;
 
@@ -5417,7 +5417,7 @@ FILE *R_OpenCompiledFile(char *fname, char *buf, size_t bsize)
     else return NULL;
 }
 
-SEXP attribute_hidden do_growconst(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_growconst(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP constBuf, ans;
     int i, n;
@@ -5435,7 +5435,7 @@ SEXP attribute_hidden do_growconst(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP constBuf, x;
     int i, constCount;
@@ -5464,7 +5464,7 @@ SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarInteger(constCount);
 }
 
-SEXP attribute_hidden do_getconst(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_getconst(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP constBuf, ans;
     int i, n;
@@ -5570,7 +5570,7 @@ SEXP R_stopbcprof() { return R_NilValue; }
 
 /* end of byte code section */
 
-SEXP attribute_hidden do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int old = R_num_math_threads, new;
     checkArity(op, args);
@@ -5580,7 +5580,7 @@ SEXP attribute_hidden do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int old = R_max_num_math_threads, new;
     checkArity(op, args);
@@ -5595,22 +5595,52 @@ SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rh
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
-attribute_hidden FUNTAB R_FunTab_eval1[] =
+attribute_hidden FUNTAB R_FunTab_eval1[] =  /* more frequently used ones */
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"if",		do_if,		0,	1200,	-1,	{PP_IF,	     PREC_FN,	  1}},
-{"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
 {"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
+{"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
 {"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
 {"break",	do_break, CTXT_BREAK,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
 {"next",	do_break, CTXT_NEXT,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
+{"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
+{"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
 {"return",	do_return,	0,	0,	-1,	{PP_RETURN,  PREC_FN,	  0}},
 {"function",	do_function,	0,	0,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
 {"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
 {"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
 {"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
-{"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
-{"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
+{"eval",	do_eval,	0,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"eval.with.vis",do_eval,	1,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"Recall",	do_recall,	0,	210,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+};
+
+attribute_hidden FUNTAB R_FunTab_eval2[] =  /* less frequently used ones */
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"Rprof",	do_Rprof,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"enableJIT",    do_enablejit,  0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
+{"compilePKGS", do_compilepkgs, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
+{"withVisible", do_withVisible,	1,	10,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"mkCode",     do_mkcode,       0,      11,     2,      {PP_FUNCALL, PREC_FN, 0}},
+{"bcClose",    do_bcclose,      0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
+{"is.builtin.internal", do_is_builtin_internal, 0, 11, 1, {PP_FUNCALL, PREC_FN, 0}},
+{"disassemble", do_disassemble, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
+{"bcVersion", do_bcversion,     0,      11,     0,      {PP_FUNCALL, PREC_FN, 0}},
+{"load.from.file", do_loadfile, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
+{"save.to.file", do_savefile,   0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
+{"growconst", do_growconst,     0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
+{"putconst", do_putconst,       0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
+{"getconst", do_getconst,       0,      11,     2,      {PP_FUNCALL, PREC_FN, 0}},
+
+{"setNumMathThreads", do_setnumthreads,      0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
+{"setMaxNumMathThreads", do_setmaxnumthreads,0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
+
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };
