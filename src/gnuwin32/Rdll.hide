@@ -619,7 +619,6 @@
  do_col2RGB
  do_colors
  do_commandArgs
- do_complex
  do_contour
  do_contourLines
  do_convertXY
@@ -853,7 +852,6 @@
  do_plot_xy
  do_pmatch
  do_polygon
- do_polyroot
  do_pos2env
  do_primitive
  do_printDeferredWarnings
