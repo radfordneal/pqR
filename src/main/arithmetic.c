@@ -1540,17 +1540,13 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
                               HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
         }
-    } 
-
-    else if (isComplex(x)) {
+    } else if (isComplex(x)) {
         SEXP args;
         PROTECT (args = CONS(x,R_NilValue));
         WAIT_UNTIL_COMPUTED(x);
 	s = do_cmathfuns(call, op, args, env);
         UNPROTECT(1);
-    } 
-
-    else
+    } else
 	errorcall(call, R_MSG_NONNUM_MATH);
 
     if (x!=s) {
