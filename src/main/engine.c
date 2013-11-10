@@ -2893,14 +2893,14 @@ void GEplaySnapshot(SEXP snapshot, pGEDevDesc dd)
 }
 
 /* recordPlot() */
-SEXP attribute_hidden do_getSnapshot(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_getSnapshot(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     return GEcreateSnapshot(GEcurrentDevice());
 }
 
 /* replayPlot() */
-SEXP attribute_hidden do_playSnapshot(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_playSnapshot(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     GEplaySnapshot(CAR(args), GEcurrentDevice());
@@ -2915,7 +2915,7 @@ SEXP attribute_hidden do_playSnapshot(SEXP call, SEXP op, SEXP args, SEXP env)
  ****************************************************************
  */
 
-SEXP attribute_hidden do_recordGraphics(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_recordGraphics(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, xptr, evalenv, retval;
     pGEDevDesc dd = GEcurrentDevice();
@@ -3478,3 +3478,16 @@ void R_GE_rasterRotate(unsigned int *sraster, int w, int h, double angle,
         }
     }
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_engine[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"getSnapshot",	do_getSnapshot,	0,	111,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"playSnapshot",do_playSnapshot,0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"recordGraphics", do_recordGraphics, 0, 211,     3,      {PP_FOREIGN, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

@@ -32,7 +32,7 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 
-SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans = R_NilValue;
 
@@ -69,7 +69,7 @@ SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* primitives .primTrace and .primUntrace */
-SEXP attribute_hidden do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     check1arg_x (args, call);
@@ -119,7 +119,7 @@ R_current_trace_state() { return GET_TRACE_STATE; }
 /* memory tracing */
 /* report when a traced object is duplicated */
 
-SEXP attribute_hidden do_tracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_tracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #ifdef R_MEMORY_PROFILING
     SEXP object;
@@ -154,7 +154,7 @@ SEXP attribute_hidden do_tracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #ifdef R_MEMORY_PROFILING
     SEXP object;
@@ -207,7 +207,7 @@ void attribute_hidden memtrace_report(void * old, void * _new)
 
 #endif /* R_MEMORY_PROFILING */
 
-SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #ifdef R_MEMORY_PROFILING
     SEXP object, previous, ans, argList;
@@ -252,3 +252,22 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 #endif
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_debug[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"debug",	do_debug,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	  0}},
+{"undebug",	do_debug,	1,	111,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"isdebugged",	do_debug,	2,	11,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"debugonce",	do_debug,	3,	111,	3,	{PP_FUNCALL, PREC_FN,	  0}},
+{".primTrace",	do_trace,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{".primUntrace",do_trace,	1,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"tracemem",    do_tracemem,    0,      1,	1,      {PP_FUNCALL, PREC_FN,	0}},
+{"untracemem",  do_untracemem,  0,      101,	1,      {PP_FUNCALL, PREC_FN,	0}},
+{"retracemem",  do_retracemem,  0,      201,     -1,      {PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

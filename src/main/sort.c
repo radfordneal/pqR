@@ -155,7 +155,7 @@ Rboolean isUnsorted(SEXP x, Rboolean strictly)
     return FALSE;/* sorted */
 }
 
-SEXP attribute_hidden do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int strictly, n;
     SEXP x, ans;
@@ -304,7 +304,7 @@ void revsort(double *a, int *ib, int n)
 }
 
 
-SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
     Rboolean decreasing;
@@ -561,7 +561,7 @@ void cPsort(Rcomplex *x, int n, int k)
 
 
 /* FUNCTION psort(x, indices) */
-SEXP attribute_hidden do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int i, k, n;
     int *l;
@@ -867,7 +867,7 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
 }
 
 /* FUNCTION order(...) */
-SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ap, ans;
     int i, n = -1, narg = 0;
@@ -908,7 +908,7 @@ SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* FUNCTION: rank(x) */
-SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rank, indx, x;
     int *in, *ik = NULL /* -Wall */;
@@ -963,7 +963,7 @@ SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #include <R_ext/RS.h>
 
-SEXP attribute_hidden do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, ans;
     Rboolean nalast, decreasing;
@@ -1024,7 +1024,7 @@ SEXP attribute_hidden do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP fn, prargs, ans;
 
@@ -1040,3 +1040,20 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
     
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_sort[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"is.unsorted",	do_isunsorted,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"sort",	do_sort,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"psort",	do_psort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"order",	do_order,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rank",	do_rank,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"radixsort",	do_radixsort,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

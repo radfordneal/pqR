@@ -225,8 +225,7 @@ static int Rf_getNumRtoCConverters()
  Returns the number of registered converters to S.
 */
 
-SEXP attribute_hidden
-do_getNumRtoCConverters(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getNumRtoCConverters(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
@@ -238,8 +237,7 @@ do_getNumRtoCConverters(SEXP call, SEXP op, SEXP args, SEXP env)
 /*
   Return a character vector describing each of the converter elements.
  */
-SEXP attribute_hidden
-do_getRtoCConverterDescriptions(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getRtoCConverterDescriptions(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int n = 0, i;
     R_toCConverter *tmp = StoCConverters;
@@ -264,8 +262,7 @@ do_getRtoCConverterDescriptions(SEXP call, SEXP op, SEXP args, SEXP env)
  Return a logical vector indicating whether each converter element
  is active or inactive
 */
-SEXP attribute_hidden
-do_getRtoCConverterStatus(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getRtoCConverterStatus(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int n = 0, i;
     R_toCConverter *tmp = StoCConverters;
@@ -294,8 +291,7 @@ do_getRtoCConverterStatus(SEXP call, SEXP op, SEXP args, SEXP env)
  This is also used to remove an element. The op contains a different value
  to indicate this.
 */
-SEXP attribute_hidden
-do_setToCConverterActiveStatus(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_setToCConverterActiveStatus(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     R_toCConverter *el;
     SEXP id, status;

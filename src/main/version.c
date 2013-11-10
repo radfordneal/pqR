@@ -65,7 +65,7 @@ Type 'contributors()' for more information and\n\
 Type 'q()' to quit R.\n\n"));
 }
 
-SEXP attribute_hidden do_version(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_version(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP value, names;
     char buf[200];
@@ -182,3 +182,14 @@ void attribute_hidden PrintVersion_part_1(char *s)
     sprintf (tmp, " (%d-bit)\n", 8*(int)sizeof(void *));
     strcat(s,tmp);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_version[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"Version",	do_version,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

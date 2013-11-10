@@ -5595,7 +5595,7 @@ static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
-attribute_hidden FUNTAB R_FunTab_eval1[] =  /* more frequently used ones */
+attribute_hidden FUNTAB R_FunTab_eval[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
@@ -5615,13 +5615,6 @@ attribute_hidden FUNTAB R_FunTab_eval1[] =  /* more frequently used ones */
 {"eval",	do_eval,	0,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"eval.with.vis",do_eval,	1,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"Recall",	do_recall,	0,	210,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
-};
-
-attribute_hidden FUNTAB R_FunTab_eval2[] =  /* less frequently used ones */
-{
-/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"Rprof",	do_Rprof,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"enableJIT",    do_enablejit,  0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},

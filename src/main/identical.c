@@ -47,7 +47,7 @@ static Rboolean neWithNaN(double x, double y, ne_strictness_type str);
 
 
 /* .Internal(identical(..)) */
-SEXP attribute_hidden do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int num_eq = 1, single_NA = 1, attr_as_set = 1, ignore_bytecode = 1, nargs = length(args), flags;
     /* avoid problems with earlier version captured in S4 methods */
@@ -319,3 +319,14 @@ static Rboolean neWithNaN(double x, double y, ne_strictness_type str)
 	return FALSE;
     }
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_identical[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"identical",	do_identical,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	  0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

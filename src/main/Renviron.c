@@ -310,7 +310,7 @@ void process_user_Renviron()
     process_Renviron(s);
 }
 
-SEXP attribute_hidden do_readEnviron(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_readEnviron(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 
     checkArity(op, args);
@@ -323,3 +323,14 @@ SEXP attribute_hidden do_readEnviron(SEXP call, SEXP op, SEXP args, SEXP env)
 	warningcall(call, _("file '%s' cannot be opened for reading"), fn);
     return ScalarLogical(res != 0);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_Renviron[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"readRenviron",do_readEnviron,	0,      111,     1,     {PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

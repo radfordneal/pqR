@@ -48,8 +48,7 @@ static void checkHandler(const char * name, SEXP eventEnv)
 	warning(_("'%s' events not supported in this device"), name);
 }
 
-SEXP attribute_hidden
-do_setGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_setGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP eventEnv;
     int devnum;
@@ -87,8 +86,7 @@ do_setGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP env)
     return(R_NilValue);
 }
 
-SEXP attribute_hidden
-do_getGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int devnum;
     pGEDevDesc gdd;
@@ -104,8 +102,7 @@ do_getGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP env)
     return gdd->dev->eventEnv;
 }
 
-SEXP attribute_hidden
-do_getGraphicsEvent(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_getGraphicsEvent(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP result = R_NilValue, prompt;
     pDevDesc dd;

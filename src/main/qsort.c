@@ -43,7 +43,7 @@
 
 
 /* R function  qsort(x, index.return) */
-SEXP attribute_hidden do_qsort(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_qsort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, sx;
     int indx_ret, n;
@@ -139,3 +139,14 @@ void R_qsort(double *v, int i, int j)
 void R_qsort_int(int *v, int i, int j)
 #include "qsort-body.c"
 #undef NUMERIC
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_qsort[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"qsort",	do_qsort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

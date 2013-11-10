@@ -527,7 +527,7 @@ static void Norm_kind(N01type kind)
 
 /*------ .Internal interface ------------------------*/
 
-SEXP attribute_hidden do_RNGkind (SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_RNGkind (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, rng, norm;
 
@@ -550,7 +550,7 @@ SEXP attribute_hidden do_RNGkind (SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_setseed (SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_setseed (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP skind, nkind;
     int seed;
@@ -807,3 +807,15 @@ static void RNG_Init_R_KT(Int32 seed)
     UNPROTECT(2);
     KT_pos = 100;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_RNG[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"RNGkind",	do_RNGkind,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"set.seed",	do_setseed,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

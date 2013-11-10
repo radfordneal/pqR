@@ -45,7 +45,7 @@ static void con_cleanup(void *data)
 
 static Rboolean field_is_foldable_p(const char *, SEXP);
 
-SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int nwhat, nret, nc, nr, m, k, lastm, need;
     Rboolean blank_skip, field_skip = FALSE;
@@ -323,3 +323,14 @@ static Rboolean field_is_foldable_p(const char *field, SEXP excludes)
     }
     return TRUE;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_dcf[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"readDCF",	do_readDCF,	0,      11,     3,      {PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
