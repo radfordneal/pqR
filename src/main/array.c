@@ -101,7 +101,7 @@ SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
 }
 
 /* Package matrix uses this .Internal with 5 args: should have 7 */
-SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP vals, ans, snr, snc, dimnames;
     int nr = 1, nc = 1, byrow, lendat, miss_nr, miss_nc;
@@ -353,7 +353,7 @@ SEXP DropDims(SEXP x)
     return x;
 }
 
-SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, xdims;
     int i, n, shorten;
@@ -375,14 +375,13 @@ SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Length of Primitive Objects */
 
-static SEXP do_fast_length (SEXP call, SEXP op, SEXP arg, SEXP rho, 
-                            int variant)
+static SEXP do_fast_length (SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 {   
     R_len_t len = length(arg);
     return ScalarInteger (len <= INT_MAX ? len : NA_INTEGER);
 }
 
-SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_length(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
@@ -392,10 +391,7 @@ SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval (call, op, "length", args, rho, &ans, 0, 1))
         return(ans);
 
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_length, 1, 0);
-
-    return do_fast_length (call, op, CAR(args), rho, 0);
+    return do_fast_length (call, op, CAR(args), rho, variant);
 }
 
 void task_row_or_col (helpers_op_t op, SEXP ans, SEXP dim, SEXP ignored)
@@ -432,8 +428,7 @@ void task_row_or_col (helpers_op_t op, SEXP ans, SEXP dim, SEXP ignored)
 
 #define T_rowscols THRESHOLD_ADJUST(100)
 
-SEXP attribute_hidden do_rowscols (SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                   int variant)
+static SEXP do_rowscols (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP dim, ans;
     int nr, nc;
@@ -725,8 +720,7 @@ void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 #define T_matmult THRESHOLD_ADJUST(30)
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
-SEXP attribute_hidden do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                  int variant)
+static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     int ldx, ldy, nrx, ncx, nry, ncy, mode;
     SEXP x = CAR(args), y = CADR(args), xdims, ydims, ans;
@@ -1347,10 +1341,12 @@ void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
     }
 }
 
+
+/* This implements t.default, which is internal. */
+
 #define T_transpose THRESHOLD_ADJUST(10)
 
-SEXP attribute_hidden do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho,
-                                    int variant)
+static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a, r, dims, dimnames, dimnamesnames, ndimnamesnames, rnames, cnames;
     int ldim, len, ncol, nrow;
@@ -1460,7 +1456,7 @@ SEXP attribute_hidden do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho,
 	j += iip[itmp] * stride[itmp];
 
 /* aperm (a, perm, resize = TRUE) */
-SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP a, perm, r, dimsa, dimsr, dna;
     int i, j, n, len, itmp;
@@ -1867,11 +1863,12 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     }
 }
 
+/* This implements (row/col)(Sums/Means). */
+
 #define T_colSums THRESHOLD_ADJUST(20)
 #define T_rowSums THRESHOLD_ADJUST(20)
 
-SEXP attribute_hidden do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                 int variant)
+static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x, ans;
     int OP, n, p;
@@ -1922,3 +1919,40 @@ SEXP attribute_hidden do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho,
 
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_array[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+/* Primitive */
+
+{"length",	do_length,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"%*%",		do_matprod,	0,	11001,	2,	{PP_BINARY,  PREC_PERCENT,0}},
+
+/* Internal */
+
+{"matrix",	do_matrix,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"drop",	do_drop,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"row",		do_rowscols,	1,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"col",		do_rowscols,	2,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"crossprod",	do_matprod,	1,	11011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"tcrossprod",	do_matprod,	2,	11011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"t.default",	do_transpose,	0,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"aperm",	do_aperm,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"colSums",	do_colsum,	0,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"colMeans",	do_colsum,	1,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rowSums",	do_colsum,	2,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rowMeans",	do_colsum,	3,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_array[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+{ do_length,	do_fast_length,	-1,		1,	1, 0,  0, 0 },	
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};

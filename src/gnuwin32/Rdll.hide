@@ -557,7 +557,6 @@
  dblep0_
  deleditordata
  det_ge_real
- do_AT
  do_Cstack_info
  do_D
  do_D2POSIXlt
@@ -568,7 +567,6 @@
  do_RGB2hsv
  do_RNGkind
  do_Rhome
- do_Rprof
  do_Rprofmem
  do_abbrev
  do_abline
@@ -579,7 +577,6 @@
  do_adist
  do_agrep
  do_allnames
- do_aperm
  do_aregexec
  do_args
  do_arrangeWindows
@@ -587,22 +584,12 @@
  do_asPOSIXct
  do_asPOSIXlt
  do_as_environment
- do_ascall
- do_ascharacter
- do_asfunction
  do_assign
- do_asvector
  do_atan
  do_attach
- do_attr
- do_attrgets
- do_attributes
- do_attributesgets
  do_axis
  do_baseenv
  do_basename
- do_bcclose
- do_bcversion
  do_bind
  do_bindtextdomain
  do_bndIsActive
@@ -616,7 +603,6 @@
  do_bzfile
  do_c
  do_c_dflt
- do_call
  do_capabilities
  do_capabilitiesX11
  do_cat
@@ -625,22 +611,14 @@
  do_chartr
  do_chooseDir
  do_chooseFiles
- do_class
- do_classgets
  do_clearpushback
  do_clip
  do_close
  do_closewinprogressbar
  do_cmathfuns
  do_col2RGB
- do_colon
  do_colors
- do_colsum
  do_commandArgs
- do_comment
- do_commentgets
- do_compcases
- do_compilepkgs
  do_complex
  do_contour
  do_contourLines
@@ -675,20 +653,15 @@
  do_dfltWarn
  do_dim
  do_dimgets
- do_dimnames
- do_dimnamesgets
  do_dirchmod
  do_dircreate
  do_dirname
- do_disassemble
  do_dllversion
- do_docall
  do_dotCode
  do_dotcall
  do_dotcallgr
  do_download
  do_dput
- do_drop
  do_dump
  do_duplicated
  do_dynload
@@ -696,7 +669,6 @@
  do_eapply
  do_edit
  do_emptyenv
- do_enablejit
  do_enc2
  do_encodeString
  do_encoding
@@ -707,7 +679,6 @@
  do_envirgets
  do_envprofile
  do_erase
- do_eval
  do_expression
  do_fast_relop
  do_fft
@@ -727,7 +698,6 @@
  do_fileshow
  do_filesymlink
  do_filledcontour
- do_first_min
  do_flush
  do_flushconsole
  do_fmin
@@ -757,7 +727,6 @@
  do_getWindowTitle
  do_getallconnections
  do_getconnection
- do_getconst
  do_getenv
  do_geterrmessage
  do_getlocale
@@ -770,7 +739,6 @@
  do_gregexpr
  do_grep
  do_grepraw
- do_growconst
  do_gsub
  do_gzcon
  do_gzfile
@@ -793,28 +761,19 @@
  do_interruptsSuspended
  do_invisible
  do_invokeRestart
- do_is
  do_isNSEnv
- do_is_builtin_internal
  do_isatty
- do_isfinite
  do_isincomplete
- do_isinfinite
  do_islistfactor
  do_isloaded
- do_isna
- do_isnan
  do_isopen
  do_isseekable
  do_isunsorted
- do_isvector
  do_l10n_info
  do_lapply
  do_layout
  do_lazyLoadDBfetch
- do_length
  do_lengthgets
- do_levelsgets
  do_libfixup
  do_list2env
  do_listdirs
@@ -822,15 +781,11 @@
  do_load
  do_loadFromConn2
  do_loadRconsole
- do_loadfile
  do_loadhistory
  do_localeconv
  do_locator
  do_lockBnd
  do_lockEnv
- do_logic
- do_logic2
- do_logic3
  do_ls
  do_machine
  do_makelazy
@@ -841,9 +796,6 @@
  do_mapply
  do_match
  do_matchcall
- do_matprod
- do_matrix
- do_mean
  do_memCompress
  do_memDecompress
  do_memlimits
@@ -858,14 +810,11 @@
  do_missing
  do_mkActiveBnd
  do_mkUnbound
- do_mkcode
  do_modelframe
  do_modelmatrix
  do_msgwindow
  do_mtext
  do_mvfft
- do_names
- do_namesgets
  do_nargs
  do_nchar
  do_newenv
@@ -903,7 +852,6 @@
  do_plot_window
  do_plot_xy
  do_pmatch
- do_pmin
  do_polygon
  do_polyroot
  do_pos2env
@@ -916,15 +864,12 @@
  do_psort
  do_pushback
  do_pushbacklength
- do_putconst
  do_qsort
  do_quit
- do_quote
  do_radixsort
  do_random1
  do_random2
  do_random3
- do_range
  do_rank
  do_rapply
  do_raster
@@ -943,7 +888,6 @@
  do_readlink
  do_readln
  do_readtablehead
- do_recall
  do_recordGraphics
  do_rect
  do_regFinaliz
@@ -951,28 +895,21 @@
  do_regexec
  do_regexpr
  do_remove
- do_rep
- do_rep_int
  do_resetCondHands
  do_restart
  do_retracemem
  do_return
  do_rgb
  do_rmultinom
- do_rowscols
  do_sample
  do_save
  do_saveToConn
- do_savefile
  do_savehistory
  do_scan
  do_search
  do_seek
  do_segments
  do_selectlist
- do_seq
- do_seq_along
- do_seq_len
  do_serializeToConn
  do_setGraphicsEventEnv
  do_setInternet2
@@ -985,8 +922,6 @@
  do_setenv
  do_seterrmessage
  do_setlocale
- do_setmaxnumthreads
- do_setnumthreads
  do_setseed
  do_setwd
  do_setwinprogressbar
@@ -1007,7 +942,6 @@
  do_stdout
  do_stop
  do_stopHTTPD
- do_storage_mode
  do_strheight
  do_strptime
  do_strsplit
@@ -1024,11 +958,9 @@
  do_subset2_dflt
  do_subset3
  do_subset_dflt
- do_substitute
  do_substr
  do_substrgets
  do_sumconnection
- do_summary
  do_switch
  do_symbols
  do_sys
@@ -1052,10 +984,8 @@
  do_tolower
  do_trace
  do_tracemem
- do_transpose
  do_truncate
  do_typecvt
- do_typeof
  do_unclass
  do_unlink
  do_unlist
@@ -1072,7 +1002,6 @@
  do_vapply
  do_version
  do_warning
- do_which
  do_windialog
  do_windialogstring
  do_wingetmenuitems
@@ -1081,7 +1010,6 @@
  do_winmenunames
  do_winprogressbar
  do_winver
- do_withVisible
  do_writeClipboard
  do_writebin
  do_writechar

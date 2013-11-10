@@ -24,7 +24,7 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/* The x:y  primitive calls do_colon(); do_colon() calls cross_colon() if
+/* The x:y primitive calls do_colon(); do_colon() calls cross_colon() if
    both arguments are factors and seq_colon() otherwise.
  */
 
@@ -186,13 +186,9 @@ static SEXP do_fast_colon (SEXP call, SEXP op, SEXP s1, SEXP s2, SEXP rho,
     return seq_colon(n1, n2, call, variant);
 }
 
-SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho,
-                               int variant)
-{   checkArity(op, args);
-
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_BINARY (op, do_fast_colon, 0, 0, 0, 0, 0);
-
+static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{   
+    checkArity(op, args);
     return do_fast_colon (call, op, CAR(args), CADR(args), rho, variant);
 }
 
@@ -392,7 +388,7 @@ static SEXP rep1(SEXP s, SEXP ncopy)
     return a;
 }
 
-SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     return rep1(CAR(args), CADR(args));
@@ -403,7 +399,7 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
    rep(1:3,,8) matches length.out */
 
 /* This is a primitive SPECIALSXP with internal argument matching */
-SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x, times = R_NilValue /* -Wall */, ind;
     int i, lx, len = NA_INTEGER, each = 1, nt, nprotect = 0;
@@ -508,8 +504,7 @@ done:
 
 #define FEPS 1e-10
 /* to match seq.default */
-SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho,
-                             int variant)
+static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans = R_NilValue /* -Wall */, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
@@ -685,8 +680,7 @@ done:
     return ans;
 }
 
-SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho,
-                                   int variant)
+static SEXP do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     static SEXP length_op = NULL;
     SEXP arg, ans;
@@ -723,11 +717,9 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho,
 
 static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho, 
                              int variant)
-{   int len;
-
-    len = asInteger(arg);
+{   int len = asInteger(arg);
     if(len == NA_INTEGER || len < 0)
-	errorcall(call, _("argument must be coercible to non-negative integer"));
+	errorcall(call,_("argument must be coercible to non-negative integer"));
     if (length(arg) != 1)
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");
@@ -735,13 +727,36 @@ static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho,
     return make_seq (1, len, variant);
 }
 
-SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                 int variant)
-{   checkArity(op, args);
+static SEXP do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{   
+    checkArity(op, args);
     check1arg(args, call, "length.out");
-
-    if (PRIMFUN_FAST(op)==0)
-        SET_PRIMFUN_FAST_UNARY (op, do_fast_seq_len, 0, 0);
 
     return do_fast_seq_len (call, op, CAR(args), rho, variant);
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_seq[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
+{"rep.int",	do_rep_int,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep",		do_rep,		0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"seq_len",	do_seq_len,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
+/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+
+{ do_colon,	do_fast_colon,	-1,		2,	0, 0,  0, 0 },
+{ do_seq_len,	do_fast_seq_len,-1,		1,	0, 0,  0, 0 },
+{ 0,		0,		0,		0,	0, 0,  0, 0 }
+};
