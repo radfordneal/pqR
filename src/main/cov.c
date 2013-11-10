@@ -612,7 +612,7 @@ find_na_2(int n, int ncx, int ncy, double *x, double *y, int *has_na_x, int *has
   "all.obs", "complete.obs", "pairwise.complete", "everything", "na.or.complete"
 	  kendall = TRUE/FALSE)
 */
-SEXP attribute_hidden do_cov(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_cov(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, y, ans, xm, ym, ind;
     Rboolean cor, ansmat, kendall, pair, na_fail, everything, sd_0, empty_err;
@@ -788,3 +788,15 @@ SEXP attribute_hidden do_cov(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(1);
     return ans;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_cov[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"cov",		do_cov,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"cor",		do_cov,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

@@ -74,8 +74,7 @@ R_set_command_line_arguments(int argc, char **argv)
   The .Internal which returns the command line arguments that are stored
   in global variables.
  */
-SEXP attribute_hidden
-do_commandArgs(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_commandArgs(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i;
     SEXP vals;
@@ -264,3 +263,14 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
     *pac = newac;
     return;
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_CommandLineArgs[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"commandArgs", do_commandArgs, 0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

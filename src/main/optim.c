@@ -209,7 +209,7 @@ static void genptry(int n, double *p, double *ptry, double scale, void *ex)
 }
 
 /* par fn gr method options */
-SEXP attribute_hidden do_optim(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_optim(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP par, fn, gr, method, options, tmp, slower, supper;
     SEXP res, value, counts, conv;
@@ -399,7 +399,7 @@ SEXP attribute_hidden do_optim(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* par fn gr options */
-SEXP attribute_hidden do_optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP par, fn, gr, options, tmp, ndeps, ans;
     OptStruct OS;
@@ -1160,3 +1160,15 @@ void samin(int n, double *pb, double *yb, optimfn fminfn, int maxit,
 }
 
 #undef E1
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_optim[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"optim",	do_optim,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"optimhess",	do_optimhess,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};

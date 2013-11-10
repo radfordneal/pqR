@@ -363,7 +363,7 @@ void KillAllDevices(void)
     if(!LENGTH(CAR(args)))					\
 	error(_("argument must have positive length"))
 
-SEXP attribute_hidden do_devcontrol(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devcontrol(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int listFlag;
     pGEDevDesc gdd = GEcurrentDevice();
@@ -380,39 +380,39 @@ SEXP attribute_hidden do_devcontrol(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarLogical(listFlag);
 }
 
-SEXP attribute_hidden do_devcopy(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devcopy(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
     GEcopyDisplayList(INTEGER(CAR(args))[0] - 1);
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_devcur(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devcur(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     return ScalarInteger(curDevice() + 1);
 }
 
-SEXP attribute_hidden do_devnext(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devnext(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
     return ScalarInteger( nextDevice(INTEGER(CAR(args))[0] - 1) + 1 );
 }
 
-SEXP attribute_hidden do_devprev(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devprev(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
     return ScalarInteger( prevDevice(INTEGER(CAR(args))[0] - 1) + 1 );
 }
 
-SEXP attribute_hidden do_devset(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devset(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int devNum = INTEGER(CAR(args))[0] - 1;
     checkArity(op, args);
     return ScalarInteger( selectDevice(devNum) + 1 );
 }
 
-SEXP attribute_hidden do_devoff(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devoff(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
     killDevice(INTEGER(CAR(args))[0] - 1);
@@ -577,7 +577,7 @@ void NewFrameConfirm(pDevDesc dd)
 }
 
 /* This needs to manage R_Visible */
-SEXP attribute_hidden do_devAskNewPage(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devAskNewPage(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int ask;
     pGEDevDesc gdd = GEcurrentDevice();
@@ -595,7 +595,7 @@ SEXP attribute_hidden do_devAskNewPage(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarLogical(oldask);
 }
 
-SEXP attribute_hidden do_devsize(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devsize(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     pDevDesc dd = GEcurrentDevice()->dev;
@@ -608,7 +608,7 @@ SEXP attribute_hidden do_devsize(SEXP call, SEXP op, SEXP args, SEXP env)
     return(ans);
 }
 
-SEXP attribute_hidden do_devholdflush(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devholdflush(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     pDevDesc dd = GEcurrentDevice()->dev;
 
@@ -619,7 +619,7 @@ SEXP attribute_hidden do_devholdflush(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarInteger(level);
 }
 
-SEXP attribute_hidden do_devcap(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devcap(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     int i = 0;
@@ -645,7 +645,7 @@ SEXP attribute_hidden do_devcap(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_devcapture(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_devcapture(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i, col, row, nrow, ncol, size;
     Rboolean native;
@@ -691,3 +691,26 @@ SEXP attribute_hidden do_devcapture(SEXP call, SEXP op, SEXP args, SEXP env)
 
     return image;    
 }
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_devices[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"dev.control",	do_devcontrol,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.displaylist",do_devcontrol,1,	111,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.copy",	do_devcopy,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.cur",	do_devcur,	0,	111,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.next",	do_devnext,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.prev",	do_devprev,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.set",	do_devset,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dev.off",	do_devoff,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"devAskNewPage",do_devAskNewPage,0,	211,	1,      {PP_FUNCALL, PREC_FN,   0}},
+{"dev.size",	do_devsize,	0,	11,	0,      {PP_FUNCALL, PREC_FN,   0}},
+{"devHoldFlush",do_devholdflush,0,	111,	1,      {PP_FUNCALL, PREC_FN,   0}},
+{"dev.capabilities", do_devcap,	0,	11,	0,      {PP_FUNCALL, PREC_FN,   0}},
+{"devCapture"  , do_devcapture,	0,	111,	1,      {PP_FUNCALL, PREC_FN,   0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
