@@ -67,7 +67,7 @@ extern int R_naflag;
 extern helpers_task_proc task_unary_minus, task_math1;
 
 
-/* Codes for merged arithmetic operations and math1 functions.  Note that
+/* CODES FOR MERGED ARITHMETIC OPERATIONS AND MATH1 FUNCTIONS.  Note that
    PLUS, MINUS, and TIMES are not assumed to be commutative, since they
    aren't always when one or both operands are NaN or NA, and we want exactly 
    the same result as is obtained without merging operations.  
@@ -79,7 +79,7 @@ extern helpers_task_proc task_unary_minus, task_math1;
    The opcode for the merged task procedure encodes two or more operations
    plus a flag saying which operand is scalar.  The flag is in the low-order
    byte.  The codes for the operations follow in higher-order bytes, with
-   the last operation in lowest position.  The code for the null  operation 
+   the last operation in lowest position.  The code for the null operation 
    is zero, so null operations occur naturally in higher-order bytes.  The
    64 bits in task operations codes could accommodate up to seven merged
    operations, but the limit for the fast procedure is three. 
@@ -104,11 +104,12 @@ extern helpers_task_proc task_unary_minus, task_math1;
 
 #define N_MERGED_OPS 14         /* Number of operation codes above */
 
-/* Task for performing a set of merged arithmetic/math1 operations. */
+
+/* TASK FOR PERFORMING A SET OF MERGED ARITHMETIC/MATH1 OPERATIONS. */
 
 #if USE_SLOW_MERGED_OP
 
-/* Slow version for testing.  Doesn't treat powers of -1, 0, 1, and 2 
+/* SLOW VERSION FOR TESTING.  Doesn't treat powers of -1, 0, 1, and 2 
    specially.  Inefficiently does switch inside loop. */
 
 void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
@@ -188,9 +189,8 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 #else 
 
-/* Fast version. Treats powers of -1, 0, 1, and 2 specially, replacing
-   the MERGED_OP_V_POW_C code with another.  Uses a big switch over all
-   combinations of operations.  Works only when MAX_OPS_MERGED is 3. 
+/* FAST VERSION. Treats powers of -1, 0, 1, and 2 specially, replacing the
+   MERGED_OP_V_POW_C code with another.  Works only when MAX_OPS_MERGED is 3. 
 
    Operations of raising to the powers -1, 0, 1, and 2 are converted to other
    operations.  When consecutive math1 operations occur, an ISNAN check is
@@ -398,7 +398,14 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 #endif
 
 
-/* Procedure for merging arithmetic and math1 operations. */
+/* PROCEDURE FOR MERGING ARITHMETIC AND MATH1 OPERATIONS.  The scalar
+   operands for all merged operations are put into a real vector of
+   length three (taken from the pre-allocated pool in R_merge_const_vec), 
+   except that if there is only one scalar operand the original scalar 
+   real vector is used instead.  The vector operand for the merged
+   operations may be either the first or second operand of the merged 
+   task procedure, with this being indicated by a flag in the operation
+   code. */
 
 #define MERGED_ARITH_OP(proc,op,in1,in2) \
  ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V \
