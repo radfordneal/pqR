@@ -67,7 +67,7 @@ extern int R_naflag;
 extern helpers_task_proc task_unary_minus, task_math1;
 
 
-/* Codes for merged arithmetic operations and math1 functions.  Note that
+/* CODES FOR MERGED ARITHMETIC OPERATIONS AND MATH1 FUNCTIONS.  Note that
    PLUS, MINUS, and TIMES are not assumed to be commutative, since they
    aren't always when one or both operands are NaN or NA, and we want exactly 
    the same result as is obtained without merging operations.  
@@ -79,7 +79,7 @@ extern helpers_task_proc task_unary_minus, task_math1;
    The opcode for the merged task procedure encodes two or more operations
    plus a flag saying which operand is scalar.  The flag is in the low-order
    byte.  The codes for the operations follow in higher-order bytes, with
-   the last operation in lowest position.  The code for the null  operation 
+   the last operation in lowest position.  The code for the null operation 
    is zero, so null operations occur naturally in higher-order bytes.  The
    64 bits in task operations codes could accommodate up to seven merged
    operations, but the limit for the fast procedure is three. 
@@ -104,11 +104,12 @@ extern helpers_task_proc task_unary_minus, task_math1;
 
 #define N_MERGED_OPS 14         /* Number of operation codes above */
 
-/* Task for performing a set of merged arithmetic/math1 operations. */
+
+/* TASK FOR PERFORMING A SET OF MERGED ARITHMETIC/MATH1 OPERATIONS. */
 
 #if USE_SLOW_MERGED_OP
 
-/* Slow version for testing.  Doesn't treat powers of -1, 0, 1, and 2 
+/* SLOW VERSION FOR TESTING.  Doesn't treat powers of -1, 0, 1, and 2 
    specially.  Inefficiently does switch inside loop. */
 
 void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
@@ -188,9 +189,8 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 #else 
 
-/* Fast version. Treats powers of -1, 0, 1, and 2 specially, replacing
-   the MERGED_OP_V_POW_C code with another.  Uses a big switch over all
-   combinations of operations.  Works only when MAX_OPS_MERGED is 3. 
+/* FAST VERSION. Treats powers of -1, 0, 1, and 2 specially, replacing the
+   MERGED_OP_V_POW_C code with another.  Works only when MAX_OPS_MERGED is 3. 
 
    Operations of raising to the powers -1, 0, 1, and 2 are converted to other
    operations.  When consecutive math1 operations occur, an ISNAN check is
@@ -199,11 +199,142 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
    is implemented by the ISNAN check leading to a "break", which goes to the
    end of the current do {...} while (0) block, with these blocks being set 
    up to span consecutive math1 operations.
-*/
+
+   The code for the first operation (which will be MERGED_OP_NULL if
+   there are less than three merged operations) will be used to select
+   one of N_MERGED_OPS procedures to call that are defined below.
+   These procedures contain the processing loop, and a switch on the
+   remaining two operation codes.  This split into multiple procedures
+   prevents the compiler (in particular gcc) from using lots of time
+   and memory processing a single large switch statement. */
 
 #if MAX_OPS_MERGED != 3
 #error Fast merged operations are implemented only when MAX_OPS_MERGED is 3
 #endif
+
+#define SW_CASE(o,S) \
+    case o: \
+        do { \
+            R_len_t u = HELPERS_UP_TO(i,a); \
+            do { \
+                v = vecp[i]; \
+                do { S; } while (0); \
+                ansp[i] = v; \
+            } while (++i <= u); \
+            helpers_amount_out(i); \
+        } while (i < a); \
+        break;
+
+#define SW_CASES2(b,o,S) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  } while(0); do { S; \
+        v = c3 + v) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  } while(0); do { S; \
+        v = v + c3) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, } while(0); do { S; \
+        v = c3 - v) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, } while(0); do { S; \
+        v = v - c3) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, } while(0); do { S; \
+        v = c3 * v) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, } while(0); do { S; \
+        v = v * c3) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   } while(0); do { S; \
+        v = c3 / v) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   } while(0); do { S; \
+        v = v / c3) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   } while(0); do { S; \
+        v = R_pow(c3,v)) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   } while(0); do { S; \
+        v = R_pow(v,c3)) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, } while(0); do { S; \
+        v = v * v) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  } while(0); do { S; \
+        v = c3) \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_MATH1, \
+        S; if (!b && ISNAN(v)) break; v = f3(v); \
+           if (e3 && ISNAN(v)) R_naflag = 1 )
+
+#define PROC(b,o,S) \
+static void proc_##o (SEXP ans, double *vecp, int sw, int which, int e3, \
+             double (*f1)(double), double (*f2)(double), double (*f3)(double), \
+             double c1, double c2, double c3) \
+{ \
+    double *ansp = REAL(ans); \
+    R_len_t n = LENGTH(ans); \
+    R_len_t i = 0; \
+    R_len_t a; \
+    double v; \
+    HELPERS_SETUP_OUT(6); \
+    while (i < n) { \
+        if (which) \
+            HELPERS_WAIT_IN2 (a, i, n); \
+        else \
+            HELPERS_WAIT_IN1 (a, i, n); \
+        switch (sw) { \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  } while(0); do { S; \
+            v = c2 + v) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  } while(0); do { S; \
+            v = v + c2) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, } while(0); do { S; \
+            v = c2 - v) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, } while(0); do { S; \
+            v = v - c2) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, } while(0); do { S; \
+            v = c2 * v) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, } while(0); do { S; \
+            v = v * c2) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   } while(0); do { S; \
+            v = c2 / v) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   } while(0); do { S; \
+            v = v / c2) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   } while(0); do { S; \
+            v = R_pow(c2,v)) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   } while(0); do { S; \
+            v = R_pow(v,c2)) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, } while(0); do { S; \
+            v = v * v) \
+        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  } while(0); do { S; \
+            v  = c2) \
+        SW_CASES2(1,(o)*N_MERGED_OPS+MERGED_OP_MATH1, \
+            S; if (!b && ISNAN(v)) break; v = f2(v)) \
+        default: abort(); \
+        } \
+    } \
+}
+
+PROC(0,MERGED_OP_NULL, ;)
+PROC(0,MERGED_OP_C_PLUS_V,  v = c1 + v)
+PROC(0,MERGED_OP_V_PLUS_C,  v = v + c1)
+PROC(0,MERGED_OP_C_MINUS_V, v = c1 - v)
+PROC(0,MERGED_OP_V_MINUS_C, v = v - c1)
+PROC(0,MERGED_OP_C_TIMES_V, v = c1 * v)
+PROC(0,MERGED_OP_V_TIMES_C, v = v * c1)
+PROC(0,MERGED_OP_C_DIV_V,   v = c1 / v)
+PROC(0,MERGED_OP_V_DIV_C,   v = v / c1)
+PROC(0,MERGED_OP_C_POW_V,   v = R_pow(c1,v))
+PROC(0,MERGED_OP_V_POW_C,   v = R_pow(v,c1))
+PROC(0,MERGED_OP_V_SQUARED, v = v * v)
+PROC(0,MERGED_OP_CONSTANT,  v = c1)
+PROC(1,MERGED_OP_MATH1,     if (ISNAN(v)) break; v = f1(v))
+
+static void (*proc_table[N_MERGED_OPS])() = {
+    proc_MERGED_OP_NULL,
+    proc_MERGED_OP_C_PLUS_V,
+    proc_MERGED_OP_V_PLUS_C,
+    proc_MERGED_OP_C_MINUS_V,
+    proc_MERGED_OP_V_MINUS_C,
+    proc_MERGED_OP_C_TIMES_V,
+    proc_MERGED_OP_V_TIMES_C,
+    proc_MERGED_OP_C_DIV_V,
+    proc_MERGED_OP_V_DIV_C,
+    proc_MERGED_OP_C_POW_V,
+    proc_MERGED_OP_V_POW_C,
+    proc_MERGED_OP_V_SQUARED,
+    proc_MERGED_OP_CONSTANT,
+    proc_MERGED_OP_MATH1
+};
 
 void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
@@ -213,9 +344,7 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     /* Get vector to operate on and pointer to scalar operands (if any). */
 
-    double *ansp, *vecp, *scp;
-
-    ansp = REAL(ans);
+    double *vecp, *scp;
 
     if (which) {
         vecp = REAL(s2);
@@ -292,113 +421,21 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     /* Do the operations. */
 
-    R_len_t n = LENGTH(ans);
-    R_len_t i = 0;
-    R_len_t a;
-    double v;
-
-    HELPERS_SETUP_OUT(6);
-
-#   define SW_CASE(o,S) \
-        case o: \
-            do { \
-                R_len_t u = HELPERS_UP_TO(i,a); \
-                do { \
-                    v = vecp[i]; \
-                    do { S; } while (0); \
-                    ansp[i] = v; \
-                } while (++i <= u); \
-                helpers_amount_out(i); \
-            } while (i < a); \
-            break;
-
-#   define SW_CASES2(b,o,S) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  } while(0); do { S; \
-            v = c3 + v) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  } while(0); do { S; \
-            v = v + c3) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, } while(0); do { S; \
-            v = c3 - v) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, } while(0); do { S; \
-            v = v - c3) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, } while(0); do { S; \
-            v = c3 * v) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, } while(0); do { S; \
-            v = v * c3) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   } while(0); do { S; \
-            v = c3 / v) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   } while(0); do { S; \
-            v = v / c3) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   } while(0); do { S; \
-            v = R_pow(c3,v)) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   } while(0); do { S; \
-            v = R_pow(v,c3)) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, } while(0); do { S; \
-            v = v * v) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  } while(0); do { S; \
-            v = c3) \
-        SW_CASE((o)*N_MERGED_OPS+MERGED_OP_MATH1, \
-            S; if (!b && ISNAN(v)) break; v = f3(v); \
-               if (e3 && ISNAN(v)) R_naflag = 1 )
-
-#   define SW_CASES1(b,o,S) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  } while(0); do { S; \
-            v = c2 + v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  } while(0); do { S; \
-            v = v + c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, } while(0); do { S; \
-            v = c2 - v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, } while(0); do { S; \
-            v = v - c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, } while(0); do { S; \
-            v = c2 * v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, } while(0); do { S; \
-            v = v * c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   } while(0); do { S; \
-            v = c2 / v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   } while(0); do { S; \
-            v = v / c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   } while(0); do { S; \
-            v = R_pow(c2,v)) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   } while(0); do { S; \
-            v = R_pow(v,c2)) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, } while(0); do { S; \
-            v = v * v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  } while(0); do { S; \
-            v  = c2) \
-        SW_CASES2(1,(o)*N_MERGED_OPS+MERGED_OP_MATH1, \
-            S; if (!b && ISNAN(v)) break; v = f2(v))
-
-    while (i < n) {
-        if (which) 
-            HELPERS_WAIT_IN2 (a, i, n); 
-        else 
-            HELPERS_WAIT_IN1 (a, i, n);
-        switch (switch_value) {
-            SW_CASES1(0,MERGED_OP_NULL, ;)
-            SW_CASES1(0,MERGED_OP_C_PLUS_V,  v = c1 + v)
-            SW_CASES1(0,MERGED_OP_V_PLUS_C,  v = v + c1)
-            SW_CASES1(0,MERGED_OP_C_MINUS_V, v = c1 - v)
-            SW_CASES1(0,MERGED_OP_V_MINUS_C, v = v - c1)
-            SW_CASES1(0,MERGED_OP_C_TIMES_V, v = c1 * v)
-            SW_CASES1(0,MERGED_OP_V_TIMES_C, v = v * c1)
-            SW_CASES1(0,MERGED_OP_C_DIV_V,   v = c1 / v)
-            SW_CASES1(0,MERGED_OP_V_DIV_C,   v = v / c1)
-            SW_CASES1(0,MERGED_OP_C_POW_V,   v = R_pow(c1,v))
-            SW_CASES1(0,MERGED_OP_V_POW_C,   v = R_pow(v,c1))
-            SW_CASES1(0,MERGED_OP_V_SQUARED, v = v * v)
-            SW_CASES1(0,MERGED_OP_CONSTANT,  v = c1)
-            SW_CASES1(1,MERGED_OP_MATH1,     if (ISNAN(v)) break; v = f1(v))
-        }
-    }
+    (*proc_table[switch_value/(N_MERGED_OPS*N_MERGED_OPS)]) (ans, vecp,
+       switch_value, which, e3, f1, f2, f3, c1, c2, c3);
 }
 
 #endif
 
 
-/* Procedure for merging arithmetic and math1 operations. */
+/* PROCEDURE FOR MERGING ARITHMETIC AND MATH1 OPERATIONS.  The scalar
+   operands for all merged operations are put into a real vector of
+   length three (taken from the pre-allocated pool in R_merge_const_vec), 
+   except that if there is only one scalar operand the original scalar 
+   real vector is used instead.  The vector operand for the merged
+   operations may be either the first or second operand of the merged 
+   task procedure, with this being indicated by a flag in the operation
+   code. */
 
 #define MERGED_ARITH_OP(proc,op,in1,in2) \
  ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V \
