@@ -225,31 +225,31 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         } while (i < a); \
         break;
 
-#define SW_CASES2(b,o,S) \
+#define SW_CASES(b,o,S) \
     SW_CASE((o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  S; } while (0); do { \
         v = c3 + v) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  S; } while (0); do { \
         v = v + c3) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, S; } while (0); do { \
         v = c3 - v) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, S; } while (0); do { \
         v = v - c3) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, S; } while (0); do { \
         v = c3 * v) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, S; } while (0); do { \
         v = v * c3) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   S; } while (0); do { \
         v = c3 / v) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   S; } while (0); do { \
         v = v / c3) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   S; } while (0); do { \
         v = R_pow(c3,v)) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   S; } while (0); do { \
         v = R_pow(v,c3)) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, S; } while (0); do { \
         v = v * v) \
-    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  } while(0); do { S; \
+    SW_CASE((o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  S; } while (0); do { \
         v = c3) \
     SW_CASE((o)*N_MERGED_OPS+MERGED_OP_MATH1, \
         S; if (!b && ISNAN(v)) break; v = f3(v); \
@@ -272,32 +272,32 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, int e3, \
         else \
             HELPERS_WAIT_IN1 (a, i, n); \
         switch (sw) { \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_NULL,      S) \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  S; } while (0); do { \
             v = c2 + v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_V_PLUS_C,  S; } while (0); do { \
             v = v + c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_C_MINUS_V, S; } while (0); do { \
             v = c2 - v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_V_MINUS_C, S; } while (0); do { \
             v = v - c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_C_TIMES_V, S; } while (0); do { \
             v = c2 * v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_V_TIMES_C, S; } while (0); do { \
             v = v * c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_C_DIV_V,   S; } while (0); do { \
             v = c2 / v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_V_DIV_C,   S; } while (0); do { \
             v = v / c2) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_C_POW_V,   S; } while (0); do { \
             v = R_pow(c2,v)) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_V_POW_C,   S; } while (0); do { \
             v = R_pow(v,c2)) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_V_SQUARED, S; } while (0); do { \
             v = v * v) \
-        SW_CASES2(0,(o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  } while(0); do { S; \
+        SW_CASES(0, (o)*N_MERGED_OPS+MERGED_OP_CONSTANT,  S; } while (0); do { \
             v  = c2) \
-        SW_CASES2(1,(o)*N_MERGED_OPS+MERGED_OP_MATH1, \
+        SW_CASES(1, (o)*N_MERGED_OPS+MERGED_OP_MATH1, \
             S; if (!b && ISNAN(v)) break; v = f2(v)) \
         default: abort(); \
         } \
