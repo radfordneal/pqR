@@ -724,8 +724,6 @@ unsigned int TimeToSeed(void); /* datetime.c */
 
 const char* get_workspace_name();  /* from startup.c */
 
-SEXP R_merge_const_vec[MAX_TASKS];  /* see helpers-app.h */
-
 void setup_Rmainloop(void)
 {
     volatile int doneit;
@@ -834,14 +832,6 @@ void setup_Rmainloop(void)
     InitTempDir(); /* must be before InitEd */
     InitMemory();
     InitStringHash(); /* must be before InitNames */
-#   ifdef helpers_can_merge
-    { int k;
-      for (k = 0; k<MAX_TASKS; k++) {
-          R_merge_const_vec[k] = allocVector (REALSXP, MAX_OPS_MERGED);
-          R_PreserveObject (R_merge_const_vec[k]);
-      }
-    }
-#   endif
     InitNames();
     InitBaseEnv();
     InitGlobalEnv();

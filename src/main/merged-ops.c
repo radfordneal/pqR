@@ -317,18 +317,10 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     int which = code & 1;
 
-    /* Get vector to operate on and pointer to scalar operands (if any). */
+    /* Get vector to operate on and the pointer to scalar operands (if any). */
 
-    double *vecp, *scp;
-
-    if (which) {
-        vecp = REAL(s2);
-        scp = REAL(s1);
-    }
-    else {
-        vecp = REAL(s1);
-        if (s2 != NULL) scp = REAL(s2);
-    }
+    double *vecp = which ? REAL(s2) : REAL(s1);
+    double *scp = helpers_task_data();
 
     /* Set up switch values encoding the first (possibly null) operation
        and the second and third operations, and the functions and
@@ -407,13 +399,10 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 
 /* PROCEDURE FOR MERGING ARITHMETIC AND MATH1 OPERATIONS.  The scalar
-   operands for all merged operations are put into a real vector of
-   length three (taken from the pre-allocated pool in R_merge_const_vec), 
-   except that if there is only one scalar operand the original scalar 
-   real vector is used instead.  The vector operand for the merged
-   operations may be either the first or second operand of the merged 
-   task procedure, with this being indicated by a flag in the operation
-   code. */
+   operands for all merged operations are placed in the task_data block.
+   The vector operand for the merged operations may be either the first 
+   or second operand of the merged task procedure, with this being indicated 
+   by a flag in the operation code. */
 
 #define MERGED_ARITH_OP(proc,op,in1,in2) \
  ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V \
@@ -423,39 +412,36 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
   helpers_var_ptr in1_A, helpers_var_ptr in2_A,
   helpers_task_proc **proc_B, helpers_op_t *op_B, 
-  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B)
+  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B,
+  double *task_data)
 {
     helpers_op_t ops;
     int which;
-    SEXP sv;
-  
-    /* Set flags, which, ops, and sv according to operations other than 
-       operation A. */
+   
+    /* Set flags, which, and ops according to operations other than op_A. */
   
     if (*proc_B == task_merged_arith_math1) {
         which = *op_B & 1;
         ops = *op_B >> 8;
-        sv = which ? *in1_B : *in2_B; 
     }
     else { /* create "merge" of just operation B */
         if (*proc_B == task_math1) {
             which = 0;
             ops = *op_B + 0x80;
-            sv = 0;
         }
         else { /* binary or unary arithmetic operation */
             ops = MERGED_ARITH_OP (*proc_B, *op_B, *in1_B, *in2_B);
             if (*in2_B == 0) { /* unary minus */
+                task_data[0] = 0.0;
                 which = 0;
-                sv = *in2_B = R_ScalarRealZero;
             }
             else if (LENGTH(*in2_B) == 1) {
+                task_data[0] = *REAL(*in2_B);
                 which = 0;
-                sv = *in2_B;
             }
             else {
+                task_data[0] = *REAL(*in1_B);
                 which = 1;
-                sv = *in1_B;
             }
         }
         *proc_B = task_merged_arith_math1;
@@ -469,42 +455,23 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         newop = op_A | 0x80;
     }
     else { /* binary or unary arithmetic operation */
-        SEXP scalar = in2_A == 0 ? R_ScalarRealZero /* for unary minus */
-                    : LENGTH(in2_A) == 1 ? in2_A : in1_A;
-        double *p;
-        if (sv == 0) { /* will also have which == 0 */
-            sv = scalar;
-            *in2_B = sv;
-        }
-        else if (LENGTH(sv) == 1) {
-            double tmp = *REAL(sv);
-            int k;
-            for (k = 0; helpers_is_in_use(R_merge_const_vec[k]); k++)
-                if (k == MAX_TASKS-1) abort();
-            sv = R_merge_const_vec[k];
-            * (which ? in1_B : in2_B) = sv;
-            REAL(sv)[0] = tmp;
-            REAL(sv)[1] = *REAL(scalar);
-        }
-        else {
-            p = REAL(sv);
-#           if MAX_OPS_MERGED==3
-                if ((ops&0x80) == 0) p += 1;
-                if ((ops>>8) != 0 && (ops&0x8000) == 0) p += 1;
-#           else
-                for (helpers_op_t o = ops; o != 0; o >>= 8) {
-                    if (! (o&0x80)) p += 1;
-                }
-#           endif
-            *p = *REAL(scalar);
-        }
+        double *p = task_data;
+#       if MAX_OPS_MERGED==3
+            if ((ops&0x80) == 0) p += 1;
+            if ((ops>>8) != 0 && (ops&0x8000) == 0) p += 1;
+#       else
+            for (helpers_op_t o = ops; o != 0; o >>= 8) {
+                if (! (o&0x80)) p += 1;
+            }
+#       endif
+        *p = in2_A==0 ? 0.0 : LENGTH(in2_A)==1 ? *REAL(in2_A) : *REAL(in1_A);
         newop = MERGED_ARITH_OP (proc_A, op_A, in1_A, in2_A);
     }
 
     ops = (ops << 8) | newop;
   
-    /* Store the new operation specification in *op_B (*proc_B and *in1_B or
-       *in2_B may have been updated above). */
+    /* Store the new operation specification in *op_B; *proc_B and task_data
+       may have been updated above. */
   
     *op_B = (ops << 8) | which;
 }

@@ -797,16 +797,28 @@ should be as follows:
      helpers_task_proc *proc_A, helpers_op_t op_A, 
      helpers_var_ptr in1_A, helpers_var_ptr in2_A,
      helpers_task_proc **proc_B, helpers_op_t *op_B, 
-     helpers_var_ptr *in1_B, helpers_var_ptr *in2_B);
+     helpers_var_ptr *in1_B, helpers_var_ptr *in2_B,
+     double task_data[HELPERS_TASK_DATA_AMT]);
 
 The first argument is the output variable shared by tasks A and B.
 The next four arguments are as passed to helpers_do_task when task A
-was scheduled. The final four arguments are pointers to where the
-corresponding information for task B is stored.  The helpers_merge
-function (or macro) may alter this information in order to produce a
-specification for a task that will have the effect of doing both task
-A and task B, subject to the following restrictions (which, when
-necessary, the helpers_can_merge macro must ensure can be satisfied):
+was scheduled; these are followed by four pointers to where the
+corresponding information for task B is stored.  
+
+The final argument is a pointer to an array of HELPERS_TASK_DATA_AMT
+(defaulting to one if not defined in helpers-app.h) double-precision
+floating-point values, which can be used to pass additional data to
+the merged task procedure.  These values will be as previously set if
+task B is a merged task, and will be undefined if task B is not the
+result of merging.  The procedure for a merged task can obtain a
+pointer to this data by calling the helpers_data_ptr function (which
+takes no arguments).
+
+The helpers_merge function (or macro) may alter the information about
+task B and the values in task_data in order to produce a specification
+for a task that will have the effect of doing both task A and task B,
+subject to the following restrictions (which, when necessary, the
+helpers_can_merge macro must ensure can be satisfied):
 
   1) If either in1_B or in2_B points to a variable that has not
      yet been computed (ie, is the output of some other task that 
@@ -1073,6 +1085,8 @@ along with the context in which they may be called.
 
   helpers_wait_for_all
                     void           void                  master
+
+  helpers_task_data void           double *              task
 
   helpers_output_perhaps_pipelined
                     int            void                  task
