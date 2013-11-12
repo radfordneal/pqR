@@ -330,8 +330,9 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         if (s2 != NULL) scp = REAL(s2);
     }
 
-    /* Set up switch value encoding all operations and the functions and
-       scalar constants used by all operations. */
+    /* Set up switch values encoding the first (possibly null) operation
+       and the second and third operations, and the functions and
+       scalar constants used by these operations. */
 
     int ops = code >> 8;
 
@@ -339,7 +340,8 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     double c1, c2, c3;
     int e3;
 
-    int switch_value;
+    int switch1;
+    int switch23;
     int op;
 
 #   define POW_SPECIAL(op,c) do { \
@@ -351,54 +353,54 @@ void task_merged_arith_math1 (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         } \
     } while (0)
 
-    if ((ops & 0xff0000) == 0) {
-        switch_value = MERGED_OP_NULL * (N_MERGED_OPS*N_MERGED_OPS);
+    op = ops>>16;
+    if (op==0) {
+        switch1 = MERGED_OP_NULL;
     }
     else {
-        op = ops >> 16;
         ops &= 0xffff;
         if (op & 0x80) {
             op &= 0x7f;
-            switch_value = MERGED_OP_MATH1 * (N_MERGED_OPS*N_MERGED_OPS);
+            switch1 = MERGED_OP_MATH1;
             f1 = R_math1_func_table[op];
         }
         else {
             c1 = *scp++;
             POW_SPECIAL(op,c1);
-            switch_value = op * (N_MERGED_OPS*N_MERGED_OPS);
+            switch1 = op;
         }
     }
 
     op = ops >> 8;
     if (op & 0x80) {
         op &= 0x7f;
-        switch_value += MERGED_OP_MATH1 * N_MERGED_OPS;
+        switch23 = MERGED_OP_MATH1 * N_MERGED_OPS;
         f2 = R_math1_func_table[op];
     }
     else {
         c2 = *scp++;
         POW_SPECIAL(op,c2);
-        switch_value += op * N_MERGED_OPS;
+        switch23 = op * N_MERGED_OPS;
     }
 
     op = ops & 0xff;
     if (op & 0x80) {
         op &= 0x7f;
-        switch_value += MERGED_OP_MATH1;
+        switch23 += MERGED_OP_MATH1;
         f3 = R_math1_func_table[op];
         e3 = R_math1_err_table[op];
     }
     else {
         c3 = *scp;
         POW_SPECIAL(op,c3);
-        switch_value += op;
+        switch23 += op;
     }
 
-    /* Do the operations. */
+    /* Do the operations by calling a procedure indexed by the first
+       operation, which will switch on the second and third operations. */
 
-    (*proc_table[switch_value/(N_MERGED_OPS*N_MERGED_OPS)]) (ans, vecp,
-       switch_value%(N_MERGED_OPS*N_MERGED_OPS), which, e3, 
-       f1, f2, f3, c1, c2, c3);
+    (*proc_table[switch1]) (ans, vecp, switch23, which, e3, 
+                            f1, f2, f3, c1, c2, c3);
 }
 
 #endif
