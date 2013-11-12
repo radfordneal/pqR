@@ -220,6 +220,7 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 #define helpers_wait_until_not_being_computed(v)    0
 #define helpers_wait_for_all_master_only()          0
 #define helpers_wait_for_all()                      0
+#define helpers_task_data()                         0
 
 static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 
@@ -261,6 +262,7 @@ void helpers_wait_until_not_being_computed2 /* Wait till two vars not outputs */
 
 void helpers_wait_for_all_master_only (void);/* Wait for all master-only tasks*/
 void helpers_wait_for_all (void);     /* Wait till all tasks have finished */
+double *helpers_task_data (void);     /* Get pointer to data for merged task */
 
 helpers_var_ptr *helpers_var_list(int);  /* Return list of variables in use */
 

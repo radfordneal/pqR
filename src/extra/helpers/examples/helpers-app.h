@@ -61,10 +61,12 @@ extern int B_in_use, B_being_computed;
 
 #define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
   ((proc_a)==add_task && (proc_b)==mul_task && (in1_a)==(out))
+
+#define HELPERS_TASK_DATA_AMT 2
                              
 #define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
-                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
-  (*(proc_b_ptr) = mul_add_task)
+                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr,d) \
+  (*(proc_b_ptr) = mul_add_task, (d)[0] = 2.0, (d)[1] = 0.1)
 
 #endif
 

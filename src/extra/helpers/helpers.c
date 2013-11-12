@@ -103,6 +103,10 @@
 #define helpers_is_in_use(v) 1
 #endif
 
+#ifndef HELPERS_TASK_DATA_AMT
+#define HELPERS_TASK_DATA_AMT 1
+#endif
+
 
 /* NULL VARIABLE POINTER, AND VARIABLE NAME MACRO HANDLING NULL. */
 
@@ -267,6 +271,9 @@ static union task_entry
     helpers_op_t op;               /* The unsigned integer operand */
     helpers_var_ptr var[3];        /* The output variable, [0], and the input 
                                       variables, [1] and [2]; any may be null */
+    double task_data [HELPERS_TASK_DATA_AMT]; /* Data the task procedure may
+                                      look at - currently only usable for tasks
+                                      that result from merging other tasks */
 
     /* The next two fields are used only by the master. */
 
@@ -1572,12 +1579,27 @@ void helpers_do_task
 
       if (merge)
       { 
-        /* If the merged task will be master-now, unmark variables.  Otherwise,
-           remember what the input variables were before the merge, to help in
-           possible later unmarking. */
+        double *task_data_loc;
+
+        /* If the merged task will be master-now, unmark variables.  Also
+           copy the task_data into pseudo-task entry 0, since that's where
+           the task running as master-now will see it.
+
+           For non-master-now tasks, remember what the input variables were 
+           before the merge, to help in possible later unmarking.  Also,
+           sets the pointer to task_data. */
 
         if (flags & HELPERS_MASTER_NOW)
         { 
+          int i;
+
+          /* Copy task_data to where it will be seen by master-now task. */
+
+          task_data_loc = task[0].info.task_data;
+          for (i = 0; i<HELPERS_TASK_DATA_AMT; i++)
+          { task_data_loc[i] = m->task_data[i];
+          }
+
           /* Mark the output as not being computed, since it won't be after
              this task is done (immediately) in the master thread. */
 
@@ -1595,6 +1617,8 @@ void helpers_do_task
 
         else /* not master-now */
         {
+          task_data_loc = m->task_data;
+
           old_var[1] = m->var[1];
           old_var[2] = m->var[2];
         }
@@ -1602,8 +1626,11 @@ void helpers_do_task
         /* Merge the new task with the existing task (which is indexed by
            'pipe0' and has info at 'm'). */
 
+        double *td;
+        
         helpers_merge (out, task_to_do, op, in1, in2, 
-                       &m->task_to_do, &m->op, &m->var[1], &m->var[2]);
+                       &m->task_to_do, &m->op, &m->var[1], &m->var[2],
+                       task_data_loc);
 
         m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
         m->flags |= (flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT));
@@ -2633,6 +2660,14 @@ int helpers_idle (void)
 #endif
 
 
+/* RETURN A POINTER TO DATA FOR A MERGED TASK. */
+
+double *helpers_task_data (void)
+{ 
+  return this_task_info->task_data;
+}
+
+
 /* RETURN A LIST OF ALL VARIABLES USED BY UNCOMPLETED TASKS. */
 
 helpers_var_ptr *helpers_var_list (int out_only)
@@ -2810,6 +2845,13 @@ void helpers_stats (void)
 void helpers_startup (int n)
 {
   mtix i;
+
+  /* Check that the size of a task entry isn't bigger than intended. */
+
+  if (sizeof task[0] != sizeof task[0].space)
+  { helpers_printf(
+     "WARNING: SIZE OF TASK ENTRY BIGGER THAN INTENDED MAXIMUM!\n");
+  }
 
   /* Record initial wall clock time, if ENABLE_TRACE is 3. */
 

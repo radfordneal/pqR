@@ -77,13 +77,15 @@ void add_task
 }
 
 
-/* COMPUTE VECTOR TIMES 1.3 PLUS 2.1. */
+/* COMPUTE VECTOR TIMES 1.3 PLUS SUM OF TWO VALUES FROM TASK DATA. The sum
+   of the task data values is set up to be 2.1. */
 
 void mul_add_task
   (helpers_op_t op, helpers_var_ptr o, helpers_var_ptr i1, helpers_var_ptr i2)
-{ helpers_size_t i;
+{ double *d = helpers_task_data();
+  helpers_size_t i;
   for (i = 0; i<size; i++)
-  { o[i] = i1[i] * 1.3 + 2.1;
+  { o[i] = i1[i] * 1.3 + (d[0] + d[1]);
   }
 }
 
@@ -134,7 +136,7 @@ void helpers_master (void)
   { int j = i==0 ? 0 : i==1 ? size/2 : size-1;
     if (A[j] != ((double)j/size) * 1.3 + 2.1)
     { fprintf (stderr, "Wrong value for A[%d] (%.15g rather than %.15f)\n", 
-                       j, A[j], ((double)j/size) * 1.3 + 2.1);
+                       j, A[j], ((double)j/size) * 1.3 + (2.0 + 0.1));
     }
   }
 }

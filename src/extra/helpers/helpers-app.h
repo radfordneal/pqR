@@ -67,9 +67,10 @@ typedef SEXP helpers_var_ptr;
        || (proc_b) != task_math1 && op_b <= MINUSOP) )
 
 #define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
-                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr) \
+                          proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr, \
+                          task_data) \
   helpers_merge_proc (/*out,*/proc_a,op_a,in1_a,in2_a, \
-                      proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr)
+                      proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr/*,task_data*/)
 
 /* Vectors used to hold scalar operands of merged task procedures. */
 
@@ -96,7 +97,7 @@ extern void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
   helpers_var_ptr in1_A, helpers_var_ptr in2_A,
   helpers_task_proc **proc_B, helpers_op_t *op_B, 
-  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B);
+  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B /*, double *task_data */);
 
 #endif
 #endif

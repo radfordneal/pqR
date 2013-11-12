@@ -423,7 +423,7 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
   helpers_var_ptr in1_A, helpers_var_ptr in2_A,
   helpers_task_proc **proc_B, helpers_op_t *op_B, 
-  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B)
+  helpers_var_ptr *in1_B, helpers_var_ptr *in2_B /*, double *task_data */)
 {
     helpers_op_t ops;
     int which;
