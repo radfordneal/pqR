@@ -1278,6 +1278,100 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return R_NilValue;/* never used; just for -Wall */
 }
 
+static SEXP do_transpose_p (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    SEXP ans, dims, dimnames, dimnamesnames, ndimnamesnames, rnames, cnames;
+    int ldim, len, ncol, nrow;
+    SEXP a, r;
+
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    if (DispatchOrEval(call, op, "t", args, rho, &ans, 0, 1))
+	return(ans);
+
+    a = CAR(args);
+
+    if (!isVector(a)) goto not_matrix;
+
+    dims = getAttrib(a, R_DimSymbol);
+    ldim = length(dims); /* not LENGTH, since could be null */
+
+    if (ldim > 2) goto not_matrix;
+
+    len = LENGTH(a);
+    nrow = ldim == 2 ? nrows(a) : len;
+    ncol = ldim == 2 ? ncols(a) : 1;
+
+    PROTECT(r = allocVector(TYPEOF(a), len));
+
+    /* Start task.  Matrices with pointer elements must be done in master only.
+       Since we don't assume that writing a pointer to memory is atomic, the
+       garbage collector could read a garbage pointer if written in a helper. */
+
+    DO_NOW_OR_LATER1 (variant, LENGTH(a) >= T_transpose,
+        isVectorNonpointer(a) ? HELPERS_PIPE_OUT : HELPERS_MASTER_ONLY, 
+        task_transpose, COMBINE_LENGTHS(nrow,ncol), r, a);
+
+    rnames = R_NilValue;
+    cnames = R_NilValue;
+    dimnamesnames = R_NilValue;
+
+    switch(ldim) {
+    case 0:
+        rnames = getAttrib(a, R_NamesSymbol);
+        dimnames = rnames;/* for isNull() below*/
+        break;
+    case 1:
+        dimnames = getAttrib(a, R_DimNamesSymbol);
+        if (dimnames != R_NilValue) {
+            rnames = VECTOR_ELT(dimnames, 0);
+            dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+        }
+        break;
+    case 2:
+        dimnames = getAttrib(a, R_DimNamesSymbol);
+        if (dimnames != R_NilValue) {
+            rnames = VECTOR_ELT(dimnames, 0);
+            cnames = VECTOR_ELT(dimnames, 1);
+            dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+        }
+        break;
+    }
+
+    PROTECT(dims = allocVector(INTSXP, 2));
+    INTEGER(dims)[0] = ncol;
+    INTEGER(dims)[1] = nrow;
+    setAttrib(r, R_DimSymbol, dims);
+    UNPROTECT(1);
+
+    /* R <= 2.2.0: dropped list(NULL,NULL) dimnames :
+     * if(rnames != R_NilValue || cnames != R_NilValue) */
+    if(!isNull(dimnames)) {
+	PROTECT(dimnames = allocVector(VECSXP, 2));
+	SET_VECTOR_ELT(dimnames, 0, cnames);
+	SET_VECTOR_ELT(dimnames, 1, rnames);
+	if(!isNull(dimnamesnames)) {
+	    PROTECT(ndimnamesnames = allocVector(VECSXP, 2));
+	    SET_VECTOR_ELT(ndimnamesnames, 1, STRING_ELT(dimnamesnames, 0));
+	    SET_VECTOR_ELT(ndimnamesnames, 0,
+			   (ldim == 2) ? STRING_ELT(dimnamesnames, 1):
+			   R_BlankString);
+	    setAttrib(dimnames, R_NamesSymbol, ndimnamesnames);
+	    UNPROTECT(1);
+	}
+	setAttrib(r, R_DimNamesSymbol, dimnames);
+	UNPROTECT(1);
+    }
+    copyMostAttrib(a, r);
+    UNPROTECT(1);
+    return r;
+
+ not_matrix:
+    error(_("argument is not a matrix"));
+    return R_NilValue;/* never used; just for -Wall */
+}
+
 /*
  New version of aperm, using strides for speed.
  Jonathan Rougier <J.C.Rougier@durham.ac.uk>
@@ -1783,6 +1877,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"col",		do_rowscols,	2,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"crossprod",	do_matprod,	1,	11011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
 {"tcrossprod",	do_matprod,	2,	11011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"tprim",	do_transpose_p,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"t.default",	do_transpose,	0,	11011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"aperm",	do_aperm,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"colSums",	do_colsum,	0,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},

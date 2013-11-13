@@ -20,14 +20,14 @@ as.numeric <- as.real <- as.double
 is.name <- is.symbol
 
 
-## extracted from existing NAMESPACE files in Dec 2003
+## extracted from existing NAMESPACE files in Dec 2003, subsequently modified.
 .knownS3Generics <- local({
 
     ## include the S3 group generics here
     baseGenerics <- c("Math", "Ops", "Summary", "Complex",
         "as.character", "as.data.frame", "as.environment", "as.matrix", "as.vector",
         "cbind", "labels", "print", "rbind", "rep", "seq", "seq.int",
-        "solve", "summary", "t")
+        "solve", "summary", "t", "tprim")
 
     utilsGenerics <- c("edit", "str")
 
@@ -145,7 +145,7 @@ assign("untracemem", function(x) NULL, envir = .ArgsEnv)
     "is.array", "is.finite",
     "is.infinite", "is.matrix", "is.na", "is.nan", "is.numeric",
     "length", "length<-", "levels<-", "names", "names<-", "rep",
-    "seq.int", "xtfrm")
+    "seq.int", "tprim", "xtfrm")
 
 .GenericArgsEnv <- local({
     env <- new.env(hash = TRUE, parent = emptyenv())
