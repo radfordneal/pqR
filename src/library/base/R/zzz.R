@@ -27,7 +27,7 @@ is.name <- is.symbol
     baseGenerics <- c("Math", "Ops", "Summary", "Complex",
         "as.character", "as.data.frame", "as.environment", "as.matrix", "as.vector",
         "cbind", "labels", "print", "rbind", "rep", "seq", "seq.int",
-        "solve", "summary", "t", "tprim")
+        "solve", "summary", "t")
 
     utilsGenerics <- c("edit", "str")
 
@@ -145,7 +145,7 @@ assign("untracemem", function(x) NULL, envir = .ArgsEnv)
     "is.array", "is.finite",
     "is.infinite", "is.matrix", "is.na", "is.nan", "is.numeric",
     "length", "length<-", "levels<-", "names", "names<-", "rep",
-    "seq.int", "tprim", "xtfrm")
+    "seq.int", "t", "xtfrm")
 
 .GenericArgsEnv <- local({
     env <- new.env(hash = TRUE, parent = emptyenv())

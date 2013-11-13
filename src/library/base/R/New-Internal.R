@@ -184,7 +184,8 @@ sprintf <- function(fmt, ...) .Internal(sprintf(fmt, ...))
 ##-- DANGER ! ---   substitute(list(...))  inside functions !!!
 ##substitute <- function(expr, env=baseenv()).Internal(substitute(expr, env))
 
-t.default <- function(x).Internal(t.default(x))
+# t.default <- function(x).Internal(t.default(x)) - t now primitive
+
 typeof <- function(x).Internal(typeof(x))
 
 
