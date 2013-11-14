@@ -722,6 +722,7 @@ void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    LOCAL_COPY(R_NilValue);
     int ldx, ldy, nrx, ncx, nry, ncy, mode;
     SEXP x = CAR(args), y = CADR(args), xdims, ydims, ans;
     Rboolean sym;
@@ -737,7 +738,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	if(value) return value;
     }
 
-    sym = isNull(y);
+    sym = y == R_NilValue;
     if (sym && (PRIMVAL(op) > 0)) y = x;
     if ( !(isNumeric(x) || isComplex(x)) || !(isNumeric(y) || isComplex(y)) )
 	errorcall(call, _("requires numeric/complex matrix/vector arguments"));
@@ -958,7 +959,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 		if (ldx == 2 || ncx == 1) {
 		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 0));
 		    dnx = getAttrib(xdims, R_NamesSymbol);
-		    if(!isNull(dnx))
+		    if(dnx != R_NilValue)
 			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 0));
 		}
 	    }
@@ -968,12 +969,12 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 		if (ldy == 2) {						\
 		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 1));	\
 		    dny = getAttrib(ydims, R_NamesSymbol);		\
-		    if(!isNull(dny))					\
+		    if(dny != R_NilValue)				\
 			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 1)); \
 		} else if (nry == 1) {					\
 		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));	\
 		    dny = getAttrib(ydims, R_NamesSymbol);		\
-		    if(!isNull(dny))					\
+		    if(dny != R_NilValue)				\
 			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0)); \
 		}							\
 	    }								\
@@ -1118,7 +1119,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 		if (ldx == 2) {/* not nrx==1 : .. fixed, ihaka 2003-09-30 */
 		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims,cross));
 		    dnx = getAttrib(xdims, R_NamesSymbol);
-		    if(!isNull(dnx))
+		    if(dnx != R_NilValue)
 			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx,cross));
 		}
 	    }
@@ -1131,7 +1132,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     if (ldy == 2) {
                         SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));
                         dny = getAttrib(ydims, R_NamesSymbol);
-                        if(!isNull(dny))
+                        if(dny != R_NilValue)
                             SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0));
                     }
                 }
