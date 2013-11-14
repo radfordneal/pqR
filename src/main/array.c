@@ -719,27 +719,95 @@ void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 
 #define T_matmult THRESHOLD_ADJUST(30)
 
-/* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
+/* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2).  For op = 0,
+   it is set up as a SPECIAL so that it can evaluate its arguments requesting
+    a VARIANT_TRANS result (produced by "t"), though it doesn't want both
+    arguments to be transposed.   */
+
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     LOCAL_COPY(R_NilValue);
+    SEXP x = CAR(args), y = CADR(args), rest = CDDR(args);
     int ldx, ldy, nrx, ncx, nry, ncy, mode;
-    SEXP x = CAR(args), y = CADR(args), xdims, ydims, ans;
+    SEXP xdims, ydims, ans;
+    PROTECT_INDEX ix, iy;
     Rboolean sym;
 
-    if(PRIMVAL(op) == 0 && /* %*% is primitive, the others are .Internal() */
-       (IS_S4_OBJECT(x) || IS_S4_OBJECT(y))
-       && R_has_methods(op)) {
-	SEXP s, value;
-        wait_until_arguments_computed(args);
-	/* Remove argument names to ensure positional matching */
-	for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG(s, R_NilValue);
-	value = R_possible_dispatch(call, op, args, rho, FALSE);
-	if(value) return value;
+    int primop = PRIMVAL(op); /* will be changed for t(A)%*%B and A%*%t(B)*/
+    int nprotect = 0;
+
+    if (primop == 0) { /* %*%, which is primitive, the others are .Internal() */
+
+        if (x != R_NilValue && x != R_DotsSymbol 
+         && y != R_NilValue && y != R_DotsSymbol && rest == R_NilValue) {
+
+            /* Simple usage like A %*% B or t(A) %*% B. */
+
+            /* Evaluate arguments with VARIANT_TRANS, except we don't want both
+               to be transposed, and we don't want a transposed argument if
+               the other is an S4 object, since that's not good for dispatch. */
+
+            PROTECT_WITH_INDEX(
+              x = evalv (x, rho, VARIANT_TRANS | VARIANT_PENDING_OK), &ix);
+            PROTECT_WITH_INDEX(
+              y = evalv (y, rho, ATTRIB(x)==R_VariantResult || IS_S4_OBJECT(x)
+               ? VARIANT_PENDING_OK : VARIANT_TRANS | VARIANT_PENDING_OK), &iy);
+            nprotect += 2;
+            if (IS_S4_OBJECT(y) && ATTRIB(x) == R_VariantResult)
+                REPROTECT(x = eval (CAR(args), rho), ix);
+
+            /* See if we dispatch to S4 method. */
+
+            if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y)) && R_has_methods(op)) {
+                SEXP value;
+                PROTECT(args = CONS(x,CONS(y,R_NilValue)));
+                nprotect += 1;
+                helpers_wait_until_not_being_computed2(x,y);
+                if (value = R_possible_dispatch(call, op, args, rho, FALSE)) {
+                    UNPROTECT(nprotect);
+                    return value;
+                }
+            }
+
+            /* See if we can switch to crossprod or tcrossprod to handle a
+               transposed argument. */
+
+            if (ATTRIB(x) == R_VariantResult) {
+                REPROTECT(x = CAR(x), ix);
+                primop = 1;
+            } 
+            else if (ATTRIB(y) == R_VariantResult) {
+                REPROTECT(y = CAR(y), iy);
+                primop = 2;
+            }
+        }
+        else {
+
+            /* Not a simple use like A %*% B, but something like `%*%`(...).
+               Don't try to evaluate arguments with VARIANT_TRANS. */
+
+            PROTECT(args = evalListPendingOK (args, rho, call));
+            nprotect += 1;
+            x = CAR(args);
+            y = CADR(args);
+
+            if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y)) && R_has_methods(op)) {
+                SEXP value, s;
+                /* Remove argument names to ensure positional matching */
+                for (s = args; s != R_NilValue; s = CDR(s)) 
+                    SET_TAG(s, R_NilValue);
+                wait_until_arguments_computed(args);
+                if (value = R_possible_dispatch(call, op, args, rho, FALSE)) {
+                    UNPROTECT(nprotect);
+                    return value;
+                }
+            }
+        }
     }
 
     sym = y == R_NilValue;
-    if (sym && (PRIMVAL(op) > 0)) y = x;
+    if (sym && primop > 0) y = x;
+
     if ( !(isNumeric(x) || isComplex(x)) || !(isNumeric(y) || isComplex(y)) )
 	errorcall(call, _("requires numeric/complex matrix/vector arguments"));
 
@@ -749,7 +817,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     ldy = sym ? ldx : length(ydims);
 
     if (ldx != 2 && ldy != 2) {		/* x and y non-matrices */
-	if (PRIMVAL(op) == 0) {
+	if (primop == 0) {
 	    nrx = 1;
 	    ncx = LENGTH(x);
 	}
@@ -765,7 +833,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	ncy = INTEGER(ydims)[1];
 	nrx = 0;
 	ncx = 0;
-	if (PRIMVAL(op) == 0) {
+	if (primop == 0) {      /* %*% */
 	    if (LENGTH(x) == nry) {	/* x as row vector */
 		nrx = 1;
 		ncx = nry; /* == LENGTH(x) */
@@ -775,7 +843,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 		ncx = 1;
 	    }
 	}
-	else if (PRIMVAL(op) == 1) { /* crossprod() */
+	else if (primop == 1) { /* crossprod() */
 	    if (LENGTH(x) == nry) {	/* x is a col vector */
 		nrx = nry; /* == LENGTH(x) */
 		ncx = 1;
@@ -799,7 +867,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	ncx = INTEGER(xdims)[1];
 	nry = 0;
 	ncy = 0;
-	if (PRIMVAL(op) == 0) {
+	if (primop == 0) {
 	    if (LENGTH(y) == ncx) {	/* y as col vector */
 		nry = ncx;
 		ncy = 1;
@@ -809,7 +877,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 		ncy = LENGTH(y);
 	    }
 	}
-	else if (PRIMVAL(op) == 1) { /* crossprod() */
+	else if (primop == 1) { /* crossprod() */
 	    if (LENGTH(y) == nrx) {	/* y is a col vector */
 		nry = nrx;
 		ncy = 1;
@@ -828,12 +896,12 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     /* nr[ow](.) and nc[ol](.) are now defined for x and y */
 
-    if (PRIMVAL(op) == 0) {
+    if (primop == 0) {
 	/* primitive, so use call */
 	if (ncx != nry)
 	    errorcall(call, _("non-conformable arguments"));
     }
-    else if (PRIMVAL(op) == 1) {
+    else if (primop == 1) {
 	if (nrx != nry)
 	    error(_("non-conformable arguments"));
     }
@@ -856,7 +924,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     PROTECT(y);
 
-    if (PRIMVAL(op) == 0) {			/* op == 0 : %*% */
+    if (primop == 0) {			/* op == 0 : %*% */
 
 	ans = allocMatrix0 (mode, nrx, ncy);
 
@@ -997,7 +1065,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     else {  /* crossprod or tcrossprod */
 
-        int cross = PRIMVAL(op)==1;
+        int cross = primop == 1;
         int nrows = cross ? ncx : nrx;
         int ncols = cross ? ncy : nry;
         int k = cross ? nrx : ncx;
@@ -1147,7 +1215,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             UNPROTECT(2);
         }
     }
-    UNPROTECT(5);
+    UNPROTECT(5+nprotect);
     return ans;
 }
 #undef YDIMS_ET_CETERA
@@ -1361,6 +1429,13 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     ldim = length(dims); /* not LENGTH, since could be null */
 
     if (ldim > 2) goto not_matrix;
+
+    if (VARIANT_KIND(variant) == VARIANT_TRANS) {
+        SEXP vres;
+        vres = CONS(a,R_NilValue);
+        SET_ATTRIB (vres, R_VariantResult);
+        return vres;
+    }
 
     len = LENGTH(a);
     nrow = ldim == 2 ? nrows(a) : len;
@@ -1930,7 +2005,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 /* Primitive */
 
 {"length",	do_length,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"%*%",		do_matprod,	0,	11001,	2,	{PP_BINARY,  PREC_PERCENT,0}},
+{"%*%",		do_matprod,	0,	11000,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
 /* Internal */
 
