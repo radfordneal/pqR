@@ -46,7 +46,13 @@ information that has not changed from previous releases of pqR.
   \subsection{INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE}{
     \itemize{
 
-\item .
+\item The table of built-in function names, C functions implementing them, and
+      operation flags, which was previously found in \code{src/main/names.c},
+      has been split into multiple tables, located in the source files that 
+      define such built-in functions (with only a few entries still in 
+      \code{names.c}).  This puts the descriptions of these built-in
+      functions next to their definitions, improving maintainability, and
+      also reduces the number of global functions.
 
   }}
 
