@@ -105,7 +105,7 @@ information that has not changed from previous releases of pqR.
       or outputs that are referenced only as task inputs
       are also waited for, so that the memory they occupy can be recovered.
 
-\item The built-in C matrix multiplication routines in those in the supplied 
+\item The built-in C matrix multiplication routines and those in the supplied 
       BLAS have both been sped up, especially those used by \code{crossprod}
       and \code{tcrossprod}.  This will of course have no effect if a different
       BLAS is used and the \code{mat_mult_with_BLAS} option is set to
