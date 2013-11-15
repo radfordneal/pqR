@@ -23,6 +23,9 @@ information that has not changed from previous releases of pqR.
       of vector operations by merging several operations into one, which 
       reduces time spent writing and later reading data in memory. 
       See \code{help(merging)} and the item below for more details.
+
+\item This release also includes other performance improvements, bug fixes,
+      and code cleanups, as detailed below.
   }}
 
   \subsection{FEATURE AND DOCUMENTATION CHANGES}{
