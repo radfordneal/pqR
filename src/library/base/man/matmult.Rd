@@ -59,9 +59,20 @@ x \%*\% y
   such a routine does not exist because Fortran double complex values
   are not supported, in which case a C routine is used.
 
-  Note that some other linear algebra operations make use of
-  the BLAS matrix multiply routines, regardless of how the 
+  Note that some other linear algebra operations make use internally
+  of the BLAS matrix multiply routines, regardless of how the
   \code{mat_mult_with_BLAS} option is set.
+
+  With the default real or complex method, when one operand of
+  \code{\%*\%} can be recognized as being the result of a transpose
+  operation (\code{\link{t}}), the transpose is not actually computed,
+  but instead a matrix multiplication routine (either from the BLAS or
+  the appropriate C routine) is used that operates directly on the
+  transposed operand.  This is equivalent to use of the
+  \code{crossprod} or \code{tcrossprod} functions.  If both operands
+  are transposed, the transposed second operand will actually be
+  computed, but not the first.
+
 }
 \value{
   A double or complex matrix product.  Use \code{\link{drop}} to remove
@@ -81,7 +92,7 @@ x \%*\% y
 }
 \examples{
 x <- 1:4
-(z <- x \%*\% x)    # scalar ("inner") product (1 x 1 matrix)
+(z <- x \%*\% x)      # scalar ("inner") product (1 x 1 matrix)
 drop(z)             # as scalar
 
 y <- diag(x)
@@ -89,6 +100,11 @@ z <- matrix(1:12, ncol = 3, nrow = 4)
 y \%*\% z
 y \%*\% x
 x \%*\% z
+
+a <- matrix(1.1,10,10)
+f <- function (m) t(m+1i)
+f(a) \%*\% a          # the transpose of a+1i is not actually computed
+
 }
 \keyword{array}
 \keyword{arith}
