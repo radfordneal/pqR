@@ -111,6 +111,13 @@ information that has not changed from previous releases of pqR.
       BLAS is used and the \code{mat_mult_with_BLAS} option is set to
       \code{TRUE}.
 
+\item Matrix multiplications in which one operand can be recognized as the
+      result of a transpose operation are now done without actually creating
+      the transpose as an intermediate result, thereby reducing both 
+      computation time and memory usage.  Effectively, these uses of the
+      \code{\%*\%} operator are converted to uses of \code{crossprod} or
+      \code{tcrossprod}.  See \code{help("\%*\%")} for details.
+
 \item Speed of \code{ifelse} has been improved (though it's now slower when the
       condition is scalar due to the bug fix mentioned below).
 
