@@ -894,7 +894,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	nry = INTEGER(ydims)[0];
 	ncy = INTEGER(ydims)[1];
     }
-    /* nr[ow](.) and nc[ol](.) are now defined for x and y */
+
+    /* all of nrx, nry, ncx, ncy are now defined. */
 
     if (primop == 0) {
 	/* primitive, so use call */
@@ -924,19 +925,24 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     PROTECT(y);
 
-    if (primop == 0) {			/* op == 0 : %*% */
+    int nrows = primop==1 ? ncx : nrx;
+    int ncols = primop==2 ? nry : ncy;
+    int k = primop==1 ? nrx : ncx;
+    int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
+    int no_pipelining = !inhlpr || helpers_not_pipelining;
+    SEXP op1 = x, op2 = y;
+    int flags = 0;
 
-	ans = allocMatrix0 (mode, nrx, ncy);
+    helpers_task_proc *task_proc;
 
-        if (LENGTH(ans) != 0) {
+    ans = allocMatrix0 (mode, nrows, ncols);
 
-            int inhlpr = nrx*(ncx+1.0)*ncy > T_matmult;
-            int no_pipelining = !inhlpr || helpers_not_pipelining;
-            helpers_task_proc *task_proc;
-            int flags = 0;
+    if (LENGTH(ans) != 0) {
+
+        if (primop == 0) { /* op == 0 : %*% */
 
             if (mode == CPLXSXP) {
-                if (ncx==0) {
+                if (k==0) {
                     task_proc = task_cfill_zeros;
                 }
                 else {
@@ -947,10 +953,10 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
             else {
-                if (ncx==0) {
+                if (k==0) {
                     task_proc = task_fill_zeros;
                 }
-                else if (nrx==1 && ncy==1) {
+                else if (nrows==1 && ncols==1) {
                     if (R_mat_mult_with_BLAS[0]) {
                         task_proc = task_matprod_vec_vec_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
@@ -964,7 +970,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         flags = HELPERS_PIPE_IN2;
                     }
                 }
-                else if (ncy==1) {
+                else if (ncols==1) {
                     if (R_mat_mult_with_BLAS[1]) {
                         task_proc = task_matprod_mat_vec_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
@@ -978,7 +984,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         flags = HELPERS_PIPE_IN2;
                     }
                 }
-                else if (nrx==1) {
+                else if (nrows==1) {
                     if (R_mat_mult_with_BLAS[2]) {
                         task_proc = task_matprod_vec_mat_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
@@ -1007,86 +1013,17 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     }
                 }
             }
-
-            DO_NOW_OR_LATER2(variant, inhlpr, flags, task_proc, ncx, ans, x, y);
         }
 
-        PROTECT(ans = allocMatrix1 (ans, nrx, ncy));
-
-	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
-
-	if (xdims != R_NilValue || ydims != R_NilValue) {
-	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
-
-	    /* allocate dimnames and dimnamesnames */
-
-	    PROTECT(dimnames = allocVector(VECSXP, 2));
-	    PROTECT(dimnamesnames = allocVector(STRSXP, 2));
-	    if (xdims != R_NilValue) {
-		if (ldx == 2 || ncx == 1) {
-		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 0));
-		    dnx = getAttrib(xdims, R_NamesSymbol);
-		    if(dnx != R_NilValue)
-			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 0));
-		}
-	    }
-
-#define YDIMS_ET_CETERA	do {						\
-	    if (ydims != R_NilValue) {					\
-		if (ldy == 2) {						\
-		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 1));	\
-		    dny = getAttrib(ydims, R_NamesSymbol);		\
-		    if(dny != R_NilValue)				\
-			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 1)); \
-		} else if (nry == 1) {					\
-		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));	\
-		    dny = getAttrib(ydims, R_NamesSymbol);		\
-		    if(dny != R_NilValue)				\
-			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0)); \
-		}							\
-	    }								\
-									\
-	    /* We sometimes attach a dimnames attribute			\
-	     * whose elements are all NULL ...				\
-	     * This is ugly but causes no real damage.			\
-	     * Now (2.1.0 ff), we don't anymore: */			\
-	    if (VECTOR_ELT(dimnames,0) != R_NilValue ||			\
-		VECTOR_ELT(dimnames,1) != R_NilValue) {			\
-		if (dnx != R_NilValue || dny != R_NilValue)		\
-		    setAttrib(dimnames, R_NamesSymbol, dimnamesnames);	\
-		setAttrib(ans, R_DimNamesSymbol, dimnames);		\
-	    } } while (0)
-
-	    YDIMS_ET_CETERA;
-	    UNPROTECT(2);
-	}
-    }
-
-    else {  /* crossprod or tcrossprod */
-
-        int cross = primop == 1;
-        int nrows = cross ? ncx : nrx;
-        int ncols = cross ? ncy : nry;
-        int k = cross ? nrx : ncx;
-
-	ans = allocMatrix0(mode,nrows,ncols);
-
-        if (LENGTH(ans) != 0) {
-
-            int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
-            int no_pipelining = !inhlpr || helpers_not_pipelining;
-            helpers_task_proc *task_proc;
-            SEXP op1 = x, op2 = y;
-            int flags = 0;
+        else {  /* crossprod or tcrossprod */
 
             if (mode == CPLXSXP) {
                 if (k==0) {
                     task_proc = task_cfill_zeros;
                 }
                 else {
-                    task_proc = cross ? task_cmatprod_trans1
-                                      : task_cmatprod_trans2;
+                    task_proc = primop==1 ? task_cmatprod_trans1
+                                          : task_cmatprod_trans2;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                     inhlpr = 0;
 #endif
@@ -1111,7 +1048,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     }
                 }
                 else if (nrows==1 || ncols==1) {
-                    if (cross) {
+                    if (primop==1) {
                         if (ncols==1) { op1 = y; op2 = x; }
                         if (R_mat_mult_with_BLAS[2]) {
                             task_proc = task_matprod_vec_mat_BLAS;
@@ -1144,17 +1081,17 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
                 else {
                     if (R_mat_mult_with_BLAS[3]) {
-                        task_proc = cross ? task_matprod_trans1_BLAS 
-                                          : task_matprod_trans2_BLAS;
+                        task_proc = primop==1 ? task_matprod_trans1_BLAS 
+                                              : task_matprod_trans2_BLAS;
 #ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                         inhlpr = 0;
 #endif
                     }
                     else if (no_pipelining)
-                        task_proc = cross ? task_matprod_trans1 
-                                          : task_matprod_trans2;
+                        task_proc = primop==1 ? task_matprod_trans1 
+                                              : task_matprod_trans2;
                     else {
-                        if (cross) {
+                        if (primop==1) {
                             task_proc = task_piped_matprod_trans1;
                             flags = HELPERS_PIPE_IN2_OUT;
                         }
@@ -1165,60 +1102,73 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     }
                 }
             }
-
-            DO_NOW_OR_LATER2(variant, inhlpr, flags, task_proc, k, 
-                             ans, op1, op2);
         }
 
-        PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
-
-	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ydims = sym ? xdims : getAttrib(y, R_DimNamesSymbol));
-
-	if (xdims != R_NilValue || ydims != R_NilValue) {
-	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
-
-	    /* allocate dimnames and dimnamesnames */
-
-	    PROTECT(dimnames = allocVector(VECSXP, 2));
-	    PROTECT(dimnamesnames = allocVector(STRSXP, 2));
-
-	    if (xdims != R_NilValue) {
-		if (ldx == 2) {/* not nrx==1 : .. fixed, ihaka 2003-09-30 */
-		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims,cross));
-		    dnx = getAttrib(xdims, R_NamesSymbol);
-		    if(dnx != R_NilValue)
-			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx,cross));
-		}
-	    }
-
-            if (cross) {
-                YDIMS_ET_CETERA;
-            }
-            else {
-                if (ydims != R_NilValue) {
-                    if (ldy == 2) {
-                        SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));
-                        dny = getAttrib(ydims, R_NamesSymbol);
-                        if(dny != R_NilValue)
-                            SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0));
-                    }
-                }
-                if (VECTOR_ELT(dimnames,0) != R_NilValue ||
-                    VECTOR_ELT(dimnames,1) != R_NilValue) {
-                    if (dnx != R_NilValue || dny != R_NilValue)
-                        setAttrib(dimnames, R_NamesSymbol, dimnamesnames);
-                    setAttrib(ans, R_DimNamesSymbol, dimnames);
-                }
-            }
-
-            UNPROTECT(2);
-        }
+        DO_NOW_OR_LATER2 (variant, inhlpr, flags, task_proc, k, ans, op1, op2);
     }
+
+    PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
+
+    SEXP xdmn, ydmn;
+
+    PROTECT(xdmn = getAttrib(x, R_DimNamesSymbol));
+    PROTECT(ydmn = getAttrib(y, R_DimNamesSymbol));
+
+    if (xdmn != R_NilValue || ydmn != R_NilValue) {
+
+        SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
+
+        /* allocate dimnames and dimnamesnames */
+
+        PROTECT(dimnames = allocVector(VECSXP, 2));
+        PROTECT(dimnamesnames = allocVector(STRSXP, 2));
+
+        if (xdmn != R_NilValue) {
+            if (LENGTH(xdmn) == 2) {
+                SET_VECTOR_ELT (dimnames, 0, VECTOR_ELT(xdmn,primop==1));
+                dnx = getAttrib (xdmn, R_NamesSymbol);
+                if (dnx != R_NilValue)
+                    SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx,primop==1));
+            }
+            else if (LENGTH(xdmn) == 1 && LENGTH(VECTOR_ELT(xdmn,0)) == nrows
+                       && PRIMVAL(op)==0 /* only! strange but documented */) {
+                SET_VECTOR_ELT (dimnames, 0, VECTOR_ELT(xdmn,0));
+                dnx = getAttrib (xdmn, R_NamesSymbol);
+                if (dnx != R_NilValue)
+                    SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx,0));
+            }
+        }
+
+        if (ydmn != R_NilValue) {
+            if (LENGTH(ydmn) == 2) {
+                SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydmn,primop!=2));
+                dny = getAttrib(ydmn, R_NamesSymbol);
+                if(dny != R_NilValue)
+                    SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny,primop!=2));
+            } 
+            else if (LENGTH(ydmn) == 1 && LENGTH(VECTOR_ELT(ydmn,0)) == ncols
+                       && PRIMVAL(op)==0 /* only! strange but documented */) {
+                SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydmn, 0));
+                dny = getAttrib(ydmn, R_NamesSymbol);
+                if(dny != R_NilValue)
+                    SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0));
+            }
+        }
+
+        if (VECTOR_ELT(dimnames,0) != R_NilValue 
+         || VECTOR_ELT(dimnames,1) != R_NilValue) {
+            if (dnx != R_NilValue || dny != R_NilValue)
+                setAttrib(dimnames, R_NamesSymbol, dimnamesnames);
+            setAttrib(ans, R_DimNamesSymbol, dimnames);
+        }
+
+        UNPROTECT(2);
+    }
+
     UNPROTECT(5+nprotect);
     return ans;
 }
-#undef YDIMS_ET_CETERA
+
 
 void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
 {
@@ -1486,20 +1436,20 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* R <= 2.2.0: dropped list(NULL,NULL) dimnames :
      * if(rnames != R_NilValue || cnames != R_NilValue) */
     if(!isNull(dimnames)) {
-	PROTECT(dimnames = allocVector(VECSXP, 2));
-	SET_VECTOR_ELT(dimnames, 0, cnames);
-	SET_VECTOR_ELT(dimnames, 1, rnames);
-	if(!isNull(dimnamesnames)) {
-	    PROTECT(ndimnamesnames = allocVector(VECSXP, 2));
-	    SET_VECTOR_ELT(ndimnamesnames, 1, STRING_ELT(dimnamesnames, 0));
-	    SET_VECTOR_ELT(ndimnamesnames, 0,
-			   (ldim == 2) ? STRING_ELT(dimnamesnames, 1):
-			   R_BlankString);
-	    setAttrib(dimnames, R_NamesSymbol, ndimnamesnames);
-	    UNPROTECT(1);
-	}
-	setAttrib(r, R_DimNamesSymbol, dimnames);
-	UNPROTECT(1);
+        PROTECT(dimnames = allocVector(VECSXP, 2));
+        SET_VECTOR_ELT(dimnames, 0, cnames);
+        SET_VECTOR_ELT(dimnames, 1, rnames);
+        if(!isNull(dimnamesnames)) {
+            PROTECT(ndimnamesnames = allocVector(VECSXP, 2));
+            SET_VECTOR_ELT(ndimnamesnames, 1, STRING_ELT(dimnamesnames, 0));
+            SET_VECTOR_ELT(ndimnamesnames, 0,
+                           (ldim == 2) ? STRING_ELT(dimnamesnames, 1):
+                           R_BlankString);
+            setAttrib(dimnames, R_NamesSymbol, ndimnamesnames);
+            UNPROTECT(1);
+        }
+        setAttrib(r, R_DimNamesSymbol, dimnames);
+        UNPROTECT(1);
     }
     copyMostAttrib(a, r);
     UNPROTECT(1);

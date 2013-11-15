@@ -51,8 +51,7 @@ tcrossprod(x, y = NULL)
 
   When \code{x} or \code{y} are not matrices, they are treated as column or
   row matrices, but their \code{\link{names}} are usually \bold{not}
-  promoted to \code{\link{dimnames}}.  Hence, currently, the last
-  example has empty dimnames.
+  promoted to \code{\link{dimnames}} (see example below).
 }
 %% Consider using a new optional argument, say 'make.names = NA'
 %% {as in kronecker} with possible values  FALSE / NA / TRUE  where
