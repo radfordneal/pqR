@@ -21,9 +21,6 @@ x \%*\% y
   \item{x, y}{numeric or complex matrices or vectors.}
 }
 \details{
-  When a vector is promoted to a matrix, its names are not
-  promoted to row or column names, unlike \code{\link{as.matrix}}.
-
   This operator is S4 generic but not S3 generic.  S4 methods need to be
   written for a function of two arguments named \code{x} and \code{y}.
 
@@ -63,6 +60,10 @@ x \%*\% y
   of the BLAS matrix multiply routines, regardless of how the
   \code{mat_mult_with_BLAS} option is set.
 
+  With the default real or complex method, when a vector is promoted
+  to a matrix, its names are not promoted to row or column names,
+  unlike \code{\link{as.matrix}}.
+
   With the default real or complex method, when one operand of
   \code{\%*\%} can be recognized as being the result of a transpose
   operation (\code{\link{t}}), the transpose is not actually computed,
@@ -70,8 +71,8 @@ x \%*\% y
   the appropriate C routine) is used that operates directly on the
   transposed operand.  This is equivalent to use of the
   \code{crossprod} or \code{tcrossprod} functions.  If both operands
-  are transposed, the transposed second operand will actually be
-  computed, but not the first.
+  are transposed, the transposed first operand will not actually be
+  computed, but not the second will be.
 
 }
 \value{
