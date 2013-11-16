@@ -728,15 +728,20 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     LOCAL_COPY(R_NilValue);
     SEXP x = CAR(args), y = CADR(args), rest = CDDR(args);
-    int ldx, ldy, nrx, ncx, nry, ncy, mode;
-    SEXP xdims, ydims, ans;
+
     PROTECT_INDEX ix, iy;
-    Rboolean sym;
+    int mode;
+    SEXP ans;
 
     int primop = PRIMVAL(op); /* will be changed for t(A)%*%B and A%*%t(B)*/
     int nprotect = 0;
 
-    if (primop == 0) { /* %*%, which is primitive, the others are .Internal() */
+    /* %*% is a SPECIAL primitive, so we need to evaluate the arguments,
+       with VARIANT_TRANS if possible and desirable.  The others (crossprod
+       and tcrossprod) are .Internal and not special, so have arguments
+       already evaluated. */
+
+    if (primop == 0) { 
 
         if (x != R_NilValue && x != R_DotsSymbol 
          && y != R_NilValue && y != R_DotsSymbol && rest == R_NilValue) {
@@ -805,111 +810,117 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
 
-    sym = y == R_NilValue;
-    if (sym && primop > 0) y = x;
+    /* Handle the one-argument case of crossprod and tcrossprod. */
+
+    if (y == R_NilValue && primop != 0) 
+        y = x;
+
+    /* Check for bad arguments. */
 
     if ( !(isNumeric(x) || isComplex(x)) || !(isNumeric(y) || isComplex(y)) )
 	errorcall(call, _("requires numeric/complex matrix/vector arguments"));
 
-    xdims = getAttrib(x, R_DimSymbol);
-    ldx = length(xdims);
-    ydims = sym ? xdims : getAttrib(y, R_DimSymbol);
-    ldy = sym ? ldx : length(ydims);
+    /* See if both arguments are the same (as with one-argument crossprod,
+       but also they just happen to be the same. */
 
-    if (ldx != 2 && ldy != 2) {		/* x and y non-matrices */
-	if (primop == 0) {
-	    nrx = 1;
-	    ncx = LENGTH(x);
-	}
-	else {
-	    nrx = LENGTH(x);
-	    ncx = 1;
-	}
-	nry = LENGTH(y);
-	ncy = 1;
-    }
-    else if (ldx != 2) {		/* x not a matrix */
-	nry = INTEGER(ydims)[0];
-	ncy = INTEGER(ydims)[1];
-	nrx = 0;
-	ncx = 0;
-	if (primop == 0) {      /* %*% */
-	    if (LENGTH(x) == nry) {	/* x as row vector */
-		nrx = 1;
-		ncx = nry; /* == LENGTH(x) */
-	    }
-	    else if (nry == 1) {	/* x as col vector */
-		nrx = LENGTH(x);
-		ncx = 1;
-	    }
-	}
-	else if (primop == 1) { /* crossprod() */
-	    if (LENGTH(x) == nry) {	/* x is a col vector */
-		nrx = nry; /* == LENGTH(x) */
-		ncx = 1;
-	    }
-	    /* else if (nry == 1) ... not being too tolerant
-	       to treat x as row vector, as t(x) *is* row vector */
-	}
-	else { /* tcrossprod */
-	    if (LENGTH(x) == ncy) {	/* x as row vector */
-		nrx = 1;
-		ncx = ncy; /* == LENGTH(x) */
-	    }
-	    else if (ncy == 1) {	/* x as col vector */
-		nrx = LENGTH(x);
-		ncx = 1;
-	    }
-	}
-    }
-    else if (ldy != 2) {		/* y not a matrix */
+    int same = x==y;
+
+    /* Get dimension attributes of the arguments, and use them to determine 
+       the dimensions of the result (nrows and ncols) and the number of
+       elements in the sums of products (k). */
+
+    SEXP xdims = getAttrib(x, R_DimSymbol);
+    SEXP ydims = same ? xdims : getAttrib(y, R_DimSymbol);
+
+    int ldx = length(xdims);
+    int ldy = same ? ldx : length(ydims);
+
+    int nrx, ncx, nry, ncy;
+
+    if (ldx == 2) {
 	nrx = INTEGER(xdims)[0];
 	ncx = INTEGER(xdims)[1];
-	nry = 0;
-	ncy = 0;
-	if (primop == 0) {
-	    if (LENGTH(y) == ncx) {	/* y as col vector */
-		nry = ncx;
-		ncy = 1;
-	    }
-	    else if (ncx == 1) {	/* y as row vector */
-		nry = 1;
-		ncy = LENGTH(y);
-	    }
-	}
-	else if (primop == 1) { /* crossprod() */
-	    if (LENGTH(y) == nrx) {	/* y is a col vector */
-		nry = nrx;
-		ncy = 1;
-	    }
-	}
-	else { /* tcrossprod --		y is a col vector */
-	    nry = LENGTH(y);
-	    ncy = 1;
-	}
     }
-    else {				/* x and y matrices */
-	nrx = INTEGER(xdims)[0];
-	ncx = INTEGER(xdims)[1];
+    if (ldy == 2) {
 	nry = INTEGER(ydims)[0];
 	ncy = INTEGER(ydims)[1];
     }
 
-    /* all of nrx, nry, ncx, ncy are now defined. */
+    if (ldx != 2 && ldy != 2) {	/* x and y non-matrices */
+        if (primop == 0) {
+            nrx = 1;
+            ncx = LENGTH(x);
+        }
+        else {
+            nrx = LENGTH(x);
+            ncx = 1;
+        }
+        nry = LENGTH(y);
+        ncy = 1;
+    }
+    else if (ldx != 2) {	/* x not a matrix */
+        if (primop == 0) {
+            if (LENGTH(x) == nry) {	/* x as row vector */
+        	nrx = 1;
+        	ncx = nry; /* == LENGTH(x) */
+            }
+            else {			/* try x as a col vector (may fail) */
+        	nrx = LENGTH(x);
+        	ncx = 1;
+            }
+        }
+        else if (primop == 1) {		/* try x as a col vector (may fail) */
+            nrx = LENGTH(x);
+            ncx = 1;
+        }
+        else {
+            if (LENGTH(x) == ncy) {	/* x as row vector */
+        	nrx = 1;
+        	ncx = ncy; /* == LENGTH(x) */
+            }
+            else {			/* try x as a col vector (may fail) */
+        	nrx = LENGTH(x);
+        	ncx = 1;
+            }
+        }
+    }
+    else if (ldy != 2) {	/* y not a matrix */
+        if (primop == 0) {
+            if (LENGTH(y) == ncx) {	/* y as col vector */
+        	nry = ncx; /* == LENGTH(y) */
+        	ncy = 1;
+            }
+            else {			/* try y as a row vector (may fail) */
+        	nry = 1;
+        	ncy = LENGTH(y);
+            }
+        }
+        else if (primop == 1) {
+            if (LENGTH(y) == nrx) {	/* y as a col vector */
+        	nry = nrx; /* == LENGTH(y) */
+        	ncy = 1;
+            }
+            else {			/* try y as a row vector (mail fail) */
+                nry = 1;
+                ncy = LENGTH(y);
+            }
+        }
+        else {				/* try y as a col vector (may fail) */
+            nry = LENGTH(y);
+            ncy = 1;
+        }
+    }
 
-    if (primop == 0) {
-	/* primitive, so use call */
-	if (ncx != nry)
-	    errorcall(call, _("non-conformable arguments"));
-    }
-    else if (primop == 1) {
-	if (nrx != nry)
-	    error(_("non-conformable arguments"));
-    }
-    else {
-	if (ncx != ncy)
-	    error(_("non-conformable arguments"));
-    }
+    if (primop == 0 && ncx != nry)  /* primitive, so we use call */
+        errorcall (call, _("non-conformable arguments"));
+    else if (primop == 1 && nrx != nry || primop == 2 && ncx != ncy)
+        error(_("non-conformable arguments"));
+
+    int nrows = primop==1 ? ncx : nrx;
+    int ncols = primop==2 ? nry : ncy;
+    int k = primop==1 ? nrx : ncx;
+
+    /* Coerce aguments if necessary. */
 
     mode = isComplex(x) || isComplex(y) ? CPLXSXP : REALSXP;
    
@@ -925,9 +936,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     PROTECT(y);
 
-    int nrows = primop==1 ? ncx : nrx;
-    int ncols = primop==2 ? nry : ncy;
-    int k = primop==1 ? nrx : ncx;
+    /* Compute the result matrix. */
+
     int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
     int no_pipelining = !inhlpr || helpers_not_pipelining;
     SEXP op1 = x, op2 = y;
@@ -1108,6 +1118,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
+
+    /* Add names to the result as appropriate. */
 
     SEXP xdmn, ydmn;
 

@@ -132,6 +132,15 @@ information that has not changed from previous releases of pqR.
 
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
+
+\item Fixed the following bug (also present in R-2.15.0 and R-3.0.2):
+\preformatted{   v <- c(1,2)
+   m <- matrix(c(3,4),1,2)
+   print(t(m)\%*\%v)
+   print(crossprod(m,v))
+}
+in which \code{crossprod} gave an error rather than produce the answer
+for the corresponding use of \code{\%*\%}.
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
