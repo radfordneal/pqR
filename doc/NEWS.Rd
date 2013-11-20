@@ -52,8 +52,8 @@ information that has not changed from previous releases of pqR.
       define such built-in functions (with only a few entries still in 
       \code{names.c}).  This puts the descriptions of these built-in
       functions next to their definitions, improving maintainability, and
-      also reduces the number of global functions.
-
+      also reduces the number of global functions.  This change should have 
+      no effects visible to users.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
