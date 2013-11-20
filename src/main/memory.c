@@ -4374,14 +4374,21 @@ SEXP attribute_hidden can_save_alloc (SEXP s1, SEXP s2, SEXPTYPE typ)
        attributes will then take precedence when copied. */
 
     if (n2>=n1) {
-        if (TYPEOF(s2)==typ && NAMEDCNT_EQ_0(s2))
+        if (TYPEOF(s2)==typ && NAMEDCNT_EQ_0(s2)) {
+            /* Must remove any "names" attribute of s2 to match action of
+               copyMostAttrib.  Any "dim" and "dimnames" attributes are allowed
+               to stay, since they will be overwritten anyway. */
+            if (ATTRIB(s2)!=R_NilValue) 
+                setAttrib (s2, R_NamesSymbol, R_NilValue);
             return s2;
-        else
+        }
+        else {
             /* Can use 1st arg's space only if 2nd arg has no attributes, else
                we may not get attributes of result right. */
             if (n1==n2 && TYPEOF(s1)==typ && NAMEDCNT_EQ_0(s1)
                        && ATTRIB(s2)==R_NilValue)
                 return s1;
+        }
     } else {
         if (TYPEOF(s1)==typ && NAMEDCNT_EQ_0(s1))
             return s1;
