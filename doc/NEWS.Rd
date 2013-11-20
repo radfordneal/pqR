@@ -130,6 +130,13 @@ information that has not changed from previous releases of pqR.
 \item Fixed a bug in \code{ifelse} with scalar condition but other
       operands with length greater than one.  (Pointed out by Luke Tierney.)
 
+\item Fixed a bug stemming from re-use of operand storage for a result
+      (pointed out by Luke Tierney) illustrated by the following:
+\preformatted{   A <- array(c(1), dim = c(1,1), dimnames = list("a", 1))
+   x <- c(a=1)
+   A/(pi*x)
+}
+
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
 
