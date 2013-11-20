@@ -10,3 +10,5 @@ Also put in S4 check from R-3.0.0.
 
 Now pay attention to MAT_MULT_WITH_BLAS_IN_HELPERS_OK for complex
 matrix multiplication.
+
+Fixed bug in reusing operand where "name" attribute not removed.
