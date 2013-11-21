@@ -334,12 +334,12 @@ void attribute_hidden InitOptions(void)
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
     SET_TAG(v, install("helpers_no_multithreading"));
-    SETCAR(v, ScalarLogical(helpers_not_multithreading));
+    SETCAR(v, ScalarLogical(helpers_not_multithreading_now));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
     SET_TAG(v, install("helpers_no_pipelining"));
-    SETCAR(v, ScalarLogical(helpers_not_pipelining));
+    SETCAR(v, ScalarLogical(helpers_not_pipelining_now));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
@@ -593,7 +593,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef R_DEFERRED_EVAL
 		helpers_disable(k);
 #endif
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		SET_VECTOR_ELT(value, i, 
+                   SetOption(tag, ScalarLogical(helpers_are_disabled)));
 	    }
 	    else if (streql(CHAR(namei), "helpers_no_multithreading")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
@@ -602,7 +603,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef R_DEFERRED_EVAL
 		helpers_no_multithreading(k);
 #endif
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		SET_VECTOR_ELT(value, i, 
+                   SetOption(tag, ScalarLogical(helpers_not_multithreading)));
 	    }
 	    else if (streql(CHAR(namei), "helpers_no_pipelining")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
@@ -611,7 +613,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef R_DEFERRED_EVAL
 		helpers_no_pipelining(k);
 #endif
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		SET_VECTOR_ELT(value, i, 
+                   SetOption(tag, ScalarLogical(helpers_not_pipelining)));
 	    }
 	    else if (streql(CHAR(namei), "helpers_no_merging")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
@@ -620,7 +623,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef R_DEFERRED_EVAL
 		helpers_no_merging(k);
 #endif
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		SET_VECTOR_ELT(value, i, 
+                   SetOption(tag, ScalarLogical(helpers_not_merging)));
 	    }
 	    else if (streql(CHAR(namei), "helpers_trace")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
@@ -629,7 +633,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef R_DEFERRED_EVAL
 		helpers_trace(k);
 #endif
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		SET_VECTOR_ELT(value, i, 
+                   SetOption(tag, ScalarLogical(k)));
 	    }
 	    else if (streql(CHAR(namei), "warnPartialMatchDollar")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)

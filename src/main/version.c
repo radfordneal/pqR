@@ -42,11 +42,12 @@ void attribute_hidden PrintGreeting(void)
     Rprintf("%s", buf);
 
     if (helpers_are_disabled)
-        Rprintf (_("Deferred evaluation disabled (no helpers, no merging).\n"));
-    else if (helpers_not_multithreading && helpers_not_merging)
+        Rprintf (
+    _("Deferred evaluation disabled (no helper threadss, no task merging).\n"));
+    else if (helpers_not_multithreading_now && helpers_not_merging)
         Rprintf (_("No helper threads, no task merging.\n"));
-    else if (helpers_not_multithreading)
-        Rprintf (_("Task merging enabled, no helper threads.\n"));
+    else if (helpers_not_multithreading_now)
+        Rprintf (_("No helper threads, task merging enabled.\n"));
     else if (helpers_not_merging)
         Rprintf (_("%d helper threads, no task merging.\n"), helpers_num);
     else
