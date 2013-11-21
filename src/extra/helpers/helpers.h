@@ -88,7 +88,9 @@ void helpers_master (void);          /* The master procedure, does it all */
 
 #define helpers_num 0
 #define helpers_not_multithreading 1
+#define helpers_not_multithreading_now 1
 #define helpers_not_pipelining 1
+#define helpers_not_pipelining_now 1
 
 #define helpers_output_perhaps_pipelined() 0
 
@@ -121,13 +123,16 @@ void helpers_master (void);          /* The master procedure, does it all */
 
 #else
 
-/* NON_STUB PROCEDURES/MACROS FOR WHEN THERE MAY BE HELPER THREADS. */
+/* NON-STUB PROCEDURES/VARIAABLES/MACROS FOR WHEN THERE MAY BE HELPER THREADS.*/
 
-extern int helpers_num;              /* Number of helper threads */
-extern int helpers_not_multithreading; /* 1 if tasks done only by master */
-extern int helpers_not_pipelining;   /* 1 if pipelining is disabled */
+extern int helpers_num;                    /* Number of helper threads */
 
-int helpers_output_perhaps_pipelined(void); /* Other might get piped output? */
+extern int helpers_not_multithreading;     /* 1 if multithreading disabled */
+extern int helpers_not_multithreading_now; /* 1 if no multithreading right now*/
+extern int helpers_not_pipelining;         /* 1 if pipelining is disabled */
+extern int helpers_not_pipelining_now;     /* 1 if no pipelining right now */
+
+int helpers_output_perhaps_pipelined(void); /* Others might get piped output? */
 
 void helpers_amount_out (helpers_size_t);  /* Set how much of output produced */
 
