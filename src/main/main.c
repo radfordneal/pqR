@@ -306,11 +306,13 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	resetTimeLimits();
 	PROTECT(thisExpr = R_CurrentExpr);
 	R_Busy(1);
-	value = eval(thisExpr, rho);
+	value = evalv(thisExpr, rho, VARIANT_PENDING_OK);
 	SET_SYMVALUE(R_LastvalueSymbol, value);
 	wasDisplayed = R_Visible;
-	if (R_Visible)
+	if (R_Visible) {
+            WAIT_UNTIL_COMPUTED(value);
 	    PrintValueEnv(value, rho);
+        }
 	if (R_CollectWarnings)
 	    PrintWarnings();
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
@@ -1485,6 +1487,7 @@ Rf_callToplevelHandlers(SEXP expr, SEXP value, Rboolean succeeded,
 	return;
 
     h = Rf_ToplevelTaskHandlers;
+    if (h) WAIT_UNTIL_COMPUTED(value);
     Rf_RunningToplevelHandlers = TRUE;
     while(h) {
 	again = (h->cb)(expr, value, succeeded, visible, h->data);
