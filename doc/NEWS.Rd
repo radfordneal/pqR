@@ -79,12 +79,12 @@ information that has not changed from previous releases of pqR.
       \code{exp(v[i]+1)} for each element, \code{i}, of \code{v} in a 
       single loop.  
 
-      Currently, such ``task
-      merging'' is done only for (some) operations in which only one operand
-      is a vector. When there are helper threads (which might be able to 
-      do some operations even faster, in parallel) merging is done only when 
-      one of the operations merged is a simple addition or subtraction (with
-      vector and a scaler operands).
+      Currently, such ``task merging'' is done only for (some)
+      operations in which only one operand is a vector. When there are
+      helper threads (which might be able to do some operations even
+      faster, in parallel) merging is done only when one of the
+      operations merged is a simple addition, subtraction, or
+      multiplication (with vector and a scaler operands).
 
       See \code{help(merging)} for more details.
 
