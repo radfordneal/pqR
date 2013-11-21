@@ -939,7 +939,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* Compute the result matrix. */
 
     int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
-    int no_pipelining = !inhlpr || helpers_not_pipelining;
+    int no_pipelining = !inhlpr || helpers_not_pipelining_now;
     SEXP op1 = x, op2 = y;
     int flags = 0;
 
