@@ -130,6 +130,11 @@ information that has not changed from previous releases of pqR.
    A/(pi*x)
 }
 
+\item The \code{--disable-mat-mult-with-BLAS-in-helpers} configuration
+      setting is now respected for complex matrix multiplication
+      (previously it had only disabled use of the BLAS in helper
+      threads for real matrix multiplication).
+
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
   }}
