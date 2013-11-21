@@ -2190,7 +2190,8 @@ void helpers_start_computing_var (helpers_var_ptr v)
     if (vinfo->var[0] == v) 
     { ATOMIC_READ_CHAR (d = vinfo->done);
       if (d)
-      { return;
+      { if (trace) trace_start_computing_var(0,v);
+        return;
       }
       else
       { break;
