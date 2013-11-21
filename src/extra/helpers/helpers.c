@@ -403,7 +403,9 @@ int helpers_not_merging = 0;     /* 1 if task merging is not enabled */
 
 #ifndef HELPERS_NO_MULTITHREADING
 int helpers_not_pipelining;      /* 1 if pipelining currently disabled */
-int helpers_not_multithreading;  /* 1 if currently all tasks done by master */
+int helpers_not_pipelining_now;  /* 1 if not pipelining right now */
+int helpers_not_multithreading;  /* 1 if multithreading currently disabled */
+int helpers_not_multithreading_now; /* 1 if not multithreading right now */
 #endif
 
 static int flag_mask = ~0;       /* Mask used to clear task flags according
@@ -1296,7 +1298,7 @@ static void do_task_in_master (int only_needed)
  
 #   ifndef HELPERS_NO_MULTITHREADING
 
-    if (!helpers_not_multithreading)
+    if (!helpers_not_multithreading_now)
     {
       ATOMIC_READ_CHAR (h = suspended);
 
@@ -1313,7 +1315,7 @@ static void do_task_in_master (int only_needed)
 
 #   ifndef HELPERS_NO_MULTITHREADING
 
-    if (!helpers_not_multithreading)
+    if (!helpers_not_multithreading_now)
     { 
       if (!omp_test_lock (&start_lock))
       { 
@@ -1339,7 +1341,7 @@ static void do_task_in_master (int only_needed)
 
 #   ifndef HELPERS_NO_MULTITHREADING
 
-    if (!helpers_not_multithreading)
+    if (!helpers_not_multithreading_now)
     { omp_unset_lock (&start_lock);
     }
 
@@ -1390,7 +1392,7 @@ static void helper_proc (void)
 
     for (count = 0; count<SPIN_EMPTY; count++)
     { ATOMIC_READ_CHAR (u_in = untaken_in);
-      if (u_in!=untaken_out && !helpers_not_multithreading)
+      if (u_in!=untaken_out && !helpers_not_multithreading_now)
       { break;
       }
       FLUSH;
@@ -1407,7 +1409,7 @@ static void helper_proc (void)
       omp_set_lock (&untaken_lock);
 
       ATOMIC_READ_CHAR (u_in = untaken_in);
-      if (u_in==untaken_out || helpers_not_multithreading) 
+      if (u_in==untaken_out || helpers_not_multithreading_now)
       { ATOMIC_WRITE_CHAR (suspended = this_thread);
         will_suspend = 1;
       }
@@ -1439,7 +1441,8 @@ static void helper_proc (void)
 
     /* Wait until there is a task to do.  Note that start_lock will have 
        been set, and the untaken queue must contain at least one task, which
-       must eventually become runnable. */
+       must eventually become runnable (though perhaps only after the master
+       thread does some required master-only tasks). */
 
     do { this_task = find_untaken_runnable(0); } while (this_task==0);
 
@@ -2074,7 +2077,7 @@ out_of_merge:
 
 # else
 
-  if (helpers_not_multithreading)
+  if (helpers_not_multithreading_now)
   { 
     ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
   }
@@ -2626,8 +2629,8 @@ helpers_size_t helpers_avail_var (helpers_var_ptr v, helpers_size_t mx)
 
 
 /* RETURN AN ESTIMATE OF THE NUMBER OF IDLE HELPERS.  Note that it starts by 
-   calling notice_completed (unless no multithreading or helpers disabled, or
-   no tasks outstanding). */
+   calling notice_completed (unless no multithreading is going on now, or
+   no tasks are outstanding). */
 
 #ifndef HELPERS_NO_MULTITHREADING
 
@@ -2636,7 +2639,7 @@ int helpers_idle (void)
   int i, c;
   hix h;
 
-  if (helpers_not_multithreading || helpers_are_disabled) 
+  if (helpers_not_multithreading_now) 
   { return 0;
   }
 
@@ -2691,20 +2694,24 @@ helpers_var_ptr *helpers_var_list (int out_only)
 }
 
 
-/* SET FLAG MASK ACCORDING TO CURRENT OPTIONS. */
+/* SET FLAG MASK AND "NOW" VARIABLES ACCORDING TO CURRENT OPTIONS. */
 
-static void set_flag_mask (void)
+static void set_flag_mask_now (void)
 {
+# ifndef HELPERS_NO_MULTITHREADING
+    helpers_not_multithreading_now
+      = helpers_not_multithreading || helpers_are_disabled || helpers_num==0;
+    helpers_not_pipelining_now
+      = helpers_not_pipelining || helpers_not_multithreading_now;
+# endif
+
   flag_mask = ~0;
 
-  if (helpers_are_disabled
-   || helpers_not_multithreading
-   || helpers_not_pipelining) 
+  if (helpers_not_pipelining_now)
   { flag_mask &= ~HELPERS_PIPE_IN012_OUT;
   }
 
-  if (helpers_are_disabled 
-   || helpers_not_merging)   
+  if (helpers_are_disabled || helpers_not_merging)   
   { flag_mask &= ~HELPERS_MERGE_IN_OUT;
   }
 }
@@ -2716,8 +2723,9 @@ static void set_flag_mask (void)
 
 void helpers_no_pipelining (int a)
 {
-  helpers_not_pipelining = a!=0 || helpers_num==0;
-  set_flag_mask();
+  helpers_not_pipelining = a!=0;
+
+  set_flag_mask_now();
 
   if (trace) 
   { helpers_printf ("HELPERS: Pipelining %s\n",
@@ -2735,7 +2743,8 @@ void helpers_no_pipelining (int a)
 void helpers_no_merging (int a)
 {
   helpers_not_merging = a!=0;
-  set_flag_mask();
+
+  set_flag_mask_now();
 
   if (trace) 
   { helpers_printf ("HELPERS: Task merging %s\n",
@@ -2756,7 +2765,8 @@ void helpers_disable (int a)
     memset (&task[0].info, 0, sizeof task[0].info);
   }
   helpers_are_disabled = a!=0;
-  set_flag_mask();
+
+  set_flag_mask_now();
   FLUSH;
 
   if (trace) 
@@ -2774,8 +2784,9 @@ void helpers_disable (int a)
 void helpers_no_multithreading (int a)
 {
   helpers_wait_for_all();
-  helpers_not_multithreading = a!=0 || helpers_num==0;
-  set_flag_mask();
+  helpers_not_multithreading = a!=0;
+
+  set_flag_mask_now();
   FLUSH;
 
   if (trace) 
@@ -2885,7 +2896,8 @@ void helpers_startup (int n)
       helpers_not_pipelining = 1;
 #   endif
 
-    set_flag_mask();
+    set_flag_mask_now();
+
     helpers_master();
     exit(0);
   }
@@ -2928,7 +2940,7 @@ void helpers_startup (int n)
         helpers_not_pipelining = 1;
       }
 
-      set_flag_mask();
+      set_flag_mask_now();
 
       /* Set suspend_lock[0] so helpers will be able to suspend themselves. */
 

@@ -150,22 +150,29 @@ getOption(x, default = NULL)
     \item{\code{helpers_no_multithreading}:}{A logical value set to \code{TRUE} 
       to disable use of helper threads (but not the entire helpers apparatus
       supporting deferred evaluation).  Initially \code{FALSE}, unless there 
-      are no helper threads.}
+      are no helper threads.  Note that if \code{helpers_disable} is \code{TRUE}
+      multithreading will be disabled regardless of this option.}
 
     \item{\code{helpers_no_pipelining}:}{A logical value set to \code{TRUE} 
       to disable pipelining of data between helper threads.  Initially
-      \code{FALSE}, unless there are no helper threads.}
+      \code{FALSE}, unless there are no helper threads. Note that if 
+      \code{helpers_disable} or \code{helpers_no_multithreading} is \code{TRUE}
+      pipelining will be disabled regardless of this option.}
 
     \item{\code{helpers_no_merging}:}{A logical value set to \code{TRUE} 
-      to disable merging of tasks.  Initially \code{FALSE}, unless task
-      merging (or the entire helpers apparatus) was disabled when pqR
+      to disable merging of tasks.  Initially \code{FALSE}, unless 
+      multithreading (or the entire helpers apparatus) was disabled when pqR
       was configured.}
 
     \item{\code{helpers_trace}:}{A logical value set to \code{TRUE} 
       to enable tracing of tasks that are scheduled to be done, either
       in helper threads or the master thread.  Initially \code{FALSE}, 
       unless the environment variable \code{R_HELPERS_TRACE} was defined 
-      at startup.}
+      at startup.  Note that trace output is not produced when deferred
+      evaluation was disabled when pqR was configured.  Also, pqR will
+      do tasks directly (bypassing tracing) when there is no possibility
+      that the task will be merged or done in a helper thread, and when
+      the operands are too small to justify the overhead of task scheduling.}
 
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
       functions (newly defined or loaded) is stored internally
