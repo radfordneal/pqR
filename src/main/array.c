@@ -1163,7 +1163,7 @@ void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
 
     if (helpers_output_perhaps_pipelined()) {
 
-        HELPERS_SETUP_OUT (8);
+        HELPERS_SETUP_OUT (9);
 
         switch (TYPEOF(a)) {
 
@@ -1636,7 +1636,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     int i, j;                 /* Row and column indexes */
     int k;                    /* Index going sequentially through whole matrix*/
 
-    HELPERS_SETUP_OUT (n>500 ? 3 : n>50 ? 4 : 5);
+    HELPERS_SETUP_OUT (n>500 ? 4 : n>50 ? 5 : 6);
 
     if (TYPEOF(x) == REALSXP) {
         double *rx = REAL(x);
@@ -1741,7 +1741,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
     int i, j;                 /* Row and column indexes */
 
-    HELPERS_SETUP_OUT (p>20 ? 4 : 5);
+    HELPERS_SETUP_OUT (p>20 ? 5 : 6);
 
     if (TYPEOF(x) == REALSXP) {
 

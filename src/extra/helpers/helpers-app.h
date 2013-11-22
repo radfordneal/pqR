@@ -36,7 +36,7 @@
    value may be desirable to prevent large numbers of outstanding tasks
    when some values are computed but never used. */
 
-#define MAX_TASKS 31
+#define MAX_TASKS 15
 
 
 /* TYPES DEFINED BY THE APPLICATION. */

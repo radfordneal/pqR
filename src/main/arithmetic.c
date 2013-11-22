@@ -711,7 +711,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     n2 = LENGTH(s2);
     n = n1>n2 ? n1 : n2;
 
-    HELPERS_SETUP_OUT (6);
+    HELPERS_SETUP_OUT (7);
 
     switch (code) {
     case PLUSOP:
@@ -1163,7 +1163,7 @@ void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
     R_len_t i = 0;
     R_len_t a;
 
-    HELPERS_SETUP_OUT (8);
+    HELPERS_SETUP_OUT (9);
 
     switch (TYPEOF(s1)) {
 
@@ -1488,7 +1488,7 @@ void task_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
     R_len_t i = 0;
     R_len_t a;
 
-    HELPERS_SETUP_OUT(7);
+    HELPERS_SETUP_OUT(9);
     while (i < n) {
         HELPERS_WAIT_IN1 (a, i, n);
         do {
