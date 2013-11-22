@@ -1,0 +1,8 @@
+Creates VARIANT_TRANS, changes "t" to return it, and changes %*% to
+ask for it for its operands, thereby allowing t(A)%*%B and A%*%t(B) 
+to be done faster and with less memory use (like crossprod(A,B) and
+tcrossprod(A,B)).
+
+Also cleans up do_matprod, and fixes a bug.
+
+Updates NEWS.Rd with info on this mod.

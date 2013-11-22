@@ -10,9 +10,16 @@
 \title{Matrix Crossproduct}
 \description{
   Given matrices \code{x} and \code{y} as arguments, return a matrix
-  cross-product.  This is formally equivalent to (but usually
-  faster than) the call \code{t(x) \%*\% y} (\code{crossprod}) or
-  \code{x \%*\% t(y)} (\code{tcrossprod}).
+  cross-product.  This is nearly equivalent to 
+  the call \code{t(x) \%*\% y} (\code{crossprod}) or
+  \code{x \%*\% t(y)} (\code{tcrossprod}), except for a slight difference
+  regarding dimension names noted below.  
+
+  Using \code{crossprod} and
+  \code{tcrossprod} was somewhat faster than using \code{\%*\%} in
+  R-2.15.0, but the difference is negligible in pqR, since pqR recognizes
+  when an operand of \code{\%*\%} is written as a transpose, and 
+  then does the same thing as \code{crossprod} or \code{tcrossprod}.
 }
 \usage{
 crossprod(x, y = NULL)
@@ -33,17 +40,17 @@ tcrossprod(x, y = NULL)
   in the same way as for \code{\link{\%*\%}}, referring to the setting of
   the \code{mat_mult_with_BLAS} option.
 
-  When the C routines are used for the multiplication, and helper 
+  When the C routines are used for the multiplication, and helper
   threads are enabled, \code{crossprod} and \code{tcrossprod} will
-  produce pipelined output, and \code{crossprod} but not \code{tcrossprod}
-  will take pipelined input for the second operand.  When a BLAS
-  routine is used, the multiplication can be done in helper threads
-  (unless this is disabled when configuring pqR with the 
-  \code{--disable-mat-mult-with-BLAS-in-helpers} option), 
-  but with no pipelining of inputs or output.
+  produce pipelined output, and \code{crossprod} but not
+  \code{tcrossprod} will take pipelined input for the second operand.
+  When a BLAS routine is used, the multiplication can be done in a
+  helper thread (unless this is disabled with
+  \code{--disable-mat-mult-with-BLAS-in-helpers} when configuring
+  pqR), but with no pipelining of inputs or output.
 
   When \code{crossprod} or \code{tcrossprod} is given only one
-  argument (the second defaulting to be the same as the first), or the
+  argument (the second defaulting to be the same as the first), or when the
   two arguments are recognizable as being identical because they are
   stored in the same memory location, the multiplication may be done
   more quickly by exploiting the fact that the result will be a
@@ -51,8 +58,7 @@ tcrossprod(x, y = NULL)
 
   When \code{x} or \code{y} are not matrices, they are treated as column or
   row matrices, but their \code{\link{names}} are usually \bold{not}
-  promoted to \code{\link{dimnames}}.  Hence, currently, the last
-  example has empty dimnames.
+  promoted to \code{\link{dimnames}} (see example below).
 }
 %% Consider using a new optional argument, say 'make.names = NA'
 %% {as in kronecker} with possible values  FALSE / NA / TRUE  where

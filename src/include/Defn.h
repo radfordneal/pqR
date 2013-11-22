@@ -499,16 +499,18 @@ typedef struct {
    R_NilValue, and results with VARIANT_PENDING_OK may be ordinary vectors
    marked as being computed. */
 
-#define VARIANT_NULL 1  /* May just return R_NilValue (but do side effects) */
-                        /* (Should usually be OR'd with VARIANT_PENDING_OK) */
+#define VARIANT_NULL  1  /* May just return R_NilValue, while doing side effects
+                            (Should usually be OR'd with VARIANT_PENDING_OK) */
 
-#define VARIANT_SEQ  2  /* May return a sequence spec, rather than a vector */
-#define VARIANT_AND  3  /* May return AND of a logical vec rather than vec  */
-#define VARIANT_OR   4  /* May return OR of a logical vec rather than vec   */
-#define VARIANT_SUM  5  /* May return sum of vec elements rather than vec   */
+#define VARIANT_SEQ   2  /* May return a sequence spec, rather than a vector */
+#define VARIANT_AND   3  /* May return AND of a logical vec rather than vec  */
+#define VARIANT_OR    4  /* May return OR of a logical vec rather than vec   */
+#define VARIANT_SUM   5  /* May return sum of vec elements rather than vec   */
+#define VARIANT_TRANS 6  /* May return the transpose of the result (as the CAR
+                            of an object with ATTRIB set to R_VariantResult) */
 
-#define VARIANT_KIND(v) (v&15) /* Isolate low four bits to compare with symbols
-                                  defined above */
+#define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
+                                    defined above */
 
 #define VARIANT_PENDING_OK 16  /* Computation may be deferred pending completion
                                   of a task (in a helper or the master) */

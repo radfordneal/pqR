@@ -111,6 +111,13 @@ information that has not changed from previous releases of pqR.
       BLAS is used and the \code{mat_mult_with_BLAS} option is set to
       \code{TRUE}.
 
+\item Matrix multiplications in which one operand can be recognized as the
+      result of a transpose operation are now done without actually creating
+      the transpose as an intermediate result, thereby reducing both 
+      computation time and memory usage.  Effectively, these uses of the
+      \code{\%*\%} operator are converted to uses of \code{crossprod} or
+      \code{tcrossprod}.  See \code{help("\%*\%")} for details.
+
 \item Speed of \code{ifelse} has been improved (though it's now slower when the
       condition is scalar due to the bug fix mentioned below).
 
@@ -137,6 +144,15 @@ information that has not changed from previous releases of pqR.
 
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
+
+\item Fixed the following bug (also present in R-2.15.0 and R-3.0.2):
+\preformatted{   v <- c(1,2)
+   m <- matrix(c(3,4),1,2)
+   print(t(m)\%*\%v)
+   print(crossprod(m,v))
+}
+in which \code{crossprod} gave an error rather than produce the answer
+for the corresponding use of \code{\%*\%}.
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
