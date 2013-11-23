@@ -37,8 +37,12 @@ information that has not changed from previous releases of pqR.
       for the latest news regarding systems and packages that do or do not
       work with pqR.
 
-\item Note that any previosly-installed packages must be re-installed for 
-      use with pqR (as is generally the case with new versions of R), except
+\item Note that any packages compiled and installed under R Core versions of 
+      R must be re-installed for use with pqR, as is generally the case with 
+      new versions of R (although it so happens that it is not necessary to 
+      re-install packages installed with pqR-2013-07-22 with this release,
+      because the formats of the crucial internal data structures happen not
+      to have changed).  Note, however, that there should be no problem 
       for those written purely in R (no C, C++, or Fortran).
 
   }}
