@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2013-??-??}{
+\section{CHANGES IN VERSION RELEASED 2013-11-23}{
 
   \subsection{INTRODUCTION}{
 
@@ -26,16 +26,6 @@ information that has not changed from previous releases of pqR.
 
 \item This release also includes other performance improvements, bug fixes,
       and code cleanups, as detailed below.
-  }}
-
-  \subsection{FEATURE AND DOCUMENTATION CHANGES}{
-    \itemize{
-      \item .
-  }}
-
-  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
-    \itemize{
-\item .
   }}
 
   \subsection{INSTALLATION AND TESTING}{
@@ -77,6 +67,13 @@ information that has not changed from previous releases of pqR.
       functions next to their definitions, improving maintainability, and
       also reduces the number of global functions.  This change should have 
       no effects visible to users.
+
+\item The initialization for fast dispatch to some primitive functions
+      is now done in \code{names.c}, using tables in other source files
+      analogous to those described in the point just above.  This is 
+      cleaner, and eliminates an anomoly in the previous versions of
+      pqR that a primitve function could be slower the first time it was
+      used than when used later.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
@@ -153,11 +150,6 @@ information that has not changed from previous releases of pqR.
 }
 in which \code{crossprod} gave an error rather than produce the answer
 for the corresponding use of \code{\%*\%}.
-  }}
-
-  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
-    \itemize{
-\item .
   }}
 }
 
