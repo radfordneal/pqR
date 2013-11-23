@@ -23,8 +23,8 @@ DD), with only the following changes:
     the mods directory.
 
   o removal of .gitignore, and creation of configure, NEWS, NEW.pdf,
-    and doc/html/R-admin.html from source files (by running make, or as 
-    described in R-admin).
+    doc/html/NEWS.html, and doc/html/R-admin.html from source files 
+    (by running make, or as described in R-admin).
 
   o updating of the release date, which is stored in the (now mis-named) 
     file SVN-REVISION.
