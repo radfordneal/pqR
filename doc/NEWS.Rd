@@ -75,8 +75,8 @@ information that has not changed from previous releases of pqR.
 \item The initialization for fast dispatch to some primitive functions
       is now done in \code{names.c}, using tables in other source files
       analogous to those described in the point just above.  This is 
-      cleaner, and eliminates an anomoly in the previous versions of
-      pqR that a primitve function could be slower the first time it was
+      cleaner, and eliminates an anomaly in the previous versions of
+      pqR that a primitive function could be slower the first time it was
       used than when used later.
   }}
 
