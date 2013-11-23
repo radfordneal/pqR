@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2013-??-??}{
+\section{CHANGES IN VERSION RELEASED 2013-11-23}{
 
   \subsection{INTRODUCTION}{
 
@@ -18,16 +18,6 @@ implementing some new features and fixing some bugs.  See the notes
 below on earlier pqR releases for general discussion of pqR, and for
 information that has not changed from previous releases of pqR.
 
-  }}
-
-  \subsection{FEATURE AND DOCUMENTATION CHANGES}{
-    \itemize{
-      \item .
-  }}
-
-  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
-    \itemize{
-\item .
   }}
 
   \subsection{INSTALLATION AND TESTING}{
@@ -54,6 +44,13 @@ information that has not changed from previous releases of pqR.
       functions next to their definitions, improving maintainability, and
       also reduces the number of global functions.  This change should have 
       no effects visible to users.
+
+\item The initialization for fast dispatch to some primitive functions
+      is now done in \code{names.c}, using tables in other source files
+      analogous to those described in the point just above.  This is 
+      cleaner, and eliminates an anomoly in the previous versions of
+      pqR that a primitve function could be slower the first time it was
+      used than when used later.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
@@ -92,11 +89,6 @@ information that has not changed from previous releases of pqR.
 
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
-  }}
-
-  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
-    \itemize{
-\item .
   }}
 }
 
