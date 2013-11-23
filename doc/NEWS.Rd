@@ -88,7 +88,7 @@ information that has not changed from previous releases of pqR.
       helper threads (which might be able to do some operations even
       faster, in parallel) merging is done only when one of the
       operations merged is a simple addition, subtraction, or
-      multiplication (with vector and a scaler operands).
+      multiplication (with one vector operand and one scalar operand).
 
       See \code{help(merging)} for more details.
 
