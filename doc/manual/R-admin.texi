@@ -92,10 +92,11 @@ Modifications for pqR are for pqR version @value{pqRVERSION}.
 @chapter Obtaining pqR and R
 @cindex Obtaining pqR and R
 
-Sources, binaries, and documentation for pqR can be obtained from
-@uref{http://github.com/radfordneal/pqR/}.  The remainder of this
-section documents how to obtain versions of @R{} produced by the
-R Core Team.
+Sources, binaries, and documentation for pqR can be obtained from the
+project webpage at @uref{http://pqR-project.org/} or the source code
+repository at @uref{http://github.com/radfordneal/pqR/}.  The
+remainder of this section documents how to obtain versions of @R{}
+produced by the R Core Team.
 
 Sources, binaries and documentation for @R{} can be obtained via
 @acronym{CRAN}, the ``Comprehensive R Archive Network'' whose current
