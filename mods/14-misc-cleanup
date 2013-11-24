@@ -16,3 +16,5 @@ Fixed bug in reusing operand where "name" attribute not removed.
 In interactive session, allow value returned at top level to not
 have been computed yet.  Of course, we have to wait for it if it
 ends up being printed.
+
+Now warn of dangers of -O3 in R-admin.
