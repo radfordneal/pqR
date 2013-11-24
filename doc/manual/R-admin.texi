@@ -3616,12 +3616,16 @@ front end shell script which does the re-ordering).
 These flags can also be used to build a faster-running version of @R{}.
 On most platforms using @command{gcc}, having @samp{-O3} in
 @code{CFLAGS} and @code{FFLAGS} produces worthwhile performance gains
-with @command{gcc} and @command{gfortran}.  On systems using the
-@acronym{GNU} linker (especially those using @R{} as a shared library),
-it is likely that including @samp{-Wl,-O1} in @code{LDFLAGS} is
-worthwhile, and @samp{'-Bdirect,--hash-style=both,-Wl,-O1'} is
-recommended at @uref{http://lwn.net/@/Articles/@/192624/}.  Tuning
-compilation to a specific @acronym{CPU} family (e.g.@:
+with @command{gcc} and @command{gfortran}, though it is also possible
+that this will create bugs due to over-enthusiastic optimization, or
+produce code that is slower than with @samp{-O2}.
+
+On systems using the @acronym{GNU} linker (especially those using @R{} as 
+a shared library), it is likely that including @samp{-Wl,-O1} in @code{LDFLAGS}
+is worthwhile, and @samp{'-Bdirect,--hash-style=both,-Wl,-O1'} is
+recommended at @uref{http://lwn.net/@/Articles/@/192624/}.
+
+Tuning compilation to a specific @acronym{CPU} family (e.g.@:
 @samp{-mtune=native} for @command{gcc}) can give worthwhile performance
 gains, especially on older architectures such as @cputype{ix86}.
 
