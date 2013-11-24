@@ -3625,6 +3625,13 @@ compilation to a specific @acronym{CPU} family (e.g.@:
 @samp{-mtune=native} for @command{gcc}) can give worthwhile performance
 gains, especially on older architectures such as @cputype{ix86}.
 
+When configuring pqR, @code{-DENABLE_ISNAN_TRICK} can be included in
+@code{CFLAGS} in order to enable use of a ``trick'' for testing
+whether a real value is @code{NA} or @code{NaN} more quickly.  This
+trick should work for @cputype{ix86} systems, and perhaps for others
+as well.  A run-time check is made for whether it does appear to work,
+and an error message is printed if not.
+
 @node Making manuals,  , Compilation flags, Configuration variables
 @subsection Making manuals
 
