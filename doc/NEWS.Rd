@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2013-11-23}{
+\section{CHANGES IN VERSION RELEASED 2013-11-25}{
 
   \subsection{INTRODUCTION}{
 
@@ -124,6 +124,9 @@ information that has not changed from previous releases of pqR.
 
 \item Inputs to the mod operator can now be piped. (Previously, this was 
       inadvertently prevented in some cases.)
+
+\item The speed of the quick check for NA/NaN that can be enabled with 
+      \code{-DENABLE_ISNAN_TRICK} in CFLAGS has been improved.
   }}
 
   \subsection{BUG FIXES}{
