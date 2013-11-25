@@ -43,7 +43,7 @@ extern "C" {
 
 /* implementation of these : ../../main/arithmetic.c */
 LibExtern double R_NaN;		/* IEEE NaN */
-LibExtern double R_NaN_cast_to_int;  /* Set to (int) R_NaN */
+LibExtern int R_NaN_cast_to_int;/* Set to (int) R_NaN */
 LibExtern double R_PosInf;	/* IEEE Inf */
 LibExtern double R_NegInf;	/* IEEE -Inf */
 LibExtern double R_NaReal;	/* NA_REAL: IEEE */
