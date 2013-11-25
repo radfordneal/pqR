@@ -717,6 +717,9 @@ void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
                      x, &nrx, y, &nry, &zero, z, &nrx);
 }
 
+
+static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
+
 #define T_matmult THRESHOLD_ADJUST(30)
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2).  For op = 0,
@@ -749,22 +752,31 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             /* Simple usage like A %*% B or t(A) %*% B. */
 
             /* Evaluate arguments with VARIANT_TRANS, except we don't want both
-               to be transposed, and we don't want a transposed argument if
-               the other is an S4 object, since that's not good for dispatch. */
+               to be transposed.  Don't ask for VARIANT_TRANS for y if from x 
+               we know we will need to check for S4 dispatch. */
+
+            int hm = -1;  /* Any methods?  -1 for not known yet */
 
             PROTECT_WITH_INDEX(
               x = evalv (x, rho, VARIANT_TRANS | VARIANT_PENDING_OK), &ix);
             PROTECT_WITH_INDEX(
-              y = evalv (y, rho, ATTRIB(x)==R_VariantResult || IS_S4_OBJECT(x)
+              y = evalv (y, rho, ATTRIB(x)==R_VariantResult 
+                                  || IS_S4_OBJECT(x) && (hm = R_has_methods(op))
                ? VARIANT_PENDING_OK : VARIANT_TRANS | VARIANT_PENDING_OK), &iy);
             nprotect += 2;
-            if (IS_S4_OBJECT(y) && ATTRIB(x) == R_VariantResult)
-                REPROTECT(x = eval (CAR(args), rho), ix);
 
             /* See if we dispatch to S4 method. */
 
-            if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y)) && R_has_methods(op)) {
+            if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y))
+                  && (hm == -1 ? R_has_methods(op) : hm)) {
                 SEXP value;
+                /* we don't want a transposed argument if the other is an 
+                   S4 object, since that's not good for dispatch. */
+                if (IS_S4_OBJECT(y) && ATTRIB(x) == R_VariantResult) {
+                    SET_ATTRIB (x, R_NilValue);
+                    REPROTECT (x = do_transpose (R_NilValue,R_NilValue,x,rho,0),
+                               ix);
+                }
                 PROTECT(args = CONS(x,CONS(y,R_NilValue)));
                 nprotect += 1;
                 helpers_wait_until_not_being_computed2(x,y);
@@ -1340,7 +1352,8 @@ void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
 }
 
 
-/* This implements t.default, which is internal. */
+/* This implements t.default, which is internal.  Can be called from %*% 
+   when VARIANT_TRANS result turns out to not be desired. */
 
 #define T_transpose THRESHOLD_ADJUST(10)
 
@@ -1349,7 +1362,9 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP a, r, dims, dimnames, dimnamesnames, ndimnamesnames, rnames, cnames;
     int ldim, len, ncol, nrow;
 
-    checkArity(op, args);
+    if (op != R_NilValue) /* passed R_NilValue when called from %*% */
+        checkArity(op, args);
+
     a = CAR(args);
 
     if (!isVector(a)) goto not_matrix;
