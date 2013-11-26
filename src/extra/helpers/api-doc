@@ -29,7 +29,10 @@ finished.  Alternatively, a task may be capable of taking pipelined
 inputs, in which case it can start as soon as the tasks producing its
 inputs have started, and process parts of those inputs as soon as they
 are produced.  It is also possible to use more than one task for a
-single computation.
+single computation.  Finally, a task that has not yet started may be
+merged with a newly-scheduled task that takes its output as input.
+This task merging facility can be useful even when no helper threads
+are used.
 
 A C interface for this facility is provided, and summarized at the end
 of this document.  Interfaces for other languages might be possible.
@@ -42,8 +45,10 @@ facility using something other than OpenMP would be possible.
 
 This helpers facility is designed for use implementing an interpretive
 language that provides parallel computations without the programmer
-needing to write any explicitly parallel code.  It is potentially
-useful for many other applications as well.
+needing to write any explicitly parallel code, and/or that allows
+operations to be deferred so that they may possibly be combined with
+later operations.  It is potentially useful for many other
+applications as well.
 
 
 USING THE HELPERS FACILITY
@@ -93,7 +98,9 @@ compiled in whatever way is needed for OpenMP (eg, with the -fopenmp
 option for gcc).  It should work with OpenMP 3.0 or 3.1 on most
 machines, but see the file imp-doc for more information on the
 concurrent memory model that is assumed, options regarding atomic
-reads and writes, and performance issues.
+reads and writes, and performance issues.  However, OpenMP support is
+not required if multithreading is disabled (see below), with the
+helpers facility being used only to support task merging.
 
 After any necessary initialization, an application program using the
 helpers facility should call the helpers_startup procedure, passing it
@@ -307,6 +314,9 @@ all scheduled tasks have completed.  Calling this procedure may be
 advisable before terminating the program, if some pending tasks may
 have desired side effects (such as writing data to files).
 
+
+FAST CHECKS FOR VARIABLES BEING IN USE OR BEING COMPUTED
+
 Programs may sometimes wish to quickly check (in the master thread)
 whether a variable is currently in use or is being computed, without
 the overhead of a procedure call.  This can be arranged by providing
@@ -330,17 +340,37 @@ uncompleted task, unless it is also the output of that task.  It can
 therefore happen that a variable is simultaneously "being computed"
 and "not in use".
 
-When one of these macros is not defined in helpers-app.h, the
+When one pair of these macros is not defined in helpers-app.h, the
 corresponding marker will not be set or cleared, which is sensible
-only if this marker is not used.
+only if this marker is not used by the application.  An application
+should either define both a "mark" macro and the corresponding
+"mark_not" macro, or define neither macro in the pair.
 
 These macros will be invoked only in the master thread, when a task is
 scheduled by helpers_do_task, or when helpers_do_task or one of the
 other procedures notices that a task has completed.  Consequently, a
 variable may remain marked as in-use or being-computed when it no
-longer is, if the master thread has not yet noticed the change.  These
-markers should be examined only from the master thread, so that no
-synchronization will be required when accessing them.
+longer is, if the master thread has not yet noticed the change.  
+
+These markers may be accessed by the application in whatever way is
+convenient, but they should only be accessed from the master thread,
+so that no synchronization will be required when accessing them.  An
+application may choose to make access to these markers available to
+the helpers implementation, by defining one or both of the following
+macros:
+
+  helpers_is_in_use
+  helpers_is_being_computed
+
+These take one argument of type helpers_var_ptr.  The helpers
+implementation will use these macros, if they are defined, to avoid
+some computations.  For correct operation, these macros must return a
+non-zero value if the variable given is in use or is being computed.
+They may return a non-zero value even if the variable is not in use or
+is not being computed, though this will slow down some operations.
+
+All the macros described in this section will never be invoked by
+the helpers implementation with a null pointer argument.
 
 
 SETTING UP PIPELINED COMPUTATIONS
@@ -429,18 +459,22 @@ scheduled until the master-now task has finished.  However, scheduling
 a master-now task with pipelined inputs may be useful.
 
 Pipelining can be disabled by calling helpers_no_pipelining with
-argument 1 (it can be re-enabled by calling helpers_no_pipelining with
-argument 0).  When pipelining is disabled, the HELPERS_PIPE_OUT flag
-will be disregarded when a task is scheduled.  (Existing tasks are
-not affected.)  Disabling pipelining slightly decreases overhead for
-tasks scheduled with HELPERS_PIPE_OUT, when no process is receiving
+argument 1 (and can be re-enabled by calling helpers_no_pipelining
+with argument 0).  When pipelining is disabled, the HELPERS_PIPE_OUT
+flag will be disregarded when a task is scheduled.  (Existing tasks
+are not affected.)  Disabling pipelining slightly decreases overhead
+for tasks scheduled with HELPERS_PIPE_OUT when no process is receiving
 the piped output, and may also be desirable when the number of helper
 threads may exceed the number of available processor cores (as could
 happen uncontrollably in a time-shared environment), since a wait for
-pipelined input uses a spin-loop that occupies a processor core.  When
-pipelining is disabled, the global variable helpers_are_not_pipelining
-will be set to 1 (versus 0 otherwise).  Pipelining is always disabled
-when there are no helper threads (and hence pipelining is impossible).
+pipelined input uses a spin-loop that occupies a processor core.  
+
+The global variable helpers_not_pipelining will be set to the last
+value passed to helpers_no_pipelining (0 initially).  The global
+variable helpers_not_pipelining_now will be 1 if pipelining will not
+be done because either helpers_not_pipelining is 1 or multithreading
+is not being done.  (See also the discussion below on disabling parts
+of the helpers facility.)
 
 
 WRITING PIPELINED TASK PROCEDURES
@@ -484,16 +518,16 @@ number of elements in the vector.
 
 A task scheduled with HELPERS_PIPE_IN0 must not finish before the task
 (if any) supplying the input for its output variable has finished
-computing that variable.  Similarly if the output variable for a task
-is the same as one of its other input variables, which was scheduled
-with pipelined input, the task must not finish before the task (if
-any) supplying that input.  For example, a task that computes the
-result of changing all leading zeros in an input vector to ones
-(leaving later elements unchanged) is not allowed to finish when it
-finds a non-zero element, without waiting until the rest of the input
-is computed, since if it did so, a task that receives its output might
-incorrectly believe that the computation was finished, when elements
-after the first non-zero element are still being computed.
+computing that variable.  (This includes cases where the output
+variable is the same as one of the other input variables, with both
+being pipelined.)  For example, a task that computes the result of
+changing all leading zeros in an input vector to ones (leaving later
+elements unchanged) is not allowed to finish when it finds a non-zero
+element, without waiting until the rest of the input is computed,
+since if it did so, a task that receives its output might incorrectly
+believe that the computation was finished when this task finished,
+when actually elements after the first non-zero element are still
+being computed.
 
 After a task procedure has called helpers_amount_out, it should not
 change the part of the output variable that it has indicated has been
@@ -517,6 +551,15 @@ argument.  Assuming that an input is not pipelined therefore allows
 overhead in the task procedure to be reduced - but of course, a task
 procedure written with this assumption must never be scheduled with
 that input flagged for pipelining.
+
+A task procedure can check whether calling the helpers_amount_out
+procedure is useful with the helpers_output_perhaps_pipelined
+function, which takes no arguments, and returns 1 if the output may be
+pipelined to another task, and 0 if not.  Note that this is based
+solely on whether or not pipelining is disabled, and on whether the
+task was scheduled with the HELPERS_PIPE_OUT flag, not on whether
+another task is currently looking for such pipelined output (which may
+change as the task runs).
 
 
 PIPELINING FOR ELEMENT-BY-ELEMENT VECTOR COMPUTATIONS
@@ -707,6 +750,111 @@ version of the helpers facility will provide a more convenient and
 efficient way of parallelizing a single computation.
 
 
+TASK MERGING
+
+An application can arrange that when some tasks are scheduled they may
+be merged with a previously-scheduled task that provides input to the
+new task, so that both operations can be done at once, possibly
+reducing computation time.
+
+When a new task, A, is scheduled, it will be merged with a task, B,
+that was previously scheduled if all the following conditions hold:
+
+  1) The output variable of task A is not null, and is the same as the
+     output variable of task B.  Furthermore, no task scheduled after 
+     task B has this variable as its output variable.
+
+  2) Task A has the HELPERS_MERGE_IN bit set in its flags (which are
+     given by an argument to helpers_do_task).
+
+  3) Task B has the HELPERS_MERGE_OUT bit set in its flags.
+
+  4) If task B has the HELPERS_MASTER_ONLY bit set in its flags,
+     either task B is the most recently scheduled master-only task, or
+     task A does not have either the HELPERS_MASTER_ONLY bit or the
+     HELPERS_MASTER_NOW bit set in its flags.  (Otherwise, merging
+     these tasks would cause master-only operations to be performed
+     out of order.)
+
+  5) Task B has not started to run in some helper thread.
+
+  6) The helpers_can_merge macro supplied by the application returns
+     a non-zero value when given as arguments these tasks' output 
+     variable, the task procedure for task A, the operation for task
+     A, the two input variables for task A, the task procedure for
+     task B, the operation for task B, and the two input variables
+     for task B.  This macro is invoked only if (1) to (4) above are 
+     true, but it may be invoked when (5) is not true.
+
+For convenience, the symbol HELPER_MERGE_IN_OUT is defined to be
+HELPERS_MERGE_IN | HELPERS_MERGE_OUT.
+
+If the application does not define a helpers_can_merge macro, in
+helpers-app.h, no task merging is done.  If this macro is defined, a
+helpers_merge macro or function must also be defined, which will
+modify the task information for task B to merge in the operation of
+task A.  If defined as a function, the prototype for helpers_merge
+should be as follows:
+
+  void helpers_merge (helpers_var_ptr out, 
+     helpers_task_proc *proc_A, helpers_op_t op_A, 
+     helpers_var_ptr in1_A, helpers_var_ptr in2_A,
+     helpers_task_proc **proc_B, helpers_op_t *op_B, 
+     helpers_var_ptr *in1_B, helpers_var_ptr *in2_B,
+     double task_data[HELPERS_TASK_DATA_AMT]);
+
+The first argument is the output variable shared by tasks A and B.
+The next four arguments are as passed to helpers_do_task when task A
+was scheduled; these are followed by four pointers to where the
+corresponding information for task B is stored.  
+
+The final argument is a pointer to an array of HELPERS_TASK_DATA_AMT
+(defaulting to one if not defined in helpers-app.h) double-precision
+floating-point values, which can be used to pass additional data to
+the merged task procedure.  These values will be as previously set if
+task B is a merged task, and will be undefined if task B is not the
+result of merging.  The procedure for a merged task can obtain a
+pointer to this data by calling the helpers_data_ptr function (which
+takes no arguments).
+
+The helpers_merge function (or macro) may alter the information about
+task B and the values in task_data in order to produce a specification
+for a task that will have the effect of doing both task A and task B,
+subject to the following restrictions (which, when necessary, the
+helpers_can_merge macro must ensure can be satisfied):
+
+  1) If either in1_B or in2_B points to a variable that has not
+     yet been computed (ie, is the output of some other task that 
+     has not finished), that variable reference must not be altered.
+
+  2) Neither in1_B or in2_B may be changed to refer to a variable
+     that has not yet been computed.
+
+The helpers_merge function or macro must not do anything that affects
+the state of the helpers module (eg, it must not wait until a variable
+is not in use).
+
+The task resulting from merging a new and an old task will have flag
+bits HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
+HELPERS_PIPE_OUT if the new task had the corresponding flag bit, and
+it will also have flag bits HELPERS_PIPE_IN0, HELPERS_PIPE_IN1,
+HELPERS_PIPE_IN2, or HELPERS_MASTER_ONLY if the old task had the
+corresponding flag bit (except HELPERS_MASTER_ONLY will be overridden
+by HELPERS_MASTER_NO in the new task).  The HELPERS_MERGE_IN flag bit
+will not be set for the merged task (it would have no effect in any
+case).
+
+Task merging can be disabled by calling helpers_no_merging with
+argument 1 (and can be re-enabled by calling it with argument 0).
+When task merging is disabled, HELPERS_MERGE_IN and HELPERS_MERGE_OUT
+flags will be disregarded when a task is scheduled.  (Existing tasks
+are not affected.)  When task merging is disabled, the global variable
+helpers_not_merging will be set to 1 (versus 0 otherwise), except note
+that helpers_not_merging will be the constant 1 regardless of calls to
+helpers_no_merging if helpers_can_merge is not defined, or if the
+HELPERS_DISABLE symbol is defined (see below).
+
+
 INFORMATION FUNCTIONS AND VARIABLES
 
 Information about the configuration or state is available to the
@@ -725,9 +873,11 @@ being computed, without checking them individually.
 To help the master decide how many tasks should be created to do a
 computation in parallel, the helpers_idle function is provided, which
 takes no arguments, and returns an estimate of how many helper threads
-are currently idle.  This estimate is not guaranteed to be correct
-(but will be in the range from 0 the helpers_num), and of course may
-soon be out-of-date, so it should be used only as a rough guide.
+are currently available to perform tasks.  This estimate is not
+guaranteed to be correct (but will be in the range from 0 the
+helpers_num), and of course may soon be out-of-date, so it should be
+used only as a rough guide.  When multithreading is disabled,
+helpers_idle will always return zero.
 
 
 OBTAINING A LIST OF VARIABLES
@@ -738,12 +888,14 @@ variables are currently referenced by scheduled tasks, if it is
 possible that some such variables are no longer referenced elsewhere.
 
 The helpers_var_list function is provided for this purpose.  It takes
-no arguments, and returns a pointer to an array of pointers to all
-input and output variables for tasks that have been scheduled with
-helpers_do_task, but which the master thread has not yet noticed have
-completed.  (The helpers_var_list function will start by looking for
-completed tasks, but of course a task might complete just after this,
-before the list is produced.)  
+one argument that should be zero or one.  If the argument is zero, it
+returns a pointer to an array of pointers to all non-null input and
+output variables for tasks that have been scheduled, but which the
+master thread has not yet noticed have completed.  If the argument is
+one, the array will contain pointers only to output variables (which
+might also be input variables).  The helpers_var_list function will
+start by looking for completed tasks, but of course a task might
+complete just after this, before the list is produced.
 
 The array returned by helpers_var_list has elements of type
 helpers_var_ptr and is terminated by a null pointer.  The order of
@@ -789,49 +941,46 @@ whose meaning can be gathered from the source code, and which is
 intended mostly for debugging and tuning the helpers implementation,
 
 
-DISABLING THE HELPERS FACILITY
+DISABLING ALL OR PART OF THE HELPERS FACILITY
 
 If HELPERS_DISABLED is defined prior to helpers.h being included
 (perhaps in helpers-app.h, or perhaps using a compiler option), the
-helpers_startup procedure is replaced by a macro that simply calls
-helpers_master, and the helpers_do_task procedure is replaced by a
-macro that simply calls the procedure given by the second argument,
-passing the following four arguments.  No attempt is made to perform
-computations in parallel.
+entire helpers facility is disabled.  The helpers_startup procedure is
+replaced by a macro that simply calls helpers_master (ignoring the
+argument specifying the number of helper threads), and the
+helpers_do_task procedure is replaced by a macro that simply calls the
+procedure given by the second argument, passing the following four
+arguments.  No attempt will be made to perform computations in
+parallel, all tasks will be performed immediately, and there will be
+merging of tasks.
 
-Other procedures and macros are also replaced by suitable stubs: the
-helpers_avail0, helpers_avail1, helpers_avail2, and helpers_avail_var
-procedures are replaced with macros that always return their last
-argument; helpers_var_list is replaced by a macro that returns a
-pointer to a null list; the HELPERS_SETUP_OUT macro does nothing;
-HELPERS_NEXT_OUT(i) adds 1 to i; HELPERS_BLOCK_OUT(i,k) adds k to i;
-HELPERS_UP_TO(i,a) returns a-1; HELPERS_UP_TO2(i,a1,a2) returns the
-minimum of a1-1 and a2-1; and HELPERS_WAIT_IN_VAR(v,a,i,s) and
-HELPERS_WAIT_INn(a,i,s) and set a to s. The remaining helpers
-procedures, such as helpers_amount_out, are replaced with macros that
-do nothing.  The helpers_num and helpers_tasks variables are made
-preprocessor symbols defined as 0.
+When HELPERS_DISABLED is defined, other procedures and macros are also
+replaced by suitable stubs: the helpers_avail0, helpers_avail1,
+helpers_avail2, and helpers_avail_var procedures are replaced with
+macros that always return their last argument; helpers_var_list is
+replaced by a macro that returns a pointer to a null list; the
+HELPERS_SETUP_OUT macro does nothing; HELPERS_NEXT_OUT(i) adds 1 to i;
+HELPERS_BLOCK_OUT(i,k) adds k to i; HELPERS_UP_TO(i,a) returns a-1;
+HELPERS_UP_TO2(i,a1,a2) returns the minimum of a1-1 and a2-1; and
+HELPERS_WAIT_IN_VAR(v,a,i,s) and HELPERS_WAIT_INn(a,i,s) set a to s.
+The remaining helpers procedures, such as helpers_amount_out, are
+replaced with macros that do nothing.  The helpers_num and
+helpers_tasks variables are made preprocessor symbols defined as 0.
 
 If HELPERS_DISABLED is defined, the helpers.c module produces no code;
 it may be compiled and linked with the program or not, as convenient.
 Consequently, the C implementation needn't support OpenMP.
 
-No statistics or trace output is produced when HELPERS_DISABLED is
+No statistics or trace output can be produced when HELPERS_DISABLED is
 defined.
 
-All computations are also done in one thread when HELPERS_DISABLED is
-not defined, but helpers_startup is passed zero as the number of
-helpers, though there will be slightly more overhead than when
-HELPERS_DISABLED is defined.  Statistics and trace output can be
-produced in this context.
-
-The helpers facility can also be disabled temporarily by calling (from
-the master thread) the helpers_disable procedure, with argument 1, and
-may later be re-enabled by calling helpers_disable with argument 0.
-When helpers are disabled, any current tasks are first allowed to
-complete, all new tasks are then treated as if they were scheduled
+The helpers facility can also be disabled temporarily by calling the
+helpers_disable procedure, from the master thread, with argument 1,
+and may later be re-enabled by calling helpers_disable with argument
+0. When helpers are disabled, any current tasks are first allowed to
+complete, and all new tasks are then treated as if they were scheduled
 with the HELPERS_MASTER_NOW flag.  The helper threads continue to
-exist while their use is disabled, but will not occupy processor
+exist while their use is disabled, but they will not occupy processor
 resources (provided the OpenMP implementation that is used suspends
 threads that are waiting on a lock.)
 
@@ -843,8 +992,74 @@ high time-sharing system load) makes use of helper threads undesirable
 during a computation that might have used them.
 
 The global variable helpers_are_disabled will be set to 1 (versus 0)
-when helpers are disabled, or when the number of helper threads is
-zero.
+when helpers are disabled.  If HELPERS_DISABLED is defined, this will
+actually be the constant 1, and attempts to set it to zero using
+helpers_disable will be ignored.  Otherwise, helpers_are_disabled will
+initially be 0 (that is, helpers are not disabled), even if the number
+of helper threads is zero, but helpers_disable can be called to change
+this before helpers_startup is called.
+
+The use of helper threads can be disabled without also disabling the
+entire helpers facility by defining HELPERS_NO_MULTITHREADING before
+including helpers.h (in helpers_app.h, or by a compiler option).  The
+effect of this that no helper threads are created, but tasks are
+scheduled in the same way as they would have been if helper threads
+existed, and hence are queued rather than being performed immediately
+(unless scheduled with the HELPERS_MASTER_NOW flag).  Since there are
+no helper threads, all tasks will eventually be done in the master
+thread, but tasks may be merged.
+
+When HELPERS_NO_MULTITHREADING is defined, some no-longer-relevant
+procedures are replaced by macros that do nothing.  Note that defining
+HELPERS_NO_MULTITHREADING has no effect if HELPERS_DISABLED is also
+defined.  If HELPERS_NO_MULTITHREADING is defined but HELPERS_DISABLED
+is not, the helpers.c module must be linked with the application
+program, but compiling helpers.c will not require support for OpenMP.
+
+Defining HELPERS_NO_MULTITHREADING is useful (apart from testing) only
+if the application is using the helpers facility in order to support
+task merging, as described above.
+
+Use of helper threads can be disabled temporarily, without disabling
+the whole helpers facility, by calling the helpers_no_multithreading
+procedure with argument 1, from the master thread, and may later be
+re-enabled by calling helpers_no_multithreading with argument 0.  In
+detail, a call of helpers_no_multithreading first waits for all tasks
+to complete; then, if its argument is 1, it arranges for helper
+threads to ignore the task queue, until helpers_no_multithreading is
+later called with an argument of 0.  Tasks that are scheduled after
+helpers_no_multithreading is called with argument 1 will therefore be
+done in the master thread, though not necessarily immediately, as they
+would be if helpers_disabled had been called with argument 1.
+
+The global variable helpers_not_multithreading is set to the last
+value passed to helpers_no_multithreading, except that it is always 1
+if HELPERS_NO_MULTITHREADING was defined.  Also, when helpers_startup
+is called, helpers_not_multithreading will be set to 1 if zero helper
+threads were created.  
+
+The global variable (or constant) helpers_not_multithreading_now is
+set to 1 if tasks will not be run in helper threads, either because
+helpers_not_multithreading is 1, or because helpers_are_disabled is 1.
+Note that if helpers_disable is used to disable the helpers facility,
+and later to re-enabled it, the setting of helpers_not_multihreading
+will be retained as it was before helpers were disabled, even though
+helpers_not_multithreading_now may change while helpers are disabled.
+
+As discussed above, pipelining can be disabled by calling
+helpers_no_pipelining, whose argument in the most recent call is
+recorded in helpers_not_pipelining, while the global variable (or
+constant) helpers_not_pipelining_now indicates whether pipelining will
+actually be done - it will be 1 if either helpers_no_pipelining is 1
+or helpers_not_multithreading_now is 1.
+
+Of course, all computations will be done in the master thread when
+helpers_startup is passed zero as the number of helper threads (or the
+operating system doesn't allow helper threads).  The overhead of
+running tasks when there are no helper threads is slightly greater
+when helper threads are supported, but helpers_not_multithreading_now
+is 1, than when the helpers facility or multithreading has been
+disabled at compilation time.
 
 
 SUMMARY OF THE APPLICATION PROGRAM INTERFACE TO THE HELPERS FACILITY
@@ -856,7 +1071,7 @@ along with the context in which they may be called.
 
       init     the application program before calling helpers_startup
       master   the master thread, outside of a task procedure
-      task     a task procedure scheduled by helpers_do_task, or
+      task     a task procedure, scheduled by helpers_do_task, or
                called directly from the master thread
 
   -------------------------------------------------------------------
@@ -891,6 +1106,11 @@ along with the context in which they may be called.
   helpers_wait_for_all
                     void           void                  master
 
+  helpers_task_data void           double *              task
+
+  helpers_output_perhaps_pipelined
+                    int            void                  task
+
   helpers_amount_out  
                     void           helpers_size_t        task
 
@@ -909,7 +1129,11 @@ along with the context in which they may be called.
   helpers_stats     void           void                  master
   helpers_trace     void           int                   master or init
   helpers_disable   void           int                   master or init
-  helpers_no_pipelining                                  master or init
+  helpers_no_multithreading                              master
+                    void           int
+  helpers_no_pipelining                                  master
+                    void           int
+  helpers_no_merging                                     master
                     void           int
 
 An application program using the helpers facility must define the
@@ -927,30 +1151,43 @@ The application program must also define the following procedure:
 
   helpers_master                    void      void
 
-The following macros may be defined in helpers-app.h, but will default
-to stubs if they are not defined there:
+The following macros may be defined in helpers-app.h by the
+application (but need not be defined for correct operation of the
+helpers facility):
 
   -----------------------------------------------------------
   macro                             returns   arguments
   -----------------------------------------------------------
 
+  helpers_can_merge                 int       see documentation above
+  helpers_merge                     void        regarding these macros
+
   helpers_mark_in_use               void      helpers_var_ptr
   helpers_mark_not_in_use           void      helpers_var_ptr
   helpers_mark_being_computed       void      helpers_var_ptr
   helpers_mark_not_being_computed   void      helpers_var_ptr
+  helpers_is_in_use                 int       helpers_var_ptr
+  helpers_is_being_computed         int       helpers_var_ptr
 
   helpers_var_name                  char *    helpers_var_ptr
   helpers_task_name                 char *    helpers_var_ptr
 
   helpers_printf                    symbol - no arguments
 
-The following global variables (of type int) are available in the
-master:
+The following global variables or constants (of type int) are
+available in the master:
 
   helpers_num                Number of helper threads
   helpers_tasks              Number of tasks currently outstanding
-  helpers_are_not_pipelining Set to 1 if pipelining is disabled, 0 otherwise
-  helpers_are_disabled       Set to 1 if no enabled helpers, 0 otherwise
+
+  helpers_not_merging        Set to 1 if task merging is disabled, 0 otherwise
+
+  helpers_are_disabled       Set to 1 if helpers not enabled, 0 otherwise
+  helpers_not_pipelining     Set to 1 if pipelining is disabled, 0 otherwise
+  helpers_not_pipelining_now Set to 1 if pipelining is not done, 0 otherwise
+  helpers_not_multithreading Set to 1 if multithreading is disabled, 0 otherwise
+  helpers_not_multithreading_now  
+                             Set to 1 if tasks done only in master, 0 otherwise
 
 The following constants are defined in helpers.h:
 
@@ -973,6 +1210,9 @@ The following constants are defined in helpers.h:
   HELPERS_PIPE_IN02_OUT
   HELPERS_PIPE_IN12_OUT
   HELPERS_PIPE_IN012_OUT
+  HELPERS_MERGE_IN
+  HELPERS_MERGE_OUT
+  HELPERS_MERGE_IN_OUT
 
 The following macro is provided as a convenience for conditionally
 calling a procedure via helpers_do_task or calling it directly:
@@ -985,9 +1225,20 @@ vectors are defined:
   HELPERS_SETUP_OUT (pow2)
   HELPERS_NEXT_OUT (i)
   HELPERS_BLOCK_OUT (i, k)
+  HELPERS_UP_TO (i, a)
+  HELPERS_UP_TO2 (i, a1, a2)
 
   HELPERS_WAIT_IN0 (avail, prev, length)
   HELPERS_WAIT_IN1 (avail, prev, length)
   HELPERS_WAIT_IN2 (avail, prev, length)
 
   HELPERS_WAIT_IN_VAR (var, avail, prev, length)
+
+The following symbols may be defined in helpers-app.h or via compiler
+options when building the helpers facility:
+
+  HELPERS_DISABLED
+  HELPERS_NO_MULTITHREADING
+
+Note that the task merging facility is disabled if the application
+does not define the helpers_can_merge macro.

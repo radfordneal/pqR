@@ -46,6 +46,9 @@ static int slow[4];        /* How much to slow down computations */
 static helpers_size_t size; /* Size of vectors */
 static int rep;            /* Number of repetitions */
 static int trace;          /* Trace option:  0=none, 1=last repetition, 2=all */
+static int disable;        /* Call helpers_disable? */
+static int no_pipelining;  /* Call helpers_no_pipelining? */
+static int no_multithreading; /* Call helpers_no_multithreading (twice)? */
 static int stats;          /* Output statistics at end? */
 static int do_direct;      /* Do direct computation after last repetition? */
 static int verify;         /* Verify results for last repetition? */
@@ -200,6 +203,23 @@ void helpers_master (void)
     { helpers_trace(1);
     }
 
+    if (disable && r==1)
+    { helpers_disable(1);
+    }
+
+    if (no_pipelining && r==1)
+    { helpers_no_pipelining(1);
+    }
+
+    if (no_multithreading)
+    { if (r==(rep+2)/3)
+      { helpers_no_multithreading(1);
+      }
+      if (r==rep+1-(rep+2)/3)
+      { helpers_no_multithreading(0);
+      }
+    }
+
     f = 0;
     if (pipeline[0])    f |= HELPERS_PIPE_OUT;
     if (master_only[0]) f |= HELPERS_MASTER_ONLY;
@@ -263,7 +283,7 @@ void helpers_master (void)
     if (get_var_list && r==rep)
     { helpers_var_ptr *list;
       printf("Variable list:");
-      for (list = helpers_var_list(); *list != NULL; list++)
+      for (list = helpers_var_list(0); *list != NULL; list++)
       { printf(" %s",helpers_var_name(*list));
       }
       printf("\n");
@@ -310,7 +330,7 @@ void helpers_master (void)
            B_in_use, B_being_computed);
   }
   
-  if (get_var_list && r==rep && *helpers_var_list()!=NULL)
+  if (get_var_list && r==rep && *helpers_var_list(0)!=NULL)
   { printf("Variable list isn't empty at end!\n");
   }
 
@@ -410,8 +430,9 @@ int main (int argc, char **argv)
     else if (strcmp(argv[1],"-p")==0)
     { pipeline[0] = pipeline[1] = pipeline[2] = pipeline[3] = 1;
     }
-    else if (strcmp(argv[1],"-dh")==0)  helpers_disable(1);
-    else if (strcmp(argv[1],"-dp")==0)  helpers_no_pipelining(1);
+    else if (strcmp(argv[1],"-dh")==0)  disable = 1;
+    else if (strcmp(argv[1],"-dp")==0)  no_pipelining = 1;
+    else if (strcmp(argv[1],"-dt")==0)  no_multithreading = 1;
     else 
     { break;
     }

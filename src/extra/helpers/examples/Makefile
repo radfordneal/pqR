@@ -19,18 +19,29 @@
 
 
 COMPILE=gcc -fopenmp -g -O2                     # command for gcc/Intel
-#COMPILE=cc -xopenmp -DASSUME_ATOMIC_READ_CHAR  # command for cc/SPARC
+COMPILE_NO_OPENMP=gcc -g -O2
 
-all:		example example-d simple parex parex-d
+#COMPILE=cc -xopenmp -DASSUME_ATOMIC_READ_CHAR  # command for cc/SPARC
+#COMPILE_NO_OPENMP=cc
+
+all:		example example-d example-m simple merge parex parex-d
 
 example:	example.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. example.c ../helpers.c -lm -o example
 
 example-d:	example.c helpers-app.h ../helpers.h
-	${COMPILE} -I.. -I. -DHELPERS_DISABLED example.c -lm -o example-d
+	${COMPILE_NO_OPENMP} -I.. -I. -DHELPERS_DISABLED \
+	example.c -lm -o example-d
 
-simple:	simple.c helpers-app.h ../helpers.c ../helpers.h
+example-m:	example.c helpers-app.h ../helpers.c ../helpers.h
+	${COMPILE_NO_OPENMP} -I.. -I. -DHELPERS_NO_MULTITHREADING \
+	example.c ../helpers.c -lm -o example-m
+
+simple:		simple.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. simple.c ../helpers.c -lm -o simple
+
+merge:		merge.c helpers-app.h ../helpers.c ../helpers.h
+	${COMPILE} -I.. -I. -DMERGE merge.c ../helpers.c -lm -o merge
 
 parex:		parex.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. parex.c ../helpers.c -lm -o parex
@@ -39,4 +50,4 @@ parex-d:	parex.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. -DHELPERS_DISABLED parex.c -lm -o parex-d
 
 clean:
-	rm -f example example-d simple parex parex-d
+	rm -f example example-d example-m simple merge parex parex-d
