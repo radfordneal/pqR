@@ -719,7 +719,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     n2 = LENGTH(s2);
     n = n1>n2 ? n1 : n2;
 
-    HELPERS_SETUP_OUT (6);
+    HELPERS_SETUP_OUT (7);
 
     switch (code) {
     case PLUSOP:

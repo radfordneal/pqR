@@ -1905,7 +1905,7 @@ static void RunGenCollect(R_size_t size_needed)
        become free, so we can collect them. */
 
     if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
-        for (SEXP *var_list = helpers_var_list(); *var_list; var_list++) {
+        for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
             SEXP v = *var_list;
             if (!NODE_IS_MARKED(v) && NODE_CLASS(v) == LARGE_NODE_CLASS) {
                 if (IS_BEING_COMPUTED_BY_TASK(v))
@@ -1916,7 +1916,7 @@ static void RunGenCollect(R_size_t size_needed)
         }
     }
 
-    for (SEXP *var_list = helpers_var_list(); *var_list; var_list++)
+    for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++)
         FORWARD_NODE(*var_list);
 
     /* process any forwarded task vars. */

@@ -334,7 +334,7 @@ void attribute_hidden InitOptions(void)
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
     SET_TAG(v, install("helpers_no_pipelining"));
-    SETCAR(v, ScalarLogical(helpers_are_not_pipelining));
+    SETCAR(v, ScalarLogical(helpers_not_pipelining));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);

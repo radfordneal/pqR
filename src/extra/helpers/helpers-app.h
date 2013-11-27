@@ -47,6 +47,7 @@ typedef SEXP helpers_var_ptr;
 #define helpers_printf Rprintf
 
 #define ENABLE_TRACE 1
+#define ENABLE_STATS 1
 
 
 /* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
@@ -54,7 +55,7 @@ typedef SEXP helpers_var_ptr;
    value may be desirable to prevent large numbers of outstanding tasks
    when some values are computed but never used. */
 
-#define MAX_TASKS 31
+#define MAX_TASKS 15
 
 
 /* MARKING MACROS. */
