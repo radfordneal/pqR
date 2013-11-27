@@ -711,6 +711,15 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     n2 = LENGTH(s2);
     n = n1>n2 ? n1 : n2;
 
+    /* Check that can be enabled for debugging... */
+#   if 1
+        if (TYPEOF(s1)!=REALSXP && TYPEOF(s1)!=INTSXP && TYPEOF(s1)!=LGLSXP
+             || LENGTH(s1)<=0
+         || TYPEOF(s2)!=REALSXP && TYPEOF(s2)!=INTSXP && TYPEOF(s2)!=LGLSXP
+             || LENGTH(s2)<=0)
+            abort();
+#   endif
+
     HELPERS_SETUP_OUT (7);
 
     switch (code) {
