@@ -36,7 +36,7 @@
    value may be desirable to prevent large numbers of outstanding tasks
    when some values are computed but never used. */
 
-#define MAX_TASKS 15
+#define MAX_TASKS 7
 
 
 /* TYPES DEFINED BY THE APPLICATION. */
@@ -108,7 +108,7 @@ extern void helpers_merge_proc ( /* helpers_var_ptr out, */
 #define helpers_printf Rprintf
 
 #define ENABLE_TRACE 1
-#define ENABLE_STATS 0
+#define ENABLE_STATS 1
 
 
 /* TASK AND VARIABLE NAMES FOR TRACE OUTPUT.  Functions references are in

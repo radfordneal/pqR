@@ -1252,6 +1252,9 @@ static SEXP do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
     SA_TYPE ask=SA_DEFAULT;
     int status, runLast;
 
+    helpers_stats(); /* Normally does nothing, since normally ENABLE_STATS is 0,
+                        but could be useful sometimes for debugging */
+
     /* if there are any browser contexts active don't quit */
     if(countContexts(CTXT_BROWSER, 1)) {
 	warning(_("cannot quit from browser"));
