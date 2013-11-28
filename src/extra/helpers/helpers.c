@@ -1123,8 +1123,11 @@ static void notice_completed_proc (void)
          Also, we find out here whether the output variable is still being 
          computed.  We rely on a task that takes piped input for its 'out' 
          variable not finishing before the earlier task has fully computed 
-         this variable, so only later tasks might still be computing it. */
+         this variable, so only later tasks might still be computing it. 
+         Note, however, that we can't rely on the 'done' flags being set in
+         the sequence that the tasks completed their computations. */
 
+      helpers_var_ptr out = info->var[0];
       int still_being_computed = 0;
 
       if (info->out_used)
@@ -1150,6 +1153,9 @@ static void notice_completed_proc (void)
             still_being_computed = 1;
             break;
           }
+          if (ninfo->var[0]==out) /* possible even if ninfo->pipe[0]!=t */
+          { still_being_computed = 1;
+          }
         }
       }
   
@@ -1165,8 +1171,8 @@ static void notice_completed_proc (void)
          defined the required macro. */
   
 #     ifdef helpers_mark_not_being_computed
-      { if (!still_being_computed)
-        { helpers_mark_not_being_computed(info->var[0]);
+      { if (!still_being_computed && out!=null)
+        { helpers_mark_not_being_computed(out);
         }
       }
 #     endif
