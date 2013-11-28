@@ -286,6 +286,8 @@ static union task_entry
 
     /* The fields below are used only when ENABLE_TRACE is 2 or more. */
 
+    hix pipe_hlpr_done[3];
+    tix pipe_when_sched[3];        /* Value of "pipe" when task is scheduled */
     tix pipe_at_start[3];          /* Value of "pipe" when task is started */
     helpers_size_t first_amt[3];   /* First non-zero value from helpers_availN*/
     helpers_size_t last_amt[3];    /* Last value from helpers_amount_out */
@@ -1135,20 +1137,26 @@ static void notice_completed_proc (void)
             { ATOMIC_READ_SIZE (ninfo->last_amt[2] = info->amt_out);
             }
             ATOMIC_WRITE_CHAR (ninfo->pipe[2] = 0);
+ATOMIC_WRITE_CHAR(ninfo->pipe_hlpr_done[2] = info->helper);
           }
           if (ninfo->pipe[1]==t) 
           { if (ENABLE_TRACE>1)
             { ATOMIC_READ_SIZE (ninfo->last_amt[1] = info->amt_out);
             }
             ATOMIC_WRITE_CHAR (ninfo->pipe[1] = 0);
+ATOMIC_WRITE_CHAR(ninfo->pipe_hlpr_done[1] = info->helper);
           }
           if (ninfo->pipe[0]==t) 
           { if (ENABLE_TRACE>1)
             { ATOMIC_READ_SIZE (ninfo->last_amt[0] = info->amt_out);
             }
             ATOMIC_WRITE_CHAR (ninfo->pipe[0] = 0);
+ATOMIC_WRITE_CHAR(ninfo->pipe_hlpr_done[0] = info->helper);
             still_being_computed = 1;
             break;
+          }
+          if (ninfo->var[0]==info->var[0])
+          { still_being_computed = 1;
           }
         }
       }
@@ -1165,7 +1173,7 @@ static void notice_completed_proc (void)
          defined the required macro. */
   
 #     ifdef helpers_mark_not_being_computed
-      { if (!still_being_computed)
+      { if (!still_being_computed && info->var[0]!=null)
         { helpers_mark_not_being_computed(info->var[0]);
         }
       }
@@ -1607,7 +1615,7 @@ void helpers_do_task
              this task is done (immediately) in the master thread. */
 
 #         ifdef helpers_mark_not_being_computed
-            helpers_mark_not_being_computed (out);
+            helpers_mark_not_being_computed (out);  /* can't be null */
 #         endif
 
           /* Mark inputs of task being merged into as not being used, if
@@ -2026,6 +2034,16 @@ out_of_merge:
   search_done: ;
   }
 
+  info->pipe_when_sched[0] = info->pipe[0];
+  info->pipe_when_sched[1] = info->pipe[1];
+  info->pipe_when_sched[2] = info->pipe[2];
+  info->pipe_at_start[0] = -1;
+  info->pipe_at_start[1] = -1;
+  info->pipe_at_start[2] = -1;
+  info->pipe_hlpr_done[0] = -2;
+  info->pipe_hlpr_done[1] = -2;
+  info->pipe_hlpr_done[2] = -2;
+
   /* Do a master-now task directly. */
 
   if (t==0) 
@@ -2084,6 +2102,7 @@ out_of_merge:
   else
   { 
     omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
+
     h = suspended;
 
     ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);

@@ -712,7 +712,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     n = n1>n2 ? n1 : n2;
 
     /* Check that can be enabled for debugging... */
-#   if 1
+#   if 0
         if (TYPEOF(s1)!=REALSXP && TYPEOF(s1)!=INTSXP && TYPEOF(s1)!=LGLSXP
              || LENGTH(s1)<=0
          || TYPEOF(s2)!=REALSXP && TYPEOF(s2)!=INTSXP && TYPEOF(s2)!=LGLSXP
@@ -723,12 +723,12 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     if (n==1173) {
 
         int i;
-
+#if 0
         if (TYPEOF(s1)!=REALSXP || TYPEOF(s2)!=REALSXP) {
             fprintf(stderr,"types %d %d\n",TYPEOF(s1),TYPEOF(s2));
             abort();
         }
-
+#endif
         if (n1==n && n2==n && code==PLUSOP) {
             double k = REAL(s2)[0];
             double r = k*(k-1)/2;
@@ -748,6 +748,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                 }
             }
         }
+#if 0
         else if (n1==1 && n2==n && code==PLUSOP) {
             if (REAL(s1)[0]!=0.0) { 
                 fprintf(stderr,"B1\n"); fflush(stderr); abort(); 
@@ -783,6 +784,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             fflush(stderr);
             abort();
         }
+#endif
     }
 
     HELPERS_SETUP_OUT (7);
