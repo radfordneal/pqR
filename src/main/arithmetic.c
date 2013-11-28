@@ -720,6 +720,71 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             abort();
 #   endif
 
+    if (n==1173) {
+
+        int i;
+
+        if (TYPEOF(s1)!=REALSXP || TYPEOF(s2)!=REALSXP) {
+            fprintf(stderr,"types %d %d\n",TYPEOF(s1),TYPEOF(s2));
+            abort();
+        }
+
+        if (n1==n && n2==n && code==PLUSOP) {
+            double k = REAL(s2)[0];
+            double r = k*(k-1)/2;
+            for (i = n-1; i>=0; i--) {
+                double val = REAL(s1)[i];
+                if (val!=r) { 
+                    double sv[1173];
+                    for (int j = n-1; j>=0; j--) sv[j] = REAL(s1)[j];
+                    fprintf(stderr,"A1 %.15g %.15g %.15g %d\n",val,k,r,i); 
+                    for (int j = 0; j<n; j++) 
+                        printf("%d  %.15g  %.15g\n",j,sv[j],REAL(s2)[j]);
+                    fflush(stderr); 
+                    abort(); 
+                }
+                if (REAL(s2)[i]!=k) { 
+                    fprintf(stderr,"A2\n"); fflush(stderr); abort(); 
+                }
+            }
+        }
+        else if (n1==1 && n2==n && code==PLUSOP) {
+            if (REAL(s1)[0]!=0.0) { 
+                fprintf(stderr,"B1\n"); fflush(stderr); abort(); 
+            }
+            for (i = 0; i<n; i++) {
+                if (REAL(s2)[i]!=1.0) { 
+                    fprintf(stderr,"B2\n"); fflush(stderr); abort(); 
+                }
+            }
+        }
+        else if (n1==n && n2==1 && code==PLUSOP) {
+            double k = REAL(s1)[0];
+            if (REAL(s2)[0]!=0.0) { 
+                fprintf(stderr,"C1\n"); fflush(stderr); abort(); 
+            }
+            for (i = 0; i<n; i++) {
+                if (REAL(s1)[i]!=k) { 
+                    fprintf(stderr,"C2\n"); fflush(stderr); abort(); 
+                }
+            }
+        }
+        else if (n1==n && n2==1 && code==TIMESOP) {
+            for (i = 0; i<n; i++) {
+                if (REAL(s1)[i]!=1.0) { 
+                    fprintf(stderr,"D2 %d %f %.15g\n",i,REAL(s2)[0],REAL(s1)[i]); 
+                    fflush(stderr); 
+                    abort(); 
+                }
+            }
+        }
+        else {
+            fprintf(stderr,"code=%d n1=%d n2=%d\n",(int)code,n1,n2);
+            fflush(stderr);
+            abort();
+        }
+    }
+
     HELPERS_SETUP_OUT (7);
 
     switch (code) {
