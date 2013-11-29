@@ -1,0 +1,1246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>R: pqR News</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="R.css">
+</head><body>
+
+<table width="100%" summary="page for NEWS"><tr><td>NEWS</td><td align="right">R Documentation</td></tr></table>
+
+<h2> pqR News</h2>
+
+<h3>CHANGES IN VERSION RELEASED 2013-11-28</h3>
+
+
+
+
+<h4>INTRODUCTION</h4>
+
+
+ 
+<ul>
+<li><p> pqR is based on R-2.15.0, distributed by the R Core Team, but
+improves on it in many ways, mostly ways that speed it up, but also by
+implementing some new features and fixing some bugs.  See the notes
+below on earlier pqR releases for general discussion of pqR, and for
+information that has not changed from previous releases of pqR.
+</p>
+</li>
+<li><p> The most notable change in this release is that &ldquo;task merging&rdquo;
+is now implemented.  This can speed up sequences
+of vector operations by merging several operations into one, which 
+reduces time spent writing and later reading data in memory. 
+See <code>help(merging)</code> and the item below for more details.
+</p>
+</li>
+<li><p> This release also includes other performance improvements, bug fixes,
+and code cleanups, as detailed below.
+</p>
+</li></ul>
+
+
+
+<h4>INSTALLATION AND TESTING</h4>
+
+
+
+<ul>
+<li><p> Additional configuration options are now present to allow
+enabling and disabling of task merging, and more generally, of the
+deferred evaluation framework needed for both task merging and
+use of helper threads.  By default, these facilities are enabled.
+The <code>--disable-task-merging</code> option to <code>./configure</code>
+disables task merging, <code>--disable-helper-threads</code> disables
+support for helper threads (as before), and 
+<code>--disable-deferred-evaluation</code> disables both of these
+features, along with the whole deferred evaluation framework.
+See the <code>R-admin</code> manual for more details.
+</p>
+</li>
+<li><p> See the pqR wiki at <code>https://github.com/radfordneal/pqR/wiki</code>
+for the latest news regarding systems and packages that do or do not
+work with pqR.
+</p>
+</li>
+<li><p> Note that any packages compiled and installed under R Core versions of 
+R must be re-installed for use with pqR, as is generally the case with 
+new versions of R (although it so happens that it is not necessary to 
+re-install packages installed with pqR-2013-07-22 with this release,
+because the formats of the crucial internal data structures happen not
+to have changed).  Note, however, that there should be no problem 
+for those written purely in R (no C, C++, or Fortran).
+</p>
+</li>
+<li><p> Additional tests of matrix multiplication (<code>%*%</code>, <code>crossprod</code>,
+and <code>tcrossprod</code>) have been written.  They are run with
+<code>make check</code> or <code>make check-all</code>.
+</p>
+</li></ul>
+
+
+
+<h4>INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE</h4>
+
+
+
+<ul>
+<li><p> The table of built-in function names, C functions implementing them, and
+operation flags, which was previously found in <code>src/main/names.c</code>,
+has been split into multiple tables, located in the source files that 
+define such built-in functions (with only a few entries still in 
+<code>names.c</code>).  This puts the descriptions of these built-in
+functions next to their definitions, improving maintainability, and
+also reduces the number of global functions.  This change should have 
+no effects visible to users.
+</p>
+</li>
+<li><p> The initialization for fast dispatch to some primitive functions
+is now done in <code>names.c</code>, using tables in other source files
+analogous to those described in the point just above.  This is 
+cleaner, and eliminates an anomaly in the previous versions of
+pqR that a primitive function could be slower the first time it was
+used than when used later.
+</p>
+</li></ul>
+
+
+
+<h4>PERFORMANCE IMPROVEMENTS</h4>
+
+
+
+<ul>
+<li><p> Some sequences of vector operations can now be merged into a single
+operation, which can speed them up by eliminating memory operations
+to store and fetch intermediate results.  For example, when <code>v</code> is 
+a long vector, the expression 
+<code>exp(v+1)</code> can be merged into one task, which will compute 
+<code>exp(v[i]+1)</code> for each element, <code>i</code>, of <code>v</code> in a 
+single loop.  
+</p>
+<p>Currently, such &ldquo;task merging&rdquo; is done only for (some)
+operations in which only one operand is a vector. When there are
+helper threads (which might be able to do some operations even
+faster, in parallel) merging is done only when one of the
+operations merged is a simple addition, subtraction, or
+multiplication (with one vector operand and one scalar operand).
+</p>
+<p>See <code>help(merging)</code> for more details.
+</p>
+</li>
+<li><p> During all garbage collections, any tasks whose outputs are not
+referenced are now waited for, to allow memory used by their outputs to be
+recovered.  (Such unreferenced outputs should be rare in real 
+programs.)  In a full garbage collection, tasks with large inputs
+or outputs that are referenced only as task inputs
+are also waited for, so that the memory they occupy can be recovered.
+</p>
+</li>
+<li><p> The built-in C matrix multiplication routines and those in the supplied 
+BLAS have both been sped up, especially those used by <code>crossprod</code>
+and <code>tcrossprod</code>.  This will of course have no effect if a different
+BLAS is used and the <code>mat_mult_with_BLAS</code> option is set to
+<code>TRUE</code>.
+</p>
+</li>
+<li><p> Matrix multiplications in which one operand can be recognized as the
+result of a transpose operation are now done without actually creating
+the transpose as an intermediate result, thereby reducing both 
+computation time and memory usage.  Effectively, these uses of the
+<code>%*%</code> operator are converted to uses of <code>crossprod</code> or
+<code>tcrossprod</code>.  See <code>help("%*%")</code> for details.
+</p>
+</li>
+<li><p> Speed of <code>ifelse</code> has been improved (though it's now slower when the
+condition is scalar due to the bug fix mentioned below).
+</p>
+</li>
+<li><p> Inputs to the mod operator can now be piped. (Previously, this was 
+inadvertently prevented in some cases.)
+</p>
+</li>
+<li><p> The speed of the quick check for NA/NaN that can be enabled with 
+<code>-DENABLE_ISNAN_TRICK</code> in CFLAGS has been improved.
+</p>
+</li></ul>
+
+
+
+<h4>BUG FIXES</h4>
+
+
+
+<ul>
+<li><p> Fixed a bug in <code>ifelse</code> with scalar condition but other
+operands with length greater than one.  (Pointed out by Luke Tierney.)
+</p>
+</li>
+<li><p> Fixed a bug stemming from re-use of operand storage for a result
+(pointed out by Luke Tierney) illustrated by the following:
+</p>
+<PRE>   A &lt;- array(c(1), dim = c(1,1), dimnames = list("a", 1))
+   x &lt;- c(a=1)
+   A/(pi*x)
+</PRE>
+</li>
+<li><p> The <code>--disable-mat-mult-with-BLAS-in-helpers</code> configuration
+setting is now respected for complex matrix multiplication
+(previously it had only disabled use of the BLAS in helper
+threads for real matrix multiplication).
+</p>
+</li>
+<li><p> Fixed a bug in keeping track of references when assigning 
+repeated elements into a list array.
+</p>
+</li>
+<li><p> Fixed the following bug (also present in R-2.15.0 and R-3.0.2):
+</p>
+<PRE>   v &lt;- c(1,2)
+   m &lt;- matrix(c(3,4),1,2)
+   print(t(m)%*%v)
+   print(crossprod(m,v))
+</PRE>
+in which <code>crossprod</code> gave an error rather than produce the answer
+for the corresponding use of <code>%*%</code>.
+</li></ul>
+
+
+
+<h3>CHANGES IN VERSION RELEASED 2013-07-22</h3>
+
+
+
+
+<h4>INTRODUCTION</h4>
+
+
+ 
+<ul>
+<li><p> pqR is based on R-2.15.0, distributed by the R Core Team, but
+improves on it in many ways, mostly ways that speed it up, but also by
+implementing some new features and fixing some bugs.  See the notes
+below, on the release of 2013-06-28, for general discussion of pqR,
+and for information on pqR that has not changed since that release.
+</p>
+</li>
+<li><p> This updated release of pqR provides some performance
+enhancements and bug fixes, including some from R Core releases after
+R-2.15.0.  More work is still needed to incorporate improvements in
+R-2.15.1 and later R Core releases into pqR.
+</p>
+</li>
+<li><p> This release is the same as the briefly-released version of
+2013-17-19, except that it fixes one bug and one reversion of an
+optimization that were introduced in that release, and tweaks the
+Windows Makefiles (which are not yet fully tested).
+</p>
+</li></ul>
+
+
+
+<h4>FEATURE AND DOCUMENTATION CHANGES</h4>
+
+
+
+<ul>
+<li><p> Detailed information on what operations can be done in helper
+threads is now provided by help(helpers).
+</p>
+</li>
+<li><p> Assignment to parts of a vector via code such as 
+<code>v[[i]]&lt;-value</code> and <code>v[ix]&lt;-values</code> now automatically 
+converts raw values to the appropriate type
+for assignment into numeric or string vectors, and assignment
+of numeric or string values into a raw vector now results in the
+raw vector being first converted to the corresponding type.  This
+is consistent with the existing behaviour with other types.
+</p>
+</li>
+<li><p> The allowed values for assignment to an element of an &quot;expression&quot; 
+list has been expanded to match the allowed values for ordinary
+lists.  These values (such as function closures) could previously 
+occur in expression lists as a result of other operations (such
+as creation with the <code>expression</code> primitive).
+</p>
+</li>
+<li><p> Operations such as
+<code>v &lt;- pairlist(1,2,3); v[[-2]] &lt;- NULL</code> now raise an error.
+These operations were previously documented as being illegal, and
+they are illegal for ordinary lists.  The proper way to do
+this deletion is <code>v &lt;- pairlist(1,2,3); v[-2] &lt;- NULL</code>.
+</p>
+</li>
+<li><p> Raising <code>-Inf</code> to a large value (eg, <code>(-Inf)^(1e16)</code>)
+no longer produces an incomprehensible warning.  As before, the 
+value returned is <code>Inf</code>, because (due to their 
+limited-precision floating-point representation) all such large 
+numbers are even integers.
+</p>
+</li></ul>
+
+
+
+<h4>FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES</h4>
+
+
+
+<ul>
+<li><p> From R-2.15.1: On Windows, there are two new environment variables which
+control the defaults for command-line options.
+</p>
+<p>If <span class="env">R_WIN_INTERNET2</span> is set to a non-empty value, it is as if
+<span class="option">--internet2</span> was used.
+</p>
+<p>If <span class="env">R_MAX_MEM_SIZE</span> is set, it gives the default memory limit
+if <span class="option">--max-mem-size</span> is not specified: invalid values being
+ignored.
+</p>
+</li>
+<li><p> From R-2.15.1: The NA warning messages from e.g. <code>pchisq()</code> now 
+report the call to the closure and not that of the <code>.Internal</code>.
+</p>
+</li>
+<li><p> The following included software has been updated to new versions:
+zlib to 1.2.8, LZMA to 5.0.4, and PCRE to 8.33.
+</p>
+</li></ul>
+
+
+
+<h4>INSTALLATION AND TESTING</h4>
+
+
+
+<ul>
+<li><p> See the pqR wiki at <code>https://github.com/radfordneal/pqR/wiki</code>
+for the latest news regarding systems and packages that do or do not
+work with pqR.
+</p>
+</li>
+<li><p> Note that any previosly-installed packages must be re-installed for 
+use with pqR (as is generally the case with new versions of R), except
+for those written purely in R.
+</p>
+</li>
+<li><p> It is now known that pqR can be successfully installed under Mac
+OS X for use via the command line (at least with some versions
+of OS X).  The gcc 4.2
+compiler supplied by Apple with Xcode works when helper threads
+are disabled, but does not have the full OpenMP support required for
+helper threads.   For helper threads to work, a C compiler that fully
+supports OpenMP is needed, such as gcc 4.7.3 (available via 
+macports.org).
+</p>
+<p>The Apple BLAS and LAPACK routines can be used by giving the
+<code>--with-blas='-framework vecLib'</code> and <code>--withlapack</code>
+options to <code>configure</code>.  This speeds up some operations
+but slows down others.
+</p>
+<p>The R Mac GUI would need to be recompiled for use with pqR.
+There are problems doing this unless helper threads
+are disabled (see pqR issue #17 for discussion).
+</p>
+<p>Compiled binary versions of pqR for Mac OS X are not yet being supplied.
+Installation on a Mac is recommended only for users experienced
+in installation of R from source code.
+</p>
+</li>
+<li><p> Success has also been reported in installing pqR on a Windows
+system, including with helper threads, but various tweaks were
+required.  Some of these tweaks are incorporated in this release,
+but they are probably not sufficient for installation &quot;out of the box&quot;.
+Attempting to install pqR on Windows is recommended only for
+users who are both experienced and adventurous.
+</p>
+</li>
+<li><p> Compilation using the <code>-O3</code> option for gcc is not recommended.
+It speeds up some operations, but slows down others.  With gcc 4.7.3
+on a 32-bit Intel system running Ubuntu 13.04, compiling with 
+<code>-O3</code> causes compiled functions to crash. (This is not a
+pqR issue, since the same thing happens when R-2.15.0 is compiled 
+with <code>-O3</code>).
+</p>
+</li></ul>
+
+
+
+<h4>INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE</h4>
+
+
+
+<ul>
+<li><p> The R internals manual now documents (in Section 1.8) a
+preliminary set of conventions that pqR follows (not yet
+perfectly) regarding when objects may be modified, and how
+NAMEDCNT should be maintained.  R-2.15.0 did not follow any
+clear conventions.
+</p>
+</li>
+<li><p> The documentation in the R internals manual on how helper
+threads are implemented in pqR now has the correct title.  (It
+would previously have been rather hard to notice.)
+</p>
+</li></ul>
+
+
+
+<h4>PERFORMANCE IMPROVEMENTS</h4>
+
+
+
+<ul>
+<li><p> Some unnecessary duplication of objects has been eliminated.  Here
+are three examples:  
+Creation of lists no longer duplicates all the elements put in the
+list, but instead increments <code>NAMEDCNT</code> for these elements, so
+that
+</p>
+<PRE>   a &lt;- numeric(10000)
+   k &lt;- list(1,a)
+</PRE>
+no longer duplicates <code>a</code> when <code>k</code> is created (though a duplication
+will be needed later if either <code>a</code> or <code>k[[2]]</code> is modified).
+Furthermore, the assignment below to <code>b$x</code>, no longer
+causes duplication of the 10000 elements of <code>y</code>:
+<PRE>   a &lt;- list (x=1, y=seq(0,1,length=10000))
+   b &lt;- a
+   b$x &lt;- 2
+</PRE>
+Instead, a single vector of 10000 elements is shared between <code>a$y</code> and
+<code>b$y</code>, and will be duplicated later only if necessary.  Unnecessary
+duplication of a 10000-element vector is also avoided when <code>b[1]</code> is 
+assigned to in the code below:
+<PRE>   a &lt;- list (x=1, y=seq(0,1,length=10000))
+   b &lt;- a$y
+   a$y &lt;- 0
+   b[1] &lt;- 1
+</PRE>
+The assignment to <code>a$y</code> now reduces <code>NAMEDCNT</code> for the vector
+bound to <code>b</code>, allowing it to be changed without duplication.
+</li>
+<li><p> Assignment to part of a vector using code such as <code>v[101:200]&lt;-0</code>
+will now not actually create a vector of 100 indexes, but will instead
+simply change the elements with indexes 101 to 200 without creating
+an index vector.  This optimization has not yet been implemented for
+matrix or array indexing.
+</p>
+</li>
+<li><p> Assignments to parts of vectors, matrices, and arrays using &quot;[&quot; has been
+sped up by detailed code improvements, quite substantially in some
+cases.
+</p>
+</li>
+<li><p> Subsetting of arrays of three or more dimensions using &quot;[&quot; has
+been sped up by detailed code improvements.
+</p>
+</li>
+<li><p> Pending summations of one-argument mathematical functions are now
+passed on by <code>sum</code>.  So, for example, in 
+<code>sum(exp(a)) + sum(exp(b))</code>, the two
+summations of exponentials can now potentially be done in parallel.
+</p>
+</li>
+<li><p> A full garbage collection now does not wait for all tasks being
+done by helpers to complete.  Instead, only tasks that are using
+or computing variables that are not otherwise referenced are 
+waited for (so that this storage can be reclaimed).
+</p>
+</li></ul>
+
+
+
+<h4>BUG FIXES</h4>
+
+
+
+<ul>
+<li><p> A bug that could have affected the result of <code>sum(abs(v))</code> when
+it is done by a helper thread has been fixed.
+</p>
+</li>
+<li><p> A bug that could have allowed <code>as.vector</code>, <code>as.integer</code>, etc.
+to pass on an object still being computed to a caller not expecting
+such a pending object has been fixed.
+</p>
+</li>
+<li><p> Some bugs in which production of warnings at inopportune times could 
+have caused serious problems have been fixed.
+</p>
+</li>
+<li><p> The bug illustrated below (pqR issue #13) has been fixed:
+</p>
+<PRE>   &gt; l = list(list(list(1)))
+   &gt; l1 = l[[1]]
+   &gt; l[[c(1,1,1)]] &lt;- 2
+   &gt; l1
+   [[1]]
+   [[1]][[1]]
+   [1] 2
+</PRE>
+</li>
+<li><p> Fixed a bug (also present in R-2.15.0 and R-3.0.1) illustrated by the
+following code:
+</p>
+<PRE>   &gt; a &lt;- list(x=c(1,2),y=c(3,4))
+   &gt; b &lt;- as.pairlist(a)
+   &gt; b$x[1] &lt;- 9
+   &gt; print(a)
+   $x
+   [1] 9 2
+   
+   $y
+   [1] 3 4
+</PRE>
+The value printed for a has a$x[1] changed to 9, when it should still be 1.
+See pqR issue #14.
+</li>
+<li><p> Fixed a bug (also present in R-2.15.0 and R-3.0.1) in which extending
+an &quot;expression&quot; by assigning to a new element changes it to an ordinary
+list.  See pqR issue #15.
+</p>
+</li>
+<li><p> Fixed several bugs (also present in R-2.15.0 and R-3.0.1) illustrated
+by the code below (see pqR issue #16):
+</p>
+<PRE>   v &lt;- c(10,20,30)
+   v[[2]] &lt;- NULL        # wrong error message
+   
+   x &lt;- pairlist(list(1,2))
+   x[[c(1,2)]] &lt;- NULL   # wrongly gives an error, referring to misuse
+                         # of the internal SET_VECTOR_ELT procedure
+   
+   v&lt;-list(1)
+   v[[quote(abc)]] &lt;- 2  # internal error, this time for SET_STRING_ELT
+   
+   a &lt;- pairlist(10,20,30,40,50,60)
+   dim(a) &lt;- c(2,3)
+   dimnames(a) &lt;- list(c("a","b"),c("x","y","z"))
+   print(a)              # doesn't print names
+   
+   a[["a","x"]] &lt;- 0     # crashes with a segmentation fault
+</PRE>
+</li></ul>
+
+
+
+<h4>BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES</h4>
+
+
+
+<ul>
+<li><p> From R-2.15.1: <code>formatC()</code> uses the C entry point <code>str_signif</code>
+which could write beyond the length allocated for the output string.
+</p>
+</li>
+<li><p> From R-2.15.1: <code>plogis(x, lower = FALSE, log.p = TRUE)</code> no longer
+underflows early for large x (e.g. 800).
+</p>
+</li>
+<li><p> From R-2.15.1: <code>?Arithmetic</code>'s &ldquo;<code>1 ^ y</code> and <code>y ^ 0</code>
+are <code>1</code>, <EM>always</EM>&rdquo; now also applies for <code>integer</code>
+vectors <code>y</code>.
+</p>
+</li>
+<li><p> From R-2.15.1: X11-based pixmap devices like <code>png(type = "Xlib")</code> 
+were trying to set the cursor style, which triggered some warnings and
+hangs.
+</p>
+</li>
+<li><p> From R-3.0.1 patched: Fixed comment-out bug in BLAS, as per PR 14964.
+</p>
+</li></ul>
+
+
+
+<h3>CHANGES IN VERSION RELEASED 2013-06-28</h3>
+
+
+
+
+<h4>INTRODUCTION</h4>
+
+
+ 
+<ul>
+<li><p> This release of pqR is based on R-2.15.0, distributed by the R
+Core Team, but improves on it in many ways, mostly ways that speed it
+up, but also by implementing some new features and fixing some bugs.
+One notable speed improvement in pqR is that for systems with multiple
+processors or processor cores, pqR is able to do some numeric
+computations in parallel with other operations of the interpreter, and
+with other numeric computations.
+</p>
+</li>
+<li><p> This is the second publicised release of pqR (the first was on
+2013-06-20, and there were earlier unpublicised releases). It fixes one
+significant pqR bug (that could cause two empty strings to not compare
+as equal, reported by Jon Clayden), fixes a bug reported to R Core (PR
+15363) that also existed in pqR (see below), fixes a bug in deciding
+when matrix multiplies are best done in a helper thread, and fixes some
+issues preventing pqR from being built in some situations (including
+some partial fixes for Windows suggested by &quot;armgong&quot;).  Since the
+rest of the news is almost unchanged from the previous release, I have
+not made a separate news section for this release. (New sections will
+be created once new releases have significant differences.)
+</p>
+</li>
+<li><p> This section documents changes in pqR from R-2.15.0 that are of
+direct interest to users.  For changes from earlier version of R to
+R-2.15.0, see the ONEWS, OONEWS, and OOONEWS files.  Changes of little
+interest to users, such as code cleanups and internal details on
+performance improvements, are documented in the file MODS, which
+relates these changes to branches in the code repository at
+github.com/radfordneal/pqR.
+</p>
+</li>
+<li><p> Note that for compatibility with R's version system, pqR presently
+uses the same version number, 2.15.0, as the version of R on which it
+is based. This allows checks for feature availability to continue to
+work.  This scheme will likely change in the future.  Releases of pqR
+with the same version number are distinguished by release date.
+</p>
+</li>
+<li><p> See radfordneal.github.io/pqR for current information on pqR, including
+announcements of new releases, a link to the page for making and viewing
+reports of bugs and other issues, and a link to the wiki page containing
+information such as systems on which pqR has been tested.
+</p>
+</li></ul>
+
+
+
+<h4>FEATURE CHANGES</h4>
+
+
+
+<ul>
+<li><p> A new primitive function <code>get_rm</code> has been added,
+which removes a variable while returning the value it
+had when removed.  See <code>help(get_rm)</code> for details,
+and how this can sometimes improve efficiency of R functions.
+</p>
+</li>
+<li><p> An enhanced version of the <code>Rprofmem</code> function for profiling
+allocation of vectors has been implemented, that can
+display more information, and can output to the terminal,
+allowing the source of allocations to more easily be
+determined.  Also, <code>Rprofmem</code> is now always accessible
+(not requiring the <code>--enable-memory-profiling</code> configuration
+option).  Its overhead when not in use is negligible.
+</p>
+<p>The new version allows records of memory allocation to be
+output to the terminal, where their position relative to
+other output can be informative (this is the default for the
+new <code>Rprofmemt</code> variant).  More identifying
+information, including type, number of elements, and
+hexadecimal address, can also be output.  For more details on
+these and other changes, see <code>help(Rprofmem)</code>.
+</p>
+</li>
+<li><p> A new primitive function, pnamedcnt, has been added, that
+prints the NAMEDCNT/NAMED count for an R object, which is helpful
+in tracking when objects will have to be duplicated.  For
+details, see help(pnamedcnt).
+</p>
+</li>
+<li><p> The <code>tracemem</code> function is defunct.  What exactly it was
+supposed to do in R-2.15.0 was unclear, and optimizations 
+in pqR make it even less clear what it should do.  The bit
+in object headers that was used to implement it has been
+put to a better use in pqR.  The <code>--enable-memory-profiling</code>
+configuration option used to enable it no longer exists.
+</p>
+<p>The <code>retracemem</code> function remains for compatibility
+(doing nothing).  The <code>Rprofmemt</code> and <code>pnamedcnt</code>
+functions described above provide alternative ways of gaining
+insight into memory allocation behaviour.
+</p>
+</li>
+<li><p> Some options that can be set by arguments to the R command can
+now also be set with environment variables, specifically, the
+values of R_DEBUGGER, R_DEBUGGER_ARGS, and R_HELPERS give the
+default when <code>--debugger</code>, <code>--debugger-args</code>, and 
+<code>--helpers</code> are not specified on the command line.  This 
+feature is useful when using a shell file or Makefile that contains 
+R commands that one would rather not have to modify.
+</p>
+</li></ul>
+
+
+
+
+<h4>INSTALLATION AND TESTING</h4>
+
+
+
+<ul>
+<li><p> The procedure for compiling and installing from source is largely 
+unchanged from R-2.15.0.  In particular, the final result is a 
+program called &quot;R&quot;, not &quot;pqR&quot;, though of course you can provide a 
+link to it called &quot;pqR&quot;.  Note that (as for R-2.15.0) it is not 
+necessary to do an &quot;install&quot; after &quot;make&quot; &mdash; one can just
+run bin/R in the directory where you did &quot;make&quot;.  This may be 
+convenient if you wish to try out pqR along with your current 
+version of R.
+</p>
+</li>
+<li><p> Testing of pqR has so far been done only on Linux/Unix
+systems, not on Windows or Mac systems.  There is no specific
+reason to believe that it will not work on Windows or Mac
+systems, but until tests have been done, trying to use it 
+on these systems is not recommended.  (However, some users
+have reported that pqR can be built on Mac systems, as long
+as a C compiler fully supporting OpenMP is used, or the
+<code>--disable-helper-threads</code> configuration option is used.)
+</p>
+</li>
+<li><p> This release contains the versions of the standard and recommended
+packages that were released with R-2.15.0.  Newer versions may
+or may not be compatible (same as for R-2.15.0).
+</p>
+</li>
+<li><p> It is intended that this release will be fully compatible with
+R-2.15.0, but you will need to recompile any packages (other
+that those with only R code) that you had installed for R-2.15.0, 
+and any other C code you use with R, since the format of internal 
+data structures has changed (see below).
+</p>
+</li>
+<li><p> New configuration options relating to helper threads and
+to matrix multiplication now exist.  For details, see 
+doc/R-admin.html (or R-admin.pdf), or run <code>./configure --help</code>.
+</p>
+<p>In particular, the <code>--disable-helper-threads</code> option
+to configure will remove support for helper threads.  Use of
+this option is advised if you know that multiple processors
+or processor cores will not be available, or if you know that
+the C compiler used does not support OpenMP 3.0 or 3.1 (which 
+is used in the implementation of the helpers package).
+</p>
+</li>
+<li><p> Including <code>-DENABLE_ISNAN_TRICK</code> in CFLAGS will speed up 
+checks for NA and NaN on machines on which it works.  It works
+on Intel processors (verified both empirically and by consulting
+Intel documentation).  It does not work on SPARC machines.
+</p>
+</li>
+<li><p> The <code>--enable-memory-profiling</code> option to configure
+no longer exists.  In pqR, the <code>Rprofmem</code> function is always
+enabled, and the <code>tracemem</code> function is defunct.  (See
+discussion above.)
+</p>
+</li>
+<li><p> When installing from source, the output of configure 
+now displays whether standard and recommended packages will
+be byte compiled.
+</p>
+</li>
+<li><p> The tests of random number generation run with <code>make check-all</code>
+now set the random number seed explicitly.  Previously, the random
+number seed was set from the time and process ID, with the result
+that these tests would occasionally fail non-deterministically,
+when by chance one of the p-values obtained was below the threshold
+used.  (Any such failure should now occur consistently, rather
+than appearing to be due to a non-deterministic bug.)
+</p>
+</li>
+<li><p> Note that (as in R-2.15.0) the output of <code>make check-all</code> for 
+the boot package includes many warning messages regarding a 
+non-integer argument, and when byte compilation is enabled, these 
+messages identify the wrong function call as the source.  This 
+appears to have no wider implications, and can be ignored.
+</p>
+</li>
+<li><p> Testing of the &quot;xz&quot; compression method is now done with <code>try</code>,
+so that failure will be tolerated on machines that don't have enough
+memory for these tests.
+</p>
+</li>
+<li><p> The details of how valgrind is used have changed. See the source
+file &lsquo;<span class="file">memory.c</span>&rsquo;.
+</p>
+</li></ul>
+
+
+
+
+<h4>INTERNAL STRUCTURES AND APPLICATION PROGRAM INTERFACE</h4>
+
+
+
+<ul>
+<li><p> The internal structure of an object has changed, in ways that 
+should be compatible with R-2.15.0, but which do require 
+re-compilation.  The flags in the object header for <code>DEBUG</code>,
+<code>RSTEP</code>, and <code>TRACE</code> now exist only for non-vector 
+objects, which is sufficient for their present use (now that 
+<code>tracemem</code> is defunct).
+</p>
+</li>
+<li><p> The sizes of objects have changed in some cases (though not most).
+For a 32-bit configuration, the size of a cons cell increases
+from 28 bytes to 32 bytes; for a 64-bit configuration, the
+size of a cons cell remains at 56 bytes.  For a 32-bit 
+configuration, the size of a vector of one double remains
+at 32 bytes; for a 64-bit configuration (with 8-byte alignment), 
+the size of a vector of one double remains at 48 bytes.
+</p>
+</li>
+<li><p> Note that the actual amount of memory occupied by an object
+depends on the set of node classes defined (which may be tuned).
+There is no longer a separate node class for cons cells and
+zero-length vectors (as in R-2.15.0) &mdash; instead, cons cells
+share a node class with whatever vectors also fit in that
+node class.
+</p>
+</li>
+<li><p> The old two-bit NAMED field of an object is now a three-bit
+NAMEDCNT field, to allow for a better attempt at reference
+counting.  Versions of the the NAMED and SET_NAMED macros
+are still defined for compatibility.  See the R-ints manual
+for details.
+</p>
+</li>
+<li><p> Setting the length of a vector to something less than its
+allocated length using SETLENGTH is deprecated.  The LENGTH
+field is used for memory allocation tracking by the garbage
+collector (as is also the case in R-2.15.0), so setting it 
+to the wrong value may cause problems.  (Setting the length
+to more than the allocated length is of course even worse.)
+</p>
+</li></ul>
+
+
+
+
+<h4>PERFORMANCE IMPROVEMENTS</h4>
+
+
+
+<ul>
+<li><p> Many detailed improvements have been made that reduce
+general interpretive overhead and speed up particular 
+functions.  Only some of these improvements are noted
+below.
+</p>
+</li>
+<li><p> Numerical computations can now be performed in parallel with
+each other and with interpretation of R code, by using 
+&ldquo;helper threads&rdquo;, on machines
+with multiple processors or multiple processor cores.  When
+the output of one such computation is used as the input to
+another computation, these computations can often be done
+in parallel, with the output of one task being &ldquo;pipelined&rdquo;
+to the other task.  Note that these 
+parallel execution facilities do not require any changes to user 
+code &mdash; only that helper threads be enabled with the 
+<code>--helpers</code> option to the command starting pqR. See 
+<code>help(helpers)</code> for details.
+</p>
+<p>However, helper threads are not used for operations that are 
+done within the interpreter for byte-compiled code or that are 
+done in primitive functions invoked by the byte-code interpreter.
+</p>
+<p>This facility is still undergoing rapid development.  Additional 
+documentation on which operations may be done in parallel will be 
+forthcoming.
+</p>
+</li>
+<li><p> A better attempt at counting how many &quot;names&quot; an object has
+is now made, which reduces how often objects are duplicated
+unnecessarily.  This change is ongoing, with further improvements
+and documentation forthcoming.
+</p>
+</li>
+<li><p> Several primitive functions that can generate integer sequences
+&mdash; &quot;:&quot;, seq.int, seq_len, and seq_along &mdash; will now sometimes
+not generate an actual sequence, but rather just a description
+of its start and end points.  This is not visible to users,
+but is used to speed up several operations.
+</p>
+<p>In particular, &quot;for&quot; loops such as <code>for (i in 1:1000000) ...</code>
+are now done without actually allocating a vector to hold
+the sequence.  This saves both space and time.  Also,
+a subscript such as <code>101:200</code> for a vector or as the first 
+subscript for a matrix is now (often) handled without actually 
+creating a vector of indexes, saving both time and space.  
+</p>
+<p>However, the above performance improvements 
+are not effective in compiled code.
+</p>
+</li>
+<li><p> Matrix multiplications with the <code>%*%</code> operator are now
+much faster when the operation is a vector dot product, a
+vector-matrix product, a matrix-vector product, or more generally
+when the sum of the numbers of rows and columns in the result
+is not much less than their product.  This improvement results
+from the elimination of a costly check for NA/NaN elements in the 
+operands before doing the multiply.  There is no need for this check
+if the supplied BLAS is used.  If a BLAS that does not properly
+handle NaN is supplied, the <code>%*%</code> operator will still
+handle NaN properly if the new library of matrix multiply
+routines is used for <code>%*%</code> instead of the BLAS.  See the
+next two items for more relevant details.
+</p>
+</li>
+<li><p> A new library of matrix multiply routines is provided, which
+is guaranteed to handle NA/NaN correctly, and which supports
+pipelined computation with helper threads.  Whether this
+library or the BLAS routines are used for <code>%*%</code> is
+controlled by the <code>mat_mult_with_BLAS</code> option. The default
+is to not use the BLAS, but the 
+<code>--enable-mat-mult-with-BLAS-by-default</code> configuration option
+will change this.  See <code>help("%*%")</code> for details.
+</p>
+</li>
+<li><p> The BLAS routines supplied with R were modified to improve the 
+performance of the routines DGEMM (matrix-matrix multiply) and 
+DGEMV (matrix-vector multiply).  Also, proper propagation of NaN, 
+Inf, etc. is now always done in these routines.  This speeds
+up the <code>%*%</code> operator in R, when the supplied BLAS is used
+for matrix multiplications, and speeds up other matrix operations
+that call these BLAS routines, if the BLAS used is the one supplied.
+</p>
+</li>
+<li><p> The low-level routines for generation of uniform random
+numbers have been improved.  (These routines are also used for
+higher-level functions such as <code>rnorm</code>.)
+</p>
+<p>The previous code copied the seed back and forth to
+.Random.seed for every call of a random number generation
+function, which is rather time consuming given that for
+the default generator <code>.Random.seed</code> is 625 integers long.
+It also allocated new space for <code>.Random.seed</code> every time.
+Now, <code>.Random.seed</code> is used without copying, except when the 
+generator is user-supplied.  
+</p>
+<p>The previous code had imposed an unnecessary limit on the
+length of a seed for a user-supplied random number
+generator, which has now been removed.
+</p>
+</li>
+<li><p> The <code>any</code> and <code>all</code> primitives have been substantially
+sped up for large vectors.  
+</p>
+<p>Also, expressions such as
+<code>all(v&gt;0)</code> and <code>any(is.na(v))</code>, where <code>v</code> is a
+real vector, avoid computing and storing a logical vector,
+instead computing the result of <code>any</code> or <code>all</code>
+without this intermediate, looking at only as much of <code>v</code>
+as is needed to determine the result.
+However, this improvement is not effective in compiled code.
+</p>
+</li>
+<li><p> When <code>sum</code> is applied to many mathematical functions
+of one vector argument, for example <code>sum(log(v))</code>, the
+sum is performed as the function is computed, without a
+vector being allocated to hold the function values.  
+However, this improvement is not effective in compiled code.
+</p>
+</li>
+<li><p> The handling of power operations has been improved (primarily 
+for powers of reals, but slightly affecting powers of integers too).
+In particular, scalar powers of 2, 1, 0, and -1, are handled 
+specially to avoid general power operations in these cases.
+</p>
+</li>
+<li><p> Extending lists and character vectors by assigning to an
+index past the end, and deleting list items by assigning NULL
+have been sped up substantially.
+</p>
+</li>
+<li><p> The speed of the transpose (<code>t</code>) function has been
+improved, when applied to real, integer, and logical
+matrices.
+</p>
+</li>
+<li><p> The <code>cbind</code> and <code>rbind</code> functions have been greatly
+sped up for large objects.
+</p>
+</li>
+<li><p> The <code>c</code> and <code>unlist</code> functions have been sped up 
+by a bit in simple cases, and by a lot in some situations 
+involving names.
+</p>
+</li>
+<li><p> The <code>matrix</code> function has been greatly sped up, in
+many cases.
+</p>
+</li>
+<li><p> Extraction of subsets of vectors or matrices (eg, <code>v[100:200]</code>
+or <code>M[1:100,101:110]</code>) has been sped up substantially.
+</p>
+</li>
+<li><p> Logical operations and relational operators have been sped up
+in simple cases. Relational
+operators have also been substantially sped up for long vectors.
+</p>
+</li>
+<li><p> Access via the $ operator to lists, pairlists, and environments 
+has been sped up. 
+</p>
+</li>
+<li><p> Existing code for handling special cases of &quot;[&quot; in which there is
+only one scalar index was replaced by cleaner code that handles 
+more cases.   The old code handled only integer and real vectors, 
+and only positive indexes.  The new code handles all atomic 
+vectors (logical, integer, real, complex, raw, and string), and 
+positive or negative indexes that are not out of bounds.
+</p>
+</li>
+<li><p> Many unary and binary primitive functions are now usually
+called using a faster internal interface that does not allocate
+nodes for a pairlist of evaluated arguments. This change
+substantially speeds up some programs.
+</p>
+</li>
+<li><p> Lookup of some builtin/special function symbols (eg, &quot;+&quot; and &quot;if&quot;)
+has been sped up by allowing fast bypass of non-global environments
+that do not contain (and have never contained) one of these 
+symbols.
+</p>
+</li>
+<li><p> Some binary and unary arithmetic operations have been sped
+up by, when possible, using the space holding one of the
+operands to hold the result, rather than allocating new
+space.  Though primarily a speed improvement, for very
+long vectors avoiding this allocation could avoid running
+out of space.
+</p>
+</li>
+<li><p> Some speedup has been obtained by using new internal C functions 
+for performing exact or partial string matches in the interpreter.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+
+<ul>
+<li><p> The &quot;debug&quot; facility has been fixed.  Its behaviour for if,
+while, repeat, and for statements when the inner statement
+was or was not one with curly brackets had made no sense.
+The fixed behaviour is now documented in help(debug). 
+(I reported this bug and how
+to fix it to the R Core Team in July 2012, but the bug is 
+still present in R-3.0.1, released May 2013.)
+</p>
+</li>
+<li><p> Fixed a bug in <code>sum</code>, where overflow is allowed (and not 
+detected) where overflow can actually be avoided.  For example:
+</p>
+<PRE>   &gt; v&lt;-c(3L,1000000000L:1010000000L,-(1000000000L:1010000000L))
+   &gt; sum(v)
+   [1] 4629
+</PRE>
+Also fixed a related bug in <code>mean</code>, applied to an integer
+vector, which would arise only on a system where a long double 
+is no bigger than a double.
+</li>
+<li><p> Fixed <code>diag</code> so that it returns a matrix when passed
+a list of elements to put on the diagonal.
+</p>
+</li>
+<li><p> Fixed a bug that could lead to mis-identification of the 
+direction of stack growth on a non-Windows system, causing
+stack overflow to not be detected, and a segmentation fault 
+to occur.  (I also reported this bug and how to fix it to the 
+R Core Team, who included a fix in R-2.15.2.)
+</p>
+</li>
+<li><p> Fixed a bug where, for example, <code>log(base=4)</code> returned 
+the natural log of 4, rather than signalling an error. 
+</p>
+</li>
+<li><p> The documentation on what <code>MARGIN</code> arguments are allowed for
+<code>apply</code> has been clarified, and checks for validity added.
+The call 
+</p>
+<PRE>   &gt; apply(array(1:24,c(2,3,4)),-3,sum)
+</PRE>
+now produces correct results (the same as when <code>MARGIN</code>
+is <code>1:2</code>).
+</li>
+<li><p> Fixed a bug in which <code>Im(matrix(complex(0),3,4))</code> returned
+a matrix of zero elements rather than a matrix of NA elements.
+</p>
+</li>
+<li><p> Fixed a bug where more than six warning messages at startup
+would overwrite random memory, causing garbage output 
+and perhaps arbitrarily bizarre behaviour.
+</p>
+</li>
+<li><p> Fixed a bug where LC_PAPER was not correctly set at startup.
+</p>
+</li>
+<li><p> Fixed gc.time, which was producing grossly incorrect values
+for user and system time.
+</p>
+</li>
+<li><p> Now check for bad arguments for .rowSums, .colSums, .rowMeans,
+and .rowMeans (would previously segfault if n*p too big).
+</p>
+</li>
+<li><p> Fixed a bug where excess warning messages may be produced
+on conversion to RAW.  For instance:
+</p>
+<PRE>   &gt; as.raw(1e40)
+   [1] 00
+   Warning messages:
+   1: NAs introduced by coercion 
+   2: out-of-range values treated as 0 in coercion to raw 
+</PRE>
+Now, only the second warning message is produced.
+</li>
+<li><p> A bug has been fixed in which rbind would not handle 
+non-vector objects such as function closures, whereas
+cbind did handle them, and both were documented to do so.
+</p>
+</li>
+<li><p> Fixed a bug in numeric_deriv in stats/src/nls.c, where it
+was not duplicating when it should, as illustrated below:
+</p>
+<PRE>   &gt; x &lt;- 5; y &lt;- 2; f &lt;- function (y) x
+   &gt; numericDeriv(f(y),"y")
+    [1] 5
+    attr(,"gradient")
+         [,1]
+    [1,]    0
+    &gt; x
+    [1] 5
+    attr(,"gradient")
+         [,1]
+    [1,]    0
+</PRE>
+</li>
+<li><p> Fixed a bug in vapply illustrated by the following:
+</p>
+<PRE>   X&lt;-list(456)
+   f&lt;-function(a)X
+   A&lt;-list(1,2)  
+   B&lt;-vapply(A,f,list(0))
+   print(B)
+   X[[1]][1]&lt;-444
+   print(B)
+</PRE>
+After the fix, the values in <code>B</code> are no long changed by the 
+assignment to <code>X</code>. Similar bugs in mapply, eapply, and rapply 
+have also been fixed.  I reported these bugs to r-devel, and
+(different) fixes are in R-3.0.0 and later versions.
+</li>
+<li><p> Fixed a but in rep.int illustrated by the following:
+</p>
+<PRE>   a&lt;-list(1,2)
+   b&lt;-rep.int(a,c(2,2))
+   b[[1]][1]&lt;-9
+   print(a[[1]])
+</PRE>
+</li>
+<li><p> Fixed a bug in mget, illustrated by the following code:
+</p>
+<PRE>   a &lt;- numeric(1)
+   x &lt;- mget("a",as.environment(1))
+   print(x)
+   a[1] &lt;- 9
+   print(x)
+</PRE>
+</li>
+<li><p> Fixed bugs that the R Core Team fixed (differently) for R-2.15.3,
+illustrated by the following:
+</p>
+<PRE>   a &lt;- list(c(1,2),c(3,4))
+   b &lt;- list(1,2,3)
+   b[2:3] &lt;- a
+   b[[2]][2] &lt;- 99
+   print(a[[1]][2])
+
+   a &lt;- list(1+1,1+1)
+   b &lt;- list(1,1,1,1)
+   b[1:4] &lt;- a
+   b[[1]][1] &lt;- 1
+   print(b[2:4])
+</PRE>
+</li>
+<li><p> Fixed a bug illustrated by the following:
+</p>
+<PRE>   &gt; library(compiler)
+   &gt; foo &lt;- function(x,y) UseMethod("foo")
+   &gt; foo.numeric &lt;- function(x,y) "numeric"
+   &gt; foo.default &lt;- function(x,y) "default"
+   &gt; testi &lt;- function () foo(x=NULL,2)
+   &gt; testc &lt;- cmpfun (function () foo(x=NULL,2))
+   &gt; testi() 
+   [1] "default"
+   &gt; testc()
+   [1] "numeric"
+</PRE>
+</li>
+<li><p> Fixed several bugs that produced wrong results 
+such as the following:
+</p>
+<PRE>   a&lt;-list(c(1,2),c(3,4),c(5,6))
+   b&lt;-a[2:3]
+   a[[2]][2]&lt;-9
+   print(b[[1]][2])
+</PRE>
+I reported this to r-devel, and a (different) fix is in R-3.0.0 and 
+later versions.
+</li>
+<li><p> Fixed bugs reported on r-devel by Justin Talbot, Jan 2013 (also
+fixed, differently, in R-2.15.3), illustrated by the following:
+</p>
+<PRE>   a &lt;- list(1)
+   b &lt;- (a[[1]] &lt;- a)
+   print(b)
+   a &lt;- list(x=1)
+   b &lt;- (a$x &lt;- a)
+   print(b)
+</PRE>
+</li>
+<li><p> Fixed <code>svd</code> so that it will not return a list with
+<code>NULL</code> elements.  This matches the behaviour of <code>La.svd</code>.
+</p>
+</li>
+<li><p> Fixed (by a kludge, not a proper fix) a bug in the &quot;tre&quot;
+package for regular expression matching (eg, in <code>sub</code>),
+which shows up when <code>WCHAR_MAX</code> doesn't fit in an
+&quot;int&quot;.  The kludge reduces <code>WCHAR_MAX</code> to fit, but really
+the &quot;int&quot; variables ought to be bigger.  (This problem
+showed up on a Raspberry Pi running Raspbian.)
+</p>
+</li>
+<li><p> Fixed a minor error-reporting bug with
+<code>(1:2):integer(0)</code> and similar expressions.
+</p>
+</li>
+<li><p> Fixed a small error-reporting bug with &quot;$&quot;,
+illustrated by the following output:
+</p>
+<PRE>    &gt; options(warnPartialMatchDollar=TRUE)
+    &gt; pl &lt;- pairlist(abc=1,def=2)
+    &gt; pl$ab
+    [1] 1
+    Warning message:
+    In pl$ab : partial match of 'ab' to ''
+</PRE>
+</li>
+<li><p> Fixed documentation error in R-admin regarding the
+<code>--disable-byte-compiled-packages</code> configuration option, 
+and changed the DESCRIPTION file for the recommended mgcv 
+package to respect this option.
+</p>
+</li>
+<li><p> Fixed a bug reported to R Core (PR 15363, 2013-006-26) that
+also existed in pqR-2013-06-20.  This bug sometimes caused memory
+expansion when many complex assignments or removals were done
+in the global environment.
+</p>
+</li></ul>
+
+
+
+
+</body></html>
