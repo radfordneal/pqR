@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2013-11-25}{
+\section{CHANGES IN VERSION RELEASED 2013-11-28}{
 
   \subsection{INTRODUCTION}{
 
