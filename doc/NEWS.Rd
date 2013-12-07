@@ -157,6 +157,10 @@ information that has not changed from previous releases of pqR.
 }
 in which \code{crossprod} gave an error rather than produce the answer
 for the corresponding use of \code{\%*\%}.
+
+\item Bypassed a problem with the Xcode gcc compiler for the Mac that 
+      led to it falsely saying that using -DENABLE_ISNAN_TRICK in CFLAGS
+      doesn't work.
   }}
 }
 
