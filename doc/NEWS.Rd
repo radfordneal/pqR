@@ -141,6 +141,10 @@ information that has not changed from previous releases of pqR.
 
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
+
+\item Bypassed a problem with the Xcode gcc compiler for the Mac that 
+      led to it falsely saying that using -DENABLE_ISNAN_TRICK in CFLAGS
+      doesn't work.
   }}
 }
 
