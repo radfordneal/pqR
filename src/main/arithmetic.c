@@ -79,11 +79,9 @@ int matherr(struct exception *exc)
 #endif
 #endif
 
-#ifndef _AIX
-const double R_Zero_Hack = 0.0;	/* Silence the Sun compiler */
-#else
-double R_Zero_Hack = 0.0;
-#endif
+/* Hack to avoid possibly-incorrect constant folding. */
+volatile double R_Zero_Hack = 0.0;
+
 typedef union
 {
     double value;
