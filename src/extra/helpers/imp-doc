@@ -33,7 +33,7 @@ processor using cc 5.12 with OpenMP 3.1.
 Only a few OpenMP features are used: the parallel directive, the
 threadprivate directive, the flush directive (without variable list),
 the omp_get_thread_num procedure, and the omp_init_lock, omp_set_lock,
-omp_test_lock, and omp_unset_lock procedures, and for OpenMP 3.1, the
+omp_test_lock, and omp_unset_lock procedures, plus for OpenMP 3.1, the
 atomic read and atomic write directives.
 
 No OpenMP directives or procedure calls appear in programs using the
@@ -65,15 +65,15 @@ exception of the following provision in the OpenMP 3.1 specification:
   of memory.  (page 14)
 
 The helpers implementation assumes that the "minimum size" mentioned
-is such that if a thread writes a C data type (char, int, etc.), the
-value seen in some other thread at a different address, that was not
-written to by this thread, will not change as a result, even if the
-other thread may have written to the other address around the same
-time, and these addresses are within a single C array or structure
-(except that this is not assumed to be true when two threads both
-write to bit fields within the same structure).  This is true of Intel
-architecture processors, and probably also of all other commonly-used
-processors.
+is such that if a thread writes a non-compound C data type (char, int,
+etc.), the value seen in some other thread at a different address,
+that was not written to by this thread, will not change as a result,
+even if the other thread may have written to the other address around
+the same time, and these addresses are within a single C array or
+structure (except that this is not assumed to be true when two threads
+both write to bit fields within the same structure).  This is true of
+Intel architecture processors, and probably also of all other
+commonly-used processors.
 
 The OpenMP 3.1 "atomic read" and "atomic write" directives are used
 for any access to a variable that might occur simultaneously with an
@@ -93,25 +93,47 @@ ATOMIC_WRITE_... macros simply expand to the given statement when
 OpenMP 3.0 is used.  In this situation, correctness of the helpers
 implementation requires that reads and writes of variables of type
 char (signed or unsigned) and of type helpers_size_t be atomic without
-use of these directives, as a consequence of the architecture, at
-least when aligned as they are by the C compiler.  That is, if one
+use of these directives, as a consequence of the machine architecture,
+at least when aligned as they are by the C compiler.  That is, if one
 thread writes such a value to some address while another thread reads
 the value from that same address, without OpenMP synchronization, the
 value read will either be the value before the write or the value that
 was written.  Atomicity of simultaneous writes is not required, as
 they do not occur in this helpers implementation.
 
-This implementation is compatible with their being a "store buffer",
-which can lead to two threads both seeing their unsynchronized writes
-as occurring before the other thread's write.  The unsynchronized data
-transfers done are unidirectional, with one thread writing and another
-thread (or threads) reading, which will operate correctly with a store
-buffer as long as the ordering of writes and reads is preserved, which
-should be the case when suitable OpenMP flush directives are used.
+The OpenMP specification is informal and open to interpretation.  An
+expansive reading of it appears to be incompatible with the gcc
+implementation for Intel processors, in which flush directives appear
+to merely generate Intel "mfence" instructions (and perhaps disable
+some reordering of operations that the compiler's optimizer might
+otherwise have performed), which is not sufficient to ensure that data
+in the cache has actually been stored in main memory.  This helpers
+implementation therefore uses a somewhat conservative interpretation
+of what OpenMP guarantees.
 
-This helpers implementation does not rely on the flushes that are
-implied by the OpenMP 3.1 atomic read and write directives - instead,
-explicit flush operations are done wherever required.
+In particular, this implementation is compatible with there being a
+"store buffer", which can lead to two threads both seeing their writes
+as occurring before the other thread's write (even if OpenMP flush
+directives that might be thought to eliminate this possibility are
+present).  The unsynchronized data transfers done are unidirectional,
+with one thread writing and another thread (or threads) reading, which
+will operate correctly with a store buffer as long as the ordering of
+writes and reads within one thread is preserved, which should be the
+case when suitable OpenMP flush directives are used.
+
+However, this implementation does assume that stores obey "transitive
+visibility" (in the terminology of the Intel architecture manual).
+Suppose that A, B, and C are initially zero, that Processor 1 sets A
+to 1 and then (after a flush) sets B to 1 (and does a flush), that
+Processor 2 sees (after a flush) that B is 1 and then sets C to 1 (and
+does a flush), and that Processor 3 sees (after a flush) that C is 1
+and then fetches A.  It is assumed that the value for A fetched by
+Processor 3 is guaranteed to be 1.  This property is required for the
+correctness by the mechanism the helpers implementation uses to delete
+task entries, while replacing references to the deleted task as a
+source of input by 0, as if it did not hold, it would be possible that
+the task reading the input would see the 0 reference and assume that
+all data was available to read, when it might not be.
 
 Some OpenMP 3.1 implementations of "atomic read" and "atomic write"
 are quite slow, even when it appears that no costly operations should
@@ -125,6 +147,14 @@ in the corresponding ATOMIC_... macro.  It is difficult to imagine how
 a read of a single byte can be non-atomic on any contemporary computer
 architecture, so defining ASSUME_ATOMIC_READ_CHAR at least ought to be
 safe.
+
+This helpers implementation does not rely on the flushes that are
+implied by the OpenMP 3.1 atomic read and write directives - instead,
+explicit flush operations are done wherever required - since there are
+no atomic directives in OpenMP 3.0 (and it is not clear that the gcc
+implementation of OpenMP 3.1 correctly implements such implicit
+flushes in any case), and the atomic directives for OpenMP 3.1 might
+have been disabled as described above.
 
 
 WAIT POLICY
@@ -147,19 +177,23 @@ released, but will relinquish the processor after some moderate number
 of repetitions of this loop.  The helpers implementation tries to
 reduce the overhead of some short waits further, by looping directly
 without calling an OpenMP procedure such as omp_set_lock.  However,
-the omp_set_lock procedure is always called (perhaps after a moderate
+the omp_set_lock procedure is usually called (perhaps after a moderate
 amount of looping) in contexts where a very long wait may occur (eg,
 when waiting for the next task to be scheduled by the master, which
 could take arbitrarily long if the master is waiting for user input).
+One exception is that the helper thread that will run the next task
+may loop for an extended period of time checking for runnability of a
+task if the only tasks that might run cannot run immediately because
+they require completion of some master-only task.
 
 
 DATA STRUCTURES AND LOCKS
 
 The central data structure in the helpers implementation is an array
 of structures recording data on tasks that are pending, that are
-currently active, or that have finished completed but not yet been
-noticed to have completed by the master.  This array is indexed by
-task indexes, from 1 to MAX_TASKS.  Index 0 is used for tasks that are
+currently active, or that have completed but have not yet been noticed
+to have completed by the master.  This array is indexed by task
+indexes, from 1 to MAX_TASKS.  Index 0 is used for tasks that are
 performed directly by the master (without ever being scheduled).
 Entries in this 'task' array are created by the master thread, but
 some fields may later be updated by helper threads.  Both the master
@@ -168,13 +202,16 @@ and helper threads read task entries.
 A list of indexes of all outstanding tasks, in the order in which they
 were scheduled, is maintained in the "used" array.  This array is read
 and written only by the master thread, so no synchronization issues
-arise with it.
+arise with it.  Note that the "used" array will contain some tasks
+that have completed, but have not been noticed by the master to have
+completed.
 
 Two circular queues of task indexes are maintained, as arrays in which
 the number of entries is equal to MAX_TASKS+1, which must be a power
 of two, so that increments modulo the size of the array can be quickly
-done by adding and then and'ing with MAX_TASKS.  All tasks in these
-queues will also be present in the "used" array.
+done by adding and then and'ing with MAX_TASKS (which must be a power
+of two minus one).  All tasks in these queues will also be present in
+the "used" array.
 
 The "master_only" queue holds indexes of pending master-only tasks, in
 the order in which they were scheduled.  It is read and written only
@@ -218,25 +255,26 @@ has completed.  The master will notice tasks that have finished when
 helpers_do_task, or any of the helpers_wait_... procedures are called,
 as well as at other opportune times.
 
-To schedule a new task (other than a master-now task), the master
-first puts it at the end of the "used" array, with a currently unused
-task index.  It then searches for tasks that are computing each of its
-input variables, and the most-recently-scheduled such task is recorded
-in the "pipe" field of the new task's entry in the 'task' array.
-Next, it adds the new task to either the "master_only" queue, or the
-"untaken" queue.  Since only the master accesses the "used" array, and
-only the master add tasks to these queues, this requires no
-synchronization with helpers, except for the brief setting of
-untaken_lock described above to avoid a suspension race.  Also, the
-application's helpers_mark_in_use and helpers_mark_being_computed
-macros (if defined) are called to mark variables being used or
-computed by the new task.
+To schedule a new task (other than a master-now task), the master puts
+it at the end of the "used" array, with a currently unused task index.
+It also searches for tasks that are computing each of its input
+variables, and records the most-recently-scheduled such task in the
+"pipe" field of the new task's entry in the 'task' array.  Finally, it
+adds the new task to either the "master_only" queue, or the "untaken"
+queue.  Since only the master accesses the "used" array, and only the
+master add tasks to these queues, this requires no synchronization
+with helpers, except for the brief setting of untaken_lock described
+above to avoid a suspension race.  
 
 When a new task is added to the "untaken" queue, the master looks to
 see if a helper has suspended itself because the "untaken" queue was
 empty.  If so, this suspended helper is woken up.  Since this produces
 some overhead in the master thread, a helper refrains from suspending
 until the "untaken" queue has been empty for a moderate time.
+
+When a task is scheduled, the application's helpers_mark_in_use and
+helpers_mark_being_computed macros (if defined) are also called to
+mark variables being used or computed by the new task.
 
 When one of the helpers_wait_... procedures is called, the master
 marks a subset of tasks (found from the "used" array) as being needed
@@ -251,14 +289,15 @@ notices tasks that have completed, and may do tasks itself.  When the
 master does a (non-master-only) task, it performs the relevant subset
 of the operations that a helper performs when doing a task, as
 described next.  One difference, however, is that the master does not
-use omp_set_lock on start_lock to gain exclusive access to taking a
+use omp_set_lock on start_lock to gain exclusive access for taking a
 task from the untaken queue, but instead gains access only when it is
 currently possible by calling omp_test_lock, so that it will not
 block.  Blocking for this reason might prevent the master from doing a
 master-only task that later becomes runnable, which could cause
 deadlock if another task needs the master-only task to complete before
-it can run.  (Even if there are not any master-only tasks scheduled,
-blocking could slightly delay the master's return from waiting.)
+it can run.  (Furthermore, even if there are not any master-only tasks
+scheduled, blocking could slightly delay the master's return from
+waiting.)
 
 The helpers_start_computing_var procedure waits for helper threads to
 start the needed tasks, so that the master can return as soon as
@@ -323,7 +362,8 @@ indicate that more of the output variable has been computed by calling
 helpers_amount_out, which will store the helpers_size_t argument that
 it is passed in the 'amt_out' field of the entry for this task in the
 'task' array.  A flush is performed before setting 'amt_out', to
-ensure that the promised data is actually visible to other threads.
+ensure that the promised data is actually visible to other threads at
+the moment when the new 'amt_out' value is visible.
 
 A task procedure receiving pipelined input will call helpers_avail0,
 helpers_avail1, or helpers_avail2 to see how much input is available.
@@ -338,8 +378,9 @@ Careful flush operations are needed to ensure correct operation when
 the master notices completion of a task and sets the index of the task
 computing the variable to 0 just as one of these procedures is called.
 
-When pipelined input is not immediately available, the helper checks
-repeatedly until it is available, without blocking.
+When more pipelined input for a task is not immediately available, the
+the helpers_avail... procedure that was called checks repeatedly until
+some more input is available, without blocking.
 
 These operations are the same whether the task procedure is executing
 in the master thread or a helper thread (operations in the master
@@ -370,8 +411,8 @@ understood only by referring to the source code in helpers.c), 3
 produces this additional information plus timing information, and 4
 produces additional information on the entire set of tasks whenever a
 task list is displayed.  Setting ENABLE_TRACE to 0 will save a small
-amount of time when tracing is not enabled.  Value greater than 1 slow
-down operations, even when tracing is not enabled (with 3 or 4
+amount of time when tracing is not enabled.  Values greater than 1
+slow down operations, even when tracing is not enabled (with 3 or 4
 producing greater slowdown than 2).
 
 The ENABLE_STATS symbol can be defined as 0 or 1, with 0 disabling
