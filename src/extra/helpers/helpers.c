@@ -243,7 +243,7 @@ typedef int mtix;           /* Task index for use in one thread only */
 
    Entries are forced to be 256 bytes in size by the presence of the "space" 
    field (assuming that the "info" field is no more than 256 bytes in size). 
-   This makes index arithmetic faster, and may prevent possible performance 
+   This makes index arithmetic faster, and may reduce possible performance 
    degradation from cache invalidation when one entry is updated and a 
    different entry is then accessed.  Fields updated by helpers are all put 
    first to increase the chance that they are not split between cache lines
@@ -1904,11 +1904,28 @@ out_of_merge:
 
     t = used[helpers_tasks];
     info = &task[t].info;
+
+    info->flags = flags;
     info->task_to_do = task_to_do;
     info->op = op;
     info->var[0] = out;
     info->var[1] = in1;
     info->var[2] = in2;
+
+    /* Initialize to indicate nobody is doing this task, or needs its output. */
+
+    info->helper = -1;
+    info->needed = 0;
+
+    /* Clear 'done' and 'amt_out' in the task info for the new task.  Not
+       necessary in a task done directly in the master (since never seen). */
+
+    info->done = 0;
+    info->amt_out = 0;
+
+    /* Initialize variables used by the master in managing the list of 
+       tasks in 'used'. */
+
     info->out_used = 0;
 
 #   ifdef helpers_mark_not_in_use
@@ -1920,24 +1937,14 @@ out_of_merge:
       }
 #   endif
 
-    info->pipe[0] = info->pipe[1] = info->pipe[2] = 0;
+    /* Initialize extra trace info for this task. */
+
     if (ENABLE_TRACE>1)
     { info->last_amt[0] = info->last_amt[1] = info->last_amt[2] = 0;
     }
     if (ENABLE_TRACE>2)
     { info->start_wtime = info->done_wtime = 0.0;
     }
-
-    info->flags = flags;
-
-    info->helper = -1; /* nobody is doing the task yet */
-    info->needed = 0;  /* master isn't currently waiting for task to finish */
-
-    /* Clear 'done' and 'amt_out' in the task info for the new task.  Not
-       necessary in a task done directly in the master (since never seen). */
-
-    info->done = 0;
-    info->amt_out = 0;
   }
 
   /* Look for the previous task (if any) outputting the output variable of the
