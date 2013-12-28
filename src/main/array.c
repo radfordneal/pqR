@@ -1433,7 +1433,6 @@ static SEXP do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* and away we go! iip will hold the incrementer */
 
-    len = LENGTH(a);
     len = length(a);
     PROTECT(r = allocVector(TYPEOF(a), len));
 
