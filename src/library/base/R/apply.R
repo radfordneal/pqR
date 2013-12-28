@@ -24,7 +24,7 @@ apply <- function(X, MARGIN, FUN, ...)
     if(!dl) stop("dim(X) must have a positive length")
     if(is.object(X))
 	X <- if(dl == 2L) as.matrix(X) else as.array(X)
-    ## now record dim as coercion can change it
+    ## now record dim (not before) as coercion above can change it
     ## (e.g. when a data frame contains a matrix).
     d <- dim(X)
     dn <- dimnames(X)
@@ -70,7 +70,9 @@ apply <- function(X, MARGIN, FUN, ...)
 
     ans <- vector("list", d2)
 
-    if (length(d) == 2 && length(s.ans) == 1) { # Quick version for a matrix
+    if (length(d) == 2 && length(s.ans) == 1 && !is.object(X)) { 
+
+        # Quick version for a matrix.
 
         if (length(dn.call))
             dimnames(X) <- 
@@ -88,10 +90,11 @@ apply <- function(X, MARGIN, FUN, ...)
             }
     }
 
-    else { # General version
+    else {
 
-        if (any (c(s.call,s.ans) != ds)) 
-            X <- aperm(X, c(s.call, s.ans))
+        # General version.
+
+        X <- aperm(X, c(s.call, s.ans))
         dim(X) <- c(prod(d.call), d2)
     
         if(length(d.call) < 2L) {# vector
