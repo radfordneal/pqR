@@ -93,6 +93,12 @@ information that has not changed from previous releases of pqR.
       dimnames).  Previously, it incorrecty said it did (as is the
       case also in R-2.15.0 and R-3.0.2).
 
+\item Changed \code{apply} from previous versions of pqR to replicate
+      the behaviour seen in R-2.15.0 (and later R Core version) when the matrix 
+      or array has a class attribute.  Documented this behaviour (which is
+      somewhat dubious and convoluted) in the help entry for \code{apply}.
+      This change fixes a problem seen in package TSA (and probably others).
+
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
   }}
