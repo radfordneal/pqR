@@ -37,10 +37,11 @@ aperm(a, perm, \dots)
   the array is reshaped as well as having its elements permuted, the
   \code{dimnames} are also permuted; if \code{resize = FALSE} then the
   returned object has the same dimensions as \code{a}, and the dimnames
-  are dropped.  In each case other attributes are copied from \code{a}.
+  are dropped.  In the default method, the result has no other attributes.
 
   The function \code{t} provides a faster and more convenient way of
-  transposing matrices.
+  transposing matrices (but note that, unlike \code{aperm}, it preserves
+  attributes).
 }
 \author{Jonathan Rougier, \email{J.C.Rougier@durham.ac.uk} did the
   faster C implementation.
