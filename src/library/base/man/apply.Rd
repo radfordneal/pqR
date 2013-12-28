@@ -31,8 +31,13 @@ apply(X, MARGIN, FUN, \dots)
 \details{
   If \code{X} is not an array but an object of a class with a non-null
   \code{\link{dim}} value (such as a data frame), \code{apply} attempts
-  to coerce it to an array via \code{as.matrix} if it is two-dimensional
-  (e.g., a data frame) or via \code{as.array}.
+  to coerce it to an array, via \code{as.matrix} if it is two-dimensional
+  (e.g., a data frame), or otherwise via \code{as.array}. If the result is an
+  object of a class with a method for \code{aperm}, this method will be
+  applied to \code{X} (rather than the default method), and if the result 
+  of \code{aperm} is an object with a method for \code{`[`}, that method 
+  will be used to extract portions of \code{X}.  Otherise the default
+  method for \code{`[`} is used.
 
   \code{FUN} is found by a call to \code{\link{match.fun}} and typically
   is either a function or a symbol (e.g. a backquoted name) or a
@@ -54,7 +59,8 @@ apply(X, MARGIN, FUN, \dots)
 
   In all cases the result is coerced by \code{\link{as.vector}} to one
   of the basic vector types before the dimensions are set, so that (for
-  example) factor results will be coerced to a character array.
+  example) factor results will be coerced to a character array.  The
+  value will not have a class attribute, even if \code{X} does.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
