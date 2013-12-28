@@ -94,6 +94,11 @@ information that has not changed from previous releases of pqR.
       (previously it had only disabled use of the BLAS in helper
       threads for real matrix multiplication).
 
+\item The documentation for \code{aperm} now says that the default
+      method does not copy attributes (other than dimensions and
+      dimnames).  Previously, it incorrecty said it did (as is the
+      case also in R-2.15.0 and R-3.0.2).
+
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
 
