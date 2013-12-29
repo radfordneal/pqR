@@ -1,0 +1,1380 @@
+This directory contains a file for each git branch in the pqR
+repository, documenting what that branch is for.  These files will
+ultimately be combined in release branches to produce the MODS file in
+the main source directory.
+
+Development branches start with branch 00, which is identical to the
+version of R released by the R Core Team on which pqR is based
+(currently R-2.15.0), except for the 00 and README files in the mods
+directory.
+
+Later development branches have the form DD-desc, where DD is a
+two-digit number, and desc is a descriptive string.  All branches
+starting with DD are merged into the branch with number DD+1, which
+does not contain any modifications of its own (branch 00, containing
+this text, excepted), but which forms the basis for the development
+branches starting with DD+1.
+
+Release branches have names of the form Release-YYYY-MM-DD, and are
+based on some merged development branch (ie, with a name of the form
+DD), with only the following changes:
+
+  o concatenation of files in mods into the file MODS, and deletion of 
+    the mods directory.
+
+  o removal of .gitignore, and creation of configure, NEWS, NEW.pdf,
+    doc/html/NEWS.html, and doc/html/R-admin.html from source files 
+    (by running make, or as described in R-admin).
+
+  o updating of the release date, which is stored in the (now mis-named) 
+    file SVN-REVISION.
+
+The development branches that go into a release may be changed after
+the release, with the new versions forming the basis for a later
+release, but without the commits that produce these new versions being
+merged into the earlier release.  Once a release branch is created, it
+is modified only in exceptional circumstances (such as discovery that
+a file is missing).
+
+The "master" branch is used only for adding versions of R released by
+the R Core Team, starting with R-2.11.1, for each of which there is a
+tag.
+ 
+ 
+00:
+ 
+The R release pqR is based on, unchanged except for adding the README
+in mods, and the 00 file within it, containing this text.
+ 
+ 
+00-admin:
+ 
+Updates R-admin.texi to minimally say where pqR can be obtained.
+ 
+ 
+00-copyright:
+ 
+This mod updates the copyright notices at the start of many
+source files.
+ 
+ 
+00-future:
+ 
+Replaced the section of "future directions" in R-ints.texi with a stub
+for pqR, with no content at the moment.
+ 
+ 
+00-news:
+ 
+Move NEWS to ONEWS, ONEWS to OONEWS, OONEWS to OOONEWS.  Create new
+NEWS.Rd with initial content for pqR.
+ 
+ 
+00-version:
+ 
+Changes to display pqR version information, including separating the
+pqR version from the version of R that pqR is based on. Also updates
+some copyright notices, and changes bug reporting address.
+ 
+ 
+01-Rprofmem:
+ 
+New version of function Rprofmem (and related Rprofmemt) implemented.
+See NEWS entry.
+ 
+ 
+01-cleanup:
+ 
+Miscellaneous code cleanups, including the following:
+
+  o Cleaned up inconsistencies in checks for arity of primitives in eval.c
+    Removed checks from functions implementing language features "repeat",
+    "while", and "function", consistent with other language features (lack
+    of checks does not cause a crash --- missing arguments just appear
+    to be NULL).  Changed the check in do_set to the standard form
+    using checkArity, with names.c changed to make the arity be 2 rather
+    than -1.
+
+  o The "spare" bit in sxpinfo is renamed to "misc", and the documentation 
+    in the code and in R-ints.texi is changed to reflect this, and to 
+    document that this bit is actually used.
+
+  o The documentation before do_seq in seq.c is changed to be correct
+    (seq.int is no longer SPECIAL), and the incorrect reference to
+    seq.int in R-ints.texi is removed.
+
+  o The fixup_NaRm function defined in summary.c is moved to match.c,
+    where it belongs.  It is now properly declared in Rinternals.h,
+    rather than the definition in summary.c being surreptitiously
+    referenced as an extern from logic.c.
+
+  o Defined an isRaw macro globally for consistency with other such macros, 
+    deleting several local definitions of this.    
+
+  o Fixed problem with recompilation with byte compilation not enabled.
+
+  o Fixed (by a kludge, not a proper fix) a bug in the "tre" package that
+    shows up when WCHAR_MAX doesn't fit in an "int".  The kludge reduces
+    WCHAR_MAX to fit, but really the "int" variables ought to be bigger.
+    (This problem shows up on a Raspberry Pi running Raspbian.)  Also fixed 
+    a going-past-end-of array bug (that probably never happened).
+
+  o Code in R-2.15.0 exists for maintaining a cache of primitive objects,
+    but this code forgets to ever actually enter a primitve into the cache.
+    This is now done (in mkPRIMSXP).
+
+  o Updated R-admin to discuss derived but distributed files (eg configure).
+
+See also entries in NEWS for other mods that merit description there.
+ 
+ 
+01-inspect:
+ 
+The "inspect" .Internal function was changed to show some details of
+pairlist nodes, if SHOW_PAIRLIST_NODES is defined as 1 in inspect.c.
+It also shows length and truelength (the hash) for CHARSXP nodes.
+Finally, it no longer produces output with tabs (spaces instead).
+ 
+ 
+01-omp:
+ 
+Rinternals.h now has a #define for R_OMP_FIRSTPRIVATE_VARS, which
+contains a comma-separated list of variables that should usually be
+included in the firstprivate part of an OMP parallel construction,
+since they are used in macros such as NA_REAL.
+
+The only use of this in the interpreter itself gets deleted by a later
+mod, but this mod is retained anyway...
+ 
+ 
+01-pnamedcnt:
+ 
+New pnamedcnt primitive function for printing named field of object.
+
+See NEWS entry for details.
+ 
+ 
+01-testing:
+ 
+Eliminated non-deterministic aspect of testing of random number
+generators.  Also prints more details on failure.  
+
+See NEWS entry for details.
+ 
+ 
+02-cons-with-tag:
+ 
+This mod defines a cons_with_tag function that creates a CONS cell
+given its CAR, CDR, and TAG fields.  This makes for clearer, more
+concise, and faster code when CONS cells with TAG set need to be created.
+ 
+ 
+02-copy-elements:
+ 
+Defines several functions for use within the R interpreter.
+
+New functions copy_string_elements and copy_vector_elements are now
+defined.  Compared to using SET_STRING_ELT and SET_VECTOR_ELT, these
+allow copying of multiple elements without error checks on every
+element, and sometimes without old-to-new checks on every element.
+
+A new function copy_elements is also defined, for copying elements in
+any sort of vector (duplicating non-atomic elements, and using
+copy_string_elements).
+
+A new function set_elements_to_NA_or_NULL is defined for doing that.
+
+See also the NEWS item on a bug fix.
+ 
+ 
+02-epmatch:
+ 
+New functions are defined for finding exact or partial matches, to
+replace the existing pmatch, psmatch, and other matching functions
+(but pmatch and psmatch are retained, in case anyone uses them).
+These functions return 0, -1, or +1 for no match, partial match, and
+exact match, allowing any subset of these conditions to be easily
+checked for in one comparison.  There is therefore no need for an
+"exact" argument as in psmatch.  The new functions should usually be
+faster as well (the old psmatch uses strcmp for exact matches, which
+might be able to use special machine instructions if they exist, but
+since most calls will be for short strings, and early failure to match
+is likely the most common result, this is unlikely to provide a
+benefit once extra procedure call overhead is accounted for.)
+
+Versions are provided for matching a string to a string, an SEXP to an
+SEXP, or a string to an SEXP, called ep_match_strings, ep_match_exprs,
+and ep_match_string_expr.
+
+Calls of pmatch are replaced by calls of ep_match_exprs in various
+places as part of this mod, and these functions are also used in later
+mods (eg, in matchArgs and in do_subset3).
+
+Speedup from using these functions is mentioned in a NEWS entry.
+ 
+ 
+02-evalv-prim:
+ 
+Two changes to how expressions are evaluated.
+
+First, a facility has been introduced for an expression to be
+evaluated in a context in which a "variant result" is allowed - eg, if
+the result will be ignored anyway (expression is evaluated only for
+side effects), a null result might be allowed.  This is done by
+introducing an "evalv" function that is like "eval" but with an extra
+parameter saying what variant results are permissible.  This facility
+is used for later modifications, with some symbols defined here in
+anticipation of these modifications.
+
+Second, calling of primitive functions has been speeded up by copying
+relevant information (eg, arity) from the table defining primitives
+(in names.c) to fields in the SEXP for the primitive.  This saves
+table access computations and also division and remainder operations
+to get at the information in the "eval" field in names.c, which is
+encoded as decimal digits.
+
+A procedure SET_PRIMFUN in memory.c was surreptitiously changing the
+function pointer for a primitive via the function pointer access
+macro, PRIMFUN.  A SET_PRIMFUN macro now does this properly.
+
+The types used for pointers for C functions implementing primitives
+have been make safer, taking account of C99's specification that one
+can convert between all types that are pointers to functions without
+loss of information, but not necessarily between a pointer to a
+function and a pointer to void.
+
+Code in saveload.c (for loading old workspaces?) creates a primitive
+directly, bypassing the mkPRIMSXP procedure.  This seems unwise, since
+creation via mkPRIMSXP is apparently needed to ensure protection of
+primitives.  Whatever is going on there should not be affected by this
+modification, however.
+
+R-ints.texi has been updated to document evalv and variants.
+ 
+ 
+02-promiseWith:
+ 
+Two related changes.
+
+Created a promiseArgsWithValues function that calls promiseArgs and
+then sets the values of the promises created, and a promiseArgsWith1Value 
+function that does the same except setting only the value for the
+first promise.  Code to do these things appears in several places, so
+creating these functions cleans things up (and is needed for later
+mods).
+
+The promiseArgsWithValues and promiseArgsWith1Value functions are not
+entirely equivalent to the previous code, which set the values of what
+it took to be promises without checking that they actually were
+promises.  Since promiseArgs doesn't always create a promise for every
+argument (it doesn't when the argument is R_MissingArg), this doesn't
+seem safe, though there seem to be no examples where a bug actually
+arises.  The promiseArgsWithValues and promiseArgsWith1Value silently
+skip setting the value for arguments that aren't promises, as will be
+necessary when missing arguments do arise.
+
+Also, a problem is fixed with the DispatchOrEval function in eval.c.
+Without this fix, some subtle things go wrong with existing features
+in 2.15.0, and more serious things go wrong with some later pqR mods.
+
+The issue is that if DispatchOrEval is called with argsevald set to 1
+(which indicates that arguments have already been evaluated), if
+DispatchOrEval dispatches to a method for an object, it passes on
+these argument values without putting them in promises along with the
+unevaluated arguments.  Because of this, a method that attempts to
+deparse an argument will not work correctly.  It seems possible that
+there might also be some other bad effects of not having these
+promises.
+
+Here is an illustration:
+
+> a <- 0
+> class(a) <- "fred"
+> seq.fred <- function (x, y) deparse(substitute(y))
+> seq(a,1+2)
+[1] "1 + 2"
+> seq.int(a,1+2)
+[1] "3"
+
+Both "seq" and "seq.int" dispatch to seq.fred, but seq.int calls
+DispatchOrEval, which doesn't pass on a promise with the unevaluated
+argument.  After the fix, seq.int does the same as seq.  This example
+is now tested in tests/eval-etc.R.
+
+Also fixed some formatting in DispatchOrEval, and improved the
+documentation for R_possible_dispatch to explain its features used in
+this fix.
+ 
+ 
+03-ISNAN:
+ 
+IF ENABLE_ISNAN_TRICK is defined when pqR is configured (by including
+-DENABLE_ISNAN_TRICK in CFLAGS), the ISNAN macro is changed to be
+faster for many common cases.  This change relies on the same result
+being produced when casting NaN, -NaN, NA, and -NA to integer, which
+is true on Intel systems, but not on SPARC systems.  A fatal error is
+produced if this is seen to not be true (in which case the define of
+ENABLE_ISNANS_TRICK should of course be removed).
+ 
+ 
+03-contexts:
+ 
+Reorder RCNTXT structure and code in begincontext to maybe make saving
+a context faster.
+ 
+ 
+03-def-COPY:
+ 
+Introduced a facility for making a local copy of R_NilValue, and
+potentially other globals.  This is done with LOCAL_COPY(R_NilValue).
+Access to the local copy may be faster, partly because the compiler
+will know that it isn't being modified.
+ 
+ 
+03-fast-base:
+ 
+Lookup of symbols defined in the base environment has been sped up by
+flagging symbols that have a base environment definition recorded in
+the global cache. This allows the definition to be retrieved quickly
+without looking in the hash table.  In particular, this speeds up
+basic operations such as "+", "<-", "if", and "length".
+ 
+ 
+03-fast-const-eval:
+ 
+An "eval" of an expression that evaluates to itself (usually a
+constant in an expression) has been made faster by quickly checking
+for a self-evaluating value by a shift and mask operation, and if the
+expression is self-evaluating, returning it immediately, without the
+overhead of things like checking for stack overflow.  Depending on the
+machine and the compiler, it's possible that the subsequent switch on
+expresssion type for non-self-evaluating expressions will also be
+faster, due to it having many fewer cases.
+ 
+ 
+03-fast-spec:
+ 
+Lookup of some builtin/special function symbols (eg, '+' and 'if') has
+been sped up by allowing fast bypass of non-global environments that
+do not contain (and have never contained) one of these symbols.  The
+symbols that are special for this purpose are specified in InitNames
+in names.c.
+ 
+ 
+03-getAttrib:
+ 
+Defines versions of getAttrib that allow faster attribute search when
+it is known that no special processing is needed.  Plus other minor
+speedups.
+ 
+ 
+03-inlined:
+ 
+Various inlined procedures were changed to be more efficient.
+
+Several sets of types, represented by 32-bit words with "1" bits
+corresponding to included types, are now defined in Rinternals.h. These
+allow fast testing for set membership with if ((set >> type) & 1) ...
+This is sed heavily in the inlined functions, but may also be used 
+elsewhere.
+
+The "length" function was un-inlined, since it's fairly long.
+Numerous occurences of code like for (i = 0; i < length(...); i++)
+... were replaced by code that doesn't call length many times,
+sometimes by saving the result of one call of length, sometimes by
+replacing length with LENGTH.  (Though note that LENGTH doesn't work
+for R_NilValue!)
+ 
+ 
+03-install:
+ 
+Detailed speed-up of the "install" function for installing a new (or
+old) symbol.  Also put in (currently disabled) code for seeing how
+many symbols there are, for tuning purposes.
+ 
+ 
+03-matchArgs:
+ 
+The matchArgs function, used in the interpreter to match formal and
+actual arguments when calling functions has been sped up, and given a
+new interface.
+
+One interface change allows the formal arguments to either be given as
+a list SEXP (as before), or as an array of C strings, along with a
+count of how many strings are in the array.  (If formals are given by
+C strings, the SEXP for the formals list parameter should be NULL,
+whereas if the formals are given by a list, the pointer for the C
+strings should be NULL and their count should be 0.)
+
+Numerous calls of matchArgs are changed to use the interface with an
+array of C strings (for example, in the code implementing rep and
+seq.int).  These calls were previously preceded by creation of a list
+with calls to "install" for all the formal argument names.  Using the
+new interface is cleaner and considerably faster.
+
+A second interface change is that if the formals are given by a list
+SEXP, tags for the arguments are attached to the actuals list by
+matchArgs.  Places where matchArgs is called are changed to no longer
+do this themselves.  (Doing this in matchArgs is both cleaner and
+faster.)
+
+The new code is also faster in ways unrelated to these interface
+changes.
+
+Finally, 38 calls of check1arg(args,call,"x") were replaced with calls
+of a new macro check1arg_x(args,call) that should be faster.
+ 
+ 
+03-parens:
+ 
+Parentheses are make faster by making them SPECIAL.  Also, curly
+brackets pass on the eval variant to the last expression, and pass
+VARIANT_NULL for earlier expressions.
+ 
+ 
+03-promise-named:
+ 
+Values of forced promises no longer have NAMED always set to 2.
+Instead NAMED for an object is incremented when it becomes the value
+of a promise.
+ 
+ 
+03-promiseArgs:
+ 
+The creation of argument lists for closures is sped up by avoiding an
+unnecessary allocation of a CONS cell, in the same way as was done in
+my Sep 2010 patch for evalList, which was incorporated into 2.12.0 and
+later versions of R.  Also, now uses cons_with_tag in all these routines.
+ 
+ 
+03-protect:
+ 
+PROTECT, UNPROTECT, etc. have been made mostly macros in most of the
+files in src/main.  This applies only to files that include Defn.h
+after defining the symbol USE_FAST_PROTECT_MACROS.  If this is
+defined, macros PROTECT2 and PROTECT3 for protecting two or three
+objects at once are also defined.
+
+This change speeds up numerous operations.
+ 
+ 
+03-save-alloc:
+ 
+Some binary and unary arithmetic operations have been sped up by, when
+possible, using the space holding one of the operands to hold the
+result, rather than allocating new space.  Though primarily a speed
+improvement, for very long vectors avoiding this allocation could
+avoid running out of space.
+ 
+ 
+03-scalars:
+ 
+Global constants R_ScalarLogicalNA, R_ScalarLogicalTRUE, and
+R_ScalarLogicalFALSE have been created, and the interpreter's
+ScalarLogical function now returns one of these rather than allocate
+new space for every logical value.
+
+To avoid problems with an external C or Fortran routine changing one
+of these values (with an incorrect specification of DUP=FALSE even
+though it modifies the argument), the values of these constants are
+checked after the return of an external function called with .C or
+.Fortran, and if they have changed, their values are reset and an
+error is signalled.
+
+The bytecode interpreter sets up a similar set of logical constants.
+That facility should be merged with this one (perhaps by just calling
+the ScalarLogical function in the bytecode interpreter).
+
+Various places in coerce.c were changed to use ScalarLogical rather
+than allocate logical values themselve.  This is both cleaner and now
+more efficient given the change above.
+ 
+ 
+03-seq-varop:
+ 
+Several primitive functions that can generate integer sequences (":",
+seq.int, seq_len, and seq_along) will now sometimes not generate an
+actual sequence, but rather just a description of its start and end
+points.  This is not visible to users (except in time and space
+savings), but allows for speed up (with other mods) of primitive
+operations such as "for" loops and indexing of vectors.
+ 
+ 
+03-sexprec:
+ 
+The basic sexprec structure for objects is modified here, to allow for
+a number of future modifications.  The new scheme is documented in
+R-ints.texi.
+ 
+ 
+03-stringops:
+ 
+Procedures copy_1_string, copy_2_strings, and copy_3_strings are now
+defined in utils.c, and used in many places in the interpreter.  These
+procedures concatenate 1, 2, or 3 strings, checking for overflow of
+the destination space.  They are faster and less error-prone than the
+various code sequences they replace (often involving strlen and sprintf).
+This gives signficant speed-ups for some operations such as calling
+S3 methods.
+ 
+ 
+03-translate:
+ 
+Speed up character translation a bit somtimes, by doing operations
+only when they are actually needed.
+ 
+ 
+03-vstack:
+ 
+Many calls of vmaxget and vmaxset are replaced by macros VMAXGET and
+VMAXSET that do the same thing faster.
+ 
+ 
+03-zap-isMissing:
+ 
+Removes a call of R_isMissing in the interpeter's evalList function.
+This check, done for every argument to a builtin primitive that is a
+symbol, is slow, and appears to serve only to produce an error message
+that is slightly different (and sometimes less informative) than
+simply letting the symbol be evaluated.
+ 
+ 
+04-coerce-bind:
+ 
+Extensive cleanup in bind.c and coerce.c.
+
+Simple cases of "c" with no names (or names ignored), no conversion,
+and no recursion are done more quickly.
+
+The copy_elements procedure is now used where appropriate.
+
+A complete set of XFromY functions are now present in coerce.c (some
+were missing).  A copy_numeric_or_string_elements procedure is now
+defined in coerce.c, which uses these functions.
+
+Also, fixed a bug where excess warning messages may be produced on
+conversion to RAW.  See NEWS entry.
+ 
+ 
+04-dollar:
+ 
+Access via the $ operator to lists, pairlists, and environments has
+been sped up.  The speedup comes mainly from (a) avoiding the overhead
+of calling DispatchOrEval if there are no complexities, (b) passing on
+the field to extract as a symbol, or a name, or both, as available,
+and then converting only as necessary, (c) using the new ep_match
+functions instead of the previous local pstrmatch procedure, and (d)
+not translating a string multiple times.
+
+An error reporting bug in $ was also fixed.  See NEWS entry.
+ 
+ 
+04-ifloop-debug:
+ 
+Fixes the "debug" facility.  See NEWS item.
+
+Also cleans up code, and propagates evalv variant to branches of "if".
+ 
+ 
+04-relop-logic:
+ 
+Logical operations and relational operators have been sped up in
+simple cases, and use the new facility for producing a scalar logical
+result without allocating new storage.  Relational operators have also
+been substantially speeded up for long vectors.  Relational operators
+are reduced to either EQOP or LTOP to avoid repetitive code, which
+then makes it reasonable to specially treat equal length operands and
+operands of length 1.
+ 
+ 
+04-subscript:
+ 
+Speeds up extraction and replacement of subsets of vectors or
+matrices, by speeding up the creation of the vector of indexes used.
+Often avoids a duplication and eliminates a second scan of the
+subscript vector for zero subscripts, folding it into a previous scan
+at no additional cost.  String subscripts are handled more efficiently
+by not creating a vector of indexnames when it is not needed, and by
+other detailed code improvements.
+
+The previous code duplicated a vector of indexes when it seems
+unnecessary.  Duplication was for two reasons: first, to handle the
+situation where the index vector is itself being modified in a replace
+operation, and second, so that any attributes can be removed, which is
+helpful only for string subscripts, given how the routine to handle
+them returns information via an attribute.  Duplication for the second
+reasons can easily be avoided.  The first reason for duplication is
+sometimes valid, but can usually be avoided by, first, only doing it
+if the subscript is to be used for replacement rather than extraction,
+and second, only doing it if the NAMED field for the subscript isn't
+zero.
+
+Also removes two layers of procedure call overhead (passing seven
+arguments, so not trivial) that seemed to be doing nothing.
+ 
+ 
+04-vec-enlarge:
+ 
+Extending lists and character vectors by assigning to an index past
+the end, deleting list items by assigning NULL, and concatenation of
+character vectors with "c" have all been speded up.  This is partially
+from use of copy_string_elements and copy_vector_elements.  Another
+gain comes from handling deletion of a contiguous block specially.
+ 
+ 
+04-vec-subset:
+ 
+Speeds up extraction of subsets with "[", as detailed in NEWS entries.
+ 
+ 
+05-BLAS:
+ 
+The BLAS routines supplied with R were modified to improve the
+performance of the routines DGEMM (matrix-matrix multiply) and DGEMV
+(matrix-vector multiply).  Also, proper propagation of NaN, Inf,
+etc. is done now.
+
+These routines are probably still not as fast as those in a more
+sophisticated BLAS, but will be of benefit to users who do not 
+install a different BLAS.
+ 
+ 
+05-RNG:
+ 
+Improves the performance of the uniform random number generation
+routines (which are also used as the base for other generators), and
+an unnecessary limitation.  See NEWS entry for details.
+
+The previous code was also rather messy - global references were mixed
+with references by argument to the same variables, sometimes concealed
+by macro definitions, and the seed was often referenced by pointers
+which actually always pointed to the same location, which was also in
+some places referenced directly.
+
+A bit of previous code that assumed R integers are exactly 32 bits was
+changed to assume only an R integer is at least 32 bits in size.
+ 
+ 
+05-anyall:
+ 
+Speeds up "any" and "all" by detailed code improvements.
+ 
+ 
+05-data-frame:
+ 
+The R code for as.data.frame.matrix has been sped up a bit. (Other
+mods also have the effect of speeding up this function.)
+ 
+ 
+05-matprod:
+ 
+Includes the matprod library from github.com/radfordneal/matprod, 
+and uses it for the %*% operator when doing so is specified by the
+mat_mult_with_BLAS option.  See help("%*%") and help(options) for
+details.  
+
+The NEWS item for this is a stub, since it will be combined with
+that for a later mod.
+ 
+ 
+05-pow:
+ 
+I previously proposed a simple patch speeding up squaring, which the R
+core team did not adopt.  Instead, in R-2.12.0 they introduced an
+inline function R_POW, that checks specially for a power of 2, and
+does it as a multiply, otherwise calling the R_pow function.  R_pow
+proceeds to check again for a power of 2 at the beginning, and then
+check again for a power of 2 just before calling the C pow function.
+The R_pow function also contains a check for a power of 0.5, but it is
+disabled for recent versions of gcc, to bypass a bug that according to
+a comment existed at one time.  Note that the inline R_POW function
+will not necessarily be actually inlined by the compiler, and that in
+any case the check for a power of 2 is done over again for every
+element of a vector being raised to that power, even if the power is a
+scalar.
+
+In this new patch, if the power is a scalar, I check for it being 2,
+1, 0, or -1, and if so handle it specially.  Otherwise, I call R_pow,
+which I changed to not bother checking for powers of 2, and to
+actually check for a power of 0.5.  (Since the relevant code has
+changed, any buggy compilers still extant probably will compile the
+new code OK; if not, they probably compile lots of stuff incorrectly,
+since there is nothing unusual in the new code.)
+
+For non-scalar powers, I use R_POW, but change it to a macro, so that
+it will definitely be inlined, and have it check for powers of 2 and
+1.  (If one is going to do this check when the power is a vector, it
+makes sense to tailor it to something other than a vector of powers
+that are all the same, since this doesn't seem like a common case.
+Some powers of 1 and some of 2 seems plausible in some statistical
+applications.)  The macro also allows for the power to be an integer,
+slightly speeding up some integer^integer operations.
+
+The speed improvement from this patch depends a lot on the machine
+architecture and the compiler.  On machines where memory is much
+slower than the processor, checking for a power of 2 every time may
+mostly overlap with the a memory fetch or store operation, but one
+would not expect this to always be the case.
+
+See also the NEWS item on this.
+ 
+ 
+05-rowcolSums:
+ 
+Rewrote the internal rowSums and colSums functions to be faster.  Also
+changed the R rowSums and colSums functions that call the internal
+functions so that they treat the common case where the array is matrix
+specially, with less overhead.
+ 
+ 
+05-sum-prod:
+ 
+Code for the sum and prod functions has been changed to move some
+checks outside the inner summation loops.  The effect depends on the
+extent to which the unnecessary checks overlap memory fetch
+operations, but one would expect signficant speed-ups with some
+machines/compilers.
+
+I had previously proposed this modificaton to sum and prod before
+R-2.12.0.  That patch was not adopted by the R core team, though they
+did swap the order of checking for NA/NaN and checking the na.rm
+option, which avoids the worst inefficiency of the previous code in
+R-2.11.1.
+ 
+ 
+05-transpose:
+ 
+The speed of the transpose (t) function has been improved, when
+applied to real, integer, and logical matrices.  This is done by
+moving pairs of elements, which improves memory access behaviour.
+
+Note that I had previously speeded up transpose with a patch that was
+incorporated into R 2.12.0.  This improvement gives an additional
+speedup, by up to a factor of about 1.4.
+ 
+ 
+06-applydefine:
+ 
+Speed up assignment to a subset of a variable by various detailed
+improvements to "applydefine" and associated functions in eval.c.
+Includes handling "[", "[[", and "R" as special cases, with pre-setup
+symbols for "[<-", etc. rather than using "install".
+ 
+ 
+06-attrib:
+ 
+Speed improvements in attrib.c from detailed code improvements.
+ 
+ 
+06-contexts2:
+ 
+Defines a revisecontext function, that is used to avoid the deletion
+and recreation of a context during the setup for applying a function.
+ 
+ 
+06-def-nmcnt-macros:
+ 
+Defines macros for using a three-bit nmcnt in the sxpinfo structure in
+the header for every object rather than the named field of R-2.15.0.
+These macros support a true reference counting scheme, which is
+documented in R-ints.texi.  
+
+New versions of NAMED and SET_NAMED are defined for compatibility.
+The new macros are actually used only in later mods, not in this one.
+
+The "inspect" and "pnamedcnt" funtions are updated to display nmcnt
+properly.
+ 
+ 
+06-fast-prim:
+ 
+This mod combines several changes, loosely related by their all
+reducing interpretive overhead or speeding up primitive functions.
+
+The largest change is that a new scheme is used for quick dispatch of
+some unary and binary primitive functions, as described in the
+documentation in R-ints.texi.  In particular, this mod includes "fast"
+versions of the functions implementing the following primitives
+(called do_fast_XXX):
+  
+  arith (+, -, *, /, ^, %%, %/%)
+  math1 (exp, sin, etc.)
+  trunc
+  abs
+  length
+  dim
+  is (is.null, is.integer, etc.)
+  isna
+  isnan
+  isfinite
+  isinfinite
+  cmathfuns (Re, Im, etc.)
+  logic3 (any, all)
+  colon
+  seq_len
+  sum
+  prod
+
+But note that not all calls of such primitives will use the fast
+dispatch mechanism.
+
+The evalListKeepMissing function in eval.c now just calls evalList,
+with an indicative argument, eliminating code duplication.
+
+Calls of the R_CheckStack procedure in evalv and other places were
+replaced with a macro R_CHECKSTACK, which is faster.
+
+The LOCAL_COPY macro is used in several places to (hopefully) speed up
+references to R_NilValue.
+
+Evaluation of .Internal calls now pass on the "variant" desired.
+
+Expressions such as \code{all(v>0)} and \code{any(is.na(v))} where
+\code{v} is a real vector now avoid computing and storing a logical
+vector, instead computing the result of \code{any} or \code{all}
+without this intermediate, looking at only as much of \code{v} as is
+needed to determine the result.  This is done using the "variant
+result" framework.
+
+Similarly, when \code{sum} is applied to many mathematical functions
+of one vector argument, for example \code{sum(log(v))}, the sum is
+performed as the function is computed, without a vector being
+allocated to hold the function values.
+
+Several bugs were fixed, as described in NEWS items.  In particular,
+int_fast64_t variables are now used to accumulate integer sums for
+"sum" and "mean" in order to avoid overflow.
+ 
+ 
+06-gc-mods:
+ 
+Many changes were made to the garbage collector and associated
+routines in memory.c.  These do not change the general scheme, but
+improve it in many ways, some of which are noted below.
+
+Small nodes classes are now distinguished only by size, with CONS
+cells being allocated in the smallest class that can contain a CONS
+cell, not in a special class.  (Depending on the machine, it is
+possible for some vector objects to be smaller than CONS cells.)  See
+comments in memory.c for details, also the new version of the
+documentation obtained with help(Memory).
+
+Linking of nodes in pages is now done in forward order, not backwards
+as before, which should improve cache performance.
+
+The source file size.c has been merged into memory.c, where it
+logically belongs.
+
+The mkChar function and related routines were moved from envir.c to
+memory.c, where they belong, because of the special treatment of the
+global string cache by the garbage collector.
+
+HASHPRI was renamed to HASHSLOTSUSED.
+
+The scheme for using valgrind was revised, and a newer version of
+valgrind is now used.
+
+The gc.time function was fixed (see NEWS item).
+ 
+ 
+06-gram:
+ 
+The parser was changed to improve locality of nodes representing
+language objects, which may improve cache performance when
+interpreting R code.
+ 
+The paser is now generated with bison version 2.5.  This is not
+expected to have any consequences.
+ 
+ 
+06-objects:
+ 
+Speeds up routines in objects.c, such as GetObject.  Also fixes the
+bug mentioned in the NEWS item here.
+ 
+ 
+06-rm-named:
+ 
+A new function get_rm is now defined, which removes a variable and
+returns the value it had had.  See the NEWS item and help(get_rm) for
+details.
+
+Many function in base have been changed to use get_rm to reduce
+duplication of objects.  Some other code improvements have been
+made at the same time.
+
+Two bugs have been fixed, as reported in NEWS.
+
+The lapack.Rout.save file has been changed to match the new behaviour
+of svd regarding return of NULL elements.
+ 
+ 
+06-varop-for:
+ 
+For loops in which the index variable goes through an integer sequence
+are now done without actualy allocating a vector to hold the sequence.
+This saves both space and time.  This is implemented using the variant
+result facility, which is used by ":" and other sequence primitives.
+ 
+ 
+06-varop-sub:
+ 
+The variant sequence operations that possibly return a range are used
+here to speed up subscripting of vectors and matrices.  For matrices,
+only the first index (for rows) is currently handled as a range (if
+possible). (Handling the column index as a range would be possible,
+but would provide a lesser speedup, due to data ordering, and to the
+loop over columns being the outer loop.)
+
+A missing row subscript for a matrix is also converted to a range from
+1 to the number of rows.
+
+Handling ranges without creating index vectors saves both time and
+space.
+
+Note that this change has no effect for accesses via compiled code,
+though the compiler could probably be modified to exploit this
+feature.
+ 
+ 
+07-apply:
+ 
+Sped up "apply" in the common case where it is applied to a matrix.
+Also clarified the documentation and fixed a bug, as described in
+NEWS.
+ 
+ 
+07-coerce-bind2:
+ 
+The "rbind", "cbind", "c", and "unlist" primitives have been speeded
+up for many cases.  A bug in "rbind" has been fixed, as documented in
+a NEWS item.
+
+A new copy_elements_coerced procedure numeric and string vectors with
+possible coercion, and has been used to replace much repetitive code
+that does this.  This replaces the copy_numeric_or_string_elements
+procedure from the 04-coerce-bind mod.
+ 
+ 
+07-math-cleanup:
+ 
+Cleans up the code for mathematical functions in arith.c, speeding
+some things up in the process, and preparing for later mods.
+ 
+ 
+07-scalar-arith:
+ 
+Rreal arithmetic and integer plus/minus on scalars with no attributes
+are now done more quickly as special cases rather than by the
+general-purpose code.
+ 
+ 
+07-use-nmcnt-macros:
+ 
+Many uses of NAMED and SET_NAMED are replaced by the appropriate
+NAMEDCNT macro (defined in the 07-def-nmcnt-macros mod).
+
+Procedures for setting variables in envir.c have been re-organized,
+and changed to increment and decrement NAMEDCNT according to the new
+scheme.
+
+The <<- operator no longer duplicates rather than adjusting NAMEDCNT
+when the value assigned has NAMEDCNT > 0.
+
+Assignment to a global symbol no longer causes it to be flushed from
+the global cache, unless it did not previously exist.  (Flushing is
+not necessary when all that changes is the value bound, not whether
+and where it is bound.)
+
+The count of hash table entries in use was wrongly maintained in
+HashSet in envir.c.  This affected when hash tables were resized, but
+not correctness.
+ 
+ 
+08-DispatchOrEval-change:
+ 
+Added the option of the argsevald argument of DispatchOrEval being -1,
+which indicates that the first, but only the first, of the arguments
+has already been evaluated.  Used later for "[".
+ 
+ 
+08-fix-nmcnt-bugs:
+ 
+Several bugs involving incorrect maintanence of NAMEDCNT/NAMED are
+fixed here, as detailed in NEWS items.  These fixes use new macros
+called SET_VECTOR_ELEMENT_TO_VALUE and SET_VECTOR_ELEMENT_FROM_VECTOR.
+Some speed improvements were made too.
+
+A new test script, tests/namedcnt.R, tests these fixes.
+ 
+ 
+08-helpers-framework:
+ 
+This mod implements the basic framework of the helpers facility.
+However, the only functions that may be done in a task are the "row"
+and "col" functions (implemented in this mod for testing purposes).
+Later mods implement many more operations as tasks that may be done in
+helper threads.
+
+General information on the helpers facility is now obtainable with
+help(helpers).  In this mod, the information is very minimal.
+
+The --enable-helpers-threads configuration option is now documented
+in R-admin.texi.
+
+There is some minimal documentation on the helpers framework in
+R-ints.texi.
+
+See NEWS item (and R --help) for new use of environment variables as
+alternative to arguments to the R command.
+ 
+ 
+08-matrix:
+ 
+Speeds up the "matrix" function, as described in NEWS.
+ 
+ 
+09-arith-tasks:
+ 
+This mod uses the helpers framework to implement pipelined arithmetic
+tasks, for operators +, -, *, /, ^, %%, and %/%, and for mathematical
+functions of one argument (exp, etc.).  The code is also cleaned up in
+various ways.
+
+Note that some operations cannot be done in helper threads because of
+the possibility that they will produce a warning message, which can be
+produced only in the master thread.
+ 
+ 
+09-matprod-tasks:
+ 
+This mod implements matrix multiplication using tasks that may be done
+in helper threads.
+
+For real matrix multiplication, five tasks are defined, for
+zero-result multiplies, matrix dot products, matrix-vector multiplies,
+vector-matrix multiplies, and matrix-matrix multiplies.  All but the
+first of these tasks have three versions, using non-taks routines in
+extra/matprod, using BLAS routines, and using the pipelined task
+routines in extra/matprod.
+
+For complex matrix multiplication, two tasks are defined, for
+zero-result and normal multiplies.
+
+A new configuration option is introduced for controlling whether BLAS
+routines can be called from helper threads (ie, whether the BLAS is
+thread-safe), called --disable-mat-mult-with-BLAS-in-helpers.  The
+default is to consider the BLAS to be thread-safe.
+ 
+ 
+09-rowcolsums-tasks:
+ 
+Changed (row/col)(Sums/Means) to use task procedures that can be done
+in a helper thread.  Also makes other tweaks.
+
+Fixed lack of error check for .rowMeans, etc. (see NEWS).
+ 
+ 
+09-set-pend-cmplx:
+ 
+Changes symbol lookup routines to allow lookups that do not wait for
+the value to be computed.  Also does some cleanup of these routines.
+
+Modifies the implementation of assignments to use these modified
+lookups, and to temporarily increment NAMEDCNT for rhs of complex
+assignment to avoid problems when the value of the assignment
+expression is used (see bug described in NEWS).  Adds a test of this.
+ 
+ 
+09-subset-fix:
+ 
+This fixes some bugs with subsetting of lists, as described in NEWS.
+Adds tests for these.
+
+ 
+ 
+09-subset-par:
+ 
+This mod changes simple forms of indexing of vectors to allow the
+vector to not be fully computed, as long as the elements accessed have
+been computed.
+ 
+ 
+09-transpose-task:
+ 
+Do matrix transpose in a task that can be executed in a helper thread
+(unless it's a matrix of non-numeric items).  The output can be
+pipelined, but not the input.
+ 
+ 
+09-writetable:
+ 
+The write.table function is modified to allow the data vector to not
+be fully computed when write.table starts.  It waits for an element to
+be computed only when that element is the next to be written.
+ 
+ 
+10-future:
+ 
+This mod adds comments on future directions for pqR to R-ints.
+ 
+ 
+10-hash:
+ 
+Fixes a memory expansion bug reported to R Core (PR 15363), and the
+similar problem with rm and get_rm.  Also cleans up the code some
+(more cleanup is needed), and uses HASHASH to avoid hash computations
+consistently.  Defines a maximum size for the string hash table in
+memory.c separately from the maximum size for other hash tables.
+ 
+ 
+10-no-SETLENGTH:
+ 
+Remove the few uses of the deprecated SETLENGTH macro/function in the
+interpreter and in the stats package.  There is still one place it is
+used in the recommended Matrix package.
+ 
+ 
+10-pretty-news:
+ 
+This mod revises doc/NEWS.Rd to be in pretty form for a release,
+removing some information that really only belongs in MODS.
+
+The MODS file is also removed here.  It was present before only
+because earlier version of some mods used it rather than the mods
+directory.  (However, MODS is recreated in release directories.)
+ 
+ 
+11-newer-news:
+ 
+More updates to NEWS.Rd.  Also changed date in SVN-REVISION,
+matching date in NEWS.Rd.
+ 
+ 
+11-sxpinfo-chng:
+ 
+This mod changes sxpinfo in a major way, splitting 32 of the 64 bits
+into a union that differs for vector and non-vector nodes.  This
+allows the full 32-bit truelength field to be restored.  The diverse
+uses of the "misc" bit are now separated.  The use of the "trace" bit
+for memory tracing is no longer possible, since it doesn't exist in
+vectors, so the tracemem facility is defunct.
+ 
+ 
+12-contributed:
+ 
+This branch contains a few mods suggested by "armgong" to get pqR
+to work on Windows.
+ 
+ 
+12-fixes-from-R-Core:
+ 
+This branch contains numerous bug fixes and other enhancements taken
+from R-2.15.1 or later versions of R distributed by the R Core Team.
+ 
+ 
+12-gc-helpers:
+ 
+Changed the garbage collector so it doesn't always wait for all tasks
+to complete on full collections.  Instead, it waits only until all
+large variables that aren't otherwise marked are not in use and not
+being computed.
+ 
+ 
+12-misc-cleanup:
+ 
+Miscellaneous cleanups, including fix of bug reported on r-devel by
+Herve Pages 2013-07-12.  Also gets rid of warning for (-Inf)^(1e16).
+
+
+ 
+ 
+12-namedcnt-cleanup:
+ 
+This mod documents a set of conventions regarding modification of
+objects and use of NAMEDCNT in R-ints, and implements changes that
+bring pqR closer to following them.  These changes also fix bugs,
+generalize operations, and improve performance by avoiding some
+duplications.
+
+The KalmanLike and KalmanFore functions were also changed to not
+modify shared objects, even if "fast" is TRUE.  This was necessitated
+by other changes that broadened when objects are shared.
+
+More types are compatible for [[<-, such as assigning a raw to a real,
+and a function to an expression.
+
+The bugs fixed include pqR issues #14 and #15, and all of #16 except
+about printing dimnames, which also occur in R-2.15.0 and R-3.0.1.
+Also makes illegal constructs like v <- pairlist(1,2,3); v[[-2]] <- NULL,
+which are documented to be illegal.
+ 
+ 
+12-subassign:
+ 
+Cleanup in subassign.c.
+ 
+ 
+12-variant-enhance:
+ 
+This branch enhances/fixes some things to do with variant returns.
+A pending result can now be passed on from sum_math through "sum".
+A bug in sum(abs(...)) with helper threads enabled is fixed.
+ 
+ 
+12-windows-fixes:
+ 
+Changes meant to fix things up for pqR to work on Windows.
+ 
+ 
+13-helpers-help:
+ 
+This mod provides more detailed user documentation on computations
+that can be done in helper threads.
+ 
+ 
+13-newer-news:
+ 
+Updates to NEWS.Rd, including date, with matching change to date in
+SVN-REVISION.
+ 
+ 
+13-subassign2:
+ 
+More cleanup in subassign.c, include using VARIANT_SEQ for 
+subscripts of vectors.
+ 
+ 
+13-subset:
+ 
+This mod spees up subsetting of arrays of three or more dimensions
+with "[" by detailed code improvements.
+ 
+ 
+14-blas-opt:
+ 
+Further improvements in the reference BLAS routines.
+
+DSYRK improved, which affects performance of R crossprod and tcrossprod.
+
+DGEMM is improved for all cases except when the first but not second
+operand is tranposed.
+
+Also fixes the bug illustrate below:
+
+  a <- matrix(c(NA,1,0,1),2,2,byrow=T)
+  print(a%*%t(a))
+  print(tcrossprod(a,a))
+  print(tcrossprod(a))
+ 
+ 
+14-html:
+ 
+Updates doc/html and other places for pqR rather than old R.
+ 
+ 
+14-misc-cleanup:
+ 
+Miscellaneous cleanups/optimizations, along with start of new NEWS.
+
+Fixed glitch that would prevent pipelining into MODOP.
+
+Fixed NAMEDCNT bug in assignment of repeated elements to a list array;
+added tests for such cases.
+
+Fixed ifelse bug introduced earlier in pqR, and sped it up a bit more.
+Also put in S4 check from R-3.0.0.
+
+Now pay attention to MAT_MULT_WITH_BLAS_IN_HELPERS_OK for complex
+matrix multiplication.
+
+Fixed bug in reusing operand where "name" attribute not removed.
+
+In interactive session, allow value returned at top level to not
+have been computed yet.  Of course, we have to wait for it if it
+ends up being printed.
+
+Now warn of dangers of -O3 in R-admin.
+
+Bug and documentation fixes for 'apply' and 'rank'.
+
+ 
+ 
+14-names-reorg:
+ 
+This mod splits the R_FunTab table in names.c, that gives all the
+builtin functions, into smaller tables found in each source file
+defining these builtin functions. This lets the descriptions be placed
+near the functions, and also lets these functions be static rather
+than extern.
+ 
+ 
+14-new-helpers:
+ 
+This mod includes a new version of the helpers module that supports
+deferred task evaluation even when there are no helper threads, and
+associated mods to pqR to accomodate it (with various options for
+enabling/disabling).
+
+This is preparation for a later mod that will be able to merge some
+deferred tasks.
+ 
+ 
+14-new-matprod:
+ 
+This mod uses a new version of the "matprod" library.
+This version includes the matprod_trans1 and matprod_trans2
+routines, useful for crossprod and tcrossprod, but they
+aren't actually called yet in this mod.
+ 
+ 
+14-pqR-logo:
+ 
+Changes the R logo to the pqR logo.  Also changes the README and
+R-admin to reference pqR-project.org.
+ 
+ 
+15-crossprod:
+ 
+Changes in how crossprod and tcrossprod are implemented, to make them
+similar to regular matrix multiplies (including pipelining, except no
+input pipelining for tcrossprod).  Takes advantage of the new version
+of 'matprod'.  (Also note the improved BLAS routines in 14-blas-opt.)
+ 
+ 
+15-extra-news:
+ 
+Adds some NEWS entries that need to be added here to merge properly,
+gets rid of surplus sections, and adds the date of the next release.
+
+ 
+ 
+15-matprod-test:
+ 
+Add tests of matrix product operations to "make check".
+ 
+ 
+15-task-merging:
+ 
+This mod implements a limited facility for sometimes merging a
+newly-scheduled task with an existing task.  A new version of the
+helpers module that supports this is included.  Configuration options
+are updated to support this.  Documentation and NEWS are updated as
+well.
+ 
+ 
+16-t-varop-mm:
+ 
+Creates VARIANT_TRANS, changes "t" to return it, and changes %*% to
+ask for it for its operands, thereby allowing t(A)%*%B and A%*%t(B) 
+to be done faster and with less memory use (like crossprod(A,B) and
+tcrossprod(A,B)).
+
+Also cleans up do_matprod, and fixes a bug.
+
+Updates NEWS.Rd with info on this mod.
+ 
+ 
+16-tune:
+ 
+Adjusts tuning parameters for use of helpers facilities.

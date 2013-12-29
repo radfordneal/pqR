@@ -1,5 +1,0 @@
-Extending lists and character vectors by assigning to an index past
-the end, deleting list items by assigning NULL, and concatenation of
-character vectors with "c" have all been speded up.  This is partially
-from use of copy_string_elements and copy_vector_elements.  Another
-gain comes from handling deletion of a contiguous block specially.
