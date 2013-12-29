@@ -18,6 +18,7 @@
 rank <- function(x, na.last = TRUE,
 		 ties.method=c("average", "first", "random", "max", "min"))
 {
+    if (is.data.frame(x)) x <- unlist(x)
     nas <- is.na(x)
     not.nas <- !nas
     any.nas <- any(nas)
