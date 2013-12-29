@@ -1,6 +1,7 @@
 % File src/library/base/man/rank.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{rank}
@@ -15,7 +16,11 @@ rank(x, na.last = TRUE,
      ties.method = c("average", "first", "random", "max", "min"))
 }
 \arguments{
-  \item{x}{a numeric, complex, character or logical vector.}
+  \item{x}{a numeric, complex, character or logical vector, or an
+    object of a class that behaves as a vector with respect to
+    subscripting with \code{[}, comparison of elements with \code{==}
+    and \code{>}, and checking for \code{NA} with \code{is.na}.  As
+    a special case, data frames are converted to vectors with \code{unlist}.}
   \item{na.last}{for controlling the treatment of \code{\link{NA}}s.
     If \code{TRUE}, missing values in the data are put last; if
     \code{FALSE}, they are put first; if \code{NA}, they are removed; if

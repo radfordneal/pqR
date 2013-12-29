@@ -105,6 +105,12 @@ information that has not changed from previous releases of pqR.
       somewhat dubious and convoluted) in the help entry for \code{apply}.
       This change fixes a problem seen in package TSA (and probably others).
 
+\item Changed \code{rank} from prevous versions of pqR to replicate
+      the behaviour when it is applied to data frames that is seen in R-2.15.0 
+      (and later R Core versions).  Documented this (somewhat dubious) 
+      behaviour in the help entry for \code{rank}.  This change fixes a
+      problem in the \code{coin} package.
+
 \item Fixed a bug in keeping track of references when assigning 
       repeated elements into a list array.
   }}
