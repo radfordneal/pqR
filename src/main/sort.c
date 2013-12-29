@@ -701,7 +701,7 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
     if (c == 0 && i < j) return 0; else return 1;
 }
 
-/* Needs indx set to 1...n initially */
+/* Needs indx set to 0, 1, ..., n-1 initially */
 static void orderVector(int *indx, int n, SEXP key, Rboolean nalast,
 			Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
 {
@@ -734,7 +734,7 @@ static void orderVector(int *indx, int n, SEXP key, Rboolean nalast,
 		}
 
 
-/* Needs indx set to 1...n initially.
+/* Needs indx set to 0, 1, ..., n-1 initially.
    Also used by do_options, src/gnuwin32/extra.c
    Called with rho != R_NilValue only from do_rank, when NAs are not involved.
  */
@@ -925,7 +925,7 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 //	error(_("argument is not an atomic vector"));
     if(TYPEOF(x) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
-    n = LENGTH(x);
+    n = length(x);
     ties_str = CHAR(asChar(CADR(args)));
     if(!strcmp(ties_str, "average"))	ties_kind = AVERAGE;
     else if(!strcmp(ties_str, "max"))	ties_kind = MAX;
