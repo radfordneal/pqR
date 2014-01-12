@@ -305,6 +305,13 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 extern void helpers_wait_until_not_in_use(SEXP);
 #endif
 
+/* Below is for packages that (naughtily) define USE_RINTERNALS, but don't
+   include Defn.h, where helpers_is_in_use is defined. */
+
+#ifndef helpers_is_in_use  
+#define helpers_is_in_use(x)               ((x)->sxpinfo.in_use)
+#endif
+
 #define NAMEDCNT(x) \
 ( helpers_is_in_use(x) && (x)->sxpinfo.nmcnt != MAX_NAMEDCNT \
      ? (helpers_wait_until_not_in_use(x), (x)->sxpinfo.nmcnt) \
