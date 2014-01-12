@@ -1526,6 +1526,15 @@ extern void Rf_unprotect_error (void);
 
 #endif
 
+/* Redefine NA_INTEGER and NA_LOGICAL to be constants.  Defined in Arith.h
+   to refer to R_NaInt, because the RcppEigen package needs them to be
+   variables, but they may be faster as constants inside the interpreter. */
+
+#undef NA_INTEGER
+#define NA_INTEGER INT_MIN
+#undef NA_LOGICAL
+#define NA_LOGICAL INT_MIN
+
 #endif /* DEFN_H_ */
 /*
  *- Local Variables:

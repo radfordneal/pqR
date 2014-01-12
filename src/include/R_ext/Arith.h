@@ -61,8 +61,12 @@ LibExtern int	 R_NaInt;	/* NA_INTEGER:= INT_MIN currently */
 #endif
 #endif
 
-#define NA_LOGICAL	INT_MIN	 /* used to refer to R_NaInt */
-#define NA_INTEGER	INT_MIN	 /* used to refer to R_NaInt */
+/* The next two are redefined to INT_MIN directly at end of Defn.h, for 
+   (possibly) faster access.  They are defined here to refer to a variable 
+   because otherwise the RcppEigen package doesn't install. */
+#define NA_LOGICAL	R_NaInt
+#define NA_INTEGER	R_NaInt
+
 /* #define NA_FACTOR	R_NaInt  unused */
 #define NA_REAL		R_NaReal
 /* NA_STRING is a SEXP, so defined in Rinternals.h */
