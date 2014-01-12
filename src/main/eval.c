@@ -1332,9 +1332,12 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     if (len == 0)
         errorcall(call, _("argument is of length zero"));
 
-    if (len > 1)
+    if (len > 1) {
+        PROTECT(s);
         warningcall(call,
         _("the condition has length > 1 and only the first element will be used"));
+        UNPROTECT(1);
+    }
 
     if (cond == NA_LOGICAL)
 	errorcall(call, isLogical(s) ? 
