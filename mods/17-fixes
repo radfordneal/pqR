@@ -1,1 +1,19 @@
 Various fixes, mostly needed for compatibility with various packages.
+
+Includes a fix for following bug:
+
+  f <- function (a) 
+  { 
+    x <- a
+  
+    function () { b <- a; b[2]<-1000; a+b  }
+  }
+  
+  g <- f(c(7,8,9))
+  
+  save.image("tmpimage")
+  load("tmpimage")
+  
+  print(g())
+  
+where the result printed was 14 2000 18 rather than 14 1008 18.

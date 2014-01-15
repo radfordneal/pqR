@@ -520,40 +520,52 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     case SYMSXP:
 	if (e == R_DotsSymbol)
 	    error(_("'...' used in an incorrect context"));
-	if( DDVAL(e) )
-		tmp = ddfindVar(e,rho);
+
+	if (DDVAL(e))
+	    tmp = ddfindVar(e,rho);
 	else
-		tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
-                                                   : findVar (e, rho);
+	    tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
+                                               : findVar (e, rho);
 	if (tmp == R_UnboundValue)
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
+
 	/* if ..d is missing then ddfindVar will signal */
-	else if (tmp == R_MissingArg && !DDVAL(e) ) {
+	if (tmp == R_MissingArg && !DDVAL(e) ) {
 	    const char *n = CHAR(PRINTNAME(e));
-	    if(*n) error(_("argument \"%s\" is missing, with no default"),
-			 CHAR(PRINTNAME(e)));
-	    else error(_("argument is missing, with no default"));
-	}
-	else if (TYPEOF(tmp) == PROMSXP) {
-	    if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue) {
-		/* not sure the PROTECT is needed here but keep it to
-		   be on the safe side. */
-		PROTECT(tmp);
-		tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(tmp)
-                                                   : forcePromise(tmp);
-		UNPROTECT(1);
-	    }
+	    if (*n)
+                error(_("argument \"%s\" is missing, with no default"),
+		      CHAR(PRINTNAME(e)));
 	    else 
-                tmp = variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(tmp)
-                                                   : PRVALUE(tmp);
+                error(_("argument is missing, with no default"));
 	}
-	else if (NAMEDCNT_EQ_0(tmp))
-	    SET_NAMEDCNT_1(tmp);
-	break;
+
+        if (TYPEOF(tmp) == PROMSXP) {
+            if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue) {
+                /* not sure the PROTECT is needed here but keep it to
+                   be on the safe side. */
+                PROTECT(tmp);
+                tmp = variant & VARIANT_PENDING_OK 
+                       ? forcePromisePendingOK(tmp) : forcePromise(tmp);
+                UNPROTECT(1);
+            }
+            else 
+                tmp = variant & VARIANT_PENDING_OK 
+                       ? PRVALUE_PENDING_OK(tmp) : PRVALUE(tmp);
+        }
+
+        /* A NAMEDCNT of 0 might arise from an inadverently missing increment
+           somewhere, or from a save/load sequence (since loaded values in
+           promises have NAMEDCNT of 0), so fix up here... */
+
+        if (NAMEDCNT_EQ_0(tmp))
+            SET_NAMEDCNT_1(tmp);
+
+        break;
     case PROMSXP:
         /* We could just unconditionally use the return value from
            forcePromise; the test below avoids the function call if the
-           promise is already evaluated. */
+           promise is already evaluated.  We don't change NAMEDCNT, 
+           since for use in applydefine, that would be undesirable. */
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
             tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(e)
                                                : forcePromise(e);
