@@ -101,9 +101,10 @@ static const char *typename(SEXP v) {
 
 /* pre is the prefix, v is the object to inspect, deep specifies
    the recursion behavior (0 = no recursion, -1 = [sort of] unlimited
-   recursion, positive numbers define the maximum recursion depth)
-   and pvec is the max. number of vector elements to show  */
-static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
+   recursion, positive numbers define the maximum recursion depth),
+   pvec is the max. number of vector elements to show, and prom is
+   whether recursion happens for promises.  */
+static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     int a = 0;
     pp(pre);
     /* the use of %lx is deliberate because I hate the output of %p,
@@ -154,8 +155,13 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 	if (IS_CACHED(v)) Rprintf(" [cached]");
 	Rprintf("\"%s\"", CHAR(v));
     }
-    if (TYPEOF(v) == SYMSXP)
-	Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), (SYMVALUE(v) == R_UnboundValue) ? "" : " (has value)");
+    if (TYPEOF(v) == SYMSXP) {
+        if (v == R_UnboundValue)
+            Rprintf("UnboundValue");
+        else
+	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
+                    SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
+    }
     switch (TYPEOF(v)) { /* for native vectors print the first elements in-line */
     case LGLSXP:
 	if (LENGTH(v) > 0) {
@@ -204,7 +210,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 	    {
 		unsigned int i = 0;
 		while (i<LENGTH(v) && i < pvec) {
-		  inspect_tree(pre+2, VECTOR_ELT(v, i), deep - 1, pvec);
+		  inspect_tree(pre+2, VECTOR_ELT(v, i), deep - 1, pvec, prom);
 		    i++;
 		}
 		if (i<LENGTH(v)) { pp(pre+2); Rprintf("...\n"); }
@@ -214,7 +220,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 	    {
 		unsigned int i = 0;
 		while (i < LENGTH(v) && i < pvec) {
-		  inspect_tree(pre+2, STRING_ELT(v, i), deep - 1, pvec);
+		  inspect_tree(pre+2, STRING_ELT(v, i), deep - 1, pvec, prom);
 		    i++;
 		}
 		if (i < LENGTH(v)) { pp(pre+2); Rprintf("...\n"); }
@@ -236,9 +242,9 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 		    if (TAG(lc) && TAG(lc) != R_NilValue) {
 			pp(pre + 2);
 			Rprintf("TAG: "); /* TAG should be a one-liner since it's a symbol so we don't put it on an extra line*/
-			inspect_tree(0, TAG(lc), deep - 1, pvec);
+			inspect_tree(0, TAG(lc), deep - 1, pvec, prom);
 		    }		  
-		    inspect_tree(pre + 2, CAR(lc), deep - 1, pvec);
+		    inspect_tree(pre + 2, CAR(lc), deep - 1, pvec, prom);
 		    lc=CDR(lc);
 		}
 	    }
@@ -246,28 +252,38 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
 	case ENVSXP:
 	    if (FRAME(v) != R_NilValue) {
 		pp(pre); Rprintf("FRAME:\n");
-		inspect_tree(pre+2, FRAME(v), deep - 1, pvec);
+		inspect_tree(pre+2, FRAME(v), deep - 1, pvec, prom);
 	    }
 	    pp(pre); Rprintf("ENCLOS:\n");
-	    inspect_tree(pre+2, ENCLOS(v), 0, pvec);
+	    inspect_tree(pre+2, ENCLOS(v), 0, pvec, prom);
 	    if (HASHTAB(v) != R_NilValue) {
 		pp(pre); Rprintf("HASHTAB:\n");
-		inspect_tree(pre+2, HASHTAB(v), deep - 1, pvec);
+		inspect_tree(pre+2, HASHTAB(v), deep - 1, pvec, prom);
 	    }
 	    break;
+
+        case PROMSXP:
+            if (!prom) break;
+	    pp(pre); Rprintf("PRCODE:\n");
+	    inspect_tree(pre+2, PRCODE(v), deep - 1, pvec, prom);
+	    pp(pre); Rprintf("PRVALUE:\n");
+	    inspect_tree(pre+2, PRVALUE(v), deep - 1, pvec, prom);
+	    pp(pre); Rprintf("PRENV:\n");
+	    inspect_tree(pre+2, PRENV(v), 0, pvec, prom);
+            break;
 	    
 	case CLOSXP:
 	    pp(pre); Rprintf("FORMALS:\n");
-	    inspect_tree(pre+2, FORMALS(v), deep - 1, pvec);
+	    inspect_tree(pre+2, FORMALS(v), deep - 1, pvec, prom);
 	    pp(pre); Rprintf("BODY:\n");
-	    inspect_tree(pre+2, BODY(v), deep - 1, pvec);
+	    inspect_tree(pre+2, BODY(v), deep - 1, pvec, prom);
 	    pp(pre); Rprintf("CLOENV:\n");
-	    inspect_tree(pre+2, CLOENV(v), 0, pvec);
+	    inspect_tree(pre+2, CLOENV(v), 0, pvec, prom);
 	    break;
 	}
     
     if (ATTRIB(v) && ATTRIB(v) != R_NilValue && TYPEOF(v) != CHARSXP) {
-	pp(pre); Rprintf("ATTRIB:\n"); inspect_tree(pre+2, ATTRIB(v), deep, pvec);
+	pp(pre); Rprintf("ATTRIB:\n"); inspect_tree(pre+2, ATTRIB(v), deep, pvec, prom);
     }
 }
 
@@ -278,24 +294,29 @@ SEXP attribute_hidden do_inspect(SEXP call, SEXP op, SEXP args, SEXP env) {
     SEXP obj = CAR(args);
     int deep = -1;
     int pvec = 5;
+    int prom = 0;
     if (CDR(args) != R_NilValue) {
 	deep = asInteger(CADR(args));
-	if (CDDR(args) != R_NilValue)
+	if (CDDR(args) != R_NilValue) {
 	    pvec = asInteger(CADDR(args));
+            if (CDR(CDDR(args)) != R_NilValue) {
+	        prom = asInteger(CADR(CDDR(args)));
+            }
+        }
     }
 	
-    inspect_tree(0, CAR(args), deep, pvec);
+    inspect_tree(0, CAR(args), deep, pvec, prom);
     return obj;
 }
 
 /* the following functions can be use internally and for debugging purposes -
    so far they are not used in any actual code */
 SEXP attribute_hidden R_inspect(SEXP x) {
-    inspect_tree(0, x, -1, 5);
+    inspect_tree(0, x, -1, 5, 0);
     return x;
 }
 
 SEXP attribute_hidden R_inspect3(SEXP x, int deep, int pvec) {
-    inspect_tree(0, x, deep, pvec);
+    inspect_tree(0, x, deep, pvec, 0);
     return x;
 }
