@@ -528,14 +528,14 @@ void task_matprod_vec_mat (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     matprod_vec_mat (x, y, z, nry, ncy);
 }
 
-void task_matprod (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+void task_matprod_mat_mat (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 { 
     double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
     int ncx_nry = op;
     int nrx = LENGTH(sx) / ncx_nry;
     int ncy = LENGTH(sy) / ncx_nry;
 
-    matprod (x, y, z, nrx, ncx_nry, ncy);
+    matprod_mat_mat (x, y, z, nrx, ncx_nry, ncy);
 }
 
 void task_matprod_trans1 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
@@ -591,7 +591,7 @@ void task_matprod_vec_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
     F77_CALL(dgemv) ("T", &nry, &ncy, &one, y, &nry, x, &i1, &zero, z, &i1);
 }
 
-void task_matprod_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
+void task_matprod_mat_mat_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 { 
     double *z = REAL(sz), *x = REAL(sx), *y = REAL(sy);
     int ncx_nry = op;
@@ -1022,15 +1022,15 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
             else {
                 if (R_mat_mult_with_BLAS[3]) {
-                    task_proc = task_matprod_BLAS;
+                    task_proc = task_matprod_mat_mat_BLAS;
 #                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                         inhlpr = 0;
 #                   endif
                 }
                 else if (no_pipelining)
-                    task_proc = task_matprod;
+                    task_proc = task_matprod_mat_mat;
                 else {
-                    task_proc = task_piped_matprod;
+                    task_proc = task_piped_matprod_mat_mat;
                     flags = HELPERS_PIPE_IN2_OUT;
                 }
             }

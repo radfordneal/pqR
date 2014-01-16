@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Interface to Task Procedures With Pipelining
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,6 +21,6 @@
 helpers_task_proc task_piped_matprod_vec_vec;
 helpers_task_proc task_piped_matprod_vec_mat;
 helpers_task_proc task_piped_matprod_mat_vec;
-helpers_task_proc task_piped_matprod;
+helpers_task_proc task_piped_matprod_mat_mat;
 helpers_task_proc task_piped_matprod_trans1;
 helpers_task_proc task_piped_matprod_trans2;

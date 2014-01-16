@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              C Procedures for Matrix Multiplication Without Pipelining
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -326,7 +326,7 @@ void matprod_mat_vec (double *x, double *y, double *z, int n, int k)
    controlled using -DALT_MATPROD.  Change #ifdef to #ifndef or 
    vice versa below to change the default. */
 
-void matprod (double *x, double *y, double *z, int n, int k, int m)
+void matprod_mat_mat (double *x, double *y, double *z, int n, int k, int m)
 {
     if (n <= 0) return;
 
