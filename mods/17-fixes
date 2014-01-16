@@ -1,6 +1,9 @@
-Various fixes, mostly needed for compatibility with various packages.
+Various changes/fixes.
 
-Includes a fix for following bug:
+Some changes for compatibility with various packages, allowing
+more access to internals.
+
+Fixes the following bug:
 
   f <- function (a) 
   { 
@@ -17,3 +20,5 @@ Includes a fix for following bug:
   print(g())
   
 where the result printed was 14 2000 18 rather than 14 1008 18.
+
+Fixes bug in prod with integer vector containing NA, eg prod(NA).

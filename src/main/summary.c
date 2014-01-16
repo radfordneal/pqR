@@ -269,7 +269,7 @@ static double iprod(int *x, int n, Rboolean narm)
     } else { 
         for (i = 0; i < n; i++) {
             if (x[i] == NA_INTEGER) 
-                return NA_INTEGER;
+                return NA_REAL;
             s *= x[i];
         }
     }
