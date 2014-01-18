@@ -4318,23 +4318,26 @@ void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
 	return NULL;
     }
 
-    if(blen * sizeof(char) < buf->bufsize) return buf->data;
-    blen1 = blen = (blen + 1) * sizeof(char);
+    if (blen < buf->bufsize) return buf->data;
+    blen1 = blen = (blen + 1);
     blen = (blen / bsize) * bsize;
     if(blen < blen1) blen += bsize;
 
     if(buf->data == NULL) {
 	buf->data = (char *) malloc(blen);
-	buf->data[0] = '\0';
-    } else
+        if (buf->data) buf->data[0] = 0;
+    }
+    else
 	buf->data = (char *) realloc(buf->data, blen);
-    buf->bufsize = blen;
-    if(!buf->data) {
+
+    if (!buf->data) {
 	buf->bufsize = 0;
 	/* don't translate internal error message */
 	error("could not allocate memory (%u Mb) in C function 'R_AllocStringBuffer'",
 	      (unsigned int) blen/1024/1024);
     }
+
+    buf->bufsize = blen;
     return buf->data;
 }
 

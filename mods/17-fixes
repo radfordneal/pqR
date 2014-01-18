@@ -22,3 +22,5 @@ Fixes the following bug:
 where the result printed was 14 2000 18 rather than 14 1008 18.
 
 Fixes bug in prod with integer vector containing NA, eg prod(NA).
+
+Cleaned up code in R_AllocStringBuffer, avoiding potential segfault.

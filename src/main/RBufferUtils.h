@@ -21,7 +21,8 @@
 #define R_BUFFER_UTILS
 
 /* used in bind.c character.c deparse.c, printutils.c, saveload.c
-   scan.c seq.c sprintf.c sysutils.c */
+   scan.c, seq.c, sprintf.c, sysutils.c, paste.c - but just use
+   grep if you want to know for sure. */
 
 typedef struct {
  char *data;
