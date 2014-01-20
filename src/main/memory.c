@@ -1,4 +1,3 @@
-
 /*
  *  pqR : A pretty quick version of R
  *  Copyright (C) 2013 by Radford M. Neal
@@ -342,6 +341,7 @@ static void mem_err_malloc(R_size_t size);
 
 static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 
+static SEXP R_StringHash;   /* Global hash of CHARSXPs */
 
 #define NODE_IS_MARKED(s) (MARK(s))
 #define MARK_NODE(s) (MARK(s)=1)
@@ -1996,6 +1996,12 @@ static void RunGenCollect(R_size_t size_needed)
 	    s = VECTOR_ELT(R_StringHash, i);
 	    t = R_NilValue;
 	    while (s != R_NilValue) {
+#if DEBUG_GLOBAL_STRING_HASH
+                if (TYPEOF(s)!=CHARSXP)
+                   REprintf(
+                     "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
+                      TYPEOF(s));
+#endif
 		if (! NODE_IS_MARKED(CXHEAD(s))) { 
                     /* remove unused CHARSXP, and associated cons cell (if 
                        not linking by attribute field) */
@@ -2004,9 +2010,6 @@ static void RunGenCollect(R_size_t size_needed)
 			VECTOR_ELT(R_StringHash, i) = CXTAIL(s);
 		    else
 			CXTAIL(t) = CXTAIL(s);
-#ifndef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-                    FORWARD_NODE(s);
-#endif
 		    s = CXTAIL(s);
 		    continue;
 		}
@@ -4039,8 +4042,8 @@ SEXP mkChar(const char *name)
     return mkCharLenCE(name, strlen(name), CE_NATIVE);
 }
 
-/* Follows the hash structure from envir.c, but need separate code for 
-   get/set of values since our keys are char* and not SEXP symbol types,
+/* CHARSXP hashing follows the hash structure from envir.c, but need separate
+   code for get/set of values since our keys are char* and not SEXP symbol types
    and the string hash table is treated specially in garbage collection.
 
    Experience has shown that it is better to use a different hash function,
@@ -4098,6 +4101,11 @@ static void R_StringHash_resize(unsigned int newsize)
 	while (chain != R_NilValue) {
 	    val = CXHEAD(chain);
 	    next = CXTAIL(chain);
+#if DEBUG_GLOBAL_STRING_HASH
+            if (TYPEOF(val)!=CHARSXP)
+               REprintf("R_StringHash table contains a non-CHARSXP (%d, rs)!\n",
+                        TYPEOF(val));
+#endif
 	    new_hashcode = char_hash (CHAR(val), LENGTH(val)) & newmask;
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
@@ -4195,7 +4203,6 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
             }
 	}
     }
-
     if (cval == R_NilValue) {
 	/* no cached value; need to allocate one and add to the cache */
 	cval = allocCharsxp(len);
@@ -4234,9 +4241,15 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
 	/* Resize the hash table if desirable and possible. */
 	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
-             && 2*char_hash_size <= STRHASHMAXSIZE)
+             && 2*char_hash_size <= STRHASHMAXSIZE) {
+            /* NOTE!  Must protect cval here, since it is NOT protected by
+               its presence in the hash table. */
+            PROTECT(cval);
 	    R_StringHash_resize (2*char_hash_size);
+            UNPROTECT(1);
+        }
     }
+
     return cval;
 }
 
