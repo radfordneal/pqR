@@ -1516,7 +1516,9 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
     /* cannot use isEnvironment since we do not want NULL here */
     else if( TYPEOF(x) == ENVSXP ) {
-	defineVar(name, val, x);
+
+	set_var_in_frame (name, val, x, TRUE, 3);
+
     }
 
     else if( TYPEOF(x) == SYMSXP || /* Used to 'work' in R < 2.8.0 */

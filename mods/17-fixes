@@ -36,3 +36,6 @@ affecting package "lsr"):
 
 Also made related change to "range" to probably make it more robust
 (though no actual bad behaviour is apparent).
+
+Fixed bug in maintaining NAMEDCNT when assigning to a variable in
+an environment using $ (showed up in check of package 'plus').
