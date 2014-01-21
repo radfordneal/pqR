@@ -28,3 +28,11 @@ Cleaned up code in R_AllocStringBuffer, avoiding potential segfault.
 Fixed lack-of-protection bug in mkCharLenCE (showed up in checks for
 package cmrutils), other improvements in CHARSXP hashing stuff, made
 R_StringHash local to memory.c.
+
+Fixed a problem with xtfrm demonstrated by the following (and
+affecting package "lsr"):
+
+  f<-function(...) xtfrm(...); f(c(1,3,2))
+
+Also made related change to "range" to probably make it more robust
+(though no actual bad behaviour is apparent).
