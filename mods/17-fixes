@@ -39,3 +39,19 @@ Also made related change to "range" to probably make it more robust
 
 Fixed bug in maintaining NAMEDCNT when assigning to a variable in
 an environment using $ (showed up in check of package 'plus').
+
+Changed the behaviour of "$" when dispatching so that the unevaluated
+element name arrives as a string, as in R-2.15.0.  This behaviour is
+needed for the "dyn" package.  The issue is illustrated by the
+following code:
+
+  a <- list(p=3,q=4)
+  class(a) <- "fred"
+  `$.fred` <- 
+    function (x,n) { print(list(n,substitute(n))); x[[n]] }
+  print(a$q)
+
+In R-2.15.0, both elements of the list printed are strings, but in
+pqR-2013-12-29, the element from "substitute" is a symbol.  Changed
+help("$") to document this behaviour, and the corresponding behaviour
+of "$<-".  Added a test with "make check" for it.

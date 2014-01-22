@@ -1570,7 +1570,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP from, what, ans, input;
+    SEXP from, what, ans, input, ncall;
 
     SEXP string = R_NilValue;
     SEXP name = R_NilValue;
@@ -1612,9 +1612,13 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     /* replace the second argument with a string */
 
     /* Previously this was SETCADR(args, input); */
-    /* which could cause problems when nlist was */
+    /* which could cause problems when "from" was */
     /* ..., as in PR#8718 */
     PROTECT(args = CONS(from, CONS(input, R_NilValue)));
+    /* Change call used too, for compatibility with
+       R-2.15.0:  It's accessible using "substitute", 
+       and was a string in R-2.15.0. */
+    PROTECT(ncall = CONS(CAR(call), CONS(CADR(call), CONS(input, R_NilValue))));
 
     /* If the first argument is an object and there is */
     /* an approriate method, we dispatch to that method, */
@@ -1622,15 +1626,15 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     /* through to the generic code below.  Note that */
     /* evaluation retains any missing argument indicators. */
 
-    if(DispatchOrEval(call, op, "$", args, env, &ans, 0, argsevald)) {
-        UNPROTECT(2+argsevald);
+    if(DispatchOrEval(ncall, op, "$", args, env, &ans, 0, argsevald)) {
+        UNPROTECT(3+argsevald);
 	if (NAMEDCNT_GT_0(ans))         /* IS THIS NECESSARY? */
 	    SET_NAMEDCNT_MAX(ans);
 	return ans;
     }
 
     ans = R_subset3_dflt(CAR(ans), string, name, call);
-    UNPROTECT(2+argsevald);
+    UNPROTECT(3+argsevald);
     return ans;
 }
 

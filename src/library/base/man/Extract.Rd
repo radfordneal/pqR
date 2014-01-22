@@ -87,7 +87,9 @@ x$i <- value
   descriptions here apply only to the default methods.  Note that
   separate methods are required for the replacement functions
   \code{[<-}, \code{[[<-} and \code{$<-} for use when indexing occurs on
-  the assignment side of an expression.
+  the assignment side of an expression.  Method for \code{$} and \code{$<-}
+  receive \code{name} as a character string, even if it was written as
+  a symbol.
 
   The most important distinction between \code{[}, \code{[[} and
   \code{$} is that the \code{[} can select more than one element whereas
