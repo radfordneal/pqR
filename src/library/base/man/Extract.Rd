@@ -87,7 +87,7 @@ x$i <- value
   descriptions here apply only to the default methods.  Note that
   separate methods are required for the replacement functions
   \code{[<-}, \code{[[<-} and \code{$<-} for use when indexing occurs on
-  the assignment side of an expression.  Method for \code{$} and \code{$<-}
+  the assignment side of an expression.  Methods for \code{$} and \code{$<-}
   receive \code{name} as a character string, even if it was written as
   a symbol.
 
