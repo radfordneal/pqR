@@ -1303,17 +1303,14 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     if (findVarInFrame3(rho, symbol, TRUE) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
-	if (!NAMEDCNT_GT_1(vl)) 
-            return vl;
     }
     else {
         vl = eval(symbol, ENCLOS(rho));
         if (vl == R_UnboundValue)
             error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
+        set_var_in_frame (symbol, vl, rho, TRUE, 3);
     }
 
-    vl = dup_top_level(vl);
-    set_var_in_frame (symbol, vl, rho, TRUE, 3);
     return vl;
 }
 
@@ -1790,34 +1787,33 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
  *  The partial evaluations are carried out efficiently using previously 
  *  computed components.
  *
+ *  Intermediate values are assigned to a temporary variable, whose binding
+ *  is stored in tmploc.  This is not needed when expr is a symbol.
+ *
  *  The expr and rho arguments must be protected by the caller of evalseq.
  */
 
-static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
+static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal, R_varloc_t tmploc)
 {
     SEXP val, nval, nexpr;
+
     if (isNull(expr))
 	error(_("invalid (NULL) left side of assignment"));
     if (isSymbol(expr)) {
-	if(forcelocal) {
-	    nval = EnsureLocal(expr, rho);
-	}
-	else {/* now we are down to the target symbol */
-	  nval = eval(expr, ENCLOS(rho));
-	}
-	return CONS(nval, expr);
+	nval = forcelocal ? EnsureLocal(expr,rho) : eval(expr,ENCLOS(rho));
+        val = expr;
     }
     else if (isLanguage(expr)) {
-	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
+	PROTECT(val = evalseq (CADR(expr), rho, forcelocal, tmploc));
 	R_SetVarLocValue(tmploc, CAR(val));
-	PROTECT(nexpr = LCONS (CAR(expr), 
-                               LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr))));
+	PROTECT(nexpr = LCONS (CAR(expr), LCONS(R_TmpvalSymbol, CDDR(expr))));
 	nval = eval(nexpr, rho);
 	UNPROTECT(2);
-	return CONS(nval, val);
     }
-    else error(_("target of assignment expands to non-language object"));
-    return R_NilValue;	/*NOTREACHED*/
+    else 
+        error(_("target of assignment expands to non-language object"));
+
+    return CONS(nval,val);
 }
 
 static void tmp_cleanup(void *data)
@@ -1827,10 +1823,10 @@ static void tmp_cleanup(void *data)
 
 /* This macro stores the current assignment target in the saved
    binding location. It duplicates if necessary to make sure
-   replacement functions are always called with a target with NAMED ==
-   1. The SET_CAR is intended to protect against possible GC in
-   R_SetVarLocValue; this might occur it the binding is an active
-   binding. */
+   replacement functions are always called with a target with 
+   NAMEDCNT of 1. The SET_CAR is intended to protect against possible 
+   GC in R_SetVarLocValue, which might occur it the binding is an 
+   active binding. */
 #define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
@@ -1845,33 +1841,61 @@ static void tmp_cleanup(void *data)
 #define ASSIGNBUFSIZ 32
 static R_INLINE SEXP installAssignFcnName(SEXP fun)
 {
-    char buf[ASSIGNBUFSIZ];
-    const char *fname = CHAR(PRINTNAME(fun));
-
     /* Handle "[", "[[", and "$" specially for speed. */
 
-    if (fname[0] == '[') {
-        if (fname[1] == 0)
-            return R_SubAssignSymbol;
-        else if (fname[1] == '[' && fname[2] == 0)
-            return R_SubSubAssignSymbol;
-    }
-    else if (fname[0] == '$' && fname[1] == 0)
+    if (fun == R_BracketSymbol)
+        return R_SubAssignSymbol;
+    else if (fun == R_Bracket2Symbol)
+        return R_SubSubAssignSymbol;
+    else if (fun == R_DollarSymbol)
         return R_DollarAssignSymbol;
-
-    /* The general case... */
-
-    if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
-        error(_("overlong name in '%s'"), fname);
-    return install(buf);
+    else { /* The general case... */
+        char buf[ASSIGNBUFSIZ];
+        const char *fname = CHAR(PRINTNAME(fun));
+        if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
+            error(_("overlong name in '%s'"), fname);
+        return install(buf);
+    }
 }
 
 /* Main entry point for complex assignments; rhs has already been evaluated. */
 
+   We need a temporary variable to hold the intermediate values
+   in the computation.  For efficiency reasons we record the
+   location where this variable is stored.  We need to protect
+   the location in case the biding is removed from its
+   environment by user code or an assignment within the
+   assignment arguments */
+
+   There are two issues with the approach here:
+
+       A complex assignment within a complex assignment, like
+       f(x, y[] <- 1) <- 3, can cause the value temporary
+       variable for the outer assignment to be overwritten and
+       then removed by the inner one.  This could be addressed by
+       using multiple temporaries or using a promise for this
+       variable as is done for the RHS.  Printing of the
+       replacement function call in error messages might then need
+       to be adjusted.
+
+       With assignments of the form f(g(x, z), y) <- w the value
+       of 'z' will be computed twice, once for a call to g(x, z)
+       and once for the call to the replacement function g<-.  It
+       might be possible to address this by using promises.
+       Using more temporaries would not work as it would mess up
+       replacement functions that use substitute and/or
+       nonstandard evaluation (and there are packages that do
+       that -- igraph is one).
+
+   LT */
+
 static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 {
+    int forcelocal = PRIMVAL(op)==1 || PRIMVAL(op)==3;
+    SEXP lhs = CADR(expr);
+
     SEXP lhs, tmp, afun, rhsprom;
-    R_varloc_t tmploc;
+    R_varloc_t tmploc = NULL;
     RCNTXT cntxt;
     int nprot;
 
@@ -1880,51 +1904,26 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     if (rho == R_BaseEnv)
 	errorcall(call, _("cannot do complex assignments in base environment"));
 
-    /*  We need a temporary variable to hold the intermediate values
-	in the computation.  For efficiency reasons we record the
-	location where this variable is stored.  We need to protect
-	the location in case the biding is removed from its
-	environment by user code or an assignment within the
-	assignment arguments */
+    /* Set up temporary variable if needed.  Also set up a context to remove 
+       it when we are done, even in the case of an error.  This all helps 
+       error() provide a better call.*/
 
-    /*  There are two issues with the approach here:
-
-	    A complex assignment within a complex assignment, like
-	    f(x, y[] <- 1) <- 3, can cause the value temporary
-	    variable for the outer assignment to be overwritten and
-	    then removed by the inner one.  This could be addressed by
-	    using multiple temporaries or using a promise for this
-	    variable as is done for the RHS.  Printing of the
-	    replacement function call in error messages might then need
-	    to be adjusted.
-
-	    With assignments of the form f(g(x, z), y) <- w the value
-	    of 'z' will be computed twice, once for a call to g(x, z)
-	    and once for the call to the replacement function g<-.  It
-	    might be possible to address this by using promises.
-	    Using more temporaries would not work as it would mess up
-	    replacement functions that use substitute and/or
-	    nonstandard evaluation (and there are packages that do
-	    that -- igraph is one).
-
-	    LT */
-
-    defineVar(R_TmpvalSymbol, R_NilValue, rho);
-    PROTECT((SEXP) (tmploc = R_findVarLocInFrame(rho, R_TmpvalSymbol)));
-
-    /* Now set up a context to remove it when we are done, even in the
-     * case of an error.  This all helps error() provide a better call.
-     */
-    begincontext(&cntxt, CTXT_CCODE, call, R_BaseEnv, R_BaseEnv,
-		 R_NilValue, R_NilValue);
-    cntxt.cend = &tmp_cleanup;
-    cntxt.cenddata = rho;
+    if (!forcelocal || !isSymbol(lhs)) {
+        defineVar(R_TmpvalSymbol, R_NilValue, rho);
+        PROTECT((SEXP) (tmploc = R_findVarLocInFrame(rho, R_TmpvalSymbol)));
+        begincontext (&cntxt, CTXT_CCODE, call, R_BaseEnv, R_BaseEnv,
+                      R_NilValue, R_NilValue);
+        cntxt.cend = &tmp_cleanup;
+        cntxt.cenddata = rho;
+    }
 
     /*  Do a partial evaluation down through the LHS. */
-    lhs = evalseq(CADR(expr), rho,
-		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
 
-    PROTECT(lhs);
+    PROTECT (evsq = evalseq (lhs, rho, forcelocal, tmploc));
+
+    /* Put the rhs value (already evaluated) in a promise, so further
+       evaluation will have no effect. */
+
     PROTECT(rhsprom = mkPROMISE(CADDR(call), rho));
     SET_PRVALUE(rhsprom, rhs);
     WAIT_UNTIL_COMPUTED(rhs);
@@ -1948,41 +1947,43 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	    else
 		error(_("invalid function in complex assignment"));
 	}
-	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
+	SET_TEMPVARLOC_FROM_CAR(tmploc, evsq);
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
-	lhs = CDR(lhs);
+	evsq = CDR(evsq);
 	expr = CADR(expr);
     }
 
-    nprot = 4; /* the common case */
+    nprot = 3; /* the common case */
     if (TYPEOF(CAR(expr)) == SYMSXP)
 	afun = installAssignFcnName(CAR(expr));
     else {
 	/* check for and handle assignments of the form
 	   foo::bar(x) <- y or foo:::bar(x) <- y */
-	afun = R_NilValue; /* avoid uninitialized variable warnings */
-	if (TYPEOF(CAR(expr)) == LANGSXP &&
-	    (CAR(CAR(expr)) == R_DoubleColonSymbol ||
-	     CAR(CAR(expr)) == R_TripleColonSymbol) &&
-	    length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
-	    afun = installAssignFcnName(CADDR(CAR(expr)));
-	    PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
-	    nprot++;
-	}
-	else
+	if (TYPEOF(CAR(expr))!=LANGSXP
+	 || CAAR(expr)!=R_DoubleColonSymbol && CAAR(expr)!=R_TripleColonSymbol
+	 || length(CAR(expr))!=3 || TYPEOF(CADDR(CAR(expr)))!=SYMSXP)
 	    error(_("invalid function in complex assignment"));
+        afun = installAssignFcnName(CADDR(CAR(expr)));
+        PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
+        nprot++;
     }
-    SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
-    PROTECT(expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
-			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
+    SET_TEMPVARLOC_FROM_CAR(tmploc, evsq);
+    PROTECT(expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(evsq),
+       afun, (tmploc ? R_TmpvalSymbol : lhs), CDDR(expr), rhsprom));
     expr = eval(expr, rho);
     UNPROTECT(nprot);
-    endcontext(&cntxt); /* which does not run the remove */
-    (void) RemoveVariable (R_TmpvalSymbol, rho);
+
+    /* Remove the temporary variable, if it was created. */
+
+    if (tmploc) {
+        UNPROTECT(1);
+        endcontext(&cntxt); /* which does not run the remove */
+        (void) RemoveVariable (R_TmpvalSymbol, rho);
+    }
 }
 
 
