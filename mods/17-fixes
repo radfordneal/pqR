@@ -59,3 +59,14 @@ of "$<-".  Added a test with "make check" for it.
 Fixed bug that causes the code below to create a circular data structure:
 
   { a <- list(1); a[[1]] <- a; a }
+
+Fixed bugs such as that below:
+
+  a <- list(list(list(1)))
+  b <- a
+  a[[1]][[1]][[1]]<-2
+  print(b)
+
+Added tests for such bugs.  Introduced a variant scheme into subassign
+that may help for further cleanup of subassign/applydefine, but is at
+present only used minimally for this fix.

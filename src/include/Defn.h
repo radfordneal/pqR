@@ -507,6 +507,14 @@ typedef struct {
 #define VARIANT_TRANS 6  /* May return the transpose of the result (as the CAR
                             of an object with ATTRIB set to R_VariantResult) */
 
+/* Variants below control behaviour of [<-, [[<-, and $<-.  The MUST_COPY
+   variant must be obeyed, except when a copy is never indicated (eg, for
+   environments), but the NO_COPY variant is merely advisory.  Both override
+   what would otherwise be done based on NAMEDCNT. */
+
+#define VARIANT_MUST_COPY 7 /* Must make a copy before modifying object */
+#define VARIANT_NO_COPY 8   /* Should normally not copy before modifying */
+
 #define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
                                     defined above */
 
@@ -1354,7 +1362,7 @@ void orderVector1(int *indx, int n, SEXP key, Rboolean nalast,
 SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP);
 
 /* main/subassign.c */
-SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP, int);
 
 #include <wchar.h>
 

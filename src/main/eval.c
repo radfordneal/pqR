@@ -1790,14 +1790,21 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
  *  The partial evaluations are carried out efficiently using previously 
  *  computed components.
  *
+ *  Each CONS cell in the list returned will have its LEVELS field set to 1
+ *  if NAMEDCNT for its CAR or the CAR of any later element in the list is
+ *  greater than 1 (and otherwise to 0).  This determines whether duplication 
+ *  of the corresponding part of the object is neccessary.
+ *
  *  The expr and rho arguments must be protected by the caller of evalseq.
  */
 
 static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 {
-    SEXP val, nval, nexpr;
+    SEXP val, nval, nexpr, r;
+
     if (isNull(expr))
 	error(_("invalid (NULL) left side of assignment"));
+
     if (isSymbol(expr)) {
 	if(forcelocal) {
 	    nval = EnsureLocal(expr, rho);
@@ -1805,7 +1812,8 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 	else {/* now we are down to the target symbol */
 	  nval = eval(expr, ENCLOS(rho));
 	}
-	return CONS(nval, expr);
+	r = CONS(nval, expr);
+        SETLEVELS (r, NAMEDCNT_GT_1(nval));
     }
     else if (isLanguage(expr)) {
 	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
@@ -1814,10 +1822,13 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
                                LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr))));
 	nval = eval(nexpr, rho);
 	UNPROTECT(2);
-	return CONS(nval, val);
+	r = CONS(nval, val);
+        SETLEVELS (r, LEVELS(val) || NAMEDCNT_GT_1(nval));
     }
-    else error(_("target of assignment expands to non-language object"));
-    return R_NilValue;	/*NOTREACHED*/
+    else 
+        error(_("target of assignment expands to non-language object"));
+
+    return r;
 }
 
 static void tmp_cleanup(void *data)
@@ -1950,7 +1961,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	}
 	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
-	rhs = eval(rhs, rho);
+	rhs = evalv (rhs, rho, LEVELS(lhs) ? VARIANT_MUST_COPY : 0);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
@@ -3118,10 +3129,10 @@ SEXP do_math1(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_andor(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset2_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP, int);
 
 #define GETSTACK_PTR(s) (*(s))
 #define GETSTACK(i) GETSTACK_PTR(R_BCNodeStackTop + (i))
@@ -3892,7 +3903,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
   PUSHCALLARG(rhs); \
-  value = fun(call, symbol, args, rho); \
+  value = fun(call, symbol, args, rho, 0); \
   R_BCNodeStackTop -= 4; \
   SETSTACK(-1, value);	 \
   NEXT(); \
@@ -4161,7 +4172,7 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     args = CONS(idx, args);
     args = CONS(vec, args);
     PROTECT(args);
-    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho, 0);
     UNPROTECT(1);
     SETSTACK_PTR(sv, vec);
 }
@@ -4214,7 +4225,7 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     args = CONS(idx, args);
     args = CONS(mat, args);
     SETSTACK(-1, args); /* for GC protection */
-    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho, 0);
     R_BCNodeStackTop -= 3;
     SETSTACK(-1, mat);
 }
@@ -4878,7 +4889,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    UNPROTECT(1);
 	}
 	if (! dispatched)
-	  value = R_subassign3_dflt(call, x, symbol, rhs);
+	  value = R_subassign3_dflt(call, x, symbol, rhs, 0);
 	R_BCNodeStackTop--;
 	SETSTACK(-1, value);
 	NEXT();

@@ -178,7 +178,7 @@ static SEXP R_element_named(SEXP obj, const char * what)
 static SEXP R_insert_element(SEXP mlist, const char * what, SEXP object)
 {
     SEXP sym = install(what);
-    return R_subassign3_dflt(R_NilValue, mlist, sym, object);
+    return R_subassign3_dflt(R_NilValue, mlist, sym, object, 0);
 }
 
 SEXP R_el_named(SEXP object, SEXP what)
