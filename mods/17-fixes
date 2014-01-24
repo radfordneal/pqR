@@ -55,3 +55,7 @@ In R-2.15.0, both elements of the list printed are strings, but in
 pqR-2013-12-29, the element from "substitute" is a symbol.  Changed
 help("$") to document this behaviour, and the corresponding behaviour
 of "$<-".  Added a test with "make check" for it.
+
+Fixed bug that causes the code below to create a circular data structure:
+
+  { a <- list(1); a[[1]] <- a; a }

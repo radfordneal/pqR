@@ -1258,7 +1258,7 @@ SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho
     }
     else if (isPairList(x))
         x = duplicate(x);
-    else if (isVectorList(x) && NAMEDCNT_GT_1(x))
+    else if (isVectorList(x) && (NAMEDCNT_GT_1(x) || x==y))
         x = dup_top_level(x);
 
     xtop = xup = x; /* x will contain the element which is assigned to; */
