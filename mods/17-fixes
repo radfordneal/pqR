@@ -70,3 +70,6 @@ Fixed bugs such as that below:
 Added tests for such bugs.  Introduced a variant scheme into subassign
 that may help for further cleanup of subassign/applydefine, but is at
 present only used minimally for this fix.
+
+Fixed a bug where unary minus might improperly reuse its operand for
+the result even when it was logical - eg, -c(F,T,T,F).
