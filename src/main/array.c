@@ -727,6 +727,9 @@ static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
     a VARIANT_TRANS result (produced by "t"), though it doesn't want both
     arguments to be transposed.   */
 
+#define MULTRANS1 1   /* if this bit set, first operand is transposed */
+#define MULTRANS2 2   /* if this bit set, second operand is transposed */
+
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     LOCAL_COPY(R_NilValue);
@@ -858,19 +861,62 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	ncy = INTEGER(ydims)[1];
     }
 
-    if (ldx != 2 && ldy != 2) {	/* x and y non-matrices */
-        if (primop == 0) {
-            nrx = 1;
-            ncx = LENGTH(x);
+    /* Regard operands that are vectors as 1xn or nx1 matrices, in a way
+       that makes the operation valid (if this is possible), except that
+       outer products of vectors are done only with tcrossprod. */
+
+    if (ldx != 2 && ldy != 2) {
+
+        /* Both operands are vectors - could be valid as either a dot product,
+           or as a multiplication with one operand a 1x1 matrix, or as an
+           outer product (which is the interpretation for tcrossprod). */
+
+        if (LENGTH(x) == 1) {  /* 1x1 matrix times something */
+            nrx = ncx = 1;
+            if (primop & MULTRANS2) {
+                nry = LENGTH(y);
+                ncy = 1;
+            }
+            else {
+                nry = 1;
+                ncy = LENGTH(y);
+            }
         }
-        else {
+        else if (LENGTH(y) == 1) {  /* something times 1x1 matrix */
+            nry = ncy = 1;
+            if (primop & MULTRANS1) {
+                nrx = 1;
+                ncx = LENGTH(x);
+            }
+            else {
+                nrx = LENGTH(x);
+                ncx = 1;
+            }
+        }
+        else if (primop & MULTRANS2) {  /* outer product, for tcrossprod */
             nrx = LENGTH(x);
             ncx = 1;
+            nry = LENGTH(y);
+            ncy = 1;
         }
-        nry = LENGTH(y);
-        ncy = 1;
+        else { /* dot product, not for tcrossprod, may fail */
+            if (primop & MULTRANS1) {
+                nrx = LENGTH(x);
+                ncx = 1;
+            }
+            else {
+                nrx = 1;
+                ncx = LENGTH(x);
+            }
+            nry = LENGTH(y);
+            ncy = 1;
+        }
     }
-    else if (ldx != 2) {	/* x not a matrix */
+
+    else if (ldx != 2) {
+
+        /* Vector times matrix. */
+
         if (primop == 0) {
             if (LENGTH(x) == nry) {	/* x as row vector */
         	nrx = 1;
@@ -896,7 +942,11 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
         }
     }
-    else if (ldy != 2) {	/* y not a matrix */
+
+    else if (ldy != 2) {
+
+        /* Matrix times vector. */
+
         if (primop == 0) {
             if (LENGTH(y) == ncx) {	/* y as col vector */
         	nry = ncx; /* == LENGTH(y) */
