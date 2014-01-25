@@ -73,3 +73,15 @@ present only used minimally for this fix.
 
 Fixed a bug where unary minus might improperly reuse its operand for
 the result even when it was logical - eg, -c(F,T,T,F).
+
+Fixed the following bug (also present in R-2.15.0 and R-3.0.2):
+
+  x <- t(5)
+  print (x %*% c(3,4))
+  print (crossprod(5,c(3,4)))
+
+The call of crossprod produced an error, whereas the corresponding
+use of %*% did not.  
+
+In pqR-2013-12-29, this bug also affected the expression t(5) %*% c(3,4),
+since it is converted to the equivalent of crossprod(5,c(3,4)).

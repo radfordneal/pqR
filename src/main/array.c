@@ -847,79 +847,61 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     int ldx = length(xdims);
     int ldy = same ? ldx : length(ydims);
 
-    int nrx, ncx, nry, ncy;
+    int nrx, ncx, nry, ncy;  /* Numbers of rows and columns in operands */
 
-    if (ldx == 2) {
+    int vecx = ldx != 2;     /* Is first operand a vector (not matrix)? */
+    int vecy = ldy != 2;     /* Is second operand a vector (not matrix)? */
+
+    if (!vecx) {
 	nrx = INTEGER(xdims)[0];
 	ncx = INTEGER(xdims)[1];
     }
-    if (ldy == 2) {
+    if (!vecy) {
 	nry = INTEGER(ydims)[0];
 	ncy = INTEGER(ydims)[1];
     }
 
-    if (ldx != 2 && ldy != 2) {	/* x and y non-matrices */
-        if (primop == 0) {
+    if (vecx && primop == 1) {
+        /* crossprod: regard first operand as a column vector (which will
+           end up as a row vector after transpose). */
+        nrx = LENGTH(x);
+        ncx = 1;
+        vecx = 0;
+    }
+
+    if (vecy && primop == 2) {
+        /* tcrossprod: regard second operand as a column vector (which will
+           end up as a row vector after transpose). */
+        nry = LENGTH(y);
+        ncy = 1;
+        vecy = 0;
+    }
+
+    if (vecx && vecy) {  /* %*% only */
+        /* dot product */
+        nrx = 1;
+        ncx = LENGTH(x);  /* will fail below if the lengths */
+        nry = LENGTH(y);  /*   are different */
+        ncy = 1;
+    }
+    else if (vecx) {  /* %*% or tcrossprod, not crossprod */
+        if (LENGTH(x) == (primop == 0 ? nry : ncy)) {  /* x as row vector */
             nrx = 1;
             ncx = LENGTH(x);
         }
-        else {
+        else {                        /* try x as a col vector (may fail) */
             nrx = LENGTH(x);
             ncx = 1;
         }
-        nry = LENGTH(y);
-        ncy = 1;
     }
-    else if (ldx != 2) {	/* x not a matrix */
-        if (primop == 0) {
-            if (LENGTH(x) == nry) {	/* x as row vector */
-        	nrx = 1;
-        	ncx = nry; /* == LENGTH(x) */
-            }
-            else {			/* try x as a col vector (may fail) */
-        	nrx = LENGTH(x);
-        	ncx = 1;
-            }
-        }
-        else if (primop == 1) {		/* try x as a col vector (may fail) */
-            nrx = LENGTH(x);
-            ncx = 1;
-        }
-        else {
-            if (LENGTH(x) == ncy) {	/* x as row vector */
-        	nrx = 1;
-        	ncx = ncy; /* == LENGTH(x) */
-            }
-            else {			/* try x as a col vector (may fail) */
-        	nrx = LENGTH(x);
-        	ncx = 1;
-            }
-        }
-    }
-    else if (ldy != 2) {	/* y not a matrix */
-        if (primop == 0) {
-            if (LENGTH(y) == ncx) {	/* y as col vector */
-        	nry = ncx; /* == LENGTH(y) */
-        	ncy = 1;
-            }
-            else {			/* try y as a row vector (may fail) */
-        	nry = 1;
-        	ncy = LENGTH(y);
-            }
-        }
-        else if (primop == 1) {
-            if (LENGTH(y) == nrx) {	/* y as a col vector */
-        	nry = nrx; /* == LENGTH(y) */
-        	ncy = 1;
-            }
-            else {			/* try y as a row vector (mail fail) */
-                nry = 1;
-                ncy = LENGTH(y);
-            }
-        }
-        else {				/* try y as a col vector (may fail) */
+    else if (vecy) {  /* %*% or crossprod, not tcrossprod */
+        if (LENGTH(y) == (primop == 0 ? ncx : nrx)) {  /* y as col vector */
             nry = LENGTH(y);
             ncy = 1;
+        }
+        else {                        /* try y as a row vector (may fail) */
+            nry = 1;
+            ncy = LENGTH(y);
         }
     }
 
