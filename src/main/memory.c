@@ -52,7 +52,7 @@
 
 /* CONFIGURATION OPTIONS.  
 
-   Any valid settings for these options should work, with different effects
+   Any valid settings for the options below should work, with different effects
    on performance.  However, some combinations may not have been tested 
    recently (or at all). */
 
@@ -126,6 +126,12 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
        If defined, tries to detect unprotected SEXPs.  See below.
 
    Other debug options are set by the definitions below. */
+
+#define TOLERATE_NULL 1 /* If non-zero, node forwarding & aging ignores zero
+                           pointers (which shouldn't exist), to avoid crashing.
+                           Some packages incorrectly create objects with zero
+                           pointers, so this option should probably be set to 1,
+                           but it could be set to 0 for debugging purposes. */
 
 #define DEBUG_GC 0  /* How much debug info to write about node lists in a GC  */
                     /* 0: none, 1: summary only, 2: do checks, 3: print counts*/
@@ -805,11 +811,14 @@ static R_size_t R_NodesInUse = 0;
 
 /* Forwarding Nodes.  These macros mark nodes or children of nodes and
    place them on the forwarding list.  The forwarding list is assumed
-   to be in a local variable of the caller named "forwarded_nodes". */
+   to be in a local variable of the caller named "forwarded_nodes". 
+
+   Forwarding a zero pointer is tolerated if TOLERATE_NULL is set to 1, 
+   although such zero pointers are not supposed to be there. */
 
 #define FORWARD_NODE(s) do { \
   SEXP fn__n__ = (s); \
-  if (! NODE_IS_MARKED(fn__n__)) { \
+  if ((!TOLERATE_NULL || fn__n__) && !NODE_IS_MARKED(fn__n__)) { \
     CHECK_FOR_FREE_NODE(fn__n__) \
     MARK_NODE(fn__n__); \
     UNSNAP_NODE(fn__n__); \
@@ -1337,12 +1346,13 @@ static void AdjustHeapSize(R_size_t size_needed)
 }
 
 
-/* Managing Old-to-New References. */
+/* Managing Old-to-New References.  Tolerates s being zero (incorrectly) if
+   TOLERATE_NULL is set to 1. */
 
 #define AGE_NODE(s,g) do { \
   SEXP an__n__ = (s); \
   int an__g__ = (g); \
-  if (NODE_GEN_IS_YOUNGER(an__n__, an__g__)) { \
+  if ((!TOLERATE_NULL || an__n__) && NODE_GEN_IS_YOUNGER(an__n__, an__g__)) { \
     if (NODE_IS_MARKED(an__n__)) \
        R_GenHeap[NODE_CLASS(an__n__)].OldCount[NODE_GENERATION(an__n__)]--; \
     else \

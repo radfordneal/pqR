@@ -85,3 +85,8 @@ use of %*% did not.
 
 In pqR-2013-12-29, this bug also affected the expression t(5) %*% c(3,4),
 since it is converted to the equivalent of crossprod(5,c(3,4)).
+
+Added an option (currently set) for pqR to ignore incorrect zero
+pointers encountered by the garbage collector (as R-2.15.0 does).
+This avoids crashes with some packages (eg, 'birch') that incorrectly
+set up objects with zero pointers.
