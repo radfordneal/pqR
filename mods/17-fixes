@@ -90,3 +90,8 @@ Added an option (currently set) for pqR to ignore incorrect zero
 pointers encountered by the garbage collector (as R-2.15.0 does).
 This avoids crashes with some packages (eg, 'birch') that incorrectly
 set up objects with zero pointers.
+
+Now use the ISNAN trick (if enabled) only in the interpreter itself, 
+since the macro implementing it evaluates its argument twice, which
+doesn't work if it has side effects (as happens in the ff package).
+
