@@ -1030,7 +1030,10 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 
 /* The [<- operator.  "x" is the vector that is to be assigned into, 
    y is the vector that is going to provide the new values and subs is
-   the vector of subscripts that are going to be replaced. */
+   the vector of subscripts that are going to be replaced. 
+
+   If the variant is VARIANT_MUST_COPY, copying is required regardless
+   of NAMEDCNT. */
 
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1073,6 +1076,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     return do_subassign_dflt(call, op, ans, rho, variant);
 }
+
+/* Also called directly from elsewhere.  For role of variant, see above. */
 
 SEXP attribute_hidden do_subassign_dflt
     (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -1189,10 +1194,14 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
 }
 
 /* The [[<- operator; should be fast.
- *     ====
- * args[1] = object being subscripted
- * args[2] = list of subscripts
- * args[3] = replacement values */
+       ====
+   args[1] = object being subscripted
+   args[2] = list of subscripts
+   args[3] = replacement values 
+
+   If the variant is VARIANT_MUST_COPY, copying is required regardless
+   of NAMEDCNT. */
+
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
@@ -1203,6 +1212,8 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     return do_subassign2_dflt(call, op, ans, rho, variant);
 }
+
+/* Also called directly from elsewhere.  For role of variant, see above. */
 
 SEXP attribute_hidden do_subassign2_dflt
     (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -1445,7 +1456,10 @@ SEXP attribute_hidden do_subassign2_dflt
 /* $<-(x, elt, val), and elt does not get evaluated it gets matched.
    to get DispatchOrEval to work we need to first translate it
    to a string
-*/
+
+   If the variant is VARIANT_MUST_COPY, copying is required regardless
+   of NAMEDCNT. */
+
 static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP name, ans, input;
@@ -1480,7 +1494,8 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans), variant);
 }
 
-/* used in "$<-" (above) and methods_list_dispatch.c */
+/* Also called directly from elsewhere.  For role of variant, see above. */
+
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
 {
     LOCAL_COPY(R_NilValue);
