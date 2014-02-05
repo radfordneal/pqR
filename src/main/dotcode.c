@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995  Robert Gentleman and Ross Ihaka
@@ -81,6 +81,22 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
 		     DllReference *dll);
 static SEXP pkgtrim(SEXP args, DllReference *dll);
+
+
+/* Check whether any of the logical constants have changed.  If so, reset
+   them to their correct values. */
+
+static R_INLINE check_scalar_constants_OK (SEXP call)
+{
+    if (LOGICAL(R_ScalarLogicalTRUE)[0] != 1 
+     || LOGICAL(R_ScalarLogicalFALSE)[0] != 0
+     || LOGICAL(R_ScalarLogicalNA)[0] != NA_LOGICAL) {
+        LOGICAL(R_ScalarLogicalTRUE)[0] = 1;
+        LOGICAL(R_ScalarLogicalFALSE)[0] = 0;
+        LOGICAL(R_ScalarLogicalNA)[0] = NA_LOGICAL;
+        errorcall(call, _("Foreign routine changed TRUE, FALSE, or NA - reset"));
+    }
+}
 
 /*
   Checks whether the specified object correctly identifies a native routine.
@@ -776,6 +792,9 @@ static SEXP do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 
     retval = (SEXP)fun(args);
+
+    check_scalar_constants_OK(call);
+
     VMAXSET(vmax);
     return retval;
 }
@@ -1472,6 +1491,9 @@ static SEXP do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	errorcall(call, _("too many arguments, sorry"));
     }
+
+    check_scalar_constants_OK(call);
+
     VMAXSET(vmax);
     return retval;
 }
@@ -2276,16 +2298,7 @@ static SEXP do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call, _("too many arguments, sorry"));
     }
 
-    /* Check whether the routine changed a logical constant. */
-
-    if (LOGICAL(R_ScalarLogicalTRUE)[0] != 1 
-     || LOGICAL(R_ScalarLogicalFALSE)[0] != 0
-     || LOGICAL(R_ScalarLogicalNA)[0] != NA_LOGICAL) {
-        LOGICAL(R_ScalarLogicalTRUE)[0] = 1;
-        LOGICAL(R_ScalarLogicalFALSE)[0] = 0;
-        LOGICAL(R_ScalarLogicalNA)[0] = NA_LOGICAL;
-        errorcall(call, _("Foreign routine changed TRUE, FALSE, or NA - reset"));
-    }
+    check_scalar_constants_OK(call);
 
     PROTECT(ans = allocVector(VECSXP, nargs));
     havenames = 0;

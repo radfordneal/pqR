@@ -1,0 +1,5 @@
+Various mods and documentation changes related to reliability, but not
+actually bug fixes.
+
+Extended the check for a foreign routine changing TRUE, FALSE, or NA
+to .Call and .External (was only for .C and .Fortran).
