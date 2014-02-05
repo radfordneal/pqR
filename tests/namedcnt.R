@@ -1,6 +1,6 @@
 # Test possible bugs involving NAMEDCNT/NAMED.
 #
-# Added for pqR, 2013, Radford M. Neal.
+# Added for pqR, 2013, 2014, Radford M. Neal.
 
 # mk2(1) makes 2 in a way unlikely to be optimized with constant folding
 
