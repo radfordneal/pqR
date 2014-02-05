@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -269,7 +269,7 @@ static double iprod(int *x, int n, Rboolean narm)
     } else { 
         for (i = 0; i < n; i++) {
             if (x[i] == NA_INTEGER) 
-                return NA_INTEGER;
+                return NA_REAL;
             s *= x[i];
         }
     }
@@ -777,7 +777,7 @@ static SEXP do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(op = findFun(install("range.default"), env));
     /* Below should really use CDR(call) for the unevaluated expressions, 
        but it can't because args has been fiddled with by fixup_NaRm. */
-    PROTECT(prargs = promiseArgsWithValues(args, R_GlobalEnv, args));
+    PROTECT(prargs = promiseArgsWithValues(args, R_EmptyEnv, args));
     ans = applyClosure(call, op, prargs, env, R_BaseEnv);
     UNPROTECT(3);
     return(ans);

@@ -1,6 +1,6 @@
 # Test possible bugs involving NAMEDCNT/NAMED.
 #
-# Added for pqR, 2013, Radford M. Neal.
+# Added for pqR, 2013, 2014, Radford M. Neal.
 
 # mk2(1) makes 2 in a way unlikely to be optimized with constant folding
 
@@ -151,3 +151,22 @@ a <- list(c(1,2))
 b <- list(a)[[c(1,1)]]
 a[[1]][1] <- 9
 stopifnot(b[1]==1)
+
+
+# Deep assignments.
+
+a <- list(list(list(1)))
+b <- a
+a[[1]][[1]][1]<-list(2)
+stopifnot(b[[1]][[1]][[1]]==1)
+
+a <- list(list(list(1)))
+b <- a
+a[[1]][[1]][[1]]<-2
+stopifnot(b[[1]][[1]][[1]]==1)
+
+a <- list(e=list(e=1))
+x <- list(e=a)
+y <- list(e=a)
+x$e$e$e <- 2
+stopifnot(y$e$e$e==1)

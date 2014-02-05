@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Test Program for Matrix Multiplicaton With Pipelining
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ void helpers_master (void)
                          matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
       }
       else
-      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod, 
+      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_mat_mat,
                          matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
       }
     }

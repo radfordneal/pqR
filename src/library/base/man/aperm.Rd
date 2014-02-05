@@ -1,6 +1,7 @@
 % File src/library/base/man/aperm.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Development Team
+% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{aperm}

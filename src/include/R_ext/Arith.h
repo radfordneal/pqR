@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -61,8 +61,12 @@ LibExtern int	 R_NaInt;	/* NA_INTEGER:= INT_MIN currently */
 #endif
 #endif
 
-#define NA_LOGICAL	INT_MIN	 /* used to refer to R_NaInt */
-#define NA_INTEGER	INT_MIN	 /* used to refer to R_NaInt */
+/* The next two are redefined to INT_MIN directly at end of Defn.h, for 
+   (possibly) faster access.  They are defined here to refer to a variable 
+   because otherwise the RcppEigen package doesn't install. */
+#define NA_LOGICAL	R_NaInt
+#define NA_INTEGER	R_NaInt
+
 /* #define NA_FACTOR	R_NaInt  unused */
 #define NA_REAL		R_NaReal
 /* NA_STRING is a SEXP, so defined in Rinternals.h */
@@ -78,25 +82,14 @@ int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
    isnan if it is a macro (it is on OS X and in C99),
    hence the workaround.  This code also appears in Rmath.h
 
-   May be changed in pqR to be faster for many non-NaN and non-NA numbers, 
-   when one can rely on the result of converting NaN, NA, -NaN, and -NA 
-   to int being the same, which is checked for in InitArithmetic.  This 
-   trick is enabled only when ENABLE_ISNAN_TRICK is defined (with a -D
-   argument in CFLAGS). */
+   In pqR, this definition may be changed in Defn.h when ENABLE_ISNAN_TRICK
+   is defined, to give a faster version in the interpreter. */
 
 #ifdef __cplusplus
    int R_isnancpp(double); /* in arithmetic.c */
-#  ifndef ENABLE_ISNAN_TRICK
-#    define ISNAN(x) (R_isnancpp(x))
-#  else
-#    define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && R_isnancpp(x))
-#  endif
+#  define ISNAN(x) (R_isnancpp(x))
 #else
-#  ifndef ENABLE_ISNAN_TRICK
-#    define ISNAN(x) (isnan(x) != 0)
-#  else
-#    define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && isnan(x) != 0)
-#  endif
+#  define ISNAN(x) (isnan(x) != 0)
 #endif
 
 /* The following is only defined inside R */

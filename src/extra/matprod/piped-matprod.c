@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Task Procedures for Matrix Multiplication With Pipelining
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -320,8 +320,8 @@ void task_piped_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz,
    local variables rather than in a column of the result, and then storing
    them in the result column at the end. */
 
-void task_piped_matprod (helpers_op_t op, helpers_var_ptr sz, 
-                         helpers_var_ptr sx, helpers_var_ptr sy)
+void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz, 
+                                 helpers_var_ptr sx, helpers_var_ptr sy)
 {
     double *x = REAL(sx), *y = REAL(sy), *z = REAL(sz);
     double *oy = y;

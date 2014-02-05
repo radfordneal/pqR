@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -122,8 +122,8 @@ SEXP do_setGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_shade(SEXP, SEXP, SEXP, SEXP);
 SEXP do_sysinfo(SEXP,SEXP,SEXP,SEXP);
 SEXP do_syssleep(SEXP,SEXP,SEXP,SEXP);
-SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_subassigndf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassigndf2(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);

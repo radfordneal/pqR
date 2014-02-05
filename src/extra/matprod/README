@@ -1,6 +1,6 @@
 MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
 
-Files in this directory are Copyright (C) 2013 Radford M. Neal.  
+Files in this directory are Copyright (C) 2013, 2014 Radford M. Neal.  
 
   The matprod library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -39,4 +39,4 @@ helpers library is available from github.com/radfordneal/helpers.
 
 Radford Neal may be contacted at radfordneal@gmail.com.
 
-This is the version of 2013-12-24.
+This is the version of 2014-01-16.

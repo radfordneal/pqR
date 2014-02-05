@@ -1,7 +1,7 @@
 MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
           Documentation for Library Procedures and Test Programs
 
-Copyright (C) 2013 Radford M. Neal.
+Copyright (C) 2013, 2014 Radford M. Neal.
 
   The matprod library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ The procedures below are in matprod.c, with declarations in matprod.h:
       Multiply matrix x, of dimension n x k, and column vector y, of
       dimension k, storing the result in column vector z, of dimension n.
 
-    void matprod (double *x, double *y, double *z, int n, int k, int m);
+    void matprod_mat_mat (double *x, double *y, double *z, int n, int k, int m);
 
       Multiply matrix x, of dimension n x k, and matrix y, of dimension
       k x m, storing the result in matrix z, of dimension n x m.
@@ -134,7 +134,7 @@ non-pipelined procedures above, and are as follows:
       Matrix-vector multiply, with element-by-element pipelining of
       the second operand.
 
-    task_piped_matprod
+    task_piped_matprod_mat_mat
 
       Matrix-matrix multiply, with column-by-column pipelining of the
       second operand, and column-by-column pipelining of the output.

@@ -9,6 +9,9 @@ and licensed under GPL2 or later.
 The library in src/extra/helpers is Copyright (C) 2013 Radford M. Neal, 
 and licensed under GPL2 or later.
 
+Some bug fixes and other features are taken from R-2.15.1 and other
+later version of R distributed by the R Core Team.
+
 
 COPYRIGHT STATUS of R-2.15.0 (taken from this file in R-2.15.0, modified
 as required for use of new versions)

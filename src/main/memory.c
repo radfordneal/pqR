@@ -1,7 +1,6 @@
-
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -53,7 +52,7 @@
 
 /* CONFIGURATION OPTIONS.  
 
-   Any valid settings for these options should work, with different effects
+   Any valid settings for the options below should work, with different effects
    on performance.  However, some combinations may not have been tested 
    recently (or at all). */
 
@@ -127,6 +126,12 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
        If defined, tries to detect unprotected SEXPs.  See below.
 
    Other debug options are set by the definitions below. */
+
+#define TOLERATE_NULL 1 /* If non-zero, node forwarding & aging ignores zero
+                           pointers (which shouldn't exist), to avoid crashing.
+                           Some packages incorrectly create objects with zero
+                           pointers, so this option should probably be set to 1,
+                           but it could be set to 0 for debugging purposes. */
 
 #define DEBUG_GC 0  /* How much debug info to write about node lists in a GC  */
                     /* 0: none, 1: summary only, 2: do checks, 3: print counts*/
@@ -342,6 +347,7 @@ static void mem_err_malloc(R_size_t size);
 
 static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 
+static SEXP R_StringHash;   /* Global hash of CHARSXPs */
 
 #define NODE_IS_MARKED(s) (MARK(s))
 #define MARK_NODE(s) (MARK(s)=1)
@@ -805,11 +811,14 @@ static R_size_t R_NodesInUse = 0;
 
 /* Forwarding Nodes.  These macros mark nodes or children of nodes and
    place them on the forwarding list.  The forwarding list is assumed
-   to be in a local variable of the caller named "forwarded_nodes". */
+   to be in a local variable of the caller named "forwarded_nodes". 
+
+   Forwarding a zero pointer is tolerated if TOLERATE_NULL is set to 1, 
+   although such zero pointers are not supposed to be there. */
 
 #define FORWARD_NODE(s) do { \
   SEXP fn__n__ = (s); \
-  if (! NODE_IS_MARKED(fn__n__)) { \
+  if ((!TOLERATE_NULL || fn__n__) && !NODE_IS_MARKED(fn__n__)) { \
     CHECK_FOR_FREE_NODE(fn__n__) \
     MARK_NODE(fn__n__); \
     UNSNAP_NODE(fn__n__); \
@@ -1337,12 +1346,13 @@ static void AdjustHeapSize(R_size_t size_needed)
 }
 
 
-/* Managing Old-to-New References. */
+/* Managing Old-to-New References.  Tolerates s being zero (incorrectly) if
+   TOLERATE_NULL is set to 1. */
 
 #define AGE_NODE(s,g) do { \
   SEXP an__n__ = (s); \
   int an__g__ = (g); \
-  if (NODE_GEN_IS_YOUNGER(an__n__, an__g__)) { \
+  if ((!TOLERATE_NULL || an__n__) && NODE_GEN_IS_YOUNGER(an__n__, an__g__)) { \
     if (NODE_IS_MARKED(an__n__)) \
        R_GenHeap[NODE_CLASS(an__n__)].OldCount[NODE_GENERATION(an__n__)]--; \
     else \
@@ -1996,6 +2006,12 @@ static void RunGenCollect(R_size_t size_needed)
 	    s = VECTOR_ELT(R_StringHash, i);
 	    t = R_NilValue;
 	    while (s != R_NilValue) {
+#if DEBUG_GLOBAL_STRING_HASH
+                if (TYPEOF(s)!=CHARSXP)
+                   REprintf(
+                     "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
+                      TYPEOF(s));
+#endif
 		if (! NODE_IS_MARKED(CXHEAD(s))) { 
                     /* remove unused CHARSXP, and associated cons cell (if 
                        not linking by attribute field) */
@@ -2004,9 +2020,6 @@ static void RunGenCollect(R_size_t size_needed)
 			VECTOR_ELT(R_StringHash, i) = CXTAIL(s);
 		    else
 			CXTAIL(t) = CXTAIL(s);
-#ifndef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-                    FORWARD_NODE(s);
-#endif
 		    s = CXTAIL(s);
 		    continue;
 		}
@@ -4039,8 +4052,8 @@ SEXP mkChar(const char *name)
     return mkCharLenCE(name, strlen(name), CE_NATIVE);
 }
 
-/* Follows the hash structure from envir.c, but need separate code for 
-   get/set of values since our keys are char* and not SEXP symbol types,
+/* CHARSXP hashing follows the hash structure from envir.c, but need separate
+   code for get/set of values since our keys are char* and not SEXP symbol types
    and the string hash table is treated specially in garbage collection.
 
    Experience has shown that it is better to use a different hash function,
@@ -4098,6 +4111,11 @@ static void R_StringHash_resize(unsigned int newsize)
 	while (chain != R_NilValue) {
 	    val = CXHEAD(chain);
 	    next = CXTAIL(chain);
+#if DEBUG_GLOBAL_STRING_HASH
+            if (TYPEOF(val)!=CHARSXP)
+               REprintf("R_StringHash table contains a non-CHARSXP (%d, rs)!\n",
+                        TYPEOF(val));
+#endif
 	    new_hashcode = char_hash (CHAR(val), LENGTH(val)) & newmask;
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
@@ -4195,7 +4213,6 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
             }
 	}
     }
-
     if (cval == R_NilValue) {
 	/* no cached value; need to allocate one and add to the cache */
 	cval = allocCharsxp(len);
@@ -4234,9 +4251,15 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
 	/* Resize the hash table if desirable and possible. */
 	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
-             && 2*char_hash_size <= STRHASHMAXSIZE)
+             && 2*char_hash_size <= STRHASHMAXSIZE) {
+            /* NOTE!  Must protect cval here, since it is NOT protected by
+               its presence in the hash table. */
+            PROTECT(cval);
 	    R_StringHash_resize (2*char_hash_size);
+            UNPROTECT(1);
+        }
     }
+
     return cval;
 }
 
@@ -4318,23 +4341,26 @@ void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
 	return NULL;
     }
 
-    if(blen * sizeof(char) < buf->bufsize) return buf->data;
-    blen1 = blen = (blen + 1) * sizeof(char);
+    if (blen < buf->bufsize) return buf->data;
+    blen1 = blen = (blen + 1);
     blen = (blen / bsize) * bsize;
     if(blen < blen1) blen += bsize;
 
     if(buf->data == NULL) {
 	buf->data = (char *) malloc(blen);
-	buf->data[0] = '\0';
-    } else
+        if (buf->data) buf->data[0] = 0;
+    }
+    else
 	buf->data = (char *) realloc(buf->data, blen);
-    buf->bufsize = blen;
-    if(!buf->data) {
+
+    if (!buf->data) {
 	buf->bufsize = 0;
 	/* don't translate internal error message */
 	error("could not allocate memory (%u Mb) in C function 'R_AllocStringBuffer'",
 	      (unsigned int) blen/1024/1024);
     }
+
+    buf->bufsize = blen;
     return buf->data;
 }
 

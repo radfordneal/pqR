@@ -1,5 +1,6 @@
 #  File src/library/stats/R/Kalman.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR by Radford M. Neal, 2013
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by

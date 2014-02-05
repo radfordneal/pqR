@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -303,6 +303,13 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define helpers_wait_until_not_in_use(v) 0
 #else
 extern void helpers_wait_until_not_in_use(SEXP);
+#endif
+
+/* Below is for packages that (naughtily) define USE_RINTERNALS, but don't
+   include Defn.h, where helpers_is_in_use is defined. */
+
+#ifndef helpers_is_in_use  
+#define helpers_is_in_use(x)               ((x)->sxpinfo.in_use)
 #endif
 
 #define NAMEDCNT(x) \

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -1229,7 +1229,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
         return s1;
 
     n = LENGTH(s1);
-    PROTECT(ans = NAMEDCNT_EQ_0(s1) ? s1 
+    PROTECT(ans = NAMEDCNT_EQ_0(s1) && type!=LGLSXP ? s1 
                 : allocVector (type==LGLSXP ? INTSXP : type, n));
 
     if (operation==MINUSOP) {

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1030,9 +1030,12 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 
 /* The [<- operator.  "x" is the vector that is to be assigned into, 
    y is the vector that is going to provide the new values and subs is
-   the vector of subscripts that are going to be replaced. */
+   the vector of subscripts that are going to be replaced. 
 
-static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
+   If the variant is VARIANT_MUST_COPY, copying is required regardless
+   of NAMEDCNT. */
+
+static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans, a1, a2, a3;
     int argsevald = 0;
@@ -1054,13 +1057,13 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
             /* ... in particular, it might be missing ... */
             args = CONS (a1, evalListKeepMissing(a2,rho));
             UNPROTECT(1);
-            return do_subassign_dflt(call, op, args, rho); 
+            return do_subassign_dflt(call, op, args, rho, variant); 
         }
         else {
             PROTECT(a2 = evalv (CAR(a2), rho, VARIANT_SEQ));
             args = CONS (a1, CONS (a2, evalListKeepMissing (a3, rho)));
             UNPROTECT(2);
-            return do_subassign_dflt(call, op, args, rho); 
+            return do_subassign_dflt(call, op, args, rho, variant); 
         }
     }
 
@@ -1071,10 +1074,13 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald))
         return(ans);
 
-    return do_subassign_dflt(call, op, ans, rho);
+    return do_subassign_dflt(call, op, ans, rho, variant);
 }
 
-SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* Also called directly from elsewhere.  For role of variant, see above. */
+
+SEXP attribute_hidden do_subassign_dflt
+    (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP subs, x, y;
 
@@ -1103,7 +1109,7 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
                 return x;
             }
 	}
-        else if (NAMEDCNT_GT_1(x))
+        else if (VARIANT_KIND(variant) == VARIANT_MUST_COPY || NAMEDCNT_GT_1(x))
             x = dup_top_level(x);
     }
     else
@@ -1188,11 +1194,15 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
 }
 
 /* The [[<- operator; should be fast.
- *     ====
- * args[1] = object being subscripted
- * args[2] = list of subscripts
- * args[3] = replacement values */
-static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
+       ====
+   args[1] = object being subscripted
+   args[2] = list of subscripts
+   args[3] = replacement values 
+
+   If the variant is VARIANT_MUST_COPY, copying is required regardless
+   of NAMEDCNT. */
+
+static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
@@ -1200,10 +1210,13 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 /*     if(DispatchAnyOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) */
       return(ans);
 
-    return do_subassign2_dflt(call, op, ans, rho);
+    return do_subassign2_dflt(call, op, ans, rho, variant);
 }
 
-SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* Also called directly from elsewhere.  For role of variant, see above. */
+
+SEXP attribute_hidden do_subassign2_dflt
+    (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     LOCAL_COPY(R_NilValue);
 
@@ -1258,8 +1271,11 @@ SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho
     }
     else if (isPairList(x))
         x = duplicate(x);
-    else if (isVectorList(x) && NAMEDCNT_GT_1(x))
-        x = dup_top_level(x);
+    else if (isVectorList(x)) {
+        if (VARIANT_KIND(variant) == VARIANT_MUST_COPY 
+         || NAMEDCNT_GT_1(x) || x == y)
+            x = dup_top_level(x);
+    }
 
     xtop = xup = x; /* x will contain the element which is assigned to; */
                     /*   xup may contain x; xtop is what is returned.  */ 
@@ -1289,7 +1305,8 @@ SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho
                         x = duplicate(x);
                         SET_VECTOR_ELT (xup, off, x);
                     }
-                    else if (isVectorList(x) && NAMEDCNT_GT_1(x)) {
+                    else if (isVectorList(x) && (NAMEDCNT_GT_1(x) ||
+                               VARIANT_KIND(variant) == VARIANT_MUST_COPY)) {
                         x = dup_top_level(x);
                         SET_VECTOR_ELT (xup, off, x);
                     }
@@ -1354,7 +1371,8 @@ SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho
 
             SubassignTypeFix(&x, &y, stretch, 2, call);
     
-            if (NAMEDCNT_GT_1(x))
+            if (VARIANT_KIND(variant) == VARIANT_MUST_COPY
+             || NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);
     
             PROTECT(x);
@@ -1438,8 +1456,11 @@ SEXP attribute_hidden do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho
 /* $<-(x, elt, val), and elt does not get evaluated it gets matched.
    to get DispatchOrEval to work we need to first translate it
    to a string
-*/
-static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
+
+   If the variant is VARIANT_MUST_COPY, copying is required regardless
+   of NAMEDCNT. */
+
+static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP name, ans, input;
     int iS;
@@ -1470,11 +1491,12 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
     if (!iS)
 	name = install(translateChar(STRING_ELT(input, 0)));
 
-    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
+    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans), variant);
 }
 
-/* used in "$<-" (above) and methods_list_dispatch.c */
-SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
+/* Also called directly from elsewhere.  For role of variant, see above. */
+
+SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
 {
     LOCAL_COPY(R_NilValue);
 
@@ -1516,7 +1538,9 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
     /* cannot use isEnvironment since we do not want NULL here */
     else if( TYPEOF(x) == ENVSXP ) {
-	defineVar(name, val, x);
+
+	set_var_in_frame (name, val, x, TRUE, 3);
+
     }
 
     else if( TYPEOF(x) == SYMSXP || /* Used to 'work' in R < 2.8.0 */
@@ -1536,7 +1560,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
 	}
 
-        if (NAMEDCNT_GT_1(x) || x == val)
+        if (VARIANT_KIND(variant) == VARIANT_MUST_COPY 
+         || NAMEDCNT_GT_1(x) || x == val)
             REPROTECT(x = dup_top_level(x), pxidx);
 
         SEXP pname = PRINTNAME(name);
@@ -1627,9 +1652,9 @@ attribute_hidden FUNTAB R_FunTab_subassign[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"[<-",		do_subassign,	0,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"[[<-",	do_subassign2,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"$<-",		do_subassign3,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"[<-",		do_subassign,	0,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"[[<-",	do_subassign2,	1,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"$<-",		do_subassign3,	1,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -120,8 +120,6 @@ extern0 SEXP    R_dot_Group;  /* ".Group" */
 extern0 SEXP    R_dot_Class;  /* ".Class" */
 extern0 SEXP    R_dot_GenericCallEnv;  /* ".GenericCallEnv" */
 extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
-
-extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 
 
  /* writable char access for R internal use only */
@@ -509,6 +507,12 @@ typedef struct {
 #define VARIANT_TRANS 6  /* May return the transpose of the result (as the CAR
                             of an object with ATTRIB set to R_VariantResult) */
 
+/* The variant below controls behaviour of [<-, [[<-, and $<-.  The MUST_COPY
+   variant must be obeyed, except when a copy is never indicated (eg, for
+   environments), overriding what would otherwise be done based on NAMEDCNT. */
+
+#define VARIANT_MUST_COPY 7 /* Must make a copy before modifying object */
+
 #define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
                                     defined above */
 
@@ -797,8 +801,8 @@ extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
-extern0 uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
-extern0 uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
+extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
+extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
 extern0 int	R_CStackDir	INI_as(1);	/* C stack direction */
 extern0 uintptr_t R_CStackThreshold;	/* Threshold for overflow detection */
 
@@ -1356,7 +1360,7 @@ void orderVector1(int *indx, int n, SEXP key, Rboolean nalast,
 SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP);
 
 /* main/subassign.c */
-SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP, int);
 
 #include <wchar.h>
 
@@ -1524,6 +1528,30 @@ extern void Rf_unprotect_error (void);
 #define REPROTECT(x,i) \
   ( (void) (R_PPStack[i] = x) )
 
+#endif
+
+/* Redefine NA_INTEGER and NA_LOGICAL to be constants.  Defined in Arith.h
+   to refer to R_NaInt, because the RcppEigen package needs them to be
+   variables, but they may be faster as constants inside the interpreter. */
+
+#undef NA_INTEGER
+#define NA_INTEGER INT_MIN
+#undef NA_LOGICAL
+#define NA_LOGICAL INT_MIN
+
+/* Redefine ISNAN to make use of a trick, if ENABLE_ISNAN_TRICK is
+   defined (with a -D argument in CFLAGS).  This is done here only, not 
+   in Arith.h, because the macro implementing the trick evaluates its 
+   argument twice, which is bad if it has side effects.  Such macro
+   calls are avoided in the interpreter, but may occur in packages. 
+
+   The trick is faster for many non-NaN and non-NA numbers.  It relies
+   on the results of converting NaN, NA, -NaN, and -NA to int all being 
+   the same, which is checked for in InitArithmetic. */
+
+#ifdef ENABLE_ISNAN_TRICK
+#  undef ISNAN
+#  define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && isnan(x) != 0)
 #endif
 
 #endif /* DEFN_H_ */

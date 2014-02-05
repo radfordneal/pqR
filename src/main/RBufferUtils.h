@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1998--2007	    The R Development Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -21,7 +24,8 @@
 #define R_BUFFER_UTILS
 
 /* used in bind.c character.c deparse.c, printutils.c, saveload.c
-   scan.c seq.c sprintf.c sysutils.c */
+   scan.c, seq.c, sprintf.c, sysutils.c, paste.c - but just use
+   grep if you want to know for sure. */
 
 typedef struct {
  char *data;

@@ -1,6 +1,6 @@
  /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
@@ -520,40 +520,52 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     case SYMSXP:
 	if (e == R_DotsSymbol)
 	    error(_("'...' used in an incorrect context"));
-	if( DDVAL(e) )
-		tmp = ddfindVar(e,rho);
+
+	if (DDVAL(e))
+	    tmp = ddfindVar(e,rho);
 	else
-		tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
-                                                   : findVar (e, rho);
+	    tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
+                                               : findVar (e, rho);
 	if (tmp == R_UnboundValue)
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
+
 	/* if ..d is missing then ddfindVar will signal */
-	else if (tmp == R_MissingArg && !DDVAL(e) ) {
+	if (tmp == R_MissingArg && !DDVAL(e) ) {
 	    const char *n = CHAR(PRINTNAME(e));
-	    if(*n) error(_("argument \"%s\" is missing, with no default"),
-			 CHAR(PRINTNAME(e)));
-	    else error(_("argument is missing, with no default"));
-	}
-	else if (TYPEOF(tmp) == PROMSXP) {
-	    if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue) {
-		/* not sure the PROTECT is needed here but keep it to
-		   be on the safe side. */
-		PROTECT(tmp);
-		tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(tmp)
-                                                   : forcePromise(tmp);
-		UNPROTECT(1);
-	    }
+	    if (*n)
+                error(_("argument \"%s\" is missing, with no default"),
+		      CHAR(PRINTNAME(e)));
 	    else 
-                tmp = variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(tmp)
-                                                   : PRVALUE(tmp);
+                error(_("argument is missing, with no default"));
 	}
-	else if (NAMEDCNT_EQ_0(tmp))
-	    SET_NAMEDCNT_1(tmp);
-	break;
+
+        if (TYPEOF(tmp) == PROMSXP) {
+            if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue) {
+                /* not sure the PROTECT is needed here but keep it to
+                   be on the safe side. */
+                PROTECT(tmp);
+                tmp = variant & VARIANT_PENDING_OK 
+                       ? forcePromisePendingOK(tmp) : forcePromise(tmp);
+                UNPROTECT(1);
+            }
+            else 
+                tmp = variant & VARIANT_PENDING_OK 
+                       ? PRVALUE_PENDING_OK(tmp) : PRVALUE(tmp);
+        }
+
+        /* A NAMEDCNT of 0 might arise from an inadverently missing increment
+           somewhere, or from a save/load sequence (since loaded values in
+           promises have NAMEDCNT of 0), so fix up here... */
+
+        if (NAMEDCNT_EQ_0(tmp))
+            SET_NAMEDCNT_1(tmp);
+
+        break;
     case PROMSXP:
         /* We could just unconditionally use the return value from
            forcePromise; the test below avoids the function call if the
-           promise is already evaluated. */
+           promise is already evaluated.  We don't change NAMEDCNT, 
+           since for use in applydefine, that would be undesirable. */
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
             tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(e)
                                                : forcePromise(e);
@@ -1332,9 +1344,12 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     if (len == 0)
         errorcall(call, _("argument is of length zero"));
 
-    if (len > 1)
+    if (len > 1) {
+        PROTECT(s);
         warningcall(call,
         _("the condition has length > 1 and only the first element will be used"));
+        UNPROTECT(1);
+    }
 
     if (cond == NA_LOGICAL)
 	errorcall(call, isLogical(s) ? 
@@ -1775,14 +1790,21 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
  *  The partial evaluations are carried out efficiently using previously 
  *  computed components.
  *
+ *  Each CONS cell in the list returned will have its LEVELS field set to 1
+ *  if NAMEDCNT for its CAR or the CAR of any later element in the list is
+ *  greater than 1 (and otherwise to 0).  This determines whether duplication 
+ *  of the corresponding part of the object is neccessary.
+ *
  *  The expr and rho arguments must be protected by the caller of evalseq.
  */
 
 static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 {
-    SEXP val, nval, nexpr;
+    SEXP val, nval, nexpr, r;
+
     if (isNull(expr))
 	error(_("invalid (NULL) left side of assignment"));
+
     if (isSymbol(expr)) {
 	if(forcelocal) {
 	    nval = EnsureLocal(expr, rho);
@@ -1790,7 +1812,8 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 	else {/* now we are down to the target symbol */
 	  nval = eval(expr, ENCLOS(rho));
 	}
-	return CONS(nval, expr);
+	r = CONS(nval, expr);
+        SETLEVELS (r, NAMEDCNT_GT_1(nval));
     }
     else if (isLanguage(expr)) {
 	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
@@ -1799,10 +1822,13 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
                                LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr))));
 	nval = eval(nexpr, rho);
 	UNPROTECT(2);
-	return CONS(nval, val);
+	r = CONS(nval, val);
+        SETLEVELS (r, LEVELS(val) || NAMEDCNT_GT_1(nval));
     }
-    else error(_("target of assignment expands to non-language object"));
-    return R_NilValue;	/*NOTREACHED*/
+    else 
+        error(_("target of assignment expands to non-language object"));
+
+    return r;
 }
 
 static void tmp_cleanup(void *data)
@@ -1935,7 +1961,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	}
 	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
-	rhs = eval(rhs, rho);
+	rhs = evalv (rhs, rho, LEVELS(lhs) ? VARIANT_MUST_COPY : 0);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
@@ -3103,10 +3129,10 @@ SEXP do_math1(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_andor(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset2_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP, int);
 
 #define GETSTACK_PTR(s) (*(s))
 #define GETSTACK(i) GETSTACK_PTR(R_BCNodeStackTop + (i))
@@ -3877,7 +3903,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
   PUSHCALLARG(rhs); \
-  value = fun(call, symbol, args, rho); \
+  value = fun(call, symbol, args, rho, 0); \
   R_BCNodeStackTop -= 4; \
   SETSTACK(-1, value);	 \
   NEXT(); \
@@ -4146,7 +4172,7 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     args = CONS(idx, args);
     args = CONS(vec, args);
     PROTECT(args);
-    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho, 0);
     UNPROTECT(1);
     SETSTACK_PTR(sv, vec);
 }
@@ -4199,7 +4225,7 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     args = CONS(idx, args);
     args = CONS(mat, args);
     SETSTACK(-1, args); /* for GC protection */
-    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho, 0);
     R_BCNodeStackTop -= 3;
     SETSTACK(-1, mat);
 }
@@ -4863,7 +4889,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    UNPROTECT(1);
 	}
 	if (! dispatched)
-	  value = R_subassign3_dflt(call, x, symbol, rhs);
+	  value = R_subassign3_dflt(call, x, symbol, rhs, 0);
 	R_BCNodeStackTop--;
 	SETSTACK(-1, value);
 	NEXT();
