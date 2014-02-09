@@ -1138,10 +1138,6 @@ void task_piped_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
             xs += 2*n;
         }
 
-        /* Signal that two columns of z have been computed. */
-
-        HELPERS_BLOCK_OUT (done, 2*n);
-
         /* If the result is symmetric, copy the columns just computed
            to the corresponding rows. */
 
@@ -1157,6 +1153,12 @@ void task_piped_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
                 q += n;
             }
         }
+
+        /* Signal that two columns of z have been computed.  Note! This
+           can't be done earlier, because the receiver may change data once
+           it has been made available. */
+
+        HELPERS_BLOCK_OUT (done, 2*n);
 
         /* Move forward two to the next column of the result and the
            next row of y. */
