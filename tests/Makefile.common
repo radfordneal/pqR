@@ -15,6 +15,7 @@ test-src-gct = \
 	any-all.R
 test-src-strict-1 = \
 	$(test-src-gct) \
+	helpers.R \
 	namedcnt.R \
 	matprod.R \
 	d-p-q-r-tests.R
