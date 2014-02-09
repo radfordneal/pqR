@@ -3,3 +3,6 @@ actually bug fixes.
 
 Extended the check for a foreign routine changing TRUE, FALSE, or NA
 to .Call and .External (was only for .C and .Fortran).
+
+Added a test helpers.R that checks that results of vector/matrix
+operations are the same with or without multithreading/merging.
