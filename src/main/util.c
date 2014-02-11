@@ -659,11 +659,13 @@ SEXP with_pairlist_appended (SEXP s, SEXP t)
 }
 
 
-/* Create a new pairlist (of same type as first arg, or R_NilValue if becomes
-   empty) with the nth item (counting from one) deleted.  Silently returns the
-   same list if the list isn't at least n long.  The new list will share CONS 
-   cells with the old after the point of deletion.  No existing CONS cells are 
-   altered.  The first argument needn't be protected by the caller. */
+/* Create a new pairlist/language (of the same type and attributes as
+   s, or of its CDR if the first element of s is the one deleted) with
+   the nth item (counting from one) deleted.  Silently returns the
+   same list if the list isn't at least n long.  The new list will
+   share CONS cells with the old after the point of deletion.  No
+   existing CONS cells are altered.  The first argument needn't be
+   protected by the caller. */
 
 SEXP with_no_nth (SEXP s, int n)
 {
@@ -671,23 +673,12 @@ SEXP with_no_nth (SEXP s, int n)
     SEXP head, tail, new;
     LOCAL_COPY(R_NilValue);
 
-    if (s == R_NilValue || n == 1 && CDR(s) == R_NilValue)
+    if (s == R_NilValue)
         return R_NilValue;
+    if (n == 1)
+        return CDR(s);
 
     PROTECT(s);
-
-    if (n == 1) {
-        s = CDR(s);
-        if (TYPEOF(s) == TYPEOF(original) 
-             && ATTRIB(s)==ATTRIB(original) 
-             && OBJECT(s)==OBJECT(original))
-            return s;
-        else {
-            DUP_CONS(head,s);
-            UNPROTECT(1);
-            return head;
-        }
-    }
 
     DUP_CONS(head,s);
     PROTECT(head);
