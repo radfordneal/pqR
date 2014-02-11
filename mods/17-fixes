@@ -95,3 +95,5 @@ Now use the ISNAN trick (if enabled) only in the interpreter itself,
 since the macro implementing it evaluates its argument twice, which
 doesn't work if it has side effects (as happens in the ff package).
 
+Fixed bug in pairlist element deletion.  Added tests in subset.R
+for such cases.
