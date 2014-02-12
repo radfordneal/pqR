@@ -2268,6 +2268,13 @@ is not in use; similarly, @code{NAMEDCNT_EQ_0} and
 @code{NAMEDCNT_GT_1} return immediately when the comparison does not
 depend on whether the object is in use by a task.
 
+To avoid problems with the use of multiple threads by the helpers
+facility, the Unix/Linux @code{fork} function, used by package
+\code{parallel} and others, is redefined to @code{Rf_fork} in
+@code{Rinternals.h}.  The @code{Rf_fork} function waits for all helper
+threads to become idle before forking, and then disables used of
+helper threads in the child process.
+
 
 @node .Internal vs .Primitive, Internationalization in the R sources, R Internal Structures, Top
 @chapter @code{.Internal} vs @code{.Primitive}

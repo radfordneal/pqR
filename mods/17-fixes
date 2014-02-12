@@ -97,3 +97,8 @@ doesn't work if it has side effects (as happens in the ff package).
 
 Fixed bug in pairlist element deletion.  Added tests in subset.R
 for such cases.
+
+Redefined "fork" to "Rf_fork" so that helper threads can be disabled
+in the child when "fork" is used in packages like "multicore".  Took
+out previous pqR mods to the "parallel" package that did this just for
+it, in favour of using this more universal scheme.

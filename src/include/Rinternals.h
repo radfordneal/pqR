@@ -1116,6 +1116,9 @@ int R_system(const char *);
 */
 Rboolean R_compute_identical(SEXP, SEXP, int);
 
+/* Redefinition of "fork" to handle helper threads properly. */
+#define fork Rf_fork
+
 #ifndef R_NO_REMAP
 #define acopy_string		Rf_acopy_string
 #define alloc3DArray            Rf_alloc3DArray
