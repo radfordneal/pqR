@@ -2,7 +2,6 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  (C) Copyright 2008-11 Simon Urbanek
  *      Copyright 2011 R Core Development Team.
- *  Modifications for pqR Copyright (C) 2013 Radford M. Neal.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -128,9 +127,6 @@ extern Rboolean R_isForkedChild;
 
 SEXP mc_fork() 
 {
-    extern void Rf_wait_for_helpers_before_fork(void),
-                Rf_disable_helpers_after_fork(void);
-
     int pipefd[2]; /* write end, read end */
     int sipfd[2];
     pid_t pid;
@@ -146,18 +142,14 @@ SEXP mc_fork()
 	    getpid(), pipefd[1], pipefd[0], sipfd[1], sipfd[0]);
 #endif
 
-    Rf_wait_for_helpers_before_fork();
     pid = fork();
-
     if (pid == -1) {
 	close(pipefd[0]); close(pipefd[1]);
 	close(sipfd[0]); close(sipfd[1]);
 	error(_("unable to fork, possible reason: %s"), strerror(errno));
     }
     res_i[0] = (int) pid;
-
     if (pid == 0) { /* child */
-	Rf_disable_helpers_after_fork();
 	R_isForkedChild = 1;
 	close(pipefd[0]); /* close read end */
 	master_fd = res_i[1] = pipefd[1];
@@ -172,7 +164,6 @@ SEXP mc_fork()
 #ifdef MC_DEBUG
 	Dprintf("child process %d started\n", getpid());
 #endif
-
     } else { /* master process */
 	child_info_t *ci;
 	close(pipefd[1]); /* close write end of the data pipe */
@@ -191,7 +182,6 @@ SEXP mc_fork()
 	ci->next = children;
 	children = ci;
     }
-
     return res; /* (pid, fd of data pipe, fd of child-stdin pipe) */
 }
 

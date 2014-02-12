@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -491,4 +491,26 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 	return 0;
     }
     return 1;
+}
+
+
+/* Fork process, after waiting for helper threads to finish, and then
+   disable use of helper threads in the child process.  This lets
+   packages like 'parallel' and 'multicore' do their own idea of
+   parallel processing without fatal interaction with the helpers
+   facility. */
+
+#undef fork
+
+Rf_fork (void)
+{
+    extern void Rf_wait_for_helpers_before_fork(void),
+                Rf_disable_helpers_after_fork(void);
+    int r;
+
+    Rf_wait_for_helpers_before_fork();
+    r = fork();
+    if (r == 0) Rf_disable_helpers_after_fork();
+
+    return r;
 }
