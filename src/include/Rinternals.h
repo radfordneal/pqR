@@ -692,8 +692,8 @@ void (SET_HASHVALUE)(SEXP x, int v);
 
 /* Pointer Protection and Unprotection */
 #define PROTECT(s)		Rf_protect(s)
-#define PROTECT2(s1,s2)		Rf_protect2(s) /* BEWARE! All args evaluated */
-#define PROTECT3(s1,s2,s3)	Rf_protect3(s) /*   before any are protected */
+#define PROTECT2(s1,s2)		Rf_protect2(s1,s2) /* BEWARE! All args eval'd */
+#define PROTECT3(s1,s2,s3)	Rf_protect3(s1,s2,s3) /* before any protected */
 #define UNPROTECT(n)		Rf_unprotect(n)
 #define UNPROTECT_PTR(s)	Rf_unprotect_ptr(s)
 
