@@ -257,12 +257,12 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
 /* 'name' should be 1-element STRSXP or SYMSXP */
 SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 {
-    PROTECT2(vec,name);
+    PROTECT3(vec,name,val);
 
     if (isString(name))
 	name = install(translateChar(STRING_ELT(name, 0)));
     if (val == R_NilValue) {
-	UNPROTECT(2);
+	UNPROTECT(3);
 	return removeAttrib(vec, name);
     }
 
@@ -272,7 +272,7 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 
     if (NAMEDCNT_GT_0(val)) val = duplicate(val);
     SET_NAMEDCNT(val, NAMEDCNT(vec));  /* Is there something better to do? */
-    UNPROTECT(2);
+    UNPROTECT(3);
 
     if (name == R_NamesSymbol)
 	return namesgets(vec, val);
