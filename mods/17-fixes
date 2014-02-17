@@ -102,3 +102,8 @@ Redefined "fork" to "Rf_fork" so that helper threads can be disabled
 in the child when "fork" is used in packages like "multicore".  Took
 out previous pqR mods to the "parallel" package that did this just for
 it, in favour of using this more universal scheme.
+
+Added apparently missing PROTECT of third argument in setAttrib.  Not
+protected by caller in lengthgets, for example, though the fact that
+the second argument is a symbol there means no actual bug arises.  The
+protect is also missing in R-2.15.0 and R-3.0.2.
