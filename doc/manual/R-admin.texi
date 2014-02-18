@@ -47,7 +47,7 @@ notice identical to this one except for the removal of this paragraph
 
 @value{ISBN-admin}
 
-Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
 
 @end titlepage
 
@@ -61,7 +61,7 @@ Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
 
 This is a guide to installation and administration for R.
 
-The current version of this document is for R @value{VERSION}.
+This document is based on the version for R @value{VERSION}.
 
 @value{ISBN-admin}
 

@@ -1,9 +1,9 @@
 COPYRIGHT STATUS OF pqR.
  
 The modifications made to the source of R-2.15.0 to create pqR are
-Copyright (C) 2013 by Radford M. Neal.
+Copyright (C) 2013, 2014 by Radford M. Neal.
 
-The library in src/extra/matprod is Copyright (C) 2013 Radford M. Neal, 
+The library in src/extra/matprod is Copyright (C) 2013, 2014 Radford M. Neal, 
 and licensed under GPL2 or later.
 
 The library in src/extra/helpers is Copyright (C) 2013 Radford M. Neal, 
