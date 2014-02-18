@@ -1,56 +1,206 @@
+Installing pqR on a Unix/Linux system
 
-			INSTALLING R UNDER UNIX
+This document describes how to build and install pqR from a tar
+archive of the source, as distributed at pqR-project.org.  If you are
+building pqR from a download of a development version from the
+repository at https://github.com/radfordneal/pqR, see the note at the
+end of this document.
 
+More detailed information on installation is in the "R Installation
+and Administration Manual", an HTML copy of which is in the source
+directory, at doc/html/R-admin.html.
 
-This document concerns building and installing R from sources.  Pre-made
-binaries are made available for some systems with varying regularity and
-can be obtained from CRAN (see the RESOURCES file).
-
-The main source of information on installation is the `R Installation
-and Administration Manual', an HTML copy of which is available as file
-`doc/html/R-admin.html'.  Please read that before installing R.  But
-if you are impatient, read on but please refer to the manual to
-resolve any problems.  (If you obtained R using Subversion, the manual
-is at doc/manual/R-admin.texi.)
-
-
-SIMPLE COMPILATION
-
-As you are reading this file, you have unpacked the R sources and are
-presumably in the top directory.  Issue the following commands:
-
-	./configure
-	make
-
-(If your make is not called `make', set the environment variable MAKE to
-its name, and use that name throughout these instructions.)
-This will take a while, giving you time to read `R-admin.html'.
-
-Then check the built system worked correctly, by
-
-	make check
-
-and make the manuals by (as many options as preferred from)
-
-	make pdf	to create PDF versions
-	make info	to create info files
-
-However, please read the notes in `R-admin.html' about making the
-reference manual.
+Readers familiar with the process of installing versions of R
+distributed by the R Core Team (from source) should note that the
+process for pqR is basically the same.  However, there are some
+configuration options specific to pqR that you may wish to set, as
+described below, and in the R-admin manual.
 
 
-INSTALLATION
+Configuring pqR
 
-You do not need to install R to run it: you can run R by the script
-`bin/R' which you can link or copy to any convenient place in your path.
+After uncompressing and unpacking the tar archive (with a command such
+as "tar xf pqR-2014-02-19.tar.gz"), you should make a directory in
+which to build pqR, such as "pqR-2014-02-19-myconfig".  It is possible
+to instead build pqR in the source directory, but using a separate
+directory is preferable, so that the source directory says clean, and
+so that you can create more than one configuration if desired.
 
-For a site-wide installation, use
+You should then enter the build directory, and issue the command:
 
-	make install
-	make install-info
-	make install-pdf
+    path-to-source-directory/configure
 
-choosing to install the manuals that you made.
+where "path-to-source-directory" is the path to the source directory,
+perhaps something like "../pqR-2014-02-19".
 
-This installs to the default location (typically `/usr/local') for your
-platform: see the Installation and Administration Manual for other options.
+The configure command will produce a lot of output regarding the
+results of checks for various system facilities, and end (if
+successful) with a summary of the features of this configuration.
+These features are partly determined by the available system
+facilities, and partially by options you can give to "configure".
+
+You can get a list of configuration options with
+
+    path-to-source-directory/configure --help
+
+These options are discussed in the R-admin manual.  The ones most
+likely to be useful are as follows:
+
+    --disable-helper-threads
+
+        This disables use of "helper threads" to do some operations in
+        parallel.  Specifying this options is desirable if your
+        computer does not have multiple processors, multiple cores, or
+        hyperthreading.  It is necessary if your system does not
+        support the OpenMP facility.
+
+    --disable-mat-mult-with-BLAS-in-helpers
+
+        Specify this option if the BLAS routines you plan to use are
+        not thread-safe, and hence should not be run in parallel. The
+        BLAS routines supplied with pqR are thread-safe, so this is
+        not the default.
+
+    --enable-mat-mult-with-BLAS-by-default
+
+        Specify this if by default you want matrix multiply operations
+        in R code to be done with whatever BLAS you supply (or the one
+        supplied with pqR), rather than the C routines built into pqR.
+        Your BLAS may be faster than the builtin C routines, but on
+        the other hand, the builtin C routines guarantee that NA, Inf,
+        etc. are propagated correctly, and will pipeline output to
+        other operations when run in parallel.  This option specifies
+        only the default, which can be changed using "options" (see
+        help("%*%") for details).  Note that matrix multiplies done as
+        part of other operations (eg, eigenvector computations) are
+        always done with the BLAS.
+
+    --disable-byte-compiled-packages
+
+        Disables byte compilation for the builtin and recommended 
+        packages built along with pqR.  This does not affect whether
+        packages installed later are byte compiled.  It is not clear
+        whether or not byte compilation is desirable in pqR, since
+        it speeds up some operations, but does not support some of
+        pqR's speed improvements.
+
+    --enable-R-shlib
+
+        Build R as a shared library.  This is necessary if you want to
+        use RStudio.
+
+    R_PAPERSIZE=letter
+
+        Sets the default paper size to 8 1/2 by 11 inch letter size.
+        The default is A4, appropriate for Europeans, but probably not
+        North Americans.
+ 
+    CC=...
+    FC=...
+    F77=...
+
+        Specifies which compilers to use for C, Fortran 90/95, and
+        Fortran 77.  Suitable compilers may be chosen automatically,
+        but the GNU compilers can be specified as follows:
+
+          CC='gcc -std=gnu99'
+          FC='gfortran'
+          F77='gfortran'
+
+        Adding a -m32 option may be useful to compile in 32-bit mode
+        on a 64-bit system.
+
+    CFLAGS=...
+    FFLAGS=...
+
+        Sets the compiler flags for C and Fortran.  If the GNU
+        compilers are used with an Intel/AMD 64-bit processor, the
+        following flags are recommended:
+
+          CFLAGS='-g -O2 -mtune=native -DENABLE_ISNAN_TRICK'
+          FFLAGS='-g -O2 -mtune=native'
+
+        For a 32-bit build, adding the -mfpmath=sse option is probably
+        desirable (unless you have a very old processor, Pentium III
+        or earlier).
+
+
+Compiling pqR
+
+Once you have run the "configure" script, you can compile pqR, and
+make all the base and recommended packages, with the command
+
+    make
+
+This will take a while, and produce lots of output, which might
+contain some meaningful error or warning messages (though some
+warnings are normal).
+
+The above "make" command will make HTML versions of the manuals
+(placing them in doc/manual).  You can optionally make PDF or GNU info
+versions of the manuals using either or both of the following
+commands:
+
+    make pdf
+    make info
+
+However, making these versions requires additional system facilities
+which you might not have available.  See the section on "Making the
+manuals" in the R-admin manual for details.
+
+
+Checking that pqR works correctly
+
+After compiling pqR, you can check that it works with the command
+
+    make check
+
+More extensive checks, including of the recommended packages, can
+be run with
+
+    make check-all
+
+Some discrepancies are typically shown in the output of these
+commands, because floating-point arithmetic differs slightly from one
+computer to another, because the exact form of error messages may
+differ depending on whether a package was byte compiled or not, and
+because some output depends on the set of files present, etc.
+However, any report of "ERROR" or "FAILED" that appears indicates a
+problem, except if it is due to lack of internet access, or to running
+the checks in a C/POSIX locale.
+
+
+Running and installing pqR
+
+For compatibility with other R releases, the script to run pqR is
+called "R", not "pqR".  After compiling pqR as described above, you
+can run it, without any further installation steps, using the command
+
+    path-to-build-directory/bin/R
+
+or just "bin/R" if you are currently in the build directory.  Other
+standard R commands such as Rscript can be run similarly.
+
+To install pqR in system directories, use the commands
+
+    make install
+    make install-pdf
+    make install-info
+
+or some subset of them.  By default, these install to /usr/local, but
+this can be changed using the --prefix configure option.  For more
+details, see the R-admin manual.
+
+
+Building pqR from a development version
+
+If you download a version of pqR from the source code repository that
+is not a release version, you should first, in the source directory,
+run the command
+
+    ./create-configure
+
+You can then proceed as described above.  However, note that the
+release date may not be set to anything meaningful.  Also, the
+descriptions of the modifications done to create pqR will be in files
+in the "mods" directory, rather than the single file "MODS".
