@@ -8782,6 +8782,19 @@ Currently all arguments to a @code{.Call} call will have @code{NAMED}
 set to 2, and so users must assume that they need to be duplicated
 before alteration.
 
+User code may also deal with objects that are encountered as elements
+of lists, or as attributes.  Such references to an object also count
+as it being ``named'', and will normally be included in the count seen
+with @code{NAMED}.  However, @code{NAMED} for such objects is
+sometimes left at zero --- hence, any object obtained from a list that
+has @code{NAMED} greater than zero must be regarded as having
+@code{NAMED} of at least one (and hence, recursively, elements within
+this object must also be regarded as having @code{NAMED} of at least
+one).
+
+See the section on ``Reference counts and the nmcnt field'' in the 
+``R Internals'' manual for more details on conventions regarding @code{NAMED}.
+
 @node Interface functions .Call and .External, Evaluating R expressions from C, Handling R objects in C, System and foreign language interfaces
 @section Interface functions @code{.Call} and @code{.External}
 @cindex Interfaces to compiled code
