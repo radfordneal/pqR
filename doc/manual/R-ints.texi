@@ -2272,7 +2272,7 @@ To avoid problems with the use of multiple threads by the helpers
 facility, the Unix/Linux @code{fork} function, used by package
 @code{parallel} and others, is redefined to @code{Rf_fork} in
 @code{Rinternals.h}.  The @code{Rf_fork} function waits for all helper
-threads to become idle before forking, and then disables used of
+threads to become idle before forking, and then disables use of
 helper threads in the child process.
 
 
