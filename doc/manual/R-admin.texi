@@ -435,6 +435,8 @@ you have a working @file{configure} script --- if necessary, you can re-create
    aclocal --output=aclocal.m4 -I .
    autoconf -B .
 @end example
+These commands are in the @file{create-configure} shell file in the
+main directory of a pqR source distribution.
 
 @node Help options, Making the manuals, Simple compilation, Installing R under Unix-alikes
 @section Help options
