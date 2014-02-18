@@ -51,6 +51,13 @@
 
   \subsection{DOCUMENTATION UPDATES}{
     \itemize{
+\item The manual on "Writing R Extensions" now has additional information 
+      (in the section on "Named objects and copying") on paying proper attention
+      to NAMED for objects found in lists.
+  }}
+
+  \subsection{CHANGES FOR PACKAGE COMPATIBILITY}{
+    \itemize{
 \item .
   }}
 
