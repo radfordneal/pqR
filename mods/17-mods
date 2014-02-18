@@ -9,3 +9,5 @@ operations are the same with or without multithreading/merging.
 
 Added a "create-configure" script for creating "configure" from
 "configure.ac".
+
+Added more documentation on NAMED to R-exts.
