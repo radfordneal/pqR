@@ -49,7 +49,7 @@ notice identical to this one except for the removal of this paragraph
 
 @value{ISBN-ints}
 
-Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
 
 @end titlepage
 
@@ -64,7 +64,7 @@ Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
 This is a guide to the internal structures of @R{} and coding standards for
 the core team working on @R{} itself.
 
-The current version of this document is for R @value{VERSION}.
+This document is based on the version for R @value{VERSION}.
 
 @value{ISBN-ints}
 
