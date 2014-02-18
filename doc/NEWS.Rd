@@ -6,6 +6,59 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2014-02-19}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+
+\item This is a maintainence release, with bug fixes, changes for
+      compatibility with packages, additional correctness tests, and 
+      documentation improvements.  There are no new features in this 
+      release, and no significant changes in performance.
+
+\item See the sections below on earlier releases for general
+      information on pqR.
+  }}
+
+  \subsection{INSTALLATION AND TESTING}{
+    \itemize{
+\item The information in the file "INSTALL" in the main source directory 
+      has been re-written.  It now contains all the information expected
+      to be needed for most installations, without the user needing to
+      refer to R-admin, including information on the configuration
+      options that have been added for pqR.  It also has information on
+      how to build pqR from a development version downloaded from github.
+
+\item Additional tests regarding subsetting operations, maintainance of
+      NAMEDCNT, and operation of helper threads have been written.
+      They are run with \code{make check} or \code{make check-all}.
+
+\item A "create-configure" shell script is now included, which allows
+      for creation of the "configure" shell script when it is non-functional
+      or not present (as when building from a development version of pqR).
+      It is not needed for typical installs of pqR releases.
+
+\item Note that any packages (except those written only in R, plus 
+      C or Fortran routines called by \code{.C} or \code{.Fortran}) that
+      were compiled and installed under R Core versions of R must be 
+      re-installed for use with pqR, as is generally the case with new versions
+      of R (although it so happens that it is not necessary to re-install
+      packages installed with pqR-2013-07-22 or pqR-2013-12-29 with this 
+      release, because the formats of the crucial internal data structures 
+      happen not to have changed).
+  }}
+
+  \subsection{DOCUMENTATION UPDATES}{
+    \itemize{
+\item .
+  }}
+
+  \subsection{BUG FIXES}{
+    \itemize{
+\item .
+  }}
+
 \section{CHANGES IN VERSION RELEASED 2013-12-29}{
 
   \subsection{INTRODUCTION}{
