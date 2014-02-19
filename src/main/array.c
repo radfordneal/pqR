@@ -38,6 +38,8 @@
 
 #include <helpers/helpers-app.h>
 #include <matprod/piped-matprod.h>
+/* ensure piped matprod routines are present when built as shared library. */
+helpers_task_proc *R_kludge = task_piped_matprod_mat_mat;
 
 /* "GetRowNames" and "GetColNames" are utility routines which
  * locate and return the row names and column names from the
