@@ -43,6 +43,9 @@
       by Yu Gong) have hopefully been fixed.  (But trying to install
       pqR on Windows is still recommended only for adventurous users.)
 
+\item A problem with installing pqR as a shared library when multithreading
+      is disabled has been fixed.
+
 \item Note that any packages (except those written only in R, plus 
       C or Fortran routines called by \code{.C} or \code{.Fortran}) that
       were compiled and installed under R Core versions of R must be 
