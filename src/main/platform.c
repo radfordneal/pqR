@@ -1323,7 +1323,9 @@ static SEXP do_fileexists(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #define CHOOSEBUFSIZE 1024
 
-#ifndef Win32
+#ifdef Win32 /* Windows version is in src/gnuwin32/extra.c */
+extern SEXP do_filechoose(SEXP call, SEXP op, SEXP args, SEXP rho);
+#else
 static SEXP do_filechoose(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int _new, len;

@@ -147,15 +147,20 @@ dllversion.o: ../include/Rversion.h
 R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
 	@$(ECHO) EXPORTS > R.def
 	@$(NM) $^ | $(SED) -n  $(SYMPAT)  | $(SORT) | uniq > R0.def
-	@comm -23 R0.def Rdll.hide >> R.def
+ifeq "$(WIN)" "64"
+	@$(SED) -e's/@.*//' Rdll.hide | $(SORT) > R1.def	
+else
+	@$(SORT) <Rdll.hide >R1.def
+endif
+	@$(COMM) -23 R0.def R1.def >> R.def
 	$(DLL) -shared $(DLLFLAGS) $($*-DLLFLAGS) -o $@ R.def $^ $($*-DLLLIBS) $(DLLLIBS)
-	@$(RM) R.def R0.def
+	@$(RM) R.def R0.def R1.def
 
 R.exp: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
 	@$(ECHO) LIBRARY R.dll > R.exp
 	@$(ECHO) EXPORTS >> R.exp
 	@$(NM) $^ | $(SED) -n $(SYMPAT) | $(SORT) | uniq > R0.def
-	@comm -23 R0.def Rdll.hide >> R.exp
+	@$(COMM) -23 R0.def Rdll.hide >> R.exp
 	@$(RM) R0.def
 
 
@@ -207,10 +212,10 @@ front-ends:
 	$(MK) -C ../extra/xz -f Makefile.win
 
 ../extra/helpers/libhelpers.a:
-  $(MK) -C ../extra/helpers -f Makefile.win
+	$(MK) -C ../extra/helpers -f Makefile.win
 
 ../extra/matprod/libmatprod.a:
-  $(MK) -C ../extra/matprod -f Makefile.win
+	$(MK) -C ../extra/matprod -f Makefile.win
 
 NEWSdocs:
 	@$(MK) -C ../../doc -f Makefile.win
