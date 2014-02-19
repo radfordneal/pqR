@@ -550,6 +550,8 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 
 #else 
 
+#undef helpers_is_being_computed
+#undef helpers_is_in_use
 #define helpers_is_being_computed(x) 0  /* Stub routines used when support */
 #define helpers_is_in_use(x) 0          /*   for helpers is not enabled    */
 
