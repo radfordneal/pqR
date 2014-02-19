@@ -12,7 +12,7 @@
 
   \itemize{ 
 
-\item This is a maintainence release, with bug fixes, changes for
+\item This is a maintenance release, with bug fixes, changes for
       compatibility with packages, additional correctness tests, and 
       documentation improvements.  There are no new features in this 
       release, and no significant changes in performance.
@@ -30,7 +30,7 @@
       options that have been added for pqR.  It also has information on
       how to build pqR from a development version downloaded from github.
 
-\item Additional tests regarding subsetting operations, maintainance of
+\item Additional tests regarding subsetting operations, maintenance of
       NAMEDCNT, and operation of helper threads have been written.
       They are run with \code{make check} or \code{make check-all}.
 
@@ -38,6 +38,10 @@
       for creation of the "configure" shell script when it is non-functional
       or not present (as when building from a development version of pqR).
       It is not needed for typical installs of pqR releases.
+
+\item Some problems with installation on Microsoft Windows (identified
+      by Yu Gong) have hopefully been fixed.  (But trying to install
+      pqR on Windows is still recommended only for adventurous users.)
 
 \item Note that any packages (except those written only in R, plus 
       C or Fortran routines called by \code{.C} or \code{.Fortran}) that
@@ -51,20 +55,113 @@
 
   \subsection{DOCUMENTATION UPDATES}{
     \itemize{
+\item The instructions in "INSTALL" have been re-written, as noted above.
 \item The manual on "Writing R Extensions" now has additional information 
       (in the section on "Named objects and copying") on paying proper attention
       to NAMED for objects found in lists.
   }}
 
-  \subsection{CHANGES FOR PACKAGE COMPATIBILITY}{
+  \subsection{CHANGES REGARDING PACKAGE COMPATIBILITY AND CHECKING}{
     \itemize{
-\item .
+\item Changed the behaviour of \code{$} when dispatching so that the unevaluated
+      element name arrives as a string, as in R-2.15.0.  This behaviour is
+      needed for the "dyn" package.  The issue is illustrated by the
+      following code:
+\preformatted{    a <- list(p=3,q=4)
+    class(a) <- "fred"
+    `$.fred` <-
+      function (x,n) { print(list(n,substitute(n))); x[[n]] }
+    print(a$q)
+}
+      In R-2.15.0, both elements of the list printed are strings, but in
+      pqR-2013-12-29, the element from "substitute" is a symbol.  Changed
+      \code{help("$")} to document this behaviour, and the corresponding 
+      behaviour of \code{"$<-"}.  Added a test with \code{make check} for it.
+\item Redefined "fork" to "Rf_fork" so that helper threads can be disabled
+      in the child when "fork" is used in packages like "multicore". 
+      (Special mods for this had previously been made to the "parallel" 
+      package, but this is a more universal scheme.)
+\item Added an option (currently set) for pqR to ignore incorrect zero
+      pointers encountered by the garbage collector (as R-2.15.0 does).
+      This avoids crashes with some packages (eg, "birch") that incorrectly
+      set up objects with zero pointers.
+\item Changed C procedure names in the "matprod" routines to reduce the
+      chance of name conflicts with C code in packages.
+\item Made \code{NA_LOGICAL} and \code{NA_INTEGER} appear as variables
+      (rather than constants) in packages, as needed for package
+      "RcppEigen".
+\item Made \code{R_CStackStart} and \code{R_CStackLimit} visible to 
+      packages, as needed for package "vimcom".
+\item Fixed problem with using \code{NAMED} in a package that defines
+      \code{USE_RINTERNALS}, such as "igraph".
+\item Calls of external routines with .Call and .External are now
+      followed by checks that the routine didn't incorrectly change 
+      the constant objects sometimes used internally in pqR for TRUE, 
+      FALSE, and NA.  (Previously, such checks were made only after calls 
+      of .C and .Fortran.)
   }}
 
   \subsection{BUG FIXES}{
     \itemize{
-\item .
-  }}
+\item Fixed the following bug (also present in R-2.15.0 and R-3.0.2):
+\preformatted{    x <- t(5)
+    print (x \%*\% c(3,4))
+    print (crossprod(5,c(3,4)))
+}
+     The call of \code{crossprod} produced an error, whereas the corresponding
+     use of \code{\%*\%} does not.
+
+     In pqR-2013-12-29, this bug also affected the expression 
+     \code{t(5) \%*\% c(3,4)}, since it is converted to the equivalent of 
+     \code{crossprod(5,c(3,4))}.
+
+\item Fixed a problem in R_AllocStringBuffer that could result in
+      a crash due to an invalid memory access.  (This bug is also
+      present in R-2.15.0 and R-3.0.2.)
+\item Fixed a bug illustrated by the following:
+\preformatted{    f <- function (a)
+    { x <- a
+      function () { b <- a; b[2]<-1000; a+b  }
+    }
+    g <- f(c(7,8,9))
+    save.image("tmpimage")
+    load("tmpimage")
+    print(g())
+}
+      where the result printed was 14 2000 18 rather than 14 1008 18.
+\item Fixed a bug in \code{prod} with an integer vector containing \code{NA}, 
+      such as, \code{prod(NA)}.
+\item Fixed a lack-of-protection bug in mkCharLenCE that showed up
+      in checks for packages "cmrutils".
+\item Fixed a problem with xtfrm demonstrated by the following:
+\preformatted{    f<-function(...) xtfrm(...); f(c(1,3,2))
+}
+      which produced an error saying '...' was used in an incorrect context.
+      This affected package "lsr". 
+\item Fixed a bug in maintaining NAMEDCNT when assigning to a variable in
+      an environment using \code{$}, which showed up in package "plus".
+\item Fixed a bug that causes the code below to create a circular data 
+      structure:
+\preformatted{    { a <- list(1); a[[1]] <- a; a }
+}
+\item Fixed bugs such as that illustrated below:
+\preformatted{    a <- list(list(list(1)))
+    b <- a
+    a[[1]][[1]][[1]]<-2
+    print(b)
+}
+      in which the assignment to \code{a} changes \code{b}, and added tests
+      for such bugs.
+\item Fixed a bug where unary minus might improperly reuse its operand for
+      the result even when it was logical (eg, in \code{-c(F,T,T,F)}).
+\item Fixed a bug in pairlist element deletion, and added tests in subset.R
+      for such cases.
+\item The ISNAN trick (if enabled) is now used only in the interpreter itself,
+      not in packages, since the macro implementing it evaluates its argument
+      twice, which doesn't work if it has side effects (as happens in the 
+      "ff" package).
+}}
+}
 
 \section{CHANGES IN VERSION RELEASED 2013-12-29}{
 
