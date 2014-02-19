@@ -85,8 +85,8 @@
       pointers encountered by the garbage collector (as R-2.15.0 does).
       This avoids crashes with some packages (eg, "birch") that incorrectly
       set up objects with zero pointers.
-\item Changed C procedure names in the "matprod" routines to reduce the
-      chance of name conflicts with C code in packages.
+\item Changed a C procedure name in the "matprod" routines to reduce the
+      chance of a name conflict with C code in packages.
 \item Made \code{NA_LOGICAL} and \code{NA_INTEGER} appear as variables
       (rather than constants) in packages, as needed for package
       "RcppEigen".
@@ -118,6 +118,9 @@
 \item Fixed a problem in R_AllocStringBuffer that could result in
       a crash due to an invalid memory access.  (This bug is also
       present in R-2.15.0 and R-3.0.2.)
+\item Fixed a bug in a "matprod" routine sometimes affecting 
+      \code{tcrossprod} (or an equivalent use of \code{\%*\%}) with 
+      helper threads.
 \item Fixed a bug illustrated by the following:
 \preformatted{    f <- function (a)
     { x <- a
