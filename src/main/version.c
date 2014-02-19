@@ -171,7 +171,7 @@ void attribute_hidden PrintVersion_part_1(char *s)
     strcat (s, "ISBN 3-900051-07-0\n\n");
 
     sprintf (tmp, 
-      "Modifications to R in pqR are Copyright (C) %s Radford M. Neal\n\n",
+      "Modifications to R in pqR are Copyright (C) 2013-%s Radford M. Neal\n\n",
       R_YEAR);
     strcat(s,tmp);
 
