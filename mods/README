@@ -21,8 +21,13 @@ DD), with only the following changes:
 
   o Removal of the file ".gitignore".
 
-  o Concatenation of all files in the "mods" directory into the file 
-    "MODS", and deletion of the "mods" directory.
+  o Concatenate all files in the "mods" directory into the file 
+    "MODS", as follows:
+
+      (cd mods; cat README; for i in [0-9]*; \
+       do echo " "; echo " "; echo ${i}:; echo " "; cat $i; done) >MODS
+
+    Then delete the "mods" directory.
 
   o Creation of the file "configure" by running create-configure.
 
