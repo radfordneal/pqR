@@ -529,6 +529,9 @@
 /* Define this to enable helper threads. */
 #define R_HELPER_THREADS 1
 
+/* Define this to enable task merging. */
+#define R_TASK_MERGING 1
+
 /* Define to 1 if you have pangocairo. */
 /* #undef HAVE_PANGOCAIRO */
 

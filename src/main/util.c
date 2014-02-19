@@ -1144,7 +1144,9 @@ static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 
 
-#ifndef Win32 /* Windows version is in src/gnuwin32/extra.c */
+#ifdef Win32 /* Windows version is in src/gnuwin32/extra.c */
+extern SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho);
+#else
 #ifndef HAVE_DECL_REALPATH
 extern char *realpath(const char *path, char *resolved_path);
 #endif
