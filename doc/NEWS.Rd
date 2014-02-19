@@ -62,6 +62,8 @@
 \item The manual on "Writing R Extensions" now has additional information 
       (in the section on "Named objects and copying") on paying proper attention
       to NAMED for objects found in lists.
+\item More instructions on how to create a release branch of pqR from a 
+      development branch have been added to mods/README (or MODS).
   }}
 
   \subsection{CHANGES REGARDING PACKAGE COMPATIBILITY AND CHECKING}{
