@@ -69,7 +69,8 @@ RESCOMP=$(BINPREF)windres $(RC_ARCH)
 # as set by make
 RM=rm -f
 SED=sed
-SORT=sort
+SORT=LC_COLLATE=C sort
+COMM=LC_COLLATE=C comm
 
 .SUFFIXES:
 .SUFFIXES: .c .cc .cpp .C .f .o .a .def .exp .dll .exe .d .f90 .f95 .m .S
