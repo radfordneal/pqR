@@ -19,15 +19,22 @@ Release branches have names of the form Release-YYYY-MM-DD, and are
 based on some merged development branch (ie, with a name of the form
 DD), with only the following changes:
 
-  o concatenation of files in mods into the file MODS, and deletion of 
-    the mods directory.
+  o Removal of the file ".gitignore".
 
-  o removal of .gitignore, and creation of configure, NEWS, NEW.pdf,
-    doc/html/NEWS.html, and doc/html/R-admin.html from source files 
-    (by running make, or as described in R-admin).
+  o Concatenation of all files in the "mods" directory into the file 
+    "MODS", and deletion of the "mods" directory.
 
-  o updating of the release date, which is stored in the (now mis-named) 
-    file SVN-REVISION.
+  o Creation of the file "configure" by running create-configure.
+
+  o Creation of files "NEWS", "NEWS.pdf", "doc/html/NEWS.html", and 
+    "doc/html/R-admin.html" from source files, by running make in some
+    build directory, and then copying them to the source directory.
+
+  o Updating of the release date, which is stored in the (now mis-named) 
+    file "SVN-REVISION".  This should match the date in "NEWS.Rd", which
+    would have been set in a development branch.  (The date in the
+    "SVN-REVISION" file a development branch should approximately the
+    correct year, but have month and day set to "00".)
 
 The development branches that go into a release may be changed after
 the release, with the new versions forming the basis for a later
