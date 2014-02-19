@@ -110,3 +110,6 @@ protect is also missing in R-2.15.0 and R-3.0.2.
 
 Made changes along lines suggested by Yu Gong to fix problems with
 building for Windows.
+
+Added kludge to fix problem with making as shared library when
+multithreading is disabled.
