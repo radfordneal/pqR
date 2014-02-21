@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-02-19}{
+\section{CHANGES IN VERSION RELEASED 2014-02-20}{
 
   \subsection{INTRODUCTION}{
 
@@ -168,6 +168,8 @@
       not in packages, since the macro implementing it evaluates its argument
       twice, which doesn't work if it has side effects (as happens in the 
       "ff" package).
+\item Fixed a bug that sometimes resulted in task merging being disabled
+      when it shouldn't have been.
 }}
 }
 
