@@ -1272,7 +1272,7 @@ Accordingly, @code{NAMEDCNT} is not meaningful for such objects.
 
 An atomic or non-atomic vector that is referenced from an object of one
 of these types (eg, a numeric constant in a language construct) should
-have its @code{NAMECNT} set to @code{MAX_NAMEDCNT} whenever it becomes
+have its @code{NAMEDCNT} set to @code{MAX_NAMEDCNT} whenever it becomes
 visible elsewhere (eg, as the result of @code{eval}) to ensure that it
 is never changed.
 
