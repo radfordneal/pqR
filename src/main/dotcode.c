@@ -86,7 +86,7 @@ static SEXP pkgtrim(SEXP args, DllReference *dll);
 /* Check whether any of the logical constants have changed.  If so, reset
    them to their correct values. */
 
-static R_INLINE check_scalar_constants_OK (SEXP call)
+static R_INLINE void check_scalar_constants_OK (SEXP call)
 {
     if (LOGICAL(R_ScalarLogicalTRUE)[0] != 1 
      || LOGICAL(R_ScalarLogicalFALSE)[0] != 0
