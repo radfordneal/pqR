@@ -1,6 +1,6 @@
 /*
  *  pqR : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2013 Radford M. Neal
+ *  Copyright (C) 2013, 2014 Radford M. Neal
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 #define DO_NOW_OR_LATER2(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
  HELPERS_NOW_OR_LATER( (((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
-                               && !helpers_not_merging \
+                               && !helpers_not_merging_now \
                           || !helpers_not_multithreading_now) \
                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
                        helpers_is_being_computed(_in1_) \
@@ -147,7 +147,7 @@ extern char *Rf_var_name (helpers_var_ptr);
 
 #define DO_NOW_OR_LATER1(_variant_,_c_,_flags_,_proc_,_op_,_out_,_in_) \
  HELPERS_NOW_OR_LATER( (((_flags_) & HELPERS_MERGE_IN_OUT) != 0 \
-                                && !helpers_not_merging \
+                                && !helpers_not_merging_now \
                           || !helpers_not_multithreading_now) \
                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
                        helpers_is_being_computed(_in_), \

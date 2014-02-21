@@ -325,7 +325,6 @@ void attribute_hidden InitOptions(void)
     set_rl_word_breaks(" \t\n\"\\'`><=%;,|&{()}");
 #endif
 
-#ifdef R_DEFERRED_EVAL
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
     SET_TAG(v, install("helpers_disable"));
@@ -350,7 +349,6 @@ void attribute_hidden InitOptions(void)
     v = CDR(v);
     SET_TAG(v, install("helpers_trace"));
     SETCAR(v, ScalarLogical(getenv("R_HELPERS_TRACE")!=0));
-#endif
 
     SET_SYMVALUE(install(".Options"), CDR(val));
     UNPROTECT(1);
@@ -590,9 +588,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_DEFERRED_EVAL
 		helpers_disable(k);
-#endif
 		SET_VECTOR_ELT(value, i, 
                    SetOption(tag, ScalarLogical(helpers_are_disabled)));
 	    }
@@ -600,9 +596,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_DEFERRED_EVAL
 		helpers_no_multithreading(k);
-#endif
 		SET_VECTOR_ELT(value, i, 
                    SetOption(tag, ScalarLogical(helpers_not_multithreading)));
 	    }
@@ -610,9 +604,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_DEFERRED_EVAL
 		helpers_no_pipelining(k);
-#endif
 		SET_VECTOR_ELT(value, i, 
                    SetOption(tag, ScalarLogical(helpers_not_pipelining)));
 	    }
@@ -620,9 +612,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_DEFERRED_EVAL
 		helpers_no_merging(k);
-#endif
 		SET_VECTOR_ELT(value, i, 
                    SetOption(tag, ScalarLogical(helpers_not_merging)));
 	    }
@@ -630,9 +620,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-#ifdef R_DEFERRED_EVAL
 		helpers_trace(k);
-#endif
 		SET_VECTOR_ELT(value, i, 
                    SetOption(tag, ScalarLogical(k)));
 	    }
