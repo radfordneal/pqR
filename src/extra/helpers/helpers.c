@@ -1,7 +1,7 @@
 /* HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
              C Procedures Implementing the Facility
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The helpers library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -399,6 +399,7 @@ int helpers_are_disabled = 0;    /* 1 if helpers currently disabled */
 
 #ifdef helpers_can_merge
 int helpers_not_merging = 0;     /* 1 if task merging is not enabled */
+int helpers_not_merging_now = 0; /* 1 if task merging not done at the moment */
 #endif
 
 #ifndef HELPERS_NO_MULTITHREADING
@@ -1552,7 +1553,8 @@ void helpers_do_task
 
 #     ifndef HELPERS_NO_MULTITHREADING
       {
-        if (! (m->flags & HELPERS_MASTER_ONLY))
+        if (!helpers_not_multithreading_now 
+              && ! (m->flags & HELPERS_MASTER_ONLY))
         { 
           FLUSH;
           ATOMIC_READ_CHAR (h = m->helper);
@@ -2719,13 +2721,18 @@ static void set_flag_mask_now (void)
       = helpers_not_pipelining || helpers_not_multithreading_now;
 # endif
 
+# ifdef helpers_can_merge
+    helpers_not_merging_now
+      = helpers_not_merging || helpers_are_disabled;
+# endif
+
   flag_mask = ~0;
 
   if (helpers_not_pipelining_now)
   { flag_mask &= ~HELPERS_PIPE_IN012_OUT;
   }
 
-  if (helpers_are_disabled || helpers_not_merging)   
+  if (helpers_not_merging_now)
   { flag_mask &= ~HELPERS_MERGE_IN_OUT;
   }
 }

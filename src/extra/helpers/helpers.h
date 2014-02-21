@@ -1,7 +1,7 @@
 /* HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
              Interface to C Procedures Called by Application Programs
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The helpers library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2, as 
@@ -213,6 +213,7 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 #define helpers_tasks 0
 #define helpers_are_disabled 1
 #define helpers_not_merging 1
+#define helpers_not_merging_now 1
 
 #define helpers_startup(n)           (helpers_master())
 
@@ -278,11 +279,13 @@ void helpers_disable (int);          /* Disable/re-enable helpers */
 #ifdef helpers_can_merge
 
 extern int helpers_not_merging;      /* 1 if task merging is not enabled */
+extern int helpers_not_merging_now;  /* 1 if no merging at the moment */
 void helpers_no_merging (int);       /* Disable/re-enable task merging */
 
 #else
 
 #define helpers_not_merging 1        /* Stubs for when merging not supported */
+#define helpers_not_merging_now 1
 #define helpers_no_merging(a) 0
 
 #endif

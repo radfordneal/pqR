@@ -1,7 +1,7 @@
 HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
           Application Program Interface Documentation
 
-Copyright (c) 2013 Radford M. Neal.
+Copyright (c) 2013, 2014 Radford M. Neal.
 
   The helpers library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -856,7 +856,10 @@ are not affected.)  When task merging is disabled, the global variable
 helpers_not_merging will be set to 1 (versus 0 otherwise), except note
 that helpers_not_merging will be the constant 1 regardless of calls to
 helpers_no_merging if helpers_can_merge is not defined, or if the
-HELPERS_DISABLE symbol is defined (see below).
+HELPERS_DISABLE symbol is defined (see below).  The global variable
+helpers_not_merging_now will be 1 if task merging will not be done,
+because it has either been disabled, or the whole helpers facility 
+has been disabled.
 
 
 INFORMATION FUNCTIONS AND VARIABLES
@@ -1189,9 +1192,9 @@ available in the master:
   helpers_num                Number of helper threads
   helpers_tasks              Number of tasks currently outstanding
 
-  helpers_not_merging        Set to 1 if task merging is disabled, 0 otherwise
-
   helpers_are_disabled       Set to 1 if helpers not enabled, 0 otherwise
+  helpers_not_merging        Set to 1 if task merging is disabled, 0 otherwise
+  helpers_not_merging_now    Set to 1 if task merging not done now, 0 otherwise
   helpers_not_pipelining     Set to 1 if pipelining is disabled, 0 otherwise
   helpers_not_pipelining_now Set to 1 if pipelining is not done, 0 otherwise
   helpers_not_multithreading Set to 1 if multithreading is disabled, 0 otherwise
