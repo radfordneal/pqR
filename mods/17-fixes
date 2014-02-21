@@ -113,3 +113,7 @@ building for Windows.
 
 Added kludge to fix problem with making as shared library when
 multithreading is disabled.
+
+Fixed bug that sometimes resulted in task merging being disabled when
+it shouldn't have been.  Cleaned up some other things with helpers
+options.
