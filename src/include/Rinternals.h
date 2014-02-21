@@ -1118,6 +1118,10 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 
 /* Redefinition of "fork" to handle helper threads properly. */
 #define fork Rf_fork
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+pid_t Rf_fork(void);
+#endif
 
 #ifndef R_NO_REMAP
 #define acopy_string		Rf_acopy_string
