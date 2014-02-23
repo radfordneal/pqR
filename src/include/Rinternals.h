@@ -28,30 +28,6 @@
 #define R_INTERNALS_H_
 
 
-/* Redefinition of "fork" to handle helper threads properly, using the
-   Rf_fork function in system.c.  Starts by including the header file
-   that declares the system "fork" (if such exists), so that the
-   redefinition won't affect that.  Declares Rf_fork as returning a
-   value of type pid_t if the header file defining that type exists,
-   and otherwise as returning int. 
-
-   For some mysterious reason, things go wrong if this is done after
-   the includes of headers in R_ext below. */
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#define fork Rf_fork
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-pid_t Rf_fork(void);
-#else
-int Rf_fork(void);
-#endif
-
-
 #ifdef __cplusplus
 # include <cstdio>
 # ifdef __SUNPRO_CC
@@ -63,6 +39,35 @@ extern "C" {
 # include <stdio.h>
 # include <limits.h> /* for INT_MAX */
 #endif
+
+
+/* Redefinition of "fork" to handle helper threads properly, using the
+   Rf_fork function in system.c.  Starts by including the header file
+   that declares the system "fork" (if such exists), so that the
+   redefinition won't affect that.  Declares Rf_fork as returning a
+   value of type pid_t if the header file defining that type exists.
+   If not, it is allowed to default to returning int.
+
+   For some mysterious reason, things go wrong if this is done after
+   the includes of headers in R_ext below.  Also, letting Rf_fork
+   default to returning int, rather than declaring it so, is deliberate,
+   in case "fork" (now really "Rf_fork") is somehow declared later,
+   in which case we don't want to conflict with the return type it is
+   given then, which we hope is the same as it's declared as in util.c.
+   (You'd think this couldn't be an issue, but something funny happens
+   with C++ ...) */
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#define fork Rf_fork
+
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+pid_t Rf_fork(void);
+#endif
+
 
 #include <R_ext/Arith.h>
 #include <R_ext/Boolean.h>
