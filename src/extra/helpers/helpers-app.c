@@ -1,6 +1,6 @@
 /*
  *  pqR : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2013 Radford M. Neal
+ *  Copyright (C) 2013, 2014 Radford M. Neal
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
