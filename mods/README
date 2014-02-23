@@ -19,9 +19,19 @@ Release branches have names of the form Release-YYYY-MM-DD, and are
 based on some merged development branch (ie, with a name of the form
 DD), with only the following changes:
 
-  o Removal of the file ".gitignore".
+ 1) Update the release date, which is stored in the (now mis-named) 
+    file "SVN-REVISION".  This should match the date in "NEWS.Rd", which
+    would have been set in a development branch.  (The date in the
+    "SVN-REVISION" file a development branch should approximately the
+    correct year, but have month and day set to "00".)
 
-  o Concatenate all files in the "mods" directory into the file 
+ 2) Create the file "configure" by running create-configure.
+
+ 3) Create the files "NEWS", "NEWS.pdf", "doc/html/NEWS.html", and 
+    "doc/html/R-admin.html" from source files, by running make in some
+    build directory, and then copying them to the source directory.
+
+ 4) Concatenate all files in the "mods" directory into the file 
     "MODS", as follows:
 
       (cd mods; cat README; for i in [0-9]*; \
@@ -29,17 +39,7 @@ DD), with only the following changes:
 
     Then delete the "mods" directory.
 
-  o Creation of the file "configure" by running create-configure.
-
-  o Creation of files "NEWS", "NEWS.pdf", "doc/html/NEWS.html", and 
-    "doc/html/R-admin.html" from source files, by running make in some
-    build directory, and then copying them to the source directory.
-
-  o Updating of the release date, which is stored in the (now mis-named) 
-    file "SVN-REVISION".  This should match the date in "NEWS.Rd", which
-    would have been set in a development branch.  (The date in the
-    "SVN-REVISION" file a development branch should approximately the
-    correct year, but have month and day set to "00".)
+ 5) Remove the file ".gitignore" (using "git rm", if you're using git).
 
 The development branches that go into a release may be changed after
 the release, with the new versions forming the basis for a later
