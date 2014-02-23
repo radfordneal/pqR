@@ -36,12 +36,6 @@
 
 #define R_USE_SIGNALS 1
 #include <Defn.h>
-/* Remove redefinition of fork as Rf_fork in Defn.h.  Rf_fork is defined 
-   below, using fork. */
-#undef fork
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>  /* declares fork */
-#endif
 
 #include <locale.h>
 
@@ -506,14 +500,22 @@ int R_EditFiles(int nfile, const char **file, const char **title,
    parallel processing without fatal interaction with the helpers
    facility. */
 
+#undef fork /* Remove redefinition of fork as Rf_fork in Rinternals.h/Defn.h. */
+
 #ifdef HAVE_SYS_TYPES_H
 pid_t  /* declared in sys/types.h, included in Rinternals.h/Defn.h if exists */
+#else
+int
 #endif
 Rf_fork (void)
 {
     extern void Rf_wait_for_helpers_before_fork(void),
                 Rf_disable_helpers_after_fork(void);
-    long r;  /* long, not pid_t, in case pid_t doesn't exist */
+#ifdef HAVE_SYS_TYPES_H
+    pid_t r;
+#else
+    int r;
+#endif
 
     Rf_wait_for_helpers_before_fork();
     r = fork();

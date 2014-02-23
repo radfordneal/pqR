@@ -27,6 +27,31 @@
 #ifndef R_INTERNALS_H_
 #define R_INTERNALS_H_
 
+
+/* Redefinition of "fork" to handle helper threads properly, using the
+   Rf_fork function in system.c.  Starts by including the header file
+   that declares the system "fork" (if such exists), so that the
+   redefinition won't affect that.  Declares Rf_fork as returning a
+   value of type pid_t if the header file defining that type exists,
+   and otherwise as returning int. 
+
+   For some mysterious reason, things go wrong if this is done after
+   the includes of headers in R_ext below. */
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#define fork Rf_fork
+
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+pid_t Rf_fork(void);
+#else
+int Rf_fork(void);
+#endif
+
+
 #ifdef __cplusplus
 # include <cstdio>
 # ifdef __SUNPRO_CC
@@ -1115,13 +1140,6 @@ int R_system(const char *);
    8 = !IGNORE_BYTECODE
 */
 Rboolean R_compute_identical(SEXP, SEXP, int);
-
-/* Redefinition of "fork" to handle helper threads properly. */
-#define fork Rf_fork
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-pid_t Rf_fork(void);
-#endif
 
 #ifndef R_NO_REMAP
 #define acopy_string		Rf_acopy_string
