@@ -29,7 +29,8 @@ DD), with only the following changes:
 
  3) Create the files "NEWS", "NEWS.pdf", "doc/html/NEWS.html", and 
     "doc/html/R-admin.html" from source files, by running make in some
-    build directory, and then copying them to the source directory.
+    build directory (with "C" locale), and then copying them to the 
+    source directory (R-admin.html from doc/manual).
 
  4) Concatenate all files in the "mods" directory into the file 
     "MODS", as follows:
@@ -37,7 +38,7 @@ DD), with only the following changes:
       (cd mods; cat README; for i in [0-9]*; \
        do echo " "; echo " "; echo ${i}:; echo " "; cat $i; done) >MODS
 
-    Then delete the "mods" directory.
+    Then delete the "mods" directory (with "git rm -r" if using git).
 
  5) Remove the file ".gitignore" (using "git rm", if you're using git).
 
