@@ -1392,7 +1392,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 
     R_naflag = 0;
 
-    /* Note: need to protect sy below because some ops may produce a warning. */
+    /* Note: need to protect sy below because some ops may produce a warning,
+       and attributes may be duplicated. */
 
     if (VARIANT_KIND(variant) == VARIANT_SUM) {
 
@@ -1401,7 +1402,6 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
         SET_ATTRIB (sy, R_VariantResult);
-        UNPROTECT(2);
     }
 
     else { /* non-variant result */
@@ -1419,10 +1419,10 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
                        task_math1, opcode, sy, sa);
         if (sa!=sy) 
             DUPLICATE_ATTRIB(sy, sa);
-        UNPROTECT(2);
     }
 
     if (R_naflag) warningcall (call, R_MSG_NA);
+    UNPROTECT(2);
 
     return sy;
 }

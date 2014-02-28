@@ -1,0 +1,3 @@
+Miscellaneous bug fixes.
+
+Fixed a lack of protection bug in "log" when it produced a warning.
