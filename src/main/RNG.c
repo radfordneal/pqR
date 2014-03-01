@@ -371,7 +371,8 @@ static void Randomize(RNGtype newkind)
 {
     /* Only called by  GetRNGstate() when there is no .Random.seed */
 
-    RNG_Init (newkind, TimeToSeed());
+    char *s = getenv("R_SEED");
+    RNG_Init (newkind, s ? atoi(s) : TimeToSeed());
 }
 
 /* Load RNG_kind, N01_kind from .Random.seed if present */
