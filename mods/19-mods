@@ -1,0 +1,5 @@
+Various mods, mostly motivated by desire to improve checking.
+
+Set an unset random seed from the R_SEED environment variable, if it
+exists (otherwise from time and process id as before).  Allows for
+reproducible checks of packages without changing them.
