@@ -1,3 +1,9 @@
 Miscellaneous bug fixes.
 
 Fixed a lack of protection bug in "log" when it produced a warning.
+
+Fixed an out-of-bound memory access in chull that valgrind reports 
+(but which is likely to be innocuous).
+
+Fixed bug in "foreign" package that showed up on systems where
+the C "char" type is unsigned.

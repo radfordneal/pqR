@@ -360,8 +360,8 @@ void R_chull(int *n, double *x, int *m, int *in,
 	do {
 	    inh = il[inh];
 	    ++ma;
-	    nia -= ia[ma];
 	    if (ma == mp1) goto Finis;
+	    nia -= ia[ma];
 	} while(ia[ma] == 0);
 	ilinh = il[inh];
 /* on the right side of the tree, the left son of a left son */
