@@ -742,8 +742,6 @@ static SEXP scanFrame(SEXP what, int maxitems, int maxlines, int flush,
 	    extractItem(buffer, VECTOR_ELT(ans, ii), n, d);
 	    ii++;
 	    colsread++;
-	    if (length(stripwhite) == length(what))
-		strip = LOGICAL(stripwhite)[colsread];
 	    /* increment n and reset i after filling a row */
 	    if (colsread == nc) {
 		n++;
@@ -753,9 +751,9 @@ static SEXP scanFrame(SEXP what, int maxitems, int maxlines, int flush,
 		    while ((c = scanchar(FALSE, d)) != '\n' && c != R_EOF);
 		    bch = c;
 		}
-		if (length(stripwhite) == length(what))
-		    strip = LOGICAL(stripwhite)[0];
 	    }
+	    if (length(stripwhite) == length(what))
+		strip = LOGICAL(stripwhite)[colsread];
 	}
     }
 
