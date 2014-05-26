@@ -7,3 +7,6 @@ Fixed an out-of-bound memory access in chull that valgrind reports
 
 Fixed bug in "foreign" package that showed up on systems where
 the C "char" type is unsigned.
+
+Fixed stack imbalance bug in assignment to arrays with zero-length
+subscripts.

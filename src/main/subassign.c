@@ -1,4 +1,4 @@
-/*
+*
  *  pqR : A pretty quick version of R
  *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
@@ -846,7 +846,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	error(_("incorrect number of subscripts"));
 
-    int *subs[k], indx[k], nsubs[k], offset[k];
+    int *subs[k], indx[k], bound[k], offset[k];
 
     ny = LENGTH(y);
 
@@ -854,8 +854,8 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     for (i = 0; i < k; i++) {
         PROTECT(tmp = arraySubscript (i,CAR(s),dims,getAttrib,(STRING_ELT),x));
         subs[i] = INTEGER(tmp);
-	nsubs[i] = LENGTH(tmp);
-        n *= nsubs[i];
+	bound[i] = LENGTH(tmp);
+        n *= bound[i];
         indx[i] = 0;
 	s = CDR(s);
     }
@@ -867,7 +867,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     if (ny > 1) { /* check for NAs in indices */
 	for (i = 0; i < k; i++)
-	    for (j = 0; j < nsubs[i]; j++)
+	    for (j = 0; j < bound[i]; j++)
 		if (subs[i][j] == NA_INTEGER)
 		    error(_("NAs are not allowed in subscripted assignments"));
     }
@@ -882,7 +882,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     SubassignTypeFix(&x, &y, 0, 1, call);
 
     if (n == 0) {
-	UNPROTECT(1);
+	UNPROTECT(k+1);
 	return(x);
     }
 
@@ -995,7 +995,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
       next:
         j = 0;
-        while (++indx[j] >= nsubs[j]) {
+        while (++indx[j] >= bound[j]) {
             indx[j] = 0;
             if (++j >= k) goto done;
         }
