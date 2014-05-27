@@ -586,7 +586,6 @@ void matprod_mat_mat (double *x, double *y, double *z, int n, int k, int m)
 void matprod_trans1 (double *x, double *y, double *z, int n, int k, int m)
 {
     int sym = x==y && n==m;  /* same operands, so symmetric result? */
-    double *oz = z;          /* original value of z */
     int j = 0;               /* number of columns of result produced so far */
 
     if (n <= 0) return;
@@ -764,7 +763,6 @@ void matprod_trans1 (double *x, double *y, double *z, int n, int k, int m)
 void matprod_trans2 (double *x, double *y, double *z, int n, int k, int m)
 {
     int sym = x==y && n==m;  /* same operands, so symmetric result? */
-    double *oz = z;          /* original value of z */
     double *ex = x + n*k;    /* point past end of x */
     int j = 0;               /* number of columns of result produced so far */
 

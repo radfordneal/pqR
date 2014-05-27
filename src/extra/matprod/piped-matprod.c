@@ -645,7 +645,6 @@ void task_piped_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
     helpers_size_t m = k_times_m / k;
 
     int sym = x==y && n==m;  /* same operands, so symmetric result? */
-    double *oz = z;          /* original value of z */
     int j = 0;               /* number of columns of result produced so far */
     helpers_size_t done = 0; /* amount of the result piped out so far */
     helpers_size_t a = 0;    /* amount of y now available */
@@ -852,7 +851,6 @@ void task_piped_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
     helpers_size_t m = k_times_m / k;
 
     int sym = x==y && n==m;     /* same operands, so symmetric result? */
-    double *oz = z;             /* original value of z */
     double *ex = x + n_times_k; /* point past end of x */
     int j = 0;                  /* number of columns of result produced so far*/
 

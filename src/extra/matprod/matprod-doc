@@ -255,11 +255,14 @@ follows:
 
     blas-test
 
-      Uses BLAS routines in ddot.f, dgemv.f, dgemm.f, dsyrk.f, and
-      lsame.f.  A xerbla routine for BLAS error reporting is provided
-      as part of the test program.  The dsyrk routine is used when the
-      "T" option is specified, along with a C routine for filling in
-      the lower triangle of the matrix from the upper triangle.
+      Uses BLAS routines in the following FORTRAN source files:
+
+          ddot.f  dgemv.f  dgemm.f  dsyrk.f  lsame.f
+
+      A xerbla routine for BLAS error reporting is provided as part of 
+      the test program.  The dsyrk routine is used when the "T" option 
+      is specified, along with a C routine for filling in the lower 
+      triangle of the matrix from the upper triangle.
 
     blas2-test
 
