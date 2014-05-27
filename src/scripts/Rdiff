@@ -7,4 +7,6 @@ while test -n "${1}"; do
   shift
 done
 
+unset R_DEBUGGER
+
 R_DEFAULT_PACKAGES=NULL "${R_HOME}/bin/R" -e 'tools:::.Rdiff()' --vanilla --slave --args ${args}

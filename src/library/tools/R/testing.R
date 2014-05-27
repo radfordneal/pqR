@@ -130,12 +130,19 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE, nullPointers=TRUE, L
         ## remove BATCH footer
         nl <- length(txt)
         if(nl > 3L && grepl("^> proc.time()", txt[nl-2L])) txt <- txt[1:(nl-3L)]
+
         if (nullPointers)
-        ## remove pointer addresses from listings
+            ## remove pointer addresses from listings
             txt <- gsub("<(environment|bytecode|pointer|promise): [x[:xdigit:]]+>", "<\\1: 0>", txt)
+
+        ## Remove valgrind output
+        vlg <- grep ("^==[0-9][0-9]*==", txt, useBytes=TRUE)
+        if (length(vlg) > 0) txt <- txt[-vlg]
+
         ## regularize fancy quotes.  First UTF-8 ones:
         txt <- gsub("(\xe2\x80\x98|\xe2\x80\x99)", "'", txt,
                       perl = TRUE, useBytes = TRUE)
+
         if(.Platform$OS.type == "windows") {
             ## not entirely safe ...
             txt <- gsub("(\x93|\x94)", "'", txt, perl = TRUE, useBytes = TRUE)
