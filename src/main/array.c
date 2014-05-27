@@ -636,7 +636,6 @@ void task_matprod_trans2_BLAS (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
         fill_lower(z,nrx);
     }
     else {
-        char *transa = "N", *transb = "T";
         F77_CALL(dgemm)("N", "T", &nrx, &nry, &nc, &one,
                         x, &nrx, y, &nry, &zero, z, &nrx);
     }
