@@ -1637,8 +1637,6 @@ void helpers_do_task
         /* Merge the new task with the existing task (which is indexed by
            'pipe0' and has info at 'm'). */
 
-        double *td;
-        
         helpers_merge (out, task_to_do, op, in1, in2, 
                        &m->task_to_do, &m->op, &m->var[1], &m->var[2],
                        task_data_loc);
@@ -1719,9 +1717,6 @@ void helpers_do_task
 
       if (flags & HELPERS_MASTER_NOW)
       { 
-        helpers_var_ptr v;
-        int j;
-
         if (trace) 
         { trace_merged (pipe0, flags0, task_to_do, op, out, in1, in2);
         }
