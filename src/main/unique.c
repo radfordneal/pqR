@@ -1171,7 +1171,7 @@ static SEXP subDots(SEXP rho)
 static SEXP do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP formals, actuals, rlist;
-    SEXP funcall, f, b, rval, sysp, t1, t2, tail;
+    SEXP funcall, b, rval, sysp, t1, t2, tail;
     RCNTXT *cptr;
     int expdots;
 
