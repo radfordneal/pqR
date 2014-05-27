@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Application Helpers Header File for Test Program with Pipelining
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2014 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
