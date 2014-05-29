@@ -526,12 +526,11 @@ function(file = NULL)
     db <- .extract_news_from_Rd(x)
 
     ## Squeeze in an empty date column.
-    .make_news_db(cbind(sub("^CHANGES IN (R )?(VERSION )?", "", db[, 1L]),
-                        NA_character_,
-                        db[, 2L],
-                        sub("\n*$", "", db[, 3L])),
-                  logical(nrow(db)),
-                  "news_db_from_Rd")
+    .make_news_db(
+       cbind(sub("^CHANGES IN (R )?(VERSION )?(RELEASED )?", "", db[, 1L]),
+                 NA_character_, db[, 2L], sub("\n*$", "", db[, 3L])),
+             logical(nrow(db)),
+             "news_db_from_Rd")
 }
 
 .build_news_db_from_package_NEWS_Rd <-
