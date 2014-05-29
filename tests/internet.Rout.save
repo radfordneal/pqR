@@ -33,34 +33,14 @@ Type 'q()' to quit R.
 [1] 3697
 > 
 > # test url connections on http
-> zz <- url("http://cran.r-project.org/")
+> zz <- url("http://pqR-project.org/internet.html")
 > readLines(zz)
- [1] "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML//EN\">"                       
- [2] ""                                                                       
- [3] "<html>"                                                                 
- [4] "<head>"                                                                 
- [5] "<title>The Comprehensive R Archive Network</title>"                     
- [6] "<link rel=\"icon\" href=\"favicon.ico\" type=\"image/x-icon\">"         
- [7] "<link rel=\"shortcut icon\" href=\"favicon.ico\" type=\"image/x-icon\">"
- [8] "<link rel=\"stylesheet\" type=\"text/css\" href=\"R.css\">"             
- [9] "</head>"                                                                
-[10] ""                                                                       
-[11] "<FRAMESET cols=\"1*, 4*\" border=0>"                                    
-[12] "<FRAMESET rows=\"120, 1*\">"                                            
-[13] "<FRAME src=\"logo.html\" name=\"logo\" frameborder=0>"                  
-[14] "<FRAME src=\"navbar.html\" name=\"contents\" frameborder=0>"            
-[15] "</FRAMESET>"                                                            
-[16] "<FRAME src=\"banner.shtml\" name=\"banner\" frameborder=0>"             
-[17] "<noframes>"                                                             
-[18] "<h1>The Comprehensive R Archive Network</h1>"                           
-[19] ""                                                                       
-[20] "Your browser seems not to support frames,"                              
-[21] "here is the <A href=\"navbar.html\">contents page</A> of CRAN."         
-[22] "</noframes>"                                                            
-[23] "</FRAMESET>"                                                            
-[24] ""                                                                       
-[25] ""                                                                       
-[26] ""                                                                       
+[1] "<html>"                                                                   
+[2] "<head><title>File used to test http connections when checking pqR</title></head>"
+[3] "<body>"                                                                   
+[4] "<h1>File used to test http connections when checking pqR</h1>"            
+[5] "This is the text in this test page.</body>"                               
+[6] "</html>"                                                                  
 > close(zz)
 > 
 > ## check graceful failure:
