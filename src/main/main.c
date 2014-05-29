@@ -35,6 +35,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Global Variables:  For convenience, all interpeter global symbols
+ * ================   are declared in Defn.h as extern -- and defined here.
+ *
+ * NOTE: This is done by using some preprocessor trickery.  If __MAIN__
+ * is defined as below, there is a sneaky
+ *     #define extern
+ * so that the same code produces both declarations and definitions.
+ *
+ * This does not include user interface symbols which are included
+ * in separate platform dependent modules.
+ */
+
 #define __MAIN__
 #define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
@@ -105,18 +117,6 @@ void Rf_disable_helpers_after_fork (void)
     helpers_trace(0);
 }
 
-
-/* Global Variables:  For convenience, all interpeter global symbols
- * ================   are declared in Defn.h as extern -- and defined here.
- *
- * NOTE: This is done by using some preprocessor trickery.  If __MAIN__
- * is defined as above, there is a sneaky
- *     #define extern
- * so that the same code produces both declarations and definitions.
- *
- * This does not include user interface symbols which are included
- * in separate platform dependent modules.
- */
 
 void Rf_callToplevelHandlers(SEXP expr, SEXP value, Rboolean succeeded,
 			     Rboolean visible);
