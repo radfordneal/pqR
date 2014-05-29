@@ -12,3 +12,7 @@ Fixed stack imbalance bug in assignment to arrays with zero-length
 subscripts.
 
 Fixed problem with news() due to pqR version numbers being dates.
+
+Changed the internet.R test to avoid looking at CRAN's html code,
+which is subject to change.  Looks instead at a test file at 
+pqR-project.org.
