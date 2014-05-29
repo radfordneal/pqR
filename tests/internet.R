@@ -14,7 +14,7 @@ if(.Platform$OS.type == "unix" &&
 nrow(available.packages(contrib.url("http://cran.r-project.org")))
 
 # test url connections on http
-zz <- url("http://cran.r-project.org/")
+zz <- url("http://pqR-project.org/internet.html")
 readLines(zz)
 close(zz)
 
