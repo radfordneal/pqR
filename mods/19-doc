@@ -5,3 +5,6 @@ that type is double if not complex.
 
 help(c) now documents what happens with names, including
 the use.names argument.
+
+help(Arithmetic) now documents the what may happen when an operand 
+is NA or NaN, or both are.
