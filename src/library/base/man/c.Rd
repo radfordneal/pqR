@@ -34,6 +34,13 @@ c(\dots, recursive=FALSE)
   \code{as.vector} is a more intuitive way to do this, but also drops
   names.  Note too that methods other than the default are not required
   to do this (and they will almost certainly preserve a class attribute).
+
+  The default method takes a \code{use.names} argument, which controls
+  whether names are attached to the result.  If \code{use.names} is
+  \code{TRUE} (the default), the names of the arguments to \code{c},
+  where present, are used as names for the result, combined with names
+  from the objects concatenated (preceded by "."), or with integers
+  from 1 up for non-scalar objects that have no names.
   
   This is a \link{primitive} function.
 }
