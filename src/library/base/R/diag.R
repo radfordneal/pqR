@@ -1,6 +1,6 @@
 #  File src/library/base/R/diag.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,6 +36,8 @@ diag <- function(x = 1, nrow, ncol)
     if (is.array(x) && length(dim(x)) != 1L)
         stop("'x' is an array, but not 1D.")
 
+    if (missing(x))
+        n <- as.integer(nrow)
     if (length(x) == 1L && nargs() == 1L) {
 	n <- as.integer(x)
 	x <- 1
@@ -50,12 +52,16 @@ diag <- function(x = 1, nrow, ncol)
     else
 	ncol <- n
 
-    y <- ( if (is.complex(x)) matrix (0i, n, ncol) 
-           else if (is.list(x)) matrix (list(0), n, ncol) 
-           else matrix (0, n, ncol) )
+    m <- min(n,ncol)
 
-    if ((m <- min(n, ncol)) > 0L)
-        y[1L + 0L:(m-1L) * (n+1L)] <- x
+    if (is.complex(x)) {
+        y <- matrix (0i, n, ncol)
+        if (m > 0L) y[1L + 0L:(m-1L) * (n+1L)] <- x
+    }
+    else {
+        y <- matrix (0, n, ncol)
+        if (m > 0L) y[1L + 0L:(m-1L) * (n+1L)] <- as.numeric(x)
+    }
 
     get_rm(y)
 }
