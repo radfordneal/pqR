@@ -1,0 +1,7 @@
+Documentation updates.
+
+help(diag) now documents what really happens with names, and
+that type is double if not complex.
+
+help(c) now documents what happens with names, including
+the use.names argument.

@@ -134,6 +134,21 @@ x \%/\% y
   One place in \R where the difference might be seen is in division by
   zero: \code{1/x} is \code{Inf} or \code{-Inf} depending on the sign of
   zero \code{x}.
+
+  Operations where one operand is \code{NA} or \code{NaN} and the
+  other is a non-special number will return the \code{NA} or
+  \code{NaN} operand as their result.  This is also the case when both
+  operands are \code{NA}, or both are \code{NaN}.  When one operand is
+  \code{NA} and the other is \code{NaN}, the result will be either
+  \code{NA} or \code{NaN}, but which is arbitrary: it may vary from
+  one system to another, or when pqR is compiled on the same system
+  with different compilers, or when the operation is done in different
+  contexts (eg, as a scalar or vector).  It might even vary randomly.
+  (Note: For an Intel system, using a gcc compiler, consistent
+  preference for the result being \code{NA} for operations where both
+  \code{NA} and \code{NaN} are operands may be obtained by building
+  pqR with the \code{-mfpmath=387} option in \code{CFLAGS}, but this 
+  is likely to reduce the speed of some arithmetic operations.)
 }
 \note{
   \code{**} is translated in the parser to \code{^}, but this was
