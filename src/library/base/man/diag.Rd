@@ -39,8 +39,10 @@ diag(x) <- value
 }
 \value{
   If \code{x} is a matrix then \code{diag(x)} returns the diagonal of
-  \code{x}.  The resulting vector will have \code{\link{names}} if the
-  matrix \code{x} has matching column and rownames.
+  \code{x}.  If \code{x} has row and column names that match along the
+  diagonal, the resulting vector will have those names, otherwise the
+  result will have names from a \code{names} attribute of \code{x} if 
+  that is present, or will have no names. 
 
   The replacement form sets the diagonal of the matrix \code{x} to the
   given value(s).
@@ -56,7 +58,9 @@ diag(x) <- value
   When a diagonal matrix is returned, the diagonal elements are one
   except in the fourth case, when \code{x} gives the diagonal elements:
   it will be recycled or truncated as needed, but fractional recycling
-  and truncation will give a warning.
+  and truncation will give a warning.  The diagonal matrix will be complex
+  if \code{x} is complex, and will otherwise be of type double, with
+  \code{x} being coerced to double before being used.
 }
 \note{
   Using \code{diag(x)} can have unexpected effects if \code{x} is a
