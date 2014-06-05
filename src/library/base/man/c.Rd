@@ -1,6 +1,7 @@
 % File src/library/base/man/c.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Development Team
+% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{c}
@@ -37,10 +38,14 @@ c(\dots, recursive=FALSE)
 
   The default method takes a \code{use.names} argument, which controls
   whether names are attached to the result.  If \code{use.names} is
-  \code{TRUE} (the default), the names of the arguments to \code{c},
-  where present, are used as names for the result, combined with names
-  from the objects concatenated (preceded by "."), or with integers
-  from 1 up for non-scalar objects that have no names.
+  \code{TRUE} (the default), the names used are taken from the names of 
+  arguments in the call of \code{c} (if present) combined with the names
+  from the objects concatenated (if present), with the two parts separated
+  by "." if both are present.  If an argument has a name in the call but 
+  the object has no names, and is not scalar, integers from 1 up are appended
+  to the name from the call (with no "." separator).  Otherwise, there will
+  be no name for the element (and there will be no names attribute for the
+  result if all elements lack names for this reason).
   
   This is a \link{primitive} function.
 }
