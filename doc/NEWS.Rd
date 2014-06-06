@@ -6,6 +6,109 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2014-06-06}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+
+\item This is a maintenance release, with bug fixes, documentation
+      improvements (including provision of previously missing
+      documentation), and changes for compatibility with R Core releases.
+      There are some new features in this release that help
+      with testing pqR and packages. There are no significant changes 
+      in performance.
+
+\item See the sections below on earlier releases for general
+      information on pqR.
+  }}
+
+  \subsection{NEW FEATURES FOR TESTING}{
+    \itemize{
+\item The setting of the \code{R_SEED} environment variable now specifies what
+      random number seed to use when \code{set.seed} is not called.  When
+      \code{R_SEED} is not set, the seed will be set from the time and process
+      ID as before.  It is recommended that \code{R_SEED} be set before running
+      tests on pqR or packages, so that the results will be reproducible.
+      For example, some packages report an error if a hypothesis test on
+      simulated data results in a p-value less than some threshold.  If 
+      \code{R_SEED} is not set, these packages will fail their tests now 
+      and then at random, whereas setting \code{R_SEED} will result either
+      in consistent success or (less likely) consistent failure.
+\item The comparison of test output with saved output using \code{Rdiff} now
+      ignores any output from \code{valgrind}, so spurious errors will not be
+      triggered by using it.  When using \code{valgrind}, the
+      output files should be checked manually for \code{valgrind} messages 
+      that are of possible interest.
+\item The test script in \file{tests/internet.R} no longer looks at CRAN's html
+      code, which is subject to change.  It instead looks at a special test file
+      at \url{pqR-project.org}.
+  }}
+
+  \subsection{CHANGE FOR COMPATIBILITY}{
+    \itemize{
+\item The result of \code{diag(list(1,3,5))} is now a matrix of type
+      double.  In R-2.15.0, this expression did not produce a sensible
+      result.  A previous fix in pqR made this expression produce a matrix of 
+      type list.  A later change by R Core also fixed this, but so it
+      produced a double matrix, coercing the list to a numeric vector
+      (to the extent possible); pqR now does the same.
+  }}
+
+  \subsection{DOCUMENTATION UPDATES}{
+    \itemize{
+\item The documentation for \code{c} now says how the names for the 
+      result are determined, including previously missing information
+      on the \code{use.names} argument, and on the role of the names of
+      arguments in the call of \code{c}.  This documentation is missing
+      in R-2.15.0 and R-3.1.0.
+\item The documentaton for \code{diag} now documents that a diagonal matrix 
+      is always created with type double or complex, and that the
+      names of an extracted diagonal vector are taken from a \code{names}
+      attribute (if present), if not from the row and column names.  This
+      information is absent in the documentation in R-2.15.1 and R-3.1.0.
+\item Incorrect information regarding the pointer protection stack
+      was removed from \code{help(Memory)}.  This incorrect information
+      is present in R-2.15.0 and R-3.1.0 as well.
+\item There is now information in \code{help(Arithmetic)} regarding what
+      happens when the operands of an arithmetic operation are \code{NA}
+      or \code{NaN}, including the arbitrary nature of the result when
+      one operand is \code{NA} and the other is \code{NaN}.  There is
+      no discussion of this issue in the documentation for R-2.15.0 and R-3.1.0.
+\item The \code{R_HELPERS} and \code{R_HELPERS_TRACE} environment variables
+      are now documented in \code{help("environment variables")}.  The
+      documentation in \code{help(helpers)} has also been clarified.
+  }}
+
+  \subsection{BUG FIXES}{
+    \itemize{
+\item Fixed a lack of protection bug that arose when \code{log} produced a
+      warning.
+\item Fixed a stack imbalance bug that showed up when an assignment was
+      made to an array of three or more dimensions using a zero-length
+      subscript.
+\item Fixed a problem with \code{news()} that was due to pqR's version
+      numbers being dates (pqR issue #1).
+\item Fixed a bug in the foreign package that showed up on systems where
+      the C \code{char} type is unsigned, such as a Rasberry Pi running
+      Rasbian.  I reported this to R Core, and it is also fixed in R-3.1.0.
+\item Fixed out-of-bound memory accesses in \code{R_chull} and \code{scanFrame}
+      that valgrind reports (but which are likely to be innocuous).
+  }}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item From R-2.15.1: The string "infinity" now converts correctly to \code{Inf}
+      (PR#14933).
+\item From R-2.15.1: The generic for backsolve is now correct (PR#14883).
+\item From R-2.15.1: A bug in \code{get_all_vars} was fixed (PR#14847).
+\item From R-3.1.0-patched: Fixed a problem with \code{mcmapply} not 
+      parallelizing when the number of jobs was less than number of cores.
+      (However, unlike R-3.1.0-patched, this fix doesn't try to 
+      parallelize when there is only one core.)
+  }}
+}
+
 \section{CHANGES IN VERSION RELEASED 2014-02-23}{
 
   \subsection{INTRODUCTION}{
