@@ -1,0 +1,5 @@
+Bug fixes taken from R core releases after 2.15.0
+or from a PR at r-project.org.
+
+Fixed PR 14933 (let "infinity" convert to Inf) as in
+R-2.15.1.
