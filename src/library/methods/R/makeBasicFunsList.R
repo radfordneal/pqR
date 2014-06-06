@@ -1,5 +1,6 @@
 #  File src/library/methods/R/makeBasicFunsList.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -182,7 +183,7 @@
 	       signature = c("x", "type"), where = where)
     setGenericImplicit("norm", where, FALSE)
 
-    setGeneric("backsolve", function(r, x, k, upper.tri = TRUE, transpose = FALSE, ...)
+    setGeneric("backsolve", function(r, x, k = ncol(r), upper.tri = TRUE, transpose = FALSE, ...)
 	       standardGeneric("backsolve"),
 	       useAsDefault =
 	       function(r, x, k = ncol(r), upper.tri = TRUE, transpose = FALSE, ...)

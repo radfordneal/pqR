@@ -3,3 +3,6 @@ or from a PR at r-project.org.
 
 Fixed PR 14933 (let "infinity" convert to Inf) as in
 R-2.15.1.
+
+Fixed PR 14883 (incorrect generic for backsolve) as in
+R-2.15.1
