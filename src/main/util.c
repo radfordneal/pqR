@@ -1774,6 +1774,7 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	ans = R_PosInf;
 	p += 3;
 	goto done;
+    }
 
     if(strlen(p) > 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
 	/* This will overflow to Inf if appropriate */
