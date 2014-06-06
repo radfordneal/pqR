@@ -6,3 +6,5 @@ R-2.15.1.
 
 Fixed PR 14883 (incorrect generic for backsolve) as in
 R-2.15.1
+
+Fixed PR 14847 (bug in get_all_vars) as in R-2.15.1.

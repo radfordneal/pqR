@@ -1,5 +1,6 @@
 #  File src/library/stats/R/models.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -636,6 +637,7 @@ get_all_vars <- function(formula, data = NULL, ...)
     extras <- eval(extras, data, env)
     x <- as.data.frame(c(variables, extras), optional=TRUE)
     names(x) <- c(varnames, extranames)
-    attr(x, "row.names") <- rownames # might be short form
+    if (!is.null(rownames))
+	attr(x, "row.names") <- rownames # might be short form
     x
 }
