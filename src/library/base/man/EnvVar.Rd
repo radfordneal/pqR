@@ -23,6 +23,7 @@
 \alias{R_PDFVIEWER}
 \alias{R_PLATFORM}
 \alias{R_RD4PDF}
+\alias{R_SEED}
 \alias{R_SHARE_DIR}
 \alias{R_TEXI2DVICMD}
 \alias{R_UNZIPCMD}
@@ -127,6 +128,9 @@
       file: see \link{Startup}.  Consulted at startup.}
     \item{\env{R_RD4PDF}:}{Options for \command{pdflatex} processing of
       \code{Rd} files.  Used by \command{R CMD Rd2pdf}.}
+    \item{\env{R_SEED}:}{Optional.  The initial random number generation
+      seed, if one is not set explicitly.  If \env{R_SEED} is not set,
+      a seed is generated from the time and process id.}
     \item{\env{R_SHARE_DIR}:}{The location of the \R \file{share}
       directory.  Set by \R.} 
     \item{\env{R_TEXI2DVICMD}:}{The path to \command{texi2dvi}.
