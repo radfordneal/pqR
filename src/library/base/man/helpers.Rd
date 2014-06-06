@@ -1,6 +1,6 @@
 % File src/library/base/man/helpers.Rd
 % Part of pqR
-% Copyright 2013 Radford M. Neal
+% Copyright 2013, 2014 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{helpers}
@@ -19,7 +19,10 @@
   enabled, such parallel execution occurs without any change to the
   program, though the degree of parallelism achieved will depend on
   the program's structure.  The numerical results obtained should be 
-  exactly the same as when no helper threads are used.
+  exactly the same as when no helper threads are used (except possibly
+  for operations where one operand is \code{NA} and the other \code{NaN},
+  where a result of \code{NA} or \code{NaN} may be chosen arbitrarily,
+  as discussed in the help on \link{Arithmetic}).
 
   Deferring some computations also allows them to sometimes be merged
   with other computations, which can reduce the total computation time, 
@@ -35,17 +38,20 @@
   again the default.
 
   The number of helper threads is specified with the \code{--helpers}
-  option (short form \code{-p}) to the command starting pqR.  A
-  \code{--helpers} option with no argument specifies that one helper
-  thread will be used (two threads total, counting the master thread
-  running the interpreter).  An option of \code{--helpers=N} specifies
-  that the number of helper threads should be \code{N} (silently
-  reduced to 127 if it is larger than this maximum).  If no
-  \code{--helpers} or \code{-p} argument is given, zero helper threads
-  are used. An argument of \code{--helpers=-1} or \code{-p=-1}
-  specifies zero helper threads and also disables deferred evaluation
-  (so all tasks are done by the master thread immediately, with no
-  task merging performed).
+  option (short form \code{-p}) to the command starting pqR, or if no
+  such option is given, by the setting of the \code{R_HELPERS}
+  environment variable.  A \code{--helpers} option with no argument
+  specifies that one helper thread will be used (two threads total,
+  counting the master thread running the interpreter).  An option of
+  \code{--helpers=N} specifies that the number of helper threads
+  should be \code{N} (0 or more, silently reduced to 127 if it is
+  larger than this maximum). An argument of \code{--helpers=-1} or
+  \code{-p=-1} specifies zero helper threads and also disables
+  deferred evaluation (so all tasks are done by the master thread
+  immediately, with no task merging performed).  Values for the
+  \code{R_HELPERS} environment variable have the same significance,
+  except that an empty string or no value for \code{R_HELPERS}
+  specifies that zero helper threads will be used.
 
   Some but not all computations are structured as ``tasks'' that may
   be done in helper threads, and possibly merged with other tasked.

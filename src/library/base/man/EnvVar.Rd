@@ -1,6 +1,7 @@
 % File src/library/base/man/EnvVar.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 2007-2011 R Core Development Team
+% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{EnvVar}
@@ -12,6 +13,8 @@
 \alias{R_COMPLETION}
 \alias{R_DOC_DIR}
 \alias{R_GSCMD}
+\alias{R_HELPERS}
+\alias{R_HELPERS_TRACE}
 \alias{R_HISTFILE}
 \alias{R_HISTSIZE}
 \alias{R_INCLUDE_DIR}
@@ -81,6 +84,11 @@
     \item{\env{R_GSCMD}:}{Optional.  The path to Ghostscript, used by
       \code{\link{dev2bitmap}}, \code{\link{bitmap}} and
       \code{\link{embedFonts}}.  Consulted when those functions are invoked.}
+    \item{\env{R_HELPERS}:}{Optional.  The number of helper threads to
+      use.  See \link{helpers}.}
+    \item{\env{R_HELPERS_TRACE}:}{Optional.  If set to anything, tracing
+      of task scheduling and execution is enabled at the start.  See
+      the documentation on \code{helpers_trace} in \code{\link{options}}.}
     \item{\env{R_HISTFILE}:}{Optional.  The path of the history file:
       see \link{Startup}.  Consulted at startup and when the history is
       saved.}
