@@ -1,5 +1,6 @@
 #  File src/library/parallel/R/unix/mcmapply.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,7 +28,7 @@ mcmapply <-
     n <- max(lens)
     if(n && min(lens) == 0L)
         stop("Zero-length inputs cannot be mixed with those of non-zero length")
-    answer <- if(n <= mc.cores) {
+    answer <- if (n < 2L || mc.cores < 2L) {
         .Call("do_mapply", FUN, dots, MoreArgs, environment(), PACKAGE = "base")
     } else {
         ## recycle shorter vectors

@@ -8,3 +8,7 @@ Fixed PR 14883 (incorrect generic for backsolve) as in
 R-2.15.1
 
 Fixed PR 14847 (bug in get_all_vars) as in R-2.15.1.
+
+Fixed problem with mcmapply not parallelizing when number of jobs 
+is less than number of cores, as in R-3.1.0-patched, except (unlike
+R-3.1.0-patched) don't try to parallelize with only one core.
