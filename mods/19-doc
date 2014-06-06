@@ -8,3 +8,6 @@ the use.names argument.
 
 help(Arithmetic) now documents the what may happen when an operand 
 is NA or NaN, or both are.
+
+R_HELPERS and R_HELPERS_TRACE now documented in "environment
+variables"; other doc updates for helpers.
