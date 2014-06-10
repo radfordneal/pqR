@@ -13,3 +13,5 @@ R_HELPERS and R_HELPERS_TRACE now documented in "environment
 variables"; other doc updates for helpers.
 
 Removed incorrect info on PP stack from help(Memory).
+
+Documented R_DEBUGGER and R_DEBUGGER_ARGS in EnvVar.Rd.

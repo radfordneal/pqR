@@ -11,6 +11,8 @@
 \alias{R_BATCH}
 \alias{R_BROWSER}
 \alias{R_COMPLETION}
+\alias{R_DEBUGGER}
+\alias{R_DEBUGGER_ARGS}
 \alias{R_DOC_DIR}
 \alias{R_GSCMD}
 \alias{R_HELPERS}
@@ -75,6 +77,10 @@
       set the default value of \code{\link{options}("browser")}.}
     \item{\env{R_COMPLETION}:}{Optional.  If set to \code{FALSE},
       command-line completion is not used.  (Not used by Mac OS GUI.)}
+    \item{\env{R_DEBUGGER}:}{Debugger to run \R under, as for the 
+      \code{--debugger} argument.}
+    \item{\env{R_DEBUGGER_ARGS}:}{Arguments for the debugger, as for 
+      the \code{--debugger-args} argument.}
     \item{\env{R_DEFAULT_PACKAGES}:}{A comma-separated list of packages
       which are to be attached in every session.  See \code{\link{options}}.}
     \item{\env{R_DOC_DIR}:}{The location of the \R \file{doc}
