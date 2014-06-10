@@ -57,7 +57,8 @@ SEXP attribute_hidden do_setGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP
 
     checkArity(op, args);
     
-    devnum = INTEGER(CAR(args))[0] - 1;
+    devnum = TYPEOF(CAR(args))!=INTSXP || LENGTH(CAR(args))==0 ? 0 
+              : INTEGER(CAR(args))[0] - 1;
     if(devnum < 1 || devnum > R_MaxDevices)
 	error(_("invalid graphical device number"));
 
@@ -93,7 +94,8 @@ SEXP attribute_hidden do_getGraphicsEventEnv(SEXP call, SEXP op, SEXP args, SEXP
 
     checkArity(op, args);
     
-    devnum = INTEGER(CAR(args))[0] - 1;
+    devnum = TYPEOF(CAR(args))!=INTSXP || LENGTH(CAR(args))==0 ? 0 
+              : INTEGER(CAR(args))[0] - 1;
     if(devnum < 1 || devnum > R_MaxDevices)
 	error(_("invalid graphical device number"));
 
