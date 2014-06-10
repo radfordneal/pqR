@@ -1,2 +1,0 @@
-The R code for as.data.frame.matrix has been sped up a bit. (Other
-mods also have the effect of speeding up this function.)

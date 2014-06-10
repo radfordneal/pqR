@@ -1,3 +1,0 @@
-This mod defines a cons_with_tag function that creates a CONS cell
-given its CAR, CDR, and TAG fields.  This makes for clearer, more
-concise, and faster code when CONS cells with TAG set need to be created.
