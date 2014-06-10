@@ -85,7 +85,7 @@
       \code{\link{dev2bitmap}}, \code{\link{bitmap}} and
       \code{\link{embedFonts}}.  Consulted when those functions are invoked.}
     \item{\env{R_HELPERS}:}{Optional.  The number of helper threads to
-      use.  See \link{helpers}.}
+      use.  See \code{\link{helpers}}.}
     \item{\env{R_HELPERS_TRACE}:}{Optional.  If set to anything, tracing
       of task scheduling and execution is enabled at the start.  See
       the documentation on \code{helpers_trace} in \code{\link{options}}.}
