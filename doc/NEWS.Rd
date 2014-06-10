@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-06-06}{
+\section{CHANGES IN VERSION RELEASED 2014-06-10}{
 
   \subsection{INTRODUCTION}{
 
@@ -78,6 +78,10 @@
 \item The \code{R_HELPERS} and \code{R_HELPERS_TRACE} environment variables
       are now documented in \code{help("environment variables")}.  The
       documentation in \code{help(helpers)} has also been clarified.
+\item The \code{R_DEBUGGER} and \code{R_DEBUGGER_ARGS} environment variables
+      are now documented in \code{help("environment variables")} as 
+      alternatives to the \code{--debugger} and \code{--debugger-args}
+      arguments.
   }}
 
   \subsection{BUG FIXES}{
@@ -92,6 +96,8 @@
 \item Fixed a bug in the foreign package that showed up on systems where
       the C \code{char} type is unsigned, such as a Rasberry Pi running
       Rasbian.  I reported this to R Core, and it is also fixed in R-3.1.0.
+\item Fixed argument error-checking bugs in \code{getGraphicsEventEnv}
+      and \code{setGraphicsEventEnv} (also present in R-2.15.0 and R-3.1.0).
 \item Fixed out-of-bound memory accesses in \code{R_chull} and \code{scanFrame}
       that valgrind reports (but which are likely to be innocuous).
   }}
@@ -102,6 +108,7 @@
       (PR#14933).
 \item From R-2.15.1: The generic for backsolve is now correct (PR#14883).
 \item From R-2.15.1: A bug in \code{get_all_vars} was fixed (PR#14847).
+\item From R-2.15.1: Fixed an argument error checking bug in \code{dev.set}.
 \item From R-3.1.0-patched: Fixed a problem with \code{mcmapply} not 
       parallelizing when the number of jobs was less than number of cores.
       (However, unlike R-3.1.0-patched, this fix doesn't try to 
