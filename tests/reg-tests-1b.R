@@ -916,6 +916,7 @@ for(compress in c("bzip2", "xz"))
             try(test1(ascii, compress))  # may fail due to memory limit
         else 
             test1(ascii, compress)
+    }
 
 ## tests of read.table with different types of compressed input
 mor <- system.file("data/morley.tab", package="datasets")
