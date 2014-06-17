@@ -1,6 +1,6 @@
 #  File src/library/tools/R/testing.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
