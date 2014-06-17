@@ -18,3 +18,5 @@ which is subject to change.  Looks instead at a test file at
 pqR-project.org.
 
 Fixed argument error checking bugs in gevents.c.
+
+Fixed bug in reg-tests-1b test script.
