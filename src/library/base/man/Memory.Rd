@@ -1,7 +1,7 @@
 % File src/library/base/man/Memory.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
-% Modifications for pqR copyright (C) 2013 Radford M. Neal
+% Modifications for pqR copyright (C) 2013, 2014 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{Memory}
