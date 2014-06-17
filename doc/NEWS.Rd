@@ -100,6 +100,7 @@
       and \code{setGraphicsEventEnv} (also present in R-2.15.0 and R-3.1.0).
 \item Fixed out-of-bound memory accesses in \code{R_chull} and \code{scanFrame}
       that valgrind reports (but which are likely to be innocuous).
+\item Fixed a bug in the \file{reg-tests-1b} test script.
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
