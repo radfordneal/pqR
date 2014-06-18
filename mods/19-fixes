@@ -19,4 +19,6 @@ pqR-project.org.
 
 Fixed argument error checking bugs in gevents.c.
 
-Fixed bug in reg-tests-1b test script.
+Fixed problems in reg-tests-1b test script, related to making it
+fail gracefully on systems without enough memory for xz compression.
+Included a reg-tests-1b.Rout.save to compare with.
