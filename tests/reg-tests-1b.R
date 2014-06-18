@@ -1,3 +1,5 @@
+set.seed(2)  # seed 1 produces strange "Chernobyl" warning from loess
+
 pdf("reg-tests-1b.pdf", encoding = "ISOLatin1.enc")
 
 ## force standard handling for data frames
@@ -905,15 +907,18 @@ test1 <- function(ascii, compress)
     tf <- tempfile()
     save(x, ascii = ascii, compress = compress, file = tf)
     load(tf)
-    stopifnot(identical(x, xx))
     unlink(tf)
+    stopifnot(identical(x, xx))
 }
 for(compress in c(FALSE, TRUE))
     for(ascii in c(TRUE, FALSE)) test1(ascii, compress)
+
 for(compress in c("bzip2", "xz"))
     for(ascii in c(TRUE, FALSE)) {
-        if (compress=="xz")
-            try(test1(ascii, compress))  # may fail due to memory limit
+        if (compress=="xz") {
+            cat("Next may fail with error 5 if not enough memory available.\n")
+            try(test1(ascii, compress))
+        }
         else 
             test1(ascii, compress)
     }
@@ -930,11 +935,14 @@ stopifnot(identical(read.table(tf), morley))
 writeLines(ll, con <- bzfile(tf)); close(con)
 file.info(tf)$size
 stopifnot(identical(read.table(tf), morley))
-## xz copression
-writeLines(ll, con <- xzfile(tf, compression = -9)); close(con)
-file.info(tf)$size
-stopifnot(identical(read.table(tf), morley))
-unlink(tf)
+## xz compression
+cat("Next may fail with error 5 if not enough memory available.\n")
+try({writeLines(ll, con <- xzfile(tf, compression = -9))
+     close(con)
+     print(file.info(tf)$size)
+     stopifnot(identical(read.table(tf), morley))
+     unlink(tf)
+})
 
 
 ## weighted.mean with NAs (PR#14032)
@@ -1204,9 +1212,11 @@ stopifnot(nlevels(c1 <- cut(x, breaks = 3)) == 3,
 
 ## memDecompress (https://stat.ethz.ch/pipermail/r-devel/2010-May/057419.html)
 char <- paste(replicate(200, "1234567890"), collapse="")
-try({  # may fail due to memory limit
+cat("Next may fail with error 5 if not enough memory available.\n")
+try({
     char.comp <- memCompress(char, type="xz")
     char.dec <- memDecompress(char.comp, type="xz", asChar=TRUE)
+    print(c(nchar(char),nchar(char.dec)))
     stopifnot(nchar(char.dec) == nchar(char))
 })
 ## short in R <= 2.11.0
@@ -1551,14 +1561,18 @@ close(con)
 stopifnot(length(readLines(tf)) == 70)
 unlink(tf)
 
-con <- xzfile(tf, "w")
-writeLines(as.character(1:50), con)
-close(con); con <- xzfile(tf, "a")
-writeLines(as.character(51:70), con)
-close(con)
-stopifnot(length(readLines(tf)) == 70)
-unlink(tf)
-## bzfile warned and did not work R < 2.13.0
+cat("Next may fail with error 5 if not enough memory available.\n")
+try({con <- xzfile(tf, "w");
+     writeLines(as.character(1:50), con)
+     close(con)
+     con <- xzfile(tf, "a")
+     writeLines(as.character(51:70), con)
+     close(con)
+     print(lnth<-length(readLines(tf)))
+     unlink(tf)
+     stopifnot(lnth == 70)
+     ## bzfile warned and did not work R < 2.13.0
+})
 
 
 ## NA_complex_ in prettyNum()
@@ -1776,6 +1790,3 @@ est <- ar(y, aic=FALSE, order.max=2) ## Estimate VAR(2)
 xpred <- predict(object=est, n.ahead=100, se.fit=FALSE)
 stopifnot(dim(xpred) == c(100,2), abs(range(xpred)) < 1)
 ## values went to +- 1e23 in R <= 2.14.2
-
-
-proc.time()
