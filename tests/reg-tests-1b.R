@@ -916,7 +916,7 @@ for(compress in c(FALSE, TRUE))
 for(compress in c("bzip2", "xz"))
     for(ascii in c(TRUE, FALSE)) {
         if (compress=="xz") {
-            cat("Next may fail with error 5 if not enough memory available.\n")
+            ## May fail with error 5 if not enough memory available.
             try(test1(ascii, compress))
         }
         else 
@@ -936,7 +936,7 @@ writeLines(ll, con <- bzfile(tf)); close(con)
 file.info(tf)$size
 stopifnot(identical(read.table(tf), morley))
 ## xz compression
-cat("Next may fail with error 5 if not enough memory available.\n")
+## May fail with error 5 if not enough memory available.
 try({writeLines(ll, con <- xzfile(tf, compression = -9))
      close(con)
      print(file.info(tf)$size)
@@ -1212,7 +1212,7 @@ stopifnot(nlevels(c1 <- cut(x, breaks = 3)) == 3,
 
 ## memDecompress (https://stat.ethz.ch/pipermail/r-devel/2010-May/057419.html)
 char <- paste(replicate(200, "1234567890"), collapse="")
-cat("Next may fail with error 5 if not enough memory available.\n")
+## May fail with error 5 if not enough memory available.
 try({
     char.comp <- memCompress(char, type="xz")
     char.dec <- memDecompress(char.comp, type="xz", asChar=TRUE)
@@ -1561,7 +1561,7 @@ close(con)
 stopifnot(length(readLines(tf)) == 70)
 unlink(tf)
 
-cat("Next may fail with error 5 if not enough memory available.\n")
+## May fail with error 5 if not enough memory available.
 try({con <- xzfile(tf, "w");
      writeLines(as.character(1:50), con)
      close(con)
