@@ -43,6 +43,11 @@
 \item The test script in \file{tests/internet.R} no longer looks at CRAN's html
       code, which is subject to change.  It instead looks at a special test file
       at \url{pqR-project.org}.
+\item Fixed problems wit the \file{reg-tests-1b} test script.  Also, now sets
+      the random seed, so it's consistent (even without R_SEED set), and has
+      its output compared to a saved version.  Non-fatal errors (with
+      code 5) should be expected on systems without enough memory for xz
+      compression.
   }}
 
   \subsection{CHANGE FOR COMPATIBILITY}{
@@ -100,7 +105,6 @@
       and \code{setGraphicsEventEnv} (also present in R-2.15.0 and R-3.1.0).
 \item Fixed out-of-bound memory accesses in \code{R_chull} and \code{scanFrame}
       that valgrind reports (but which are likely to be innocuous).
-\item Fixed problems wit the \file{reg-tests-1b} test script.
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
