@@ -25,3 +25,6 @@ Included a reg-tests-1b.Rout.save to compare with.
 
 Fix bug with lang[23456] not protecting all its arguments.  Also
 clean up code (no bug) for list[2345].
+
+Fixed bugs (also in R Core versions) with lack of protection in
+sort.c and deriv.c.
