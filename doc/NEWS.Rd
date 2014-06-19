@@ -98,6 +98,11 @@
       These bugs are also present in R-2.15.0 and R-3.1.0.
 \item Fixed argument error-checking bugs in \code{getGraphicsEventEnv}
       and \code{setGraphicsEventEnv} (also present in R-2.15.0 and R-3.1.0).
+\item Fixed a stack imbalance bug that shows up in the expression
+      \code{anyDuplicated(c(1,2,1),incomp=2)}.  This bug is also present
+      in R-2.15.0 and R-3.1.0.  The bug is reported only when the \code{base}
+      package is not byte compiled (but still exists silently when it is 
+      compiled).
 \item Fixed a bug in the foreign package that showed up on systems where
       the C \code{char} type is unsigned, such as a Rasberry Pi running
       Rasbian.  I reported this to R Core, and it is also fixed in R-3.1.0.
