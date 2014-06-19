@@ -93,6 +93,8 @@
     \itemize{
 \item Fixed a lack of protection bug that arose when \code{log} produced a
       warning.
+\item Fixed a lack of protection bug in the \code{lang[23456]}
+      C functions.
 \item Fixed a stack imbalance bug that showed up when an assignment was
       made to an array of three or more dimensions using a zero-length
       subscript.
