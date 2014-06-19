@@ -91,6 +91,16 @@
 
   \subsection{BUG FIXES}{
     \itemize{
+\item Fixed lack of protection bugs in the \code{equal} and \code{greater}
+      functions in \file{sort.c}.  These bugs are also present in R-2.15.0
+      and R-3.1.0.
+\item Fixed lack of protection bugs in the \code{D} function in \file{deriv.c}.
+      These bugs are also present in R-2.15.0 and R-3.1.0.
+\item Fixed argument error-checking bugs in \code{getGraphicsEventEnv}
+      and \code{setGraphicsEventEnv} (also present in R-2.15.0 and R-3.1.0).
+\item Fixed a bug in the foreign package that showed up on systems where
+      the C \code{char} type is unsigned, such as a Rasberry Pi running
+      Rasbian.  I reported this to R Core, and it is also fixed in R-3.1.0.
 \item Fixed a lack of protection bug that arose when \code{log} produced a
       warning.
 \item Fixed a lack of protection bug in the \code{lang[23456]}
@@ -100,11 +110,6 @@
       subscript.
 \item Fixed a problem with \code{news()} that was due to pqR's version
       numbers being dates (pqR issue #1).
-\item Fixed a bug in the foreign package that showed up on systems where
-      the C \code{char} type is unsigned, such as a Rasberry Pi running
-      Rasbian.  I reported this to R Core, and it is also fixed in R-3.1.0.
-\item Fixed argument error-checking bugs in \code{getGraphicsEventEnv}
-      and \code{setGraphicsEventEnv} (also present in R-2.15.0 and R-3.1.0).
 \item Fixed out-of-bound memory accesses in \code{R_chull} and \code{scanFrame}
       that valgrind reports (but which are likely to be innocuous).
   }}
