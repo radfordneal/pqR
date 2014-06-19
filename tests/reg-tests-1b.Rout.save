@@ -481,10 +481,10 @@ Error in `[.data.frame`(dd, , "C") : undefined columns selected
 > stopifnot(sapply(x, is.numeric) == FALSE)
 > # TRUE in 2.7.1, tried to dispatch on "FUN"
 > (ds <- seq(from=Sys.Date(), by=1, length=4))
-[1] "2014-06-17" "2014-06-18" "2014-06-19" "2014-06-20"
+[1] "2014-06-19" "2014-06-20" "2014-06-21" "2014-06-22"
 > lapply(list(d=ds), round)
 $d
-[1] "2014-06-17" "2014-06-18" "2014-06-19" "2014-06-20"
+[1] "2014-06-19" "2014-06-20" "2014-06-21" "2014-06-22"
 
 > # failed in 2.7.1 with 'dispatch error' since call had '...' arg
 > ## related to calls being passed unevaluated by lapply.
@@ -1130,7 +1130,7 @@ Error in file(tmp, open = "r", encoding = "unknown") :
 > 
 > ## median should work on POSIXt objects (it did in 2.8.0)
 > median(rep(Sys.time(), 2))
-[1] "2014-06-17 20:32:17 EDT"
+[1] "2014-06-19 14:02:50 EDT"
 > ## failed in 2.8.1, 2.9.0
 > 
 > 
@@ -1244,14 +1244,12 @@ Creating a generic function for 'na.omit' from package 'stats' in the global env
 > for(compress in c("bzip2", "xz"))
 +     for(ascii in c(TRUE, FALSE)) {
 +         if (compress=="xz") {
-+             cat("Next may fail with error 5 if not enough memory available.\n")
++             ## May fail with error 5 if not enough memory available.
 +             try(test1(ascii, compress))
 +         }
 +         else 
 +             test1(ascii, compress)
 +     }
-Next may fail with error 5 if not enough memory available.
-Next may fail with error 5 if not enough memory available.
 > 
 > ## tests of read.table with different types of compressed input
 > mor <- system.file("data/morley.tab", package="datasets")
@@ -1268,8 +1266,7 @@ Next may fail with error 5 if not enough memory available.
 [1] 482
 > stopifnot(identical(read.table(tf), morley))
 > ## xz compression
-> cat("Next may fail with error 5 if not enough memory available.\n")
-Next may fail with error 5 if not enough memory available.
+> ## May fail with error 5 if not enough memory available.
 > try({writeLines(ll, con <- xzfile(tf, compression = -9))
 +      close(con)
 +      print(file.info(tf)$size)
@@ -1595,8 +1592,7 @@ Error in gzcon(tc) :
 > 
 > ## memDecompress (https://stat.ethz.ch/pipermail/r-devel/2010-May/057419.html)
 > char <- paste(replicate(200, "1234567890"), collapse="")
-> cat("Next may fail with error 5 if not enough memory available.\n")
-Next may fail with error 5 if not enough memory available.
+> ## May fail with error 5 if not enough memory available.
 > try({
 +     char.comp <- memCompress(char, type="xz")
 +     char.dec <- memDecompress(char.comp, type="xz", asChar=TRUE)
@@ -2007,8 +2003,7 @@ Autocorrelations of series 'X', by lag
 > stopifnot(length(readLines(tf)) == 70)
 > unlink(tf)
 > 
-> cat("Next may fail with error 5 if not enough memory available.\n")
-Next may fail with error 5 if not enough memory available.
+> ## May fail with error 5 if not enough memory available.
 > try({con <- xzfile(tf, "w");
 +      writeLines(as.character(1:50), con)
 +      close(con)
@@ -2270,4 +2265,4 @@ Time difference of 8.333333 mins
 > xpred <- predict(object=est, n.ahead=100, se.fit=FALSE)
 > stopifnot(dim(xpred) == c(100,2), abs(range(xpred)) < 1)
 > ## values went to +- 1e23 in R <= 2.14.2
->
+> 
