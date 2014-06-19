@@ -598,11 +598,11 @@ static int equal(int i, int j, SEXP x, Rboolean nalast, SEXP rho)
     if (isObject(x) && !isNull(rho)) { /* so never any NAs */
 	/* evaluate .gt(x, i, j) */
 	SEXP si, sj, call;
-	si = ScalarInteger(i+1);
-	sj = ScalarInteger(j+1);
+	PROTECT(si = ScalarInteger(i+1));
+	PROTECT(sj = ScalarInteger(j+1));
 	PROTECT(call = lang4(install(".gt"), x, si, sj));
 	c = asInteger(eval(call, rho));
-	UNPROTECT(1);
+	UNPROTECT(3);
     } else {
 	switch (TYPEOF(x)) {
 	case LGLSXP:
@@ -636,11 +636,11 @@ static int greater(int i, int j, SEXP x, Rboolean nalast, Rboolean decreasing,
     if (isObject(x) && !isNull(rho)) { /* so never any NAs */
 	/* evaluate .gt(x, i, j) */
 	SEXP si, sj, call;
-	si = ScalarInteger(i+1);
-	sj = ScalarInteger(j+1);
+	PROTECT(si = ScalarInteger(i+1));
+	PROTECT(sj = ScalarInteger(j+1));
 	PROTECT(call = lang4(install(".gt"), x, si, sj));
 	c = asInteger(eval(call, rho));
-	UNPROTECT(1);
+	UNPROTECT(3);
     } else {
 	switch (TYPEOF(x)) {
 	case LGLSXP:
