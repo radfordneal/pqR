@@ -28,3 +28,8 @@ clean up code (no bug) for list[2345].
 
 Fixed bugs (also in R Core versions) with lack of protection in
 sort.c and deriv.c.
+
+Fixed stack imbalance bug illustrated by anyDuplicated(c(1,2,1), incomp=2)
+which is also in R-2.15.0 and R-3.1.0.  (It exists but is not reported
+when the base package is byte compiled.)
+
