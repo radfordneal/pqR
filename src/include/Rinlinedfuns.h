@@ -129,8 +129,7 @@ INLINE_FUN SEXP list2(SEXP s, SEXP t)
 
 INLINE_FUN SEXP list3(SEXP s, SEXP t, SEXP u)
 {
-    PROTECT(s);
-    PROTECT(t);
+    PROTECT2(s,t);
     s = CONS(s, CONS(t, CONS(u, R_NilValue)));
     UNPROTECT(2);
     return s;
@@ -139,9 +138,7 @@ INLINE_FUN SEXP list3(SEXP s, SEXP t, SEXP u)
 
 INLINE_FUN SEXP list4(SEXP s, SEXP t, SEXP u, SEXP v)
 {
-    PROTECT(s);
-    PROTECT(t);
-    PROTECT(u);
+    PROTECT3(s,t,u);
     s = CONS(s, CONS(t, CONS(u, CONS(v, R_NilValue))));
     UNPROTECT(3);
     return s;
@@ -149,9 +146,7 @@ INLINE_FUN SEXP list4(SEXP s, SEXP t, SEXP u, SEXP v)
 
 INLINE_FUN SEXP list5(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w)
 {
-    PROTECT(s);
-    PROTECT(t);
-    PROTECT(u);
+    PROTECT3(s,t,u);
     PROTECT(v);
     s = CONS(s, CONS(t, CONS(u, CONS(v, CONS(w, R_NilValue)))));
     UNPROTECT(4);
@@ -188,7 +183,7 @@ INLINE_FUN SEXP lcons(SEXP car, SEXP cdr)
 
 /* Define the langN functions so that the nodes are allocated in order,
    not reverse order, so that access will be sequential if node allocation
-   is sequential. */
+   is sequential.  Be sure arguments get protected here, so caller needn't. */
 
 INLINE_FUN SEXP lang1(SEXP s)
 {
@@ -197,51 +192,58 @@ INLINE_FUN SEXP lang1(SEXP s)
 
 INLINE_FUN SEXP lang2(SEXP s, SEXP t)
 {
+    PROTECT (t);
     PROTECT (s = LCONS(s,R_NilValue));
     SETCDR (s, CONS(t,R_NilValue));
-    UNPROTECT(1);
+    UNPROTECT(2);
     return s;
 }
 
 INLINE_FUN SEXP lang3(SEXP s, SEXP t, SEXP u)
 {
+    PROTECT2 (t,u);
     PROTECT (s = LCONS(s,R_NilValue));
     SETCDR (s, t = CONS(t,R_NilValue));
     SETCDR (t, CONS(u,R_NilValue));
-    UNPROTECT(1);
+    UNPROTECT(3);
     return s;
 }
 
 INLINE_FUN SEXP lang4(SEXP s, SEXP t, SEXP u, SEXP v)
 {
+    PROTECT3 (t,u,v);
     PROTECT (s = LCONS(s,R_NilValue));
     SETCDR (s, t = CONS(t,R_NilValue));
     SETCDR (t, u = CONS(u,R_NilValue));
     SETCDR (u, CONS(v,R_NilValue));
-    UNPROTECT(1);
+    UNPROTECT(4);
     return s;
 }
 
 INLINE_FUN SEXP lang5(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w)
 {
+    PROTECT3 (t,u,v);
+    PROTECT (w);
     PROTECT (s = LCONS(s,R_NilValue));
     SETCDR (s, t = CONS(t,R_NilValue));
     SETCDR (t, u = CONS(u,R_NilValue));
     SETCDR (u, v = CONS(v,R_NilValue));
     SETCDR (v, CONS(w,R_NilValue));
-    UNPROTECT(1);
+    UNPROTECT(5);
     return s;
 }
 
 INLINE_FUN SEXP lang6(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w, SEXP x)
 {
+    PROTECT3 (t,u,v);
+    PROTECT2 (w,x);
     PROTECT (s = LCONS(s,R_NilValue));
     SETCDR (s, t = CONS(t,R_NilValue));
     SETCDR (t, u = CONS(u,R_NilValue));
     SETCDR (u, v = CONS(v,R_NilValue));
     SETCDR (v, w = CONS(w,R_NilValue));
     SETCDR (w, CONS(x,R_NilValue));
-    UNPROTECT(1);
+    UNPROTECT(6);
     return s;
 }
 
