@@ -1089,10 +1089,6 @@ alternative hypothesis: two.sided
 + 	  identical(5L, anyDuplicated(c(1,NA,3,NA,3), incomp=NA)),
 + 	  identical(4L, anyDuplicated(c(1,NA,3,NA,3), incomp= 3)),
 + 	  identical(0L, anyDuplicated(c(1,NA,3,NA,3), incomp=c(3,NA))))
-Warning: stack imbalance in 'anyDuplicated', 27 then 28
-Warning: stack imbalance in '.Internal', 27 then 28
-Warning: stack imbalance in 'anyDuplicated', 27 then 28
-Warning: stack imbalance in '.Internal', 27 then 28
 > options(oo)
 > ## missing UNPROTECT and partly wrong in development versions of R
 > 
@@ -1130,7 +1126,7 @@ Error in file(tmp, open = "r", encoding = "unknown") :
 > 
 > ## median should work on POSIXt objects (it did in 2.8.0)
 > median(rep(Sys.time(), 2))
-[1] "2014-06-19 14:02:50 EDT"
+[1] "2014-06-19 19:23:53 EDT"
 > ## failed in 2.8.1, 2.9.0
 > 
 > 
