@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-00-00}{
+\section{CHANGES IN VERSION RELEASED 2014-06-19}{
 
   \subsection{INTRODUCTION}{
 
@@ -20,7 +20,11 @@
       in performance.
 
 \item See the sections below on earlier releases for general
-      information on pqR.
+      information on pqR.  
+
+\item Note that there was a test release of 2014-06-10 that 
+      is superceded by this release, with no separate listing 
+      of the changes it contained.
   }}
 
   \subsection{NEW FEATURES FOR TESTING}{
