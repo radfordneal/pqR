@@ -96,8 +96,6 @@ Rcomplex Rf_ComplexFromReal(double, int*);
 #define CALLED_FROM_DEFN_H 1
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
-#undef eval
-#define eval(e,rho) evalv(e,rho,0)  /* eval is a macro within interpreter */
 #undef CALLED_FROM_DEFN_H
 
 extern0 SEXP	R_CommentSymbol;    /* "comment" */

@@ -447,10 +447,12 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)
     return PRVALUE_PENDING_OK(e);
 }
 
-/* Return value of "e" evaluated in "rho".  This will be bypassed by
-   a macro definition for "eval" in the interpreter itself. */
+/* Return value of "e" evaluated in "rho".  Once was bypassed by
+   a macro definition for "eval" in the interpreter itself, calling
+   evalv with last argument 0, but compilers may be smart enough that 
+   leaving it as a procedure is faster. */
 
-SEXP Rf_eval(SEXP e, SEXP rho)
+SEXP eval(SEXP e, SEXP rho)
 {
     return evalv(e,rho,0);
 }
