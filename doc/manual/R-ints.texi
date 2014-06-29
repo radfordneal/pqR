@@ -1144,19 +1144,26 @@ that may specify that a ``variant'' result is allowed.  This argument
 should be 0 if no variant is allowed, as for plain @code{eval}.
 Symbols for other variants are defined in @file{Rinternals.h}.  
 
-For example, a caller of @code{evalv} might specify that the value
-will not be used (evaluation being done only for side effects), and
-may therefore be returned as @code{R_NilValue}, or that if the value
-is a numeric vector, only the sum of vector elements is needed, so
-that this sum may be returned rather than the vector (which will then
-not need to have space allocated for it).  However, the caller of
+For example, a caller of @code{evalv} might specify (by
+@code{VARIANT_NULL}) that the value will not be used (evaluation being
+done only for side effects), and may therefore be returned as
+@code{R_NilValue}, or (by @code{VARIANT_SUM}) that if the value is a
+numeric vector, only the sum of vector elements is needed, so that
+this sum may be returned rather than the vector (which will then not
+need to have space allocated for it).  However, the caller of
 @code{evalv} must always be prepared to receive an ordinary value,
 rather than the variant asked for.
 
-For many variants, a value returned by @code{evalv} that is a variant
-is identified by an attribute field of @code{R_VariantResult}, which
-is a special object that should not be propagated to be visible from
-user code.
+For some variants (eg, @code{VARIANT_SUM}), there is no need to 
+specially identify that the value returned is the variant.  For
+others, a variant result is identified by the global variable 
+@code{R_variant_result} being set to a non-zero value after the
+return of @code{evalv}.  The caller of @code{evalv} should note
+the contents of @code{R_variant_result} and then reset it to zero
+before it could taken as indicating that a later return is of
+a variant. (But note that @code{evalv} will itself start by setting
+@code{R_variant_result} to zero, so there is no need to set it
+just before calling @code{evalv}.)
 
 The variant argument of @code{evalv} will be passed on to a function
 implementing a primitive if the appropriate flag is set in the
