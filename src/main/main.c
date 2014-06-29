@@ -612,6 +612,7 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	    }
 	REprintf("address %p, cause '%s'\n", ip->si_addr, s);
     }
+    if (getenv("R_ABORT") == 0)
     {   /* A simple customized print of the traceback */
 	SEXP trace, p, q;
 	int line = 1, i;
@@ -675,7 +676,7 @@ static void init_signal_handlers(void)
 	if(sigaltstack(&sigstk, NULL) < 0)
 	    warning("failed to set alternate signal stack");
     } else
-	warning("failed to allocate alternate signal stack");
+	Warning("failed to allocate alternate signal stack");
     sa.sa_sigaction = sigactionSegv;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_ONSTACK | SA_SIGINFO;
