@@ -612,8 +612,10 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	    }
 	REprintf("address %p, cause '%s'\n", ip->si_addr, s);
     }
-    if (getenv("R_ABORT") == 0)
-    {   /* A simple customized print of the traceback */
+
+    if (getenv("R_ABORT") == 0 || *getenv("R_ABORT") == 0)
+    {   
+        /* A simple customized print of the traceback */
 	SEXP trace, p, q;
 	int line = 1, i;
 	PROTECT(trace = R_GetTraceback(0));
@@ -628,23 +630,25 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	    }
 	    UNPROTECT(1);
 	}
+
+        if (R_Interactive) {
+            REprintf("\nPossible actions:\n1: %s\n2: %s\n3: %s\n4: %s\n",
+                     "abort (with core dump, if enabled)",
+                     "normal R exit",
+                     "exit R without saving workspace",
+                     "exit R saving workspace");
+            while(1) {
+                if(R_ReadConsole("Selection: ", ConsoleBuf, CONSOLE_BUFFER_SIZE,
+                                 0) > 0) {
+                    if(ConsoleBuf[0] == '1') break;
+                    if(ConsoleBuf[0] == '2') R_CleanUp(SA_DEFAULT, 0, 1);
+                    if(ConsoleBuf[0] == '3') R_CleanUp(SA_NOSAVE, 70, 0);
+                    if(ConsoleBuf[0] == '4') R_CleanUp(SA_SAVE, 71, 0);
+                }
+            }
+        }
     }
-    if(R_Interactive) {
-	REprintf("\nPossible actions:\n1: %s\n2: %s\n3: %s\n4: %s\n",
-		 "abort (with core dump, if enabled)",
-		 "normal R exit",
-		 "exit R without saving workspace",
-		 "exit R saving workspace");
-	while(1) {
-	    if(R_ReadConsole("Selection: ", ConsoleBuf, CONSOLE_BUFFER_SIZE,
-			     0) > 0) {
-		if(ConsoleBuf[0] == '1') break;
-		if(ConsoleBuf[0] == '2') R_CleanUp(SA_DEFAULT, 0, 1);
-		if(ConsoleBuf[0] == '3') R_CleanUp(SA_NOSAVE, 70, 0);
-		if(ConsoleBuf[0] == '4') R_CleanUp(SA_SAVE, 71, 0);
-	    }
-	}
-    }
+
     REprintf("aborting ...\n");
     R_CleanTempDir();
     /* now do normal behaviour, e.g. core dump */
