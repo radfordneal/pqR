@@ -1035,6 +1035,9 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
    If the variant is VARIANT_MUST_COPY, copying is required regardless
    of NAMEDCNT. */
 
+static SEXP do_subassign_dflt_seq 
+              (SEXP call, SEXP op, SEXP args, SEXP rho, int variant, int seq);
+
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans, a1, a2, a3;
@@ -1057,13 +1060,16 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             /* ... in particular, it might be missing ... */
             args = CONS (a1, evalListKeepMissing(a2,rho));
             UNPROTECT(1);
-            return do_subassign_dflt(call, op, args, rho, variant); 
+            return do_subassign_dflt (call, op, args, rho, variant); 
         }
         else {
+            int seq;
             PROTECT(a2 = evalv (CAR(a2), rho, VARIANT_SEQ));
+            seq = R_variant_result;
+            R_variant_result = 0;
             args = CONS (a1, CONS (a2, evalListKeepMissing (a3, rho)));
             UNPROTECT(2);
-            return do_subassign_dflt(call, op, args, rho, variant); 
+            return do_subassign_dflt_seq (call, op, args, rho, variant, seq); 
         }
     }
 
@@ -1077,10 +1083,20 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return do_subassign_dflt(call, op, ans, rho, variant);
 }
 
-/* Also called directly from elsewhere.  For role of variant, see above. */
+/* N.B.  do_subassign_dflt is called directly from elsewhere.  For role of
+   variant, see above. */
 
 SEXP attribute_hidden do_subassign_dflt
-    (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+                        (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    do_subassign_dflt_seq (call, op, args, rho, variant, 0);
+}
+
+/* The last "seq" argument below is 1 if the first subscript is a sequence spec
+   (a variant result). */
+
+static SEXP do_subassign_dflt_seq
+              (SEXP call, SEXP op, SEXP args, SEXP rho, int variant, int seq)
 {
     SEXP subs, x, y;
 
@@ -1124,7 +1140,7 @@ SEXP attribute_hidden do_subassign_dflt
     else if (CDR(subs) == R_NilValue) { 
         /* 1 subscript argument */
         SEXP sub1 = CAR(subs);
-        if (ATTRIB(sub1) == R_VariantResult) {
+        if (seq) {
             int start, end;
             sub1 = Rf_DecideVectorOrRange (sub1, &start, &end, call);
             if (sub1 == NULL) {

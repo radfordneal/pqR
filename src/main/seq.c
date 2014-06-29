@@ -94,7 +94,8 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
     return(a);
 }
 
-/* Create a simple integer sequence, or as variant, a description of it. */
+/* Create a simple integer sequence, or as variant, a description of it. 
+   Sets R_variant_result to 1 if a sequence description is returned. */
 static SEXP make_seq (int from, int len, int variant)
 {
     SEXP ans;
@@ -105,7 +106,7 @@ static SEXP make_seq (int from, int len, int variant)
         p = INTEGER(ans);
         p[0] = from;
         p[1] = from + len - 1;
-        SET_ATTRIB (ans, R_VariantResult);
+        R_variant_result = 1;
     }
     else {
         ans = allocVector (INTSXP, len);

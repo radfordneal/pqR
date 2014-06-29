@@ -389,18 +389,15 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
 
    NOTE: mean used to be done here, but is now separate, since it has
    nothing in common with the others (has only one arg and no na.rm, and
-   dispatch is from an R-level generic). */
+   dispatch is from an R-level generic). 
+
+   Note that for the fast forms, na.rm must be FALSE. */
 
 static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
-    if (ATTRIB(arg) == R_VariantResult) {
-        SET_ATTRIB (arg, R_NilValue);
-        if (! (variant & VARIANT_PENDING_OK) )
-            WAIT_UNTIL_COMPUTED(arg);
-        return arg;
-    }
-
-    WAIT_UNTIL_COMPUTED(arg);
+    /* A variant return value for arg looks just like an arg of length one, 
+       and can be treated the same.  An arg of length one can be returned
+       as the result if it has the right type and no attributes. */
 
     switch (TYPEOF(arg)) {
 
@@ -408,18 +405,31 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         return ScalarInteger (0);
 
     case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
+        WAIT_UNTIL_COMPUTED(arg);
+        return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
+
     case INTSXP:  
+        if (LENGTH(arg) == 1 && ATTRIB(arg) == R_NilValue) break;
+        WAIT_UNTIL_COMPUTED(arg);
         return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
 
     case REALSXP:
+        if (LENGTH(arg) == 1 && ATTRIB(arg) == R_NilValue) break;
+        WAIT_UNTIL_COMPUTED(arg);
         return ScalarReal (rsum (REAL(arg), LENGTH(arg), 0));
 
     case CPLXSXP:
+        if (LENGTH(arg) == 1 && ATTRIB(arg) == R_NilValue) break;
+        WAIT_UNTIL_COMPUTED(arg);
         return ScalarComplex (csum (COMPLEX(arg), LENGTH(arg), 0));
 
     default:
         errorcall(call, R_MSG_type, type2char(TYPEOF(arg)));
     }
+
+    if (! (variant & VARIANT_PENDING_OK) )
+        WAIT_UNTIL_COMPUTED(arg);
+    return arg;
 }
 
 static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)

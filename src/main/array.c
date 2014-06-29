@@ -752,6 +752,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
             /* Simple usage like A %*% B or t(A) %*% B. */
 
+            int x_transposed = 0, y_transposed = 0;
+
             /* Evaluate arguments with VARIANT_TRANS, except we don't want both
                to be transposed.  Don't ask for VARIANT_TRANS for y if from x 
                we know we will need to check for S4 dispatch. */
@@ -760,10 +762,13 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
             PROTECT_WITH_INDEX(
               x = evalv (x, rho, VARIANT_TRANS | VARIANT_PENDING_OK), &ix);
-            PROTECT_WITH_INDEX(
-              y = evalv (y, rho, ATTRIB(x)==R_VariantResult 
-                                  || IS_S4_OBJECT(x) && (hm = R_has_methods(op))
-               ? VARIANT_PENDING_OK : VARIANT_TRANS | VARIANT_PENDING_OK), &iy);
+            x_transposed = R_variant_result;
+            PROTECT(y = evalv (y, rho, 
+                x_transposed || IS_S4_OBJECT(x) && (hm = R_has_methods(op))
+                  ? VARIANT_PENDING_OK 
+                  : VARIANT_TRANS | VARIANT_PENDING_OK));
+            y_transposed = R_variant_result;
+            R_variant_result = 0;
             nprotect += 2;
 
             /* See if we dispatch to S4 method. */
@@ -773,11 +778,9 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SEXP value;
                 /* we don't want a transposed argument if the other is an 
                    S4 object, since that's not good for dispatch. */
-                if (IS_S4_OBJECT(y) && ATTRIB(x) == R_VariantResult) {
-                    SET_ATTRIB (x, R_NilValue);
+                if (IS_S4_OBJECT(y) && x_transposed)
                     REPROTECT (x = do_transpose (R_NilValue,R_NilValue,x,rho,0),
                                ix);
-                }
                 PROTECT(args = CONS(x,CONS(y,R_NilValue)));
                 nprotect += 1;
                 helpers_wait_until_not_being_computed2(x,y);
@@ -787,17 +790,12 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
 
-            /* See if we can switch to crossprod or tcrossprod to handle a
-               transposed argument. */
+            /* Switch to crossprod or tcrossprod to handle a transposed arg. */
 
-            if (ATTRIB(x) == R_VariantResult) {
-                REPROTECT(x = CAR(x), ix);
+            if (x_transposed) 
                 primop = 1;
-            } 
-            else if (ATTRIB(y) == R_VariantResult) {
-                REPROTECT(y = CAR(y), iy);
+            else if (y_transposed)
                 primop = 2;
-            }
         }
         else {
 
@@ -1358,10 +1356,8 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (ldim > 2) goto not_matrix;
 
     if (VARIANT_KIND(variant) == VARIANT_TRANS) {
-        SEXP vres;
-        vres = CONS(a,R_NilValue);
-        SET_ATTRIB (vres, R_VariantResult);
-        return vres;
+        R_variant_result = 1;
+        return a;
     }
 
     len = LENGTH(a);

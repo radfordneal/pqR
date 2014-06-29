@@ -1401,7 +1401,6 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
         DO_NOW_OR_LATER1 (variant, 
                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
-        SET_ATTRIB (sy, R_VariantResult);
     }
 
     else { /* non-variant result */
@@ -1538,7 +1537,6 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             s = allocVector (REALSXP, 1);
             DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
-            SET_ATTRIB (s, R_VariantResult);
             return s;
         }
         else {
