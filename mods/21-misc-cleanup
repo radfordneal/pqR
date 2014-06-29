@@ -1,3 +1,5 @@
 Miscellaneous mods for minor speedups or code cleanliness.
 
 Slightly sped up evalcount updates in eval.c
+
+Slight cosmetic changes to license(), plus pqR URL added.
