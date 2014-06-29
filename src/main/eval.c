@@ -1,4 +1,4 @@
- /*
+/*
  *  pqR : A pretty quick version of R
  *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
@@ -467,9 +467,12 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
     R_Visible = TRUE;
 
-    if (++evalcount > 1000) { /* was 100 before 2.8.0 */
-	R_CheckUserInterrupt();
-	evalcount = 0 ;
+    /* Check periodically for a user interrupt. */
+
+    evalcount -= 1;
+    if (evalcount <= 0) {
+        R_CheckUserInterrupt();
+        evalcount = 1000;
     }
 
     /* Evaluate constants quickly, without the overhead that's necessary when

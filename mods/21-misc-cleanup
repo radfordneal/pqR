@@ -1,0 +1,3 @@
+Miscellaneous mods for minor speedups or code cleanliness.
+
+Slightly sped up evalcount updates in eval.c
