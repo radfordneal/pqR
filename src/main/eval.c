@@ -1710,7 +1710,8 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     CheckFormals(CAR(args));
     rval = mkCLOSXP(CAR(args), CADR(args), rho);
     srcref = CADDR(args);
-    if (!isNull(srcref)) setAttrib(rval, R_SrcrefSymbol, srcref);
+    if (srcref != R_NilValue) 
+        setAttrib(rval, R_SrcrefSymbol, srcref);
     return rval;
 }
 
@@ -2291,28 +2292,33 @@ void attribute_hidden CheckFormals(SEXP ls)
 static SEXP VectorToPairListNamed(SEXP x)
 {
     SEXP xptr, xnew, xnames;
-    int i, len = 0, len_x = length(x), named;
+    int i, len, len_x = length(x);
 
     PROTECT(x);
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); /* isn't this protected via x? */
-    named = (xnames != R_NilValue);
-    if(named)
-	for (i = 0; i < len_x; i++)
-	    if (CHAR(STRING_ELT(xnames, i))[0] != '\0') len++;
+    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); 
+                       /* isn't this protected via x?  Or could be concocted? */
 
-    if(len) {
-	PROTECT(xnew = allocList(len));
+    if (xnames != R_NilValue) {
+        len = 0;
+	for (i = 0; i < len_x; i++)
+	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) len += 1;
+    }
+
+    PROTECT(xnew = allocList(len));
+
+    if (len > 0) {
 	xptr = xnew;
 	for (i = 0; i < len_x; i++) {
-	    if (CHAR(STRING_ELT(xnames, i))[0] != '\0') {
-		SETCAR(xptr, VECTOR_ELT(x, i));
-		SET_TAG(xptr, install(translateChar(STRING_ELT(xnames, i))));
+	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) {
+		SETCAR (xptr, VECTOR_ELT(x,i));
+		SET_TAG (xptr, install (translateChar (STRING_ELT(xnames,i))));
 		xptr = CDR(xptr);
 	    }
 	}
 	UNPROTECT(1);
-    } else xnew = allocList(0);
-    UNPROTECT(2);
+    } 
+
+    UNPROTECT(3);
     return xnew;
 }
 
@@ -2945,7 +2951,9 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     return 1;
 }
 
-/* start of bytecode section */
+
+/* START OF BYTECODE SECTION. */
+
 static int R_bcVersion = 7;
 static int R_bcMinVersion = 6;
 
