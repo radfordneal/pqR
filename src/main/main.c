@@ -680,7 +680,7 @@ static void init_signal_handlers(void)
 	if(sigaltstack(&sigstk, NULL) < 0)
 	    warning("failed to set alternate signal stack");
     } else
-	Warning("failed to allocate alternate signal stack");
+	warning("failed to allocate alternate signal stack");
     sa.sa_sigaction = sigactionSegv;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_ONSTACK | SA_SIGINFO;
