@@ -467,6 +467,13 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     int typeof_e = TYPEOF(e);
     static int evalcount = 0;
 
+    if (0) { 
+        /* THE "IF" CONDITION IS NORMALLY 0; CAN BE SET TO 1 FOR DEBUGGING.
+           Enabling this section will test that callers who normally
+           get a variant result can actually handle an ordinary result. */
+        if (variant!=VARIANT_MUST_COPY) variant = 0;
+    }
+
     R_variant_result = 0;
     R_Visible = TRUE;
 
