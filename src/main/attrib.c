@@ -398,7 +398,7 @@ static SEXP removeAttrib(SEXP vec, SEXP name)
 	    SET_TAG(t, R_NilValue);
 	return R_NilValue;
     }
-    else {
+    else if (vec != R_NilValue) {
 	if (name == R_DimSymbol)
 	    SET_ATTRIB(vec, stripAttrib(R_DimNamesSymbol, ATTRIB(vec)));
 	SET_ATTRIB(vec, stripAttrib(name, ATTRIB(vec)));

@@ -354,7 +354,7 @@ static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 static SEXP R_StringHash;   /* Global hash of CHARSXPs */
 
 #define NODE_IS_MARKED(s) (MARK(s))
-#define MARK_NODE(s) (MARK(s)=1)
+#define MARK_NODE(s) (MARK(s)=1)  /* Should only be called if !NODE_IS_MARKED */
 #define UNMARK_NODE(s) (MARK(s)=0)
 
 /* Tuning Constants. Most of these could be made settable from R,
@@ -1833,8 +1833,7 @@ static void RunGenCollect(R_size_t size_needed)
     /* forward all roots */
 
     static SEXP *root_vars[] = { 
-        &R_NilValue,	          /* Builtin constants */
-        &NA_STRING,
+        &NA_STRING,	          /* Builtin constants */
         &R_BlankString,
         &R_UnboundValue,
         &R_RestartToken,

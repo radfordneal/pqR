@@ -142,13 +142,6 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
 #define FUNSXP      99    /* Closure or Builtin or Special */
 
 
-#ifdef USE_RINTERNALS
-/* This is intended for use only within R itself.
- * It defines internal structures that are otherwise only accessible
- * via SEXP, and macros to replace many (but not all) of accessor functions
- * (which are always defined).
- */
-
 /* Flags.  Order may be fiddled to try to improve performance.  Total
    size is 64 bits = 8 bytes. */
 
@@ -308,6 +301,17 @@ typedef struct VECTOR_SEXPREC {
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 
+#ifdef USE_RINTERNALS
+/* This is intended for use only within R itself.
+ * It defines internal structures that are otherwise only accessible
+ * via SEXP, and macros to replace many (but not all) of accessor functions
+ * (which are always defined).
+ *
+ * Making R_NilValue a constant has necessitated exposing more of the
+ * internals (some of what is above used to be after this ifdef).
+ */
+
+
 /* Macros for accessing and changing NAMEDCNT. */
 
 #define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
@@ -359,10 +363,24 @@ extern void helpers_wait_until_not_in_use(SEXP);
 ( (x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
-#define SET_NAMEDCNT(x,v)    ((x)->sxpinfo.nmcnt = (v))
 #define SET_NAMEDCNT_0(x)    ((x)->sxpinfo.nmcnt = 0)
 #define SET_NAMEDCNT_1(x)    ((x)->sxpinfo.nmcnt = 1)
-#define SET_NAMEDCNT_MAX(x)  ((x)->sxpinfo.nmcnt = MAX_NAMEDCNT)
+
+/* Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
+   even if the new value is also MAX_NAMEDCNT, since it might be a constant 
+   object in a read-only memory area. */
+
+#define SET_NAMEDCNT(x,v) do { \
+    SEXP _p_ = (x); int _v_ = v; \
+    if (_p_->sxpinfo.nmcnt != _v_) \
+        _p_->sxpinfo.nmcnt = _v_; \
+  } while (0)
+
+#define SET_NAMEDCNT_MAX(x) do { \
+    SEXP _p_ = (x); \
+    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
+        _p_->sxpinfo.nmcnt = MAX_NAMEDCNT; \
+  } while (0)
 
 #define INC_NAMEDCNT(x) do { \
     SEXP _p_ = (x); \
@@ -418,9 +436,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #else 			/* New scheme with MAX_NAMEDCNT > 2 */
 
 #define NAMED(x) \
-  ( (x)->sxpinfo.nmcnt > 1 ? (SET_NAMEDCNT_MAX((x)), 2) : NAMEDCNT((x)) )
-#define SET_NAMED(x,v) \
-  ( (v) > 1 ? SET_NAMEDCNT_MAX((x)) : SET_NAMEDCNT((x),(v)) )
+  ( (x)->sxpinfo.nmcnt > 1 && (x)->sxpinfo.nmcnt < MAX_NAMEDCNT \
+      ? (((x)->sxpinfo.nmcnt = MAX_NAMEDCNT), 2) \
+      : NAMEDCNT((x)) )
+
+#define SET_NAMED(x,v) do { \
+    if ((v) > 1) SET_NAMEDCNT_MAX((x)); else SET_NAMEDCNT((x),(v)); \
+  } while (0)
 
 #endif
 
@@ -751,8 +773,11 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 
 LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
+/* R_NilValue is the R NULL object */
+#define R_NilValue ((SEXP) &R_NilValue_constant)
+extern const SEXPREC R_NilValue_constant; /* defined in const-objs.c */
+
 /* Special Values */
-extern const SEXPREC R_NilValue[1]; /* R_NilValue is the R NULL object */
 LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */

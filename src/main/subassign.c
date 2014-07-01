@@ -1163,7 +1163,7 @@ SEXP attribute_hidden do_subassign_dflt
     /* in a naked fashion. */
 
     UNPROTECT(2);
-    SET_NAMEDCNT_0(x);
+    if (x != R_NilValue) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }
@@ -1446,7 +1446,7 @@ SEXP attribute_hidden do_subassign2_dflt
     else
         xtop = x;
 
-    SET_NAMEDCNT_0(xtop);
+    if (xtop != R_NilValue) SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
 
     UNPROTECT(3);
@@ -1641,7 +1641,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
     UNPROTECT(2);
     if(xS4 != R_NilValue)
 	x = xS4; /* x was an env't, the data slot of xS4 */
-    SET_NAMEDCNT_0(x);
+    if (x != R_NilValue) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }

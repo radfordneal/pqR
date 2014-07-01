@@ -1845,7 +1845,7 @@ static void tmp_cleanup(void *data)
 #define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
-	if (NAMEDCNT_GT_1(__v__)) { \
+	if (__v__ != R_NilValue && NAMEDCNT_GT_1(__v__)) { \
 	    __v__ = duplicate(__v__); \
 	    SET_NAMEDCNT_1(__v__); \
 	    SETCAR(__lhs__, __v__); \

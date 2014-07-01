@@ -38,17 +38,17 @@
 #include "Defn.h"		/*-> Arith.h -> math.h */
 
 
-/* Definition of R_NilValue.  Done as an array of length one so that
-   R_NilValue will be a pointer to the NULL object without needing & in
-   front, and so assignment to R_NilValue will give a compiler error. 
-   Declared const so that many compilers will put it in a read-only
-   area of memory. */
+/* Definition of the R_NilValue constant, whose address when cast to SEXP is 
+   R_NilValue.  Declared as "const" so that many compilers will put it in a 
+   read-only area of memory. 
 
-const SEXPREC R_NilValue[1] = {
-  { .sxpinfo = { .nmcnt = 7, .type = NILSXP, .mark = 1 },
+   Must be marked, and be of the oldest generation, so the garbage collector
+   won't fiddle with it. */
+
+const SEXPREC R_NilValue_constant = { \
+    .sxpinfo = { .nmcnt = 7, .type = NILSXP, .gcgen = 1, .mark = 1 },
     .attrib = R_NilValue,
     .u = { .listsxp = 
             { .carval = R_NilValue, .cdrval = R_NilValue, .tagval = R_NilValue }
          }
-  }
 };
