@@ -1,3 +1,7 @@
 Modifications to how scalars (vectors of length one) are handled.
 
 No longer inline ScalarInteger, etc. (except ScalarLogical).
+
+Define R_NilValue as a constant, rather than allocate it at the start.
+Create new const-objs.c source file for such constant objects.
+

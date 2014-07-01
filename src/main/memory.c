@@ -2420,21 +2420,6 @@ void attribute_hidden InitMemory()
     orig_R_NSize = R_NSize;
     orig_R_VSize = R_VSize;
 
-    /* R_NilValue */
-    /* THIS MUST BE THE FIRST CONS CELL ALLOCATED */
-    /* OR ARMAGEDDON HAPPENS. */
-    /* Field assignments for R_NilValue must not go through write barrier
-       since the write barrier prevents assignments to R_NilValue's fields.
-       because of checks for nil */
-    R_NilValue = get_free_node(SEXPREC_class);
-    R_NilValue_COPY_ = R_NilValue;
-    TYPEOF(R_NilValue) = NILSXP;
-    SET_NAMEDCNT_MAX(R_NilValue);
-    CAR(R_NilValue) = R_NilValue;
-    CDR(R_NilValue) = R_NilValue;
-    TAG(R_NilValue) = R_NilValue;
-    ATTRIB(R_NilValue) = R_NilValue;
-
     R_BCNodeStackBase = (SEXP *) malloc(R_BCNODESTACKSIZE * sizeof(SEXP));
     if (R_BCNodeStackBase == NULL)
 	R_Suicide("couldn't allocate node stack");
