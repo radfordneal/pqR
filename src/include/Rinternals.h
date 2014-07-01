@@ -918,6 +918,11 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
+SEXP Rf_ScalarComplex(Rcomplex);
+SEXP Rf_ScalarInteger(int);
+SEXP Rf_ScalarRaw(Rbyte);
+SEXP Rf_ScalarReal(double);
+SEXP Rf_ScalarString(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
@@ -1427,12 +1432,7 @@ SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
-SEXP	 Rf_ScalarComplex(Rcomplex);
-SEXP	 Rf_ScalarInteger(int);
 SEXP	 Rf_ScalarLogical(int);
-SEXP	 Rf_ScalarRaw(Rbyte);
-SEXP	 Rf_ScalarReal(double);
-SEXP	 Rf_ScalarString(SEXP);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);

@@ -426,51 +426,14 @@ INLINE_FUN Rboolean isNumber(SEXP s)
                                : ((NUMBER_TYPES >> TYPEOF(s)) & 1);
 }
 
-/* As from R 2.4.0 we check that the value is allowed. */
+/* Only ScalarLogical here, others not inline, and in memory.c where compiler
+   might inline specialized versions of allocVector. */
+
 INLINE_FUN SEXP ScalarLogical(int x)
 {
     return x == 0 ? R_ScalarLogicalFALSE
          : x == NA_LOGICAL ? R_ScalarLogicalNA
          : R_ScalarLogicalTRUE;
-}
-
-INLINE_FUN SEXP ScalarInteger(int x)
-{
-    SEXP ans = allocVector(INTSXP, 1);
-    INTEGER(ans)[0] = x;
-    return ans;
-}
-
-INLINE_FUN SEXP ScalarReal(double x)
-{
-    SEXP ans = allocVector(REALSXP, 1);
-    REAL(ans)[0] = x;
-    return ans;
-}
-
-
-INLINE_FUN SEXP ScalarComplex(Rcomplex x)
-{
-    SEXP ans = allocVector(CPLXSXP, 1);
-    COMPLEX(ans)[0] = x;
-    return ans;
-}
-
-INLINE_FUN SEXP ScalarString(SEXP x)
-{
-    SEXP ans;
-    PROTECT(x);
-    ans = allocVector(STRSXP, 1);
-    SET_STRING_ELT(ans, 0, x);
-    UNPROTECT(1);
-    return ans;
-}
-
-INLINE_FUN SEXP ScalarRaw(Rbyte x)
-{
-    SEXP ans = allocVector(RAWSXP, 1);
-    RAW(ans)[0] = x;
-    return ans;
 }
 
 /* Conversion between R and C99 complex values. */
@@ -551,12 +514,7 @@ INLINE_FUN SEXP mkNamed(SEXPTYPE TYP, const char **names)
 /* short cut for  ScalarString(mkChar(s)) : */
 INLINE_FUN SEXP mkString(const char *s)
 {
-    SEXP t;
-
-    PROTECT(t = allocVector(STRSXP, 1));
-    SET_STRING_ELT(t, 0, mkChar(s));
-    UNPROTECT(1);
-    return t;
+    return ScalarString (mkChar(s));
 }
 
 #endif /* R_INLINES_H_ */

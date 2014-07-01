@@ -79,7 +79,7 @@
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
    "cons" cells (so it's necessary that one be big enough for this).  Note 
-   that the last node  class is for larger vectors, and has no entry here.
+   that the last node class is for larger vectors, and has no entry here.
 
    The values in the initialization below will usually be replaced by values 
    derived from NodeClassBytes32 or NodeClassBytes64, which are designed for 
@@ -87,10 +87,14 @@
 
    The initialization below is for the maximum number of small node classes.
    The number of classes used may be smaller, as determined by the setting of
-   NUM_NODE_CLASSES above. */
+   NUM_NODE_CLASSES above. 
+
+   The first node class must be big enough to hold a length one vector of
+   RAWSXP, LGLSXP, INTSXP, or REALSXP type (but not necessarily CPLXSXP).
+*/
 
 static int NodeClassSize[MAX_NODE_CLASSES-1]    /* Fallback sizes, in VECRECs */
-        = {  1,  2,  4,  6,  8,  16,  32 };  /*  (typically 8-byte chunks) */
+        = {  1,  2,  4,  6,  8,  16,  32 };     /*  (typically 8-byte chunks) */
 
 #define USE_FALLBACK_SIZES 0  /* Use above sizes even when sizes below apply? */
 
@@ -2683,6 +2687,48 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
     return s;
+}
+
+/* Allocation of scalars, which compiler may optimize into specialized
+   versions of allocVector. */
+
+SEXP ScalarInteger(int x)
+{
+    SEXP ans = allocVector(INTSXP, 1);
+    INTEGER(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarReal(double x)
+{
+    SEXP ans = allocVector(REALSXP, 1);
+    REAL(ans)[0] = x;
+    return ans;
+}
+
+
+SEXP ScalarComplex(Rcomplex x)
+{
+    SEXP ans = allocVector(CPLXSXP, 1);
+    COMPLEX(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarString(SEXP x)
+{
+    SEXP ans;
+    PROTECT(x);
+    ans = allocVector(STRSXP, 1);
+    SET_STRING_ELT(ans, 0, x);
+    UNPROTECT(1);
+    return ans;
+}
+
+SEXP ScalarRaw(Rbyte x)
+{
+    SEXP ans = allocVector(RAWSXP, 1);
+    RAW(ans)[0] = x;
+    return ans;
 }
 
 /* Allocate a vector object (and also list-like objects).

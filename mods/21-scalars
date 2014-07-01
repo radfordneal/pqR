@@ -1,0 +1,3 @@
+Modifications to how scalars (vectors of length one) are handled.
+
+No longer inline ScalarInteger, etc. (except ScalarLogical).
