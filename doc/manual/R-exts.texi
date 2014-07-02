@@ -9238,6 +9238,8 @@ SEXP mkans(double x)
 @{
     SEXP ans;
     PROTECT(ans = allocVector(REALSXP, 1));
+    /* This PROTECT is not essential with this code, but would become so if
+       we added anything below that could allocate memory, so let's be safe. */
     REAL(ans)[0] = x;
     UNPROTECT(1);
     return ans;
@@ -9247,7 +9249,10 @@ SEXP mkans(double x)
 @group
 double feval(double x, SEXP f, SEXP rho)
 @{
-    defineVar(install("x"), mkans(x), rho);
+    SEXP ansx;
+    PROTECT(ansx = mkans(x));
+    defineVar(install("x"), ansx, rho);
+    UNPROTECT(1);
     return(REAL(eval(f, rho))[0]);
 @}
 @end group
