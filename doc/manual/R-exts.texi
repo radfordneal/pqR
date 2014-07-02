@@ -9288,10 +9288,11 @@ SEXP zero(SEXP f, SEXP guesses, SEXP stol, SEXP rho)
 @subsection Calculating numerical derivatives
 @cindex Numerical derivatives
 
-We will use a longer example (by Saikat DebRoy) to illustrate the use of
-evaluation and @code{.External}.  This calculates numerical derivatives,
-something that could be done as effectively in interpreted @R{} code but
-may be needed as part of a larger C calculation.
+We will use a longer example (by Saikat DebRoy, with bug fixed by
+Radford Neal) to illustrate the use of evaluation and
+@code{.External}.  This calculates numerical derivatives, something
+that could be done as effectively in interpreted @R{} code but may be
+needed as part of a larger C calculation.
 
 An interpreted @R{} version and an example are
 
@@ -9372,6 +9373,13 @@ SEXP numeric_deriv(SEXP args)
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
         PROTECT(par = findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+        if (NAMED(par) > 1) @{
+            par = duplicate(par);
+            UNPROTECT(1); /* old value of par */
+            PROTECT(par);
+            defineVar(install(CHAR(STRING_ELT(theta, i))), par, rho);
+            SET_NAMED(par,1);
+        @}
         tt = REAL(par)[0];
         xx = fabs(tt);
         delta = (xx < 1) ? eps : xx*eps;
@@ -9437,6 +9445,13 @@ arguments are the numbers of rows and columns.
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
         PROTECT(par = findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+        if (NAMED(par) > 1) @{
+            par = duplicate(par);
+            UNPROTECT(1); /* old value of par */
+            PROTECT(par);
+            defineVar(install(CHAR(STRING_ELT(theta, i))), par, rho);
+            SET_NAMED(par,1);
+        @}
 @end group
 @end example
 
@@ -9450,6 +9465,16 @@ corresponding to the @code{i}'th element of the @code{STRSXP}
 representation@footnote{@pxref{Character encoding issues} for why this
 might not be what is required.} of it: it returns a pointer.  We then
 install the name and use @code{findVar} to find its value.
+
+@noindent
+It's possible the value of this variable is shared with other
+variables (or perhaps an element of a list).  We need to check for
+this, by seeing if @code{NAMED} is greater than one, and if so,
+duplicate the value and store this value (which will not be shared)
+back in the variable, since we will shortly be changing it.  (Although
+we restore the changed value later, that's not enough, since it's
+possible that the changed value will incorrectly be seen in the
+meantime.)
 
 @example
 @group
