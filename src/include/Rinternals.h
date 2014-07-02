@@ -806,6 +806,9 @@ extern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
 #define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
 extern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
 
+#define R_ScalarRealOne ((SEXP) &R_ScalarRealOne_const)
+extern VECTOR_SEXPREC_CONST R_ScalarRealOne_const;
+
 
 #ifdef __MAIN__
 attribute_hidden

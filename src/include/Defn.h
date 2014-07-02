@@ -521,13 +521,17 @@ typedef struct {
 
 #ifdef R_DEFERRED_EVAL
 
-/* Markers maintained in conjunction with the helpers facility. */
+/* Markers maintained in conjunction with the helpers facility.  We need to
+   avoid writing to constant objects, which will have max NAMEDCNT (and hence
+   don't need "in use" anyway, since they'll never have lower NAMEDCNT). */
 
 #define helpers_is_being_computed(x)       ((x)->sxpinfo.being_computed)
 #define helpers_is_in_use(x)               ((x)->sxpinfo.in_use)
 
-#define helpers_mark_in_use(v)             ((v)->sxpinfo.in_use = 1)
-#define helpers_mark_not_in_use(v)         ((v)->sxpinfo.in_use = 0)
+#define helpers_mark_in_use(v) \
+    ((v)->sxpinfo.nmcnt < MAX_NAMEDCNT ? (v)->sxpinfo.in_use = 1 : 1)
+#define helpers_mark_not_in_use(v) \
+    ((v)->sxpinfo.in_use ? (v)->sxpinfo.in_use = 0 : 0)
 
 #define helpers_mark_being_computed(v)     ((v)->sxpinfo.being_computed = 1)
 #define helpers_mark_not_being_computed(v) ((v)->sxpinfo.being_computed = 0)

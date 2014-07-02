@@ -497,6 +497,8 @@ done:
        of them here. */
     setAttrib(ans, R_DimSymbol, R_NilValue);
     UNPROTECT(nprotect);
+    if (NAMEDCNT_GT_0(ans)) /* Guarantee value of "rep" isn't shared */
+        ans = duplicate(ans);
     return ans;
 }
 

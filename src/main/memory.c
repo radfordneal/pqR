@@ -2681,6 +2681,9 @@ SEXP ScalarInteger(int x)
 
 SEXP ScalarReal(double x)
 {
+    if (x == 0.0) return R_ScalarRealZero;
+    if (x == 1.0) return R_ScalarRealOne;
+
     SEXP ans = allocVector(REALSXP, 1);
     REAL(ans)[0] = x;
     return ans;

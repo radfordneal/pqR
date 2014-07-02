@@ -1,8 +1,12 @@
 Modifications to how scalars (vectors of length one) are handled.
 
-No longer inline ScalarInteger, etc. (except ScalarLogical).
+No longer inlines ScalarInteger, etc. (except ScalarLogical).
 
-Define R_NilValue as a constant, rather than allocate it at the start.
-Create new const-objs.c source file for such constant objects.
+Defines R_NilValue as a constant, rather than allocate it at the start.
+Created a new const-objs.c source file for such constant objects.
 
-Make the logical constants be constant objects.
+Makes the logical constants be constant objects.
+
+Makes real 0 and 1 be constant objects.
+
+Makes "rep" always return an unshared object.
