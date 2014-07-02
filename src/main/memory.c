@@ -1838,10 +1838,6 @@ static void RunGenCollect(R_size_t size_needed)
         &R_UnboundValue,
         &R_RestartToken,
         &R_MissingArg,
-        &R_ScalarLogicalNA,
-        &R_ScalarLogicalFALSE,
-        &R_ScalarLogicalTRUE,
-        &R_ScalarRealZero,
 
         &R_GlobalEnv,	          /* Global environment */
         &R_BaseEnv,

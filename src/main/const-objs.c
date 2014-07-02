@@ -38,6 +38,13 @@
 #include "Defn.h"		/*-> Arith.h -> math.h */
 
 
+/* Header for a constant. */
+
+#define CONST_HEADER(typ) \
+    .sxpinfo = { .nmcnt = 7, .type = typ, .gcgen = 1, .mark = 1 }, \
+    .attrib = R_NilValue,
+
+
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
    R_NilValue.  Declared as "const" so that many compilers will put it in a 
    read-only area of memory. 
@@ -45,10 +52,33 @@
    Must be marked, and be of the oldest generation, so the garbage collector
    won't fiddle with it. */
 
-const SEXPREC R_NilValue_constant = { \
-    .sxpinfo = { .nmcnt = 7, .type = NILSXP, .gcgen = 1, .mark = 1 },
-    .attrib = R_NilValue,
+const SEXPREC R_NilValue_const = { \
+    CONST_HEADER(NILSXP)
     .u = { .listsxp = 
             { .carval = R_NilValue, .cdrval = R_NilValue, .tagval = R_NilValue }
          }
 };
+
+
+/* Logical constants. */
+
+#define LOGICAL_CONST(v) { \
+    CONST_HEADER(LGLSXP) \
+    .vecsxp = { .length = 1 }, \
+    .data = { .i = v } \
+}
+
+VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const    = LOGICAL_CONST(NA_LOGICAL);
+VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const = LOGICAL_CONST(FALSE);
+VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
+
+
+/* Real constants. */
+
+#define REAL_CONST(v) { \
+    CONST_HEADER(REALSXP) \
+    .vecsxp = { .length = 1 }, \
+    .data = { .d = v } \
+}
+
+VECTOR_SEXPREC_CONST R_ScalarRealZero_const = REAL_CONST(0.0);

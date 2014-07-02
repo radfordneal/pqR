@@ -493,7 +493,8 @@ done:
 	SET_S4_OBJECT(ans);
     }
 #endif
-    /* 1D arrays get dimensions preserved */
+    /* 1D arrays get dimensions preserved by do_subset_dflt, so get rid
+       of them here. */
     setAttrib(ans, R_DimSymbol, R_NilValue);
     UNPROTECT(nprotect);
     return ans;

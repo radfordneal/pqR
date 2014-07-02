@@ -300,6 +300,14 @@ typedef struct VECTOR_SEXPREC {
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
+/* Version of VECTOR_SEXPREC used for defining constants in const_obj.c */
+
+typedef const struct VECTOR_SEXPREC_CONST {
+    SEXPREC_HEADER;
+    struct vecsxp_struct vecsxp;
+    union { double d; int i; char c; } data;
+} VECTOR_SEXPREC_CONST;
+
 
 #ifdef USE_RINTERNALS
 /* This is intended for use only within R itself.
@@ -774,21 +782,29 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
 /* R_NilValue is the R NULL object */
-#define R_NilValue ((SEXP) &R_NilValue_constant)
-extern const SEXPREC R_NilValue_constant; /* defined in const-objs.c */
+#define R_NilValue ((SEXP) &R_NilValue_const)
+extern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
 
 /* Special Values */
 LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
-/* Logical Values */
-LibExtern SEXP  R_ScalarLogicalNA;    /* Vector of one logical NA value */
-LibExtern SEXP  R_ScalarLogicalFALSE; /* Vector of one FALSE value */
-LibExtern SEXP  R_ScalarLogicalTRUE;  /* Vector of one TRUE value */
+/* Logical Values.  Defined in const-objs.c */
 
-/* Real Values */
-LibExtern SEXP  R_ScalarRealZero;     /* Vector of one 0.0 value */
+#define R_ScalarLogicalNA ((SEXP) &R_ScalarLogicalNA_const)
+extern VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const;
+
+#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogicalFALSE_const)
+extern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
+
+#define R_ScalarLogicalTRUE ((SEXP) &R_ScalarLogicalTRUE_const)
+extern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
+
+/* Real Values.  Defined in const-objs.c */
+
+#define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
+extern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
 
 
 #ifdef __MAIN__

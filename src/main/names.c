@@ -595,25 +595,6 @@ void InitNames()
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
     SET_PRINTNAME(R_RestartToken, mkChar(""));
 
-    /* Logical values */
-    R_ScalarLogicalNA = allocVector(LGLSXP, 1);
-    LOGICAL(R_ScalarLogicalNA)[0] = NA_LOGICAL;
-    SET_NAMEDCNT_MAX(R_ScalarLogicalNA);
-
-    R_ScalarLogicalFALSE = allocVector(LGLSXP, 1);
-    LOGICAL(R_ScalarLogicalFALSE)[0] = FALSE;
-    SET_NAMEDCNT_MAX(R_ScalarLogicalFALSE);
-
-    R_ScalarLogicalTRUE = allocVector(LGLSXP, 1);
-    LOGICAL(R_ScalarLogicalTRUE)[0] = TRUE;
-    SET_NAMEDCNT_MAX(R_ScalarLogicalTRUE);
-
-    /* Real values */
-
-    R_ScalarRealZero = allocVector(REALSXP, 1);
-    REAL(R_ScalarRealZero)[0] = 0.0;
-    SET_NAMEDCNT_MAX(R_ScalarRealZero);
-
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
        mkChar("NA") is distinct from NA_STRING */
