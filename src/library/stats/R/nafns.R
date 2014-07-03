@@ -72,7 +72,7 @@ na.omit.data.frame <- function(object, ...)
 	    omit <- if (is.null(omit)) x else omit | x
 	else # matrix
 	    for(ii in 1L:d[2L])
-		omit <- if (is.null(omit) x[, ii] else omit | x[, ii]
+		omit <- if (is.null(omit)) x[, ii] else omit | x[, ii]
     }
     if (is.null(omit) || !any(omit))
         object
@@ -128,7 +128,7 @@ na.exclude.data.frame <- function(object, ...)
 	    omit <- if (is.null(omit)) x else omit | x
 	else # matrix
 	    for(ii in 1L:d[2L])
-		omit <- if (is.null(omit) x[, ii] else omit | x[, ii]
+		omit <- if (is.null(omit)) x[, ii] else omit | x[, ii]
     }
     if (is.null(omit) || !any(omit))
         object
