@@ -28,9 +28,10 @@ licence <- license <- function() {
   cat("\n")
   cat("A small number of files (the API header files listed in\n")
   cat("R_DOC_DIR/COPYRIGHTS) are distributed under the\n")
-  cat("Lesser GNU General Public LIcense version 2.1.\n")
-  cat("This can be displayed by RShowDoc(\"COPYING.LIB\"),\n")
-  cat("or obtained at the URLs given above.\n")
+  cat("Lesser GNU General Public LIcense version 2.1 or later.\n")
+  cat("This can be displayed by RShowDoc(\"LGPL-2.1\"), or version 3\n")
+  cat("can be displayed by RShowDoc(\"LGPL-3\"), or these can be\n")
+  cat("obtained at the URLs given above.\n")
   cat("\n")
   cat("'Share and Enjoy.'\n\n")
 }

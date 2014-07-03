@@ -2,7 +2,8 @@ Miscellaneous mods for minor speedups, code cleanliness, or bugs.
 
 Slightly sped up evalcount updates in eval.c
 
-Slight cosmetic changes to license(), plus pqR URL added.
+Slight cosmetic changes to license(), plus pqR URL added, plus fixed
+wrong file name.
 
 Changes to model.frame, na.omit, na.exclude, that clean up code
 and fix bug that na.omit of a data frame with zero rows has one row.
