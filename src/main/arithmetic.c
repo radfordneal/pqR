@@ -1257,7 +1257,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
    primitives.  The entry for fabs is currently not used, since the compiler
    may be able to inline fabs when it's called directly from task_abs. */
 
-double (*R_math1_func_table[44])(double) = {
+double (* const R_math1_func_table[44])(double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        fabs,   floor,  ceil,   sqrt,   sign,   trunc,  0,0,0,0,
 /* 10 */        exp,    expm1,  log1p,  R_log,  0,      0,      0,0,0,0,
@@ -1275,7 +1275,7 @@ double (*R_math1_func_table[44])(double) = {
 
    Entries correspond to those in R_math1_func_table above. */
 
-char R_math1_err_table[44] = {
+const char R_math1_err_table[44] = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        0,      0,      0,      -1,     0,      0,      0,0,0,0,
 /* 10 */        0,      0,      -1,     -1,     0,      0,      0,0,0,0,
