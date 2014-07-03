@@ -2298,8 +2298,8 @@ static SEXP VectorToPairListNamed(SEXP x)
     PROTECT(xnames = getAttrib(x, R_NamesSymbol)); 
                        /* isn't this protected via x?  Or could be concocted? */
 
+    len = 0;
     if (xnames != R_NilValue) {
-        len = 0;
 	for (i = 0; i < len_x; i++)
 	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) len += 1;
     }
@@ -2315,7 +2315,6 @@ static SEXP VectorToPairListNamed(SEXP x)
 		xptr = CDR(xptr);
 	    }
 	}
-	UNPROTECT(1);
     } 
 
     UNPROTECT(3);
