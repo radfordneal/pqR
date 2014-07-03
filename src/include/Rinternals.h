@@ -962,10 +962,16 @@ SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
 SEXP Rf_ScalarComplex(Rcomplex);
+SEXP Rf_ScalarComplexShared(Rcomplex);
 SEXP Rf_ScalarInteger(int);
+SEXP Rf_ScalarIntegerShared(int);
+SEXP Rf_ScalarLogical(int);  /* shared version is inlined */
 SEXP Rf_ScalarRaw(Rbyte);
+SEXP Rf_ScalarRawShared(Rbyte);
 SEXP Rf_ScalarReal(double);
+SEXP Rf_ScalarRealShared(double);
 SEXP Rf_ScalarString(SEXP);
+SEXP Rf_ScalarStringShared(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
@@ -1342,11 +1348,17 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
 #define ScalarComplex		Rf_ScalarComplex
+#define ScalarComplexShared	Rf_ScalarComplexShared
 #define ScalarInteger		Rf_ScalarInteger
+#define ScalarIntegerShared	Rf_ScalarIntegerShared
 #define ScalarLogical		Rf_ScalarLogical
+#define ScalarLogicalShared	Rf_ScalarLogicalShared
 #define ScalarReal		Rf_ScalarReal
+#define ScalarRealShared	Rf_ScalarRealShared
 #define ScalarString		Rf_ScalarString
+#define ScalarStringShared	Rf_ScalarStringShared
 #define ScalarRaw		Rf_ScalarRaw
+#define ScalarRawShared		Rf_ScalarRawShared
 #define setAttrib		Rf_setAttrib
 #define setNoSpecSymFlag	Rf_setNoSpecSymFlag
 #define setSVector		Rf_setSVector
@@ -1475,7 +1487,7 @@ SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
-SEXP	 Rf_ScalarLogical(int);
+SEXP	 Rf_ScalarLogicalShared(int);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);

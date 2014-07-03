@@ -2670,7 +2670,15 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 }
 
 /* Allocation of scalars, which compiler may optimize into specialized
-   versions of allocVector. */
+   versions of allocVector.  These versions always return an unshared 
+   value. */
+
+SEXP ScalarLogical(int x)
+{
+    SEXP ans = allocVector(LGLSXP, 1);
+    LOGICAL(ans)[0] = x == 0 || x == NA_LOGICAL ? x : 1;
+    return ans;
+}
 
 SEXP ScalarInteger(int x)
 {
@@ -2681,9 +2689,6 @@ SEXP ScalarInteger(int x)
 
 SEXP ScalarReal(double x)
 {
-    if (x == 0.0) return R_ScalarRealZero;
-    if (x == 1.0) return R_ScalarRealOne;
-
     SEXP ans = allocVector(REALSXP, 1);
     REAL(ans)[0] = x;
     return ans;
@@ -2708,6 +2713,51 @@ SEXP ScalarString(SEXP x)
 }
 
 SEXP ScalarRaw(Rbyte x)
+{
+    SEXP ans = allocVector(RAWSXP, 1);
+    RAW(ans)[0] = x;
+    return ans;
+}
+
+/* Versions of functions for allocation of scalars that may return a 
+   shared object.  ScalarLogicalShared is inlined. */
+
+SEXP ScalarIntegerShared(int x)
+{
+    SEXP ans = allocVector(INTSXP, 1);
+    INTEGER(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarRealShared(double x)
+{
+    if (x == 0.0) return R_ScalarRealZero;
+    if (x == 1.0) return R_ScalarRealOne;
+
+    SEXP ans = allocVector(REALSXP, 1);
+    REAL(ans)[0] = x;
+    return ans;
+}
+
+
+SEXP ScalarComplexShared(Rcomplex x)
+{
+    SEXP ans = allocVector(CPLXSXP, 1);
+    COMPLEX(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarStringShared(SEXP x)
+{
+    SEXP ans;
+    PROTECT(x);
+    ans = allocVector(STRSXP, 1);
+    SET_STRING_ELT(ans, 0, x);
+    UNPROTECT(1);
+    return ans;
+}
+
+SEXP ScalarRawShared(Rbyte x)
 {
     SEXP ans = allocVector(RAWSXP, 1);
     RAW(ans)[0] = x;
