@@ -1,5 +1,10 @@
-Miscellaneous mods for minor speedups or code cleanliness.
+Miscellaneous mods for minor speedups, code cleanliness, or bugs.
 
 Slightly sped up evalcount updates in eval.c
 
 Slight cosmetic changes to license(), plus pqR URL added.
+
+Changes to model.frame, na.omit, na.exclude, that clean up code
+and fix bug that na.omit of a data frame with zero rows has one row.
+Also fixed by R-core (with slightly different code) (PR 15399) in
+R-3.0.2.
