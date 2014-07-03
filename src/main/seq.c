@@ -446,7 +446,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	nt = 1;
     } else {
 	int it, sum = 0;
-	if(CADR(args) == R_MissingArg) PROTECT(times = ScalarInteger(1));
+	if(CADR(args) == R_MissingArg) PROTECT(times = ScalarIntegerShared(1));
 	else PROTECT(times = coerceVector(CADR(args), INTSXP));
 	nprotect++;
 	nt = LENGTH(times);

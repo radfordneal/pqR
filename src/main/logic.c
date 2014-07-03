@@ -179,7 +179,7 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 
     if (len==1 && isLogical(arg) && ATTRIB(arg)==R_NilValue) {
         int v = LOGICAL(arg)[0];
-        return ScalarLogical (v==NA_LOGICAL ? v : !v);
+        return ScalarLogicalShared (v==NA_LOGICAL ? v : !v);
     }
 
     /* The general case... */
@@ -256,10 +256,10 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
     x1 = asLogical(s1);
 
     if (PRIMVAL(op)==1 && x1==FALSE)  /* FALSE && ... */
-        return ScalarLogical(FALSE);
+        return ScalarLogicalShared(FALSE);
 
     if (PRIMVAL(op)==2 && x1==TRUE)   /* TRUE || ... */
-        return ScalarLogical(TRUE);
+        return ScalarLogicalShared(TRUE);
     
     s2  = eval(CADR(args), env);
     if (!isNumber(s2))	
@@ -268,13 +268,13 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
     x2 = asLogical(s2);
 
     if (PRIMVAL(op)==1) /* ... && ... */
-        return ScalarLogical (x2==FALSE ? FALSE
-                            : x1==TRUE && x2==TRUE ? TRUE
-                            : NA_LOGICAL);
+        return ScalarLogicalShared (x2==FALSE ? FALSE
+                                  : x1==TRUE && x2==TRUE ? TRUE
+                                  : NA_LOGICAL);
     else /* ... || ... */
-        return ScalarLogical (x2==TRUE ? TRUE
-                            : x1==FALSE && x2==FALSE ? FALSE
-                            : NA_LOGICAL);
+        return ScalarLogicalShared (x2==TRUE ? TRUE
+                                  : x1==FALSE && x2==FALSE ? FALSE
+                                  : NA_LOGICAL);
 }
 
 /* i1 = i % n1; i2 = i % n2;
@@ -466,7 +466,7 @@ static SEXP do_fast_allany (SEXP call, SEXP op, SEXP arg, SEXP env,
 	val = checkValues (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
     }
 
-    return ScalarLogical(val);
+    return ScalarLogicalShared(val);
 }
 
 static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -520,7 +520,7 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
         } 
     }
     UNPROTECT(2);
-    return has_na ? ScalarLogical(NA_LOGICAL) : ScalarLogical(val);
+    return ScalarLogicalShared (has_na ? NA_LOGICAL : val);
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */

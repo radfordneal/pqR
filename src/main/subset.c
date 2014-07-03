@@ -1051,12 +1051,12 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
             HELPERS_WAIT_IN_VAR (x, avail, ix, n);
         }
         switch (typeofx) {
-        case LGLSXP:  return ScalarLogical (LOGICAL(x)[ix]);
-        case INTSXP:  return ScalarInteger (INTEGER(x)[ix]);
-        case REALSXP: return ScalarReal (REAL(x)[ix]);
-        case RAWSXP:  return ScalarRaw (RAW(x)[ix]);
-        case STRSXP:  return ScalarString (STRING_ELT(x,ix));
-        case CPLXSXP: return ScalarComplex (COMPLEX(x)[ix]);
+        case LGLSXP:  return ScalarLogicalShared (LOGICAL(x)[ix]);
+        case INTSXP:  return ScalarIntegerShared (INTEGER(x)[ix]);
+        case REALSXP: return ScalarRealShared (REAL(x)[ix]);
+        case RAWSXP:  return ScalarRawShared (RAW(x)[ix]);
+        case STRSXP:  return ScalarStringShared (STRING_ELT(x,ix));
+        case CPLXSXP: return ScalarComplexShared (COMPLEX(x)[ix]);
         }
     }
     else { /* ix < 0 */
@@ -1139,12 +1139,12 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
     }
 
     switch (TYPEOF(x)) {
-    case LGLSXP:  return ScalarLogical (LOGICAL(x)[e]);
-    case INTSXP:  return ScalarInteger (INTEGER(x)[e]);
-    case REALSXP: return ScalarReal (REAL(x)[e]);
-    case RAWSXP:  return ScalarRaw (RAW(x)[e]);
-    case STRSXP:  return ScalarString (STRING_ELT(x,e));
-    case CPLXSXP: return ScalarComplex (COMPLEX(x)[e]);
+    case LGLSXP:  return ScalarLogicalShared (LOGICAL(x)[e]);
+    case INTSXP:  return ScalarIntegerShared (INTEGER(x)[e]);
+    case REALSXP: return ScalarRealShared (REAL(x)[e]);
+    case RAWSXP:  return ScalarRawShared (RAW(x)[e]);
+    case STRSXP:  return ScalarStringShared (STRING_ELT(x,e));
+    case CPLXSXP: return ScalarComplexShared (COMPLEX(x)[e]);
     }
 }
 

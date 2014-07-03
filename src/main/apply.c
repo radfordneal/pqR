@@ -373,7 +373,7 @@ static SEXP do_islistfactor(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
     }
 do_ans:
-    return ScalarLogical(lans);
+    return ScalarLogicalShared(lans);
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */

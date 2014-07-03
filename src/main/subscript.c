@@ -631,7 +631,7 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
             if (0 < i && i <= nx) {
                 if (warn) CoercionWarning(warn);
                 *stretch = 0;
-                return ScalarInteger(i);
+                return ScalarIntegerShared(i);
             }
         }
     }

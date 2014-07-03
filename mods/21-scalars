@@ -1,7 +1,7 @@
 Modifications to how scalars (vectors of length one) are handled.
 
 Introduces two versions:  ScalarReal and ScalarRealShared, etc.
-Most uses in interpreter converted to shared versions.
+Many uses in interpreter converted to shared versions.
 
 No longer inlines these, except except ScalarLogicalShared.
 
