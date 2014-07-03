@@ -322,6 +322,12 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 	    error(_("variable '%s' is integer, not numeric"), name);
 	if(!isReal(temp))
 	    error(_("variable '%s' is not numeric"), name);
+        if (NAMED(temp) > 1) {
+            PROTECT(temp = duplicate(temp));
+            defineVar(install(name), temp, rho);
+            SET_NAMED(temp,1);
+            UNPROTECT(1);
+        }
 	SET_VECTOR_ELT(pars, i, temp);
 	lengthTheta += LENGTH(VECTOR_ELT(pars, i));
     }

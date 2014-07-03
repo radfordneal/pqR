@@ -10,3 +10,7 @@ Makes the logical constants be constant objects.
 Makes real 0 and 1 be constant objects.
 
 Makes "rep" always return an unshared object.
+
+Fixed a bug in numericDeriv that was found as a result of failure after
+real constants were created.
+
