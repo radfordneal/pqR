@@ -75,7 +75,7 @@
   if (__a__ != R_NilValue) { \
     SET_ATTRIB(to, duplicate1(__a__)); \
     SET_OBJECT(to, OBJECT(from)); \
-    IS_S4_OBJECT(from) ? SET_S4_OBJECT(to) : UNSET_S4_OBJECT(to);  \
+    if (IS_S4_OBJECT(from)) SET_S4_OBJECT(to); else UNSET_S4_OBJECT(to);  \
   } \
 } while (0)
 
@@ -253,7 +253,7 @@ static SEXP duplicate1(SEXP s)
     }
     if(TYPEOF(t) == TYPEOF(s) ) { /* surely it only makes sense in this case*/
 	SET_OBJECT(t, OBJECT(s));
-	(IS_S4_OBJECT(s) ? SET_S4_OBJECT(t) : UNSET_S4_OBJECT(t));
+	if (IS_S4_OBJECT(s)) SET_S4_OBJECT(t); else UNSET_S4_OBJECT(t);
     }
     return t;
 }

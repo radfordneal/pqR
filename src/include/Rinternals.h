@@ -508,8 +508,14 @@ extern void helpers_wait_until_not_in_use(SEXP);
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
      in read-only memory. */
-#define SET_OBJECT(x,v)	((x)->sxpinfo.obj!=(v) ? (x)->sxpinfo.obj = (v) : (v))
-#define SET_TYPEOF(x,v)	((x)->sxpinfo.type!=(v) ? (x)->sxpinfo.type = (v) : (v))
+#define SET_OBJECT(x,v) do { \
+    SEXP _x_ = (x); int _v_ = (v); \
+    if (_x_->sxpinfo.obj!=_v_) _x_->sxpinfo.obj = _v_; \
+  } while (0)
+#define SET_TYPEOF(x,v) do { \
+    SEXP _x_ = (x); int _v_ = (v); \
+    if (_x_->sxpinfo.type!=_v_) _x_->sxpinfo.type = _v_; \
+  } while (0)
 #define SET_RTRACE(x,v)	(NONVEC_SXPINFO(x).trace=(v))
 #define SETLEVELS(x,v)	((x)->sxpinfo.gp=(v))
 
@@ -521,10 +527,14 @@ extern void helpers_wait_until_not_in_use(SEXP);
    of what's already there, in case object is a constant in read-only memory. */
 #define S4_OBJECT_MASK (1<<4)
 #define IS_S4_OBJECT(x) (((x)->sxpinfo.gp & S4_OBJECT_MASK) != 0)
-#define SET_S4_OBJECT(x) \
-  (IS_S4_OBJECT(x) ? ((x)->sxpinfo.gp) |= S4_OBJECT_MASK : 0)
-#define UNSET_S4_OBJECT(x) \
-  (!IS_S4_OBJECT(x) ? ((x)->sxpinfo.gp) &= ~S4_OBJECT_MASK : 0)
+#define SET_S4_OBJECT(x) do { \
+    SEXP _x_ = (x); \
+    if (!IS_S4_OBJECT(_x_)) _x_->sxpinfo.gp |= S4_OBJECT_MASK; \
+  } while (0)
+#define UNSET_S4_OBJECT(x) do { \
+    SEXP _x_ = (x); \
+    if (IS_S4_OBJECT(_x_)) _x_->sxpinfo.gp &= ~S4_OBJECT_MASK; \
+  } while (0)
 
 /* Vector Access Macros */
 #define LENGTH(x)	(((VECSEXP) (x))->vecsxp.length)
