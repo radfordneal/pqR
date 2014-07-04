@@ -84,7 +84,7 @@ FORCE:
 
 .Rin.R:
 	@$(ECHO) "creating '$@'"
-	@$(R) < $< > /dev/null
+	@$(R) < $< > $(R_BIT_BUCKET)
 
 .R.Rout:
 	@rm -f $@ $@.fail
@@ -229,7 +229,7 @@ test-Segfault:
 test-Rd: $(srcdir)/testit.Rd $(srcdir)/ver20.Rd
 	@$(ECHO) "testing Rd conversion"
 	@$(RDCONV) -t txt $(srcdir)/testit.Rd > testit.txt
-	@$(RDCONV) -t html $(srcdir)/testit.Rd > testit.html 2> /dev/null
+	@$(RDCONV) -t html $(srcdir)/testit.Rd > testit.html 2> $(R_BIT_BUCKET)
 	@$(RDCONV) -t latex $(srcdir)/testit.Rd > testit.tex
 	@$(RDCONV) -t example $(srcdir)/testit.Rd > testit-Ex.R
 	@diff -bw testit.txt $(srcdir)/testit.txt.save

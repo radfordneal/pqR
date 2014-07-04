@@ -1,0 +1,5 @@
+Debugging stuff.
+
+Introduced R_ABORT to get immediate core dump.
+
+Introduced R_BIT_BUCKET to direct output previously always going to /dev/null.

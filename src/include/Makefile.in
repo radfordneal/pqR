@@ -60,12 +60,12 @@ $(TIMESTAMPS): stamp-R
 config.h: stamp-h
 stamp-h: $(srcdir)/config.h.in $(top_builddir)/config.status
 	@cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/config.h
-	@$(ECHO) timestamp > $@ 2> /dev/null
+	@$(ECHO) timestamp > $@ 2> $(R_BIT_BUCKET)
 $(srcdir)/config.h.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/stamp-h.in
 $(srcdir)/stamp-h.in: @MAINTAINER_MODE_TRUE@ $(top_srcdir)/configure.ac $(top_builddir)/aclocal.m4
 	@TBD=`cd $(top_builddir); pwd`; \
 	  cd $(top_srcdir) && $(AUTOHEADER) -I $${TBD}
-	@$(ECHO) timestamp > $@ 2> /dev/null
+	@$(ECHO) timestamp > $@ 2> $(R_BIT_BUCKET)
 Rconfig.h: config.h $(top_srcdir)/tools/GETCONFIG
 	@$(SHELL) $(top_srcdir)/tools/GETCONFIG > $@
 Rversion.h: $(top_srcdir)/VERSION $(top_srcdir)/tools/GETVERSION $(top_builddir)/SVN-REVISION
@@ -119,7 +119,7 @@ TAGS info dvi check:
 distdir: $(DISTFILES)
 	@for f in $(DISTFILES); do \
 	  test -f $(distdir)/$${f} \
-	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>/dev/null \
+	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>$(R_BIT_BUCKET) \
 	    || cp -p $(srcdir)/$${f} $(distdir)/$${f}; \
 	done
 	@for d in $(SUBDIRS); do \

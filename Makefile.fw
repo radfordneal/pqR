@@ -38,7 +38,7 @@ install-R-framework:
 	@## the resulting libR will point dyld to the fat libR regardless of its origin
 	@(cd "$(DESTDIR)$(R_FRAMEWORK_DIR)/Resources/lib" && \
 	  install_name_tool -id "$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/lib/libR.dylib" $(Rexeclibdir)/libR.dylib)
-	@( otool=otool ; if otool -D "$(DESTDIR)$(Rexeclibdir)/libR.dylib"|grep 'not an object'>/dev/null; then otool=otool64; fi; \
+	@( otool=otool ; if otool -D "$(DESTDIR)$(Rexeclibdir)/libR.dylib"|grep 'not an object'>$(R_BIT_BUCKET); then otool=otool64; fi; \
 	   for lib in Rlapack Rblas R; do \
 	   if test -e "$(DESTDIR)$(Rexeclibdir)/lib$${lib}.dylib"; then $(ECHO) "  lib$${lib}"; \
 	    find "$(DESTDIR)$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/" -name '*.so' -or -name '*.dylib' | \
@@ -55,7 +55,7 @@ install-R-framework:
 	      install_name_tool -id "$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/lib/lib$${lib}.dylib" \
 	      "$(DESTDIR)$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/lib/lib$${lib}.dylib"; \
 	    fi; \
-	    for rexe in `ls "$(DESTDIR)$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)"/Resources/bin/exec/*/R "$(DESTDIR)$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/bin/exec/R" 2>/dev/null`; do \
+	    for rexe in `ls "$(DESTDIR)$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)"/Resources/bin/exec/*/R "$(DESTDIR)$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/bin/exec/R" 2>$(R_BIT_BUCKET)`; do \
 	     install_name_tool -change lib$${lib}.dylib \
 	     "$(R_FRAMEWORK_DIR)/Versions/$(FW_VERSION)/Resources/lib/lib$${lib}.dylib" "$$rexe" ; \
 	    done; \

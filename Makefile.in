@@ -99,7 +99,7 @@ svnonly:
 	@if test ! -f "$(srcdir)/doc/FAQ" || test -f non-tarball ; then \
 	  (cd doc/manual && $(MAKE) front-matter html-non-svn) ; \
 	  touch non-tarball ; \
-	  (cd $(srcdir); LC_ALL=C TZ=GMT svn info || $(ECHO) "Revision: unknown") 2> /dev/null \
+	  (cd $(srcdir); LC_ALL=C TZ=GMT svn info || $(ECHO) "Revision: unknown") 2> $(R_BIT_BUCKET) \
 	    | sed -n -e '/^Revision/p' -e '/^Last Changed Date/'p \
 	    | cut -d' ' -f1,2,3,4 > SVN-REVISION-tmp ; \
 	  $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
@@ -128,7 +128,7 @@ uninstall:
 	  rm -f "$(DESTDIR)$(rhome)/$${f}"; \
 	done
 	@rm -rf "$(DESTDIR)$(Rexecbindir)" "$(DESTDIR)$(rhome)/lib"
-	@rmdir "$(DESTDIR)$(rhome)" 2>/dev/null \
+	@rmdir "$(DESTDIR)$(rhome)" 2>$(R_BIT_BUCKET) \
           || $(ECHO) "  dir $(DESTDIR)$(rhome) not removed"
 	@rm -f "$(DESTDIR)${libdir}/libR$(DYLIB_EXT)"
 
@@ -178,7 +178,7 @@ distdir: $(DISTFILES) vignettes
 	@-chmod 755 $(distdir)
 	@for f in $(DISTFILES); do \
 	  test -f $(distdir)/$${f} \
-	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>/dev/null \
+	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>$(R_BIT_BUCKET) \
 	    || cp -p $(srcdir)/$${f} $(distdir)/$${f}; \
 	done
 	@for f in NEWS NEWS.pdf $(NON_SVN_INSTFILES) ; do \

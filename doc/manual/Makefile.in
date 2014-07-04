@@ -141,7 +141,7 @@ FORCE:
 $(texinputs_RECOMMENDED): FORCE
 	@(pkg=`basename $@ -pkg.tex`; \
 	if find $@ -newer $(top_builddir)/library/$${pkg}/DESCRIPTION \
-	    -print 2> /dev/null | grep $@ > /dev/null; then :; else \
+	    -print 2> $(R_BIT_BUCKET) | grep $@ > $(R_BIT_BUCKET); then :; else \
 	  $(ECHO) "collecting LaTeX docs for package '$${pkg}' ..."; \
 	  $(ECHO) "tools:::.pkg2tex(\"$(top_builddir)/library/$${pkg}\")" \
 	    | LC_ALL=C $(R_EXE) ; \
@@ -336,7 +336,7 @@ maintainer-clean: distclean
 distdir: $(DISTFILES)
 	@for f in $(DISTFILES); do \
 	  test -f $(distdir)/$${f} \
-	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>/dev/null \
+	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>$(R_BIT_BUCKET) \
 	    || cp -p $(srcdir)/$${f} $(distdir)/$${f}; \
 	done
 	@for d in $(SUBDIRS_WITH_NO_BUILD); do \

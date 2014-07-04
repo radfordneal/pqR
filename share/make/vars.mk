@@ -10,3 +10,8 @@ R_PKGS_BASE2 = base tools utils grDevices graphics stats grid splines stats4 tcl
 R_PKGS_RECOMMENDED =  MASS lattice Matrix nlme survival boot cluster codetools foreign KernSmooth rpart class nnet spatial mgcv
 # there are dependencies in src/library/Recommended/Makefile*
 # which this order respects
+
+# Where to direct output that is usually ignored.  Can be defined by an
+# variable, but defaults to /dev/null.
+
+R_BIT_BUCKET ?= /dev/null

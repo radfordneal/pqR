@@ -51,11 +51,11 @@ R:
 	done
 	@(cd base && $(MAKE) mkdesc)
 	@$(ECHO) "tools:::.vinstall_package_descriptions_as_RDS(\"$(top_builddir)/library\", \"$(R_PKGS_BASE)\")" | \
-	  R_DEFAULT_PACKAGES=tools LC_ALL=C $(R_EXE) > /dev/null
+	  R_DEFAULT_PACKAGES=tools LC_ALL=C $(R_EXE) > $(R_BIT_BUCKET)
 	@$(ECHO) "installing parsed NAMESPACE files"
 	@rm -f $(top_builddir)/library/tools/Meta/nsInfo.rds
 	@$(ECHO) "tools:::.vinstall_package_namespaces_as_RDS(\"$(top_builddir)/library\", \"$(R_PKGS_BASE)\")" | \
-	  R_DEFAULT_PACKAGES=tools LC_ALL=C $(R_EXE) > /dev/null
+	  R_DEFAULT_PACKAGES=tools LC_ALL=C $(R_EXE) > $(R_BIT_BUCKET)
 
 ## do Rdobjects before metadata before help indices
 docs:
@@ -107,14 +107,14 @@ vignettes:
 	    ($(ECHO) "tools:::.install_package_vignettes(\"$(srcdir)/$${pkg}\", \"$(top_builddir)/library/$${pkg}\")") | \
 	        R_DEFAULT_PACKAGES="utils,tools" LC_ALL=C \
 		  R_LIBS_USER= R_LIBS_SITE= \
-	          $(R_EXE) > /dev/null; \
+	          $(R_EXE) > $(R_BIT_BUCKET); \
 	  done \
 	fi
 
 metadata:
 	@$(ECHO) "building/updating package metadata ..."
 	@$(ECHO) "tools:::.vinstall_package_indices(\"$(srcdir)\", \"$(top_builddir)/library\", \"$(R_PKGS_BASE)\")" | \
-	  R_DEFAULT_PACKAGES=tools LC_ALL=C $(R_EXE) > /dev/null
+	  R_DEFAULT_PACKAGES=tools LC_ALL=C $(R_EXE) > $(R_BIT_BUCKET)
 
 install: installdirs
 	@$(ECHO) "installing packages ..."
@@ -123,7 +123,7 @@ install: installdirs
 	    $(TAR) cf - . | (cd "$(DESTDIR)$(rhome)/library"; $(TAR) xmof -))
 	@$(ECHO) "  building HTML index ..."
 	@$(ECHO) "utils:::make.packages.html(.Library, verbose=FALSE, docdir=\"$(DESTDIR)${rdocdir}\")" | \
-          R_DEFAULT_PACKAGES=NULL LC_ALL=C ${R_EXE} >/dev/null
+          R_DEFAULT_PACKAGES=NULL LC_ALL=C ${R_EXE} >$(R_BIT_BUCKET)
 installdirs:
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(rhome)/library"
 install-strip:
@@ -135,7 +135,7 @@ uninstall:
 	@$(ECHO) "uninstalling packages ..."
 	@(cd "$(DESTDIR)$(rhome)/library"; \
 	  for p in $(R_PKGS); do rm -rf $${p}; done)
-	@rmdir "$(DESTDIR)$(rhome)/library" 2>/dev/null \
+	@rmdir "$(DESTDIR)$(rhome)/library" 2>$(R_BIT_BUCKET) \
           || $(ECHO) "  subdir $(DESTDIR)$(rhome)/library not removed"
 
 install-tests:
@@ -174,7 +174,7 @@ TAGS info dvi check:
 distdir: $(DISTFILES)
 	@for f in $(DISTFILES); do \
 	  test -f $(distdir)/$${f} \
-	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>/dev/null \
+	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>$(R_BIT_BUCKET) \
 	    || cp -p $(srcdir)/$${f} $(distdir)/$${f}; \
 	done
 	@for d in $(SUBDIRS); do \

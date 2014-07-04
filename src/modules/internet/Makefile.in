@@ -73,7 +73,7 @@ TAGS info dvi check:
 distdir: $(DISTFILES)
 	@for f in $(DISTFILES); do \
 	  test -f $(distdir)/$${f} \
-	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>/dev/null \
+	    || ln $(srcdir)/$${f} $(distdir)/$${f} 2>$(R_BIT_BUCKET) \
 	    || cp -p $(srcdir)/$${f} $(distdir)/$${f}; \
 	done
 
