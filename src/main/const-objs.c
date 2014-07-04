@@ -73,6 +73,23 @@ VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const = LOGICAL_CONST(FALSE);
 VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
 
 
+/* Integer constants. */
+
+#define INTEGER_CONST(v) { \
+    CONST_HEADER(INTSXP) \
+    .vecsxp = { .length = 1 }, \
+    .data = { .i = v } \
+}
+
+VECTOR_SEXPREC_CONST R_ScalarIntegerNA_const = INTEGER_CONST(NA_INTEGER);
+
+VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11] = {
+    INTEGER_CONST(0), INTEGER_CONST(1), INTEGER_CONST(2), INTEGER_CONST(3),
+    INTEGER_CONST(4), INTEGER_CONST(5), INTEGER_CONST(6), INTEGER_CONST(7),
+    INTEGER_CONST(8), INTEGER_CONST(9), INTEGER_CONST(10) 
+};
+
+
 /* Real constants. */
 
 #define REAL_CONST(v) { \

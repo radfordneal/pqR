@@ -2724,6 +2724,11 @@ SEXP ScalarRaw(Rbyte x)
 
 SEXP ScalarIntegerShared(int x)
 {
+    if (x >=0 && x <= 10)
+        return R_ScalarInteger0To10(x);
+    if (x == NA_INTEGER)
+        return R_ScalarIntegerNA;
+
     SEXP ans = allocVector(INTSXP, 1);
     INTEGER(ans)[0] = x;
     return ans;

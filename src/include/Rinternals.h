@@ -817,6 +817,14 @@ extern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
 #define R_ScalarLogicalTRUE ((SEXP) &R_ScalarLogicalTRUE_const)
 extern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
 
+/* Integer Values.  Defined in const-objs.c */
+
+#define R_ScalarIntegerNA ((SEXP) &R_ScalarIntegerNA_const)
+extern VECTOR_SEXPREC_CONST R_ScalarIntegerNA_const;
+
+#define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger0To10_const[v])
+extern VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11];
+
 /* Real Values.  Defined in const-objs.c */
 
 #define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
