@@ -83,3 +83,13 @@ VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
 
 VECTOR_SEXPREC_CONST R_ScalarRealZero_const = REAL_CONST(0.0);
 VECTOR_SEXPREC_CONST R_ScalarRealOne_const = REAL_CONST(1.0);
+
+VECTOR_SEXPREC_CONST R_ScalarRealNA_const = {
+    CONST_HEADER(REALSXP)
+    .vecsxp = { .length = 1 },
+#ifdef WORDS_BIGENDIAN
+    .data = { .w = { 0x7ff00000, 1954 } }
+#else
+    .data = { .w = { 1954, 0x7ff00000 } }
+#endif
+};

@@ -86,12 +86,6 @@ int matherr(struct exception *exc)
 /* Hack to avoid possibly-incorrect constant folding. */
 volatile double R_Zero_Hack = 0.0;
 
-typedef union
-{
-    double value;
-    unsigned int word[2];
-} ieee_double;
-
 /* gcc had problems with static const on AIX and Solaris
    Solaris was for gcc 3.1 and 3.2 under -O2 32-bit on 64-bit kernel */
 #ifdef _AIX
@@ -110,21 +104,20 @@ static CONST int hw = 1;
 static CONST int lw = 0;
 #endif /* WORDS_BIGENDIAN */
 
+typedef union
+{   double value;
+    unsigned int word[2];
+} R_ieee_double;
 
 static double R_ValueOfNA(void)
 {
-    /* The gcc shipping with RedHat 9 gets this wrong without
-     * the volatile declaration. Thanks to Marc Schwartz. */
-    volatile ieee_double x;
-    x.word[hw] = 0x7ff00000;
-    x.word[lw] = 1954;
-    return x.value;
+    return REAL(R_ScalarRealNA)[0];
 }
 
 int R_IsNA(double x)
 {
     if (isnan(x)) {
-	ieee_double y;
+	R_ieee_double y;
 	y.value = x;
 	return (y.word[lw] == 1954);
     }
@@ -134,7 +127,7 @@ int R_IsNA(double x)
 int R_IsNaN(double x)
 {
     if (isnan(x)) {
-	ieee_double y;
+	R_ieee_double y;
 	y.value = x;
 	return (y.word[lw] != 1954);
     }

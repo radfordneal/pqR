@@ -305,7 +305,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 typedef const struct VECTOR_SEXPREC_CONST {
     SEXPREC_HEADER;
     struct vecsxp_struct vecsxp;
-    union { double d; int i; char c; } data;
+    union { double d; int w[2]; int i; char c; } data;
 } VECTOR_SEXPREC_CONST;
 
 
@@ -818,6 +818,9 @@ extern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
 extern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
 
 /* Real Values.  Defined in const-objs.c */
+
+#define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
+extern VECTOR_SEXPREC_CONST R_ScalarRealNA_const;
 
 #define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
 extern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
