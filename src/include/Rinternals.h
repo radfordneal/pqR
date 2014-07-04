@@ -754,6 +754,7 @@ LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 /* Special Values */
 LibExtern SEXP	R_NilValue;	    /* The nil object */
 LibExtern SEXP	R_NilValue_COPY_;   /* Copy of R_NilValue, for LOCAL_COPY */
+LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
