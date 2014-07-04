@@ -36,7 +36,7 @@ mkR: mkR1
 iconvlist: $(top_builddir)/library/$(pkg)/iconvlist
 
 $(top_builddir)/library/$(pkg)/iconvlist:
-	-@iconv -l > $@ 2> /dev/null || touch $@
+	-@iconv -l > $@ 2> $(R_BIT_BUCKET) || touch $@
 
 include $(top_srcdir)/share/make/basepkg.mk
 include $(top_srcdir)/share/make/lazycomp.mk
