@@ -405,7 +405,7 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     switch (TYPEOF(arg)) {
 
     case NILSXP:  
-        return ScalarInteger (0);
+        return ScalarIntegerShared (0);
 
     case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
     case INTSXP:  
@@ -427,7 +427,7 @@ static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     switch (TYPEOF(arg)) {
 
     case NILSXP:  
-        return ScalarReal (1.0);
+        return ScalarRealShared (1.0);
 
     case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
     case INTSXP:  

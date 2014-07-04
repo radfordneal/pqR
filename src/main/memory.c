@@ -79,7 +79,7 @@
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
    "cons" cells (so it's necessary that one be big enough for this).  Note 
-   that the last node  class is for larger vectors, and has no entry here.
+   that the last node class is for larger vectors, and has no entry here.
 
    The values in the initialization below will usually be replaced by values 
    derived from NodeClassBytes32 or NodeClassBytes64, which are designed for 
@@ -87,10 +87,14 @@
 
    The initialization below is for the maximum number of small node classes.
    The number of classes used may be smaller, as determined by the setting of
-   NUM_NODE_CLASSES above. */
+   NUM_NODE_CLASSES above. 
+
+   The first node class must be big enough to hold a length one vector of
+   RAWSXP, LGLSXP, INTSXP, or REALSXP type (but not necessarily CPLXSXP).
+*/
 
 static int NodeClassSize[MAX_NODE_CLASSES-1]    /* Fallback sizes, in VECRECs */
-        = {  1,  2,  4,  6,  8,  16,  32 };  /*  (typically 8-byte chunks) */
+        = {  1,  2,  4,  6,  8,  16,  32 };     /*  (typically 8-byte chunks) */
 
 #define USE_FALLBACK_SIZES 0  /* Use above sizes even when sizes below apply? */
 
@@ -350,7 +354,7 @@ static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 static SEXP R_StringHash;   /* Global hash of CHARSXPs */
 
 #define NODE_IS_MARKED(s) (MARK(s))
-#define MARK_NODE(s) (MARK(s)=1)
+#define MARK_NODE(s) (MARK(s)=1)  /* Should only be called if !NODE_IS_MARKED */
 #define UNMARK_NODE(s) (MARK(s)=0)
 
 /* Tuning Constants. Most of these could be made settable from R,
@@ -1829,16 +1833,11 @@ static void RunGenCollect(R_size_t size_needed)
     /* forward all roots */
 
     static SEXP *root_vars[] = { 
-        &R_NilValue,	          /* Builtin constants */
-        &NA_STRING,
+        &NA_STRING,	          /* Builtin constants */
         &R_BlankString,
         &R_UnboundValue,
         &R_RestartToken,
         &R_MissingArg,
-        &R_ScalarLogicalNA,
-        &R_ScalarLogicalFALSE,
-        &R_ScalarLogicalTRUE,
-        &R_ScalarRealZero,
 
         &R_GlobalEnv,	          /* Global environment */
         &R_BaseEnv,
@@ -2416,21 +2415,6 @@ void attribute_hidden InitMemory()
     orig_R_NSize = R_NSize;
     orig_R_VSize = R_VSize;
 
-    /* R_NilValue */
-    /* THIS MUST BE THE FIRST CONS CELL ALLOCATED */
-    /* OR ARMAGEDDON HAPPENS. */
-    /* Field assignments for R_NilValue must not go through write barrier
-       since the write barrier prevents assignments to R_NilValue's fields.
-       because of checks for nil */
-    R_NilValue = get_free_node(SEXPREC_class);
-    R_NilValue_COPY_ = R_NilValue;
-    TYPEOF(R_NilValue) = NILSXP;
-    SET_NAMEDCNT_MAX(R_NilValue);
-    CAR(R_NilValue) = R_NilValue;
-    CDR(R_NilValue) = R_NilValue;
-    TAG(R_NilValue) = R_NilValue;
-    ATTRIB(R_NilValue) = R_NilValue;
-
     R_BCNodeStackBase = (SEXP *) malloc(R_BCNODESTACKSIZE * sizeof(SEXP));
     if (R_BCNodeStackBase == NULL)
 	R_Suicide("couldn't allocate node stack");
@@ -2683,6 +2667,101 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
     return s;
+}
+
+/* Allocation of scalars, which compiler may optimize into specialized
+   versions of allocVector.  These versions always return an unshared 
+   value. */
+
+SEXP ScalarLogical(int x)
+{
+    SEXP ans = allocVector(LGLSXP, 1);
+    LOGICAL(ans)[0] = x == 0 || x == NA_LOGICAL ? x : 1;
+    return ans;
+}
+
+SEXP ScalarInteger(int x)
+{
+    SEXP ans = allocVector(INTSXP, 1);
+    INTEGER(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarReal(double x)
+{
+    SEXP ans = allocVector(REALSXP, 1);
+    REAL(ans)[0] = x;
+    return ans;
+}
+
+
+SEXP ScalarComplex(Rcomplex x)
+{
+    SEXP ans = allocVector(CPLXSXP, 1);
+    COMPLEX(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarString(SEXP x)
+{
+    SEXP ans;
+    PROTECT(x);
+    ans = allocVector(STRSXP, 1);
+    SET_STRING_ELT(ans, 0, x);
+    UNPROTECT(1);
+    return ans;
+}
+
+SEXP ScalarRaw(Rbyte x)
+{
+    SEXP ans = allocVector(RAWSXP, 1);
+    RAW(ans)[0] = x;
+    return ans;
+}
+
+/* Versions of functions for allocation of scalars that may return a 
+   shared object.  ScalarLogicalShared is inlined. */
+
+SEXP ScalarIntegerShared(int x)
+{
+    SEXP ans = allocVector(INTSXP, 1);
+    INTEGER(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarRealShared(double x)
+{
+    if (x == 0.0) return R_ScalarRealZero;
+    if (x == 1.0) return R_ScalarRealOne;
+
+    SEXP ans = allocVector(REALSXP, 1);
+    REAL(ans)[0] = x;
+    return ans;
+}
+
+
+SEXP ScalarComplexShared(Rcomplex x)
+{
+    SEXP ans = allocVector(CPLXSXP, 1);
+    COMPLEX(ans)[0] = x;
+    return ans;
+}
+
+SEXP ScalarStringShared(SEXP x)
+{
+    SEXP ans;
+    PROTECT(x);
+    ans = allocVector(STRSXP, 1);
+    SET_STRING_ELT(ans, 0, x);
+    UNPROTECT(1);
+    return ans;
+}
+
+SEXP ScalarRawShared(Rbyte x)
+{
+    SEXP ans = allocVector(RAWSXP, 1);
+    RAW(ans)[0] = x;
+    return ans;
 }
 
 /* Allocate a vector object (and also list-like objects).
@@ -3433,8 +3512,10 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
     if(TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
 	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
 	      type2char(TYPEOF(x)));
-    CHECK_OLD_TO_NEW(x, v);
-    ATTRIB(x) = v;
+    if (ATTRIB(x) != v) {
+        CHECK_OLD_TO_NEW(x, v);
+        ATTRIB(x) = v;
+    }
 }
 void (SET_OBJECT)(SEXP x, int v) { SET_OBJECT(CHK(x), v); }
 void (SET_TYPEOF)(SEXP x, int v) { SET_TYPEOF(CHK(x), v); }

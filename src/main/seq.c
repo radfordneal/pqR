@@ -446,7 +446,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	nt = 1;
     } else {
 	int it, sum = 0;
-	if(CADR(args) == R_MissingArg) PROTECT(times = ScalarInteger(1));
+	if(CADR(args) == R_MissingArg) PROTECT(times = ScalarIntegerShared(1));
 	else PROTECT(times = coerceVector(CADR(args), INTSXP));
 	nprotect++;
 	nt = LENGTH(times);
@@ -493,9 +493,12 @@ done:
 	SET_S4_OBJECT(ans);
     }
 #endif
-    /* 1D arrays get dimensions preserved */
+    /* 1D arrays get dimensions preserved by do_subset_dflt, so get rid
+       of them here. */
     setAttrib(ans, R_DimSymbol, R_NilValue);
     UNPROTECT(nprotect);
+    if (NAMEDCNT_GT_0(ans)) /* Guarantee value of "rep" isn't shared */
+        ans = duplicate(ans);
     return ans;
 }
 

@@ -73,7 +73,7 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         && (TYPEOF(y) == REALSXP || TYPEOF(y) == INTSXP)
 	&& nx > 0 && ny > 0) {
 
-        /* Handle scalars even quicker, return result with ScalarLogical. */
+        /* Handle scalars even quicker, using ScalarLogicalShared. */
 
         if (nx==1 && ny==1) {
             /* Separate code when both integers, in case a double can't hold
@@ -87,14 +87,14 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             }
             else {
                 double x1 = TYPEOF(x) == REALSXP ? REAL(x)[0]
-                        : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
+                          : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
                 double y1 = TYPEOF(y) == REALSXP ? REAL(y)[0]
-                        : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
+                          : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
                 result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
                        : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
             }
-            return ScalarLogical (negate && result!=NA_LOGICAL ? !result 
-                                                               : result);
+            return ScalarLogicalShared (negate && result!=NA_LOGICAL ? !result 
+                                                                     : result);
         } 
         else {
    	    if (((nx > ny) ? nx % ny : ny % nx) != 0) {

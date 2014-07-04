@@ -1051,12 +1051,12 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
             HELPERS_WAIT_IN_VAR (x, avail, ix, n);
         }
         switch (typeofx) {
-        case LGLSXP:  return ScalarLogical (LOGICAL(x)[ix]);
-        case INTSXP:  return ScalarInteger (INTEGER(x)[ix]);
-        case REALSXP: return ScalarReal (REAL(x)[ix]);
-        case RAWSXP:  return ScalarRaw (RAW(x)[ix]);
-        case STRSXP:  return ScalarString (STRING_ELT(x,ix));
-        case CPLXSXP: return ScalarComplex (COMPLEX(x)[ix]);
+        case LGLSXP:  return ScalarLogicalShared (LOGICAL(x)[ix]);
+        case INTSXP:  return ScalarIntegerShared (INTEGER(x)[ix]);
+        case REALSXP: return ScalarRealShared (REAL(x)[ix]);
+        case RAWSXP:  return ScalarRawShared (RAW(x)[ix]);
+        case STRSXP:  return ScalarStringShared (STRING_ELT(x,ix));
+        case CPLXSXP: return ScalarComplexShared (COMPLEX(x)[ix]);
         }
     }
     else { /* ix < 0 */
@@ -1139,12 +1139,12 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
     }
 
     switch (TYPEOF(x)) {
-    case LGLSXP:  return ScalarLogical (LOGICAL(x)[e]);
-    case INTSXP:  return ScalarInteger (INTEGER(x)[e]);
-    case REALSXP: return ScalarReal (REAL(x)[e]);
-    case RAWSXP:  return ScalarRaw (RAW(x)[e]);
-    case STRSXP:  return ScalarString (STRING_ELT(x,e));
-    case CPLXSXP: return ScalarComplex (COMPLEX(x)[e]);
+    case LGLSXP:  return ScalarLogicalShared (LOGICAL(x)[e]);
+    case INTSXP:  return ScalarIntegerShared (INTEGER(x)[e]);
+    case REALSXP: return ScalarRealShared (REAL(x)[e]);
+    case RAWSXP:  return ScalarRawShared (RAW(x)[e]);
+    case STRSXP:  return ScalarStringShared (STRING_ELT(x,e));
+    case CPLXSXP: return ScalarComplexShared (COMPLEX(x)[e]);
     }
 }
 
@@ -1361,14 +1361,15 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (type == LANGSXP) {
 	ax = ans;
 	PROTECT(ans = allocList(LENGTH(ax)));
-	if ( LENGTH(ax) > 0 )
+	if (ans != R_NilValue) {
 	    SET_TYPEOF(ans, LANGSXP);
-	for(px = ans, i = 0 ; px != R_NilValue ; px = CDR(px))
-	    SETCAR(px, VECTOR_ELT(ax, i++));
-	setAttrib(ans, R_DimSymbol, getAttrib(ax, R_DimSymbol));
-	setAttrib(ans, R_DimNamesSymbol, getAttrib(ax, R_DimNamesSymbol));
-	setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
-	SET_NAMEDCNT(ans, NAMEDCNT(ax)); /* PR#7924 */
+            for (px = ans, i = 0 ; px != R_NilValue ; px = CDR(px))
+                SETCAR(px, VECTOR_ELT(ax, i++));
+            setAttrib(ans, R_DimSymbol, getAttrib(ax, R_DimSymbol));
+            setAttrib(ans, R_DimNamesSymbol, getAttrib(ax, R_DimNamesSymbol));
+            setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
+            SET_NAMEDCNT_MAX(ans);
+        }
     }
     else {
 	PROTECT(ans);

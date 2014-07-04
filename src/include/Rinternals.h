@@ -142,13 +142,6 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
 #define FUNSXP      99    /* Closure or Builtin or Special */
 
 
-#ifdef USE_RINTERNALS
-/* This is intended for use only within R itself.
- * It defines internal structures that are otherwise only accessible
- * via SEXP, and macros to replace many (but not all) of accessor functions
- * (which are always defined).
- */
-
 /* Flags.  Order may be fiddled to try to improve performance.  Total
    size is 64 bits = 8 bytes. */
 
@@ -307,6 +300,25 @@ typedef struct VECTOR_SEXPREC {
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
+/* Version of VECTOR_SEXPREC used for defining constants in const_obj.c */
+
+typedef const struct VECTOR_SEXPREC_CONST {
+    SEXPREC_HEADER;
+    struct vecsxp_struct vecsxp;
+    union { double d; int i; char c; } data;
+} VECTOR_SEXPREC_CONST;
+
+
+#ifdef USE_RINTERNALS
+/* This is intended for use only within R itself.
+ * It defines internal structures that are otherwise only accessible
+ * via SEXP, and macros to replace many (but not all) of accessor functions
+ * (which are always defined).
+ *
+ * Making R_NilValue a constant has necessitated exposing more of the
+ * internals (some of what is above used to be after this ifdef).
+ */
+
 
 /* Macros for accessing and changing NAMEDCNT. */
 
@@ -359,10 +371,24 @@ extern void helpers_wait_until_not_in_use(SEXP);
 ( (x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
-#define SET_NAMEDCNT(x,v)    ((x)->sxpinfo.nmcnt = (v))
 #define SET_NAMEDCNT_0(x)    ((x)->sxpinfo.nmcnt = 0)
 #define SET_NAMEDCNT_1(x)    ((x)->sxpinfo.nmcnt = 1)
-#define SET_NAMEDCNT_MAX(x)  ((x)->sxpinfo.nmcnt = MAX_NAMEDCNT)
+
+/* Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
+   even if the new value is also MAX_NAMEDCNT, since it might be a constant 
+   object in a read-only memory area. */
+
+#define SET_NAMEDCNT(x,v) do { \
+    SEXP _p_ = (x); int _v_ = v; \
+    if (_p_->sxpinfo.nmcnt != _v_) \
+        _p_->sxpinfo.nmcnt = _v_; \
+  } while (0)
+
+#define SET_NAMEDCNT_MAX(x) do { \
+    SEXP _p_ = (x); \
+    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
+        _p_->sxpinfo.nmcnt = MAX_NAMEDCNT; \
+  } while (0)
 
 #define INC_NAMEDCNT(x) do { \
     SEXP _p_ = (x); \
@@ -418,9 +444,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #else 			/* New scheme with MAX_NAMEDCNT > 2 */
 
 #define NAMED(x) \
-  ( (x)->sxpinfo.nmcnt > 1 ? (SET_NAMEDCNT_MAX((x)), 2) : NAMEDCNT((x)) )
-#define SET_NAMED(x,v) \
-  ( (v) > 1 ? SET_NAMEDCNT_MAX((x)) : SET_NAMEDCNT((x),(v)) )
+  ( (x)->sxpinfo.nmcnt > 1 && (x)->sxpinfo.nmcnt < MAX_NAMEDCNT \
+      ? (((x)->sxpinfo.nmcnt = MAX_NAMEDCNT), 2) \
+      : NAMEDCNT((x)) )
+
+#define SET_NAMED(x,v) do { \
+    if ((v) > 1) SET_NAMEDCNT_MAX((x)); else SET_NAMEDCNT((x),(v)); \
+  } while (0)
 
 #endif
 
@@ -475,8 +505,11 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define TYPEOF(x)	((x)->sxpinfo.type)
 #define RTRACE(x)	(NONVEC_SXPINFO(x).trace)
 #define LEVELS(x)	((x)->sxpinfo.gp)
-#define SET_OBJECT(x,v)	((x)->sxpinfo.obj=(v))
-#define SET_TYPEOF(x,v)	((x)->sxpinfo.type=(v))
+  /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
+     to avoid crashing on an innocuous write to a constant that may be stored
+     in read-only memory. */
+#define SET_OBJECT(x,v)	((x)->sxpinfo.obj!=(v) ? (x)->sxpinfo.obj = (v) : (v))
+#define SET_TYPEOF(x,v)	((x)->sxpinfo.type!=(v) ? (x)->sxpinfo.type = (v) : (v))
 #define SET_RTRACE(x,v)	(NONVEC_SXPINFO(x).trace=(v))
 #define SETLEVELS(x,v)	((x)->sxpinfo.gp=(v))
 
@@ -484,11 +517,14 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define TRUELENGTH(x)	(VEC_SXPINFO(x).truelength)
 #define SET_TRUELENGTH(x,v)  (VEC_SXPINFO(x).truelength = (v))
 
-/* S4 object bit, set by R_do_new_object for all new() calls */
+/* S4 object bit, set by R_do_new_object for all new() calls.  Avoid writes
+   of what's already there, in case object is a constant in read-only memory. */
 #define S4_OBJECT_MASK (1<<4)
 #define IS_S4_OBJECT(x) (((x)->sxpinfo.gp & S4_OBJECT_MASK) != 0)
-#define SET_S4_OBJECT(x) (((x)->sxpinfo.gp) |= S4_OBJECT_MASK)
-#define UNSET_S4_OBJECT(x) (((x)->sxpinfo.gp) &= ~S4_OBJECT_MASK)
+#define SET_S4_OBJECT(x) \
+  (IS_S4_OBJECT(x) ? ((x)->sxpinfo.gp) |= S4_OBJECT_MASK : 0)
+#define UNSET_S4_OBJECT(x) \
+  (!IS_S4_OBJECT(x) ? ((x)->sxpinfo.gp) &= ~S4_OBJECT_MASK : 0)
 
 /* Vector Access Macros */
 #define LENGTH(x)	(((VECSEXP) (x))->vecsxp.length)
@@ -738,7 +774,7 @@ typedef int PROTECT_INDEX;
 /* Macro for creating a local copy of a non-changing global SEXP variable,
    if a global copy of it has been set up. */
 
-#define LOCAL_COPY(var) SEXP var = var##_COPY_
+#define LOCAL_COPY(var) /* SEXP var = var##_COPY_ */
 
 /* Evaluation Environment */
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
@@ -751,20 +787,33 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 
 LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
+/* R_NilValue is the R NULL object */
+#define R_NilValue ((SEXP) &R_NilValue_const)
+extern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
+
 /* Special Values */
-LibExtern SEXP	R_NilValue;	    /* The nil object */
-LibExtern SEXP	R_NilValue_COPY_;   /* Copy of R_NilValue, for LOCAL_COPY */
 LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
-/* Logical Values */
-LibExtern SEXP  R_ScalarLogicalNA;    /* Vector of one logical NA value */
-LibExtern SEXP  R_ScalarLogicalFALSE; /* Vector of one FALSE value */
-LibExtern SEXP  R_ScalarLogicalTRUE;  /* Vector of one TRUE value */
+/* Logical Values.  Defined in const-objs.c */
 
-/* Real Values */
-LibExtern SEXP  R_ScalarRealZero;     /* Vector of one 0.0 value */
+#define R_ScalarLogicalNA ((SEXP) &R_ScalarLogicalNA_const)
+extern VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const;
+
+#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogicalFALSE_const)
+extern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
+
+#define R_ScalarLogicalTRUE ((SEXP) &R_ScalarLogicalTRUE_const)
+extern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
+
+/* Real Values.  Defined in const-objs.c */
+
+#define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
+extern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
+
+#define R_ScalarRealOne ((SEXP) &R_ScalarRealOne_const)
+extern VECTOR_SEXPREC_CONST R_ScalarRealOne_const;
 
 
 #ifdef __MAIN__
@@ -918,6 +967,17 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
+SEXP Rf_ScalarComplex(Rcomplex);
+SEXP Rf_ScalarComplexShared(Rcomplex);
+SEXP Rf_ScalarInteger(int);
+SEXP Rf_ScalarIntegerShared(int);
+SEXP Rf_ScalarLogical(int);  /* shared version is inlined */
+SEXP Rf_ScalarRaw(Rbyte);
+SEXP Rf_ScalarRawShared(Rbyte);
+SEXP Rf_ScalarReal(double);
+SEXP Rf_ScalarRealShared(double);
+SEXP Rf_ScalarString(SEXP);
+SEXP Rf_ScalarStringShared(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
@@ -1294,11 +1354,17 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
 #define ScalarComplex		Rf_ScalarComplex
+#define ScalarComplexShared	Rf_ScalarComplexShared
 #define ScalarInteger		Rf_ScalarInteger
+#define ScalarIntegerShared	Rf_ScalarIntegerShared
 #define ScalarLogical		Rf_ScalarLogical
+#define ScalarLogicalShared	Rf_ScalarLogicalShared
 #define ScalarReal		Rf_ScalarReal
+#define ScalarRealShared	Rf_ScalarRealShared
 #define ScalarString		Rf_ScalarString
+#define ScalarStringShared	Rf_ScalarStringShared
 #define ScalarRaw		Rf_ScalarRaw
+#define ScalarRawShared		Rf_ScalarRawShared
 #define setAttrib		Rf_setAttrib
 #define setNoSpecSymFlag	Rf_setNoSpecSymFlag
 #define setSVector		Rf_setSVector
@@ -1427,12 +1493,7 @@ SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
-SEXP	 Rf_ScalarComplex(Rcomplex);
-SEXP	 Rf_ScalarInteger(int);
-SEXP	 Rf_ScalarLogical(int);
-SEXP	 Rf_ScalarRaw(Rbyte);
-SEXP	 Rf_ScalarReal(double);
-SEXP	 Rf_ScalarString(SEXP);
+SEXP	 Rf_ScalarLogicalShared(int);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);

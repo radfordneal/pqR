@@ -1257,7 +1257,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
    primitives.  The entry for fabs is currently not used, since the compiler
    may be able to inline fabs when it's called directly from task_abs. */
 
-double (*R_math1_func_table[44])(double) = {
+double (* const R_math1_func_table[44])(double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        fabs,   floor,  ceil,   sqrt,   sign,   trunc,  0,0,0,0,
 /* 10 */        exp,    expm1,  log1p,  R_log,  0,      0,      0,0,0,0,
@@ -1275,7 +1275,7 @@ double (*R_math1_func_table[44])(double) = {
 
    Entries correspond to those in R_math1_func_table above. */
 
-char R_math1_err_table[44] = {
+const char R_math1_err_table[44] = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        0,      0,      0,      -1,     0,      0,      0,0,0,0,
 /* 10 */        0,      0,      -1,     -1,     0,      0,      0,0,0,0,
@@ -1801,7 +1801,7 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
 	double digits = 0;
 	if(PRIMVAL(op) == 10004) digits = 6.0;
-	PROTECT(args = list2(CAR(args), ScalarReal(digits))); nprotect++;
+	PROTECT(args = list2(CAR(args), ScalarRealShared(digits))); nprotect++;
     }
 
     PROTECT(args = evalListKeepMissing(args, env));
@@ -1819,7 +1819,7 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	    double digits = 0.0;
             check1arg_x (args, call);
 	    if(PRIMVAL(op) == 10004) digits = 6.0;
-	    SETCDR(args, CONS(ScalarReal(digits), R_NilValue));
+	    SETCDR(args, CONS(ScalarRealShared(digits), R_NilValue));
 	} else {
 	    /* If named, do argument matching by name */
 	    if (TAG(args) != R_NilValue || TAG(CDR(args)) != R_NilValue) {
@@ -1846,8 +1846,8 @@ SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (DispatchGroup("Math", call, op, args, env, &res)) return res;
 
-    if(PRIMVAL(op) == 10) tmp = ScalarReal(10.0);
-    if(PRIMVAL(op) == 2)  tmp = ScalarReal(2.0);
+    if(PRIMVAL(op) == 10) tmp = ScalarRealShared(10.0);
+    if(PRIMVAL(op) == 2)  tmp = ScalarRealShared(2.0);
 
     PROTECT(call2 = lang3(install("log"), CAR(args), tmp));
     PROTECT(args2 = lang2(CAR(args), tmp));

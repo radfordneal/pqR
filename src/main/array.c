@@ -380,7 +380,7 @@ static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_fast_length (SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 {   
     R_len_t len = length(arg);
-    return ScalarInteger (len <= INT_MAX ? len : NA_INTEGER);
+    return ScalarIntegerShared (len <= INT_MAX ? len : NA_INTEGER);
 }
 
 static SEXP do_length(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)

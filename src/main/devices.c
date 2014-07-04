@@ -377,7 +377,7 @@ static SEXP do_devcontrol(SEXP call, SEXP op, SEXP args, SEXP env)
     } else { /* dev.displaylist */
 	listFlag = gdd->displayListOn;
     }
-    return ScalarLogical(listFlag);
+    return ScalarLogicalShared(listFlag);
 }
 
 static SEXP do_devcopy(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -390,26 +390,26 @@ static SEXP do_devcopy(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP do_devcur(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    return ScalarInteger(curDevice() + 1);
+    return ScalarIntegerShared(curDevice() + 1);
 }
 
 static SEXP do_devnext(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
-    return ScalarInteger( nextDevice(INTEGER(CAR(args))[0] - 1) + 1 );
+    return ScalarIntegerShared( nextDevice(INTEGER(CAR(args))[0] - 1) + 1 );
 }
 
 static SEXP do_devprev(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
-    return ScalarInteger( prevDevice(INTEGER(CAR(args))[0] - 1) + 1 );
+    return ScalarIntegerShared( prevDevice(INTEGER(CAR(args))[0] - 1) + 1 );
 }
 
 static SEXP do_devset(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity_length;
     int devNum = INTEGER(CAR(args))[0] - 1;
-    return ScalarInteger( selectDevice(devNum) + 1 );
+    return ScalarIntegerShared( selectDevice(devNum) + 1 );
 }
 
 static SEXP do_devoff(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -592,7 +592,7 @@ static SEXP do_devAskNewPage(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_Visible = FALSE;
     } else R_Visible = TRUE;
 
-    return ScalarLogical(oldask);
+    return ScalarLogicalShared(oldask);
 }
 
 static SEXP do_devsize(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -616,7 +616,7 @@ static SEXP do_devholdflush(SEXP call, SEXP op, SEXP args, SEXP env)
     int level = asInteger(CAR(args));
     if(dd->holdflush && level != NA_INTEGER) level = (dd->holdflush(dd, level));
     else level = 0;
-    return ScalarInteger(level);
+    return ScalarIntegerShared(level);
 }
 
 static SEXP do_devcap(SEXP call, SEXP op, SEXP args, SEXP env)

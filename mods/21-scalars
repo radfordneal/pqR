@@ -1,0 +1,18 @@
+Modifications to how scalars (vectors of length one) are handled.
+
+Introduces two versions:  ScalarReal and ScalarRealShared, etc.
+Many uses in interpreter converted to shared versions.
+
+No longer inlines these, except except ScalarLogicalShared.
+
+Defines R_NilValue as a constant, rather than allocate it at the start.
+Created a new const-objs.c source file for such constant objects.
+
+Makes the logical constants be constant objects.
+
+Makes real 0 and 1 be constant objects when created with ScalarRealShared.
+
+Makes "rep" always return an unshared object.
+
+Fixed a bug in numericDeriv that was found as a result of failure after
+real constants were created.

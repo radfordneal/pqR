@@ -614,7 +614,7 @@ static SEXP do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   a major redesign of everything... -pd */
 	while (n-- > 0)
 	    i = R_sysparent(nframe - i + 1, cptr);
-	return ScalarInteger(i);
+	return ScalarIntegerShared(i);
     case 2: /* call */
 	if(n == NA_INTEGER)
 	    error(_("invalid '%s' argument"), "which");
@@ -624,7 +624,7 @@ static SEXP do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid '%s' argument"), "which");
 	return R_sysframe(n, cptr);
     case 4: /* sys.nframe */
-	return ScalarInteger(framedepth(cptr));
+	return ScalarIntegerShared(framedepth(cptr));
     case 5: /* sys.calls */
 	nframe = framedepth(cptr);
 	PROTECT(rval = allocList(nframe));

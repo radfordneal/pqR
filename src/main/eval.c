@@ -897,7 +897,7 @@ static SEXP do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (new > 0)
 	loadCompilerNamespace();
     R_jit_enabled = new;
-    return ScalarInteger(old);
+    return ScalarIntegerShared(old);
 }
 
 static SEXP do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -908,7 +908,7 @@ static SEXP do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (new != NA_LOGICAL && new)
 	loadCompilerNamespace();
     R_compile_pkgs = new;
-    return ScalarLogical(old);
+    return ScalarLogicalShared(old);
 }
 
 /* forward declaration */
@@ -1849,7 +1849,7 @@ static void tmp_cleanup(void *data)
 #define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
-	if (NAMEDCNT_GT_1(__v__)) { \
+	if (__v__ != R_NilValue && NAMEDCNT_GT_1(__v__)) { \
 	    __v__ = duplicate(__v__); \
 	    SET_NAMEDCNT_1(__v__); \
 	    SETCAR(__lhs__, __v__); \
@@ -2430,7 +2430,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	SET_STRING_ELT(encl, 0, mkChar("value"));
 	SET_STRING_ELT(encl, 1, mkChar("visible"));
 	SET_VECTOR_ELT(env, 0, expr);
-	SET_VECTOR_ELT(env, 1, ScalarLogical(R_Visible));
+	SET_VECTOR_ELT(env, 1, ScalarLogicalShared(R_Visible));
 	setAttrib(env, R_NamesSymbol, encl);
 	expr = env;
 	UNPROTECT(3);
@@ -2454,7 +2454,7 @@ static SEXP do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_STRING_ELT(nm, 0, mkChar("value"));
     SET_STRING_ELT(nm, 1, mkChar("visible"));
     SET_VECTOR_ELT(ret, 0, x);
-    SET_VECTOR_ELT(ret, 1, ScalarLogical(R_Visible));
+    SET_VECTOR_ELT(ret, 1, ScalarLogicalShared(R_Visible));
     setAttrib(ret, R_NamesSymbol, nm);
     UNPROTECT(3);
     return ret;
@@ -5613,7 +5613,7 @@ static SEXP do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
     new = asInteger(CAR(args));
     if (new >= 0 && new <= R_max_num_math_threads)
 	R_num_math_threads = new;
-    return ScalarInteger(old);
+    return ScalarIntegerShared(old);
 }
 
 static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -5626,7 +5626,7 @@ static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (R_num_math_threads > R_max_num_math_threads)
 	    R_num_math_threads = R_max_num_math_threads;
     }
-    return ScalarInteger(old);
+    return ScalarIntegerShared(old);
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
