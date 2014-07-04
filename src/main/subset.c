@@ -300,7 +300,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP sb, SEXP call)
+static SEXP VectorSubset(SEXP x, SEXP sb, int seq, SEXP call)
 {
     int spi, stretch = 1;
     SEXP result, attrib, nattrib;
@@ -317,7 +317,7 @@ static SEXP VectorSubset(SEXP x, SEXP sb, SEXP call)
        and if we have a range, see whether it can be used directly, or must
        be converted to a vector to be handled as other vectors. */
 
-    if (ATTRIB(sb) == R_VariantResult) {
+    if (seq) {
         REPROTECT(sb = Rf_DecideVectorOrRange(sb,&start,&end,call), spi);
         if (sb == NULL)
             n = end - start + 1;
@@ -669,7 +669,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 /* Subset for a vector with dim attribute specifying two dimensions. */
 
-static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
+static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
 {
     SEXP attr, result, sr, sc;
     int start = 1, end = 0;
@@ -690,7 +690,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop)
         end = nr;
         nrs = nr;
     }
-    else if (ATTRIB(s0) == R_VariantResult) {
+    else if (seq) {
         PROTECT(s0 = Rf_DecideVectorOrRange(s0,&start,&end,call));
         nprotect++;
         if (s0 == NULL)
@@ -1152,11 +1152,14 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
 /* The "[" subset operator.
  * This provides the most general form of subsetting. */
 
+static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq);
+
 static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
     int argsevald = 0;
     int nprotect = 0;
+    int seq = 0;
 
     /* If we can easily determine that this will be handled by subset_dflt
        and has one or two index arguments in total, evaluate the first index
@@ -1185,6 +1188,10 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
                 int variant = remargs==R_NilValue || CDR(remargs)==R_NilValue
                                ? VARIANT_SEQ : 0;
                 SEXP idx = evalv (CAR(ixlist), rho, variant|VARIANT_PENDING_OK);
+                if (R_variant_result) {
+                    seq = 1;
+                    R_variant_result = 0;
+                }
                 if (remargs != R_NilValue) {
                     PROTECT(idx);
                     nprotect++;
@@ -1194,7 +1201,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
                 wait_until_arguments_computed(args);
                 args = CONS(array,args);
                 UNPROTECT(nprotect);
-                return do_subset_dflt(call, op, args, rho); 
+                return do_subset_dflt_seq(call, op, args, rho, seq); 
             }
         }
     }
@@ -1218,19 +1225,27 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* NB: do_subset_dflt is sometimes called directly, not just from do_subset */
+/* N.B.  do_subset_dflt is sometimes called directly from outside this module. 
+   It doesn't have the "seq" argument of do_subset_dflt_seq. */
 
-SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    return do_subset_dflt_seq (call, op, args, rho, 0);
+}
+
+/* The last "seq" argument below is 1 if the first subscript is a sequence spec
+   (a variant result). */
+
+static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq)
 {
     SEXP ans, ax, px, x, subs;
     int drop, i, nsubs, type;
     SEXP cdrArgs = CDR(args);
     SEXP cddrArgs = CDR(cdrArgs);
 
-    /* By default we drop extents of length 1 */
-
-    if (CAR(args) != R_NilValue && cdrArgs != R_NilValue 
-                                && TAG(cdrArgs) == R_NilValue) {
+    if (!seq && CAR(args) != R_NilValue 
+             && cdrArgs != R_NilValue 
+             && TAG(cdrArgs) == R_NilValue) {
 
         /* Check for one subscript, handling simple cases like this */
         if (cddrArgs == R_NilValue) { 
@@ -1319,7 +1334,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP dim = getAttrib(x, R_DimSymbol);
 	int ndim = length(dim);
 	PROTECT(ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
-				   call));
+				   seq, call));
 	/* one-dimensional arrays went through here, and they should
 	   have their dimensions dropped only if the result has
 	   length one and drop == TRUE
@@ -1349,7 +1364,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (nsubs != length(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
-	    ans = MatrixSubset(ax, CAR(subs), CADR(subs), call, drop);
+	    ans = MatrixSubset(ax, CAR(subs), CADR(subs), call, drop, seq);
 	else
 	    ans = ArraySubset(ax, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);

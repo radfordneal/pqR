@@ -443,10 +443,7 @@ static SEXP do_fast_allany (SEXP call, SEXP op, SEXP arg, SEXP env,
 {
     int val;
 
-    if (ATTRIB(arg) == R_VariantResult)
-        val = LOGICAL(arg)[0];
-
-    else if (length(arg) == 0)
+    if (length(arg) == 0)
         /* Avoid memory waste from coercing empty inputs, and also
            avoid warnings with empty lists coming from sapply */
         val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
@@ -463,7 +460,10 @@ static SEXP do_fast_allany (SEXP call, SEXP op, SEXP arg, SEXP env,
 			    type2char(TYPEOF(arg)));
 	    arg = coerceVector(arg, LGLSXP);
 	}
-	val = checkValues (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
+        if (LENGTH(arg) == 1) /* includes variant return of AND or OR of vec */
+            val = LOGICAL(arg)[0];
+        else
+            val = checkValues (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
     }
 
     return ScalarLogicalShared(val);

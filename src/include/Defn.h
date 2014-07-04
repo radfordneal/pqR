@@ -96,8 +96,6 @@ Rcomplex Rf_ComplexFromReal(double, int*);
 #define CALLED_FROM_DEFN_H 1
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
-#undef eval
-#define eval(e,rho) evalv(e,rho,0)  /* eval is a macro within interpreter */
 #undef CALLED_FROM_DEFN_H
 
 extern0 SEXP	R_CommentSymbol;    /* "comment" */
@@ -492,26 +490,44 @@ typedef struct {
    OR'd with zero or more symbols with values 16, 32, 64, or 128.  The result
    will fit in one unsigned char.
 
-   Return of a variant result is usually indicated by the attribute field 
-   being R_VariantResult, but a VARIANT_NULL variant result can be just 
-   R_NilValue, and results with VARIANT_PENDING_OK may be ordinary vectors
-   marked as being computed. */
+   Return of a variant result is indicated either by the nature of the 
+   returned value, or by R_variant_result being set to a non-zero value
+   (to 1 unless something else is used to provide further details).  
+   If a call of evalv leads to R_variant_result being non-zero, the caller 
+   must set R_variant_result to zero after noting its value, so an outer 
+   return will not appear to have a variant result.  Accordingly, variants
+   that set R_variant_return are not allowed for evaluation of arguments 
+   for fast primitives (ie, for ARG1VAR or ARG2VAR), since the code in
+   evalv that handles these does not know how to record such a flag.
+
+   A caller of evalv need not set R_variant_result to zero before a call,
+   since that is done inside evalv. */
 
 #define VARIANT_NULL  1  /* May just return R_NilValue, while doing side effects
-                            (Should usually be OR'd with VARIANT_PENDING_OK) */
+                            (should usually be OR'd with VARIANT_PENDING_OK). 
+                            Does not set R_variant_result. */
 
-#define VARIANT_SEQ   2  /* May return a sequence spec, rather than a vector */
-#define VARIANT_AND   3  /* May return AND of a logical vec rather than vec  */
-#define VARIANT_OR    4  /* May return OR of a logical vec rather than vec   */
-#define VARIANT_SUM   5  /* May return sum of vec elements rather than vec   */
-#define VARIANT_TRANS 6  /* May return the transpose of the result (as the CAR
-                            of an object with ATTRIB set to R_VariantResult) */
+#define VARIANT_SEQ   2  /* May return a sequence spec, rather than a vector.
+                            Sets R_variant_result to 1 if so. */
+
+#define VARIANT_AND   3  /* May return AND of a logical vec rather than vec.
+                            Does not set R_variant_result. */
+
+#define VARIANT_OR    4  /* May return OR of a logical vec rather than vec.
+                            Does not set R_variant_result. */
+
+#define VARIANT_SUM   5  /* May return sum of vec elements rather than vec.
+                            Does not set R_variant_result. */
+
+#define VARIANT_TRANS 6  /* May return the transpose of the result.  
+                            Sets R_variant_result to 1 if so. */
 
 /* The variant below controls behaviour of [<-, [[<-, and $<-.  The MUST_COPY
    variant must be obeyed, except when a copy is never indicated (eg, for
    environments), overriding what would otherwise be done based on NAMEDCNT. */
 
-#define VARIANT_MUST_COPY 7 /* Must make a copy before modifying object */
+#define VARIANT_MUST_COPY 15  /* Must make a copy before modifying object.
+                                 Does not set R_variant_result */
 
 #define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
                                     defined above */
@@ -797,6 +813,7 @@ LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */
 LibExtern RCNTXT* R_GlobalContext;    /* The global environment */
 #endif
 extern0 Rboolean R_Visible;	    /* Value visibility flag */
+LibExtern int   R_variant_result INI_as(0);     /* 0 or flags variant result */
 LibExtern int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 

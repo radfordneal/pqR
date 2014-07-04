@@ -1844,7 +1844,6 @@ static void RunGenCollect(R_size_t size_needed)
         &R_EmptyEnv,
         &R_Warnings,	          /* Warnings, if any */
 
-        &R_VariantResult,         /* Marker for variant result of op */
         &R_HandlerStack,          /* Condition handler stack */
         &R_RestartStack,          /* Available restarts stack */
 

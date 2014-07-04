@@ -522,26 +522,24 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     int i, i1, i2, n, n1, n2;
     double x1, x2;
     int T = !F;
-    SEXP ans;
+    int ans;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
     n = (n1 > n2) ? n1 : n2;
 
-    ans = allocVector(LGLSXP, 1);
-    SET_ATTRIB (ans, R_VariantResult);
-    LOGICAL(ans)[0] = TRUE;
+    ans = TRUE;
 
     if (code == EQOP) {
         if (n2 == 1) {
             x2 = REAL(s2)[0];
             if (ISNAN(x2)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x1 = REAL(s1)[i];
                     if (ISNAN(x1)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 == x2 ? F : T) 
                         goto false;
                 }
@@ -549,12 +547,12 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         else if (n1 == 1) {
             x1 = REAL(s1)[0];
             if (ISNAN(x1)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x2 = REAL(s2)[i];
                     if (ISNAN(x2)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 == x2 ? F : T) 
                         goto false;
                 }
@@ -564,7 +562,7 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i];
                 x2 = REAL(s2)[i];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 == x2 ? F : T) 
                     goto false;
             }
@@ -574,7 +572,7 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i1];
                 x2 = REAL(s2)[i2];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 == x2 ? F : T) 
                     goto false;
             }
@@ -584,12 +582,12 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         if (n2 == 1) {
             x2 = REAL(s2)[0];
             if (ISNAN(x2)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x1 = REAL(s1)[i];
                     if (ISNAN(x1)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 < x2 ? F : T) 
                         goto false;
                 }
@@ -597,12 +595,12 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         else if (n1 == 1) {
             x1 = REAL(s1)[0];
             if (ISNAN(x1)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x2 = REAL(s2)[i];
                     if (ISNAN(x2)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 < x2 ? F : T) 
                         goto false;
                 }
@@ -612,7 +610,7 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i];
                 x2 = REAL(s2)[i];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 < x2 ? F : T) 
                     goto false;
             }
@@ -622,18 +620,17 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i1];
                 x2 = REAL(s2)[i2];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 < x2 ? F : T) 
                     goto false;
             }
 	}
     }
 
-    return ans;
+    return ScalarLogical(ans);
 
 false:
-    LOGICAL(ans)[0] = FALSE;
-    return ans;
+    return ScalarLogical(FALSE);
 }
 
 static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
@@ -641,26 +638,24 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     int i, i1, i2, n, n1, n2;
     double x1, x2;
     int T = !F;
-    SEXP ans;
+    int ans;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
     n = (n1 > n2) ? n1 : n2;
 
-    ans = allocVector(LGLSXP, 1);
-    SET_ATTRIB (ans, R_VariantResult);
-    LOGICAL(ans)[0] = FALSE;
+    ans = FALSE;
 
     if (code == EQOP) {
         if (n2 == 1) {
             x2 = REAL(s2)[0];
             if (ISNAN(x2)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x1 = REAL(s1)[i];
                     if (ISNAN(x1)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 == x2 ? T : F) 
                         goto true;
                 }
@@ -668,12 +663,12 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         else if (n1 == 1) {
             x1 = REAL(s1)[0];
             if (ISNAN(x1)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x2 = REAL(s2)[i];
                     if (ISNAN(x2)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 == x2 ? T : F) 
                         goto true;
                 }
@@ -683,7 +678,7 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i];
                 x2 = REAL(s2)[i];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 == x2 ? T : F) 
                     goto true;
             }
@@ -693,7 +688,7 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i1];
                 x2 = REAL(s2)[i2];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 == x2 ? T : F) 
                     goto true;
             }
@@ -703,12 +698,12 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         if (n2 == 1) {
             x2 = REAL(s2)[0];
             if (ISNAN(x2)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x1 = REAL(s1)[i];
                     if (ISNAN(x1)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 < x2 ? T : F) 
                         goto true;
                 }
@@ -716,12 +711,12 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         else if (n1 == 1) {
             x1 = REAL(s1)[0];
             if (ISNAN(x1)) 
-                LOGICAL(ans)[0] = NA_LOGICAL;
+                ans = NA_LOGICAL;
             else 
                 for (i = 0; i<n; i++) {
                     x2 = REAL(s2)[i];
                     if (ISNAN(x2)) 
-                        LOGICAL(ans)[0] = NA_LOGICAL;
+                        ans = NA_LOGICAL;
                     else if (x1 < x2 ? T : F) 
                         goto true;
                 }
@@ -731,7 +726,7 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i];
                 x2 = REAL(s2)[i];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 < x2 ? T : F) 
                     goto true;
             }
@@ -741,18 +736,18 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = REAL(s1)[i1];
                 x2 = REAL(s2)[i2];
                 if (ISNAN(x1) || ISNAN(x2)) 
-                    LOGICAL(ans)[0] = NA_LOGICAL;
+                    ans = NA_LOGICAL;
                 else if (x1 < x2 ? T : F) 
                     goto true;
             }
 	}
     }
 
-    return ans;
+    return ScalarLogical(ans);
 
 true:
-    LOGICAL(ans)[0] = TRUE;
-    return ans;
+    return ScalarLogical(TRUE);
+    
 }
 
 static SEXP complex_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
