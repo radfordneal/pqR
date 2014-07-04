@@ -1,5 +1,6 @@
 #  File src/library/stats/R/nafns.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -59,7 +60,7 @@ na.omit.data.frame <- function(object, ...)
 {
     ## Assuming a data.frame like object
     n <- length(object)
-    omit <- FALSE
+    omit <- NULL
     vars <- seq_len(n)
     for(j in vars) {
 	x <- object[[j]]
@@ -68,19 +69,21 @@ na.omit.data.frame <- function(object, ...)
 	x <- is.na(x)
 	d <- dim(x)
 	if(is.null(d) || length(d) != 2L)
-	    omit <- omit | x
+	    omit <- if (is.null(omit)) x else omit | x
 	else # matrix
 	    for(ii in 1L:d[2L])
-		omit <- omit | x[, ii]
+		omit <- if (is.null(omit)) x[, ii] else omit | x[, ii]
     }
-    xx <- object[!omit, , drop = FALSE]
-    if (any(omit > 0L)) {
-	temp <- seq(omit)[omit]
-	names(temp) <- attr(object, "row.names")[omit]
-	attr(temp, "class") <- "omit"
-	attr(xx, "na.action") <- temp
+    if (is.null(omit) || !any(omit))
+        object
+    else {
+        xx <- object[!omit, , drop = FALSE]
+        temp <- seq(omit)[omit]
+        names(temp) <- attr(object, "row.names")[omit]
+        attr(temp, "class") <- "omit"
+        attr(xx, "na.action") <- temp
+        xx
     }
-    xx
 }
 
 na.exclude <- function(object, ...) UseMethod("na.exclude")
@@ -113,7 +116,7 @@ na.exclude.data.frame <- function(object, ...)
 {
     ## Assuming a data.frame like object
     n <- length(object)
-    omit <- FALSE
+    omit <- NULL
     vars <- seq_len(n)
     for(j in vars) {
 	x <- object[[j]]
@@ -122,19 +125,21 @@ na.exclude.data.frame <- function(object, ...)
 	x <- is.na(x)
 	d <- dim(x)
 	if(is.null(d) || length(d) != 2L)
-	    omit <- omit | x
+	    omit <- if (is.null(omit)) x else omit | x
 	else # matrix
 	    for(ii in 1L:d[2L])
-		omit <- omit | x[, ii]
+		omit <- if (is.null(omit)) x[, ii] else omit | x[, ii]
     }
-    xx <- object[!omit, , drop = FALSE]
-    if (any(omit > 0L)) {
-	temp <- seq(omit)[omit]
-	names(temp) <- attr(object, "row.names")[omit]
-	attr(temp, "class") <- "exclude"
-	attr(xx, "na.action") <- temp
+    if (is.null(omit) || !any(omit))
+        object
+    else {
+        xx <- object[!omit, , drop = FALSE]
+        temp <- seq(omit)[omit]
+        names(temp) <- attr(object, "row.names")[omit]
+        attr(temp, "class") <- "exclude"
+        attr(xx, "na.action") <- temp
+        xx
     }
-    xx
 }
 
 naresid <- function(omit, x, ...) UseMethod("naresid")

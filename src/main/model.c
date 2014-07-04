@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1440,12 +1440,22 @@ static SEXP do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(na_action);
 	PROTECT(tmp = lang2(na_action, data));
 	PROTECT(ans = eval(tmp, rho));
-	if (!isNewList(ans) || length(ans) != length(data))
-	    error(_("invalid result from na.action"));
-	/* need to transfer _all but tsp and dim_ attributes, possibly lost
-	   by subsetting in na.action.  */
-	for ( i = length(ans) ; i-- ; )
-		copyMostAttribNoTs(VECTOR_ELT(data, i),VECTOR_ELT(ans, i));
+        if (ans != data) {
+            if (NAMEDCNT_GT_0 (ans)) {
+                ans = duplicate(ans);
+                UNPROTECT(1);
+                PROTECT(ans);
+            }
+            if (!isNewList(ans) || length(ans) != length(data))
+                error(_("invalid result from na.action"));
+            /* need to transfer _all but tsp and dim_ attributes, possibly lost
+               by subsetting in na.action.  */
+            for ( i = length(ans) ; i-- ; ) {
+                if (NAMEDCNT_GT_0 (VECTOR_ELT(ans,i)))
+                    SET_VECTOR_ELT (ans, i, duplicate(VECTOR_ELT(ans,i)));
+                copyMostAttribNoTs(VECTOR_ELT(data, i),VECTOR_ELT(ans, i));
+            }
+        }
 
 	UNPROTECT(3);
     }
