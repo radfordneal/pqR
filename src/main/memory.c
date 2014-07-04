@@ -2719,10 +2719,15 @@ SEXP ScalarRaw(Rbyte x)
 }
 
 /* Versions of functions for allocation of scalars that may return a 
-   shared object.  ScalarLogicalShared is inlined. */
+   shared object.  ScalarLogicalShared is in Rinlinedfuns.h. */
 
 SEXP ScalarIntegerShared(int x)
 {
+    if (x >=0 && x <= 10)
+        return R_ScalarInteger0To10(x);
+    if (x == NA_INTEGER)
+        return R_ScalarIntegerNA;
+
     SEXP ans = allocVector(INTSXP, 1);
     INTEGER(ans)[0] = x;
     return ans;
@@ -2730,14 +2735,21 @@ SEXP ScalarIntegerShared(int x)
 
 SEXP ScalarRealShared(double x)
 {
-    if (x == 0.0) return R_ScalarRealZero;
-    if (x == 1.0) return R_ScalarRealOne;
+    /* Compare to pre-allocated values as 8-byte integers, not as doubles,
+       since double comparison doesn't work for NA or when comparing -0 and
+       +0 (which should be distinct). */
+
+    if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealNA)[0]) 
+        return R_ScalarRealNA;
+    if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealZero)[0]) 
+        return R_ScalarRealZero;
+    if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealOne)[0]) 
+        return R_ScalarRealOne;
 
     SEXP ans = allocVector(REALSXP, 1);
     REAL(ans)[0] = x;
     return ans;
 }
-
 
 SEXP ScalarComplexShared(Rcomplex x)
 {
@@ -3524,7 +3536,7 @@ int (SETLEVELS)(SEXP x, int v) { return SETLEVELS(CHK(x), v); }
 void DUPLICATE_ATTRIB(SEXP to, SEXP from) {
     SET_ATTRIB(CHK(to), duplicate(CHK(ATTRIB(CHK(from)))));
     SET_OBJECT(CHK(to), OBJECT(from));
-    IS_S4_OBJECT(from) ?  SET_S4_OBJECT(to) : UNSET_S4_OBJECT(to);
+    if (IS_S4_OBJECT(from)) SET_S4_OBJECT(to); else UNSET_S4_OBJECT(to);
 }
 
 /* S4 object testing */
