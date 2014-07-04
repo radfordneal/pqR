@@ -8610,15 +8610,16 @@ can be used to assign values to @R{} variables.  @code{defineVar}
 creates a new binding or changes the value of an existing binding in the
 specified environment frame; it is the analogue of @code{assign(symbol,
 value, envir = rho, inherits = FALSE)}, but unlike @code{assign},
-@code{defineVar} does not make a copy of the object
-@code{value}.@footnote{You can assign a @emph{copy} of the object in the
-environment frame @code{rho} using @code{defineVar(symbol,
+@code{defineVar} does not adjust the count of references to
+@code{value}.@footnote{You should therefore usually assign a @emph{copy} 
+of the object in the environment frame @code{rho} using @code{defineVar(symbol,
 duplicate(value), rho)}).}  @code{setVar} searches for an existing
 binding for @code{symbol} in @code{rho} or its enclosing environments.
 If a binding is found, its value is changed to @code{value}.  Otherwise,
 a new binding with the specified value is created in the global
 environment.  This corresponds to @code{assign(symbol, value, envir =
-rho, inherits = TRUE)}.
+rho, inherits = TRUE)}, except as for @code{defineVar}, it does not
+adjust the count of references to @code{value}.
 
 @node Some convenience functions, Named objects and copying, Finding and setting variables, Handling R objects in C
 @subsection Some convenience functions
@@ -9237,6 +9238,8 @@ SEXP mkans(double x)
 @{
     SEXP ans;
     PROTECT(ans = allocVector(REALSXP, 1));
+    /* This PROTECT is not essential with this code, but would become so if
+       we added anything below that could allocate memory, so let's be safe. */
     REAL(ans)[0] = x;
     UNPROTECT(1);
     return ans;
@@ -9246,7 +9249,10 @@ SEXP mkans(double x)
 @group
 double feval(double x, SEXP f, SEXP rho)
 @{
-    defineVar(install("x"), mkans(x), rho);
+    SEXP ansx;
+    PROTECT(ansx = mkans(x));
+    defineVar(install("x"), ansx, rho);
+    UNPROTECT(1);
     return(REAL(eval(f, rho))[0]);
 @}
 @end group
@@ -9287,10 +9293,11 @@ SEXP zero(SEXP f, SEXP guesses, SEXP stol, SEXP rho)
 @subsection Calculating numerical derivatives
 @cindex Numerical derivatives
 
-We will use a longer example (by Saikat DebRoy) to illustrate the use of
-evaluation and @code{.External}.  This calculates numerical derivatives,
-something that could be done as effectively in interpreted @R{} code but
-may be needed as part of a larger C calculation.
+We will use a longer example (by Saikat DebRoy, with bug fixed by
+Radford Neal) to illustrate the use of evaluation and
+@code{.External}.  This calculates numerical derivatives, something
+that could be done as effectively in interpreted @R{} code but may be
+needed as part of a larger C calculation.
 
 An interpreted @R{} version and an example are
 
@@ -9371,6 +9378,13 @@ SEXP numeric_deriv(SEXP args)
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
         PROTECT(par = findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+        if (NAMED(par) > 1) @{
+            par = duplicate(par);
+            UNPROTECT(1); /* old value of par */
+            PROTECT(par);
+            defineVar(install(CHAR(STRING_ELT(theta, i))), par, rho);
+            SET_NAMED(par,1);
+        @}
         tt = REAL(par)[0];
         xx = fabs(tt);
         delta = (xx < 1) ? eps : xx*eps;
@@ -9436,6 +9450,13 @@ arguments are the numbers of rows and columns.
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
         PROTECT(par = findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+        if (NAMED(par) > 1) @{
+            par = duplicate(par);
+            UNPROTECT(1); /* old value of par */
+            PROTECT(par);
+            defineVar(install(CHAR(STRING_ELT(theta, i))), par, rho);
+            SET_NAMED(par,1);
+        @}
 @end group
 @end example
 
@@ -9449,6 +9470,16 @@ corresponding to the @code{i}'th element of the @code{STRSXP}
 representation@footnote{@pxref{Character encoding issues} for why this
 might not be what is required.} of it: it returns a pointer.  We then
 install the name and use @code{findVar} to find its value.
+
+@noindent
+It's possible the value of this variable is shared with other
+variables (or perhaps an element of a list).  We need to check for
+this, by seeing if @code{NAMED} is greater than one, and if so,
+duplicate the value and store this value (which will not be shared)
+back in the variable, since we will shortly be changing it.  (Although
+we restore the changed value later, that's not enough, since it's
+possible that the changed value will incorrectly be seen in the
+meantime.)
 
 @example
 @group
