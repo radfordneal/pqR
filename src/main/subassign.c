@@ -1089,7 +1089,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 SEXP attribute_hidden do_subassign_dflt
                         (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    do_subassign_dflt_seq (call, op, args, rho, variant, 0);
+    return do_subassign_dflt_seq (call, op, args, rho, variant, 0);
 }
 
 /* The last "seq" argument below is 1 if the first subscript is a sequence spec
