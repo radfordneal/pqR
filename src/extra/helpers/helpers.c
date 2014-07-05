@@ -2288,11 +2288,19 @@ void helpers_wait_until_not_in_use (helpers_var_ptr v)
 {
   int any_needed, master_only_needed, i;
 
-  /* Quick check for there being no uncompleted tasks. */
+  /* Quick check for variable being one we needn't wait for. */
+
+  if (v==null || !helpers_is_in_use(v))
+  { if (trace) trace_wait_until_not_in_use(0,v);
+    return;
+  }
+
+  /* Quick check for there being no uncompleted tasks, so no need to wait.
+     Plus repeat the last test above, in case it has changed. */
 
   notice_completed();
 
-  if (v==null || !helpers_is_in_use(v) || helpers_tasks==0)
+  if (helpers_tasks==0 || !helpers_is_in_use(v))
   { if (trace) trace_wait_until_not_in_use(0,v);
     return;
   }
