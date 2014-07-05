@@ -368,9 +368,11 @@ macros:
 These take one argument of type helpers_var_ptr.  The helpers
 implementation will use these macros, if they are defined, to avoid
 some computations.  For correct operation, these macros must return a
-non-zero value if the variable given is in use or is being computed.
-They may return a non-zero value even if the variable is not in use or
-is not being computed, though this will slow down some operations.
+non-zero value if the variable given is in use or is being computed
+(except that helpers_is_in_use may return zero for a variable that is
+in use if that variable is never modified).  However, these macros may
+return a non-zero value even if the variable is not in use or is not
+being computed, though this will slow down some operations.
 
 All the macros described in this section will never be invoked by
 the helpers implementation with a null pointer argument.
