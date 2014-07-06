@@ -9,3 +9,6 @@ Changes to model.frame, na.omit, na.exclude, that clean up code
 and fix bug that na.omit of a data frame with zero rows has one row.
 Also fixed by R-core (with slightly different code) (PR 15399) in
 R-3.0.2.
+
+Removed redundant (I hope) initial setting of R_Visible from primitive
+data in evalv, and slightly sped up final setting.

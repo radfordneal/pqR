@@ -593,10 +593,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
             int fast = FALSE;
             SEXP args = CDR(e);
 	    int save = R_PPStackTop;
-            int flag = PRIMPRINT(op);
 	    const void *vmax = VMAXGET();
-
-	    if (flag == 1) R_Visible = FALSE;
 
             if (TYPEOF(op) == SPECIALSXP)
 
@@ -734,20 +731,10 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                 if (used_cntxt) endcontext(&cntxt);
 	    }
 
-#ifdef CHECK_VISIBILITY
-	    if(flag < 2 && R_Visible == flag) {
-		char *nm = PRIMNAME(op);
-                if (TYPEOF(op) == BUILTINSXP)
-                    printf("vis: builtin %s\n", nm);
-		else if (strcmp(nm, "for") != 0
-                      && strcmp(nm, "repeat") != 0 
-                      && strcmp(nm, "while") != 0
-                      && strcmp(nm, "[[<-") != 0
-                      && strcmp(nm, "on.exit") != 0)
-		    printf("vis: special %s\n", nm);
-	    }
-#endif
-	    if (flag < 2) R_Visible = 1 - flag;
+            int flag = PRIMPRINT(op);
+            if (flag == 0) R_Visible = TRUE;
+            else if (flag == 1) R_Visible = FALSE;
+
 	    CHECK_STACK_BALANCE(op, save);
 	    VMAXSET(vmax);
 	    UNPROTECT(1); /* op */
