@@ -4179,7 +4179,6 @@ void attribute_hidden InitStringHash()
 /* Resize the global R_StringHash CHARSXP cache */
 static void R_StringHash_resize(unsigned int newsize)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP old_table = R_StringHash;
     SEXP new_table, chain, new_chain, val, next;
     unsigned int counter, new_hashcode, newmask;

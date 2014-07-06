@@ -1395,7 +1395,6 @@ SEXP findFun(SEXP symbol, SEXP rho)
 
 int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 {
-    LOCAL_COPY(R_NilValue);
     int hashcode;
     SEXP loc;
 

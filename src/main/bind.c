@@ -697,7 +697,6 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
                             int *anytags, int *allsametype)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP a, n, last = NULL, next = NULL;
     int v, n_recurse = 0, n_usenames = 0;
 

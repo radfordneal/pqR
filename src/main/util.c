@@ -597,7 +597,6 @@ SEXP with_changed_nth (SEXP s, int n, SEXP val)
 {
     SEXP original = s;
     SEXP head, tail, new;
-    LOCAL_COPY(R_NilValue);
 
     if (s == R_NilValue)
         return R_NilValue;
@@ -671,7 +670,6 @@ SEXP with_no_nth (SEXP s, int n)
 {
     SEXP original = s;
     SEXP head, tail, new;
-    LOCAL_COPY(R_NilValue);
 
     if (s == R_NilValue)
         return R_NilValue;

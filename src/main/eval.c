@@ -462,7 +462,6 @@ SEXP eval(SEXP e, SEXP rho)
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP op, tmp;
     int typeof_e = TYPEOF(e);
     static int evalcount = 0;
@@ -940,7 +939,6 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
                                      SEXP suppliedenv, int variant)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
     SEXP f, a, tmp;
@@ -1123,7 +1121,6 @@ SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho,
 static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho)
 {
-    LOCAL_COPY(R_NilValue);
     volatile SEXP body;
     SEXP tmp;
     RCNTXT cntxt;
@@ -1654,7 +1651,6 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho,
 static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
                                 int variant)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP s = R_NilValue;
     if (args != R_NilValue) {
     	SEXP srcrefs = getBlockSrcrefs(call);
@@ -1729,7 +1725,6 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP replaceCall(SEXP fun, SEXP val, SEXP args, SEXP rhs)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP first, p;
 
     first = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
@@ -2081,7 +2076,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
 
 SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP head, tail, ev, h;
 
     head = R_NilValue;
@@ -2182,7 +2176,6 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
     SEXP head, tail, ev, h;
-    LOCAL_COPY(R_NilValue);
 
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
@@ -2757,7 +2750,6 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     SEXP rclass, rmeth, rgr, rsxp, value;
     char lbuf[512], rbuf[512], generic[128];
     Rboolean useS4 = TRUE, isOps = FALSE;
-    LOCAL_COPY(R_NilValue);
 
     /* pre-test to avoid string computations when there is nothing to
        dispatch on because either there is only one argument and it
@@ -4289,7 +4281,6 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
-  LOCAL_COPY(R_NilValue);
   SEXP value, constants;
   BCODE *pc, *codebase;
   int ftype = 0;

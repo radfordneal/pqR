@@ -730,7 +730,6 @@ static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
 
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP x = CAR(args), y = CADR(args), rest = CDDR(args);
 
     PROTECT_INDEX ix, iy;

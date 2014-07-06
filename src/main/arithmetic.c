@@ -900,7 +900,6 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
 {
-    LOCAL_COPY(R_NilValue);
     helpers_task_proc *task;
     SEXP klass, dims, tsp, xnames, ynames, ans;
     int mismatch = 0, nx, ny, n, xarray, yarray, xts, yts, xS4 = 0, yS4 = 0;

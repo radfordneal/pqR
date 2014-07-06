@@ -1057,7 +1057,6 @@ static SEXP do_dim(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 static SEXP do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x;
-    LOCAL_COPY(R_NilValue);
 
     checkArity(op, args);
     if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1))
@@ -1116,7 +1115,6 @@ SEXP dimgets(SEXP vec, SEXP val)
 
 static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP attrs, names, namesattr, value;
     int nvalues;
 
@@ -1195,7 +1193,6 @@ static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 /* brought to the front of the list.  This ensures that when both */
 /* "dim" and "dimnames" are set that the "dim" is attached first. */
 
-    LOCAL_COPY(R_NilValue);
     SEXP object, attrs, names = R_NilValue /* -Wall */;
     int i, i0 = -1, nattrs;
 
@@ -1298,7 +1295,6 @@ fairly minor.  LT */
 
 static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP argList, s, t, tag = R_NilValue, alist, ans;
     const char *str;
     size_t n;

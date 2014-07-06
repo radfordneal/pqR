@@ -303,7 +303,6 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 static SEXP VectorAssignSeq 
               (SEXP call, SEXP x, R_len_t start, R_len_t end, SEXP y)
 {
-    LOCAL_COPY(R_NilValue);
     int i, n, ny;
 
     if (x==R_NilValue && y==R_NilValue)
@@ -399,7 +398,6 @@ static SEXP NA_check_remove (SEXP indx, int *n, int err)
 
 static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
-    LOCAL_COPY(R_NilValue);
     SEXP indx, newnames;
     int i, ii, iy, n, nx, ny, stretch;
     double ry;
@@ -1009,8 +1007,6 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 {
-    LOCAL_COPY(R_NilValue);
-
     *x = CAR(args); /* OK even if args is R_NilValue */
     if (args == R_NilValue || (args = CDR(args)) == R_NilValue)
 	error(_("SubAssignArgs: invalid number of arguments"));
@@ -1234,8 +1230,6 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 SEXP attribute_hidden do_subassign2_dflt
     (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    LOCAL_COPY(R_NilValue);
-
     SEXP dims, names, newname, subs, x, xtop, xup, y;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
     Rboolean S4, recursed;
@@ -1514,8 +1508,6 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
 {
-    LOCAL_COPY(R_NilValue);
-
     PROTECT_INDEX pvalidx, pxidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
 
