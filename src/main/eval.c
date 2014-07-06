@@ -1858,24 +1858,25 @@ static void tmp_cleanup(void *data)
 #define ASSIGNBUFSIZ 32
 static R_INLINE SEXP installAssignFcnName(SEXP fun)
 {
-    char buf[ASSIGNBUFSIZ];
-    const char *fname = CHAR(PRINTNAME(fun));
-
     /* Handle "[", "[[", and "$" specially for speed. */
 
-    if (fname[0] == '[') {
-        if (fname[1] == 0)
-            return R_SubAssignSymbol;
-        else if (fname[1] == '[' && fname[2] == 0)
-            return R_SubSubAssignSymbol;
-    }
-    else if (fname[0] == '$' && fname[1] == 0)
+    if (fun == R_BracketSymbol)
+        return R_SubAssignSymbol;
+
+    if (fun == R_Bracket2Symbol)
+        return R_SubSubAssignSymbol;
+
+    if (fun == R_DollarSymbol)
         return R_DollarAssignSymbol;
 
     /* The general case... */
 
+    char buf[ASSIGNBUFSIZ];
+    const char *fname = CHAR(PRINTNAME(fun));
+
     if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
         error(_("overlong name in '%s'"), fname);
+
     return install(buf);
 }
 
