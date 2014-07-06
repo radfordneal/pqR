@@ -909,7 +909,6 @@
  mallinfo
  max_contour_segments
  mb_char_len
- memtrace_report
  menuclear
  menuconfig
  menueditornew

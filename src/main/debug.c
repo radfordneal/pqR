@@ -135,10 +135,6 @@ static SEXP do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-void attribute_hidden memtrace_report(void* old, void *_new) {
-    return;
-}
-
 static SEXP do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Do nothing - this function is no longer implemented (but is kept
