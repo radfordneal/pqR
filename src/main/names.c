@@ -696,7 +696,6 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 {
     SEXP s, fun, ifun, ans;
     int save = R_PPStackTop;
-    int flag;
     const void *vmax = VMAXGET();
 
     checkArity(op, args);
@@ -718,24 +717,14 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
     }
     PROTECT(args);
 
-    flag = PRIMPRINT(ifun);
-    R_Visible = flag != 1;
+    R_Visible = TRUE;
 
     ans = CALL_PRIMFUN(s, ifun, args, env, variant);
 
-    /* This resetting of R_Visible = FALSE was to fix PR#7397,
-       now fixed in GEText */
-    if (flag < 2) R_Visible = flag != 1;
-#ifdef CHECK_VISIBILITY
-    if(flag < 2 && flag == R_Visible) {
-	char *nm = CHAR(PRINTNAME(fun));
-	if(strcmp(nm, "eval") && strcmp(nm, "options") && strcmp(nm, "Recall")
-	   && strcmp(nm, "do.call") && strcmp(nm, "switch")
-	   && strcmp(nm, "recordGraphics") && strcmp(nm, "writeBin")
-	   && strcmp(nm, "NextMethod") && strcmp(nm, "eval.with.vis"))
-	    printf("vis: internal %s\n", nm);
-    }
-#endif
+    int flag = PRIMPRINT(ifun);
+    if (flag == 0) R_Visible = TRUE;
+    else if (flag == 1) R_Visible = FALSE;
+
     UNPROTECT(1);
     check_stack_balance(ifun, save);
     VMAXSET(vmax);
