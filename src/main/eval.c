@@ -600,7 +600,6 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
 	if (TYPEOF(op) == SPECIALSXP || TYPEOF(op) == BUILTINSXP) {
 
-            int fast = FALSE;
             SEXP args = CDR(e);
 	    int save = R_PPStackTop;
 	    const void *vmax = VMAXGET();
@@ -612,6 +611,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
             else { /* BUILTINSXP */
 
                 SEXP arg1 = NULL, arg2 = NULL;
+                int fast = FALSE;
 
                 /* See if this may be a fast primitive.  All fast primitives
                    should be BUILTIN.  We will not do a fast call if there 
