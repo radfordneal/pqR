@@ -949,37 +949,45 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 }
 
 
-/* Returns and removes a named argument from argument list args.
+/* Returns and removes a named argument from the argument list 
+   pointed to by args_ptr, and updates args_ptr to account for
+   the removal (when it was at the head).
+
    The search ends as soon as a matching argument is found.  If
    the argument is not found, the argument list is not modified
-   and R_NilValue is returned.
- */
-static SEXP ExtractArg(SEXP args, SEXP arg_sym)
-{
-    SEXP arg, prev_arg;
-    int found = 0;
+   and the C NULL pointer is is returned.
 
-    for (arg = prev_arg = args; arg != R_NilValue; arg = CDR(arg)) {
+   The caller does not need to protect *args_ptr before.
+ */
+static SEXP ExtractArg(SEXP *args_ptr, SEXP arg_sym)
+{
+    SEXP result = NULL;
+    SEXP prev_arg = NULL;
+    SEXP arg;
+
+    for (arg = *args_ptr; arg != R_NilValue; arg = CDR(arg)) {
 	if(TAG(arg) == arg_sym) {
-	    if (arg == prev_arg) /* found at head of args */
-		args = CDR(args);
+	    if (prev_arg == NULL) /* found at head of args */
+		*args_ptr = CDR(arg);
 	    else
 		SETCDR(prev_arg, CDR(arg));
-	    found = 1;
-	    break;
+	    return CAR(arg);
 	}
-	else  prev_arg = arg;
+	prev_arg = arg;
     }
-    return found ? CAR(arg) : R_NilValue;
+    return NULL;
 }
 
 /* Extracts the drop argument, if present, from the argument list.
-   The object being subsetted must be the first argument. */
-static void ExtractDropArg(SEXP el, int *drop)
+   The argument list will be modified, and the pointer passed changed
+   if the first argument is deleted.  The caller does not need to
+   protect *args_ptr before.*/
+
+static int ExtractDropArg(SEXP *args_ptr)
 {
-    SEXP dropArg = ExtractArg(el, R_DropSymbol);
-    *drop = asLogical(dropArg);
-    if (*drop == NA_LOGICAL) *drop = 1;
+    SEXP drop_arg = ExtractArg(args_ptr, R_DropSymbol);
+    int drop = drop_arg ? asLogical(drop_arg) : NA_LOGICAL;
+    return drop == NA_LOGICAL ? 1 : drop;
 }
 
 
@@ -989,13 +997,15 @@ static void ExtractDropArg(SEXP el, int *drop)
        0  not exact
        1  exact
       -1  not exact, but warn when partial matching is used
+
+   The argument list pointed to by args_ptr may be modified.  The
+   caller does not need to protect *args_ptr before.
  */
-static int ExtractExactArg(SEXP args)
+static int ExtractExactArg(SEXP *args_ptr)
 {
-    SEXP argval = ExtractArg(args, R_ExactSymbol);
-    int exact;
-    if(isNull(argval)) return 1; /* Default is true as from R 2.7.0 */
-    exact = asLogical(argval);
+    SEXP argval = ExtractArg(args_ptr, R_ExactSymbol);
+    if (argval == NULL) return 1; /* Default is true as from R 2.7.0 */
+    int exact = asLogical(argval);
     if (exact == NA_LOGICAL) exact = -1;
     return exact;
 }
@@ -1152,7 +1162,8 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
 /* The "[" subset operator.
  * This provides the most general form of subsetting. */
 
-static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq);
+static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP array, SEXP args, 
+                                SEXP rho, int seq);
 
 static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1198,10 +1209,9 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
                     remargs = evalListPendingOK (remargs, rho, NULL);
                 }
                 args = CONS(idx,remargs);
-                wait_until_arguments_computed(args);
-                args = CONS(array,args);
                 UNPROTECT(nprotect);
-                return do_subset_dflt_seq(call, op, args, rho, seq); 
+                wait_until_arguments_computed(args);
+                return do_subset_dflt_seq(call, op, array, args, rho, seq); 
             }
         }
     }
@@ -1221,35 +1231,34 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Method dispatch has failed, we now */
     /* run the generic internal code. */
-    return do_subset_dflt(call, op, ans, rho);
+    return do_subset_dflt_seq (call, op, CAR(ans), CDR(ans), rho, 0);
 }
 
 
 /* N.B.  do_subset_dflt is sometimes called directly from outside this module. 
-   It doesn't have the "seq" argument of do_subset_dflt_seq. */
+   It doesn't have the "seq" argument of do_subset_dflt_seq, and takes all
+   arguments as an arg list. */
 
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subset_dflt_seq (call, op, args, rho, 0);
+    return do_subset_dflt_seq (call, op, CAR(args), CDR(args), rho, 0);
 }
 
 /* The last "seq" argument below is 1 if the first subscript is a sequence spec
-   (a variant result). */
+   (a variant result).  The first argument (the array, x) is passed separately
+   rather than as part of an argument list, for efficiency. */
 
-static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq)
+static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
+                                SEXP rho, int seq)
 {
-    SEXP ans, ax, px, x, subs;
+    SEXP cdr_subs = CDR(subs);
     int drop, i, nsubs, type;
-    SEXP cdrArgs = CDR(args);
-    SEXP cddrArgs = CDR(cdrArgs);
+    SEXP ans, ax, px;
 
-    if (!seq && CAR(args) != R_NilValue 
-             && cdrArgs != R_NilValue 
-             && TAG(cdrArgs) == R_NilValue) {
+    if (!seq && x!=R_NilValue && subs!=R_NilValue && TAG(subs)==R_NilValue) {
 
         /* Check for one subscript, handling simple cases like this */
-        if (cddrArgs == R_NilValue) { 
-            SEXP x = CAR(args);
+        if (cdr_subs == R_NilValue) { 
             SEXP attr = ATTRIB(x);
             if (attr != R_NilValue) {
                 if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
@@ -1259,23 +1268,22 @@ static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq)
                 }
             }
             if (attr == R_NilValue) {
-                SEXP r = one_vector_subscript(x,CAR(cdrArgs));
+                SEXP r = one_vector_subscript(x,CAR(subs));
                 if (r != R_NilValue)
                     return r;
             }
         }
 
         /* Check for two subscripts, handling simple cases like this */
-        else if (cddrArgs != R_NilValue && CDR(cddrArgs) == R_NilValue
-	          && TAG(cddrArgs) == R_NilValue) { /* two subscripts */
-            SEXP x = CAR(args);
+        else if (cdr_subs != R_NilValue && CDR(cdr_subs) == R_NilValue
+	          && TAG(cdr_subs) == R_NilValue) { /* two subscripts */
             SEXP attr = ATTRIB(x);
             if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
                 SEXP dim = CAR(attr);
                 if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {
                     /* x is a matrix */
-                    SEXP r = two_matrix_subscripts (x, dim, CAR(cdrArgs),
-                                                            CAR(cddrArgs));
+                    SEXP r = two_matrix_subscripts (x, dim, CAR(subs),
+                                                            CAR(cdr_subs));
                     if (r != R_NilValue)
                         return r;
                 }
@@ -1283,22 +1291,17 @@ static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq)
         }
     }
 
-    WAIT_UNTIL_COMPUTED(CAR(args));
-    PROTECT(args);
-
-    drop = 1;
-    ExtractDropArg(args, &drop);
-    x = CAR(args);
-
     /* This was intended for compatibility with S, */
     /* but in fact S does not do this. */
-    /* FIXME: replace the test by isNull ... ? */
 
-    if (x == R_NilValue) {
-	UNPROTECT(1);
+    if (x == R_NilValue)
 	return x;
-    }
-    subs = CDR(args);
+
+    PROTECT(x);
+    drop = ExtractDropArg(&subs);
+    PROTECT(subs);
+    WAIT_UNTIL_COMPUTED(x);
+
     nsubs = length(subs);
     type = TYPEOF(x);
 
@@ -1385,10 +1388,10 @@ static SEXP do_subset_dflt_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int seq)
             setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
             SET_NAMEDCNT_MAX(ans);
         }
+        UNPROTECT(2);
+        PROTECT(ans);
     }
-    else {
-	PROTECT(ans);
-    }
+
     if (ATTRIB(ans) != R_NilValue) { /* remove probably erroneous attr's */
 	setAttrib(ans, R_TspSymbol, R_NilValue);
 #ifdef _S4_subsettable
@@ -1432,14 +1435,15 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, dims, dimnames, indx, subs, x;
     int i, ndims, nsubs, offset = 0;
-    int drop = 1, pok, exact = -1;
+    int pok, exact = -1;
 
+    (void) ExtractDropArg(&args);  /* a "drop" arg is tolerated, but ignored */
+    exact = ExtractExactArg(&args);
     PROTECT(args);
-    ExtractDropArg(args, &drop);
+
     /* Is partial matching ok?  When the exact arg is NA, a warning is
        issued if partial matching occurs.
      */
-    exact = ExtractExactArg(args);
     if (exact == -1)
 	pok = exact;
     else
