@@ -802,7 +802,6 @@ LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 extern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
 
 /* Special Values */
-LibExtern SEXP	R_VariantResult;    /* Marker for variant result of op */
 LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
