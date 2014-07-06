@@ -1928,13 +1928,6 @@ static SEXP do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(x = allocMatrix(REALSXP, n, nc));
 
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(vars)){
-       memtrace_report(vars, x);
-       SET_RTRACE(x, 1);
-    }
-#endif
-
     /* a) Begin with a column of 1s for the intercept. */
 
     if ((jnext = jstart = intrcept) != 0) {
@@ -1952,12 +1945,6 @@ static SEXP do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (INTEGER(columns)[i] == 0)
 		continue;
 	    var_i = VECTOR_ELT(variable, i);
-#ifdef R_MEMORY_PROFILING
-	    if (RTRACE(var_i)){
-	       memtrace_report(var_i, x);
-	       SET_RTRACE(x, 1);
-	    }
-#endif
 	    fik = INTEGER(factors)[i + k * nVar];
 	    if (fik) {
 		switch(fik) {

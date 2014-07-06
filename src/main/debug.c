@@ -116,141 +116,35 @@ Rboolean attribute_hidden
 R_current_trace_state() { return GET_TRACE_STATE; }
 
 
-/* memory tracing */
-/* report when a traced object is duplicated */
+/* memory tracing - no longer exists. */
 
 static SEXP do_tracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-#ifdef R_MEMORY_PROFILING
-    SEXP object;
-    char buffer[20];
+    /* Do nothing - this function is no longer implemented (but is kept
+       for compatibility. */
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    object = CAR(args);
-    if (TYPEOF(object) == CLOSXP ||
-	TYPEOF(object) == BUILTINSXP ||
-	TYPEOF(object) == SPECIALSXP)
-	errorcall(call, _("argument must not be a function"));
-
-    if(object == R_NilValue)
-	errorcall(call, _("cannot trace NULL"));
-
-    if(TYPEOF(object) == ENVSXP || TYPEOF(object) == PROMSXP)
-	errorcall(call,
-		  _("'tracemem' is not useful for promise and environment objects"));
-    if(TYPEOF(object) == EXTPTRSXP || TYPEOF(object) == WEAKREFSXP)
-	errorcall(call,
-		  _("'tracemem' is not useful for weak reference or external pointer objects"));
-
-    SET_RTRACE(object, 1);
-    snprintf(buffer, 20, "<%p>", (void *) object);
-    return mkString(buffer);
-#else
-    errorcall(call, _("R was not compiled with support for memory profiling"));
     return R_NilValue;
-#endif
 }
 
 
 static SEXP do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-#ifdef R_MEMORY_PROFILING
-    SEXP object;
+    /* Do nothing - this function is no longer implemented (but is kept
+       for compatibility. */
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    object=CAR(args);
-    if (TYPEOF(object) == CLOSXP ||
-	TYPEOF(object) == BUILTINSXP ||
-	TYPEOF(object) == SPECIALSXP)
-	errorcall(call, _("argument must not be a function"));
-
-    if (RTRACE(object))
-	SET_RTRACE(object, 0);
-#else
-    errorcall(call, _("R was not compiled with support for memory profiling"));
-#endif
     return R_NilValue;
 }
 
-
-#ifndef R_MEMORY_PROFILING
 void attribute_hidden memtrace_report(void* old, void *_new) {
     return;
 }
-#else
-static void memtrace_stack_dump(void)
-{
-    RCNTXT *cptr;
-
-    for (cptr = R_GlobalContext; cptr; cptr = cptr->nextcontext) {
-	if ((cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN))
-	    && TYPEOF(cptr->call) == LANGSXP) {
-	    SEXP fun = CAR(cptr->call);
-	    Rprintf("%s ",
-		    TYPEOF(fun) == SYMSXP ? translateChar(PRINTNAME(fun)) :
-		    "<Anonymous>");
-	}
-    }
-    Rprintf("\n");
-}
-
-void attribute_hidden memtrace_report(void * old, void * _new)
-{
-    if (!R_current_trace_state()) return;
-    Rprintf("tracemem[%p -> %p]: ", (void *) old, _new);
-    memtrace_stack_dump();
-}
-
-#endif /* R_MEMORY_PROFILING */
 
 static SEXP do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-#ifdef R_MEMORY_PROFILING
-    SEXP object, previous, ans, argList;
-    char buffer[20];
-    static char *ap[2] = { "x", "previous" };
+    /* Do nothing - this function is no longer implemented (but is kept
+       for compatibility. */
 
-    PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
-    if(CAR(argList) == R_MissingArg) SETCAR(argList, R_NilValue);
-    if(CADR(argList) == R_MissingArg) SETCAR(CDR(argList), R_NilValue);
-
-    object = CAR(ap);
-    if (TYPEOF(object) == CLOSXP ||
-	TYPEOF(object) == BUILTINSXP ||
-	TYPEOF(object) == SPECIALSXP)
-	errorcall(call, _("argument must not be a function"));
-
-    previous = CADR(ap);
-    if(!isNull(previous) && !isString(previous))
-	    errorcall(call, _("invalid '%s' argument"), "previous");
-
-    if (RTRACE(object)) {
-	snprintf(buffer, 20, "<%p>", (void *) object);
-	ans = mkString(buffer);
-    } else {
-	R_Visible = 0;
-	ans = R_NilValue;
-    }
-
-    if (previous != R_NilValue){
-	SET_RTRACE(object, 1);
-	if (R_current_trace_state()) {
-	    /* FIXME: previous will have <0x....> whereas other values are
-	       without the < > */
-	    Rprintf("tracemem[%s -> %p]: ",
-		    translateChar(STRING_ELT(previous, 0)), (void *) object);
-	    memtrace_stack_dump();
-	}
-    }
-    UNPROTECT(1);
-    return ans;
-#else
     return R_NilValue;
-#endif
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */

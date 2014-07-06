@@ -2084,11 +2084,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 
     SET_STRING_ELT(ansnames, i, mkChar("profmem"));
-#ifdef R_MEMORY_PROFILING
-    LOGICAL(ans)[i++] = TRUE;
-#else
-    LOGICAL(ans)[i++] = FALSE;
-#endif
+    LOGICAL(ans)[i++] = FALSE;  /* always - memory profiling no longer exists */
 
     SET_STRING_ELT(ansnames, i, mkChar("cairo"));
 #ifdef HAVE_WORKING_CAIRO

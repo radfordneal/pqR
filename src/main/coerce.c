@@ -717,12 +717,6 @@ static SEXP coerceToExpression(SEXP v)
     if (isVectorAtomic(v)) {
 	n = LENGTH(v);
 	PROTECT(ans = allocVector(EXPRSXP, n));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
 	switch (TYPEOF(v)) {
 	case LGLSXP:
 	    for (i = 0; i < n; i++)
@@ -766,12 +760,6 @@ static SEXP coerceToVectorList(SEXP v)
     int i, n;
     n = length(v);
     PROTECT(ans = allocVector(VECSXP, n));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
     switch (TYPEOF(v)) {
     case LGLSXP:
 	for (i = 0; i < n; i++)
@@ -972,12 +960,6 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     if (type == STRSXP) {
 	n = length(v);
 	PROTECT(rval = allocVector(type, n));
-#ifdef R_MEMORY_PROFILING
-	if (RTRACE(v)){
-	   memtrace_report(v, rval);
-	   SET_RTRACE(rval,1);
-	}
-#endif
 	for (i = 0; i < n;  i++) {
 	    if (isString(VECTOR_ELT(v, i)) && length(VECTOR_ELT(v, i)) == 1)
 		SET_STRING_ELT(rval, i, STRING_ELT(VECTOR_ELT(v, i), 0));
@@ -1068,12 +1050,6 @@ static SEXP coerce_numeric_or_string (SEXP v, int type)
     SEXP ans;
 
     PROTECT(ans = allocVector(type,n));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(v)){
-       memtrace_report(v,ans);
-       SET_RTRACE(ans,1);
-    }
-#endif
     DUPLICATE_ATTRIB(ans, v);
 
     warn = copy_elements_coerced (ans, 0, 1, v, 0, 1, n);

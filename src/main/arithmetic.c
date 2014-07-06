@@ -1072,21 +1072,6 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
     /* Do the actual operation. */
 
     if (n!=0) {
-
-#ifdef R_MEMORY_PROFILING
-        if (RTRACE(x) || RTRACE(y)) {
-           if (RTRACE(x) && RTRACE(y)) {
-              if (nx > ny)
-                  memtrace_report(x, ans);
-              else
-                  memtrace_report(y, ans);
-           } else if (RTRACE(x))
-               memtrace_report(x, ans);
-           else /* only y */
-               memtrace_report(y, ans);
-           SET_RTRACE(ans, 1);
-        }
-#endif
         integer_overflow = 0;
 
         threshold = T_arithmetic;
@@ -1427,12 +1412,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     else { /* non-variant result, not scalar */
 
         PROTECT(sy = NAMEDCNT_EQ_0(sa) ? sa : allocVector(REALSXP, n));
-#ifdef R_MEMORY_PROFILING
-        if (RTRACE(sa)){
-           memtrace_report(sa, sy);
-           SET_RTRACE(sy, 1);
-        }
-#endif
+
         DO_NOW_OR_LATER1 (variant,
                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
                        HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
@@ -1613,21 +1593,6 @@ static void setup_Math2
     PROTECT(*sa = coerceVector (*sa, REALSXP));
     PROTECT(*sb = coerceVector (*sb, REALSXP));
     PROTECT(*sy = allocVector (REALSXP, na < nb ? nb : na));
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(*sa) || RTRACE(*sb)) {
-       if (RTRACE(*sa) && RTRACE(*sb)){
-	  if (na > nb)
-	      memtrace_report(*sa, *sy);
-	  else
-	      memtrace_report(*sb, *sy);
-       } else if (RTRACE(*sa))
-	   memtrace_report(*sa, *sy);
-       else /* only s2 */
-	   memtrace_report(*sb, *sy);
-       SET_RTRACE(*sy, 1);
-    }
-#endif
 }
 
 #define DO_MATH2(y,a,b,n,na,nb,fncall) do { \
@@ -1979,18 +1944,6 @@ static void setup_Math3
     if (n < nb) n = nb;
     if (n < nc) n = nc;
     PROTECT(*sy = allocVector (REALSXP, n));
-
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(*sa) || RTRACE(*sb) || RTRACE(*sc)) {
-       if (RTRACE(*sa))
-	  memtrace_report(*sa, *sy);
-       else if (RTRACE(*sb))
-	  memtrace_report(*sb, *sy);
-       else if (RTRACE(*sc))
-	  memtrace_report(*sc, *sy);
-       SET_RTRACE(*sy, 1);
-    }
-#endif
 }
 
 #define DO_MATH3(y,a,b,c,n,na,nb,nc,fncall) do { \
