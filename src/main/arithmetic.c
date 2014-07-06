@@ -1388,7 +1388,35 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     /* Note: need to protect sy below because some ops may produce a warning,
        and attributes may be duplicated. */
 
-    if (VARIANT_KIND(variant) == VARIANT_SUM) {
+    if (LENGTH(sa) == 1) { /* scalar operation */
+
+        WAIT_UNTIL_COMPUTED(sa);
+
+        double opr = REAL(sa)[0];
+        double res;
+
+        if (ISNAN(opr))
+            res = opr;
+        else {
+            res = R_math1_func_table[opcode] (opr);
+            if (R_math1_err_table[opcode] && ISNAN(res))
+                R_naflag = 1;
+        }
+
+        if (NAMEDCNT_EQ_0(sa)) {
+            PROTECT(sy = sa);
+            REAL(sy)[0] = res;
+        }
+        else if (ATTRIB(sa) == R_NilValue) {
+            PROTECT(sy = ScalarRealShared(res));
+        }
+        else {
+            PROTECT(sy = ScalarReal(res));
+            DUPLICATE_ATTRIB(sy, sa);
+        }
+    }
+
+    else if (VARIANT_KIND(variant) == VARIANT_SUM) { /* just need the sum */
 
         PROTECT(sy = allocVector(REALSXP, 1));
         DO_NOW_OR_LATER1 (variant, 
@@ -1397,7 +1425,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
         SET_ATTRIB (sy, R_VariantResult);
     }
 
-    else { /* non-variant result */
+    else { /* non-variant result, not scalar */
 
         PROTECT(sy = NAMEDCNT_EQ_0(sa) ? sa : allocVector(REALSXP, n));
 #ifdef R_MEMORY_PROFILING
