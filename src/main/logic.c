@@ -480,8 +480,7 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
 
     PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = duplicate(call));
-    SETCDR(call2, args);
+    PROTECT(call2 = CONS(CAR(call),args));
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
 	UNPROTECT(2);
