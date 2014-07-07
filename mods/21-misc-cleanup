@@ -16,3 +16,6 @@ data in evalv, and slightly sped up final setting.  Did same for .Internal
 
 Changed creation of assignment symbols in applydefine to use predefined
 symbols rather than look at printname.
+
+Fixed performance problem in logic.c and summary.c from PR 15798
+(differently from fix by R Core).  Wider implications addressed elsewhere.
