@@ -167,6 +167,28 @@ static SEXP getActiveValue(SEXP fun)
     return expr;
 }
 
+/* Macro to produce an unwrapped loop to search for a symbol in a chain.
+   This code takes advantage of the CAR, CDR and TAG of R_NilValue being
+   R_NilValue to avoid a check for R_NilValue in unwrapped part.  The
+   arguments are the pointer to the start of the chain (which is modified
+   to point to the binding cell found), the symbol to search for, and
+   the statement to do if the symbol is found, which must have the effect
+   of exitting the loop (ie, be a "break", "return", or "goto" statement).
+   If the symbol is not found, execution continues after this macro, with
+   the chain pointer being R_NilValue. */
+   
+#define SEARCH_LOOP(chain,symbol,statement) \
+    do { \
+        if (TAG(chain) == symbol) statement; \
+        chain = CDR(chain); \
+        if (TAG(chain) == symbol) statement; \
+        chain = CDR(chain); \
+        if (TAG(chain) == symbol) statement; \
+        chain = CDR(chain); \
+        if (TAG(chain) == symbol) statement; \
+        chain = CDR(chain); \
+    } while (chain != R_NilValue)
+
 
 /* Function to correctly set NO_SPEC_SYM flag for an (unhashed) environment. */
 
@@ -179,13 +201,23 @@ void setNoSpecSymFlag (SEXP env)
         return;
     }
 
-    for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame))
-        if (SPEC_SYM(TAG(frame))) {
-            SET_NO_SPEC_SYM (env, 0); 
-            return;
-        }
+    /* Unwrapped loop, which relies on CAR, CDR, and TAG of R_NilValue 
+       being R_NilValue. */
+
+    frame = FRAME(env);
+    do {
+        if (SPEC_SYM(TAG(frame))) goto special;
+        frame = CDR(frame);
+        if (SPEC_SYM(TAG(frame))) goto special;
+        frame = CDR(frame);
+    } while (frame != R_NilValue);
 
     SET_NO_SPEC_SYM (env, 1);
+    return;
+
+  special:
+    SET_NO_SPEC_SYM (env, 0);
+    return;
 }
 
 /*----------------------------------------------------------------------
@@ -247,25 +279,26 @@ int attribute_hidden R_Newhashpjw(const char *s)
 static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
                       Rboolean frame_locked)
 {
-    SEXP chain, loc, new_chain;
+    SEXP chain = VECTOR_ELT(table, hashcode);
 
-    /* Grab the chain from the hashtable */
-    chain = VECTOR_ELT(table, hashcode);
+    SEXP loc, new_chain;
 
-    /* Search for the value in the chain */
-    for (loc = chain; loc != R_NilValue; loc = CDR(loc))
-        if (TAG(loc) == symbol) {
-            SET_BINDING_VALUE(loc, value);
-            SET_MISSING(loc, 0);        /* Over-ride for new value */
-            return;
-        }
+    loc = chain;
+    SEARCH_LOOP (loc, symbol, goto found);
+
     if (frame_locked)
         error(_("cannot add bindings to a locked environment"));
-    if (chain == R_NilValue)
-        SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
+
     /* Add the value into the chain */
+
+    if (chain == R_NilValue) SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
     new_chain = cons_with_tag (value, chain, symbol);
     SET_VECTOR_ELT (table, hashcode, new_chain);
+    return;
+
+  found:
+    SET_BINDING_VALUE(loc, value);
+    SET_MISSING(loc, 0);        /* Over-ride for new value */
     return;
 }
 
@@ -283,28 +316,26 @@ static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
 
 static SEXP R_HashGet(int hashcode, SEXP symbol, SEXP table)
 {
-    SEXP chain;
+    SEXP chain = VECTOR_ELT(table, hashcode);
 
-    /* Grab the chain from the hashtable */
-    chain = VECTOR_ELT(table, hashcode);
-    /* Retrieve the value from the chain */
-    for (; chain != R_NilValue ; chain = CDR(chain))
-	if (TAG(chain) == symbol) return BINDING_VALUE(chain);
-    /* If not found */
+    SEARCH_LOOP (chain, symbol, goto found);
+
     return R_UnboundValue;
+
+found:
+    return BINDING_VALUE(chain);
 }
 
 static Rboolean R_HashExists(int hashcode, SEXP symbol, SEXP table)
 {
-    SEXP chain;
+    SEXP chain = VECTOR_ELT(table, hashcode);
 
-    /* Grab the chain from the hashtable */
-    chain = VECTOR_ELT(table, hashcode);
-    /* Find the binding in the chain */
-    for (; chain != R_NilValue ; chain = CDR(chain))
-	if (TAG(chain) == symbol) return TRUE;
-    /* If not found */
+    SEARCH_LOOP (chain, symbol, goto found);
+
     return FALSE;
+
+found:
+    return TRUE;
 }
 
 
@@ -321,13 +352,11 @@ static Rboolean R_HashExists(int hashcode, SEXP symbol, SEXP table)
 
 static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
 {
-    SEXP chain;
+    SEXP chain = VECTOR_ELT(table, hashcode);
 
-    for (chain = VECTOR_ELT(table, hashcode);
-         chain != R_NilValue && TAG(chain) != symbol;
-         chain = CDR(chain)) ;
+    SEARCH_LOOP (chain, symbol, return chain);
 
-    return chain;
+    return R_NilValue;
 }
 
 
@@ -765,8 +794,7 @@ static SEXP R_GetGlobalCache(SEXP symbol)
         return SYMBOL_BINDING_VALUE(symbol);
 #endif
 
-    vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol,
-			R_GlobalCache);
+    vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache);
     switch(TYPEOF(vl)) {
     case SYMSXP:
 	if (vl == R_UnboundValue) /* avoid test?? */
@@ -856,11 +884,9 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     */
 
     else if (HASHTAB(rho) == R_NilValue) {
-	loc = FRAME(rho);
-	while (loc != R_NilValue && TAG(loc) != symbol)
-	    loc = CDR(loc);
+        loc = FRAME(rho);
+        SEARCH_LOOP (loc, symbol, break);
     }
-
     else {
         int hashcode;
 	SEXP c = PRINTNAME(symbol);
@@ -975,18 +1001,17 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 	error(_("argument to '%s' is not an environment"), "findVarInFrame3");
 
     else if (HASHTAB(rho) == R_NilValue) {
+
 	loc = FRAME(rho);
-        for (;;) {
-            if (loc == R_NilValue)
-                return R_UnboundValue;
-            if (TAG(loc) == symbol) {
-                if (option==2)
-                    return R_NilValue;
-                value = BINDING_VALUE(loc);
-                break;
-            }
-            loc = CDR(loc);
-	}
+        SEARCH_LOOP (loc, symbol, goto found);
+
+        return R_UnboundValue;
+
+      found: 
+        if (option==2)
+            return R_NilValue;
+        else
+            value = BINDING_VALUE(loc);
     }
 
     else {
@@ -1332,8 +1357,9 @@ SEXP findFun(SEXP symbol, SEXP rho)
 {
     SEXP vl;
 
-    /* If it's a symbol starting with a special character, skip to the first
+    /* If it's a special symbol, skip to the first
        environment that might contain such a symbol. */
+
     if (SPEC_SYM(symbol)) {
         while (rho != R_EmptyEnv && NO_SPEC_SYM(rho))
             rho = ENCLOS(rho);
@@ -1449,21 +1475,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
     }
 
-    while (loc != R_NilValue) {
-        if (TAG(loc) == symbol) { /* variable already exists */
-            if ((incdec&1) && !IS_ACTIVE_BINDING(loc))
-                DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
-            SET_BINDING_VALUE(loc,value);
-            if (incdec&2) 
-                INC_NAMEDCNT(value);
-            SET_MISSING(loc,0);
-            if (rho == R_GlobalEnv) 
-                R_DirtyImage = 1;
-            UNPROTECT(3);
-            return TRUE;
-        }
-        loc = CDR(loc);
-    }
+    SEARCH_LOOP (loc, symbol, goto found);
 
     if (create) { /* try to create new variable */
 
@@ -1502,6 +1514,18 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     UNPROTECT(3);
     return FALSE;
+
+  found:
+    if ((incdec&1) && !IS_ACTIVE_BINDING(loc))
+        DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
+    SET_BINDING_VALUE(loc,value);
+    if (incdec&2) 
+        INC_NAMEDCNT(value);
+    SET_MISSING(loc,0);
+    if (rho == R_GlobalEnv) 
+        R_DirtyImage = 1;
+    UNPROTECT(3);
+    return TRUE;
 }
 
 
