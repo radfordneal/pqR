@@ -262,8 +262,8 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
-		   Rboolean replace, SEXP rho)
+static SEXP rapply_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
+		   Rboolean replace, int no_dots, SEXP rho)
 {
     SEXP ans, names, klass, R_fcall;
     int i, j, n;
@@ -277,8 +277,8 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 	/* or copy attributes if replace = TRUE? */
 	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
 	for(i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, do_one(VECTOR_ELT(X, i), FUN, classes,
-					  deflt, replace, rho));
+	    SET_VECTOR_ELT(ans, i, rapply_one(VECTOR_ELT(X, i), FUN, classes,
+					  deflt, replace, no_dots, rho));
 	UNPROTECT(1);
 	return ans;
     }
@@ -293,8 +293,10 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 	UNPROTECT(1);
     }
     if(matched) {
-	/* PROTECT(R_fcall = lang2(FUN, X)); */
-	PROTECT(R_fcall = lang3(FUN, X, R_DotsSymbol));
+	if (no_dots)
+            PROTECT(R_fcall = lang2(FUN, X));
+        else
+	    PROTECT(R_fcall = lang3(FUN, X, R_DotsSymbol));
 	ans = eval(R_fcall, rho);
 	UNPROTECT(1);
         return NAMEDCNT_EQ_0(ans) ? ans : duplicate(ans);
@@ -305,8 +307,8 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 
 static SEXP do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP X, FUN, classes, deflt, how, ans, names;
-    int i, n;
+    SEXP X, FUN, classes, deflt, how, ans, names, dotsv;
+    int i, n, no_dots;
     Rboolean replace;
 
     checkArity(op, args);
@@ -319,14 +321,17 @@ static SEXP do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     how = CAR(args);
     if(!isString(how)) error(_("invalid '%s' argument"), "how");
     replace = strcmp(CHAR(STRING_ELT(how, 0)), "replace") == 0; /* ASCII */
+
+    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
     n = length(X);
     PROTECT(ans = allocVector(VECSXP, n));
     names = getAttrib(X, R_NamesSymbol);
     /* or copy attributes if replace = TRUE? */
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
     for(i = 0; i < n; i++)
-	SET_VECTOR_ELT(ans, i, do_one(VECTOR_ELT(X, i), FUN, classes, deflt,
-				      replace, rho));
+	SET_VECTOR_ELT(ans, i, rapply_one(VECTOR_ELT(X, i), FUN, classes, deflt,
+				          replace, no_dots,rho));
     UNPROTECT(1);
     return ans;
 }
