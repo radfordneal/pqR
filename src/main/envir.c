@@ -2117,53 +2117,49 @@ R_isMissing(SEXP symbol, SEXP rho)
 /* this is primitive and a SPECIALSXP */
 static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    int ddv=0;
-    SEXP rval, t, sym, s;
+    SEXP t, sym, s;
+    int ddv = 0;
 
     checkArity(op, args);
     check1arg_x (args, call);
-    s = sym = CAR(args);
-    if( isString(sym) && length(sym)==1 )
-	s = sym = install(translateChar(STRING_ELT(CAR(args), 0)));
+
+    sym = CAR(args);
+    if (isString(sym) && length(sym)==1)
+	sym = install(translateChar(STRING_ELT(CAR(args), 0)));
     if (!isSymbol(sym))
 	errorcall(call, _("invalid use of 'missing'"));
 
     if (DDVAL(sym)) {
 	ddv = ddVal(sym);
-	sym = R_DotsSymbol;
+	s = R_DotsSymbol;
     }
-    rval = allocVector(LGLSXP,1);
+    else
+        s = sym;
 
-    t = findVarLocInFrame(rho, sym, NULL);
-    if (t != R_NilValue) {
-	if (DDVAL(s)) {
-	    if (length(CAR(t)) < ddv  || CAR(t) == R_MissingArg) {
-		LOGICAL(rval)[0] = 1;
-		return rval;
-	    }
-	    else
-		t = nthcdr(CAR(t), ddv-1);
-	}
-	if (MISSING(t) || CAR(t) == R_MissingArg) {
-	    LOGICAL(rval)[0] = 1;
-	    return rval;
-	}
-	else goto havebinding;
-    }
-    else  /* it wasn't an argument to the function */
+    t = findVarLocInFrame (rho, s, NULL);
+
+    if (t == R_NilValue)  /* no error for local variables, despite msg below */
 	errorcall(call, _("'missing' can only be used for arguments"));
 
- havebinding:
-
-    t = CAR(t);
-    if (TYPEOF(t) != PROMSXP) {
-	LOGICAL(rval)[0] = 0;
-	return rval;
+    if (DDVAL(sym)) {
+        if (CAR(t) == R_MissingArg || length(CAR(t)) < ddv) 
+            goto true;
+        else
+            t = nthcdr(CAR(t), ddv-1);
     }
 
-    if (!isSymbol(PREXPR(t))) LOGICAL(rval)[0] = 0;
-    else LOGICAL(rval)[0] = R_isMissing(PREXPR(t), PRENV(t));
-    return rval;
+    if (MISSING(t) || CAR(t) == R_MissingArg)
+        goto true;
+
+    t = CAR(t);
+    if (TYPEOF(t)==PROMSXP && isSymbol(PREXPR(t)) 
+          && R_isMissing(PREXPR(t),PRENV(t)))
+        goto true;
+
+    return ScalarLogical(FALSE);
+
+  true:
+    return ScalarLogical(TRUE);
 }
 
 /*----------------------------------------------------------------------
