@@ -2717,9 +2717,9 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind;
+    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind, dotsv;
     int i, k, k2;
-    int /* boolean */ all, useNms;
+    int /* boolean */ all, useNms, no_dots;
 
     checkArity(op, args);
 
@@ -2762,9 +2762,12 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ind = allocVector(INTSXP, 1));
     /* tmp :=  `[`(<elist>, i) */
     PROTECT(tmp = LCONS(R_Bracket2Symbol,
-			LCONS(tmp2, LCONS(ind, R_NilValue))));
-    /* fcall :=  <FUN>( tmp, ... ) */
-    PROTECT(R_fcall = LCONS(FUN, LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
+			CONS(tmp2, LCONS(ind, R_NilValue))));
+    /* fcall :=  <FUN>( tmp, ... ), with ... omitted if nothing */
+    if (no_dots)
+        PROTECT(R_fcall = LCONS(FUN, CONS(tmp, R_NilValue)));
+    else
+        PROTECT(R_fcall = LCONS(FUN, CONS(tmp, CONS(R_DotsSymbol,R_NilValue))));
 
     for(i = 0; i < k2; i++) {
 	INTEGER(ind)[0] = i+1;

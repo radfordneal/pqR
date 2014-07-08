@@ -1,5 +1,5 @@
 Mods to avoid passing ... to functions called from the apply family
-when ... consists of nothing.
+(apply, lapply, vapply, rapply, and eapply) when ... consists of nothing.
 
 This reduces overhead, and sometimes will allow fast handling of
 primitives in pqR (eg, sum).
