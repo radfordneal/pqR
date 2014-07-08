@@ -2180,10 +2180,10 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
           && R_isMissing(PREXPR(t),PRENV(t)))
         goto true;
 
-    return ScalarLogical(FALSE);
+    return ScalarLogicalShared(FALSE);
 
   true:
-    return ScalarLogical(TRUE);
+    return ScalarLogicalShared(TRUE);
 }
 
 /*----------------------------------------------------------------------
