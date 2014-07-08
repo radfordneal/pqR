@@ -1,0 +1,4 @@
+Speed up variable lookup by unrolling loop that looks down the chain
+of bindings.  
+
+Speed up setting special symbol flag similarly.
