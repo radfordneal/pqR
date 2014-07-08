@@ -613,7 +613,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #else /* not USE_RINTERNALS */
 
-typedef struct SEXPREC *SEXP;
+/* typedef struct SEXPREC *SEXP; */  /* now defined outside USE_RINTERNALS */
 
 #define CHAR(x)		R_CHAR(x)
 const char *(R_CHAR)(SEXP x);
