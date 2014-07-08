@@ -37,14 +37,16 @@
    called from a closure wrapper, so X and FUN are promises. */
 static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP R_fcall, ans, names, X, XX, FUN;
-    int i, n;
+    SEXP R_fcall, ans, names, X, XX, FUN, dotsv;
+    int i, n, no_dots;
     PROTECT_INDEX px;
 
     checkArity(op, args);
     PROTECT_WITH_INDEX(X = CAR(args), &px);
     PROTECT(XX = eval(CAR(args), rho));
     FUN = CADR(args);  /* must be unevaluated for use in e.g. bquote */
+    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
     n = length(XX);
     if (n == NA_INTEGER) error(_("invalid length"));
 
@@ -68,12 +70,16 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(ind = allocVector(INTSXP, 1));
 	if(isVectorAtomic(XX))
 	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-				LCONS(XX, LCONS(ind, R_NilValue))));
+				CONS(XX, CONS(ind, R_NilValue))));
 	else
 	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-				LCONS(X, LCONS(ind, R_NilValue))));
-	PROTECT(R_fcall = LCONS(FUN,
-				LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
+				CONS(X, CONS(ind, R_NilValue))));
+
+        if (no_dots)
+	    PROTECT(R_fcall = LCONS (FUN, CONS (tmp, R_NilValue)));
+        else 
+	    PROTECT(R_fcall = 
+	              LCONS (FUN, CONS (tmp, CONS(R_DotsSymbol, R_NilValue))));
 
 	for(i = 0; i < n; i++) {
 	    INTEGER(ind)[0] = i + 1;
