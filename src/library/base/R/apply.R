@@ -79,15 +79,27 @@ apply <- function(X, MARGIN, FUN, ...)
               if (s.call==1) c(dn.call, list(NULL)) else c(list(NULL), dn.call)
 
         if (s.ans == 1)
-            for (i in 1L:d2) {
-                tmp <- FUN (X[i,], ...)
-                if (!is.null(tmp)) ans[[i]] <- tmp
-            }
+            if (missing(...))
+                for (i in 1L:d2) {
+                    tmp <- FUN (X[i,])
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
+            else
+                for (i in 1L:d2) {
+                    tmp <- FUN (X[i,], ...)
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
         else
-            for (i in 1L:d2) {
-                tmp <- FUN (X[,i], ...)
-                if (!is.null(tmp)) ans[[i]] <- tmp
-            }
+            if (missing(...))
+                for (i in 1L:d2) {
+                    tmp <- FUN (X[,i])
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
+            else
+                for (i in 1L:d2) {
+                    tmp <- FUN (X[,i], ...)
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
     }
 
     else {
@@ -100,16 +112,28 @@ apply <- function(X, MARGIN, FUN, ...)
         if(length(d.call) < 2L) {# vector
             if (length(dn.call)) 
                 dimnames(X) <- c(dn.call, list(NULL))
-            for (i in 1L:d2) {
-                tmp <- FUN(X[,i], ...)
-                if (!is.null(tmp)) ans[[i]] <- tmp
-            }
+            if (missing(...))
+                for (i in 1L:d2) {
+                    tmp <- FUN(X[,i])
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
+            else
+                for (i in 1L:d2) {
+                    tmp <- FUN(X[,i], ...)
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
         } 
         else
-           for (i in 1L:d2) {
-               tmp <- FUN(array(X[,i], d.call, dn.call), ...)
-               if (!is.null(tmp)) ans[[i]] <- tmp
-            }
+            if (missing(...))
+                for (i in 1L:d2) {
+                    tmp <- FUN(array(X[,i], d.call, dn.call))
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
+            else
+                for (i in 1L:d2) {
+                    tmp <- FUN(array(X[,i], d.call, dn.call), ...)
+                    if (!is.null(tmp)) ans[[i]] <- tmp
+                }
     }
 
     X <- NULL

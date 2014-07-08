@@ -1,0 +1,8 @@
+Mods to avoid passing ... to functions called from the apply family
+when ... consists of nothing.
+
+This reduces overhead, and sometimes will allow fast handling of
+primitives.
+
+Note that "apply" is in R, for which this may not help much, while
+the others are in C.  
