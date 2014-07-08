@@ -45,6 +45,7 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT_WITH_INDEX(X = CAR(args), &px);
     PROTECT(XX = eval(CAR(args), rho));
     FUN = CADR(args);  /* must be unevaluated for use in e.g. bquote */
+
     dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
     no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
     n = length(XX);
@@ -60,7 +61,7 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     */
     {
 	SEXP ind, tmp;
-	/* Build call: FUN(XX[[<ind>]], ...) */
+	/* Build call: FUN(XX[[<ind>]], ...), with ... omitted if not there. */
 
 	/* Notice that it is OK to have one arg to LCONS do memory
 	   allocation and not PROTECT the result (LCONS does memory
@@ -97,8 +98,8 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP R_fcall, ans, X, XX, FUN, value, dim_v;
-    int i, n, commonLen, useNames;
+    SEXP R_fcall, ans, X, XX, FUN, value, dim_v, dotsv;
+    int i, n, commonLen, useNames, no_dots;
     Rboolean array_value;
     SEXPTYPE commonType;
     PROTECT_INDEX index;
@@ -116,13 +117,15 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     useNames = asLogical(eval(CADDDR(args), rho));
     if (useNames == NA_LOGICAL) error(_("invalid USE.NAMES value"));
 
+    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
     n = length(XX);
     if (n == NA_INTEGER) error(_("invalid length"));
 
     commonLen = length(value);
     commonType = TYPEOF(value);
     dim_v = getAttrib(value, R_DimSymbol);
-    array_value = (TYPEOF(dim_v) == INTSXP && LENGTH(dim_v) >= 1) ? TRUE : FALSE;
+    array_value = TYPEOF(dim_v) == INTSXP && LENGTH(dim_v) >= 1;
     PROTECT(ans = allocVector(commonType, n*commonLen));
     if (useNames) {
     	PROTECT(names = getAttrib(XX, R_NamesSymbol));
@@ -130,13 +133,12 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     	    UNPROTECT(1);
     	    PROTECT(names = XX);
     	}
-    	PROTECT_WITH_INDEX(rowNames = getAttrib(value,
-						array_value ? R_DimNamesSymbol
-						: R_NamesSymbol),
-			   &index);
+    	PROTECT_WITH_INDEX(rowNames = 
+          getAttrib(value, array_value ? R_DimNamesSymbol : R_NamesSymbol), 
+          &index);
     }
 
-    /* Build call: FUN(XX[[<ind>]], ...)
+    /* Build call: FUN(XX[[<ind>]], ...), with ... omitted if not there.
 
        The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
@@ -151,12 +153,16 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ind = allocVector(INTSXP, 1));
     if(isVectorAtomic(XX))
         PROTECT(tmp = LCONS(R_Bracket2Symbol,
-                            LCONS(XX, LCONS(ind, R_NilValue))));
+                            CONS(XX, CONS(ind, R_NilValue))));
     else
         PROTECT(tmp = LCONS(R_Bracket2Symbol,
-                            LCONS(X, LCONS(ind, R_NilValue))));
-    PROTECT(R_fcall = LCONS(FUN,
-                            LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
+                            CONS(X, CONS(ind, R_NilValue))));
+
+    if (no_dots)
+        PROTECT(R_fcall = LCONS(FUN, CONS(tmp, R_NilValue)));
+    else
+        PROTECT(R_fcall = 
+                  LCONS(FUN, CONS(tmp, CONS(R_DotsSymbol, R_NilValue))));
 
     for(i = 0; i < n; i++) {
         SEXPTYPE tmpType;
