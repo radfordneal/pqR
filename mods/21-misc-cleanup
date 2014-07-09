@@ -19,3 +19,5 @@ symbols rather than look at printname.
 
 Fixed performance problem in logic.c and summary.c from PR 15798
 (differently from fix by R Core).  Wider implications addressed elsewhere.
+
+Now use Seql for exact comparison in get1index.
