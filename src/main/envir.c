@@ -167,9 +167,9 @@ static SEXP getActiveValue(SEXP fun)
     return expr;
 }
 
-/* Macro to produce an unwrapped loop to search for a symbol in a chain.
+/* Macro to produce an unrolled loop to search for a symbol in a chain.
    This code takes advantage of the CAR, CDR and TAG of R_NilValue being
-   R_NilValue to avoid a check for R_NilValue in unwrapped part.  The
+   R_NilValue to avoid a check for R_NilValue in unrolled part.  The
    arguments are the pointer to the start of the chain (which is modified
    to point to the binding cell found), the symbol to search for, and
    the statement to do if the symbol is found, which must have the effect
@@ -201,8 +201,8 @@ void setNoSpecSymFlag (SEXP env)
         return;
     }
 
-    /* Unwrapped loop, which relies on CAR, CDR, and TAG of R_NilValue 
-       being R_NilValue. */
+    /* Unrolled loop, which relies on CAR, CDR, and TAG of R_NilValue 
+       being R_NilValue.  Also relies on SPEC_SYM(R_NilValue) being 0. */
 
     frame = FRAME(env);
     do {
