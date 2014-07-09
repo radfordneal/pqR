@@ -655,11 +655,13 @@ static int HashGet(SEXP item, SEXP ht)
 #define IS_OBJECT_BIT_MASK (1 << 8)
 #define HAS_ATTR_BIT_MASK (1 << 9)
 #define HAS_TAG_BIT_MASK (1 << 10)
+#define IS_CONSTANT_MASK (1 << 11)
 #define ENCODE_LEVELS(v) ((v) << 12)
 #define DECODE_LEVELS(v) ((v) >> 12)
 #define DECODE_TYPE(v) ((v) & 255)
 
-static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag)
+static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag,
+                     int isconstant)
 {
     /* We don't write out bit 5 as from R 2.8.0.
        It is used to indicate if an object is in CHARSXP cache
@@ -674,17 +676,20 @@ static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag)
     if (isobj) val |= IS_OBJECT_BIT_MASK;
     if (hasattr) val |= HAS_ATTR_BIT_MASK;
     if (hastag) val |= HAS_TAG_BIT_MASK;
+    if (isconstant) val |= IS_CONSTANT_MASK;
     return val;
 }
 
 static void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
-			int *pisobj, int *phasattr, int *phastag)
+			int *pisobj, int *phasattr, int *phastag,
+                        int *pisconstant)
 {
     *ptype = DECODE_TYPE(flags);
     *plevs = DECODE_LEVELS(flags);
     *pisobj = flags & IS_OBJECT_BIT_MASK ? TRUE : FALSE;
     *phasattr = flags & HAS_ATTR_BIT_MASK ? TRUE : FALSE;
     *phastag = flags & HAS_TAG_BIT_MASK ? TRUE : FALSE;
+    *pisconstant = flags & IS_CONSTANT_MASK ? TRUE : FALSE;
 }
 
 
@@ -989,7 +994,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 	hasattr = ATTRIB(s) != R_NilValue;
 #endif
 	flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
-			  hasattr, hastag);
+			  hasattr, hastag, IS_CONSTANT(s));
 	OutInteger(stream, flags);
 	switch (TYPEOF(s)) {
 	case LISTSXP:
@@ -1064,9 +1069,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 	    switch (stream->type) {
 	    case R_pstream_xdr_format:
 	    case R_pstream_binary_format:
-	    {
-		/* need to writelonger vectors in chunks in future */
-		int done, this, len = LENGTH(s);
+	    {	int done, this, len = LENGTH(s);
 		for (done = 0; done < len; done += this) {
 		    this = min2(CHUNK_SIZE, len - done);
 		    stream->OutBytes(stream, RAW(s) + done, this);
@@ -1440,12 +1443,12 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     SEXP s;
     /* len, count will need to be another type to allow longer vectors */
     int len, count;
-    int flags, levs, objf, hasattr, hastag, length;
+    int flags, levs, objf, hasattr, hastag, isconstant, length;
 
     R_assert(TYPEOF(ref_table) == LISTSXP && TYPEOF(CAR(ref_table)) == VECSXP);
 
     flags = InInteger(stream);
-    UnpackFlags(flags, &type, &levs, &objf, &hasattr, &hastag);
+    UnpackFlags(flags, &type, &levs, &objf, &hasattr, &hastag, &isconstant);
 
     switch(type) {
     case NILVALUE_SXP:      return R_NilValue;
@@ -1586,28 +1589,52 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 		Free(cbuf);
 	    }
 	    break;
-	case LGLSXP:
-	case INTSXP:
-	    len = InInteger(stream);
-	    PROTECT(s = allocVector(type, len));
-	    InIntegerVec(stream, s, len);
-	    break;
-	case REALSXP:
-	    len = InInteger(stream);
-	    PROTECT(s = allocVector(type, len));
-	    InRealVec(stream, s, len);
-	    break;
-	case CPLXSXP:
-	    len = InInteger(stream);
-	    PROTECT(s = allocVector(type, len));
-	    InComplexVec(stream, s, len);
-	    break;
-	case STRSXP:
-	    len = InInteger(stream);
-	    PROTECT(s = allocVector(type, len));
-	    for (count = 0; count < len; ++count)
-		SET_STRING_ELT(s, count, ReadItem(ref_table, stream));
-	    break;
+        case LGLSXP:
+            len = InInteger(stream);
+            if (isconstant && len==1)
+                PROTECT(s = ScalarLogicalShared(InInteger(stream)));
+            else {
+                PROTECT(s = allocVector(type, len));
+                InIntegerVec(stream, s, len);
+            }
+            break;
+        case INTSXP:
+            len = InInteger(stream);
+            if (isconstant && len==1)
+                PROTECT(s = ScalarIntegerShared(InInteger(stream)));
+            else {
+                PROTECT(s = allocVector(type, len));
+                InIntegerVec(stream, s, len);
+            }
+            break;
+        case REALSXP:
+            len = InInteger(stream);
+            if (isconstant && len==1)
+                PROTECT(s = ScalarRealShared(InReal(stream)));
+            else {
+                PROTECT(s = allocVector(type, len));
+                InRealVec(stream, s, len);
+            }
+            break;
+        case CPLXSXP:
+            len = InInteger(stream);
+            if (isconstant && len==1)
+                PROTECT(s = ScalarComplexShared(InComplex(stream)));
+            else {
+                PROTECT(s = allocVector(type, len));
+                InComplexVec(stream, s, len);
+            }
+            break;
+        case STRSXP:
+            len = InInteger(stream);
+            if (isconstant && len==1)
+                PROTECT(s = ScalarStringShared(ReadItem(ref_table, stream)));
+            else {
+                PROTECT(s = allocVector(type, len));
+                for (count = 0; count < len; ++count)
+                    SET_STRING_ELT(s, count, ReadItem(ref_table, stream));
+            }
+            break;
 	case VECSXP:
 	case EXPRSXP:
 	    len = InInteger(stream);
@@ -1622,18 +1649,22 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    error(_("this version of R cannot read class references"));
 	case GENERICREFSXP:
 	    error(_("this version of R cannot read generic function references"));
-	case RAWSXP:
-	    len = InInteger(stream);
-	    PROTECT(s = allocVector(type, len));
-	    {
-		/* need to read longer vectors in chunks in future */
-		int done, this;
-		for (done = 0; done < len; done += this) {
-		    this = min2(CHUNK_SIZE, len - done);
-		    stream->InBytes(stream, RAW(s) + done, this);
-		}
-	    }
-	    break;
+        case RAWSXP:
+            len = InInteger(stream);
+            if (isconstant && len==1) {
+                Rbyte b;
+                stream->InBytes (stream, &b, 1);
+                PROTECT(s = ScalarRawShared(b));
+            }
+            else {
+                int done, this;
+                PROTECT(s = allocVector(type, len));
+                for (done = 0; done < len; done += this) {
+                    this = min2(CHUNK_SIZE, len - done);
+                    stream->InBytes(stream, RAW(s) + done, this);
+                }
+            }
+            break;
 	case S4SXP:
 	    PROTECT(s = allocS4Object());
 	    break;
@@ -1642,7 +1673,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    error(_("ReadItem: unknown type %i, perhaps written by later version of R"), type);
 	}
 	if (type != CHARSXP && type != SPECIALSXP && type != BUILTINSXP)
-	    SETLEVELS(s, levs);
+	    if (LEVELS(s)!=levs) SETLEVELS(s, levs); /* don't write to const! */
 	SET_OBJECT(s, objf);
 #ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
 	if (TYPEOF(s) == CHARSXP) {

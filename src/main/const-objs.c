@@ -38,19 +38,32 @@
 #include "Defn.h"		/*-> Arith.h -> math.h */
 
 
-/* Header for a constant. */
+/* This module defines some commonly-used objects as shared constants.
+   They are declared as "const" so that many compilers will put them in
+   a read-only area of memory.  Care must consequently be taken that they
+   are not written to. */
+
+
+/* Object to link to in gengc_next_node of a constant object in order to 
+   identify it as a constant that should be re-created as the same constant 
+   when unserializing. */
+
+const SEXPREC R_unserialize_as_constant;
+
+
+/* Header for a constant.
+
+   Constants must be marked, and be of the oldest generation, so the garbage 
+   collector won't fiddle with them. */
 
 #define CONST_HEADER(typ) \
     .sxpinfo = { .nmcnt = 7, .type = typ, .gcgen = 1, .mark = 1 }, \
-    .attrib = R_NilValue,
+    .attrib = R_NilValue, \
+    .gengc_next_node = (SEXP) &R_unserialize_as_constant,
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
-   R_NilValue.  Declared as "const" so that many compilers will put it in a 
-   read-only area of memory. 
-
-   Must be marked, and be of the oldest generation, so the garbage collector
-   won't fiddle with it. */
+   R_NilValue.  */
 
 const SEXPREC R_NilValue_const = { \
     CONST_HEADER(NILSXP)

@@ -1,1 +1,4 @@
 More definition and use of the scalar constants.
+
+Serialize/unserialize now use a flag to indicate a constant, which
+is restored as the same constant.
