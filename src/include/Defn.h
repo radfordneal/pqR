@@ -142,6 +142,10 @@ extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
+/* Test whether this is a constant object (defined in const-objs.c). */
+extern const SEXPREC R_unserialize_as_constant;
+#define IS_CONSTANT(x) ((x)->gengc_next_node == &R_unserialize_as_constant)
+
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) (((x)->sxpinfo.gp) |= BYTES_MASK)
