@@ -1293,23 +1293,29 @@ static R_INLINE SEXP GetReadRef(SEXP table, int index)
     return VECTOR_ELT(data, i);
 }
 
+static SEXP ExpandRefTable(SEXP table, SEXP value)
+{
+    SEXP data = CAR(table);
+    int len = LENGTH(data);
+    SEXP newdata;
+    int i;
+
+    PROTECT(value);
+    newdata = allocVector(VECSXP, 2*len);
+    for (i = 0; i < len; i++)
+        SET_VECTOR_ELT(newdata, i, VECTOR_ELT(data, i));
+    SETCAR(table, newdata);
+    UNPROTECT(1);
+
+    return newdata;
+}
+
 static R_INLINE void AddReadRef(SEXP table, SEXP value)
 {
     SEXP data = CAR(table);
     int count = TRUELENGTH(data) + 1;
-    if (count >= LENGTH(data)) {
-	int i, len;
-	SEXP newdata;
-
-	PROTECT(value);
-	len = 2 * count;
-	newdata = allocVector(VECSXP, len);
-	for (i = 0; i < LENGTH(data); i++)
-	    SET_VECTOR_ELT(newdata, i, VECTOR_ELT(data, i));
-	SETCAR(table, newdata);
-	data = newdata;
-	UNPROTECT(1);
-    }
+    if (count >= LENGTH(data)) 
+        data = ExpandRefTable(table,value);
     SET_TRUELENGTH(data, count);
     SET_VECTOR_ELT(data, count - 1, value);
 }
