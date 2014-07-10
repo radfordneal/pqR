@@ -423,7 +423,7 @@ static void InitInStringStream(R_instring_stream_t s, R_inpstream_t stream)
     s->stream = stream;
 }
 
-static int GetChar(R_instring_stream_t s)
+static R_INLINE int GetChar(R_instring_stream_t s)
 {
     int c;
     if (s->last != EOF) {
@@ -434,7 +434,7 @@ static int GetChar(R_instring_stream_t s)
     return c;
 }
 
-static void UngetChar(R_instring_stream_t s, int c)
+static R_INLINE void UngetChar(R_instring_stream_t s, int c)
 {
     s->last = c;
 }
@@ -552,7 +552,7 @@ static void InFormat(R_inpstream_t stream)
  *
  * Hashing functions for hashing reference objects during writing.
  * Objects are entered, and the order in which they are encountered is
- * recorded.  GashGet returns this number, a positive integer, if the
+ * recorded.  HashGet returns this number, a positive integer, if the
  * object was seen before, and zero if not.  A fixed hash table size
  * is used; this is not ideal but seems adequate for now.  The hash
  * table representation consists of a (R_NilValue . vector) pair.  The
@@ -579,7 +579,7 @@ static SEXP MakeHashTable(void)
     return val;
 }
 
-static void HashAdd(SEXP obj, SEXP ht)
+static R_INLINE void HashAdd(SEXP obj, SEXP ht)
 {
     int pos = PTRHASH(obj) % HASH_TABLE_SIZE(ht);
     int count = HASH_TABLE_COUNT(ht) + 1;
@@ -591,7 +591,7 @@ static void HashAdd(SEXP obj, SEXP ht)
     SET_TAG(cell, obj);
 }
 
-static int HashGet(SEXP item, SEXP ht)
+static R_INLINE int HashGet(SEXP item, SEXP ht)
 {
     int pos = PTRHASH(item) % HASH_TABLE_SIZE(ht);
     SEXP cell;
@@ -660,8 +660,8 @@ static int HashGet(SEXP item, SEXP ht)
 #define DECODE_LEVELS(v) ((v) >> 12)
 #define DECODE_TYPE(v) ((v) & 255)
 
-static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag,
-                     int isconstant)
+static R_INLINE int PackFlags(int type, int levs, int isobj, int hasattr, 
+                              int hastag, int isconstant)
 {
     /* We don't write out bit 5 as from R 2.8.0.
        It is used to indicate if an object is in CHARSXP cache
@@ -680,9 +680,9 @@ static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag,
     return val;
 }
 
-static void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
-			int *pisobj, int *phasattr, int *phastag,
-                        int *pisconstant)
+static R_INLINE void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
+                                 int *pisobj, int *phasattr, int *phastag,
+                                 int *pisconstant)
 {
     *ptype = DECODE_TYPE(flags);
     *plevs = DECODE_LEVELS(flags);
@@ -697,7 +697,7 @@ static void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
  * Reference/Index Packing and Unpacking
  *
  * Code will contain many references to symbols. As long as there are
- * not too many references, the index ant the REFSXP flag indicating a
+ * not too many references, the index and the REFSXP flag indicating a
  * reference can be packed in a single integeger.  Since the index is
  * 1-based, a 0 is used to indicate an index that doesn't fit and
  * therefore follows.
@@ -707,7 +707,7 @@ static void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
 #define UNPACK_REF_INDEX(i) ((i) >> 8)
 #define MAX_PACKED_INDEX (INT_MAX >> 8)
 
-static void OutRefIndex(R_outpstream_t stream, int i)
+static R_INLINE void OutRefIndex(R_outpstream_t stream, int i)
 {
     if (i > MAX_PACKED_INDEX) {
 	OutInteger(stream, REFSXP);
@@ -716,7 +716,7 @@ static void OutRefIndex(R_outpstream_t stream, int i)
     else OutInteger(stream, PACK_REF_INDEX(i));
 }
 
-static int InRefIndex(R_inpstream_t stream, int flags)
+static R_INLINE int InRefIndex(R_inpstream_t stream, int flags)
 {
     int i = UNPACK_REF_INDEX(flags);
     if (i == 0)
@@ -807,7 +807,7 @@ static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table)
 #define min2(a, b) ((a) < (b)) ? (a) : (b)
 
 /* length will need to be another type to allow longer vectors */
-static R_INLINE void OutIntegerVec(R_outpstream_t stream, SEXP s, int length) 
+static void OutIntegerVec(R_outpstream_t stream, SEXP s, int length) 
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -842,7 +842,7 @@ static R_INLINE void OutIntegerVec(R_outpstream_t stream, SEXP s, int length)
     }
 }
 
-static R_INLINE void OutRealVec(R_outpstream_t stream, SEXP s, int length) 
+static void OutRealVec(R_outpstream_t stream, SEXP s, int length) 
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -876,7 +876,7 @@ static R_INLINE void OutRealVec(R_outpstream_t stream, SEXP s, int length)
     }
 }
 
-static R_INLINE void OutComplexVec(R_outpstream_t stream, SEXP s, int length) 
+static void OutComplexVec(R_outpstream_t stream, SEXP s, int length) 
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1283,7 +1283,7 @@ static SEXP MakeReadRefTable(void)
     return CONS(data, R_NilValue);
 }
 
-static SEXP GetReadRef(SEXP table, int index)
+static R_INLINE SEXP GetReadRef(SEXP table, int index)
 {
     int i = index - 1;
     SEXP data = CAR(table);
@@ -1293,23 +1293,29 @@ static SEXP GetReadRef(SEXP table, int index)
     return VECTOR_ELT(data, i);
 }
 
-static void AddReadRef(SEXP table, SEXP value)
+static SEXP ExpandRefTable(SEXP table, SEXP value)
+{
+    SEXP data = CAR(table);
+    int len = LENGTH(data);
+    SEXP newdata;
+    int i;
+
+    PROTECT(value);
+    newdata = allocVector(VECSXP, 2*len);
+    for (i = 0; i < len; i++)
+        SET_VECTOR_ELT(newdata, i, VECTOR_ELT(data, i));
+    SETCAR(table, newdata);
+    UNPROTECT(1);
+
+    return newdata;
+}
+
+static R_INLINE void AddReadRef(SEXP table, SEXP value)
 {
     SEXP data = CAR(table);
     int count = TRUELENGTH(data) + 1;
-    if (count >= LENGTH(data)) {
-	int i, len;
-	SEXP newdata;
-
-	PROTECT(value);
-	len = 2 * count;
-	newdata = allocVector(VECSXP, len);
-	for (i = 0; i < LENGTH(data); i++)
-	    SET_VECTOR_ELT(newdata, i, VECTOR_ELT(data, i));
-	SETCAR(table, newdata);
-	data = newdata;
-	UNPROTECT(1);
-    }
+    if (count >= LENGTH(data)) 
+        data = ExpandRefTable(table,value);
     SET_TRUELENGTH(data, count);
     SET_VECTOR_ELT(data, count - 1, value);
 }
@@ -1330,7 +1336,7 @@ static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
 
 /* use static buffer to reuse storage */
 /* length, done could be a longer type */
-static R_INLINE void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
+static void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1364,7 +1370,7 @@ static R_INLINE void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
     }
 }
 
-static R_INLINE void InRealVec(R_inpstream_t stream, SEXP obj, int length)
+static void InRealVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1398,7 +1404,7 @@ static R_INLINE void InRealVec(R_inpstream_t stream, SEXP obj, int length)
     }
 }
 
-static R_INLINE void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
+static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1440,51 +1446,59 @@ static R_INLINE void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
 static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 {
     SEXPTYPE type;
-    SEXP s;
+
     /* len, count will need to be another type to allow longer vectors */
     int len, count;
     int flags, levs, objf, hasattr, hastag, isconstant, length;
 
+    /* The result is stored in "s", which is returned at the end of this
+       function (at label "ret").  However, for tail recursion elimination, 
+       when "set_cdr" is not NULL, "s" is instead stored in the CDR of
+       "set_cdr", and "ss" is returned. */
+
+    SEXP s, ss, set_cdr = NULL;
+
     R_assert(TYPEOF(ref_table) == LISTSXP && TYPEOF(CAR(ref_table)) == VECSXP);
 
+  again:
     flags = InInteger(stream);
     UnpackFlags(flags, &type, &levs, &objf, &hasattr, &hastag, &isconstant);
 
     switch(type) {
-    case NILVALUE_SXP:      return R_NilValue;
-    case EMPTYENV_SXP:	    return R_EmptyEnv;
-    case BASEENV_SXP:	    return R_BaseEnv;
-    case GLOBALENV_SXP:     return R_GlobalEnv;
-    case UNBOUNDVALUE_SXP:  return R_UnboundValue;
-    case MISSINGARG_SXP:    return R_MissingArg;
-    case BASENAMESPACE_SXP:
-	return R_BaseNamespace;
+    case NILVALUE_SXP:      s = R_NilValue;       goto ret;
+    case EMPTYENV_SXP:	    s = R_EmptyEnv;       goto ret;
+    case BASEENV_SXP:	    s = R_BaseEnv;        goto ret;
+    case GLOBALENV_SXP:     s = R_GlobalEnv;      goto ret;
+    case UNBOUNDVALUE_SXP:  s = R_UnboundValue;   goto ret;
+    case MISSINGARG_SXP:    s = R_MissingArg;     goto ret;
+    case BASENAMESPACE_SXP: s = R_BaseNamespace;  goto ret;
     case REFSXP:
-	return GetReadRef(ref_table, InRefIndex(stream, flags));
+	s = GetReadRef(ref_table, InRefIndex(stream, flags));
+        goto ret;
     case PERSISTSXP:
 	PROTECT(s = InStringVec(stream, ref_table));
 	s = PersistentRestore(stream, s);
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
-	return s;
+	goto ret;
     case SYMSXP:
 	PROTECT(s = ReadItem(ref_table, stream)); /* print name */
 	s = install(CHAR(s));
 	AddReadRef(ref_table, s);
 	UNPROTECT(1);
-	return s;
+	goto ret;
     case PACKAGESXP:
 	PROTECT(s = InStringVec(stream, ref_table));
 	s = R_FindPackageEnv(s);
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
-	return s;
+	goto ret;
     case NAMESPACESXP:
 	PROTECT(s = InStringVec(stream, ref_table));
 	s = R_FindNamespace(s);
 	AddReadRef(ref_table, s);
 	UNPROTECT(1);
-	return s;
+	goto ret;
     case ENVSXP:
 	{
 	    int locked = InInteger(stream);
@@ -1509,33 +1523,44 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    /* Convert a NULL enclosure to baseenv() */
 	    if (ENCLOS(s) == R_NilValue) SET_ENCLOS(s, R_BaseEnv);
 	    UNPROTECT(1);
-	    return s;
+	    goto ret;
 	}
     case LISTSXP:
     case LANGSXP:
     case CLOSXP:
     case PROMSXP:
     case DOTSXP:
-	/* This handling of dotted pair objects still uses recursion
-	   on the CDR and so will overflow the PROTECT stack for long
-	   lists.  The save format does permit using an iterative
-	   approach; it just has to pass around the place to write the
-	   CDR into when it is allocated.  It's more trouble than it
-	   is worth to write the code to handle this now, but if it
-	   becomes necessary we can do it without needing to change
-	   the save format. */
 	PROTECT(s = allocSExp(type));
 	SETLEVELS(s, levs);
 	SET_OBJECT(s, objf);
-	SET_ATTRIB(s, hasattr ? ReadItem(ref_table, stream) : R_NilValue);
-	SET_TAG(s, hastag ? ReadItem(ref_table, stream) : R_NilValue);
+        if (hasattr)
+	    SET_ATTRIB(s, ReadItem(ref_table, stream));
+        if (hastag)
+	    SET_TAG(s, ReadItem(ref_table, stream));
 	SETCAR(s, ReadItem(ref_table, stream));
-	SETCDR(s, ReadItem(ref_table, stream));
-	/* For reading closures and promises stored in earlier versions, convert NULL env to baseenv() */
-	if      (type == CLOSXP && CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
-	else if (type == PROMSXP && PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
-	UNPROTECT(1); /* s */
-	return s;
+
+        /* For reading closures and promises stored in earlier versions, 
+           convert NULL env to baseenv() */
+        if (type == CLOSXP) {
+            SETCDR(s, ReadItem(ref_table, stream));  /* CDR == CLOENV */
+            if (CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
+        }
+        else if (type == PROMSXP) {
+            SETCDR(s, ReadItem(ref_table, stream));  /* CDR == PRENV */
+            if (PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
+        }
+        else {  /* Eliminate tail recursion for CDR */
+            if (set_cdr) {
+                SETCDR(set_cdr,s);
+                UNPROTECT(1);  /* s, which is now protected through ss */
+            }
+            else
+                ss = s;  /* ss is proteced, since s is */
+            set_cdr = s;
+            goto again;
+        }
+        UNPROTECT(1); /* s */
+        goto ret;
     default:
 	/* These break out of the switch to have their ATTR,
 	   LEVELS, and OBJECT fields filled in.  Each leaves the
@@ -1672,6 +1697,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    s = R_NilValue; /* keep compiler happy */
 	    error(_("ReadItem: unknown type %i, perhaps written by later version of R"), type);
 	}
+
 	if (type != CHARSXP && type != SPECIALSXP && type != BUILTINSXP)
 	    if (LEVELS(s)!=levs) SETLEVELS(s, levs); /* don't write to const! */
 	SET_OBJECT(s, objf);
@@ -1685,14 +1711,24 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	       read and ignore the value. */
 	    if (hasattr) ReadItem(ref_table, stream);
 	}
-	else
-	    SET_ATTRIB(s, hasattr ? ReadItem(ref_table, stream) : R_NilValue);
+	else if (hasattr)
+	    SET_ATTRIB(s, ReadItem(ref_table, stream));
 #else
-	SET_ATTRIB(s, hasattr ? ReadItem(ref_table, stream) : R_NilValue);
+	if (hasattr)
+	    SET_ATTRIB(s, ReadItem(ref_table, stream));
 #endif
 	UNPROTECT(1); /* s */
-	return s;
+	goto ret;
     }
+
+  ret:
+    if (set_cdr) {
+        CDR(set_cdr) = s;
+        UNPROTECT(1);  /* ss */
+        return ss;
+    }
+    else
+        return s;
 }
 
 static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream);
