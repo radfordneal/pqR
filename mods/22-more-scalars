@@ -2,3 +2,6 @@ More definition and use of the scalar constants.
 
 Serialize/unserialize now use a flag to indicate a constant, which
 is restored as the same constant.
+
+Other optimization also done in serialize.c, including eliminating
+tail recursion in ReadItem.
