@@ -423,7 +423,7 @@ static void InitInStringStream(R_instring_stream_t s, R_inpstream_t stream)
     s->stream = stream;
 }
 
-static int GetChar(R_instring_stream_t s)
+static R_INLINE int GetChar(R_instring_stream_t s)
 {
     int c;
     if (s->last != EOF) {
@@ -434,7 +434,7 @@ static int GetChar(R_instring_stream_t s)
     return c;
 }
 
-static void UngetChar(R_instring_stream_t s, int c)
+static R_INLINE void UngetChar(R_instring_stream_t s, int c)
 {
     s->last = c;
 }
@@ -579,7 +579,7 @@ static SEXP MakeHashTable(void)
     return val;
 }
 
-static void HashAdd(SEXP obj, SEXP ht)
+static R_INLINE void HashAdd(SEXP obj, SEXP ht)
 {
     int pos = PTRHASH(obj) % HASH_TABLE_SIZE(ht);
     int count = HASH_TABLE_COUNT(ht) + 1;
@@ -591,7 +591,7 @@ static void HashAdd(SEXP obj, SEXP ht)
     SET_TAG(cell, obj);
 }
 
-static int HashGet(SEXP item, SEXP ht)
+static R_INLINE int HashGet(SEXP item, SEXP ht)
 {
     int pos = PTRHASH(item) % HASH_TABLE_SIZE(ht);
     SEXP cell;
@@ -660,8 +660,8 @@ static int HashGet(SEXP item, SEXP ht)
 #define DECODE_LEVELS(v) ((v) >> 12)
 #define DECODE_TYPE(v) ((v) & 255)
 
-static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag,
-                     int isconstant)
+static R_INLINE int PackFlags(int type, int levs, int isobj, int hasattr, 
+                              int hastag, int isconstant)
 {
     /* We don't write out bit 5 as from R 2.8.0.
        It is used to indicate if an object is in CHARSXP cache
@@ -680,9 +680,9 @@ static int PackFlags(int type, int levs, int isobj, int hasattr, int hastag,
     return val;
 }
 
-static void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
-			int *pisobj, int *phasattr, int *phastag,
-                        int *pisconstant)
+static R_INLINE void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
+                                 int *pisobj, int *phasattr, int *phastag,
+                                 int *pisconstant)
 {
     *ptype = DECODE_TYPE(flags);
     *plevs = DECODE_LEVELS(flags);
@@ -707,7 +707,7 @@ static void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
 #define UNPACK_REF_INDEX(i) ((i) >> 8)
 #define MAX_PACKED_INDEX (INT_MAX >> 8)
 
-static void OutRefIndex(R_outpstream_t stream, int i)
+static R_INLINE void OutRefIndex(R_outpstream_t stream, int i)
 {
     if (i > MAX_PACKED_INDEX) {
 	OutInteger(stream, REFSXP);
@@ -716,7 +716,7 @@ static void OutRefIndex(R_outpstream_t stream, int i)
     else OutInteger(stream, PACK_REF_INDEX(i));
 }
 
-static int InRefIndex(R_inpstream_t stream, int flags)
+static R_INLINE int InRefIndex(R_inpstream_t stream, int flags)
 {
     int i = UNPACK_REF_INDEX(flags);
     if (i == 0)
@@ -807,7 +807,7 @@ static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table)
 #define min2(a, b) ((a) < (b)) ? (a) : (b)
 
 /* length will need to be another type to allow longer vectors */
-static R_INLINE void OutIntegerVec(R_outpstream_t stream, SEXP s, int length) 
+static void OutIntegerVec(R_outpstream_t stream, SEXP s, int length) 
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -842,7 +842,7 @@ static R_INLINE void OutIntegerVec(R_outpstream_t stream, SEXP s, int length)
     }
 }
 
-static R_INLINE void OutRealVec(R_outpstream_t stream, SEXP s, int length) 
+static void OutRealVec(R_outpstream_t stream, SEXP s, int length) 
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -876,7 +876,7 @@ static R_INLINE void OutRealVec(R_outpstream_t stream, SEXP s, int length)
     }
 }
 
-static R_INLINE void OutComplexVec(R_outpstream_t stream, SEXP s, int length) 
+static void OutComplexVec(R_outpstream_t stream, SEXP s, int length) 
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1283,7 +1283,7 @@ static SEXP MakeReadRefTable(void)
     return CONS(data, R_NilValue);
 }
 
-static SEXP GetReadRef(SEXP table, int index)
+static R_INLINE SEXP GetReadRef(SEXP table, int index)
 {
     int i = index - 1;
     SEXP data = CAR(table);
@@ -1293,7 +1293,7 @@ static SEXP GetReadRef(SEXP table, int index)
     return VECTOR_ELT(data, i);
 }
 
-static void AddReadRef(SEXP table, SEXP value)
+static R_INLINE void AddReadRef(SEXP table, SEXP value)
 {
     SEXP data = CAR(table);
     int count = TRUELENGTH(data) + 1;
@@ -1330,7 +1330,7 @@ static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
 
 /* use static buffer to reuse storage */
 /* length, done could be a longer type */
-static R_INLINE void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
+static void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1364,7 +1364,7 @@ static R_INLINE void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
     }
 }
 
-static R_INLINE void InRealVec(R_inpstream_t stream, SEXP obj, int length)
+static void InRealVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
@@ -1398,7 +1398,7 @@ static R_INLINE void InRealVec(R_inpstream_t stream, SEXP obj, int length)
     }
 }
 
-static R_INLINE void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
+static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
