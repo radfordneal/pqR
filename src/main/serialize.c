@@ -1335,6 +1335,37 @@ static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
     return s;
 }
 
+#define ShortStringLimit 1000
+
+static SEXP InCharSXP(R_inpstream_t stream, int levs)
+{
+    int length = InInteger(stream); /* suppose still limited to 2^31-1 bytes */
+
+    if (length == -1) return NA_STRING;
+
+    int enc = (levs & UTF8_MASK) ? CE_UTF8 
+            : (levs & LATIN1_MASK) ? CE_LATIN1
+            : (levs & BYTES_MASK) ? CE_BYTES
+            : CE_NATIVE;
+
+    SEXP s;
+
+    if (length <= ShortStringLimit) {
+        char cbuf[length+1];
+        InString(stream, cbuf, length);
+        cbuf[length] = '\0'; /* unnecessary? */
+        s = mkCharLenCE(cbuf, length, enc);
+    }
+    else {
+        char *big_cbuf = CallocCharBuf(length+1);
+        InString(stream, big_cbuf, length);
+        s = mkCharLenCE(big_cbuf, length, enc);
+        Free(big_cbuf);
+    }
+
+    return s;
+}
+
 /* use static buffer to reuse storage */
 /* length, done could be a longer type */
 static void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
@@ -1443,17 +1474,12 @@ static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
     }
 }
 
-
-#define ReadItemShortStringLimit 1000
-
 static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 {
-    SEXPTYPE type;
-
     /* len, count will need to be another type to allow longer vectors */
-    int len, count;
-    int flags, levs, objf, hasattr, hastag, isconstant, length;
-    char cbuf[ReadItemShortStringLimit+1];
+    int len, count, flags, levs, length;
+    int objf, hasattr, hastag, isconstant;
+    SEXPTYPE type;
 
     /* The result is stored in "s", which is returned at the end of this
        function (at label "ret").  However, for tail recursion elimination, 
@@ -1587,34 +1613,14 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    {
 		/* These are all short strings */
 		length = InInteger(stream);
+		char cbuf[length+1];
 		InString(stream, cbuf, length);
 		cbuf[length] = '\0';
 		PROTECT(s = mkPRIMSXP(StrToInternal(cbuf), type == BUILTINSXP));
 	    }
 	    break;
 	case CHARSXP:
-	    /* Let us support these will still be limited to 2^31 -1 bytes */
-	    length = InInteger(stream);
-	    if (length == -1)
-		PROTECT(s = NA_STRING);
-	    else if (length <= ReadItemShortStringLimit) {
-		int enc = CE_NATIVE;
-		InString(stream, cbuf, length);
-		cbuf[length] = '\0'; /* unnecessary? */
-		if (levs & UTF8_MASK) enc = CE_UTF8;
-		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
-		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(cbuf, length, enc));
-	    } else {
-		int enc = CE_NATIVE;
-		char *big_cbuf = CallocCharBuf(length+1);
-		InString(stream, big_cbuf, length);
-		if (levs & UTF8_MASK) enc = CE_UTF8;
-		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
-		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(big_cbuf, length, enc));
-		Free(big_cbuf);
-	    }
+            PROTECT(s = InCharSXP(stream,levs));
 	    break;
         case LGLSXP:
             len = InInteger(stream);
