@@ -76,6 +76,11 @@
                                    (must be a power of two) */
 #define STRHASHMAXSIZE (1<<21)  /* Maximum slots in the string hash table */
 
+#define ENABLE_SHARED_CONSTANTS 1  /* Normally 1, to enable use of shared
+                                      constants 0.0, 0L, etc. But doesn't affect
+                                      sharing of logicals FALSE, TRUE, and NA,
+                                      which is done in Rinlinedfuns.h */
+
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
    "cons" cells (so it's necessary that one be big enough for this).  Note 
@@ -155,6 +160,9 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
 #define DEBUG_GLOBAL_STRING_HASH 0
 
 #define DEBUG_SHOW_CHARSXP_CACHE 0
+
+#define PRINT_TYPE_STATS 0 /* Set to 1 to print stats on # of objects of each 
+                              type after garbage collection initiated by gc() */
 
 
 /* VALGRIND declarations.
@@ -2257,6 +2265,33 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     R_gc();
 
+#   if PRINT_TYPE_STATS
+        int count[32], count0[32], count00[32], count01[32];
+        for (int i = 0; i<32; i++) 
+            count[i] = count0[i] = count00[i] = count01[i] = 0;
+        REprintf(
+         "\n# OF OBJECTS OF EACH TYPE (PLUS COUNT IN CLASS 0, LENGTH 0/1)\n\n"
+        );
+        for (int i = 0; i < NUM_NODE_CLASSES; i++) {
+            for (int g = 0; g < NUM_OLD_GENERATIONS; g++) {
+                for (SEXP s = NEXT_NODE(R_GenHeap[i].Old[g]);
+                     s != R_GenHeap[i].Old[g]; 
+                     s = NEXT_NODE(s)) {
+                    count[TYPEOF(s)] += 1;
+                    if (i == 0) {
+                        count0[TYPEOF(s)] += 1;
+                        if (LENGTH(s) == 0) count00[TYPEOF(s)] += 1;
+                        if (LENGTH(s) == 1) count01[TYPEOF(s)] += 1;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i<32; i++)
+            printf ("%11s%10d %10d %10d %10d\n", sexptype2char(i),
+                    count[i], count0[i], count00[i], count01[i]);
+        REprintf("\n");
+#   endif
+
     gc_reporting = ogc;
     /*- now return the [used , gc trigger size] for cells and heap */
     PROTECT(value = allocVector(REALSXP, 14));
@@ -2723,10 +2758,12 @@ SEXP ScalarRaw(Rbyte x)
 
 SEXP ScalarIntegerShared(int x)
 {
-    if (x >=0 && x <= 10)
-        return R_ScalarInteger0To10(x);
-    if (x == NA_INTEGER)
-        return R_ScalarIntegerNA;
+    if (ENABLE_SHARED_CONSTANTS) {
+        if (x >=0 && x <= 10)
+            return R_ScalarInteger0To10(x);
+        if (x == NA_INTEGER)
+            return R_ScalarIntegerNA;
+    }
 
     SEXP ans = allocVector(INTSXP, 1);
     INTEGER(ans)[0] = x;
@@ -2735,16 +2772,19 @@ SEXP ScalarIntegerShared(int x)
 
 SEXP ScalarRealShared(double x)
 {
-    /* Compare to pre-allocated values as 8-byte integers, not as doubles,
-       since double comparison doesn't work for NA or when comparing -0 and
-       +0 (which should be distinct). */
+    if (ENABLE_SHARED_CONSTANTS) {
 
-    if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealNA)[0]) 
-        return R_ScalarRealNA;
-    if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealZero)[0]) 
-        return R_ScalarRealZero;
-    if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealOne)[0]) 
-        return R_ScalarRealOne;
+        /* Compare to pre-allocated values as 8-byte integers, not as doubles,
+           since double comparison doesn't work for NA or when comparing -0 and
+           +0 (which should be distinct). */
+
+        if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealNA)[0]) 
+            return R_ScalarRealNA;
+        if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealZero)[0]) 
+            return R_ScalarRealZero;
+        if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealOne)[0]) 
+            return R_ScalarRealOne;
+    }
 
     SEXP ans = allocVector(REALSXP, 1);
     REAL(ans)[0] = x;
