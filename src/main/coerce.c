@@ -2087,7 +2087,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     /* Return variant result. */
 
 vret:
-    return ScalarLogical(ret);
+    return ScalarLogicalShared(ret);
 }
 
 static SEXP do_isna (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2189,7 +2189,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     /* Return variant result. */
 
 vret:
-    return ScalarLogical(ret);
+    return ScalarLogicalShared(ret);
 }
 
 static SEXP do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2304,7 +2304,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     /* Return variant result. */
 
 vret:
-    return ScalarLogical(ret);
+    return ScalarLogicalShared(ret);
 }
 
 static SEXP do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2419,7 +2419,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
     /* Return variant result. */
 
 vret:
-    return ScalarLogical(ret);
+    return ScalarLogicalShared(ret);
 }
 
 static SEXP do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho, 
