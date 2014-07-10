@@ -1476,9 +1476,7 @@ static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
 
 static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 {
-    /* len, count will need to be another type to allow longer vectors */
-    int len, count, flags, levs, length;
-    int objf, hasattr, hastag, isconstant;
+    int len, flags, levs, objf, hasattr, hastag, isconstant;
     SEXPTYPE type;
 
     /* The result is stored in "s", which is returned at the end of this
@@ -1612,10 +1610,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	case BUILTINSXP:
 	    {
 		/* These are all short strings */
-		length = InInteger(stream);
-		char cbuf[length+1];
-		InString(stream, cbuf, length);
-		cbuf[length] = '\0';
+                len = InInteger(stream);
+		char cbuf[len+1];
+		InString(stream, cbuf, len);
+		cbuf[len] = '\0';
 		PROTECT(s = mkPRIMSXP(StrToInternal(cbuf), type == BUILTINSXP));
 	    }
 	    break;
@@ -1664,7 +1662,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
                 PROTECT(s = ScalarStringShared(ReadItem(ref_table, stream)));
             else {
                 PROTECT(s = allocVector(type, len));
-                for (count = 0; count < len; ++count)
+                for (int count = 0; count < len; ++count)
                     SET_STRING_ELT(s, count, ReadItem(ref_table, stream));
             }
             break;
@@ -1672,7 +1670,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	case EXPRSXP:
 	    len = InInteger(stream);
 	    PROTECT(s = allocVector(type, len));
-	    for (count = 0; count < len; ++count)
+	    for (int count = 0; count < len; ++count)
 		SET_VECTOR_ELT(s, count, ReadItem(ref_table, stream));
 	    break;
 	case BCODESXP:
