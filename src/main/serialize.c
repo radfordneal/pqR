@@ -684,12 +684,13 @@ static R_INLINE void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
                                  int *pisobj, int *phasattr, int *phastag,
                                  int *pisconstant)
 {
-    *ptype = DECODE_TYPE(flags);
-    *plevs = DECODE_LEVELS(flags);
-    *pisobj = flags & IS_OBJECT_BIT_MASK ? TRUE : FALSE;
-    *phasattr = flags & HAS_ATTR_BIT_MASK ? TRUE : FALSE;
-    *phastag = flags & HAS_TAG_BIT_MASK ? TRUE : FALSE;
-    *pisconstant = flags & IS_CONSTANT_MASK ? TRUE : FALSE;
+    if ((*ptype = DECODE_TYPE(flags)) != REFSXP) {
+        *plevs = DECODE_LEVELS(flags);
+        *pisobj = (flags & IS_OBJECT_BIT_MASK) != 0;
+        *phasattr = (flags & HAS_ATTR_BIT_MASK) != 0;
+        *phastag = (flags & HAS_TAG_BIT_MASK) != 0;
+        *pisconstant = (flags & IS_CONSTANT_MASK) != 0;
+    }
 }
 
 
@@ -1443,6 +1444,8 @@ static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
 }
 
 
+#define ReadItemShortStringLimit 1000
+
 static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 {
     SEXPTYPE type;
@@ -1450,6 +1453,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     /* len, count will need to be another type to allow longer vectors */
     int len, count;
     int flags, levs, objf, hasattr, hastag, isconstant, length;
+    char cbuf[ReadItemShortStringLimit+1];
 
     /* The result is stored in "s", which is returned at the end of this
        function (at label "ret").  However, for tail recursion elimination, 
@@ -1583,7 +1587,6 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    {
 		/* These are all short strings */
 		length = InInteger(stream);
-		char cbuf[length+1];
 		InString(stream, cbuf, length);
 		cbuf[length] = '\0';
 		PROTECT(s = mkPRIMSXP(StrToInternal(cbuf), type == BUILTINSXP));
@@ -1594,24 +1597,23 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    length = InInteger(stream);
 	    if (length == -1)
 		PROTECT(s = NA_STRING);
-	    else if (length < 1000) {
+	    else if (length <= ReadItemShortStringLimit) {
 		int enc = CE_NATIVE;
-		char cbuf[length+1];
 		InString(stream, cbuf, length);
-		cbuf[length] = '\0';
+		cbuf[length] = '\0'; /* unnecessary? */
 		if (levs & UTF8_MASK) enc = CE_UTF8;
 		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
 		else if (levs & BYTES_MASK) enc = CE_BYTES;
 		PROTECT(s = mkCharLenCE(cbuf, length, enc));
 	    } else {
 		int enc = CE_NATIVE;
-		char *cbuf = CallocCharBuf(length);
-		InString(stream, cbuf, length);
+		char *big_cbuf = CallocCharBuf(length+1);
+		InString(stream, big_cbuf, length);
 		if (levs & UTF8_MASK) enc = CE_UTF8;
 		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
 		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(cbuf, length, enc));
-		Free(cbuf);
+		PROTECT(s = mkCharLenCE(big_cbuf, length, enc));
+		Free(big_cbuf);
 	    }
 	    break;
         case LGLSXP:
