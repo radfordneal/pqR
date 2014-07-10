@@ -108,9 +108,10 @@ static int 	processLineDirective();
 /* These routines allocate constants */
 
 static SEXP	mkComplex(const char *);
-SEXP		mkFalse(void);
 static SEXP     mkFloat(const char *);
-static SEXP	mkNA(void);
+static SEXP	mkInt(const char *s);
+
+SEXP		mkFalse(void);  /* not used here, but are used elsewhere */
 SEXP		mkTrue(void);
 
 /* Internal lexer / parser state variables */
@@ -1600,13 +1601,13 @@ static int KeywordLookup(const char *s)
 		if(GenerateCode) {
 		    switch(i) {
 		    case 1:
-			PROTECT(yylval = mkNA());
+			PROTECT(yylval = ScalarLogicalShared(NA_LOGICAL));
 			break;
 		    case 2:
-			PROTECT(yylval = mkTrue());
+			PROTECT(yylval = ScalarLogicalShared(1));
 			break;
 		    case 3:
-			PROTECT(yylval = mkFalse());
+			PROTECT(yylval = ScalarLogicalShared(0));
 			break;
 		    case 4:
 			PROTECT(yylval = allocVector(REALSXP, 1));
@@ -1617,8 +1618,7 @@ static int KeywordLookup(const char *s)
 			REAL(yylval)[0] = R_NaN;
 			break;
 		    case 6:
-			PROTECT(yylval = allocVector(INTSXP, 1));
-			INTEGER(yylval)[0] = NA_INTEGER;
+                        PROTECT(yylval = ScalarIntegerShared(NA_INTEGER));
 			break;
 		    case 7:
 			PROTECT(yylval = allocVector(REALSXP, 1));
@@ -1660,13 +1660,13 @@ static int KeywordLookup(const char *s)
 
 static SEXP mkFloat(const char *s)
 {
-    return ScalarReal(R_atof(s));
+    return ScalarRealShared(R_atof(s));
 }
 
 static SEXP mkInt(const char *s)
 {
     double f = R_atof(s);  /* or R_strtol? */
-    return ScalarInteger((int) f);
+    return ScalarIntegerShared((int) f);
 }
 
 static SEXP mkComplex(const char *s)
@@ -1681,13 +1681,6 @@ static SEXP mkComplex(const char *s)
        COMPLEX(t)[0].i = f;
     }
 
-    return t;
-}
-
-static SEXP mkNA(void)
-{
-    SEXP t = allocVector(LGLSXP, 1);
-    LOGICAL(t)[0] = NA_LOGICAL;
     return t;
 }
 

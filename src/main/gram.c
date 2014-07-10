@@ -4,10 +4,7 @@
    
       Copyright (C) 1984, 1989-1990, 2000-2011 Free Software Foundation, Inc.
    
-   The changes in pqR from R-2.15.0 distributed by the R Core Team are
- *  documented in the NEWS and MODS files in the top-level source directory.
- *
- *  This program is free software: you can redistribute it and/or modify
+   This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
@@ -76,9 +73,6 @@
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2010  The R Development Core Team
- *
- *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
- *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -181,9 +175,10 @@ static int 	processLineDirective();
 /* These routines allocate constants */
 
 static SEXP	mkComplex(const char *);
-SEXP		mkFalse(void);
 static SEXP     mkFloat(const char *);
-static SEXP	mkNA(void);
+static SEXP	mkInt(const char *s);
+
+SEXP		mkFalse(void);  /* not used here, but are used elsewhere */
 SEXP		mkTrue(void);
 
 /* Internal lexer / parser state variables */
@@ -756,16 +751,16 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   252,   252,   253,   254,   255,   256,   259,   260,   263,
-     266,   267,   268,   269,   271,   272,   274,   275,   276,   277,
-     278,   280,   281,   282,   283,   284,   285,   286,   287,   288,
-     289,   290,   291,   292,   293,   294,   295,   296,   297,   298,
-     299,   301,   302,   303,   305,   306,   307,   308,   309,   310,
-     311,   312,   313,   314,   315,   316,   317,   318,   319,   320,
-     321,   322,   323,   324,   325,   326,   330,   333,   336,   340,
-     341,   342,   343,   344,   345,   348,   349,   352,   353,   354,
-     355,   356,   357,   358,   359,   362,   363,   364,   365,   366,
-     369
+       0,   256,   256,   257,   258,   259,   260,   263,   264,   267,
+     270,   271,   272,   273,   275,   276,   278,   279,   280,   281,
+     282,   284,   285,   286,   287,   288,   289,   290,   291,   292,
+     293,   294,   295,   296,   297,   298,   299,   300,   301,   302,
+     303,   305,   306,   307,   309,   310,   311,   312,   313,   314,
+     315,   316,   317,   318,   319,   320,   321,   322,   323,   324,
+     325,   326,   327,   328,   329,   330,   334,   337,   340,   344,
+     345,   346,   347,   348,   349,   352,   353,   356,   357,   358,
+     359,   360,   361,   362,   363,   366,   367,   368,   369,   370,
+     373
 };
 #endif
 
@@ -3193,7 +3188,7 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	    PROTECT(ans = attachSrcrefs(a2));
 	    REPROTECT(SrcRefs = prevSrcrefs, srindex);
 	    /* SrcRefs got NAMED by being an attribute... */
-	    SET_NAMEDCNT_0(SrcRefs);
+	    SET_NAMED(SrcRefs, 0);
 	    UNPROTECT_PTR(prevSrcrefs);
 	}
 	else
@@ -3864,13 +3859,13 @@ static int KeywordLookup(const char *s)
 		if(GenerateCode) {
 		    switch(i) {
 		    case 1:
-			PROTECT(yylval = mkNA());
+			PROTECT(yylval = ScalarLogicalShared(NA_LOGICAL));
 			break;
 		    case 2:
-			PROTECT(yylval = mkTrue());
+			PROTECT(yylval = ScalarLogicalShared(1));
 			break;
 		    case 3:
-			PROTECT(yylval = mkFalse());
+			PROTECT(yylval = ScalarLogicalShared(0));
 			break;
 		    case 4:
 			PROTECT(yylval = allocVector(REALSXP, 1));
@@ -3881,8 +3876,7 @@ static int KeywordLookup(const char *s)
 			REAL(yylval)[0] = R_NaN;
 			break;
 		    case 6:
-			PROTECT(yylval = allocVector(INTSXP, 1));
-			INTEGER(yylval)[0] = NA_INTEGER;
+                        PROTECT(yylval = ScalarIntegerShared(NA_INTEGER));
 			break;
 		    case 7:
 			PROTECT(yylval = allocVector(REALSXP, 1));
@@ -3924,13 +3918,13 @@ static int KeywordLookup(const char *s)
 
 static SEXP mkFloat(const char *s)
 {
-    return ScalarReal(R_atof(s));
+    return ScalarRealShared(R_atof(s));
 }
 
 static SEXP mkInt(const char *s)
 {
     double f = R_atof(s);  /* or R_strtol? */
-    return ScalarInteger((int) f);
+    return ScalarIntegerShared((int) f);
 }
 
 static SEXP mkComplex(const char *s)
@@ -3945,13 +3939,6 @@ static SEXP mkComplex(const char *s)
        COMPLEX(t)[0].i = f;
     }
 
-    return t;
-}
-
-static SEXP mkNA(void)
-{
-    SEXP t = allocVector(LGLSXP, 1);
-    LOGICAL(t)[0] = NA_LOGICAL;
     return t;
 }
 
@@ -4347,7 +4334,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
     nb = cnt*6;
 #endif
     char s[nb];
-    R_CHECKSTACK();
+    R_CheckStack();
     memset(s, 0, nb); /* safety */
 #ifdef WC_NOT_UNICODE
     {

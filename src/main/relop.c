@@ -627,10 +627,10 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
 
-    return ScalarLogical(ans);
+    return ScalarLogicalShared(ans);
 
 false:
-    return ScalarLogical(FALSE);
+    return ScalarLogicalShared(FALSE);
 }
 
 static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
@@ -743,10 +743,10 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
 
-    return ScalarLogical(ans);
+    return ScalarLogicalShared(ans);
 
 true:
-    return ScalarLogical(TRUE);
+    return ScalarLogicalShared(TRUE);
     
 }
 
