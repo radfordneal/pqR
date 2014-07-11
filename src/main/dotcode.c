@@ -1695,6 +1695,10 @@ static SEXP do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 				  Fort, symName, argConverters + nargs,
 				  checkTypes ? checkTypes[nargs] : 0,
 				  encname);
+#ifdef R_MEMORY_PROFILING
+	if (RTRACE(CAR(pargs)) && dup)
+	    memtrace_report(CAR(pargs), cargs[nargs]);
+#endif
 	nargs++;
     }
 
@@ -2321,6 +2325,12 @@ static SEXP do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 		PROTECT(s = CPtrToRObj(cargs[nargs], CAR(pargs), Fort,
 				       checkTypes ? checkTypes[nargs] : TYPEOF(CAR(pargs)),
 				       encname));
+#if R_MEMORY_PROFILING
+		if (RTRACE(CAR(pargs))) {
+		    memtrace_report(cargs[nargs], s);
+		    SET_RTRACE(s, 1);
+		}
+#endif
 		DUPLICATE_ATTRIB(s, CAR(pargs));
 	    }
 	    if (TAG(pargs) != R_NilValue)
