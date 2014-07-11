@@ -1466,7 +1466,14 @@ Serialization then writes out the object recursively using function
 Some objects are written as if they were @code{SEXPTYPE}s: such
 pseudo-@code{SEXPTYPE}s cover @code{R_NilValue}, @code{R_EmptyEnv},
 @code{R_BaseEnv}, @code{R_GlobalEnv}, @code{R_UnboundValue},
-@code{R_MissingArg} and @code{R_BaseNamespace}.
+@code{R_MissingArg} and @code{R_BaseNamespace}.  In the current version
+of pqR, objects stored as shared constants (probably in read-only memory) 
+are written with a flag bit saying they are constants.  This flag will be 
+ignored by earlier versions of pqR or R that didn't have such constants,
+but will cause the current version of pqR to unserialize them as the
+same constants.  (A check is done that other aspects of the object 
+match the constant, for compatibility with future versions that might
+have a wider variety of such constants.)
 
 For all @code{SEXPTYPE}s except @code{NILSXP}, @code{SYMSXP} and
 @code{ENVSXP} serialization starts with an integer with the
@@ -1477,7 +1484,7 @@ indicating if there are any attributes and if there is a tag (for the
 pairlist types), an unused bit and then the @code{gp}
 field@footnote{Currently the only relevant bits are 0:1, 4, 14:15.} in
 bits 12:27.  Pairlist-like objects write their attributes (if any), tag
-(if any), CAR and then CDR (using tail recursion): other objects write
+(if any), CAR and then CDR (avoiding tail recursion on CDR): other objects write
 their attributes after themselves.  Atomic vector objects write their
 length followed by the data: generic vector-list objects write their
 length followed by a call to @code{WriteItem} for each element.  The
