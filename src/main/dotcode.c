@@ -1500,8 +1500,8 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	SEXPTYPE t = TYPEOF(s);
 	switch(t) {
 	case RAWSXP:
-	    if (dup && NAMED(s)) {
-		n = LENGTH(s);
+	    n = LENGTH(s);
+	    if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(RAW(ss), RAW(s), n * sizeof(Rbyte));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1516,7 +1516,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 		for (int i = 0 ; i < n ; i++)
 		    if(iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na + 1);
-	    if (dup && NAMED(s)) {
+	    if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(INTEGER(ss), INTEGER(s), n * sizeof(int));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1534,7 +1534,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 		float *sptr = (float*) R_alloc(n, sizeof(float));
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
 		cargs[na] = (void*) sptr;
-	    } else if (dup && NAMED(s)) {
+	    } else if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
 		SEXP ss  = allocVector(t, n);
 		memcpy(REAL(ss), REAL(s), n * sizeof(double));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1548,7 +1548,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(zptr[i].r) || !R_FINITE(zptr[i].i))
 			error(_("complex NA/NaN/Inf in foreign function call (arg %d)"), na + 1);
-	    if (dup && NAMED(s)) {
+	    if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(COMPLEX(ss), COMPLEX(s), n * sizeof(Rcomplex));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -2260,14 +2260,15 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 
 		switch(type) {
 		case LGLSXP:
-		{
-		    int *iptr = INTEGER(arg), tmp;
-		    for (int i = 0 ; i < n ; i++) {
-			tmp =  iptr[i];
-			iptr[i] = (tmp == NA_INTEGER || tmp == 0) ? tmp : 1;
+		{   /* Make sure logical values are valid.  Doesn't write
+                       if unnecessary, which may be faster, and would be
+                       necessary if ever it might be a read-only constant. */
+		    int *q = (int *) p;
+		    for (int i = 0; i < n; i++) {
+		        if (q[i]!=0 && q[i]!=1 && q[i]!=NA_INTEGER) q[i] = 1;
 		    }
 		    break;
-		}
+                }
 		case REALSXP:
 		case SINGLESXP:
 		    if (type == SINGLESXP || asLogical(getAttrib(arg, CSingSymbol)) == 1) {
