@@ -581,9 +581,6 @@
  do_getGraphicsEvent
  do_getGraphicsEventEnv
  do_getIdentification
- do_getNumRtoCConverters
- do_getRtoCConverterDescriptions
- do_getRtoCConverterStatus
  do_getWindowHandle
  do_getWindowHandles
  do_getWindowTitle
@@ -615,7 +612,6 @@
  do_setGraphicsEventEnv
  do_setStatusBar
  do_setTitle
- do_setToCConverterActiveStatus
  do_setwinprogressbar
  do_shellexec
  do_shortpath
