@@ -1,6 +1,8 @@
 % File src/library/base/man/Foreign.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 1995-2012 R Core Development Team
+% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+% This documentation file is derived from the one in R-2.15.2.
+% Copyright 1995-2012 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Foreign}
@@ -27,9 +29,9 @@
     \code{NA} or \code{NaN} or \code{Inf} values is regarded as an error.}
   \item{DUP}{if \code{TRUE} then arguments are duplicated before
     their address is passed to C or Fortran.}
-  \item{PACKAGE}{if supplied, confine the search for the \code{.NAME} to
-    the DLL given by this argument (plus the conventional extension,
-    \file{.so}, \file{.dll}, \dots).
+  \item{PACKAGE}{if supplied, confine the search for a character string
+    \code{.NAME} to the DLL given by this argument (plus the
+    conventional extension, \file{.so}, \file{.dll}, \dots).
 
     This is intended to add safety for packages, which can ensure by
     using this argument that no other package can override their external
@@ -43,7 +45,8 @@
 \details{
   These functions can be used to make calls to compiled C and Fortran 77
   code.  Later interfaces are \code{\link{.Call}} and
-  \code{\link{.External}}.
+  \code{\link{.External}} which are more flexible and have better
+  performance.
 
   Character strings will be translated from the value of \code{ENCODING}
   or any declared encoding (see \code{\link{Encoding}}) to the current
@@ -52,12 +55,12 @@
   specified, when the output strings are translated to the specified
   encoding.  This is deprecated: convert code to use \code{\link{iconv}}.
   
-  These functions are all \link{primitive}, and \code{.NAME} is always
-  matched to the first argument supplied (which if named must partially
-  match \code{.NAME}).  The other named arguments follow \code{\dots}
-  and so cannot be abbreviated.  For clarity, should avoid using names
-  in the arguments passed to \code{\dots} that match or partially match
-  \code{.NAME}.
+  These functions are \link{primitive}, and \code{.NAME} is always
+  matched to the first argument supplied (which should not be named and
+  there will be a warning if it is---and an error in future.).
+  The other named arguments follow \code{\dots} and so cannot be
+  abbreviated.  For clarity, should avoid using names in the arguments
+  passed to \code{\dots} that match or partially match \code{.NAME}.
 }
 
 \value{
@@ -112,34 +115,28 @@
   Missing (\code{NA}) string values are passed to \code{.C} as the string
   "NA". As the C \code{char} type can represent all possible bit patterns
   there appears to be no way to distinguish missing strings from the
-  string \code{"NA"}.  If this distinction is important use \code{.Call}.
+  string \code{"NA"}.  If this distinction is important use \code{\link{.Call}}.
 
   \code{.Fortran} passes the first (only )character string of a character
-  vector is passed as a C character array to Fortran: that may be usable
+  vector as a C character array to Fortran, which may be usable
   as \code{character*255} if its true length is passed separately.  Only
   up to 255 characters of the string are passed back.  (How well this
   works, and even if it works at all, depends on the C and Fortran
   compilers and the platform.)
-
-  \R objects such as functions, expressions, environments and other
-  language elements are passed as the \R pointer type \code{SEXP}.  This
-  type is defined in header \file{Rinternals.h} or the arguments can be
-  declared as generic pointers, \code{void *}.  Lists are passed as C
-  arrays of \code{SEXP} and can be declared as \code{void **} or
-  \code{SEXP *}.  All inputs apart from atomic vectors should be
-  regarded as read-only, and all apart from vectors (including lists),
+  
+  Lists, functions are other \R objects can (for historical reasons) be
+  passed to \code{.C}, but the \code{\link{.Call}} interface is much
+  preferred.  All inputs apart from atomic vectors should be regarded as
+  read-only, and use of any inputs other that vectors (including lists), 
   functions and environments are now deprecated.
-
-  If you need to return \R objects created within the C routine, use the
-  \code{.Call} interface.
 }
 %%-- This note by Thomas Lumley, (minimally edited by MM,
 %%      edited by BDR for 1.2.0's non-moving garbage collector):
 \section{Warning}{
   \emph{\code{DUP = FALSE} is dangerous.}
 
-  People concerned about memory usage are strongly recommended to use
-  the \code{\link{.Call}} interface instead of these interfaces.
+%  People concerned about memory usage are strongly recommended to use
+%  the \code{\link{.Call}} interface instead of these interfaces.
 
   If you pass a local variable to \code{.C}/\code{.Fortran} with
   \code{DUP = FALSE}, your compiled code can alter the local variable and
@@ -148,7 +145,7 @@
   be able to change not only the local variable but the variable one
   level up.  This will be very hard to trace.
 
-  Character vectors and lists cannot be used with \code{DUP = FALSE}.
+  Character vectors cannot be used with \code{DUP = FALSE}.
 
   It is safe and useful to set \code{DUP = FALSE} if you do not change any
   of the variables that might be affected, e.g.,
@@ -156,13 +153,18 @@
   \code{.C("Cfunction", input = x, output = numeric(10))}.
 
   In this case the \code{output} variable did not exist before the call
-  so it cannot cause trouble.  If the \code{input} variable is not
+  so it cannot cause trouble (but as from \R 2.15.1 it is not copied
+  even with \code{DUP = TRUE}).  If the \code{input} variable is not
   changed in the C code of \code{Cfunction} you are safe.
 
-  Note that if \code{DUP = TRUE} there are two copies involved, one when
-  the data from the argument is copied and the pointer to the copied data
-  passed to the compiled code, and one when the return value is prepared
-  from the data accessed by the compiled code.
+  Note that if \code{DUP = TRUE} there are up to two copies involved.
+  Prior to \R 2.15.1 this was always the case for vectors (one before
+  calling the compiled code and one to collect the results), and this is
+  still the case for character vectors.  For other atomic vectors, the
+  argument is not copied before calling the compiled code if it is not
+  otherwise used in the calling code (such as \code{output} in the
+  example above).  Non-atomic-vector objects are read-only to the C code
+  and are never copied.
 }
 
 \section{Fortran symbol names}{
@@ -194,6 +196,8 @@
   not use this in your own code: such symbols are not part of the API
   and may be changed without warning.
   
+  \code{PACKAGE = ""} is accepted, but deprecated.
+  
   The way \link{pairlist}s were passed by \code{.C} prior to \R 2.15.0
   was not as documented.  This has been corrected, but the
   \code{\link{.Call}} and \code{\link{.External}} interfaces are much
@@ -209,9 +213,5 @@
   \code{\link{dyn.load}}, \code{\link{.Call}}.
 
   The \sQuote{Writing R Extensions} manual.
-  
-  \code{\link{getCConverterDescriptions}} for converters that might be
-  used when passing \R objects with explicit classes to and from
-  compiled code.
 }
 \keyword{programming}
