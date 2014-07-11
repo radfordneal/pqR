@@ -36,8 +36,6 @@
 #include <Print.h>
 #include "arithmetic.h" /* for do_math[1234], do_cmathfuns */
 
-#include <R_ext/RConverters.h>
-
 #include <Rinterface.h>
 
 
@@ -381,12 +379,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"loadhistory", do_loadhistory,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"savehistory", do_savehistory,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"addhistory",  do_addhistory,  0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"getNumRtoCConverters", do_getNumRtoCConverters, 0, 11, 0,{PP_FUNCALL, PREC_FN,0}},
-{"getRtoCConverterDescriptions", do_getRtoCConverterDescriptions, 0, 11, 0,{PP_FUNCALL, PREC_FN, 0}},
-{"getRtoCConverterStatus", do_getRtoCConverterStatus, 0, 11, 0, {PP_FUNCALL, PREC_FN, 0}},
-{"setToCConverterActiveStatus", do_setToCConverterActiveStatus, 0, 11, 2, {PP_FUNCALL, PREC_FN, 0}},
-{"removeToCConverterActiveStatus", do_setToCConverterActiveStatus, 1, 11, 1, {PP_FUNCALL, PREC_FN, 0}},
 
 {"lazyLoadDBfetch",do_lazyLoadDBfetch,0,1,	4,	{PP_FUNCALL, PREC_FN,	0}},
 

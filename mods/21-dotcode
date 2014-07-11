@@ -1,0 +1,5 @@
+Use R-2.15.2's version of .C, etc.
+
+Delete support for "converters" dropped in R-3.0.0.
+
+Make other updates for pqR.
