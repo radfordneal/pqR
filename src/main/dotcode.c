@@ -88,7 +88,6 @@ static SEXP pkgtrim(SEXP args, DllReference *dll);
 
 static R_INLINE void check_scalar_constants_OK (SEXP call)
 {
-#if 0  /* Disabled, since constants are now probably in read-only memory */
     if (LOGICAL(R_ScalarLogicalTRUE)[0] != 1 
      || LOGICAL(R_ScalarLogicalFALSE)[0] != 0
      || LOGICAL(R_ScalarLogicalNA)[0] != NA_LOGICAL) {
@@ -97,7 +96,6 @@ static R_INLINE void check_scalar_constants_OK (SEXP call)
         LOGICAL(R_ScalarLogicalNA)[0] = NA_LOGICAL;
         errorcall(call, _("Foreign routine changed TRUE, FALSE, or NA - reset"));
     }
-#endif
 }
 
 /*
