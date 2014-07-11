@@ -93,8 +93,7 @@
 #include <config.h>
 #endif
 
-/* Don't enable this, since many instances, but not time critical */
-/* #define USE_FAST_PROTECT_MACROS */ 
+#define USE_FAST_PROTECT_MACROS
 #include "IOStuff.h"		/*-> Defn.h */
 #include "Fileio.h"
 #include "Parse.h"
@@ -751,16 +750,16 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   256,   256,   257,   258,   259,   260,   263,   264,   267,
-     270,   271,   272,   273,   275,   276,   278,   279,   280,   281,
-     282,   284,   285,   286,   287,   288,   289,   290,   291,   292,
-     293,   294,   295,   296,   297,   298,   299,   300,   301,   302,
-     303,   305,   306,   307,   309,   310,   311,   312,   313,   314,
-     315,   316,   317,   318,   319,   320,   321,   322,   323,   324,
-     325,   326,   327,   328,   329,   330,   334,   337,   340,   344,
-     345,   346,   347,   348,   349,   352,   353,   356,   357,   358,
-     359,   360,   361,   362,   363,   366,   367,   368,   369,   370,
-     373
+       0,   255,   255,   256,   257,   258,   259,   262,   263,   266,
+     269,   270,   271,   272,   274,   275,   277,   278,   279,   280,
+     281,   283,   284,   285,   286,   287,   288,   289,   290,   291,
+     292,   293,   294,   295,   296,   297,   298,   299,   300,   301,
+     302,   304,   305,   306,   308,   309,   310,   311,   312,   313,
+     314,   315,   316,   317,   318,   319,   320,   321,   322,   323,
+     324,   325,   326,   327,   328,   329,   333,   336,   339,   343,
+     344,   345,   346,   347,   348,   351,   352,   355,   356,   357,
+     358,   359,   360,   361,   362,   365,   366,   367,   368,   369,
+     372
 };
 #endif
 
@@ -3130,8 +3129,12 @@ static SEXP xxdefun(SEXP fname, SEXP formals, SEXP body, YYLTYPE *lloc)
 static SEXP xxunary(SEXP op, SEXP arg)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = lang2(op, arg));
+    if (GenerateCode) {
+        PROTECT(op); /* maybe unnecessary, but just in case... */
+	ans = LCONS (op, SharedList1(arg));
+        UNPROTECT(1);
+        PROTECT(ans);
+    }
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(arg);
@@ -3141,8 +3144,12 @@ static SEXP xxunary(SEXP op, SEXP arg)
 static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = lang3(n1, n2, n3));
+    if (GenerateCode) {
+        PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
+	ans = LCONS (n1, CONS (n2, SharedList1(n3)));
+        UNPROTECT(2);
+        PROTECT(ans);
+    }
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(n2);
@@ -3153,8 +3160,12 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 static SEXP xxparen(SEXP n1, SEXP n2)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = lang2(n1, n2));
+    if (GenerateCode) {
+        PROTECT(n1); /* maybe unnecessary, but just in case... */
+	ans = LCONS (n1, SharedList1(n2));
+        UNPROTECT(1);
+        PROTECT(ans);
+    }
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(n2);

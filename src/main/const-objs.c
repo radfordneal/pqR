@@ -123,3 +123,50 @@ VECTOR_SEXPREC_CONST R_ScalarRealNA_const = {
     .data = { .w = { 1954, 0x7ff00000 } }
 #endif
 };
+
+
+/* 1-element pairlist constants. */
+
+#define LIST1_CONST(car) { \
+    CONST_HEADER(LISTSXP) \
+    .u = { .listsxp = \
+            { .carval = &car, .cdrval = R_NilValue, .tagval = R_NilValue } \
+         } \
+}
+
+static const SEXPREC R_list1_constants[] = {
+    LIST1_CONST(R_ScalarLogicalNA_const),
+    LIST1_CONST(R_ScalarLogicalFALSE_const),
+    LIST1_CONST(R_ScalarLogicalTRUE_const),
+    LIST1_CONST(R_ScalarIntegerNA_const),
+    LIST1_CONST(R_ScalarInteger0To10_const[0]),
+    LIST1_CONST(R_ScalarInteger0To10_const[1]),
+    LIST1_CONST(R_ScalarInteger0To10_const[2]),
+    LIST1_CONST(R_ScalarInteger0To10_const[3]),
+    LIST1_CONST(R_ScalarInteger0To10_const[4]),
+    LIST1_CONST(R_ScalarInteger0To10_const[5]),
+    LIST1_CONST(R_ScalarInteger0To10_const[6]),
+    LIST1_CONST(R_ScalarInteger0To10_const[7]),
+    LIST1_CONST(R_ScalarInteger0To10_const[8]),
+    LIST1_CONST(R_ScalarInteger0To10_const[9]),
+    LIST1_CONST(R_ScalarInteger0To10_const[10]),
+    LIST1_CONST(R_ScalarRealZero_const),
+    LIST1_CONST(R_ScalarRealOne_const),
+    LIST1_CONST(R_NilValue_const) /* may be used, and also signals end of list*/
+};
+
+
+/* Return the CONS of the "car" argument with R_NilValue, as a shared 
+   constant if possible.  The argument need not be protected by the caller
+   before the call. */
+
+SEXP attribute_hidden SharedList1(SEXP car)
+{
+    for (int i = 0; ; i++) {
+        SEXP c = (SEXP) &R_list1_constants[i];
+        if (CAR(c) == car) 
+            return c;
+        if (CAR(c) == R_NilValue)
+            return CONS(car,R_NilValue);
+    }
+}
