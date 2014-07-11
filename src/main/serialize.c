@@ -99,16 +99,8 @@
    The output format for dotted pairs writes the ATTRIB value first
    rather than last.  This allows CDR's to be processed by iterative
    tail calls to avoid recursion stack overflows when processing long
-   lists.  The writing code does take advantage of this, but the
-   reading code does not.  It hasn't been a big issue so far--the only
-   case where it has come up is in saving a large unhashed environment
-   where saving succeeds but loading fails because the PROTECT stack
-   overflows.  With the ability to create hashed environments at the
-   user level this is likely to be even less of an issue now.  But if
-   we do need to deal with it we can do so without a change in the
-   serialization format--just rewrite ReadItem to pass the place to
-   store the CDR it reads. (It's a bit of a pain to do, that is why it
-   is being deferred until it is clearly needed.)
+   lists.  Both the writing code and the reading code take advantage 
+   of this.
 
    CHARSXPs are now handled in a way that preserves both embedded null
    characters and NA_STRING values.

@@ -2269,9 +2269,10 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
         int count[32], count0[32], count00[32], count01[32];
         for (int i = 0; i<32; i++) 
             count[i] = count0[i] = count00[i] = count01[i] = 0;
-        REprintf(
-         "\n# OF OBJECTS OF EACH TYPE (PLUS COUNT IN CLASS 0, LENGTH 0/1)\n\n"
-        );
+        REprintf (
+         "\n# OF OBJECTS OF EACH TYPE (PLUS COUNT IN CLASS 0, LENGTH 0/1)\n");
+        REprintf ("\n%11s%10s %10s %10s %10s\n", 
+                  "Type", "Total", "Class 0", "Length 0", "Length 1");
         for (int i = 0; i < NUM_NODE_CLASSES; i++) {
             for (int g = 0; g < NUM_OLD_GENERATIONS; g++) {
                 for (SEXP s = NEXT_NODE(R_GenHeap[i].Old[g]);
