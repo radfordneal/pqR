@@ -1000,6 +1000,7 @@ void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
 void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
+SEXP Rf_SharedList1(SEXP);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1387,6 +1388,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define setVar			Rf_setVar
 #define set_var_in_frame	Rf_set_var_in_frame
 #define set_var_nonlocal	Rf_set_var_nonlocal
+#define SharedList1		Rf_SharedList1
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute

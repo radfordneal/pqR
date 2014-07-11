@@ -26,8 +26,7 @@
 #include <config.h>
 #endif
 
-/* Don't enable this, since many instances, but not time critical */
-/* #define USE_FAST_PROTECT_MACROS */ 
+#define USE_FAST_PROTECT_MACROS
 #include "IOStuff.h"		/*-> Defn.h */
 #include "Fileio.h"
 #include "Parse.h"
@@ -872,8 +871,12 @@ static SEXP xxdefun(SEXP fname, SEXP formals, SEXP body, YYLTYPE *lloc)
 static SEXP xxunary(SEXP op, SEXP arg)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = lang2(op, arg));
+    if (GenerateCode) {
+        PROTECT(op); /* maybe unnecessary, but just in case... */
+	ans = LCONS (op, SharedList1(arg));
+        UNPROTECT(1);
+        PROTECT(ans);
+    }
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(arg);
@@ -883,8 +886,12 @@ static SEXP xxunary(SEXP op, SEXP arg)
 static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = lang3(n1, n2, n3));
+    if (GenerateCode) {
+        PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
+	ans = LCONS (n1, CONS (n2, SharedList1(n3)));
+        UNPROTECT(2);
+        PROTECT(ans);
+    }
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(n2);
@@ -895,8 +902,12 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 static SEXP xxparen(SEXP n1, SEXP n2)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = lang2(n1, n2));
+    if (GenerateCode) {
+        PROTECT(n1); /* maybe unnecessary, but just in case... */
+	ans = LCONS (n1, SharedList1(n2));
+        UNPROTECT(1);
+        PROTECT(ans);
+    }
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(n2);

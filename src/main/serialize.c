@@ -1488,7 +1488,8 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 
     R_assert(TYPEOF(ref_table) == LISTSXP && TYPEOF(CAR(ref_table)) == VECSXP);
 
-  again:
+  again: /* we jump back here instead of tail recursion for CDR of CONS type */
+
     flags = InInteger(stream);
     UnpackFlags(flags, &type, &levs, &objf, &hasattr, &hastag, &isconstant);
 
@@ -1554,6 +1555,15 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    goto ret;
 	}
     case LISTSXP:
+        if (isconstant && !objf && !hasattr && !hastag && levs==0) {
+            SEXP car, cdr;
+            PROTECT(car = ReadItem (ref_table, stream));
+            cdr = ReadItem (ref_table, stream);
+            s = cdr == R_NilValue ? SharedList1(car) : CONS(car,cdr);
+            UNPROTECT(1); /* car */
+            goto ret;
+        }
+        /* else fall through to code below for non-constants */
     case LANGSXP:
     case CLOSXP:
     case PROMSXP:
@@ -1622,7 +1632,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    break;
         case LGLSXP:
             len = InInteger(stream);
-            if (isconstant && len==1)
+            if (isconstant && len==1 && !objf && !hasattr && levs==0)
                 PROTECT(s = ScalarLogicalShared(InInteger(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
@@ -1631,7 +1641,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             break;
         case INTSXP:
             len = InInteger(stream);
-            if (isconstant && len==1)
+            if (isconstant && len==1 && !objf && !hasattr && levs==0)
                 PROTECT(s = ScalarIntegerShared(InInteger(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
@@ -1640,7 +1650,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             break;
         case REALSXP:
             len = InInteger(stream);
-            if (isconstant && len==1)
+            if (isconstant && len==1 && !objf && !hasattr && levs==0)
                 PROTECT(s = ScalarRealShared(InReal(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
@@ -1649,7 +1659,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             break;
         case CPLXSXP:
             len = InInteger(stream);
-            if (isconstant && len==1)
+            if (isconstant && len==1 && !objf && !hasattr && levs==0)
                 PROTECT(s = ScalarComplexShared(InComplex(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
@@ -1658,7 +1668,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             break;
         case STRSXP:
             len = InInteger(stream);
-            if (isconstant && len==1)
+            if (isconstant && len==1 && !objf && !hasattr && levs==0)
                 PROTECT(s = ScalarStringShared(ReadItem(ref_table, stream)));
             else {
                 PROTECT(s = allocVector(type, len));
@@ -1682,7 +1692,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    error(_("this version of R cannot read generic function references"));
         case RAWSXP:
             len = InInteger(stream);
-            if (isconstant && len==1) {
+            if (isconstant && len==1 && !objf && !hasattr && levs==0) {
                 Rbyte b;
                 stream->InBytes (stream, &b, 1);
                 PROTECT(s = ScalarRawShared(b));
