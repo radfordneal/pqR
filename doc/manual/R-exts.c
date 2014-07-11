@@ -242,6 +242,8 @@ SEXP mkans(double x)
 {
     SEXP ans;
     PROTECT(ans = allocVector(REALSXP, 1));
+    /* This PROTECT is not essential with this code, but would become so if
+       we added anything below that could allocate memory, so let's be safe. */
     REAL(ans)[0] = x;
     UNPROTECT(1);
     return ans;
@@ -249,7 +251,10 @@ SEXP mkans(double x)
 
 double feval(double x, SEXP f, SEXP rho)
 {
-    defineVar(install("x"), mkans(x), rho);
+    SEXP ansx;
+    PROTECT(ansx = mkans(x));
+    defineVar(install("x"), ansx, rho);
+    UNPROTECT(1);
     return(REAL(eval(f, rho))[0]);
 }
 
@@ -301,6 +306,13 @@ SEXP numeric_deriv(SEXP args)
 
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) {
 	PROTECT(par = findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+        if (NAMED(par) > 1) {
+            par = duplicate(par);
+            UNPROTECT(1); /* old value of par */
+            PROTECT(par);
+            defineVar(install(CHAR(STRING_ELT(theta, i))), par, rho);
+            SET_NAMED(par,1);
+        }
 	tt = REAL(par)[0];
 	xx = fabs(tt);
 	delta = (xx < 1) ? eps : xx*eps;
