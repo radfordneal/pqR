@@ -173,27 +173,27 @@ ListAnswer(SEXP x, int recurse, struct BindData *data, SEXP call)
 	break;
     case LGLSXP:
 	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarLogicalShared(LOGICAL(x)[i]));
+	    LIST_ASSIGN(ScalarLogicalMaybeConst(LOGICAL(x)[i]));
 	break;
     case RAWSXP:
 	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarRawShared(RAW(x)[i]));
+	    LIST_ASSIGN(ScalarRawMaybeConst(RAW(x)[i]));
 	break;
     case INTSXP:
 	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarIntegerShared(INTEGER(x)[i]));
+	    LIST_ASSIGN(ScalarIntegerMaybeConst(INTEGER(x)[i]));
 	break;
     case REALSXP:
 	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarRealShared(REAL(x)[i]));
+	    LIST_ASSIGN(ScalarRealMaybeConst(REAL(x)[i]));
 	break;
     case CPLXSXP:
 	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarComplexShared(COMPLEX(x)[i]));
+	    LIST_ASSIGN(ScalarComplexMaybeConst(COMPLEX(x)[i]));
 	break;
     case STRSXP:
 	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarStringShared(STRING_ELT(x, i)));
+	    LIST_ASSIGN(ScalarStringMaybeConst(STRING_ELT(x, i)));
 	break;
     case VECSXP:
     case EXPRSXP:

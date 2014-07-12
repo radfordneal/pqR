@@ -100,7 +100,7 @@ static void InitDerivSymbols(void)
 
 static SEXP Constant(double x)
 {
-    return ScalarRealShared(x);
+    return ScalarRealMaybeConst(x);
 }
 
 static int isZero(SEXP s)
@@ -501,14 +501,14 @@ static SEXP D(SEXP expr, SEXP var)
 	else if (CAR(expr) == TriGammaSymbol) {
 	    ans = simplify(TimesSymbol,
 			   PP(D(CADR(expr), var)),
-			   PP_S(PsiSymbol, CADR(expr), PP(ScalarIntegerShared(2))));
+			   PP_S(PsiSymbol, CADR(expr), PP(ScalarIntegerMaybeConst(2))));
 	    UNPROTECT(3);
 	}
 	else if (CAR(expr) == PsiSymbol) {
 	    if (length(expr) == 2){
 		ans = simplify(TimesSymbol,
 			       PP(D(CADR(expr), var)),
-			       PP_S(PsiSymbol,CADR(expr),PP(ScalarIntegerShared(1))));
+			       PP_S(PsiSymbol,CADR(expr),PP(ScalarIntegerMaybeConst(1))));
 		UNPROTECT(3);
 	    } else if (TYPEOF(CADDR(expr)) == INTSXP ||
 		       TYPEOF(CADDR(expr)) == REALSXP) {
@@ -516,7 +516,7 @@ static SEXP D(SEXP expr, SEXP var)
 			       PP(D(CADR(expr), var)),
 			       PP_S(PsiSymbol,
 				  CADR(expr),
-				  PP(ScalarIntegerShared(asInteger(CADDR(expr))+1))));
+				  PP(ScalarIntegerMaybeConst(asInteger(CADDR(expr))+1))));
 		UNPROTECT(3);
 	    } else {
 		ans = simplify(TimesSymbol,
@@ -524,7 +524,7 @@ static SEXP D(SEXP expr, SEXP var)
 			       PP_S(PsiSymbol,
 				    CADR(expr),
 				    simplify(PlusSymbol, CADDR(expr),
-					     PP(ScalarIntegerShared(1)))));
+					     PP(ScalarIntegerMaybeConst(1)))));
 		UNPROTECT(3);
 	    }
 	}
@@ -805,8 +805,8 @@ static SEXP CreateGrad(SEXP names)
     PROTECT(dim = lang3(R_NilValue, R_NilValue, R_NilValue));
     SETCAR(dim, install("c"));
     SETCADR(dim, lang2(install("length"), install(".value")));
-    SETCADDR(dim, ScalarIntegerShared(length(names))); /* was real? */
-    PROTECT(data = ScalarRealShared(0.));
+    SETCADDR(dim, ScalarIntegerMaybeConst(length(names))); /* was real? */
+    PROTECT(data = ScalarRealMaybeConst(0.));
     PROTECT(p = lang4(install("array"), data, dim, dimnames));
     p = lang3(install("<-"), install(".grad"), p);
     UNPROTECT(4);
@@ -832,9 +832,9 @@ static SEXP CreateHess(SEXP names)
     PROTECT(dim = lang4(R_NilValue, R_NilValue, R_NilValue,R_NilValue));
     SETCAR(dim, install("c"));
     SETCADR(dim, lang2(install("length"), install(".value")));
-    SETCADDR(dim, ScalarIntegerShared(length(names)));
-    SETCADDDR(dim, ScalarIntegerShared(length(names)));
-    PROTECT(data = ScalarRealShared(0.));
+    SETCADDR(dim, ScalarIntegerMaybeConst(length(names)));
+    SETCADDDR(dim, ScalarIntegerMaybeConst(length(names)));
+    PROTECT(data = ScalarRealMaybeConst(0.));
     PROTECT(p = lang4(install("array"), data, dim, dimnames));
     p = lang3(install("<-"), install(".hessian"), p);
     UNPROTECT(4);

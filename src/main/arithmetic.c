@@ -1408,7 +1408,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
             REAL(sy)[0] = res;
         }
         else if (ATTRIB(sa) == R_NilValue) {
-            PROTECT(sy = ScalarRealShared(res));
+            PROTECT(sy = ScalarRealMaybeConst(res));
         }
         else {
             PROTECT(sy = ScalarReal(res));
@@ -1820,7 +1820,7 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
 	double digits = 0;
 	if(PRIMVAL(op) == 10004) digits = 6.0;
-	PROTECT(args = list2(CAR(args), ScalarRealShared(digits))); nprotect++;
+	PROTECT(args = list2(CAR(args), ScalarRealMaybeConst(digits))); nprotect++;
     }
 
     PROTECT(args = evalListKeepMissing(args, env));
@@ -1838,7 +1838,7 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	    double digits = 0.0;
             check1arg_x (args, call);
 	    if(PRIMVAL(op) == 10004) digits = 6.0;
-	    SETCDR(args, CONS(ScalarRealShared(digits), R_NilValue));
+	    SETCDR(args, CONS(ScalarRealMaybeConst(digits), R_NilValue));
 	} else {
 	    /* If named, do argument matching by name */
 	    if (TAG(args) != R_NilValue || TAG(CDR(args)) != R_NilValue) {
@@ -1865,8 +1865,8 @@ SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (DispatchGroup("Math", call, op, args, env, &res)) return res;
 
-    if(PRIMVAL(op) == 10) tmp = ScalarRealShared(10.0);
-    if(PRIMVAL(op) == 2)  tmp = ScalarRealShared(2.0);
+    if(PRIMVAL(op) == 10) tmp = ScalarRealMaybeConst(10.0);
+    if(PRIMVAL(op) == 2)  tmp = ScalarRealMaybeConst(2.0);
 
     PROTECT(call2 = lang3(install("log"), CAR(args), tmp));
     PROTECT(args2 = lang2(CAR(args), tmp));

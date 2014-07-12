@@ -69,7 +69,7 @@ SEXP attribute_hidden do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEX
 	error(_("argument 'MoreArgs' of 'mapply' is not a list"));
 
     for(j = m - 1; j >= 0; j--) {
-	SET_VECTOR_ELT(mindex, j, ScalarIntegerShared(j + 1));
+	SET_VECTOR_ELT(mindex, j, ScalarIntegerMaybeConst(j + 1));
 	SET_VECTOR_ELT(nindex, j, allocVector(INTSXP, 1));
 	PROTECT(tmp1 = lang3(R_Bracket2Symbol,
 			     install("dots"),

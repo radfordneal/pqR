@@ -726,27 +726,27 @@ static SEXP coerceToExpression(SEXP v)
 	switch (TYPEOF(v)) {
 	case LGLSXP:
 	    for (i = 0; i < n; i++)
-		SET_VECTOR_ELT(ans, i, ScalarLogicalShared(LOGICAL(v)[i]));
+		SET_VECTOR_ELT(ans, i, ScalarLogicalMaybeConst(LOGICAL(v)[i]));
 	    break;
 	case INTSXP:
 	    for (i = 0; i < n; i++)
-		SET_VECTOR_ELT(ans, i, ScalarIntegerShared(INTEGER(v)[i]));
+		SET_VECTOR_ELT(ans, i, ScalarIntegerMaybeConst(INTEGER(v)[i]));
 	    break;
 	case REALSXP:
 	    for (i = 0; i < n; i++)
-		SET_VECTOR_ELT(ans, i, ScalarRealShared(REAL(v)[i]));
+		SET_VECTOR_ELT(ans, i, ScalarRealMaybeConst(REAL(v)[i]));
 	    break;
 	case CPLXSXP:
 	    for (i = 0; i < n; i++)
-		SET_VECTOR_ELT(ans, i, ScalarComplexShared(COMPLEX(v)[i]));
+		SET_VECTOR_ELT(ans, i, ScalarComplexMaybeConst(COMPLEX(v)[i]));
 	    break;
 	case STRSXP:
 	    for (i = 0; i < n; i++)
-		SET_VECTOR_ELT(ans, i, ScalarStringShared(STRING_ELT(v, i)));
+		SET_VECTOR_ELT(ans, i, ScalarStringMaybeConst(STRING_ELT(v, i)));
 	    break;
 	case RAWSXP:
 	    for (i = 0; i < n; i++)
-		SET_VECTOR_ELT(ans, i, ScalarRawShared(RAW(v)[i]));
+		SET_VECTOR_ELT(ans, i, ScalarRawMaybeConst(RAW(v)[i]));
 	    break;
 	default:
 	    UNIMPLEMENTED_TYPE("coerceToExpression", v);
@@ -775,27 +775,27 @@ static SEXP coerceToVectorList(SEXP v)
     switch (TYPEOF(v)) {
     case LGLSXP:
 	for (i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, ScalarLogicalShared(LOGICAL(v)[i]));
+	    SET_VECTOR_ELT(ans, i, ScalarLogicalMaybeConst(LOGICAL(v)[i]));
 	break;
     case INTSXP:
 	for (i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, ScalarIntegerShared(INTEGER(v)[i]));
+	    SET_VECTOR_ELT(ans, i, ScalarIntegerMaybeConst(INTEGER(v)[i]));
 	break;
     case REALSXP:
 	for (i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, ScalarRealShared(REAL(v)[i]));
+	    SET_VECTOR_ELT(ans, i, ScalarRealMaybeConst(REAL(v)[i]));
 	break;
     case CPLXSXP:
 	for (i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, ScalarComplexShared(COMPLEX(v)[i]));
+	    SET_VECTOR_ELT(ans, i, ScalarComplexMaybeConst(COMPLEX(v)[i]));
 	break;
     case STRSXP:
 	for (i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, ScalarStringShared(STRING_ELT(v, i)));
+	    SET_VECTOR_ELT(ans, i, ScalarStringMaybeConst(STRING_ELT(v, i)));
 	break;
     case RAWSXP:
 	for (i = 0; i < n; i++)
-	    SET_VECTOR_ELT(ans, i, ScalarRawShared(RAW(v)[i]));
+	    SET_VECTOR_ELT(ans, i, ScalarRawMaybeConst(RAW(v)[i]));
 	break;
     case LISTSXP:
     case LANGSXP:
@@ -1844,7 +1844,7 @@ static SEXP do_fast_is(SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 	errorcall(call, _("unimplemented predicate"));
     }
 
-    return ScalarLogicalShared(log_ans);
+    return ScalarLogicalMaybeConst(log_ans);
 }
 
 static SEXP do_is(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -1920,7 +1920,7 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 
-    return ScalarLogicalShared(log_ans);
+    return ScalarLogicalMaybeConst(log_ans);
 }
 
 static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
@@ -2087,7 +2087,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     /* Return variant result. */
 
 vret:
-    return ScalarLogicalShared(ret);
+    return ScalarLogicalMaybeConst(ret);
 }
 
 static SEXP do_isna (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2189,7 +2189,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     /* Return variant result. */
 
 vret:
-    return ScalarLogicalShared(ret);
+    return ScalarLogicalMaybeConst(ret);
 }
 
 static SEXP do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2304,7 +2304,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     /* Return variant result. */
 
 vret:
-    return ScalarLogicalShared(ret);
+    return ScalarLogicalMaybeConst(ret);
 }
 
 static SEXP do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2419,7 +2419,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
     /* Return variant result. */
 
 vret:
-    return ScalarLogicalShared(ret);
+    return ScalarLogicalMaybeConst(ret);
 }
 
 static SEXP do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho, 

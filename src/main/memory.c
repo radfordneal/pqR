@@ -2755,9 +2755,9 @@ SEXP ScalarRaw(Rbyte x)
 }
 
 /* Versions of functions for allocation of scalars that may return a 
-   shared object.  ScalarLogicalShared is in Rinlinedfuns.h. */
+   shared object.  ScalarLogicalMaybeConst is in Rinlinedfuns.h. */
 
-SEXP ScalarIntegerShared(int x)
+SEXP ScalarIntegerMaybeConst(int x)
 {
     if (ENABLE_SHARED_CONSTANTS) {
         if (x >=0 && x <= 10)
@@ -2771,7 +2771,7 @@ SEXP ScalarIntegerShared(int x)
     return ans;
 }
 
-SEXP ScalarRealShared(double x)
+SEXP ScalarRealMaybeConst(double x)
 {
     if (ENABLE_SHARED_CONSTANTS) {
 
@@ -2792,14 +2792,14 @@ SEXP ScalarRealShared(double x)
     return ans;
 }
 
-SEXP ScalarComplexShared(Rcomplex x)
+SEXP ScalarComplexMaybeConst(Rcomplex x)
 {
     SEXP ans = allocVector(CPLXSXP, 1);
     COMPLEX(ans)[0] = x;
     return ans;
 }
 
-SEXP ScalarStringShared(SEXP x)
+SEXP ScalarStringMaybeConst(SEXP x)
 {
     SEXP ans;
     PROTECT(x);
@@ -2809,7 +2809,7 @@ SEXP ScalarStringShared(SEXP x)
     return ans;
 }
 
-SEXP ScalarRawShared(Rbyte x)
+SEXP ScalarRawMaybeConst(Rbyte x)
 {
     SEXP ans = allocVector(RAWSXP, 1);
     RAW(ans)[0] = x;

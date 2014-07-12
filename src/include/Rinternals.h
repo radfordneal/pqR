@@ -989,16 +989,16 @@ SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
 SEXP Rf_ScalarComplex(Rcomplex);
-SEXP Rf_ScalarComplexShared(Rcomplex);
+SEXP Rf_ScalarComplexMaybeConst(Rcomplex);
 SEXP Rf_ScalarInteger(int);
-SEXP Rf_ScalarIntegerShared(int);
-SEXP Rf_ScalarLogical(int);  /* shared version is inlined */
+SEXP Rf_ScalarIntegerMaybeConst(int);
+SEXP Rf_ScalarLogical(int);  /* MaybeConst version is inlined */
 SEXP Rf_ScalarRaw(Rbyte);
-SEXP Rf_ScalarRawShared(Rbyte);
+SEXP Rf_ScalarRawMaybeConst(Rbyte);
 SEXP Rf_ScalarReal(double);
-SEXP Rf_ScalarRealShared(double);
+SEXP Rf_ScalarRealMaybeConst(double);
 SEXP Rf_ScalarString(SEXP);
-SEXP Rf_ScalarStringShared(SEXP);
+SEXP Rf_ScalarStringMaybeConst(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
@@ -1006,7 +1006,7 @@ void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
 void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
-SEXP Rf_SharedList1(SEXP);
+SEXP Rf_MaybeConstList1(SEXP);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1376,17 +1376,17 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
 #define ScalarComplex		Rf_ScalarComplex
-#define ScalarComplexShared	Rf_ScalarComplexShared
+#define ScalarComplexMaybeConst	Rf_ScalarComplexMaybeConst
 #define ScalarInteger		Rf_ScalarInteger
-#define ScalarIntegerShared	Rf_ScalarIntegerShared
+#define ScalarIntegerMaybeConst	Rf_ScalarIntegerMaybeConst
 #define ScalarLogical		Rf_ScalarLogical
-#define ScalarLogicalShared	Rf_ScalarLogicalShared
+#define ScalarLogicalMaybeConst	Rf_ScalarLogicalMaybeConst
 #define ScalarReal		Rf_ScalarReal
-#define ScalarRealShared	Rf_ScalarRealShared
+#define ScalarRealMaybeConst	Rf_ScalarRealMaybeConst
 #define ScalarString		Rf_ScalarString
-#define ScalarStringShared	Rf_ScalarStringShared
+#define ScalarStringMaybeConst	Rf_ScalarStringMaybeConst
 #define ScalarRaw		Rf_ScalarRaw
-#define ScalarRawShared		Rf_ScalarRawShared
+#define ScalarRawMaybeConst		Rf_ScalarRawMaybeConst
 #define setAttrib		Rf_setAttrib
 #define setNoSpecSymFlag	Rf_setNoSpecSymFlag
 #define setSVector		Rf_setSVector
@@ -1394,7 +1394,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define setVar			Rf_setVar
 #define set_var_in_frame	Rf_set_var_in_frame
 #define set_var_nonlocal	Rf_set_var_nonlocal
-#define SharedList1		Rf_SharedList1
+#define MaybeConstList1		Rf_MaybeConstList1
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute
@@ -1516,7 +1516,7 @@ SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
-SEXP	 Rf_ScalarLogicalShared(int);
+SEXP	 Rf_ScalarLogicalMaybeConst(int);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);

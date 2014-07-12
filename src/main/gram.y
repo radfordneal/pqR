@@ -873,7 +873,7 @@ static SEXP xxunary(SEXP op, SEXP arg)
     SEXP ans;
     if (GenerateCode) {
         PROTECT(op); /* maybe unnecessary, but just in case... */
-	ans = LCONS (op, SharedList1(arg));
+	ans = LCONS (op, MaybeConstList1(arg));
         UNPROTECT(1);
         PROTECT(ans);
     }
@@ -888,7 +888,7 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
     SEXP ans;
     if (GenerateCode) {
         PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
-	ans = LCONS (n1, CONS (n2, SharedList1(n3)));
+	ans = LCONS (n1, CONS (n2, MaybeConstList1(n3)));
         UNPROTECT(2);
         PROTECT(ans);
     }
@@ -904,7 +904,7 @@ static SEXP xxparen(SEXP n1, SEXP n2)
     SEXP ans;
     if (GenerateCode) {
         PROTECT(n1); /* maybe unnecessary, but just in case... */
-	ans = LCONS (n1, SharedList1(n2));
+	ans = LCONS (n1, MaybeConstList1(n2));
         UNPROTECT(1);
         PROTECT(ans);
     }
@@ -965,7 +965,7 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
     case SYMSXP:
 	return cons_with_tag (arg, R_NilValue, tag);
     case NILSXP:
-    	return SharedList1(arg);
+    	return MaybeConstList1(arg);
     default:
 	error(_("incorrect tag type at line %d"), lloc->first_line); 
         return R_NilValue/* -Wall */;
@@ -1623,13 +1623,13 @@ static int KeywordLookup(const char *s)
 		if(GenerateCode) {
 		    switch(i) {
 		    case 1:
-			PROTECT(yylval = ScalarLogicalShared(NA_LOGICAL));
+			PROTECT(yylval = ScalarLogicalMaybeConst(NA_LOGICAL));
 			break;
 		    case 2:
-			PROTECT(yylval = ScalarLogicalShared(1));
+			PROTECT(yylval = ScalarLogicalMaybeConst(1));
 			break;
 		    case 3:
-			PROTECT(yylval = ScalarLogicalShared(0));
+			PROTECT(yylval = ScalarLogicalMaybeConst(0));
 			break;
 		    case 4:
 			PROTECT(yylval = allocVector(REALSXP, 1));
@@ -1640,7 +1640,7 @@ static int KeywordLookup(const char *s)
 			REAL(yylval)[0] = R_NaN;
 			break;
 		    case 6:
-                        PROTECT(yylval = ScalarIntegerShared(NA_INTEGER));
+                        PROTECT(yylval = ScalarIntegerMaybeConst(NA_INTEGER));
 			break;
 		    case 7:
 			PROTECT(yylval = allocVector(REALSXP, 1));
@@ -1682,13 +1682,13 @@ static int KeywordLookup(const char *s)
 
 static SEXP mkFloat(const char *s)
 {
-    return ScalarRealShared(R_atof(s));
+    return ScalarRealMaybeConst(R_atof(s));
 }
 
 static SEXP mkInt(const char *s)
 {
     double f = R_atof(s);  /* or R_strtol? */
-    return ScalarIntegerShared((int) f);
+    return ScalarIntegerMaybeConst((int) f);
 }
 
 static SEXP mkComplex(const char *s)

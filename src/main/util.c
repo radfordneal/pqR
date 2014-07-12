@@ -750,7 +750,7 @@ static SEXP do_nargs(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    break;
 	}
     }
-    return ScalarIntegerShared(nargs);
+    return ScalarIntegerMaybeConst(nargs);
 }
 
 

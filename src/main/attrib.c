@@ -239,7 +239,7 @@ SEXP R_shortRowNames(SEXP vec, SEXP stype)
     if(type >= 1) {
 	int n = (isInteger(s) && LENGTH(s) == 2 && INTEGER(s)[0] == NA_INTEGER)
 	    ? INTEGER(s)[1] : (s == R_NilValue ? 0 : LENGTH(s));
-	ans = ScalarIntegerShared((type == 1) ? n : abs(n));
+	ans = ScalarIntegerMaybeConst((type == 1) ? n : abs(n));
     }
     return ans;
 }
@@ -669,7 +669,7 @@ static SEXP R_S4_extends_table = 0;
  
 static SEXP cache_class(const char *class, SEXP klass) {
     if(!R_S4_extends_table) {
-	R_S4_extends_table = R_NewHashedEnv(R_NilValue, ScalarIntegerShared(0));
+	R_S4_extends_table = R_NewHashedEnv(R_NilValue, ScalarIntegerMaybeConst(0));
 	R_PreserveObject(R_S4_extends_table);
     }
     if(isNull(klass)) { /* retrieve cached value */
@@ -687,7 +687,7 @@ static SEXP S4_extends(SEXP klass) {
     if(!s_extends) {
 	s_extends = install("extends");
 	s_extendsForS3 = install(".extendsForS3");
-	R_S4_extends_table = R_NewHashedEnv(R_NilValue, ScalarIntegerShared(0));
+	R_S4_extends_table = R_NewHashedEnv(R_NilValue, ScalarIntegerMaybeConst(0));
 	R_PreserveObject(R_S4_extends_table);
     }
     /* sanity check for methods package available */
