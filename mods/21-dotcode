@@ -2,4 +2,8 @@ Use R-2.15.2's version of .C, etc.
 
 Delete support for "converters" dropped in R-3.0.0.
 
-Make other updates for pqR.
+Make other updates for pqR, including copying of all length-one
+vectors, since these might be constants.  Updated documentation
+to reflect this, and say what functions give unshared values.
+
+
