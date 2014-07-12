@@ -5,3 +5,8 @@ is restored as the same constant.
 
 Other optimization also done in serialize.c, including eliminating
 tail recursion in ReadItem.
+
+Define one-element pairlist constants.
+
+Modifed matchArgs as a result to avoid writing to supplied arg list,
+which might be a read-only constant.
