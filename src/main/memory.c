@@ -58,9 +58,8 @@
 
 #define EXPEL_OLD_TO_NEW 0 /* Immediately expel, rather than use OldToNew? */
 
-#define FLAG_OLD_TO_NEW 0  /* Use gcoton in sxpinfo to flag nodes already moved
-                              to OldToNew?  (Only when EXPEL_OLD_TO_NEW is 0).
-                              Can't be enabled if there's no gcoton field! */
+#define FLAG_OLD_TO_NEW 1  /* Use "prev" field to flag nodes already moved
+                              to OldToNew?  (Only when EXPEL_OLD_TO_NEW is 0) */
 
 #define SORT_NODES 1  /* Sort free nodes in every page on each full GC? */
 
@@ -897,7 +896,7 @@ int CheckStuff(SEXP x, SEXP n, int w, int g)
 #endif
           "\n", n, x, NODE_GENERATION(x), g 
 #if FLAG_OLD_TO_NEW
-          , n->sxpinfo.gcoton, x->sxpinfo.gcoton
+          , n->gengc_prev_node!=0, x->gengc_prev_node!=0
 #endif
         );
         err = 1;
@@ -932,8 +931,8 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                 REprintf(" -- %s %d\n",type2char(TYPEOF(s)),i);
             }
 #if FLAG_OLD_TO_NEW
-            if (s->sxpinfo.gcoton) {
-                REprintf("Node in New has gcoton set!\n");
+            if (s->gengc_prev_node == 0) {
+                REprintf("Node in New has zero prev!\n");
                 REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                          i, NODE_CLASS(s));
             }
@@ -951,8 +950,8 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                     REprintf(" -- %d %d %d\n",i,gen,OldCount);
                 }
 #if FLAG_OLD_TO_NEW
-                if (s->sxpinfo.gcoton) {
-		    REprintf("Node in Old has gcoton set!\n");
+                if (s->gengc_prev_node == 0) {
+		    REprintf("Node in Old has zero prev!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                              i, NODE_CLASS(s));
                 }
@@ -982,8 +981,8 @@ void DEBUG_CHECK_NODE_COUNTS(char *where)
                     REprintf(" -- %d %d %d\n",i,gen,OldToNewCount);
                 }
 #if FLAG_OLD_TO_NEW
-                if (!s->sxpinfo.gcoton) {
-		    REprintf("Node in OldToNew does not have gcoton set!\n");
+                if (s->gengc_prev_node != 0) {
+		    REprintf("Node in OldToNew does not have zero prev!\n");
                     REprintf(" -- %s %d %d\n", type2char(TYPEOF(s)),
                              i, NODE_CLASS(s));
                 }
@@ -1389,9 +1388,13 @@ static void old_to_new(SEXP x, SEXP y)
     AgeNodeAndChildren(y, NODE_GENERATION(x));
 #else
     UNSNAP_NODE(x);
-    SNAP_NODE(x, R_GenHeap[NODE_CLASS(x)].OldToNew[NODE_GENERATION(x)]);
 #if FLAG_OLD_TO_NEW
-    x->sxpinfo.gcoton = 1;  /* so won't have to unsnap & snap again */
+    SEXP h = R_GenHeap[NODE_CLASS(x)].OldToNew[NODE_GENERATION(x)];
+    SET_NEXT_NODE(x,NEXT_NODE(h));
+    SET_NEXT_NODE(h,x);
+    x->gengc_prev_node = 0;
+#else
+    SNAP_NODE(x, R_GenHeap[NODE_CLASS(x)].OldToNew[NODE_GENERATION(x)]);
 #endif
 #endif
 
@@ -1410,7 +1413,7 @@ static void old_to_new(SEXP x, SEXP y)
 #if FLAG_OLD_TO_NEW
 #define CHECK_OLD_TO_NEW(x,y) do { \
   if (NODE_IS_MARKED(CHK(x)) \
-   && !(x)->sxpinfo.gcoton \
+   && (x)->gengc_prev_node != 0 \
    && (!NODE_IS_MARKED(CHK(y)) || NODE_GENERATION(x) > NODE_GENERATION(y))) \
       old_to_new(x,y); \
   } while (0)
@@ -1733,15 +1736,12 @@ static void transfer_old_to_new (int num_old_gens_to_collect)
 	    while (s != R_GenHeap[i].OldToNew[gen]) {
 		SEXP next = NEXT_NODE(s);
 		DO_CHILDREN(s, AgeNodeAndChildren, gen);
-		UNSNAP_NODE(s);
-#if FLAG_OLD_TO_NEW
-                s->sxpinfo.gcoton = 0;
-#endif
 		if (NODE_GENERATION(s) != gen)
 		    REprintf("****snapping into wrong generation\n");
 		SNAP_NODE(s, R_GenHeap[i].Old[gen]);
 		s = next;
 	    }
+	    MAKE_EMPTY(s);
 	}
     }
 }

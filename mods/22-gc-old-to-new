@@ -1,0 +1,3 @@
+Set "prev" field in nodes to zero to indicate that they are
+already in an old-to-new list, and hence don't have to be
+moved again.
