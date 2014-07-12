@@ -44,9 +44,11 @@
 
 \details{
   These functions can be used to make calls to compiled C and Fortran 77
-  code.  Later interfaces are \code{\link{.Call}} and
-  \code{\link{.External}} which are more flexible and have better
-  performance.
+  code.  The interfaces of \code{\link{.Call}} and
+  \code{\link{.External}} are more flexible, which may sometimes allow
+  for better performance, although their flexibility may also prevent
+  some optimizations in future versions of pqR that are possible for
+  \code{.C} and \code{.Fortran}.
 
   Character strings will be translated from the value of \code{ENCODING}
   or any declared encoding (see \code{\link{Encoding}}) to the current
@@ -130,41 +132,44 @@
   read-only, and use of any inputs other that vectors (including lists), 
   functions and environments are now deprecated.
 }
-%%-- This note by Thomas Lumley, (minimally edited by MM,
-%%      edited by BDR for 1.2.0's non-moving garbage collector):
-\section{Warning}{
-  \emph{\code{DUP = FALSE} is dangerous.}
 
-%  People concerned about memory usage are strongly recommended to use
-%  the \code{\link{.Call}} interface instead of these interfaces.
-
-  If you pass a local variable to \code{.C}/\code{.Fortran} with
-  \code{DUP = FALSE}, your compiled code can alter the local variable and
-  not just the copy in the return list.  Worse, if you pass a local
-  variable that is a formal parameter of the calling function, you may
-  be able to change not only the local variable but the variable one
-  level up.  This will be very hard to trace.
+\section{Use of \code{DUP = FALSE}}{
+  Using \emph{\code{DUP = FALSE}} is dangerous, since if not used properly
+  it can result in inadvertant modification of a local variable, or even 
+  a non-local variable.  This will be very hard to trace.
 
   Character vectors cannot be used with \code{DUP = FALSE}.
+  Non-vector objects are read-only to the C code
+  and are never copied, regarless of the setting of \code{DUP}.
 
-  It is safe and useful to set \code{DUP = FALSE} if you do not change any
-  of the variables that might be affected, e.g.,
+  Atomic vectors (numeric, integer, complex, logical, and raw) of length 
+  one are always copied even if \code{DUP = FALSE},
+  and so may safely be modified by the C or Fortran routine.  However, this
+  is not true for pqR-2014-06-19 and earlier, or for R Core versions of R
+  (up to at least R-3.1.1), so if compatibility with these versions is needed,
+  vectors of length one should be handled the same as longer vectors.
 
-  \code{.C("Cfunction", input = x, output = numeric(10))}.
+  Vectors created with certain functions are guaranteed
+  to not be referred to in any other way, and so may be passed with
+  \code{DUP = FALSE} and modified by the C or Fortran routine, either 
+  for its internal use, or as a way of returning information to the caller.
+  The set of such functions is currently as follows:
 
-  In this case the \code{output} variable did not exist before the call
-  so it cannot cause trouble (but as from \R 2.15.1 it is not copied
-  even with \code{DUP = TRUE}).  If the \code{input} variable is not
-  changed in the C code of \code{Cfunction} you are safe.
+  \code{numeric}, \code{integer}, \code{complex}, \code{logical},
+  \code{raw}, \code{matrix}, \code{array}, \code{rep}
 
-  Note that if \code{DUP = TRUE} there are up to two copies involved.
-  Prior to \R 2.15.1 this was always the case for vectors (one before
-  calling the compiled code and one to collect the results), and this is
-  still the case for character vectors.  For other atomic vectors, the
-  argument is not copied before calling the compiled code if it is not
-  otherwise used in the calling code (such as \code{output} in the
-  example above).  Non-atomic-vector objects are read-only to the C code
-  and are never copied.
+  For example, in the following call:
+
+  \code{.C("Cfunction", input = x, output = numeric(10), DUP = FALSE)}
+
+  it is permited for \code{Cfunction} to modify \code{output}, but
+  it should not modify \code{input}, since that would change the
+  variable \code{x}, and perhaps other variables as well, if they
+  share their value with \code{x}.  Using \code{DUP =FALSE} in
+  this situation will save time and memory, since \code{input} will
+  not be copied.  Note that \code{output} will not be copied regardless
+  of the setting of \code{DUP}, since the interpreter is smart enough 
+  to realize that it is unshared.
 }
 
 \section{Fortran symbol names}{
