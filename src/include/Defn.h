@@ -1496,6 +1496,17 @@ extern void *alloca(size_t);
 #endif
 
 
+/* Macro version of SETCAR.  Assumes FLAG_OLD_TO_NEW is set to 1 in
+   memory.c, though it will give correct results either way.  Avoids
+   a function call when the node is already in the old-to-new list.
+   Similar macros could be defined for SETCDR, SET_TAG, etc., but it
+   is less likely that they will be called repeatedly for the same
+   object. */
+
+#define SETCAR(x,y) \
+  ((x)->gengc_prev_node==0 ? (x)->u.listsxp.carval = (y) : (SETCAR)((x),(y)))
+
+
 /* Macro for fast stack checking */
 
 #define R_CHECKSTACK() do { \

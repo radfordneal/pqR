@@ -1,3 +1,9 @@
 Set "prev" field in nodes to zero to indicate that they are
 already in an old-to-new list, and hence don't have to be
 moved again.
+
+Also, gets rid of error checks on first arg of SETCAR, SETCDR, etc.,
+which seem redundant, given that a memory access error will result.
+
+Makes SETCAR a macro in the interpreter, so a call can be avoided
+when the node is already in the old-to-new list.

@@ -3758,8 +3758,6 @@ void (SET_TAG)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); TAG(x) = v; }
 
 SEXP (SETCAR)(SEXP x, SEXP y)
 {
-    if (x == NULL || x == R_NilValue)
-	error(_("bad value"));
     CHECK_OLD_TO_NEW(x, y);
     CAR(x) = y;
     return y;
@@ -3767,8 +3765,6 @@ SEXP (SETCAR)(SEXP x, SEXP y)
 
 SEXP (SETCDR)(SEXP x, SEXP y)
 {
-    if (x == NULL || x == R_NilValue)
-	error(_("bad value"));
     CHECK_OLD_TO_NEW(x, y);
     CDR(x) = y;
     return y;
@@ -3777,9 +3773,6 @@ SEXP (SETCDR)(SEXP x, SEXP y)
 SEXP (SETCADR)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (x == NULL || x == R_NilValue ||
-	CDR(x) == NULL || CDR(x) == R_NilValue)
-	error(_("bad value"));
     cell = CDR(x);
     CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
@@ -3789,10 +3782,6 @@ SEXP (SETCADR)(SEXP x, SEXP y)
 SEXP (SETCADDR)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (x == NULL || x == R_NilValue ||
-	CDR(x) == NULL || CDR(x) == R_NilValue ||
-	CDDR(x) == NULL || CDDR(x) == R_NilValue)
-	error(_("bad value"));
     cell = CDDR(x);
     CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
@@ -3804,11 +3793,6 @@ SEXP (SETCADDR)(SEXP x, SEXP y)
 SEXP (SETCADDDR)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (CHK(x) == NULL || x == R_NilValue ||
-	CHK(CDR(x)) == NULL || CDR(x) == R_NilValue ||
-	CHK(CDDR(x)) == NULL || CDDR(x) == R_NilValue ||
-	CHK(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue)
-	error(_("bad value"));
     cell = CDDDR(x);
     CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
@@ -3820,12 +3804,6 @@ SEXP (SETCADDDR)(SEXP x, SEXP y)
 SEXP (SETCAD4R)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (CHK(x) == NULL || x == R_NilValue ||
-	CHK(CDR(x)) == NULL || CDR(x) == R_NilValue ||
-	CHK(CDDR(x)) == NULL || CDDR(x) == R_NilValue ||
-	CHK(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue ||
-	CHK(CD4R(x)) == NULL || CD4R(x) == R_NilValue)
-	error(_("bad value"));
     cell = CD4R(x);
     CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
