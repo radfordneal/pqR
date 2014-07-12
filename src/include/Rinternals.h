@@ -156,7 +156,6 @@ struct sxpinfo_struct {
     unsigned int gccls : 3;   /* node class for garbage collector */
     unsigned int gcgen : 1;   /* old generation number - may be best first */
     unsigned int mark : 1;    /* marks object as in use in garbage collector */
-    /*unsigned int gcoton:1; */ /* 1 if already in old-to-new list - DISABLED */
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
     /* Flags to synchronize with helper threads */
@@ -250,7 +249,14 @@ struct promsxp_struct {
 };
 
 /* Every node must have a set of sxpinfo flags and an attribute field,
-   plus fields used to maintain the collector's linked list structures. */
+   plus gengc_next_node and gengc_prev_node fields, used to maintain the 
+   collector's linked list structures. 
+
+   The gengc_next_node field is also used to mark constants defined
+   in const-objs.c, and the gengc_prev_node field is set to zero to
+   mark nodes already put into the old-to-new list in the garbage 
+   collector.
+*/
 
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
