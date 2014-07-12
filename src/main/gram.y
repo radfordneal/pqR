@@ -955,15 +955,17 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 
 /*--------------------------------------------------------------------------*/
 
+/* Note that this may return a constant object, so check before modifying. */
 static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
 {
     switch (TYPEOF(tag)) {
     case STRSXP:
 	tag = install(translateChar(STRING_ELT(tag, 0)));
         /* fall through... */
-    case NILSXP:
     case SYMSXP:
 	return cons_with_tag (arg, R_NilValue, tag);
+    case NILSXP:
+    	return SharedList1(arg);
     default:
 	error(_("incorrect tag type at line %d"), lloc->first_line); 
         return R_NilValue/* -Wall */;
@@ -971,11 +973,15 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
 }
 
 
-/* Stretchy List Structures : Lists are created and grown using a special */
-/* dotted pair.  The CAR of the list points to the last cons-cell in the */
-/* list and the CDR points to the first.  The list can be extracted from */
-/* the pair by taking its CDR, while the CAR gives fast access to the end */
-/* of the list. */
+/* Stretchy List Structures : Lists are created and grown using a special
+   dotted pair.  The CAR of the list points to the last cons-cell in the
+   list, the TAG of the list points to the second-to-last cons-cell, and
+   the CDR points to the first.  The list can be extracted from
+   the pair by taking its CDR, while the CAR gives fast access to the end
+   of the list.  For an empty list, the CAR is the list head itself. 
+
+   The arguments of these procedure do not need to be protected by the caller.
+*/
 
 
 /* Create a stretchy-list dotted pair */
@@ -984,27 +990,35 @@ static SEXP NewList(void)
 {
     SEXP s = CONS(R_NilValue, R_NilValue);
     SETCAR(s, s);
+    SET_TAG(s, s);
     return s;
 }
 
-/* Add a new element at the end of a stretchy list */
+/* Add a new element at the end of a stretchy list.  For GrowList0, the
+   CONS cell for the new element has already been created (and is passed). */
 
 static SEXP GrowList0(SEXP l, SEXP t)
 {
-    SETCDR(CAR(l), t);
+    SEXP last = CAR(l);
+    if (IS_CONSTANT(last)) {
+        PROTECT2(l,t);
+        last = cons_with_tag (CAR(last), CDR(last), TAG(last));
+        SETCDR (TAG(l), last);
+        UNPROTECT(2);
+    }
+    SETCDR(last, t);
     SETCAR(l, t);
+    SET_TAG(l, last);
     return l;
 }
 
 static SEXP GrowList(SEXP l, SEXP s)
 {
     SEXP tmp;
-    PROTECT(s);
-    tmp = CONS(s, R_NilValue);
+    PROTECT(l);
+    tmp = GrowList0 (l, CONS(s, R_NilValue));
     UNPROTECT(1);
-    SETCDR(CAR(l), tmp);
-    SETCAR(l, tmp);
-    return l;
+    return tmp;
 }
 
 /* Insert a new element at the head of a stretchy list */
@@ -1012,10 +1026,12 @@ static SEXP GrowList(SEXP l, SEXP s)
 static SEXP Insert(SEXP l, SEXP s)
 {
     SEXP tmp;
-    PROTECT(s);
+    PROTECT(l);
     tmp = CONS(s, CDR(l));
     UNPROTECT(1);
     SETCDR(l, tmp);
+    if (CAR(l) == l) SETCAR(l,tmp);
+    else if (TAG(l) == l) SET_TAG(l,tmp);
     return l;
 }
 
@@ -1028,6 +1044,7 @@ static SEXP Insert(SEXP l, SEXP s)
 static SEXP WrapInsert(SEXP l, SEXP s)
 {
     SETCAR(l,s);
+    SET_TAG(l,R_NilValue);
     return l;
 }
 
@@ -1043,32 +1060,26 @@ static SEXP FirstArg0(SEXP t)
 
 static SEXP NextArg0(SEXP l, SEXP t)
 {
-    PROTECT(l);
-    PROTECT(t);
-    l = GrowList0(l, t);
-    UNPROTECT(2);
-    return l;
+    return GrowList0(l, t);
 }
 
 static SEXP FirstArg(SEXP s, SEXP tag)
 {
     SEXP tmp;
-    PROTECT(s);
-    PROTECT(tag);
-    PROTECT(tmp = NewList());
+    PROTECT2(s,tag);
+    tmp = NewList();
     tmp = GrowList(tmp, s);
     SET_TAG(CAR(tmp), tag);
-    UNPROTECT(3);
+    UNPROTECT(2);
     return tmp;
 }
 
 static SEXP NextArg(SEXP l, SEXP s, SEXP tag)
 {
     PROTECT(tag);
-    PROTECT(l);
     l = GrowList(l, s);
     SET_TAG(CAR(l), tag);
-    UNPROTECT(2);
+    UNPROTECT(1);
     return l;
 }
 
