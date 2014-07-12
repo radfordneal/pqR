@@ -1551,7 +1551,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             SEXP car, cdr;
             PROTECT(car = ReadItem (ref_table, stream));
             cdr = ReadItem (ref_table, stream);
-            s = cdr == R_NilValue ? SharedList1(car) : CONS(car,cdr);
+            s = cdr == R_NilValue ? MaybeConstList1(car) : CONS(car,cdr);
             UNPROTECT(1); /* car */
             goto ret;
         }
@@ -1625,7 +1625,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         case LGLSXP:
             len = InInteger(stream);
             if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarLogicalShared(InInteger(stream)));
+                PROTECT(s = ScalarLogicalMaybeConst(InInteger(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
                 InIntegerVec(stream, s, len);
@@ -1634,7 +1634,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         case INTSXP:
             len = InInteger(stream);
             if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarIntegerShared(InInteger(stream)));
+                PROTECT(s = ScalarIntegerMaybeConst(InInteger(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
                 InIntegerVec(stream, s, len);
@@ -1643,7 +1643,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         case REALSXP:
             len = InInteger(stream);
             if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarRealShared(InReal(stream)));
+                PROTECT(s = ScalarRealMaybeConst(InReal(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
                 InRealVec(stream, s, len);
@@ -1652,7 +1652,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         case CPLXSXP:
             len = InInteger(stream);
             if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarComplexShared(InComplex(stream)));
+                PROTECT(s = ScalarComplexMaybeConst(InComplex(stream)));
             else {
                 PROTECT(s = allocVector(type, len));
                 InComplexVec(stream, s, len);
@@ -1661,7 +1661,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         case STRSXP:
             len = InInteger(stream);
             if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarStringShared(ReadItem(ref_table, stream)));
+                PROTECT(s = ScalarStringMaybeConst(ReadItem(ref_table, stream)));
             else {
                 PROTECT(s = allocVector(type, len));
                 for (int count = 0; count < len; ++count)
@@ -1687,7 +1687,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             if (isconstant && len==1 && !objf && !hasattr && levs==0) {
                 Rbyte b;
                 stream->InBytes (stream, &b, 1);
-                PROTECT(s = ScalarRawShared(b));
+                PROTECT(s = ScalarRawMaybeConst(b));
             }
             else {
                 int done, this;

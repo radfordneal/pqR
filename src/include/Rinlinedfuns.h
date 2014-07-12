@@ -426,10 +426,10 @@ INLINE_FUN Rboolean isNumber(SEXP s)
                                : ((NUMBER_TYPES >> TYPEOF(s)) & 1);
 }
 
-/* Only ScalarLogicalShared is here, others not inline, but in memory.c,
+/* Only ScalarLogicalMaybeConst is here, others not inline, but in memory.c,
    where a compiler might inline specialized versions of allocVector. */
 
-INLINE_FUN SEXP ScalarLogicalShared(int x)
+INLINE_FUN SEXP ScalarLogicalMaybeConst(int x)
 {
     return x == 0 ? R_ScalarLogicalFALSE
          : x == NA_LOGICAL ? R_ScalarLogicalNA

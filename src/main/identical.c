@@ -70,7 +70,7 @@ static SEXP do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
     if(ignore_bytecode == NA_LOGICAL) error(_("invalid '%s' value"), "ignore.bytecode");
     
     flags = (num_eq ? 0 : 1) + (single_NA ? 0 : 2) + (attr_as_set ? 0 : 4) + (ignore_bytecode ? 0 : 8); 
-    return ScalarLogicalShared(R_compute_identical(CAR(args),CADR(args),flags));
+    return ScalarLogicalMaybeConst(R_compute_identical(CAR(args),CADR(args),flags));
 }
 
 #define NUM_EQ 		(!(flags & 1))

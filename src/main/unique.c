@@ -559,7 +559,7 @@ static SEXP do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
     if ((n = length(x)) == 0)
 	return(PRIMVAL(op) <= 1
 	       ? allocVector(PRIMVAL(op) != 1 ? LGLSXP : TYPEOF(x), 0)
-	       : ScalarIntegerShared(0));
+	       : ScalarIntegerMaybeConst(0));
 
     if (!isVector(x)) {
 	error(_("%s() applies only to vectors"),
@@ -570,13 +570,13 @@ static SEXP do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
     if(length(incomp) && /* S has FALSE to mean empty */
        !(isLogical(incomp) && length(incomp) == 1 && LOGICAL(incomp)[0] == 0)) {
 	if(PRIMVAL(op) == 2) /* return R's 1-based index :*/
-	    return ScalarIntegerShared(any_duplicated3(x, incomp, fromLast));
+	    return ScalarIntegerMaybeConst(any_duplicated3(x, incomp, fromLast));
 	else
 	    dup = duplicated3(x, incomp, fromLast);
     }
     else {
 	if(PRIMVAL(op) == 2)
-	    return ScalarIntegerShared(any_duplicated(x, fromLast));
+	    return ScalarIntegerMaybeConst(any_duplicated(x, fromLast));
 	else
 	    dup = duplicated(x, fromLast);
     }

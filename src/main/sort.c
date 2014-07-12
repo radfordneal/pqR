@@ -167,9 +167,9 @@ static SEXP do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(strictly == NA_LOGICAL)
 	errorcall(call, _("invalid '%s' argument"), "strictly");
     n = length(x);
-    if(n < 2) return ScalarLogicalShared(FALSE);
+    if(n < 2) return ScalarLogicalMaybeConst(FALSE);
     if(isVectorAtomic(x))
-	return ScalarLogicalShared(isUnsorted(x, strictly));
+	return ScalarLogicalMaybeConst(isUnsorted(x, strictly));
     if(isObject(x)) {
 	/* try dispatch */
 	SEXP call;
@@ -178,7 +178,7 @@ static SEXP do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNPROTECT(1);
 	return ans;
     } else res = NA_LOGICAL;
-    return ScalarLogicalShared(res);
+    return ScalarLogicalMaybeConst(res);
 }
 
 

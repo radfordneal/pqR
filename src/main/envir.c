@@ -698,7 +698,7 @@ void attribute_hidden InitBaseEnv()
 
 void attribute_hidden InitGlobalEnv()
 {
-    R_GlobalEnv = R_NewHashedEnv(R_BaseEnv, ScalarIntegerShared(0));
+    R_GlobalEnv = R_NewHashedEnv(R_BaseEnv, ScalarIntegerMaybeConst(0));
 #ifdef NEW_CODE /* Not used */
     HASHTAB(R_GlobalEnv) = R_NewHashTable(100);
 #endif
@@ -713,7 +713,7 @@ void attribute_hidden InitGlobalEnv()
     SET_SYMVALUE(install(".BaseNamespaceEnv"), R_BaseNamespace);
     R_BaseNamespaceName = ScalarString(mkChar("base"));
     R_PreserveObject(R_BaseNamespaceName);
-    R_NamespaceRegistry = R_NewHashedEnv(R_NilValue, ScalarIntegerShared(0));
+    R_NamespaceRegistry = R_NewHashedEnv(R_NilValue, ScalarIntegerMaybeConst(0));
     R_PreserveObject(R_NamespaceRegistry);
     defineVar(install("base"), R_BaseNamespace, R_NamespaceRegistry);
     /**** needed to properly initialize the base namespace */
@@ -1935,7 +1935,7 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return rval;
     }
     else /* exists(.) */
-	return ScalarLogicalShared (rval != R_UnboundValue);
+	return ScalarLogicalMaybeConst (rval != R_UnboundValue);
 }
 
 static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
@@ -2179,10 +2179,10 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
           && R_isMissing(PREXPR(t),PRENV(t)))
         goto true;
 
-    return ScalarLogicalShared(FALSE);
+    return ScalarLogicalMaybeConst(FALSE);
 
   true:
-    return ScalarLogicalShared(TRUE);
+    return ScalarLogicalMaybeConst(TRUE);
 }
 
 /*----------------------------------------------------------------------
@@ -3019,7 +3019,7 @@ static SEXP do_lockEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_envIsLocked(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    return ScalarLogicalShared(R_EnvironmentIsLocked(CAR(args)));
+    return ScalarLogicalMaybeConst(R_EnvironmentIsLocked(CAR(args)));
 }
 
 void R_LockBinding(SEXP sym, SEXP env)
@@ -3194,7 +3194,7 @@ static SEXP do_bndIsLocked(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     sym = CAR(args);
     env = CADR(args);
-    return ScalarLogicalShared(R_BindingIsLocked(sym, env));
+    return ScalarLogicalMaybeConst(R_BindingIsLocked(sym, env));
 }
 
 static SEXP do_mkActiveBnd(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -3214,7 +3214,7 @@ static SEXP do_bndIsActive(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     sym = CAR(args);
     env = CADR(args);
-    return ScalarLogicalShared(R_BindingIsActive(sym, env));
+    return ScalarLogicalMaybeConst(R_BindingIsActive(sym, env));
 }
 
 /* This is a .Internal with no wrapper, currently unused in base R */

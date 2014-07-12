@@ -402,7 +402,7 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     switch (TYPEOF(arg)) {
 
     case NILSXP:  
-        return ScalarIntegerShared (0);
+        return ScalarIntegerMaybeConst (0);
 
     case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
         WAIT_UNTIL_COMPUTED(arg);
@@ -437,7 +437,7 @@ static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     switch (TYPEOF(arg)) {
 
     case NILSXP:  
-        return ScalarRealShared (1.0);
+        return ScalarRealMaybeConst (1.0);
 
     case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
     case INTSXP:  

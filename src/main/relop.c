@@ -73,7 +73,7 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         && (TYPEOF(y) == REALSXP || TYPEOF(y) == INTSXP)
 	&& nx > 0 && ny > 0) {
 
-        /* Handle scalars even quicker, using ScalarLogicalShared. */
+        /* Handle scalars even quicker, using ScalarLogicalMaybeConst. */
 
         if (nx==1 && ny==1) {
             /* Separate code when both integers, in case a double can't hold
@@ -93,7 +93,7 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
                 result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
                        : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
             }
-            return ScalarLogicalShared (negate && result!=NA_LOGICAL ? !result 
+            return ScalarLogicalMaybeConst (negate && result!=NA_LOGICAL ? !result 
                                                                      : result);
         } 
         else {
@@ -627,10 +627,10 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
 
-    return ScalarLogicalShared(ans);
+    return ScalarLogicalMaybeConst(ans);
 
 false:
-    return ScalarLogicalShared(FALSE);
+    return ScalarLogicalMaybeConst(FALSE);
 }
 
 static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
@@ -743,10 +743,10 @@ static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
 
-    return ScalarLogicalShared(ans);
+    return ScalarLogicalMaybeConst(ans);
 
 true:
-    return ScalarLogicalShared(TRUE);
+    return ScalarLogicalMaybeConst(TRUE);
     
 }
 

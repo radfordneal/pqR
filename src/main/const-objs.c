@@ -160,7 +160,7 @@ static const SEXPREC R_list1_constants[] = {
    constant if possible.  The argument need not be protected by the caller
    before the call. */
 
-SEXP attribute_hidden SharedList1(SEXP car)
+SEXP attribute_hidden MaybeConstList1(SEXP car)
 {
     for (int i = 0; ; i++) {
         SEXP c = (SEXP) &R_list1_constants[i];
