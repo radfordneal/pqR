@@ -334,9 +334,6 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
    except that ... isn't flagged as missing even when its value is R_MissingArg 
    because no arguments were left for it. */
 
-#define ARGUSED(x) LEVELS(x)
-#define SET_ARGUSED(x,v) SETLEVELS(x,v)
-
 /* Find name of formal argument from either a C string (formal_names[arg_i]) or
    a tag from a formals list (formal_tag[arg_i]). */
 
@@ -380,25 +377,22 @@ SEXP attribute_hidden matchArgs (
     }
 #endif
 
-    /* We use fargused instead of ARGUSED/SET_ARGUSED on elements of
-       formals to avoid modification of the formals SEXPs.  A gc can
-       cause matchArgs to be called from finalizer code, resulting in
-       another matchArgs call with the same formals.  In R-2.10.x, this
-       corrupted the ARGUSED data of the formals and resulted in an
-       incorrect "formal argument 'foo' matched by multiple actual
-       arguments" error.
+    /* We avoid modifying either the formal or the supplied arguments, since
+       this could cause problems.
 
        The "actual" and "formal_tag" arrays below are used in preference to 
        scanning and modifying the pairlists for speed.  It is assumed that 
        they will not be excessively large (as for "fargsused"), but that 
-       "supplied" might be very long, since many supplied arguments might 
-       match "...", and hence we shouldn't do the same thing for it.
+       "supplied" might be very long (with arguments matching "..."), so 
+       for the supplied arguments we use an array only for the used flag.
      */
 
+    n_supplied = length(supplied);
     if (formal_names==NULL)
         arg_count = length(formals);
 
-    int fargused[arg_count];
+    char suppused[n_supplied], *u;
+    char fargused[arg_count];
     SEXP actual[arg_count];
     /* Below is used only when formal_names==NULL; has size 1 if not used. */
     SEXP formal_tag[formal_names==NULL ? arg_count : 1]; 
@@ -434,16 +428,15 @@ SEXP attribute_hidden matchArgs (
     /* Sets last_positional to the last positional argument, or to R_NilValue
        if none.  Sets last_potential_match to the last tagged argument that
        hasn't been exactly matched, or to R_NilValue if none.  Also counts
-       number of supplied arguments, and number intially matched. */
+       number of supplied arguments initially matched. */
 
     last_positional = R_NilValue;
     last_potential_match = R_NilValue;
     n_matched = 0;
-    n_supplied = 0;
 
-    for (b = supplied; b != R_NilValue; b = CDR(b)) {
+    for (b = supplied, u = suppused; b != R_NilValue; b = CDR(b), u++) {
         SEXP tag_b = TAG(b);
-        SET_ARGUSED (b, 0);
+        *u = 0;
 	if (tag_b == R_NilValue)
             last_positional = b;
         else {
@@ -461,25 +454,23 @@ SEXP attribute_hidden matchArgs (
 		    error(_("formal argument \"%s\" matched by multiple actual arguments"),
 			  FORMALSTR (formal_names, formal_tag, arg_i));
 		actual[arg_i] = CAR(b);
-		SET_ARGUSED(b, 2);
+		*u = 2;
 		fargused[arg_i] = 2;
                 n_matched += 1;
                 break;  /* assumes no duplicate names in formals */
 	    }
-            if (ARGUSED(b)==0)
+            if (*u==0)
                 last_potential_match = b;
 	}
-        n_supplied += 1;
     }
 
     /* Second pass: partial matches based on tags */
     /* Stop looking after ..., since only exact matches are allowed there */
 
     if (last_potential_match != R_NilValue) {
-        int sup_i;
-        for (b = supplied, sup_i = 1; ; b = CDR(b), sup_i++) {
+        for (b = supplied, u = suppused; ; b = CDR(b), u++) {
             SEXP tag_b = TAG(b);
-            if (tag_b != R_NilValue && ARGUSED(b)==0) {
+            if (tag_b != R_NilValue && *u==0) {
                 for (arg_i = 0; arg_i<arg_count && arg_i!=dots; arg_i++) {
                     if (fargused[arg_i] == 2)
                         continue;
@@ -490,11 +481,12 @@ SEXP attribute_hidden matchArgs (
                         if (ep_match_exprs (formal_tag[arg_i], tag_b) == 0)
                             continue;
                     }
-                    if (ARGUSED(b))
-                        error(_("argument %d matches multiple formal arguments"), 
-                              sup_i);
+                    if (*u)
+                        error(
+                          _("argument %d matches multiple formal arguments"), 
+                          u-suppused+1);
                     if (fargused[arg_i] == 1)
-                        error(_("formal argument \"%s\" matched by multiple actual arguments"),
+v                        error(_("formal argument \"%s\" matched by multiple actual arguments"),
 		              FORMALSTR (formal_names, formal_tag, arg_i));
                     if (R_warn_partial_match_args) 
                         warningcall(call,
@@ -502,7 +494,7 @@ SEXP attribute_hidden matchArgs (
                             CHAR(PRINTNAME(tag_b)),
 		            FORMALSTR (formal_names, formal_tag, arg_i));
                     actual[arg_i] = CAR(b);
-                    SET_ARGUSED(b, 1);
+                    *u = 1;
                     fargused[arg_i] = 1;
                     n_matched += 1;
                 }
@@ -522,6 +514,7 @@ SEXP attribute_hidden matchArgs (
     if (last_positional != R_NilValue) {
 
         b = supplied;
+        u = suppused;
         arg_i = 0;
 
         while (arg_i < arg_count && arg_i != dots) {
@@ -533,18 +526,21 @@ SEXP attribute_hidden matchArgs (
             } 
 
             /* Find the next positional argument, which must exist */
-            while (TAG(b) != R_NilValue) 
+            while (TAG(b) != R_NilValue) {
                 b = CDR(b); 
+                u += 1;
+            }
 
             /* We have a positional match */
             actual[arg_i] = CAR(b);
-            SET_ARGUSED(b, 1);
+            *u = 1;
             n_matched += 1;
 
             /* Move to next supplied arg and formal, unless this is the last */
             if (b == last_positional)
                 break;
             b = CDR(b);
+            u += 1;
             arg_i += 1;
         }
     }
@@ -558,8 +554,8 @@ SEXP attribute_hidden matchArgs (
 	    PROTECT(a = actual[dots] = allocList(n_supplied-n_matched));
 	    SET_TYPEOF(a, DOTSXP);
 
-	    for (b = supplied; b != R_NilValue; b = CDR(b)) {
-		if (!ARGUSED(b)) {
+	    for (b = supplied, u = suppused; b != R_NilValue; b = CDR(b), u++) {
+		if (*u==0) {
 		    SETCAR(a, CAR(b));
 		    SET_TAG(a, TAG(b));
 		    a = CDR(a);
@@ -573,8 +569,8 @@ SEXP attribute_hidden matchArgs (
 
 	/* Find the unused arguments */
         last = R_NilValue;
-	for (b = supplied; b != R_NilValue; b = CDR(b))
-	    if (!ARGUSED(b)) {
+	for (b = supplied, u = suppused; b != R_NilValue; b = CDR(b), u++)
+	    if (*u==0) {
 		if(last == R_NilValue) {
 		    PROTECT(unused = CONS(CAR(b), R_NilValue));
 		    SET_TAG(unused, TAG(b));
