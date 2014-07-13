@@ -1218,11 +1218,8 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
     if ( ! ((NUMBER_TYPES >> type) & 1))
         errorcall(call, _("invalid argument to unary operator"));
 
-    if (operation==PLUSOP) 
-        return s1;
-
     n = LENGTH(s1);
-    PROTECT(ans = NAMEDCNT_EQ_0(s1) && type!=LGLSXP ? s1 
+    PROTECT(ans = type!=LGLSXP && (operation==PLUSOP || NAMEDCNT_EQ_0(s1)) ? s1 
                 : allocVector (type==LGLSXP ? INTSXP : type, n));
 
     if (operation==MINUSOP) {
@@ -1230,12 +1227,19 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
           TYPEOF(s1)==REALSXP ? HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT
                               : HELPERS_PIPE_IN01_OUT,
           task_unary_minus, 0, ans, s1);
-        if (ans != s1) {
-            DUPLICATE_ATTRIB(ans,s1);
+    }
+    else if (operation==PLUSOP) {
+        if (ans != s1) { /* will only happen when s1 is logical */
+            WAIT_UNTIL_COMPUTED(s1);
+            for (int i = 0; i<LENGTH(s1); i++) INTEGER(ans)[i] = LOGICAL(s1)[i];
         }
     }
     else
         errorcall(call, _("invalid argument to unary operator"));
+
+    if (ans != s1) {
+        DUPLICATE_ATTRIB(ans,s1);
+    }
 
     UNPROTECT(1);
     return ans;
