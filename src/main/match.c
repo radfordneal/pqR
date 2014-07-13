@@ -486,7 +486,7 @@ SEXP attribute_hidden matchArgs (
                           _("argument %d matches multiple formal arguments"), 
                           u-suppused+1);
                     if (fargused[arg_i] == 1)
-v                        error(_("formal argument \"%s\" matched by multiple actual arguments"),
+                        error(_("formal argument \"%s\" matched by multiple actual arguments"),
 		              FORMALSTR (formal_names, formal_tag, arg_i));
                     if (R_warn_partial_match_args) 
                         warningcall(call,
