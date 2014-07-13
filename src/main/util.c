@@ -708,7 +708,7 @@ SEXP with_no_nth (SEXP s, int n)
 R_len_t length(SEXP s)
 {
     extern int Rf_envlength(SEXP);
-    int i;
+
     switch (TYPEOF(s)) {
     case NILSXP:
         return 0;
@@ -725,9 +725,17 @@ R_len_t length(SEXP s)
     case LISTSXP:
     case LANGSXP:
     case DOTSXP:
+    {   /* Loop below relies on CDR(R_NilValue) == R_NilValue */
+        SEXP t;
+        int i;
         i = 0;
-	while (s != R_NilValue) { i += 1; s = CDR(s); }
-        return i;
+        do {
+            i += 2;
+            t = CDR(s);
+            s = CDR(t);
+        } while (s != R_NilValue);
+        return t == R_NilValue ? i-1 : i;
+    }
     case ENVSXP:
         return Rf_envlength(s);
     default:
