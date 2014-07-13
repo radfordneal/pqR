@@ -23,3 +23,5 @@ Fixed performance problem in logic.c and summary.c from PR 15798
 Now use Seql for exact comparison in get1index.
 
 Sped up Rf_length for pairlists.
+
++logical now converts to integer.
