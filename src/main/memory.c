@@ -163,6 +163,9 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
 #define PRINT_TYPE_STATS 0 /* Set to 1 to print stats on # of objects of each 
                               type after garbage collection initiated by gc() */
 
+#define ABORT_ON_BAD_SEXPTYPE 1 /* Set to 1 to make bad SEXPTYPE result in a
+                                   call of abort() rather than a report */
+
 
 /* VALGRIND declarations.
 
@@ -267,6 +270,9 @@ static SEXPTYPE bad_sexp_type_old_type = 0;
 #endif
 static int bad_sexp_type_line = 0;
 
+#if ABORT_ON_BAD_SEXPTYPE
+#define register_bad_sexp_type(s,line) abort()
+#else
 static void register_bad_sexp_type(SEXP s, int line)
 {
     if (bad_sexp_type_seen == 0) {
@@ -279,6 +285,8 @@ static void register_bad_sexp_type(SEXP s, int line)
 #endif
     }
 }
+#endif
+
 
 /* slight modification of typename() from install.c -- should probably merge */
 static const char *sexptype2char(SEXPTYPE type) {
@@ -361,7 +369,8 @@ static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 static SEXP R_StringHash;   /* Global hash of CHARSXPs */
 
 #define NODE_IS_MARKED(s) (MARK(s))
-#define MARK_NODE(s) (MARK(s)=1)  /* Should only be called if !NODE_IS_MARKED */
+#define MARK_NODE(s) (MARK(s)=1)  /* Should only be called if !NODE_IS_MARKED 
+                                     since s could be a read-only constant */
 #define UNMARK_NODE(s) (MARK(s)=0)
 
 /* Tuning Constants. Most of these could be made settable from R,
@@ -579,7 +588,7 @@ typedef union PAGE_HEADER {
    a bit to the execution time, though the difference is probably marginal 
    on both counts.*/
 
-static struct {
+static struct gen_heap {
 
     SEXP Old[NUM_OLD_GENERATIONS];      /* Marked nodes of old generations */
     SEXP New;                           /* Unmarked nodes, free or newly used */
@@ -687,7 +696,7 @@ static R_size_t R_NodesInUse = 0;
 #ifdef PROTECTCHECK
 #define FREE_FORWARD_CASE case FREESXP: if (gc_inhibit_release) break;
 #define FREE_FORWARD_ELSE_IF \
-            else if (typ_ == FREESXP && gc_inhibit_release) cnt_ = 0;
+            else if (typ_ == FREESXP && gc_inhibit_release) break;
 #else
 #define FREE_FORWARD_CASE
 #define FREE_FORWARD_ELSE_IF
@@ -739,7 +748,9 @@ static R_size_t R_NodesInUse = 0;
             strt_ = &CAR(n_); cnt_ = 3; \
         } \
         else if ((vector_of_pointers_types >> typ_) & 1) { \
-            strt_ = &STRING_ELT(n_,0); cnt_ = LENGTH(n_); \
+            cnt_ = LENGTH(n_); \
+            if (cnt_ == 0) break; \
+            strt_ = &STRING_ELT(n_,0); \
         } \
         else if (typ_ == EXTPTRSXP) { \
             strt_ = &CDR(n_); cnt_ = 2; \
@@ -747,10 +758,10 @@ static R_size_t R_NodesInUse = 0;
         FREE_FORWARD_ELSE_IF \
         else \
             register_bad_sexp_type(n_, __LINE__); \
-        while (cnt_ > 0) { \
+        do { \
             dc_action_ (*strt_++, dc_extra_); \
             cnt_ -= 1; \
-        } \
+        } while (cnt_ > 0); \
     } \
 } while(0)
 
@@ -1717,14 +1728,25 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static void process_nodes (SEXP forwarded_nodes, int no_snap)
 {
-    SEXP s;
-    while (forwarded_nodes != NULL) {
-        s = forwarded_nodes;
-        forwarded_nodes = NEXT_NODE(forwarded_nodes);
-        R_GenHeap[NODE_CLASS(s)].OldCount[NODE_GENERATION(s)]++;
-        if (!no_snap || NODE_CLASS(s) == LARGE_NODE_CLASS)
-            SNAP_NODE(s, R_GenHeap[NODE_CLASS(s)].Old[NODE_GENERATION(s)]);
-        FORWARD_CHILDREN(s);
+    if (forwarded_nodes == NULL) return;
+
+    SEXP s = forwarded_nodes;
+    int cl = NODE_CLASS(s);
+
+    for (;;) {
+        struct gen_heap *h = &R_GenHeap[cl];
+        do {
+            int gn = NODE_GENERATION(s);
+            h->OldCount[gn] += 1;
+            forwarded_nodes = NEXT_NODE(s);
+            if (!no_snap || cl == LARGE_NODE_CLASS) 
+                SNAP_NODE(s, h->Old[gn]);
+            FORWARD_CHILDREN(s);
+            if (forwarded_nodes == NULL)
+                return;
+            s = forwarded_nodes;
+        } while (NODE_CLASS(s) == cl);
+        cl = NODE_CLASS(s);
     }
 }
 
@@ -1758,25 +1780,28 @@ static void transfer_old_to_new (int num_old_gens_to_collect)
 /* Unmark all marked nodes in old generations to be collected and move to 
    New space */
 
-static void unmark_and_move_to_new (int num_old_gens_to_collect)
+void unmark_and_move_to_new (int num_old_gens_to_collect)
 {   int gen, i;
     for (gen = 0; gen < num_old_gens_to_collect; gen++) {
         for (i = 0; i < NUM_NODE_CLASSES; i++) {
             SEXP peg = R_GenHeap[i].Old[gen];
+            SEXP s = NEXT_NODE(peg);
+            R_GenHeap[i].OldCount[gen] = 0;
+            if (s == peg) continue;
             if (gen != NUM_OLD_GENERATIONS - 1) {
-                for (SEXP s = NEXT_NODE(peg); s != peg; s = NEXT_NODE(s)) {
+                do {
                     SET_NODE_GENERATION (s, gen+1);
                     UNMARK_NODE(s);
-                }
+                    s = NEXT_NODE(s);
+                } while (s != peg);
             }
             else {
-                for (SEXP s = NEXT_NODE(peg); s != peg; s = NEXT_NODE(s)) {
+                do {
                     UNMARK_NODE(s);
-                }
+                    s = NEXT_NODE(s);
+                } while (s != peg);
             }
-            R_GenHeap[i].OldCount[gen] = 0;
-            if (NEXT_NODE(peg) != peg)
-                BULK_MOVE(peg, R_GenHeap[i].New);
+            BULK_MOVE(peg, R_GenHeap[i].New);
         }
     }
 }
