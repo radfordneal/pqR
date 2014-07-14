@@ -1390,14 +1390,15 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    RecordLinkage and locfit pass lists.
 */
 
-SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
+                                  int variant)
 {
     void **cargs;
     int dup, naok, na, nargs, Fort;
-    Rboolean havenames;
+    int name_count;
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
-    SEXP ans, pa, s;
+    SEXP ans, pa, s, last_named;
     R_RegisteredNativeSymbol symbol = {R_C_SYM, {NULL}, NULL};
     R_NativePrimitiveArgType *checkTypes = NULL;
     R_NativeArgStyle *argStyles = NULL;
@@ -1434,22 +1435,31 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Construct the return value */
     nargs = 0;
-    havenames = FALSE;
+    name_count = 0;
     for(pa = args ; pa != R_NilValue; pa = CDR(pa)) {
-	if (TAG(pa) != R_NilValue) havenames = TRUE;
+	if (TAG(pa) != R_NilValue) {
+            name_count += 1;
+            last_named = pa;
+        }
 	nargs++;
     }
 
     PROTECT(ans = allocVector(VECSXP, nargs));
-    if (havenames) {
+
+    if (name_count > 1 || name_count == 1 
+                           && VARIANT_KIND(variant) != VARIANT_ONE_NAMED) {
+        /* not a variant return, and need names */
 	SEXP names;
 	PROTECT(names = allocVector(STRSXP, nargs));
-	for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
-	    if (TAG(pa) == R_NilValue)
-		SET_STRING_ELT(names, na, R_BlankString);
-	    else
+        /* The names are initialized by allocVector to all R_BlankString. */
+        na = 0; pa = args;
+        for (;;) {
+	    if (TAG(pa) != R_NilValue)
 		SET_STRING_ELT(names, na, PRINTNAME(TAG(pa)));
-	}
+            if (pa == last_named) break;
+            na += 1;
+            pa = CDR(pa);
+        }
 	setAttrib(ans, R_NamesSymbol, names);
 	UNPROTECT(1);
     }
@@ -2309,7 +2319,11 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     UNPROTECT(1);
     vmaxset(vmax);
-    return ans;
+    if (namme_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED) 
+       /* Return just the one named element as a pairlist */
+       return cons_with_tag (ans, R_NilValue, 
+    else
+        return ans;
 }
 
 static const struct {

@@ -1,0 +1,7 @@
+Introduces a variant result for .C or .Fortran, that returns only
+one element of the list if it is the only one that is named (as
+a one-element pairlist).
+
+Avoids allocation of the names vector, and will in future provide the
+possibility that the C or Fortran routine might be done in a helper
+thread.
