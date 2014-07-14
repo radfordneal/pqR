@@ -128,10 +128,10 @@ VECTOR_SEXPREC_CONST R_ScalarRealNA_const = {
 /* 1-element pairlist constants. */
 
 #define LIST1_CONST(car) { \
-    CONST_HEADER(LISTSXP) \
-    .u = { .listsxp = \
-            { .carval = &car, .cdrval = R_NilValue, .tagval = R_NilValue } \
-         } \
+  CONST_HEADER(LISTSXP) \
+  .u = { .listsxp = \
+         { .carval = (SEXP) &car, .cdrval = R_NilValue, .tagval = R_NilValue } \
+       } \
 }
 
 static const SEXPREC R_list1_constants[] = {
