@@ -48,12 +48,13 @@
 #define max(a, b) ((a > b)?(a):(b))
 #endif
 
-/* Was 'name' prior to 2.13.0, then .NAME, but checked as
-   'name' up to 2.15.1. */
-static void check1arg2(SEXP arg, SEXP call, const char *formal)
+/* Was 'name' prior to 2.13.0, then .NAME, but checked as 'name' up to 2.15.1 */
+static void check_NAME(SEXP args, SEXP call)
 {
-    if (TAG(arg) == R_NilValue) return;
-    warningcall(call, "the first argument should not be named");
+    if (args == R_NilValue)
+        errorcall(call, _("'.NAME' is missing"));
+    if (TAG(args) != R_NilValue)
+        warningcall(call, "the first argument should not be named");
 }
 
 
@@ -154,9 +155,8 @@ checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
 
 	/* copy the symbol name. */
 	if (p) {
-	    if (strlen(p) >= MaxSymbolBytes)
+            if (!copy_1_string(buf,MaxSymbolBytes,p))
 		error(_("symbol '%s' is too long"), p);
-	    memcpy(buf, p, strlen(p)+1);
 	}
 
 	return;
@@ -233,17 +233,13 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     /* Make up the load symbol */
     if(TYPEOF(op) == STRSXP) {
 	p = translateChar(STRING_ELT(op, 0));
-	if(strlen(p) >= MaxSymbolBytes)
+	if (!copy_1_string(buf,MaxSymbolBytes,p))
 	    error(_("symbol '%s' is too long"), p);
-	q = buf;
-	while ((*q = *p) != '\0') {
-	    if(symbol->type == R_FORTRAN_SYM) *q = (char) tolower(*q);
-	    p++;
-	    q++;
-	}
+        if (symbol->type == R_FORTRAN_SYM)
+            for (q = buf; *q; q++) *q = (char) tolower(*q);
     }
 
-    if(dll.type != FILENAME && strlen(ns)) {
+    if (dll.type != FILENAME && *ns != 0) {
 	/* no PACKAGE= arg, so see if we can identify a DLL
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
@@ -269,7 +265,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     if (*fun) return args;
 
     /* so we've failed and bail out */
-    if(strlen(dll.DLLname)) {
+    if (*dll.DLLname != 0) {
 	switch(symbol->type) {
 	case R_C_SYM:
 	    errorcall(call,
@@ -411,9 +407,8 @@ static void setDLLname(SEXP s, char *DLLname)
     /* allow the package: form of the name, as returned by find */
     if(strncmp(name, "package:", 8) == 0)
 	name += 8;
-    if(strlen(name) > PATH_MAX - 1)
+    if (!copy_1_string (DLLname, PATH_MAX, name))
 	error(_("PACKAGE argument is too long"));
-    strcpy(DLLname, name);
 }
 
 static SEXP pkgtrim(SEXP args, DllReference *dll)
@@ -520,11 +515,11 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     R_ExternalRoutine fun = NULL;
     SEXP retval;
     R_RegisteredNativeSymbol symbol = {R_EXTERNAL_SYM, {NULL}, NULL};
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
 
-    if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
-    check1arg2(args, call, ".NAME");
+    check_NAME (args, call);
+
     args = resolveNativeRoutine(args, &ofun, &symbol, buf, NULL, NULL,
 				NULL, call, env);
     fun = (R_ExternalRoutine) ofun;
@@ -545,7 +540,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 
     retval = (SEXP)fun(args);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return retval;
 }
 
@@ -563,11 +558,10 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP retval, cargs[MAX_ARGS], pargs;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
     int nargs;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
 
-    if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
-    check1arg2(args, call, ".NAME");
+    check_NAME (args, call);
 
     args = resolveNativeRoutine(args, &ofun, &symbol, buf, NULL, NULL,
 				NULL, call, env);
@@ -1242,7 +1236,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	errorcall(call, _("too many arguments, sorry"));
     }
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return retval;
 }
 
@@ -1405,8 +1399,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     void *vmax;
     char symName[MaxSymbolBytes], encname[101];
 
-    if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
-    check1arg2(args, call, ".NAME");
+    check_NAME (args, call);
+
     if (NaokSymbol == NULL || DupSymbol == NULL || PkgSymbol == NULL) {
 	NaokSymbol = install("NAOK");
 	DupSymbol = install("DUP");
@@ -1414,7 +1408,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     }
     if (EncSymbol == NULL) EncSymbol = install("ENCODING");
     if (CSingSymbol == NULL) CSingSymbol = install("Csingle");
-    vmax = vmaxget();
+    vmax = VMAXGET();
     Fort = PRIMVAL(op);
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
@@ -1577,7 +1571,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		cargs[na] =  (void*) fptr;
 	    } else {
 		char **cptr = (char**) R_alloc(n, sizeof(char*));
-		if (strlen(encname)) {
+		if (*encname != 0) {
 		    char *outbuf;
 		    const char *inbuf;
 		    size_t inb, outb, outb0, res;
@@ -2319,7 +2313,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	}
     }
     UNPROTECT(1);
-    vmaxset(vmax);
+    VMAXSET(vmax);
+
     if (name_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED) 
         /* Return just the one named element as a pairlist */
         return cons_with_tag (VECTOR_ELT(ans,last_pos), R_NilValue, last_tag);
