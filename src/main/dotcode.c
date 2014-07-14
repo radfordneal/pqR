@@ -1395,10 +1395,10 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 {
     void **cargs;
     int dup, naok, na, nargs, Fort;
-    int name_count;
+    int name_count, last_pos;
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
-    SEXP ans, pa, s, last_named;
+    SEXP ans, pa, s, last_tag;
     R_RegisteredNativeSymbol symbol = {R_C_SYM, {NULL}, NULL};
     R_NativePrimitiveArgType *checkTypes = NULL;
     R_NativeArgStyle *argStyles = NULL;
@@ -1439,7 +1439,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     for(pa = args ; pa != R_NilValue; pa = CDR(pa)) {
 	if (TAG(pa) != R_NilValue) {
             name_count += 1;
-            last_named = pa;
+            last_tag = TAG(pa);
+            last_pos = nargs;
         }
 	nargs++;
     }
@@ -1452,12 +1453,10 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	SEXP names;
 	PROTECT(names = allocVector(STRSXP, nargs));
         /* The names are initialized by allocVector to all R_BlankString. */
-        na = 0; pa = args;
-        for (;;) {
+        pa = args;
+        for (na = 0; na <= last_pos; na++) {
 	    if (TAG(pa) != R_NilValue)
 		SET_STRING_ELT(names, na, PRINTNAME(TAG(pa)));
-            if (pa == last_named) break;
-            na += 1;
             pa = CDR(pa);
         }
 	setAttrib(ans, R_NamesSymbol, names);
@@ -2257,7 +2256,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     if (dup) {
 
 	for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
-	    if(argStyles && argStyles[na] == R_ARG_IN) {
+            if (VARIANT_KIND(variant) == VARIANT_ONE_NAMED && na != last_pos)
+                continue;
+	    else if(argStyles && argStyles[na] == R_ARG_IN) {
 		SET_VECTOR_ELT(ans, na, R_NilValue);
 		continue;
 	    } else {
@@ -2319,9 +2320,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     }
     UNPROTECT(1);
     vmaxset(vmax);
-    if (namme_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED) 
-       /* Return just the one named element as a pairlist */
-       return cons_with_tag (ans, R_NilValue, 
+    if (name_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED) 
+        /* Return just the one named element as a pairlist */
+        return cons_with_tag (VECTOR_ELT(ans,last_pos), R_NilValue, last_tag);
     else
         return ans;
 }
@@ -2506,8 +2507,8 @@ attribute_hidden FUNTAB R_FunTab_dotcode[] =
 {".Call",       do_dotcall,     0,      1,      -1,     {PP_FOREIGN, PREC_FN,	0}},
 {".External.graphics", do_Externalgr, 0, 1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".Call.graphics", do_dotcallgr, 0,	1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".C",		do_dotCode,	0,	1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".Fortran",	do_dotCode,	1,	1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".C",		do_dotCode,	0,	1001,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".Fortran",	do_dotCode,	1,	1001,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

@@ -4,4 +4,4 @@ a one-element pairlist).
 
 Avoids allocation of the names vector, and will in future provide the
 possibility that the C or Fortran routine might be done in a helper
-thread.
+thread.  Also avoids conversion of data that will be ignored.
