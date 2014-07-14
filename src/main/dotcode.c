@@ -92,7 +92,7 @@ static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
 static SEXP pkgtrim(SEXP args, DllReference *dll);
 
 /*
-  Called from resolveNativeRoutine (and itself).
+  Called from resolveNativeRoutine.
 
   Checks whether the specified object correctly identifies a native routine.
   op is the supplied value for .NAME.  This can be
@@ -105,15 +105,18 @@ static SEXP pkgtrim(SEXP args, DllReference *dll);
 
    NB: in the last two cases it sets fun and symbol as well!
  */
-static void
-checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
-		   R_RegisteredNativeSymbol *symbol, char *buf)
+static void processSymbolId (SEXP op, SEXP call, DL_FUNC *fun,
+                             R_RegisteredNativeSymbol *symbol, char *buf)
 {
-    if (isValidString(op)) return;
+    if (isValidString(op))
+        return;
 
-    *fun = NULL;
-    if(TYPEOF(op) == EXTPTRSXP) {
+    if (TYPEOF(op) != EXTPTRSXP && inherits(op, "NativeSymbolInfo"))
+        op = VECTOR_ELT(op,1);
+
+    if (TYPEOF(op) == EXTPTRSXP) {
 	char *p = NULL;
+        *fun = NULL;
 	if(R_ExternalPtrTag(op) == install("native symbol"))
 	   *fun = R_ExternalPtrAddrFn(op);
 	else if(R_ExternalPtrTag(op) == install("registered native symbol")) {
@@ -149,7 +152,7 @@ checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
 	      *symbol = *tmp;
 	   }
 	}
-	/* This is illegal C */
+
 	if(*fun == NULL)
 	    errorcall(call, _("NULL value passed as symbol address"));
 
@@ -161,14 +164,9 @@ checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
 
 	return;
     }
-    else if(inherits(op, "NativeSymbolInfo")) {
-	checkValidSymbolId(VECTOR_ELT(op, 1), call, fun, symbol, buf);
-	return;
-    }
 
     errorcall(call,
-      _("first argument must be a string (of length 1) or native symbol reference"));
-    return; /* not reached */
+     _("first argument must be a string (of length 1) or native symbol reference"));
 }
 
 
@@ -198,8 +196,8 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     dll.dll = NULL; dll.obj = NULL; dll.type = NOT_DEFINED;
     
     op = CAR(args);  // value of .NAME =
-    /* NB, this sets fun, symbol and buf and is not just a check! */
-    checkValidSymbolId(op, call, fun, symbol, buf);
+
+    processSymbolId(op, call, fun, symbol, buf); /* May set fun, symbol, buf */
 
     /* The following code modifies the argument list */
     /* We know this is ok because do_dotCode is entered */
@@ -257,10 +255,6 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
        and may append one or more underscores.
     */
 
-    *fun = R_FindSymbol(buf, dll.DLLname, symbol);
-    if (*fun) return args;
-
-    /* so we've failed and bail out */
     *fun = R_FindSymbol(buf, dll.DLLname, symbol);
     if (*fun) return args;
 
