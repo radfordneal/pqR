@@ -1612,7 +1612,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
        overhead of allocation and calling of DispatchOrEval. */
 
     if (from != R_DotsSymbol) {
-        from = eval (from, env);
+        from = evalv (from, env, VARIANT_ONE_NAMED);
         if (isObject(from)) {
             PROTECT(from);
             argsevald = 1;
