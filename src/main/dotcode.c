@@ -48,22 +48,14 @@
 #define max(a, b) ((a > b)?(a):(b))
 #endif
 
-/* Was 'name' prior to 2.13.0, then .NAME, but checked as
-   'name' up to 2.15.1. */
-static void check1arg2(SEXP arg, SEXP call, const char *formal)
+/* Was 'name' prior to 2.13.0, then .NAME, but checked as 'name' up to 2.15.1 */
+static void check_NAME(SEXP args, SEXP call)
 {
-    if (TAG(arg) == R_NilValue) return;
-    warningcall(call, "the first argument should not be named");
+    if (args == R_NilValue)
+        errorcall(call, _("'.NAME' is missing"));
+    if (TAG(args) != R_NilValue)
+        warningcall(call, "the first argument should not be named");
 }
-
-
-/* These are set during the first call to do_dotCode() below. */
-
-static SEXP NaokSymbol = NULL;
-static SEXP DupSymbol = NULL;
-static SEXP PkgSymbol = NULL;
-static SEXP EncSymbol = NULL;
-static SEXP CSingSymbol = NULL;
 
 #include <Rdynpriv.h>
 // Odd: 'type' is really this enum
@@ -91,7 +83,7 @@ static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
 static SEXP pkgtrim(SEXP args, DllReference *dll);
 
 /*
-  Called from resolveNativeRoutine (and itself).
+  Called from resolveNativeRoutine.
 
   Checks whether the specified object correctly identifies a native routine.
   op is the supplied value for .NAME.  This can be
@@ -104,18 +96,21 @@ static SEXP pkgtrim(SEXP args, DllReference *dll);
 
    NB: in the last two cases it sets fun and symbol as well!
  */
-static void
-checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
-		   R_RegisteredNativeSymbol *symbol, char *buf)
+static void processSymbolId (SEXP op, SEXP call, DL_FUNC *fun,
+                             R_RegisteredNativeSymbol *symbol, char *buf)
 {
-    if (isValidString(op)) return;
+    if (isValidString(op))
+        return;
 
-    *fun = NULL;
-    if(TYPEOF(op) == EXTPTRSXP) {
+    if (TYPEOF(op) != EXTPTRSXP && inherits(op, "NativeSymbolInfo"))
+        op = VECTOR_ELT(op,1);
+
+    if (TYPEOF(op) == EXTPTRSXP) {
 	char *p = NULL;
-	if(R_ExternalPtrTag(op) == install("native symbol"))
+        *fun = NULL;
+	if (R_ExternalPtrTag(op) == R_NativeSymbolSymbol)
 	   *fun = R_ExternalPtrAddrFn(op);
-	else if(R_ExternalPtrTag(op) == install("registered native symbol")) {
+	else if(R_ExternalPtrTag(op) == R_RegisteredNativeSymbolSymbol) {
 	   R_RegisteredNativeSymbol *tmp;
 	   tmp = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(op);
 	   if(tmp) {
@@ -148,27 +143,21 @@ checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
 	      *symbol = *tmp;
 	   }
 	}
-	/* This is illegal C */
+
 	if(*fun == NULL)
 	    errorcall(call, _("NULL value passed as symbol address"));
 
 	/* copy the symbol name. */
 	if (p) {
-	    if (strlen(p) >= MaxSymbolBytes)
+            if (!copy_1_string(buf,MaxSymbolBytes,p))
 		error(_("symbol '%s' is too long"), p);
-	    memcpy(buf, p, strlen(p)+1);
 	}
 
 	return;
     }
-    else if(inherits(op, "NativeSymbolInfo")) {
-	checkValidSymbolId(VECTOR_ELT(op, 1), call, fun, symbol, buf);
-	return;
-    }
 
     errorcall(call,
-      _("first argument must be a string (of length 1) or native symbol reference"));
-    return; /* not reached */
+     _("first argument must be a string (of length 1) or native symbol reference"));
 }
 
 
@@ -198,8 +187,8 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     dll.dll = NULL; dll.obj = NULL; dll.type = NOT_DEFINED;
     
     op = CAR(args);  // value of .NAME =
-    /* NB, this sets fun, symbol and buf and is not just a check! */
-    checkValidSymbolId(op, call, fun, symbol, buf);
+
+    processSymbolId(op, call, fun, symbol, buf); /* May set fun, symbol, buf */
 
     /* The following code modifies the argument list */
     /* We know this is ok because do_dotCode is entered */
@@ -213,7 +202,6 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 	if(*nargs > MAX_ARGS)
 	    errorcall(call, _("too many arguments in foreign function call"));
     } else {
-	if (PkgSymbol == NULL) PkgSymbol = install("PACKAGE");
 	/* This has the side effect of setting dll.type if a PACKAGE=
 	   argument if found, but it will only be used if a string was
 	   passed in  */
@@ -233,17 +221,13 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     /* Make up the load symbol */
     if(TYPEOF(op) == STRSXP) {
 	p = translateChar(STRING_ELT(op, 0));
-	if(strlen(p) >= MaxSymbolBytes)
+	if (!copy_1_string(buf,MaxSymbolBytes,p))
 	    error(_("symbol '%s' is too long"), p);
-	q = buf;
-	while ((*q = *p) != '\0') {
-	    if(symbol->type == R_FORTRAN_SYM) *q = (char) tolower(*q);
-	    p++;
-	    q++;
-	}
+        if (symbol->type == R_FORTRAN_SYM)
+            for (q = buf; *q; q++) *q = (char) tolower(*q);
     }
 
-    if(dll.type != FILENAME && strlen(ns)) {
+    if (dll.type != FILENAME && *ns != 0) {
 	/* no PACKAGE= arg, so see if we can identify a DLL
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
@@ -265,11 +249,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     if (*fun) return args;
 
     /* so we've failed and bail out */
-    *fun = R_FindSymbol(buf, dll.DLLname, symbol);
-    if (*fun) return args;
-
-    /* so we've failed and bail out */
-    if(strlen(dll.DLLname)) {
+    if (*dll.DLLname != 0) {
 	switch(symbol->type) {
 	case R_C_SYM:
 	    errorcall(call,
@@ -326,7 +306,7 @@ comparePrimitiveTypes(R_NativePrimitiveArgType type, SEXP s, Rboolean dup)
       return(TRUE);
 
    if(dup && type == SINGLESXP)
-      return(asLogical(getAttrib(s, install("Csingle"))) == TRUE);
+      return asLogical (getAttrib(s, R_CSingSymbol)) == TRUE;
 
    return(FALSE);
 }
@@ -349,15 +329,15 @@ static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
     *dup = 1;
     *len = 0;
     for(s = args, prev=args; s != R_NilValue;) {
-	if(TAG(s) == NaokSymbol) {
+	if(TAG(s) == R_NaokSymbol) {
 	    *naok = asLogical(CAR(s));
 	    /* SETCDR(prev, s = CDR(s)); */
 	    if(naokused++ == 1) warning(_("NAOK used more than once"));
-	} else if(TAG(s) == DupSymbol) {
+	} else if(TAG(s) == R_DupSymbol) {
 	    *dup = asLogical(CAR(s));
 	    /* SETCDR(prev, s = CDR(s)); */
 	    if(dupused++ == 1) warning(_("DUP used more than once"));
-	} else if(TAG(s) == PkgSymbol) {
+	} else if(TAG(s) == R_PkgSymbol) {
 	    dll->obj = CAR(s);  // really? 
 	    if(TYPEOF(CAR(s)) == STRSXP) {
 		p = translateChar(STRING_ELT(CAR(s), 0));
@@ -411,9 +391,8 @@ static void setDLLname(SEXP s, char *DLLname)
     /* allow the package: form of the name, as returned by find */
     if(strncmp(name, "package:", 8) == 0)
 	name += 8;
-    if(strlen(name) > PATH_MAX - 1)
+    if (!copy_1_string (DLLname, PATH_MAX, name))
 	error(_("PACKAGE argument is too long"));
-    strcpy(DLLname, name);
 }
 
 static SEXP pkgtrim(SEXP args, DllReference *dll)
@@ -426,13 +405,13 @@ static SEXP pkgtrim(SEXP args, DllReference *dll)
 	/* Look for PACKAGE=. We look at the next arg, unless
 	   this is the last one (which will only happen for one arg),
 	   and remove it */
-	if(ss == R_NilValue && TAG(s) == PkgSymbol) {
+	if(ss == R_NilValue && TAG(s) == R_PkgSymbol) {
 	    if(pkgused++ == 1) warning(_("PACKAGE used more than once"));
 	    setDLLname(s, dll->DLLname);
 	    dll->type = FILENAME;
 	    return R_NilValue;
 	}
-	if(TAG(ss) == PkgSymbol) {
+	if(TAG(ss) == R_PkgSymbol) {
 	    if(pkgused++ == 1) warning(_("PACKAGE used more than once"));
 	    setDLLname(ss, dll->DLLname);
 	    dll->type = FILENAME;
@@ -454,7 +433,7 @@ static SEXP enctrim(SEXP args, char *name, int len)
 	/* Look for ENCODING=. We look at the next arg, unless
 	   this is the last one (which will only happen for one arg),
 	   and remove it */
-	if(ss == R_NilValue && TAG(s) == EncSymbol) {
+	if(ss == R_NilValue && TAG(s) == R_EncSymbol) {
 	    sx = CAR(s);
 	    if(pkgused++ == 1) warning(_("ENCODING used more than once"));
 	    if(TYPEOF(sx) != STRSXP || length(sx) != 1)
@@ -463,7 +442,7 @@ static SEXP enctrim(SEXP args, char *name, int len)
 	    warning("ENCODING is deprecated");
 	    return R_NilValue;
 	}
-	if(TAG(ss) == EncSymbol) {
+	if(TAG(ss) == R_EncSymbol) {
 	    sx = CAR(ss);
 	    if(pkgused++ == 1) warning(_("ENCODING used more than once"));
 	    if(TYPEOF(sx) != STRSXP || length(sx) != 1)
@@ -520,11 +499,11 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     R_ExternalRoutine fun = NULL;
     SEXP retval;
     R_RegisteredNativeSymbol symbol = {R_EXTERNAL_SYM, {NULL}, NULL};
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
 
-    if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
-    check1arg2(args, call, ".NAME");
+    check_NAME (args, call);
+
     args = resolveNativeRoutine(args, &ofun, &symbol, buf, NULL, NULL,
 				NULL, call, env);
     fun = (R_ExternalRoutine) ofun;
@@ -545,7 +524,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 
     retval = (SEXP)fun(args);
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return retval;
 }
 
@@ -563,11 +542,10 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP retval, cargs[MAX_ARGS], pargs;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
     int nargs;
-    const void *vmax = vmaxget();
+    const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
 
-    if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
-    check1arg2(args, call, ".NAME");
+    check_NAME (args, call);
 
     args = resolveNativeRoutine(args, &ofun, &symbol, buf, NULL, NULL,
 				NULL, call, env);
@@ -1242,7 +1220,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	errorcall(call, _("too many arguments, sorry"));
     }
-    vmaxset(vmax);
+    VMAXSET(vmax);
     return retval;
 }
 
@@ -1405,16 +1383,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     void *vmax;
     char symName[MaxSymbolBytes], encname[101];
 
-    if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
-    check1arg2(args, call, ".NAME");
-    if (NaokSymbol == NULL || DupSymbol == NULL || PkgSymbol == NULL) {
-	NaokSymbol = install("NAOK");
-	DupSymbol = install("DUP");
-	PkgSymbol = install("PACKAGE");
-    }
-    if (EncSymbol == NULL) EncSymbol = install("ENCODING");
-    if (CSingSymbol == NULL) CSingSymbol = install("Csingle");
-    vmax = vmaxget();
+    check_NAME (args, call);
+
+    vmax = VMAXGET();
     Fort = PRIMVAL(op);
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
@@ -1539,7 +1510,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(rptr[i]))
 			error(_("NA/NaN/Inf in foreign function call (arg %d)"), na + 1);
-	    if (asLogical(getAttrib(s, CSingSymbol)) == 1) {
+	    if (asLogical(getAttrib(s, R_CSingSymbol)) == 1) {
 		float *sptr = (float*) R_alloc(n, sizeof(float));
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
 		cargs[na] = (void*) sptr;
@@ -1577,7 +1548,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		cargs[na] =  (void*) fptr;
 	    } else {
 		char **cptr = (char**) R_alloc(n, sizeof(char*));
-		if (strlen(encname)) {
+		if (*encname != 0) {
 		    char *outbuf;
 		    const char *inbuf;
 		    size_t inb, outb, outb0, res;
@@ -2282,7 +2253,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 }
 		case REALSXP:
 		case SINGLESXP:
-		    if (type == SINGLESXP || asLogical(getAttrib(arg, CSingSymbol)) == 1) {
+		    if (type == SINGLESXP 
+                         || asLogical(getAttrib(arg, R_CSingSymbol)) == 1) {
 			s = allocVector(REALSXP, n);
 			float *sptr = (float*) p;
 			for(int i = 0 ; i < n ; i++) 
@@ -2319,7 +2291,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	}
     }
     UNPROTECT(1);
-    vmaxset(vmax);
+    VMAXSET(vmax);
+
     if (name_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED) 
         /* Return just the one named element as a pairlist */
         return cons_with_tag (VECTOR_ELT(ans,last_pos), R_NilValue, last_tag);

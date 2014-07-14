@@ -499,6 +499,14 @@ static void SymbolShortcuts(void)
     R_dot_Class = install(".Class");
     R_dot_GenericCallEnv = install(".GenericCallEnv");
     R_dot_GenericDefEnv = install(".GenericDefEnv");
+
+    R_NaokSymbol = install("NAOK");
+    R_DupSymbol = install("DUP");
+    R_PkgSymbol = install("PACKAGE");
+    R_EncSymbol = install("ENCODING");
+    R_CSingSymbol = install("Csingle");
+    R_NativeSymbolSymbol = install("native symbol");
+    R_RegisteredNativeSymbolSymbol = install("registered native symbol");
 }
 
 /* Set up built-in functions from R_FunTab and the FastFunTab_srcfile tables.
