@@ -526,6 +526,11 @@ typedef struct {
 #define VARIANT_TRANS 6  /* May return the transpose of the result.  
                             Sets R_variant_result to 1 if so. */
 
+#define VARIANT_ONE_NAMED 7  /* When the result is a vector list with exactly
+                                one named element, may return a one-element
+                                pairlist with this element (used for $).
+                                Does not set R_variant_result. */
+
 /* The variant below controls behaviour of [<-, [[<-, and $<-.  The MUST_COPY
    variant must be obeyed, except when a copy is never indicated (eg, for
    environments), overriding what would otherwise be done based on NAMEDCNT. */

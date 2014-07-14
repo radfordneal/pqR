@@ -3038,7 +3038,8 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     /* For EXPRSXP, VECSXP, and STRSXP, prevent disaster in the case */
     /* that an uninitialised list vector or string vector is marked */
     /* Direct assignment is OK since the node was just allocated and */
-    /* so is at least as new as R_NilValue and R_BlankString */
+    /* so is at least as new as R_NilValue and R_BlankString.  Strings
+    /* are initialized to R_BlankString. */
 
     if (type == EXPRSXP || type == VECSXP) {
 	SEXP *data = STRING_PTR(s);
