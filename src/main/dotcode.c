@@ -288,36 +288,26 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 static Rboolean
 checkNativeType(int targetType, int actualType)
 {
-    if(targetType > 0) {
-	if(targetType == INTSXP || targetType == LGLSXP) {
-	    return(actualType == INTSXP || actualType == LGLSXP);
-	}
-	return(targetType == actualType);
-    }
-
-    return(TRUE);
+    return targetType == actualType || targetType <= 0
+        || targetType == INTSXP && actualType == LGLSXP
+        || targetType == LGLSXP && actualType == INTSXP;
 }
 
 
 static Rboolean
 comparePrimitiveTypes(R_NativePrimitiveArgType type, SEXP s, Rboolean dup)
 {
-   if(type == ANYSXP || TYPEOF(s) == type)
-      return(TRUE);
-
-   if(dup && type == SINGLESXP)
-      return asLogical (getAttrib(s, R_CSingSymbol)) == TRUE;
-
-   return(FALSE);
+   return type == ANYSXP || TYPEOF(s) == type
+       || dup && type==SINGLESXP && asLogical(getAttrib(s,R_CSingSymbol))==TRUE;
 }
 
 
 /* Foreign Function Interface.  This code allows a user to call C */
 /* or Fortran code which is either statically or dynamically linked. */
 
-/* NB: this leaves NAOK and DUP arguments on the list */
-
-/* find NAOK and DUP, find and remove PACKAGE */
+/* Finds NAOK, DUP, and PACKAGE arguments, and removes them.  Returns the
+   number of remaining arguments in len, and returns the new argument list
+   (which differs from input if first arg removed). */
 static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
 		     DllReference *dll)
 {
@@ -328,7 +318,7 @@ static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
     *naok = 0;
     *dup = 1;
     *len = 0;
-    for(s = args, prev=args; s != R_NilValue;) {
+    for (s = args; s != R_NilValue; ) {
 	if(TAG(s) == R_NaokSymbol) {
 	    *naok = asLogical(CAR(s));
 	    /* SETCDR(prev, s = CDR(s)); */
