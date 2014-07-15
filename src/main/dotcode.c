@@ -52,8 +52,9 @@
 /* Trim special arguments from argument list for .Call, .External, .C or
    .Fortran.  These arguments are removed (destructively) from the argument 
    list.  The second argument is 1 for .C/.Fortran, 0 for .Call/.External, 
-   and controls whether NAOK, DUP, and ENCODING are allowed.  The result 
-   is returned in the special_args structure passed.  
+   and controls whether NAOK, DUP, and ENCODING are allowed.  The results
+   are returned in the special_args structure passed.  The number or remaining
+   arguments, apart from the first, is returned as the value of trimargs.
 
    Note that no action regarding these arguments is taken here - they are 
    just found, removed, and returned.  NAOK defaults to FALSE, DUP to TRUE, 
@@ -65,9 +66,9 @@
 
 struct special_args { int naok, dup; SEXP encoding, pkg; };
 
-static void trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
+static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 { 
-    int naokused=0, dupused=0, encused=0, pkgused=0;
+    int naokused=0, dupused=0, encused=0, pkgused=0, nargs=0;
     const char *p;
     SEXP s, t, prev;
 
@@ -116,12 +117,15 @@ static void trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
             }
         }
 
+        nargs += 1;
         prev = s;
         continue;
 
       remove:
         CDR(prev) = CDR(s);
     }
+
+    return nargs;
 }
 
 
@@ -424,7 +428,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     char buf[MaxSymbolBytes];
     struct special_args spa;
 
-    trimargs (args, 0, &spa, call);
+    (void) trimargs (args, 0, &spa, call);
 
     PROTECT(spa.pkg);
     resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, buf, call, env);
@@ -463,14 +467,17 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
-    SEXP retval, cargs[MAX_ARGS], pargs;
+    SEXP retval, pargs;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
-    int nargs;
+    int nargs, i;
     const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
     struct special_args spa;
 
-    trimargs (args, 0, &spa, call);
+    nargs = trimargs (args, 0, &spa, call);
+
+    if (nargs > MAX_ARGS)
+        errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT(spa.pkg);
     resolveNativeRoutine(args, &ofun, &symbol, spa.pkg, buf, call, env);
@@ -478,12 +485,11 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     args = CDR(args);
     UNPROTECT(1);
 
-    for(nargs = 0, pargs = args ; pargs != R_NilValue; pargs = CDR(pargs)) {
-	if (nargs == MAX_ARGS)
-	    errorcall(call, _("too many arguments in foreign function call"));
-	cargs[nargs] = CAR(pargs);
-	nargs++;
-    }
+    SEXP cargs [nargs>0 ? nargs : 1]; /* 0-length arrays not allowed in C99 */
+
+    for (pargs = args, i = 0; pargs != R_NilValue; pargs = CDR(pargs), i++)
+	cargs[i] = CAR(pargs);
+
     if(symbol.symbol.call && symbol.symbol.call->numArgs > -1) {
 	if(symbol.symbol.call->numArgs != nargs)
 	    errorcall(call,
@@ -1298,7 +1304,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                                   int variant)
 {
     int na, nargs, Fort;
-    int name_count, last_pos;
+    int name_count, last_pos, i;
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
     SEXP ans, pa, s, last_tag;
@@ -1313,11 +1319,14 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     Fort = PRIMVAL(op);
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
-    trimargs (args, 1, &spa, call);
+    nargs = trimargs (args, 1, &spa, call);
 
     if (spa.naok == NA_LOGICAL)
         errorcall(call, _("invalid '%s' value"), "naok");
     /* Should check spa.dup == NA_LOGICAL too?  But not done in R-2.15.3 ... */
+
+    if (nargs > MAX_ARGS)
+        errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT2(spa.pkg,spa.encoding);
 
@@ -1336,16 +1345,15 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     UNPROTECT(2);
 
-    /* Count arguments, and find out about names. */
-    nargs = 0;
+    /* Count named arguments, and note last one. */
+
     name_count = 0;
-    for(pa = args ; pa != R_NilValue; pa = CDR(pa)) {
+    for (pa = args, i = 0; pa != R_NilValue; pa = CDR(pa), i++) {
 	if (TAG(pa) != R_NilValue) {
             name_count += 1;
             last_tag = TAG(pa);
-            last_pos = nargs;
+            last_pos = i;
         }
-	nargs++;
     }
 
     if(symbol.symbol.c && symbol.symbol.c->numArgs > -1) {
@@ -1359,9 +1367,6 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     }
 
     /* Construct the return value */
-
-    if (nargs > MAX_ARGS)
-        errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT(ans = allocVector(VECSXP, nargs));
 
@@ -1383,7 +1388,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     /* Convert the arguments for use in foreign function calls. */
 
-    void *cargs[nargs];
+    void *cargs [nargs>0 ? nargs : 1]; /* 0-length arrays not allowed in C99 */
 
     for(na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 	if(checkTypes &&
