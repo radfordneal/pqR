@@ -1297,7 +1297,6 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                                   int variant)
 {
-    void **cargs;
     int na, nargs, Fort;
     int name_count, last_pos;
     DL_FUNC ofun = NULL;
@@ -1383,7 +1382,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     }
 
     /* Convert the arguments for use in foreign function calls. */
-    cargs = (void**) R_alloc(nargs, sizeof(void*));
+
+    void *cargs[nargs];
+
     for(na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 	if(checkTypes &&
 	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), spa.dup)) {
