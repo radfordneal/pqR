@@ -255,22 +255,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 
     processSymbolId(op, call, fun, symbol, buf); /* May set fun, symbol, buf */
 
-    dll.obj = pkg; /* ?? */
-    if (TYPEOF(pkg) != STRSXP) {
-        /* Have a DLL object, which is not something documented .... */
-        if(TYPEOF(pkg) == EXTPTRSXP) {
-            dll.dll = (HINSTANCE) R_ExternalPtrAddr(pkg);
-            dll.type = DLL_HANDLE;
-        } else if(TYPEOF(pkg) == VECSXP) {
-            dll.type = R_OBJECT;
-            strcpy(dll.DLLname,
-                   translateChar(STRING_ELT(VECTOR_ELT(pkg, 1), 0)));
-            dll.dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(pkg, 4));
-        } else 
-            error("incorrect type (%s) of PACKAGE argument\n",
-        	  type2char(TYPEOF(pkg)));
-    }
-    else { /* TYPEOF(pkg) == STRSXP */
+    if (TYPEOF(pkg) == STRSXP) {
         if (LENGTH(pkg) != 1)
 	    error(_("PACKAGE argument must be a single character string"));
         name = translateChar (STRING_ELT (pkg,0));
@@ -278,7 +263,24 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
         if(strncmp(name, "package:", 8) == 0) name += 8;
         if (!copy_1_string (dll.DLLname, PATH_MAX, name))
             error(_("PACKAGE argument is too long"));
+        dll.obj = pkg; /* ?? */
         dll.type = FILENAME;
+    }
+    else if (pkg != R_NilValue) {
+        /* Have a DLL object, which is not something documented .... */
+        if(TYPEOF(pkg) == EXTPTRSXP) {
+            dll.dll = (HINSTANCE) R_ExternalPtrAddr(pkg);
+            dll.obj = pkg; /* ?? */
+            dll.type = DLL_HANDLE;
+        } else if(TYPEOF(pkg) == VECSXP) {
+            dll.obj = pkg; /* ?? */
+            dll.type = R_OBJECT;
+            strcpy(dll.DLLname,
+                   translateChar(STRING_ELT(VECTOR_ELT(pkg, 1), 0)));
+            dll.dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(pkg, 4));
+        } else 
+            error("incorrect type (%s) of PACKAGE argument\n",
+        	  type2char(TYPEOF(pkg)));
     }
 
     /* We were given a symbol (or an address), so we are done. */
@@ -1321,7 +1323,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     PROTECT2(spa.pkg,spa.encoding);
 
     encname[0] = 0;
-    if (spa.encoding) {
+    if (spa.encoding != R_NilValue) {
         if(TYPEOF(spa.encoding) != STRSXP || LENGTH(spa.encoding) != 1)
             error(_("ENCODING argument must be a single character string"));
         strncpy(encname, translateChar(STRING_ELT(spa.encoding,0)), 100);
