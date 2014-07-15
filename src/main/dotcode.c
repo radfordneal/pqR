@@ -48,6 +48,7 @@
 #define max(a, b) ((a > b)?(a):(b))
 #endif
 
+
 /* Was 'name' prior to 2.13.0, then .NAME, but checked as 'name' up to 2.15.1 */
 static void check_NAME(SEXP args, SEXP call)
 {
@@ -56,6 +57,79 @@ static void check_NAME(SEXP args, SEXP call)
     if (TAG(args) != R_NilValue)
         warningcall(call, "the first argument should not be named");
 }
+
+
+/* Trim special arguments from argument list for .Call, .External, .C or
+   .Fortran.  These arguments are removed (destructively) from the argument 
+   list, and the new argument list is returned.  The second argument is
+   1 for .C or .Fortran, 0 for .Call or .External, and controls whether
+   NAOK, DUP, and ENCODING are allowed.  The result is returned in the
+   special_args structure passed.  Note that no action regarding these
+   arguments is taken here - they are just found, removed, and returned.
+   NAOK defaults to FALSE, DUP to TRUE, ENCODING to C NULL, and PACKAGE
+   to C NULL. */
+
+struct special_args { int naok, dup; SEXP encoding, pkg; };
+
+static SEXP trimargs (SEXP args, int C_Fort, struct special_args *r)
+{ 
+    int naokused=0, dupused=0, encused=0, pkgused=0;
+    const char *p;
+    SEXP s, t, prev;
+
+    r->naok = FALSE;
+    r->dup = TRUE;
+    r->encoding = NULL;
+    r->pkg = NULL;
+
+    prev = NULL;
+
+    for (s = args; s != R_NilValue; s = CDR(s)) {
+
+        if (TAG(s) == R_PkgSymbol) {
+            r->pkg = CAR(s);
+            if (pkgused) warning(_("PACKAGE used more than once"));
+            pkgused = 1;
+            goto remove;
+        }
+
+        if (C_Fort) {
+
+            if (TAG(s) == R_EncSymbol) {
+                r->encoding = CAR(s);
+                if (encused) warning(_("ENCODING used more than once"));
+                encused = 1;
+                goto remove;
+            }
+     
+            if (TAG(s) == R_NaokSymbol) {
+                r->naok = asLogical(CAR(s));
+                if (naokused) warning(_("NAOK used more than once"));
+                naokused = 1;
+                goto remove;
+            }
+    
+            if (TAG(s) == R_DupSymbol) {
+                r->dup = asLogical(CAR(s));
+                if (dupused) warning(_("DUP used more than once"));
+                dupused = 1;
+                goto remove;
+            }
+        }
+
+        prev = s;
+        continue;
+
+      remove:
+        if (prev == NULL)
+            args = CDR(s);
+        else 
+            CDR(prev) = CDR(s);
+    }
+
+    return args;
+}
+
 
 #include <Rdynpriv.h>
 // Odd: 'type' is really this enum
@@ -163,9 +237,9 @@ static void processSymbolId (SEXP op, SEXP call, DL_FUNC *fun,
 
 /*
   This is the routine that is called by do_dotCode, do_dotcall and
-  do_External to find the DL_FUNC to invoke. It handles processing the
-  arguments for the PACKAGE argument, if present, and also takes care
-  of the cases where we are given a NativeSymbolInfo object, an
+  do_External to find the DL_FUNC to invoke. It handles processing
+  the PACKAGE argument, if present, and also takes care of
+  the cases where we are given a NativeSymbolInfo object, an
   address directly, and if the DLL is specified. If no PACKAGE is
   provided, we check whether the calling function is in a namespace
   and look there.
@@ -173,13 +247,14 @@ static void processSymbolId (SEXP op, SEXP call, DL_FUNC *fun,
 
 //#define CHECK_NAMSPACE_RESOLUTION 1
 
-static SEXP
-resolveNativeRoutine(SEXP args, DL_FUNC *fun,
-		     R_RegisteredNativeSymbol *symbol, char *buf,
-		     int *nargs, int *naok, int *dup, SEXP call, SEXP env)
+static void
+resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
+                     SEXP pkg, char *buf, SEXP call, SEXP env)
 {
     SEXP op;
-    const char *p; char *q;
+    char *q;
+    const char *p, *name; 
+
     DllReference dll;
     /* This is used as shorthand for 'all' in R_FindSymbol, but
        should never be supplied */
@@ -190,26 +265,34 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 
     processSymbolId(op, call, fun, symbol, buf); /* May set fun, symbol, buf */
 
-    /* The following code modifies the argument list */
-    /* We know this is ok because do_dotCode is entered */
-    /* with its arguments evaluated. */
-
-    if(symbol->type == R_C_SYM || symbol->type == R_FORTRAN_SYM) {
-	/* And that also looks for PACKAGE = */
-	args = naokfind(CDR(args), nargs, naok, dup, &dll);
-	if(*naok == NA_LOGICAL)
-	    errorcall(call, _("invalid '%s' value"), "naok");
-	if(*nargs > MAX_ARGS)
-	    errorcall(call, _("too many arguments in foreign function call"));
-    } else {
-	/* This has the side effect of setting dll.type if a PACKAGE=
-	   argument if found, but it will only be used if a string was
-	   passed in  */
-	args = pkgtrim(args, &dll);
+    if (TYPEOF(pkg) != STRSXP) {
+        /* Have a DLL object, which is not something documented .... */
+        if(TYPEOF(pkg) == EXTPTRSXP) {
+            dll->dll = (HINSTANCE) R_ExternalPtrAddr(pkg);
+            dll->type = DLL_HANDLE;
+        } else if(TYPEOF(pkg) == VECSXP) {
+            dll->type = R_OBJECT;
+            dll->obj = s;
+            strcpy(dll->DLLname,
+                   translateChar(STRING_ELT(VECTOR_ELT(pkg, 1), 0)));
+            dll->dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(s, 4));
+        } else 
+            error("incorrect type (%s) of PACKAGE argument\n",
+        	  type2char(TYPEOF(pkg)));
+    }
+    else { /* TYPEOF(pkg) == STRSXP */
+        if (LENGTH(pkg) != 1)
+	    error(_("PACKAGE argument must be a single character string"));
+        name = translateChar (STRING_ELT (pkg,0));
+        /* allow the package: form of the name, as returned by find */
+        if(strncmp(name, "package:", 8) == 0) name += 8;
+        if (!copy_1_string (dll.DLLname, PATH_MAX, name))
+            error(_("PACKAGE argument is too long"));
+        dll.type = FILENAME;
     }
 
     /* We were given a symbol (or an address), so we are done. */
-    if (*fun) return args;
+    if (*fun) return;
 
     // find if we were called from a namespace
     SEXP env2 = ENCLOS(env);
@@ -231,7 +314,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 	/* no PACKAGE= arg, so see if we can identify a DLL
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
-	if (*fun) return args;
+	if (*fun) return;
 #ifdef CHECK_NAMSPACE_RESOLUTION
 	warningcall(call, 
 		    "\"%s\" not resolved from current namespace (%s)",
@@ -246,7 +329,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     */
 
     *fun = R_FindSymbol(buf, dll.DLLname, symbol);
-    if (*fun) return args;
+    if (*fun) return;
 
     /* so we've failed and bail out */
     if (*dll.DLLname != 0) {
@@ -280,8 +363,6 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     } else
 	errorcall(call, _("%s symbol name \"%s\" not in load table"),
 		  symbol->type == R_FORTRAN_SYM ? "Fortran" : "C", buf);
-
-    return args; /* -Wall */
 }
 
 
@@ -304,148 +385,6 @@ comparePrimitiveTypes(R_NativePrimitiveArgType type, SEXP s, Rboolean dup)
 
 /* Foreign Function Interface.  This code allows a user to call C */
 /* or Fortran code which is either statically or dynamically linked. */
-
-/* Finds NAOK, DUP, and PACKAGE arguments, and removes them.  Returns the
-   number of remaining arguments in len, and returns the new argument list
-   (which differs from input if first arg removed). */
-static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
-		     DllReference *dll)
-{
-    SEXP s, prev;
-    int nargs=0, naokused=0, dupused=0, pkgused=0;
-    const char *p;
-
-    *naok = 0;
-    *dup = 1;
-    *len = 0;
-    for (s = args; s != R_NilValue; ) {
-	if(TAG(s) == R_NaokSymbol) {
-	    *naok = asLogical(CAR(s));
-	    /* SETCDR(prev, s = CDR(s)); */
-	    if(naokused++ == 1) warning(_("NAOK used more than once"));
-	} else if(TAG(s) == R_DupSymbol) {
-	    *dup = asLogical(CAR(s));
-	    /* SETCDR(prev, s = CDR(s)); */
-	    if(dupused++ == 1) warning(_("DUP used more than once"));
-	} else if(TAG(s) == R_PkgSymbol) {
-	    dll->obj = CAR(s);  // really? 
-	    if(TYPEOF(CAR(s)) == STRSXP) {
-		p = translateChar(STRING_ELT(CAR(s), 0));
-		if(strlen(p) > PATH_MAX - 1)
-		    error(_("DLL name is too long"));
-		dll->type = FILENAME;
-		strcpy(dll->DLLname, p);
-		if(pkgused++ > 1) warning(_("PACKAGE used more than once"));
-		/* More generally, this should allow us to process
-		   any additional arguments and not insist that PACKAGE
-		   be the last argument.
-		*/
-	    } else {
-		/* Have a DLL object, which is not something documented .... */
-		if(TYPEOF(CAR(s)) == EXTPTRSXP) {
-		    dll->dll = (HINSTANCE) R_ExternalPtrAddr(CAR(s));
-		    dll->type = DLL_HANDLE;
-		} else if(TYPEOF(CAR(s)) == VECSXP) {
-		    dll->type = R_OBJECT;
-		    dll->obj = s;
-		    strcpy(dll->DLLname,
-			   translateChar(STRING_ELT(VECTOR_ELT(CAR(s), 1), 0)));
-		    dll->dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(s, 4));
-		} else 
-		    error("incorrect type (%s) of PACKAGE argument\n",
-			  type2char(TYPEOF(CAR(s))));
-	    }
-	} else {
-	    nargs++;
-	    prev = s;
-	    s = CDR(s);
-	    continue;
-	}
-	if(s == args)
-	    args = s = CDR(s);
-	else
-	    SETCDR(prev, s = CDR(s));
-    }
-    *len = nargs;
-    return args;
-}
-
-static void setDLLname(SEXP s, char *DLLname)
-{
-    SEXP ss = CAR(s);
-    const char *name;
-
-    if(TYPEOF(ss) != STRSXP || length(ss) != 1)
-	error(_("PACKAGE argument must be a single character string"));
-    name = translateChar(STRING_ELT(ss, 0));
-    /* allow the package: form of the name, as returned by find */
-    if(strncmp(name, "package:", 8) == 0)
-	name += 8;
-    if (!copy_1_string (DLLname, PATH_MAX, name))
-	error(_("PACKAGE argument is too long"));
-}
-
-static SEXP pkgtrim(SEXP args, DllReference *dll)
-{
-    SEXP s, ss;
-    int pkgused=0;
-
-    for(s = args ; s != R_NilValue;) {
-	ss = CDR(s);
-	/* Look for PACKAGE=. We look at the next arg, unless
-	   this is the last one (which will only happen for one arg),
-	   and remove it */
-	if(ss == R_NilValue && TAG(s) == R_PkgSymbol) {
-	    if(pkgused++ == 1) warning(_("PACKAGE used more than once"));
-	    setDLLname(s, dll->DLLname);
-	    dll->type = FILENAME;
-	    return R_NilValue;
-	}
-	if(TAG(ss) == R_PkgSymbol) {
-	    if(pkgused++ == 1) warning(_("PACKAGE used more than once"));
-	    setDLLname(ss, dll->DLLname);
-	    dll->type = FILENAME;
-	    SETCDR(s, CDR(ss));
-	}
-	s = CDR(s);
-    }
-    return args;
-}
-
-static SEXP enctrim(SEXP args, char *name, int len)
-{
-    SEXP s, ss, sx;
-    int pkgused = 0;
-
-    strcpy(name, "");
-    for(s = args ; s != R_NilValue;) {
-	ss = CDR(s);
-	/* Look for ENCODING=. We look at the next arg, unless
-	   this is the last one (which will only happen for one arg),
-	   and remove it */
-	if(ss == R_NilValue && TAG(s) == R_EncSymbol) {
-	    sx = CAR(s);
-	    if(pkgused++ == 1) warning(_("ENCODING used more than once"));
-	    if(TYPEOF(sx) != STRSXP || length(sx) != 1)
-		error(_("ENCODING argument must be a single character string"));
-	    strncpy(name, translateChar(STRING_ELT(sx, 0)), len);
-	    warning("ENCODING is deprecated");
-	    return R_NilValue;
-	}
-	if(TAG(ss) == R_EncSymbol) {
-	    sx = CAR(ss);
-	    if(pkgused++ == 1) warning(_("ENCODING used more than once"));
-	    if(TYPEOF(sx) != STRSXP || length(sx) != 1)
-		error(_("ENCODING argument must be a single character string"));
-	    strncpy(name, translateChar(STRING_ELT(sx, 0)), len);
-	    warning("ENCODING is deprecated");
-	    SETCDR(s, CDR(ss));
-	}
-	s = CDR(s);
-    }
-    return args;
-}
-
 
 
 SEXP attribute_hidden do_isloaded(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -491,11 +430,12 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     R_RegisteredNativeSymbol symbol = {R_EXTERNAL_SYM, {NULL}, NULL};
     const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
+    struct special_args spa;
 
     check_NAME (args, call);
+    args = trimargs (args, 0, &spa);
 
-    args = resolveNativeRoutine(args, &ofun, &symbol, buf, NULL, NULL,
-				NULL, call, env);
+    resolveNativeRoutine (args, &ofun, &symbol, spa->pkg, buf, call, env);
     fun = (R_ExternalRoutine) ofun;
 
     /* Some external symbols that are registered may have 0 as the
@@ -513,6 +453,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 #endif
 
+    /* Note that .NAME is passed as the first argument (and usually ignored). */
     retval = (SEXP)fun(args);
     VMAXSET(vmax);
     return retval;
@@ -534,13 +475,14 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     int nargs;
     const void *vmax = VMAXGET();
     char buf[MaxSymbolBytes];
+    struct special_args spa;
 
     check_NAME (args, call);
+    args = trimargs (args, 0, &spa);
 
-    args = resolveNativeRoutine(args, &ofun, &symbol, buf, NULL, NULL,
-				NULL, call, env);
-    args = CDR(args);
+    resolveNativeRoutine(args, &ofun, &symbol, spa->pkg, buf, call, env);
     fun = (VarFun) ofun;
+    args = CDR(args);
 
     for(nargs = 0, pargs = args ; pargs != R_NilValue; pargs = CDR(pargs)) {
 	if (nargs == MAX_ARGS)
@@ -1372,17 +1314,43 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     R_NativeArgStyle *argStyles = NULL;
     void *vmax;
     char symName[MaxSymbolBytes], encname[101];
-
-    check_NAME (args, call);
+    struct special_args spa;
 
     vmax = VMAXGET();
     Fort = PRIMVAL(op);
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
-    args = enctrim(args, encname, 100);
-    args = resolveNativeRoutine(args, &ofun, &symbol, symName, &nargs,
-				&naok, &dup, call, env);
+    check_NAME (args, call);
+    args = trimargs (args, 1, &spa);
+
+    if (*naok == NA_LOGICAL)
+        errorcall(call, _("invalid '%s' value"), "naok");
+    /* Should check *dup == NA_LOGICAL too?  But not done in R-2.15.3 ... */
+
+    encname[0] = 0;
+    if (spa->encoding) {
+        if(TYPEOF(spa->encoding) != STRSXP || LENGTH(spa->encoding) != 1)
+            error(_("ENCODING argument must be a single character string"));
+        strncpy(encname, translateChar(STRING_ELT(spa->encoding,0)), 100);
+        encname[100] = 0;
+        warning("ENCODING is deprecated");
+    }
+
+    resolveNativeRoutine (args, &ofun, &symbol, spa->pkg, symName, call, env);
     fun = (VarFun) ofun;
+    args = CDR(args);
+
+    /* Count arguments, and find out about names. */
+    nargs = 0;
+    name_count = 0;
+    for(pa = args ; pa != R_NilValue; pa = CDR(pa)) {
+	if (TAG(pa) != R_NilValue) {
+            name_count += 1;
+            last_tag = TAG(pa);
+            last_pos = nargs;
+        }
+	nargs++;
+    }
 
     if(symbol.symbol.c && symbol.symbol.c->numArgs > -1) {
 	if(symbol.symbol.c->numArgs != nargs)
@@ -1395,16 +1363,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     }
 
     /* Construct the return value */
-    nargs = 0;
-    name_count = 0;
-    for(pa = args ; pa != R_NilValue; pa = CDR(pa)) {
-	if (TAG(pa) != R_NilValue) {
-            name_count += 1;
-            last_tag = TAG(pa);
-            last_pos = nargs;
-        }
-	nargs++;
-    }
+
+    if (nargs > MAX_ARGS)
+        errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT(ans = allocVector(VECSXP, nargs));
 

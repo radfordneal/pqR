@@ -131,7 +131,7 @@ SEXP convolveE(SEXP args)
 
 SEXP showArgs(SEXP args)
 {
-    args = CDR(args); /* skip 'name' */
+    args = CDR(args); /* skip '.NAME' */
     for(int i = 0; args != R_NilValue; i++, args = CDR(args)) {
         const char *name = 
             isNull(TAG(args)) ? "" : CHAR(PRINTNAME(TAG(args)));
