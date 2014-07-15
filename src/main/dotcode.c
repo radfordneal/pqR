@@ -49,46 +49,45 @@
 #endif
 
 
-/* Was 'name' prior to 2.13.0, then .NAME, but checked as 'name' up to 2.15.1 */
-static void check_NAME(SEXP args, SEXP call)
-{
-    if (args == R_NilValue)
-        errorcall(call, _("'.NAME' is missing"));
-    if (TAG(args) != R_NilValue)
-        warningcall(call, "the first argument should not be named");
-}
-
-
 /* Trim special arguments from argument list for .Call, .External, .C or
    .Fortran.  These arguments are removed (destructively) from the argument 
-   list, and the new argument list is returned.  The second argument is
-   1 for .C or .Fortran, 0 for .Call or .External, and controls whether
-   NAOK, DUP, and ENCODING are allowed.  The result is returned in the
-   special_args structure passed.  Note that no action regarding these
-   arguments is taken here - they are just found, removed, and returned.
-   NAOK defaults to FALSE, DUP to TRUE, ENCODING to C NULL, and PACKAGE
-   to C NULL. */
+   list.  The second argument is 1 for .C/.Fortran, 0 for .Call/.External, 
+   and controls whether NAOK, DUP, and ENCODING are allowed.  The result 
+   is returned in the special_args structure passed.  
+
+   Note that no action regarding these arguments is taken here - they are 
+   just found, removed, and returned.  NAOK defaults to FALSE, DUP to TRUE, 
+   ENCODING to C R_NilValue, and PACKAGE to C R_NilValue. 
+
+   Also checks that the first argument is present and unnamed.  Note 
+   that since this argument is always present, removal of later arguments
+   won't change the head of the argument list. */
 
 struct special_args { int naok, dup; SEXP encoding, pkg; };
 
-static SEXP trimargs (SEXP args, int C_Fort, struct special_args *r)
+static void trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 { 
     int naokused=0, dupused=0, encused=0, pkgused=0;
     const char *p;
     SEXP s, t, prev;
 
+    if (args == R_NilValue)
+        errorcall(call, _("'.NAME' is missing"));
+    if (TAG(args) != R_NilValue)
+        warningcall(call, "the first argument should not be named");
+
     r->naok = FALSE;
     r->dup = TRUE;
-    r->encoding = NULL;
-    r->pkg = NULL;
+    r->encoding = R_NilValue;
+    r->pkg = R_NilValue;
 
-    prev = NULL;
+    prev = args;
 
-    for (s = args; s != R_NilValue; s = CDR(s)) {
+    for (s = CDR(args); s != R_NilValue; s = CDR(s)) {
 
         if (TAG(s) == R_PkgSymbol) {
             r->pkg = CAR(s);
-            if (pkgused) warning(_("PACKAGE used more than once"));
+            if (pkgused) warningcall(call,_("PACKAGE used more than once"));
             pkgused = 1;
             goto remove;
         }
@@ -97,21 +96,21 @@ static SEXP trimargs (SEXP args, int C_Fort, struct special_args *r)
 
             if (TAG(s) == R_EncSymbol) {
                 r->encoding = CAR(s);
-                if (encused) warning(_("ENCODING used more than once"));
+                if (encused) warningcall(call,_("ENCODING used more than once"));
                 encused = 1;
                 goto remove;
             }
      
             if (TAG(s) == R_NaokSymbol) {
                 r->naok = asLogical(CAR(s));
-                if (naokused) warning(_("NAOK used more than once"));
+                if (naokused) warningcall(call,_("NAOK used more than once"));
                 naokused = 1;
                 goto remove;
             }
     
             if (TAG(s) == R_DupSymbol) {
                 r->dup = asLogical(CAR(s));
-                if (dupused) warning(_("DUP used more than once"));
+                if (dupused) warningcall(call,_("DUP used more than once"));
                 dupused = 1;
                 goto remove;
             }
@@ -121,13 +120,8 @@ static SEXP trimargs (SEXP args, int C_Fort, struct special_args *r)
         continue;
 
       remove:
-        if (prev == NULL)
-            args = CDR(s);
-        else 
-            CDR(prev) = CDR(s);
+        CDR(prev) = CDR(s);
     }
-
-    return args;
 }
 
 
@@ -152,12 +146,8 @@ static DL_FUNC
 R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 			  R_RegisteredNativeSymbol *symbol, SEXP env);
 
-static SEXP naokfind(SEXP args, int * len, int *naok, int *dup,
-		     DllReference *dll);
-static SEXP pkgtrim(SEXP args, DllReference *dll);
 
-/*
-  Called from resolveNativeRoutine.
+/* Called from resolveNativeRoutine.
 
   Checks whether the specified object correctly identifies a native routine.
   op is the supplied value for .NAME.  This can be
@@ -265,17 +255,17 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 
     processSymbolId(op, call, fun, symbol, buf); /* May set fun, symbol, buf */
 
+    dll.obj = pkg; /* ?? */
     if (TYPEOF(pkg) != STRSXP) {
         /* Have a DLL object, which is not something documented .... */
         if(TYPEOF(pkg) == EXTPTRSXP) {
-            dll->dll = (HINSTANCE) R_ExternalPtrAddr(pkg);
-            dll->type = DLL_HANDLE;
+            dll.dll = (HINSTANCE) R_ExternalPtrAddr(pkg);
+            dll.type = DLL_HANDLE;
         } else if(TYPEOF(pkg) == VECSXP) {
-            dll->type = R_OBJECT;
-            dll->obj = s;
-            strcpy(dll->DLLname,
+            dll.type = R_OBJECT;
+            strcpy(dll.DLLname,
                    translateChar(STRING_ELT(VECTOR_ELT(pkg, 1), 0)));
-            dll->dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(s, 4));
+            dll.dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(pkg, 4));
         } else 
             error("incorrect type (%s) of PACKAGE argument\n",
         	  type2char(TYPEOF(pkg)));
@@ -432,11 +422,12 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     char buf[MaxSymbolBytes];
     struct special_args spa;
 
-    check_NAME (args, call);
-    args = trimargs (args, 0, &spa);
+    trimargs (args, 0, &spa, call);
 
-    resolveNativeRoutine (args, &ofun, &symbol, spa->pkg, buf, call, env);
+    PROTECT(spa.pkg);
+    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, buf, call, env);
     fun = (R_ExternalRoutine) ofun;
+    UNPROTECT(1);
 
     /* Some external symbols that are registered may have 0 as the
        expected number of arguments.  We may want a warning
@@ -477,12 +468,13 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     char buf[MaxSymbolBytes];
     struct special_args spa;
 
-    check_NAME (args, call);
-    args = trimargs (args, 0, &spa);
+    trimargs (args, 0, &spa, call);
 
-    resolveNativeRoutine(args, &ofun, &symbol, spa->pkg, buf, call, env);
+    PROTECT(spa.pkg);
+    resolveNativeRoutine(args, &ofun, &symbol, spa.pkg, buf, call, env);
     fun = (VarFun) ofun;
     args = CDR(args);
+    UNPROTECT(1);
 
     for(nargs = 0, pargs = args ; pargs != R_NilValue; pargs = CDR(pargs)) {
 	if (nargs == MAX_ARGS)
@@ -1304,7 +1296,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                                   int variant)
 {
     void **cargs;
-    int dup, naok, na, nargs, Fort;
+    int na, nargs, Fort;
     int name_count, last_pos;
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
@@ -1320,25 +1312,28 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     Fort = PRIMVAL(op);
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
-    check_NAME (args, call);
-    args = trimargs (args, 1, &spa);
+    trimargs (args, 1, &spa, call);
 
-    if (*naok == NA_LOGICAL)
+    if (spa.naok == NA_LOGICAL)
         errorcall(call, _("invalid '%s' value"), "naok");
-    /* Should check *dup == NA_LOGICAL too?  But not done in R-2.15.3 ... */
+    /* Should check spa.dup == NA_LOGICAL too?  But not done in R-2.15.3 ... */
+
+    PROTECT2(spa.pkg,spa.encoding);
 
     encname[0] = 0;
-    if (spa->encoding) {
-        if(TYPEOF(spa->encoding) != STRSXP || LENGTH(spa->encoding) != 1)
+    if (spa.encoding) {
+        if(TYPEOF(spa.encoding) != STRSXP || LENGTH(spa.encoding) != 1)
             error(_("ENCODING argument must be a single character string"));
-        strncpy(encname, translateChar(STRING_ELT(spa->encoding,0)), 100);
+        strncpy(encname, translateChar(STRING_ELT(spa.encoding,0)), 100);
         encname[100] = 0;
         warning("ENCODING is deprecated");
     }
 
-    resolveNativeRoutine (args, &ofun, &symbol, spa->pkg, symName, call, env);
+    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, symName, call, env);
     fun = (VarFun) ofun;
     args = CDR(args);
+
+    UNPROTECT(2);
 
     /* Count arguments, and find out about names. */
     nargs = 0;
@@ -1389,7 +1384,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     cargs = (void**) R_alloc(nargs, sizeof(void*));
     for(na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 	if(checkTypes &&
-	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), dup)) {
+	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), spa.dup)) {
 	    /* We can loop over all the arguments and report all the
 	       erroneous ones, but then we would also want to avoid
 	       the conversions.  Also, in the future, we may just
@@ -1406,7 +1401,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	SET_VECTOR_ELT(ans, na, s);
 
 	if(checkNativeType(targetType, TYPEOF(s)) == FALSE) {
-	    if(!dup) {
+	    if(!spa.dup) {
 		error(_("explicit request not to duplicate arguments in call to '%s', but argument %d is of the wrong type (%d != %d)"),
 		      symName, na + 1, targetType, TYPEOF(s));
 	    }
@@ -1432,7 +1427,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	switch(t) {
 	case RAWSXP:
 	    n = LENGTH(s);
-	    if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(RAW(ss), RAW(s), n * sizeof(Rbyte));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1443,11 +1438,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case INTSXP:
 	    n = LENGTH(s);
 	    int *iptr = INTEGER(s);
-	    if (!naok)
+	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na + 1);
-	    if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(INTEGER(ss), INTEGER(s), n * sizeof(int));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1457,7 +1452,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case REALSXP:
 	    n = LENGTH(s);
 	    double *rptr = REAL(s);
-	    if (!naok)
+	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(rptr[i]))
 			error(_("NA/NaN/Inf in foreign function call (arg %d)"), na + 1);
@@ -1465,7 +1460,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		float *sptr = (float*) R_alloc(n, sizeof(float));
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
 		cargs[na] = (void*) sptr;
-	    } else if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
+	    } else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
 		SEXP ss  = allocVector(t, n);
 		memcpy(REAL(ss), REAL(s), n * sizeof(double));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1475,11 +1470,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case CPLXSXP:
 	    n = LENGTH(s);
 	    Rcomplex *zptr = COMPLEX(s);
-	    if (!naok)
+	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(zptr[i].r) || !R_FINITE(zptr[i].i))
 			error(_("complex NA/NaN/Inf in foreign function call (arg %d)"), na + 1);
-	    if (NAMEDCNT_GT_0(s) && (dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(COMPLEX(ss), COMPLEX(s), n * sizeof(Rcomplex));
 		SET_VECTOR_ELT(ans, na, ss);
@@ -1487,7 +1482,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    } else cargs[na] = (void *) zptr;
 	    break;
 	case STRSXP:
-	    if (!dup)
+	    if (!spa.dup)
 		error(_("character variables must be duplicated in .C/.Fortran"));
 	    n = LENGTH(s);
 	    if (Fort) {
@@ -2175,7 +2170,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	errorcall(call, _("too many arguments, sorry"));
     }
 
-    if (dup) {
+    if (spa.dup) {
 
 	for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
             if (VARIANT_KIND(variant) == VARIANT_ONE_NAMED && na != last_pos)
