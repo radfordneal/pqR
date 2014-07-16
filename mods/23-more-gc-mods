@@ -1,0 +1,3 @@
+Further improvements to the garbage collector.
+
+Some local code changes, optional (set) removal of excessive error checks.
