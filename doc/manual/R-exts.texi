@@ -7416,10 +7416,9 @@ R_CMethodDef cMethods[] = @{
 One can also specify whether each argument is used simply as input, or
 as output, or as both input and output.  The style field in the
 description of a method is used for this.  The purpose is to
-allow@footnote{but this is not currently done.} @R{} to transfer values
+allow @R{} to transfer values
 more efficiently across the @R{}-C/FORTRAN interface by avoiding copying
-values when it is not necessary. Typically, one omits this information
-in the registration data.
+values when it is not necessary. This information is often omitted.
 
 Having created the arrays describing each routine, the last step is to
 actually register them with @R{}.  We do this by calling
