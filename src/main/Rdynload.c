@@ -663,49 +663,57 @@ addDLL(char *dpath, char *DLLname, HINSTANCE handle)
 static Rf_DotCSymbol *
 Rf_lookupRegisteredCSymbol(DllInfo *info, const char *name)
 {
-    int i;
-    for(i = 0; i < info->numCSymbols; i++) {
-	if(strcmp(name, info->CSymbols[i].name) == 0)
-	    return(&(info->CSymbols[i]));
+    int n = info->numCSymbols;
+
+    for (int i = 0; i < n; i++) {
+        const char *p = info->CSymbols[i].name;
+	if (*name == *p && strcmp(name,p) == 0)
+	    return &info->CSymbols[i];
     }
 
-    return(NULL);
+    return NULL;
 }
 
 static Rf_DotFortranSymbol *
 Rf_lookupRegisteredFortranSymbol(DllInfo *info, const char *name)
 {
-    int i;
-    for(i = 0; i < info->numFortranSymbols; i++) {
-	if(strcmp(name, info->FortranSymbols[i].name) == 0)
-	    return(&(info->FortranSymbols[i]));
+    int n = info->numFortranSymbols;
+
+    for (int i = 0; i < n; i++) {
+        const char *p = info->FortranSymbols[i].name;
+	if (*name == *p && strcmp(name,p) == 0)
+	    return &info->FortranSymbols[i];
     }
 
-    return((Rf_DotFortranSymbol*)NULL);
+    return NULL;
 }
 
 static Rf_DotCallSymbol *
 Rf_lookupRegisteredCallSymbol(DllInfo *info, const char *name)
 {
-    int i;
+    int n = info->numCallSymbols;
 
-    for(i = 0; i < info->numCallSymbols; i++) {
-	if(strcmp(name, info->CallSymbols[i].name) == 0)
-	    return(&(info->CallSymbols[i]));
+    for (int i = 0; i < n; i++) {
+        const char *p = info->CallSymbols[i].name;
+	if (*name == *p && strcmp(name,p) == 0)
+	    return &info->CallSymbols[i];
     }
-    return((Rf_DotCallSymbol*)NULL);
+
+    return NULL;
 }
 
 static Rf_DotExternalSymbol *
 Rf_lookupRegisteredExternalSymbol(DllInfo *info, const char *name)
 {
-    int i;
+    int n = info->numExternalSymbols;
 
-    for(i = 0; i < info->numExternalSymbols; i++) {
-	if(strcmp(name, info->ExternalSymbols[i].name) == 0)
-	    return(&(info->ExternalSymbols[i]));
+    for (int i = 0; i < n; i++) {
+        const char *p = info->ExternalSymbols[i].name;
+	if (*name == *p && strcmp(name,p) == 0)
+	    return &info->ExternalSymbols[i];
     }
-    return((Rf_DotExternalSymbol*)NULL);
+
+    return NULL;
 }
 
 static DL_FUNC R_getDLLRegisteredSymbol(DllInfo *info, const char *name,
@@ -780,42 +788,66 @@ DL_FUNC attribute_hidden
 R_dlsym(DllInfo *info, char const *name,
 	R_RegisteredNativeSymbol *symbol)
 {
-    char buf[strlen(name) + 4]; /* up to 3 additional underscores */
     DL_FUNC f;
 
-    f = R_getDLLRegisteredSymbol(info, name, symbol);
-    if(f) return(f);
+    f = R_getDLLRegisteredSymbol (info, name, symbol);
+    if (f) return f;
 
+    if (!info->useDynamicLookup) return NULL;
 
-    if(info->useDynamicLookup == FALSE) return(NULL);
+#   ifdef HAVE_NO_SYMBOL_UNDERSCORE
 
-#ifdef HAVE_NO_SYMBOL_UNDERSCORE
-    sprintf(buf, "%s", name);
-#else
-    sprintf(buf, "_%s", name);
-#endif
+        if (symbol == NULL || symbol->type != R_FORTRAN_SYM) {
+            f = (DL_FUNC) R_osDynSymbol->dlsym(info, name);
+            if (f) return f;
+        }
 
-#ifdef HAVE_F77_UNDERSCORE
-    if(symbol && symbol->type == R_FORTRAN_SYM) {
-	strcat(buf, "_");
-# ifdef HAVE_F77_EXTRA_UNDERSCORE
-	if(strchr(name, '_')) strcat(buf, "_");
-# endif
-    }
-#endif
+#       ifdef HAVE_F77_UNDERSCORE
+            if (symbol != NULL && (symbol->type == R_FORTRAN_SYM 
+                                    || symbol->type == R_ANY_SYM)) {
+                int len = strlen(name);
+                char buf[len+3]; /* up to 2 additional underscores */
+                strcpy(buf,name);
+                buf[len++] = '_';
+#               ifdef HAVE_F77_EXTRA_UNDERSCORE
+                    if (strchr(name,'_')) buf[len++] = '_';
+#               endif
+                buf[len] = 0;
+                f = (DL_FUNC) R_osDynSymbol->dlsym (info, buf);
+                if (f) return f;
+            }
+#       endif
 
-    f = (DL_FUNC) R_osDynSymbol->dlsym(info, buf);
-#ifdef HAVE_F77_UNDERSCORE
-    if (!f && symbol && symbol->type == R_ANY_SYM) {
-	strcat(buf, "_");
-# ifdef HAVE_F77_EXTRA_UNDERSCORE
-	if(strchr(name, '_')) strcat(buf, "_");
-# endif
-	f = (DL_FUNC) R_osDynSymbol->dlsym(info, buf);
-    }
-#endif
+#   else
 
-    return f;
+        int len = strlen(name);
+        char buf_space[len+4]; /* up to 3 additional underscores */
+        buf_space[0] = '_';
+        char *buf = buf_space+1;
+        strcpy(buf,name);
+        len++;
+
+        if (symbol == NULL || symbol->type != R_FORTRAN_SYM) {
+            f = (DL_FUNC) R_osDynSymbol->dlsym(info, buf);
+            if (f) return f;
+        }
+
+#       ifdef HAVE_F77_UNDERSCORE
+            if (symbol != NULL && (symbol->type == R_FORTRAN_SYM 
+                                    || symbol->type == R_ANY_SYM)) {
+                buf[len++] = '_';
+#               ifdef HAVE_F77_EXTRA_UNDERSCORE
+                    if (strchr(name,'_')) buf[len++] = '_';
+#               endif
+                buf[len] = 0;
+                f = (DL_FUNC) R_osDynSymbol->dlsym (info, buf);
+                if (f) return f;
+            }
+#       endif
+
+#   endif
+
+    return NULL;
 }
 
 	/* R_FindSymbol checks whether one of the objects */
@@ -836,7 +868,8 @@ DL_FUNC R_FindSymbol(char const *name, char const *pkg,
 		     R_RegisteredNativeSymbol *symbol)
 {
     DL_FUNC fcnptr = (DL_FUNC) NULL;
-    int i, all = (strlen(pkg) == 0), doit;
+    int all = pkg[0]==0;
+    int i, doit;
 
     if(R_osDynSymbol->lookupCachedSymbol)
 	fcnptr = R_osDynSymbol->lookupCachedSymbol(name, pkg, all);

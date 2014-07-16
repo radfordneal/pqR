@@ -218,17 +218,6 @@ static DL_FUNC R_local_dlsym(DllInfo *info, char const *name)
 }
 
 
-/*
-  In the future, this will receive an additional argument
-  which will specify the nature of the symbol expected by the
-  caller, specifically whether it is for a .C(), .Call(),
-  .Fortran(), .External(), generic, etc. invocation. This will
-  reduce the pool of possible symbols in the case of a library
-  that registers its routines.
- */
-
-
-
 static void getFullDLLPath(SEXP call, char *buf, const char *path)
 {
     if(path[0] == '~')
