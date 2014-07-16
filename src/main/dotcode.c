@@ -250,10 +250,9 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     const char *p, *name; 
 
     DllReference dll;
-    /* This is used as shorthand for 'all' in R_FindSymbol, but
+    /* Null string for DLLname is shorthand for 'all' in R_FindSymbol, but
        should never be supplied */
-    strcpy(dll.DLLname, ""); 
-    dll.dll = NULL; dll.obj = NULL; dll.type = NOT_DEFINED;
+    dll.DLLname[0] = 0; dll.dll = NULL; dll.obj = NULL; dll.type = NOT_DEFINED;
     
     op = CAR(args);  // value of .NAME =
 
