@@ -1367,10 +1367,12 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     /* Construct the return value */
 
+    int return_one_named = 
+          name_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED;
+
     PROTECT(ans = allocVector(VECSXP, nargs));
 
-    if (name_count > 1 || name_count == 1 
-                           && VARIANT_KIND(variant) != VARIANT_ONE_NAMED) {
+    if (name_count > 1 || name_count == 1 && !return_one_named) {
         /* not a variant return, and need names */
 	SEXP names;
 	PROTECT(names = allocVector(STRSXP, nargs));
@@ -2180,7 +2182,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     if (spa.dup) {
 
 	for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
-            if (VARIANT_KIND(variant) == VARIANT_ONE_NAMED && na != last_pos)
+            if (return_one_named && na != last_pos)
                 continue;
 	    else if(argStyles && argStyles[na] == R_ARG_IN) {
 		SET_VECTOR_ELT(ans, na, R_NilValue);
@@ -2246,7 +2248,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     UNPROTECT(1);
     VMAXSET(vmax);
 
-    if (name_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED) 
+    if (return_one_named)
         /* Return just the one named element as a pairlist */
         return cons_with_tag (VECTOR_ELT(ans,last_pos), R_NilValue, last_tag);
     else
