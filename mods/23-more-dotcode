@@ -1,1 +1,5 @@
 More improvements to dotcode.c
+
+Duplicate scalars only when they change.
+
+Fixed possible protection bug in do_dotCode.

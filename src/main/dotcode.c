@@ -1389,7 +1389,14 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     /* Convert the arguments for use in foreign function calls. */
 
-    void *cargs [nargs>0 ? nargs : 1]; /* 0-length arrays not allowed in C99 */
+    int nargs1 = nargs>0 ? nargs : 1;  /* 0-length arrays not allowed in C99 */
+    void *cargs [nargs1]; 
+
+    /* Scalar RAW, LGL, INT, and REAL arguments out of their boxes. */
+    union { Rbyte r; int i; double d; } scalar_value[nargs1];
+    char scalar_type[nargs1];
+
+    int nprotect = 0;
 
     for(na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 	if(checkTypes &&
@@ -1402,24 +1409,25 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    errorcall(call, _("Wrong type for argument %d in call to %s"),
 		      na+1, symName);
 	}
-	int n, nprotect = 0,
-	    targetType =  checkTypes ? checkTypes[na] : 0;
+
+	int targetType =  checkTypes ? checkTypes[na] : 0;
+
 	s = CAR(pa);
+
 	/* start with return value a copy of the inputs, as that is
 	   what is needed for DUP = FALSE and for non-atomic-vector inputs */
 	SET_VECTOR_ELT(ans, na, s);
 
-	if(checkNativeType(targetType, TYPEOF(s)) == FALSE) {
+	if (checkNativeType(targetType, TYPEOF(s)) == FALSE) {
 	    if(!spa.dup) {
 		error(_("explicit request not to duplicate arguments in call to '%s', but argument %d is of the wrong type (%d != %d)"),
 		      symName, na + 1, targetType, TYPEOF(s));
 	    }
 
 	    if(targetType != SINGLESXP) {
-		/* Cannot be called if DUP = FALSE, so only needs to live
-		   until copied in the switch.
-		   But R_alloc allocates, so missed protection < R 2.15.0.
-		*/
+		/* Needs to be protected until the external routine is called.
+		   Coerced value may have NAMEDCNT of zero, so not necessarily
+                   copied in the switch below. */
 		PROTECT(s = coerceVector(s, targetType));
 		nprotect++;
 	    }
@@ -1432,16 +1440,25 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
 	   We do not need to copy if the inputs have NAMED = 0 */
 
+        scalar_type[na] = NILSXP;
 	SEXPTYPE t = TYPEOF(s);
+        int n;
+
 	switch(t) {
 	case RAWSXP:
 	    n = LENGTH(s);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-		SEXP ss = allocVector(t, n);
-		memcpy(RAW(ss), RAW(s), n * sizeof(Rbyte));
-		SET_VECTOR_ELT(ans, na, ss);
-		cargs[na] = (void*) RAW(ss);
-	    } else cargs[na] = (void *) RAW(s);
+                if (n == 1 && s == CAR(pa)) {
+                    scalar_type[na] = t; 
+                    scalar_value[na].r = RAW(s)[0];
+                    cargs[na] = (void*) &scalar_value[na].r;
+                } else {
+		    SEXP ss = allocVector(t, n);
+		    memcpy(RAW(ss), RAW(s), n * sizeof(Rbyte));
+		    SET_VECTOR_ELT(ans, na, ss);
+		    cargs[na] = (void*) RAW(ss);
+                }
+	    } else cargs[na] = (void*) RAW(s);
 	    break;
 	case LGLSXP:
 	case INTSXP:
@@ -1452,10 +1469,16 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    if(iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na + 1);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-		SEXP ss = allocVector(t, n);
-		memcpy(INTEGER(ss), INTEGER(s), n * sizeof(int));
-		SET_VECTOR_ELT(ans, na, ss);
-		cargs[na] = (void*) INTEGER(ss);
+                if (n == 1 && s == CAR(pa)) {
+                    scalar_type[na] = t; 
+                    scalar_value[na].i = INTEGER(s)[0];
+                    cargs[na] = (void*) &scalar_value[na].i;
+                } else {
+		    SEXP ss = allocVector(t, n);
+		    memcpy(INTEGER(ss), INTEGER(s), n * sizeof(int));
+		    SET_VECTOR_ELT(ans, na, ss);
+		    cargs[na] = (void*) INTEGER(ss);
+                }
 	    } else cargs[na] = (void*) iptr;
 	    break;
 	case REALSXP:
@@ -1470,10 +1493,16 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
 		cargs[na] = (void*) sptr;
 	    } else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-		SEXP ss  = allocVector(t, n);
-		memcpy(REAL(ss), REAL(s), n * sizeof(double));
-		SET_VECTOR_ELT(ans, na, ss);
-		cargs[na] = (void*) REAL(ss);
+                if (n == 1 && s == CAR(pa)) {
+                    scalar_type[na] = t; 
+                    scalar_value[na].d = REAL(s)[0];
+                    cargs[na] = (void*) &scalar_value[na].d;
+                } else {
+		    SEXP ss  = allocVector(t, n);
+		    memcpy(REAL(ss), REAL(s), n * sizeof(double));
+		    SET_VECTOR_ELT(ans, na, ss);
+		    cargs[na] = (void*) REAL(ss);
+                }
 	    } else cargs[na] = (void*) rptr;
 	    break;
 	case CPLXSXP:
@@ -1581,8 +1610,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    cargs[na] =  (void*) s;
 	    continue;
 	}
-	if (nprotect) UNPROTECT(nprotect);
     }
+
+    UNPROTECT(nprotect);
 
     switch (nargs) {
     case 0:
@@ -2179,72 +2209,86 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	errorcall(call, _("too many arguments, sorry"));
     }
 
-    if (spa.dup) {
+    for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
 
-	for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
-            if (return_one_named && na != last_pos)
-                continue;
-	    else if(argStyles && argStyles[na] == R_ARG_IN) {
-		SET_VECTOR_ELT(ans, na, R_NilValue);
-		continue;
-	    } else {
-		void *p = cargs[na];
-		SEXP arg = CAR(pa);
-		s = VECTOR_ELT(ans, na);
-		R_NativePrimitiveArgType type =
-		    checkTypes ? checkTypes[na] : TYPEOF(arg);
-	        int n = length(arg);
+        if (return_one_named && na != last_pos)
+            continue;
 
-		switch(type) {
-		case LGLSXP:
-		{   /* Make sure logical values are valid.  Doesn't write
-                       if unnecessary, which may be faster, and would be
-                       necessary if ever it might be a read-only constant. */
-		    int *q = (int *) p;
-		    for (int i = 0; i < n; i++) {
-		        if (q[i]!=0 && q[i]!=1 && q[i]!=NA_INTEGER) q[i] = 1;
-		    }
-		    break;
-                }
-		case REALSXP:
-		case SINGLESXP:
-		    if (type == SINGLESXP 
-                         || asLogical(getAttrib(arg, R_CSingSymbol)) == 1) {
-			s = allocVector(REALSXP, n);
-			float *sptr = (float*) p;
-			for(int i = 0 ; i < n ; i++) 
-			    REAL(s)[i] = (double) sptr[i];
-		    }
-		    break;
-		case STRSXP:
-		    if(Fort) {
-			char buf[256];
-			/* only return one string: warned on the R -> Fortran step */
-			strncpy(buf, (char*)p, 255);
-			buf[255] = '\0';
-			PROTECT(s = allocVector(type, 1));
-			SET_STRING_ELT(s, 0, mkChar(buf));
-			UNPROTECT(1);
-		    } else {
-			PROTECT(s = allocVector(type, n));
-			char **cptr = (char**) p;
-			for (int i = 0 ; i < n ; i++)
-			    SET_STRING_ELT(s, i, mkChar(cptr[i]));
-			UNPROTECT(1);
-		    }
-		    break;
-		default:
-		    break;
-		}
-		if (s != arg) {
-		    PROTECT(s);
-		    DUPLICATE_ATTRIB(s, arg);
-		    SET_VECTOR_ELT(ans, na, s);
-		    UNPROTECT(1);
-		}
-	    }
-	}
+        if (spa.dup && argStyles && argStyles[na] == R_ARG_IN) {
+            SET_VECTOR_ELT(ans, na, R_NilValue);
+            continue;
+        }
+
+        SEXP arg = CAR(pa);
+        SEXP s = VECTOR_ELT(ans, na);
+        int scalar = scalar_type[na] != NILSXP;
+        R_NativePrimitiveArgType type = checkTypes ? checkTypes[na] 
+                                                   : TYPEOF(arg);
+        switch(type) {
+        case RAWSXP:
+            if (scalar && scalar_value[na].r != RAW(s)[0])
+                s = ScalarRaw(scalar_value[na].r);
+            break;
+        case LGLSXP: ;
+            /* Make sure logical values are valid.  Doesn't write
+               if unnecessary, which may be faster, and would be
+               necessary if ever it might be a read-only constant. */
+            int n = LENGTH(arg);
+            int *q = (int *) cargs[na];
+            for (int i = 0; i < n; i++) {
+                if (q[i]!=0 && q[i]!=1 && q[i]!=NA_LOGICAL) q[i] = 1;
+            }
+            if (scalar && scalar_value[na].i != LOGICAL(s)[0])
+                s = ScalarLogical(scalar_value[na].i);
+            break;
+        case INTSXP:
+            if (scalar && scalar_value[na].i != INTEGER(s)[0])
+                s = ScalarInteger(scalar_value[na].i);
+            break;
+        case REALSXP:
+        case SINGLESXP:
+            if (type == SINGLESXP 
+                 || asLogical(getAttrib(arg, R_CSingSymbol)) == 1) {
+                int n = LENGTH(arg);
+                s = allocVector(REALSXP, n);
+                float *sptr = (float*) cargs[na];
+                for (int i = 0; i < n; i++) 
+                    REAL(s)[i] = (double) sptr[i];
+                break;
+            }
+            if (scalar && scalar_value[na].d != REAL(s)[0])
+                s = ScalarReal(scalar_value[na].d);
+            break;
+        case STRSXP:
+            if(Fort) {
+                char buf[256];
+                /* only return one string: warned on the R -> Fortran step */
+                strncpy(buf, (char*)cargs[na], 255);
+                buf[255] = '\0';
+                PROTECT(s = allocVector(type, 1));
+                SET_STRING_ELT(s, 0, mkChar(buf));
+                UNPROTECT(1);
+            } else {
+                int n = LENGTH(arg);
+                PROTECT(s = allocVector(type, n));
+                char **cptr = (char**) cargs[na];
+                for (int i = 0 ; i < n ; i++)
+                    SET_STRING_ELT(s, i, mkChar(cptr[i]));
+                UNPROTECT(1);
+            }
+            break;
+        default:
+            break;
+        }
+
+        if (s != arg) {
+            PROTECT(s);
+            DUPLICATE_ATTRIB(s, arg);
+            SET_VECTOR_ELT(ans, na, s);
+            UNPROTECT(1);
+        }
     }
+
     UNPROTECT(1);
     VMAXSET(vmax);
 
