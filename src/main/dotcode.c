@@ -364,7 +364,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 static Rboolean
 checkNativeType(int targetType, int actualType)
 {
-    return targetType == actualType || targetType <= 0
+    return targetType <= 0 || targetType == actualType
         || targetType == INTSXP && actualType == LGLSXP
         || targetType == LGLSXP && actualType == INTSXP;
 }
@@ -1396,9 +1396,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     union { Rbyte r; int i; double d; } scalar_value[nargs1];
     char scalar_type[nargs1];
 
-    int nprotect = 0;
+    for (na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 
-    for(na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 	if(checkTypes &&
 	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), spa.dup)) {
 	    /* We can loop over all the arguments and report all the
@@ -1414,24 +1413,20 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
 	s = CAR(pa);
 
-	/* start with return value a copy of the inputs, as that is
-	   what is needed for DUP = FALSE and for non-atomic-vector inputs */
-	SET_VECTOR_ELT(ans, na, s);
-
-	if (checkNativeType(targetType, TYPEOF(s)) == FALSE) {
+	if (!checkNativeType (targetType, TYPEOF(s))) {
 	    if(!spa.dup) {
 		error(_("explicit request not to duplicate arguments in call to '%s', but argument %d is of the wrong type (%d != %d)"),
 		      symName, na + 1, targetType, TYPEOF(s));
 	    }
-
-	    if(targetType != SINGLESXP) {
-		/* Needs to be protected until the external routine is called.
-		   Coerced value may have NAMEDCNT of zero, so not necessarily
-                   copied in the switch below. */
-		PROTECT(s = coerceVector(s, targetType));
-		nprotect++;
-	    }
+	    if (targetType != SINGLESXP) s = coerceVector(s, targetType);
+                                         /* protected when put in "ans" below */
 	}
+
+	/* Start with return value a copy of the inputs (maybe coerced above),
+           as that is what is needed for DUP = FALSE and for non-atomic-vector
+           inputs. */
+
+	SET_VECTOR_ELT(ans, na, s);
 
 	/* We create any copies needed for the return value here,
 	   except for character vectors.  The compiled code works on
@@ -1448,7 +1443,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case RAWSXP:
 	    n = LENGTH(s);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-                if (n == 1 && s == CAR(pa)) {
+                if (n == 1) {
                     scalar_type[na] = t; 
                     scalar_value[na].r = RAW(s)[0];
                     cargs[na] = (void*) &scalar_value[na].r;
@@ -1469,7 +1464,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    if(iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na + 1);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-                if (n == 1 && s == CAR(pa)) {
+                if (n == 1) {
                     scalar_type[na] = t; 
                     scalar_value[na].i = INTEGER(s)[0];
                     cargs[na] = (void*) &scalar_value[na].i;
@@ -1493,7 +1488,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
 		cargs[na] = (void*) sptr;
 	    } else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-                if (n == 1 && s == CAR(pa)) {
+                if (n == 1) {
                     scalar_type[na] = t; 
                     scalar_value[na].d = REAL(s)[0];
                     cargs[na] = (void*) &scalar_value[na].d;
@@ -1611,8 +1606,6 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    continue;
 	}
     }
-
-    UNPROTECT(nprotect);
 
     switch (nargs) {
     case 0:
@@ -2223,7 +2216,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         SEXP s = VECTOR_ELT(ans, na);
         int scalar = scalar_type[na] != NILSXP;
         R_NativePrimitiveArgType type = checkTypes ? checkTypes[na] 
-                                                   : TYPEOF(arg);
+                                                   : TYPEOF(s);
         switch(type) {
         case RAWSXP:
             if (scalar && scalar_value[na].r != RAW(s)[0])
@@ -2233,7 +2226,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
             /* Make sure logical values are valid.  Doesn't write
                if unnecessary, which may be faster, and would be
                necessary if ever it might be a read-only constant. */
-            int n = LENGTH(arg);
+            int n = LENGTH(s);
             int *q = (int *) cargs[na];
             for (int i = 0; i < n; i++) {
                 if (q[i]!=0 && q[i]!=1 && q[i]!=NA_LOGICAL) q[i] = 1;
@@ -2249,7 +2242,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         case SINGLESXP:
             if (type == SINGLESXP 
                  || asLogical(getAttrib(arg, R_CSingSymbol)) == 1) {
-                int n = LENGTH(arg);
+                int n = LENGTH(s);
                 s = allocVector(REALSXP, n);
                 float *sptr = (float*) cargs[na];
                 for (int i = 0; i < n; i++) 
@@ -2269,7 +2262,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 SET_STRING_ELT(s, 0, mkChar(buf));
                 UNPROTECT(1);
             } else {
-                int n = LENGTH(arg);
+                int n = LENGTH(s);
                 PROTECT(s = allocVector(type, n));
                 char **cptr = (char**) cargs[na];
                 for (int i = 0 ; i < n ; i++)
@@ -2282,10 +2275,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         }
 
         if (s != arg) {
-            PROTECT(s);
-            DUPLICATE_ATTRIB(s, arg);
             SET_VECTOR_ELT(ans, na, s);
-            UNPROTECT(1);
+            DUPLICATE_ATTRIB(s, arg);
         }
     }
 
