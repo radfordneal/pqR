@@ -44,10 +44,6 @@
 
 #include <R_ext/Riconv.h>
 
-#ifndef max
-#define max(a, b) ((a > b)?(a):(b))
-#endif
-
 
 /* Trim special arguments from argument list for .Call, .External, .C or
    .Fortran.  These arguments are removed (destructively) from the argument 
@@ -1522,7 +1518,10 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		const char *ss = translateChar(STRING_ELT(s, 0));
 		if (n > 1)
 		    warning(_("only first string in char vector used in .Fortran"));
-		char *fptr = (char*) R_alloc(max(255, strlen(ss)) + 1, sizeof(char));
+                int len;
+                len = strlen(ss) + 1;
+                if (len < 256) len = 256;
+		char *fptr = (char*) R_alloc(len, sizeof(char));
 		strcpy(fptr, ss);
 		cargs[na] =  (void*) fptr;
 	    } else {
