@@ -1297,9 +1297,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    RecordLinkage and locfit pass lists.
 */
 
-union op_fun { helpers_op_t op; VarFun fun; };
-
-void task_dotCode (helpers_op_t op, SEXP ans, SEXP rawfun, SEXP args)
+void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 {
     int nargs = LENGTH(args);
     int nargs1 = nargs>0 ? nargs : 1;  /* 0-length arrays not allowed in C99 */
@@ -1308,44 +1306,26 @@ void task_dotCode (helpers_op_t op, SEXP ans, SEXP rawfun, SEXP args)
     void *cargs [nargs1]; 
 
     /* Scalar RAW, LGL, INT, and REAL arguments out of their boxes. */
-    union { Rbyte r; int i; double d; } scalar_value[nargs1];
+    union scalar_val { Rbyte r; int i; double d; } scalar_value[nargs1];
 
     /* Pointer to function to call. */
     VarFun fun = * (VarFun *) RAW(rawfun);
 
-    int nans;  /* index of 'ans' in 'args' */
+    helpers_op_t sc;
+    int na;
 
-    for (int na = 0; na < nargs; na++) {
+    for (na = 0, sc = scalars; na < nargs; na++, sc >>= 1) {
 
         SEXP arg = VECTOR_ELT(args,na);
 
-        if (arg == ans)
-            nans = na;
-        else if (LENGTH(arg) == 1) { /* is arg a scalar used out of box? */
-            switch (TYPEOF(arg)) {
-            case RAWSXP: 
-                scalar_value[na].r = RAW(arg)[0];
-                cargs[na] = &scalar_value[na].r;
-                continue;
-            case LGLSXP:
-                scalar_value[na].i = LOGICAL(arg)[0];
-                cargs[na] = &scalar_value[na].i;
-                continue;
-            case INTSXP: 
-                scalar_value[na].i = INTEGER(arg)[0];
-                cargs[na] = &scalar_value[na].i;
-                continue;
-            case REALSXP: 
-                scalar_value[na].d = REAL(arg)[0];
-                cargs[na] = &scalar_value[na].d;
-                continue;
-	    default: ; /* fall through to code below */
-            }
+        if (sc & 1) {
+            scalar_value[na] = * (union scalar_val *) DATAPTR(arg);
+            cargs[na] = &scalar_value[na];
         }
-
-        /* Use the data part of the vector passed. */
-
-        cargs[na] = (void *) DATAPTR(arg);
+        else if (isVectorAtomic(arg) || TYPEOF(arg) == VECSXP)
+            cargs[na] = (void *) DATAPTR(arg);
+        else
+            cargs[na] = (void *) arg;
     }
 
     switch (nargs) {
@@ -1941,14 +1921,67 @@ void task_dotCode (helpers_op_t op, SEXP ans, SEXP rawfun, SEXP args)
 	break;
     }
 
-    /* Make sure a logical answer has valid values. Doesn't write if 
-       unnecessary, since this may be faster. */
+    /* Handle case where ans1 is the only result (any change to other
+       arguments ignored). */
 
-    if (TYPEOF(ans) == LGLSXP) {
-        int n = LENGTH(ans);
-        int *q = (int *) cargs[nans];
-        for (int i = 0; i < n; i++) {
-            if (q[i]!=0 && q[i]!=1 && q[i]!=NA_LOGICAL) q[i] = 1;
+    if (ans1) {
+
+        /* Make sure a logical answer has valid values. Doesn't write if 
+           unnecessary, since this may be faster. */
+
+        if (TYPEOF(ans1) == LGLSXP) {
+            int n = LENGTH(ans1);
+            int *q = LOGICAL(ans1);
+            for (int i = 0; i < n; i++) {
+                if (q[i]!=0 && q[i]!=1 && q[i]!=NA_LOGICAL) q[i] = 1;
+            }
+        }
+
+        return;
+    }
+
+    /* Handle case where all the arguments may matter.  Note that in this case, 
+       we are in the master thread, so allocating memory is OK. */
+
+    for (na = 0, sc = scalars; na < nargs; na++, sc >>= 1) {
+
+        SEXP arg = VECTOR_ELT(args,na);
+
+        /* For logical vectors, ensure validity of values.  Doesn't write
+           if unnecessary, since this may be faster, and would be essential
+           if the argument could be a read-only constant. */
+
+        if (TYPE(args) == LGLSXP) {
+            int n = LENGTH(arg);
+            int *q = (int *) cargs[na];  /* could be an out-of-box scalar */
+            for (int i = 0; i < n; i++) {
+                if (q[i]!=0 && q[i]!=1 && q[i]!=NA_LOGICAL) q[i] = 1;
+            }
+        }
+
+        /* For an out-of-box scalar, see if it has changed, and if so
+           allocate new space for its new value. */
+
+        if (sc & 1) {
+            switch (TYPEOF(arg)) {
+            case RAWSXP:
+                if (scalar_value[na].r != RAW(arg)[0])
+                    SET_VECTOR_ELT(args, na, ScalarRaw(scalar_value[na].r));
+                break;
+            case LGLSXP:
+                if (scalar_value[na].i != LOGICAL(arg)[0])
+                    SET_VECTOR_ELT(args, na, ScalarLogical(scalar_value[na].i));
+                break;
+            case INTSXP:
+                if (scalar_value[na].i != INTEGER(arg)[0])
+                    SET_VECTOR_ELT(args, na, ScalarInteger(scalar_value[na].i));
+                break;
+            case REALSXP:
+                if (scalar_value[na].d != REAL(arg)[0])
+                    SET_VECTOR_ELT(args, na, ScalarReal(scalar_value[na].d));
+                break;
+            default: 
+                abort();
         }
     }
 }
@@ -1961,7 +1994,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     int name_count, last_pos, i;
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
-    SEXP ans, pa, s, last_tag;
+    SEXP ans, pa, s, last_tag, last_arg;
     R_RegisteredNativeSymbol symbol = {R_C_SYM, {NULL}, NULL};
     R_NativePrimitiveArgType *checkTypes = NULL;
     R_NativeArgStyle *argStyles = NULL;
@@ -2006,6 +2039,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	if (TAG(pa) != R_NilValue) {
             name_count += 1;
             last_tag = TAG(pa);
+            last_arg = CAR(pa);
             last_pos = i;
         }
     }
@@ -2042,14 +2076,12 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	UNPROTECT(1);
     }
 
-    /* Convert the arguments for use in foreign function calls. */
+    /* Convert the arguments for use in .C or .Fortran. */
 
     int nargs1 = nargs>0 ? nargs : 1;  /* 0-length arrays not allowed in C99 */
     void *cargs [nargs1]; 
 
-    /* Scalar RAW, LGL, INT, and REAL arguments out of their boxes. */
-    union { Rbyte r; int i; double d; } scalar_value[nargs1];
-    char scalar_type[nargs1];
+    helpers_op_t scalars = 0;
 
     for (na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 
@@ -2098,17 +2130,14 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case RAWSXP:
 	    n = LENGTH(s);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-                if (n == 1) {
-                    scalar_type[na] = t; 
-                    scalar_value[na].r = RAW(s)[0];
-                    cargs[na] = (void*) &scalar_value[na].r;
-                } else {
+                if (n == 1 && na < 64)
+                    scalars |= (helpers_op_t) 1 << na;
+                else {
 		    SEXP ss = allocVector(t, n);
 		    memcpy(RAW(ss), RAW(s), n * sizeof(Rbyte));
 		    SET_VECTOR_ELT(ans, na, ss);
-		    cargs[na] = (void*) RAW(ss);
                 }
-	    } else cargs[na] = (void*) RAW(s);
+            }
 	    break;
 	case LGLSXP:
 	case INTSXP:
@@ -2116,20 +2145,17 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    int *iptr = INTEGER(s);
 	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
-		    if(iptr[i] == NA_INTEGER)
-			error(_("NAs in foreign function call (arg %d)"), na + 1);
+		    if (iptr[i] == NA_INTEGER)
+			error(_("NAs in foreign function call (arg %d)"), na+1);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-                if (n == 1) {
-                    scalar_type[na] = t; 
-                    scalar_value[na].i = INTEGER(s)[0];
-                    cargs[na] = (void*) &scalar_value[na].i;
-                } else {
+                if (n == 1 && na < 64)
+                    scalars |= (helpers_op_t) 1 << na;
+                else {
 		    SEXP ss = allocVector(t, n);
 		    memcpy(INTEGER(ss), INTEGER(s), n * sizeof(int));
 		    SET_VECTOR_ELT(ans, na, ss);
-		    cargs[na] = (void*) INTEGER(ss);
                 }
-	    } else cargs[na] = (void*) iptr;
+            }
 	    break;
 	case REALSXP:
 	    n = LENGTH(s);
@@ -2137,23 +2163,22 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(rptr[i]))
-			error(_("NA/NaN/Inf in foreign function call (arg %d)"), na + 1);
+			error(_("NA/NaN/Inf in foreign function call (arg %d)"),
+                              na+1);
 	    if (asLogical(getAttrib(s, R_CSingSymbol)) == 1) {
 		float *sptr = (float*) R_alloc(n, sizeof(float));
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
 		cargs[na] = (void*) sptr;
-	    } else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
-                if (n == 1) {
-                    scalar_type[na] = t; 
-                    scalar_value[na].d = REAL(s)[0];
-                    cargs[na] = (void*) &scalar_value[na].d;
-                } else {
+	    } 
+            else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
+                if (n == 1 && na < 64)
+                    scalars |= (helpers_op_t) 1 << na;
+                else {
 		    SEXP ss  = allocVector(t, n);
 		    memcpy(REAL(ss), REAL(s), n * sizeof(double));
 		    SET_VECTOR_ELT(ans, na, ss);
-		    cargs[na] = (void*) REAL(ss);
                 }
-	    } else cargs[na] = (void*) rptr;
+	    }
 	    break;
 	case CPLXSXP:
 	    n = LENGTH(s);
@@ -2161,13 +2186,12 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(zptr[i].r) || !R_FINITE(zptr[i].i))
-			error(_("complex NA/NaN/Inf in foreign function call (arg %d)"), na + 1);
+			error (_("complex NA/NaN/Inf in foreign function call (arg %d)"), na+1);
 	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(COMPLEX(ss), COMPLEX(s), n * sizeof(Rcomplex));
 		SET_VECTOR_ELT(ans, na, ss);
-		cargs[na] = (void*) COMPLEX(ss);
-	    } else cargs[na] = (void *) zptr;
+	    }
 	    break;
 	case STRSXP:
 	    if (!spa.dup)
@@ -2182,7 +2206,6 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 if (len < 256) len = 256;
 		char *fptr = (char*) R_alloc(len, sizeof(char));
 		strcpy(fptr, ss);
-		cargs[na] =  (void*) fptr;
 	    } else {
 		char **cptr = (char**) R_alloc(n, sizeof(char*));
 		if (*encname != 0) {
@@ -2228,21 +2251,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 			}
 		    }
 		}
-		cargs[na] = (void*) cptr;
 	    }
 	    break;
 	case VECSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"),
 			    type2char(t), na + 1);
-	    /* Used read-only, so this is safe */
-#ifdef USE_RINTERNALS
-	    cargs[na] = (void*) DATAPTR(s);
-#else
-	    n = length(s);
-	    SEXP *lptr = (SEXP *) R_alloc(n, sizeof(SEXP));
-	    for (int i = 0 ; i < n ; i++) lptr[i] = VECTOR_ELT(s, i);
-	    cargs[na] = (void*) lptr;
-#endif
 	    break;
 	case CLOSXP:
 	case BUILTINSXP:
@@ -2250,7 +2263,6 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case ENVSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"), 
 			    type2char(TYPEOF(s)), na + 1);
-	    cargs[na] =  (void*) s;
 	    break;
 	default:
 	    /* Includes pairlists from R 2.15.0 */
@@ -2260,610 +2272,41 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    type2char(t), na + 1);
 	    if (t == LISTSXP)
 		warning(_("pairlists are passed as SEXP as from R 2.15.0"));
-	    cargs[na] =  (void*) s;
-	    continue;
+	    break;
 	}
     }
 
-    switch (nargs) {
-    case 0:
-	/* Silicon graphics C chokes here */
-	/* if there is no argument to fun. */
-	fun(0);
-	break;
-    case 1:
-	fun(cargs[0]);
-	break;
-    case 2:
-	fun(cargs[0], cargs[1]);
-	break;
-    case 3:
-	fun(cargs[0], cargs[1], cargs[2]);
-	break;
-    case 4:
-	fun(cargs[0], cargs[1], cargs[2], cargs[3]);
-	break;
-    case 5:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4]);
-	break;
-    case 6:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5]);
-	break;
-    case 7:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6]);
-	break;
-    case 8:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7]);
-	break;
-    case 9:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8]);
-	break;
-    case 10:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9]);
-	break;
-    case 11:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10]);
-	break;
-    case 12:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11]);
-	break;
-    case 13:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12]);
-	break;
-    case 14:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13]);
-	break;
-    case 15:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14]);
-	break;
-    case 16:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15]);
-	break;
-    case 17:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16]);
-	break;
-    case 18:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17]);
-	break;
-    case 19:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18]);
-	break;
-    case 20:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19]);
-	break;
-    case 21:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20]);
-	break;
-    case 22:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21]);
-	break;
-    case 23:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22]);
-	break;
-    case 24:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23]);
-	break;
-    case 25:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24]);
-	break;
-    case 26:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25]);
-	break;
-    case 27:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26]);
-	break;
-    case 28:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27]);
-	break;
-    case 29:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28]);
-	break;
-    case 30:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29]);
-	break;
-    case 31:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30]);
-	break;
-    case 32:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31]);
-	break;
-    case 33:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32]);
-	break;
-    case 34:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33]);
-	break;
-    case 35:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34]);
-	break;
-    case 36:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35]);
-	break;
-    case 37:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36]);
-	break;
-    case 38:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37]);
-	break;
-    case 39:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38]);
-	break;
-    case 40:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39]);
-	break;
-    case 41:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40]);
-	break;
-    case 42:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41]);
-	break;
-    case 43:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42]);
-	break;
-    case 44:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43]);
-	break;
-    case 45:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44]);
-	break;
-    case 46:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45]);
-	break;
-    case 47:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46]);
-	break;
-    case 48:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47]);
-	break;
-    case 49:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48]);
-	break;
-    case 50:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49]);
-	break;
-    case 51:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50]);
-	break;
-    case 52:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51]);
-	break;
-    case 53:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52]);
-	break;
-    case 54:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53]);
-	break;
-    case 55:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54]);
-	break;
-    case 56:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55]);
-	break;
-    case 57:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56]);
-	break;
-    case 58:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57]);
-	break;
-    case 59:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58]);
-	break;
-    case 60:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58], cargs[59]);
-	break;
-    case 61:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58], cargs[59],
-	    cargs[60]);
-	break;
-    case 62:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58], cargs[59],
-	    cargs[60], cargs[61]);
-	break;
-    case 63:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58], cargs[59],
-	    cargs[60], cargs[61], cargs[62]);
-	break;
-    case 64:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58], cargs[59],
-	    cargs[60], cargs[61], cargs[62], cargs[63]);
-	break;
-    case 65:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
-	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
-	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
-	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
-	    cargs[20], cargs[21], cargs[22], cargs[23], cargs[24],
-	    cargs[25], cargs[26], cargs[27], cargs[28], cargs[29],
-	    cargs[30], cargs[31], cargs[32], cargs[33], cargs[34],
-	    cargs[35], cargs[36], cargs[37], cargs[38], cargs[39],
-	    cargs[40], cargs[41], cargs[42], cargs[43], cargs[44],
-	    cargs[45], cargs[46], cargs[47], cargs[48], cargs[49],
-	    cargs[50], cargs[51], cargs[52], cargs[53], cargs[54],
-	    cargs[55], cargs[56], cargs[57], cargs[58], cargs[59],
-	    cargs[60], cargs[61], cargs[62], cargs[63], cargs[64]);
-	break;
-    default:
-	errorcall(call, _("too many arguments, sorry"));
+    SEXP rawfun = allocVector (RAWSXP, sizeof fun);
+    memcpy (RAW(rawfun), &fun, sizeof fun)
+
+    SEXP ans1;
+
+    if (return_one_named) {
+        ans1 = VECTOR_ELT(ans,last_pos);
+        if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
+    }
+    else
+        ans1 = 0;
+
+    task_dotCode (scalars, ans1, rawfun, args);
+
+    /* See if we return just the one named element, ans1, as a pairlist. 
+       Note that the contents of ans1 may not have been computed yet,
+       if task_dotCode was deferred to possibly be done in a helper thread. */
+
+    if (return_one_named) {
+        UNPROTECT(1);
+        VMAXSET(vmax);
+        return cons_with_tag (ans1, R_NilValue, last_tag);
     }
 
-    for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
+    /* The rest is done only if the whole vector of results is returned,
+       in which case task_dotCode will have been done immediately in the
+       master thread.  Note that task_dotCode will have ensured validity
+       of logical values, and copied out-of-box values into new objects
+       when necessary. */
 
-        if (return_one_named && na != last_pos)
-            continue;
+    for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
 
         if (spa.dup && argStyles && argStyles[na] == R_ARG_IN) {
             SET_VECTOR_ELT(ans, na, R_NilValue);
@@ -2872,43 +2315,21 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
         SEXP arg = CAR(pa);
         SEXP s = VECTOR_ELT(ans, na);
-        int scalar = scalar_type[na] != NILSXP;
+        int n;
+
         R_NativePrimitiveArgType type = checkTypes ? checkTypes[na] 
                                                    : TYPEOF(s);
         switch(type) {
-        case RAWSXP:
-            if (scalar && scalar_value[na].r != RAW(s)[0])
-                s = ScalarRaw(scalar_value[na].r);
-            break;
-        case LGLSXP: ;
-            /* Make sure logical values are valid.  Doesn't write
-               if unnecessary, which may be faster, and would be
-               necessary if ever it might be a read-only constant. */
-            int n = LENGTH(s);
-            int *q = (int *) cargs[na];
-            for (int i = 0; i < n; i++) {
-                if (q[i]!=0 && q[i]!=1 && q[i]!=NA_LOGICAL) q[i] = 1;
-            }
-            if (scalar && scalar_value[na].i != LOGICAL(s)[0])
-                s = ScalarLogical(scalar_value[na].i);
-            break;
-        case INTSXP:
-            if (scalar && scalar_value[na].i != INTEGER(s)[0])
-                s = ScalarInteger(scalar_value[na].i);
-            break;
         case REALSXP:
-        case SINGLESXP:
-            if (type == SINGLESXP 
-                 || asLogical(getAttrib(arg, R_CSingSymbol)) == 1) {
-                int n = LENGTH(s);
-                s = allocVector(REALSXP, n);
-                float *sptr = (float*) cargs[na];
-                for (int i = 0; i < n; i++) 
-                    REAL(s)[i] = (double) sptr[i];
+            if (asLogical (getAttrib (arg, R_CSingSymbol)) != 1)
                 break;
-            }
-            if (scalar && scalar_value[na].d != REAL(s)[0])
-                s = ScalarReal(scalar_value[na].d);
+            else
+                /* fall through to code below */ ;
+        case SINGLESXP:
+            n = LENGTH(s);
+            s = allocVector(REALSXP, n);
+            float *sptr = (float*) cargs[na];
+            for (int i = 0; i < n; i++) REAL(s)[i] = (double) sptr[i];
             break;
         case STRSXP:
             if(Fort) {
@@ -2919,8 +2340,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 PROTECT(s = allocVector(type, 1));
                 SET_STRING_ELT(s, 0, mkChar(buf));
                 UNPROTECT(1);
-            } else {
-                int n = LENGTH(s);
+            } 
+            else {
+                n = LENGTH(s);
                 PROTECT(s = allocVector(type, n));
                 char **cptr = (char**) cargs[na];
                 for (int i = 0 ; i < n ; i++)
@@ -2940,12 +2362,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     UNPROTECT(1);
     VMAXSET(vmax);
-
-    if (return_one_named)
-        /* Return just the one named element as a pairlist */
-        return cons_with_tag (VECTOR_ELT(ans,last_pos), R_NilValue, last_tag);
-    else
-        return ans;
+    return ans;
 }
 
 static const struct {
