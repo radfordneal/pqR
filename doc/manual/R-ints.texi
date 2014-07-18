@@ -2242,7 +2242,7 @@ is confined to numeric vectors.  Two bits in the headers of such
 objects (actually all objects) allow checks on how computations that
 may be done by helper threads or otherwise are deferred are
 progressing.  These bits are accessed by the
-@code{IS_BEING_COMPUTED_BY_TASK} and @code{IS_IN_USE_BY_TASK} macros.
+@code{helpers_is_being_computed} and @code{helpers_is_in_use} macros.
 An object is being computed by a task if computation of its data part
 was scheduled to be done by a task that has not been completed (or
 perhaps not even started).  An object is in use by a task if it is an
