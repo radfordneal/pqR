@@ -2246,7 +2246,9 @@ progressing.  These bits are accessed by the
 An object is being computed by a task if computation of its data part
 was scheduled to be done by a task that has not been completed (or
 perhaps not even started).  An object is in use by a task if it is an
-input to a scheduled task for which it is not also the output.  Note
+input to a scheduled task for which it is not also the output.  (However,
+a object with maximum @code{NAMEDCNT} may not be flagged as in use
+even if it is, since such an object will never be modified anyway.) Note
 that these bits are set only by the master thread (whenever the master
 thread looks to see what tasks performed by helpers have completed),
 so access to them does not raise any synchronization issues.
