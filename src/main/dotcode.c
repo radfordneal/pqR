@@ -1297,6 +1297,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    RecordLinkage and locfit pass lists.
 */
 
+static VarFun dotCode_fun;  /* Function to call for .C or .Fortran */
 void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 {
     int nargs = LENGTH(args);
@@ -1308,8 +1309,11 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
     /* Scalar RAW, LGL, INT, and REAL arguments out of their boxes. */
     union scalar_val { Rbyte r; int i; double d; } scalar_value[nargs1];
 
-    /* Pointer to function to call. */
-    VarFun fun = * (VarFun *) RAW(rawfun);
+    /* Pointer to function to call.  If this task may be deferred, we need
+       to get it from a task input, otherwise it's faster from a variable set
+       by the caller. */
+
+    VarFun fun = rawfun!=NULL ? * (VarFun *) RAW(rawfun) : dotCode_fun;
 
     helpers_op_t sc;
     int na;
@@ -1951,7 +1955,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
            if unnecessary, since this may be faster, and would be essential
            if the argument could be a read-only constant. */
 
-        if (TYPE(args) == LGLSXP) {
+        if (TYPEOF(args) == LGLSXP) {
             int n = LENGTH(arg);
             int *q = (int *) cargs[na];  /* could be an out-of-box scalar */
             for (int i = 0; i < n; i++) {
@@ -1980,8 +1984,8 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
                 if (scalar_value[na].d != REAL(arg)[0])
                     SET_VECTOR_ELT(args, na, ScalarReal(scalar_value[na].d));
                 break;
-            default: 
-                abort();
+            default: abort();
+            }
         }
     }
 }
@@ -2122,7 +2126,6 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
 	   We do not need to copy if the inputs have NAMED = 0 */
 
-        scalar_type[na] = NILSXP;
 	SEXPTYPE t = TYPEOF(s);
         int n;
 
@@ -2276,17 +2279,19 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	}
     }
 
-    SEXP rawfun = allocVector (RAWSXP, sizeof fun);
-    memcpy (RAW(rawfun), &fun, sizeof fun)
+    SEXP rawfun = NULL;
 
-    SEXP ans1;
+    if (return_one_named /* later, actual test for doing it in helper */) {
+        SEXP rawfun = allocVector (RAWSXP, sizeof dotCode_fun);
+        memcpy (RAW(rawfun), &fun, sizeof dotCode_fun);
+    }
+
+    SEXP ans1 = NULL;
 
     if (return_one_named) {
         ans1 = VECTOR_ELT(ans,last_pos);
         if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
     }
-    else
-        ans1 = 0;
 
     task_dotCode (scalars, ans1, rawfun, args);
 
