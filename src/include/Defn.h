@@ -1572,6 +1572,14 @@ extern void Rf_unprotect_error (void);
 
 #endif
 
+
+/* Version of SET_ATTRIB that allows anything for the attributes.  Objects
+   with such attributes are safe for garbage collection, but shouldn't appear 
+   at user level. */
+
+void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
+
+
 /* Redefine NA_INTEGER and NA_LOGICAL to be constants.  Defined in Arith.h
    to refer to R_NaInt, because the RcppEigen package needs them to be
    variables, but they may be faster as constants inside the interpreter. */
