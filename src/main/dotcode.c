@@ -1286,8 +1286,9 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 
 
 
-/* .C() {op=0}  or  .Fortran() {op=1} */
-/* Use of this except for atomic vectors is not allowed for .Fortran,
+/* .C() {op=0}  or  .Fortran() {op=1}
+
+   Use of this except for atomic vectors is not allowed for .Fortran,
    and is only kept for legacy code for .C.
 
    CRAN packages R2Cuba, RCALI, ars, coxme, fCopulae, locfit, nlme,
@@ -1297,21 +1298,71 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    RecordLinkage and locfit pass lists.
 */
 
+
+/* Task procedure for .C and .Fortran.  This procedure may be called
+   directly in the master thread, or scheduled for deferred evaluation,
+   perhaps in a helper thread.
+
+   If it is called directly, the function to call may be specified by the
+   dotCode_fun variable.  If deferred, the function to call must be stored
+   in the rawfun operand, which is NULL otherwise.
+
+   If the output, ans1, is not NULL, it is the sole result of the
+   computation, with the arguments in args being ignored after the
+   call (they may or may not have changed).  If ans1 is NULL, this
+   task procedure must be called directly, not deferred, and the
+   contents of args is updated to be returned as the result.  This may
+   involve memory allocation, not allowed for a deferred task, as some
+   arguments may need to be converted to an appropriate form.  
+
+   The args operand will be a vector list (VECSXP) containing pointers to 
+   the arguments of the function to be called.  For arguments that are
+   atomic vectors or vector lists, the function called is passed the DATAPTR 
+   for the vector (unless this argument is marked as an out-of-the-box scalar,
+   see below).  For other argument types, the function is passed the SEXP 
+   for the operand itself.
+
+   A string argument needing converstion back to an R string is recognized 
+   as such by ATTRIB being a RAWSXP (not a pairlist), with ATTRIB pointing 
+   to itself for a Fortran string.  Single-precision arguments needing 
+   to be converted to an R double vector are recognized by having ATTRIB 
+   of R_CSingSymbol.
+
+   The opcode, scalars, holds a bit-vector indicating which of the
+   first 64 arguments are scalars that should be stored "out of their
+   boxes" - copied to a local variable before the call, and if necessary 
+   copied back after the call.  Any arguments past the first 64 are never 
+   treated as out-of-the-box scalars.  If ans1 is not NULL, it must not
+   be marked as an out-of-the-box scalar (even if it is of length one).
+
+   The variable dotCode_spa is consulted for the value of DUP (but only 
+   when the task is not deferred).
+*/
+
 static VarFun dotCode_fun;  /* Function to call for .C or .Fortran */
+static struct special_args dotCode_spa;  /* Special arguments provided */
+static R_NativeArgStyle *argStyles;
+
 void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 {
     int nargs = LENGTH(args);
     int nargs1 = nargs>0 ? nargs : 1;  /* 0-length arrays not allowed in C99 */
 
-    /* Pointers to where data is. */
+    /* Pointers to where the data is, passed to the function called. */
+
     void *cargs [nargs1]; 
 
     /* Scalar RAW, LGL, INT, and REAL arguments out of their boxes. */
-    union scalar_val { Rbyte r; int i; double d; } scalar_value[nargs1];
+
+    union scalar_val { 
+        Rbyte r;   /* for RAW */
+        int i;     /* for LGL and INT */
+        double d;  /* for REAL */
+    } scalar_value [scalars==0 ? 1 : nargs1];
 
     /* Pointer to function to call.  If this task may be deferred, we need
-       to get it from a task input, otherwise it's faster from a variable set
-       by the caller. */
+       to get it from the rawfun operand, otherwise it's faster from a variable
+       set by the caller. */
 
     VarFun fun = rawfun!=NULL ? * (VarFun *) RAW(rawfun) : dotCode_fun;
 
@@ -1322,8 +1373,14 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 
         SEXP arg = VECTOR_ELT(args,na);
 
-        if (sc & 1) {
-            scalar_value[na] = * (union scalar_val *) DATAPTR(arg);
+        if (sc & 1) {  /* copy argument out of its box */
+            if (arg == ans1) abort();
+            switch (TYPEOF (arg)) {
+            case RAWSXP:  scalar_value[na].r = RAW(arg)[0];     break;
+            case LGLSXP:  scalar_value[na].i = LOGICAL(arg)[0]; break;
+            case INTSXP:  scalar_value[na].i = INTEGER(arg)[0]; break;
+            case REALSXP: scalar_value[na].d = REAL(arg)[0];    break;
+            }
             cargs[na] = &scalar_value[na];
         }
         else if (isVectorAtomic(arg) || TYPEOF(arg) == VECSXP)
@@ -1727,7 +1784,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 	    cargs[50]);
 	break;
     case 52:
-	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
+ 	fun(cargs[0],  cargs[1],  cargs[2],  cargs[3],  cargs[4],
 	    cargs[5],  cargs[6],  cargs[7],  cargs[8],  cargs[9],
 	    cargs[10], cargs[11], cargs[12], cargs[13], cargs[14],
 	    cargs[15], cargs[16], cargs[17], cargs[18], cargs[19],
@@ -1944,10 +2001,17 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
         return;
     }
 
-    /* Handle case where all the arguments may matter.  Note that in this case, 
-       we are in the master thread, so allocating memory is OK. */
+    /* FROM HERE ON DOWN, WE WILL (AND MUST) BE RUNNING IN THE MASTER THREAD. */
+
+    /* Convert all arguments in args to the form needed for them to be 
+       returned as the result. */
 
     for (na = 0, sc = scalars; na < nargs; na++, sc >>= 1) {
+
+        if (dotCode_spa.dup && argStyles && argStyles[na] == R_ARG_IN) {
+            SET_VECTOR_ELT(args, na, R_NilValue);
+            continue;
+        }
 
         SEXP arg = VECTOR_ELT(args,na);
 
@@ -1970,21 +2034,60 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
             switch (TYPEOF(arg)) {
             case RAWSXP:
                 if (scalar_value[na].r != RAW(arg)[0])
-                    SET_VECTOR_ELT(args, na, ScalarRaw(scalar_value[na].r));
+                    SET_VECTOR_ELT (args, na, 
+                      ScalarRawMaybeConst(scalar_value[na].r));
                 break;
             case LGLSXP:
                 if (scalar_value[na].i != LOGICAL(arg)[0])
-                    SET_VECTOR_ELT(args, na, ScalarLogical(scalar_value[na].i));
+                    SET_VECTOR_ELT (args, na, 
+                      ScalarLogicalMaybeConst(scalar_value[na].i));
                 break;
             case INTSXP:
                 if (scalar_value[na].i != INTEGER(arg)[0])
-                    SET_VECTOR_ELT(args, na, ScalarInteger(scalar_value[na].i));
+                    SET_VECTOR_ELT (args, na, 
+                      ScalarIntegerMaybeConst(scalar_value[na].i));
                 break;
-            case REALSXP:
-                if (scalar_value[na].d != REAL(arg)[0])
-                    SET_VECTOR_ELT(args, na, ScalarReal(scalar_value[na].d));
+            case REALSXP: 
+                /* compare as 64-bit unsigned ints, else -0 will equal +0,
+                   and it may not work for NaN, etc. */
+                if (*(uint64_t*)&scalar_value[na].d != *(uint64_t*)REAL(arg))
+                    SET_VECTOR_ELT (args, na, 
+                      ScalarRealMaybeConst(scalar_value[na].d));
                 break;
             default: abort();
+            }
+        }
+
+        /* Convert a single-precision argument back to double. */
+
+        if (ATTRIB(arg) == R_CSingSymbol) {
+            int n = LENGTH(arg);
+            SEXP s = allocVector (REALSXP, n);
+            float *sptr = (float*) cargs[na];
+            for (int i = 0; i < n; i++) 
+                REAL(s)[i] = (double) sptr[i];
+            SET_VECTOR_ELT (args, na, s);
+        }
+
+        /* Convert strings back into R string form. */
+
+        if (TYPEOF(ATTRIB(arg)) == RAWSXP) {
+            if (ATTRIB(arg) == arg) {
+                char buf[256];
+                /* only return one string: warned on the R -> Fortran step */
+                strncpy(buf, (char*)cargs[na], 255);
+                buf[255] = '\0';
+                SET_VECTOR_ELT (args, na, ScalarString(mkChar(buf)));
+            } 
+            else {
+                int n = LENGTH(arg);
+                char **cptr = (char**) cargs[na];
+                SEXP s;
+                PROTECT (s = allocVector (STRSXP, n));
+                for (int i = 0 ; i < n ; i++) 
+                    SET_STRING_ELT(s, i, mkChar(cptr[i]));
+                SET_VECTOR_ELT (args, na, s);
+                UNPROTECT(1);
             }
         }
     }
@@ -1997,41 +2100,41 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     int na, nargs, Fort;
     int name_count, last_pos, i;
     DL_FUNC ofun = NULL;
-    VarFun fun = NULL;
     SEXP ans, pa, s, last_tag, last_arg;
     R_RegisteredNativeSymbol symbol = {R_C_SYM, {NULL}, NULL};
     R_NativePrimitiveArgType *checkTypes = NULL;
-    R_NativeArgStyle *argStyles = NULL;
     void *vmax;
     char symName[MaxSymbolBytes], encname[101];
-    struct special_args spa;
 
     vmax = VMAXGET();
     Fort = PRIMVAL(op);
+    argStyles = NULL;
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
-    nargs = trimargs (args, 1, &spa, call);
+    nargs = trimargs (args, 1, &dotCode_spa, call);
 
-    if (spa.naok == NA_LOGICAL)
+    if (dotCode_spa.naok == NA_LOGICAL)
         errorcall(call, _("invalid '%s' value"), "naok");
-    /* Should check spa.dup == NA_LOGICAL too?  But not done in R-2.15.3 ... */
+    /* Should check for DUP being NA_LOGICAL too?  But not done in R-2.15.3...*/
 
     if (nargs > MAX_ARGS)
         errorcall(call, _("too many arguments in foreign function call"));
 
-    PROTECT2(spa.pkg,spa.encoding);
+    PROTECT2(dotCode_spa.pkg,dotCode_spa.encoding);
 
     encname[0] = 0;
-    if (spa.encoding != R_NilValue) {
-        if(TYPEOF(spa.encoding) != STRSXP || LENGTH(spa.encoding) != 1)
+    if (dotCode_spa.encoding != R_NilValue) {
+        if (TYPEOF(dotCode_spa.encoding) != STRSXP 
+             || LENGTH(dotCode_spa.encoding) != 1)
             error(_("ENCODING argument must be a single character string"));
-        strncpy(encname, translateChar(STRING_ELT(spa.encoding,0)), 100);
+        strncpy(encname, translateChar(STRING_ELT(dotCode_spa.encoding,0)),100);
         encname[100] = 0;
         warning("ENCODING is deprecated");
     }
 
-    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, symName, call, env);
-    fun = (VarFun) ofun;
+    resolveNativeRoutine (args, &ofun, &symbol, dotCode_spa.pkg, symName, 
+                          call, env);
+    dotCode_fun = (VarFun) ofun;
     args = CDR(args);
 
     UNPROTECT(2);
@@ -2050,10 +2153,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     if(symbol.symbol.c && symbol.symbol.c->numArgs > -1) {
 	if(symbol.symbol.c->numArgs != nargs)
-	    errorcall(call,
-		      _("Incorrect number of arguments (%d), expecting %d for '%s'"),
-		      nargs, symbol.symbol.c->numArgs, symName);
-
+	    errorcall (call,
+              _("Incorrect number of arguments (%d), expecting %d for '%s'"),
+              nargs, symbol.symbol.c->numArgs, symName);
 	checkTypes = symbol.symbol.c->types;
 	argStyles = symbol.symbol.c->styles;
     }
@@ -2082,15 +2184,13 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     /* Convert the arguments for use in .C or .Fortran. */
 
-    int nargs1 = nargs>0 ? nargs : 1;  /* 0-length arrays not allowed in C99 */
-    void *cargs [nargs1]; 
-
-    helpers_op_t scalars = 0;
+    helpers_op_t scalars = 0;  /* bit vector indicating which arguments
+                                  are scalars used out of their boxes */
 
     for (na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 
 	if(checkTypes &&
-	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), spa.dup)) {
+	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), dotCode_spa.dup)) {
 	    /* We can loop over all the arguments and report all the
 	       erroneous ones, but then we would also want to avoid
 	       the conversions.  Also, in the future, we may just
@@ -2105,7 +2205,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	s = CAR(pa);
 
 	if (!checkNativeType (targetType, TYPEOF(s))) {
-	    if(!spa.dup) {
+	    if (!dotCode_spa.dup) {
 		error(_("explicit request not to duplicate arguments in call to '%s', but argument %d is of the wrong type (%d != %d)"),
 		      symName, na + 1, targetType, TYPEOF(s));
 	    }
@@ -2119,12 +2219,15 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
 	SET_VECTOR_ELT(ans, na, s);
 
-	/* We create any copies needed for the return value here,
-	   except for character vectors.  The compiled code works on
-	   the data pointer of the return value for the other atomic
-	   vectors, and anything else is supposed to be read-only.
+        /* Do error checks on argument contents, and make any needed copies,
+           here, not in the dotCode task procedure, which may be deferred
+           to run in a helper thread where such things aren't allowed. 
 
-	   We do not need to copy if the inputs have NAMED = 0 */
+           We don't need to duplicate when NAMEDCNT is zero.  When it is
+           greater than zero, and the argument is scalar, we can avoid an
+           immediate duplication by flagging the argument to be used out
+           of its box (with a duplicate made only if it will be part of
+           the result, and it has been changed). */
 
 	SEXPTYPE t = TYPEOF(s);
         int n;
@@ -2132,7 +2235,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	switch(t) {
 	case RAWSXP:
 	    n = LENGTH(s);
-	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
                 if (n == 1 && na < 64)
                     scalars |= (helpers_op_t) 1 << na;
                 else {
@@ -2146,11 +2249,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case INTSXP:
 	    n = LENGTH(s);
 	    int *iptr = INTEGER(s);
-	    if (!spa.naok)
+	    if (!dotCode_spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if (iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na+1);
-	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
                 if (n == 1 && na < 64)
                     scalars |= (helpers_op_t) 1 << na;
                 else {
@@ -2163,17 +2266,23 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case REALSXP:
 	    n = LENGTH(s);
 	    double *rptr = REAL(s);
-	    if (!spa.naok)
+	    if (!dotCode_spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(rptr[i]))
 			error(_("NA/NaN/Inf in foreign function call (arg %d)"),
                               na+1);
 	    if (asLogical(getAttrib(s, R_CSingSymbol)) == 1) {
-		float *sptr = (float*) R_alloc(n, sizeof(float));
+                double nints = ((double) n * sizeof(float)) / sizeof(int);
+                if (nints > INT_MAX)
+                    error (_(
+                    "too many elements for vector of single-precision values"));
+                SEXP ss = allocVector (INTSXP, (int)(nints+0.99));
+		float *sptr = (float*) INTEGER(ss);
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
-		cargs[na] = (void*) sptr;
+                SET_ATTRIB_TO_ANYTHING(ss,R_CSingSymbol);
+                SET_VECTOR_ELT(ans, na, ss);
 	    } 
-            else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
+            else if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
                 if (n == 1 && na < 64)
                     scalars |= (helpers_op_t) 1 << na;
                 else {
@@ -2186,31 +2295,38 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case CPLXSXP:
 	    n = LENGTH(s);
 	    Rcomplex *zptr = COMPLEX(s);
-	    if (!spa.naok)
+	    if (!dotCode_spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(zptr[i].r) || !R_FINITE(zptr[i].i))
 			error (_("complex NA/NaN/Inf in foreign function call (arg %d)"), na+1);
-	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(COMPLEX(ss), COMPLEX(s), n * sizeof(Rcomplex));
 		SET_VECTOR_ELT(ans, na, ss);
 	    }
 	    break;
 	case STRSXP:
-	    if (!spa.dup)
+	    if (!dotCode_spa.dup)
 		error(_("character variables must be duplicated in .C/.Fortran"));
 	    n = LENGTH(s);
-	    if (Fort) {
-		const char *ss = translateChar(STRING_ELT(s, 0));
+	    if (Fort) { /* .Fortran */
+		const char *ss = n==0 ? "" : translateChar(STRING_ELT(s, 0));
 		if (n > 1)
 		    warning(_("only first string in char vector used in .Fortran"));
                 int len;
                 len = strlen(ss) + 1;
                 if (len < 256) len = 256;
-		char *fptr = (char*) R_alloc(len, sizeof(char));
-		strcpy(fptr, ss);
-	    } else {
-		char **cptr = (char**) R_alloc(n, sizeof(char*));
+                SEXP st = allocVector(RAWSXP,len);
+		strcpy(RAW(st), ss);
+                SET_ATTRIB_TO_ANYTHING(st,st); /* marks it as pFortran string */
+                SET_VECTOR_ELT(ans, na, st);
+	    } 
+            else { /* .C */
+                if ((double)n*sizeof(char*) > INT_MAX)
+                    error(_("too many strings to pass to C routine"));
+                SEXP sptr = allocVector(RAWSXP,n*sizeof(char*));
+                SET_VECTOR_ELT(ans, na, sptr);
+		char **cptr = (char**) RAW(sptr);
 		if (*encname != 0) {
 		    char *outbuf;
 		    const char *inbuf;
@@ -2222,8 +2338,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 			inbuf = CHAR(STRING_ELT(s, i));
 			inb = strlen(inbuf);
 			outb0 = 3*inb;
-		    restart_in:
-			cptr[i] = outbuf = (char*) R_alloc(outb0 + 1, sizeof(char));
+		    restart_in: ;
+                        SEXP new = allocVector(RAWSXP,outb0+1+1);
+                        SET_ATTRIB_TO_ANYTHING (new, ATTRIB(sptr));
+                        SET_ATTRIB_TO_ANYTHING (sptr, new);
+			cptr[i] = outbuf = (char*) RAW(new);
 			outb = 3*inb;
 			Riconv(obj, NULL, NULL, &outbuf, &outb);
 			errno = 0; /* precaution */
@@ -2242,18 +2361,23 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    for (int i = 0 ; i < n ; i++) {
 			const char *ss = translateChar(STRING_ELT(s, i));
 			int nn = strlen(ss) + 1;
-			if(nn > 1) {
-			    cptr[i] = (char*) R_alloc(nn, sizeof(char));
+                        SEXP new = allocVector (RAWSXP, nn==1 ? 128 : nn);
+                        SET_ATTRIB_TO_ANYTHING (new, ATTRIB(sptr));
+                        SET_ATTRIB_TO_ANYTHING (sptr, new);
+                        cptr[i] = (char*) RAW(new);
+			if (nn > 1)
 			    strcpy(cptr[i], ss);
-			} else {
+			else {
 			    /* Protect ourselves against those who like to
 			       extend "", maybe using strncpy */
-			    nn = 128;
-			    cptr[i] = (char*) R_alloc(nn, sizeof(char));
-			    memset(cptr[i], 0, nn);
+			    memset(cptr[i], 0, 128);
 			}
 		    }
 		}
+                if (n == 0) {
+                    /* keep it from looking like it's actually for a RAWSXP. */
+                    SET_ATTRIB_TO_ANYTHING(sptr,allocVector(RAWSXP,0));
+                }
 	    }
 	    break;
 	case VECSXP:
@@ -2283,7 +2407,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     if (return_one_named /* later, actual test for doing it in helper */) {
         SEXP rawfun = allocVector (RAWSXP, sizeof dotCode_fun);
-        memcpy (RAW(rawfun), &fun, sizeof dotCode_fun);
+        memcpy (RAW(rawfun), &dotCode_fun, sizeof dotCode_fun);
     }
 
     SEXP ans1 = NULL;
@@ -2293,75 +2417,19 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
     }
 
-    task_dotCode (scalars, ans1, rawfun, args);
+    task_dotCode (scalars, ans1, rawfun, ans);
 
-    /* See if we return just the one named element, ans1, as a pairlist. 
-       Note that the contents of ans1 may not have been computed yet,
-       if task_dotCode was deferred to possibly be done in a helper thread. */
+    /* Either return just the one named element, ans1, as a pairlist,
+       or the whole vector list of updated arguments, to which we must
+       attach the right attributes. */
 
-    if (return_one_named) {
-        UNPROTECT(1);
-        VMAXSET(vmax);
-        return cons_with_tag (ans1, R_NilValue, last_tag);
-    }
-
-    /* The rest is done only if the whole vector of results is returned,
-       in which case task_dotCode will have been done immediately in the
-       master thread.  Note that task_dotCode will have ensured validity
-       of logical values, and copied out-of-box values into new objects
-       when necessary. */
-
-    for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
-
-        if (spa.dup && argStyles && argStyles[na] == R_ARG_IN) {
-            SET_VECTOR_ELT(ans, na, R_NilValue);
-            continue;
-        }
-
-        SEXP arg = CAR(pa);
-        SEXP s = VECTOR_ELT(ans, na);
-        int n;
-
-        R_NativePrimitiveArgType type = checkTypes ? checkTypes[na] 
-                                                   : TYPEOF(s);
-        switch(type) {
-        case REALSXP:
-            if (asLogical (getAttrib (arg, R_CSingSymbol)) != 1)
-                break;
-            else
-                /* fall through to code below */ ;
-        case SINGLESXP:
-            n = LENGTH(s);
-            s = allocVector(REALSXP, n);
-            float *sptr = (float*) cargs[na];
-            for (int i = 0; i < n; i++) REAL(s)[i] = (double) sptr[i];
-            break;
-        case STRSXP:
-            if(Fort) {
-                char buf[256];
-                /* only return one string: warned on the R -> Fortran step */
-                strncpy(buf, (char*)cargs[na], 255);
-                buf[255] = '\0';
-                PROTECT(s = allocVector(type, 1));
-                SET_STRING_ELT(s, 0, mkChar(buf));
-                UNPROTECT(1);
-            } 
-            else {
-                n = LENGTH(s);
-                PROTECT(s = allocVector(type, n));
-                char **cptr = (char**) cargs[na];
-                for (int i = 0 ; i < n ; i++)
-                    SET_STRING_ELT(s, i, mkChar(cptr[i]));
-                UNPROTECT(1);
-            }
-            break;
-        default:
-            break;
-        }
-
-        if (s != arg) {
-            SET_VECTOR_ELT(ans, na, s);
-            DUPLICATE_ATTRIB(s, arg);
+    if (return_one_named)
+        ans = cons_with_tag (ans1, R_NilValue, last_tag);
+    else {
+        for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
+            SEXP arg = CAR(pa);
+            SEXP s = VECTOR_ELT (ans, na);
+            if (s != arg) DUPLICATE_ATTRIB (s, arg);
         }
     }
 
@@ -2369,6 +2437,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     VMAXSET(vmax);
     return ans;
 }
+
 
 static const struct {
     const char *name;
