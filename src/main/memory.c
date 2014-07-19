@@ -3595,6 +3595,14 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
         ATTRIB(x) = v;
     }
 }
+
+void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
+    if (ATTRIB(x) != v) {
+        CHECK_OLD_TO_NEW(x, v);
+        ATTRIB(x) = v;
+    }
+}
+
 void (SET_OBJECT)(SEXP x, int v) { SET_OBJECT(CHK(x), v); }
 void (SET_TYPEOF)(SEXP x, int v) { SET_TYPEOF(CHK(x), v); }
 void (SET_NAMED)(SEXP x, int v) { SET_NAMED(CHK(x), v); }

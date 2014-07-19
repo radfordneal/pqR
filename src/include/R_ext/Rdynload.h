@@ -36,14 +36,11 @@ typedef unsigned int R_NativePrimitiveArgType;
 typedef unsigned int R_NativeObjectArgType;
 
 
-/* In the near future, we may support registering 
-   information about the arguments of native routines 
+/* Information about the arguments of native routines 
    and whether they are used to return information.
-   The hope is that we can minimize copying objects even 
-   further. Not currently in use.
+   The hope is that we can minimize copying objects.
 */
 typedef enum {R_ARG_IN, R_ARG_OUT, R_ARG_IN_OUT, R_IRRELEVANT} R_NativeArgStyle;
-
 
 
 /* 
