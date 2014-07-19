@@ -1341,12 +1341,13 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 
 static VarFun dotCode_fun;  /* Function to call for .C or .Fortran */
 static struct special_args dotCode_spa;  /* Special arguments provided */
-static R_NativeArgStyle *argStyles;
+static R_NativeArgStyle *argStyles;  /* May hold types and usages of args */
 
 void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 {
     int nargs = LENGTH(args);
     int nargs1 = nargs>0 ? nargs : 1;  /* 0-length arrays not allowed in C99 */
+    R_NativeArgStyle *arg_styles = argStyles;  /* save now, might change */
 
     /* Pointers to where the data is, passed to the function called. */
 
@@ -2008,7 +2009,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 
     for (na = 0, sc = scalars; na < nargs; na++, sc >>= 1) {
 
-        if (dotCode_spa.dup && argStyles && argStyles[na] == R_ARG_IN) {
+        if (dotCode_spa.dup && arg_styles && arg_styles[na] == R_ARG_IN) {
             SET_VECTOR_ELT(args, na, R_NilValue);
             continue;
         }
@@ -2080,7 +2081,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
                 SET_VECTOR_ELT (args, na, ScalarString(mkChar(buf)));
             } 
             else {
-                int n = LENGTH(arg);
+                int n = LENGTH(arg) / sizeof (char*);
                 char **cptr = (char**) cargs[na];
                 SEXP s;
                 PROTECT (s = allocVector (STRSXP, n));
