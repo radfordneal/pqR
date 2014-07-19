@@ -1381,6 +1381,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
             case LGLSXP:  scalar_value[na].i = LOGICAL(arg)[0]; break;
             case INTSXP:  scalar_value[na].i = INTEGER(arg)[0]; break;
             case REALSXP: scalar_value[na].d = REAL(arg)[0];    break;
+            default: abort();
             }
             cargs[na] = &scalar_value[na];
         }
@@ -2020,7 +2021,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
            if unnecessary, since this may be faster, and would be essential
            if the argument could be a read-only constant. */
 
-        if (TYPEOF(args) == LGLSXP) {
+        if (TYPEOF(arg) == LGLSXP) {
             int n = LENGTH(arg);
             int *q = (int *) cargs[na];  /* could be an out-of-box scalar */
             for (int i = 0; i < n; i++) {
@@ -2029,31 +2030,28 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
         }
 
         /* For an out-of-box scalar, see if it has changed, and if so
-           allocate new space for its new value. */
+           allocate new space for its new value.  Note:  Since attributes
+           might need to be attached later, we can't return a constant. */
 
         if (sc & 1) {
             switch (TYPEOF(arg)) {
             case RAWSXP:
                 if (scalar_value[na].r != RAW(arg)[0])
-                    SET_VECTOR_ELT (args, na, 
-                      ScalarRawMaybeConst(scalar_value[na].r));
+                    SET_VECTOR_ELT(args, na, ScalarRaw(scalar_value[na].r));
                 break;
             case LGLSXP:
                 if (scalar_value[na].i != LOGICAL(arg)[0])
-                    SET_VECTOR_ELT (args, na, 
-                      ScalarLogicalMaybeConst(scalar_value[na].i));
+                    SET_VECTOR_ELT(args, na, ScalarLogical(scalar_value[na].i));
                 break;
             case INTSXP:
                 if (scalar_value[na].i != INTEGER(arg)[0])
-                    SET_VECTOR_ELT (args, na, 
-                      ScalarIntegerMaybeConst(scalar_value[na].i));
+                    SET_VECTOR_ELT(args, na, ScalarInteger(scalar_value[na].i));
                 break;
             case REALSXP: 
                 /* compare as 64-bit unsigned ints, else -0 will equal +0,
                    and it may not work for NaN, etc. */
                 if (*(uint64_t*)&scalar_value[na].d != *(uint64_t*)REAL(arg))
-                    SET_VECTOR_ELT (args, na, 
-                      ScalarRealMaybeConst(scalar_value[na].d));
+                    SET_VECTOR_ELT(args, na, ScalarReal(scalar_value[na].d));
                 break;
             default: abort();
             }
@@ -2237,7 +2235,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case RAWSXP:
 	    n = LENGTH(s);
 	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
-                if (n == 1 && na < 64)
+                if (n == 1 && na < 64 && !(return_one_named && na == last_pos))
                     scalars |= (helpers_op_t) 1 << na;
                 else {
 		    SEXP ss = allocVector(t, n);
@@ -2255,7 +2253,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    if (iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na+1);
 	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
-                if (n == 1 && na < 64)
+                if (n == 1 && na < 64 && !(return_one_named && na == last_pos))
                     scalars |= (helpers_op_t) 1 << na;
                 else {
 		    SEXP ss = allocVector(t, n);
@@ -2284,7 +2282,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 SET_VECTOR_ELT(ans, na, ss);
 	    } 
             else if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
-                if (n == 1 && na < 64)
+                if (n == 1 && na < 64 && !(return_one_named && na == last_pos))
                     scalars |= (helpers_op_t) 1 << na;
                 else {
 		    SEXP ss  = allocVector(t, n);
