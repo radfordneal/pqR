@@ -78,8 +78,9 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 	    for (j = 0; j < nlt; j++) {
 		const char *vj = translateChar(STRING_ELT(lt, j));
 		vt = strlen(vj);
-		cbuf = R_AllocStringBuffer(vs + vt + 1, &cbuff);
-		(void) copy_3_strings(cbuf,vi,":",vj);
+                int len = vs + vt + 1;
+		cbuf = R_AllocStringBuffer(len, &cbuff);
+		(void) copy_3_strings(cbuf,len,vi,":",vj);
 		SET_STRING_ELT(la, k, mkChar(cbuf));
 		k++;
 	    }
