@@ -4448,8 +4448,9 @@ void do_write_cache()
 
 #include "RBufferUtils.h"
 
-attribute_hidden
-void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
+/* Allocate at least blen+1 bytes, enough to hold a string of length blen. */
+
+attribute_hidden void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
 {
     size_t blen1, bsize = buf->defaultSize;
 
