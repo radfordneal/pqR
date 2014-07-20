@@ -85,6 +85,7 @@ char *Rf_task_name (helpers_task_proc *task)
     /* w */
     /* x */
     /* y */
+    TASK_NAME(dotCode);
     /* z */
 
 # ifdef R_TASK_MERGING
