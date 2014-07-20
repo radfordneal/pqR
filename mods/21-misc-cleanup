@@ -25,3 +25,7 @@ Now use Seql for exact comparison in get1index.
 Sped up Rf_length for pairlists.
 
 +logical now converts to integer.
+
+Use copy_3_strings in cross_colon.  Document before its definition that
+R_AllocStringBuffer allocates an extra byte for the terminating null
+(apparently not realized by someone who updated cross_colon in R-3.0.1).
