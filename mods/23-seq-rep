@@ -1,0 +1,5 @@
+Updates to the "seq" and "rep" functions, including changes from R
+Core releases.
+
+Adds checks to seq.int for from, to, by being of length 1 (as in
+R-2.15.1, but more cleanly).

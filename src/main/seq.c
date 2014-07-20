@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
@@ -560,12 +560,20 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     if(lout == NA_INTEGER) {
-	double rfrom = asReal(from), rto = asReal(to), rby = asReal(by), *ra;
-	if(from == R_MissingArg) rfrom = 1.0;
-	if(to == R_MissingArg) rto = 1.0;
+        double rfrom = 1.0, rto = 1.0, rby, *ra;
+        if (from != R_MissingArg) {
+            if (length(from) != 1) error("'from' must be of length 1");
+            rfrom = asReal(from);
+        }
+        if (to != R_MissingArg) {
+            if (length(to) != 1) error("'to' must be of length 1");
+            rto = asReal(to);
+        }
 	if(by == R_MissingArg)
 	    ans = seq_colon(rfrom, rto, call, variant);
 	else {
+            if (length(by) != 1) error("'by' must be of length 1");
+            rby = asReal(by);
 	    double del = rto - rfrom, n, dd;
 	    int nn;
 	    if(!R_FINITE(rfrom))
