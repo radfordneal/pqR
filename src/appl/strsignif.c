@@ -98,8 +98,8 @@ int trio_sprintf(char *buffer, const char *format, ...);
 
 /*
    The declaration for x is unusual for a .C() but is managed by
-   casting in the code itself.  However, it does mean that we cannot
-   use the argument type matching
+   casting in the code itself.  It is declared as ANYSXP for 
+   argument type matching.
  */
 attribute_hidden
 void str_signif(char *x, int *n, const char **type, int *width, int *digits,

@@ -9,3 +9,8 @@ Implements parallel execution in helper threads, in some circumstances.
 Updates help(.C) to reflect mods.
 
 Allows character arguments with DUP=FALSE, duplicating them anyway.
+
+Rationalizes the "checkTypes" code in do_dotCode, which made no sense
+(had code to coerce which apparently could not possibly be executed).
+Enables registration with type checking for str_signif, with ANYSXP
+for the first argument (which previously failed).

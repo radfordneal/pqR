@@ -371,23 +371,6 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 }
 
 
-static Rboolean
-checkNativeType(int targetType, int actualType)
-{
-    return targetType <= 0 || targetType == actualType
-        || targetType == INTSXP && actualType == LGLSXP
-        || targetType == LGLSXP && actualType == INTSXP;
-}
-
-
-static Rboolean
-comparePrimitiveTypes(R_NativePrimitiveArgType type, SEXP s, Rboolean dup)
-{
-   return type == ANYSXP || TYPEOF(s) == type
-       || dup && type==SINGLESXP && asLogical(getAttrib(s,R_CSingSymbol))==TRUE;
-}
-
-
 /* Foreign Function Interface.  This code allows a user to call C */
 /* or Fortran code which is either statically or dynamically linked. */
 
@@ -2211,28 +2194,16 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     for (na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 
-	if(checkTypes &&
-	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), dotCode_spa.dup)) {
-	    /* We can loop over all the arguments and report all the
-	       erroneous ones, but then we would also want to avoid
-	       the conversions.  Also, in the future, we may just
-	       attempt to coerce the value to the appropriate
-	       type. */
-	    errorcall(call, _("Wrong type for argument %d in call to %s"),
-		      na+1, symName);
-	}
-
-	int targetType =  checkTypes ? checkTypes[na] : 0;
-
 	s = CAR(pa);
 
-	if (!checkNativeType (targetType, TYPEOF(s))) {
-	    if (!dotCode_spa.dup) {
-		error(_("explicit request not to duplicate arguments in call to '%s', but argument %d is of the wrong type (%d != %d)"),
-		      symName, na + 1, targetType, TYPEOF(s));
-	    }
-	    if (targetType != SINGLESXP) s = coerceVector(s, targetType);
-                                         /* protected when put in "ans" below */
+	if (checkTypes && checkTypes[na] != ANYSXP) {
+            int targetType = checkTypes[na];
+            int typesMatch = targetType == TYPEOF(s)
+                          || targetType == SINGLESXP 
+                              && asLogical (getAttrib(s,R_CSingSymbol)) == TRUE;
+            if (!typesMatch)
+                errorcall(call, _("Wrong type for argument %d in call to %s"),
+                          na+1, symName);
 	}
 
 	/* Start with return value a copy of the inputs (maybe coerced above),
