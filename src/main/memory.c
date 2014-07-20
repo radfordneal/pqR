@@ -2800,15 +2800,15 @@ SEXP ScalarRealMaybeConst(double x)
 {
     if (ENABLE_SHARED_CONSTANTS) {
 
-        /* Compare to pre-allocated values as 8-byte integers, not as doubles,
-           since double comparison doesn't work for NA or when comparing -0 and
-           +0 (which should be distinct). */
+        /* Compare to pre-allocated values as 8-byte unsigned integers, not 
+           as doubles, since double comparison doesn't work for NA or when 
+           comparing -0 and +0 (which should be distinct). */
 
-        if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealNA)[0]) 
+        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealNA)[0]) 
             return R_ScalarRealNA;
-        if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealZero)[0]) 
+        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealZero)[0]) 
             return R_ScalarRealZero;
-        if (*(int64_t*) &x == *(int64_t*) &REAL(R_ScalarRealOne)[0]) 
+        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealOne)[0]) 
             return R_ScalarRealOne;
     }
 
