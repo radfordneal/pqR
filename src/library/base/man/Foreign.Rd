@@ -14,8 +14,10 @@
   Functions to make calls to compiled code that has been loaded into \R.
 }
 \usage{
-       .C(.NAME, \dots, NAOK = FALSE, DUP = TRUE, PACKAGE, ENCODING)
- .Fortran(.NAME, \dots, NAOK = FALSE, DUP = TRUE, PACKAGE, ENCODING)
+       .C(.NAME, \dots, NAOK = FALSE, DUP = TRUE, HELPER=FALSE, 
+           PACKAGE, ENCODING)
+ .Fortran(.NAME, \dots, NAOK = FALSE, DUP = TRUE, HELPER=FALSE, 
+           PACKAGE, ENCODING)
 }
 \arguments{
   \item{.NAME}{a character string giving the name of a C function or
@@ -29,6 +31,11 @@
     \code{NA} or \code{NaN} or \code{Inf} values is regarded as an error.}
   \item{DUP}{if \code{TRUE} then arguments are duplicated before
     their address is passed to C or Fortran.}
+  \item{HELPER}{if \code{TRUE} then the C or Fortran routine may be
+    done in a helper thread, perhaps in parallel with other computations,
+    rather than being done immediately in the master thread.  This should
+    be specified only if the C or Fortran routine has no side effects,
+    and otherwise operates in a thread-safe manner.}
   \item{PACKAGE}{if supplied, confine the search for a character string
     \code{.NAME} to the DLL given by this argument (plus the
     conventional extension, \file{.so}, \file{.dll}, \dots).
@@ -46,9 +53,8 @@
   These functions can be used to make calls to compiled C and Fortran 77
   code.  The interfaces of \code{\link{.Call}} and
   \code{\link{.External}} are more flexible, which may sometimes allow
-  for better performance, although their flexibility may also prevent
-  some optimizations in future versions of pqR that are possible for
-  \code{.C} and \code{.Fortran}.
+  for better performance, although their flexibility also prevents
+  such routines from being done in parallel in a helper thread.
 
   Character strings will be translated from the value of \code{ENCODING}
   or any declared encoding (see \code{\link{Encoding}}) to the current
@@ -136,16 +142,29 @@
 \section{Use of \code{DUP = FALSE}}{
   Using \emph{\code{DUP = FALSE}} is dangerous, since if not used properly
   it can result in inadvertant modification of a local variable, or even 
-  a non-local variable.  This will be very hard to trace.
+  a non-local variable.  This will be very hard to trace.  Note that use of
+  \code{DUP = FALSE} is intended purely as a way of improving performance,
+  not as an alternative way of returning information to the caller.
+  A program that operates correctly with \code{DUP = FALSE} should also
+  operate correctly with \code{DUP = TRUE}.  If it does not, it may well
+  stop working with \code{DUP = FALSE} when the implementation changes.
+  In particular, use of \code{DUP = FALSE} does not \emph{guarantee} that the
+  argument will not be duplicated before being passed to the C or Fortran
+  routine.
 
-  Character vectors cannot be used with \code{DUP = FALSE}.
+  Character vectors will be duplicated even if \code{DUP = FALSE}.  However,
+  passing character vectors is not allowed when \code{DUP = FALSE} in
+  pqR-2014-06-19 or earlier, and in R Core versions of R (up to at least 
+  R-3.1.1), so they should not be passed with \code{DUP = FALSE} if 
+  compatibility with these versions is needed.
+
   Non-vector objects are read-only to the C code
   and are never copied, regarless of the setting of \code{DUP}.
 
   Atomic vectors (numeric, integer, complex, logical, and raw) of length 
   one are always copied even if \code{DUP = FALSE},
   and so may safely be modified by the C or Fortran routine.  However, this
-  is not true for pqR-2014-06-19 and earlier, or for R Core versions of R
+  is not true for pqR-2014-06-19 and earlier, and for R Core versions of R
   (up to at least R-3.1.1), so if compatibility with these versions is needed,
   vectors of length one should be handled the same as longer vectors.
 
@@ -165,11 +184,55 @@
   it is permited for \code{Cfunction} to modify \code{output}, but
   it should not modify \code{input}, since that would change the
   variable \code{x}, and perhaps other variables as well, if they
-  share their value with \code{x}.  Using \code{DUP =FALSE} in
+  share their value with \code{x}.  Using \code{DUP = FALSE} in
   this situation will save time and memory, since \code{input} will
   not be copied.  Note that \code{output} will not be copied regardless
   of the setting of \code{DUP}, since the interpreter is smart enough 
   to realize that it is unshared.
+}
+
+\section{Parallel execution in a helper thread}{
+  Rather than being done immediately in the master thread, the C or 
+  Fortran routine may, in certain situations, instead be scheduled for 
+  possible execution in a helper thread, in parallel with other operations
+  (possibly including other calls of the same routine).
+
+  The C or Fortran routine will be done in a helper thread only if the
+  \code{HELPER} argument is set to \code{TRUE}, which is not the
+  default.  \code{HELPER} should be specified to be \code{TRUE} only
+  if the routine is ``thread safe'' - in particular, it should not
+  have side effects, should not use statically allocated storage, and
+  should only call other routines that are themselves thread-safe.
+  Whether some operations, such as creation, use, and deletion of a
+  scratch file with a unique name, are thread-safe may depend on the
+  compiler and operating system used.  It is also desirable to set
+  \code{HELPER} to \code{FALSE} if the time for the routine to execute
+  is so small that the overhead of scheduling it is not worthwhile.
+
+  Even if \code{HELPER} is \code{TRUE}, the routine will be scheduled
+  for execution in a helper thread only if it is used in a context
+  in which only a single argument is referred to by the caller after
+  the routine completes.  Currently,
+  this situation is recognized only with constructions such as
+
+    \code{.C("myroutine",result=numeric(100),x,y,HELPER=TRUE)$result}
+  
+  There must be exactly one named argument to \code{.C} or
+  \code{.Fortran}, and the immediate use of the value of \code{.C} or
+  \code{.Fortran} must be to extract the element with that
+  argument's name using the \code{$} operator.
+
+  The routine will not be done in a helper thread if the one
+  named argument is a character string, or is flagged as being passed 
+  in single-precision floating point format.  The routine will also
+  not be done in a helper thread if it has any arguments that are not
+  of numeric, complex, logical, integer, raw, or character type
+  (such as lists or functions).
+
+  Finally, the routine will of course not be done in a helper thread
+  if there are no helper threads, or if multithreading has been
+  disabled, or if the master thread decides to do it while all the
+  helper threads are otherwise busy.
 }
 
 \section{Fortran symbol names}{
@@ -218,5 +281,25 @@
   \code{\link{dyn.load}}, \code{\link{.Call}}.
 
   The \sQuote{Writing R Extensions} manual.
+}
+
+\examples{
+
+\dontrun{
+  x <- 1.2; y <- seq(10,20,length.out=100)
+
+  # The following might be done in a helper thread
+  a <- .C ("myroutine", result=numeric(100), x, y, HELPER=TRUE) $ result
+
+  # Neither of the following will be done in a helper thread
+  a <- .C ("myroutine", result=numeric(100), scale=x, y, HELPER=TRUE) $ result
+  a <- .C ("myroutine", numeric(100), x, y, HELPER=TRUE) [[1]]
+
+  # The .C in the function defined below might be done in a helper thread 
+  # if called as in the following example.
+  f <- function (y) .C ("myroutine", result=numeric(length(y)),
+                                     1.2, as.double(y), HELPER=length(y)>50)
+  a <- f(1:100)$result
+}
 }
 \keyword{programming}

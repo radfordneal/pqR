@@ -101,11 +101,9 @@ static R_NativePrimitiveArgType R_rowsum_t[] = {INTSXP, REALSXP, REALSXP, REALSX
 static R_NativePrimitiveArgType stemleaf_t[] = {REALSXP, INTSXP, REALSXP, INTSXP, REALSXP};
 
 /* Note the ANYSXP in the first place.
-   Doesn't quite work.  Needs investigation.
-   See the odd first argument in the routine's definition.
+   See the odd first argument in the routine's definition. */
 
 static R_NativePrimitiveArgType str_signif_t[] = {ANYSXP, INTSXP, STRSXP, INTSXP, INTSXP, STRSXP, STRSXP, STRSXP};
-*/
 
 static R_NativePrimitiveArgType R_tabulate_t[] = {INTSXP, INTSXP, INTSXP, INTSXP};
 
@@ -137,11 +135,7 @@ static R_CMethodDef cMethods [] = {
     /* this is called by Hmisc, although no longer used in R */
     CDEF(R_rowsum),
     CDEF(stemleaf),
-#if 0
     CDEF(str_signif),
-#else
-    {"str_signif", (DL_FUNC) &str_signif, 8, NULL},
-#endif
     CDEF(R_tabulate),
 
     /* Sockets */

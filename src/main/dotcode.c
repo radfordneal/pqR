@@ -56,17 +56,17 @@
 
    Note that no action regarding these arguments is taken here - they are 
    just found, removed, and returned.  NAOK defaults to FALSE, DUP to TRUE, 
-   ENCODING to C R_NilValue, and PACKAGE to C R_NilValue. 
+   ENCODING to R_NilValue, PACKAGE to R_NilValue, and HELPER to FALSE.
 
    Also checks that the first argument is present and unnamed.  Note 
    that since this argument is always present, removal of later arguments
    won't change the head of the argument list. */
 
-struct special_args { int naok, dup; SEXP encoding, pkg; };
+struct special_args { int naok, dup, helper; SEXP encoding, pkg; };
 
 static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 { 
-    int naokused=0, dupused=0, encused=0, pkgused=0, nargs=0;
+    int naokused=0, dupused=0, helperused=0, encused=0, pkgused=0, nargs=0;
     const char *p;
     SEXP s, t, prev;
 
@@ -77,6 +77,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 
     r->naok = FALSE;
     r->dup = TRUE;
+    r->helper = FALSE;
     r->encoding = R_NilValue;
     r->pkg = R_NilValue;
 
@@ -95,22 +96,33 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 
             if (TAG(s) == R_EncSymbol) {
                 r->encoding = CAR(s);
-                if (encused) warningcall(call,_("ENCODING used more than once"));
+                if (encused) 
+                    warningcall(call,_("ENCODING used more than once"));
                 encused = 1;
                 goto remove;
             }
      
             if (TAG(s) == R_NaokSymbol) {
                 r->naok = asLogical(CAR(s));
-                if (naokused) warningcall(call,_("NAOK used more than once"));
+                if (naokused) 
+                    warningcall(call,_("NAOK used more than once"));
                 naokused = 1;
                 goto remove;
             }
     
             if (TAG(s) == R_DupSymbol) {
                 r->dup = asLogical(CAR(s));
-                if (dupused) warningcall(call,_("DUP used more than once"));
+                if (dupused) 
+                    warningcall(call,_("DUP used more than once"));
                 dupused = 1;
+                goto remove;
+            }
+    
+            if (TAG(s) == R_HelperSymbol) {
+                r->helper = asLogical(CAR(s));
+                if (helperused) 
+                    warningcall(call,_("HELPER used more than once"));
+                helperused = 1;
                 goto remove;
             }
         }
@@ -356,23 +368,6 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     } else
 	errorcall(call, _("%s symbol name \"%s\" not in load table"),
 		  symbol->type == R_FORTRAN_SYM ? "Fortran" : "C", buf);
-}
-
-
-static Rboolean
-checkNativeType(int targetType, int actualType)
-{
-    return targetType <= 0 || targetType == actualType
-        || targetType == INTSXP && actualType == LGLSXP
-        || targetType == LGLSXP && actualType == INTSXP;
-}
-
-
-static Rboolean
-comparePrimitiveTypes(R_NativePrimitiveArgType type, SEXP s, Rboolean dup)
-{
-   return type == ANYSXP || TYPEOF(s) == type
-       || dup && type==SINGLESXP && asLogical(getAttrib(s,R_CSingSymbol))==TRUE;
 }
 
 
@@ -1311,7 +1306,8 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    computation, with the arguments in args being ignored after the
    call (they may or may not have changed).  If ans1 is NULL, this
    task procedure must be called directly, not deferred, and the
-   contents of args is updated to be returned as the result.  This may
+   contents of args is updated to be returned as the result (or perhaps
+   the procedure is called for its side effects).  Updating args may
    involve memory allocation, not allowed for a deferred task, as some
    arguments may need to be converted to an appropriate form.  
 
@@ -1320,13 +1316,18 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    atomic vectors or vector lists, the function called is passed the DATAPTR 
    for the vector (unless this argument is marked as an out-of-the-box scalar,
    see below).  For other argument types, the function is passed the SEXP 
-   for the operand itself.
+   for the operand itself.  If this task procedure is deferred, the arguments,
+   other than ans1, must all either be unshared (NAMEDCNT of zero) or be 
+   guaranteed to never change (NAMEDCNT at its maximum), since the helpers
+   "in use" mechanism will not work for such objects that are inside the operand
+   passed.
 
    A string argument needing converstion back to an R string is recognized 
    as such by ATTRIB being a RAWSXP (not a pairlist), with ATTRIB pointing 
    to itself for a Fortran string.  Single-precision arguments needing 
    to be converted to an R double vector are recognized by having ATTRIB 
-   of R_CSingSymbol.
+   of R_CSingSymbol.  The result, ans1, must not be either of these sorts
+   of argument.
 
    The opcode, scalars, holds a bit-vector indicating which of the
    first 64 arguments are scalars that should be stored "out of their
@@ -2113,7 +2114,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     nargs = trimargs (args, 1, &dotCode_spa, call);
 
     if (dotCode_spa.naok == NA_LOGICAL)
-        errorcall(call, _("invalid '%s' value"), "naok");
+        errorcall(call, _("invalid '%s' value"), "NAOK");
+    if (dotCode_spa.helper == NA_LOGICAL)
+        errorcall(call, _("invalid '%s' value"), "HELPER");
     /* Should check for DUP being NA_LOGICAL too?  But not done in R-2.15.3...*/
 
     if (nargs > MAX_ARGS)
@@ -2181,6 +2184,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	UNPROTECT(1);
     }
 
+    if (!return_one_named || helpers_not_multithreading_now)
+        dotCode_spa.helper = 0;
+
     /* Convert the arguments for use in .C or .Fortran. */
 
     helpers_op_t scalars = 0;  /* bit vector indicating which arguments
@@ -2188,28 +2194,16 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     for (na = 0, pa = args ; pa != R_NilValue; pa = CDR(pa), na++) {
 
-	if(checkTypes &&
-	   !comparePrimitiveTypes(checkTypes[na], CAR(pa), dotCode_spa.dup)) {
-	    /* We can loop over all the arguments and report all the
-	       erroneous ones, but then we would also want to avoid
-	       the conversions.  Also, in the future, we may just
-	       attempt to coerce the value to the appropriate
-	       type. */
-	    errorcall(call, _("Wrong type for argument %d in call to %s"),
-		      na+1, symName);
-	}
-
-	int targetType =  checkTypes ? checkTypes[na] : 0;
-
 	s = CAR(pa);
 
-	if (!checkNativeType (targetType, TYPEOF(s))) {
-	    if (!dotCode_spa.dup) {
-		error(_("explicit request not to duplicate arguments in call to '%s', but argument %d is of the wrong type (%d != %d)"),
-		      symName, na + 1, targetType, TYPEOF(s));
-	    }
-	    if (targetType != SINGLESXP) s = coerceVector(s, targetType);
-                                         /* protected when put in "ans" below */
+	if (checkTypes && checkTypes[na] != ANYSXP) {
+            int targetType = checkTypes[na];
+            int typesMatch = targetType == TYPEOF(s)
+                          || targetType == SINGLESXP 
+                              && asLogical (getAttrib(s,R_CSingSymbol)) == TRUE;
+            if (!typesMatch)
+                errorcall(call, _("Wrong type for argument %d in call to %s"),
+                          na+1, symName);
 	}
 
 	/* Start with return value a copy of the inputs (maybe coerced above),
@@ -2275,6 +2269,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 if (nints > INT_MAX)
                     error (_(
                     "too many elements for vector of single-precision values"));
+                if (return_one_named && na == last_pos) return_one_named = 0;
                 SEXP ss = allocVector (INTSXP, (int)(nints+0.99));
 		float *sptr = (float*) INTEGER(ss);
 		for (int i = 0 ; i < n ; i++) sptr[i] = (float) REAL(s)[i];
@@ -2305,8 +2300,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	    }
 	    break;
 	case STRSXP:
-	    if (!dotCode_spa.dup)
+	    if (!dotCode_spa.dup && 0)  /* this is no longer an error in pqR */
 		error(_("character variables must be duplicated in .C/.Fortran"));
+            if (return_one_named && na == last_pos) return_one_named = 0;
 	    n = LENGTH(s);
 	    if (Fort) { /* .Fortran */
 		const char *ss = n==0 ? "" : translateChar(STRING_ELT(s, 0));
@@ -2382,6 +2378,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case VECSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"),
 			    type2char(t), na + 1);
+            dotCode_spa.helper = 0;
 	    break;
 	case CLOSXP:
 	case BUILTINSXP:
@@ -2389,6 +2386,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case ENVSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"), 
 			    type2char(TYPEOF(s)), na + 1);
+            dotCode_spa.helper = 0;
 	    break;
 	default:
 	    /* Includes pairlists from R 2.15.0 */
@@ -2398,25 +2396,30 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    type2char(t), na + 1);
 	    if (t == LISTSXP)
 		warning(_("pairlists are passed as SEXP as from R 2.15.0"));
+            dotCode_spa.helper = 0;
 	    break;
 	}
     }
 
-    SEXP rawfun = NULL;
-
-    if (return_one_named /* later, actual test for doing it in helper */) {
-        SEXP rawfun = allocVector (RAWSXP, sizeof dotCode_fun);
-        memcpy (RAW(rawfun), &dotCode_fun, sizeof dotCode_fun);
-    }
-
     SEXP ans1 = NULL;
-
     if (return_one_named) {
         ans1 = VECTOR_ELT(ans,last_pos);
         if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
     }
 
-    task_dotCode (scalars, ans1, rawfun, ans);
+    if (dotCode_spa.helper) {
+        /* Ensure arguments won't change while task is not complete (the
+           "in use" mechanism won't work on these inner objects). */
+        for (na = 0; na < nargs; na++) {
+            SEXP arg = VECTOR_ELT(args,na);
+            if (NAMEDCNT_GT_0(arg)) SET_NAMEDCNT_MAX(arg);
+        }
+        SEXP rawfun = allocVector (RAWSXP, sizeof dotCode_fun);
+        memcpy (RAW(rawfun), &dotCode_fun, sizeof dotCode_fun);
+        helpers_do_task (0, task_dotCode, scalars, ans1, rawfun, ans);
+    }
+    else
+        task_dotCode (scalars, ans1, NULL, ans);
 
     /* Either return just the one named element, ans1, as a pairlist,
        or the whole vector list of updated arguments, to which we must
