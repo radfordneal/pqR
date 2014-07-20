@@ -878,10 +878,11 @@ LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */
 LibExtern SEXP  R_dot_target;       /* ".target" */
 
-LibExtern SEXP R_NaokSymbol;	    /* ".NAOK" */
+LibExtern SEXP R_NaokSymbol;	    /* "NAOK" */
 LibExtern SEXP R_DupSymbol;	    /* "DUP" */
 LibExtern SEXP R_PkgSymbol;	    /* "PACKAGE" */
 LibExtern SEXP R_EncSymbol;	    /* "ENCODING" */
+LibExtern SEXP R_HelperSymbol;	    /* "HELPER" */
 LibExtern SEXP R_CSingSymbol;	    /* "Csingle" */
 
 LibExtern SEXP R_NativeSymbolSymbol;            /* "native symbol" */

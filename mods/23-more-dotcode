@@ -1,5 +1,11 @@
 More improvements to dotcode.c
 
-Duplicate scalars only when they change.
+Duplicates scalars only when they change.
 
-Fixed possible protection bug in do_dotCode.
+Fixes possible protection bug in do_dotCode.
+
+Implements parallel execution in helper threads, in some circumstances.
+
+Updates help(.C) to reflect mods.
+
+Allows character arguments with DUP=FALSE, duplicating them anyway.

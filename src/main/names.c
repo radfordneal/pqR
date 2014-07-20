@@ -504,6 +504,7 @@ static void SymbolShortcuts(void)
     R_DupSymbol = install("DUP");
     R_PkgSymbol = install("PACKAGE");
     R_EncSymbol = install("ENCODING");
+    R_HelperSymbol = install("HELPER");
     R_CSingSymbol = install("Csingle");
     R_NativeSymbolSymbol = install("native symbol");
     R_RegisteredNativeSymbolSymbol = install("registered native symbol");
