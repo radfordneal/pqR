@@ -564,12 +564,12 @@ static DllInfo* AddDLL(const char *path, int asLocal, int now,
 	tmp = (char*) malloc(sizeof(char)*(strlen("R_init_") +
 					   strlen(info->name)+ 1));
 	if(!tmp) error("allocation failure in AddDLL");
-	sprintf(tmp, "%s%s","R_init_", info->name);
+        copy_2_strings (tmp, "R_init_", info->name); 
 #else
 	tmp = (char*) malloc(sizeof(char)*(strlen("R_init_") +
 					   strlen(info->name)+ 2));
 	if(!tmp) error("allocation failure in AddDLL");
-	sprintf(tmp, "_%s%s","R_init_", info->name);
+	copy_3_strings (tmp, "_", "R_init_", info->name);
 #endif
 	f = (DllInfoInitCall) R_osDynSymbol->dlsym(info, tmp);
 	/* This is potentially unsafe in MBCSs, as '.' might be part of 
