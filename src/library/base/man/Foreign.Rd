@@ -172,14 +172,11 @@
   to not be referred to in any other way, and so may be passed with
   \code{DUP = FALSE} and modified by the C or Fortran routine, either 
   for its internal use, or as a way of returning information to the caller.
-  The set of such functions is currently as follows:
+  The set of such functions is currently as 
+  follows:\preformatted{  numeric, integer, complex, logical, raw, matrix, array, rep}
 
-  \code{numeric}, \code{integer}, \code{complex}, \code{logical},
-  \code{raw}, \code{matrix}, \code{array}, \code{rep}
-
-  For example, in the following call:
-
-  \code{.C("Cfunction", input = x, output = numeric(10), DUP = FALSE)}
+  For example, in the following 
+  call:\preformatted{  .C("Cfunction", input = x, output = numeric(10), DUP = FALSE)}
 
   it is permited for \code{Cfunction} to modify \code{output}, but
   it should not modify \code{input}, since that would change the
@@ -210,12 +207,11 @@
   is so small that the overhead of scheduling it is not worthwhile.
 
   Even if \code{HELPER} is \code{TRUE}, the routine will be scheduled
-  for execution in a helper thread only if it is used in a context
-  in which only a single argument is referred to by the caller after
-  the routine completes.  Currently,
-  this situation is recognized only with constructions such as
-
-    \code{.C("myroutine",result=numeric(100),x,y,HELPER=TRUE)$result}
+  for execution in a helper thread only if it is used in a context in
+  which only a single argument is referred to by the caller after the
+  routine completes.  Currently, this situation is recognized only
+  with constructions such 
+  as\preformatted{  .C("myroutine",result=numeric(100),x,y,HELPER=TRUE)$result}
   
   There must be exactly one named argument to \code{.C} or
   \code{.Fortran}, and the immediate use of the value of \code{.C} or
@@ -289,16 +285,16 @@
   x <- 1.2; y <- seq(10,20,length.out=100)
 
   # The following might be done in a helper thread
-  a <- .C ("myroutine", result=numeric(100), x, y, HELPER=TRUE) $ result
+  a <- .C("myroutine", result=numeric(100), x, y, HELPER=TRUE)$result
 
   # Neither of the following will be done in a helper thread
-  a <- .C ("myroutine", result=numeric(100), scale=x, y, HELPER=TRUE) $ result
-  a <- .C ("myroutine", numeric(100), x, y, HELPER=TRUE) [[1]]
+  a <- .C("myroutine", result=numeric(100), scale=x, y, HELPER=TRUE)$result
+  a <- .C("myroutine", numeric(100), x, y, HELPER=TRUE) [[1]]
 
   # The .C in the function defined below might be done in a helper thread 
   # if called as in the following example.
-  f <- function (y) .C ("myroutine", result=numeric(length(y)),
-                                     1.2, as.double(y), HELPER=length(y)>50)
+  f <- function (y) .C("myroutine", result=numeric(length(y)),
+                                    1.2, as.double(y), HELPER=length(y)>50)
   a <- f(1:100)$result
 }
 }
