@@ -14,11 +14,22 @@
 
 \item This release contains several performance improvements, including some
       adapted from those in R Core releases after R-2.15.0, as well as
-      some bug fixes.
+      some bug fixes and documentation updates, a few features changes that 
+      track later changes in R Core releases, and some new features that are 
+      mostly of interest to developers.
+}}
+
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+
+\item The unary \code{+} operator now converts a logical vector to an
+      integer vector. This follows a corresponding change in R-3.0.2.
+\item Support for "converters" for use with \code{.C} has been dropped,
+      as it was in R-3.0.0.
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
-    These are mostly of interest to developers, not ordinary users.
+    These are mostly of interest to developers, not to most users.
     \itemize{
 \item Setting the environment variable \code{R_ABORT} to any non-null
       string will prevent any attempt to produce a stack trace on a
@@ -43,23 +54,39 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
+\item The speed of \code{.C} and \code{.Fortran} has been substantially
+      improved, partly by incorporating changes in R-2.15.1 and R-2.15.2,
+      but with substantial additional improvements as well.  The speed of 
+      \code{.Call} and \code{.External} has been sped up to a lesser degree.
+\item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
+      can now be done in a helper thread, in parallel with other computations.
+      See \code{help(.C)} for details.
+\item Expressions now sometimes return constant values, that are shared,
+      and likely stored in read-only memory.  These constants include 
+      \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
+      \code{TRUE}, \code{NA}, \code{NA_real_}, 0.0, 1.0, 0L, 1L, ..., 10L, 
+      and some one-element pairlists with such constant elements.  Apart 
+      from \code{NULL}, these constants are not
+      \emph{always} used for the corresponding value, but they often are, which
+      saves on memory and associated garbage collection time.  External routines
+      that incorrectly modify objects without checking that \code{NAMED} is
+      zero may now crash when passed a read-only constant, which is a generally
+      desirable debugging aid, though it might sometimes cause a package that
+      had previously at least sort-of worked to no longer run.
 \item Variable lookup has been sped up a bit (by unrolling the search loop).
 \item Functions in the \code{apply} family have been sped up when they are
       called with no additional arguments for the function being applied.
-\itme Fixed the peformance problem reported in PR #15798 at r-projejct.org
-      (differently from the R Core fix).
+\item The peformance problem reported in PR #15798 at r-project.org has
+      been fixed (differently from the R Core fix).
 }}
 
-  \subsection{BUG FIXES}{p
+  \subsection{BUG FIXES}{
     \itemize{
 \item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
       \code{na.exclude} that led to a
-      data frame that should have had zero rows having one row instead..
+      data frame that should have had zero rows having one row instead.
       (Also fixed in R-3.1.1, though differently.)
-\item The unary \code{+} operator now converts a logical vector to an
-      integer vector (which follows the corresponding change in 
-      R-3.0.2).
-\itme Fixed a bug in \code{numericDeriv} (see also the documentation
+\item Fixed a bug in \code{numericDeriv} (see also the documentation
       update above), which is illustrated by the following
       code:
 \preformatted{    x <- y <- 10
@@ -67,6 +94,7 @@
 }
       I reported this to R Core, and it is also fixed (differently) in
       R-3.1.1.
+}}
 }
 
 
