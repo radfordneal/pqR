@@ -26,6 +26,14 @@
       integer vector. This follows a corresponding change in R-3.0.2.
 \item Support for "converters" for use with \code{.C} has been dropped,
       as it was in R-3.0.0.
+\item In \code{.C} and \code{.Fortran}, arguments may be character strings
+      even when \code{DUP=FALSE} is specified - they are duplicated regardless.
+      This differs from R Core versions, which (at least through R-3.1.1)
+      give an error if an argument is a character string and \code{DUP=FALSE}.
+\item In \code{.C} and \code{.Fortran}, scalars (vectors of length one)
+      are duplicated even when \code{DUP=FALSE} is specified.  They are
+      not duplicated in R Core versions, however (at least through R-3.1.1),
+      so it may be unwise to rely on this.
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
@@ -73,10 +81,17 @@
       zero may now crash when passed a read-only constant, which is a generally
       desirable debugging aid, though it might sometimes cause a package that
       had previously at least sort-of worked to no longer run.
+\item The function for unserializing data (eg, reading file \file{.RData}) is
+      now done with tail-recursion (on the CDR field) optimized when reading 
+      pairlists.  This is both faster and less likely to produce a stack
+      overflow.  Some other improvements to serializing/unserializing have
+      also been made, including support for restoring constant values (mentioned
+      above) as constant values.
+\item Several speed improvements relating to garbage collection have been made.
 \item Variable lookup has been sped up a bit (by unrolling the search loop).
 \item Functions in the \code{apply} family have been sped up when they are
       called with no additional arguments for the function being applied.
-\item The peformance problem reported in PR #15798 at r-project.org has
+\item The performance problem reported in PR #15798 at r-project.org has
       been fixed (differently from the R Core fix).
 }}
 
@@ -94,6 +109,11 @@
 }
       I reported this to R Core, and it is also fixed (differently) in
       R-3.1.1.
+\item Fixed a problem with treatment of \code{ANYSXP} in specifying
+      types of registered C or Fortran routines, which in particular had
+      prevented the types of \code{str_signif}, used in \code{formatC},
+      from being registered.  (This bug exists in R Core versions of R,
+      at least through R-3.1.1.) 
 }}
 }
 
