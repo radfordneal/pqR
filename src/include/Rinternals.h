@@ -460,7 +460,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
     SEXP _v_ = VECTOR_ELT(_s_,_j_); \
     if (!DUPVE || NAMEDCNT_EQ_0(_s_)) { \
         SET_VECTOR_ELT (_dst_, _i_, _v_); \
-        if (NAMEDCNT_GT_0(_s_)) \
+        if (NAMEDCNT_GT_0(_s_) || NAMEDCNT_GT_0(_v_)) \
             INC_NAMEDCNT_0_AS_1(_v_); \
     } \
     else \
