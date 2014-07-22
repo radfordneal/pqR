@@ -6,6 +6,70 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2014-00-00}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+
+\item This release contains several performance improvements, including some
+      adapted from those in R Core releases after R-2.15.0, as well as
+      some bug fixes.
+}}
+
+  \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
+    These are mostly of interest to developers, not ordinary users.
+    \itemize{
+\item Setting the environment variable \code{R_ABORT} to any non-null
+      string will prevent any attempt to produce a stack trace on a
+      segmentation fault, in favour of instead producing (maybe) an
+      immediate core dump.
+\item The environment variable \code{R_BIT_BUCKET} can be set to
+      a file to receive output that would otherwise go to dev/null
+      when "make" is run.
+      
+}}
+
+  \subsection{DOCUMENTATION UPDATES}{
+    \itemize{
+\item Some incorrect code has been corrected in the "Writing
+      R Extensions" manual, in the "Zero finding"
+      and "Calculating numerical derivatives" sections.  The
+      discussion in "Finding and Setting Variables" has also been
+      clarified to reflect current behaviour.
+\item Fixed an out-of-date comment in the section on helper threads in
+      the "R Internals" manual.
+}}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+    \itemize{
+\item Variable lookup has been sped up a bit (by unrolling the search loop).
+\item Functions in the \code{apply} family have been sped up when they are
+      called with no additional arguments for the function being applied.
+\itme Fixed the peformance problem reported in PR #15798 at r-projejct.org
+      (differently from the R Core fix).
+}}
+
+  \subsection{BUG FIXES}{p
+    \itemize{
+\item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
+      \code{na.exclude} that led to a
+      data frame that should have had zero rows having one row instead..
+      (Also fixed in R-3.1.1, though differently.)
+\item The unary \code{+} operator now converts a logical vector to an
+      integer vector (which follows the corresponding change in 
+      R-3.0.2).
+\itme Fixed a bug in \code{numericDeriv} (see also the documentation
+      update above), which is illustrated by the following
+      code:
+\preformatted{    x <- y <- 10
+    numericDeriv(quote(x+y),c("x","y"))
+}
+      I reported this to R Core, and it is also fixed (differently) in
+      R-3.1.1.
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2014-06-19}{
 
   \subsection{INTRODUCTION}{
