@@ -33,3 +33,5 @@ R_AllocStringBuffer allocates an extra byte for the terminating null
 Be more cautious in SET_VECTOR_ELEMENT_FROM_VECTOR.  Probably was a
 bug there, though can't so far construct an example due to namedcnt getting
 incremented for other reasons.
+
+Added vmaxget/set in numeric_deriv (as in later R Core releases).
