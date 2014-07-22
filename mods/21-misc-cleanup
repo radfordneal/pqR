@@ -29,3 +29,7 @@ Sped up Rf_length for pairlists.
 Use copy_3_strings in cross_colon.  Document before its definition that
 R_AllocStringBuffer allocates an extra byte for the terminating null
 (apparently not realized by someone who updated cross_colon in R-3.0.1).
+
+Be more cautious in SET_VECTOR_ELEMENT_FROM_VECTOR.  Probably was a
+bug there, though can't so far construct an example due to namedcnt getting
+incremented for other reasons.
