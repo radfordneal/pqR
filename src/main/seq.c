@@ -80,7 +80,7 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 		vt = strlen(vj);
                 int len = vs + vt + 1;
 		cbuf = R_AllocStringBuffer(len, &cbuff);
-		(void) copy_3_strings(cbuf,len,vi,":",vj);
+		(void) copy_3_strings(cbuf,len+1,vi,":",vj);
 		SET_STRING_ELT(la, k, mkChar(cbuf));
 		k++;
 	    }
