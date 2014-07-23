@@ -35,3 +35,6 @@ bug there, though can't so far construct an example due to namedcnt getting
 incremented for other reasons.
 
 Added vmaxget/set in numeric_deriv (as in later R Core releases).
+
+Changed how namedcnt is maintained for lists in seq.c, subassign.c,
+and subset.c.
