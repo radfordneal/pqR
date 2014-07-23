@@ -276,50 +276,65 @@ static SEXP rep2(SEXP s, SEXP ncopy)
 
 static SEXP rep3(SEXP s, int ns, int na)
 {
-    int i;
+    int i, j;
     SEXP a, t;
     PROTECT(a = allocVector(TYPEOF(s), na));
 
     switch (TYPEOF(s)) {
     case LGLSXP:
-	for (i = 0; i < na; i++)
-	    LOGICAL(a)[i] = LOGICAL(s)[i % ns];
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
+	    LOGICAL(a)[i] = LOGICAL(s)[j];
+	}
 	break;
     case INTSXP:
-	for (i = 0; i < na; i++)
-	    INTEGER(a)[i] = INTEGER(s)[i % ns];
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
+	    INTEGER(a)[i] = INTEGER(s)[j];
+	}
 	break;
     case REALSXP:
-	for (i = 0; i < na; i++)
-	    REAL(a)[i] = REAL(s)[i % ns];
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
+	    REAL(a)[i] = REAL(s)[j];
+	}
 	break;
     case CPLXSXP:
-	for (i = 0; i < na; i++)
-	    COMPLEX(a)[i] = COMPLEX(s)[i % ns];
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
+	    COMPLEX(a)[i] = COMPLEX(s)[j];
+	}
+	break;
+    case RAWSXP:
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
+	    RAW(a)[i] = RAW(s)[j];
+	}
 	break;
     case STRSXP:
-	for (i = 0; i < na; i++)
-	    SET_STRING_ELT(a, i, STRING_ELT(s, i% ns));
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
+	    SET_STRING_ELT(a, i, STRING_ELT(s, j));
+	}
 	break;
     case LISTSXP:
-	i = 0;
-	for (t = a; t != R_NilValue; t = CDR(t), i++)
-	    SETCAR(t, duplicate(CAR(nthcdr(s, (i % ns)))));
+	for (t = a, j = 0; t != R_NilValue; t = CDR(t), j++) {
+	    if (j >= ns) j = 0;
+	    SETCAR (t, duplicate (CAR (nthcdr (s, j))));
+        }
 	break;
     case VECSXP:
-	for (i = 0; i < na; i++)
+	for (i = 0, j = 0; i < na; i++, j++) {
+	    if (j >= ns) j = 0;
             if (i < ns) {
                 SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, i);
             }
             else {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, i % ns);
-                if (NAMEDCNT_EQ_0(s))
-                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(a,i));
+                SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, j);
+                if (NAMEDCNT_EQ_0(VECTOR_ELT(a,i)))
+                    SET_NAMEDCNT(VECTOR_ELT(a,i),2);
             }
-	break;
-    case RAWSXP:
-	for (i = 0; i < na; i++)
-	    RAW(a)[i] = RAW(s)[i % ns];
+        }
 	break;
     default:
 	UNIMPLEMENTED_TYPE("rep", s);
@@ -602,7 +617,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SEXP xn = getAttrib(x, R_NamesSymbol);
 
-    if (TYPEOF(x) == LISTXP) {
+    if (TYPEOF(x) == LISTSXP) {
         PROTECT(x = coerceVector(x,VECSXP));
         nprotect++;
     }
