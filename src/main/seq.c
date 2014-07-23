@@ -418,9 +418,12 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(each == NA_INTEGER) each = 1;
 
     if(lx == 0) {
+        PROTECT(x = duplicate(x));
+        nprotect++;
+        if (len != NA_INTEGER && len > 0)
+            x = lengthgets(x,len);
 	UNPROTECT(nprotect);
-	if(len == NA_INTEGER) return x;
-	else return lengthgets(duplicate(x), len);
+        return x;
     }
 
     if(len != NA_INTEGER) { /* takes precedence over times */
@@ -448,6 +451,10 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
             len = sum;
 	}
     }
+
+    if(len > 0 && each == 0)
+	errorcall(call, _("invalid '%s' argument"), "each");
+
     PROTECT(ind = allocVector(INTSXP, len));
     nprotect++;
     if(len > 0 && each == 0)
