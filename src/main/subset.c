@@ -863,7 +863,12 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 SET_STRING_ELT(result, i, STRING_ELT(x, ii));
                 break;
             case VECSXP:
-                SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii);
+                if (!DUPVE || NAMEDCNT_EQ_0(x)) {
+                    SET_VECTOR_ELT (result, i, VECTOR_ELT(x, ii));
+                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(result,i));
+                }
+                else
+                    SET_VECTOR_ELT (result, i, duplicate(VECTOR_ELT(x,ii)));
                 break;
             case RAWSXP:
                 RAW(result)[i] = RAW(x)[ii];

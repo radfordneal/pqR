@@ -575,8 +575,8 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             }
             else { /* first time we get here, k is and should be 0 */
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, k);
-                if (NAMEDCNT_EQ_0(y))
-                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
+                if (NAMEDCNT_EQ_0(VECTOR_ELT(x,ii)))
+                    SET_NAMEDCNT(VECTOR_ELT(x,ii),2);
                 if (++k == ny) k = 0;
             }
         }
@@ -819,8 +819,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 }
                 else {
                     SET_VECTOR_ELEMENT_FROM_VECTOR(x, ij, y, k % ny);
-                    if (NAMEDCNT_EQ_0(y))
-                        INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ij));
+                    if (NAMEDCNT_EQ_0(VECTOR_ELT(x,ij)))
+                        SET_NAMEDCNT(VECTOR_ELT(x,ij),2);
                 }
 		k += 1;
 	    }
@@ -984,8 +984,8 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                     rep_assign = 1;
             }
             else {
-                if (NAMEDCNT_EQ_0(y))
-                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(x,ii));
+                if (NAMEDCNT_EQ_0(VECTOR_ELT(x,ii)))
+                    SET_NAMEDCNT(VECTOR_ELT(x,ii),2);
             }
 	    break;
 
