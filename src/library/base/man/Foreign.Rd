@@ -175,6 +175,8 @@
   The set of such functions is currently as 
   follows:\preformatted{  numeric, integer, complex, logical, raw, matrix, array, rep}
 
+  For \code{rep}, this applies only to the defalt method for numeric vectors.
+
   For example, in the following 
   call:\preformatted{  .C("Cfunction", input = x, output = numeric(10), DUP = FALSE)}
 
