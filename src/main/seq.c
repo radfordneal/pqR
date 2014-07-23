@@ -245,8 +245,8 @@ static SEXP rep2(SEXP s, SEXP ncopy)
 	for (i = 0; i < nc; i++) {
 	    for (j = 0; j < INTEGER(t)[i]; j++) {
                 SET_VECTOR_ELEMENT_FROM_VECTOR(a, n, s, i);
-                if (j > 0 && NAMEDCNT_EQ_0(s))
-                    INC_NAMEDCNT_0_AS_1(VECTOR_ELT(a,n));
+                if (j > 0 && NAMEDCNT_EQ_0(VECTOR_ELT(a,n)))
+                    SET_NAMEDCNT(VECTOR_ELT(a,n),2);
                 n += 1;
             }
         }
