@@ -602,7 +602,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SEXP xn = getAttrib(x, R_NamesSymbol);
 
-    if (TYPEOF(x) == LISTXP) {
+    if (TYPEOF(x) == LISTSXP) {
         PROTECT(x = coerceVector(x,VECSXP));
         nprotect++;
     }
