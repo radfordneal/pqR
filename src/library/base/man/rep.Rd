@@ -85,6 +85,12 @@ rep.int(x, times)
   The default method of \code{rep} gives the result names (which will
   almost always contain duplicates) if \code{x} had names, but retains
   no other attributes except for factors.
+
+  The value returned by the default method for \code{rep} is guaranteed 
+  not to be shared.
+  This is visible to the user only in so far as this value is passed
+  as an argument to \code{.Call} or \code{.External}, or to \code{.C} or
+  \code{.Fortran} with \code{DUP=FALSE}.
 }
 \note{
   Function \code{rep.int} is a simple case handled by internal code, and
