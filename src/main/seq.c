@@ -478,7 +478,7 @@ static SEXP rep4(SEXP x, SEXP times, int len, int each, int nt)
 	    }
 	}
 	break;
-    case LISTSXP: ;
+    case LISTSXP: ;  /* not actually used, since will be coerced to VECSXP */
         SEXP t = a;
 	if (nt == 1)
 	    for (i = 0; i < len; i++) {
@@ -524,6 +524,7 @@ done:
    rep(1:3,,8) matches length.out */
 
 /* This is a primitive SPECIALSXP with internal argument matching */
+
 static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x, times = R_NilValue /* -Wall */, ind;
@@ -600,6 +601,11 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("invalid '%s' argument"), "each");
 
     SEXP xn = getAttrib(x, R_NamesSymbol);
+
+    if (TYPEOF(x) == LISTXP) {
+        PROTECT(x = coerceVector(x,VECSXP));
+        nprotect++;
+    }
 
     PROTECT(ans = rep4(x, times, len, each, nt));
     nprotect++;
