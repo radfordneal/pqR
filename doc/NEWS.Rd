@@ -69,6 +69,11 @@
 \item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
       can now be done in a helper thread, in parallel with other computations.
       See \code{help(.C)} for details.
+\item The performance improvements in \code{rep} and \code{rep.int} from
+      R-2.15.2 have been incorporated, though without the changes in 
+      function (pairlists are still allowed).  Performance in pqR is
+      better than in R-2.15.2, due to past improvements in pqR, and additional
+      improvements in this release beyond those in R-2.15.2.
 \item Expressions now sometimes return constant values, that are shared,
       and likely stored in read-only memory.  These constants include 
       \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
