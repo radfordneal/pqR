@@ -204,41 +204,38 @@ static SEXP rep2(SEXP s, SEXP ncopy)
     nc = length(ncopy);
     na = 0;
     for (i = 0; i < nc; i++) {
-	if (INTEGER(t)[i] == NA_INTEGER || INTEGER(t)[i]<0)
+	if (INTEGER(t)[i] == NA_INTEGER || INTEGER(t)[i] < 0)
 	    error(_("invalid '%s' value"), "times");
 	na += INTEGER(t)[i];
     }
 
-    if (isVector(s))
-	a = allocVector(TYPEOF(s), na);
-    else
-	a = allocList(na);
-    PROTECT(a);
+    PROTECT(a = allocVector(TYPEOF(s), na));
+
     n = 0;
     switch (TYPEOF(s)) {
     case LGLSXP:
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
+	    for (j = 0; j < INTEGER(t)[i]; j++)
 		LOGICAL(a)[n++] = LOGICAL(s)[i];
 	break;
     case INTSXP:
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
+	    for (j = 0; j < INTEGER(t)[i]; j++)
 		INTEGER(a)[n++] = INTEGER(s)[i];
 	break;
     case REALSXP:
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
+	    for (j = 0; j < INTEGER(t)[i]; j++)
 		REAL(a)[n++] = REAL(s)[i];
 	break;
     case CPLXSXP:
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
+	    for (j = 0; j < INTEGER(t)[i]; j++)
 		COMPLEX(a)[n++] = COMPLEX(s)[i];
 	break;
     case STRSXP:
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
+	    for (j = 0; j < INTEGER(t)[i]; j++)
 		SET_STRING_ELT(a, n++, STRING_ELT(s, i));
 	break;
     case VECSXP:
@@ -255,78 +252,29 @@ static SEXP rep2(SEXP s, SEXP ncopy)
     case LISTSXP:
 	u = a;
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++) {
+	    for (j = 0; j < INTEGER(t)[i]; j++) {
 		SETCAR(u, duplicate(CAR(nthcdr(s, i))));
 		u = CDR(u);
 	    }
 	break;
     case RAWSXP:
 	for (i = 0; i < nc; i++)
-	    for (j = 0; j < (INTEGER(t)[i]); j++)
+	    for (j = 0; j < INTEGER(t)[i]; j++)
 		RAW(a)[n++] = RAW(s)[i];
 	break;
     default:
 	UNIMPLEMENTED_TYPE("rep2", s);
     }
-#ifdef _S4_rep_keepClass
-    if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
-	SET_S4_OBJECT(a);
-    }
-#endif
-    if (inherits(s, "factor")) {
-	SEXP tmp;
-	if(inherits(s, "ordered")) {
-	    PROTECT(tmp = allocVector(STRSXP, 2));
-	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
-	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
-	}
-	else {
-	    PROTECT(tmp = mkString("factor"));
-	}
-	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1);
-	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
-    }
     UNPROTECT(2);
     return a;
 }
 
-/* called in do_rep_int() only */
-static SEXP rep1(SEXP s, SEXP ncopy)
+/* rep.int() with scalar 'times', rep(x, length.out=) */
+static SEXP rep3(SEXP s, int ns, int na)
 {
-    int i, ns, na, nc;
+    int i;
     SEXP a, t;
-
-    if (!isVector(ncopy))
-	error(_("incorrect type for second argument"));
-
-    if (!isVector(s) && (!isList(s)))
-	error(_("attempt to replicate non-vector"));
-
-    if ((length(ncopy) == length(s)))
-	return rep2(s, ncopy);
-
-    if ((length(ncopy) != 1))
-	error(_("invalid '%s' value"), "times");
-
-    if ((nc = asInteger(ncopy)) == NA_INTEGER || nc < 0)/* nc = 0 ok */
-	error(_("invalid '%s' value"), "times");
-
-    ns = length(s);
-    na = nc * ns;
-    if (isVector(s))
-	a = allocVector(TYPEOF(s), na);
-    else
-	a = allocList(na);
-    PROTECT(a);
-
-#ifdef _S4_rep_keepClass
-    if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
-	SET_S4_OBJECT(a);
-    }
-#endif
+    PROTECT(a = allocVector(TYPEOF(s), na));
 
     switch (TYPEOF(s)) {
     case LGLSXP:
@@ -372,20 +320,7 @@ static SEXP rep1(SEXP s, SEXP ncopy)
     default:
 	UNIMPLEMENTED_TYPE("rep", s);
     }
-    if (inherits(s, "factor")) {
-	SEXP tmp;
-	if(inherits(s, "ordered")) {
-	    PROTECT(tmp = allocVector(STRSXP, 2));
-	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
-	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
-	}
-	else {
-	    PROTECT(tmp = mkString("factor"));
-	}
-	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1);
-	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
-    }
+
     UNPROTECT(1);
     return a;
 }
@@ -393,7 +328,51 @@ static SEXP rep1(SEXP s, SEXP ncopy)
 static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    return rep1(CAR(args), CADR(args));
+
+    SEXP s = CAR(args), ncopy = CADR(args), a;
+
+    if (!isVector(ncopy))
+	error(_("incorrect type for second argument"));
+
+    if (!isVector(s) && !isList(s))
+	error(_("attempt to replicate non-vector"));
+
+    int nc = length(ncopy); // might be 0
+    int ns = length(s);
+
+    if (nc == ns)
+	PROTECT(a = rep2(s, ncopy));
+    else {
+	if (nc != 1) error(_("invalid '%s' value"), "times");
+        int ncv = asInteger(ncopy);
+	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
+	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
+	PROTECT(a = rep3(s, ns, ncv * ns));
+    }
+
+#ifdef _S4_rep_keepClass
+    if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
+	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
+	SET_S4_OBJECT(a);
+    }
+#endif
+
+    if (inherits(s, "factor")) {
+	SEXP tmp;
+	if(inherits(s, "ordered")) {
+	    PROTECT(tmp = allocVector(STRSXP, 2));
+	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
+	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
+	} 
+        else 
+            PROTECT(tmp = mkString("factor"));
+	setAttrib(a, R_ClassSymbol, tmp);
+	UNPROTECT(1);
+	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
+    }
+
+    UNPROTECT(1);
+    return a;
 }
 
 /* We are careful to use evalListKeepMissing here (inside
