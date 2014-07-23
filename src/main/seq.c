@@ -194,6 +194,9 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return do_fast_colon (call, op, CAR(args), CADR(args), rho, variant);
 }
 
+/* Repeat each element of s by the number of times given specified in ncopy
+   (which must be the same length as s). */
+
 static SEXP rep2(SEXP s, SEXP ncopy)
 {
     int i, na, nc, n, j;
@@ -269,7 +272,8 @@ static SEXP rep2(SEXP s, SEXP ncopy)
     return a;
 }
 
-/* rep.int() with scalar 'times', rep(x, length.out=) */
+/* Repeat s, of length ns, to be of length na. */
+
 static SEXP rep3(SEXP s, int ns, int na)
 {
     int i;
@@ -375,11 +379,152 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     return a;
 }
 
+/* rep(), allowing for both times and each */
+static SEXP rep4(SEXP x, SEXP times, int len, int each, int nt)
+{
+    SEXP a;
+    int lx = length(x);
+    int i, j, k, k2, k3, sum;
+
+    /* faster code for common special case */
+    if (each == 1 && nt == 1)
+        return rep3(x, lx, len);
+
+    PROTECT(a = allocVector(TYPEOF(x), len));
+
+    switch (TYPEOF(x)) {
+    case LGLSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		LOGICAL(a)[i] = LOGICAL(x)[(i/each) % lx];
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    LOGICAL(a)[k2++] = LOGICAL(x)[i];
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    case INTSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		INTEGER(a)[i] = INTEGER(x)[(i/each) % lx];
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    INTEGER(a)[k2++] = INTEGER(x)[i];
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    case REALSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		REAL(a)[i] = REAL(x)[(i/each) % lx];
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    REAL(a)[k2++] = REAL(x)[i];
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    case CPLXSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		COMPLEX(a)[i] = COMPLEX(x)[(i/each) % lx];
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    COMPLEX(a)[k2++] = COMPLEX(x)[i];
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    case STRSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		SET_STRING_ELT(a, i, STRING_ELT(x, (i/each) % lx));
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    SET_STRING_ELT(a, k2++, STRING_ELT(x, i));
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    case VECSXP:
+    case EXPRSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		SET_VECTOR_ELT(a, i, VECTOR_ELT(x, (i/each) % lx));
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    SET_VECTOR_ELT(a, k2++, VECTOR_ELT(x, i));
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    case LISTSXP: ;  /* not actually used, since will be coerced to VECSXP */
+        SEXP t = a;
+	if (nt == 1)
+	    for (i = 0; i < len; i++) {
+                SETCAR (t, duplicate (CAR (nthcdr (x, (i/each)%lx))));
+                t = CDR(t);
+            }
+	else {
+	    for (i = 0, k = 0; i < lx; i++) {
+		for (j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for (k3 = 0; k3 < sum; k3++) {
+                    SETCAR (t, duplicate (CAR (nthcdr(x,i))));
+                    t = CDR(t);
+		    if (t == R_NilValue) goto done;
+		}
+	    }
+	}
+	break;
+    case RAWSXP:
+	if(nt == 1)
+	    for(i = 0; i < len; i++)
+		RAW(a)[i] = RAW(x)[(i/each) % lx];
+	else {
+	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
+		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
+		for(k3 = 0; k3 < sum; k3++) {
+		    RAW(a)[k2++] = RAW(x)[i];
+		    if(k2 == len) goto done;
+		}
+	    }
+	}
+	break;
+    default:
+	UNIMPLEMENTED_TYPE("rep", x);
+    }
+done:
+    UNPROTECT(1);
+    return a;
+}
+
+
 /* We are careful to use evalListKeepMissing here (inside
    DispatchOrEval) to avoid dropping missing arguments so e.g.
    rep(1:3,,8) matches length.out */
 
 /* This is a primitive SPECIALSXP with internal argument matching */
+
 static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x, times = R_NilValue /* -Wall */, ind;
@@ -418,9 +563,12 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(each == NA_INTEGER) each = 1;
 
     if(lx == 0) {
+        PROTECT(x = duplicate(x));
+        nprotect++;
+        if (len != NA_INTEGER && len > 0)
+            x = lengthgets(x,len);
 	UNPROTECT(nprotect);
-	if(len == NA_INTEGER) return x;
-	else return lengthgets(duplicate(x), len);
+        return x;
     }
 
     if(len != NA_INTEGER) { /* takes precedence over times */
@@ -448,38 +596,31 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
             len = sum;
 	}
     }
-    PROTECT(ind = allocVector(INTSXP, len));
-    nprotect++;
+
     if(len > 0 && each == 0)
 	errorcall(call, _("invalid '%s' argument"), "each");
-    if(nt == 1)
-	for(i = 0; i < len; i++) INTEGER(ind)[i] = 1 + ((i/each) % lx);
-    else {
-	int j, k, k2, k3;
-	for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-	    int sum = 0;
-	    for(j = 0; j < each; j++) sum += INTEGER(times)[k++];
-	    for(k3 = 0; k3 < sum; k3++) {
-		INTEGER(ind)[k2++] = i+1;
-		if(k2 == len) goto done;
-	    }
-	}
+
+    SEXP xn = getAttrib(x, R_NamesSymbol);
+
+    if (TYPEOF(x) == LISTXP) {
+        PROTECT(x = coerceVector(x,VECSXP));
+        nprotect++;
     }
 
-done:
-    ans = do_subset_dflt(R_NilValue, R_NilValue, list2(x, ind), rho);
+    PROTECT(ans = rep4(x, times, len, each, nt));
+    nprotect++;
+
+    if (length(xn) > 0)
+	setAttrib(ans, R_NamesSymbol, rep4(xn, times, len, each, nt));
+
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
 	setAttrib(ans, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
 	SET_S4_OBJECT(ans);
     }
 #endif
-    /* 1D arrays get dimensions preserved by do_subset_dflt, so get rid
-       of them here. */
-    setAttrib(ans, R_DimSymbol, R_NilValue);
+
     UNPROTECT(nprotect);
-    if (NAMEDCNT_GT_0(ans)) /* Guarantee value of "rep" isn't shared */
-        ans = duplicate(ans);
     return ans;
 }
 
