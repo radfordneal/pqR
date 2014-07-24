@@ -177,25 +177,27 @@ static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP s;
+    SEXP fun, s;
 
     checkArity(op,args);
-    if (TYPEOF(CAR(args)) == STRSXP && length(CAR(args))==1) {
-	PROTECT(s = install(translateChar(STRING_ELT(CAR(args), 0))));
+    fun = CAR(args);
+
+    if (TYPEOF(fun) == STRSXP && length(fun)==1) {
+	PROTECT(s = install(translateChar(STRING_ELT(fun, 0))));
 	SETCAR(args, findFun(s, rho));
 	UNPROTECT(1);
     }
 
-    if (TYPEOF(CAR(args)) == CLOSXP) {
+    if (TYPEOF(fun) == CLOSXP) {
 	s = allocSExp(CLOSXP);
-	SET_FORMALS(s, FORMALS(CAR(args)));
+	SET_FORMALS(s, FORMALS(fun));
 	SET_BODY(s, R_NilValue);
 	SET_CLOENV(s, R_GlobalEnv);
 	return s;
     }
 
-    if (TYPEOF(CAR(args)) == BUILTINSXP || TYPEOF(CAR(args)) == SPECIALSXP) {
-	char *nm = PRIMNAME(CAR(args));
+    if (TYPEOF(fun) == BUILTINSXP || TYPEOF(fun) == SPECIALSXP) {
+	char *nm = PRIMNAME(fun);
 	SEXP env, s2;
 	PROTECT_INDEX xp;
 
@@ -232,10 +234,29 @@ static SEXP do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return duplicate(FORMALS(CAR(args)));
-    else
-	return R_NilValue;
+
+    SEXP fun = CAR(args);
+
+    if (TYPEOF(fun) == BUILTINSXP || TYPEOF(fun) == SPECIALSXP) {
+        char *nm = PRIMNAME(fun);
+        SEXP env, nmi, s;
+        PROTECT_INDEX xp;
+        PROTECT_WITH_INDEX(
+          env = findVarInFrame3(R_BaseEnv, install(".ArgsEnv"), TRUE), &xp);
+        if (TYPEOF(env)==PROMSXP) REPROTECT(env = eval(env,R_BaseEnv), xp);
+        PROTECT(nmi = install(nm));
+        fun = findVarInFrame3(env, nmi, TRUE);
+        if (fun == R_UnboundValue) {
+            REPROTECT(
+              env = findVarInFrame3(R_BaseEnv,install(".GenericArgsEnv"), TRUE),
+              xp);
+            if (TYPEOF(env)==PROMSXP) REPROTECT(env = eval(env,R_BaseEnv), xp);
+            fun = findVarInFrame3(env, nmi, TRUE);
+        }
+        UNPROTECT(2);
+    }
+
+    return TYPEOF(fun) == CLOSXP ? duplicate(FORMALS(fun)) : R_NilValue;
 }
 
 static SEXP do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
