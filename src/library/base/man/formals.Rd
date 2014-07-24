@@ -23,15 +23,17 @@ formals(fun, envir = environment(fun)) <- value
   
   For the first form, \code{fun} can also be a character string naming
   the function to be manipulated, which is searched for from the parent
-  frame.  If it is not specified, the function calling \code{formals} is
-  used.
+  frame.  If \code{fun} is not specified, the function calling \code{formals} 
+  is used.
 
-  Only \emph{closures} have formals, not primitive functions.
+  Only \emph{closures} can have their formals set, but primitive functions
+  can have their putative formals (as will be printed, or returned by
+  \code{args}) returned with \code{formals}.
 }
 \value{
   \code{formals} returns the formal argument list of the function
   specified, as a \code{\link{pairlist}}, or \code{NULL} for a
-  non-function or primitive.
+  non-function.
 
   The replacement form sets the formals of a function to the
   list/pairlist on the right hand side, and (potentially) resets the
