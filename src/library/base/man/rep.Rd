@@ -22,7 +22,7 @@
 \usage{
 rep(x, \dots)
 
-rep.int(x, times)
+rep.int(x, times=1)
 }
 \arguments{
   \item{x}{a vector (of any mode including a list) or a pairlist or a
@@ -49,11 +49,11 @@ rep.int(x, times)
 }
 
 \details{
-  The default behaviour is as if the call was \code{rep(x, times=1,
-    length.out=NA, each=1)}.  Normally just one of the additional
-  arguments is specified, but if \code{each} is specified with either
-  of the other two, its replication is performed first, and then that
-  implied by \code{times} or \code{length.out}.
+  The default behaviour of \code{rep} is as if the call was 
+  \code{rep(x, times=1, length.out=NA, each=1)}.  Normally just one of 
+  the additional arguments is specified, but if \code{each} is specified 
+  with either of the other two, its replication is performed first, and then 
+  that implied by \code{times} or \code{length.out}.
 
   If \code{times} consists of a single integer, the result consists of
   the whole input repeated this many times.  If \code{times} is a

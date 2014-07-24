@@ -516,8 +516,10 @@ static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
     int ns = length(s);
     int nc = ncopy==R_MissingArg ? 1 : LENGTH(ncopy);
 
-    if (nc == 1) {	
-        int ncv = ncopy==R_MissingArg ? 1 : asInteger(ncopy);
+    if (nc == 1) {
+        int ncv = ncopy==R_MissingArg ? 1 
+                : isList(ncopy) ? asInteger(coerceVector(ncopy,INTSXP))
+                : asInteger(ncopy);
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
 	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
         na = ncv * ns;
