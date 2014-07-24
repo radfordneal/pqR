@@ -53,7 +53,7 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(math1);
     TASK_NAME(sum_math1);
     /* i */
-    /* j */
+    TASK_NAME(rep);
     /* k */
     TASK_NAME(fill_zeros);
     TASK_NAME(matprod_vec_vec);
