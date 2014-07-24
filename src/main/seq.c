@@ -518,7 +518,7 @@ static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
 
     if (nc == 1) {
         int ncv = ncopy==R_MissingArg ? 1 
-                : isList(ncopy) ? asInteger(coerceVector(ncopy,INTSXP))
+                : isVectorList(ncopy) ? asInteger(coerceVector(ncopy,INTSXP))
                 : asInteger(ncopy);
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
 	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
