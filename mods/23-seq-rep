@@ -5,4 +5,7 @@ Adds checks to seq.int for from, to, by being of length 1 (as in
 R-2.15.1, but more cleanly).
 
 Changed implementation of rep.int to be closer to that of R-2.15.2
-(same as R-2.15.3).
+(same as R-2.15.3).  But further mods, with further performance
+improvements, eliminate just about any resemblence to the code from
+R-2.15.2.
+
