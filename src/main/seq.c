@@ -857,8 +857,8 @@ done:
 
 static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP a, ans, times = R_NilValue /* -Wall */;
-    int i, lx, len, each, nt, nprotect = 0;
+    SEXP a, ans, times;
+    int i, len, each, nprotect = 0;
     static char *ap[5] = { "x", "times", "length.out", "each", "..." };
 
     if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
@@ -888,7 +888,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isVector(x) && !isList(x))
 	error(_("attempt to replicate non-vector"));
     
-    lx = length(x);
+    int lx = length(x);
 
     len = asInteger(length_arg);
     if(len != NA_INTEGER && len < 0)
@@ -897,14 +897,16 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	warningcall(call, _("first element used of '%s' argument"), 
 		    "length.out");
 
+    int le = length(each_arg);
     each = asInteger(each_arg);
-    if(each != NA_INTEGER && each < 0)
+    if (each == NA_INTEGER) 
+        each = 1;
+    if (le == 0 || each < 0)
 	errorcall(call, _("invalid '%s' argument"), "each");
-    if(length(each_arg) != 1)
+    if (le != 1)
 	warningcall(call, _("first element used of '%s' argument"), "each");
-    if(each == NA_INTEGER) each = 1;
 
-    if(lx == 0) {
+    if (lx == 0) {
         PROTECT(x = duplicate(x));
         nprotect++;
         if (len != NA_INTEGER && len > 0)
@@ -913,13 +915,13 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
         return x;
     }
 
-    if(len != NA_INTEGER) { /* takes precedence over times */
+    if (len != NA_INTEGER) { /* takes precedence over times */
         if(len > 0 && each == 0)
             errorcall(call, _("invalid '%s' argument"), "each");
-	nt = 1;
+        times = NULL;
     } 
     else {  /* len == NA_INTEGER */
-	int it, sum = 0;
+	int nt;
 	if(times_arg == R_MissingArg) 
             PROTECT(times = ScalarIntegerMaybeConst(1));
 	else 
@@ -927,21 +929,24 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	nprotect++;
 	nt = LENGTH(times);
 	if (nt == 1) {
-	    it = INTEGER(times)[0];
+	    int it = INTEGER(times)[0];
 	    if (it == NA_INTEGER || it < 0 || (double) lx * it * each > INT_MAX)
 		errorcall(call, _("invalid '%s' argument"), "times");
 	    len = lx * it * each;
+            times = NULL;
 	} 
         else {
             if (nt != (double) lx * each)
                 errorcall(call, _("invalid '%s' argument"), "times");
+            len = 0;
 	    for(i = 0; i < nt; i++) {
-		it = INTEGER(times)[i];
-		if (it == NA_INTEGER || it < 0)
+		int it = INTEGER(times)[i];
+		if (it == NA_INTEGER || it < 0 || (double)len + it > INT_MAX)
 		    errorcall(call, _("invalid '%s' argument"), "times");
-		sum += it;
+		len += it;
 	    }
-            len = sum;
+            /* Here, convert calls like rep(c(T,F),each=2,times=c(1,3,5,2)) 
+               to rep(c(T,F),each=1,times=c(4,7)) */
             if (each != 1) {
                 SEXP old_times = times;
                 int j;
@@ -965,13 +970,18 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
         nprotect++;
     }
 
-    /* PROTECT(a = allocVector(TYPEOF(x), len)); */
+    SEXP each_times = each != 1 ? ScalarIntegerMaybeConst(each) : times;
 
-    PROTECT(a = rep4(x, times, len, each, nt));
+    PROTECT(a = allocVector(TYPEOF(x), len));
     nprotect++;
 
-    if (length(xn) > 0)
-	setAttrib(a, R_NamesSymbol, rep4(xn, times, len, each, nt));
+    task_rep (0, a, x, each_times);
+
+    if (length(xn) > 0) {
+        SEXP an = allocVector (TYPEOF(xn), len);
+        task_rep (0, an, xn, each_times);
+        setAttrib(a, R_NamesSymbol, an);
+    }
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
