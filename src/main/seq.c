@@ -501,23 +501,29 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     }
 }
 
-static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
+                         int variant)
 {
-    checkArity(op, args);
-
-    SEXP s = CAR(args), ncopy = CADR(args), a;
+    SEXP a;
     int na;
 
-    if (!isVector(ncopy))
-	error(_("incorrect type for second argument"));
+    if (ncopy != R_MissingArg && !isVector(ncopy))
+        error(_("incorrect type for second argument"));
 
     if (!isVector(s) && TYPEOF(s) != LISTSXP)
 	error(_("attempt to replicate non-vector"));
 
     int ns = length(s);
-    int nc = length(ncopy);
+    int nc = ncopy==R_MissingArg ? 1 : LENGTH(ncopy);
 
-    if (nc == ns) {
+    if (nc == 1) {	
+        int ncv = ncopy==R_MissingArg ? 1 : asInteger(ncopy);
+	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
+	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
+        na = ncv * ns;
+        ncopy = NULL;
+    }
+    else if (nc == ns) {
         PROTECT(ncopy = coerceVector(ncopy, INTSXP));
         if (TYPEOF(ncopy) != INTSXP || LENGTH(ncopy) != nc) abort();
         na = 0;
@@ -529,14 +535,8 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
             na += INTEGER(ncopy)[i];
         }
     }
-    else {	
-	if (nc != 1) error(_("invalid '%s' value"), "times");
-        int ncv = asInteger(ncopy);
-	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
-	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
-        na = ncv * ns;
-        ncopy = NULL;
-    }
+    else 
+        error(_("invalid '%s' value"), "times");
 
     PROTECT(a = allocVector(TYPEOF(s), na));
 
@@ -559,12 +559,21 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
         else 
             PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1);
+	UNPROTECT(1 + (ncopy!=NULL));
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
     UNPROTECT(1 + (ncopy!=NULL));
     return a;
+}
+
+static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    static char *ap[2] = { "x", "times" };
+    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+    SEXP ans = do_fast_rep (call, op, CAR(args), CADR(args), rho, 0);
+    UNPROTECT(1);
+    return ans;
 }
 
 /* We are careful to use evalListKeepMissing here (inside
@@ -963,7 +972,7 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
-{"rep.int",	do_rep_int,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep.int",	do_rep_int,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -979,5 +988,6 @@ attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 
 { do_colon,	do_fast_colon,	-1,		2,	0, 0,  0, 0 },
 { do_seq_len,	do_fast_seq_len,-1,		1,	0, 0,  0, 0 },
+{ do_rep_int,	do_fast_rep,	-1,		2,	0, 0,  0, 0 },
 { 0,		0,		0,		0,	0, 0,  0, 0 }
 };
