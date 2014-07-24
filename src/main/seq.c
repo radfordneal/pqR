@@ -207,8 +207,11 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 {
-    int na = LENGTH(a), ns = LENGTH(s);
+    int na = length(a), ns = length(s);
     int i, j, k;
+    SEXP u;
+
+    if (TYPEOF(a) != TYPEOF(s) || t != NULL && TYPEOF(t) != INTSXP) abort();
 
     if (na <= 0) return;
 
@@ -248,7 +251,8 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
             }
             case LISTSXP: {
                 SEXP v = CAR(s);
-                for (t = a; t != R_NilValue; t = CDR(t)) SETCAR(t,duplicate(v));
+                for (u = a; u != R_NilValue; u = CDR(u)) 
+                    SETCAR (u, duplicate(v));
                 break;
             }
             case EXPRSXP:
@@ -304,9 +308,9 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                 }
                 break;
             case LISTSXP:
-                for (t = a, j = 0; t != R_NilValue; t = CDR(t), j++) {
+                for (u = a, j = 0; u != R_NilValue; u = CDR(u), j++) {
                     if (j >= ns) j = 0;
-                    SETCAR (t, duplicate (CAR (nthcdr (s, j))));
+                    SETCAR (u, duplicate (CAR (nthcdr (s, j))));
                 }
                 break;
             case EXPRSXP:
@@ -339,7 +343,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     int v = LOGICAL(s)[j];
                     for (k = each; k > 0; k--) {
                         LOGICAL(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case INTSXP:
@@ -348,7 +352,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     int v = INTEGER(s)[j];
                     for (k = each; k > 0; k--) {
                         INTEGER(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case REALSXP:
@@ -357,7 +361,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     double v = REAL(s)[j];
                     for (k = each; k > 0; k--) {
                         REAL(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case CPLXSXP:
@@ -366,7 +370,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     Rcomplex v = COMPLEX(s)[j];
                     for (k = each; k > 0; k--) {
                         COMPLEX(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case RAWSXP:
@@ -375,7 +379,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     Rbyte v = RAW(s)[j];
                     for (k = each; k > 0; k--) {
                         RAW(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case STRSXP:
@@ -384,23 +388,28 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     SEXP v = STRING_ELT (s, j);
                     for (k = each; k > 0; k--) {
                         SET_STRING_ELT (a, i, v);
-                        if (i++ == na) return;
+                        if (++i == na) return;
+                    }
+                }
+            case LISTSXP:
+                for (u = a, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    SEXP v = CAR (nthcdr (s, j));
+                    for (k = each; k > 0; k--) {
+                        SETCAR (u, duplicate(v));
+                        u = CDR(u);
+                        if (u == R_NilValue) return;
                     }
                 }
             case EXPRSXP:
             case VECSXP:
                 for (i = 0, j = 0; ; j++) {
                     if (j >= ns) j = 0;
-                    k = each;
-                    if (i < ns) {
-                        SET_VECTOR_ELEMENT_FROM_VECTOR (a, i, s, j);
-                        k -= 1;
-                    }
                     SEXP v = VECTOR_ELT (s, j);
-                    for ( ; k > 0; k--) {
+                    for (k = each; k > 0; k--) {
                         SET_VECTOR_ELT (a, i, v);
                         INC_NAMEDCNT_0_AS_1 (v);
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             default: abort();
@@ -409,6 +418,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
         else {
             /* Repeat elements varying numbers of times in each cycle. */
             int *eachv = INTEGER(t);
+            if (LENGTH(t) != ns) abort();
             switch (TYPEOF(s)) {
             case LGLSXP:
                 for (i = 0, j = 0; ; j++) {
@@ -416,7 +426,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     int v = LOGICAL(s)[j];
                     for (k = eachv[j]; k > 0; k--) {
                         LOGICAL(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case INTSXP:
@@ -425,7 +435,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     int v = INTEGER(s)[j];
                     for (k = eachv[j]; k > 0; k--) {
                         INTEGER(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case REALSXP:
@@ -434,7 +444,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     double v = REAL(s)[j];
                     for (k = eachv[j]; k > 0; k--) {
                         REAL(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case CPLXSXP:
@@ -443,7 +453,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     Rcomplex v = COMPLEX(s)[j];
                     for (k = eachv[j]; k > 0; k--) {
                         COMPLEX(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case RAWSXP:
@@ -452,7 +462,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     Rbyte v = RAW(s)[j];
                     for (k = eachv[j]; k > 0; k--) {
                         RAW(a)[i] = v;
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             case STRSXP:
@@ -461,25 +471,28 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                     SEXP v = STRING_ELT (s, j);
                     for (k = eachv[j]; k > 0; k--) {
                         SET_STRING_ELT (a, i, v);
-                        if (i++ == na) return;
+                        if (++i == na) return;
+                    }
+                }
+            case LISTSXP:
+                for (u = a, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    SEXP v = CAR (nthcdr (s, j));
+                    for (k = eachv[j]; k > 0; k--) {
+                        SETCAR (u, duplicate(v));
+                        u = CDR(u);
+                        if (u == R_NilValue) return;
                     }
                 }
             case EXPRSXP:
             case VECSXP:
                 for (i = 0, j = 0; ; j++) {
                     if (j >= ns) j = 0;
-                    k = eachv[j];
-                    if (k == 0) 
-                        continue;
-                    if (i < ns) {
-                        SET_VECTOR_ELEMENT_FROM_VECTOR (a, i, s, j);
-                        k -= 1;
-                    }
                     SEXP v = VECTOR_ELT (s, j);
-                    for ( ; k > 0; k--) {
+                    for (k = eachv[j]; k > 0; k--) {
                         SET_VECTOR_ELT (a, i, v);
                         INC_NAMEDCNT_0_AS_1 (v);
-                        if (i++ == na) return;
+                        if (++i == na) return;
                     }
                 }
             default: abort();
@@ -635,35 +648,41 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     SEXP s = CAR(args), ncopy = CADR(args), a;
+    int na;
 
     if (!isVector(ncopy))
 	error(_("incorrect type for second argument"));
 
-    if (!isVector(s) && !isList(s))
+    if (!isVector(s) && TYPEOF(s) != LISTSXP)
 	error(_("attempt to replicate non-vector"));
 
-    int nc = length(ncopy); // might be 0
     int ns = length(s);
+    int nc = length(ncopy);
 
     if (nc == ns) {
         PROTECT(ncopy = coerceVector(ncopy, INTSXP));
-        int na = 0;
+        if (TYPEOF(ncopy) != INTSXP || LENGTH(ncopy) != nc) abort();
+        na = 0;
         for (int i = 0; i < nc; i++) {
 	    if (INTEGER(ncopy)[i] == NA_INTEGER || INTEGER(ncopy)[i] < 0)
 	        error(_("invalid '%s' value"), "times");
+            if ((double)na + INTEGER(ncopy)[i] > INT_MAX)
+                error(_("invalid '%s' value"), "times");
             na += INTEGER(ncopy)[i];
         }
-	a = rep2(s, ncopy, na);
-        UNPROTECT(1);
-        PROTECT(a);
     }
     else {	
 	if (nc != 1) error(_("invalid '%s' value"), "times");
         int ncv = asInteger(ncopy);
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
 	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
-	PROTECT(a = rep3(s, ns, ncv * ns));
+        na = ncv * ns;
+        ncopy = NULL;
     }
+
+    PROTECT(a = allocVector(TYPEOF(s), na));
+
+    task_rep (0, a, s, ncopy);
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
@@ -686,7 +705,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
-    UNPROTECT(1);
+    UNPROTECT(1 + (ncopy!=NULL));
     return a;
 }
 
@@ -910,6 +929,9 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(len > 0 && each == 0)
 	errorcall(call, _("invalid '%s' argument"), "each");
+
+    if (!isVector(x) && !isList(x))
+	error(_("attempt to replicate non-vector"));
 
     SEXP xn = getAttrib(x, R_NamesSymbol);
 
