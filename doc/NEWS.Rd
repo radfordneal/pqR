@@ -21,7 +21,13 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
-
+\item The formal arguments of primitive functions will now be returned
+      by \code{formals}, as they are shown when printed or with \code{args}.
+      In R Core releases (at least to R-3.1.1), the result of \code{formals}
+      for a primitive is \code{NULL}.  This change allows some
+      existing functions (eg, \code{rep.int}) to be made primitive without
+      breaking code that relies on getting their formal arguments with
+      \code{formals}.
 \item The unary \code{+} operator now converts a logical vector to an
       integer vector. This follows a corresponding change in R-3.0.2.
 \item Support for "converters" for use with \code{.C} has been dropped,
@@ -69,11 +75,14 @@
 \item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
       can now be done in a helper thread, in parallel with other computations.
       See \code{help(.C)} for details.
-\item The performance improvements in \code{rep} and \code{rep.int} from
-      R-2.15.2 have been incorporated, though without the changes in 
-      function (pairlists are still allowed).  Performance in pqR is
-      better than in R-2.15.2, due to past improvements in pqR, and additional
-      improvements in this release beyond those in R-2.15.2.
+\item The performance of \code{rep} and \code{rep.int} (which is now primitive)
+      is much improved.
+      These improvements (and improvements previously made in pqR) go beyond 
+      those that were made in R-2.15.2, so these functions are often 
+      substantially faster in pqR than in R-2.15.2, or later R Core versions
+      to at least R-3.1.1, for both long and short vectors.  (Also,
+      the changes in functionality made in R-2.15.2 have not been made in pqR;
+      in particular, pairlists are still allowed.)
 \item Expressions now sometimes return constant values, that are shared,
       and likely stored in read-only memory.  These constants include 
       \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
