@@ -37,6 +37,8 @@
 #include <float.h>  /* for DBL_EPSILON */
 #include <Rmath.h>
 
+#include <helpers/helpers-app.h>
+
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
@@ -194,26 +196,310 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return do_fast_colon (call, op, CAR(args), CADR(args), rho, variant);
 }
 
-/* Repeat each element of s by the number of times given specified in ncopy
-   (which must be the same length as s). */
+/* Task procedure for rep and rep.int.  Repeats first input to the length
+   of the output.  If the second input is null, repeats each element once
+   in each cycle; if it is scalar, repeats each element that many times
+   each cycle; if it is a vector (same length as first input), it repeats 
+   each element the specified number of times each cycle. 
+  
+   Should be master-only if input is not numeric.  Does not pipeline input
+   or output. */
 
-static SEXP rep2(SEXP s, SEXP ncopy)
+void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 {
-    int i, na, nc, n, j;
-    SEXP a, t, u;
+    int na = LENGTH(a), ns = LENGTH(s);
+    int i, j, k;
 
-    PROTECT(t = coerceVector(ncopy, INTSXP));
+    if (na <= 0) return;
 
-    nc = length(ncopy);
-    na = 0;
-    for (i = 0; i < nc; i++) {
-	if (INTEGER(t)[i] == NA_INTEGER || INTEGER(t)[i] < 0)
-	    error(_("invalid '%s' value"), "times");
-	na += INTEGER(t)[i];
+    if (t == NULL || LENGTH(t) == 1 && INTEGER(t)[0] == 1) {
+        if (ns == 1) {
+            /* Repeat of a single element na times. */
+            switch (TYPEOF(s)) {
+            case LGLSXP: {
+                int v = LOGICAL(s)[0];
+                for (i = 0; i < na; i++) LOGICAL(a)[i] = v;
+                break;
+            }
+            case INTSXP: {
+                int v = INTEGER(s)[0];
+                for (i = 0; i < na; i++) INTEGER(a)[i] = v;
+                break;
+            }
+            case REALSXP: {
+                double v = REAL(s)[0];
+                for (i = 0; i < na; i++) REAL(a)[i] = v;
+                break;
+            }
+            case CPLXSXP: {
+                Rcomplex v = COMPLEX(s)[0];
+                for (i = 0; i < na; i++) COMPLEX(a)[i] = v;
+                break;
+            }
+            case RAWSXP: {
+                Rbyte v = RAW(s)[0];
+                for (i = 0; i < na; i++) RAW(a)[i] = v;
+                break;
+            }
+            case STRSXP: {
+                SEXP v = STRING_ELT(s,0);
+                for (i = 0; i < na; i++) SET_STRING_ELT (a, i, v);
+                break;
+            }
+            case LISTSXP: {
+                SEXP v = CAR(s);
+                for (t = a; t != R_NilValue; t = CDR(t)) SETCAR(t,duplicate(v));
+                break;
+            }
+            case EXPRSXP:
+            case VECSXP: {
+                SEXP v = VECTOR_ELT (s, 0);
+                SET_VECTOR_ELEMENT_FROM_VECTOR (a, 0, s, 0);
+                for (i = 1; i < na; i++) {
+                    SET_VECTOR_ELT (a, i, v);
+                    INC_NAMEDCNT_0_AS_1 (v);
+                }
+        	break;
+            }
+            default: abort();
+            }
+        }
+        else {
+            /* Simple repeat of a vector to length na. */
+            switch (TYPEOF(s)) {
+            case LGLSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    LOGICAL(a)[i] = LOGICAL(s)[j];
+                }
+                break;
+            case INTSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    INTEGER(a)[i] = INTEGER(s)[j];
+                }
+                break;
+            case REALSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    REAL(a)[i] = REAL(s)[j];
+                }
+                break;
+            case CPLXSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    COMPLEX(a)[i] = COMPLEX(s)[j];
+                }
+                break;
+            case RAWSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    RAW(a)[i] = RAW(s)[j];
+                }
+                break;
+            case STRSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    SET_STRING_ELT(a, i, STRING_ELT(s, j));
+                }
+                break;
+            case LISTSXP:
+                for (t = a, j = 0; t != R_NilValue; t = CDR(t), j++) {
+                    if (j >= ns) j = 0;
+                    SETCAR (t, duplicate (CAR (nthcdr (s, j))));
+                }
+                break;
+            case EXPRSXP:
+            case VECSXP:
+                for (i = 0, j = 0; i < na; i++, j++) {
+                    if (j >= ns) j = 0;
+                    if (i < ns)
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (a, i, s, j);
+                    else {
+                        SEXP v = VECTOR_ELT (s, j);
+                        SET_VECTOR_ELT (a, i, v);
+                        INC_NAMEDCNT_0_AS_1 (v);
+                    }
+                }
+        	break;
+            default: abort();
+            }
+        }
     }
+
+    else {
+        if (LENGTH(t) == 1) {
+            /* Repeat each element of s same number of times in each cycle. */
+            int each = INTEGER(t)[0];
+            if (each == 0) return;
+            switch (TYPEOF(s)) {
+            case LGLSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    int v = LOGICAL(s)[j];
+                    for (k = each; k > 0; k--) {
+                        LOGICAL(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case INTSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    int v = INTEGER(s)[j];
+                    for (k = each; k > 0; k--) {
+                        INTEGER(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case REALSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    double v = REAL(s)[j];
+                    for (k = each; k > 0; k--) {
+                        REAL(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case CPLXSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    Rcomplex v = COMPLEX(s)[j];
+                    for (k = each; k > 0; k--) {
+                        COMPLEX(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case RAWSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    Rbyte v = RAW(s)[j];
+                    for (k = each; k > 0; k--) {
+                        RAW(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case STRSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    SEXP v = STRING_ELT (s, j);
+                    for (k = each; k > 0; k--) {
+                        SET_STRING_ELT (a, i, v);
+                        if (i++ == na) return;
+                    }
+                }
+            case EXPRSXP:
+            case VECSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    k = each;
+                    if (i < ns) {
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (a, i, s, j);
+                        k -= 1;
+                    }
+                    SEXP v = VECTOR_ELT (s, j);
+                    for ( ; k > 0; k--) {
+                        SET_VECTOR_ELT (a, i, v);
+                        INC_NAMEDCNT_0_AS_1 (v);
+                        if (i++ == na) return;
+                    }
+                }
+            default: abort();
+            }
+        }
+        else {
+            /* Repeat elements varying numbers of times in each cycle. */
+            int *eachv = INTEGER(t);
+            switch (TYPEOF(s)) {
+            case LGLSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    int v = LOGICAL(s)[j];
+                    for (k = eachv[j]; k > 0; k--) {
+                        LOGICAL(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case INTSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    int v = INTEGER(s)[j];
+                    for (k = eachv[j]; k > 0; k--) {
+                        INTEGER(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case REALSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    double v = REAL(s)[j];
+                    for (k = eachv[j]; k > 0; k--) {
+                        REAL(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case CPLXSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    Rcomplex v = COMPLEX(s)[j];
+                    for (k = eachv[j]; k > 0; k--) {
+                        COMPLEX(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case RAWSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    Rbyte v = RAW(s)[j];
+                    for (k = eachv[j]; k > 0; k--) {
+                        RAW(a)[i] = v;
+                        if (i++ == na) return;
+                    }
+                }
+            case STRSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    SEXP v = STRING_ELT (s, j);
+                    for (k = eachv[j]; k > 0; k--) {
+                        SET_STRING_ELT (a, i, v);
+                        if (i++ == na) return;
+                    }
+                }
+            case EXPRSXP:
+            case VECSXP:
+                for (i = 0, j = 0; ; j++) {
+                    if (j >= ns) j = 0;
+                    k = eachv[j];
+                    if (k == 0) 
+                        continue;
+                    if (i < ns) {
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (a, i, s, j);
+                        k -= 1;
+                    }
+                    SEXP v = VECTOR_ELT (s, j);
+                    for ( ; k > 0; k--) {
+                        SET_VECTOR_ELT (a, i, v);
+                        INC_NAMEDCNT_0_AS_1 (v);
+                        if (i++ == na) return;
+                    }
+                }
+            default: abort();
+            }
+        }
+    }
+}
+
+
+/* Repeat each element of s by the number of times specified in t
+   (which must be the same length as s), giving total length na. */
+
+static SEXP rep2(SEXP s, SEXP t, int na)
+{
+    int i, nc, n, j;
+    SEXP a, u;
 
     PROTECT(a = allocVector(TYPEOF(s), na));
 
+    nc = length(s);
     n = 0;
     switch (TYPEOF(s)) {
     case LGLSXP:
@@ -268,7 +554,7 @@ static SEXP rep2(SEXP s, SEXP ncopy)
     default:
 	UNIMPLEMENTED_TYPE("rep2", s);
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
     return a;
 }
 
@@ -359,9 +645,19 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     int nc = length(ncopy); // might be 0
     int ns = length(s);
 
-    if (nc == ns)
-	PROTECT(a = rep2(s, ncopy));
-    else {
+    if (nc == ns) {
+        PROTECT(ncopy = coerceVector(ncopy, INTSXP));
+        int na = 0;
+        for (int i = 0; i < nc; i++) {
+	    if (INTEGER(ncopy)[i] == NA_INTEGER || INTEGER(ncopy)[i] < 0)
+	        error(_("invalid '%s' value"), "times");
+            na += INTEGER(ncopy)[i];
+        }
+	a = rep2(s, ncopy, na);
+        UNPROTECT(1);
+        PROTECT(a);
+    }
+    else {	
 	if (nc != 1) error(_("invalid '%s' value"), "times");
         int ncv = asInteger(ncopy);
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
