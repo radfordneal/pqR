@@ -480,6 +480,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define DUPVE 0  /* Set to 1 to duplicate values, to 0 to adjust namedcnt */
 
+/* Set element to a value whose namedcnt is properly set.  One can lazily
+   let namedcnt of zero stay zero, rather than increment, for the moment. */
 #define SET_VECTOR_ELEMENT_TO_VALUE(_dst_,_i_,_val_) do { \
     SEXP _v_ = _val_; \
     if (!DUPVE || NAMEDCNT_EQ_0(_v_)) { \
@@ -491,6 +493,10 @@ extern void helpers_wait_until_not_in_use(SEXP);
         SET_VECTOR_ELT (_dst_, _i_, duplicate(_v_)); \
 } while (0)
 
+/* Set element to a value from another list.  If the value has namedcnt of
+   zero, it must be regarded as actually being one, unless the list it came
+   from has namedcnt of zero (which for proper operation must be the real
+   namedcnt for it, not a lazy zero). */
 #define SET_VECTOR_ELEMENT_FROM_VECTOR(_dst_,_i_,_src_,_j_) do { \
     SEXP _s_ = _src_; \
     SEXP _v_ = VECTOR_ELT(_s_,_j_); \
