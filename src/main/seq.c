@@ -194,26 +194,18 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return do_fast_colon (call, op, CAR(args), CADR(args), rho, variant);
 }
 
-/* Repeat each element of s by the number of times given specified in ncopy
-   (which must be the same length as s). */
 
-static SEXP rep2(SEXP s, SEXP ncopy)
+/* Repeat each element of s by the number of times specified in t
+   (which must be the same length as s), giving total length na. */
+
+static SEXP rep2(SEXP s, SEXP t, int na)
 {
-    int i, na, nc, n, j;
-    SEXP a, t, u;
-
-    PROTECT(t = coerceVector(ncopy, INTSXP));
-
-    nc = length(ncopy);
-    na = 0;
-    for (i = 0; i < nc; i++) {
-	if (INTEGER(t)[i] == NA_INTEGER || INTEGER(t)[i] < 0)
-	    error(_("invalid '%s' value"), "times");
-	na += INTEGER(t)[i];
-    }
+    int i, nc, n, j;
+    SEXP a, u;
 
     PROTECT(a = allocVector(TYPEOF(s), na));
 
+    nc = length(s);
     n = 0;
     switch (TYPEOF(s)) {
     case LGLSXP:
@@ -268,7 +260,7 @@ static SEXP rep2(SEXP s, SEXP ncopy)
     default:
 	UNIMPLEMENTED_TYPE("rep2", s);
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
     return a;
 }
 
@@ -359,9 +351,19 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     int nc = length(ncopy); // might be 0
     int ns = length(s);
 
-    if (nc == ns)
-	PROTECT(a = rep2(s, ncopy));
-    else {
+    if (nc == ns) {
+        PROTECT(ncopy = coerceVector(ncopy, INTSXP));
+        int na = 0;
+        for (int i = 0; i < nc; i++) {
+	    if (INTEGER(ncopy)[i] == NA_INTEGER || INTEGER(ncopy)[i] < 0)
+	        error(_("invalid '%s' value"), "times");
+            na += INTEGER(ncopy)[i];
+        }
+	a = rep2(s, ncopy, na);
+        UNPROTECT(1);
+        PROTECT(a);
+    }
+    else {	
 	if (nc != 1) error(_("invalid '%s' value"), "times");
         int ncv = asInteger(ncopy);
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
