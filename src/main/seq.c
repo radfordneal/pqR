@@ -501,165 +501,29 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     }
 }
 
-
-/* Repeat each element of s by the number of times specified in t
-   (which must be the same length as s), giving total length na. */
-
-static SEXP rep2(SEXP s, SEXP t, int na)
+static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
+                         int variant)
 {
-    int i, nc, n, j;
-    SEXP a, u;
-
-    PROTECT(a = allocVector(TYPEOF(s), na));
-
-    nc = length(s);
-    n = 0;
-    switch (TYPEOF(s)) {
-    case LGLSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++)
-		LOGICAL(a)[n++] = LOGICAL(s)[i];
-	break;
-    case INTSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++)
-		INTEGER(a)[n++] = INTEGER(s)[i];
-	break;
-    case REALSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++)
-		REAL(a)[n++] = REAL(s)[i];
-	break;
-    case CPLXSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++)
-		COMPLEX(a)[n++] = COMPLEX(s)[i];
-	break;
-    case STRSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++)
-		SET_STRING_ELT(a, n++, STRING_ELT(s, i));
-	break;
-    case VECSXP:
-    case EXPRSXP:
-	for (i = 0; i < nc; i++) {
-	    for (j = 0; j < INTEGER(t)[i]; j++) {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(a, n, s, i);
-                if (j > 0 && NAMEDCNT_EQ_0(VECTOR_ELT(a,n)))
-                    SET_NAMEDCNT(VECTOR_ELT(a,n),2);
-                n += 1;
-            }
-        }
-	break;
-    case LISTSXP:
-	u = a;
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++) {
-		SETCAR(u, duplicate(CAR(nthcdr(s, i))));
-		u = CDR(u);
-	    }
-	break;
-    case RAWSXP:
-	for (i = 0; i < nc; i++)
-	    for (j = 0; j < INTEGER(t)[i]; j++)
-		RAW(a)[n++] = RAW(s)[i];
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("rep2", s);
-    }
-    UNPROTECT(1);
-    return a;
-}
-
-/* Repeat s, of length ns, to be of length na. */
-
-static SEXP rep3(SEXP s, int ns, int na)
-{
-    int i, j;
-    SEXP a, t;
-    PROTECT(a = allocVector(TYPEOF(s), na));
-
-    switch (TYPEOF(s)) {
-    case LGLSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-	    LOGICAL(a)[i] = LOGICAL(s)[j];
-	}
-	break;
-    case INTSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-	    INTEGER(a)[i] = INTEGER(s)[j];
-	}
-	break;
-    case REALSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-	    REAL(a)[i] = REAL(s)[j];
-	}
-	break;
-    case CPLXSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-	    COMPLEX(a)[i] = COMPLEX(s)[j];
-	}
-	break;
-    case RAWSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-	    RAW(a)[i] = RAW(s)[j];
-	}
-	break;
-    case STRSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-	    SET_STRING_ELT(a, i, STRING_ELT(s, j));
-	}
-	break;
-    case LISTSXP:
-	for (t = a, j = 0; t != R_NilValue; t = CDR(t), j++) {
-	    if (j >= ns) j = 0;
-	    SETCAR (t, duplicate (CAR (nthcdr (s, j))));
-        }
-	break;
-    case VECSXP:
-	for (i = 0, j = 0; i < na; i++, j++) {
-	    if (j >= ns) j = 0;
-            if (i < ns) {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, i);
-            }
-            else {
-                SET_VECTOR_ELEMENT_FROM_VECTOR(a, i, s, j);
-                if (NAMEDCNT_EQ_0(VECTOR_ELT(a,i)))
-                    SET_NAMEDCNT(VECTOR_ELT(a,i),2);
-            }
-        }
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("rep", s);
-    }
-
-    UNPROTECT(1);
-    return a;
-}
-
-static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    checkArity(op, args);
-
-    SEXP s = CAR(args), ncopy = CADR(args), a;
+    SEXP a;
     int na;
 
-    if (!isVector(ncopy))
-	error(_("incorrect type for second argument"));
+    if (ncopy != R_MissingArg && !isVector(ncopy))
+        error(_("incorrect type for second argument"));
 
     if (!isVector(s) && TYPEOF(s) != LISTSXP)
 	error(_("attempt to replicate non-vector"));
 
     int ns = length(s);
-    int nc = length(ncopy);
+    int nc = ncopy==R_MissingArg ? 1 : LENGTH(ncopy);
 
-    if (nc == ns) {
+    if (nc == 1) {	
+        int ncv = ncopy==R_MissingArg ? 1 : asInteger(ncopy);
+	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
+	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
+        na = ncv * ns;
+        ncopy = NULL;
+    }
+    else if (nc == ns) {
         PROTECT(ncopy = coerceVector(ncopy, INTSXP));
         if (TYPEOF(ncopy) != INTSXP || LENGTH(ncopy) != nc) abort();
         na = 0;
@@ -671,14 +535,8 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
             na += INTEGER(ncopy)[i];
         }
     }
-    else {	
-	if (nc != 1) error(_("invalid '%s' value"), "times");
-        int ncv = asInteger(ncopy);
-	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
-	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
-        na = ncv * ns;
-        ncopy = NULL;
-    }
+    else 
+        error(_("invalid '%s' value"), "times");
 
     PROTECT(a = allocVector(TYPEOF(s), na));
 
@@ -701,7 +559,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
         else 
             PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1);
+	UNPROTECT(1 + (ncopy!=NULL));
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
@@ -709,145 +567,14 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     return a;
 }
 
-/* rep(), allowing for both times and each */
-static SEXP rep4(SEXP x, SEXP times, int len, int each, int nt)
+static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP a;
-    int lx = length(x);
-    int i, j, k, k2, k3, sum;
-
-    /* faster code for common special case */
-    if (each == 1 && nt == 1)
-        return rep3(x, lx, len);
-
-    PROTECT(a = allocVector(TYPEOF(x), len));
-
-    switch (TYPEOF(x)) {
-    case LGLSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		LOGICAL(a)[i] = LOGICAL(x)[(i/each) % lx];
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    LOGICAL(a)[k2++] = LOGICAL(x)[i];
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    case INTSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		INTEGER(a)[i] = INTEGER(x)[(i/each) % lx];
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    INTEGER(a)[k2++] = INTEGER(x)[i];
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    case REALSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		REAL(a)[i] = REAL(x)[(i/each) % lx];
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    REAL(a)[k2++] = REAL(x)[i];
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    case CPLXSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		COMPLEX(a)[i] = COMPLEX(x)[(i/each) % lx];
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    COMPLEX(a)[k2++] = COMPLEX(x)[i];
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    case STRSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		SET_STRING_ELT(a, i, STRING_ELT(x, (i/each) % lx));
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    SET_STRING_ELT(a, k2++, STRING_ELT(x, i));
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    case VECSXP:
-    case EXPRSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		SET_VECTOR_ELT(a, i, VECTOR_ELT(x, (i/each) % lx));
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    SET_VECTOR_ELT(a, k2++, VECTOR_ELT(x, i));
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    case LISTSXP: ;  /* not actually used, since will be coerced to VECSXP */
-        SEXP t = a;
-	if (nt == 1)
-	    for (i = 0; i < len; i++) {
-                SETCAR (t, duplicate (CAR (nthcdr (x, (i/each)%lx))));
-                t = CDR(t);
-            }
-	else {
-	    for (i = 0, k = 0; i < lx; i++) {
-		for (j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for (k3 = 0; k3 < sum; k3++) {
-                    SETCAR (t, duplicate (CAR (nthcdr(x,i))));
-                    t = CDR(t);
-		    if (t == R_NilValue) goto done;
-		}
-	    }
-	}
-	break;
-    case RAWSXP:
-	if(nt == 1)
-	    for(i = 0; i < len; i++)
-		RAW(a)[i] = RAW(x)[(i/each) % lx];
-	else {
-	    for(i = 0, k = 0, k2 = 0; i < lx; i++) {
-		for(j = 0, sum = 0; j < each; j++) sum += INTEGER(times)[k++];
-		for(k3 = 0; k3 < sum; k3++) {
-		    RAW(a)[k2++] = RAW(x)[i];
-		    if(k2 == len) goto done;
-		}
-	    }
-	}
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("rep", x);
-    }
-done:
+    static char *ap[2] = { "x", "times" };
+    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+    SEXP ans = do_fast_rep (call, op, CAR(args), CADR(args), rho, 0);
     UNPROTECT(1);
-    return a;
+    return ans;
 }
-
 
 /* We are careful to use evalListKeepMissing here (inside
    DispatchOrEval) to avoid dropping missing arguments so e.g.
@@ -857,8 +584,8 @@ done:
 
 static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP a, ans, times = R_NilValue /* -Wall */;
-    int i, lx, len, each, nt, nprotect = 0;
+    SEXP a, ans, times;
+    int i, len, each, nprotect = 0;
     static char *ap[5] = { "x", "times", "length.out", "each", "..." };
 
     if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
@@ -888,7 +615,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isVector(x) && !isList(x))
 	error(_("attempt to replicate non-vector"));
     
-    lx = length(x);
+    int lx = length(x);
 
     len = asInteger(length_arg);
     if(len != NA_INTEGER && len < 0)
@@ -897,14 +624,16 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	warningcall(call, _("first element used of '%s' argument"), 
 		    "length.out");
 
+    int le = length(each_arg);
     each = asInteger(each_arg);
-    if(each != NA_INTEGER && each < 0)
+    if (each == NA_INTEGER) 
+        each = 1;
+    if (le == 0 || each < 0)
 	errorcall(call, _("invalid '%s' argument"), "each");
-    if(length(each_arg) != 1)
+    if (le != 1)
 	warningcall(call, _("first element used of '%s' argument"), "each");
-    if(each == NA_INTEGER) each = 1;
 
-    if(lx == 0) {
+    if (lx == 0) {
         PROTECT(x = duplicate(x));
         nprotect++;
         if (len != NA_INTEGER && len > 0)
@@ -913,13 +642,13 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
         return x;
     }
 
-    if(len != NA_INTEGER) { /* takes precedence over times */
+    if (len != NA_INTEGER) { /* takes precedence over times */
         if(len > 0 && each == 0)
             errorcall(call, _("invalid '%s' argument"), "each");
-	nt = 1;
+        times = NULL;
     } 
     else {  /* len == NA_INTEGER */
-	int it, sum = 0;
+	int nt;
 	if(times_arg == R_MissingArg) 
             PROTECT(times = ScalarIntegerMaybeConst(1));
 	else 
@@ -927,21 +656,24 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	nprotect++;
 	nt = LENGTH(times);
 	if (nt == 1) {
-	    it = INTEGER(times)[0];
+	    int it = INTEGER(times)[0];
 	    if (it == NA_INTEGER || it < 0 || (double) lx * it * each > INT_MAX)
 		errorcall(call, _("invalid '%s' argument"), "times");
 	    len = lx * it * each;
+            times = NULL;
 	} 
         else {
             if (nt != (double) lx * each)
                 errorcall(call, _("invalid '%s' argument"), "times");
+            len = 0;
 	    for(i = 0; i < nt; i++) {
-		it = INTEGER(times)[i];
-		if (it == NA_INTEGER || it < 0)
+		int it = INTEGER(times)[i];
+		if (it == NA_INTEGER || it < 0 || (double)len + it > INT_MAX)
 		    errorcall(call, _("invalid '%s' argument"), "times");
-		sum += it;
+		len += it;
 	    }
-            len = sum;
+            /* Here, convert calls like rep(c(T,F),each=2,times=c(1,3,5,2)) 
+               to rep(c(T,F),each=1,times=c(4,7)) */
             if (each != 1) {
                 SEXP old_times = times;
                 int j;
@@ -965,13 +697,18 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
         nprotect++;
     }
 
-    /* PROTECT(a = allocVector(TYPEOF(x), len)); */
+    SEXP each_times = each != 1 ? ScalarIntegerMaybeConst(each) : times;
 
-    PROTECT(a = rep4(x, times, len, each, nt));
+    PROTECT(a = allocVector(TYPEOF(x), len));
     nprotect++;
 
-    if (length(xn) > 0)
-	setAttrib(a, R_NamesSymbol, rep4(xn, times, len, each, nt));
+    task_rep (0, a, x, each_times);
+
+    if (length(xn) > 0) {
+        SEXP an = allocVector (TYPEOF(xn), len);
+        task_rep (0, an, xn, each_times);
+        setAttrib(a, R_NamesSymbol, an);
+    }
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
@@ -1235,7 +972,7 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
-{"rep.int",	do_rep_int,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep.int",	do_rep_int,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1251,5 +988,6 @@ attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 
 { do_colon,	do_fast_colon,	-1,		2,	0, 0,  0, 0 },
 { do_seq_len,	do_fast_seq_len,-1,		1,	0, 0,  0, 0 },
+{ do_rep_int,	do_fast_rep,	-1,		2,	0, 0,  0, 0 },
 { 0,		0,		0,		0,	0, 0,  0, 0 }
 };

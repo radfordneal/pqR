@@ -1,6 +1,6 @@
 #  File src/library/base/R/zzz.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -127,6 +127,7 @@ assign("pos.to.env", function(x) NULL, envir = .ArgsEnv)
 assign("proc.time", function() NULL, envir = .ArgsEnv)
 assign("quote", function(expr) NULL, envir = .ArgsEnv)
 assign("retracemem", function(x, previous = NULL) NULL, envir = .ArgsEnv)
+assign("rep.int", function(x,times) NULL, envir = .ArgsEnv)
 assign("seq_along", function(along.with) NULL, envir = .ArgsEnv)
 assign("seq_len", function(length.out) NULL, envir = .ArgsEnv)
 assign("standardGeneric", function(f, fdef) NULL, envir = .ArgsEnv)
