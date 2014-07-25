@@ -9,3 +9,6 @@ Changed implementation of rep.int to be closer to that of R-2.15.2
 improvements, eliminate just about any resemblence to the code from
 R-2.15.2.
 
+Made rep.int a primitive, with a "fast" interface.
+
+Made rep and rep.int doable in a helper thread.

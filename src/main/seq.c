@@ -501,6 +501,8 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     }
 }
 
+#define T_rep THRESHOLD_ADJUST(20)
+
 static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
                          int variant)
 {
@@ -542,7 +544,10 @@ static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
 
     PROTECT(a = allocVector(TYPEOF(s), na));
 
-    task_rep (0, a, s, ncopy);
+    HELPERS_NOW_OR_LATER (
+      !helpers_not_multithreading && na >= T_rep && isVectorNonpointer(a)
+        && (variant & VARIANT_PENDING_OK) != 0, 
+      FALSE, 0, task_rep, 0, a, s, ncopy);
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
@@ -569,11 +574,11 @@ static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
     return a;
 }
 
-static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     static char *ap[2] = { "x", "times" };
     PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
-    SEXP ans = do_fast_rep (call, op, CAR(args), CADR(args), rho, 0);
+    SEXP ans = do_fast_rep (call, op, CAR(args), CADR(args), rho, variant);
     UNPROTECT(1);
     return ans;
 }
@@ -584,7 +589,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* This is a primitive SPECIALSXP with internal argument matching */
 
-static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a, ans, times;
     int i, len, each, nprotect = 0;
@@ -693,6 +698,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     SEXP xn = getAttrib(x, R_NamesSymbol);
+    int len_xn = length(xn);
 
     if (TYPEOF(x) == LISTSXP) {
         PROTECT(x = coerceVector(x,VECSXP));
@@ -704,12 +710,16 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(a = allocVector(TYPEOF(x), len));
     nprotect++;
 
-    task_rep (0, a, x, each_times);
+    HELPERS_NOW_OR_LATER (
+      !helpers_not_multithreading && len >= T_rep && isVectorNonpointer(a)
+         && (len_xn > 0 || (variant & VARIANT_PENDING_OK) != 0), 
+      FALSE, 0, task_rep, 0, a, x, each_times);
 
-    if (length(xn) > 0) {
+    if (len_xn > 0) {
         SEXP an = allocVector (TYPEOF(xn), len);
         task_rep (0, an, xn, each_times);
         setAttrib(a, R_NamesSymbol, an);
+        if ((variant & VARIANT_PENDING_OK) == 0) WAIT_UNTIL_COMPUTED(a);
     }
 
 #ifdef _S4_rep_keepClass
@@ -974,8 +984,8 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
-{"rep.int",	do_rep_int,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rep",		do_rep,		0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep.int",	do_rep_int,	0,	1001,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_len",	do_seq_len,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
