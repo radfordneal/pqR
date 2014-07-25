@@ -399,7 +399,7 @@ static SEXP NA_check_remove (SEXP indx, int *n, int err)
 static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     SEXP indx, newnames;
-    int i, ii, iy, n, nx, ny, stretch;
+    int i, ii, iy, n, nx, ny;
     double ry;
 
     if (x==R_NilValue && y==R_NilValue)
@@ -426,7 +426,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         }
     }
 
-    stretch = 1;
+    int stretch = -1; /* allow out of bounds, for assignment */
     int pindx;
     PROTECT_WITH_INDEX(indx = makeSubscript(x, s, &stretch, R_NilValue, 1), 
                        &pindx);
@@ -596,32 +596,20 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        attribute (a vector list) of the generated subscript vector */
     if (TYPEOF(s)==STRSXP && 
           (newnames = getAttrib(indx, R_UseNamesSymbol)) != R_NilValue) {
-	SEXP oldnames = getAttrib(x, R_NamesSymbol);
-	if (oldnames != R_NilValue) {
-	    for (i = 0; i < n; i++) {
-		if (VECTOR_ELT(newnames, i) != R_NilValue) {
-		    ii = INTEGER(indx)[i];
-		    if (ii == NA_INTEGER) continue;
-		    ii = ii - 1;
-		    SET_STRING_ELT(oldnames, ii, VECTOR_ELT(newnames, i));
-		}
-	    }
-	}
-	else {
-	    PROTECT(oldnames = allocVector(STRSXP, nx));
-	    for (i = 0; i < nx; i++)
-		SET_STRING_ELT(oldnames, i, R_BlankString);
-	    for (i = 0; i < n; i++) {
-		if (VECTOR_ELT(newnames, i) != R_NilValue) {
-		    ii = INTEGER(indx)[i];
-		    if (ii == NA_INTEGER) continue;
-		    ii = ii - 1;
-		    SET_STRING_ELT(oldnames, ii, VECTOR_ELT(newnames, i));
-		}
-	    }
-	    setAttrib(x, R_NamesSymbol, oldnames);
-	    UNPROTECT(1);
-	}
+        SEXP oldnames = getAttrib(x, R_NamesSymbol);
+        if (oldnames == R_NilValue) {
+            PROTECT(oldnames = allocVector(STRSXP,nx)); /* all R_BlankString */
+            setAttrib(x, R_NamesSymbol, oldnames);
+            UNPROTECT(1);
+        }
+        for (i = 0; i < n; i++) {
+            if (VECTOR_ELT(newnames, i) != R_NilValue) {
+                ii = INTEGER(indx)[i];
+                if (ii == NA_INTEGER) continue;
+                ii = ii - 1;
+                SET_STRING_ELT(oldnames, ii, VECTOR_ELT(newnames, i));
+            }
+        }
     }
     UNPROTECT(4);
     return x;
