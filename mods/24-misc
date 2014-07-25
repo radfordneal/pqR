@@ -1,0 +1,3 @@
+Miscellaneous updates.
+
+Be more cautious regarding string comparisons involving NA_STRING.

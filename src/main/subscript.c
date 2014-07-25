@@ -465,7 +465,8 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
                 sub = 0;
                 if (!na_or_empty_string(sbe_i)) {
                     for (j = 0; j < nnames; j++) {
-                        if (Seql (sbe_i, strg(names,j))) {
+                        SEXP sbe_j = strg(names,j);
+                        if (!na_or_empty_string(sbe_j) && Seql(sbe_i,sbe_j)) {
                             sub = j + 1;
                             break;
                         }
@@ -500,7 +501,8 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
                     for (j = i+1 ; j<ns ; j++) {
                         if (INTEGER(indx)[j] == 0) {
                             SEXP sbe_j = STRING_ELT(s,j);
-                            if (Seql (sbe_i, sbe_j)) { 
+                            if (!na_or_empty_string(sbe_j) 
+                             && Seql(sbe_i,sbe_j)) {
                                 INTEGER(indx)[j] = sub;
                                 SET_VECTOR_ELT (indexnames, j, sbe_i);
                             }

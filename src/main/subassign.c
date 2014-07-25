@@ -1494,6 +1494,8 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 /* Also called directly from elsewhere.  For role of variant, see above. */
 
+#define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
+
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
 {
     PROTECT_INDEX pvalidx, pxidx;
@@ -1568,9 +1570,10 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
            Note that NA_STRING and "" don't match anything. */
 
         int imatch = -1;
-        if (names != R_NilValue && pname != NA_STRING && *CHAR(pname) != 0) {
+        if (names != R_NilValue && !na_or_empty_string(pname))
             for (int i = 0; i < nx; i++) {
-                if (Seql (STRING_ELT(names, i), pname)) {
+                SEXP ni = STRING_ELT(names, i);
+                if (!na_or_empty_string(ni) && Seql(ni,pname)) {
                     imatch = i;
                     break;
                 }
