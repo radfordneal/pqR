@@ -151,6 +151,11 @@ sum                \tab N/A (scalar)
                    \tab (see below)
                    \tab (see below)\cr
 \tab\tab\tab\cr
+rep, rep.int       \tab No
+                   \tab No
+                   \tab If non-numeric \cr
+\tab\tab           \tab done by master\cr
+\tab\tab\tab\cr
 row, col           \tab Yes
                    \tab N/A (ignored)
                    \tab \cr
