@@ -38,3 +38,5 @@ Added vmaxget/set in numeric_deriv (as in later R Core releases).
 
 Changed how namedcnt is maintained for lists in seq.c, subassign.c,
 and subset.c.
+
+Got rid of NonNullStringMatch.
