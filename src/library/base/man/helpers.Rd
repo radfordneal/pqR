@@ -163,6 +163,12 @@ write.table        \tab N/A (NULL)
                    \tab If vector with
                    \tab Done by master\cr
 \tab\tab                a scalar index\tab
+\tab\tab\tab\cr
+.C, .Fortran       \tab No
+                   \tab No
+                   \tab See help(.C) or
+\tab\tab           \tab help(.Fortran)\cr
+\tab\tab\tab\cr
 }
 
 For +, -, *, /, ^, and \%\/\%, pipelining is done only for real
