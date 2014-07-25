@@ -589,6 +589,9 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 /* This is a primitive SPECIALSXP with internal argument matching */
 
+/* NOTE:  In pqR, we now guarantee that the result of "rep" (with default
+   method) is unshared (relevant to .C and .Fortran with DUP=FALSE). */
+
 static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a, ans, times;
