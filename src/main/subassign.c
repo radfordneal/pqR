@@ -1584,12 +1584,13 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
 	SEXP names = getAttrib(x, R_NamesSymbol);
 	R_len_t nx = length(x);  /* x could be R_NilValue */
 
-        /* set imatch to the index of the selected element, -1 if not present */
+        /* Set imatch to the index of the selected element, -1 if not present.
+           Note that NA_STRING and "" don't match anything. */
 
         int imatch = -1;
-        if (names != R_NilValue) {
+        if (names != R_NilValue && pname != NA_STRING && *CHAR(pname) != 0) {
             for (int i = 0; i < nx; i++) {
-                if (NonNullStringMatch(STRING_ELT(names, i), pname)) {
+                if (Seql (STRING_ELT(names, i), pname)) {
                     imatch = i;
                     break;
                 }

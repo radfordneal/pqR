@@ -983,7 +983,6 @@ SEXP Rf_matchE(SEXP, SEXP, int, SEXP);
 SEXP Rf_namesgets(SEXP, SEXP);
 SEXP Rf_mkChar(const char *);
 SEXP Rf_mkCharLen(const char *, int);
-Rboolean Rf_NonNullStringMatch(SEXP, SEXP);
 int Rf_ncols(SEXP);
 int Rf_nrows(SEXP);
 SEXP Rf_nthcdr(SEXP, int);
@@ -1368,7 +1367,6 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define namesgets		Rf_namesgets
 #define ncols			Rf_ncols
 #define nlevels			Rf_nlevels
-#define NonNullStringMatch	Rf_NonNullStringMatch
 #define nrows			Rf_nrows
 #define nthcdr			Rf_nthcdr
 #define PairToVectorList	Rf_PairToVectorList
