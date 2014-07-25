@@ -511,7 +511,7 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
     if (indexnames != 0)
 	setAttrib(indx, R_UseNamesSymbol, indexnames);
     if (canstretch)
-	*stretch = extra;
+	*stretch = extra==nx ? 0 : extra;
 
     UNPROTECT (3+(indexnames!=0));
 

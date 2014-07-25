@@ -1,0 +1,6 @@
+Correct performance bugs regarding "extra" string subscripts.
+
+Fixed bug causing duplication of vec when v["x1"] assigned to below:
+
+   vec <- rep(1.1,1000); names(vec) <- paste0("x",1:1000)
+   vec["x1"] <- 9
