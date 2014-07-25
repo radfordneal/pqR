@@ -302,7 +302,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
    matrix indexing of arrays */
 static SEXP VectorSubset(SEXP x, SEXP sb, int seq, SEXP call)
 {
-    int spi, stretch = 1;
+    int spi;
     SEXP result, attrib, nattrib;
     int start = 1, end = 0, n = 0;
     SEXP indx = R_NilValue;
@@ -341,6 +341,7 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, SEXP call)
     /* Convert sb to a vector of integer subscripts (unless we have a range) */
 
     if (sb != NULL) {
+        int stretch = 1;  /* allow out of bounds, not for assignment */
         PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
         n = length(indx);
     }
