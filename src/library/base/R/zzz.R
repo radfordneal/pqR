@@ -51,11 +51,11 @@ is.name <- is.symbol
 .ArgsEnv <- new.env(hash = TRUE, parent = emptyenv())
 
 assign("%*%", function(x, y) NULL, envir = .ArgsEnv)
-assign(".C", function(.NAME, ..., NAOK = FALSE, DUP = TRUE, PACKAGE,
-                      ENCODING) NULL,
+assign(".C", function(.NAME, ..., NAOK = FALSE, DUP = TRUE, HELPER = FALSE,
+                       PACKAGE, ENCODING) NULL,
        envir = .ArgsEnv)
-assign(".Fortran",
-       function(.NAME, ..., NAOK = FALSE, DUP = TRUE, PACKAGE, ENCODING) NULL,
+assign(".Fortran",function(.NAME, ..., NAOK = FALSE, DUP = TRUE, HELPER = FALSE,
+                            PACKAGE, ENCODING) NULL,
        envir = .ArgsEnv)
 assign(".Call", function(.NAME, ..., PACKAGE) NULL, envir = .ArgsEnv)
 assign(".Call.graphics", function(.NAME, ..., PACKAGE) NULL, envir = .ArgsEnv)
