@@ -14,8 +14,8 @@
 
 \item This release contains several performance improvements, including some
       adapted from those in R Core releases after R-2.15.0, as well as
-      some bug fixes and documentation updates, a few features changes that 
-      track later changes in R Core releases, and some new features that are 
+      some bug fixes and documentation updates, a few features changes, some
+      tracking later changes in R Core releases, and some new features that are 
       mostly of interest to developers.
 }}
 
@@ -78,11 +78,14 @@
 \item The performance of \code{rep} and \code{rep.int} (which is now primitive)
       is much improved.
       These improvements (and improvements previously made in pqR) go beyond 
-      those that were made in R-2.15.2, so these functions are often 
-      substantially faster in pqR than in R-2.15.2, or later R Core versions
-      to at least R-3.1.1, for both long and short vectors.  (Also,
-      the changes in functionality made in R-2.15.2 have not been made in pqR;
-      in particular, pairlists are still allowed.)
+      those in R Core releases from R-2.15.2 on, so these functions are often 
+      substantially faster in pqR than in R-2.15.2 or later R Core versions
+      to at least R-3.1.1, for both long and short vectors.  (However, note
+      that the changes in functionality made in R-2.15.2 have not been made 
+      in pqR; in particular, pairlists are still allowed, as in R-2.15.0.)
+\item For numeric vectors, the repetition done by \code{rep} and \code{rep.int}
+      may now be done in a helper thread, in parallel with other computations
+      (including attaching names to the result of \code{rep} if necessary).
 \item Expressions now sometimes return constant values, that are shared,
       and likely stored in read-only memory.  These constants include 
       \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
@@ -126,7 +129,7 @@
 \item Fixed a problem with treatment of \code{ANYSXP} in specifying
       types of registered C or Fortran routines, which in particular had
       prevented the types of \code{str_signif}, used in \code{formatC},
-      from being registered.  (This bug exists in R Core versions of R,
+      from being registered.  (This bug exists in R Core versions of R
       at least through R-3.1.1.) 
 }}
 }
