@@ -6,6 +6,135 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2014-00-00}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+
+\item This release contains several performance improvements, including some
+      adapted from those in R Core releases after R-2.15.0, as well as
+      some bug fixes and documentation updates, a few features changes, some
+      tracking later changes in R Core releases, and some new features that are 
+      mostly of interest to developers.
+}}
+
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+\item The formal arguments of primitive functions will now be returned
+      by \code{formals}, as they are shown when printed or with \code{args}.
+      In R Core releases (at least to R-3.1.1), the result of \code{formals}
+      for a primitive is \code{NULL}.  This change allows some
+      existing functions (eg, \code{rep.int}) to be made primitive without
+      breaking code that relies on getting their formal arguments with
+      \code{formals}.
+\item The unary \code{+} operator now converts a logical vector to an
+      integer vector. This follows a corresponding change in R-3.0.2.
+\item Support for "converters" for use with \code{.C} has been dropped,
+      as it was in R-3.0.0.
+\item In \code{.C} and \code{.Fortran}, arguments may be character strings
+      even when \code{DUP=FALSE} is specified - they are duplicated regardless.
+      This differs from R Core versions, which (at least through R-3.1.1)
+      give an error if an argument is a character string and \code{DUP=FALSE}.
+\item In \code{.C} and \code{.Fortran}, scalars (vectors of length one)
+      are duplicated even when \code{DUP=FALSE} is specified.  They are
+      not duplicated in R Core versions, however (at least through R-3.1.1),
+      so it may be unwise to rely on this.
+}}
+
+  \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
+    These are mostly of interest to developers, not to most users.
+    \itemize{
+\item Setting the environment variable \code{R_ABORT} to any non-null
+      string will prevent any attempt to produce a stack trace on a
+      segmentation fault, in favour of instead producing (maybe) an
+      immediate core dump.
+\item The environment variable \code{R_BIT_BUCKET} can be set to
+      a file to receive output that would otherwise go to dev/null
+      when "make" is run.
+      
+}}
+
+  \subsection{DOCUMENTATION UPDATES}{
+    \itemize{
+\item Some incorrect code has been corrected in the "Writing
+      R Extensions" manual, in the "Zero finding"
+      and "Calculating numerical derivatives" sections.  The
+      discussion in "Finding and Setting Variables" has also been
+      clarified to reflect current behaviour.
+\item Fixed an out-of-date comment in the section on helper threads in
+      the "R Internals" manual.
+}}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+    \itemize{
+\item The speed of \code{.C} and \code{.Fortran} has been substantially
+      improved, partly by incorporating changes in R-2.15.1 and R-2.15.2,
+      but with substantial additional improvements as well.  The speed of 
+      \code{.Call} and \code{.External} has been sped up to a lesser degree.
+\item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
+      can now be done in a helper thread, in parallel with other computations.
+      See \code{help(.C)} for details.
+\item The performance of \code{rep} and \code{rep.int} (which is now primitive)
+      is much improved.
+      These improvements (and improvements previously made in pqR) go beyond 
+      those in R Core releases from R-2.15.2 on, so these functions are often 
+      substantially faster in pqR than in R-2.15.2 or later R Core versions
+      to at least R-3.1.1, for both long and short vectors.  (However, note
+      that the changes in functionality made in R-2.15.2 have not been made 
+      in pqR; in particular, pairlists are still allowed, as in R-2.15.0.)
+\item For numeric vectors, the repetition done by \code{rep} and \code{rep.int}
+      may now be done in a helper thread, in parallel with other computations
+      (including attaching names to the result of \code{rep} if necessary).
+\item Expressions now sometimes return constant values, that are shared,
+      and likely stored in read-only memory.  These constants include 
+      \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
+      \code{TRUE}, \code{NA}, \code{NA_real_}, 0.0, 1.0, 0L, 1L, ..., 10L, 
+      and some one-element pairlists with such constant elements.  Apart 
+      from \code{NULL}, these constants are not
+      \emph{always} used for the corresponding value, but they often are, which
+      saves on memory and associated garbage collection time.  External routines
+      that incorrectly modify objects without checking that \code{NAMED} is
+      zero may now crash when passed a read-only constant, which is a generally
+      desirable debugging aid, though it might sometimes cause a package that
+      had previously at least sort-of worked to no longer run.
+\item The function for unserializing data (eg, reading file \file{.RData}) is
+      now done with tail-recursion (on the CDR field) optimized when reading 
+      pairlists.  This is both faster and less likely to produce a stack
+      overflow.  Some other improvements to serializing/unserializing have
+      also been made, including support for restoring constant values (mentioned
+      above) as constant values.
+\item Several speed improvements relating to garbage collection have been made.
+\item Variable lookup has been sped up a bit (by unrolling the search loop).
+\item Functions in the \code{apply} family have been sped up when they are
+      called with no additional arguments for the function being applied.
+\item The performance problem reported in PR #15798 at r-project.org has
+      been fixed (differently from the R Core fix).
+}}
+
+  \subsection{BUG FIXES}{
+    \itemize{
+\item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
+      \code{na.exclude} that led to a
+      data frame that should have had zero rows having one row instead.
+      (Also fixed in R-3.1.1, though differently.)
+\item Fixed a bug in \code{numericDeriv} (see also the documentation
+      update above), which is illustrated by the following
+      code:
+\preformatted{    x <- y <- 10
+    numericDeriv(quote(x+y),c("x","y"))
+}
+      I reported this to R Core, and it is also fixed (differently) in
+      R-3.1.1.
+\item Fixed a problem with treatment of \code{ANYSXP} in specifying
+      types of registered C or Fortran routines, which in particular had
+      prevented the types of \code{str_signif}, used in \code{formatC},
+      from being registered.  (This bug exists in R Core versions of R
+      at least through R-3.1.1.) 
+}}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2014-06-19}{
 
   \subsection{INTRODUCTION}{
