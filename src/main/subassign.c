@@ -1570,7 +1570,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
            Note that NA_STRING and "" don't match anything. */
 
         int imatch = -1;
-        if (names != R_NilValue && !na_or_empty_string(pname))
+        if (names != R_NilValue && !na_or_empty_string(pname)) {
             for (int i = 0; i < nx; i++) {
                 SEXP ni = STRING_ELT(names, i);
                 if (!na_or_empty_string(ni) && Seql(ni,pname)) {
