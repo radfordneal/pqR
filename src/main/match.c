@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -99,17 +99,6 @@ SEXP fixup_NaRm(SEXP args)
     }
 
     return args;
-}
-
-/* used in subscript.c and subassign.c */
-Rboolean NonNullStringMatch(SEXP s, SEXP t)
-{
-    /* "" or NA string matches nothing */
-    if (s == NA_STRING || t == NA_STRING) return FALSE;
-    if (CHAR(s)[0] && CHAR(t)[0] && Seql(s, t))
-	return TRUE;
-    else
-	return FALSE;
 }
 
 /*  Exact or partial string match.  Returns 0 if f and t do not match at all, 
