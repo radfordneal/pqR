@@ -476,29 +476,34 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
         }
     }
 
-    for (i = 0; i < ns; i++) {
-	if (INTEGER(indx)[i] == 0) {
-            SEXP sbe_i = STRING_ELT(s,i);
-            if (indexnames==0) { /* first non-matching index */
-                if (!canstretch) {
-	            ECALL(call, _("subscript out of bounds"));
-	        }
-                PROTECT (indexnames = allocVector(VECSXP, ns));
-                for (k = 0; k < ns; k++) 
-                    if (INTEGER(indx)[k] != 0)
-                        SET_VECTOR_ELT (indexnames, k, R_NilValue);
-            }
-            SET_VECTOR_ELT (indexnames, i, sbe_i);
-            extra += 1;
-            sub = extra;
-            INTEGER(indx)[i] = sub;
-            if (!na_or_empty_string(sbe_i)) {
-                for (j = i+1 ; j<ns ; j++) {
-                    if (INTEGER(indx)[j] == 0) {
-                        SEXP sbe_j = STRING_ELT(s,j);
-                        if (Seql (sbe_i, sbe_j)) { 
-                            INTEGER(indx)[j] = sub;
-                            SET_VECTOR_ELT (indexnames, j, sbe_i);
+    if (canstretch == 0) {
+        for (i = 0; i < ns; i++) {
+            if (INTEGER(indx)[i] == 0)
+                ECALL(call, _("subscript out of bounds"));
+        }
+    }
+    else if (canstretch < 0) {
+        for (i = 0; i < ns; i++) {
+            if (INTEGER(indx)[i] == 0) {
+                SEXP sbe_i = STRING_ELT(s,i);
+                if (indexnames==0) { /* first non-matching index */
+                    PROTECT (indexnames = allocVector(VECSXP, ns));
+                    for (k = 0; k < ns; k++) 
+                        if (INTEGER(indx)[k] != 0)
+                            SET_VECTOR_ELT (indexnames, k, R_NilValue);
+                }
+                SET_VECTOR_ELT (indexnames, i, sbe_i);
+                extra += 1;
+                sub = extra;
+                INTEGER(indx)[i] = sub;
+                if (!na_or_empty_string(sbe_i)) {
+                    for (j = i+1 ; j<ns ; j++) {
+                        if (INTEGER(indx)[j] == 0) {
+                            SEXP sbe_j = STRING_ELT(s,j);
+                            if (Seql (sbe_i, sbe_j)) { 
+                                INTEGER(indx)[j] = sub;
+                                SET_VECTOR_ELT (indexnames, j, sbe_i);
+                            }
                         }
                     }
                 }
@@ -509,9 +514,9 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
     /* We return the new names as the names attribute of the returned
        subscript vector. */
     if (indexnames != 0)
-	setAttrib(indx, R_UseNamesSymbol, indexnames);
+        setAttrib(indx, R_UseNamesSymbol, indexnames);
     if (canstretch)
-	*stretch = extra==nx ? 0 : extra;
+        *stretch = extra==nx ? 0 : extra;
 
     UNPROTECT (3+(indexnames!=0));
 
@@ -581,8 +586,15 @@ arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
 /* Subscript creation.  x is the object being subscripted; s is the 
    R subscript value.  
 
-   If stretch is zero on entry then the vector x cannot be "stretched", 
-   otherwise, stretch returns the new required length for x.
+   The "stretch" argument is a pointer to an integer set by the caller as 
+   follows:
+  
+      0   No out-of-bounds indexes allowed
+      1   Out-of-bounds indexes allowed, for fetching only
+     -1   Out-of-bounds indexes allowed, for storing
+  
+   This procedure will set *stretch to 0 if there are no out-of-bound
+   indexes, and otherwise to the largest out-of-bounds index.
 
    The used_to_replace argument should be 1 if the subscript is used to 
    replace items and 0 if the subscript is only for extracting items.

@@ -4,3 +4,15 @@ Fixed bug causing duplication of vec when v["x1"] assigned to below:
 
    vec <- rep(1.1,1000); names(vec) <- paste0("x",1:1000)
    vec["x1"] <- 9
+
+Fixed performance bug reported on r-devel on 2010-07-15 and 2013-05-08:
+
+   x <- c(A=10L, B=20L, C=30L)
+   subscript <- c(LETTERS[1:3], sprintf("ID%05d", 1:150000))
+
+   > system.time(y1 <- x[subscript])
+      user  system elapsed
+   111.991   0.000 112.230
+
+The fix only speeds up extraction, using such invalid subscripts when storing
+is still slow.

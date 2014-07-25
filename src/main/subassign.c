@@ -399,7 +399,7 @@ static SEXP NA_check_remove (SEXP indx, int *n, int err)
 static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     SEXP indx, newnames;
-    int i, ii, iy, n, nx, ny, stretch;
+    int i, ii, iy, n, nx, ny;
     double ry;
 
     if (x==R_NilValue && y==R_NilValue)
@@ -426,7 +426,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         }
     }
 
-    stretch = 1;
+    int stretch = -1; /* allow out of bounds, for assignment */
     int pindx;
     PROTECT_WITH_INDEX(indx = makeSubscript(x, s, &stretch, R_NilValue, 1), 
                        &pindx);
