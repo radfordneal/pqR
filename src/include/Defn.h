@@ -118,6 +118,8 @@ extern0 SEXP    R_dot_Group;  /* ".Group" */
 extern0 SEXP    R_dot_Class;  /* ".Class" */
 extern0 SEXP    R_dot_GenericCallEnv;  /* ".GenericCallEnv" */
 extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
+extern0 SEXP	R_sort_list;  /* "sort.list" */
+extern0 SEXP	R_S3MethodsTable;  /* ".__S3MethodsTable__." */
 
 
  /* writable char access for R internal use only */
