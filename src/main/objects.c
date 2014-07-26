@@ -274,11 +274,10 @@ int isBasicClass(const char *ss) {
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
-    SEXP klass, method, sxp, t, s, matchedarg, sort_list;
-    SEXP op, formals, newrho, newcall;
-    char buf[512];
+    SEXP klass, method, sxp, t, s, sort_list, op, formals;
     int i, j, nclass;
     RCNTXT *cptr;
+    char buf[512];
 
     /* Get the context which UseMethod was called from. */
 
@@ -288,8 +287,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
     /* Create a new environment without any */
     /* of the formals to the generic in it. */
-
-    PROTECT(newrho = allocSExp(ENVSXP));
 
     op = CAR(cptr->call);
     switch (TYPEOF(op)) {
@@ -307,18 +304,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     default:
 	error(_("Invalid generic function in 'usemethod'"));
     }
-
-    if (TYPEOF(op) == CLOSXP) {
-	formals = FORMALS(op);
-	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-	    for (t = formals; t!=R_NilValue && TAG(t)!=TAG(s); t = CDR(t)) ;
-	    if (t == R_NilValue) 
-                defineVar(TAG(s), CAR(s), newrho);
-	}
-    }
-
-    PROTECT(matchedarg = cptr->promargs);
-    PROTECT(newcall = duplicate(cptr->call));
 
     PROTECT(klass = R_data_class2(obj));
     sort_list = install("sort.list");
@@ -356,11 +341,28 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         goto found;
     }
 
-    UNPROTECT(5);
+    UNPROTECT(2);
     cptr->callflag = CTXT_RETURN;
     return 0;
 
-found:
+found: ;
+
+    SEXP newrho, matchedarg, newcall;
+
+    PROTECT(newrho = allocSExp(ENVSXP));
+
+    if (TYPEOF(op) == CLOSXP) {
+	formals = FORMALS(op);
+	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
+	    for (t = formals; t!=R_NilValue && TAG(t)!=TAG(s); t = CDR(t)) ;
+	    if (t == R_NilValue) 
+                defineVar(TAG(s), CAR(s), newrho);
+	}
+    }
+
+    PROTECT(matchedarg = cptr->promargs);
+    PROTECT(newcall = duplicate(cptr->call));
+
     if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
     defineVar(R_dot_Class, t, newrho);
     defineVar(R_dot_Generic, mkString(generic), newrho);
