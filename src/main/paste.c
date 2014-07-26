@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -76,11 +76,11 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     x = CAR(args);
     if (!isVectorList(x))
 	error(_("invalid first argument"));
-    nx = length(x);
+    nx = LENGTH(x);
 
     if(use_sep) { /* paste(..., sep, .) */
 	sep = CADR(args);
-	if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep, 0) == NA_STRING)
+	if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep,0)==NA_STRING)
 	    error(_("invalid separator"));
 	sep = STRING_ELT(sep, 0);
 	csep = translateChar(sep);
@@ -101,7 +101,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     if(nx == 0)
 	return (!isNull(collapse)) ? mkString("") : allocVector(STRSXP, 0);
 
-
     /* Maximum argument length, coerce if needed */
 
     maxlen = 0;
@@ -113,16 +112,17 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 		PROTECT(call = lang2(install("as.character"), xj));
 		SET_VECTOR_ELT(x, j, eval(call, env));
 		UNPROTECT(1);
-	    } else if (isSymbol(xj))
+	    } 
+	    else if (isSymbol(xj))
 		SET_VECTOR_ELT(x, j, ScalarString(PRINTNAME(xj)));
-	    else
+	    else if (!isString(xj))
 		SET_VECTOR_ELT(x, j, coerceVector(xj, STRSXP));
 
 	    if (!isString(VECTOR_ELT(x, j)))
 		error(_("non-string argument to Internal paste"));
 	}
-	if(length(VECTOR_ELT(x, j)) > maxlen)
-	    maxlen = length(VECTOR_ELT(x, j));
+	if (LENGTH(VECTOR_ELT(x, j)) > maxlen)
+	    maxlen = LENGTH(VECTOR_ELT(x, j));
     }
     if(maxlen == 0)
 	return (!isNull(collapse)) ? mkString("") : allocVector(STRSXP, 0);
@@ -144,9 +144,8 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    use_Bytes = sepBytes;
 	}
 
-	pwidth = 0;
 	for (j = 0; j < nx; j++) {
-	    k = length(VECTOR_ELT(x, j));
+	    k = LENGTH(VECTOR_ELT(x, j));
 	    if (k > 0) {
 		SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
 		if(IS_UTF8(cs)) use_UTF8 = TRUE;
@@ -155,15 +154,17 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	if (use_Bytes) use_UTF8 = FALSE;
 	vmax = VMAXGET();
+	pwidth = 0;
 	for (j = 0; j < nx; j++) {
-	    k = length(VECTOR_ELT(x, j));
+	    k = LENGTH(VECTOR_ELT(x, j));
 	    if (k > 0) {
 		if(use_Bytes)
-		    pwidth += strlen(CHAR(STRING_ELT(VECTOR_ELT(x, j), i % k)));
+		    s = CHAR(STRING_ELT(VECTOR_ELT(x, j), i % k));
 		else if(use_UTF8)
-		    pwidth += strlen(translateCharUTF8(STRING_ELT(VECTOR_ELT(x, j), i % k)));
+		    s = translateCharUTF8(STRING_ELT(VECTOR_ELT(x, j), i % k));
 		else
-		    pwidth += strlen(translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k)));
+		    s = translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k));
+		pwidth += strlen(s);
 		VMAXSET(vmax);
 	    }
 	}
@@ -177,31 +178,30 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
 	vmax = VMAXGET();
 	for (j = 0; j < nx; j++) {
-	    k = length(VECTOR_ELT(x, j));
+	    k = LENGTH(VECTOR_ELT(x, j));
 	    if (k > 0) {
 		SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
-		if (use_UTF8) {
+		if (use_UTF8)
 		    s = translateCharUTF8(cs);
-		    strcpy(buf, s);
-		    buf += strlen(s);
-		} else {
+		else {
 		    s = use_Bytes ? CHAR(cs) : translateChar(cs);
-		    strcpy(buf, s);
-		    buf += strlen(s);
-		    allKnown = allKnown && (strIsASCII(s) || (ENC_KNOWN(cs)> 0));
-		    anyKnown = anyKnown || (ENC_KNOWN(cs)> 0);
+		    allKnown = allKnown && (ENC_KNOWN(cs) > 0 || strIsASCII(s));
+		    anyKnown = anyKnown || ENC_KNOWN(cs) > 0;
 		}
+		strcpy(buf, s);
+		buf += strlen(s);
 	    }
 	    if (sepw != 0 && j != nx - 1) {
 		if (use_UTF8) {
 		    strcpy(buf, u_csep);
 		    buf += u_sepw;
-		} else {
+		} 
+		else {
 		    strcpy(buf, csep);
 		    buf += sepw;
 		}
 	    }
-	    vmax = VMAXGET();
+	    VMAXSET(vmax);
 	}
 	ienc = 0;
 	if(use_UTF8) ienc = CE_UTF8;
@@ -235,12 +235,14 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	allKnown = anyKnown || strIsASCII(csep);
 	pwidth = 0;
 	vmax = VMAXGET();
-	for (i = 0; i < nx; i++)
+	for (i = 0; i < nx; i++) {
 	    if(use_UTF8) {
-		pwidth += strlen(translateCharUTF8(STRING_ELT(ans, i)));
+		s = translateCharUTF8(STRING_ELT(ans, i));
 		VMAXSET(vmax);
 	    } else /* already translated */
-		pwidth += strlen(CHAR(STRING_ELT(ans, i)));
+		s = CHAR(STRING_ELT(ans, i));
+            pwidth += strlen(s);
+	}
 	pwidth += (nx - 1) * sepw;
 	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
 	vmax = VMAXGET();
@@ -257,9 +259,9 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    while (*buf)
 		buf++;
 	    allKnown = allKnown &&
-		(strIsASCII(s) || (ENC_KNOWN(STRING_ELT(ans, i)) > 0));
-	    anyKnown = anyKnown || (ENC_KNOWN(STRING_ELT(ans, i)) > 0);
-	    if(use_UTF8) VMAXSET(vmax);
+		(strIsASCII(s) || ENC_KNOWN(STRING_ELT(ans, i)) > 0);
+	    anyKnown = anyKnown || ENC_KNOWN(STRING_ELT(ans, i)) > 0;
+	    VMAXSET(vmax);
 	}
 	UNPROTECT(1);
 	ienc = CE_NATIVE;
@@ -290,7 +292,7 @@ static SEXP do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
     x = CAR(args);
     if (!isVectorList(x))
 	error(_("invalid first argument"));
-    nx = length(x);
+    nx = LENGTH(x);
     if(nx == 0) return allocVector(STRSXP, 0);
 
 
@@ -319,7 +321,7 @@ static SEXP do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (!isString(VECTOR_ELT(x, j)))
 		error(_("non-string argument to Internal paste"));
 	}
-	ln = length(VECTOR_ELT(x, j));
+	ln = LENGTH(VECTOR_ELT(x, j));
 	if(ln > maxlen) maxlen = ln;
 	if(ln == 0) {nzero++; break;}
     }
@@ -330,13 +332,13 @@ static SEXP do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
     for (i = 0; i < maxlen; i++) {
 	pwidth = 0;
 	for (j = 0; j < nx; j++) {
-	    k = length(VECTOR_ELT(x, j));
+	    k = LENGTH(VECTOR_ELT(x, j));
 	    pwidth += strlen(translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k)));
 	}
 	pwidth += (nx - 1) * sepw;
 	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
 	for (j = 0; j < nx; j++) {
-	    k = length(VECTOR_ELT(x, j));
+	    k = LENGTH(VECTOR_ELT(x, j));
 	    if (k > 0) {
 		s = translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k));
 		strcpy(buf, s);
