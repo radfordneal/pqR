@@ -83,6 +83,9 @@ int matherr(struct exception *exc)
 #endif
 #endif
 
+#define R_INT_MAX INT_MAX
+#define R_INT_MIN (-INT_MAX)  /* Excludes INT_MIN, which is NA_INTEGER */
+
 /* Hack to avoid possibly-incorrect constant folding. */
 volatile double R_Zero_Hack = 0.0;
 
@@ -391,12 +394,13 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                     return ans;
                 }
 
-                if (opcode==MINUSOP) a2 = -a2;
+                int_fast64_t val = 
+                  opcode==PLUSOP ? (int_fast64_t) a1 + (int_fast64_t) a2
+                                 : (int_fast64_t) a1 - (int_fast64_t) a2;
 
-                *INTEGER(ans) = a1 + a2;
-
-                if (a1>0 ? (a2>0 && *INTEGER(ans)<0) 
-                         : (a2<0 && *INTEGER(ans)>0)) {
+                if (val >= R_INT_MIN && val <= R_INT_MAX)
+                    *INTEGER(ans) = val;
+                else {
                     PROTECT(ans);
                     warningcall(call, _("NAs produced by integer overflow"));
                     UNPROTECT(1);
@@ -546,39 +550,6 @@ SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 #define RIFETCH(_s_,_i_) \
    ((double) (INTEGER(_s_)[_i_] == NA_INTEGER ? NA_REAL : INTEGER(_s_)[_i_]))
 
-/* The tests using integer comparisons are a bit faster than the tests
-   using doubles, but they depend on a two's complement representation
-   (but that is almost universal).  The tests that compare results to
-   double's depend on being able to accurately represent all int's as
-   double's.  Since int's are almost universally 32 bit that should be
-   OK. */
-
-#ifndef INT_32_BITS
-/* configure checks whether int is 32 bits.  If not this code will
-   need to be rewritten.  Since 32 bit ints are pretty much universal,
-   we can worry about writing alternate code when the need arises.
-   To be safe, we signal a compiler error if int is not 32 bits. */
-# error code requires that int have 32 bits
-#else
-/* Just to be on the safe side, configure ought to check that the
-   mashine uses two's complement. A define like
-#define USES_TWOS_COMPLEMENT (~0 == (unsigned) -1)
-   might work, but at least one compiler (CodeWarrior 6) chokes on it.
-   So for now just assume it is true.
-*/
-#define USES_TWOS_COMPLEMENT 1
-
-#if USES_TWOS_COMPLEMENT
-# define OPPOSITE_SIGNS(x, y) ((x < 0) ^ (y < 0))
-# define GOODISUM(x, y, z) (((x) > 0) ? ((y) < (z)) : ! ((y) < (z)))
-# define GOODIDIFF(x, y, z) (!(OPPOSITE_SIGNS(x, y) && OPPOSITE_SIGNS(x, z)))
-#else
-# define GOODISUM(x, y, z) ((double) (x) + (double) (y) == (z))
-# define GOODIDIFF(x, y, z) ((double) (x) - (double) (y) == (z))
-#endif
-#define GOODIPROD(x, y, z) ((double) (x) * (double) (y) == (z))
-#endif
-
 static int integer_overflow;  /* Set by task_integer_arithmetic on overflow
                                  (only in a master-now task or a direct call) */
 
@@ -599,12 +570,12 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
                 INTEGER(ans)[i] = NA_INTEGER;
             else {
-                int val = x1 + x2;
-                if (val != NA_INTEGER && GOODISUM(x1, x2, val))
+                int_fast64_t val = (int_fast64_t) x1 + (int_fast64_t) x2;
+                if (val >= R_INT_MIN && val <= R_INT_MAX)
                     INTEGER(ans)[i] = val;
                 else {
-                    INTEGER(ans)[i] = NA_INTEGER;
                     integer_overflow = TRUE;
+                    INTEGER(ans)[i] = NA_INTEGER;
                 }
             }
         }
@@ -616,8 +587,8 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
                 INTEGER(ans)[i] = NA_INTEGER;
             else {
-                int val = x1 - x2;
-                if (val != NA_INTEGER && GOODIDIFF(x1, x2, val))
+                int_fast64_t val = (int_fast64_t) x1 - (int_fast64_t) x2;
+                if (val >= R_INT_MIN && val <= R_INT_MAX)
                     INTEGER(ans)[i] = val;
                 else {
                     integer_overflow = TRUE;
@@ -633,8 +604,8 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
                 INTEGER(ans)[i] = NA_INTEGER;
             else {
-                int val = x1 * x2;
-                if (val != NA_INTEGER && GOODIPROD(x1, x2, val))
+                int_fast64_t val = (int_fast64_t) x1 * (int_fast64_t) x2;
+                if (val >= R_INT_MIN && val <= R_INT_MAX)
                     INTEGER(ans)[i] = val;
                 else {
                     integer_overflow = TRUE;
