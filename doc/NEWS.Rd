@@ -14,7 +14,7 @@
 
 \item This release contains several performance improvements, including some
       adapted from those in R Core releases after R-2.15.0, as well as
-      some bug fixes and documentation updates, a few features changes, some
+      some bug fixes and documentation updates, a few feature changes, some
       tracking later changes in R Core releases, and some new features that are 
       mostly of interest to developers.
 }}
@@ -40,6 +40,10 @@
       are duplicated even when \code{DUP=FALSE} is specified.  They are
       not duplicated in R Core versions, however (at least through R-3.1.1),
       so it may be unwise to rely on this.
+\item A \code{HELEPRS} argument can now be used in \code{.C} and 
+      \code{.Fortran} to specify that the C or Fortran routine may
+      (sometimes) be done in a helper thread.  (See the section on
+      performance improvements below.)
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
@@ -50,12 +54,14 @@
       segmentation fault, in favour of instead producing (maybe) an
       immediate core dump.
 \item The environment variable \code{R_BIT_BUCKET} can be set to
-      a file to receive output that would otherwise go to dev/null
+      a file to receive output that would otherwise go to \file{dev/null}
       when "make" is run.
       
 }}
 
   \subsection{DOCUMENTATION UPDATES}{
+  These are in addition to changes in documentation relating to other
+  changes reported here.
     \itemize{
 \item Some incorrect code has been corrected in the "Writing
       R Extensions" manual, in the "Zero finding"
@@ -74,7 +80,10 @@
       \code{.Call} and \code{.External} has been sped up to a lesser degree.
 \item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
       can now be done in a helper thread, in parallel with other computations.
-      See \code{help(.C)} for details.
+      This is done only if requested with the \code{HELPERS} option, and
+      at present only in certain limited circumstances, in which only a single
+      output variable is used.  See \code{help(.C)} or \code{help(.Fortran)}
+      for details.
 \item The performance of \code{rep} and \code{rep.int} (which is now primitive)
       is much improved.
       These improvements (and improvements previously made in pqR) go beyond 
@@ -84,8 +93,9 @@
       that the changes in functionality made in R-2.15.2 have not been made 
       in pqR; in particular, pairlists are still allowed, as in R-2.15.0.)
 \item For numeric vectors, the repetition done by \code{rep} and \code{rep.int}
-      may now be done in a helper thread, in parallel with other computations
-      (including attaching names to the result of \code{rep} if necessary).
+      may now be done in a helper thread, in parallel with other computations.
+      For example, attaching names to the result of \code{rep} (if necessary)
+      may be done in parallel with replication of the data part.
 \item Expressions now sometimes return constant values, that are shared,
       and likely stored in read-only memory.  These constants include 
       \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
@@ -99,17 +109,44 @@
       desirable debugging aid, though it might sometimes cause a package that
       had previously at least sort-of worked to no longer run.
 \item The function for unserializing data (eg, reading file \file{.RData}) is
-      now done with tail-recursion (on the CDR field) optimized when reading 
-      pairlists.  This is both faster and less likely to produce a stack
+      now done with elimination of tail-recursion (on the CDR field) when 
+      reading pairlists.  This is both faster and less likely to produce a stack
       overflow.  Some other improvements to serializing/unserializing have
       also been made, including support for restoring constant values (mentioned
       above) as constant values.
+\item Lookup of S3 methods has been sped up, especially when no method is
+      found.  This is important for several primitive functions, such as 
+      \code{$}, that look for a method when applied to an object with a class
+      attribute, but perform the operation themselves if no method is found.
 \item Several speed improvements relating to garbage collection have been made.
 \item Variable lookup has been sped up a bit (by unrolling the search loop).
 \item Functions in the \code{apply} family have been sped up when they are
       called with no additional arguments for the function being applied.
 \item The performance problem reported in PR #15798 at r-project.org has
       been fixed (differently from the R Core fix).
+\item A performance bug has been fixed in which any assignment to a vector 
+      subscripted with a string index caused the entire vector to be copied.
+      For example, the final assignment in the code below would copy all
+      of \code{a}:
+\preformatted{   a<-rep(1.1,10000); names(a)[1] <- "x"
+   a["x"] <- 9
+}
+      This bug exists in R Core implementations though at least R-3.1.1.
+\item A performance bug has been fixed that involved subscripting with many 
+      invalid string indexes, reported on r-devel on 2010-07-15 and 
+      2013-05-8.  It is illustrated by the following code, 
+      which is more than ten thousand times slower than expected:
+\preformatted{   x <- c(A=10L, B=20L, C=30L)
+   subscript <- c(LETTERS[1:3], sprintf("ID%05d", 1:150000))
+   system.time(y1 <- x[subscript])
+}
+      The fix in this version of pqR does not solve the related problem 
+      when assigning to \code{x[subscript]}, which is still slow.  Fixing
+      that would require implementation of a new method, possibly requiring
+      more memory.
+
+      This performance bug has not been fixed in R Core releases, at 
+      least through R-3.1.1.
 }}
 
   \subsection{BUG FIXES}{
