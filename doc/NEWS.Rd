@@ -118,6 +118,8 @@
       found.  This is important for several primitive functions, such as 
       \code{$}, that look for a method when applied to an object with a class
       attribute, but perform the operation themselves if no method is found.
+\item Integer plus, minus, and times are now somewhat faster (as side effect
+      of switching to a more robust overflow check, as described below).
 \item Several speed improvements relating to garbage collection have been made.
 \item Variable lookup has been sped up a bit (by unrolling the search loop).
 \item Functions in the \code{apply} family have been sped up when they are
@@ -151,6 +153,9 @@
 
   \subsection{BUG FIXES}{
     \itemize{
+\item Fixed the non-robust checks for integer overflow, which reportedly
+      sometimes fail when using clang on a Mac.  This is PR 15774 at
+      r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
 \item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
       \code{na.exclude} that led to a
       data frame that should have had zero rows having one row instead.
