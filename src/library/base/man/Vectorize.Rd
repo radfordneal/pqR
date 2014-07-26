@@ -31,9 +31,6 @@ Vectorize(FUN, vectorize.args = arg.names, SIMPLIFY = TRUE,
   \code{Vectorize} are the arguments passed in the \code{...}  list to
   \code{\link{mapply}}.  Only those that are actually passed will be
   vectorized; default values will not.  See the examples.
-
-  \code{Vectorize} cannot be used with primitive functions as they do
-  not have a value for \code{\link{formals}}.
 }
 \value{
   A function with the same arguments as \code{FUN}, wrapping a call to
@@ -41,7 +38,7 @@ Vectorize(FUN, vectorize.args = arg.names, SIMPLIFY = TRUE,
 }
 
 \examples{
-# We use rep.int as rep is primitive
+# We use rep.int, since the formals for rep are just x, ...
 vrep <- Vectorize(rep.int)
 vrep(1:4, 4:1)
 vrep(times = 1:4, x = 4:1)
