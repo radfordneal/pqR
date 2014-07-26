@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -120,11 +120,13 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
 {
     SEXP ans;
     if (TYPEOF(op) == SPECIALSXP) {
-	int save = R_PPStackTop, flag = PRIMPRINT(op);
+	int save = R_PPStackTop;
 	const void *vmax = VMAXGET();
-	R_Visible = flag != 1;
+	R_Visible = TRUE;
 	ans = CALL_PRIMFUN(call, op, args, rho, variant);
-	if (flag < 2) R_Visible = flag != 1;
+        int flag = PRIMPRINT(op);
+        if (flag == 0) R_Visible = TRUE;
+        else if (flag == 1) R_Visible = FALSE;
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
     }
@@ -134,12 +136,14 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
        found).
      */
     else if (TYPEOF(op) == BUILTINSXP) {
-	int save = R_PPStackTop, flag = PRIMPRINT(op);
+	int save = R_PPStackTop;
 	const void *vmax = VMAXGET();
 	PROTECT(args = evalList(args, rho, call));
-	R_Visible = flag != 1;
+	R_Visible = TRUE;
 	ans = CALL_PRIMFUN(call, op, args, rho, variant);
-	if (flag < 2) R_Visible = flag != 1;
+        int flag = PRIMPRINT(op);
+        if (flag == 0) R_Visible = TRUE;
+        else if (flag == 1) R_Visible = FALSE;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
@@ -226,14 +230,12 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	defrho = R_BaseNamespace;
 
     /* This evaluates promises */
-    val = findVar1(method, callrho, FUNSXP, TRUE);
+    val = findFunMethod (method, callrho);
     if (isFunction(val))
 	return val;
     else {
 	/* We assume here that no one registered a non-function */
-	SEXP table = findVarInFrame3(defrho,
-				     install(".__S3MethodsTable__."),
-				     TRUE);
+	SEXP table = findVarInFrame3 (defrho, R_S3MethodsTable, TRUE);
 	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
 	if (TYPEOF(table) == ENVSXP) {
 	    val = findVarInFrame3(table, method, TRUE);
@@ -274,7 +276,7 @@ int isBasicClass(const char *ss) {
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
-    SEXP klass, method, sxp, t, s, sort_list, op, formals;
+    SEXP klass, method, sxp, t, s, op, formals;
     int i, j, nclass;
     RCNTXT *cptr;
     char buf[512];
@@ -306,7 +308,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     }
 
     PROTECT(klass = R_data_class2(obj));
-    sort_list = install("sort.list");
 
     nclass = length(klass);
     for (i = 0; i < nclass; i++) {
@@ -316,7 +317,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	method = install(buf);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
-	    if(method == sort_list && CLOENV(sxp) == R_BaseNamespace)
+	    if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
 	    if (i > 0) {
 	        int ii;
@@ -424,8 +425,8 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	The generic need not be a closure (Henrik Bengtsson writes
 	UseMethod("$"), although only functions are documented.)
     */
-    val = findVar1(install(translateChar(STRING_ELT(generic, 0))),
-		   ENCLOS(env), FUNSXP, TRUE); /* That has evaluated promises */
+    val = findFunMethod (install(translateChar(STRING_ELT(generic, 0))),
+                         ENCLOS(env)); /* That has evaluated promises */
     if(TYPEOF(val) == CLOSXP) defenv = CLOENV(val);
     else defenv = R_BaseNamespace;
 

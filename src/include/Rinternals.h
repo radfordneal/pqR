@@ -963,6 +963,7 @@ int Rf_ep_match_string_expr(const char *, SEXP);
 SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_evalv(SEXP, SEXP, int);
 SEXP Rf_findFun(SEXP, SEXP);
+SEXP Rf_findFunMethod(SEXP, SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
 SEXP Rf_findVarPendingOK(SEXP, SEXP);
 SEXP Rf_findVarInFrame(SEXP, SEXP);
@@ -1293,6 +1294,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define eval			Rf_eval
 #define evalv			Rf_evalv
 #define findFun			Rf_findFun
+#define findFunMethod		Rf_findFunMethod
 #define findVar			Rf_findVar
 #define findVarPendingOK	Rf_findVarPendingOK
 #define findVarInFrame		Rf_findVarInFrame
