@@ -277,7 +277,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     SEXP klass, method, sxp, t, s, matchedarg, sort_list;
     SEXP op, formals, newrho, newcall;
     char buf[512];
-    int i, j, nclass, /* S4toS3, */ nprotect;
+    int i, j, nclass;
     RCNTXT *cptr;
 
     /* Get the context which UseMethod was called from. */
@@ -290,10 +290,10 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     /* of the formals to the generic in it. */
 
     PROTECT(newrho = allocSExp(ENVSXP));
+
     op = CAR(cptr->call);
     switch (TYPEOF(op)) {
     case SYMSXP:
-
 	PROTECT(op = findFun(op, cptr->sysparent));
 	break;
     case LANGSXP:
@@ -308,7 +308,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	error(_("Invalid generic function in 'usemethod'"));
     }
 
-    nprotect = 5;
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
@@ -334,58 +333,50 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	if (isFunction(sxp)) {
 	    if(method == sort_list && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
-            if( RDEBUG(op) || RSTEP(op) )
-                SET_RSTEP(sxp, 1);
-	    defineVar(R_dot_Generic, mkString(generic), newrho);
 	    if (i > 0) {
 	        int ii;
 		PROTECT(t = allocVector(STRSXP, nclass - i));
 		for(j = 0, ii = i; j < LENGTH(t); j++, ii++)
 		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
 		setAttrib(t, install("previous"), klass);
-		defineVar(R_dot_Class, t, newrho);
 		UNPROTECT(1);
-	    } else
-		defineVar(R_dot_Class, klass, newrho);
-	    PROTECT(t = mkString(buf));
-	    defineVar(R_dot_Method, t, newrho);
-	    UNPROTECT(1);
-	    defineVar(R_dot_GenericCallEnv, callrho, newrho);
-	    defineVar(R_dot_GenericDefEnv, defrho, newrho);
-	    t = newcall;
-	    SETCAR(t, method);
-	    R_GlobalContext->callflag = CTXT_GENERIC;
-	    *ans = applyMethod(t, sxp, matchedarg, rho, newrho, variant);
-	    R_GlobalContext->callflag = CTXT_RETURN;
-	    UNPROTECT(nprotect);
-	    return 1;
+	    } 
+            else
+		t = klass;
+            goto found;
 	}
     }
+
     if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
 	error(_("class name too long in '%s'"), generic);
     method = install(buf);
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
-        if( RDEBUG(op) || RSTEP(op) )
-            SET_RSTEP(sxp, 1);
-	defineVar(R_dot_Generic, mkString(generic), newrho);
-	defineVar(R_dot_Class, R_NilValue, newrho);
-	PROTECT(t = mkString(buf));
-	defineVar(R_dot_Method, t, newrho);
-	UNPROTECT(1);
-	defineVar(R_dot_GenericCallEnv, callrho, newrho);
-	defineVar(R_dot_GenericDefEnv, defrho, newrho);
-	t = newcall;
-	SETCAR(t, method);
-	R_GlobalContext->callflag = CTXT_GENERIC;
-	*ans = applyMethod(t, sxp, matchedarg, rho, newrho, variant);
-	R_GlobalContext->callflag = CTXT_RETURN;
-	UNPROTECT(5);
-	return 1;
+        t = R_NilValue;
+        goto found;
     }
+
     UNPROTECT(5);
     cptr->callflag = CTXT_RETURN;
     return 0;
+
+found:
+    if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
+    defineVar(R_dot_Class, t, newrho);
+    defineVar(R_dot_Generic, mkString(generic), newrho);
+    PROTECT(t = mkString(buf));
+    defineVar(R_dot_Method, t, newrho);
+    UNPROTECT(1);
+    defineVar(R_dot_GenericCallEnv, callrho, newrho);
+    defineVar(R_dot_GenericDefEnv, defrho, newrho);
+    SETCAR(newcall, method);
+    R_GlobalContext->callflag = CTXT_GENERIC;
+
+    *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
+
+    R_GlobalContext->callflag = CTXT_RETURN;
+    UNPROTECT(5);
+    return 1;
 }
 
 /* Note: "do_usemethod" is not the only entry point to
