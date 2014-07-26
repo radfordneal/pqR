@@ -40,7 +40,7 @@
       are duplicated even when \code{DUP=FALSE} is specified.  They are
       not duplicated in R Core versions, however (at least through R-3.1.1),
       so it may be unwise to rely on this.
-\item A \code{HELEPRS} argument can now be used in \code{.C} and 
+\item A \code{HELPERS} argument can now be used in \code{.C} and 
       \code{.Fortran} to specify that the C or Fortran routine may
       (sometimes) be done in a helper thread.  (See the section on
       performance improvements below.)
