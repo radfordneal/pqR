@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1400,6 +1400,34 @@ SEXP findFun(SEXP symbol, SEXP rho)
     }
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
     /* NOT REACHED */
+    return R_UnboundValue;
+}
+
+/* Variation on findFun that doesn't report errors itself, doesn't
+   check for special symbols, and does not use the global cache,
+   which is quicker if most searches are expected to fail.  
+
+   Used for looking up methods in objects.c. */
+
+SEXP findFunMethod(SEXP symbol, SEXP rho)
+{
+    SEXP vl;
+
+    while (rho != R_EmptyEnv) {
+	vl = findVarInFrame3(rho, symbol, 3);
+	if (vl != R_UnboundValue) {
+	    if (TYPEOF(vl) == PROMSXP) {
+		PROTECT(vl);
+		vl = eval(vl, rho);
+		UNPROTECT(1);
+	    }
+	    if (TYPEOF(vl) == CLOSXP || TYPEOF(vl) == BUILTINSXP ||
+		TYPEOF(vl) == SPECIALSXP)
+		return (vl);
+	}
+	rho = ENCLOS(rho);
+    }
+
     return R_UnboundValue;
 }
 
