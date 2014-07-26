@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -120,11 +120,13 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
 {
     SEXP ans;
     if (TYPEOF(op) == SPECIALSXP) {
-	int save = R_PPStackTop, flag = PRIMPRINT(op);
+	int save = R_PPStackTop;
 	const void *vmax = VMAXGET();
-	R_Visible = flag != 1;
+	R_Visible = TRUE;
 	ans = CALL_PRIMFUN(call, op, args, rho, variant);
-	if (flag < 2) R_Visible = flag != 1;
+        int flag = PRIMPRINT(op);
+        if (flag == 0) R_Visible = TRUE;
+        else if (flag == 1) R_Visible = FALSE;
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
     }
@@ -134,12 +136,14 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
        found).
      */
     else if (TYPEOF(op) == BUILTINSXP) {
-	int save = R_PPStackTop, flag = PRIMPRINT(op);
+	int save = R_PPStackTop;
 	const void *vmax = VMAXGET();
 	PROTECT(args = evalList(args, rho, call));
-	R_Visible = flag != 1;
+	R_Visible = TRUE;
 	ans = CALL_PRIMFUN(call, op, args, rho, variant);
-	if (flag < 2) R_Visible = flag != 1;
+        int flag = PRIMPRINT(op);
+        if (flag == 0) R_Visible = TRUE;
+        else if (flag == 1) R_Visible = FALSE;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
@@ -226,14 +230,12 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	defrho = R_BaseNamespace;
 
     /* This evaluates promises */
-    val = findVar1(method, callrho, FUNSXP, TRUE);
+    val = findFunMethod (method, callrho);
     if (isFunction(val))
 	return val;
     else {
 	/* We assume here that no one registered a non-function */
-	SEXP table = findVarInFrame3(defrho,
-				     install(".__S3MethodsTable__."),
-				     TRUE);
+	SEXP table = findVarInFrame3 (defrho, R_S3MethodsTable, TRUE);
 	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
 	if (TYPEOF(table) == ENVSXP) {
 	    val = findVarInFrame3(table, method, TRUE);
@@ -274,11 +276,10 @@ int isBasicClass(const char *ss) {
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
-    SEXP klass, method, sxp, t, s, matchedarg, sort_list;
-    SEXP op, formals, newrho, newcall;
-    char buf[512];
-    int i, j, nclass, /* S4toS3, */ nprotect;
+    SEXP klass, method, sxp, t, s, op, formals;
+    int i, j, nclass;
     RCNTXT *cptr;
+    char buf[512];
 
     /* Get the context which UseMethod was called from. */
 
@@ -289,11 +290,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     /* Create a new environment without any */
     /* of the formals to the generic in it. */
 
-    PROTECT(newrho = allocSExp(ENVSXP));
     op = CAR(cptr->call);
     switch (TYPEOF(op)) {
     case SYMSXP:
-
 	PROTECT(op = findFun(op, cptr->sysparent));
 	break;
     case LANGSXP:
@@ -308,7 +307,51 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	error(_("Invalid generic function in 'usemethod'"));
     }
 
-    nprotect = 5;
+    PROTECT(klass = R_data_class2(obj));
+
+    nclass = length(klass);
+    for (i = 0; i < nclass; i++) {
+        const char *ss = translateChar(STRING_ELT(klass, i));
+        if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
+	    error(_("class name too long in '%s'"), generic);
+	method = install(buf);
+	sxp = R_LookupMethod(method, rho, callrho, defrho);
+	if (isFunction(sxp)) {
+	    if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
+		continue; /* kludge because sort.list is not a method */
+	    if (i > 0) {
+	        int ii;
+		PROTECT(t = allocVector(STRSXP, nclass - i));
+		for(j = 0, ii = i; j < LENGTH(t); j++, ii++)
+		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
+		setAttrib(t, install("previous"), klass);
+		UNPROTECT(1);
+	    } 
+            else
+		t = klass;
+            goto found;
+	}
+    }
+
+    if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
+	error(_("class name too long in '%s'"), generic);
+    method = install(buf);
+    sxp = R_LookupMethod(method, rho, callrho, defrho);
+    if (isFunction(sxp)) {
+        t = R_NilValue;
+        goto found;
+    }
+
+    UNPROTECT(2);
+    cptr->callflag = CTXT_RETURN;
+    return 0;
+
+found: ;
+
+    SEXP newrho, matchedarg, newcall;
+
+    PROTECT(newrho = allocSExp(ENVSXP));
+
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
@@ -321,71 +364,22 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     PROTECT(matchedarg = cptr->promargs);
     PROTECT(newcall = duplicate(cptr->call));
 
-    PROTECT(klass = R_data_class2(obj));
-    sort_list = install("sort.list");
+    if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
+    defineVar(R_dot_Class, t, newrho);
+    defineVar(R_dot_Generic, mkString(generic), newrho);
+    PROTECT(t = mkString(buf));
+    defineVar(R_dot_Method, t, newrho);
+    UNPROTECT(1);
+    defineVar(R_dot_GenericCallEnv, callrho, newrho);
+    defineVar(R_dot_GenericDefEnv, defrho, newrho);
+    SETCAR(newcall, method);
+    R_GlobalContext->callflag = CTXT_GENERIC;
 
-    nclass = length(klass);
-    for (i = 0; i < nclass; i++) {
-        const char *ss = translateChar(STRING_ELT(klass, i));
-        if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
-	    error(_("class name too long in '%s'"), generic);
-	method = install(buf);
-	sxp = R_LookupMethod(method, rho, callrho, defrho);
-	if (isFunction(sxp)) {
-	    if(method == sort_list && CLOENV(sxp) == R_BaseNamespace)
-		continue; /* kludge because sort.list is not a method */
-            if( RDEBUG(op) || RSTEP(op) )
-                SET_RSTEP(sxp, 1);
-	    defineVar(R_dot_Generic, mkString(generic), newrho);
-	    if (i > 0) {
-	        int ii;
-		PROTECT(t = allocVector(STRSXP, nclass - i));
-		for(j = 0, ii = i; j < LENGTH(t); j++, ii++)
-		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
-		setAttrib(t, install("previous"), klass);
-		defineVar(R_dot_Class, t, newrho);
-		UNPROTECT(1);
-	    } else
-		defineVar(R_dot_Class, klass, newrho);
-	    PROTECT(t = mkString(buf));
-	    defineVar(R_dot_Method, t, newrho);
-	    UNPROTECT(1);
-	    defineVar(R_dot_GenericCallEnv, callrho, newrho);
-	    defineVar(R_dot_GenericDefEnv, defrho, newrho);
-	    t = newcall;
-	    SETCAR(t, method);
-	    R_GlobalContext->callflag = CTXT_GENERIC;
-	    *ans = applyMethod(t, sxp, matchedarg, rho, newrho, variant);
-	    R_GlobalContext->callflag = CTXT_RETURN;
-	    UNPROTECT(nprotect);
-	    return 1;
-	}
-    }
-    if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
-	error(_("class name too long in '%s'"), generic);
-    method = install(buf);
-    sxp = R_LookupMethod(method, rho, callrho, defrho);
-    if (isFunction(sxp)) {
-        if( RDEBUG(op) || RSTEP(op) )
-            SET_RSTEP(sxp, 1);
-	defineVar(R_dot_Generic, mkString(generic), newrho);
-	defineVar(R_dot_Class, R_NilValue, newrho);
-	PROTECT(t = mkString(buf));
-	defineVar(R_dot_Method, t, newrho);
-	UNPROTECT(1);
-	defineVar(R_dot_GenericCallEnv, callrho, newrho);
-	defineVar(R_dot_GenericDefEnv, defrho, newrho);
-	t = newcall;
-	SETCAR(t, method);
-	R_GlobalContext->callflag = CTXT_GENERIC;
-	*ans = applyMethod(t, sxp, matchedarg, rho, newrho, variant);
-	R_GlobalContext->callflag = CTXT_RETURN;
-	UNPROTECT(5);
-	return 1;
-    }
+    *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
+
+    R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5);
-    cptr->callflag = CTXT_RETURN;
-    return 0;
+    return 1;
 }
 
 /* Note: "do_usemethod" is not the only entry point to
@@ -431,8 +425,8 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	The generic need not be a closure (Henrik Bengtsson writes
 	UseMethod("$"), although only functions are documented.)
     */
-    val = findVar1(install(translateChar(STRING_ELT(generic, 0))),
-		   ENCLOS(env), FUNSXP, TRUE); /* That has evaluated promises */
+    val = findFunMethod (install(translateChar(STRING_ELT(generic, 0))),
+                         ENCLOS(env)); /* That has evaluated promises */
     if(TYPEOF(val) == CLOSXP) defenv = CLOENV(val);
     else defenv = R_BaseNamespace;
 
