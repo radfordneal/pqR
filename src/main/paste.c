@@ -68,10 +68,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     vmax0 = VMAXGET();
 
-    /* We use formatting and so we must initialize printing. */
-
-    PrintDefaults();
-
     /* Check the arguments */
 
     x = CAR(args);
