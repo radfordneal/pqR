@@ -68,10 +68,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     vmax0 = VMAXGET();
 
-    /* We use formatting and so we must initialize printing. */
-
-    PrintDefaults();
-
     /* Check the arguments */
 
     x = CAR(args);
@@ -106,10 +102,11 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
     maxlen = 0;
     for (j = 0; j < nx; j++) {
-	if (!isString(VECTOR_ELT(x, j))) {
+        SEXP xj = VECTOR_ELT(x,j);
+	if (!isString(xj)) {
 	    /* formerly in R code: moved to C for speed */
-	    SEXP call, xj = VECTOR_ELT(x, j);
-	    if(OBJECT(xj)) { /* method dispatch */
+	    if (OBJECT(xj)) { /* method dispatch */
+                SEXP call;
 		PROTECT(call = lang2(install("as.character"), xj));
 		SET_VECTOR_ELT(x, j, eval(call, env));
 		UNPROTECT(1);
@@ -118,12 +115,12 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 		SET_VECTOR_ELT(x, j, ScalarString(PRINTNAME(xj)));
 	    else if (!isString(xj))
 		SET_VECTOR_ELT(x, j, coerceVector(xj, STRSXP));
-
-	    if (!isString(VECTOR_ELT(x, j)))
+            xj = VECTOR_ELT(x,j);
+	    if (!isString(xj))
 		error(_("non-string argument to Internal paste"));
 	}
-	if (LENGTH(VECTOR_ELT(x, j)) > maxlen)
-	    maxlen = LENGTH(VECTOR_ELT(x, j));
+	if (LENGTH(xj) > maxlen)
+	    maxlen = LENGTH(xj);
     }
     if(maxlen == 0)
 	return (!isNull(collapse)) ? mkString("") : allocVector(STRSXP, 0);
@@ -149,9 +146,10 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             use_Bytes = use_UTF8 = any_known = FALSE;
 
         for (j = 0; j < nx && !use_Bytes; j++) {
-            k = LENGTH(VECTOR_ELT(x, j));
+            SEXP xj = VECTOR_ELT(x,j);
+            k = LENGTH(xj);
             if (k > 0) {
-                SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
+                SEXP cs = STRING_ELT(xj, i % k);
                 if (IS_BYTES(cs))
                     use_Bytes = TRUE;
                 else if (IS_UTF8(cs))
@@ -169,9 +167,10 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         vmax = VMAXGET();
         pwidth = 0;
         for (j = 0; j < nx; j++) {
-            k = LENGTH(VECTOR_ELT(x, j));
+            SEXP xj = VECTOR_ELT(x,j);
+            k = LENGTH(xj);
             if (k > 0) {
-                SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
+                SEXP cs = STRING_ELT(xj, i % k);
                 if (use_Bytes)
                     s = CHAR(cs);
                 else if (use_UTF8)
@@ -195,9 +194,10 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
         vmax = VMAXGET();
         for (j = 0; j < nx; j++) {
-            k = LENGTH(VECTOR_ELT(x, j));
+            SEXP xj = VECTOR_ELT(x,j);
+            k = LENGTH(xj);
             if (k > 0) {
-                SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
+                SEXP cs = STRING_ELT(xj, i % k);
                 if(use_Bytes)
                     s = CHAR(cs);
                 else if (use_UTF8)
