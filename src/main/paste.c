@@ -46,21 +46,21 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
   .Internal(paste (args, sep, collapse))
   .Internal(paste0(args, collapse))
 
- * do_paste uses two passes to paste the arguments (in CAR(args)) together.
- * The first pass calculates the width of the paste buffer,
- * then it is alloc-ed and the second pass stuffs the information in.
- */
+  Note that NA_STRING is not handled separately here.  This is
+  deliberate -- see ?paste -- and implicitly coerces it to "NA" */
 
-/* Note that NA_STRING is not handled separately here.  This is
-   deliberate -- see ?paste -- and implicitly coerces it to "NA"
-*/
+#define SMALL_BUFFER_SIZE 500
+
 static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, collapse, sep, x;
     int i, j, k, maxlen, nx, pwidth, sepw, u_sepw, ienc;
-    const char *s, *cbuf, *csep=NULL, *u_csep=NULL;
+    const char *s, *buf, *csep=NULL, *u_csep=NULL;
     const void *vmax0, *vmax;
-    char *buf;
+
+    char small_buffer[SMALL_BUFFER_SIZE];
+    int buf_size = SMALL_BUFFER_SIZE;
+    char *cbuf = small_buffer;
 
     Rboolean sepASCII=TRUE, sepUTF8=FALSE, sepBytes=FALSE, sepKnown=FALSE,
              use_sep = (PRIMVAL(op) == 0);
@@ -192,7 +192,19 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             }
             pwidth += (nx - 1) * (use_UTF8 ? u_sepw : sepw);
         }
-        cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
+
+        if (pwidth+1 > buf_size) {
+            double bs = (pwidth+1.0)*1.1; /* "*1.1" to make time logarithmic */ 
+            if (bs > INT_MAX) bs = pwidth+1.0;
+            buf_size = (int) bs;
+            cbuf = cbuf==small_buffer ? malloc(buf_size)
+                                      : realloc(cbuf,buf_size);
+            if (cbuf == NULL)
+                error("could not allocate memory (%.2f Mb) in 'paste'", 
+                       bs/1024/1024);
+        }
+
+        buf = cbuf;
         vmax = VMAXGET();
         for (j = 0; j < nx; j++) {
             k = LENGTH(VECTOR_ELT(x, j));
@@ -286,7 +298,18 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         }
 
         pwidth += (nx - 1) * sepw;
-        cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
+
+        if (pwidth+1 > buf_size) {
+            double bs = pwidth+1.0;
+            buf_size = (int) bs;
+            cbuf = cbuf==small_buffer ? malloc(buf_size)
+                                      : realloc(cbuf,buf_size);
+            if (cbuf == NULL)
+                error("could not allocate memory (%.1f Mb) in 'paste'", 
+                       bs/1024/1024);
+        }
+
+        buf = cbuf;
         vmax = VMAXGET();
         for (i = 0; i < nx; i++) {
             SEXP cs = STRING_ELT(ans,i);
@@ -320,7 +343,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         SET_STRING_ELT(ans, 0, mkCharCE(cbuf, ienc));
     }
 
-    R_FreeStringBufferL(&cbuff);
+    if (cbuf != small_buffer) free(cbuf);
     UNPROTECT(1);
     VMAXSET(vmax0);
 
