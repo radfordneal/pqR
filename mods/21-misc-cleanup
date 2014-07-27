@@ -40,3 +40,6 @@ Changed how namedcnt is maintained for lists in seq.c, subassign.c,
 and subset.c.
 
 Got rid of NonNullStringMatch.
+
+Cleaned up paste, including getting rid of a vmaxset/get error that
+would eat up space, and some speed improvements.
