@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -218,32 +218,55 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
-static void substr(char *buf, const char *str, int ienc, int sa, int so)
+/* Find the beginning and end (indexes start at 0) of the substring in str
+   from sa to so (indexes start at 1).  If so is beyond the end of str, 
+   the end is just past the last character of str. */
+
+static void find_substr (const char *str, int slen, int ienc, int sa, int so,
+                         int *beginning, int *end)
 {
-/* Store the substring	str [sa:so]  into buf[] */
-    int i, j, used;
+    int i, j;
 
     if (ienc == CE_UTF8) {
-	for (i = 0; i < so; i++) {
-	    used = utf8clen(*str);
-	    if (i < sa - 1) { str+= used; continue; }
-	    for (j = 0; j < used; j++) *buf++ = *str++;
-	}
-    } else if (ienc == CE_LATIN1 || ienc == CE_BYTES) {
-	for (str += (sa - 1), i = sa; i <= so; i++) *buf++ = *str++;
-    } else {
-	if (mbcslocale && !strIsASCII(str)) {
-	    mbstate_t mb_st;
-	    mbs_init(&mb_st);
-	    for (i = 1; i < sa; i++) str += Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
-	    for (i = sa; i <= so; i++) {
-		used = Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
-		for (j = 0; j < used; j++) *buf++ = *str++;
-	    }
-	} else
-	    for (str += (sa - 1), i = sa; i <= so; i++) *buf++ = *str++;
+        for (i = 1, j = 0; i < sa; i++, j += utf8clen(str[j])) {
+            if (j >= slen) {
+                *beginning = *end = slen;
+                return;
+            }
+        }
+        *beginning = j;
+        for ( ; i < so+1; i++, j += utf8clen(str[j])) {
+            if (j >= slen) {
+                *end = slen;
+                return;
+            }
+        }
+        *end = j;
     }
-    *buf = '\0';
+    else if (ienc!=CE_LATIN1 && ienc!=CE_BYTES 
+              && mbcslocale && !strIsASCII(str)) {
+        mbstate_t mb_st;
+        mbs_init(&mb_st);
+        for (i = 1, j = 0; i < sa; 
+                           i++, j += Mbrtowc(NULL,str+j,MB_CUR_MAX,&mb_st)) {
+            if (j >= slen) {
+                *beginning = *end = slen;
+                return;
+            }
+        }
+        *beginning = j;
+        for ( ; i < so+1; i++, j += Mbrtowc(NULL,str+j,MB_CUR_MAX,&mb_st)) {
+            if (j >= slen) {
+                *end = slen;
+                return;
+            }
+        }
+        *end = j;
+    }
+    else {
+        *beginning = sa-1;
+        *end = so > slen ? slen : so;
+    }
 }
 
 static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -280,15 +303,17 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    ienc = getCharCE(el);
 	    ss = CHAR(el);
-	    slen = strlen(ss); /* FIXME -- should handle embedded nuls */
-	    buf = R_AllocStringBuffer(slen+1, &cbuff);
+	    slen = LENGTH(el);
 	    if (start < 1) start = 1;
-	    if (start > stop || start > slen) {
-		buf[0] = '\0';
-	    } else {
-		if (stop > slen) stop = slen;
-		substr(buf, ss, ienc, start, stop);
-	    }
+	    if (start > stop)
+                buf = "";
+	    else {
+                int beginning, end;
+		find_substr (ss, slen, ienc, start, stop, &beginning, &end);
+                buf = R_AllocStringBuffer (end-beginning, &cbuff);
+                memcpy (buf, ss+beginning, (size_t)(end-beginning));
+                buf[end-beginning] = 0;
+            }
 	    SET_STRING_ELT(s, i, mkCharCE(buf, ienc));
 	}
 	R_FreeStringBufferL(&cbuff);
