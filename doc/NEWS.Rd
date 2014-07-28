@@ -110,6 +110,7 @@
       had previously at least sort-of worked to no longer run.
 \item The \code{substr} function has been sped up, and uses less memory,
       especially when a small substring is extracted from a long string.
+      Assignment to \code{substr} has also been sped up a bit.
 \item The function for unserializing data (eg, reading file \file{.RData}) is
       now done with elimination of tail-recursion (on the CDR field) when 
       reading pairlists.  This is both faster and less likely to produce a stack
@@ -183,7 +184,8 @@
    c <- substr(b,1,16000)
 }
       I reported this as PR #15910 at r-project.org, so it may be
-      fixed in an R Core release after R-3.1.1.
+      fixed in an R Core release after R-3.1.1.  A related bug in
+      assignment to \code{substr} has also been fixed.
 }}
 }
 
