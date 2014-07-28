@@ -48,3 +48,6 @@ rid of unnecessary call to PrintDefaults.
 Cleaned up substr, including fixing bug (reported at PR 15910), and
 speeding it up, particularly when extracting a small substring from
 a large substring (also saves memory in that case).
+
+Cleaned up substr<- and fixed bug similar to that in substr.  Should
+be a bit faster.
