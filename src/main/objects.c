@@ -276,7 +276,7 @@ int isBasicClass(const char *ss) {
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
-    SEXP klass, method, sxp, t, s, op, formals;
+    SEXP klass, method, sxp, setcl, s, op;
     int i, j, nclass;
     RCNTXT *cptr;
     char buf[512];
@@ -321,14 +321,14 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
 	    if (i > 0) {
 	        int ii;
-		PROTECT(t = allocVector(STRSXP, nclass - i));
-		for(j = 0, ii = i; j < LENGTH(t); j++, ii++)
-		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
-		setAttrib(t, install("previous"), klass);
-		UNPROTECT(1);
+		setcl = allocVector (STRSXP, nclass - i);
+                copy_string_elements (setcl, 0, klass, i, nclass-i);
+		setAttrib (setcl, R_previousSymbol, klass);
+		UNPROTECT(1); /* klass */
+                PROTECT(setcl);
 	    } 
             else
-		t = klass;
+		setcl = klass; /* protected */
             goto found;
 	}
     }
@@ -338,7 +338,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     method = install(buf);
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
-        t = R_NilValue;
+        setcl = R_NilValue;
         goto found;
     }
 
@@ -353,11 +353,12 @@ found: ;
     PROTECT(newrho = allocSExp(ENVSXP));
 
     if (TYPEOF(op) == CLOSXP) {
+        SEXP formals, t;
 	formals = FORMALS(op);
 	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-	    for (t = formals; t!=R_NilValue && TAG(t)!=TAG(s); t = CDR(t)) ;
+	    for (t = formals; t != R_NilValue && TAG(t) != TAG(s); t = CDR(t)) ;
 	    if (t == R_NilValue) 
-                defineVar(TAG(s), CAR(s), newrho);
+                defineVar (TAG(s), CAR(s), newrho);
 	}
     }
 
@@ -365,11 +366,9 @@ found: ;
     PROTECT(newcall = duplicate(cptr->call));
 
     if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
-    defineVar(R_dot_Class, t, newrho);
+    defineVar(R_dot_Class, setcl, newrho);
     defineVar(R_dot_Generic, mkString(generic), newrho);
-    PROTECT(t = mkString(buf));
-    defineVar(R_dot_Method, t, newrho);
-    UNPROTECT(1);
+    defineVar(R_dot_Method, mkString(buf), newrho);
     defineVar(R_dot_GenericCallEnv, callrho, newrho);
     defineVar(R_dot_GenericDefEnv, defrho, newrho);
     SETCAR(newcall, method);
