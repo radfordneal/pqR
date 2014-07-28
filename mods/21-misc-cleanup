@@ -1,4 +1,4 @@
-Miscellaneous mods for minor speedups, code cleanliness, or bugs.
+Miscellaneous mods for (mostly) minor speedups, code cleanliness, or bugs.
 
 Slightly sped up evalcount updates in eval.c
 
@@ -42,4 +42,9 @@ and subset.c.
 Got rid of NonNullStringMatch.
 
 Cleaned up paste, including getting rid of a vmaxset/get error that
-would eat up space, and some speed improvements.
+would eat up space, and some speed improvements, including getting
+rid of unnecessary call to PrintDefaults.
+
+Cleaned up substr, including fixing bug (reported at PR 15910), and
+speeding it up, particularly when extracting a small substring from
+a large substring (also saves memory in that case).
