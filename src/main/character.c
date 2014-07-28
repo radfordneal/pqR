@@ -220,26 +220,29 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* Find the beginning and end (indexes start at 0) of the substring in str
    from sa to so (indexes start at 1).  If so is beyond the end of str, 
-   the end is just past the last character of str. */
+   the end is just past the last character of str. 
 
-static void find_substr (const char *str, int slen, int ienc, int sa, int so,
-                         int *beginning, int *end)
+   Tries to fudge something if the last character extends beyond slen
+   (only possible in a string with an invalid multibyte character). */
+
+static int find_substr (const char *str, size_t slen, int ienc, 
+                        int sa, int so, size_t *beginning, size_t *end)
 {
-    int i, j;
+    int i, n; 
+    size_t j;
+
+    *beginning = *end = slen;
 
     if (ienc == CE_UTF8) {
         for (i = 1, j = 0; i < sa; i++, j += utf8clen(str[j])) {
-            if (j >= slen) {
-                *beginning = *end = slen;
-                return;
-            }
+            if (j >= slen) return 0;
         }
         *beginning = j;
-        for ( ; i < so+1; i++, j += utf8clen(str[j])) {
-            if (j >= slen) {
-                *end = slen;
-                return;
-            }
+        while (i <= so) {
+            j += utf8clen(str[j]);
+            if (j > slen) return i - sa;
+            i += 1;
+            if (j == slen) return i - sa;
         }
         *end = j;
     }
@@ -249,24 +252,25 @@ static void find_substr (const char *str, int slen, int ienc, int sa, int so,
         mbs_init(&mb_st);
         for (i = 1, j = 0; i < sa; 
                            i++, j += Mbrtowc(NULL,str+j,MB_CUR_MAX,&mb_st)) {
-            if (j >= slen) {
-                *beginning = *end = slen;
-                return;
-            }
+            if (j >= slen) return 0;
         }
         *beginning = j;
-        for ( ; i < so+1; i++, j += Mbrtowc(NULL,str+j,MB_CUR_MAX,&mb_st)) {
-            if (j >= slen) {
-                *end = slen;
-                return;
-            }
+        while (i <= so) {
+            j += Mbrtowc(NULL,str+j,MB_CUR_MAX,&mb_st);
+            if (j > slen) return i - sa;
+            i += 1;
+            if (j == slen) return i - sa;
         }
         *end = j;
     }
     else {
+        if (sa > slen) return 0;
         *beginning = sa-1;
-        *end = so > slen ? slen : so;
+        if (so > slen) return slen - sa + 1;
+        *end = so;
     }
+
+    return so - sa + 1; 
 }
 
 static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -308,10 +312,11 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (start > stop)
                 buf = "";
 	    else {
-                int beginning, end;
-		find_substr (ss, slen, ienc, start, stop, &beginning, &end);
+                size_t beginning, end;
+		(void) find_substr (ss, slen, ienc, start, stop, 
+                                    &beginning, &end);
                 buf = R_AllocStringBuffer (end-beginning, &cbuff);
-                memcpy (buf, ss+beginning, (size_t)(end-beginning));
+                memcpy (buf, ss+beginning, end-beginning);
                 buf[end-beginning] = 0;
             }
 	    SET_STRING_ELT(s, i, mkCharCE(buf, ienc));
@@ -322,45 +327,6 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
     /* This copied the class, if any */
     UNPROTECT(1);
     return s;
-}
-
-static void
-substrset(char *buf, const char *const str, cetype_t ienc, int sa, int so)
-{
-    /* Replace the substring buf[sa:so] by str[] */
-    int i, in = 0, out = 0;
-
-    if (ienc == CE_UTF8) {
-	for (i = 1; i < sa; i++) buf += utf8clen(*buf);
-	for (i = sa; i <= so; i++) {
-	    in +=  utf8clen(str[in]);
-	    out += utf8clen(buf[out]);
-	    if (!str[in]) break;
-	}
-	if (in != out) memmove(buf+in, buf+out, strlen(buf+out)+1);
-	memcpy(buf, str, in);
-    } else if (ienc == CE_LATIN1 || ienc == CE_BYTES) {
-	in = strlen(str);
-	out = so - sa + 1;
-	memcpy(buf + sa - 1, str, (in < out) ? in : out);
-    } else {
-	/* This cannot work for stateful encodings */
-	if (mbcslocale) {
-	    for (i = 1; i < sa; i++) buf += Mbrtowc(NULL, buf, MB_CUR_MAX, NULL);
-	    /* now work out how many bytes to replace by how many */
-	    for (i = sa; i <= so; i++) {
-		in += Mbrtowc(NULL, str+in, MB_CUR_MAX, NULL);
-		out += Mbrtowc(NULL, buf+out, MB_CUR_MAX, NULL);
-		if (!str[in]) break;
-	    }
-	    if (in != out) memmove(buf+in, buf+out, strlen(buf+out)+1);
-	    memcpy(buf, str, in);
-	} else {
-	    in = strlen(str);
-	    out = so - sa + 1;
-	    memcpy(buf + sa - 1, str, (in < out) ? in : out);
-	}
-    }
 }
 
 static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -405,33 +371,44 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    ienc = getCharCE(el);
 	    ss = CHAR(el);
-	    slen = strlen(ss);
+	    slen = LENGTH(el);
 	    if (start < 1) start = 1;
-	    if (stop > slen) stop = slen; /* SBCS optimization */
 	    if (start > stop) {
-		/* just copy element across */
-		SET_STRING_ELT(s, i, STRING_ELT(x, i));
-	    } else {
-		int ienc2 = ienc;
-		v_ss = CHAR(v_el);
-		/* is the value in the same encoding?
-		   FIXME: could prefer UTF-8 here
-		 */
-		venc = getCharCE(v_el);
-		if (venc != ienc && !strIsASCII(v_ss)) {
-		    ss = translateChar(el);
-		    slen = strlen(ss);
-		    v_ss = translateChar(v_el);
-		    ienc2 = CE_NATIVE;
-		}
-		/* might expand under MBCS */
-		buf = R_AllocStringBuffer(slen+strlen(v_ss), &cbuff);
-		strcpy(buf, ss);
-		substrset(buf, v_ss, ienc2, start, stop);
-		SET_STRING_ELT(s, i, mkCharCE(buf, ienc2));
-	    }
-	    VMAXSET(vmax);
-	}
+                SET_STRING_ELT(s, i, STRING_ELT(x, i));
+                continue;
+            }
+            int ienc2 = ienc;
+            v_ss = CHAR(v_el);
+            /* is the value in the same encoding?
+               FIXME: could prefer UTF-8 here
+             */
+            venc = getCharCE(v_el);
+            if (venc != ienc && !strIsASCII(v_ss)) {
+                ss = translateChar(el);
+                slen = strlen(ss);
+                v_ss = translateChar(v_el);
+                ienc2 = CE_NATIVE;
+            }
+            size_t ss_b, ss_e, v_ss_l, v_ss_b, v_ss_e;
+            int n, v_n;
+            v_ss_l = strlen(v_ss);
+            n = find_substr (ss, slen, ienc2, start, stop, &ss_b, &ss_e);
+            v_n = find_substr (v_ss, v_ss_l, ienc2, 1, n, &v_ss_b, &v_ss_e);
+                  /* note: v_ss_b will be set to zero */
+            if (v_n != n)
+                n = find_substr (ss, slen, ienc2, start, start+v_n-1, 
+                                 &ss_b, &ss_e);
+            size_t new_len = slen - (ss_e-ss_b) + v_ss_e;
+            if (new_len > INT_MAX) 
+                error(_("new string is too long"));
+            buf = R_AllocStringBuffer (new_len, &cbuff);
+            if (ss_b > 0) memcpy (buf, ss, ss_b);
+            memcpy (buf+ss_b, v_ss, v_ss_e);
+            if (ss_e < slen) memcpy (buf+ss_b+v_ss_e, ss+ss_e, slen-ss_e);
+            buf[new_len] = 0;
+            SET_STRING_ELT(s, i, mkCharCE(buf, ienc2));
+            VMAXSET(vmax);
+        }
 	R_FreeStringBufferL(&cbuff);
     }
     UNPROTECT(1);
