@@ -108,6 +108,8 @@
       zero may now crash when passed a read-only constant, which is a generally
       desirable debugging aid, though it might sometimes cause a package that
       had previously at least sort-of worked to no longer run.
+\item The \code{substr} function has been sped up, and uses less memory,
+      especially when a small substring is extracted from a long string.
 \item The function for unserializing data (eg, reading file \file{.RData}) is
       now done with elimination of tail-recursion (on the CDR field) when 
       reading pairlists.  This is both faster and less likely to produce a stack
@@ -173,6 +175,15 @@
       prevented the types of \code{str_signif}, used in \code{formatC},
       from being registered.  (This bug exists in R Core versions of R
       at least through R-3.1.1.) 
+\item Fixed a bug in \code{substr} applied to a string with UTF-8
+      encoding, which could cause a crash for code such as
+\preformatted{   a <- "\xc3\xa9"
+   Encoding(a) <- "UTF-8"
+   b <- paste0(rep(a,8000),collapse="")
+   c <- substr(b,1,16000)
+}
+      I reported this as PR #15910 at r-project.org, so it may be
+      fixed in an R Core release after R-3.1.1.
 }}
 }
 
