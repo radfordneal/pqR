@@ -501,6 +501,7 @@ static void SymbolShortcuts(void)
     R_dot_GenericDefEnv = install(".GenericDefEnv");
     R_sort_list = install("sort.list");
     R_S3MethodsTable = install(".__S3MethodsTable__.");
+    R_previousSymbol = install("previous");
 
     R_NaokSymbol = install("NAOK");
     R_DupSymbol = install("DUP");

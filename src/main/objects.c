@@ -321,11 +321,11 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
 	    if (i > 0) {
 	        int ii;
-		PROTECT(t = allocVector(STRSXP, nclass - i));
-		for(j = 0, ii = i; j < LENGTH(t); j++, ii++)
-		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
-		setAttrib(t, install("previous"), klass);
-		UNPROTECT(1);
+		t = allocVector (STRSXP, nclass - i);
+                copy_string_elements (t, 0, klass, i, nclass-i);
+		setAttrib(t, R_previousSymbol, klass);
+		UNPROTECT(1); /* klass */
+                PROTECT(t);
 	    } 
             else
 		t = klass;
