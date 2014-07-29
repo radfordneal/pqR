@@ -1,2 +1,3 @@
-Improvements to S3 method dispatch, particular to speed up
-the case where there is no method to dispatch to.
+Improvements to S3 method dispatch, particularly to speed up
+the case where there is no method to dispatch to, but also
+other improvements.
