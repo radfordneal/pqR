@@ -287,9 +287,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     if ( !(cptr->callflag & CTXT_FUNCTION) || cptr->cloenv != rho)
 	error(_("'UseMethod' used in an inappropriate fashion"));
 
-    /* Create a new environment without any */
-    /* of the formals to the generic in it. */
-
     op = CAR(cptr->call);
     switch (TYPEOF(op)) {
     case SYMSXP:
@@ -319,6 +316,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	if (isFunction(sxp)) {
 	    if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
+            PROTECT(method);
 	    if (i > 0) {
 	        int ii;
 		setcl = allocVector (STRSXP, nclass - i);
@@ -338,6 +336,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     method = install(buf);
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
+        PROTECT(method);
         setcl = R_NilValue;
         goto found;
     }
@@ -349,6 +348,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 found: ;
 
     SEXP newrho, matchedarg, newcall;
+
+    /* Create a new environment without any */
+    /* of the formals to the generic in it. */
 
     PROTECT(newrho = allocSExp(ENVSXP));
 
@@ -368,7 +370,7 @@ found: ;
     if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
     defineVar(R_dot_Class, setcl, newrho);
     defineVar(R_dot_Generic, mkString(generic), newrho);
-    defineVar(R_dot_Method, mkString(buf), newrho);
+    defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
     defineVar(R_dot_GenericCallEnv, callrho, newrho);
     defineVar(R_dot_GenericDefEnv, defrho, newrho);
     SETCAR(newcall, method);
@@ -377,7 +379,7 @@ found: ;
     *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
 
     R_GlobalContext->callflag = CTXT_RETURN;
-    UNPROTECT(5);
+    UNPROTECT(6);
     return 1;
 }
 
@@ -424,10 +426,18 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	The generic need not be a closure (Henrik Bengtsson writes
 	UseMethod("$"), although only functions are documented.)
     */
-    val = findFunMethod (install(translateChar(STRING_ELT(generic, 0))),
-                         ENCLOS(env)); /* That has evaluated promises */
-    if(TYPEOF(val) == CLOSXP) defenv = CLOENV(val);
-    else defenv = R_BaseNamespace;
+
+    SEXP generic_name = STRING_ELT(generic, 0);
+
+    if (CHAR(generic_name)[0] == 0)
+	errorcall(call, _("first argument must be a generic name"));
+
+    char *generic_trans = translateChar(generic_name);
+    SEXP generic_symbol = install(generic_trans);
+
+    val = findFunMethod (generic_symbol, ENCLOS(env)); /* evaluates promises */
+
+    defenv = TYPEOF(val) == CLOSXP ? CLOENV(val) : R_BaseNamespace;
 
     if (CADR(argList) != R_MissingArg)
 	PROTECT(obj = eval(CADR(argList), env));
@@ -443,11 +453,7 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	PROTECT(obj = GetObject(cptr));
     }
 
-    SEXP generic_name = STRING_ELT(generic, 0);
-    if (CHAR(generic_name)[0] == 0)
-	errorcall(call, _("first argument must be a generic name"));
-
-    if (usemethod(translateChar(generic_name), obj, call, CDR(args),
+    if (usemethod(generic_trans, obj, call, CDR(args),
 		  env, callenv, defenv, variant, &ans) == 1) {
 	UNPROTECT(2); /* obj, argList */
 	PROTECT(ans);
@@ -470,8 +476,9 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	    }
 	    strcat(cl, "')");
 	}
-	errorcall(call, _("no applicable method for '%s' applied to an object of class \"%s\""),
-		  translateChar(generic_name), cl);
+	errorcall(call,
+        _("no applicable method for '%s' applied to an object of class \"%s\""),
+           generic_trans, cl);
     }
     /* Not reached */
     return R_NilValue;
