@@ -1842,7 +1842,7 @@ static void tmp_cleanup(void *data)
 #define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
-	if (__v__ != R_NilValue && NAMEDCNT_GT_1(__v__)) { \
+	if (NAMEDCNT_GT_1(__v__) && __v__ != R_NilValue) { \
 	    __v__ = duplicate(__v__); \
 	    SET_NAMEDCNT_1(__v__); \
 	    SETCAR(__lhs__, __v__); \
@@ -3873,7 +3873,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   int label = GETOP(); \
   SEXP lhs = GETSTACK(-2); \
   SEXP rhs = GETSTACK(-1); \
-  if (NAMEDCNT_GT_1(lhs)) { \
+  if (NAMEDCNT_GT_1(lhs) && lhs != R_NilValue) { \
     lhs = duplicate(lhs); \
     SETSTACK(-2, lhs); \
     SET_NAMEDCNT_1(lhs); \
@@ -3932,7 +3932,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
     if (isObject(lhs)) { \
 	SEXP call = VECTOR_ELT(constants, callidx); \
 	SEXP rhs = GETSTACK(-1); \
-	if (NAMEDCNT_GT_1(lhs)) { \
+	if (NAMEDCNT_GT_1(lhs) & lhs != R_NilValue) { \
 	    lhs = duplicate(lhs); \
 	    SETSTACK(-2, lhs); \
 	    SET_NAMEDCNT_1(lhs); \
@@ -4871,7 +4871,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	SEXP x = GETSTACK(-2);
 	SEXP rhs = GETSTACK(-1);
-	if (NAMEDCNT_GT_1(x)) {
+	if (NAMEDCNT_GT_1(x) && x != R_NilValue) {
 	    x = duplicate(x);
 	    SETSTACK(-2, x);
 	    SET_NAMEDCNT_1(x);
@@ -4998,7 +4998,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP call = VECTOR_ELT(constants, GETOP());
 	SEXP vexpr = VECTOR_ELT(constants, GETOP());
 	SEXP args, prom, last;
-	if (NAMEDCNT_GT_1(lhs)) {
+	if (NAMEDCNT_GT_1(lhs) && lhs != R_NilValue) {
 	  lhs = duplicate(lhs);
 	  SETSTACK(-5, lhs);
 	  SET_NAMEDCNT_1(lhs);
