@@ -1,6 +1,5 @@
 #  File src/library/utils/R/RShowDoc.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -99,7 +98,7 @@ RShowDoc <- function(what, type=c("pdf", "html", "txt"), package)
         writeLines(tmp, tf)
         file.show(tf, delete.file = TRUE, encoding = "UTF-8")
         return(invisible(path))
-    } else if(what %in% c("COPYING","ONEWS","OONEWS","OOONEWS","MODS")) {
+    } else if(what == "COPYING") {
         path <- file.path(R.home(), what)
         file.show(path)
         return(invisible(path))

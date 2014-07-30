@@ -1,5 +1,3 @@
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
-
 ## What a silly name ...
 .is_not_nonempty_text <-
 function(x)
@@ -896,18 +894,6 @@ function(file, meta = NULL)
 citation <-
 function(package = "base", lib.loc = NULL, auto = NULL)
 {
-    ## Preliminary citation for pqR to use for "base" package.
-
-    if (package=="base" && is.null(auto))
-        pqR.rval <- bibentry ("Misc",
-                     author = "R. M. Neal",
-                     title = "pqR - a pretty quick version of R",
-                     year = 2012,
-                     note = "source repository at github.com/radfordneal/pqR",
-         textVersion = "Neal, RM (2012) pqR - a pretty quick version of R, source repository at github.com/radfordneal/pqR")
-    else
-        pqR.rval <- NULL
-
     ## Allow citation(auto = meta) in CITATION files to include
     ## auto-generated package citation.
     if(inherits(auto, "packageDescription")) {
@@ -926,19 +912,9 @@ function(package = "base", lib.loc = NULL, auto = NULL)
         ## available.
         citfile <- file.path(dir, "CITATION")
         if(is.null(auto)) auto <- !file_test("-f", citfile)
-
         ## if CITATION is available
-
         if(!auto) {
-            rval <- readCitationFile(citfile, meta)
-            if (!is.null(pqR.rval)) {
-                rval <- .citation (c (pqR.rval, rval))
-                attr(rval,"mheader") <- 
- "pqR is based on R-2.15.0.  These contributions may be referenced as follows:"
-                attr(rval,"mfooter") <- 
- "Please cite as appropriate. See 'citation(\"pkgname\")' for citing packages."
-            }
-            return (rval)
+            return(readCitationFile(citfile, meta))
         } else if(package == "base") {
             ## Avoid infinite recursion for broken installation.
             stop("broken installation, no CITATION file in the base package.")
@@ -1043,7 +1019,6 @@ function(package = "base", lib.loc = NULL, auto = NULL)
 	footer = footer,
 	other = z
     )
-
     .citation(rval)
 }
 
