@@ -1,6 +1,12 @@
 /*
- *  Copyright (C) Martin Maechler, 1994, 1998
- *  Copyright (C) 2001-2012 the R Core Team
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *
+ *  Base on the version from R-2.15.0, Copyright (C) Martin Maechler, 1994, 1998
+ *  and Copyright (C) 2001-2012 the R Core Team.
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

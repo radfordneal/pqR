@@ -8,7 +8,7 @@
  *  Copyright 2005--2007  The R Development Core Team
  *  Copyright 2006	  The R Foundation
  *
- *  Bug fixes in numeric_deriv by Radford Neal, 2012, 2014.
+ *  Bug fixes in numeric_deriv Copyright (c) Radford Neal, 2012, 2014.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

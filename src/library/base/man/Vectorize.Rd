@@ -2,6 +2,7 @@
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
 % Copyright 2002-2010 The R Foundation
+% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Vectorize}
