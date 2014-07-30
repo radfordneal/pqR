@@ -1,7 +1,7 @@
 Package: utils
 Version: @VERSION@
 Priority: base
-Title: The R Utils Package
+Title: The R Utils Package - with modifications for pqR
 Author: R Core Team and contributors worldwide
 Maintainer: R Core Team <R-core@r-project.org>
 Description: R utility functions
