@@ -48,7 +48,22 @@
 
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
-\item .
+\item From R-2.15.1:
+      install.packages("pkg_version.tgz") on Mac OS X now has sanity
+      checks that this is actually a binary package (as people have
+      tried it with incorrectly named source packages).
+\item From R-2.15.1:
+      .C() gains some protection against the misuse of character vector
+      arguments.  (An all too common error is to pass character(N),
+      which initializes the elements to "", and then attempt to edit
+      the strings in-place, sometimes forgetting to terminate them.)
+\item From R-2.15.1:
+      Calls to the new function globalVariables() in package utils
+      declare that functions and other objects in a package should be
+      treated as globally defined, so that CMD check will not note
+      them.
+\item From R-2.15.1:
+      print(packageDescription(*)) trims the Collate field by default.
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
@@ -195,7 +210,15 @@
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
-\item .
+\item From R-2.15.1: 
+      Trying to update (recommended) packages in R_HOME/library without
+      write access is now dealt with more gracefully.  Further, such
+      package updates may be skipped (with a warning), when a newer
+      installed version is already going to be used from .libPaths().
+      (PR#14866)
+\item From R-2.15.1:
+      getMethod(f, sig) produced an incorrect error message in some
+      cases when f was not a string).
 }}
 }
 
