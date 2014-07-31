@@ -3,7 +3,7 @@
 ### Process this file with autoconf to produce a configure script.
 ###
 ### Copyright (C) 1998-2011 R Core Team
-### Modifications for pqR copyright (C) 2012 Radford Neal
+### Modifications for pqR copyright (C) 2012-2014 Radford Neal
 ###
 ### This file is part of R.
 ###
@@ -31,7 +31,7 @@ m4_define([R_VERSION],
           m4_bpatsubst(m4_esyscmd([cat VERSION]),
                        [\([0-9.]*\)\(\w\|\W\)*],
                        [\1]))
-AC_INIT([R],[R_VERSION],[http://github.com/radfordneal/pqR/issues],[R],[http://github.com/radfordneal/pqR/])
+AC_INIT([pqR],[R_VERSION],[http://github.com/radfordneal/pqR/issues],[pqR],[http://pqR-project.org])
 AC_CONFIG_SRCDIR([src/include/Defn.h])
 AC_CONFIG_AUX_DIR([tools])
 
