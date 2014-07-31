@@ -46,6 +46,11 @@
       performance improvements below.)
 }}
 
+  \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item .
+}}
+
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
     These are mostly of interest to developers, not to most users.
     \itemize{
@@ -186,6 +191,11 @@
       I reported this as PR #15910 at r-project.org, so it may be
       fixed in an R Core release after R-3.1.1.  A related bug in
       assignment to \code{substr} has also been fixed.
+}}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item .
 }}
 }
 
