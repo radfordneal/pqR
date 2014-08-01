@@ -64,6 +64,12 @@
       
 }}
 
+  \subsection{
+    FEATURES FOR INSTALLATION CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+\item .
+}}
+
   \subsection{DOCUMENTATION UPDATES}{
   These are in addition to changes in documentation relating to other
   changes reported here.
