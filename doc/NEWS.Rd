@@ -64,6 +64,13 @@
       them.
 \item From R-2.15.1:
       print(packageDescription(*)) trims the Collate field by default.
+\item From R-2.15.3:
+      Configuration and R CMD javareconf now come up with a smaller set
+      of library paths for Java on Oracle-format JDK (including
+      OpenJDK).  This helps avoid conflicts between libraries (such as
+      libjpeg) supplied in the JDK and system libraries.  This can
+      always be overridden if needed: see the 'R Installation and
+      Administration' manual.
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
