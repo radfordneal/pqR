@@ -71,6 +71,9 @@
       libjpeg) supplied in the JDK and system libraries.  This can
       always be overridden if needed: see the 'R Installation and
       Administration' manual.
+\item From R-2.15.3:
+      The configure tests for Objective C and Objective C++ now work on
+      Mac OS 10.8 with Xcode 4.5.2 (PR#15107).
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{

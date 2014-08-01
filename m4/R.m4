@@ -1275,12 +1275,13 @@ AC_DEFUN([R_PROG_OBJC_RUNTIME],
   AC_CACHE_CHECK([for ObjC runtime library], [r_cv_objc_runtime], [
     save_OBJCFLAGS="$OBJCFLAGS"
     save_LIBS="$LIBS"
-    r_cv_objc_runtime=none
+    r_cv_objc_runtime=
     for libobjc in objc objc-gnu objc-lf objc-lf2; do
       LIBS="${save_LIBS} -l${libobjc}"
       #OBJCFLAGS="$OBJCFLAGS $PTHREAD_CFLAGS -fgnu-runtime"
       AC_LINK_IFELSE([
 	AC_LANG_PROGRAM([
+#undef __OBJC2__
 #include <objc/Object.h>
 			], [
   @<:@Object class@:>@;
@@ -1296,7 +1297,7 @@ AC_DEFUN([R_PROG_OBJC_RUNTIME],
 
   OBJC_LIBS="${r_cv_objc_runtime} ${OBJC_LIBS}"
 
-  if test "${r_cv_objc_runtime}" != none; then
+  if test "z${r_cv_objc_runtime}" != z; then
   AC_CACHE_CHECK([for ObjC runtime style], [r_cv_objc_runtime_style], [
     save_OBJCFLAGS="$OBJCFLAGS"
     save_LIBS="$LIBS"
@@ -1305,6 +1306,8 @@ AC_DEFUN([R_PROG_OBJC_RUNTIME],
     for objc_lookup_class in objc_lookup_class objc_lookUpClass; do
       AC_LINK_IFELSE([
         AC_LANG_PROGRAM([
+/* see PR#15107 */
+#undef __OBJC2__
 #include <objc/objc.h>
 #include <objc/objc-api.h>
 			], [
@@ -1345,7 +1348,9 @@ AC_DEFUN([R_PROG_OBJCXX_WORKS],
 [AC_MSG_CHECKING([whether $1 can compile ObjC++])
 ## we don't use AC_LANG_xx because ObjC++ is not defined as a language (yet)
 ## (the test program is from the gcc test suite)
+## but it needed an #undef (PR#15107)
 cat << \EOF > conftest.mm
+#undef __OBJC2__
 #include <objc/Object.h>
 #include <iostream>
 
@@ -2007,15 +2012,25 @@ if test "${use_libpng}" = yes; then
 	      [Define if you have the PNG headers and libraries.])
   fi
 fi
-AC_CHECK_HEADERS(tiffio.h)
-# may need to resolve jpeg routines
-AC_CHECK_LIB(tiff, TIFFOpen, [have_tiff=yes], [have_tiff=no], [${BITMAP_LIBS}])
-if test "x${ac_cv_header_tiffio_h}" = xyes ; then
-  if test "x${have_tiff}" = xyes; then
-    AC_DEFINE(HAVE_TIFF, 1, [Define this if libtiff is available.])
-    BITMAP_LIBS="-ltiff ${BITMAP_LIBS}"
-  else
-    have_tiff=no
+if test "${use_libtiff}" = yes; then
+  AC_CHECK_HEADERS(tiffio.h)
+  if test "x${ac_cv_header_tiffio_h}" = xyes ; then
+    # may need to resolve jpeg routines
+    AC_CHECK_LIB(tiff, TIFFOpen, [have_tiff=yes], [have_tiff=no], [${BITMAP_LIBS}])
+    if test "x${have_tiff}" = xyes; then
+      AC_DEFINE(HAVE_TIFF, 1, [Define this if libtiff is available.])
+      BITMAP_LIBS="-ltiff ${BITMAP_LIBS}"
+    else
+      # tiff 4.0.x may need lzma too: SU's static build does
+      unset ac_cv_lib_tiff_TIFFOpen
+      AC_CHECK_LIB(tiff, TIFFOpen, [have_tiff=yes], [have_tiff=no], [-llzma ${BITMAP_LIBS} -llzma])
+      if test "x${have_tiff}" = xyes; then
+        AC_DEFINE(HAVE_TIFF, 1, [Define this if libtiff is available.])
+        BITMAP_LIBS="-ltiff -llzma ${BITMAP_LIBS}"
+      else
+        have_tiff=no
+      fi
+    fi
   fi
 fi
 AC_SUBST(BITMAP_LIBS)
@@ -2683,11 +2698,8 @@ fi
       AC_MSG_RESULT([yes])
       ## for vecLib we have a work-around by using cblas_..._sub
       use_veclib_g95fix=yes
-      ## The fix may not work with internal lapack, because
-      ## the lapack dylib won't have the fixed functions.
-      ## those are available to the lapack module only.
-      #      use_lapack=yes
-      #	     with_lapack=""
+      ## The fix may not work with internal lapack, but
+      ## is more likely to in R >= 2.15.2.
     else
       AC_MSG_RESULT([no])
       BLAS_LIBS=
@@ -2850,6 +2862,8 @@ AC_SUBST(BLAS_LIBS)
 ## broken LAPACKs out there.
 ## Based on acx_lapack.m4 version 1.3 (2002-03-12).
 
+## Test function was zgeev, changed to dpstrf which is LAPACK 3.2.
+
 AC_DEFUN([R_LAPACK_LIBS],
 [AC_REQUIRE([R_PROG_F77_FLIBS])
 AC_REQUIRE([R_PROG_F77_APPEND_UNDERSCORE])
@@ -2866,9 +2880,9 @@ case "${with_lapack}" in
 esac
 
 if test "${r_cv_prog_f77_append_underscore}" = yes; then
-  zgeev=zgeev_
+  lapack=dpstrf_
 else
-  zgeev=zgeev
+  lapack=dpstrf
 fi
 
 # We cannot use LAPACK if BLAS is not found
@@ -2881,15 +2895,15 @@ LIBS="${BLAS_LIBS} ${FLIBS} ${LIBS}"
 
 ## LAPACK linked to by default?  (Could be in the BLAS libs.)
 if test "${acx_lapack_ok}" = no; then
-  AC_CHECK_FUNC(${zgeev}, [acx_lapack_ok=yes])
+  AC_CHECK_FUNC(${lapack}, [acx_lapack_ok=yes])
 fi
 
 ## Next, check LAPACK_LIBS environment variable
 if test "${acx_lapack_ok}" = no; then
   if test "x${LAPACK_LIBS}" != x; then
     r_save_LIBS="${LIBS}"; LIBS="${LAPACK_LIBS} ${LIBS}"
-    AC_MSG_CHECKING([for ${zgeev} in ${LAPACK_LIBS}])
-    AC_TRY_LINK_FUNC(${zgeev}, [acx_lapack_ok=yes], [LAPACK_LIBS=""])
+    AC_MSG_CHECKING([for ${lapack} in ${LAPACK_LIBS}])
+    AC_TRY_LINK_FUNC(${lapack}, [acx_lapack_ok=yes], [LAPACK_LIBS=""])
     AC_MSG_RESULT([${acx_lapack_ok}])
     LIBS="${r_save_LIBS}"
   fi
@@ -2900,7 +2914,7 @@ fi
 
 ## Generic LAPACK library?
 if test "${acx_lapack_ok}" = no; then
-  AC_CHECK_LIB(lapack, ${zgeev},
+  AC_CHECK_LIB(lapack, ${lapack},
                [acx_lapack_ok=yes; LAPACK_LIBS="-llapack"])
 fi
 
@@ -2914,8 +2928,6 @@ AC_SUBST(LAPACK_LIBS)
 ## Try finding XDR library functions and headers.
 ## FreeBSD in particular needs rpc/types.h before rpc/xdr.h.
 AC_DEFUN([R_XDR],
-[AC_CACHE_CHECK([for XDR support], [r_cv_xdr],
-save_CPPFLAGS=${CPPFLAGS}
 [AC_CHECK_HEADER(rpc/types.h)
 if test "${ac_cv_header_rpc_types_h}" = yes ; then
   AC_CHECK_HEADER(rpc/xdr.h, , , [#include <rpc/types.h>])
@@ -2923,28 +2935,31 @@ fi
 if test "${ac_cv_header_rpc_types_h}" = yes && \
    test "${ac_cv_header_rpc_xdr_h}" = yes && \
    test "${ac_cv_search_xdr_string}" != no ; then
-  r_cv_xdr=yes
+  r_xdr=yes
 else
-  r_cv_xdr=no
+  r_xdr=no
 fi
-## No RPC headers, so try for TI-RPC headers: do need /usr/include/tirpc
-## on include path to find /usr/include/tirpc/netconfig.h
-if test "${r_cv_xdr}" = no ; then
+TIRPC_CPPFLAGS=
+if test "${r_xdr}" = no ; then
+  ## No RPC headers, so try for TI-RPC headers: need /usr/include/tirpc
+  ## on include path to find /usr/include/tirpc/netconfig.h
+  save_CPPFLAGS=${CPPFLAGS}
   CPPFLAGS="${CPPFLAGS} -I/usr/include/tirpc"
   AC_CHECK_HEADER(tirpc/rpc/types.h)
   if test "${ac_cv_header_tirpc_rpc_types_h}" = yes ; then
     AC_CHECK_HEADER(tirpc/rpc/xdr.h, , , [#include <tirpc/rpc/types.h>])
   fi
   if test "${ac_cv_header_tirpc_rpc_types_h}" = yes && \
-    test "${ac_cv_header_tirpc_rpc_xdr_h}" = yes &&
-    test "${ac_cv_search_xdr_string}" != no ; then
+       test "${ac_cv_header_tirpc_rpc_xdr_h}" = yes &&
+       test "${ac_cv_search_xdr_string}" != no ; then
     TIRPC_CPPFLAGS=-I/usr/include/tirpc
-    r_cv_xdr=yes
+    r_xdr=yes
   fi
   CPPFLAGS="${save_CPPFLAGS}"
 fi
-])
-AM_CONDITIONAL(BUILD_XDR, [test "x${r_cv_xdr}" = xno])
+AC_MSG_CHECKING([for XDR support])
+AC_MSG_RESULT([${r_xdr}])
+AM_CONDITIONAL(BUILD_XDR, [test "x${r_xdr}" = xno])
 AC_SUBST(TIRPC_CPPFLAGS)
 ])# R_XDR
 
@@ -3446,22 +3461,22 @@ fi
 ## -------------
 ## C99 complex
 AC_DEFUN([R_C99_COMPLEX],
-[
-  AC_CACHE_CHECK([whether C99 double complex is supported],
-  [r_cv_c99_complex],
-[ AC_MSG_RESULT([])
-  AC_CHECK_HEADER(complex.h, [r_cv_c99_complex="yes"], [r_cv_c99_complex="no"])
-  if test "${r_cv_c99_complex}" = "yes"; then
-    AC_CHECK_TYPE([double complex], , r_cv_c99_complex=no,
-                  [#include <complex.h>])
-  fi
-  dnl we are supposed to have a C99 compiler, so fail at this point.
-  if test "${r_cv_c99_complex}" = "no"; then
-    AC_MSG_ERROR([Support for C99 double complex type is required.])
-  fi
-])
+[AC_CHECK_HEADER(complex.h,
+                 [r_c99_complex=yes],
+                 [r_c99_complex=no])
+if test "${r_c99_complex}" = "yes"; then
+  AC_CHECK_TYPE([double complex], , [r_c99_complex=no],
+                [#include <complex.h>])
+fi
+AC_MSG_CHECKING([whether C99 double complex is supported])
+AC_MSG_RESULT([${r_c99_complex}])
+dnl we are supposed to have a C99 compiler, so fail at this point.
+if test "${r_c99_complex}" = "no"; then
+  AC_MSG_ERROR([Support for C99 double complex type is required.])
+fi
 R_CHECK_FUNCS([cabs carg cexp clog csqrt cpow ccos csin ctan \
-	       cacos casin catan ccosh csinh ctanh], [#include <complex.h>])
+	       cacos casin catan ccosh csinh ctanh],
+              [#include <complex.h>])
 ])# R_COMPLEX
 
 ## R_CHECK_DECL(SYMBOL,
