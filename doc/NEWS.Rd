@@ -49,10 +49,6 @@
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
 \item From R-2.15.1:
-      install.packages("pkg_version.tgz") on Mac OS X now has sanity
-      checks that this is actually a binary package (as people have
-      tried it with incorrectly named source packages).
-\item From R-2.15.1:
       .C() gains some protection against the misuse of character vector
       arguments.  (An all too common error is to pass character(N),
       which initializes the elements to "", and then attempt to edit
@@ -64,16 +60,6 @@
       them.
 \item From R-2.15.1:
       print(packageDescription(*)) trims the Collate field by default.
-\item From R-2.15.3:
-      Configuration and R CMD javareconf now come up with a smaller set
-      of library paths for Java on Oracle-format JDK (including
-      OpenJDK).  This helps avoid conflicts between libraries (such as
-      libjpeg) supplied in the JDK and system libraries.  This can
-      always be overridden if needed: see the 'R Installation and
-      Administration' manual.
-\item From R-2.15.3:
-      The configure tests for Objective C and Objective C++ now work on
-      Mac OS 10.8 with Xcode 4.5.2 (PR#15107).
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
@@ -92,7 +78,20 @@
   \subsection{
     FEATURES FOR INSTALLATION CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
-\item .
+\item From R-2.15.1:
+      install.packages("pkg_version.tgz") on Mac OS X now has sanity
+      checks that this is actually a binary package (as people have
+      tried it with incorrectly named source packages).
+\item From R-2.15.3:
+      Configuration and R CMD javareconf now come up with a smaller set
+      of library paths for Java on Oracle-format JDK (including
+      OpenJDK).  This helps avoid conflicts between libraries (such as
+      libjpeg) supplied in the JDK and system libraries.  This can
+      always be overridden if needed: see the 'R Installation and
+      Administration' manual.
+\item From R-2.15.3:
+      The configure tests for Objective C and Objective C++ now work on
+      Mac OS 10.8 with Xcode 4.5.2 (PR#15107).
 }}
 
   \subsection{DOCUMENTATION UPDATES}{
