@@ -72,7 +72,7 @@ x \%*\% y
   transposed operand.  This is equivalent to use of the
   \code{crossprod} or \code{tcrossprod} functions.  If both operands
   are transposed, the transposed first operand will not actually be
-  computed, but not the second will be.
+  computed, but the second will be.
 
 }
 \value{
