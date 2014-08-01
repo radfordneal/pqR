@@ -220,7 +220,9 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* Find the beginning and end (indexes start at 0) of the substring in str
    from sa to so (indexes start at 1).  If so is beyond the end of str, 
-   the end is just past the last character of str. 
+   the end is just past the last character of str.  Returns the number of
+   characters (not necessarily same as bytes) in the substring (which will
+   be so - sa + 1 or fewer).
 
    Tries to fudge something if the last character extends beyond slen
    (only possible in a string with an invalid multibyte character). */
