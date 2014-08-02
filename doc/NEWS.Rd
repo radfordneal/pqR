@@ -234,6 +234,9 @@
 \item From R-2.15.1:
       getMethod(f, sig) produced an incorrect error message in some
       cases when f was not a string).
+\item From R-2.15.2:
+      In Windows, the GUI preferences for foreground color were 
+      not always respected.  (Reported by Benjamin Wells.)
 }}
 }
 
