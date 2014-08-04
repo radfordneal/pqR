@@ -60,6 +60,11 @@
       them.
 \item From R-2.15.1:
       print(packageDescription(*)) trims the Collate field by default.
+\item From R-2.15.1: A new option "show.error.locations" has been added.  
+      When set to
+      TRUE, error messages will contain the location of the most recent
+      call containing source reference information. (Other values are
+      supported as well; see ?options.)
 \item From R-2.15.1:
       C entry points R_GetCurrentSrcref and R_GetSrcFilename have been
       added to the API to allow debuggers access to the source
