@@ -898,6 +898,10 @@ LibExtern SEXP R_RegisteredNativeSymbolSymbol;  /* "registered native symbol" */
 #define NA_STRING	R_NaString
 LibExtern SEXP	R_NaString;	    /* NA_STRING as a CHARSXP */
 LibExtern SEXP	R_BlankString;	    /* "" as a CHARSXP */
+ 
+/* srcref related functions */
+SEXP R_GetCurrentSrcref(int);
+SEXP R_GetSrcFilename(SEXP);
 
 /* Coercion warnings - will be OR'ed : */
 

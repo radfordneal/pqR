@@ -60,6 +60,10 @@
       them.
 \item From R-2.15.1:
       print(packageDescription(*)) trims the Collate field by default.
+\item From R-2.15.1:
+      C entry points R_GetCurrentSrcref and R_GetSrcFilename have been
+      added to the API to allow debuggers access to the source
+      references on the stack.
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
