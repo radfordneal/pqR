@@ -107,7 +107,7 @@ close.srcfile <- function(con, ...) {
 srcfilecopy <- function(filename, lines, timestamp = Sys.time(), isFile = FALSE) {
     stopifnot(is.character(filename), length(filename) == 1L)
 
-    e <- new.env(parent=emptyenv())
+    e <- new.env(hash=FALSE, parent=emptyenv())
     
     # Remove embedded newlines
     if (any(grepl("\n", lines, fixed=TRUE)))
@@ -152,7 +152,7 @@ open.srcfilecopy <- function(con, line, ...) {
 srcfilealias <- function(filename, srcfile) {
     stopifnot(is.character(filename), length(filename) == 1L)
 
-    e <- new.env(parent=emptyenv())
+    e <- new.env(hast=FALSE, parent=emptyenv())
     
     e$filename <- filename
     e$original <- srcfile
