@@ -51,3 +51,5 @@ a large substring (also saves memory in that case).
 
 Cleaned up substr<- and fixed bug similar to that in substr.  Should
 be a bit faster.
+
+Use unhashed environments for source references.
