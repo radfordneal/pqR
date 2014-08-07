@@ -1291,13 +1291,19 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 {
     SEXP vl;
 
-    if (findVarInFrame3(rho, symbol, TRUE) != R_UnboundValue) {
-	vl = eval(symbol, rho);	/* for promises */
+    vl = findVarInFrame3 (rho, symbol, TRUE);
+    if (vl != R_UnboundValue) {
+        if (TYPEOF(vl) == PROMSXP)
+            vl = forcePromise(vl);
 	if (!NAMEDCNT_GT_1(vl)) 
             return vl;
     }
     else {
-        vl = eval(symbol, ENCLOS(rho));
+        if (rho != R_EmptyEnv) {
+            vl = findVar (symbol, ENCLOS(rho));
+            if (TYPEOF(vl) == PROMSXP)
+                vl = forcePromise(vl);
+        }
         if (vl == R_UnboundValue)
             error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
     }
