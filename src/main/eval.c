@@ -2040,7 +2040,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
     /* Assignment to invalid target. */
 
     default:
-        error(_("invalid assignment left-hand side"));
+        errorcall (call, _("invalid assignment left-hand side"));
     }
 
     if (VARIANT_KIND(variant) == VARIANT_NULL)
