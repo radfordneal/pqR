@@ -467,10 +467,10 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     static int evalcount = 0;
 
     if (0) { 
-        /* THE "IF" CONDITION IS NORMALLY 0; CAN BE SET TO 1 FOR DEBUGGING.
+        /* THE "IF" CONDITION ABOVE IS NORMALLY 0; CAN SET TO 1 FOR DEBUGGING.
            Enabling this section will test that callers who normally
            get a variant result can actually handle an ordinary result. */
-        if (variant!=VARIANT_MUST_COPY) variant = 0;
+        variant = 0;
     }
 
     R_variant_result = 0;
@@ -1885,7 +1885,7 @@ static R_INLINE SEXP installAssignFcnName(SEXP fun)
 
 static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 {
-    SEXP lhs, tmp, afun, rhsprom;
+    SEXP lhs, tmp, afun, rhsprom, v;
     R_varloc_t tmploc;
     RCNTXT cntxt;
     int nprot;
@@ -1963,9 +1963,15 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	    else
 		error(_("invalid function in complex assignment"));
 	}
-	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
+        v = CAR(lhs);
+        if (LEVELS(lhs) && v != R_NilValue) {
+            v = duplicate(v);
+            SET_NAMEDCNT_1(v);
+            SETCAR(lhs,v);
+        }
+        R_SetVarLocValue(tmploc, v);
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
-	rhs = evalv (rhs, rho, LEVELS(lhs) ? VARIANT_MUST_COPY : 0);
+	rhs = eval (rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
 	UNPROTECT(nprot);
@@ -1991,7 +1997,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	else
 	    error(_("invalid function in complex assignment"));
     }
-    SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
+    R_SetVarLocValue(tmploc, CAR(lhs));
     PROTECT(expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
 			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
     expr = eval(expr, rho);
