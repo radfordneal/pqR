@@ -1,0 +1,12 @@
+Modifications to complex assignment code (the "applydefine" function).
+
+Simplifies code by getting rid of VARIANT_MUST_COPY, and removing
+unnecessary duplication in applydefine.
+
+Fixes the following bug (and related bugs):
+
+  a <- list(list(1+1))
+  b <- a
+  attr(a[[1]][[1]],"fred")<-9
+  print(b)
+
