@@ -170,3 +170,8 @@ x <- list(e=a)
 y <- list(e=a)
 x$e$e$e <- 2
 stopifnot(y$e$e$e==1)
+
+a <- list(list(mk2(1)))
+b <- a
+attr(a[[1]][[1]],"fred") <- 9
+stopifnot(attr(b[[1]][[1]],"fred")==2)
