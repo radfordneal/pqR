@@ -534,13 +534,6 @@ typedef struct {
                                 pairlist with this element (used for $).
                                 Does not set R_variant_result. */
 
-/* The variant below controls behaviour of [<-, [[<-, and $<-.  The MUST_COPY
-   variant must be obeyed, except when a copy is never indicated (eg, for
-   environments), overriding what would otherwise be done based on NAMEDCNT. */
-
-#define VARIANT_MUST_COPY 15  /* Must make a copy before modifying object.
-                                 Does not set R_variant_result */
-
 #define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
                                     defined above */
 
