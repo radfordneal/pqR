@@ -1014,10 +1014,7 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 
 /* The [<- operator.  "x" is the vector that is to be assigned into, 
    y is the vector that is going to provide the new values and subs is
-   the vector of subscripts that are going to be replaced. 
-
-   If the variant is VARIANT_MUST_COPY, copying is required regardless
-   of NAMEDCNT. */
+   the vector of subscripts that are going to be replaced. */
 
 static SEXP do_subassign_dflt_seq 
               (SEXP call, SEXP op, SEXP args, SEXP rho, int variant, int seq);
@@ -1109,7 +1106,7 @@ static SEXP do_subassign_dflt_seq
                 return x;
             }
 	}
-        else if (VARIANT_KIND(variant) == VARIANT_MUST_COPY || NAMEDCNT_GT_1(x))
+        else if (NAMEDCNT_GT_1(x))
             x = dup_top_level(x);
     }
     else
@@ -1163,7 +1160,7 @@ static SEXP do_subassign_dflt_seq
     /* in a naked fashion. */
 
     UNPROTECT(2);
-    if (x != R_NilValue) SET_NAMEDCNT_0(x);
+    if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }
@@ -1198,9 +1195,7 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
    args[1] = object being subscripted
    args[2] = list of subscripts
    args[3] = replacement values 
-
-   If the variant is VARIANT_MUST_COPY, copying is required regardless
-   of NAMEDCNT. */
+*/
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1270,8 +1265,7 @@ SEXP attribute_hidden do_subassign2_dflt
     else if (isPairList(x))
         x = duplicate(x);
     else if (isVectorList(x)) {
-        if (VARIANT_KIND(variant) == VARIANT_MUST_COPY 
-         || NAMEDCNT_GT_1(x) || x == y)
+        if (NAMEDCNT_GT_1(x) || x == y)
             x = dup_top_level(x);
     }
 
@@ -1303,8 +1297,7 @@ SEXP attribute_hidden do_subassign2_dflt
                         x = duplicate(x);
                         SET_VECTOR_ELT (xup, off, x);
                     }
-                    else if (isVectorList(x) && (NAMEDCNT_GT_1(x) ||
-                               VARIANT_KIND(variant) == VARIANT_MUST_COPY)) {
+                    else if (isVectorList(x) && NAMEDCNT_GT_1(x)) {
                         x = dup_top_level(x);
                         SET_VECTOR_ELT (xup, off, x);
                     }
@@ -1369,8 +1362,7 @@ SEXP attribute_hidden do_subassign2_dflt
 
             SubassignTypeFix(&x, &y, stretch, 2, call);
     
-            if (VARIANT_KIND(variant) == VARIANT_MUST_COPY
-             || NAMEDCNT_GT_1(x) || x == y)
+            if (NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);
     
             PROTECT(x);
@@ -1444,7 +1436,7 @@ SEXP attribute_hidden do_subassign2_dflt
     else
         xtop = x;
 
-    if (xtop != R_NilValue) SET_NAMEDCNT_0(xtop);
+    if (!isList(xtop)) SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
 
     UNPROTECT(3);
@@ -1453,10 +1445,7 @@ SEXP attribute_hidden do_subassign2_dflt
 
 /* $<-(x, elt, val), and elt does not get evaluated it gets matched.
    to get DispatchOrEval to work we need to first translate it
-   to a string
-
-   If the variant is VARIANT_MUST_COPY, copying is required regardless
-   of NAMEDCNT. */
+   to a string. */
 
 static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
@@ -1558,8 +1547,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
 	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
 	}
 
-        if (VARIANT_KIND(variant) == VARIANT_MUST_COPY 
-         || NAMEDCNT_GT_1(x) || x == val)
+        if (NAMEDCNT_GT_1(x) || x == val)
             REPROTECT(x = dup_top_level(x), pxidx);
 
         SEXP pname = PRINTNAME(name);
@@ -1641,7 +1629,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
     UNPROTECT(2);
     if(xS4 != R_NilValue)
 	x = xS4; /* x was an env't, the data slot of xS4 */
-    if (x != R_NilValue) SET_NAMEDCNT_0(x);
+    if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }
