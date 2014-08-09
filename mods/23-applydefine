@@ -1,7 +1,7 @@
 Modifications to complex assignment code (the "applydefine" function).
 
 Simplifies code by getting rid of VARIANT_MUST_COPY, and removing
-unnecessary duplication in applydefine.
+unnecessary duplication in applydefine.  
 
 Fixes the following bug (and related bugs):
 
@@ -10,3 +10,7 @@ Fixes the following bug (and related bugs):
   attr(a[[1]][[1]],"fred")<-9
   print(b)
 
+Gets rid of duplicate in EnsureLocal.  This needs some mods in other
+places: length<- and slot assignment for S4 methods.
+
+Cleans up and speeds up length<- as well.
