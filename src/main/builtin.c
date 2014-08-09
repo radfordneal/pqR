@@ -377,20 +377,20 @@ static SEXP do_parentenvgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     env = CAR(args);
-    if (isNull(env)) {
+    if (isNull(env))
 	error(_("use of NULL environment is defunct"));
-	env = R_BaseEnv;
-    } else
+
     if( !isEnvironment(env) &&
 	!isEnvironment((env = simple_as_environment(env))))
 	error(_("argument is not an environment"));
+
     if( env == R_EmptyEnv )
 	error(_("can not set parent of the empty environment"));
+
     parent = CADR(args);
-    if (isNull(parent)) {
+    if (isNull(parent))
 	error(_("use of NULL environment is defunct"));
-	parent = R_BaseEnv;
-    } else
+
     if( !isEnvironment(parent) &&
 	!isEnvironment((parent = simple_as_environment(parent))))
 	error(_("'parent' is not an environment"));
@@ -753,9 +753,8 @@ static SEXP do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* do_lengthgets: assign a length to a vector or a list */
-/* (if it is vectorizable). We could probably be fairly */
-/* clever with memory here if we wanted to. */
+/* do_lengthgets: assign a length to a vector (or a list, if it is vectorizable)
+ */ 
 
 SEXP lengthgets(SEXP x, R_len_t len)
 {
@@ -767,85 +766,64 @@ SEXP lengthgets(SEXP x, R_len_t len)
     if (lenx == len)
 	return (x);
     PROTECT(rval = allocVector(TYPEOF(x), len));
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
-    if (xnames != R_NilValue)
-	names = allocVector(STRSXP, len);
-    else names = R_NilValue;	/*- just for -Wall --- should we do this ? */
+    if (isVector(x)) {
+        PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+        if (xnames != R_NilValue) {
+            names = allocVector(STRSXP, len);
+            copy_string_elements (names, 0, xnames, 0, len > lenx ? lenx : len);
+            setAttrib(rval, R_NamesSymbol, names);
+        }
+        UNPROTECT(1);
+    }
+
     switch (TYPEOF(x)) {
     case NILSXP:
 	break;
     case LGLSXP:
     case INTSXP:
 	for (i = 0; i < len; i++)
-	    if (i < lenx) {
-		INTEGER(rval)[i] = INTEGER(x)[i];
-		if (xnames != R_NilValue)
-		    SET_STRING_ELT(names, i, STRING_ELT(xnames, i));
-	    }
-	    else
-		INTEGER(rval)[i] = NA_INTEGER;
+	    INTEGER(rval)[i] = i < lenx ? INTEGER(x)[i] : NA_INTEGER;
 	break;
     case REALSXP:
 	for (i = 0; i < len; i++)
-	    if (i < lenx) {
-		REAL(rval)[i] = REAL(x)[i];
-		if (xnames != R_NilValue)
-		    SET_STRING_ELT(names, i, STRING_ELT(xnames, i));
-	    }
-	    else
-		REAL(rval)[i] = NA_REAL;
+	    REAL(rval)[i] = i < lenx ? REAL(x)[i] : NA_REAL;
 	break;
     case CPLXSXP:
 	for (i = 0; i < len; i++)
-	    if (i < lenx) {
+	    if (i < lenx)
 		COMPLEX(rval)[i] = COMPLEX(x)[i];
-		if (xnames != R_NilValue)
-		    SET_STRING_ELT(names, i, STRING_ELT(xnames, i));
-	    }
 	    else {
 		COMPLEX(rval)[i].r = NA_REAL;
 		COMPLEX(rval)[i].i = NA_REAL;
 	    }
 	break;
     case STRSXP:
-	for (i = 0; i < len; i++)
-	    if (i < lenx) {
-		SET_STRING_ELT(rval, i, STRING_ELT(x, i));
-		if (xnames != R_NilValue)
-		    SET_STRING_ELT(names, i, STRING_ELT(xnames, i));
-	    }
-	    else
-		SET_STRING_ELT(rval, i, NA_STRING);
+        copy_string_elements (rval, 0, x, 0, len > lenx ? lenx : len);
+	for (i = lenx; i < len; i++)
+	    SET_STRING_ELT(rval, i, NA_STRING);
 	break;
     case LISTSXP:
 	for (t = rval; t != R_NilValue; t = CDR(t), x = CDR(x)) {
 	    SETCAR(t, CAR(x));
 	    SET_TAG(t, TAG(x));
+            INC_NAMEDCNT(CAR(x));
 	}
     case VECSXP:
-	for (i = 0; i < len; i++)
-	    if (i < lenx) {
-		SET_VECTOR_ELT(rval, i, VECTOR_ELT(x, i));
-		if (xnames != R_NilValue)
-		    SET_STRING_ELT(names, i, STRING_ELT(xnames, i));
-	    }
+        copy_vector_elements (rval, 0, x, 0, len > lenx ? lenx : len);
+        if (NAMEDCNT_GT_1(x)) {
+            for (i = 0; i < len; i++)
+                INC_NAMEDCNT_0_AS_1(VECTOR_ELT(rval,i));
+        }
 	break;
     case RAWSXP:
 	for (i = 0; i < len; i++)
-	    if (i < lenx) {
-		RAW(rval)[i] = RAW(x)[i];
-		if (xnames != R_NilValue)
-		    SET_STRING_ELT(names, i, STRING_ELT(xnames, i));
-	    }
-	    else
-		RAW(rval)[i] = (Rbyte) 0;
+	    RAW(rval)[i] = i < lenx ? RAW(x)[i] : (Rbyte) 0;
 	break;
     default:
 	UNIMPLEMENTED_TYPE("length<-", x);
     }
-    if (isVector(x) && xnames != R_NilValue)
-	setAttrib(rval, R_NamesSymbol, names);
-    UNPROTECT(2);
+
+    UNPROTECT(1);
     return rval;
 }
 

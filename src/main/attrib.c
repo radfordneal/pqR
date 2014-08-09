@@ -1610,7 +1610,8 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 		     * "pre-objects", currently only in makePrototypeFromClassDef() */
 	error(_("attempt to set slot on NULL object"));
 #endif
-    PROTECT2(obj,value);
+    PROTECT(value);
+    PROTECT(obj);
 				/* Ensure that name is a symbol */
     if(isString(name) && LENGTH(name) == 1)
 	name = install(translateChar(STRING_ELT(name, 0)));
@@ -1619,6 +1620,12 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
     if(!isSymbol(name) )
 	error(_("invalid type or length for slot name"));
 
+    if (NAMEDCNT_GT_1(obj)) {
+        obj = dup_top_level(obj);
+        UNPROTECT(1); /* old obj */
+        PROTECT(obj);
+    }
+        
     if(!s_dot_Data)		/* initialize */
 	init_slot_handling();
 
