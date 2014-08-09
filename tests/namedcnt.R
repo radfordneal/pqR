@@ -175,3 +175,11 @@ a <- list(list(mk2(1)))
 b <- a
 attr(a[[1]][[1]],"fred") <- 9
 stopifnot(attr(b[[1]][[1]],"fred")==2)
+
+# length<-
+
+a <- list(10+1,20+2,30+3)
+b <- a
+length(a) <- 4
+a[[1]][1] <- 99
+stopifnot(b[[1]]==11)
