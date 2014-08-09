@@ -1306,20 +1306,18 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     if (vl != R_UnboundValue) {
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
-	if (!NAMEDCNT_GT_1(vl)) 
-            return vl;
-    }
-    else {
-        if (rho != R_EmptyEnv) {
-            vl = findVar (symbol, ENCLOS(rho));
-            if (TYPEOF(vl) == PROMSXP)
-                vl = forcePromise(vl);
-        }
-        if (vl == R_UnboundValue)
-            error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
+        return vl;
     }
 
-    vl = dup_top_level(vl);
+    if (rho != R_EmptyEnv) {
+        vl = findVar (symbol, ENCLOS(rho));
+        if (TYPEOF(vl) == PROMSXP)
+            vl = forcePromise(vl);
+    }
+
+    if (vl == R_UnboundValue)
+        error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
+
     set_var_in_frame (symbol, vl, rho, TRUE, 3);
     return vl;
 }
@@ -4829,8 +4827,28 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = BINDING_VALUE(cell);
-	if (value == R_UnboundValue || NAMEDCNT(value) != 1)
-	    value = EnsureLocal(symbol, rho);
+	if (value == R_UnboundValue || NAMEDCNT(value) != 1) {
+            /* Used to call EnsureLocal, now changed, so old code is here. */
+            value = findVarInFrame3 (rho, symbol, TRUE);
+            if (value != R_UnboundValue) {
+                if (TYPEOF(value) == PROMSXP)
+                    value = forcePromise(value);
+        	if (!NAMEDCNT_GT_1(value)) 
+                    goto in_frame;
+            }
+            else {
+                if (rho != R_EmptyEnv) {
+                    value = findVar (symbol, ENCLOS(rho));
+                    if (TYPEOF(value) == PROMSXP)
+                        value = forcePromise(value);
+                }
+                if (value == R_UnboundValue)
+                    error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
+            }
+            value = dup_top_level(value);
+            set_var_in_frame (symbol, value, rho, TRUE, 3);
+          in_frame: ;
+        }
 	BCNPUSH(value);
 	BCNDUP2ND();
 	/* top three stack entries are now RHS value, LHS value, RHS value */
