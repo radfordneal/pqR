@@ -22,7 +22,7 @@ clean:
 	@$(RM) *.o *~ *.d Makedeps
 distclean: clean
 	@$(RM) libtz.a
-	@$(RM) -Rf ../../../share/zoneinfo
+	@$(RM) -rf ../../../share/zoneinfo
 
 # Dependencies
 DEPS=$(CSOURCES:.c=.d)

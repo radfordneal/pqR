@@ -48,7 +48,27 @@
 
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
-\item .
+\item From R-2.15.1:
+      .C() gains some protection against the misuse of character vector
+      arguments.  (An all too common error is to pass character(N),
+      which initializes the elements to "", and then attempt to edit
+      the strings in-place, sometimes forgetting to terminate them.)
+\item From R-2.15.1:
+      Calls to the new function globalVariables() in package utils
+      declare that functions and other objects in a package should be
+      treated as globally defined, so that CMD check will not note
+      them.
+\item From R-2.15.1:
+      print(packageDescription(*)) trims the Collate field by default.
+\item From R-2.15.1: A new option "show.error.locations" has been added.  
+      When set to
+      TRUE, error messages will contain the location of the most recent
+      call containing source reference information. (Other values are
+      supported as well; see ?options.)
+\item From R-2.15.1:
+      C entry points R_GetCurrentSrcref and R_GetSrcFilename have been
+      added to the API to allow debuggers access to the source
+      references on the stack.
 }}
 
   \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
@@ -67,7 +87,20 @@
   \subsection{
     FEATURES FOR INSTALLATION CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
-\item .
+\item From R-2.15.1:
+      install.packages("pkg_version.tgz") on Mac OS X now has sanity
+      checks that this is actually a binary package (as people have
+      tried it with incorrectly named source packages).
+\item From R-2.15.3:
+      Configuration and R CMD javareconf now come up with a smaller set
+      of library paths for Java on Oracle-format JDK (including
+      OpenJDK).  This helps avoid conflicts between libraries (such as
+      libjpeg) supplied in the JDK and system libraries.  This can
+      always be overridden if needed: see the 'R Installation and
+      Administration' manual.
+\item From R-2.15.3:
+      The configure tests for Objective C and Objective C++ now work on
+      Mac OS 10.8 with Xcode 4.5.2 (PR#15107).
 }}
 
   \subsection{DOCUMENTATION UPDATES}{
@@ -201,7 +234,18 @@
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
-\item .
+\item From R-2.15.1: 
+      Trying to update (recommended) packages in R_HOME/library without
+      write access is now dealt with more gracefully.  Further, such
+      package updates may be skipped (with a warning), when a newer
+      installed version is already going to be used from .libPaths().
+      (PR#14866)
+\item From R-2.15.1:
+      getMethod(f, sig) produced an incorrect error message in some
+      cases when f was not a string).
+\item From R-2.15.2:
+      In Windows, the GUI preferences for foreground color were 
+      not always respected.  (Reported by Benjamin Wells.)
 }}
 }
 

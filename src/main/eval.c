@@ -1022,6 +1022,10 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     else
 	revisecontext (newrho, rho);
 
+    /* Get the srcref record from the closure object */
+    
+    R_Srcref = getAttrib(op, R_SrcrefSymbol);
+    
     /* The default return value is NULL.  FIXME: Is this really needed
        or do we always get a sensible value returned?  */
 
@@ -2400,13 +2404,17 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     else if (TYPEOF(expr) == EXPRSXP) {
 	int i, n;
+        SEXP srcrefs = getBlockSrcrefs(expr);
 	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-	if (!SETJMP(cntxt.cjmpbuf))
-	    for (i = 0 ; i < n ; i++)
+	if (!SETJMP(cntxt.cjmpbuf)) {
+	    for (i = 0 ; i < n ; i++) {
+                R_Srcref = getSrcref(srcrefs, i); 
 		tmp = evalv (VECTOR_ELT(expr, i), env, 
                         i==n-1 ? variant : VARIANT_NULL | VARIANT_PENDING_OK);
+            }
+        }
 	else {
 	    tmp = R_ReturnedValue;
 	    if (tmp == R_RestartToken) {
@@ -4551,8 +4559,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = findFun(symbol, rho);
 	if(RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
+            Rprintf("trace: ");
+            PrintValue(symbol);
 	}
 
 	/* initialize the function type register, push the function, and
@@ -4571,8 +4579,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = findFun(symbol, R_GlobalEnv);
 	if(RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
+            Rprintf("trace: ");
+            PrintValue(symbol);
 	}
 
 	/* initialize the function type register, push the function, and
@@ -4595,8 +4603,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    SET_NAMEDCNT_MAX(value);
 	}
 	if(RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
+            Rprintf("trace: ");
+            PrintValue(symbol);
 	}
 
 	/* initialize the function type register, push the function, and
@@ -4615,8 +4623,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = getPrimitive(symbol, BUILTINSXP);
 	if (RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
+            Rprintf("trace: ");
+            PrintValue(symbol);
 	}
 
 	/* push the function and push space for creating the argument list. */
@@ -4634,7 +4642,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = INTERNAL(symbol);
 	if (TYPEOF(value) != BUILTINSXP)
-	  error(_("not a BUILTIN function"));
+            error(_("no internal function \"%s\""), CHAR(PRINTNAME(symbol)));
 
 	/* push the function and push space for creating the argument list. */
 	ftype = TYPEOF(value);
@@ -4773,8 +4781,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	const void *vmax = VMAXGET();
 	if (RTRACE(fun)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
+            Rprintf("trace: ");
+            PrintValue(symbol);
 	}
 	BCNPUSH(fun);  /* for GC protection */
 	flag = PRIMPRINT(fun);

@@ -3,7 +3,7 @@
 ### Process this file with autoconf to produce a configure script.
 ###
 ### Copyright (C) 1998-2011 R Core Team
-### Modifications for pqR copyright (C) 2012 Radford Neal
+### Modifications for pqR copyright (C) 2012-2014 Radford Neal
 ###
 ### This file is part of R.
 ###
@@ -31,7 +31,7 @@ m4_define([R_VERSION],
           m4_bpatsubst(m4_esyscmd([cat VERSION]),
                        [\([0-9.]*\)\(\w\|\W\)*],
                        [\1]))
-AC_INIT([R],[R_VERSION],[http://github.com/radfordneal/pqR/issues],[R],[http://github.com/radfordneal/pqR/])
+AC_INIT([pqR],[R_VERSION],[http://github.com/radfordneal/pqR/issues],[pqR],[http://pqR-project.org])
 AC_CONFIG_SRCDIR([src/include/Defn.h])
 AC_CONFIG_AUX_DIR([tools])
 
@@ -475,6 +475,10 @@ AC_ARG_WITH([jpeglib],
 [AS_HELP_STRING([--with-jpeglib],[use jpeglib library (if available) @<:@yes@:>@])],
 [R_ARG_USE(jpeglib)],
 [use_jpeglib=yes])
+AC_ARG_WITH([libtiff],
+[AS_HELP_STRING([--with-libtiff],[use libtiff library (if available) @<:@yes@:>@])],
+[R_ARG_USE(libtiff)],
+[use_libtiff=yes])
 AC_ARG_WITH([system-zlib],
 [AS_HELP_STRING([--with-system-zlib],[use system zlib library (if available) @<:@no@:>@])],
 [R_ARG_USE_SYSTEM(zlib)],
@@ -1542,11 +1546,17 @@ rm -f libconftest${DYLIB_EXT} conftest.c
     shlib_ldflags="-G"
     shlib_cxxldflags="-G"
     if test "${GCC}" = yes; then
+      cpicflags="-fPIC"
       ld=`${CC} -print-prog-name=ld`
       ldoutput=`${ld} -v 2>&1 | grep GNU`
       if test -n "${ldoutput}"; then
 	main_ldflags="-Wl,-export-dynamic"
 	shlib_ldflags="-shared"
+        shlib_cxxldflags="-shared"
+      else
+        ## it seems gcc c 4.6.2 needs this with Solaris linker
+	shlib_ldflags="-shared"
+        shlib_cxxldflags="-shared"
       fi
     else
       cpicflags="-KPIC"
@@ -1558,10 +1568,14 @@ rm -f libconftest${DYLIB_EXT} conftest.c
         fi
       fi
     fi
+    ## G77 include gfortran
     if test "${G77}" != yes; then
       fpicflags="-PIC"
+    else
+      fpicflags="-fPIC"
     fi
     if test "${GXX}" = yes; then
+      cxxpicflags="-fPIC"
       ld=`${CXX} -print-prog-name=ld`
       ldoutput=`${ld} -v 2>&1 | grep GNU`
       if test -n "${ldoutput}"; then

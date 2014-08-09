@@ -291,6 +291,17 @@ getOption(x, default = NULL)
       of calls must be (in bytes) before ellipses are used.  Defaults to
       40 and should be at least 30 and no more than 500.}
 
+    \item{\code{show.error.locations}:}{Should source locations of
+      errors be printed?  If set to \code{TRUE} or \code{"top"}, the
+      source location that is highest on the stack (the most recent
+      call) will be printed.  \code{"bottom"} will print the location
+      of the earliest call found on the stack.
+      
+      Integer values can select other entries.  The value \code{0}
+      corresponds to \code{"top"} and positive values count down the
+      stack from there.  The value \code{-1} corresponds to
+      \code{"bottom"} and negative values count up from there.}
+
     \item{\code{show.error.messages}:}{a logical.  Should error messages
       be printed?  Intended for use with \code{\link{try}} or a
       user-installed error handler.}

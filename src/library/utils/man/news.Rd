@@ -1,6 +1,6 @@
 % File src/library/utils/man/news.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 1995-2011 R Core Development Team
+% Copyright 1995-2011 R Core Team
 % Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 

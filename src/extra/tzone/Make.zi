@@ -28,5 +28,5 @@ DATA=		$(YDATA) $(TABDATA) yearistype.sh
 
 
 install: $(DATA)
-	zic -y $(YEARISTYPE) -d ../$(TZDIR) -L $(R_BIT_BUCKET) $(YDATA)
+	zic -y $(YEARISTYPE) -d ../$(TZDIR) -L /dev/null $(YDATA)
 	cp iso3166.tab zone.tab ../$(TZDIR)
