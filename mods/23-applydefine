@@ -10,7 +10,10 @@ Fixes the following bug (and related bugs):
   attr(a[[1]][[1]],"fred")<-9
   print(b)
 
-Gets rid of duplicate in EnsureLocal.  This needs some mods in other
-places: length<- and slot assignment for S4 methods.
-
-Cleans up and speeds up length<- as well.
+Tried to get rid of duplicate in EnsureLocal.  This needed some mods
+in length<- and slot assignment for S4 methods.  It turns out that
+package Matrix (version 1.0-6) also relies on this duplication and on
+the unmodified slot assignment (which it shouldn't really do), so this
+has been disabled (but the duplication is now done outside EnsureLocal, 
+and the disabled code is kept).  The mod to length<- is kept, and it 
+is cleaned up and sped up otherwise as well.
