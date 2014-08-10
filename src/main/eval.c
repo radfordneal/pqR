@@ -1807,25 +1807,37 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 	error(_("invalid (NULL) left side of assignment"));
 
     if (isSymbol(expr)) {
-	if(forcelocal) {
-	    nval = EnsureLocal(expr, rho);
-	}
-	else {/* now we are down to the target symbol */
-	  nval = eval(expr, ENCLOS(rho));
-	}
+
+        nval = forcelocal ? EnsureLocal(expr, rho) : eval(expr, ENCLOS(rho));
+
+        /* This duplication should be unnecessary, but some packages
+           (eg, Matrix 1.0-6) assume (in C code) that the object in a
+           replacement function is not shared. */
+        if (NAMEDCNT_GT_1(nval)) 
+            nval = dup_top_level(nval);
+
 	r = CONS(nval, expr);
-        SETLEVELS (r, NAMEDCNT_GT_1(nval));
+
+        /* Statement below is now unnecessary (can always leave LEVELS at 0),
+           given the duplication above. */
+        /* SETLEVELS (r, NAMEDCNT_GT_1(nval)); */
     }
+
     else if (isLanguage(expr)) {
+
 	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
 	R_SetVarLocValue(tmploc, CAR(val));
 	PROTECT(nexpr = LCONS (CAR(expr), 
                                LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr))));
 	nval = eval(nexpr, rho);
 	UNPROTECT(2);
+
 	r = CONS(nval, val);
-        SETLEVELS (r, LEVELS(val) || NAMEDCNT_GT_1(nval));
+
+        if (LEVELS(val) || NAMEDCNT_GT_1(nval))
+            SETLEVELS (r, 1);
     }
+
     else 
         error(_("target of assignment expands to non-language object"));
 
