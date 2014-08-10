@@ -1620,7 +1620,13 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
     if(!isSymbol(name) )
 	error(_("invalid type or length for slot name"));
 
-    if (NAMEDCNT_GT_1(obj)) {
+    /* The duplication below *should* be what is right to do, but
+       it is disabled because some packages (eg, Matrix 1.0-6) cheat 
+       by relying on a call of R_set_slot in C code modifying its 
+       first argument in place, even if it is shared.  Package "methods" 
+       did this as well in R-2.15.1, but has been modified not to in 
+       pqR (this also speeds it up). */
+    if (FALSE /* disabled */ && NAMEDCNT_GT_1(obj)) {
         obj = dup_top_level(obj);
         UNPROTECT(1); /* old obj */
         PROTECT(obj);
