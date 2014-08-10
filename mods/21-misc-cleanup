@@ -53,3 +53,6 @@ Cleaned up substr<- and fixed bug similar to that in substr.  Should
 be a bit faster.
 
 Use unhashed environments for source references.
+
+Un-hide R_inspect and R_inspect3 so they can be used when debugging
+packages.
