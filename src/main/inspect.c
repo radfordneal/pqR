@@ -316,12 +316,12 @@ static SEXP do_inspect(SEXP call, SEXP op, SEXP args, SEXP env) {
 
 /* the following functions can be use internally and for debugging purposes -
    so far they are not used in any actual code */
-SEXP attribute_hidden R_inspect(SEXP x) {
+SEXP R_inspect(SEXP x) {
     inspect_tree(0, x, -1, 5, 0);
     return x;
 }
 
-SEXP attribute_hidden R_inspect3(SEXP x, int deep, int pvec) {
+SEXP R_inspect3(SEXP x, int deep, int pvec) {
     inspect_tree(0, x, deep, pvec, 0);
     return x;
 }
