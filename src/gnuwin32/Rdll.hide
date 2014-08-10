@@ -237,8 +237,6 @@
  R_init_base
  R_init_jit_enabled
  R_initialize_bcode
- R_inspect
- R_inspect3
  R_isMissing
  R_is_running
  R_jit_enabled
