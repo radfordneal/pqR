@@ -1300,15 +1300,21 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     vl = findVarInFrame3 (rho, symbol, TRUE);
     if (vl != R_UnboundValue) {
-        if (TYPEOF(vl) == PROMSXP)
+        if (TYPEOF(vl) == PROMSXP) {
+            PROTECT(vl);
             vl = forcePromise(vl);
+            UNPROTECT(1);
+        }
         return vl;
     }
 
     if (rho != R_EmptyEnv) {
         vl = findVar (symbol, ENCLOS(rho));
-        if (TYPEOF(vl) == PROMSXP)
+        if (TYPEOF(vl) == PROMSXP) {
+            PROTECT(vl);
             vl = forcePromise(vl);
+            UNPROTECT(1);
+        }
     }
 
     if (vl == R_UnboundValue)
@@ -1849,23 +1855,6 @@ static void tmp_cleanup(void *data)
     (void) RemoveVariable (R_TmpvalSymbol, (SEXP) data);
 }
 
-/* This macro stores the current assignment target in the saved
-   binding location. It duplicates if necessary to make sure
-   replacement functions are always called with a target with NAMED ==
-   1. The SET_CAR is intended to protect against possible GC in
-   R_SetVarLocValue; this might occur it the binding is an active
-   binding. */
-#define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
-	SEXP __lhs__ = (lhs); \
-	SEXP __v__ = CAR(__lhs__); \
-	if (NAMEDCNT_GT_1(__v__) && __v__ != R_NilValue) { \
-	    __v__ = duplicate(__v__); \
-	    SET_NAMEDCNT_1(__v__); \
-	    SETCAR(__lhs__, __v__); \
-	} \
-	R_SetVarLocValue(loc, __v__); \
-    } while(0)
-
 #define ASSIGNBUFSIZ 32
 static R_INLINE SEXP installAssignFcnName(SEXP fun)
 {
@@ -1989,7 +1978,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	expr = CADR(expr);
     }
 
-    nprot = 4; /* the common case */
+    nprot = 3; /* the common case */
     if (TYPEOF(CAR(expr)) == SYMSXP)
 	afun = installAssignFcnName(CAR(expr));
     else {
@@ -2008,10 +1997,12 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	    error(_("invalid function in complex assignment"));
     }
     R_SetVarLocValue(tmploc, CAR(lhs));
-    PROTECT(expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
-			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
-    expr = eval(expr, rho);
+    expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
+		      afun, R_TmpvalSymbol, CDDR(expr), rhsprom);
     UNPROTECT(nprot);
+    PROTECT(expr);
+    (void) eval(expr, rho);
+    UNPROTECT(1);
     endcontext(&cntxt); /* which does not run the remove */
     (void) RemoveVariable (R_TmpvalSymbol, rho);
 }
@@ -4835,16 +4826,22 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
             /* Used to call EnsureLocal, now changed, so old code is here. */
             value = findVarInFrame3 (rho, symbol, TRUE);
             if (value != R_UnboundValue) {
-                if (TYPEOF(value) == PROMSXP)
+                if (TYPEOF(value) == PROMSXP) {
+                    PROTECT(value);
                     value = forcePromise(value);
+                    UNPROTECT(1);
+                }
         	if (!NAMEDCNT_GT_1(value)) 
                     goto in_frame;
             }
             else {
                 if (rho != R_EmptyEnv) {
                     value = findVar (symbol, ENCLOS(rho));
-                    if (TYPEOF(value) == PROMSXP)
+                    if (TYPEOF(value) == PROMSXP) {
+                        PROTECT(value);
                         value = forcePromise(value);
+                        UNPROTECT(1);
+                    }
                 }
                 if (value == R_UnboundValue)
                     error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
