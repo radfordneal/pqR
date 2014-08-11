@@ -663,7 +663,6 @@ static SEXP R_BaseNamespaceName;
 
 void attribute_hidden InitBaseEnv()
 {
-    R_EmptyEnv = NewEnvironment(R_NilValue, R_NilValue, R_NilValue);
     R_BaseEnv = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv);
 }
 
@@ -1335,7 +1334,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
     /* If it's a symbol starting with a special character, skip to the first
        environment that might contain such a symbol. */
     if (SPEC_SYM(symbol)) {
-        while (rho != R_EmptyEnv && NO_SPEC_SYM(rho))
+        while (NO_SPEC_SYM(rho) && rho != R_EmptyEnv)
             rho = ENCLOS(rho);
     }
 
@@ -1363,8 +1362,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 		vl = eval(vl, rho);
 		UNPROTECT(1);
 	    }
-	    if (TYPEOF(vl) == CLOSXP || TYPEOF(vl) == BUILTINSXP ||
-		TYPEOF(vl) == SPECIALSXP)
+	    if (isFunction (vl))
 		return (vl);
 	    if (vl == R_MissingArg)
 		error(_("argument \"%s\" is missing, with no default"),
@@ -1372,7 +1370,9 @@ SEXP findFun(SEXP symbol, SEXP rho)
 	}
 	rho = ENCLOS(rho);
     }
+
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
+
     /* NOT REACHED */
     return R_UnboundValue;
 }
