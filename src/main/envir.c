@@ -1364,7 +1364,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
             rho = ENCLOS(rho);
     }
 
-    do { /* needn't check here, since ENCLOS(R_EmptyEnv) == R_EmptyEnv */
+    while (rho != R_EmptyEnv) {
 
         /* Any variable can mask a function here; checked for below. */
 #ifdef USE_GLOBAL_CACHE
@@ -1396,7 +1396,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 	}
 	rho = ENCLOS(rho);
 
-    } while (rho != R_EmptyEnv);
+    }
 
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
 
