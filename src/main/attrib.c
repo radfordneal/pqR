@@ -261,17 +261,24 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 
     if (isString(name))
 	name = install(translateChar(STRING_ELT(name, 0)));
+
     if (val == R_NilValue) {
 	UNPROTECT(3);
 	return removeAttrib(vec, name);
     }
 
-    /* We allow attempting to remove names from NULL */
+    /* We allow attempting to remove names from NULL, which is handled above */
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    if (NAMEDCNT_GT_0(val)) val = duplicate(val);
-    SET_NAMEDCNT(val, NAMEDCNT(vec));  /* Is there something better to do? */
+    if (NAMEDCNT_GT_0(val))
+    { SEXP v = duplicate(val);
+      if (v != val) {
+          SET_NAMEDCNT_1(v);
+          val = v;
+      }
+    }
+
     UNPROTECT(3);
 
     if (name == R_NamesSymbol)
@@ -1638,8 +1645,13 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 	/* simplified version of setAttrib(obj, name, value);
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
 	PROTECT(name);
-	if (NAMEDCNT_GT_0(value)) value = duplicate(value);
-	SET_NAMEDCNT(value, NAMEDCNT(obj));/* is there something better to do?*/
+	if (NAMEDCNT_GT_0(value)) {
+            SEXP v = duplicate(value);
+            if (v != value) {
+                SET_NAMEDCNT_1(v);
+                value = v;
+            }
+        }
 	UNPROTECT(1);
 	installAttrib(obj, name, value);
 #endif
