@@ -1,0 +1,6 @@
+More things made constants.
+
+Declares constants with LibExtern rather than extern.
+
+Makes R_UnboundValue a constant.
+
