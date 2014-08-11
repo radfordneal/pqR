@@ -1854,10 +1854,9 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     pending_ok = variant & VARIANT_PENDING_OK;
 
     if (TYPEOF(value) == PROMSXP) {
-        PROTECT(value);
-        SEXP prvalue = pending_ok ? forcePromisePendingOK(value) : forcePromise(value);
+        SEXP prvalue = pending_ok ? forcePromisePendingOK(value) 
+                                  : forcePromise(value);
         DEC_NAMEDCNT_AND_PRVALUE(value);
-        UNPROTECT(1);
         value = prvalue;
     }
     else
