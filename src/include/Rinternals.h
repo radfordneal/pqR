@@ -797,7 +797,7 @@ typedef int PROTECT_INDEX;
 
 #define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
 				    	         root of the environment tree */
-extern const SEXPREC R_EmptyEnv_const; /* defined in const-objs.c */
+LibExtern const SEXPREC R_EmptyEnv_const; /* defined in const-objs.c */
 
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 
@@ -808,42 +808,46 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
 /* R_NilValue is the R NULL object */
+
 #define R_NilValue ((SEXP) &R_NilValue_const)
-extern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
+LibExtern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
 
 /* Special Values */
-LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
+
+#define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
+LibExtern const SEXPREC R_UnboundValue_const; /* defined in const-objs.c */
+
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
 /* Logical Values.  Defined in const-objs.c */
 
 #define R_ScalarLogicalNA ((SEXP) &R_ScalarLogicalNA_const)
-extern VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const;
 
 #define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogicalFALSE_const)
-extern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
 
 #define R_ScalarLogicalTRUE ((SEXP) &R_ScalarLogicalTRUE_const)
-extern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
 
 /* Integer Values.  Defined in const-objs.c */
 
 #define R_ScalarIntegerNA ((SEXP) &R_ScalarIntegerNA_const)
-extern VECTOR_SEXPREC_CONST R_ScalarIntegerNA_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarIntegerNA_const;
 
 #define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger0To10_const[v])
-extern VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11];
+LibExtern VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11];
 
 /* Real Values.  Defined in const-objs.c */
 
 #define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
-extern VECTOR_SEXPREC_CONST R_ScalarRealNA_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarRealNA_const;
 
 #define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
-extern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
 
 #define R_ScalarRealOne ((SEXP) &R_ScalarRealOne_const)
-extern VECTOR_SEXPREC_CONST R_ScalarRealOne_const;
+LibExtern VECTOR_SEXPREC_CONST R_ScalarRealOne_const;
 
 
 #ifdef __MAIN__
