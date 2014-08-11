@@ -788,10 +788,13 @@ typedef int PROTECT_INDEX;
 #define REPROTECT(x,i) R_Reprotect(x,i)
 
 /* Evaluation Environment */
+
+#define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
+				    	         root of the environment tree */
+extern const SEXPREC R_EmptyEnv_const; /* defined in const-objs.c */
+
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 
-LibExtern SEXP  R_EmptyEnv;	    /* An empty environment at the root of the
-				    	environment tree */
 LibExtern SEXP  R_BaseEnv;	    /* The base environment; formerly R_NilValue */
 LibExtern SEXP	R_BaseNamespace;    /* The (fake) namespace for base */
 LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
