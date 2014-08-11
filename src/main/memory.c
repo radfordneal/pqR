@@ -1849,7 +1849,6 @@ static void RunGenCollect(R_size_t size_needed)
 
         &R_GlobalEnv,	          /* Global environment */
         &R_BaseEnv,
-        &R_EmptyEnv,
         &R_Warnings,	          /* Warnings, if any */
 
         &R_HandlerStack,          /* Condition handler stack */
