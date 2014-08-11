@@ -584,10 +584,6 @@ void InitNames()
     if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
 	R_Suicide("couldn't allocate memory for symbol table");
 
-    /* R_UnboundValue */
-    R_UnboundValue = allocSExp(SYMSXP);
-    SET_SYMVALUE(R_UnboundValue, R_UnboundValue);
-    SET_PRINTNAME(R_UnboundValue, R_NilValue);
     /* R_MissingArg */
     R_MissingArg = allocSExp(SYMSXP);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
