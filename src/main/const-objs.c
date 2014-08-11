@@ -73,6 +73,17 @@ const SEXPREC R_NilValue_const = { \
 };
 
 
+/* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
+   R_EmptyEnv.  */
+
+const SEXPREC R_EmptyEnv_const = { \
+    CONST_HEADER(ENVSXP)
+    .u = { .envsxp = 
+            { .frame = R_NilValue, .enclos = R_NilValue, .hashtab = R_NilValue }
+         }
+};
+
+
 /* Logical constants. */
 
 #define LOGICAL_CONST(v) { \
