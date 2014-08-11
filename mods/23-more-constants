@@ -4,3 +4,5 @@ Declares constants with LibExtern rather than extern.
 
 Makes R_UnboundValue a constant.
 
+Makes ENCLOS(R_EmptyEnv) == R_EmptyEnv, so can slightly speed up loop
+in findFun.
