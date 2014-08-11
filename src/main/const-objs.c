@@ -84,6 +84,19 @@ const SEXPREC R_EmptyEnv_const = { \
 };
 
 
+/* Definition of the R_UnboundValue constant, whose address when cast to SEXP
+   R_UnboundValue.  */
+
+const SEXPREC R_UnboundValue_const = { \
+    CONST_HEADER(SYMSXP)
+    .u = { .symsxp = 
+            { .pname = R_NilValue, 
+              .value = R_UnboundValue, 
+              .internal = R_NilValue }
+         }
+};
+
+
 /* Logical constants. */
 
 #define LOGICAL_CONST(v) { \
