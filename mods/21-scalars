@@ -16,3 +16,5 @@ Makes "rep" always return an unshared object.
 
 Fixed a bug in numericDeriv that was found as a result of failure after
 real constants were created.
+
+Make R_EmptyEnv a constant.
