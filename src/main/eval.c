@@ -376,11 +376,12 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
         helpers_wait_until_not_being_computed (wait_for);
 }
 
-SEXP attribute_hidden forcePromise(SEXP e)
+SEXP attribute_hidden forcePromise(SEXP e) /* e protected here if necessary */
 {
     if (PRVALUE(e) == R_UnboundValue) {
 	RPRSTACK prstack;
 	SEXP val;
+        PROTECT(e);
 	if(PRSEEN(e)) {
 	    if (PRSEEN(e) == 1)
 		errorcall(R_GlobalContext->call,
@@ -407,16 +408,18 @@ SEXP attribute_hidden forcePromise(SEXP e)
 	SET_PRVALUE(e, val);
         INC_NAMEDCNT(val);
 	SET_PRENV(e, R_NilValue);
+        UNPROTECT(1);
     }
     return PRVALUE(e);
 }
 
 
-SEXP attribute_hidden forcePromisePendingOK(SEXP e)
+SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
 {
     if (PRVALUE(e) == R_UnboundValue) {
 	RPRSTACK prstack;
 	SEXP val;
+        PROTECT(e);
 	if(PRSEEN(e)) {
 	    if (PRSEEN(e) == 1)
 		errorcall(R_GlobalContext->call,
@@ -443,6 +446,7 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)
 	SET_PRVALUE(e, val);
         INC_NAMEDCNT(val);
 	SET_PRENV(e, R_NilValue);
+        UNPROTECT(1);
     }
     return PRVALUE_PENDING_OK(e);
 }
@@ -552,14 +556,9 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	}
 
         if (TYPEOF(tmp) == PROMSXP) {
-            if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue) {
-                /* not sure the PROTECT is needed here but keep it to
-                   be on the safe side. */
-                PROTECT(tmp);
+            if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue)
                 tmp = variant & VARIANT_PENDING_OK 
                        ? forcePromisePendingOK(tmp) : forcePromise(tmp);
-                UNPROTECT(1);
-            }
             else 
                 tmp = variant & VARIANT_PENDING_OK 
                        ? PRVALUE_PENDING_OK(tmp) : PRVALUE(tmp);
@@ -1304,21 +1303,15 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     vl = findVarInFrame3 (rho, symbol, TRUE);
     if (vl != R_UnboundValue) {
-        if (TYPEOF(vl) == PROMSXP) {
-            PROTECT(vl);
+        if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
-            UNPROTECT(1);
-        }
         return vl;
     }
 
     if (rho != R_EmptyEnv) {
         vl = findVar (symbol, ENCLOS(rho));
-        if (TYPEOF(vl) == PROMSXP) {
-            PROTECT(vl);
+        if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
-            UNPROTECT(1);
-        }
     }
 
     if (vl == R_UnboundValue)
@@ -3688,9 +3681,11 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
 	/**** R_isMissing is inefficient */
 	if (keepmiss && R_isMissing(symbol, rho))
 	    value = R_MissingArg;
-	else value = forcePromise(value);
+	else 
+            value = forcePromise(value);
     }
-    else value = PRVALUE(value);
+    else 
+        value = PRVALUE(value);
     return value;
 }
 
@@ -4834,22 +4829,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
             /* Used to call EnsureLocal, now changed, so old code is here. */
             value = findVarInFrame3 (rho, symbol, TRUE);
             if (value != R_UnboundValue) {
-                if (TYPEOF(value) == PROMSXP) {
-                    PROTECT(value);
+                if (TYPEOF(value) == PROMSXP)
                     value = forcePromise(value);
-                    UNPROTECT(1);
-                }
         	if (!NAMEDCNT_GT_1(value)) 
                     goto in_frame;
             }
             else {
                 if (rho != R_EmptyEnv) {
                     value = findVar (symbol, ENCLOS(rho));
-                    if (TYPEOF(value) == PROMSXP) {
-                        PROTECT(value);
+                    if (TYPEOF(value) == PROMSXP)
                         value = forcePromise(value);
-                        UNPROTECT(1);
-                    }
                 }
                 if (value == R_UnboundValue)
                     error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
