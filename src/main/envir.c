@@ -1360,11 +1360,11 @@ SEXP findFun(SEXP symbol, SEXP rho)
        environment that might contain such a symbol. */
 
     if (SPEC_SYM(symbol)) {
-        while (NO_SPEC_SYM(rho) && rho != R_EmptyEnv)
+        while (NO_SPEC_SYM(rho)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */
             rho = ENCLOS(rho);
     }
 
-    while (rho != R_EmptyEnv) {
+    do { /* needn't check here, since ENCLOS(R_EmptyEnv) == R_EmptyEnv */
 
         /* Any variable can mask a function here; checked for below. */
 #ifdef USE_GLOBAL_CACHE
@@ -1395,7 +1395,8 @@ SEXP findFun(SEXP symbol, SEXP rho)
 		      CHAR(PRINTNAME(symbol)));
 	}
 	rho = ENCLOS(rho);
-    }
+
+    } while (rho != R_EmptyEnv);
 
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
 
