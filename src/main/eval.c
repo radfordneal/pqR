@@ -31,6 +31,10 @@
 # include <config.h>
 #endif
 
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#endif
+
 #define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include <Defn.h>
@@ -546,8 +550,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
 	/* if ..d is missing then ddfindVar will signal */
 	if (res == R_MissingArg && !DDVAL(e) ) {
-	    const char *n = CHAR(PRINTNAME(e));
-	    if (*n)
+	    if (*CHAR(PRINTNAME(e)))
                 error(_("argument \"%s\" is missing, with no default"),
 		      CHAR(PRINTNAME(e)));
 	    else 
@@ -606,7 +609,17 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
                 int use_cntxt = R_Profiling;
                 SEXP arg1, arg2;
-                RCNTXT cntxt;
+
+                /* If we have an "alloca" function available, we use it to
+                   allocate space for a context only when one is needed,
+                   which saves stack space.  Otherwise, we just use a
+                   local variable declared here. */
+
+                RCNTXT *cntxt;
+#               ifndef HAVE_ALLOCA_H
+                    RCNTXT lcntxt;
+                    cntxt = &lcntxt;
+#               endif
 
                 /* See if this may be a fast primitive.  All fast primitives
                    should be BUILTIN.  We will not do a fast call if there 
@@ -663,7 +676,10 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                 }
                 PROTECT(args);
                 if (use_cntxt || PRIMFOREIGN(op)) {
-                    beginbuiltincontext (&cntxt, e);
+#                   ifdef HAVE_ALLOCA_H
+                        cntxt = alloca (sizeof *cntxt);
+#                   endif
+                    beginbuiltincontext (cntxt, e);
                     use_cntxt = TRUE;
                 }
                 if (!PRIMFUN_PENDING_OK(op)) {
@@ -681,8 +697,12 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                     args = CDR(args);
                     goto not_fast;
                 }
-                if (use_cntxt) /* assume fast ops are not foreign */
-                    beginbuiltincontext (&cntxt, e);
+                if (use_cntxt) { /* assume fast ops are not foreign */
+#                   ifdef HAVE_ALLOCA_H
+                        cntxt = alloca (sizeof *cntxt);
+#                   endif
+                    beginbuiltincontext (cntxt, e);
+                }
                 if (!PRIMFUN_PENDING_OK(op)) {
                     WAIT_UNTIL_COMPUTED(arg1);
                 }
@@ -709,8 +729,12 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                         goto not_fast;
                     }
                 }
-                if (use_cntxt) /* assume fast ops are not foreign */
-                    beginbuiltincontext (&cntxt, e);
+                if (use_cntxt) { /* assume fast ops are not foreign */
+#                   ifdef HAVE_ALLOCA_H
+                        cntxt = alloca (sizeof *cntxt);
+#                   endif
+                    beginbuiltincontext (cntxt, e);
+                }
                 if (!PRIMFUN_PENDING_OK(op)) {
                     if (arg2==NULL) WAIT_UNTIL_COMPUTED(arg1);
                     else            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
@@ -721,7 +745,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
               done_builtin:
                 UNPROTECT(1); /* either args or arg1 */
-                if (use_cntxt) endcontext(&cntxt);
+                if (use_cntxt) endcontext(cntxt);
 	    }
 
             int flag = PRIMPRINT(op);
@@ -742,7 +766,8 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	else
 	    error(_("attempt to apply non-function"));
 	break;
-    default:
+    default: 
+        /* put any type that is an error here, to reduce number in switch */
         if (typeof_e == DOTSXP)
             error(_("'...' used in an incorrect context"));
         else
