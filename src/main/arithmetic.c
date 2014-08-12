@@ -1340,7 +1340,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 
     n = LENGTH(sa);
     /* coercion can lose the object bit */
-    if (TYPEOF(sa) != REALSXP) sa = coerceVector(sa, REALSXP));
+    if (TYPEOF(sa) != REALSXP) sa = coerceVector(sa, REALSXP);
     PROTECT(sa);
 
     R_naflag = 0;
