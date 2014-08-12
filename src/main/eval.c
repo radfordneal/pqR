@@ -1317,6 +1317,21 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     return vl;
 }
 
+static void asLogicalNoNA_error (SEXP s, SEXP call)
+{
+    errorcall (call, 
+      length(s) == 0 ? _("argument is of length zero") :
+      isLogical(s) ?   _("missing value where TRUE/FALSE needed") :
+                       _("argument is not interpretable as logical"));
+}
+
+static void asLogicalNoNA_warning (SEXP s, SEXP call)
+{
+    PROTECT(s);
+    warningcall (call,
+     _("the condition has length > 1 and only the first element will be used"));
+    UNPROTECT(1);
+}
                                   /* Caller needn't protect the s arg below */
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
@@ -1324,39 +1339,27 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     int len;
 
     switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case INTSXP:  /* assume logical and integer are the same */
     case LGLSXP:
         len = LENGTH(s);
-        if (len > 0) 
-            cond = LOGICAL(s)[0];
-        break;
-    case INTSXP:
-        len = LENGTH(s);
-        if (len > 0) 
-            cond = INTEGER(s)[0] == NA_INTEGER ? NA_LOGICAL : INTEGER(s)[0]; 
+        if (len == 0 || LOGICAL(s)[0] == NA_LOGICAL) goto error;
+        cond = LOGICAL(s)[0];
         break;
     default:
         len = length(s);
-        if (len > 0)
-            cond = asLogical(s);
+        if (len == 0) goto error;
+        cond = asLogical(s);
         break;
     }
 
-    if (len == 0)
-        errorcall(call, _("argument is of length zero"));
+    if (cond == NA_LOGICAL) goto error;
 
-    if (len > 1) {
-        PROTECT(s);
-        warningcall(call,
-        _("the condition has length > 1 and only the first element will be used"));
-        UNPROTECT(1);
-    }
-
-    if (cond == NA_LOGICAL)
-	errorcall(call, isLogical(s) ? 
-                          _("missing value where TRUE/FALSE needed") :
-                          _("argument is not interpretable as logical"));
+    if (len > 1) asLogicalNoNA_warning (s, call);
 
     return cond;
+
+  error:
+    asLogicalNoNA_error (s, call);
 }
 
 
