@@ -1167,7 +1167,7 @@ findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
 	    if (TYPEOF(vl) == PROMSXP)
-                vl = forcePromise(vl)
+                vl = forcePromise(vl);
 	    if (TYPEOF(vl) == mode) return vl;
 	    if (mode == FUNSXP && isFunction(vl)) return (vl);
 	}
@@ -1201,9 +1201,9 @@ findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
 	    if (TYPEOF(vl) == PROMSXP)
-                vl = forcePromise(vl)
+                vl = forcePromise(vl);
 	    if (mode == CLOSXP && isFunction(vl)) return vl;
-	    tl = TYPEOF(vl)
+	    tl = TYPEOF(vl);
             if (tl == INTSXP) tl = REALSXP;
 	    if (tl == mode) return vl;
 	}
