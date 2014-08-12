@@ -1,3 +1,10 @@
 Miscellaneous updates.
 
 Be more cautious regarding string comparisons involving NA_STRING.
+
+Have forcePromise protect its arguments
+
+Introduces IS_BASE to check slightly more quickly whether an
+environment is either R_BaseEnv or R_BaseNamespace.
+
+Puts some of FindVarInFrame3 into FindFun.
