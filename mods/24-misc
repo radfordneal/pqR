@@ -10,3 +10,7 @@ environment is either R_BaseEnv or R_BaseNamespace.
 Puts some of FindVarInFrame3 into FindFun.
 
 Speed tweak in math1.
+
+Major revamp of details of how builtins are handled in evalv, plus
+other evalv cleanup.  Uses alloca if possible to avoid always allocating
+space for a context when often not needed.
