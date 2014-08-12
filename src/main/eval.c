@@ -587,7 +587,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	else
 	    PROTECT(op = eval(CAR(e), rho));
 
-	if(RTRACE(op) && R_current_trace_state()) {
+	if (RTRACE(op) && R_current_trace_state()) {
 	    Rprintf("trace: ");
 	    PrintValue(e);
 	}
@@ -604,8 +604,9 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
             else { /* BUILTINSXP */
 
-                SEXP arg1 = NULL, arg2 = NULL;
-                int fast = FALSE;
+                int use_cntxt = R_Profiling;
+                SEXP arg1, arg2;
+                RCNTXT cntxt;
 
                 /* See if this may be a fast primitive.  All fast primitives
                    should be BUILTIN.  We will not do a fast call if there 
@@ -617,122 +618,110 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                    For any PRIMARITY other than 2, a fast call may be done 
                    if there is exactly one argument, which is stored in arg1,
                    with arg2 set to NULL.*/
-    
-                if (PRIMFUN_FAST(op) != 0) {
-                    if (args!=R_NilValue && TAG(args)==R_NilValue) {
-                        SEXP a1 = CAR(args);
-                        if (a1!=R_DotsSymbol && a1!=R_MissingArg) {
-                            if (PRIMARITY(op) != 2) {
-                                if (CDR(args)==R_NilValue) {
-                                    fast = TRUE;
-                                    arg1 = a1;
-                                }
+
+                arg2 = NULL;
+                if (PRIMFUN_FAST(op) && args!=R_NilValue 
+                                     && TAG(args)==R_NilValue) {
+                    arg1 = CAR(args);
+                    if (arg1!=R_DotsSymbol && arg1!=R_MissingArg) {
+                        SEXP cdr_args = CDR(args);
+                        if (PRIMARITY(op) != 2) {
+                            if (cdr_args==R_NilValue)
+                                goto fast1;
+                        }
+                        else {
+                            if (cdr_args==R_NilValue) {
+                                if (PRIMFUN_UNI_TOO(op))
+                                    goto fast2;
                             }
-                            else {
-                                if (CDR(args)==R_NilValue) {
-                                    if (PRIMFUN_UNI_TOO(op)) {
-                                        fast = TRUE;
-                                        arg1 = a1;
-                                    }
-                                }
-                                else if (TAG(CDR(args))==R_NilValue
-                                      && CDDR(args)==R_NilValue) {
-                                    SEXP a2 = CADR(args);
-                                    if (a2!=R_DotsSymbol && a2!=R_MissingArg){
-                                        fast = TRUE;
-                                        arg1 = a1;
-                                        arg2 = a2;
-                                    }
-                                }
+                            else if (TAG(cdr_args)==R_NilValue
+                                      && CDR(cdr_args)==R_NilValue) {
+                                arg2 = CAR(cdr_args);
+                                if (arg2!=R_DotsSymbol && arg2!=R_MissingArg)
+                                    goto fast2;
+                                arg2 = NULL;
                             }
                         }
                     }
                 }
+                arg1 = NULL;
 
-                /* Evaluate arguments for a fast primitive, and check whether
-                   dispatching must be checked, in which case it won't be
-                   fast after all. */
-
-                if (fast) {
-                    PROTECT(arg1 = evalv (arg1, rho, 
-                              PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
-                    if (PRIMFUN_DSPTCH1(op) && isObject(arg1)) {
-                        args = CDR(args);
-                        arg2 = NULL;
-                        fast = FALSE;
-                    }
-                    else if (arg2 != NULL) {
-                        PROTECT(arg2 = evalv(arg2, rho, 
-                                  PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
-                        if (PRIMFUN_DSPTCH2(op) && isObject(arg2)) {
-                            args = R_NilValue;  /* == CDDR(args) */
-                            fast = FALSE;
-                        }
-                    }
-                }
-
-                /* Evaluate arguments for a non-fast primitive.  If it can't
-                   be fast because of dispatching, arguments evaluated already
-                   have to be put on at the front of the argument list. */
-
-                if (!fast) { 
+                /* Handle a non-fast op.  We may get here after starting
+                   to handle a fast op, in which case we may have already
+                   evaluated arg1 or arg2 (which will be protected). */
+              not_fast: 
+                if (args != R_NilValue) {
                     args = evalListPendingOK (args, rho, e);
-                    if (arg2 != NULL) {
-                        args = CONS(arg2,args);
-                        UNPROTECT(1);  /* arg2 */
-                    }
-                    if (arg1 != NULL) {
-                        args = CONS(arg1,args);
-                        UNPROTECT(1);  /* arg1 */
-                    }
-                    PROTECT(args);
                 }
+                if (arg2 != NULL) {
+                    args = CONS(arg2,args);
+                    UNPROTECT(1);  /* arg2 */
+                }
+                if (arg1 != NULL) {
+                    args = CONS(arg1,args);
+                    UNPROTECT(1);  /* arg1 */
+                }
+                PROTECT(args);
+                if (use_cntxt || PRIMFOREIGN(op)) {
+                    beginbuiltincontext (&cntxt, e);
+                    use_cntxt = TRUE;
+                }
+                if (!PRIMFUN_PENDING_OK(op)) {
+                    WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
+                }
+                res = CALL_PRIMFUN(e, op, args, rho, variant);
+                goto done_builtin;
 
-                /* Create a context if profiling, or calling outside function
-                   (.C, .Fortran, etc.), where it helps for tracebacks */
+                /* Handle a fast op with one argument.  If arg is an object,
+                   may turn out to not be fast after all. */
+              fast1:
+                PROTECT(arg1 = evalv (arg1, rho, 
+                          PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+                if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                    args = CDR(args);
+                    goto not_fast;
+                }
+                if (use_cntxt) /* assume fast ops are not foreign */
+                    beginbuiltincontext (&cntxt, e);
+                if (!PRIMFUN_PENDING_OK(op)) {
+                    WAIT_UNTIL_COMPUTED(arg1);
+                }
+                res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
+                         (e, op, arg1, rho, variant);
+                goto done_builtin;
 
-                int used_cntxt = FALSE;
-                RCNTXT cntxt;
-                if (R_Profiling || PRIMFOREIGN(op)) {
-                    begincontext (&cntxt, CTXT_BUILTIN, e, R_BaseEnv, 
-                                  R_BaseEnv, R_NilValue, R_NilValue);
-                    used_cntxt = TRUE;
+                /* Handle a fast op with two arguments (though the second 
+                   argument may possibly be NULL).  If either arg is an object,
+                   may turn out to not be fast after all. */
+              fast2:
+                PROTECT(arg1 = evalv (arg1, rho, 
+                          PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+                if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                    args = CDR(args);
+                    arg2 = NULL;
+                    goto not_fast;
                 }
+                if (arg2 != NULL) {
+                    PROTECT(arg2 = evalv(arg2, rho, 
+                              PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
+                    if (isObject(arg2) && PRIMFUN_DSPTCH2(op)) {
+                        args = R_NilValue;  /* == CDDR(args) */
+                        goto not_fast;
+                    }
+                }
+                if (use_cntxt) /* assume fast ops are not foreign */
+                    beginbuiltincontext (&cntxt, e);
+                if (!PRIMFUN_PENDING_OK(op)) {
+                    if (arg2==NULL) WAIT_UNTIL_COMPUTED(arg1);
+                    else            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+                }
+                res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
+                         (e, op, arg1, arg2, rho, variant);
+                if (arg2!=NULL) UNPROTECT(1); /* arg2 */
 
-                /* Call primitive, either the non-fast way with an argument
-                   list, or the fast way, passing arg1 or arg1 and arg2 (but
-                   note that arg2 may be NULL).  May need to wait for arguments
-                   before calling, if primitive can't handle pending args. */
-
-                if (!fast) {
-                    if (!PRIMFUN_PENDING_OK(op)) {
-                        WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
-                    }
-                    res = CALL_PRIMFUN(e, op, args, rho, variant);
-                }
-                else if (PRIMARITY(op) != 2) {
-                    if (!PRIMFUN_PENDING_OK(op)) {
-                        WAIT_UNTIL_COMPUTED(arg1);
-                    }
-                    res = 
-                      ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
-                        (e, op, arg1, rho, variant);
-                }
-                else { /* PRIMARITY(op) == 2 */
-                    if (!PRIMFUN_PENDING_OK(op)) {
-                        if (arg2==NULL)
-                            WAIT_UNTIL_COMPUTED(arg1);
-                        else
-                            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
-                    }
-                    res = 
-                      ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
-                        (e, op, arg1, arg2, rho, variant);
-                    if (arg2!=NULL) UNPROTECT(1); /* arg2 */
-                }
+              done_builtin:
                 UNPROTECT(1); /* either args or arg1 */
-
-                if (used_cntxt) endcontext(&cntxt);
+                if (use_cntxt) endcontext(&cntxt);
 	    }
 
             int flag = PRIMPRINT(op);
@@ -753,10 +742,11 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	else
 	    error(_("attempt to apply non-function"));
 	break;
-    case DOTSXP:
-	error(_("'...' used in an incorrect context"));
     default:
-	UNIMPLEMENTED_TYPE("eval", e);
+        if (typeof_e == DOTSXP)
+            error(_("'...' used in an incorrect context"));
+        else
+            UNIMPLEMENTED_TYPE("eval", e);
     }
 
     R_EvalDepth = depthsave;

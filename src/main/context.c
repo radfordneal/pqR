@@ -220,9 +220,16 @@ static void jumpfun(RCNTXT * cptr, int mask, SEXP val)
 }
 
 
-/* begincontext - begin an execution context */
+/* Short form used in eval.c for contexts when evaluating BUILTIN ops. */
 
-/* begincontext and endcontext are used in dataentry.c and modules */
+void beginbuiltincontext (RCNTXT * cptr, SEXP syscall)
+{ begincontext (cptr, CTXT_BUILTIN, syscall, R_BaseEnv, 
+                      R_BaseEnv, R_NilValue, R_NilValue);
+}
+
+/* begincontext - begin an execution context
+
+   begincontext and endcontext are used in dataentry.c and modules */
 void begincontext(RCNTXT * cptr, int flags,
 		  SEXP syscall, SEXP env, SEXP sysp,
 		  SEXP promargs, SEXP callfun)
