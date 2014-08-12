@@ -176,7 +176,8 @@ struct sxpinfo_struct {
         unsigned int basec : 1;       /* sym has base binding in global cache */
         unsigned int spec_sym : 1;    /* this is a "special" symbol */
         unsigned int no_spec_sym : 1; /* environment has no special symbols */
-        unsigned int unused : 2; /* not yet used */
+        unsigned int base_env : 1;    /* this is R_BaseEnv or R_BaseNamespace */
+        unsigned int unused : 1;      /* not yet used */
         /* Primitive operations */
         unsigned char var1, var2;/* variants for evals of fast primitive args */
         unsigned char pending_ok;/* whether args can have computation pending */
@@ -622,7 +623,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
 #define NO_SPEC_SYM(x)  (NONVEC_SXPINFO(x).no_spec_sym) /* 1 = env has no special symbol */
 #define SET_NO_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).no_spec_sym = (v))
-
+#define IS_BASE(x)	(NONVEC_SXPINFO(x).base_env) /* 1 = R_BaseEnv or
+                                                            R_BaseNamespace */
 #else /* not USE_RINTERNALS */
 
 /* typedef struct SEXPREC *SEXP; */  /* now defined outside USE_RINTERNALS */
