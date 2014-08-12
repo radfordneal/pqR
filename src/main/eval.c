@@ -466,8 +466,9 @@ SEXP eval(SEXP e, SEXP rho)
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
 {
-    SEXP op, tmp;
+    SEXP op, res;
     int typeof_e = TYPEOF(e);
+    int pending_OK = variant & VARIANT_PENDING_OK;
     static int evalcount = 0;
 
     if (0) { 
@@ -520,7 +521,6 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
     R_CHECKSTACK();
 
-    tmp = R_NilValue;		/* -Wall */
 #ifdef Win32
     /* This is an inlined version of Rwin_fpreset (src/gnuwin/extra.c)
        and resets the precision, rounding and exception modes of a ix86
@@ -531,22 +531,21 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
     switch (typeof_e) {
     case BCODESXP:
-	tmp = bcEval(e, rho, TRUE);
+	res = bcEval(e, rho, TRUE);
 	break;
     case SYMSXP:
 	if (e == R_DotsSymbol)
 	    error(_("'...' used in an incorrect context"));
 
 	if (DDVAL(e))
-	    tmp = ddfindVar(e,rho);
+	    res = ddfindVar(e,rho);
 	else
-	    tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
-                                               : findVar (e, rho);
-	if (tmp == R_UnboundValue)
+	    res = pending_OK ? findVarPendingOK (e, rho) : findVar (e, rho);
+	if (res == R_UnboundValue)
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
 
 	/* if ..d is missing then ddfindVar will signal */
-	if (tmp == R_MissingArg && !DDVAL(e) ) {
+	if (res == R_MissingArg && !DDVAL(e) ) {
 	    const char *n = CHAR(PRINTNAME(e));
 	    if (*n)
                 error(_("argument \"%s\" is missing, with no default"),
@@ -555,21 +554,20 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                 error(_("argument is missing, with no default"));
 	}
 
-        if (TYPEOF(tmp) == PROMSXP) {
-            if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue)
-                tmp = variant & VARIANT_PENDING_OK 
-                       ? forcePromisePendingOK(tmp) : forcePromise(tmp);
+        if (TYPEOF(res) == PROMSXP) {
+            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+                res = pending_OK ? forcePromisePendingOK(res) 
+                                 : forcePromise(res);
             else 
-                tmp = variant & VARIANT_PENDING_OK 
-                       ? PRVALUE_PENDING_OK(tmp) : PRVALUE(tmp);
+                res = pending_OK ? PRVALUE_PENDING_OK(res) : PRVALUE(res);
         }
 
         /* A NAMEDCNT of 0 might arise from an inadverently missing increment
            somewhere, or from a save/load sequence (since loaded values in
            promises have NAMEDCNT of 0), so fix up here... */
 
-        if (NAMEDCNT_EQ_0(tmp))
-            SET_NAMEDCNT_1(tmp);
+        if (NAMEDCNT_EQ_0(res))
+            SET_NAMEDCNT_1(res);
 
         break;
     case PROMSXP:
@@ -578,11 +576,9 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
            promise is already evaluated.  We don't change NAMEDCNT, 
            since for use in applydefine, that would be undesirable. */
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(e)
-                                               : forcePromise(e);
+            res = pending_OK ? forcePromisePendingOK(e) : forcePromise(e);
         else
-            tmp = variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(e)
-                                               : PRVALUE(e);
+            res = pending_OK ? PRVALUE_PENDING_OK(e) : PRVALUE(e);
 	break;
     case LANGSXP:
 	if (TYPEOF(CAR(e)) == SYMSXP)
@@ -604,7 +600,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
             if (TYPEOF(op) == SPECIALSXP)
 
-                tmp = CALL_PRIMFUN(e, op, args, rho, variant);
+                res = CALL_PRIMFUN(e, op, args, rho, variant);
 
             else { /* BUILTINSXP */
 
@@ -712,13 +708,13 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                     if (!PRIMFUN_PENDING_OK(op)) {
                         WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
                     }
-                    tmp = CALL_PRIMFUN(e, op, args, rho, variant);
+                    res = CALL_PRIMFUN(e, op, args, rho, variant);
                 }
                 else if (PRIMARITY(op) != 2) {
                     if (!PRIMFUN_PENDING_OK(op)) {
                         WAIT_UNTIL_COMPUTED(arg1);
                     }
-                    tmp = 
+                    res = 
                       ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                         (e, op, arg1, rho, variant);
                 }
@@ -729,7 +725,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                         else
                             WAIT_UNTIL_COMPUTED_2(arg1,arg2);
                     }
-                    tmp = 
+                    res = 
                       ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
                         (e, op, arg1, arg2, rho, variant);
                     if (arg2!=NULL) UNPROTECT(1); /* arg2 */
@@ -749,9 +745,9 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	}
 
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure_v (e, op, tmp, rho, R_BaseEnv, variant);
-	    UNPROTECT(2); /* op & tmp */
+	    PROTECT(res = promiseArgs(CDR(e), rho));
+	    res = applyClosure_v (e, op, res, rho, R_BaseEnv, variant);
+	    UNPROTECT(2); /* op & res */
 	}
 
 	else
@@ -762,9 +758,10 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     default:
 	UNIMPLEMENTED_TYPE("eval", e);
     }
+
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
-    return (tmp);
+    return res;
 }
 
 attribute_hidden
