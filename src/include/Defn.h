@@ -1008,7 +1008,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define DispatchGroup		Rf_DispatchGroup
 # define DispatchOrEval		Rf_DispatchOrEval
 # define DispatchAnyOrEval      Rf_DispatchAnyOrEval
-# define dup_top_level		Rf_dup_to_level
+# define dup_top_level		Rf_dup_top_level
 # define dynamicfindVar		Rf_dynamicfindVar
 # define EncodeRaw              Rf_EncodeRaw
 # define EncodeString           Rf_EncodeString
