@@ -1459,9 +1459,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         return TRUE; /* unclear whether assign always succeeds, but assume so */
     }
 
-    if (rho == R_EmptyEnv)
-        error(_("cannot assign values in the empty environment"));
-
     if (IS_BASE(rho)) {
         if (!create && SYMVALUE(symbol) == R_UnboundValue) {
             UNPROTECT(3);
@@ -1490,6 +1487,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     SEARCH_LOOP (loc, symbol, goto found);
 
     if (create) { /* try to create new variable */
+
+        if (rho == R_EmptyEnv)
+            error(_("cannot assign values in the empty environment"));
 
         if (FRAME_IS_LOCKED(rho))
             error(_("cannot add bindings to a locked environment"));
