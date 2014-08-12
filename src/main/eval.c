@@ -31,6 +31,10 @@
 # include <config.h>
 #endif
 
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#endif
+
 #define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include <Defn.h>
@@ -466,8 +470,9 @@ SEXP eval(SEXP e, SEXP rho)
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
 {
-    SEXP op, tmp;
+    SEXP op, res;
     int typeof_e = TYPEOF(e);
+    int pending_OK = variant & VARIANT_PENDING_OK;
     static int evalcount = 0;
 
     if (0) { 
@@ -520,7 +525,6 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
     R_CHECKSTACK();
 
-    tmp = R_NilValue;		/* -Wall */
 #ifdef Win32
     /* This is an inlined version of Rwin_fpreset (src/gnuwin/extra.c)
        and resets the precision, rounding and exception modes of a ix86
@@ -531,45 +535,42 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
     switch (typeof_e) {
     case BCODESXP:
-	tmp = bcEval(e, rho, TRUE);
+	res = bcEval(e, rho, TRUE);
 	break;
     case SYMSXP:
 	if (e == R_DotsSymbol)
 	    error(_("'...' used in an incorrect context"));
 
 	if (DDVAL(e))
-	    tmp = ddfindVar(e,rho);
+	    res = ddfindVar(e,rho);
 	else
-	    tmp = variant & VARIANT_PENDING_OK ? findVarPendingOK (e, rho)
-                                               : findVar (e, rho);
-	if (tmp == R_UnboundValue)
+	    res = pending_OK ? findVarPendingOK (e, rho) : findVar (e, rho);
+	if (res == R_UnboundValue)
 	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
 
 	/* if ..d is missing then ddfindVar will signal */
-	if (tmp == R_MissingArg && !DDVAL(e) ) {
-	    const char *n = CHAR(PRINTNAME(e));
-	    if (*n)
+	if (res == R_MissingArg && !DDVAL(e) ) {
+	    if (*CHAR(PRINTNAME(e)))
                 error(_("argument \"%s\" is missing, with no default"),
 		      CHAR(PRINTNAME(e)));
 	    else 
                 error(_("argument is missing, with no default"));
 	}
 
-        if (TYPEOF(tmp) == PROMSXP) {
-            if (PRVALUE_PENDING_OK(tmp) == R_UnboundValue)
-                tmp = variant & VARIANT_PENDING_OK 
-                       ? forcePromisePendingOK(tmp) : forcePromise(tmp);
+        if (TYPEOF(res) == PROMSXP) {
+            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+                res = pending_OK ? forcePromisePendingOK(res) 
+                                 : forcePromise(res);
             else 
-                tmp = variant & VARIANT_PENDING_OK 
-                       ? PRVALUE_PENDING_OK(tmp) : PRVALUE(tmp);
+                res = pending_OK ? PRVALUE_PENDING_OK(res) : PRVALUE(res);
         }
 
         /* A NAMEDCNT of 0 might arise from an inadverently missing increment
            somewhere, or from a save/load sequence (since loaded values in
            promises have NAMEDCNT of 0), so fix up here... */
 
-        if (NAMEDCNT_EQ_0(tmp))
-            SET_NAMEDCNT_1(tmp);
+        if (NAMEDCNT_EQ_0(res))
+            SET_NAMEDCNT_1(res);
 
         break;
     case PROMSXP:
@@ -578,11 +579,9 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
            promise is already evaluated.  We don't change NAMEDCNT, 
            since for use in applydefine, that would be undesirable. */
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            tmp = variant & VARIANT_PENDING_OK ? forcePromisePendingOK(e)
-                                               : forcePromise(e);
+            res = pending_OK ? forcePromisePendingOK(e) : forcePromise(e);
         else
-            tmp = variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(e)
-                                               : PRVALUE(e);
+            res = pending_OK ? PRVALUE_PENDING_OK(e) : PRVALUE(e);
 	break;
     case LANGSXP:
 	if (TYPEOF(CAR(e)) == SYMSXP)
@@ -591,7 +590,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	else
 	    PROTECT(op = eval(CAR(e), rho));
 
-	if(RTRACE(op) && R_current_trace_state()) {
+	if (RTRACE(op) && R_current_trace_state()) {
 	    Rprintf("trace: ");
 	    PrintValue(e);
 	}
@@ -604,12 +603,23 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 
             if (TYPEOF(op) == SPECIALSXP)
 
-                tmp = CALL_PRIMFUN(e, op, args, rho, variant);
+                res = CALL_PRIMFUN(e, op, args, rho, variant);
 
             else { /* BUILTINSXP */
 
-                SEXP arg1 = NULL, arg2 = NULL;
-                int fast = FALSE;
+                int use_cntxt = R_Profiling;
+                SEXP arg1, arg2;
+
+                /* If we have an "alloca" function available, we use it to
+                   allocate space for a context only when one is needed,
+                   which saves stack space.  Otherwise, we just use a
+                   local variable declared here. */
+
+                RCNTXT *cntxt;
+#               ifndef HAVE_ALLOCA_H
+                    RCNTXT lcntxt;
+                    cntxt = &lcntxt;
+#               endif
 
                 /* See if this may be a fast primitive.  All fast primitives
                    should be BUILTIN.  We will not do a fast call if there 
@@ -621,122 +631,121 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                    For any PRIMARITY other than 2, a fast call may be done 
                    if there is exactly one argument, which is stored in arg1,
                    with arg2 set to NULL.*/
-    
-                if (PRIMFUN_FAST(op) != 0) {
-                    if (args!=R_NilValue && TAG(args)==R_NilValue) {
-                        SEXP a1 = CAR(args);
-                        if (a1!=R_DotsSymbol && a1!=R_MissingArg) {
-                            if (PRIMARITY(op) != 2) {
-                                if (CDR(args)==R_NilValue) {
-                                    fast = TRUE;
-                                    arg1 = a1;
-                                }
+
+                arg2 = NULL;
+                if (PRIMFUN_FAST(op) && args!=R_NilValue 
+                                     && TAG(args)==R_NilValue) {
+                    arg1 = CAR(args);
+                    if (arg1!=R_DotsSymbol && arg1!=R_MissingArg) {
+                        SEXP cdr_args = CDR(args);
+                        if (PRIMARITY(op) != 2) {
+                            if (cdr_args==R_NilValue)
+                                goto fast1;
+                        }
+                        else {
+                            if (cdr_args==R_NilValue) {
+                                if (PRIMFUN_UNI_TOO(op))
+                                    goto fast2;
                             }
-                            else {
-                                if (CDR(args)==R_NilValue) {
-                                    if (PRIMFUN_UNI_TOO(op)) {
-                                        fast = TRUE;
-                                        arg1 = a1;
-                                    }
-                                }
-                                else if (TAG(CDR(args))==R_NilValue
-                                      && CDDR(args)==R_NilValue) {
-                                    SEXP a2 = CADR(args);
-                                    if (a2!=R_DotsSymbol && a2!=R_MissingArg){
-                                        fast = TRUE;
-                                        arg1 = a1;
-                                        arg2 = a2;
-                                    }
-                                }
+                            else if (TAG(cdr_args)==R_NilValue
+                                      && CDR(cdr_args)==R_NilValue) {
+                                arg2 = CAR(cdr_args);
+                                if (arg2!=R_DotsSymbol && arg2!=R_MissingArg)
+                                    goto fast2;
+                                arg2 = NULL;
                             }
                         }
                     }
                 }
+                arg1 = NULL;
 
-                /* Evaluate arguments for a fast primitive, and check whether
-                   dispatching must be checked, in which case it won't be
-                   fast after all. */
-
-                if (fast) {
-                    PROTECT(arg1 = evalv (arg1, rho, 
-                              PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
-                    if (PRIMFUN_DSPTCH1(op) && isObject(arg1)) {
-                        args = CDR(args);
-                        arg2 = NULL;
-                        fast = FALSE;
-                    }
-                    else if (arg2 != NULL) {
-                        PROTECT(arg2 = evalv(arg2, rho, 
-                                  PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
-                        if (PRIMFUN_DSPTCH2(op) && isObject(arg2)) {
-                            args = R_NilValue;  /* == CDDR(args) */
-                            fast = FALSE;
-                        }
-                    }
-                }
-
-                /* Evaluate arguments for a non-fast primitive.  If it can't
-                   be fast because of dispatching, arguments evaluated already
-                   have to be put on at the front of the argument list. */
-
-                if (!fast) { 
+                /* Handle a non-fast op.  We may get here after starting
+                   to handle a fast op, in which case we may have already
+                   evaluated arg1 or arg2 (which will be protected). */
+              not_fast: 
+                if (args != R_NilValue) {
                     args = evalListPendingOK (args, rho, e);
-                    if (arg2 != NULL) {
-                        args = CONS(arg2,args);
-                        UNPROTECT(1);  /* arg2 */
-                    }
-                    if (arg1 != NULL) {
-                        args = CONS(arg1,args);
-                        UNPROTECT(1);  /* arg1 */
-                    }
-                    PROTECT(args);
                 }
+                if (arg2 != NULL) {
+                    args = CONS(arg2,args);
+                    UNPROTECT(1);  /* arg2 */
+                }
+                if (arg1 != NULL) {
+                    args = CONS(arg1,args);
+                    UNPROTECT(1);  /* arg1 */
+                }
+                PROTECT(args);
+                if (use_cntxt || PRIMFOREIGN(op)) {
+#                   ifdef HAVE_ALLOCA_H
+                        cntxt = alloca (sizeof *cntxt);
+#                   endif
+                    beginbuiltincontext (cntxt, e);
+                    use_cntxt = TRUE;
+                }
+                if (!PRIMFUN_PENDING_OK(op)) {
+                    WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
+                }
+                res = CALL_PRIMFUN(e, op, args, rho, variant);
+                goto done_builtin;
 
-                /* Create a context if profiling, or calling outside function
-                   (.C, .Fortran, etc.), where it helps for tracebacks */
+                /* Handle a fast op with one argument.  If arg is an object,
+                   may turn out to not be fast after all. */
+              fast1:
+                PROTECT(arg1 = evalv (arg1, rho, 
+                          PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+                if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                    args = CDR(args);
+                    goto not_fast;
+                }
+                if (use_cntxt) { /* assume fast ops are not foreign */
+#                   ifdef HAVE_ALLOCA_H
+                        cntxt = alloca (sizeof *cntxt);
+#                   endif
+                    beginbuiltincontext (cntxt, e);
+                }
+                if (!PRIMFUN_PENDING_OK(op)) {
+                    WAIT_UNTIL_COMPUTED(arg1);
+                }
+                res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
+                         (e, op, arg1, rho, variant);
+                goto done_builtin;
 
-                int used_cntxt = FALSE;
-                RCNTXT cntxt;
-                if (R_Profiling || PRIMFOREIGN(op)) {
-                    begincontext (&cntxt, CTXT_BUILTIN, e, R_BaseEnv, 
-                                  R_BaseEnv, R_NilValue, R_NilValue);
-                    used_cntxt = TRUE;
+                /* Handle a fast op with two arguments (though the second 
+                   argument may possibly be NULL).  If either arg is an object,
+                   may turn out to not be fast after all. */
+              fast2:
+                PROTECT(arg1 = evalv (arg1, rho, 
+                          PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+                if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                    args = CDR(args);
+                    arg2 = NULL;
+                    goto not_fast;
                 }
+                if (arg2 != NULL) {
+                    PROTECT(arg2 = evalv(arg2, rho, 
+                              PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
+                    if (isObject(arg2) && PRIMFUN_DSPTCH2(op)) {
+                        args = R_NilValue;  /* == CDDR(args) */
+                        goto not_fast;
+                    }
+                }
+                if (use_cntxt) { /* assume fast ops are not foreign */
+#                   ifdef HAVE_ALLOCA_H
+                        cntxt = alloca (sizeof *cntxt);
+#                   endif
+                    beginbuiltincontext (cntxt, e);
+                }
+                if (!PRIMFUN_PENDING_OK(op)) {
+                    if (arg2==NULL) WAIT_UNTIL_COMPUTED(arg1);
+                    else            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+                }
+                res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
+                         (e, op, arg1, arg2, rho, variant);
+                if (arg2!=NULL) UNPROTECT(1); /* arg2 */
 
-                /* Call primitive, either the non-fast way with an argument
-                   list, or the fast way, passing arg1 or arg1 and arg2 (but
-                   note that arg2 may be NULL).  May need to wait for arguments
-                   before calling, if primitive can't handle pending args. */
-
-                if (!fast) {
-                    if (!PRIMFUN_PENDING_OK(op)) {
-                        WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
-                    }
-                    tmp = CALL_PRIMFUN(e, op, args, rho, variant);
-                }
-                else if (PRIMARITY(op) != 2) {
-                    if (!PRIMFUN_PENDING_OK(op)) {
-                        WAIT_UNTIL_COMPUTED(arg1);
-                    }
-                    tmp = 
-                      ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
-                        (e, op, arg1, rho, variant);
-                }
-                else { /* PRIMARITY(op) == 2 */
-                    if (!PRIMFUN_PENDING_OK(op)) {
-                        if (arg2==NULL)
-                            WAIT_UNTIL_COMPUTED(arg1);
-                        else
-                            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
-                    }
-                    tmp = 
-                      ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
-                        (e, op, arg1, arg2, rho, variant);
-                    if (arg2!=NULL) UNPROTECT(1); /* arg2 */
-                }
+              done_builtin:
                 UNPROTECT(1); /* either args or arg1 */
-
-                if (used_cntxt) endcontext(&cntxt);
+                if (use_cntxt) endcontext(cntxt);
 	    }
 
             int flag = PRIMPRINT(op);
@@ -749,22 +758,25 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	}
 
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure_v (e, op, tmp, rho, R_BaseEnv, variant);
-	    UNPROTECT(2); /* op & tmp */
+	    PROTECT(res = promiseArgs(CDR(e), rho));
+	    res = applyClosure_v (e, op, res, rho, R_BaseEnv, variant);
+	    UNPROTECT(2); /* op & res */
 	}
 
 	else
 	    error(_("attempt to apply non-function"));
 	break;
-    case DOTSXP:
-	error(_("'...' used in an incorrect context"));
-    default:
-	UNIMPLEMENTED_TYPE("eval", e);
+    default: 
+        /* put any type that is an error here, to reduce number in switch */
+        if (typeof_e == DOTSXP)
+            error(_("'...' used in an incorrect context"));
+        else
+            UNIMPLEMENTED_TYPE("eval", e);
     }
+
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
-    return (tmp);
+    return res;
 }
 
 attribute_hidden
@@ -1317,6 +1329,21 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     return vl;
 }
 
+static void asLogicalNoNA_error (SEXP s, SEXP call)
+{
+    errorcall (call, 
+      length(s) == 0 ? _("argument is of length zero") :
+      isLogical(s) ?   _("missing value where TRUE/FALSE needed") :
+                       _("argument is not interpretable as logical"));
+}
+
+static void asLogicalNoNA_warning (SEXP s, SEXP call)
+{
+    PROTECT(s);
+    warningcall (call,
+     _("the condition has length > 1 and only the first element will be used"));
+    UNPROTECT(1);
+}
                                   /* Caller needn't protect the s arg below */
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
@@ -1324,39 +1351,27 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     int len;
 
     switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case INTSXP:  /* assume logical and integer are the same */
     case LGLSXP:
         len = LENGTH(s);
-        if (len > 0) 
-            cond = LOGICAL(s)[0];
-        break;
-    case INTSXP:
-        len = LENGTH(s);
-        if (len > 0) 
-            cond = INTEGER(s)[0] == NA_INTEGER ? NA_LOGICAL : INTEGER(s)[0]; 
+        if (len == 0 || LOGICAL(s)[0] == NA_LOGICAL) goto error;
+        cond = LOGICAL(s)[0];
         break;
     default:
         len = length(s);
-        if (len > 0)
-            cond = asLogical(s);
+        if (len == 0) goto error;
+        cond = asLogical(s);
         break;
     }
 
-    if (len == 0)
-        errorcall(call, _("argument is of length zero"));
+    if (cond == NA_LOGICAL) goto error;
 
-    if (len > 1) {
-        PROTECT(s);
-        warningcall(call,
-        _("the condition has length > 1 and only the first element will be used"));
-        UNPROTECT(1);
-    }
-
-    if (cond == NA_LOGICAL)
-	errorcall(call, isLogical(s) ? 
-                          _("missing value where TRUE/FALSE needed") :
-                          _("argument is not interpretable as logical"));
+    if (len > 1) asLogicalNoNA_warning (s, call);
 
     return cond;
+
+  error:
+    asLogicalNoNA_error (s, call);
 }
 
 
