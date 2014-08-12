@@ -1166,16 +1166,10 @@ findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
 	vl = findVarInFrame3(rho, symbol, TRUE);
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
-	    if (TYPEOF(vl) == PROMSXP) {
-		PROTECT(vl);
-		vl = eval(vl, rho);
-		UNPROTECT(1);
-	    }
+	    if (TYPEOF(vl) == PROMSXP)
+                vl = forcePromise(vl)
 	    if (TYPEOF(vl) == mode) return vl;
-	    if (mode == FUNSXP && (TYPEOF(vl) == CLOSXP ||
-				   TYPEOF(vl) == BUILTINSXP ||
-				   TYPEOF(vl) == SPECIALSXP))
-		return (vl);
+	    if (mode == FUNSXP && isFunction(vl)) return (vl);
 	}
 	if (inherits)
 	    rho = ENCLOS(rho);
@@ -1206,15 +1200,11 @@ findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
-	    if (TYPEOF(vl) == PROMSXP) {
-		PROTECT(vl);
-		vl = eval(vl, rho);
-		UNPROTECT(1);
-	    }
-	    tl = TYPEOF(vl);
-	    if (tl == INTSXP) tl = REALSXP;
-	    if (tl == FUNSXP || tl ==  BUILTINSXP || tl == SPECIALSXP)
-		tl = CLOSXP;
+	    if (TYPEOF(vl) == PROMSXP)
+                vl = forcePromise(vl)
+	    if (mode == CLOSXP && isFunction(vl)) return vl;
+	    tl = TYPEOF(vl)
+            if (tl == INTSXP) tl = REALSXP;
 	    if (tl == mode) return vl;
 	}
 	if (inherits)
@@ -1950,7 +1940,7 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	/* We need to evaluate if it is a promise */
 	if (TYPEOF(rval) == PROMSXP)
-	    rval = eval(rval, genv);
+	    rval = forcePromise(rval);
 
 	if (NAMEDCNT_EQ_0(rval))
 	    SET_NAMEDCNT_1(rval);
@@ -1981,7 +1971,7 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
     }
 
     /* We need to evaluate if it is a promise */
-    if (TYPEOF(rval) == PROMSXP) rval = eval(rval, env);
+    if (TYPEOF(rval) == PROMSXP) rval = forcePromise(rval);
     if (NAMEDCNT_EQ_0(rval)) 
         SET_NAMEDCNT_1(rval);
     return rval;
@@ -2501,11 +2491,8 @@ static void FrameValues(SEXP frame, int all, SEXP values, int *indx)
 	if ((all || CHAR(PRINTNAME(TAG(frame)))[0] != '.') &&
 				      CAR(frame) != R_UnboundValue) {
 	    SEXP value = CAR(frame);
-	    if (TYPEOF(value) == PROMSXP) {
-		PROTECT(value);
-		value = eval(value, R_GlobalEnv);
-		UNPROTECT(1);
-	    }
+	    if (TYPEOF(value) == PROMSXP)
+		value = forcePromise(value);
 	    SET_VECTOR_ELT(values, *indx, duplicate(value));
 	    (*indx)++;
 	}
@@ -2590,11 +2577,8 @@ BuiltinValues(int all, int intern, SEXP values, int *indx)
 	    if (intern) {
 		if (INTERNAL(CAR(s)) != R_NilValue) {
 		    vl = SYMVALUE(CAR(s));
-		    if (TYPEOF(vl) == PROMSXP) {
-			PROTECT(vl);
-			vl = eval(vl, R_BaseEnv);
-			UNPROTECT(1);
-		    }
+		    if (TYPEOF(vl) == PROMSXP)
+			vl = forcePromise(vl);
 		    SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
 		}
 	    }
@@ -2602,11 +2586,8 @@ BuiltinValues(int all, int intern, SEXP values, int *indx)
 		if ((all || CHAR(PRINTNAME(CAR(s)))[0] != '.')
 		    && SYMVALUE(CAR(s)) != R_UnboundValue) {
 		    vl = SYMVALUE(CAR(s));
-		    if (TYPEOF(vl) == PROMSXP) {
-			PROTECT(vl);
-			vl = eval(vl, R_BaseEnv);
-			UNPROTECT(1);
-		    }
+		    if (TYPEOF(vl) == PROMSXP)
+			vl = forcePromise(vl);
 		    SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
 		}
 	    }
