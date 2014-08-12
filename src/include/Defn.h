@@ -985,6 +985,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define allocCharsxp		Rf_allocCharsxp
+# define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
 # define can_save_alloc		Rf_can_save_alloc
 # define check_stack_balance	Rf_check_stack_balance
@@ -1331,6 +1332,7 @@ SEXP Rf_vectorSubscript(int, SEXP, int*, SEXP (*)(SEXP,SEXP),
 void Rf_wait_until_arguments_computed (SEXP);
 
 #ifdef R_USE_SIGNALS
+void beginbuiltincontext(RCNTXT*, SEXP);
 void begincontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP);
 void revisecontext(SEXP, SEXP);
 SEXP dynamicfindVar(SEXP, RCNTXT*);
