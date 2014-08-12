@@ -8,3 +8,5 @@ Introduces IS_BASE to check slightly more quickly whether an
 environment is either R_BaseEnv or R_BaseNamespace.
 
 Puts some of FindVarInFrame3 into FindFun.
+
+Speed tweak in math1.
