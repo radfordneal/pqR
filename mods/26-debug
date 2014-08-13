@@ -13,3 +13,7 @@ Fixes the following bug:
 in which stepping though f after debug(f) results in A having the 
 value 2 rather than 1.
 
+Now looks at deparse.max.lines when exitting debug of a function
+as well as when entering.  Also, execClosure has parallel code
+to applyclosure, though it's not clear that it is ever executed.
+

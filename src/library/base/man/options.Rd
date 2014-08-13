@@ -92,7 +92,7 @@ getOption(x, default = NULL)
 
     \item{\code{deparse.max.lines}:}{controls the number of lines used
       when deparsing in \code{\link{traceback}}, \code{\link{browser}},
-      and upon entry to a function whose debugging flag is set.
+      and upon entry or exit of a function whose debugging flag is set.
       Initially unset, and only used if set to a positive integer.}
 
     \item{\code{digits}:}{controls the number of digits to print when
