@@ -939,8 +939,7 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
     SEXP result;
     if (!isNull(srcrefs)
         && LENGTH(srcrefs) > ind
-        && !isNull(result = VECTOR_ELT(srcrefs, ind))
-	&& TYPEOF(result) == INTSXP
+        && TYPEOF(result = VECTOR_ELT(srcrefs, ind)) == INTSXP
 	&& LENGTH(result) >= 6)
 	return result;
     else
@@ -952,7 +951,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 {
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
-    SEXP f, a, tmp;
+    SEXP f, a, res;
     RCNTXT cntxt;
 
     /* formals = list of formal parameters */
@@ -1011,12 +1010,12 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     /*  Fix up any extras that were supplied by usemethod. */
 
     if (suppliedenv != R_NilValue) {
-	for (tmp = FRAME(suppliedenv); tmp != R_NilValue; tmp = CDR(tmp)) {
+	for (SEXP t = FRAME(suppliedenv); t != R_NilValue; t = CDR(t)) {
 	    for (a = actuals; a != R_NilValue; a = CDR(a))
-		if (TAG(a) == TAG(tmp))
+		if (TAG(a) == TAG(t))
 		    break;
 	    if (a == R_NilValue)
-		set_var_in_frame (TAG(tmp), CAR(tmp), newrho, TRUE, 3);
+		set_var_in_frame (TAG(t), CAR(t), newrho, TRUE, 3);
 	}
     }
 
@@ -1036,11 +1035,6 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     /* Get the srcref record from the closure object */
     
     R_Srcref = getAttrib(op, R_SrcrefSymbol);
-    
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
 
     /* Debugging */
 
@@ -1063,9 +1057,9 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (!isSymbol(body) & !isVectorAtomic(body)){
 		/* Find out if the body is function with only one statement. */
 		if (isSymbol(CAR(body)))
-			tmp = findFun(CAR(body), rho);
+			res = findFun(CAR(body), rho);
 		else
-			tmp = eval(CAR(body), rho);
+			res = eval(CAR(body), rho);
 	}
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
@@ -1102,16 +1096,16 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = evalv (body, newrho, variant));
+	    PROTECT(res = evalv (body, newrho, variant));
 	}
 	else {
-	    PROTECT(tmp = R_ReturnedValue);
+	    PROTECT(res = R_ReturnedValue);
             if ( ! (variant & VARIANT_PENDING_OK))
-                WAIT_UNTIL_COMPUTED(tmp);
+                WAIT_UNTIL_COMPUTED(res);
         }
     }
     else {
-	PROTECT(tmp = evalv (body, newrho, variant));
+	PROTECT(res = evalv (body, newrho, variant));
     }
 
     endcontext(&cntxt);
@@ -1120,8 +1114,9 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	Rprintf("exiting from: ");
 	PrintValueRec(call, rho);
     }
-    UNPROTECT(1); /* tmp */
-    return (tmp);
+
+    UNPROTECT(1); /* res */
+    return res;
 }
 
 SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
@@ -1137,7 +1132,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho)
 {
     volatile SEXP body;
-    SEXP tmp;
+    SEXP res;
     RCNTXT cntxt;
 
     body = BODY(op);
@@ -1154,11 +1149,6 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
 
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
-
     /* Debugging */
 
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
@@ -1172,9 +1162,9 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	PrintValueRec(call,rho);
 	/* Find out if the body is function with only one statement. */
 	if (isSymbol(CAR(body)))
-	    tmp = findFun(CAR(body), rho);
+	    res = findFun(CAR(body), rho);
 	else
-	    tmp = eval(CAR(body), rho);
+	    res = eval(CAR(body), rho);
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
@@ -1207,15 +1197,15 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = eval(body, newrho));
+	    PROTECT(res = eval(body, newrho));
 	}
 	else {
-	    PROTECT(tmp = R_ReturnedValue);
-            WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+	    PROTECT(res = R_ReturnedValue);
+            WAIT_UNTIL_COMPUTED(res);
         }
     }
     else {
-	PROTECT(tmp = eval(body, newrho));
+	PROTECT(res = eval(body, newrho));
     }
 
     endcontext(&cntxt);
@@ -1224,8 +1214,9 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	Rprintf("exiting from: ");
 	PrintValueRec(call, rho);
     }
+
     UNPROTECT(1);
-    return (tmp);
+    return res;
 }
 
 /* **** FIXME: Temporary code to execute S4 methods in a way that
