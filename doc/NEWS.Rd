@@ -81,7 +81,10 @@
 \item The environment variable \code{R_BIT_BUCKET} can be set to
       a file to receive output that would otherwise go to \file{dev/null}
       when "make" is run.
-      
+\item The C functions \code{R_inspect} and \code{R_inspect3} functions are now
+      visible to package code, so they can be used there for debugging.
+      To see what they do, look in src/main/inspect.c.  They are subject
+      to change, and should not appear in any code released to users.
 }}
 
   \subsection{
@@ -209,7 +212,7 @@
       (Also fixed in R-3.1.1, though differently.)
 \item Fixed a bug in \code{numericDeriv} (see also the documentation
       update above), which is illustrated by the following
-      code:
+      code, which gave the wrong derivative:
 \preformatted{    x <- y <- 10
     numericDeriv(quote(x+y),c("x","y"))
 }
@@ -230,6 +233,13 @@
       I reported this as PR #15910 at r-project.org, so it may be
       fixed in an R Core release after R-3.1.1.  A related bug in
       assignment to \code{substr} has also been fixed.
+\item Fixed the following pqR bug (and related bugs), in which
+\code{b} was modified by the assignment to \code{a}:
+\preformatted{   a <- list(list(1+1))
+   b <- a
+   attr(a[[1]][[1]],"fred")<-9
+   print(b)
+}
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
