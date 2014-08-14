@@ -377,6 +377,20 @@ void attribute_hidden dotdotdot_error(void)
     error(_("'...' used in an incorrect context"));
 }
 
+void attribute_hidden arg_missing_error(SEXP sym)
+{
+    if (*CHAR(PRINTNAME(sym)))
+        error(_("argument \"%s\" is missing, with no default"),
+              CHAR(PRINTNAME(sym)));
+    else 
+        error(_("argument is missing, with no default"));
+}
+
+void attribute_hidden unbound_var_error(SEXP sym)
+{
+    error(_("object '%s' not found"), CHAR(PRINTNAME(sym)));
+}
+
 
 # include <R_ext/Riconv.h>
 # include <sys/param.h>

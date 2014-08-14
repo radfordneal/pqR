@@ -562,16 +562,11 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
 	else
 	    res = pending_OK ? findVarPendingOK (e, rho) : findVar (e, rho);
 	if (res == R_UnboundValue)
-	    error(_("object '%s' not found"), CHAR(PRINTNAME(e)));
+            unbound_var_error(e);
 
 	/* if ..d is missing then ddfindVar will signal */
-	if (res == R_MissingArg && !DDVAL(e) ) {
-	    if (*CHAR(PRINTNAME(e)))
-                error(_("argument \"%s\" is missing, with no default"),
-		      CHAR(PRINTNAME(e)));
-	    else 
-                error(_("argument is missing, with no default"));
-	}
+	if (res == R_MissingArg && !DDVAL(e))
+            arg_missing_error(e);
 
         if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
@@ -1330,7 +1325,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     }
 
     if (vl == R_UnboundValue)
-        error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
+        unbound_var_error(symbol);
 
     set_var_in_frame (symbol, vl, rho, TRUE, 3);
     return vl;
@@ -3673,21 +3668,6 @@ static R_INLINE SEXP GET_BINDING_CELL_CACHE(SEXP symbol, SEXP rho,
     }
 }
 
-static void MISSING_ARGUMENT_ERROR(SEXP symbol)
-{
-    const char *n = CHAR(PRINTNAME(symbol));
-    if(*n) error(_("argument \"%s\" is missing, with no default"), n);
-    else error(_("argument is missing, with no default"));
-}
-
-#define MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss) \
-    do { if (! keepmiss) MISSING_ARGUMENT_ERROR(symbol); } while (0)
-
-static void UNBOUND_VARIABLE_ERROR(SEXP symbol)
-{
-    error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
-}
-
 static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
 				   Rboolean keepmiss)
 {
@@ -3733,9 +3713,10 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	value = findVar(symbol, rho);
 
     if (value == R_UnboundValue)
-	UNBOUND_VARIABLE_ERROR(symbol);
-    else if (value == R_MissingArg)
-	MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss);
+	unbound_var_error(symbol);
+    else if (value == R_MissingArg) {
+	if (! keepmiss) arg_missing_error(symbol);
+    }
     else if (TYPEOF(value) == PROMSXP)
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
     else if (NAMEDCNT_EQ_0(value))
@@ -4855,7 +4836,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
                         value = forcePromise(value);
                 }
                 if (value == R_UnboundValue)
-                    error(_("object '%s' not found"), CHAR(PRINTNAME(symbol)));
+                    unbound_var_error(symbol);
             }
             value = dup_top_level(value);
             set_var_in_frame (symbol, value, rho, TRUE, 3);
