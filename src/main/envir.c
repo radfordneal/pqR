@@ -1846,7 +1846,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     else
         DEC_NAMEDCNT(value);
 
-    if (VARIANT_KIND(variant) == VARIANT_NULL)
+    if (variant & VARIANT_NULL)
         return R_NilValue;
 
     if (!pending_ok)
