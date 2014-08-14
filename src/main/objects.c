@@ -1449,11 +1449,11 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
 		PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-		value =  applyClosure(call, value, s, rho, R_BaseEnv);
+		value =  applyClosure(call, value, s, rho, NULL);
 		UNPROTECT(1);
 		return value;
 	    } else
-		return applyClosure(call, value, args, rho, R_BaseEnv);
+		return applyClosure(call, value, args, rho, NULL);
 	}
 	/* else, need to perform full method search */
     }
@@ -1465,10 +1465,10 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
        error in method search */
     if(!promisedArgs) {
 	PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-	value = applyClosure(call, fundef, s, rho, R_BaseEnv);
+	value = applyClosure(call, fundef, s, rho, NULL);
 	UNPROTECT(1);
     } else
-	value = applyClosure(call, fundef, args, rho, R_BaseEnv);
+	value = applyClosure(call, fundef, args, rho, NULL);
     prim_methods[offset] = current;
     if(value == deferred_default_object)
 	return NULL;

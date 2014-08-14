@@ -1035,7 +1035,7 @@ static SEXP do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* otherwise dispatch the default method */
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
     PROTECT(prargs = promiseArgsWithValues(CDR(call), rho, args));
-    ans = applyClosure(call, fn, prargs, rho, R_NilValue);
+    ans = applyClosure(call, fn, prargs, rho, NULL);
     UNPROTECT(2);
     return ans;
     
