@@ -283,6 +283,7 @@
  Rf_DispatchAnyOrEval
  Rf_DispatchGroup
  Rf_DispatchOrEval
+ Rf_dotdotdot_error
  Rf_EnsureString
  Rf_FixupCol
  Rf_FixupLty

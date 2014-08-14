@@ -870,7 +870,7 @@ static SEXP expandDots(SEXP el, SEXP rho)
 		    h = CDR(h);
 		}
 	    } else if (h != R_MissingArg)
-		error(_("'...' used in an incorrect context"));
+		dotdotdot_error();
 	} else {
 	    SETCDR(tail, CONS(CAR(el), R_NilValue));
 	    tail = CDR(tail);
