@@ -455,54 +455,70 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
     return PRVALUE_PENDING_OK(e);
 }
 
-/* Return value of "e" evaluated in "rho".  Once was bypassed by
-   a macro definition for "eval" in the interpreter itself, calling
-   evalv with last argument 0, but compilers may be smart enough that 
-   leaving it as a procedure is faster. */
+/* The "eval" function returns the value of "e" evaluated in "rho".  It
+   just calls "evalv", which also takes an argument for specifying a 
+   variant return.  This was once bypassed by a macro definition for "eval" 
+   in the interpreter itself, calling evalv with last argument 0, but 
+   compilers may be smart enough that leaving it as a procedure is faster.
+   The "evalv2" function is the main part of "evalv", split off so that
+   constants may be evaluated with less overhead within "evalv" itself.
+   This split may not be necessary with a sufficiently clever compiler,
+   but seems to help with gcc 4.6.3. */
 
 SEXP eval(SEXP e, SEXP rho)
 {
     return evalv(e,rho,0);
 }
 
-/* Return value of "e" evalued in "rho", allowing the result to possibly 
-   be a variant as described by "variant". */
+static int evalcount = 0; /* counts down to when to check for user interrupt */
+static SEXP evalv2(SEXP,SEXP,int);
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
 {
-    SEXP op, res;
-    int typeof_e = TYPEOF(e);
-    int pending_OK = variant & VARIANT_PENDING_OK;
-    static int evalcount = 0;
-
     if (0) { 
         /* THE "IF" CONDITION ABOVE IS NORMALLY 0; CAN SET TO 1 FOR DEBUGGING.
-           Enabling this section will test that callers who normally
+           Enabling this zeroing of variant will test that callers who normally
            get a variant result can actually handle an ordinary result. */
         variant = 0;
     }
 
     R_variant_result = 0;
     R_Visible = TRUE;
-
-    /* Check periodically for a user interrupt. */
-
     evalcount -= 1;
-    if (evalcount <= 0) {
-        R_CheckUserInterrupt();
-        evalcount = 1000;
-    }
 
     /* Evaluate constants quickly, without the overhead that's necessary when
-       the computation might be complex. */
+       the computation might be complex.  This code is repeated in evalv2
+       for when evalcount < 0.  That way we avoid calling any procedure 
+       other than evalv2 in this procedure, possibly reducing overhead
+       for constant evaluation. */
 
-    if (SELF_EVAL(typeof_e)) {
-	/* Make sure constants in expressions are NAMED before being
-	   used as values.  Setting NAMED to 2 makes sure weird calls
-	   to assignment functions won't modify constants in
-	   expressions.  */
+    if (evalcount >= 0 && SELF_EVAL(TYPEOF(e))) {
+	/* Make sure constants in expressions have maximum NAMEDCNT when
+	   used as values, so they won't be modified. */
         SET_NAMEDCNT_MAX(e);
         return e;
+    }
+
+    return evalv2(e,rho,variant);
+}
+
+static SEXP evalv2(SEXP e, SEXP rho, int variant)
+{
+    SEXP op, res;
+    int pending_OK = variant & VARIANT_PENDING_OK;
+
+    /* Handle check for user interrupt.  Count was decremented in evalv. */
+
+    if (evalcount < 0) {
+        R_CheckUserInterrupt();
+        evalcount = 1000;
+        /* Evaluate constants quickly. */
+        if (SELF_EVAL(TYPEOF(e))) {
+            /* Make sure constants in expressions have maximum NAMEDCNT when
+	       used as values, so they won't be modified. */
+            SET_NAMEDCNT_MAX(e);
+            return e;
+        }
     }
     
     /* Save the current srcref context. */
@@ -533,13 +549,13 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     __asm__ ( "fninit" );
 #endif
 
-    switch (typeof_e) {
+    switch (TYPEOF(e)) {
     case BCODESXP:
 	res = bcEval(e, rho, TRUE);
 	break;
     case SYMSXP:
 	if (e == R_DotsSymbol)
-	    error(_("'...' used in an incorrect context"));
+	    dotdotdot_error();
 
 	if (DDVAL(e))
 	    res = ddfindVar(e,rho);
@@ -768,8 +784,8 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 	break;
     default: 
         /* put any type that is an error here, to reduce number in switch */
-        if (typeof_e == DOTSXP)
-            error(_("'...' used in an incorrect context"));
+        if (TYPEOF(e) == DOTSXP)
+            dotdotdot_error();
         else
             UNIMPLEMENTED_TYPE("eval", e);
     }
@@ -2145,7 +2161,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 		}
 	    }
 	    else if (h != R_MissingArg)
-		error(_("'...' used in an incorrect context"));
+		dotdotdot_error();
 
 	} else if (CAR(el) == R_MissingArg && call != NULL) {
             /* Report the missing argument as an error. */
@@ -2243,7 +2259,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 		}
 	    }
 	    else if (h != R_MissingArg)
-		error(_("'...' used in an incorrect context"));
+		dotdotdot_error();
 	}
         else {
             ev = CAR(el) == R_MissingArg ?
@@ -2631,7 +2647,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                     break;
 		}
 		else if (h != R_NilValue && h != R_MissingArg)
-		    error(_("'...' used in an incorrect context"));
+		    dotdotdot_error();
 	    }
 	    else {
                 dots = FALSE;
@@ -4733,7 +4749,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    }
 	  }
 	  else if (h != R_MissingArg)
-	    error(_("'...' used in an incorrect context"));
+	    dotdotdot_error();
 	}
 	NEXT();
       }
@@ -4842,7 +4858,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(AND, 1): Builtin2(do_andor, R_AndSym, rho);
     OP(OR, 1): Builtin2(do_andor, R_OrSym, rho);
     OP(NOT, 1): Builtin1(do_not, R_NotSym, rho);
-    OP(DOTSERR, 0): error(_("'...' used in an incorrect context"));
+    OP(DOTSERR, 0): dotdotdot_error();
     OP(STARTASSIGN, 1):
       {
 	int sidx = GETOP();
