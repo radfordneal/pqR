@@ -775,7 +775,7 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
 
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(res = promiseArgs(CDR(e), rho));
-	    res = applyClosure_v (e, op, res, rho, R_BaseEnv, variant);
+	    res = applyClosure_v (e, op, res, rho, NULL, variant);
 	    UNPROTECT(2); /* op & res */
 	}
 
@@ -1026,7 +1026,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /*  Fix up any extras that were supplied by usemethod. */
 
-    if (suppliedenv != R_NilValue) {
+    if (suppliedenv) {
 	for (SEXP t = FRAME(suppliedenv); t != R_NilValue; t = CDR(t)) {
 	    for (a = actuals; a != R_NilValue; a = CDR(a))
 		if (TAG(a) == TAG(t))
@@ -2543,7 +2543,7 @@ static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP) 
     	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, R_BaseEnv, 0);
+    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
     UNPROTECT(1);
     return ans;
 }
@@ -4784,7 +4784,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  value = applyClosure_v(call, fun, args, rho, R_BaseEnv, 0);
+	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5125,7 +5125,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure_v(call, fun, args, rho, R_BaseEnv, 0);
+	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5169,7 +5169,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure_v(call, fun, args, rho, R_BaseEnv, 0);
+	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
 	default: error(_("bad function"));
 	}
