@@ -786,7 +786,7 @@ static SEXP do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Below should really use CDR(call) for the unevaluated expressions, 
        but it can't because args has been fiddled with by fixup_NaRm. */
     PROTECT(prargs = promiseArgsWithValues(args, R_EmptyEnv, args));
-    ans = applyClosure(call, op, prargs, env, R_BaseEnv);
+    ans = applyClosure(call, op, prargs, env, NULL);
     UNPROTECT(3);
     return(ans);
 }

@@ -5,3 +5,8 @@ that calls larger part (evalv2).
 
 Creates and uses dotdotdot_error to move some code
 out of eval (and elsewhere) to make for more compact code.
+
+Changes applyClosure and its calls so that no supplied environment is
+indicated by NULL, not R_NilValue or R_BaseEnv.  The use of the latter
+worked only because of peculiarities of the present implementation of
+the base environemnt.
