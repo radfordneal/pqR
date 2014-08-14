@@ -1006,9 +1006,10 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define deparse1		Rf_deparse1
 # define deparse1line		Rf_deparse1line
 # define deparse1s		Rf_deparse1s
+# define DispatchAnyOrEval      Rf_DispatchAnyOrEval
 # define DispatchGroup		Rf_DispatchGroup
 # define DispatchOrEval		Rf_DispatchOrEval
-# define DispatchAnyOrEval      Rf_DispatchAnyOrEval
+# define dotdotdot_error	Rf_dotdotdot_error
 # define dup_top_level		Rf_dup_top_level
 # define dynamicfindVar		Rf_dynamicfindVar
 # define EncodeRaw              Rf_EncodeRaw
@@ -1396,6 +1397,7 @@ SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP, int);
 /* main/util.c */
 void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
 void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
+void dotdotdot_error(void);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 

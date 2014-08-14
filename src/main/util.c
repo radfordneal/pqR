@@ -372,6 +372,12 @@ void UNIMPLEMENTED_TYPE(const char *s, SEXP x)
     UNIMPLEMENTED_TYPEt(s, TYPEOF(x));
 }
 
+void attribute_hidden dotdotdot_error(void)
+{ 
+    error(_("'...' used in an incorrect context"));
+}
+
+
 # include <R_ext/Riconv.h>
 # include <sys/param.h>
 # include <errno.h>

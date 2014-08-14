@@ -1,0 +1,7 @@
+Changes to reduce overhead in eval.
+
+Splits evalv into small part that handles constants
+that calls larger part (evalv2).
+
+Creates and uses dotdotdot_error to move some code
+out of eval (and elsewhere) to make for more compact code.
