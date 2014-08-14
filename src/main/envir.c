@@ -1382,8 +1382,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
         if (isFunction (vl))
             return vl;
         if (vl == R_MissingArg)
-            error(_("argument \"%s\" is missing, with no default"),
-                  CHAR(PRINTNAME(symbol)));
+            arg_missing_error(symbol);
     }
 
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
@@ -1833,7 +1832,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     value = RemoveVariable (name, rho);
 
     if (value == NULL)
-        error (_("object '%s' not found"), CHAR(PRINTNAME(name)));
+        unbound_var_error(name);
 
     pending_ok = variant & VARIANT_PENDING_OK;
 
@@ -1926,12 +1925,10 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (PRIMVAL(op)) { /* have get(.) */
 	if (rval == R_MissingArg)
-	    error(_("argument \"%s\" is missing, with no default"),
-		  CHAR(PRINTNAME(t1)));
+            arg_missing_error(t1);
 	if (rval == R_UnboundValue) {
 	    if (gmode == ANYSXP)
-		error(_("object '%s' not found"),
-		      CHAR(PRINTNAME(t1)));
+                unbound_var_error(t1);
 	    else
 		error(_("object '%s' of mode '%s' was not found"),
 		      CHAR(PRINTNAME(t1)),

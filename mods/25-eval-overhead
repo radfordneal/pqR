@@ -5,6 +5,7 @@ that calls larger part (evalv2).
 
 Creates and uses dotdotdot_error to move some code
 out of eval (and elsewhere) to make for more compact code.
+Also, same for unbound_var_error and arg_missing_error.
 
 Changes applyClosure and its calls so that no supplied environment is
 indicated by NULL, not R_NilValue or R_BaseEnv.  The use of the latter

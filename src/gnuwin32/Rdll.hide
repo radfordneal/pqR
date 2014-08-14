@@ -283,7 +283,6 @@
  Rf_DispatchAnyOrEval
  Rf_DispatchGroup
  Rf_DispatchOrEval
- Rf_dotdotdot_error
  Rf_EnsureString
  Rf_FixupCol
  Rf_FixupLty
@@ -332,6 +331,7 @@
  Rf_StringFromReal
  Rf_VectorIndex
  Rf_allocCharsxp
+ Rf_arg_missing_error
  Rf_bd0
  Rf_chebyshev_eval
  Rf_chebyshev_init
@@ -343,6 +343,7 @@
  Rf_copyMostAttribNoTs
  Rf_d1mach
  Rf_deparse1s
+ Rf_dotdotdot_error
  Rf_dpptr
  Rf_evalList
  Rf_evalListKeepMissing
@@ -393,6 +394,7 @@
  Rf_strmat2intmat
  Rf_substituteList
  Rf_ucstomb
+ Rf_unbound_var_error
  Rf_utf8toucs
  Rf_vectorSubscript
  Rf_wait_until_arguments_computed
