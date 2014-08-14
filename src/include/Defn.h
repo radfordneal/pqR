@@ -1004,6 +1004,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define allocCharsxp		Rf_allocCharsxp
+# define arg_missing_error	Rf_arg_missing_error
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
 # define can_save_alloc		Rf_can_save_alloc
@@ -1136,6 +1137,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define usemethod		Rf_usemethod
 # define ucstomb		Rf_ucstomb
 # define ucstoutf8		Rf_ucstoutf8
+# define unbound_var_error	Rf_unbound_var_error
 # define utf8toucs		Rf_utf8toucs
 # define utf8towcs		Rf_utf8towcs
 # define vectorSubscript	Rf_vectorSubscript
@@ -1417,6 +1419,8 @@ SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP, int);
 void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
 void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
 void dotdotdot_error(void);
+void arg_missing_error(SEXP sym);
+void unbound_var_error(SEXP sym);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 
