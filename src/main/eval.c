@@ -71,6 +71,13 @@
 
 #define SELF_EVAL(t) ((SELF_EVAL_TYPES>>(t))&1)
 
+/* Macro for evaluating with check for self-evaluation. */
+
+#define EVALV(e,rho,v) (SELF_EVAL(TYPEOF((e))) \
+   ? ((e)->sxpinfo.nmcnt==MAX_NAMEDCNT ? (e) \
+       : (((e)->sxpinfo.nmcnt = MAX_NAMEDCNT), (e))) \
+   : evalv((e),(rho),(v)))
+
 
 #define ARGUSED(x) LEVELS(x)
 
@@ -401,7 +408,7 @@ SEXP attribute_hidden forcePromise(SEXP e) /* e protected here if necessary */
 	prstack.next = R_PendingPromises;
 	R_PendingPromises = &prstack;
 
-	val = eval(PRCODE(e), PRENV(e));
+	val = EVALV(PRCODE(e), PRENV(e), 0);
 
 	/* Pop the stack, unmark the promise and set its value field.
 	   Also set the environment to R_NilValue to allow GC to
@@ -439,7 +446,7 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
 	prstack.next = R_PendingPromises;
 	R_PendingPromises = &prstack;
 
-	val = evalv (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
+	val = EVALV (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
 
 	/* Pop the stack, unmark the promise and set its value field.
 	   Also set the environment to R_NilValue to allow GC to
@@ -691,7 +698,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                 /* Handle a fast op with one argument.  If arg is an object,
                    may turn out to not be fast after all. */
               fast1:
-                PROTECT(arg1 = evalv (arg1, rho, 
+                PROTECT(arg1 = EVALV (arg1, rho, 
                           PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
                 if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
                     args = CDR(args);
@@ -714,7 +721,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                    argument may possibly be NULL).  If either arg is an object,
                    may turn out to not be fast after all. */
               fast2:
-                PROTECT(arg1 = evalv (arg1, rho, 
+                PROTECT(arg1 = EVALV (arg1, rho, 
                           PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
                 if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
                     args = CDR(args);
@@ -722,7 +729,7 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
                     goto not_fast;
                 }
                 if (arg2 != NULL) {
-                    PROTECT(arg2 = evalv(arg2, rho, 
+                    PROTECT(arg2 = EVALV(arg2, rho, 
                               PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
                     if (isObject(arg2) && PRIMFUN_DSPTCH2(op)) {
                         args = R_NilValue;  /* == CDDR(args) */
@@ -2036,7 +2043,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
      || CDR(a) != R_NilValue)
         checkArity(op,args);
 
-    rhs = evalv (CAR(a), rho, VARIANT_PENDING_OK);
+    rhs = EVALV (CAR(a), rho, VARIANT_PENDING_OK);
     lhs = CAR(args);
 
     switch (TYPEOF(lhs)) {
@@ -2128,7 +2135,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                     ev = call == NULL && CAR(h) == R_MissingArg ? 
                          cons_with_tag (R_MissingArg, R_NilValue, TAG(h))
                        : cons_with_tag (
-                           evalv (CAR(h), rho, VARIANT_PENDING_OK),
+                           EVALV (CAR(h), rho, VARIANT_PENDING_OK),
                            R_NilValue,
                            TAG(h));
                     if (head==R_NilValue)
@@ -2158,7 +2165,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                 ev = cons_with_tag (R_MissingArg, R_NilValue, TAG(el));
             else
                 ev = cons_with_tag (
-                       evalv (CAR(el), rho, VARIANT_PENDING_OK), 
+                       EVALV (CAR(el), rho, VARIANT_PENDING_OK), 
                        R_NilValue, 
                        TAG(el));
             if (head==R_NilValue)
