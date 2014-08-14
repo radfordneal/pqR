@@ -949,6 +949,7 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
                                      SEXP suppliedenv, int variant)
 {
+    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | variant;
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
     SEXP f, a, res;
@@ -1096,19 +1097,22 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = evalv (body, newrho, variant));
+	    PROTECT(res = evalv (body, newrho, vrnt));
 	}
 	else {
 	    PROTECT(res = R_ReturnedValue);
-            if ( ! (variant & VARIANT_PENDING_OK))
-                WAIT_UNTIL_COMPUTED(res);
         }
     }
     else {
-	PROTECT(res = evalv (body, newrho, variant));
+	PROTECT(res = evalv (body, newrho, vrnt));
     }
 
+    R_variant_result &= ~VARIANT_RTN_FLAG;
+
     endcontext(&cntxt);
+
+    if ( ! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(res);
 
     if (RDEBUG(op)) {
 	Rprintf("exiting from: ");
@@ -1374,8 +1378,7 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     (isLanguage(body) && CAR(body) == R_BraceSymbol)
 
 
-static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho,
-                             int variant)
+static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP Cond, Stmt;
     int absent_else = 0;
@@ -1643,8 +1646,7 @@ static SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 
    The eval variant requested is passed on to the inner expression. */
 
-static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, 
-                                int variant)
+static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     if (args!=R_NilValue && CAR(args)==R_DotsSymbol && CDR(args)==R_NilValue) {
         args = findVar(R_DotsSymbol, rho);
@@ -1658,45 +1660,62 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho,
     return evalv (CAR(args), rho, variant);
 }
 
-/* Curly brackets.  Passes on the eval variant to the last expression.
-   Evaluates earlier expresstions with VARIANT_NULL | VARIANT_PENDING_OK. */
+/* Curly brackets.  Passes on the eval variant to the last expression.  For
+   earlier expressions, passes either VARIANT_NULL | VARIANT_PENDING_OK or
+   the variant passed OR'd with those, if the variant passed includes
+   VARIANT_DIRECT_RETURN. */
 
-static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho,
-                                int variant)
+static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP s = R_NilValue;
-    if (args != R_NilValue) {
-    	SEXP srcrefs = getBlockSrcrefs(call);
-    	int i = 1;
-	while (args != R_NilValue) {
-	    PROTECT(R_Srcref = getSrcref(srcrefs, i++));
-	    if (RDEBUG(rho)) {
-	    	SrcrefPrompt("debug", R_Srcref);
-	        PrintValue(CAR(args));
-		do_browser(call, op, R_NilValue, rho);
-	    }
-	    s = evalv (CAR(args), rho, CDR(args) == R_NilValue ? variant 
-                                        : VARIANT_NULL | VARIANT_PENDING_OK);
-	    UNPROTECT(1);
-	    args = CDR(args);
-	}
-	R_Srcref = R_NilValue;
+    if (args == R_NilValue)
+        return R_NilValue;
+
+    SEXP arg, s, srcrefs = getBlockSrcrefs(call);
+
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= variant;
+
+    for (int i = 1; ; i++) {
+        arg = CAR(args);
+        args = CDR(args);
+        PROTECT(R_Srcref = getSrcref(srcrefs, i));
+        if (RDEBUG(rho)) {
+            SrcrefPrompt("debug", R_Srcref);
+            PrintValue(arg);
+            do_browser(call, op, R_NilValue, rho);
+        }
+        if (args == R_NilValue)
+            break;
+        s = evalv (arg, rho, vrnt);
+        R_Srcref = R_NilValue;
+        UNPROTECT(1);
+        if (R_variant_result & VARIANT_RTN_FLAG)
+            return s;
     }
+
+    s = evalv (arg, rho, variant);
+    R_Srcref = R_NilValue;
+    UNPROTECT(1);
     return s;
 }
 
 
-static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP v;
 
     if (args == R_NilValue) /* zero arguments provided */
 	v = R_NilValue;
     else if (CDR(args) == R_NilValue) /* one argument */
-	v = evalv (CAR(args), rho, VARIANT_PENDING_OK);
-    else {
-	v = R_NilValue; /* to avoid compiler warnings */
+	v = evalv (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
+                                                 : variant & ~ VARIANT_NULL);
+    else
 	errorcall(call, _("multi-argument returns are not permitted"));
+
+    if (variant & VARIANT_DIRECT_RETURN) {
+        R_variant_result |= VARIANT_RTN_FLAG;
+        return v;
     }
 
     findcontext(CTXT_BROWSER | CTXT_FUNCTION, rho, v);
@@ -2013,8 +2032,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 
 /*  Assignment in its various forms  */
 
-static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
-                              int variant)
+static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a, lhs, rhs;
 
@@ -2047,14 +2065,14 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
         /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
            to protect it from being modified by the assignment, or otherwise. */
 
-        if (VARIANT_KIND(variant) != VARIANT_NULL)
+        if ( ! (variant & VARIANT_NULL))
             INC_NAMEDCNT(rhs);
         PROTECT(rhs);
 
         applydefine (call, op, lhs, rhs, rho);
 
         UNPROTECT(1);
-        if (VARIANT_KIND(variant) != VARIANT_NULL)
+        if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
   
         break;
@@ -2065,10 +2083,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho,
         errorcall (call, _("invalid assignment left-hand side"));
     }
 
-    if (VARIANT_KIND(variant) == VARIANT_NULL)
+    if (variant & VARIANT_NULL)
         return R_NilValue;
 
-    if (!(variant & VARIANT_PENDING_OK)) 
+    if ( ! (variant & VARIANT_PENDING_OK)) 
         WAIT_UNTIL_COMPUTED(rhs);
     
     return rhs;
@@ -5675,7 +5693,7 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"next",	do_break, CTXT_NEXT,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
 {"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
 {"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
-{"return",	do_return,	0,	0,	-1,	{PP_RETURN,  PREC_FN,	  0}},
+{"return",	do_return,	0,	1200,	-1,	{PP_RETURN,  PREC_FN,	  0}},
 {"function",	do_function,	0,	0,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
 {"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
 {"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
