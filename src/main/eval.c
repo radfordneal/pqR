@@ -1046,7 +1046,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /* Get the srcref record from the closure object */
     
-    R_Srcref = getAttrib(op, R_SrcrefSymbol);
+    R_Srcref = getAttrib00(op, R_SrcrefSymbol);
 
     /* Debugging */
 
