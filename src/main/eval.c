@@ -957,6 +957,15 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 	return R_NilValue;
 }
 
+static SEXP printcall (SEXP call, SEXP rho)
+{
+    int old_bl = R_BrowseLines;
+    int blines = asInteger(GetOption1(install("deparse.max.lines")));
+    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
+    PrintValueRec(call,rho);
+    R_BrowseLines = old_bl;
+}
+
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
                                      SEXP suppliedenv, int variant)
 {
@@ -1053,26 +1062,12 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
     if( RSTEP(op) ) SET_RSTEP(op, 0);
     if (RDEBUG(newrho)) {
-	int old_bl = R_BrowseLines,
-	    blines = asInteger(GetOption1(install("deparse.max.lines")));
 	SEXP savesrcref;
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
-	if(blines != NA_INTEGER && blines > 0)
-	    R_BrowseLines = blines;
-	PrintValueRec(call, rho);
-	R_BrowseLines = old_bl;
-
-	/* Is the body a bare symbol (PR#6804) */
-	if (!isSymbol(body) & !isVectorAtomic(body)){
-		/* Find out if the body is function with only one statement. */
-		if (isSymbol(CAR(body)))
-			res = findFun(CAR(body), rho);
-		else
-			res = eval(CAR(body), rho);
-	}
+        printcall(call,rho);
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
@@ -1127,7 +1122,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     if (RDEBUG(op)) {
 	Rprintf("exiting from: ");
-	PrintValueRec(call, rho);
+        printcall(call,rho);
     }
 
     UNPROTECT(1); /* res */
@@ -1164,6 +1159,11 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
 
+    /* Get the srcref record from the closure object.  Disable for now
+       at least, since it's not clear that it's needed. */
+    
+    /* R_Srcref = getAttrib(op, R_SrcrefSymbol); */
+
     /* Debugging */
 
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
@@ -1174,12 +1174,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
-	PrintValueRec(call,rho);
-	/* Find out if the body is function with only one statement. */
-	if (isSymbol(CAR(body)))
-	    res = findFun(CAR(body), rho);
-	else
-	    res = eval(CAR(body), rho);
+	printcall (call, rho);
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
@@ -1227,7 +1222,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     if (RDEBUG(op)) {
 	Rprintf("exiting from: ");
-	PrintValueRec(call, rho);
+	printcall (call, rho);
     }
 
     UNPROTECT(1);

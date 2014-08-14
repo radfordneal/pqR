@@ -1,0 +1,19 @@
+Fixes and speedups for debugging.
+
+Fixes the following bug:
+
+  g <- function () { A <<- A+1; function (x) x+1 }
+  f <- function () (g())(10)
+  
+  A <- 0; f(); print(A)
+  
+  debug(f);
+  A <- 0; f(); print(A)
+  
+in which stepping though f after debug(f) results in A having the 
+value 2 rather than 1.
+
+Now looks at deparse.max.lines when exitting debug of a function
+as well as when entering.  Also, execClosure has parallel code
+to applyclosure, though it's not clear that it is ever executed.
+

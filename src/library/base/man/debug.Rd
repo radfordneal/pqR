@@ -1,7 +1,7 @@
 % File src/library/base/man/debug.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2009 R Core Development Team
-% Modifications for pqR copyright (C) 2013 Radford M. Neal
+% Modifications for pqR copyright (C) 2013, 2014 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{debug}
@@ -87,8 +87,8 @@ isdebugged(fun)
   e.g., as \cr
   \code{trace("plot", browser, exit=browser, signature = c("track", "missing"))}
 
-  The number of lines printed for the deparsed call when a function is
-  entered for debugging can be limited by setting
+  The number of lines printed for the deparsed call when a function
+  enters or exits debugging can be limited by setting
   \code{\link{options}(deparse.max.lines)}.
 
   When debugging is enabled on a byte compiled function then the
