@@ -432,7 +432,7 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
     if (CHAR(generic_name)[0] == 0)
 	errorcall(call, _("first argument must be a generic name"));
 
-    char *generic_trans = translateChar(generic_name);
+    const char *generic_trans = translateChar(generic_name);
     SEXP generic_symbol = install(generic_trans);
 
     val = findFunMethod (generic_symbol, ENCLOS(env)); /* evaluates promises */
