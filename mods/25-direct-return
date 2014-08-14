@@ -1,0 +1,2 @@
+Implements "return" directly, most of the time, using the variant
+result mechanism, which should be faster than longjmp, etc.

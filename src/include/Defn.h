@@ -499,20 +499,25 @@ typedef struct {
 
    Return of a variant result is indicated either by the nature of the 
    returned value, or by R_variant_result being set to a non-zero value
-   (to 1 unless something else is used to provide further details).  
+   (to 1 unless something else is used to provide further details, but
+   the top bit, 0x80000000, is reserved for use by VARIANT_DIRECT_RETURN,
+   perhaps in combination with lower bits specifying the type of result).
    If a call of evalv leads to R_variant_result being non-zero, the caller 
    must set R_variant_result to zero after noting its value, so an outer 
-   return will not appear to have a variant result.  Accordingly, variants
-   that set R_variant_return are not allowed for evaluation of arguments 
-   for fast primitives (ie, for ARG1VAR or ARG2VAR), since the code in
-   evalv that handles these does not know how to record such a flag.
+   return will not appear to have a variant result (unless that is what
+   should happen).  
+
+   Variants that set R_variant_return may not make sense for arguments of 
+   fast primitives (ie, for ARG1VAR or ARG2VAR), since evalv does not
+   record R_variant_result for use by the primitive.
 
    A caller of evalv need not set R_variant_result to zero before a call,
-   since that is done inside evalv. */
+   since that is done inside evalv. 
 
-#define VARIANT_NULL  1  /* May just return R_NilValue, while doing side effects
-                            (should usually be OR'd with VARIANT_PENDING_OK). 
-                            Does not set R_variant_result. */
+   If VARIANT_NULL is combined with some other variant, the result could
+   be R_NilValue, or the called-for variant, or the standard return value. 
+   However, when VARIANT_NULL is combined with VARIANT_DIRECT_RETURN, a
+   direct value for "return" will not be replaced by R_NilValue. */
 
 #define VARIANT_SEQ   2  /* May return a sequence spec, rather than a vector.
                             Sets R_variant_result to 1 if so. */
@@ -538,7 +543,21 @@ typedef struct {
                                     defined above */
 
 #define VARIANT_PENDING_OK 16  /* Computation may be deferred pending completion
-                                  of a task (in a helper or the master) */
+                                  of a task (in a helper or the master).
+                                  Does not set R_variant_result. */
+
+#define VARIANT_DIRECT_RETURN 32 /* A "return" statement may simply return the
+                                    return value, without a non-local jump.
+                                    Should be OR'd with VARIANT_PENDING_OK.
+                                    ORs R_variant_result with VARIANT_RTN */
+
+#define VARIANT_NULL 64  /* May just return R_NilValue, while doing side
+                            effects, unless the value is for a direct return.
+                            Should usually be OR'd with VARIANT_PENDING_OK.
+                            Does not set R_variant_result. */
+
+#define VARIANT_RTN_FLAG 0x80000000  /* Bit flagging a direct return */
+
 
 #ifdef R_DEFERRED_EVAL
 
@@ -789,6 +808,7 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 #define extern0 extern
 #endif
 
+LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
 
@@ -818,7 +838,6 @@ LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */
 LibExtern RCNTXT* R_GlobalContext;    /* The global environment */
 #endif
 extern0 Rboolean R_Visible;	    /* Value visibility flag */
-LibExtern int   R_variant_result INI_as(0);     /* 0 or flags variant result */
 LibExtern int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 
