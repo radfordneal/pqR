@@ -885,8 +885,9 @@ static void mem_err_malloc(R_size_t size)
    node class is set as passed), and ATTRIB to R_NilValue.  Other fields
    are not initialized. 
 
-   The "gc" version does a garbage collection first, and reports an error
-   if it fails to recover enough for a free node. */
+   The _gc version does a garbage collection first, and reports an error
+   if it fails to recover enough for a free node. The _gc1, _gc2, and _gc3
+   versions protect 1, 2, or 3 SEXP arguments before the garbage collection. */
 
 static R_INLINE SEXP get_free_node (int c)
 {
@@ -919,6 +920,33 @@ static SEXP get_free_node_gc (int c)
 { 
     R_gc_internal(0);
     if (NO_FREE_NODES()) mem_err_cons(); 
+    return get_free_node(c);
+}
+
+static SEXP get_free_node_gc1 (int c, SEXP p1)
+{ 
+    PROTECT(p1);
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    UNPROTECT(1);
+    return get_free_node(c);
+}
+
+static SEXP get_free_node_gc2 (int c, SEXP p1, SEXP p2)
+{ 
+    PROTECT2(p1,p2);
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    UNPROTECT(2);
+    return get_free_node(c);
+}
+
+static SEXP get_free_node_gc3 (int c, SEXP p1, SEXP p2, SEXP p3)
+{ 
+    PROTECT3(p1,p2,p3);
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    UNPROTECT(3);
     return get_free_node(c);
 }
 
@@ -2619,11 +2647,8 @@ static SEXP allocSExpNonCons(SEXPTYPE t)
 SEXP cons(SEXP car, SEXP cdr)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect2 (car, cdr);
-	s = get_free_node_gc(SEXPREC_class);
-        UNPROTECT(2);
-    }
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc2(SEXPREC_class,car,cdr);
     else
         s = get_free_node(SEXPREC_class);
     TYPEOF(s) = LISTSXP;
@@ -2637,11 +2662,8 @@ SEXP cons(SEXP car, SEXP cdr)
 SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect3 (car, cdr, tag);
-	s = get_free_node_gc(SEXPREC_class);
-        UNPROTECT(3);
-    }
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc3(SEXPREC_class,car,cdr,tag);
     else
         s = get_free_node(SEXPREC_class);
     SET_TYPEOF(s,LISTSXP);
@@ -2676,11 +2698,8 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
     SEXP v, n, newrho;
 
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect3 (namelist, valuelist, rho);
-	newrho = get_free_node_gc(SEXPREC_class);
-        UNPROTECT(3);
-    }
+    if (FORCE_GC || NO_FREE_NODES())
+	newrho = get_free_node_gc3(SEXPREC_class,namelist,valuelist,rho);
     else
         newrho = get_free_node(SEXPREC_class);
 
@@ -2708,11 +2727,8 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect2 (expr, rho);
-	s = get_free_node_gc(SEXPREC_class);
-        UNPROTECT(2);
-    }
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc2(SEXPREC_class,expr,rho);
     else
         s = get_free_node(SEXPREC_class);
 
@@ -2730,7 +2746,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 /* Allocation of scalars, using a version of allocVector specialized for
    vectors of length one.  These versions always return an unshared value. */
 
-static /*R_INLINE*/ SEXP allocVector1 (SEXPTYPE type)
+static R_INLINE SEXP allocVector1 (SEXPTYPE type)
 {
     /* Note that "type" must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so a
        vector of length 1 is guaranteed to fit in the first node class, and
