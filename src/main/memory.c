@@ -362,8 +362,6 @@ extern SEXP framenames;  /* in model.c */
 
 static void R_gc_internal(R_size_t size_needed);
 static void R_gc_full(R_size_t size_needed);
-static void mem_err_heap(R_size_t size);
-static void mem_err_malloc(R_size_t size);
 
 static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 
@@ -867,8 +865,28 @@ static R_size_t R_NodesInUse = 0;
 #endif
 
 
-/* Node Allocation.  Initializes sxpinfo to zeros (except node class set 
-   as passed), and ATTRIB to R_NilValue.  Other fields are not initialized. */
+static void mem_err_heap(R_size_t size)
+{
+    errorcall(R_NilValue, _("vector memory exhausted (limit reached?)"));
+}
+
+static void mem_err_cons(void)
+{
+    errorcall(R_NilValue, _("cons memory exhausted (limit reached?)"));
+}
+
+static void mem_err_malloc(R_size_t size)
+{
+    errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
+}
+
+
+/* Node Allocation - get_free_node.  Initializes sxpinfo to zeros (except 
+   node class is set as passed), and ATTRIB to R_NilValue.  Other fields
+   are not initialized. 
+
+   The "gc" version does a garbage collection first, and reports an error
+   if it fails to recover enough for a free node. */
 
 static R_INLINE SEXP get_free_node (int c)
 {
@@ -896,6 +914,13 @@ static R_INLINE SEXP get_free_node (int c)
 }
 
 #define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
+
+static SEXP get_free_node_gc (int c)
+{ 
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    return get_free_node(c);
+}
 
 
 /* Debugging Routines. */
@@ -2353,23 +2378,6 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-static void mem_err_heap(R_size_t size)
-{
-    errorcall(R_NilValue, _("vector memory exhausted (limit reached?)"));
-}
-
-
-static void mem_err_cons(void)
-{
-    errorcall(R_NilValue, _("cons memory exhausted (limit reached?)"));
-}
-
-static void mem_err_malloc(R_size_t size)
-{
-    errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
-}
-
-
 /* InitMemory : Initialise the memory to be used in R. */
 /* This includes: stack space, node space and vector space */
 
@@ -2584,12 +2592,10 @@ char *S_realloc(char *p, long new, long old, int size)
 SEXP allocSExp(SEXPTYPE t)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	R_gc_internal(0);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = t;
     CAR(s) = R_NilValue;
     CDR(s) = R_NilValue;
@@ -2600,12 +2606,10 @@ SEXP allocSExp(SEXPTYPE t)
 static SEXP allocSExpNonCons(SEXPTYPE t)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	R_gc_internal(0);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = t;
     return s;
 }
@@ -2617,12 +2621,11 @@ SEXP cons(SEXP car, SEXP cdr)
     SEXP s;
     if (FORCE_GC || NO_FREE_NODES()) {
 	Rf_protect2 (car, cdr);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
+	s = get_free_node_gc(SEXPREC_class);
+        UNPROTECT(2);
     }
-    s = get_free_node(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = LISTSXP;
     CAR(s) = CHK(car);
     CDR(s) = CHK(cdr);
@@ -2636,12 +2639,11 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
     SEXP s;
     if (FORCE_GC || NO_FREE_NODES()) {
 	Rf_protect3 (car, cdr, tag);
-	R_gc_internal(0);
-	UNPROTECT(3);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
+	s = get_free_node_gc(SEXPREC_class);
+        UNPROTECT(3);
     }
-    s = get_free_node(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     SET_TYPEOF(s,LISTSXP);
     CAR(s) = CHK(car);
     CDR(s) = CHK(cdr);
@@ -2676,12 +2678,12 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 
     if (FORCE_GC || NO_FREE_NODES()) {
 	Rf_protect3 (namelist, valuelist, rho);
-	R_gc_internal(0);
-	UNPROTECT(3);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
+	newrho = get_free_node_gc(SEXPREC_class);
+        UNPROTECT(3);
     }
-    newrho = get_free_node(SEXPREC_class);
+    else
+        newrho = get_free_node(SEXPREC_class);
+
     TYPEOF(newrho) = ENVSXP;
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = CHK(rho);
@@ -2708,12 +2710,11 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     SEXP s;
     if (FORCE_GC || NO_FREE_NODES()) {
 	Rf_protect2 (expr, rho);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
+	s = get_free_node_gc(SEXPREC_class);
+        UNPROTECT(2);
     }
-    s = get_free_node(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
@@ -2736,12 +2737,11 @@ static /*R_INLINE*/ SEXP allocVector1 (SEXPTYPE type)
        so that there's no need to initialize a pointer in the data part. */
 
 #if VALGRIND_LEVEL==0
-    if (FORCE_GC || NO_FREE_NODES()) {
-        R_gc_internal(0);
-        if (NO_FREE_NODES())
-            mem_err_cons();
-    }
-    SEXP s = get_free_node(0);
+    SEXP s;
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = type;
     LENGTH(s) = 1;
     if (R_IsMemReporting && !R_MemPagesReporting)
@@ -2883,12 +2883,10 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
 #if VALGRIND_LEVEL==0
     if (length <= 1 && ((FAST_ALLOC_TYPES>>type) & 1)) {
-        if (FORCE_GC || NO_FREE_NODES()) {
-	    R_gc_internal(0);
-	    if (NO_FREE_NODES())
-	        mem_err_cons();
-        }
-        s = get_free_node(0);
+        if (FORCE_GC || NO_FREE_NODES())
+            s = get_free_node_gc(0);
+        else
+            s = get_free_node(0);
         TYPEOF(s) = type;
         LENGTH(s) = length;
         if (R_IsMemReporting && !R_MemPagesReporting)
@@ -2973,13 +2971,12 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
         }
     }
 
+
     if (node_class < NUM_SMALL_NODE_CLASSES) {
-        if (FORCE_GC || NO_FREE_NODES()) {
-	    R_gc_internal(0);
-	    if (NO_FREE_NODES())
-	        mem_err_cons();
-        }
-        s = get_free_node(node_class);
+        if (FORCE_GC || NO_FREE_NODES())
+            s = get_free_node_gc(node_class);
+        else
+            s = get_free_node(node_class);
 #if VALGRIND_LEVEL>0
         VALGRIND_MAKE_MEM_NOACCESS (DATAPTR(s), NODE_SIZE(NODE_CLASS(s))
                                                  - sizeof(SEXPREC_ALIGN));
