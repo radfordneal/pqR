@@ -331,7 +331,8 @@ static const char *sexptype2char(SEXPTYPE type) {
 static int gc_force_wait = 0;
 static int gc_force_gap = 0;
 static Rboolean gc_inhibit_release = FALSE;
-#define FORCE_GC (gc_force_wait > 0 ? (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0)
+#define FORCE_GC (gc_force_wait > 0 ? \
+  (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0)
 
 #define GC_PROT(X) do { \
     int __wait__ = gc_force_wait; \
@@ -361,8 +362,6 @@ extern SEXP framenames;  /* in model.c */
 
 static void R_gc_internal(R_size_t size_needed);
 static void R_gc_full(R_size_t size_needed);
-static void mem_err_heap(R_size_t size);
-static void mem_err_malloc(R_size_t size);
 
 static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 
@@ -866,7 +865,29 @@ static R_size_t R_NodesInUse = 0;
 #endif
 
 
-/* Node Allocation. */
+static void mem_err_heap(R_size_t size)
+{
+    errorcall(R_NilValue, _("vector memory exhausted (limit reached?)"));
+}
+
+static void mem_err_cons(void)
+{
+    errorcall(R_NilValue, _("cons memory exhausted (limit reached?)"));
+}
+
+static void mem_err_malloc(R_size_t size)
+{
+    errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
+}
+
+
+/* Node Allocation - get_free_node.  Initializes sxpinfo to zeros (except 
+   node class is set as passed), and ATTRIB to R_NilValue.  Other fields
+   are not initialized. 
+
+   The _gc version does a garbage collection first, and reports an error
+   if it fails to recover enough for a free node. The _gc1, _gc2, and _gc3
+   versions protect 1, 2, or 3 SEXP arguments before the garbage collection. */
 
 static R_INLINE SEXP get_free_node (int c)
 {
@@ -874,9 +895,8 @@ static R_INLINE SEXP get_free_node (int c)
 
     SEXP n = R_GenHeap[c].Free;
     if (n == R_GenHeap[c].New) {
-        GetNewPage(c);
+        GetNewPage(c); /* guaranteed to provide a free node (or gives error) */
         n = R_GenHeap[c].Free;
-        if (n == R_GenHeap[c].New) abort();
     }
     R_GenHeap[c].Free = NEXT_NODE(n);
     R_NodesInUse++;
@@ -889,11 +909,46 @@ static R_INLINE SEXP get_free_node (int c)
 
     n->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     SET_NODE_CLASS(n,c);
+    ATTRIB(n) = R_NilValue;
     R_SmallNallocSize += NodeClassSize[c];
     return n;
 }
 
 #define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
+
+static SEXP get_free_node_gc (int c)
+{ 
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    return get_free_node(c);
+}
+
+static SEXP get_free_node_gc1 (int c, SEXP p1)
+{ 
+    PROTECT(p1);
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    UNPROTECT(1);
+    return get_free_node(c);
+}
+
+static SEXP get_free_node_gc2 (int c, SEXP p1, SEXP p2)
+{ 
+    PROTECT2(p1,p2);
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    UNPROTECT(2);
+    return get_free_node(c);
+}
+
+static SEXP get_free_node_gc3 (int c, SEXP p1, SEXP p2, SEXP p3)
+{ 
+    PROTECT3(p1,p2,p3);
+    R_gc_internal(0);
+    if (NO_FREE_NODES()) mem_err_cons(); 
+    UNPROTECT(3);
+    return get_free_node(c);
+}
 
 
 /* Debugging Routines. */
@@ -1183,6 +1238,9 @@ static void GetNewPage(int node_class)
         VALGRIND_MAKE_MEM_DEFINED (&s->sxpinfo, sizeof s->sxpinfo);
     }
 #endif
+
+    if (R_GenHeap[node_class].Free == R_GenHeap[node_class].New)
+        abort(); /* Shouldn't be possible, since page_count should be > 0 */
 }
 
 /* Scan pages, releasing (some) pages with no nodes in use, and (maybe)
@@ -2348,23 +2406,6 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-static void mem_err_heap(R_size_t size)
-{
-    errorcall(R_NilValue, _("vector memory exhausted (limit reached?)"));
-}
-
-
-static void mem_err_cons(void)
-{
-    errorcall(R_NilValue, _("cons memory exhausted (limit reached?)"));
-}
-
-static void mem_err_malloc(R_size_t size)
-{
-    errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
-}
-
-
 /* InitMemory : Initialise the memory to be used in R. */
 /* This includes: stack space, node space and vector space */
 
@@ -2579,31 +2620,25 @@ char *S_realloc(char *p, long new, long old, int size)
 SEXP allocSExp(SEXPTYPE t)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	R_gc_internal(0);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = t;
     CAR(s) = R_NilValue;
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
-    ATTRIB(s) = R_NilValue;
     return s;
 }
 
 static SEXP allocSExpNonCons(SEXPTYPE t)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	R_gc_internal(0);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = t;
-    ATTRIB(s) = R_NilValue;
     return s;
 }
 
@@ -2612,19 +2647,14 @@ static SEXP allocSExpNonCons(SEXPTYPE t)
 SEXP cons(SEXP car, SEXP cdr)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect2 (car, cdr);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc2(SEXPREC_class,car,cdr);
+    else
+        s = get_free_node(SEXPREC_class);
     TYPEOF(s) = LISTSXP;
     CAR(s) = CHK(car);
     CDR(s) = CHK(cdr);
     TAG(s) = R_NilValue;
-    ATTRIB(s) = R_NilValue;
     return s;
 }
 
@@ -2632,19 +2662,14 @@ SEXP cons(SEXP car, SEXP cdr)
 SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect3 (car, cdr, tag);
-	R_gc_internal(0);
-	UNPROTECT(3);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc3(SEXPREC_class,car,cdr,tag);
+    else
+        s = get_free_node(SEXPREC_class);
     SET_TYPEOF(s,LISTSXP);
     CAR(s) = CHK(car);
     CDR(s) = CHK(cdr);
     TAG(s) = CHK(tag);
-    ATTRIB(s) = R_NilValue;
     return s;
 }
 
@@ -2673,19 +2698,15 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
     SEXP v, n, newrho;
 
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect3 (namelist, valuelist, rho);
-	R_gc_internal(0);
-	UNPROTECT(3);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    newrho = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	newrho = get_free_node_gc3(SEXPREC_class,namelist,valuelist,rho);
+    else
+        newrho = get_free_node(SEXPREC_class);
+
     TYPEOF(newrho) = ENVSXP;
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = CHK(rho);
     HASHTAB(newrho) = R_NilValue;
-    ATTRIB(newrho) = R_NilValue;
 
     v = CHK(valuelist);
     n = CHK(namelist);
@@ -2706,14 +2727,10 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	Rf_protect2 (expr, rho);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    s = get_free_node(SEXPREC_class);
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc2(SEXPREC_class,expr,rho);
+    else
+        s = get_free_node(SEXPREC_class);
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
@@ -2723,35 +2740,55 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRCODE(s) = CHK(expr);
     PRENV(s) = CHK(rho);
     PRSEEN(s) = 0;
-    ATTRIB(s) = R_NilValue;
     return s;
 }
 
-/* Allocation of scalars, which compiler may optimize into specialized
-   versions of allocVector.  These versions always return an unshared 
-   value. */
+/* Allocation of scalars, using a version of allocVector specialized for
+   vectors of length one.  These versions always return an unshared value. */
+
+static R_INLINE SEXP allocVector1 (SEXPTYPE type)
+{
+    /* Note that "type" must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so a
+       vector of length 1 is guaranteed to fit in the first node class, and
+       so that there's no need to initialize a pointer in the data part. */
+
+#if VALGRIND_LEVEL==0
+    SEXP s;
+    if (FORCE_GC || NO_FREE_NODES())
+	s = get_free_node_gc(SEXPREC_class);
+    else
+        s = get_free_node(SEXPREC_class);
+    TYPEOF(s) = type;
+    LENGTH(s) = 1;
+    if (R_IsMemReporting && !R_MemPagesReporting)
+        R_ReportAllocation (
+          sizeof(SEXPREC_ALIGN) + NodeClassSize[0] * sizeof(VECREC), type, 1);
+    return s;
+#else
+    return allocVector (type, 1);
+#endif
+}
 
 SEXP ScalarLogical(int x)
 {
-    SEXP ans = allocVector(LGLSXP, 1);
+    SEXP ans = allocVector1(LGLSXP);
     LOGICAL(ans)[0] = x == 0 || x == NA_LOGICAL ? x : 1;
     return ans;
 }
 
 SEXP ScalarInteger(int x)
 {
-    SEXP ans = allocVector(INTSXP, 1);
+    SEXP ans = allocVector1(INTSXP);
     INTEGER(ans)[0] = x;
     return ans;
 }
 
 SEXP ScalarReal(double x)
 {
-    SEXP ans = allocVector(REALSXP, 1);
+    SEXP ans = allocVector1(REALSXP);
     REAL(ans)[0] = x;
     return ans;
 }
-
 
 SEXP ScalarComplex(Rcomplex x)
 {
@@ -2772,7 +2809,7 @@ SEXP ScalarString(SEXP x)
 
 SEXP ScalarRaw(Rbyte x)
 {
-    SEXP ans = allocVector(RAWSXP, 1);
+    SEXP ans = allocVector1(RAWSXP);
     RAW(ans)[0] = x;
     return ans;
 }
@@ -2789,7 +2826,7 @@ SEXP ScalarIntegerMaybeConst(int x)
             return R_ScalarIntegerNA;
     }
 
-    SEXP ans = allocVector(INTSXP, 1);
+    SEXP ans = allocVector1(INTSXP);
     INTEGER(ans)[0] = x;
     return ans;
 }
@@ -2802,15 +2839,15 @@ SEXP ScalarRealMaybeConst(double x)
            as doubles, since double comparison doesn't work for NA or when 
            comparing -0 and +0 (which should be distinct). */
 
-        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealNA)[0]) 
-            return R_ScalarRealNA;
         if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealZero)[0]) 
             return R_ScalarRealZero;
         if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealOne)[0]) 
             return R_ScalarRealOne;
+        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealNA)[0]) 
+            return R_ScalarRealNA;
     }
 
-    SEXP ans = allocVector(REALSXP, 1);
+    SEXP ans = allocVector1(REALSXP);
     REAL(ans)[0] = x;
     return ans;
 }
@@ -2834,7 +2871,7 @@ SEXP ScalarStringMaybeConst(SEXP x)
 
 SEXP ScalarRawMaybeConst(Rbyte x)
 {
-    SEXP ans = allocVector(RAWSXP, 1);
+    SEXP ans = allocVector1(RAWSXP);
     RAW(ans)[0] = x;
     return ans;
 }
@@ -2862,13 +2899,10 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
 #if VALGRIND_LEVEL==0
     if (length <= 1 && ((FAST_ALLOC_TYPES>>type) & 1)) {
-        if (FORCE_GC || NO_FREE_NODES()) {
-	    R_gc_internal(0);
-	    if (NO_FREE_NODES())
-	        mem_err_cons();
-        }
-        s = get_free_node(0);
-        ATTRIB(s) = R_NilValue;
+        if (FORCE_GC || NO_FREE_NODES())
+            s = get_free_node_gc(0);
+        else
+            s = get_free_node(0);
         TYPEOF(s) = type;
         LENGTH(s) = length;
         if (R_IsMemReporting && !R_MemPagesReporting)
@@ -2953,13 +2987,12 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
         }
     }
 
+
     if (node_class < NUM_SMALL_NODE_CLASSES) {
-        if (FORCE_GC || NO_FREE_NODES()) {
-	    R_gc_internal(0);
-	    if (NO_FREE_NODES())
-	        mem_err_cons();
-        }
-        s = get_free_node(node_class);
+        if (FORCE_GC || NO_FREE_NODES())
+            s = get_free_node_gc(node_class);
+        else
+            s = get_free_node(node_class);
 #if VALGRIND_LEVEL>0
         VALGRIND_MAKE_MEM_NOACCESS (DATAPTR(s), NODE_SIZE(NODE_CLASS(s))
                                                  - sizeof(SEXPREC_ALIGN));
@@ -3008,6 +3041,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
         }
         s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
         SET_NODE_CLASS(s, LARGE_NODE_CLASS);
+        ATTRIB(s) = R_NilValue;
         R_LargeVallocSize += size;
         R_GenHeap[LARGE_NODE_CLASS].AllocCount++;
         R_NodesInUse++;
@@ -3018,7 +3052,6 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 #endif
     }
 
-    ATTRIB(s) = R_NilValue;
     TYPEOF(s) = type;
     LENGTH(s) = length;
 
