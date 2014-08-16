@@ -985,8 +985,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define allocCharsxp		Rf_allocCharsxp
-# define arg_missing_error	Rf_arg_missing_error
-# define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
 # define can_save_alloc		Rf_can_save_alloc
 # define check_stack_balance	Rf_check_stack_balance

@@ -331,7 +331,6 @@
  Rf_StringFromReal
  Rf_VectorIndex
  Rf_allocCharsxp
- Rf_arg_missing_error
  Rf_bd0
  Rf_chebyshev_eval
  Rf_chebyshev_init
