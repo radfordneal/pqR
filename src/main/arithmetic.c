@@ -49,7 +49,7 @@
    not this macro. */
 
 #define DUPLICATE_ATTRIB(_to_,_from_) do { \
-    if (ATTRIB((_to_))!=ATTRIB((_from_))) (DUPLICATE_ATTRIB)((_to_),(_from_)) \
+    if (ATTRIB((_to_))!=ATTRIB((_from_))) (DUPLICATE_ATTRIB)((_to_),(_from_)); \
 } while (0)
 
 #include <Rmath.h>
@@ -1957,7 +1957,7 @@ static void setup_Math3
     } \
     if (naflag) warning(R_MSG_NA); \
     SEXP frm = n==na ? sa : n==nb ? sb : sc; \
-    DUPLICATE_ATTRIB(sy, from); \
+    DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(4); \
 } while (0)
 
@@ -2165,7 +2165,7 @@ static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy,
     } \
     if (naflag) warning(R_MSG_NA); \
     SEXP frm = n==na ? sa : n==nb ? sb : n==nc ? sc : sd; \
-    DUPLICATE_ATTRIB(sy, from); \
+    DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(5); \
 } while (0)
 
@@ -2347,7 +2347,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
 	warning(R_MSG_NA);		\
 						\
     SEXP frm = n==na ? sa : n==nb ? sb : n==nc ? sc : n==nd ? sd : se; \
-    DUPLICATE_ATTRIB(sy, from); \
+    DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(6)
 
     FINISH_Math5;
