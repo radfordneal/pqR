@@ -14,3 +14,6 @@ Speed tweak in math1.
 Major revamp of details of how builtins are handled in evalv, plus
 other evalv cleanup.  Uses alloca if possible to avoid always allocating
 space for a context when often not needed.
+
+DUPLICATE_ATTRIB in arithmetic.c now doesn't do it if attributes
+are already the same.
