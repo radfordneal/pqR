@@ -242,7 +242,7 @@ static SEXP FixupCex(SEXP cex, double dflt)
     int i, n;
     n = length(cex);
     if (n == 0) {
-	ans = allocVector(REALSXP, 1);
+	ans = allocVector1REAL();
 	if (R_FINITE(dflt) && dflt > 0)
 	    REAL(ans)[0] = dflt;
 	else
@@ -3205,7 +3205,7 @@ static SEXP do_locator(SEXP call, SEXP op, SEXP args, SEXP env)
 	type = CHAR(STRING_ELT(stype, 0))[0];
 	PROTECT(x = allocVector(REALSXP, n));
 	PROTECT(y = allocVector(REALSXP, n));
-	PROTECT(nobs=allocVector(INTSXP,1));
+	PROTECT(nobs=allocVector1INT());
 
 	GMode(2, dd);
 	for (i = 0; i < n; i++) {

@@ -2760,7 +2760,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	FrameValues(FRAME(env), all, tmp2, &k2);
 
-    PROTECT(ind = allocVector(INTSXP, 1));
+    PROTECT(ind = allocVector1INT());
     /* tmp :=  `[`(<elist>, i) */
     PROTECT(tmp = LCONS(R_Bracket2Symbol,
 			CONS(tmp2, LCONS(ind, R_NilValue))));

@@ -724,7 +724,7 @@ int addContourLines(double *x, int nx, double *y, int ny,
 		 * "write" the contour locations into the list of contours
 		 */
 		PROTECT(ctr = allocVector(VECSXP, 3));
-		PROTECT(level = allocVector(REALSXP, 1));
+		PROTECT(level = allocVector1REAL());
 		PROTECT(xsxp = allocVector(REALSXP, ns + 1));
 		PROTECT(ysxp = allocVector(REALSXP, ns + 1));
 		REAL(level)[0] = zc;
@@ -1052,7 +1052,7 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
 		    enc = getCharCE(STRING_ELT(labels, cnum % numl));
 		}
 		else {
-		    PROTECT(lab = allocVector(REALSXP, 1));
+		    PROTECT(lab = allocVector1REAL());
 		    REAL(lab)[0] = zc;
 		    lab = labelformat(lab);
 		    strcpy(&buffer[1], CHAR(STRING_ELT(lab, 0))); /* ASCII */
