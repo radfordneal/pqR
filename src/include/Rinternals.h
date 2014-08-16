@@ -942,6 +942,10 @@ SEXP Rf_allocList(int);
 SEXP Rf_allocS4Object(void);
 SEXP Rf_allocSExp(SEXPTYPE);
 SEXP Rf_allocVector(SEXPTYPE, R_len_t);
+SEXP Rf_allocVector1RAW(void);
+SEXP Rf_allocVector1LGL(void);
+SEXP Rf_allocVector1INT(void);
+SEXP Rf_allocVector1REAL(void);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
 SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -1013,16 +1017,10 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
-SEXP Rf_ScalarComplex(Rcomplex);
 SEXP Rf_ScalarComplexMaybeConst(Rcomplex);
-SEXP Rf_ScalarInteger(int);
 SEXP Rf_ScalarIntegerMaybeConst(int);
-SEXP Rf_ScalarLogical(int);  /* MaybeConst version is inlined */
-SEXP Rf_ScalarRaw(Rbyte);
 SEXP Rf_ScalarRawMaybeConst(Rbyte);
-SEXP Rf_ScalarReal(double);
 SEXP Rf_ScalarRealMaybeConst(double);
-SEXP Rf_ScalarString(SEXP);
 SEXP Rf_ScalarStringMaybeConst(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setNoSpecSymFlag(SEXP);
@@ -1262,6 +1260,10 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define allocS4Object		Rf_allocS4Object
 #define allocSExp		Rf_allocSExp
 #define allocVector		Rf_allocVector
+#define allocVector1RAW		Rf_allocVector1RAW
+#define allocVector1LGL		Rf_allocVector1LGL
+#define allocVector1INT		Rf_allocVector1INT
+#define allocVector1REAL	Rf_allocVector1REAL
 #define any_duplicated		Rf_any_duplicated
 #define any_duplicated3		Rf_any_duplicated3
 #define applyClosure		Rf_applyClosure
@@ -1541,6 +1543,12 @@ SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
+SEXP	 Rf_ScalarRaw(Rbyte);
+SEXP	 Rf_ScalarLogical(int);
+SEXP	 Rf_ScalarInteger(int);
+SEXP	 Rf_ScalarReal(double);
+SEXP	 Rf_ScalarComplex(Rcomplex);
+SEXP	 Rf_ScalarString(SEXP);
 SEXP	 Rf_ScalarLogicalMaybeConst(int);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */

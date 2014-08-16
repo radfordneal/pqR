@@ -1167,7 +1167,7 @@ static void WriteBCLang(SEXP s, SEXP ref_table, SEXP reps,
 		/* this is the first reference, so update and register
 		   the counter */
 		int i = INTEGER(CAR(reps))[0]++;
-		SET_TAG(r, allocVector(INTSXP, 1));
+		SET_TAG(r, allocVector1INT());
 		INTEGER(TAG(r))[0] = i;
 		OutInteger(stream, BCREPDEF);
 		OutInteger(stream, i);
@@ -1235,7 +1235,7 @@ static void WriteBC(SEXP s, SEXP ref_table, R_outpstream_t stream)
     SEXP reps = ScanForCircles(s);
     PROTECT(reps = CONS(R_NilValue, reps));
     OutInteger(stream, length(reps));
-    SETCAR(reps, allocVector(INTSXP, 1));
+    SETCAR(reps, allocVector1INT());
     INTEGER(CAR(reps))[0] = 0;
     WriteBC1(s, ref_table, reps, stream);
     UNPROTECT(1);
