@@ -591,11 +591,11 @@ static SEXP do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 		    SET_STRING_ELT(y, i, mkChar(buff));
 		}
 	    }
+	    UNPROTECT(1);
+	    break;
 	}
-	UNPROTECT(1);
-	break;
 	default:
-	    error(_("Impossible mode ( x )")); y = R_NilValue;/* -Wall */
+	    error(_("Impossible mode ( x )"));
 	}
     }
     if((l = getAttrib(x, R_DimSymbol)) != R_NilValue) {

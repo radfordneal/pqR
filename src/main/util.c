@@ -982,7 +982,7 @@ static SEXP do_getwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP s = R_NilValue, wd = R_NilValue;	/* -Wall */
+    SEXP s, wd;
 
     checkArity(op, args);
     if (!isPairList(args) || !isValidString(s = CAR(args)))
@@ -1015,7 +1015,7 @@ static SEXP do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans, s;
     char sp[PATH_MAX];
     wchar_t  buf[PATH_MAX], *p;
     const wchar_t *pp;
@@ -1050,7 +1050,7 @@ static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans, s;
     char  buf[PATH_MAX], *p, fsp = FILESEP[0];
     const char *pp;
     int i, n;
@@ -1090,7 +1090,7 @@ static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans, s;
     wchar_t buf[PATH_MAX], *p;
     const wchar_t *pp;
     char sp[PATH_MAX];
@@ -1131,7 +1131,7 @@ static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans, s;
     char buf[PATH_MAX], *p, fsp = FILESEP[0];
     const char *pp;
     int i, n;

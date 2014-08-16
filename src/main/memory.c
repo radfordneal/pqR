@@ -2572,7 +2572,6 @@ char *R_alloc(size_t nelem, int eltsize)
 	else {
 	    error(_("cannot allocate memory block of size %0.1f Gb"),
 		  dsize/1024.0/1024.0/1024.0);
-	    s = R_NilValue; /* -Wall */
 	}
 #else
 	if(dsize > R_LEN_T_MAX) /* must be in the Gb range */

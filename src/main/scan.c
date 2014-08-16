@@ -924,7 +924,6 @@ static SEXP do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    while ((c = scanchar(FALSE, &data)) != '\n' && c != R_EOF);
     }
 
-    ans = R_NilValue;		/* -Wall */
     data.save = 0;
 
     /* set up a context which will close the connection if there is

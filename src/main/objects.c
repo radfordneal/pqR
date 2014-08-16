@@ -392,7 +392,7 @@ found: ;
 static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
                                     int variant)
 {
-    SEXP ans, generic = R_NilValue /* -Wall */, obj, val;
+    SEXP ans, generic, obj, val;
     SEXP callenv, defenv;
     SEXP argList;
     RCNTXT *cptr;
@@ -1220,9 +1220,10 @@ SEXP R_primitive_generic(SEXP op)
 SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
 			SEXP mlist)
 {
-    int offset = 0;
+    int offset;
     prim_methods_t code = NO_METHODS; /* -Wall */
     SEXP value;
+
     Rboolean errorcase = FALSE;
     switch(code_string[0]) {
     case 'c': /* clear */
@@ -1241,8 +1242,8 @@ SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
     }
     if(errorcase) {
 	error(_("invalid primitive methods code (\"%s\"): should be \"clear\", \"reset\", \"set\", or \"suppress\""), code_string);
-	return R_NilValue;
     }
+
     switch(TYPEOF(op)) {
     case BUILTINSXP: case SPECIALSXP:
 	offset = PRIMOFFSET(op);

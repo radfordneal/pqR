@@ -489,7 +489,6 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		      nargs, symbol.symbol.call->numArgs, buf);
     }
 
-    retval = R_NilValue;	/* -Wall */
     fun = (VarFun) ofun;
     switch (nargs) {
     case 0:
@@ -2538,7 +2537,6 @@ void call_R(char *func, long nargs, void **arguments, char **modes,
     PROTECT(pcall = call = allocList((int) nargs + 1));
     SET_TYPEOF(call, LANGSXP);
     SETCAR(pcall, (SEXP)func);
-    s = R_NilValue;		/* -Wall */
     for (i = 0 ; i < nargs ; i++) {
 	pcall = CDR(pcall);
 	type = string2type(modes[i]);

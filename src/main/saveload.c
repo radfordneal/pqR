@@ -507,7 +507,7 @@ static void RemakeNextSEXP(FILE *fp, NodeInfo *node, int version, InputRoutines 
 {
     unsigned int j, idx, type;
     int len;
-    SEXP s = R_NilValue;	/* -Wall */
+    SEXP s;
 
     idx = m->InInteger(fp, d);
     type = FixupType(m->InInteger(fp, d), version);

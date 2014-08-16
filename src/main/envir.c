@@ -3477,14 +3477,11 @@ static SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho)
        returns R_NilValue.  This seems appropriate since there is no
        way to test whether an environment is hashed at the R level.
     */
-    SEXP env, ans = R_NilValue /* -Wall */;
-    env = CAR(args);
-    if (isEnvironment(env)) {
-	if (IS_HASHED(env))
-	    ans = R_HashProfile(HASHTAB(env));
-    } else
+    SEXP env = CAR(args);
+    if (isEnvironment(env))
+	return IS_HASHED(env) ? R_HashProfile(HASHTAB(env)) : R_NilValue;
+    else
 	error("argument must be a hashed environment");
-    return ans;
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
