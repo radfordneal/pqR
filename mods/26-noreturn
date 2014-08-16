@@ -1,0 +1,3 @@
+Mark error procs as "noreturn" if possible, either with C11
+facility or the gcc attribute.  Similar thing done in 3.0.1, 
+but only for gcc.

@@ -859,6 +859,9 @@ AC_CHECK_HEADERS(errno.h inttypes.h limits.h locale.h stdarg.h stdbool.h \
 ## only vsnprintf.c requires stdarg.h
 ## </NOTE>
 
+## Header file for C11 "noreturn" facility.
+AC_CHECK_HEADERS([stdnoreturn.h])
+
 R_HEADER_SETJMP
 R_HEADER_GLIBC2
 
