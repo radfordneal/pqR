@@ -1908,7 +1908,6 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
 	default:
 	    error(_("bad restore file magic number (file may be corrupted) -- no data loaded"));
 	}
-	return(R_NilValue);/* for -Wall */
     }
 }
 

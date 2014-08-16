@@ -3226,7 +3226,6 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
     	return MaybeConstList1(arg);
     default:
 	error(_("incorrect tag type at line %d"), lloc->first_line); 
-        return R_NilValue/* -Wall */;
     }
 }
 

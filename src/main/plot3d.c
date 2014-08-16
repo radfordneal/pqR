@@ -1755,7 +1755,6 @@ static SEXP do_filledcontour(SEXP call, SEXP op, SEXP args, SEXP env)
     error(_("invalid x / y values or limits"));
  badlev:
     error(_("invalid contour levels: must be strictly increasing"));
-    return R_NilValue;  /* never used; to keep -Wall happy */
 }
 
 

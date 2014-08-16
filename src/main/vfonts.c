@@ -70,10 +70,9 @@ double R_GE_VStrWidth(const char *s, cetype_t enc, const pGEcontext gc, pGEDevDe
 	res = (*routines.GEVStrWidth)(str, gc, dd);
 	VMAXSET(vmax);
 	return res;
-    } else {
+    } 
+    else
 	error(_("Hershey fonts cannot be loaded"));
-	return 0.0; /* -Wall */
-    }
 }
 
 attribute_hidden

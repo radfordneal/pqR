@@ -1755,7 +1755,6 @@ SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 2);
     }
-    return op;			/* never used; to keep -Wall happy */
 }
 
 
@@ -2109,7 +2108,6 @@ SEXP do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 3);
     }
-    return op;			/* never used; to keep -Wall happy */
 } /* do_math3() */
 
 /* Mathematical Functions of Four (Real) Arguments */
@@ -2267,7 +2265,6 @@ SEXP do_math4(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 4);
     }
-    return op;			/* never used; to keep -Wall happy */
 }
 
 #ifdef WHEN_MATH5_IS_THERE/* as in ./arithmetic.h */
@@ -2375,7 +2372,6 @@ SEXP do_math5(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 5);
     }
-    return op;			/* never used; to keep -Wall happy */
 } /* do_math5() */
 
 #endif /* Math5 is there */

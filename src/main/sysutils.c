@@ -473,7 +473,6 @@ static SEXP do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 #else
     error(_("'Sys.setenv' is not available on this system"));
-    return R_NilValue; /* -Wall */
 #endif
 }
 

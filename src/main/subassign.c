@@ -1464,10 +1464,8 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	SET_STRING_ELT(input, 0, PRINTNAME(name));
     else if(isString(name) )
 	SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
-    else {
+    else
 	error(_("invalid subscript type '%s'"), type2char(TYPEOF(name)));
-	return R_NilValue; /*-Wall*/
-    }
 
     /* replace the second argument with a string */
     SETCADR(args, input);

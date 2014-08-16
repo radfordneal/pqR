@@ -3671,7 +3671,6 @@ static SEXP do_dend(SEXP call, SEXP op, SEXP args, SEXP env)
 
   badargs:
     error(_("invalid dendrogram input"));
-    return R_NilValue;/* never used; to keep -Wall happy */
 }
 
 static SEXP do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -3781,7 +3780,6 @@ static SEXP do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
   badargs:
     error(_("invalid dendrogram input"));
-    return R_NilValue;/* never used; to keep -Wall happy */
 }
 
 

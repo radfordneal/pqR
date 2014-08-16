@@ -290,7 +290,6 @@ void set_iconv(Rconnection con)
 static Rboolean null_open(Rconnection con)
 {
     error(_("%s not enabled for this connection"), "open");
-    return FALSE;		/* -Wall */
 }
 
 static void null_close(Rconnection con)
@@ -306,7 +305,6 @@ static void null_destroy(Rconnection con)
 static int null_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     error(_("%s not enabled for this connection"), "printing");
-    return 0;			/* -Wall */
 }
 
 /* va_copy is C99, but a draft standard had __va_copy.  Glibc has
@@ -447,13 +445,11 @@ int dummy_fgetc(Rconnection con)
 static int null_fgetc(Rconnection con)
 {
     error(_("%s not enabled for this connection"), "'getc'");
-    return 0;			/* -Wall */
 }
 
 static double null_seek(Rconnection con, double where, int origin, int rw)
 {
     error(_("%s not enabled for this connection"), "'seek'");
-    return 0.;			/* -Wall */
 }
 
 static void null_truncate(Rconnection con)
@@ -470,14 +466,12 @@ static size_t null_read(void *ptr, size_t size, size_t nitems,
 			Rconnection con)
 {
     error(_("%s not enabled for this connection"), "'read'");
-    return 0;			/* -Wall */
 }
 
 static size_t null_write(const void *ptr, size_t size, size_t nitems,
 			 Rconnection con)
 {
     error(_("%s not enabled for this connection"), "'write'");
-    return 0;			/* -Wall */
 }
 
 void init_con(Rconnection new, const char *description, int enc,
@@ -1023,7 +1017,6 @@ static SEXP do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 #else
     error(_("fifo connections are not available on this system"));
-    return R_NilValue;		/* -Wall */
 #endif
 }
 

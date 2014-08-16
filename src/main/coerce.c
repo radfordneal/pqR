@@ -1275,7 +1275,6 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
     }
     else errorcall(call, _(COERCE_ERROR_STRING),
 		   type2char(TYPEOF(u)), type2char(type));
-    return u;/* -Wall */
 }
 
 /* used in attrib.c, eval.c and unique.c */

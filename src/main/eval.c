@@ -320,7 +320,6 @@ static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     error(_("R profiling is not available on this system"));
-    return R_NilValue;		/* -Wall */
 }
 #endif /* not R_PROFILING */
 

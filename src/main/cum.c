@@ -236,7 +236,6 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	    errorcall(call, _("unknown cumxxx function"));
 	}
     }
-    return R_NilValue; /* for -Wall */
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */

@@ -1317,7 +1317,6 @@ static unsigned int hexdigit(int digit)
     if('A' <= digit && digit <= 'F') return 10 + digit - 'A';
     if('a' <= digit && digit <= 'f') return 10 + digit - 'a';
     /*else */ error(_("invalid hex digit in 'color' or 'lty'"));
-    return digit; /* never occurs (-Wall) */
 }
 
 

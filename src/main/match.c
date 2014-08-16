@@ -159,7 +159,6 @@ int ep_match_exprs (SEXP formal, SEXP tag)
 
  fail:
     error(_("invalid partial string match"));
-    return 0;/* for -Wall */
 }
 
 /*  Exact or partial match for strings, with second given by a SEXP.  
@@ -181,7 +180,6 @@ int ep_match_string_expr (const char *f, SEXP tag)
 	break;
     default:
         error(_("invalid partial string match"));
-        return 0;/* for -Wall */
     }
 
     return ep_match_strings (f, t);
@@ -237,7 +235,6 @@ Rboolean pmatch(SEXP formal, SEXP tag, Rboolean exact)
     return psmatch(f, t, exact);
  fail:
     error(_("invalid partial string match"));
-    return FALSE;/* for -Wall */
 }
 
 

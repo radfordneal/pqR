@@ -125,7 +125,6 @@ static int isUminus(SEXP s)
 	    else return 0;
 	default:
 	    error(_("invalid form in unary minus check"));
-	    return -1;/* for -Wall */
 	}
     }
     else return 0;
@@ -651,7 +650,7 @@ static SEXP do_D(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* ------ FindSubexprs ------ and ------ Accumulate ------ */
 
-static void InvalidExpression(char *where)
+R_NORETURN static void InvalidExpression(char *where)
 {
     error(_("invalid expression in '%s'"), where);
 }
@@ -735,7 +734,8 @@ static int FindSubexprs(SEXP expr, SEXP exprlist, SEXP tag)
     case LISTSXP:
 	if (inherits(expr, "expression"))
 	    return FindSubexprs(CAR(expr), exprlist, tag);
-	else { InvalidExpression("FindSubexprs"); return -1/*-Wall*/; }
+	else 
+	    InvalidExpression("FindSubexprs");
 	break;
     case LANGSXP:
 	if (CAR(expr) == install("(")) {
@@ -753,7 +753,6 @@ static int FindSubexprs(SEXP expr, SEXP exprlist, SEXP tag)
 	break;
     default:
 	InvalidExpression("FindSubexprs");
-	return -1/*-Wall*/;
     }
 }
 

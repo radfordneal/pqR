@@ -504,7 +504,6 @@ static SEXP commentgets(SEXP vec, SEXP comment)
 	return R_NilValue;
     }
     error(_("attempt to set invalid 'comment' attribute"));
-    return R_NilValue;/*- just for -Wall */
 }
 
 static SEXP do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -561,7 +560,6 @@ SEXP classgets(SEXP vec, SEXP klass)
 	return R_NilValue;
     }
     error(_("attempt to set invalid 'class' attribute"));
-    return R_NilValue;/*- just for -Wall */
 }
 
 /* oldClass<-(), primitive */

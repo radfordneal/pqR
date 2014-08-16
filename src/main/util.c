@@ -327,7 +327,6 @@ SEXP type2str(SEXPTYPE t)
 	    return mkChar(TypeTable[i].str);
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2str");
-    return R_NilValue; /* for -Wall */
 }
 
 const char *type2char(SEXPTYPE t)
@@ -339,7 +338,6 @@ const char *type2char(SEXPTYPE t)
 	    return TypeTable[i].str;
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2char");
-    return ""; /* for -Wall */
 }
 
 SEXP type2symbol(SEXPTYPE t)
@@ -353,10 +351,9 @@ SEXP type2symbol(SEXPTYPE t)
 	    return install((char *) &TypeTable[i].str);
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2symbol");
-    return R_NilValue; /* for -Wall */
 }
 
-void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t)
+R_NORETURN void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t)
 {
     int i;
 
@@ -367,17 +364,17 @@ void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t)
     error(_("unimplemented type (%d) in '%s'\n"), t, s);
 }
 
-void UNIMPLEMENTED_TYPE(const char *s, SEXP x)
+R_NORETURN void UNIMPLEMENTED_TYPE(const char *s, SEXP x)
 {
     UNIMPLEMENTED_TYPEt(s, TYPEOF(x));
 }
 
-void attribute_hidden dotdotdot_error(void)
+R_NORETURN void attribute_hidden dotdotdot_error(void)
 { 
     error(_("'...' used in an incorrect context"));
 }
 
-void attribute_hidden arg_missing_error(SEXP sym)
+R_NORETURN void attribute_hidden arg_missing_error(SEXP sym)
 {
     if (*CHAR(PRINTNAME(sym)))
         error(_("argument \"%s\" is missing, with no default"),
@@ -386,7 +383,7 @@ void attribute_hidden arg_missing_error(SEXP sym)
         error(_("argument is missing, with no default"));
 }
 
-void attribute_hidden unbound_var_error(SEXP sym)
+R_NORETURN void attribute_hidden unbound_var_error(SEXP sym)
 {
     error(_("object '%s' not found"), CHAR(PRINTNAME(sym)));
 }
@@ -576,7 +573,6 @@ SEXP nthcdr(SEXP s, int n)
 	return s;
     }
     else error(_("'nthcdr' needs a list to CDR down"));
-    return R_NilValue;/* for -Wall */
 }
 
 

@@ -2465,7 +2465,6 @@ static int string2type(char *s)
 	}
     }
     error(_("type \"%s\" not supported in interlanguage calls"), s);
-    return 1; /* for -Wall */
 }
 
 /* This is entirely legacy, with no known users (Mar 2012).
