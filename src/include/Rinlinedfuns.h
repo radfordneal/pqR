@@ -409,7 +409,7 @@ INLINE_FUN int nlevels(SEXP f)
     return isFactor(f) ? length(getAttrib(f, R_LevelsSymbol)) : 0;
 }
 
-/* Is an object of numeric type. */
+/* Is an object of numeric type? */
 /* FIXME:  the LGLSXP case should be excluded here
  * (really? in many places we affirm they are treated like INTs)*/
 
@@ -419,15 +419,60 @@ INLINE_FUN Rboolean isNumeric(SEXP s)
                                : ((NUMERIC_TYPES >> TYPEOF(s)) & 1);
 }
 
-/** Is an object "Numeric" or  complex */
+/** Is an object a number, including both "numeric" and "complex"? */
 INLINE_FUN Rboolean isNumber(SEXP s)
 {
     return TYPEOF(s) == INTSXP ? !inherits(s,"factor")
                                : ((NUMBER_TYPES >> TYPEOF(s)) & 1);
 }
 
-/* Only ScalarLogicalMaybeConst is here, others not inline, but in memory.c,
-   where a compiler might inline specialized versions of allocVector. */
+/* The ScalarXXX functions plus ScalarLogicalMaybeConst are here, the other 
+   ScalarXXXMaybeConst functions are in memory.c. */
+
+INLINE_FUN SEXP ScalarLogical(int x)
+{
+    SEXP ans = allocVector1LGL();
+    LOGICAL(ans)[0] = x == 0 || x == NA_LOGICAL ? x : 1;
+    return ans;
+}
+
+INLINE_FUN SEXP ScalarInteger(int x)
+{
+    SEXP ans = allocVector1INT();
+    INTEGER(ans)[0] = x;
+    return ans;
+}
+
+INLINE_FUN SEXP ScalarReal(double x)
+{
+    SEXP ans = allocVector1REAL();
+    REAL(ans)[0] = x;
+    return ans;
+}
+
+INLINE_FUN SEXP ScalarComplex(Rcomplex x)
+{
+    SEXP ans = allocVector(CPLXSXP, 1);
+    COMPLEX(ans)[0] = x;
+    return ans;
+}
+
+INLINE_FUN SEXP ScalarString(SEXP x)
+{
+    SEXP ans;
+    PROTECT(x);
+    ans = allocVector(STRSXP, 1);
+    SET_STRING_ELT(ans, 0, x);
+    UNPROTECT(1);
+    return ans;
+}
+
+INLINE_FUN SEXP ScalarRaw(Rbyte x)
+{
+    SEXP ans = allocVector1RAW();
+    RAW(ans)[0] = x;
+    return ans;
+}
 
 INLINE_FUN SEXP ScalarLogicalMaybeConst(int x)
 {

@@ -985,10 +985,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define allocCharsxp		Rf_allocCharsxp
-# define allocVector1RAW	Rf_allocVector1RAW
-# define allocVector1LGL	Rf_allocVector1LGL
-# define allocVector1INT	Rf_allocVector1INT
-# define allocVector1REAL	Rf_allocVector1REAL
 # define arg_missing_error	Rf_arg_missing_error
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
@@ -1196,10 +1192,6 @@ SEXP Rf_EnsureString(SEXP);
 /* Other Internally Used Functions */
 
 SEXP Rf_allocCharsxp(R_len_t);
-SEXP Rf_allocVector1RAW(void);
-SEXP Rf_allocVector1LGL(void);
-SEXP Rf_allocVector1INT(void);
-SEXP Rf_allocVector1REAL(void);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 void check1arg(SEXP, SEXP, const char *);
 void check1arg_error(SEXP, SEXP, const char *);

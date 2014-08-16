@@ -2743,6 +2743,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     return s;
 }
 
+
 /* Fast, specialize allocVector for vectors of length 1.  The type 
    passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so a that a vector
    of length 1 is guaranteed to fit in the first node class, and
@@ -2773,58 +2774,11 @@ static SEXP allocVector1 (SEXPTYPE type)
 #endif
 }
 
-SEXP attribute_hidden allocVector1RAW(void)  { return allocVector1(RAWSXP); }
-SEXP attribute_hidden allocVector1LGL(void)  { return allocVector1(LGLSXP); }
-SEXP attribute_hidden allocVector1INT(void)  { return allocVector1(INTSXP); }
-SEXP attribute_hidden allocVector1REAL(void) { return allocVector1(REALSXP); }
+SEXP allocVector1RAW(void)  { return allocVector1(RAWSXP); }
+SEXP allocVector1LGL(void)  { return allocVector1(LGLSXP); }
+SEXP allocVector1INT(void)  { return allocVector1(INTSXP); }
+SEXP allocVector1REAL(void) { return allocVector1(REALSXP); }
 
-/* Allocation of scalars, using a version of allocVector specialized for
-   vectors of length one.  These versions always return an unshared value. */
-
-SEXP ScalarLogical(int x)
-{
-    SEXP ans = allocVector1LGL();
-    LOGICAL(ans)[0] = x == 0 || x == NA_LOGICAL ? x : 1;
-    return ans;
-}
-
-SEXP ScalarInteger(int x)
-{
-    SEXP ans = allocVector1INT();
-    INTEGER(ans)[0] = x;
-    return ans;
-}
-
-SEXP ScalarReal(double x)
-{
-    SEXP ans = allocVector1REAL();
-    REAL(ans)[0] = x;
-    return ans;
-}
-
-SEXP ScalarComplex(Rcomplex x)
-{
-    SEXP ans = allocVector(CPLXSXP, 1);
-    COMPLEX(ans)[0] = x;
-    return ans;
-}
-
-SEXP ScalarString(SEXP x)
-{
-    SEXP ans;
-    PROTECT(x);
-    ans = allocVector(STRSXP, 1);
-    SET_STRING_ELT(ans, 0, x);
-    UNPROTECT(1);
-    return ans;
-}
-
-SEXP ScalarRaw(Rbyte x)
-{
-    SEXP ans = allocVector1RAW();
-    RAW(ans)[0] = x;
-    return ans;
-}
 
 /* Versions of functions for allocation of scalars that may return a 
    shared object.  ScalarLogicalMaybeConst is in Rinlinedfuns.h. */
