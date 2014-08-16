@@ -1,1 +1,4 @@
 Mods in memory.c regarding get_free_node and the ScalarXXX functions.
+
+Also defines allocVector1RAW, allocVector1LGL, allocVector1INT, and
+allocVector1REAL, and uses them throughout where appropriate.

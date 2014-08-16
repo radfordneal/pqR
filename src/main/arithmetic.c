@@ -327,13 +327,18 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
             case PLUSOP:
                 return arg1;
             case MINUSOP: ;
-                SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 : allocVector(type,1);
-                WAIT_UNTIL_COMPUTED(arg1);
-                if (type==REALSXP) 
+                SEXP ans;
+                if (type==REALSXP) {
+                    ans = NAMEDCNT_EQ_0(arg1) ? arg1 : allocVector1REAL();
+                    WAIT_UNTIL_COMPUTED(arg1);
                     *REAL(ans) = - *REAL(arg1);
-                else /* INTSXP */
+                }
+                else { /* INTSXP */
+                    ans = NAMEDCNT_EQ_0(arg1) ? arg1 : allocVector1INT();
+                    WAIT_UNTIL_COMPUTED(arg1);
                     *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
                                       : - *INTEGER(arg1);
+                }
                 return ans;
             }
         }
@@ -343,7 +348,7 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
                 SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 
                          : NAMEDCNT_EQ_0(arg2) ? arg2
-                         : allocVector(type,1);
+                         : allocVector1REAL();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
@@ -383,7 +388,7 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
                 SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 
                          : NAMEDCNT_EQ_0(arg2) ? arg2
-                         : allocVector(type,1);
+                         : allocVector1INT();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
@@ -1377,7 +1382,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 
     else if (VARIANT_KIND(variant) == VARIANT_SUM) { /* just need the sum */
 
-        PROTECT(sy = allocVector(REALSXP, 1));
+        PROTECT(sy = allocVector1REAL());
         DO_NOW_OR_LATER1 (variant, 
                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
@@ -1509,7 +1514,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
     else if (TYPEOF(x) == REALSXP) {
 	int n = LENGTH(x);
         if (VARIANT_KIND(variant) == VARIANT_SUM) {
-            s = allocVector (REALSXP, 1);
+            s = allocVector1REAL();
             DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
             return s;

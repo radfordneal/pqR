@@ -1736,7 +1736,7 @@ static SEXP do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(expr = allocList(3));
     SET_TYPEOF(expr, LANGSXP);
     SETCAR(expr, install("contrasts"));
-    SETCADDR(expr, allocVector(LGLSXP, 1));
+    SETCADDR(expr, allocVector1LGL());
 
     /* FIXME: We need to allow a third argument to this function */
     /* which allows us to specify contrasts directly.  That argument */
