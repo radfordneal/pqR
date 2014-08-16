@@ -1050,7 +1050,7 @@ R_stdGen_ptr_t R_set_standardGeneric_ptr(R_stdGen_ptr_t val, SEXP envir)
 }
 
 SEXP R_isMethodsDispatchOn(SEXP onOff) {
-    SEXP value = allocVector(LGLSXP, 1);
+    SEXP value = allocVector1LGL();
     Rboolean onOffValue;
     R_stdGen_ptr_t old = R_get_standardGeneric_ptr();
     LOGICAL(value)[0] = !NOT_METHODS_DISPATCH_PTR(old);

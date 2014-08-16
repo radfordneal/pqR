@@ -813,15 +813,15 @@ static SEXP coerceToPairList(SEXP v)
     for (i = 0; i < n; i++) {
 	switch (TYPEOF(v)) {
 	case LGLSXP:
-	    SETCAR(ansp, allocVector(LGLSXP, 1));
+	    SETCAR(ansp, allocVector1LGL());
 	    INTEGER(CAR(ansp))[0] = INTEGER(v)[i];
 	    break;
 	case INTSXP:
-	    SETCAR(ansp, allocVector(INTSXP, 1));
+	    SETCAR(ansp, allocVector1INT());
 	    INTEGER(CAR(ansp))[0] = INTEGER(v)[i];
 	    break;
 	case REALSXP:
-	    SETCAR(ansp, allocVector(REALSXP, 1));
+	    SETCAR(ansp, allocVector1REAL());
 	    REAL(CAR(ansp))[0] = REAL(v)[i];
 	    break;
 	case CPLXSXP:
@@ -832,7 +832,7 @@ static SEXP coerceToPairList(SEXP v)
 	    SETCAR(ansp, ScalarString(STRING_ELT(v, i)));
 	    break;
 	case RAWSXP:
-	    SETCAR(ansp, allocVector(RAWSXP, 1));
+	    SETCAR(ansp, allocVector1RAW());
 	    RAW(CAR(ansp))[0] = RAW(v)[i];
 	    break;
 	case VECSXP:
