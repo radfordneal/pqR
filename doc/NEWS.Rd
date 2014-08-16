@@ -256,6 +256,12 @@
 \item From R-2.15.2:
       In Windows, the GUI preferences for foreground color were 
       not always respected.  (Reported by Benjamin Wells.)
+\item From R-2.15.1:
+      The evaluator now keeps track of source references outside of
+      functions, e.g. when source() executes a script.
+\item From R-2.15.1:
+      The value returned by tools::psnice() for invalid pid values was
+      not always NA as documented.
 }}
 }
 
