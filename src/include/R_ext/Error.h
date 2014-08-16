@@ -1,4 +1,7 @@
 /*
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2014 by Radford M. Neal
+ *
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1998-2005   Robert Gentleman, Ross Ihaka 
  *                            and the R Development Core Team
@@ -25,10 +28,26 @@
 extern "C" {
 #endif
 
-void	Rf_error(const char *, ...);
+/* Prefer the noreturn facility of C11, but if it's not there, use gcc's 
+   attribute, if available.  Note that we don't actually include the C11
+   stdnoreturn.h header file, just use its existence to signal that the
+   _Noreturn keyword will work. */
+
+# ifdef HAVE_STDNORETURN_H
+#   define R_NORETURN _Noreturn
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 3
+#     define R_NORETURN __attribute__((__noreturn__))
+#   else
+#     define R_NORETURN
+#   endif
+# endif
+
+void R_NORETURN Rf_error(const char *, ...);
+void R_NORETURN WrongArgCount(const char *);
+void R_NORETURN UNIMPLEMENTED(const char *);
+
 void	Rf_warning(const char *, ...);
-void	WrongArgCount(const char *);
-void	UNIMPLEMENTED(const char *);
 void 	R_ShowMessage(const char *s);
     
 

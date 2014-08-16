@@ -55,7 +55,8 @@ static int inPrintWarnings = 0;
 static int immediateWarning = 0;
 
 static void try_jump_to_restart(void);
-static void jump_to_top_ex(Rboolean, Rboolean, Rboolean, Rboolean, Rboolean);
+static R_NORETURN void jump_to_top_ex
+  (Rboolean, Rboolean, Rboolean, Rboolean, Rboolean);
 static void signalInterrupt(void);
 static char * R_ConciseTraceback(SEXP call, int skip);
 
@@ -564,7 +565,8 @@ static void restore_inError(void *data)
     R_Expressions = R_Expressions_keep;
 }
 
-static void verrorcall_dflt(SEXP call, const char *format, va_list ap)
+static R_NORETURN void verrorcall_dflt 
+    (SEXP call, const char *format, va_list ap)
 {
     RCNTXT cntxt;
     const char *dcall;
@@ -682,22 +684,17 @@ static void verrorcall_dflt(SEXP call, const char *format, va_list ap)
     }
 
     jump_to_top_ex(TRUE, TRUE, TRUE, TRUE, FALSE);
-
-    /* not reached */
-    endcontext(&cntxt);
-    inError = oldInError;
 }
 
-static void errorcall_dflt(SEXP call, const char *format,...)
+static R_NORETURN void errorcall_dflt(SEXP call, const char *format,...)
 {
     va_list(ap);
 
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
-    va_end(ap);
 }
 
-void errorcall(SEXP call, const char *format,...)
+R_NORETURN void errorcall(SEXP call, const char *format,...)
 {
     va_list(ap);
 
@@ -717,7 +714,6 @@ void errorcall(SEXP call, const char *format,...)
 
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
-    va_end(ap);
 }
 
 static SEXP do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -731,7 +727,7 @@ static SEXP do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
     return res;
 }
 
-void error(const char *format, ...)
+R_NORETURN void error(const char *format, ...)
 {
     char buf[BUFSIZE];
     RCNTXT *c = R_GlobalContext;
@@ -1099,7 +1095,8 @@ static SEXP findCall(void)
 
 static SEXP do_stop(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-/* error(.) : really doesn't return anything; but all do_foo() must be SEXP */
+ /* really doesn't return anything; but all do_foo() must be SEXP */
+
     SEXP c_call;
 
     if(asLogical(CAR(args))) /* find context -> "Error in ..:" */
@@ -1117,7 +1114,6 @@ static SEXP do_stop(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else
       errorcall(c_call, "");
-    /* never called: */return c_call;
 }
 
 static SEXP do_warning(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1150,14 +1146,13 @@ static SEXP do_warning(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* Error recovery for incorrect argument count error. */
-attribute_hidden
-void WrongArgCount(const char *s)
+R_NORETURN attribute_hidden void WrongArgCount(const char *s)
 {
     error(_("incorrect number of arguments to \"%s\""), s);
 }
 
 
-void UNIMPLEMENTED(const char *s)
+R_NORETURN void UNIMPLEMENTED(const char *s)
 {
     error(_("unimplemented feature in %s"), s);
 }
@@ -1191,7 +1186,7 @@ WarningDB[] = {
 };
 
 
-void ErrorMessage(SEXP call, int which_error, ...)
+R_NORETURN void ErrorMessage(SEXP call, int which_error, ...)
 {
     int i;
     char buf[BUFSIZE];
@@ -1729,7 +1724,6 @@ static SEXP do_dfltStop(SEXP call, SEXP op, SEXP args, SEXP rho)
     ecall = CADR(args);
 
     errorcall_dflt(ecall, "%s", msg);
-    return R_NilValue; /* not reached */
 }
 
 
