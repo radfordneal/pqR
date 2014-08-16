@@ -251,9 +251,9 @@ static SEXP do_optim(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < npar; i++)
 	dpar[i] = REAL(par)[i] / (OS->parscale[i]);
     PROTECT(res = allocVector(VECSXP, 5));
-    PROTECT(value = allocVector(REALSXP, 1));
+    PROTECT(value = allocVector1REAL());
     PROTECT(counts = allocVector(INTSXP, 2));
-    PROTECT(conv = allocVector(INTSXP, 1));
+    PROTECT(conv = allocVector1INT());
     abstol = asReal(getListElement(options, "abstol"));
     reltol = asReal(getListElement(options, "reltol"));
     maxit = asInteger(getListElement(options, "maxit"));

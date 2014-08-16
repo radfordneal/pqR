@@ -68,7 +68,7 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   protection of its args internally), but not both of them,
 	   since the computation of one may destroy the other */
 
-	PROTECT(ind = allocVector(INTSXP, 1));
+	PROTECT(ind = allocVector1INT());
 	if(isVectorAtomic(XX))
 	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
 				CONS(XX, CONS(ind, R_NilValue))));
@@ -150,7 +150,7 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
        since the computation of one may destroy the other.
     */
 
-    PROTECT(ind = allocVector(INTSXP, 1));
+    PROTECT(ind = allocVector1INT());
     if(isVectorAtomic(XX))
         PROTECT(tmp = LCONS(R_Bracket2Symbol,
                             CONS(XX, CONS(ind, R_NilValue))));
