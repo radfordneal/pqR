@@ -255,6 +255,11 @@
       installed version is already going to be used from .libPaths().
       (PR#14866)
 \item From R-2.15.1:
+      \command{R CMD check} with \env{_R_CHECK_NO_RECOMMENDED_}
+      set to a true value (as done by the \command{--as-cran} option)
+      could issue false errors if there was an indirect dependency
+      on a recommended package.
+\item From R-2.15.1:
       getMethod(f, sig) produced an incorrect error message in some
       cases when f was not a string).
 \item From R-2.15.2:
