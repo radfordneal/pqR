@@ -2792,9 +2792,7 @@ SEXP ScalarIntegerMaybeConst(int x)
             return R_ScalarIntegerNA;
     }
 
-    SEXP ans = allocVector1INT();
-    INTEGER(ans)[0] = x;
-    return ans;
+    return ScalarInteger(x);
 }
 
 SEXP ScalarRealMaybeConst(double x)
@@ -2813,33 +2811,22 @@ SEXP ScalarRealMaybeConst(double x)
             return R_ScalarRealNA;
     }
 
-    SEXP ans = allocVector1REAL();
-    REAL(ans)[0] = x;
-    return ans;
+    return ScalarReal(x);
 }
 
 SEXP ScalarComplexMaybeConst(Rcomplex x)
 {
-    SEXP ans = allocVector(CPLXSXP, 1);
-    COMPLEX(ans)[0] = x;
-    return ans;
+    return ScalarComplex(x);
 }
 
 SEXP ScalarStringMaybeConst(SEXP x)
 {
-    SEXP ans;
-    PROTECT(x);
-    ans = allocVector(STRSXP, 1);
-    SET_STRING_ELT(ans, 0, x);
-    UNPROTECT(1);
-    return ans;
+    return ScalarString(x);
 }
 
 SEXP ScalarRawMaybeConst(Rbyte x)
 {
-    SEXP ans = allocVector1RAW();
-    RAW(ans)[0] = x;
-    return ans;
+    return ScalarRaw(x);
 }
 
 /* Allocate a vector object (and also list-like objects).
