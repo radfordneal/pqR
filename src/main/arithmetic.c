@@ -44,6 +44,14 @@
 #define R_MSG_NA	_("NaNs produced")
 #define R_MSG_NONNUM_MATH _("Non-numeric argument to mathematical function")
 
+/* Macro to do attribute duplication only if they're not the same already.
+   Using parens in (DUPLICATE_ATTRIB) gets us the function defined in memory.c, 
+   not this macro. */
+
+#define DUPLICATE_ATTRIB(_to_,_from_) do { \
+    if (ATTRIB((_to_))!=ATTRIB((_from_))) (DUPLICATE_ATTRIB)((_to_),(_from_)) \
+} while (0)
+
 #include <Rmath.h>
 extern double Rf_gamma_cody(double);
 
@@ -1372,9 +1380,6 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
             PROTECT(sy = sa);
             REAL(sy)[0] = res;
         }
-        else if (ATTRIB(sa) == R_NilValue) {
-            PROTECT(sy = ScalarRealMaybeConst(res));
-        }
         else {
             PROTECT(sy = ScalarReal(res));
             DUPLICATE_ATTRIB(sy, sa);
@@ -1596,8 +1601,8 @@ static void setup_Math2
         if (ISNAN(y[i])) naflag = 1; \
     } \
     if (naflag) warning(R_MSG_NA); \
-    if (n == na)  DUPLICATE_ATTRIB(sy, sa); \
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
+    SEXP frm = n==na ? sa : sb; \
+    DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(3); \
 } while (0)
 
@@ -1951,9 +1956,8 @@ static void setup_Math3
         if (ISNAN(y[i])) naflag = 1; \
     } \
     if (naflag) warning(R_MSG_NA); \
-    if (n == na) DUPLICATE_ATTRIB(sy, sa); \
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
-    else if (n == nc) DUPLICATE_ATTRIB(sy, sc); \
+    SEXP frm = n==na ? sa : n==nb ? sb : sc; \
+    DUPLICATE_ATTRIB(sy, from); \
     UNPROTECT(4); \
 } while (0)
 
@@ -2160,10 +2164,8 @@ static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy,
         if (ISNAN(y[i])) naflag = 1; \
     } \
     if (naflag) warning(R_MSG_NA); \
-    if (n == na) DUPLICATE_ATTRIB(sy, sa); \
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb); \
-    else if (n == nc) DUPLICATE_ATTRIB(sy, sc); \
-    else if (n == nd) DUPLICATE_ATTRIB(sy, sd); \
+    SEXP frm = n==na ? sa : n==nb ? sb : n==nc ? sc : sd; \
+    DUPLICATE_ATTRIB(sy, from); \
     UNPROTECT(5); \
 } while (0)
 
@@ -2267,7 +2269,6 @@ SEXP do_math4(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     return op;			/* never used; to keep -Wall happy */
 }
-
 
 #ifdef WHEN_MATH5_IS_THERE/* as in ./arithmetic.h */
 
@@ -2345,11 +2346,8 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
     if(naflag)					\
 	warning(R_MSG_NA);		\
 						\
-    if (n == na) DUPLICATE_ATTRIB(sy, sa);	\
-    else if (n == nb) DUPLICATE_ATTRIB(sy, sb);	\
-    else if (n == nc) DUPLICATE_ATTRIB(sy, sc);	\
-    else if (n == nd) DUPLICATE_ATTRIB(sy, sd);	\
-    else if (n == ne) DUPLICATE_ATTRIB(sy, se);	\
+    SEXP frm = n==na ? sa : n==nb ? sb : n==nc ? sc : n==nd ? sd : se; \
+    DUPLICATE_ATTRIB(sy, from); \
     UNPROTECT(6)
 
     FINISH_Math5;
