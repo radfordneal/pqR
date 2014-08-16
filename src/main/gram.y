@@ -1632,18 +1632,18 @@ static int KeywordLookup(const char *s)
 			PROTECT(yylval = ScalarLogicalMaybeConst(0));
 			break;
 		    case 4:
-			PROTECT(yylval = allocVector(REALSXP, 1));
+			PROTECT(yylval = allocVector1REAL());
 			REAL(yylval)[0] = R_PosInf;
 			break;
 		    case 5:
-			PROTECT(yylval = allocVector(REALSXP, 1));
+			PROTECT(yylval = allocVector1REAL());
 			REAL(yylval)[0] = R_NaN;
 			break;
 		    case 6:
                         PROTECT(yylval = ScalarIntegerMaybeConst(NA_INTEGER));
 			break;
 		    case 7:
-			PROTECT(yylval = allocVector(REALSXP, 1));
+			PROTECT(yylval = allocVector1REAL());
 			REAL(yylval)[0] = NA_REAL;
 			break;
 		    case 8:
@@ -1708,14 +1708,14 @@ static SEXP mkComplex(const char *s)
 
 SEXP mkTrue(void)
 {
-    SEXP s = allocVector(LGLSXP, 1);
+    SEXP s = allocVector1LGL();
     LOGICAL(s)[0] = 1;
     return s;
 }
 
 SEXP mkFalse(void)
 {
-    SEXP s = allocVector(LGLSXP, 1);
+    SEXP s = allocVector1LGL();
     LOGICAL(s)[0] = 0;
     return s;
 }
