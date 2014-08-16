@@ -49,6 +49,10 @@
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
 \item From R-2.15.1:
+      \code{pmin()} and \code{pmax())} now also work when one of the inputs 
+      is of length zero and others are not, returning a zero-length vector,
+      analogously to, say, \code{+}.
+\item From R-2.15.1:
       .C() gains some protection against the misuse of character vector
       arguments.  (An all too common error is to pass character(N),
       which initializes the elements to "", and then attempt to edit
