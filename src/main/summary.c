@@ -330,7 +330,7 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
     case LGLSXP:
     case INTSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector(REALSXP, 1));
+        PROTECT(ans = allocVector1REAL());
         smi = 0;
         for (i = 0; i < n; i++) {
             if(INTEGER(x)[i] == NA_INTEGER) {
@@ -344,7 +344,7 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
         break;
     case REALSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector(REALSXP, 1));
+        PROTECT(ans = allocVector1REAL());
         s = 0;
         for (i = 0; i < n; i++) 
             s += REAL(x)[i];

@@ -1353,7 +1353,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
 	    int len = length(ans);
 
 	    if(!drop || len > 1) {
-		PROTECT(attr = allocVector(INTSXP, 1));
+		PROTECT(attr = allocVector1INT());
 		INTEGER(attr)[0] = length(ans);
 		setAttrib(ans, R_DimSymbol, attr);
 		UNPROTECT(1);

@@ -119,8 +119,8 @@ static SEXP do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     info.R_env = rho;
     PROTECT(info.R_fcall = lang2(v, R_NilValue));
-    PROTECT(res = allocVector(REALSXP, 1));
-    SETCADR(info.R_fcall, allocVector(REALSXP, 1));
+    PROTECT(res = allocVector1REAL());
+    SETCADR(info.R_fcall, allocVector1REAL());
     REAL(res)[0] = Brent_fmin(xmin, xmax,
 			      (double (*)(double, void*)) fcn1, &info, tol);
     UNPROTECT(2);
@@ -213,7 +213,7 @@ static SEXP do_zeroin(SEXP call, SEXP op, SEXP args, SEXP rho)
 									\
     info.R_env = rho;							\
     PROTECT(info.R_fcall = lang2(v, R_NilValue)); /* the info used in fcn2() */	\
-    SETCADR(info.R_fcall, allocVector(REALSXP, 1));			\
+    SETCADR(info.R_fcall, allocVector1REAL());			\
     PROTECT(res = allocVector(REALSXP, 3))
 
     DO_ZEROIN_part_1;
@@ -772,13 +772,13 @@ static SEXP do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     SET_STRING_ELT(names, k, mkChar("code"));
-    SET_VECTOR_ELT(value, k, allocVector(INTSXP, 1));
+    SET_VECTOR_ELT(value, k, allocVector1INT());
     INTEGER(VECTOR_ELT(value, k))[0] = code;
     k++;
 
     /* added by Jim K Lindsey */
     SET_STRING_ELT(names, k, mkChar("iterations"));
-    SET_VECTOR_ELT(value, k, allocVector(INTSXP, 1));
+    SET_VECTOR_ELT(value, k, allocVector1INT());
     INTEGER(VECTOR_ELT(value, k))[0] = itncnt;
     k++;
 

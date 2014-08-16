@@ -1589,7 +1589,7 @@ R_addTaskCallback(SEXP f, SEXP data, SEXP useData, SEXP name)
     if(length(name))
 	tmpName = CHAR(STRING_ELT(name, 0));
 
-    PROTECT(index = allocVector(INTSXP, 1));
+    PROTECT(index = allocVector1INT());
     el = Rf_addTaskCallback(R_taskCallbackRoutine,  internalData,
 			    (void (*)(void*)) R_ReleaseObject, tmpName,
 			    INTEGER(index));

@@ -5388,7 +5388,7 @@ static SEXP do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_bcversion(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-  SEXP ans = allocVector(INTSXP, 1);
+  SEXP ans = allocVector1INT();
   INTEGER(ans)[0] = R_bcVersion;
   return ans;
 }
