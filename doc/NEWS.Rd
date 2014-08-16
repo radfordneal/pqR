@@ -49,6 +49,10 @@
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
 \item From R-2.15.1:
+      \code{pmin()} and \code{pmax())} now also work when one of the inputs 
+      is of length zero and others are not, returning a zero-length vector,
+      analogously to, say, \code{+}.
+\item From R-2.15.1:
       .C() gains some protection against the misuse of character vector
       arguments.  (An all too common error is to pass character(N),
       which initializes the elements to "", and then attempt to edit
@@ -251,11 +255,22 @@
       installed version is already going to be used from .libPaths().
       (PR#14866)
 \item From R-2.15.1:
+      \command{R CMD check} with \env{_R_CHECK_NO_RECOMMENDED_}
+      set to a true value (as done by the \command{--as-cran} option)
+      could issue false errors if there was an indirect dependency
+      on a recommended package.
+\item From R-2.15.1:
       getMethod(f, sig) produced an incorrect error message in some
       cases when f was not a string).
 \item From R-2.15.2:
       In Windows, the GUI preferences for foreground color were 
       not always respected.  (Reported by Benjamin Wells.)
+\item From R-2.15.1:
+      The evaluator now keeps track of source references outside of
+      functions, e.g. when source() executes a script.
+\item From R-2.15.1:
+      The value returned by tools::psnice() for invalid pid values was
+      not always NA as documented.
 }}
 }
 
