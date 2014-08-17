@@ -957,7 +957,7 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 	return R_NilValue;
 }
 
-static SEXP printcall (SEXP call, SEXP rho)
+static void printcall (SEXP call, SEXP rho)
 {
     int old_bl = R_BrowseLines;
     int blines = asInteger(GetOption1(install("deparse.max.lines")));
