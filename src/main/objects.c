@@ -214,18 +214,12 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 {
     SEXP val;
 
-    if (TYPEOF(callrho) == NILSXP) {
-	error(_("use of NULL environment is defunct"));
-	callrho = R_BaseEnv;
-    } else
-	if (TYPEOF(callrho) != ENVSXP)
-	    error(_("bad generic call environment"));
-    if (TYPEOF(defrho) == NILSXP) {
+    if (TYPEOF(callrho) != ENVSXP) {
+        if (callrho == R_NilValue)
 	    error(_("use of NULL environment is defunct"));
-	    defrho = R_BaseEnv;
-    } else
-	if (TYPEOF(defrho) != ENVSXP)
-	    error(_("bad generic definition environment"));
+        else 
+            error(_("bad generic call environment"));
+    }
     if (defrho == R_BaseEnv)
 	defrho = R_BaseNamespace;
 
@@ -233,17 +227,18 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
     val = findFunMethod (method, callrho);
     if (isFunction(val))
 	return val;
-    else {
-	/* We assume here that no one registered a non-function */
-	SEXP table = findVarInFrame3 (defrho, R_S3MethodsTable, TRUE);
-	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
-	if (TYPEOF(table) == ENVSXP) {
-	    val = findVarInFrame3(table, method, TRUE);
-	    if (TYPEOF(val) == PROMSXP) val = eval(val, rho);
-	    if (val != R_UnboundValue) return val;
-	}
-	return R_UnboundValue;
+
+    SEXP table = findVarInFrame3 (defrho, R_S3MethodsTable, TRUE);
+    if (TYPEOF(table) == PROMSXP)
+        table = forcePromise(table);
+    if (TYPEOF(table) == ENVSXP) {
+        val = findVarInFrame3(table, method, TRUE);
+        if (TYPEOF(val) == PROMSXP) 
+            val = forcePromise(val);
+        if (isFunction(val))
+            return val;
     }
+    return R_UnboundValue;
 }
 
 #ifdef UNUSED
@@ -313,7 +308,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    error(_("class name too long in '%s'"), generic);
 	method = install(buf);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
-	if (isFunction(sxp)) {
+	if (sxp != R_UnboundValue) {
 	    if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
             PROTECT(method);
@@ -335,7 +330,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	error(_("class name too long in '%s'"), generic);
     method = install(buf);
     sxp = R_LookupMethod(method, rho, callrho, defrho);
-    if (isFunction(sxp)) {
+    if (sxp != R_UnboundValue) {
         PROTECT(method);
         setcl = R_NilValue;
         goto found;
@@ -569,7 +564,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	s = CAR(cptr->call);
     else
 	s = R_LookupMethod(CAR(cptr->call), env, callenv, defenv);
-    if (TYPEOF(s) == SYMSXP && s == R_UnboundValue)
+    if (s == R_UnboundValue)
 	error(_("no calling generic was found: was a method called directly?"));
     if (TYPEOF(s) != CLOSXP){ /* R_LookupMethod looked for a function */
 	errorcall(R_NilValue,
@@ -756,13 +751,14 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
         if (!copy_3_strings (buf, sizeof buf, sg, ".", sk))
 	    error(_("class name too long in '%s'"), sg);
 	nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
-	if (isFunction(nextfun)) break;
+	if (nextfun != R_UnboundValue) 
+            break;
 	if (group != R_UnboundValue) {
 	    /* if not Generic.foo, look for Group.foo */
             if (!copy_3_strings (buf, sizeof buf, sb, ".", sk))
 		error(_("class name too long in '%s'"), sb);
 	    nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
-	    if(isFunction(nextfun))
+	    if(nextfun != R_UnboundValue)
 		break;
 	}
 	if (isFunction(nextfun))
@@ -776,11 +772,11 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	   provided it is primitive or a wrapper for a .Internal
 	   function of the same name.
 	 */
-	if (!isFunction(nextfun)) {
+	if (nextfun == R_UnboundValue) {
 	    t = install(sg);
 	    nextfun = findVar(t, env);
 	    if (TYPEOF(nextfun) == PROMSXP)
-		nextfun = eval(nextfun, env);
+		nextfun = forcePromise(nextfun);
 	    if (!isFunction(nextfun))
 		error(_("no method to invoke"));
 	    if (TYPEOF(nextfun) == CLOSXP) {
