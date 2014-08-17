@@ -277,7 +277,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
     SEXP klass, method, sxp, setcl, s, op;
-    int i, j, nclass;
+    int i, nclass;
     RCNTXT *cptr;
     char buf[512];
 
@@ -318,7 +318,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
             PROTECT(method);
 	    if (i > 0) {
-	        int ii;
 		setcl = allocVector (STRSXP, nclass - i);
                 copy_string_elements (setcl, 0, klass, i, nclass-i);
 		setAttrib (setcl, R_previousSymbol, klass);

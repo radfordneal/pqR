@@ -1338,7 +1338,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     return vl;
 }
 
-static void asLogicalNoNA_error (SEXP s, SEXP call)
+static R_NORETURN void asLogicalNoNA_error (SEXP s, SEXP call)
 {
     errorcall (call, 
       length(s) == 0 ? _("argument is of length zero") :

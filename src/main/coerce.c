@@ -1180,7 +1180,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 
 coerce_error:
     error(_("cannot coerce type '%s' to vector of type '%s'"), 
-             type2char(TYPEOF(v)), type2char(type))
+             type2char(TYPEOF(v)), type2char(type));
 }
 
 
@@ -1270,8 +1270,9 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
 	SET_VECTOR_ELT(v, 0, u);
 	return v;
     }
-    else errorcall(call, _(COERCE_ERROR_STRING),
-		   type2char(TYPEOF(u)), type2char(type));
+    else 
+        errorcall(call, _("cannot coerce type '%s' to vector of type '%s'"),
+                             type2char(TYPEOF(u)), type2char(type));
 }
 
 /* used in attrib.c, eval.c and unique.c */

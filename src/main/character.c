@@ -230,8 +230,8 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 static int find_substr (const char *str, size_t slen, int ienc, 
                         int sa, int so, size_t *beginning, size_t *end)
 {
-    int i, n; 
     size_t j;
+    int i;
 
     *beginning = *end = slen;
 

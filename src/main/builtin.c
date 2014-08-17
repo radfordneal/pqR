@@ -239,7 +239,7 @@ static SEXP do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (TYPEOF(fun) == BUILTINSXP || TYPEOF(fun) == SPECIALSXP) {
         char *nm = PRIMNAME(fun);
-        SEXP env, nmi, s;
+        SEXP env, nmi;
         PROTECT_INDEX xp;
         PROTECT_WITH_INDEX(
           env = findVarInFrame3(R_BaseEnv, install(".ArgsEnv"), TRUE), &xp);

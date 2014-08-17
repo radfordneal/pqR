@@ -2706,7 +2706,7 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind, dotsv;
+    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind;
     int i, k, k2;
     int /* boolean */ all, useNms, no_dots;
 

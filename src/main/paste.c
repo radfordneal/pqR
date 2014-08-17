@@ -62,7 +62,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     const void *vmax0, *vmax;
     char *buf;
 
-    Rboolean sepASCII=TRUE, sepUTF8=FALSE, sepBytes=FALSE, sepKnown=FALSE,
+    Rboolean sepUTF8=FALSE, sepBytes=FALSE, sepKnown=FALSE,
              use_sep = (PRIMVAL(op) == 0);
 
     checkArity(op, args);
@@ -82,7 +82,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	sep = STRING_ELT(sep, 0);
 	csep = translateChar(sep);
 	u_sepw = sepw = strlen(csep);
-	sepASCII = strIsASCII(csep);
 	sepKnown = ENC_KNOWN(sep) > 0;
 	sepUTF8 = IS_UTF8(sep);
 	sepBytes = IS_BYTES(sep);

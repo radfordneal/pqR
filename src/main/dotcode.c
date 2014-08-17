@@ -67,8 +67,7 @@ struct special_args { int naok, dup, helper; SEXP encoding, pkg; };
 static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 { 
     int naokused=0, dupused=0, helperused=0, encused=0, pkgused=0, nargs=0;
-    const char *p;
-    SEXP s, t, prev;
+    SEXP s, prev;
 
     if (args == R_NilValue)
         errorcall(call, _("'.NAME' is missing"));
@@ -2311,7 +2310,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 len = strlen(ss) + 1;
                 if (len < 256) len = 256;
                 SEXP st = allocVector(RAWSXP,len);
-		strcpy(RAW(st), ss);
+		strcpy((char*)RAW(st), ss);
                 SET_ATTRIB_TO_ANYTHING(st,st); /* marks it as pFortran string */
                 SET_VECTOR_ELT(ans, na, st);
 	    } 

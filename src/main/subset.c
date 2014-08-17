@@ -967,7 +967,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
  */
 static SEXP ExtractArg(SEXP *args_ptr, SEXP arg_sym)
 {
-    SEXP result = NULL;
     SEXP prev_arg = NULL;
     SEXP arg;
 
@@ -1073,6 +1072,7 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
         case RAWSXP:  return ScalarRawMaybeConst (RAW(x)[ix]);
         case STRSXP:  return ScalarStringMaybeConst (STRING_ELT(x,ix));
         case CPLXSXP: return ScalarComplexMaybeConst (COMPLEX(x)[ix]);
+        default: abort();
         }
     }
     else { /* ix < 0 */
@@ -1115,6 +1115,7 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
             if (ex!=0) memcpy(COMPLEX(r)+ix, COMPLEX(x)+ix+1, 
                                                       ex * sizeof *COMPLEX(r));
             break;
+        default: abort();
         }
 
         UNPROTECT(1);
@@ -1161,6 +1162,7 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
     case RAWSXP:  return ScalarRawMaybeConst (RAW(x)[e]);
     case STRSXP:  return ScalarStringMaybeConst (STRING_ELT(x,e));
     case CPLXSXP: return ScalarComplexMaybeConst (COMPLEX(x)[e]);
+    default: abort();
     }
 }
 
