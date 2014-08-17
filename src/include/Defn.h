@@ -1004,10 +1004,10 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define allocCharsxp		Rf_allocCharsxp
+# define alloc_or_reuse		Rf_alloc_or_reuse
 # define arg_missing_error	Rf_arg_missing_error
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
-# define can_save_alloc		Rf_can_save_alloc
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
 # define check1arg_error	Rf_check1arg_error
@@ -1213,6 +1213,7 @@ SEXP Rf_EnsureString(SEXP);
 /* Other Internally Used Functions */
 
 SEXP Rf_allocCharsxp(R_len_t);
+SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 void check1arg(SEXP, SEXP, const char *);
 void check1arg_error(SEXP, SEXP, const char *);
@@ -1221,7 +1222,6 @@ void CheckFormals(SEXP);
 void R_check_locale(void);
 void check_stack_balance(SEXP op, int save);
 void CleanEd(void);
-SEXP can_save_alloc (SEXP, SEXP, SEXPTYPE);
 void copyListMatrix(SEXP, SEXP, Rboolean);
 void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);

@@ -1001,18 +1001,14 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
             errorcall(call,_("unimplemented complex operation"));
         COERCE_IF_NEEDED(x, CPLXSXP, xpi);
         COERCE_IF_NEEDED(y, CPLXSXP, ypi);
-        ans = can_save_alloc (x, y, CPLXSXP);
-        if (ans==R_NilValue)
-            ans = allocVector(CPLXSXP, n);
+        ans = alloc_or_reuse (x, y, CPLXSXP, n);
         task = task_complex_arithmetic;
         flags = 0;  /* Not bothering with pipelining yet. */
     }
     else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
          /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
             and assumes INT and LOGICAL are really the same. */
-        ans = can_save_alloc (x, y, REALSXP);
-        if (ans==R_NilValue)
-            ans = allocVector(REALSXP, n);
+        ans = alloc_or_reuse (x, y, REALSXP, n);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
         if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
@@ -1034,11 +1030,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
            this won't be true if they aren't really the same */
         if (oper == DIVOP || oper == POWOP)
             ans = allocVector(REALSXP, n);
-        else {
-            ans = can_save_alloc (x, y, INTSXP);
-            if (ans==R_NilValue) 
-                ans = allocVector(INTSXP, n);
-        }
+        else
+            ans = alloc_or_reuse (x, y, INTSXP, n);
         task = task_integer_arithmetic;
 
        /* Only ^, /, and %/% can be done in helpers at present - others must be
