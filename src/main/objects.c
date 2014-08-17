@@ -108,7 +108,7 @@ static SEXP GetObject(RCNTXT *cptr)
     UNPROTECT(2);
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE_PENDING_OK(s) == R_UnboundValue)
-	    s = evalv (s, R_BaseEnv, VARIANT_PENDING_OK);
+	    s = forcePromisePendingOK(s);
 	else
 	    s = PRVALUE_PENDING_OK(s);
     }
@@ -306,34 +306,35 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         const char *ss = translateChar(STRING_ELT(klass, i));
         if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
 	    error(_("class name too long in '%s'"), generic);
-	method = install(buf);
-	sxp = R_LookupMethod(method, rho, callrho, defrho);
-	if (sxp != R_UnboundValue) {
-	    if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
-		continue; /* kludge because sort.list is not a method */
-            PROTECT(method);
-	    if (i > 0) {
-	        int ii;
-		setcl = allocVector (STRSXP, nclass - i);
-                copy_string_elements (setcl, 0, klass, i, nclass-i);
-		setAttrib (setcl, R_previousSymbol, klass);
-		UNPROTECT(1); /* klass */
-                PROTECT(setcl);
-	    } 
-            else
-		setcl = klass; /* protected */
-            goto found;
-	}
+	if ((method = installed_already(buf)) != NULL) {
+            sxp = R_LookupMethod(method, rho, callrho, defrho);
+            if (sxp != R_UnboundValue) {
+                if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
+                    continue; /* kludge because sort.list is not a method */
+                PROTECT(method);
+                if (i > 0) {
+                    setcl = allocVector (STRSXP, nclass - i);
+                    copy_string_elements (setcl, 0, klass, i, nclass-i);
+                    setAttrib (setcl, R_previousSymbol, klass);
+                    UNPROTECT(1); /* klass */
+                    PROTECT(setcl);
+                } 
+                else
+                    setcl = klass; /* protected */
+                goto found;
+            }
+        }
     }
 
     if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
 	error(_("class name too long in '%s'"), generic);
-    method = install(buf);
-    sxp = R_LookupMethod(method, rho, callrho, defrho);
-    if (sxp != R_UnboundValue) {
-        PROTECT(method);
-        setcl = R_NilValue;
-        goto found;
+    if ((method = installed_already(buf)) != NULL) {
+        sxp = R_LookupMethod(method, rho, callrho, defrho);
+        if (sxp != R_UnboundValue) {
+            PROTECT(method);
+            setcl = R_NilValue;
+            goto found;
+        }
     }
 
     UNPROTECT(2);
@@ -550,12 +551,12 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     callenv = findVarInFrame3(R_GlobalContext->sysparent,
 			      R_dot_GenericCallEnv, TRUE);
     if (TYPEOF(callenv) == PROMSXP)
-	callenv = eval(callenv, R_BaseEnv);
+	callenv = forcePromise(callenv);
     else if (callenv == R_UnboundValue)
-	    callenv = env;
+        callenv = env;
     defenv = findVarInFrame3(R_GlobalContext->sysparent,
 			     R_dot_GenericDefEnv, TRUE);
-    if (TYPEOF(defenv) == PROMSXP) defenv = eval(defenv, R_BaseEnv);
+    if (TYPEOF(defenv) == PROMSXP) defenv = forcePromise(defenv);
     else if (defenv == R_UnboundValue) defenv = R_GlobalEnv;
 
     /* set up the arglist */

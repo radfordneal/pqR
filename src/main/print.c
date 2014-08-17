@@ -652,7 +652,7 @@ static void PrintSpecial(SEXP s)
     PROTECT_WITH_INDEX(env = findVarInFrame3(R_BaseEnv,
 					     install(".ArgsEnv"), TRUE),
 		       &xp);
-    if (TYPEOF(env) == PROMSXP) REPROTECT(env = eval(env, R_BaseEnv), xp);
+    if (TYPEOF(env) == PROMSXP) REPROTECT(env = forcePromise(env), xp);
     s2 = findVarInFrame3(env, install(nm), TRUE);
     if(s2 == R_UnboundValue) {
 	REPROTECT(env = findVarInFrame3(R_BaseEnv,

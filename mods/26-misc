@@ -3,3 +3,7 @@ Miscellaneous changes.
 Replaced can_save_alloc with alloc_or_reuse.
 
 Clean up R_LookupMethod and its uses.
+
+Introduce and use installed_already.
+
+Convert some eval's to forcePromise's.
