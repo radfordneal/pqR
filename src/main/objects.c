@@ -313,6 +313,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
             PROTECT(method);
 	    if (i > 0) {
+	        int ii;
 		setcl = allocVector (STRSXP, nclass - i);
                 copy_string_elements (setcl, 0, klass, i, nclass-i);
 		setAttrib (setcl, R_previousSymbol, klass);
