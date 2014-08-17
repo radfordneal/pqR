@@ -1,0 +1,5 @@
+Miscellaneous changes.
+
+Replaced can_save_alloc with alloc_or_reuse.
+
+Clean up R_LookupMethod and its uses.
