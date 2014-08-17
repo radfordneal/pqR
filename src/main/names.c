@@ -667,6 +667,29 @@ SEXP install(const char *name)
     return (sym);
 }
 
+/* Lookup up a symbol, returning it if it exists already, but not creating
+   it if it doesn't already exist, returning C NULL instead. */
+
+SEXP installed_already(const char *name)
+{
+    SEXP sym;
+    int i, hashcode;
+
+    if (*name == 0) return NULL;
+
+    hashcode = R_Newhashpjw(name);
+    i = hashcode % HSIZE;
+
+    /* Check to see if the symbol is already present;  if it is, return it. */
+    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym)) {
+        const char *s = CHAR(PRINTNAME(CAR(sym)));
+	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
+            return (CAR(sym));
+    }
+
+    return NULL;
+}
+
 
 /*  do_internal - This is the code for .Internal(). */
 

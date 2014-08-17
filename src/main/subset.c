@@ -1488,20 +1488,24 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* split out ENVSXP for now */
     if( TYPEOF(x) == ENVSXP ) {
-      if( nsubs != 1 || !isString(CAR(subs)) || length(CAR(subs)) != 1 )
-	errorcall(call, _("wrong arguments for subsetting an environment"));
-      ans = findVarInFrame(x, install(translateChar(STRING_ELT(CAR(subs), 0))));
-      if( TYPEOF(ans) == PROMSXP ) {
-	    PROTECT(ans);
-	    ans = eval(ans, R_GlobalEnv);
-	    UNPROTECT(1);
-      }
-      if (ans == R_UnboundValue)
-	  ans = R_NilValue;
-      else if (NAMEDCNT_EQ_0(ans))
-	  SET_NAMEDCNT_1(ans);
-      UNPROTECT(2);
-      return(ans);
+        if (nsubs != 1 || !isString(CAR(subs)) || length(CAR(subs)) != 1)
+            errorcall(call, _("wrong arguments for subsetting an environment"));
+        SEXP sym = installed_already (translateChar (STRING_ELT(CAR(subs),0)));
+        if (sym == NULL)
+            ans = R_NilValue;
+        else {
+            ans = findVarInFrame (x, sym);
+            if (ans == R_UnboundValue)
+                ans = R_NilValue;
+            else {
+                if (TYPEOF(ans) == PROMSXP)
+                    ans = forcePromise(ans);
+                if (NAMEDCNT_EQ_0(ans))
+                    SET_NAMEDCNT_1(ans);
+            }
+        }
+        UNPROTECT(2);
+        return(ans);
     }
 
     /* back to the regular program */
@@ -1779,18 +1783,22 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
         return y;
     }
     else if( isEnvironment(x) ){
-        if (name==R_NilValue) 
-            name = install(translateChar(input));
+        if (name==R_NilValue) {
+            name = installed_already (translateChar(input));
+            if (name == NULL) {
+                UNPROTECT(1);
+                return R_NilValue;
+            }
+        }
 	y = findVarInFrame (x, name);
-	if( TYPEOF(y) == PROMSXP ) {
-	    PROTECT(y);
-	    y = eval(y, R_GlobalEnv);
-	    UNPROTECT(1);
-	}
         if (y == R_UnboundValue)
             y = R_NilValue;
-        else if (NAMEDCNT_EQ_0(y))
-            SET_NAMEDCNT_1(y);
+	else {
+            if (TYPEOF(y) == PROMSXP)
+                y = forcePromise(y);
+            if (NAMEDCNT_EQ_0(y))
+                SET_NAMEDCNT_1(y);
+        }
         UNPROTECT(1);
         return y;
     }

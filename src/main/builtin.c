@@ -205,7 +205,7 @@ static SEXP do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 						 install(".ArgsEnv"), TRUE),
 			   &xp);
 
-	if (TYPEOF(env) == PROMSXP) REPROTECT(env = eval(env, R_BaseEnv), xp);
+	if (TYPEOF(env) == PROMSXP) REPROTECT(env = forcePromise(env), xp);
 	PROTECT(s2 = findVarInFrame3(env, install(nm), TRUE));
 	if(s2 != R_UnboundValue) {
 	    s = duplicate(s2);
@@ -216,7 +216,7 @@ static SEXP do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNPROTECT(1); /* s2 */
 	REPROTECT(env = findVarInFrame3(R_BaseEnv, install(".GenericArgsEnv"),
 					TRUE), xp);
-	if (TYPEOF(env) == PROMSXP) REPROTECT(env = eval(env, R_BaseEnv), xp);
+	if (TYPEOF(env) == PROMSXP) REPROTECT(env = forcePromise(env), xp);
 	PROTECT(s2 = findVarInFrame3(env, install(nm), TRUE));
 	if(s2 != R_UnboundValue) {
 	    s = allocSExp(CLOSXP);
@@ -243,14 +243,14 @@ static SEXP do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
         PROTECT_INDEX xp;
         PROTECT_WITH_INDEX(
           env = findVarInFrame3(R_BaseEnv, install(".ArgsEnv"), TRUE), &xp);
-        if (TYPEOF(env)==PROMSXP) REPROTECT(env = eval(env,R_BaseEnv), xp);
+        if (TYPEOF(env)==PROMSXP) REPROTECT(env = forcePromise(env), xp);
         PROTECT(nmi = install(nm));
         fun = findVarInFrame3(env, nmi, TRUE);
         if (fun == R_UnboundValue) {
             REPROTECT(
               env = findVarInFrame3(R_BaseEnv,install(".GenericArgsEnv"), TRUE),
               xp);
-            if (TYPEOF(env)==PROMSXP) REPROTECT(env = eval(env,R_BaseEnv), xp);
+            if (TYPEOF(env)==PROMSXP) REPROTECT(env = forcePromise(env), xp);
             fun = findVarInFrame3(env, nmi, TRUE);
         }
         UNPROTECT(2);
