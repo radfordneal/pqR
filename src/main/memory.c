@@ -4512,17 +4512,20 @@ R_FreeStringBufferL(R_StringBuffer *buf)
     }
 }
 
-/* See if space for an operand can be used for the result too.  Assumes
-   independent element-by-element computation.  Returns the operand that
-   can be reused, or R_NilValue if neither can be reused. */
+/* Allocate space for the result of an operation, or reuse the space for
+   one of its operands, if it has NAMEDCNT of zero.  Assumes independent 
+   element-by-element computation.  Attributes are assumed to be taken from 
+   the operands, with the first operand's attributes taking precedence.  The 
+   length of the result is assumed to be the maximum of the lengths of the 
+   operands (unless the result length is zero). */
 
-SEXP attribute_hidden can_save_alloc (SEXP s1, SEXP s2, SEXPTYPE typ)
+SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n)
 {
+    if (n == 0)  /* result may not have length max(n1,n2) */
+        return allocVector (typ, 0);
+
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
-
-    if (n1==0 || n2==0)  
-        return R_NilValue;  /* since result may not have length max(n1,n2) */
 
     /* Try to use space for 2nd arg if both same length, so 1st argument's
        attributes will then take precedence when copied. */
@@ -4548,7 +4551,7 @@ SEXP attribute_hidden can_save_alloc (SEXP s1, SEXP s2, SEXPTYPE typ)
             return s1;
     }
 
-    return R_NilValue;
+    return allocVector (typ, n);
 }
 
 

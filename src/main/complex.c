@@ -206,11 +206,7 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
     n = (n1 > n2) ? n1 : n2;
 
-    ans = can_save_alloc (s1, s2, CPLXSXP);
-    if (ans==R_NilValue)
-        ans = allocVector(CPLXSXP, n);
-
-    PROTECT(ans);
+    PROTECT(ans = alloc_or_reuse (s1, s2, CPLXSXP, n));
 
     switch (code) {
     case PLUSOP:

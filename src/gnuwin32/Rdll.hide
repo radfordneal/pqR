@@ -480,6 +480,7 @@
  _pcre_was_newline
  _pcre_xclass
  _vsnprintf
+ alloc_or_reuse
  any_duplicated
  any_duplicated3
  applyGUI
