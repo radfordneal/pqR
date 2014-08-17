@@ -67,8 +67,7 @@ struct special_args { int naok, dup, helper; SEXP encoding, pkg; };
 static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 { 
     int naokused=0, dupused=0, helperused=0, encused=0, pkgused=0, nargs=0;
-    const char *p;
-    SEXP s, t, prev;
+    SEXP s, prev;
 
     if (args == R_NilValue)
         errorcall(call, _("'.NAME' is missing"));
@@ -489,7 +488,6 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		      nargs, symbol.symbol.call->numArgs, buf);
     }
 
-    retval = R_NilValue;	/* -Wall */
     fun = (VarFun) ofun;
     switch (nargs) {
     case 0:
@@ -2312,7 +2310,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 len = strlen(ss) + 1;
                 if (len < 256) len = 256;
                 SEXP st = allocVector(RAWSXP,len);
-		strcpy(RAW(st), ss);
+		strcpy((char*)RAW(st), ss);
                 SET_ATTRIB_TO_ANYTHING(st,st); /* marks it as pFortran string */
                 SET_VECTOR_ELT(ans, na, st);
 	    } 
@@ -2465,7 +2463,6 @@ static int string2type(char *s)
 	}
     }
     error(_("type \"%s\" not supported in interlanguage calls"), s);
-    return 1; /* for -Wall */
 }
 
 /* This is entirely legacy, with no known users (Mar 2012).
@@ -2539,7 +2536,6 @@ void call_R(char *func, long nargs, void **arguments, char **modes,
     PROTECT(pcall = call = allocList((int) nargs + 1));
     SET_TYPEOF(call, LANGSXP);
     SETCAR(pcall, (SEXP)func);
-    s = R_NilValue;		/* -Wall */
     for (i = 0 ; i < nargs ; i++) {
 	pcall = CDR(pcall);
 	type = string2type(modes[i]);

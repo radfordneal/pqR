@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -86,10 +86,11 @@ static SEXP getInlinePar(SEXP s, char *name)
 static SEXP FixupPch(SEXP pch, int dflt)
 {
     int i, n;
-    SEXP ans = R_NilValue;/* -Wall*/
+    SEXP ans;
 
     n = length(pch);
-    if (n == 0) return ans = ScalarInteger(dflt);
+    if (n == 0) 
+        return ScalarInteger(dflt);
 
     PROTECT(ans = allocVector(INTSXP, n));
     if (isList(pch)) {
@@ -166,7 +167,7 @@ SEXP FixupLwd(SEXP lwd, double dflt)
 static SEXP FixupFont(SEXP font, int dflt)
 {
     int i, k, n;
-    SEXP ans = R_NilValue;/* -Wall*/
+    SEXP ans;
     n = length(font);
     if (n == 0) {
 	ans = ScalarInteger(dflt);
@@ -612,7 +613,7 @@ static void GetAxisLimits(double left, double right, Rboolean logflag, double *l
 SEXP attribute_hidden labelformat(SEXP labels)
 {
     /* format(labels): i.e. from numbers to strings */
-    SEXP ans = R_NilValue;/* -Wall*/
+    SEXP ans;
     int i, n, w, d, e, wi, di, ei;
     const char *strp;
     n = length(labels);
@@ -2447,16 +2448,7 @@ static double ComputeAdjValue(double adj, int side, int las)
 static double ComputeAtValueFromAdj(double adj, int side, int outer,
 				    pGEDevDesc dd)
 {
-    double at = 0;		/* -Wall */
-    switch(side % 2) {
-    case 0:
-	at  = outer ? adj : yNPCtoUsr(adj, dd);
-	break;
-    case 1:
-	at = outer ? adj : xNPCtoUsr(adj, dd);
-	break;
-    }
-    return at;
+    return outer ? adj : side % 2 ? xNPCtoUsr(adj, dd) : yNPCtoUsr(adj, dd);
 }
 
 static double ComputeAtValue(double at, double adj,
@@ -3671,7 +3663,6 @@ static SEXP do_dend(SEXP call, SEXP op, SEXP args, SEXP env)
 
   badargs:
     error(_("invalid dendrogram input"));
-    return R_NilValue;/* never used; to keep -Wall happy */
 }
 
 static SEXP do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -3781,7 +3772,6 @@ static SEXP do_dendwindow(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
   badargs:
     error(_("invalid dendrogram input"));
-    return R_NilValue;/* never used; to keep -Wall happy */
 }
 
 

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -507,7 +507,7 @@ static void RemakeNextSEXP(FILE *fp, NodeInfo *node, int version, InputRoutines 
 {
     unsigned int j, idx, type;
     int len;
-    SEXP s = R_NilValue;	/* -Wall */
+    SEXP s;
 
     idx = m->InInteger(fp, d);
     type = FixupType(m->InInteger(fp, d), version);
@@ -1908,7 +1908,6 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
 	default:
 	    error(_("bad restore file magic number (file may be corrupted) -- no data loaded"));
 	}
-	return(R_NilValue);/* for -Wall */
     }
 }
 

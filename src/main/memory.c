@@ -2572,7 +2572,6 @@ char *R_alloc(size_t nelem, int eltsize)
 	else {
 	    error(_("cannot allocate memory block of size %0.1f Gb"),
 		  dsize/1024.0/1024.0/1024.0);
-	    s = R_NilValue; /* -Wall */
 	}
 #else
 	if(dsize > R_LEN_T_MAX) /* must be in the Gb range */
@@ -3019,11 +3018,11 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
 #endif
 
-    /* For EXPRSXP, VECSXP, and STRSXP, prevent disaster in the case */
-    /* that an uninitialised list vector or string vector is marked */
-    /* Direct assignment is OK since the node was just allocated and */
-    /* so is at least as new as R_NilValue and R_BlankString.  Strings
-    /* are initialized to R_BlankString. */
+    /* For EXPRSXP, VECSXP, and STRSXP, prevent disaster in the case
+       that an uninitialised list vector or string vector is marked
+       Direct assignment is OK since the node was just allocated and
+       so is at least as new as R_NilValue and R_BlankString.  Strings
+       are initialized to R_BlankString. */
 
     if (type == EXPRSXP || type == VECSXP) {
 	SEXP *data = STRING_PTR(s);

@@ -62,13 +62,13 @@ static R_len_t asVecSize(SEXP x)
 
 static SEXP do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP name = R_NilValue /* -Wall */, expr, eenv, aenv;
+    SEXP name, expr, eenv, aenv;
     checkArity(op, args);
 
     if (!isString(CAR(args)) || length(CAR(args)) == 0)
 	error(_("invalid first argument"));
-    else
-	name = install(translateChar(STRING_ELT(CAR(args), 0)));
+
+    name = install(translateChar(STRING_ELT(CAR(args), 0)));
     args = CDR(args);
     expr = CAR(args);
 
@@ -239,7 +239,7 @@ static SEXP do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (TYPEOF(fun) == BUILTINSXP || TYPEOF(fun) == SPECIALSXP) {
         char *nm = PRIMNAME(fun);
-        SEXP env, nmi, s;
+        SEXP env, nmi;
         PROTECT_INDEX xp;
         PROTECT_WITH_INDEX(
           env = findVarInFrame3(R_BaseEnv, install(".ArgsEnv"), TRUE), &xp);

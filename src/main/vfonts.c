@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-8 The R Development Core Team
@@ -70,10 +70,9 @@ double R_GE_VStrWidth(const char *s, cetype_t enc, const pGEcontext gc, pGEDevDe
 	res = (*routines.GEVStrWidth)(str, gc, dd);
 	VMAXSET(vmax);
 	return res;
-    } else {
+    } 
+    else
 	error(_("Hershey fonts cannot be loaded"));
-	return 0.0; /* -Wall */
-    }
 }
 
 attribute_hidden

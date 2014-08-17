@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
@@ -473,7 +473,6 @@ static SEXP do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 #else
     error(_("'Sys.setenv' is not available on this system"));
-    return R_NilValue; /* -Wall */
 #endif
 }
 

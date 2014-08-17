@@ -277,7 +277,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
     SEXP klass, method, sxp, setcl, s, op;
-    int i, j, nclass;
+    int i, nclass;
     RCNTXT *cptr;
     char buf[512];
 
@@ -318,7 +318,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
             PROTECT(method);
 	    if (i > 0) {
-	        int ii;
 		setcl = allocVector (STRSXP, nclass - i);
                 copy_string_elements (setcl, 0, klass, i, nclass-i);
 		setAttrib (setcl, R_previousSymbol, klass);
@@ -392,7 +391,7 @@ found: ;
 static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
                                     int variant)
 {
-    SEXP ans, generic = R_NilValue /* -Wall */, obj, val;
+    SEXP ans, generic, obj, val;
     SEXP callenv, defenv;
     SEXP argList;
     RCNTXT *cptr;
@@ -1220,9 +1219,10 @@ SEXP R_primitive_generic(SEXP op)
 SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
 			SEXP mlist)
 {
-    int offset = 0;
+    int offset;
     prim_methods_t code = NO_METHODS; /* -Wall */
     SEXP value;
+
     Rboolean errorcase = FALSE;
     switch(code_string[0]) {
     case 'c': /* clear */
@@ -1241,8 +1241,8 @@ SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
     }
     if(errorcase) {
 	error(_("invalid primitive methods code (\"%s\"): should be \"clear\", \"reset\", \"set\", or \"suppress\""), code_string);
-	return R_NilValue;
     }
+
     switch(TYPEOF(op)) {
     case BUILTINSXP: case SPECIALSXP:
 	offset = PRIMOFFSET(op);

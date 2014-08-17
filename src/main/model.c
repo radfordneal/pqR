@@ -1368,7 +1368,6 @@ static SEXP do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* a data frame.  Be deeply suspicious here! */
 
     nc = length(data);
-    nr = 0;			/* -Wall */
     if (nc > 0) {
 	nr = nrows(VECTOR_ELT(data, 0));
 	for (i = 0; i < nc; i++) {
@@ -1390,7 +1389,9 @@ static SEXP do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 		error(_("variable lengths differ (found for '%s')"),
 		      translateChar(STRING_ELT(names, i)));
 	}
-    } else nr = length(row_names);
+    }
+    else 
+        nr = length(row_names);
 
     PROTECT(data);
     PROTECT(subset);
@@ -1614,7 +1615,6 @@ static SEXP do_modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Note: the values of "nVar" and "nterms" are the REAL number of */
     /* variables in the model data frame and the number of model terms. */
 
-    nVar = nterms = 0;		/* -Wall */
     PROTECT(factors = duplicate(getAttrib(terms, install("factors"))));
     if (length(factors) == 0) {
 	/* if (intrcept == 0)

@@ -113,7 +113,6 @@ SEXP attribute_hidden complex_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     default:
 	errorcall(call, _("invalid complex unary operator"));
     }
-    return R_NilValue; /* -Wall */
 }
 
 static R_INLINE double complex R_cpow_n(double complex X, int k)

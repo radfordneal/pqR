@@ -360,7 +360,6 @@ SEXP attribute_hidden R_sysframe(int n, RCNTXT *cptr)
     else
 	errorcall(R_GlobalContext->call,
 		  _("not that many frames on the stack"));
-    return R_NilValue;	   /* just for -Wall */
 }
 
 
@@ -448,7 +447,6 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
 	return result;
     }
     errorcall(R_GlobalContext->call, _("not that many frames on the stack"));
-    return R_NilValue;	/* just for -Wall */
 }
 
 SEXP attribute_hidden R_sysfunction(int n, RCNTXT *cptr)
@@ -472,7 +470,6 @@ SEXP attribute_hidden R_sysfunction(int n, RCNTXT *cptr)
     if (n == 0 && cptr->nextcontext == NULL)
 	return duplicate(cptr->callfun);  /***** do we need to DUP? */
     errorcall(R_GlobalContext->call, _("not that many frames on the stack"));
-    return R_NilValue;	/* just for -Wall */
 }
 
 /* some real insanity to keep Duncan sane */
@@ -665,7 +662,6 @@ static SEXP do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return(R_sysfunction(n, cptr));
     default:
 	error(_("internal error in 'do_sys'"));
-	return R_NilValue;/* just for -Wall */
     }
 }
 

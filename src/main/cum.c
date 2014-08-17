@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -236,7 +236,6 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	    errorcall(call, _("unknown cumxxx function"));
 	}
     }
-    return R_NilValue; /* for -Wall */
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */

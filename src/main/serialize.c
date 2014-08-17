@@ -2474,17 +2474,17 @@ SEXP attribute_hidden R_unserialize(SEXP icon, SEXP fun)
 
     hook = fun != R_NilValue ? CallHook : NULL;
 
-    if (TYPEOF(icon) == STRSXP && LENGTH(icon) > 0) {
+    if (TYPEOF(icon) == STRSXP && LENGTH(icon) > 0)
 	/* was the format in R < 2.4.0, removed in R 2.8.0 */
 	error("character vectors are no longer accepted by unserialize()");
-	return R_NilValue; /* -Wall */
-    } else if (TYPEOF(icon) == RAWSXP) {
+    else if (TYPEOF(icon) == RAWSXP) {
 	struct membuf_st mbs;
 	void *data = RAW(icon);
 	int length = LENGTH(icon);
 	InitMemInPStream(&in, &mbs, data,  length, hook, fun);
 	return R_Unserialize(&in);
-    } else {
+    } 
+    else {
 	Rconnection con = getConnection(asInteger(icon));
 	R_InitConnInPStream(&in, con, R_pstream_any_format, hook, fun);
 	return R_Unserialize(&in);

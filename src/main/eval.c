@@ -320,7 +320,6 @@ static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     error(_("R profiling is not available on this system"));
-    return R_NilValue;		/* -Wall */
 }
 #endif /* not R_PROFILING */
 
@@ -1334,7 +1333,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     return vl;
 }
 
-static void asLogicalNoNA_error (SEXP s, SEXP call)
+static R_NORETURN void asLogicalNoNA_error (SEXP s, SEXP call)
 {
     errorcall (call, 
       length(s) == 0 ? _("argument is of length zero") :

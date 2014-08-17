@@ -527,7 +527,6 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call,
 		  _("internal error ('op = %d' in do_summary).\t Call a Guru"),
 		  iop);
-	return R_NilValue;/*-Wall */
     }
 
     /*-- now loop over all arguments.  Do the 'op' switch INSIDE : */
@@ -1058,7 +1057,6 @@ static SEXP do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
 
  bad:
     error(_("not all arguments have the same length"));
-    return R_NilValue; /* -Wall */
 }
 
 /* op = 0 is pmin, op = 1 is pmax

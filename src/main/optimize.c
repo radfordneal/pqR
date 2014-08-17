@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -75,7 +75,6 @@ static double fcn1(double x, struct callinfo *info)
     }
  badvalue:
     error(_("invalid function value in 'optimize'"));
-    return 0;/* for -Wall */
 }
 
 /* fmin(f, xmin, xmax tol) */
@@ -161,10 +160,9 @@ static double fcn2(double x, struct callinfo *info)
     default:
 	goto badvalue;
     }
+
  badvalue:
     error(_("invalid function value in 'zeroin'"));
-    return 0;/* for -Wall */
-
 }
 
 /* zeroin(f, xmin, xmax, tol, maxiter) */

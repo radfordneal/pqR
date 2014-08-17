@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997 Robert Gentleman and Ross Ihaka
@@ -310,7 +310,7 @@ static double TeX(TEXPAR which, pGEcontext gc, pGEDevDesc dd)
     case xi13:	  /* big_op_spacing5 */
 	return 0.15 * XHeight(gc, dd);
     default:/* never happens (enum type) */
-	error(_("invalid `which' in TeX")); return 0;/*-Wall*/
+	error(_("invalid `which' in TeX"));
     }
 }
 
@@ -1266,8 +1266,6 @@ static BBOX RenderSpace(SEXP expr, int draw, mathContext *mc,
     }
     else
 	error(_("invalid mathematical annotation"));
-
-    return NullBBox();		/* -Wall */
 }
 
 static SymTab BinTable[] = {
@@ -1371,9 +1369,6 @@ static BBOX RenderBin(SEXP expr, int draw, mathContext *mc,
     }
     else
 	error(_("invalid mathematical annotation"));
-
-    return NullBBox();		/* -Wall */
-
 }
 
 
@@ -2668,8 +2663,6 @@ static BBOX RenderRel(SEXP expr, int draw, mathContext *mc,
 	    CombineBBoxes(bbox, RenderElement(CADDR(expr), draw, mc, gc, dd));
     }
     else error(_("invalid mathematical annotation"));
-
-    return NullBBox();		/* -Wall */
 }
 
 

@@ -941,7 +941,6 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     SEXP rval, names;
 
     names = v;
-    rval = R_NilValue;	/* -Wall */
 
     /* expression -> list, new in R 2.4.0 */
     if (type == VECSXP && TYPEOF(v) == EXPRSXP) {
@@ -1061,7 +1060,7 @@ static SEXP coerce_numeric_or_string (SEXP v, int type)
 
 SEXP coerceVector(SEXP v, SEXPTYPE type)
 {
-    SEXP op, vp, ans = R_NilValue;	/* -Wall */
+    SEXP op, vp, ans;
     int i,n;
 
     if (TYPEOF(v) == type)
@@ -1137,12 +1136,6 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
     case REALSXP:
     case CPLXSXP:
     case STRSXP:
-
-#define COERCE_ERROR_STRING "cannot coerce type '%s' to vector of type '%s'"
-
-#define COERCE_ERROR							\
-	error(_(COERCE_ERROR_STRING), type2char(TYPEOF(v)), type2char(type))
-
 	switch (type) {
 	case SYMSXP:
 	    ans = coerceToSymbol(v);
@@ -1176,15 +1169,19 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
                 ans = coerce_numeric_or_string (v, type);
             break;
 	default:
-	    COERCE_ERROR;
+	    goto coerce_error;
 	}
 	break;
     default:
-	COERCE_ERROR;
+	goto coerce_error;
     }
+
     return ans;
+
+coerce_error:
+    error(_("cannot coerce type '%s' to vector of type '%s'"), 
+             type2char(TYPEOF(v)), type2char(type));
 }
-#undef COERCE_ERROR
 
 
 SEXP CreateTag(SEXP x)
@@ -1273,9 +1270,9 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
 	SET_VECTOR_ELT(v, 0, u);
 	return v;
     }
-    else errorcall(call, _(COERCE_ERROR_STRING),
-		   type2char(TYPEOF(u)), type2char(type));
-    return u;/* -Wall */
+    else 
+        errorcall(call, _("cannot coerce type '%s' to vector of type '%s'"),
+                             type2char(TYPEOF(u)), type2char(type));
 }
 
 /* used in attrib.c, eval.c and unique.c */

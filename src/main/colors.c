@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1997-2009  The R Development Core Team
@@ -1317,7 +1317,6 @@ static unsigned int hexdigit(int digit)
     if('A' <= digit && digit <= 'F') return 10 + digit - 'A';
     if('a' <= digit && digit <= 'f') return 10 + digit - 'a';
     /*else */ error(_("invalid hex digit in 'color' or 'lty'"));
-    return digit; /* never occurs (-Wall) */
 }
 
 

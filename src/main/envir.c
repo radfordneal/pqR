@@ -1889,16 +1889,12 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	where = asInteger(CADR(args));
 	genv = R_sysframe(where, R_GlobalContext);
     }
-    else if (TYPEOF(CADR(args)) == NILSXP) {
+    else if (TYPEOF(CADR(args)) == NILSXP)
 	error(_("use of NULL environment is defunct"));
-	genv = R_NilValue;  /* -Wall */
-    }
     else if (TYPEOF(CADR(args)) == ENVSXP)
 	genv = CADR(args);
-    else if(TYPEOF((genv = simple_as_environment(CADR(args)))) != ENVSXP) {
+    else if(TYPEOF((genv = simple_as_environment(CADR(args)))) != ENVSXP)
 	error(_("invalid '%s' argument"), "envir");
-	genv = R_NilValue;  /* -Wall */
-    }
 
     /* mode :  The mode of the object being sought */
 
@@ -1907,14 +1903,13 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
     */
 
     if (isString(CADDR(args))) {
-	if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), 0)), "function")) /* ASCII */
+	if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), 0)), "function")) /*ASCII*/
 	    gmode = FUNSXP;
 	else
 	    gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
-    } else {
+    } 
+    else
 	error(_("invalid '%s' argument"), "mode");
-	gmode = FUNSXP;/* -Wall */
-    }
 
     ginherits = asLogical(CADDDR(args));
     if (ginherits == NA_LOGICAL)
@@ -2040,10 +2035,9 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 		gmode = FUNSXP;
 	    else
 		gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), i % nmode )));
-	} else {
+	} 
+        else
 	    error(_("invalid '%s' argument"), "mode");
-	    gmode = FUNSXP; /* -Wall */
-	}
 
 	/* is the mode provided one of the real modes? */
 	if( gmode == (SEXPTYPE) (-1))
@@ -2297,10 +2291,9 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 		for(p = FRAME(loadenv); p != R_NilValue; p = CDR(p))
 		    defineVar(TAG(p), duplicate(CAR(p)), s);
 	    }
-	} else {
+	} 
+        else
 	    error(_("'attach' only works for lists, data frames and environments"));
-	    s = R_NilValue; /* -Wall */
-	}
 
 	/* Connect FRAME(s) into HASHTAB(s) */
         hsize = (int) (length(s)/0.6);   /* about 45% of entries will be used */
@@ -2383,10 +2376,8 @@ static SEXP do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
 
     for (t = R_GlobalEnv ; ENCLOS(t) != R_BaseEnv && pos > 2 ; t = ENCLOS(t))
 	pos--;
-    if (pos != 2) {
+    if (pos != 2)
 	error(_("invalid '%s' argument"), "pos");
-	s = t;	/* for -Wall */
-    }
     else {
 	PROTECT(s = ENCLOS(t));
 	x = ENCLOS(s);
@@ -2715,7 +2706,7 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind, dotsv;
+    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind;
     int i, k, k2;
     int /* boolean */ all, useNms, no_dots;
 
@@ -2842,10 +2833,8 @@ static SEXP pos2env(int pos, SEXP call)
     SEXP env;
     RCNTXT *cptr;
 
-    if (pos == NA_INTEGER || pos < -1 || pos == 0) {
+    if (pos == NA_INTEGER || pos < -1 || pos == 0)
 	errorcall(call, _("invalid '%s' argument"), "pos");
-	env = call;/* just for -Wall */
-    }
     else if (pos == -1) {
 	/* make sure the context is a funcall */
 	cptr = R_GlobalContext;
@@ -2926,7 +2915,6 @@ static SEXP do_as_environment(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return do_pos2env(call, op, args, rho);
     case NILSXP:
 	errorcall(call,_("using 'as.environment(NULL)' is defunct"));
-	return R_BaseEnv;	/* -Wall */
     case S4SXP: {
 	/* dispatch was tried above already */
 	SEXP dot_xData = R_getS4DataSlot(arg, ENVSXP);
@@ -2947,7 +2935,6 @@ static SEXP do_as_environment(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     default:
 	errorcall(call, _("invalid object for 'as.environment'"));
-	return R_NilValue;	/* -Wall */
     }
 }
 
@@ -3490,14 +3477,11 @@ static SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho)
        returns R_NilValue.  This seems appropriate since there is no
        way to test whether an environment is hashed at the R level.
     */
-    SEXP env, ans = R_NilValue /* -Wall */;
-    env = CAR(args);
-    if (isEnvironment(env)) {
-	if (IS_HASHED(env))
-	    ans = R_HashProfile(HASHTAB(env));
-    } else
+    SEXP env = CAR(args);
+    if (isEnvironment(env))
+	return IS_HASHED(env) ? R_HashProfile(HASHTAB(env)) : R_NilValue;
+    else
 	error("argument must be a hashed environment");
-    return ans;
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-8   The R Development Core Team.
@@ -446,7 +446,7 @@ R_GE_lineend GE_LENDpar(SEXP value, int ind)
 	    if(!strcmp(CHAR(STRING_ELT(value, ind)), lineend[i].name)) /*ASCII */
 		return lineend[i].end;
 	}
-	error(_("invalid line end")); /*NOTREACHED, for -Wall : */ return 0;
+	error(_("invalid line end"));
     }
     else if(isInteger(value)) {
 	code = INTEGER(value)[ind];
@@ -466,7 +466,7 @@ R_GE_lineend GE_LENDpar(SEXP value, int ind)
 	return lineend[code].end;
     }
     else {
-	error(_("invalid line end")); /*NOTREACHED, for -Wall : */ return 0;
+	error(_("invalid line end"));
     }
 }
 
@@ -511,7 +511,7 @@ R_GE_linejoin GE_LJOINpar(SEXP value, int ind)
 	    if(!strcmp(CHAR(STRING_ELT(value, ind)), linejoin[i].name)) /* ASCII */
 		return linejoin[i].join;
 	}
-	error(_("invalid line join")); /*NOTREACHED, for -Wall : */ return 0;
+	error(_("invalid line join"));
     }
     else if(isInteger(value)) {
 	code = INTEGER(value)[ind];
@@ -531,7 +531,7 @@ R_GE_linejoin GE_LJOINpar(SEXP value, int ind)
 	return linejoin[code].join;
     }
     else {
-	error(_("invalid line join")); /*NOTREACHED, for -Wall : */ return 0;
+	error(_("invalid line join"));
     }
 }
 
@@ -2326,7 +2326,6 @@ void GEPretty(double *lo, double *up, int *ndiv)
        *lo == R_NegInf || *up == R_NegInf ||
        !R_FINITE(*up - *lo)) {
 	error(_("infinite axis extents [GEPretty(%g,%g,%d)]"), *lo, *up, *ndiv);
-	return;/*-Wall*/
     }
 
     ns = *lo; nu = *up;
@@ -3089,7 +3088,6 @@ static unsigned int hexdigit(int digit)
     if('A' <= digit && digit <= 'F') return 10 + digit - 'A';
     if('a' <= digit && digit <= 'f') return 10 + digit - 'a';
     /*else */ error(_("invalid hex digit in 'color' or 'lty'"));
-    return digit; /* never occurs (-Wall) */
 }
 
 static int nlinetype = (sizeof(linetype)/sizeof(LineTYPE)-2);
@@ -3139,7 +3137,7 @@ unsigned int GE_LTYpar(SEXP value, int ind)
 	return linetype[code].pattern;
     }
     else {
-	error(_("invalid line type")); /*NOTREACHED, for -Wall : */ return 0;
+	error(_("invalid line type"));
     }
 }
 

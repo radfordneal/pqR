@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1162,10 +1162,9 @@ static SEXP do_par(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	setAttrib(value, R_NamesSymbol, newnames);
     }
-    else {
+    else
 	error(_("invalid argument passed to par()"));
-	return R_NilValue/* -Wall */;
-    }
+
     /* should really only do this if specifying new pars ?  yes! [MM] */
     
     if (new_spec && GRecording(call, dd))

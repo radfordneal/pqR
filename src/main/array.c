@@ -732,7 +732,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x = CAR(args), y = CADR(args), rest = CDDR(args);
 
-    PROTECT_INDEX ix, iy;
+    PROTECT_INDEX ix;
     int mode;
     SEXP ans;
 
@@ -1429,7 +1429,6 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
  not_matrix:
     error(_("argument is not a matrix"));
-    return R_NilValue;/* never used; just for -Wall */
 }
 
 /*

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  file dounzip.c
@@ -471,20 +471,17 @@ static size_t unz_read(void *ptr, size_t size, size_t nitems,
 static int null_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     error(_("printing not enabled for this connection"));
-    return 0; /* -Wall */
 }
 
 static size_t null_write(const void *ptr, size_t size, size_t nitems,
 			 Rconnection con)
 {
     error(_("write not enabled for this connection"));
-    return 0; /* -Wall */
 }
 
 static double null_seek(Rconnection con, double where, int origin, int rw)
 {
     error(_("seek not enabled for this connection"));
-    return 0; /* -Wall */
 }
 
 static int null_fflush(Rconnection con)

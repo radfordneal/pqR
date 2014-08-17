@@ -1416,11 +1416,11 @@ SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP, int);
 #include <wchar.h>
 
 /* main/util.c */
-void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
-void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
-void dotdotdot_error(void);
-void arg_missing_error(SEXP sym);
-void unbound_var_error(SEXP sym);
+R_NORETURN void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
+R_NORETURN void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
+R_NORETURN void dotdotdot_error(void);
+R_NORETURN void arg_missing_error(SEXP sym);
+R_NORETURN void unbound_var_error(SEXP sym);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 
