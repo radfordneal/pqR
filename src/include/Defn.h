@@ -176,16 +176,6 @@ int SET_CACHED(SEXP x);
 int IS_CACHED(SEXP x);
 #endif /* USE_RINTERNALS */
 
-/* macros and declarations for managing CHARSXP cache */
-#define USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-# define CXHEAD(x) (x)
-# define CXTAIL(x) ATTRIB(x)
-#else
-# define CXHEAD(x) CAR(x)
-# define CXTAIL(x) CDR(x)
-#endif /* USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS */
-
 #include "Internal.h"		/* do_FOO */
 
 #include "Errormsg.h"
