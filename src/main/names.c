@@ -682,10 +682,10 @@ SEXP installed_already(const char *name)
     i = hashcode % HSIZE;
 
     /* Check to see if the symbol is already present;  if it is, return it. */
-    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym)) {
-        const char *s = CHAR(PRINTNAME(CAR(sym)));
+    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
+        const char *s = CHAR(PRINTNAME(sym));
 	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
-            return (CAR(sym));
+            return sym;
     }
 
     return NULL;
