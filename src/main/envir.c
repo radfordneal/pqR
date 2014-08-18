@@ -2529,14 +2529,14 @@ static int BuiltinSize(int all, int intern)
     SEXP s;
     int j;
     for (j = 0; j < HSIZE; j++) {
-	for (s = R_SymbolTable[j]; s != R_NilValue; s = CDR(s)) {
+	for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s)) {
 	    if (intern) {
-		if (INTERNAL(CAR(s)) != R_NilValue)
+		if (INTERNAL(s) != R_NilValue)
 		    count++;
 	    }
 	    else {
-		if ((all || CHAR(PRINTNAME(CAR(s)))[0] != '.')
-		    && SYMVALUE(CAR(s)) != R_UnboundValue)
+		if ((all || CHAR(PRINTNAME(s))[0] != '.')
+		    && SYMVALUE(s) != R_UnboundValue)
 		    count++;
 	    }
 	}
@@ -2550,15 +2550,15 @@ BuiltinNames(int all, int intern, SEXP names, int *indx)
     SEXP s;
     int j;
     for (j = 0; j < HSIZE; j++) {
-	for (s = R_SymbolTable[j]; s != R_NilValue; s = CDR(s)) {
+	for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s)) {
 	    if (intern) {
-		if (INTERNAL(CAR(s)) != R_NilValue)
-		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(CAR(s)));
+		if (INTERNAL(s) != R_NilValue)
+		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
 	    }
 	    else {
-		if ((all || CHAR(PRINTNAME(CAR(s)))[0] != '.')
-		    && SYMVALUE(CAR(s)) != R_UnboundValue)
-		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(CAR(s)));
+		if ((all || CHAR(PRINTNAME(s))[0] != '.')
+		    && SYMVALUE(s) != R_UnboundValue)
+		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
 	    }
 	}
     }
@@ -2570,19 +2570,19 @@ BuiltinValues(int all, int intern, SEXP values, int *indx)
     SEXP s, vl;
     int j;
     for (j = 0; j < HSIZE; j++) {
-	for (s = R_SymbolTable[j]; s != R_NilValue; s = CDR(s)) {
+	for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s)) {
 	    if (intern) {
-		if (INTERNAL(CAR(s)) != R_NilValue) {
-		    vl = SYMVALUE(CAR(s));
+		if (INTERNAL(s) != R_NilValue) {
+		    vl = SYMVALUE(s);
 		    if (TYPEOF(vl) == PROMSXP)
 			vl = forcePromise(vl);
 		    SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
 		}
 	    }
 	    else {
-		if ((all || CHAR(PRINTNAME(CAR(s)))[0] != '.')
-		    && SYMVALUE(CAR(s)) != R_UnboundValue) {
-		    vl = SYMVALUE(CAR(s));
+		if ((all || CHAR(PRINTNAME(s))[0] != '.')
+		    && SYMVALUE(s) != R_UnboundValue) {
+		    vl = SYMVALUE(s);
 		    if (TYPEOF(vl) == PROMSXP)
 			vl = forcePromise(vl);
 		    SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
@@ -2964,9 +2964,9 @@ void R_LockEnvironment(SEXP env, Rboolean bindings)
 	    SEXP s;
 	    int j;
 	    for (j = 0; j < HSIZE; j++)
-		for (s = R_SymbolTable[j]; s != R_NilValue; s = CDR(s))
-		    if(SYMVALUE(CAR(s)) != R_UnboundValue)
-			LOCK_BINDING(CAR(s));
+		for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s))
+		    if(SYMVALUE(s) != R_UnboundValue)
+			LOCK_BINDING(s);
 	}
 #ifdef NOT_YET
 	/* causes problems with Matrix */

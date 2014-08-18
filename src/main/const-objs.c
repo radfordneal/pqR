@@ -85,15 +85,15 @@ const SEXPREC R_EmptyEnv_const = { \
 
 
 /* Definition of the R_UnboundValue constant, whose address when cast to SEXP
-   R_UnboundValue.  */
+   is R_UnboundValue.  */
 
-const SEXPREC R_UnboundValue_const = { \
+const SYM_SEXPREC R_UnboundValue_const = { \
     CONST_HEADER(SYMSXP)
-    .u = { .symsxp = 
-            { .pname = R_NilValue, 
-              .value = R_UnboundValue, 
-              .internal = R_NilValue }
-         }
+    .symsxp = { .pname = R_NilValue, 
+                .value = R_UnboundValue, 
+                .internal = R_NilValue,
+                .nextsym = R_NilValue
+              }
 };
 
 
