@@ -1596,6 +1596,31 @@ extern void Rf_unprotect_error (void);
 #endif
 
 
+/* Block-based protect scheme. */
+
+#define BGN_PROTECT_BLK do { \
+    int blk__stack__top = R_PPStackTop; \
+    if (R_PPStackTop >= R_PPStackSize-20) Rf_protect_error();
+
+#define END_PROTECT_BLK \
+    R_PPStackTop = blk__stack__top; } while (0)
+
+#define BLK_PROTECT(s) \
+    ( R_PPStack[R_PPStackTop++] = (s) )
+#define BLK_PROTECT2(s1,s2) \
+    ( R_PPStack[R_PPStackTop] = (s1), \
+      R_PPStack[R_PPStackTop+1] = (s2), \
+      R_PPStackTop += 2 )
+#define BLK_PROTECT3(s1,s2,s3) \
+    ( R_PPStack[R_PPStackTop] = (s1), \
+      R_PPStack[R_PPStackTop+1] = (s2), \
+      R_PPStack[R_PPStackTop+2] = (s3), \
+      R_PPStackTop += 3 )
+
+#define BLK_PROTECT_WITH_INDEX(x,i) \
+  ( (*(i) = R_PPStackTop), BLK_PROTECT(x) )
+
+
 /* Version of SET_ATTRIB that allows anything for the attributes.  Objects
    with such attributes are safe for garbage collection, but shouldn't appear 
    at user level. */
