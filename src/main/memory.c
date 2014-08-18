@@ -82,8 +82,9 @@
 
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
-   "cons" cells (so it's necessary that one be big enough for this).  Note 
-   that the last node class is for larger vectors, and has no entry here.
+   "cons" cells (so it's necessary that one be big enough for this), and also
+   one as SYM_SEXPREC_class, used for symbols.  Note that the last node class 
+   is for larger vectors, and has no entry here.
 
    The values in the initialization below will usually be replaced by values 
    derived from NodeClassBytes32 or NodeClassBytes64, which are designed for 
@@ -513,8 +514,10 @@ static double R_NMega_max=0.0;
 #define NODE_CLASS(s) ((s)->sxpinfo.gccls)
 #define SET_NODE_CLASS(s,v) (((s)->sxpinfo.gccls) = (v))
 
-static int SEXPREC_class;    /* Small node class used for "cons" cells */
-static int sizeof_SEXPREC;   /* Size of SEXPREC_class nodes */
+static int SEXPREC_class;      /* Small node class used for "cons" cells */
+static int sizeof_SEXPREC;     /* Size of SEXPREC_class nodes */
+static int SYM_SEXPREC_class;  /* Small node class used for symbolss */
+static int sizeof_SYM_SEXPREC; /* Size of SYM_SEXPREC_class nodes */
 
 
 /* Node Generations. */
@@ -667,9 +670,8 @@ static R_size_t R_NodesInUse = 0;
 
 /* Processing Node Children */
 
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-/* When the CHARSXP hash chains are maintained through the ATTRIB
-   field it is important that we NOT trace those fields otherwise too
+/* Since the CHARSXP hash chains are maintained through the ATTRIB
+   field, it is important that we NOT trace those fields otherwise too
    many CHARSXPs will be kept alive artificially. As a safety we don't
    ignore all non-NULL ATTRIB values for CHARSXPs but only those that
    are themselves CHARSXPs, which is what they will be if they are
@@ -684,14 +686,7 @@ static R_size_t R_NodesInUse = 0;
     (ATTRIB(x) != R_NilValue && \
      (TYPEOF(x) != CHARSXP || TYPEOF(ATTRIB(x)) != CHARSXP))
 # endif
-#else
-# ifdef PROTECTCHECK
-#  define HAS_GENUINE_ATTRIB(x) \
-    (TYPEOF(x) != FREESXP && ATTRIB(x) != R_NilValue)
-# else
-#  define HAS_GENUINE_ATTRIB(x) (ATTRIB(x) != R_NilValue)
-# endif
-#endif
+
 #ifdef PROTECTCHECK
 #define FREE_FORWARD_CASE case FREESXP: if (gc_inhibit_release) break;
 #define FREE_FORWARD_ELSE_IF \
@@ -737,10 +732,10 @@ static R_size_t R_NodesInUse = 0;
   (1 << STRSXP) )
 
 #define DO_CHILDREN(n_,dc_action_,dc_extra_) do { \
-    if (HAS_GENUINE_ATTRIB(n_)) { \
+    int typ_ = TYPEOF(n_); \
+    if (ATTRIB(n_) != R_NilValue && typ_ != CHARSXP) { \
         dc_action_ (ATTRIB(n_), dc_extra_); \
     } \
-    int typ_ = TYPEOF(n_); \
     if (! ((no_action_types >> typ_) & 1)) { \
         SEXP *strt_; R_len_t cnt_; \
         if ((three_pointer_types >> typ_) & 1) { \
@@ -766,7 +761,7 @@ static R_size_t R_NodesInUse = 0;
 
 #define DO_CHILDREN_DEBUG(__n__,dc__action__,extra1,extra2) do { \
   int _r_, _c_ = 0; \
-  if (HAS_GENUINE_ATTRIB(__n__)) { \
+  if (ATTRIB(n_) != R_NilValue && TYPEOF(__n__) != CHARSXP) { \
     _c_ += _r_ = dc__action__(ATTRIB(__n__), __n__,extra1,extra2); \
     if (_r_) REprintf("  -- %s attrib\n",type2char(TYPEOF(__n__))); \
   } \
@@ -1947,8 +1942,11 @@ static void RunGenCollect(R_size_t size_needed)
         FORWARD_NODE(R_VStack);
 
     if (R_SymbolTable != NULL) /* Symbol table, could be NULL during startup */
-        for (i = 0; i < HSIZE; i++)
-            FORWARD_NODE(R_SymbolTable[i]);
+        for (i = 0; i < HSIZE; i++) {
+            /* We follow the chain here, as DO_CHILDREN ignores NEXTSYM_PTR */
+            for (SEXP s = R_SymbolTable[i]; s != R_NilValue; s = NEXTSYM_PTR(s))
+                FORWARD_NODE(s);
+        }
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
 	FORWARD_NODE(R_CurrentExpr);
@@ -2090,28 +2088,23 @@ static void RunGenCollect(R_size_t size_needed)
 	SEXP t;
 	int nc = 0;
 	for (i = 0; i < LENGTH(R_StringHash); i++) {
-	    s = VECTOR_ELT(R_StringHash, i);
 	    t = R_NilValue;
-	    while (s != R_NilValue) {
+	    for (s = VECTOR_ELT(R_StringHash,i); s!=R_NilValue; s = ATTRIB(s)) {
 #if DEBUG_GLOBAL_STRING_HASH
                 if (TYPEOF(s)!=CHARSXP)
                    REprintf(
                      "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
                       TYPEOF(s));
 #endif
-		if (! NODE_IS_MARKED(CXHEAD(s))) { 
-                    /* remove unused CHARSXP, and associated cons cell (if 
-                       not linking by attribute field) */
+		if (NODE_IS_MARKED(s))
+                    t = s;
+                else { /* remove unused CHARSXP */
 		    if (t == R_NilValue) /* head of list */
                         /* Do NOT use SET_VECTOR_ELT - no old-to-new tracking */
-			VECTOR_ELT(R_StringHash, i) = CXTAIL(s);
+			VECTOR_ELT(R_StringHash, i) = ATTRIB(s);
 		    else
-			CXTAIL(t) = CXTAIL(s);
-		    s = CXTAIL(s);
-		    continue;
+			ATTRIB(t) = ATTRIB(s);
 		}
-		t = s;
-		s = CXTAIL(s);
 	    }
 	    if(VECTOR_ELT(R_StringHash, i) != R_NilValue) nc++;
 	}
@@ -2449,6 +2442,19 @@ void attribute_hidden InitMemory()
     if (i == NUM_SMALL_NODE_CLASSES)
         R_Suicide("none of the small node classes is big enough for a SEXPREC");
 
+    /* Find the class to use for symbols. */
+
+    for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
+        int size = sizeof(SEXPREC_ALIGN) + NodeClassSize[i]*sizeof(VECREC);
+        if (sizeof(SYM_SEXPREC) <= size) {
+            SYM_SEXPREC_class = i;
+            sizeof_SYM_SEXPREC = size;
+            break;
+        }
+    }
+    if (i == NUM_SMALL_NODE_CLASSES)
+        R_Suicide("none of the small node classes is big enough for a symbol");
+
     init_gctorture();
 
     gc_reporting = R_Verbose;
@@ -2741,6 +2747,130 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRENV(s) = CHK(rho);
     PRSEEN(s) = 0;
     return s;
+}
+
+
+/*  mkPRIMSXP - return a builtin function      */
+/*              either "builtin" or "special"  */
+
+/*  The value produced is cached do avoid the need for GC protection
+    in cases where a .Primitive is produced by unserializing or
+    reconstructed after a package has clobbered the value assigned to
+    a symbol in the base package. */
+
+SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
+{
+    SEXP result;
+    SEXPTYPE type = eval ? BUILTINSXP : SPECIALSXP;
+    static SEXP PrimCache = NULL;
+    static int FunTabSize = 0;
+    
+    if (PrimCache == NULL) {
+	/* compute the number of entires in R_FunTab */
+	while (R_FunTab[FunTabSize].name)
+	    FunTabSize++;
+
+	/* allocate and protect the cache */
+	PrimCache = allocVector(VECSXP, FunTabSize);
+	R_PreserveObject(PrimCache);
+    }
+
+    if (offset < 0 || offset >= FunTabSize)
+	error("offset is out of R_FunTab range");
+
+    result = VECTOR_ELT(PrimCache, offset);
+
+    if (result == R_NilValue) {
+	result = allocSExp(type);
+	SET_PRIMOFFSET(result, offset);
+        SET_VECTOR_ELT (PrimCache, offset, result);
+    }
+    else if (TYPEOF(result) != type)
+	error("requested primitive type is not consistent with cached value");
+
+    return result;
+}
+
+
+/* This is called by function() {}, where an invalid
+   body should be impossible. When called from
+   other places (eg do_asfunction) they
+   should do this checking in advance */
+
+/*  mkCLOSXP - return a closure with formals f,  */
+/*             body b, and environment rho       */
+
+SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
+{
+    SEXP c;
+    PROTECT(formals);
+    PROTECT(body);
+    PROTECT(rho);
+    c = allocSExp(CLOSXP);
+
+#ifdef not_used_CheckFormals
+    if(isList(formals))
+	SET_FORMALS(c, formals);
+    else
+	error(_("invalid formal arguments for 'function'"));
+#else
+    SET_FORMALS(c, formals);
+#endif
+    switch (TYPEOF(body)) {
+    case CLOSXP:
+    case BUILTINSXP:
+    case SPECIALSXP:
+    case DOTSXP:
+    case ANYSXP:
+	error(_("invalid body argument for 'function'"));
+	break;
+    default:
+	SET_BODY(c, body);
+	break;
+    }
+
+    if(rho == R_NilValue)
+	SET_CLOENV(c, R_GlobalEnv);
+    else
+	SET_CLOENV(c, rho);
+    UNPROTECT(3);
+    return c;
+}
+
+
+/*  mkSYMSXP - return a symsxp with the string  */
+/*             name inserted in the name field  */
+
+static int isDDName(SEXP name)
+{
+    const char *buf;
+    char *endp;
+
+    buf = CHAR(name);
+    if (buf[0]=='.' && buf[1]=='.' && buf[2]!=0) {
+	(void) strtol(buf+2, &endp, 10);
+        return *endp == 0;
+    }
+    return 0;
+}
+
+SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
+
+{
+    SEXP c;
+    PROTECT2(name,value);
+    if (FORCE_GC || NO_FREE_NODES())
+	c = get_free_node_gc(SYM_SEXPREC_class);
+    else
+        c = get_free_node(SYM_SEXPREC_class);
+    TYPEOF(c) = SYMSXP;
+    PRINTNAME(c) = name;
+    SYMVALUE(c) = value;
+    INTERNAL(c) = R_NilValue;
+    NEXTSYM_PTR(c) = R_NilValue;
+    SET_DDVAL(c, isDDName(name));
+    UNPROTECT(2);
+    return c;
 }
 
 
@@ -4217,7 +4347,7 @@ void attribute_hidden InitStringHash()
 static void R_StringHash_resize(unsigned int newsize)
 {
     SEXP old_table = R_StringHash;
-    SEXP new_table, chain, new_chain, val, next;
+    SEXP new_table, new_chain, val, next;
     unsigned int counter, new_hashcode, newmask;
 #if DEBUG_GLOBAL_STRING_HASH
     unsigned int oldsize = HASHSIZE(R_StringHash);
@@ -4235,10 +4365,9 @@ static void R_StringHash_resize(unsigned int newsize)
 
     /* transfer chains from old table to new table */
     for (counter = 0; counter < LENGTH(old_table); counter++) {
-	chain = VECTOR_ELT(old_table, counter);
-	while (chain != R_NilValue) {
-	    val = CXHEAD(chain);
-	    next = CXTAIL(chain);
+	val = VECTOR_ELT(old_table, counter);
+	while (val != R_NilValue) {
+	    next = ATTRIB(val);
 #if DEBUG_GLOBAL_STRING_HASH
             if (TYPEOF(val)!=CHARSXP)
                REprintf("R_StringHash table contains a non-CHARSXP (%d, rs)!\n",
@@ -4253,9 +4382,9 @@ static void R_StringHash_resize(unsigned int newsize)
                destrictive modification, which does NOT do the old-to-new
                check, since table entries aren't supposed to be marked
                in the initial pass of the GC. */
-	    CXTAIL(val) = new_chain;
-	    VECTOR_ELT(new_table, new_hashcode) = val;
-	    chain = next;
+	    ATTRIB(val) = new_chain;                   /* not SET_ATTRIB! */
+	    VECTOR_ELT(new_table, new_hashcode) = val; /* not SET_VECTOR_ELT! */
+	    val = next;
 	}
     }
     R_StringHash = new_table;
@@ -4277,7 +4406,7 @@ static void R_StringHash_resize(unsigned int newsize)
    this will always zero-terminate */
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
-    SEXP cval, chain;
+    SEXP cval, val;
     unsigned int hashcode;
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
@@ -4327,10 +4456,9 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
     /* Search for a cached value */
     cval = R_NilValue;
-    for (chain = VECTOR_ELT(R_StringHash, hashcode); 
-         chain != R_NilValue; 
-         chain = CXTAIL(chain)) {
-	SEXP val = CXHEAD(chain);
+    for (val = VECTOR_ELT(R_StringHash, hashcode); 
+         val != R_NilValue; 
+         val = ATTRIB(val)) {
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
             if (LENGTH(val) == len) {
                 if (len == 0 || *CHAR(val) == *name /* quick pretest */
@@ -4363,19 +4491,14 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 	if (is_ascii) SET_ASCII(cval);
 	SET_CACHED(cval);  /* Mark it */
 	/* add the new value to the cache */
-	chain = VECTOR_ELT(R_StringHash, hashcode);
-	if (chain == R_NilValue)
+	val = VECTOR_ELT(R_StringHash, hashcode);
+	if (val == R_NilValue)
 	    SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
 
         /* The modifications below should NOT do the old-to-new check, since
            the table should not be looked at in the initial GC scan. */
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-	CXTAIL(cval) = chain;
-        chain = cval;
-#else
-        chain = CONS(cval,chain);
-#endif
-	VECTOR_ELT(R_StringHash, hashcode) = chain;
+	ATTRIB(cval) = val;                         /* not SET_ATTRIB! */
+	VECTOR_ELT(R_StringHash, hashcode) = cval;  /* not SET_VECTOR_ELT! */
 
 	/* Resize the hash table if desirable and possible. */
 	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
@@ -4408,14 +4531,14 @@ void do_show_cache(int n)
 	if (chain != R_NilValue) {
 	    Rprintf("Line %d: ", i);
 	    do {
-		if (IS_UTF8(CXHEAD(chain)))
+		if (IS_UTF8(chain))
 		    Rprintf("U");
-		else if (IS_LATIN1(CXHEAD(chain)))
+		else if (IS_LATIN1(chain))
 		    Rprintf("L");
-		else if (IS_BYTES(CXHEAD(chain)))
+		else if (IS_BYTES(chain))
 		    Rprintf("B");
-		Rprintf("|%s| ", CHAR(CXHEAD(chain)));
-		chain = CXTAIL(chain);
+		Rprintf("|%s| ", CHAR(chain));
+		chain = ATTRIB(chain);
 	    } while (chain != R_NilValue);
 	    Rprintf("\n");
 	    j++;
@@ -4435,14 +4558,14 @@ void do_write_cache()
 	    if (chain != R_NilValue) {
 		fprintf(f, "Line %d: ", i);
 		do {
-		    if (IS_UTF8(CXHEAD(chain)))
+		    if (IS_UTF8(chain))
 			fprintf(f, "U");
-		    else if (IS_LATIN1(CXHEAD(chain)))
+		    else if (IS_LATIN1(chain))
 			fprintf(f, "L");
-		    else if (IS_BYTES(CXHEAD(chain)))
+		    else if (IS_BYTES(chain))
 			fprintf(f, "B");
-		    fprintf(f, "|%s| ", CHAR(CXHEAD(chain)));
-		    chain = CXTAIL(chain);
+		    fprintf(f, "|%s| ", CHAR(chain));
+		    chain = ATTRIB(chain);
 		} while (chain != R_NilValue);
 		fprintf(f, "\n");
 	    }

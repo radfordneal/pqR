@@ -1,0 +1,8 @@
+Revision to how charsxp and symsxp are handled, in GC and elsewhere.
+
+Fixes charsxp cache to use ATTRIB field unconditionally, removing other code.
+
+Now does simple check for CHARSXP in DO_CHILDREN in gc.
+
+Changes a symsxp to have a nextsym field, getting rid of the
+list fof syms in R_SymbolTable in favour of linking by that field.
