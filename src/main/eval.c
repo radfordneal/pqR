@@ -384,7 +384,8 @@ SEXP attribute_hidden forcePromise(SEXP e) /* e protected here if necessary */
     if (PRVALUE(e) == R_UnboundValue) {
 	RPRSTACK prstack;
 	SEXP val;
-        PROTECT(e);
+        BGN_PROTECT_BLK;
+        BLK_PROTECT(e);
 	if(PRSEEN(e)) {
 	    if (PRSEEN(e) == 1)
 		errorcall(R_GlobalContext->call,
@@ -411,7 +412,7 @@ SEXP attribute_hidden forcePromise(SEXP e) /* e protected here if necessary */
 	SET_PRVALUE(e, val);
         INC_NAMEDCNT(val);
 	SET_PRENV(e, R_NilValue);
-        UNPROTECT(1);
+        END_PROTECT_BLK;
     }
     return PRVALUE(e);
 }
@@ -422,7 +423,8 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
     if (PRVALUE(e) == R_UnboundValue) {
 	RPRSTACK prstack;
 	SEXP val;
-        PROTECT(e);
+        BGN_PROTECT_BLK;
+        BLK_PROTECT(e);
 	if(PRSEEN(e)) {
 	    if (PRSEEN(e) == 1)
 		errorcall(R_GlobalContext->call,
@@ -449,7 +451,7 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
 	SET_PRVALUE(e, val);
         INC_NAMEDCNT(val);
 	SET_PRENV(e, R_NilValue);
-        UNPROTECT(1);
+        END_PROTECT_BLK;
     }
     return PRVALUE_PENDING_OK(e);
 }
@@ -594,11 +596,14 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
             res = pending_OK ? PRVALUE_PENDING_OK(e) : PRVALUE(e);
 	break;
     case LANGSXP:
+
+        BGN_PROTECT_BLK
+
 	if (TYPEOF(CAR(e)) == SYMSXP)
 	    /* This will throw an error if the function is not found */
-	    PROTECT(op = findFun(CAR(e), rho));
+	    BLK_PROTECT(op = findFun(CAR(e), rho));
 	else
-	    PROTECT(op = eval(CAR(e), rho));
+	    BLK_PROTECT(op = eval(CAR(e), rho));
 
 	if (RTRACE(op) && R_current_trace_state()) {
 	    Rprintf("trace: ");
@@ -607,14 +612,14 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
 
 	if (TYPEOF(op) == SPECIALSXP || TYPEOF(op) == BUILTINSXP) {
 
+            int save_pptop;
             SEXP args = CDR(e);
-	    int save = R_PPStackTop;
 	    const void *vmax = VMAXGET();
 
-            if (TYPEOF(op) == SPECIALSXP)
-
+            if (TYPEOF(op) == SPECIALSXP) {
+                save_pptop = R_PPStackTop;
                 res = CALL_PRIMFUN(e, op, args, rho, variant);
-
+            }
             else { /* BUILTINSXP */
 
                 int use_cntxt = R_Profiling;
@@ -676,15 +681,11 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
                 if (args != R_NilValue) {
                     args = evalListPendingOK (args, rho, e);
                 }
-                if (arg2 != NULL) {
+                if (arg2 != NULL)
                     args = CONS(arg2,args);
-                    UNPROTECT(1);  /* arg2 */
-                }
-                if (arg1 != NULL) {
+                if (arg1 != NULL)
                     args = CONS(arg1,args);
-                    UNPROTECT(1);  /* arg1 */
-                }
-                PROTECT(args);
+                BLK_PROTECT(args);
                 if (use_cntxt || PRIMFOREIGN(op)) {
 #                   ifdef HAVE_ALLOCA_H
                         cntxt = alloca (sizeof *cntxt);
@@ -695,14 +696,15 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
                 if (!PRIMFUN_PENDING_OK(op)) {
                     WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
                 }
+                save_pptop = R_PPStackTop;
                 res = CALL_PRIMFUN(e, op, args, rho, variant);
                 goto done_builtin;
 
                 /* Handle a fast op with one argument.  If arg is an object,
                    may turn out to not be fast after all. */
               fast1:
-                PROTECT(arg1 = evalv (arg1, rho, 
-                          PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+                BLK_PROTECT(arg1 = evalv (arg1, rho, 
+                            PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
                 if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
                     args = CDR(args);
                     goto not_fast;
@@ -716,6 +718,7 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
                 if (!PRIMFUN_PENDING_OK(op)) {
                     WAIT_UNTIL_COMPUTED(arg1);
                 }
+                save_pptop = R_PPStackTop;
                 res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                          (e, op, arg1, rho, variant);
                 goto done_builtin;
@@ -724,16 +727,16 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
                    argument may possibly be NULL).  If either arg is an object,
                    may turn out to not be fast after all. */
               fast2:
-                PROTECT(arg1 = evalv (arg1, rho, 
-                          PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+                BLK_PROTECT(arg1 = evalv (arg1, rho, 
+                            PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
                 if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
                     args = CDR(args);
                     arg2 = NULL;
                     goto not_fast;
                 }
                 if (arg2 != NULL) {
-                    PROTECT(arg2 = evalv(arg2, rho, 
-                              PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
+                    BLK_PROTECT(arg2 = evalv(arg2, rho, 
+                                PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
                     if (isObject(arg2) && PRIMFUN_DSPTCH2(op)) {
                         args = R_NilValue;  /* == CDDR(args) */
                         goto not_fast;
@@ -749,12 +752,11 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
                     if (arg2==NULL) WAIT_UNTIL_COMPUTED(arg1);
                     else            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
                 }
+                save_pptop = R_PPStackTop;
                 res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
                          (e, op, arg1, arg2, rho, variant);
-                if (arg2!=NULL) UNPROTECT(1); /* arg2 */
 
               done_builtin:
-                UNPROTECT(1); /* either args or arg1 */
                 if (use_cntxt) endcontext(cntxt);
 	    }
 
@@ -762,19 +764,20 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
             if (flag == 0) R_Visible = TRUE;
             else if (flag == 1) R_Visible = FALSE;
 
-	    CHECK_STACK_BALANCE(op, save);
+            CHECK_STACK_BALANCE(op, save_pptop);
 	    VMAXSET(vmax);
-	    UNPROTECT(1); /* op */
 	}
 
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(res = promiseArgs(CDR(e), rho));
+	    BLK_PROTECT(res = promiseArgs(CDR(e), rho));
 	    res = applyClosure_v (e, op, res, rho, NULL, variant);
-	    UNPROTECT(2); /* op & res */
 	}
 
 	else
 	    error(_("attempt to apply non-function"));
+
+        END_PROTECT_BLK;
+
 	break;
     default: 
         /* put any type that is an error here, to reduce number in switch */
@@ -974,6 +977,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     SEXP f, a, res;
     RCNTXT cntxt;
 
+    BGN_PROTECT_BLK;
+
     /* formals = list of formal parameters */
     /* actuals = values to be bound to formals */
     /* arglist = the tagged list of arguments */
@@ -1003,7 +1008,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         newrho. */
 
     actuals = matchArgs(formals, NULL, 0, arglist, call);
-    PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
+    BLK_PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
         /* no longer passes formals, since matchArg now puts tags in actuals */
 
     /* This piece of code is destructively modifying the actuals list,
@@ -1039,8 +1044,6 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	}
     }
 
-    UNPROTECT(1); /* newrho, which will be protected below via revised context*/
-
     /*  Change the previously-set-up context to have the correct environment.
 
         If we have a generic function we need to use the sysparent of
@@ -1068,12 +1071,11 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	Rprintf("debugging in: ");
         printcall(call,rho);
 	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	BLK_PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
 	R_Srcref = savesrcref;
-	UNPROTECT(1);
     }
 
     /*  It isn't completely clear that this is the right place to do
@@ -1098,18 +1100,18 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
-    if ((SETJMP(cntxt.cjmpbuf))) {
+    if (SETJMP(cntxt.cjmpbuf)) {
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = evalv (body, newrho, vrnt));
+	    BLK_PROTECT(res = evalv (body, newrho, vrnt));
 	}
 	else {
-	    PROTECT(res = R_ReturnedValue);
+	    BLK_PROTECT(res = R_ReturnedValue);
         }
     }
     else {
-	PROTECT(res = evalv (body, newrho, vrnt));
+	BLK_PROTECT(res = evalv (body, newrho, vrnt));
     }
 
     R_variant_result &= ~VARIANT_RTN_FLAG;
@@ -1124,7 +1126,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         printcall(call,rho);
     }
 
-    UNPROTECT(1); /* res */
+    END_PROTECT_BLK;
     return res;
 }
 
@@ -1143,6 +1145,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     volatile SEXP body;
     SEXP res;
     RCNTXT cntxt;
+
+    BGN_PROTECT_BLK;
 
     body = BODY(op);
 
@@ -1175,12 +1179,11 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	Rprintf("debugging in: ");
 	printcall (call, rho);
 	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	BLK_PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
 	R_Srcref = savesrcref;
-	UNPROTECT(1);
     }
 
     /*  It isn't completely clear that this is the right place to do
@@ -1206,15 +1209,15 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = eval(body, newrho));
+	    BLK_PROTECT(res = eval(body, newrho));
 	}
 	else {
-	    PROTECT(res = R_ReturnedValue);
+	    BLK_PROTECT(res = R_ReturnedValue);
             WAIT_UNTIL_COMPUTED(res);
         }
     }
     else {
-	PROTECT(res = eval(body, newrho));
+	BLK_PROTECT(res = eval(body, newrho));
     }
 
     endcontext(&cntxt);
@@ -1224,7 +1227,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	printcall (call, rho);
     }
 
-    UNPROTECT(1);
+    END_PROTECT_BLK;
     return res;
 }
 
@@ -1450,10 +1453,12 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return R_NilValue;
     }
 
-    PROTECT(args);
-    PROTECT(rho);
+    BGN_PROTECT_BLK;
 
-    PROTECT_WITH_INDEX(val = evalv (val, rho, VARIANT_SEQ), &valpi);
+    BLK_PROTECT(args);
+    BLK_PROTECT(rho);
+
+    BLK_PROTECT_WITH_INDEX(val = evalv (val, rho, VARIANT_SEQ), &valpi);
     variant = R_variant_result;
 
     if (variant) {
@@ -1487,7 +1492,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     dbg = RDEBUG(rho);
     bgn = BodyHasBraces(body);
 
-    PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
+    BLK_PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
@@ -1566,8 +1571,9 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     endcontext(&cntxt);
     if (!variant) 
         DEC_NAMEDCNT(val);
-    UNPROTECT(4);
     SET_RDEBUG(rho, dbg);
+
+    END_PROTECT_BLK;
     return R_NilValue;
 }
 
@@ -1914,7 +1920,6 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     SEXP lhs, tmp, afun, rhsprom, v;
     R_varloc_t tmploc;
     RCNTXT cntxt;
-    int nprot;
 
     if (rho == R_BaseNamespace)
 	errorcall(call, _("cannot do complex assignments in base namespace"));
@@ -1950,8 +1955,10 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 
 	    LT */
 
+    BGN_PROTECT_BLK;
+
     defineVar(R_TmpvalSymbol, R_NilValue, rho);
-    PROTECT((SEXP) (tmploc = R_findVarLocInFrame(rho, R_TmpvalSymbol)));
+    BLK_PROTECT((SEXP) (tmploc = R_findVarLocInFrame(rho, R_TmpvalSymbol)));
 
     /* Now set up a context to remove it when we are done, even in the
      * case of an error.  This all helps error() provide a better call.
@@ -1965,13 +1972,13 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     lhs = evalseq(CADR(expr), rho,
 		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
 
-    PROTECT(lhs);
-    PROTECT(rhsprom = mkPROMISE(CADDR(call), rho));
+    BLK_PROTECT(lhs);
+    BLK_PROTECT(rhsprom = mkPROMISE(CADDR(call), rho));
     SET_PRVALUE(rhsprom, rhs);
     WAIT_UNTIL_COMPUTED(rhs);
 
     while (isLanguage(CADR(expr))) {
-	nprot = 1; /* the PROTECT of rhs below from this iteration */
+        BGN_PROTECT_BLK;
 	if (TYPEOF(CAR(expr)) == SYMSXP)
 	    tmp = installAssignFcnName(CAR(expr));
 	else {
@@ -1983,7 +1990,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 		 CAR(CAR(expr)) == R_TripleColonSymbol) &&
 		length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
 		tmp = installAssignFcnName(CADDR(CAR(expr)));
-		PROTECT(tmp = lang3(CAAR(expr), CADR(CAR(expr)), tmp));
+		BLK_PROTECT(tmp = lang3(CAAR(expr), CADR(CAR(expr)), tmp));
 		nprot++;
 	    }
 	    else
@@ -1996,16 +2003,15 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
             SETCAR(lhs,v);
         }
         R_SetVarLocValue(tmploc, v);
-	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
+	BLK_PROTECT(rhs = replaceCall(tmp,R_TmpvalSymbol,CDDR(expr),rhsprom));
 	rhs = eval (rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
-	UNPROTECT(nprot);
 	lhs = CDR(lhs);
 	expr = CADR(expr);
+        END_PROTECT_BLK;
     }
 
-    nprot = 3; /* the common case */
     if (TYPEOF(CAR(expr)) == SYMSXP)
 	afun = installAssignFcnName(CAR(expr));
     else {
@@ -2017,7 +2023,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	     CAR(CAR(expr)) == R_TripleColonSymbol) &&
 	    length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
 	    afun = installAssignFcnName(CADDR(CAR(expr)));
-	    PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
+	    BLK_PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
 	    nprot++;
 	}
 	else
@@ -2026,7 +2032,9 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     R_SetVarLocValue(tmploc, CAR(lhs));
     expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
 		      afun, R_TmpvalSymbol, CDDR(expr), rhsprom);
-    UNPROTECT(nprot);
+
+    END_PROTECT_BLK;
+
     PROTECT(expr);
     (void) eval(expr, rho);
     UNPROTECT(1);
@@ -2067,19 +2075,21 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     case LANGSXP:
 
+        BGN_PROTECT_BLK;
+
         /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
            to protect it from being modified by the assignment, or otherwise. */
 
         if ( ! (variant & VARIANT_NULL))
             INC_NAMEDCNT(rhs);
-        PROTECT(rhs);
 
+        BLK_PROTECT(rhs);
         applydefine (call, op, lhs, rhs, rho);
 
-        UNPROTECT(1);
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
-  
+
+        END_PROTECT_BLK;
         break;
 
     /* Assignment to invalid target. */
@@ -2118,6 +2128,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 {
     SEXP head, tail, ev, h;
 
+    BGN_PROTECT_BLK;
+
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
@@ -2142,7 +2154,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                            R_NilValue,
                            TAG(h));
                     if (head==R_NilValue)
-                        PROTECT(head = ev);
+                        BLK_PROTECT(head = ev);
                     else
                         SETCDR(tail, ev);
                     tail = ev;
@@ -2172,7 +2184,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                        R_NilValue, 
                        TAG(el));
             if (head==R_NilValue)
-                PROTECT(head = ev);
+                BLK_PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
             tail = ev;
@@ -2181,9 +2193,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	el = CDR(el);
     }
 
-    if (head!=R_NilValue)
-        UNPROTECT(1);
-
+    END_PROTECT_BLK;
     return head;
 
 } /* evalList() */
@@ -2217,6 +2227,8 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
     SEXP head, tail, ev, h;
 
+    BGN_PROTECT_BLK;
+
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
@@ -2240,7 +2252,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                     ev = 
                       cons_with_tag (mkPROMISE(CAR(h),rho), R_NilValue, TAG(h));
                     if (head==R_NilValue)
-                        PROTECT(head=ev);
+                        BLK_PROTECT(head=ev);
                     else
                         SETCDR(tail,ev);
                     tail = ev;
@@ -2255,7 +2267,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                    cons_with_tag (R_MissingArg, R_NilValue, TAG(el))
                  : cons_with_tag (mkPROMISE(CAR(el), rho), R_NilValue, TAG(el));
             if (head==R_NilValue)
-                PROTECT(head = ev);
+                BLK_PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
             tail = ev;
@@ -2263,8 +2275,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
 
-    if (head!=R_NilValue)
-        UNPROTECT(1);
+    END_PROTECT_BLK;
 
     return head;
 }
