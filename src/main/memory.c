@@ -667,9 +667,8 @@ static R_size_t R_NodesInUse = 0;
 
 /* Processing Node Children */
 
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-/* When the CHARSXP hash chains are maintained through the ATTRIB
-   field it is important that we NOT trace those fields otherwise too
+/* Since the CHARSXP hash chains are maintained through the ATTRIB
+   field, it is important that we NOT trace those fields otherwise too
    many CHARSXPs will be kept alive artificially. As a safety we don't
    ignore all non-NULL ATTRIB values for CHARSXPs but only those that
    are themselves CHARSXPs, which is what they will be if they are
@@ -684,14 +683,7 @@ static R_size_t R_NodesInUse = 0;
     (ATTRIB(x) != R_NilValue && \
      (TYPEOF(x) != CHARSXP || TYPEOF(ATTRIB(x)) != CHARSXP))
 # endif
-#else
-# ifdef PROTECTCHECK
-#  define HAS_GENUINE_ATTRIB(x) \
-    (TYPEOF(x) != FREESXP && ATTRIB(x) != R_NilValue)
-# else
-#  define HAS_GENUINE_ATTRIB(x) (ATTRIB(x) != R_NilValue)
-# endif
-#endif
+
 #ifdef PROTECTCHECK
 #define FREE_FORWARD_CASE case FREESXP: if (gc_inhibit_release) break;
 #define FREE_FORWARD_ELSE_IF \
@@ -737,10 +729,10 @@ static R_size_t R_NodesInUse = 0;
   (1 << STRSXP) )
 
 #define DO_CHILDREN(n_,dc_action_,dc_extra_) do { \
-    if (HAS_GENUINE_ATTRIB(n_)) { \
+    int typ_ = TYPEOF(n_); \
+    if (ATTRIB(n_) != R_NilValue && typ_ != CHARSXP) { \
         dc_action_ (ATTRIB(n_), dc_extra_); \
     } \
-    int typ_ = TYPEOF(n_); \
     if (! ((no_action_types >> typ_) & 1)) { \
         SEXP *strt_; R_len_t cnt_; \
         if ((three_pointer_types >> typ_) & 1) { \
@@ -766,7 +758,7 @@ static R_size_t R_NodesInUse = 0;
 
 #define DO_CHILDREN_DEBUG(__n__,dc__action__,extra1,extra2) do { \
   int _r_, _c_ = 0; \
-  if (HAS_GENUINE_ATTRIB(__n__)) { \
+  if (ATTRIB(n_) != R_NilValue && TYPEOF(__n__) != CHARSXP) { \
     _c_ += _r_ = dc__action__(ATTRIB(__n__), __n__,extra1,extra2); \
     if (_r_) REprintf("  -- %s attrib\n",type2char(TYPEOF(__n__))); \
   } \
@@ -2090,28 +2082,23 @@ static void RunGenCollect(R_size_t size_needed)
 	SEXP t;
 	int nc = 0;
 	for (i = 0; i < LENGTH(R_StringHash); i++) {
-	    s = VECTOR_ELT(R_StringHash, i);
 	    t = R_NilValue;
-	    while (s != R_NilValue) {
+	    for (s = VECTOR_ELT(R_StringHash,i); s!=R_NilValue; s = ATTRIB(s)) {
 #if DEBUG_GLOBAL_STRING_HASH
                 if (TYPEOF(s)!=CHARSXP)
                    REprintf(
                      "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
                       TYPEOF(s));
 #endif
-		if (! NODE_IS_MARKED(CXHEAD(s))) { 
-                    /* remove unused CHARSXP, and associated cons cell (if 
-                       not linking by attribute field) */
+		if (NODE_IS_MARKED(s))
+                    t = s;
+                else { /* remove unused CHARSXP */
 		    if (t == R_NilValue) /* head of list */
                         /* Do NOT use SET_VECTOR_ELT - no old-to-new tracking */
-			VECTOR_ELT(R_StringHash, i) = CXTAIL(s);
+			VECTOR_ELT(R_StringHash, i) = ATTRIB(s);
 		    else
-			CXTAIL(t) = CXTAIL(s);
-		    s = CXTAIL(s);
-		    continue;
+			ATTRIB(t) = ATTRIB(s);
 		}
-		t = s;
-		s = CXTAIL(s);
 	    }
 	    if(VECTOR_ELT(R_StringHash, i) != R_NilValue) nc++;
 	}
@@ -4217,7 +4204,7 @@ void attribute_hidden InitStringHash()
 static void R_StringHash_resize(unsigned int newsize)
 {
     SEXP old_table = R_StringHash;
-    SEXP new_table, chain, new_chain, val, next;
+    SEXP new_table, new_chain, val, next;
     unsigned int counter, new_hashcode, newmask;
 #if DEBUG_GLOBAL_STRING_HASH
     unsigned int oldsize = HASHSIZE(R_StringHash);
@@ -4235,10 +4222,9 @@ static void R_StringHash_resize(unsigned int newsize)
 
     /* transfer chains from old table to new table */
     for (counter = 0; counter < LENGTH(old_table); counter++) {
-	chain = VECTOR_ELT(old_table, counter);
-	while (chain != R_NilValue) {
-	    val = CXHEAD(chain);
-	    next = CXTAIL(chain);
+	val = VECTOR_ELT(old_table, counter);
+	while (val != R_NilValue) {
+	    next = ATTRIB(val);
 #if DEBUG_GLOBAL_STRING_HASH
             if (TYPEOF(val)!=CHARSXP)
                REprintf("R_StringHash table contains a non-CHARSXP (%d, rs)!\n",
@@ -4253,9 +4239,9 @@ static void R_StringHash_resize(unsigned int newsize)
                destrictive modification, which does NOT do the old-to-new
                check, since table entries aren't supposed to be marked
                in the initial pass of the GC. */
-	    CXTAIL(val) = new_chain;
-	    VECTOR_ELT(new_table, new_hashcode) = val;
-	    chain = next;
+	    ATTRIB(val) = new_chain;                   /* not SET_ATTRIB! */
+	    VECTOR_ELT(new_table, new_hashcode) = val; /* not SET_VECTOR_ELT! */
+	    val = next;
 	}
     }
     R_StringHash = new_table;
@@ -4277,7 +4263,7 @@ static void R_StringHash_resize(unsigned int newsize)
    this will always zero-terminate */
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
-    SEXP cval, chain;
+    SEXP cval, val;
     unsigned int hashcode;
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
@@ -4327,10 +4313,9 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
     /* Search for a cached value */
     cval = R_NilValue;
-    for (chain = VECTOR_ELT(R_StringHash, hashcode); 
-         chain != R_NilValue; 
-         chain = CXTAIL(chain)) {
-	SEXP val = CXHEAD(chain);
+    for (val = VECTOR_ELT(R_StringHash, hashcode); 
+         val != R_NilValue; 
+         val = ATTRIB(val)) {
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
             if (LENGTH(val) == len) {
                 if (len == 0 || *CHAR(val) == *name /* quick pretest */
@@ -4363,19 +4348,14 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 	if (is_ascii) SET_ASCII(cval);
 	SET_CACHED(cval);  /* Mark it */
 	/* add the new value to the cache */
-	chain = VECTOR_ELT(R_StringHash, hashcode);
-	if (chain == R_NilValue)
+	val = VECTOR_ELT(R_StringHash, hashcode);
+	if (val == R_NilValue)
 	    SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
 
         /* The modifications below should NOT do the old-to-new check, since
            the table should not be looked at in the initial GC scan. */
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-	CXTAIL(cval) = chain;
-        chain = cval;
-#else
-        chain = CONS(cval,chain);
-#endif
-	VECTOR_ELT(R_StringHash, hashcode) = chain;
+	ATTRIB(cval) = val;                         /* not SET_ATTRIB! */
+	VECTOR_ELT(R_StringHash, hashcode) = cval;  /* not SET_VECTOR_ELT! */
 
 	/* Resize the hash table if desirable and possible. */
 	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
@@ -4408,14 +4388,14 @@ void do_show_cache(int n)
 	if (chain != R_NilValue) {
 	    Rprintf("Line %d: ", i);
 	    do {
-		if (IS_UTF8(CXHEAD(chain)))
+		if (IS_UTF8(chain))
 		    Rprintf("U");
-		else if (IS_LATIN1(CXHEAD(chain)))
+		else if (IS_LATIN1(chain))
 		    Rprintf("L");
-		else if (IS_BYTES(CXHEAD(chain)))
+		else if (IS_BYTES(chain))
 		    Rprintf("B");
-		Rprintf("|%s| ", CHAR(CXHEAD(chain)));
-		chain = CXTAIL(chain);
+		Rprintf("|%s| ", CHAR(chain));
+		chain = ATTRIB(chain);
 	    } while (chain != R_NilValue);
 	    Rprintf("\n");
 	    j++;
@@ -4435,14 +4415,14 @@ void do_write_cache()
 	    if (chain != R_NilValue) {
 		fprintf(f, "Line %d: ", i);
 		do {
-		    if (IS_UTF8(CXHEAD(chain)))
+		    if (IS_UTF8(chain))
 			fprintf(f, "U");
-		    else if (IS_LATIN1(CXHEAD(chain)))
+		    else if (IS_LATIN1(chain))
 			fprintf(f, "L");
-		    else if (IS_BYTES(CXHEAD(chain)))
+		    else if (IS_BYTES(chain))
 			fprintf(f, "B");
-		    fprintf(f, "|%s| ", CHAR(CXHEAD(chain)));
-		    chain = CXTAIL(chain);
+		    fprintf(f, "|%s| ", CHAR(chain));
+		    chain = ATTRIB(chain);
 		} while (chain != R_NilValue);
 		fprintf(f, "\n");
 	    }

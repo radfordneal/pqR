@@ -1,0 +1,5 @@
+Revision to how charsxp and symsxp are handled, in GC and elsewhere.
+
+Fixes charsxp cache to use ATTRIB field unconditionally, removing other code.
+
+Now does simple check for CHARSXP in DO_CHILDREN in gc.
