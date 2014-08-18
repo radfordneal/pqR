@@ -82,8 +82,9 @@
 
 /* NodeClassSize gives the number of VECRECs in nodes of the small node classes.
    One of these will be identified (at run time) as SEXPREC_class, used for
-   "cons" cells (so it's necessary that one be big enough for this).  Note 
-   that the last node class is for larger vectors, and has no entry here.
+   "cons" cells (so it's necessary that one be big enough for this), and also
+   one as SYM_SEXPREC_class, used for symbols.  Note that the last node class 
+   is for larger vectors, and has no entry here.
 
    The values in the initialization below will usually be replaced by values 
    derived from NodeClassBytes32 or NodeClassBytes64, which are designed for 
@@ -513,8 +514,10 @@ static double R_NMega_max=0.0;
 #define NODE_CLASS(s) ((s)->sxpinfo.gccls)
 #define SET_NODE_CLASS(s,v) (((s)->sxpinfo.gccls) = (v))
 
-static int SEXPREC_class;    /* Small node class used for "cons" cells */
-static int sizeof_SEXPREC;   /* Size of SEXPREC_class nodes */
+static int SEXPREC_class;      /* Small node class used for "cons" cells */
+static int sizeof_SEXPREC;     /* Size of SEXPREC_class nodes */
+static int SYM_SEXPREC_class;  /* Small node class used for symbolss */
+static int sizeof_SYM_SEXPREC; /* Size of SYM_SEXPREC_class nodes */
 
 
 /* Node Generations. */
@@ -1939,8 +1942,11 @@ static void RunGenCollect(R_size_t size_needed)
         FORWARD_NODE(R_VStack);
 
     if (R_SymbolTable != NULL) /* Symbol table, could be NULL during startup */
-        for (i = 0; i < HSIZE; i++)
-            FORWARD_NODE(R_SymbolTable[i]);
+        for (i = 0; i < HSIZE; i++) {
+            /* We follow the chain here, as DO_CHILDREN ignores NEXTSYM_PTR */
+            for (SEXP s = R_SymbolTable[i]; s != R_NilValue; s = NEXTSYM_PTR(s))
+                FORWARD_NODE(s);
+        }
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
 	FORWARD_NODE(R_CurrentExpr);
@@ -2436,6 +2442,19 @@ void attribute_hidden InitMemory()
     if (i == NUM_SMALL_NODE_CLASSES)
         R_Suicide("none of the small node classes is big enough for a SEXPREC");
 
+    /* Find the class to use for symbols. */
+
+    for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
+        int size = sizeof(SEXPREC_ALIGN) + NodeClassSize[i]*sizeof(VECREC);
+        if (sizeof(SYM_SEXPREC) <= size) {
+            SYM_SEXPREC_class = i;
+            sizeof_SYM_SEXPREC = size;
+            break;
+        }
+    }
+    if (i == NUM_SMALL_NODE_CLASSES)
+        R_Suicide("none of the small node classes is big enough for a symbol");
+
     init_gctorture();
 
     gc_reporting = R_Verbose;
@@ -2728,6 +2747,130 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRENV(s) = CHK(rho);
     PRSEEN(s) = 0;
     return s;
+}
+
+
+/*  mkPRIMSXP - return a builtin function      */
+/*              either "builtin" or "special"  */
+
+/*  The value produced is cached do avoid the need for GC protection
+    in cases where a .Primitive is produced by unserializing or
+    reconstructed after a package has clobbered the value assigned to
+    a symbol in the base package. */
+
+SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
+{
+    SEXP result;
+    SEXPTYPE type = eval ? BUILTINSXP : SPECIALSXP;
+    static SEXP PrimCache = NULL;
+    static int FunTabSize = 0;
+    
+    if (PrimCache == NULL) {
+	/* compute the number of entires in R_FunTab */
+	while (R_FunTab[FunTabSize].name)
+	    FunTabSize++;
+
+	/* allocate and protect the cache */
+	PrimCache = allocVector(VECSXP, FunTabSize);
+	R_PreserveObject(PrimCache);
+    }
+
+    if (offset < 0 || offset >= FunTabSize)
+	error("offset is out of R_FunTab range");
+
+    result = VECTOR_ELT(PrimCache, offset);
+
+    if (result == R_NilValue) {
+	result = allocSExp(type);
+	SET_PRIMOFFSET(result, offset);
+        SET_VECTOR_ELT (PrimCache, offset, result);
+    }
+    else if (TYPEOF(result) != type)
+	error("requested primitive type is not consistent with cached value");
+
+    return result;
+}
+
+
+/* This is called by function() {}, where an invalid
+   body should be impossible. When called from
+   other places (eg do_asfunction) they
+   should do this checking in advance */
+
+/*  mkCLOSXP - return a closure with formals f,  */
+/*             body b, and environment rho       */
+
+SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
+{
+    SEXP c;
+    PROTECT(formals);
+    PROTECT(body);
+    PROTECT(rho);
+    c = allocSExp(CLOSXP);
+
+#ifdef not_used_CheckFormals
+    if(isList(formals))
+	SET_FORMALS(c, formals);
+    else
+	error(_("invalid formal arguments for 'function'"));
+#else
+    SET_FORMALS(c, formals);
+#endif
+    switch (TYPEOF(body)) {
+    case CLOSXP:
+    case BUILTINSXP:
+    case SPECIALSXP:
+    case DOTSXP:
+    case ANYSXP:
+	error(_("invalid body argument for 'function'"));
+	break;
+    default:
+	SET_BODY(c, body);
+	break;
+    }
+
+    if(rho == R_NilValue)
+	SET_CLOENV(c, R_GlobalEnv);
+    else
+	SET_CLOENV(c, rho);
+    UNPROTECT(3);
+    return c;
+}
+
+
+/*  mkSYMSXP - return a symsxp with the string  */
+/*             name inserted in the name field  */
+
+static int isDDName(SEXP name)
+{
+    const char *buf;
+    char *endp;
+
+    buf = CHAR(name);
+    if (buf[0]=='.' && buf[1]=='.' && buf[2]!=0) {
+	(void) strtol(buf+2, &endp, 10);
+        return *endp == 0;
+    }
+    return 0;
+}
+
+SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
+
+{
+    SEXP c;
+    PROTECT2(name,value);
+    if (FORCE_GC || NO_FREE_NODES())
+	c = get_free_node_gc(SYM_SEXPREC_class);
+    else
+        c = get_free_node(SYM_SEXPREC_class);
+    TYPEOF(c) = SYMSXP;
+    PRINTNAME(c) = name;
+    SYMVALUE(c) = value;
+    INTERNAL(c) = R_NilValue;
+    NEXTSYM_PTR(c) = R_NilValue;
+    SET_DDVAL(c, isDDName(name));
+    UNPROTECT(2);
+    return c;
 }
 
 
