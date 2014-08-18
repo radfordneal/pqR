@@ -634,7 +634,8 @@ SEXP install(const char *name)
         double count = 0, count_sq = 0;
         for (i = 0; i<HSIZE; i++) {
             int c = 0;
-            for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym)) c++;
+            for (sym=R_SymbolTable[i]; sym!=R_NilValue; sym=NEXTSYM_PTR(sym))
+                c += 1;
             count += c;
             count_sq += c*c;
         }
