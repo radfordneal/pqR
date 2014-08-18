@@ -199,10 +199,6 @@ extern struct sxpinfo_struct *Rf_verify_nonvec (void *);
 #define NONVEC_SXPINFO(x) ((x)->sxpinfo.u.nonvec)
 #endif
 
-struct vecsxp_struct {
-    R_len_t length;
-};
-
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
     /* The two function pointers below can't use SEXP, since not defined yet*/
     void *(*primsxp_cfun)();   /* c-code address for prim fun, from table   */
@@ -217,12 +213,6 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument       */
     unsigned int primsxp_dsptch2:1; /* might dispatch on 2nd argument       */
     unsigned int primsxp_uni_too:1; /* can be unary as well as binary       */
-};
-
-struct symsxp_struct {
-    struct SEXPREC *pname;
-    struct SEXPREC *value;
-    struct SEXPREC *internal;
 };
 
 struct listsxp_struct {
@@ -282,13 +272,27 @@ typedef struct SEXPREC {
     SEXPREC_HEADER;
     union {
 	struct primsxp_struct primsxp;
-	struct symsxp_struct symsxp;
 	struct listsxp_struct listsxp;
 	struct envsxp_struct envsxp;
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
     } u;
 } SEXPREC, *SEXP;
+
+
+/* Version of SEXPREC used for symbols. */
+
+struct symsxp_struct {
+    struct SEXPREC *pname;
+    struct SEXPREC *value;
+    struct SEXPREC *internal;
+    struct SEXPREC *nextsym;
+};
+
+typedef struct SYM_SEXPREC {
+    SEXPREC_HEADER;
+    struct symsxp_struct symsxp;
+} SYM_SEXPREC, *SYMSEXP;
 
 /* Reduced version of SEXPREC used as a header in vector nodes.  The 
    layout MUST be kept consistent with the SEXPREC definition.  The size
@@ -299,6 +303,10 @@ typedef struct SEXPREC {
        8-byte pointers, 4-byte R_len_t:  36 bytes (40 bytes if aligned)
        8-byte pointers, 8-byte R_len_t:  40 bytes
 */
+
+struct vecsxp_struct {
+    R_len_t length;
+};
 
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
@@ -600,9 +608,10 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_RSTEP(x,v)	(NONVEC_SXPINFO(x).rstep=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	((x)->u.symsxp.pname)
-#define SYMVALUE(x)	((x)->u.symsxp.value)
-#define INTERNAL(x)	((x)->u.symsxp.internal)
+#define PRINTNAME(x)	(((SYMSEXP) (x))->symsxp.pname)
+#define SYMVALUE(x)	(((SYMSEXP) (x))->symsxp.value)
+#define INTERNAL(x)	(((SYMSEXP) (x))->symsxp.internal)
+#define NEXTSYM_PTR(x)	(((SYMSEXP) (x))->symsxp.nextsym)
 #define DDVAL_MASK	1
 #define DDVAL(x)	((x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
@@ -817,7 +826,7 @@ LibExtern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
 /* Special Values */
 
 #define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
-LibExtern const SEXPREC R_UnboundValue_const; /* defined in const-objs.c */
+LibExtern const SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c */
 
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 

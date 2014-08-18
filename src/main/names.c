@@ -585,11 +585,11 @@ void InitNames()
 	R_Suicide("couldn't allocate memory for symbol table");
 
     /* R_MissingArg */
-    R_MissingArg = allocSExp(SYMSXP);
+    R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
     SET_PRINTNAME(R_MissingArg, mkChar(""));
     /* R_RestartToken */
-    R_RestartToken = allocSExp(SYMSXP);
+    R_RestartToken = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
     SET_PRINTNAME(R_RestartToken, mkChar(""));
 
@@ -650,10 +650,10 @@ SEXP install(const char *name)
     i = hashcode % HSIZE;
 
     /* Check to see if the symbol is already present;  if it is, return it. */
-    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym)) {
-        const char *s = CHAR(PRINTNAME(CAR(sym)));
+    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
+        const char *s = CHAR(PRINTNAME(sym));
 	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
-            return (CAR(sym));
+            return sym;
     }
 
     /* Create a new symbol node and link it into the table. */
@@ -662,8 +662,8 @@ SEXP install(const char *name)
     sym = mkSYMSXP(mkChar(name), R_UnboundValue);
     SET_HASHVALUE(PRINTNAME(sym), hashcode);
     SET_HASHASH(PRINTNAME(sym), 1);
-
-    R_SymbolTable[i] = CONS(sym, R_SymbolTable[i]);
+    NEXTSYM_PTR(sym) = R_SymbolTable[i];
+    R_SymbolTable[i] = sym;
     return (sym);
 }
 
