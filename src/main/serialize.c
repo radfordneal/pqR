@@ -978,14 +978,10 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 	case DOTSXP: hastag = TAG(s) != R_NilValue; break;
 	default: hastag = FALSE;
 	}
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
-	/* With the CHARSXP cache chains maintained through the ATTRIB
-	   field the content of that field must not be serialized, so
+	/* The CHARSXP cache chains are maintained through the ATTRIB
+	   field, so the content of that field must not be serialized, so
 	   we treat it as not there. */
 	hasattr = (TYPEOF(s) != CHARSXP && ATTRIB(s) != R_NilValue);
-#else
-	hasattr = ATTRIB(s) != R_NilValue;
-#endif
 	flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
 			  hasattr, hastag, IS_CONSTANT(s));
 	OutInteger(stream, flags);
@@ -1709,22 +1705,17 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	if (type != CHARSXP && type != SPECIALSXP && type != BUILTINSXP)
 	    if (LEVELS(s)!=levs) SETLEVELS(s, levs); /* don't write to const! */
 	SET_OBJECT(s, objf);
-#ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
 	if (TYPEOF(s) == CHARSXP) {
-	    /* With the CHARSXP cache maintained through the ATTRIB
-	       field that field has already been filled in by the
+	    /* Since the CHARSXP cache is maintained through the ATTRIB
+	       field, that field has already been filled in by the
 	       mkChar/mkCharCE call above, so we need to leave it
 	       alone.  If there is an attribute (as there might be if
 	       the serialized data was created by an older version) we
 	       read and ignore the value. */
-	    if (hasattr) ReadItem(ref_table, stream);
+	    if (hasattr) (void) ReadItem(ref_table, stream);
 	}
 	else if (hasattr)
 	    SET_ATTRIB(s, ReadItem(ref_table, stream));
-#else
-	if (hasattr)
-	    SET_ATTRIB(s, ReadItem(ref_table, stream));
-#endif
 	UNPROTECT(1); /* s */
 	goto ret;
     }
