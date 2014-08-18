@@ -1991,7 +1991,6 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 		length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
 		tmp = installAssignFcnName(CADDR(CAR(expr)));
 		BLK_PROTECT(tmp = lang3(CAAR(expr), CADR(CAR(expr)), tmp));
-		nprot++;
 	    }
 	    else
 		error(_("invalid function in complex assignment"));
@@ -2024,7 +2023,6 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	    length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
 	    afun = installAssignFcnName(CADDR(CAR(expr)));
 	    BLK_PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
-	    nprot++;
 	}
 	else
 	    error(_("invalid function in complex assignment"));
