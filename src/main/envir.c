@@ -966,9 +966,27 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 
   Note that (option&1)!=0 if a get should aways be done on a user database,
   and (option&2)!=0 if we don't need to wait.
+
+  The findVarInFramePendingOK version is an abbreviation for option of 3.
+  It may not only be more convenient, but also be faster.
 */
 
-SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
+static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
+
+SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
+{
+    SEXP value;
+
+    if (rho == LASTSYMENV(symbol)) {
+        value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
+        if (value == R_UnboundValue)
+            LASTSYMENV(symbol) = NULL;
+        else
+            return value;
+    }
+
+    return findVarInFrame3_nolast (rho, symbol, 3);
+}
 
 SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
@@ -999,11 +1017,9 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
 /* Version that doesn't check LASTSYMBINDING.  Split from above so the
    simplest case will have low overhead.  Could also be called directly
-   if it's known that checking LASTSYMBINDING won't help. 
+   if it's known that checking LASTSYMBINDING won't help. */
 
-   Not declared static to discourage the compiler from inlining it above. */
-
-SEXP attribute_hidden findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
+static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
     SEXP loc, value;
 
@@ -1177,7 +1193,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
        R_GlobalEnv */
 
     while (rho != R_GlobalEnv && rho != R_EmptyEnv) {
-	value = findVarInFrame3 (rho, symbol, 3);
+	value = findVarInFramePendingOK (rho, symbol);
 	if (value != R_UnboundValue) 
             return value;
 	rho = ENCLOS(rho);
@@ -1193,7 +1209,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 #else
 
     while (rho != R_EmptyEnv) {
-	value = findVarInFrame3 (rho, symbol, 3);
+	value = findVarInFramePendingOK (rho, symbol);
 	if (value != R_UnboundValue) 
             return value;
 	rho = ENCLOS(rho);
@@ -1416,7 +1432,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
             }
 #       endif
 
-        vl = findVarInFrame3 (rho, symbol, 3);
+        vl = findVarInFramePendingOK (rho, symbol);
 
       got_value:
 	if (vl == R_UnboundValue) continue;
@@ -1446,7 +1462,7 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
     SEXP vl;
 
     while (rho != R_EmptyEnv) {
-	vl = findVarInFrame3(rho, symbol, 3);
+	vl = findVarInFramePendingOK(rho, symbol);
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP)
 		vl = forcePromise(vl);
