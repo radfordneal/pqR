@@ -540,28 +540,32 @@ static void SetupBuiltins(void)
     R_FunTab[i].name = NULL;
 
     /* Install the primitive and internal functions.  Look for fast versions
-       of each one. */
+       of the primitives (but not internals). */
 
     for (i = 0; R_FunTab[i].name!=NULL; i++) {
         SEXP (*this_cfun)() = R_FunTab[i].cfun;
         int this_code = R_FunTab[i].code;
         SEXP prim;
-        /* prim needs protect since install can (and does here) allocate */
+        /* prim needs protect since install can (and does here) allocate.
+           Except... mkPRIMSXP now caches them all, so maybe not. */
         PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
         if ((R_FunTab[i].eval % 100 )/10)
             SET_INTERNAL(install(R_FunTab[i].name), prim);
-        else
+        else {
             SET_SYMVALUE(install(R_FunTab[i].name), prim);
-        for (j = 0; FastFunTab_ptrs[j]!=NULL; j++) {
-            for (k = 0; FastFunTab_ptrs[j][k].slow!=0; k++) {
-                FASTFUNTAB *f = &FastFunTab_ptrs[j][k];
-                if (f->slow==this_cfun && (f->code==-1 || f->code==this_code)) {
-                    if (f->arity==1)
-                        SET_PRIMFUN_FAST_UNARY(prim,f->fast,f->dsptch1,f->var1);
-                    else
-                        SET_PRIMFUN_FAST_BINARY(prim,f->fast,
-                           f->dsptch1,f->dsptch2,f->var1,f->var2,f->arity==3);
-                    goto found;
+            for (j = 0; FastFunTab_ptrs[j]!=NULL; j++) {
+                for (k = 0; FastFunTab_ptrs[j][k].slow!=0; k++) {
+                    FASTFUNTAB *f = &FastFunTab_ptrs[j][k];
+                    if (f->slow==this_cfun 
+                          && (f->code==-1 || f->code==this_code)) {
+                        if (f->arity==1)
+                            SET_PRIMFUN_FAST_UNARY (prim, f->fast, f->dsptch1,
+                                                    f->var1);
+                        else
+                            SET_PRIMFUN_FAST_BINARY (prim, f->fast, f->dsptch1,
+                              f->dsptch2, f->var1, f->var2, f->arity==3);
+                        goto found;
+                    }
                 }
             }
         }

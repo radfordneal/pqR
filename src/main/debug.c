@@ -112,8 +112,15 @@ SEXP R_traceOnOff(SEXP onOff)
     return ScalarLogical(prev);
 }
 
-Rboolean attribute_hidden
-R_current_trace_state() { return GET_TRACE_STATE; }
+void attribute_hidden R_trace_call (SEXP e, SEXP op) 
+{
+    if (GET_TRACE_STATE) {
+        PROTECT2(e,op);
+        Rprintf("trace: ");
+        PrintValue(e);
+        UNPROTECT(2);
+    }
+}
 
 
 /* memory tracing - no longer exists. */

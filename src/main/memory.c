@@ -2759,7 +2759,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 /*  The value produced is cached do avoid the need for GC protection
     in cases where a .Primitive is produced by unserializing or
     reconstructed after a package has clobbered the value assigned to
-    a symbol in the base package. */
+    a symbol in the base package.  Also relied on to protect op in "eval". */
 
 SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 {

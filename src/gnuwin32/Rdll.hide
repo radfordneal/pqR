@@ -209,7 +209,6 @@
  R_compress2
  R_compress3
  R_cpolyroot
- R_current_trace_state
  R_data_class2
  R_dec_min_exponent
  R_decompress1
@@ -265,6 +264,7 @@
  R_sysframe
  R_sysfunction
  R_sysparent
+ R_trace_call
  R_unary
  R_unserialize
  R_warn_partial_match_args
@@ -333,6 +333,7 @@
  Rf_allocCharsxp
  Rf_arg_missing_error
  Rf_bd0
+ Rf_builtin_op
  Rf_chebyshev_eval
  Rf_chebyshev_init
  Rf_check1arg
@@ -348,6 +349,7 @@
  Rf_evalList
  Rf_evalListKeepMissing
  Rf_evalListPendingOK
+ Rf_evalv2
  Rf_findVar1
  Rf_findcontext
  Rf_forcePromise
