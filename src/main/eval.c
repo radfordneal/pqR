@@ -538,13 +538,10 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     __asm__ ( "fninit" );
 #endif
 
-    switch (TYPEOF(e)) {
+    SEXPTYPE typeof_e = TYPEOF(e);
 
-    case BCODESXP:
-	res = bcEval(e, rho, TRUE);
-	break;
+    if (typeof_e == SYMSXP) {
 
-    case SYMSXP:
 	if (e == R_DotsSymbol)
 	    dotdotdot_error();
 
@@ -574,25 +571,10 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
+    }
 
-        break;
+    else if (typeof_e == LANGSXP) {
 
-    case PROMSXP:
-        /* We could just unconditionally use the return value from
-           forcePromise; the test below avoids the function call if the
-           promise is already evaluated.  We don't change NAMEDCNT, 
-           since for use in applydefine, that would be undesirable. */
-	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            res = forcePromiseUnbound(e);
-        else
-            res = PRVALUE_PENDING_OK(e);
-
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-
-	break;
-
-    case LANGSXP: ;
         SEXP fn = CAR(e), args = CDR(e);
 
 	op = TYPEOF(fn)==SYMSXP ? findFun (fn,rho) : eval (fn,rho);
@@ -623,16 +605,34 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
         }
-
-	break;
-
-    default: 
-        /* put any type that is an error here, to reduce number in switch */
-        if (TYPEOF(e) == DOTSXP)
-            dotdotdot_error();
-        else
-            UNIMPLEMENTED_TYPE("eval", e);
     }
+
+    else if (typeof_e == PROMSXP) {
+
+        /* We could just unconditionally use the return value from
+           forcePromise; the test below avoids the function call if the
+           promise is already evaluated.  We don't change NAMEDCNT, 
+           since for use in applydefine, that would be undesirable. */
+	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
+            res = forcePromiseUnbound(e);
+        else
+            res = PRVALUE_PENDING_OK(e);
+
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+
+    }
+
+    else if (typeof_e == BCODESXP) {
+
+	res = bcEval(e, rho, TRUE);
+    }
+
+    else if (typeof_e == DOTSXP)
+        dotdotdot_error();
+
+    else
+        UNIMPLEMENTED_TYPE("eval", e);
 
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
