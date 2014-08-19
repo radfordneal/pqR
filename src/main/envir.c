@@ -1132,9 +1132,6 @@ SEXP findVar(SEXP symbol, SEXP rho)
 {
     SEXP value;
 
-    if (!isEnvironment(rho))
-	error(_("argument to '%s' is not an environment"), "findVar");
-
 #ifdef USE_GLOBAL_CACHE
 
     /* This first loop handles local frames, if there are any.  It
@@ -1172,9 +1169,6 @@ SEXP findVar(SEXP symbol, SEXP rho)
 SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 {
     SEXP value;
-
-    if (!isEnvironment(rho))
-	error(_("argument to '%s' is not an environment"), "findVar");
 
 #ifdef USE_GLOBAL_CACHE
 
