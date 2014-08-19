@@ -839,6 +839,14 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 {
     SEXP loc;
 
+    if (rho == LASTSYMENV(symbol)) {
+         loc = LASTSYMBINDING(symbol);
+         if (BINDING_VALUE(loc) == R_UnboundValue)
+             LASTSYMENV(symbol) = NULL;
+         else
+             return loc;
+    }
+
     if (IS_USER_DATABASE(rho)) {
 	R_ObjectTable *table = (R_ObjectTable *)R_ExternalPtrAddr(HASHTAB(rho));
 	SEXP val = table->get(CHAR(PRINTNAME(symbol)), canCache, table);
@@ -865,8 +873,15 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	return R_NilValue;
 
     else if (HASHTAB(rho) == R_NilValue) {
+
         loc = FRAME(rho);
-        SEARCH_LOOP (loc, symbol, break);
+        SEARCH_LOOP (loc, symbol, goto found);
+
+        return R_NilValue;
+
+      found:
+        LASTSYMENV(symbol) = rho;
+        LASTSYMBINDING(symbol) = loc;
     }
     else {
         int hashcode;
@@ -953,10 +968,23 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
     SEXP loc, value;
 
+    if (rho == LASTSYMENV(symbol)) {
+         value = BINDING_VALUE(LASTSYMBINDING(symbol));
+         if (value == R_UnboundValue)
+             LASTSYMENV(symbol) = NULL;
+         else {
+             if (option==2)
+                 return R_NilValue;
+             else
+                 goto return_value;
+         }
+    }
+
     if (IS_BASE(rho)) {
         if (option==2) 
             return SYMBOL_HAS_BINDING(symbol) ? R_NilValue : R_UnboundValue;
         value = SYMBOL_BINDING_VALUE(symbol);
+        goto return_value;
     }
 
     else if (IS_USER_DATABASE(rho)) {
@@ -989,6 +1017,8 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
         return R_UnboundValue;
 
       found: 
+        LASTSYMENV(symbol) = rho;
+        LASTSYMBINDING(symbol) = loc;
         if (option==2)
             return R_NilValue;
         else
@@ -1009,6 +1039,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 	value = R_HashGet(hashcode, symbol, HASHTAB(rho));
     }
 
+  return_value:
     if (option != 3)
         WAIT_UNTIL_COMPUTED(value);
 

@@ -287,6 +287,8 @@ struct symsxp_struct {
     struct SEXPREC *value;
     struct SEXPREC *internal;
     struct SEXPREC *nextsym;
+    struct SEXPREC *lastenv;
+    struct SEXPREC *lastbinding;
 };
 
 typedef struct SYM_SEXPREC {
@@ -612,6 +614,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SYMVALUE(x)	(((SYMSEXP) (x))->symsxp.value)
 #define INTERNAL(x)	(((SYMSEXP) (x))->symsxp.internal)
 #define NEXTSYM_PTR(x)	(((SYMSEXP) (x))->symsxp.nextsym)
+#define LASTSYMENV(x)	(((SYMSEXP) (x))->symsxp.lastenv)
+#define LASTSYMBINDING(x) (((SYMSEXP) (x))->symsxp.lastbinding)
 #define DDVAL_MASK	1
 #define DDVAL(x)	((x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
