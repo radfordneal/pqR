@@ -1392,18 +1392,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
             }
 #       endif
 
-        /* Do unhashed local environment lookups here for speed, though 
-           they could be left for findVarInFrame3. */
-
-        if (!OBJECT(rho) && HASHTAB(rho) == R_NilValue && !IS_BASE(rho)) {
-            SEXP loc = FRAME(rho);
-            SEARCH_LOOP (loc, symbol, goto got_loc);
-            continue;
-          got_loc:
-            vl = BINDING_VALUE(loc);
-        }
-        else
-            vl = findVarInFrame3 (rho, symbol, 3);
+        vl = findVarInFrame3 (rho, symbol, 3);
 
       got_value:
 	if (vl == R_UnboundValue) continue;
