@@ -880,7 +880,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
         return R_NilValue;
 
       found:
-        if ( ! IS_ACTIVE_BINDING(loc)) {
+        if ( ! IS_ACTIVE_BINDING(loc) && !DDVAL(symbol)) {
             /* Note:  R_MakeActiveBinding won't let an existing binding 
                become active, so we later assume this can't be active. */
             LASTSYMENV(symbol) = rho;
@@ -1059,7 +1059,7 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         return R_UnboundValue;
 
       found: 
-        if ( ! IS_ACTIVE_BINDING(loc)) {
+        if ( ! IS_ACTIVE_BINDING(loc) && !DDVAL(symbol)) {
             /* Note:  R_MakeActiveBinding won't let an existing binding 
                become active, so we later assume this can't be active. */
             LASTSYMENV(symbol) = rho;
