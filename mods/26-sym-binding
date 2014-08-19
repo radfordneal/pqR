@@ -1,3 +1,5 @@
 Implement a scheme to save the last finding found for a symbol in an
 unhashed environment in the SEXPREC for the symbol (two new fields).
 This may usually avoid linear searches for symbols in local environments.
+
+Defines new findVarInFramePendingOK function.
