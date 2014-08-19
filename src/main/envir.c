@@ -880,8 +880,12 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
         return R_NilValue;
 
       found:
-        LASTSYMENV(symbol) = rho;
-        LASTSYMBINDING(symbol) = loc;
+        if ( ! IS_ACTIVE_BINDING(loc)) {
+            /* Note:  R_MakeActiveBinding won't let an existing binding 
+               become active, so we later assume this can't be active. */
+            LASTSYMENV(symbol) = rho;
+            LASTSYMBINDING(symbol) = loc;
+        }
     }
     else {
         int hashcode;
@@ -971,7 +975,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
     SEXP value;
 
     if (rho == LASTSYMENV(symbol)) {
-        value = BINDING_VALUE(LASTSYMBINDING(symbol));
+        value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
         if (value == R_UnboundValue)
             LASTSYMENV(symbol) = NULL;
         else {
@@ -1039,8 +1043,12 @@ SEXP attribute_hidden findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         return R_UnboundValue;
 
       found: 
-        LASTSYMENV(symbol) = rho;
-        LASTSYMBINDING(symbol) = loc;
+        if ( ! IS_ACTIVE_BINDING(loc)) {
+            /* Note:  R_MakeActiveBinding won't let an existing binding 
+               become active, so we later assume this can't be active. */
+            LASTSYMENV(symbol) = rho;
+            LASTSYMBINDING(symbol) = loc;
+        }
         if (option==2)
             return R_NilValue;
         else
@@ -1124,9 +1132,6 @@ SEXP findVar(SEXP symbol, SEXP rho)
 {
     SEXP value;
 
-    if (!isEnvironment(rho))
-	error(_("argument to '%s' is not an environment"), "findVar");
-
 #ifdef USE_GLOBAL_CACHE
 
     /* This first loop handles local frames, if there are any.  It
@@ -1164,9 +1169,6 @@ SEXP findVar(SEXP symbol, SEXP rho)
 SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 {
     SEXP value;
-
-    if (!isEnvironment(rho))
-	error(_("argument to '%s' is not an environment"), "findVar");
 
 #ifdef USE_GLOBAL_CACHE
 
