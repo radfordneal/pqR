@@ -964,27 +964,49 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
   and (option&2)!=0 if we don't need to wait.
 */
 
+SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
+
 SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
-    SEXP loc, value;
+    SEXP value;
 
     if (rho == LASTSYMENV(symbol)) {
-         value = BINDING_VALUE(LASTSYMBINDING(symbol));
-         if (value == R_UnboundValue)
-             LASTSYMENV(symbol) = NULL;
-         else {
-             if (option==2)
-                 return R_NilValue;
-             else
-                 goto return_value;
-         }
+        value = BINDING_VALUE(LASTSYMBINDING(symbol));
+        if (value == R_UnboundValue)
+            LASTSYMENV(symbol) = NULL;
+        else {
+            switch (option) {
+            case 0:
+            case 1:
+                WAIT_UNTIL_COMPUTED(value);
+                break;
+            case 2:
+                value = R_NilValue;
+                break;
+            default:
+                break;
+            }
+            return value;
+        }
     }
+
+    return findVarInFrame3_nolast (rho, symbol, option);
+}
+
+/* Version that doesn't check LASTSYMBINDING.  Split from above so the
+   simplest case will have low overhead.  Could also be called directly
+   if it's known that checking LASTSYMBINDING won't help. 
+
+   Not declared static to discourage the compiler from inlining it above. */
+
+SEXP attribute_hidden findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
+{
+    SEXP loc, value;
 
     if (IS_BASE(rho)) {
         if (option==2) 
             return SYMBOL_HAS_BINDING(symbol) ? R_NilValue : R_UnboundValue;
         value = SYMBOL_BINDING_VALUE(symbol);
-        goto return_value;
     }
 
     else if (IS_USER_DATABASE(rho)) {
