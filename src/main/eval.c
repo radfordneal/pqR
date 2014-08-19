@@ -379,79 +379,64 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
         helpers_wait_until_not_being_computed (wait_for);
 }
 
-SEXP attribute_hidden forcePromise(SEXP e) /* e protected here if necessary */
+static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
 {
-    if (PRVALUE(e) == R_UnboundValue) {
-	RPRSTACK prstack;
-	SEXP val;
-        PROTECT(e);
-	if(PRSEEN(e)) {
-	    if (PRSEEN(e) == 1)
-		errorcall(R_GlobalContext->call,
-			  _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-	    else warningcall(R_GlobalContext->call,
-			     _("restarting interrupted promise evaluation"));
-	}
-	/* Mark the promise as under evaluation and push it on a stack
-	   that can be used to unmark pending promises if a jump out
-	   of the evaluation occurs. */
-	SET_PRSEEN(e, 1);
-	prstack.promise = e;
-	prstack.next = R_PendingPromises;
-	R_PendingPromises = &prstack;
+    RPRSTACK prstack;
+    SEXP val;
 
-	val = eval(PRCODE(e), PRENV(e));
+    PROTECT(e);
 
-	/* Pop the stack, unmark the promise and set its value field.
-	   Also set the environment to R_NilValue to allow GC to
-	   reclaim the promise environment; this is also useful for
-	   fancy games with delayedAssign() */
-	R_PendingPromises = prstack.next;
-	SET_PRSEEN(e, 0);
-	SET_PRVALUE(e, val);
-        INC_NAMEDCNT(val);
-	SET_PRENV(e, R_NilValue);
-        UNPROTECT(1);
+    if (PRSEEN(e)) {
+        if (PRSEEN(e) == 1)
+            errorcall(R_GlobalContext->call,
+             _("promise already under evaluation: recursive default argument reference or earlier problems?"));
+        else 
+            warningcall(R_GlobalContext->call,
+             _("restarting interrupted promise evaluation"));
     }
-    return PRVALUE(e);
+
+    /* Mark the promise as under evaluation and push it on a stack
+       that can be used to unmark pending promises if a jump out
+       of the evaluation occurs. */
+    SET_PRSEEN(e, 1);
+
+    prstack.promise = e;
+    prstack.next = R_PendingPromises;
+    R_PendingPromises = &prstack;
+
+    val = evalv (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
+
+    /* Pop the stack, unmark the promise and set its value field.
+       Also set the environment to R_NilValue to allow GC to
+       reclaim the promise environment; this is also useful for
+       fancy games with delayedAssign() */
+    R_PendingPromises = prstack.next;
+    SET_PRSEEN(e, 0);
+    SET_PRVALUE(e, val);
+    INC_NAMEDCNT(val);
+    SET_PRENV(e, R_NilValue);
+
+    UNPROTECT(1);
+    return val;
 }
 
+SEXP attribute_hidden forcePromise (SEXP e) /* e protected here if necessary */
+{
+    if (PRVALUE(e) == R_UnboundValue) {
+        SEXP val = forcePromiseUnbound(e);
+        WAIT_UNTIL_COMPUTED(val);
+        return val;
+    }
+    else
+        return PRVALUE(e);
+}
 
 SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
 {
-    if (PRVALUE(e) == R_UnboundValue) {
-	RPRSTACK prstack;
-	SEXP val;
-        PROTECT(e);
-	if(PRSEEN(e)) {
-	    if (PRSEEN(e) == 1)
-		errorcall(R_GlobalContext->call,
-			  _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-	    else warningcall(R_GlobalContext->call,
-			     _("restarting interrupted promise evaluation"));
-	}
-	/* Mark the promise as under evaluation and push it on a stack
-	   that can be used to unmark pending promises if a jump out
-	   of the evaluation occurs. */
-	SET_PRSEEN(e, 1);
-	prstack.promise = e;
-	prstack.next = R_PendingPromises;
-	R_PendingPromises = &prstack;
-
-	val = evalv (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
-
-	/* Pop the stack, unmark the promise and set its value field.
-	   Also set the environment to R_NilValue to allow GC to
-	   reclaim the promise environment; this is also useful for
-	   fancy games with delayedAssign() */
-	R_PendingPromises = prstack.next;
-	SET_PRSEEN(e, 0);
-	SET_PRVALUE(e, val);
-        INC_NAMEDCNT(val);
-	SET_PRENV(e, R_NilValue);
-        UNPROTECT(1);
-    }
-    return PRVALUE_PENDING_OK(e);
+    if (PRVALUE(e) == R_UnboundValue)
+        return forcePromiseUnbound(e);
+    else
+        return PRVALUE_PENDING_OK(e);
 }
 
 /* The "eval" function returns the value of "e" evaluated in "rho".  It
@@ -504,7 +489,6 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
 static SEXP evalv2(SEXP e, SEXP rho, int variant)
 {
     SEXP op, res;
-    int pending_OK = variant & VARIANT_PENDING_OK;
 
     /* Handle check for user interrupt.  Count was decremented in evalv. */
 
@@ -549,9 +533,11 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
 #endif
 
     switch (TYPEOF(e)) {
+
     case BCODESXP:
 	res = bcEval(e, rho, TRUE);
 	break;
+
     case SYMSXP:
 	if (e == R_DotsSymbol)
 	    dotdotdot_error();
@@ -559,7 +545,7 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
 	if (DDVAL(e))
 	    res = ddfindVar(e,rho);
 	else
-	    res = pending_OK ? findVarPendingOK (e, rho) : findVar (e, rho);
+	    res = findVarPendingOK (e, rho);
 	if (res == R_UnboundValue)
             unbound_var_error(e);
 
@@ -569,10 +555,9 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
 
         if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-                res = pending_OK ? forcePromisePendingOK(res) 
-                                 : forcePromise(res);
+                res = forcePromiseUnbound(res);
             else 
-                res = pending_OK ? PRVALUE_PENDING_OK(res) : PRVALUE(res);
+                res = PRVALUE_PENDING_OK(res);
         }
 
         /* A NAMEDCNT of 0 might arise from an inadverently missing increment
@@ -582,17 +567,26 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
         if (NAMEDCNT_EQ_0(res))
             SET_NAMEDCNT_1(res);
 
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+
         break;
+
     case PROMSXP:
         /* We could just unconditionally use the return value from
            forcePromise; the test below avoids the function call if the
            promise is already evaluated.  We don't change NAMEDCNT, 
            since for use in applydefine, that would be undesirable. */
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            res = pending_OK ? forcePromisePendingOK(e) : forcePromise(e);
+            res = forcePromiseUnbound(e);
         else
-            res = pending_OK ? PRVALUE_PENDING_OK(e) : PRVALUE(e);
+            res = PRVALUE_PENDING_OK(e);
+
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+
 	break;
+
     case LANGSXP:
 	if (TYPEOF(CAR(e)) == SYMSXP)
 	    /* This will throw an error if the function is not found */

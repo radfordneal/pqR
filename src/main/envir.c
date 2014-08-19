@@ -1880,7 +1880,6 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP name, value;
-    int pending_ok;
 
     checkArity(op, args);
     check1arg(args, call, "x");
@@ -1894,11 +1893,8 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (value == NULL)
         unbound_var_error(name);
 
-    pending_ok = variant & VARIANT_PENDING_OK;
-
     if (TYPEOF(value) == PROMSXP) {
-        SEXP prvalue = pending_ok ? forcePromisePendingOK(value) 
-                                  : forcePromise(value);
+        SEXP prvalue = forcePromisePendingOK(value);
         DEC_NAMEDCNT_AND_PRVALUE(value);
         value = prvalue;
     }
@@ -1908,7 +1904,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (variant & VARIANT_NULL)
         return R_NilValue;
 
-    if (!pending_ok)
+    if ( ! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(value);
 
     return value;

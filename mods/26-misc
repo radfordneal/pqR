@@ -7,3 +7,6 @@ Clean up R_LookupMethod and its uses.
 Introduce and use installed_already.
 
 Convert some eval's to forcePromise's.
+
+Fiddle with use of forcePromise vs. forcePromisePendingOK, and
+eliminate duplicate code in these two functions.
