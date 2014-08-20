@@ -3462,8 +3462,6 @@ void attribute_hidden Rf_protect_error (void)
     if (R_PPStackSize < R_RealPPStackSize)
         R_PPStackSize = R_RealPPStackSize;
     errorcall(R_NilValue, _("protect(): protection stack overflow"));
-
-    /* endcontext(&cntxt); */ /* not reached */
 }
 
 SEXP protect(SEXP s)

@@ -261,7 +261,6 @@ static int mbrtoint(int *w, const char *s)
 	    return 6;
 	} else return -1;
     }
-    /* return -2; not reached */
 }
 
 static SEXP do_utf8ToInt(SEXP call, SEXP op, SEXP args, SEXP env)
