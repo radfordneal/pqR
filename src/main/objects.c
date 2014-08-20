@@ -480,8 +480,6 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
         _("no applicable method for '%s' applied to an object of class \"%s\""),
            generic_trans, cl);
     }
-    /* Not reached */
-    return R_NilValue;
 }
 
 /*

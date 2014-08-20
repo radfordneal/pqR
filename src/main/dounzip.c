@@ -182,7 +182,6 @@ extract_one(unzFile uf, const char *const dest, const char * const filename,
 	if (!fout) {
 	    unzCloseCurrentFile(uf);
 	    error(_("cannot open file '%s': %s"), outname, strerror(serrno));
-	    return 3;		/* not reached */
 	}
 	while (1) {
 	    err = unzReadCurrentFile(uf, buf, BUF_SIZE);
