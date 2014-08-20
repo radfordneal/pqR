@@ -1446,9 +1446,6 @@ SEXP findFun(SEXP symbol, SEXP rho)
     }
 
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
-
-    /* NOT REACHED */
-    return R_UnboundValue;
 }
 
 /* Variation on findFun that doesn't report errors itself, doesn't
@@ -1498,6 +1495,12 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     PROTECT3(symbol,value,rho);
 
+    if (rho == LASTSYMENV(symbol)) {
+        loc = LASTSYMBINDING(symbol);    /* won't be an active binding */
+        if (CAR(loc) != R_UnboundValue)  /* could be unbound if var removed */
+            goto found;
+    }
+
     if (IS_USER_DATABASE(rho)) {
         /* FIXME: This does not behave as described - DESCRIBED WHERE? HOW? */
         WAIT_UNTIL_COMPUTED(value);
@@ -1531,9 +1534,11 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         return TRUE;      /* should have either succeeded, or raised an error */
     }
 
-    if (HASHTAB(rho) == R_NilValue)
+    if (HASHTAB(rho) == R_NilValue) {
         loc = FRAME(rho);
-    else {
+        SEARCH_LOOP (loc, symbol, goto found_update_last);
+    }
+    else { /* hashed environment */
         SEXP c = PRINTNAME(symbol);
         if( !HASHASH(c) ) {
             SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
@@ -1541,9 +1546,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         }
         hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
+        SEARCH_LOOP (loc, symbol, goto found);
     }
-
-    SEARCH_LOOP (loc, symbol, goto found);
 
     if (create) { /* try to create new variable */
 
@@ -1586,6 +1590,14 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     UNPROTECT(3);
     return FALSE;
 
+  found_update_last:
+    if ( ! IS_ACTIVE_BINDING(loc) && !DDVAL(symbol)) {
+        /* Note:  R_MakeActiveBinding won't let an existing binding 
+           become active, so we later assume this can't be active. */
+        LASTSYMENV(symbol) = rho;
+        LASTSYMBINDING(symbol) = loc;
+    }
+    
   found:
     if ((incdec&1) && !IS_ACTIVE_BINDING(loc))
         DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
