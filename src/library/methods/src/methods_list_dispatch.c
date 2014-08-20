@@ -380,7 +380,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	symbol = install(CHAR(asChar(symbol)));
     pkg = CHAR(STRING_ELT(package, 0)); /* package is guaranteed single string */
 
-    while (rho != R_NilValue) {
+    while (rho != R_EmptyEnv) {
 	vl = findVarInFrame(rho, symbol);
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP) {
