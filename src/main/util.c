@@ -161,8 +161,8 @@ int nrows(SEXP s)
     else if (isFrame(s)) {
 	return nrows(CAR(s));
     }
-    else error(_("object is not a matrix"));
-    return -1;
+    else 
+        error(_("object is not a matrix"));
 }
 
 
@@ -179,8 +179,8 @@ int ncols(SEXP s)
     else if (isFrame(s)) {
 	return length(s);
     }
-    else error(_("object is not a matrix"));
-    return -1;/*NOTREACHED*/
+    else 
+        error(_("object is not a matrix"));
 }
 
 const static char type_msg[] = "invalid type passed to internal function\n";

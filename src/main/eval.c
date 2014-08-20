@@ -1632,10 +1632,9 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-static SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
+static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     findcontext(PRIMVAL(op), rho, R_NilValue);
-    return R_NilValue;
 }
 
 /* Parens are now a SPECIAL, to avoid overhead of creating an arg list. 
@@ -1718,8 +1717,6 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     findcontext(CTXT_BROWSER | CTXT_FUNCTION, rho, v);
-
-    return R_NilValue; /*NOTREACHED*/
 }
 
 /* Declared with a variable number of args in names.c */
@@ -5262,7 +5259,6 @@ static int findOp(void *addr)
 	if (opinfo[i].addr == addr)
 	    return i;
     error(_("cannot find index for threaded code address"));
-    return 0; /* not reached */
 }
 
 SEXP R_bcDecode(SEXP code) {

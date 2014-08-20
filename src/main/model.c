@@ -669,7 +669,6 @@ static SEXP EncodeVars(SEXP formula)
 	return CONS(term, R_NilValue);
     }
     error(_("invalid model formula in EncodeVars"));
-    return R_NilValue;/*NOTREACHED*/
 }
 
 
@@ -1195,7 +1194,6 @@ static SEXP ExpandDots(SEXP object, SEXP value)
 
  badformula:
     error(_("invalid formula in 'update'"));
-    return R_NilValue; /*NOTREACHED*/
 }
 
 static SEXP do_updateform(SEXP call, SEXP op, SEXP args, SEXP rho)

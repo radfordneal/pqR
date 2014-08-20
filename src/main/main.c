@@ -1294,7 +1294,6 @@ static SEXP do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
        loop. */
     R_CleanUp(ask, status, runLast);
     exit(0);
-    /*NOTREACHED*/
 }
 
 
