@@ -10,3 +10,6 @@ Convert some eval's to forcePromise's.
 
 Fiddle with use of forcePromise vs. forcePromisePendingOK, and
 eliminate duplicate code in these two functions.
+
+Changed a reference in "methods" to R_NilValue that should be
+to R_EmptyEnv.
