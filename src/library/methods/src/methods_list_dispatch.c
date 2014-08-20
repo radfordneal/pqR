@@ -329,8 +329,8 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	ptr = strcpy(ptr, "#"); ptr +=1;
 	ptr = strcpy(ptr, "missing"); ptr += strlen("missing");
     }	    
-    value = findVarInFrame(mtable, install(buf));
-    if(value == R_UnboundValue)
+    SEXP ibuf = installed_already(buf);
+    if (ibuf==NULL || (value = findVarInFrame(mtable, ibuf)) == R_UnboundValue)
 	value = R_NilValue;
     UNPROTECT(nprotect);
     return(value);
@@ -380,7 +380,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	symbol = install(CHAR(asChar(symbol)));
     pkg = CHAR(STRING_ELT(package, 0)); /* package is guaranteed single string */
 
-    while (rho != R_NilValue) {
+    while (rho != R_EmptyEnv) {
 	vl = findVarInFrame(rho, symbol);
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP) {
@@ -786,7 +786,8 @@ static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
     }
     /* look up the method by package -- if R_unboundValue, will go on
      to do inherited calculation */
-    return findVarInFrame(table, install(buf));
+    SEXP ibuf = installed_already(buf);
+    return ibuf == NULL ? R_UnboundValue : findVarInFrame(table, install(buf));
 }
 
 static const char *
@@ -858,8 +859,8 @@ SEXP R_getClassFromCache(SEXP class, SEXP table)
     SEXP value;
     if(TYPEOF(class) == STRSXP) {
 	SEXP package = PACKAGE_SLOT(class);
-	value = findVarInFrame(table, install(CHAR(STRING_ELT(class, 0))));
-	if(value == R_UnboundValue)
+        SEXP ins = installed_already(CHAR(STRING_ELT(class, 0)));
+	if (ins==NULL || (value = findVarInFrame(table,ins)) == R_UnboundValue)
 	    return R_NilValue;
 	else if(TYPEOF(package) == STRSXP) {
 	    SEXP defPkg = PACKAGE_SLOT(value);
@@ -1011,7 +1012,8 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	while(*bufptr)
 	    bufptr++;
     }
-    method = findVarInFrame(mtable, install(buf));
+    SEXP ibuf = installed_already(buf);
+    method = ibuf==NULL ? R_UnboundValue : findVarInFrame(mtable, install(buf));
     if(DUPLICATE_CLASS_CASE(method))
 	method = R_selectByPackage(method, classes, nargs);
     if(method == R_UnboundValue) {
