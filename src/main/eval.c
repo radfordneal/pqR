@@ -2032,17 +2032,32 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 
 static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP a, lhs, rhs;
+    SEXP a;
 
-    if (args == R_NilValue 
-     || (a = CDR(args)) == R_NilValue 
-     || CDR(a) != R_NilValue)
+    if (args==R_NilValue || (a = CDR(args)) == R_NilValue || CDR(a)!=R_NilValue)
         checkArity(op,args);
 
-    rhs = evalv (CAR(a), rho, VARIANT_PENDING_OK);
-    lhs = CAR(args);
+    SEXP lhs = CAR(args), rhs = CAR(a);
+    SEXPTYPE lhs_type = TYPEOF(lhs);
 
-    switch (TYPEOF(lhs)) {
+    /* We decide whether we'll ask the right hand side evalutation to do
+       the assignment, for statements like v<-exp(v), v<-v+1, or v<-2*v. */
+
+    int local_assign = 0;
+
+    if (lhs_type == SYMSXP && TYPEOF(rhs) == LANGSXP 
+          && PRIMVAL(op) != 2 && !IS_USER_DATABASE(rho) && !IS_BASE(rho)) {
+        if (CADR(rhs) == lhs) 
+            local_assign = VARIANT_LOCAL_ASSIGN1;
+        else if (CADDR(rhs) == lhs)
+            local_assign = VARIANT_LOCAL_ASSIGN2;
+    }
+
+    /* We evaluate the right hand side now. */
+
+    rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
+
+    switch (lhs_type) {
 
     /* Assignment to simple variable. */
 
@@ -2052,6 +2067,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     case SYMSXP:
         if (PRIMVAL(op) == 2) /* <<- */
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
+        else if (R_variant_result) {
+            /* the assignment was done by the rhs operator */
+            R_variant_result = 0;
+        }
         else
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
         break;

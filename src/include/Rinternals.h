@@ -638,6 +638,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_NO_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).no_spec_sym = (v))
 #define IS_BASE(x)	(NONVEC_SXPINFO(x).base_env) /* 1 = R_BaseEnv or
                                                             R_BaseNamespace */
+#define IS_USER_DATABASE(rho) \
+  ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
+
 #else /* not USE_RINTERNALS */
 
 /* typedef struct SEXPREC *SEXP; */  /* now defined outside USE_RINTERNALS */
