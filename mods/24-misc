@@ -17,3 +17,6 @@ space for a context when often not needed.
 
 DUPLICATE_ATTRIB in arithmetic.c now doesn't do it if attributes
 are already the same.
+
+Make any(isna(x)) faster by adding several elements of x together
+and checking sum.
