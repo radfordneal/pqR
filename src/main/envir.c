@@ -1086,10 +1086,10 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
-        if (option==2)
-            return loc == R_NilValue ? R_UnboundValue : R_NilValue;
-        if (option==7 && IS_ACTIVE_BINDING(loc))
+        if (loc == R_NilValue || option == 7 && IS_ACTIVE_BINDING(loc))
             return R_UnboundValue;
+        if (option==2)
+            return R_NilValue;
         value = BINDING_VALUE(loc);
     }
 
