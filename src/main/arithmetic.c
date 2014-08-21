@@ -404,7 +404,8 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                     return ans;
                 }
             }
-            else if (opcode==PLUSOP || opcode==MINUSOP) { /* type==INTSXP */
+            else if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
+                /* type==INTSXP */
 
                 SEXP ans = NAMEDCNT_EQ_0(arg1) ? arg1 
                          : NAMEDCNT_EQ_0(arg2) ? arg2
@@ -420,8 +421,9 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 }
 
                 int_fast64_t val = 
-                  opcode==PLUSOP ? (int_fast64_t) a1 + (int_fast64_t) a2
-                                 : (int_fast64_t) a1 - (int_fast64_t) a2;
+                  opcode==PLUSOP  ? (int_fast64_t) a1 + (int_fast64_t) a2 :
+                  opcode==MINUSOP ? (int_fast64_t) a1 - (int_fast64_t) a2 :
+                                    (int_fast64_t) a1 * (int_fast64_t) a2;
 
                 if (val >= R_INT_MIN && val <= R_INT_MAX)
                     *INTEGER(ans) = val;
