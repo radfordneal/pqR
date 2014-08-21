@@ -1,0 +1,2 @@
+Implement a scheme to avoid new allocation in statements like
+v <- exp(v), when v is unshared and hence can be reused.
