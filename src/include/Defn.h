@@ -529,6 +529,12 @@ typedef struct {
                                 pairlist with this element (used for $).
                                 Does not set R_variant_result. */
 
+#define VARIANT_LOCAL_ASSIGN1 8  /* May assign result to the first operand.
+                                    Sets R_variant_result to 1 if it does so. */
+
+#define VARIANT_LOCAL_ASSIGN2 9  /* May assign result to the second operand.
+                                    Sets R_variant_result to 1 if it does so. */
+
 #define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
                                     defined above */
 

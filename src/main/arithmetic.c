@@ -1331,11 +1331,8 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 
 #define T_math1 THRESHOLD_ADJUST(5)
 
-static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
+static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 {
-    SEXP sy;
-    int n;
-
     if (opcode == 10003) /* horrible kludge for log */
         opcode = 13;
     else if (opcode >= 44)
@@ -1344,11 +1341,18 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     if (!isNumeric(sa))
         errorcall(call, R_MSG_NONNUM_MATH);
 
-    n = LENGTH(sa);
-    /* coercion can lose the object bit */
-    if (TYPEOF(sa) != REALSXP) sa = coerceVector(sa, REALSXP);
+    int local_assign = 0;
+    int n = LENGTH(sa);
+
+    if (TYPEOF(sa) != REALSXP)
+        sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
+    else if (VARIANT_KIND(variant)==VARIANT_LOCAL_ASSIGN1 && !NAMEDCNT_GT_1(sa)
+               && sa == findVarInFrame3 (env, CADR(call), 7))
+        local_assign = 1;
+
     PROTECT(sa);
 
+    SEXP sy;
     R_naflag = 0;
 
     /* Note: need to protect sy below because some ops may produce a warning,
@@ -1369,7 +1373,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
                 R_naflag = 1;
         }
 
-        if (NAMEDCNT_EQ_0(sa)) {
+        if (local_assign || NAMEDCNT_EQ_0(sa)) {
             PROTECT(sy = sa);
             REAL(sy)[0] = res;
         }
@@ -1389,7 +1393,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 
     else { /* non-variant result, not scalar */
 
-        PROTECT(sy = NAMEDCNT_EQ_0(sa) ? sa : allocVector(REALSXP, n));
+        PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
+                       ? sa : allocVector(REALSXP, n));
 
         DO_NOW_OR_LATER1 (variant,
                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
@@ -1401,6 +1406,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
 
     if (R_naflag) warningcall (call, R_MSG_NA);
     UNPROTECT(2);
+
+    R_variant_result = local_assign;  /* defer setting to now, just in case */
 
     return sy;
 }
@@ -1417,7 +1424,7 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         return tmp;
     }
 
-    return math1 (arg, PRIMVAL(op), call, variant);
+    return math1 (arg, PRIMVAL(op), call, env, variant);
 }
 
 
@@ -1439,7 +1446,7 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env,
 
 static SEXP do_fast_trunc (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
-    return math1(arg, 5, call, variant);
+    return math1(arg, 5, call, env, variant);
 }
 
 SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
@@ -1875,7 +1882,7 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	    if (isComplex(CAR(args)))
 		res = complex_math1(call, op, args, env);
 	    else
-		res = math1(CAR(args), 13, call, variant);
+		res = math1(CAR(args), 13, call, env, variant);
 	    break;
 	case 2:
 	{

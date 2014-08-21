@@ -108,9 +108,6 @@
 #define DEBUG_OUTPUT 0          /* 0 to 2 for increasing debug output */
 #define DEBUG_CHECK 0           /* 1 to enable debug check of HASHSLOTSUSED */
 
-#define IS_USER_DATABASE(rho) \
-  ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
-
 /* various definitions of macros/functions in Defn.h */
 
 #define FRAME_LOCK_MASK (1<<14)
@@ -964,6 +961,9 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
     3             Same as 1, except doesn't wait for computation of the value 
                   to finish.
 
+    7             Like 3, except that it returns R_UnboundValue if the 
+                  binding found is active.
+
   Note that (option&1)!=0 if a get should aways be done on a user database,
   and (option&2)!=0 if we don't need to wait.
 
@@ -1026,6 +1026,8 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
     if (IS_BASE(rho)) {
         if (option==2) 
             return SYMBOL_HAS_BINDING(symbol) ? R_NilValue : R_UnboundValue;
+        if (option==7 && IS_ACTIVE_BINDING(symbol))
+            return R_UnboundValue;
         value = SYMBOL_BINDING_VALUE(symbol);
     }
 
@@ -1059,7 +1061,11 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         return R_UnboundValue;
 
       found: 
-        if ( ! IS_ACTIVE_BINDING(loc) && !DDVAL(symbol)) {
+        if (IS_ACTIVE_BINDING(loc)) {
+            if (option==7) 
+                return R_UnboundValue;
+        }
+        else if (!DDVAL(symbol)) {
             /* Note:  R_MakeActiveBinding won't let an existing binding 
                become active, so we later assume this can't be active. */
             LASTSYMENV(symbol) = rho;
@@ -1079,14 +1085,16 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 	    SET_HASHASH(c, 1);
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+        loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
         if (option==2)
-            return R_HashExists (hashcode, symbol, HASHTAB(rho)) 
-                    ? R_NilValue : R_UnboundValue;
-	value = R_HashGet(hashcode, symbol, HASHTAB(rho));
+            return loc == R_NilValue ? R_UnboundValue : R_NilValue;
+        if (option==7 && IS_ACTIVE_BINDING(loc))
+            return R_UnboundValue;
+        value = BINDING_VALUE(loc);
     }
 
   return_value:
-    if (option != 3)
+    if ((option&2) == 0)
         WAIT_UNTIL_COMPUTED(value);
 
     return value;
