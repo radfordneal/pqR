@@ -1958,8 +1958,23 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = TRUE; goto vret;
         }
         if (VARIANT_KIND(variant) == VARIANT_OR) {
-            for (i = 0; i < n; i++)
+            int i = 0;
+            if (n&1) {
                 if (ISNAN(REAL(x)[i])) { ret = TRUE; goto vret; }
+                i += 1;
+            }
+            if (n&2) {
+                if (ISNAN(REAL(x)[i]+REAL(x)[i+1]) 
+                  && (ISNAN(REAL(x)[i])
+                       || ISNAN(REAL(x)[i+1]))) { ret = TRUE; goto vret; }
+                i += 2;
+            }
+            for ( ; i < n; i += 4)
+                if (ISNAN(REAL(x)[i]+REAL(x)[i+1]+REAL(x)[i+2]+REAL(x)[i+3]) 
+                  && (ISNAN(REAL(x)[i]) 
+                       || ISNAN(REAL(x)[i+1]) 
+                       || ISNAN(REAL(x)[i+2]) 
+                       || ISNAN(REAL(x)[i+3]))) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
 	for (i = 0; i < n; i++)
