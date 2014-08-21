@@ -41,8 +41,20 @@
 # undef __LIBM_PRIVATE
 #endif
 
-#define R_MSG_NA	_("NaNs produced")
-#define R_MSG_NONNUM_MATH _("Non-numeric argument to mathematical function")
+static R_NORETURN void non_numeric_errorcall (SEXP call)
+{
+    errorcall (call, _("Non-numeric argument to mathematical function"));
+}
+
+static void NaN_warning (void)
+{
+    warning (_("NaNs produced"));
+}
+
+static void NaN_warningcall (SEXP call)
+{
+    warningcall (call, _("NaNs produced"));
+}
 
 /* Macro to do attribute duplication only if they're not the same already.
    Using parens in (DUPLICATE_ATTRIB) gets us the function defined in memory.c, 
@@ -1341,8 +1353,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
     else if (opcode >= 44)
         errorcall(call, _("unimplemented real function of 1 argument"));
 
-    if (!isNumeric(sa))
-        errorcall(call, R_MSG_NONNUM_MATH);
+    if (!isNumeric(sa)) non_numeric_errorcall(call);
 
     n = LENGTH(sa);
     /* coercion can lose the object bit */
@@ -1399,7 +1410,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, int variant)
             DUPLICATE_ATTRIB(sy, sa);
     }
 
-    if (R_naflag) warningcall (call, R_MSG_NA);
+    if (R_naflag) NaN_warningcall(call);
     UNPROTECT(2);
 
     return sy;
@@ -1527,7 +1538,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         WAIT_UNTIL_COMPUTED(x);
         s = do_fast_cmathfuns (call, op, x, env, variant);
     } else
-	errorcall(call, R_MSG_NONNUM_MATH);
+	non_numeric_errorcall(call);
 
     if (x!=s) {
         PROTECT(s);
@@ -1557,7 +1568,7 @@ static void setup_Math2
     (SEXP *sa, SEXP *sb, SEXP *sy, int na, int nb, SEXP lcall)
 {
     if (!isNumeric(*sa) || !isNumeric(*sb))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
+	non_numeric_errorcall(lcall);
 
     if (na == 0 || nb == 0) {
 	PROTECT(*sy = allocVector(REALSXP, 0));
@@ -1593,7 +1604,7 @@ static void setup_Math2
         y[i] = fncall; \
         if (ISNAN(y[i])) naflag = 1; \
     } \
-    if (naflag) warning(R_MSG_NA); \
+    if (naflag) NaN_warning(); \
     SEXP frm = n==na ? sa : sb; \
     DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(3); \
@@ -1906,7 +1917,7 @@ static void setup_Math3
     (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sy, int na, int nb, int nc, SEXP lcall)
 {
     if (!isNumeric(*sa) || !isNumeric(*sb) || !isNumeric(*sc))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
+	non_numeric_errorcall(lcall);
 
     if (na == 0 || nb == 0 || nc == 0) {
 	*sy = allocVector(REALSXP,0);
@@ -1947,7 +1958,7 @@ static void setup_Math3
         y[i] = fncall; \
         if (ISNAN(y[i])) naflag = 1; \
     } \
-    if (naflag) warning(R_MSG_NA); \
+    if (naflag) NaN_warning(); \
     SEXP frm = n==na ? sa : n==nb ? sb : sc; \
     DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(4); \
@@ -2109,7 +2120,7 @@ static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy,
                          int na, int nb, int nc, int nd, SEXP lcall)
 {
     if (!isNumeric(*sa) || !isNumeric(*sb) || !isNumeric(*sc) || !isNumeric(*sd))
-	errorcall(lcall, R_MSG_NONNUM_MATH);
+	non_numeric_errorcall(lcall);
 
     if (na == 0 || nb == 0 || nc == 0 || nd == 0) {
 	*sy = allocVector(REALSXP,0);
@@ -2154,7 +2165,7 @@ static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy,
         y[i] = fncall; \
         if (ISNAN(y[i])) naflag = 1; \
     } \
-    if (naflag) warning(R_MSG_NA); \
+    if (naflag) NaN_warning(); \
     SEXP frm = n==na ? sa : n==nb ? sb : n==nc ? sc : sd; \
     DUPLICATE_ATTRIB(sy, frm); \
     UNPROTECT(5); \
@@ -2287,7 +2298,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
 #define SETUP_Math5							\
     if (!isNumeric(sa) || !isNumeric(sb) || !isNumeric(sc) ||		\
 	!isNumeric(sd) || !isNumeric(se))				\
-	errorcall(lcall, R_MSG_NONNUM_MATH);				\
+	non_numeric_errorcall(lcall);				\
 									\
     na = LENGTH(sa);							\
     nb = LENGTH(sb);							\
@@ -2332,8 +2343,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
     }
 
 #define FINISH_Math5				\
-    if(naflag)					\
-	warning(R_MSG_NA);		\
+    if(naflag) NaN_warning();			\
 						\
     SEXP frm = n==na ? sa : n==nb ? sb : n==nc ? sc : n==nd ? sd : se; \
     DUPLICATE_ATTRIB(sy, frm); \
