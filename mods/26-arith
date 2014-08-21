@@ -1,1 +1,3 @@
 Localized cleanup and speed improvements in arithmetic.c.
+
+Do integer multiply of scalars in the fast section.
