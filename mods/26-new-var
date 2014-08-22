@@ -1,0 +1,4 @@
+Modifications to the variant result mechanism.
+
+Defines a VARIANT_PASS_ON macro to isolate the part of
+a variant that should be passed on by "{", "if", etc.
