@@ -350,8 +350,8 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 int local_assign = 0;
                 SEXP ans;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 
-                      && !NAMEDCNT_GT_1(arg1)
-                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
+                  && !NAMEDCNT_GT_1(arg1)
+                  && arg1 == findVarInFrame3 (env, CADR(call), 7))
                     R_variant_result = local_assign = 1;
                 if (type==REALSXP) {
                     ans = local_assign || NAMEDCNT_EQ_0(arg1) 
@@ -378,18 +378,20 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 int local_assign1 = 0, local_assign2 = 0;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
                     if (!NAMEDCNT_GT_1(arg1)
-                          && arg1 == findVarInFrame3 (env, CADR(call), 7))
+                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
                         R_variant_result = local_assign1 = 1;
                 }
                 else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
                     if (!NAMEDCNT_GT_1(arg2)
-                          && arg2 == findVarInFrame3 (env, CADR(call), 7))
+                      && arg2 == findVarInFrame3 (env, CADDR(call), 7))
                         R_variant_result = local_assign2 = 1;
                 }
 
-                SEXP ans = local_assign1 || NAMEDCNT_EQ_0(arg1) ? arg1 
-                         : local_assign2 || NAMEDCNT_EQ_0(arg2) ? arg2
-                         : allocVector1REAL();
+                SEXP ans = local_assign1 ? arg1
+                         : local_assign2 ? arg2
+                         : NAMEDCNT_EQ_0(arg2) ? arg2
+                         : NAMEDCNT_EQ_0(arg1) ? arg1
+                         :   allocVector1REAL();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
@@ -432,18 +434,20 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 int local_assign1 = 0, local_assign2 = 0;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
                     if (!NAMEDCNT_GT_1(arg1)
-                          && arg1 == findVarInFrame3 (env, CADR(call), 7))
+                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
                         R_variant_result = local_assign1 = 1;
                 }
                 else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
                     if (!NAMEDCNT_GT_1(arg2)
-                          && arg2 == findVarInFrame3 (env, CADR(call), 7))
+                      && arg2 == findVarInFrame3 (env, CADDR(call), 7))
                         R_variant_result = local_assign2 = 1;
                 }
 
-                SEXP ans = local_assign1 || NAMEDCNT_EQ_0(arg1) ? arg1 
-                         : local_assign2 || NAMEDCNT_EQ_0(arg2) ? arg2
-                         : allocVector1INT();
+                SEXP ans = local_assign1 ? arg1
+                         : local_assign2 ? arg2
+                         : NAMEDCNT_EQ_0(arg2) ? arg2
+                         : NAMEDCNT_EQ_0(arg1) ? arg1 
+                         :   allocVector1INT();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
