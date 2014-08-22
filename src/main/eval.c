@@ -1407,7 +1407,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         return R_NilValue;
     }
 
-    return evalv (Stmt, rho, variant);
+    return evalv (Stmt, rho, VARIANT_PASS_ON(variant));
 }
 
 
@@ -1657,7 +1657,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue || CDR(args) != R_NilValue)
         checkArity(op, args);
 
-    return evalv (CAR(args), rho, variant);
+    return evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
 }
 
 /* Curly brackets.  Passes on the eval variant to the last expression.  For
@@ -1673,6 +1673,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP arg, s, srcrefs = getBlockSrcrefs(call);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    variant = VARIANT_PASS_ON(variant);
     if (variant & VARIANT_DIRECT_RETURN) 
         vrnt |= variant;
 
@@ -1709,7 +1710,7 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	v = R_NilValue;
     else if (CDR(args) == R_NilValue) /* one argument */
 	v = evalv (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
-                                                 : variant & ~ VARIANT_NULL);
+                    : VARIANT_PASS_ON(variant) & ~ VARIANT_NULL);
     else
 	errorcall(call, _("multi-argument returns are not permitted"));
 
@@ -2427,7 +2428,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
 	if (!SETJMP(cntxt.cjmpbuf))
-	    expr = evalv (expr, env, variant);
+	    expr = evalv (expr, env, VARIANT_PASS_ON(variant));
 	else {
 	    expr = R_ReturnedValue;
 	    if (expr == R_RestartToken) {
@@ -2449,7 +2450,8 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	    for (i = 0 ; i < n ; i++) {
                 R_Srcref = getSrcref(srcrefs, i); 
 		tmp = evalv (VECTOR_ELT(expr, i), env, 
-                        i==n-1 ? variant : VARIANT_NULL | VARIANT_PENDING_OK);
+                        i==n-1 ? VARIANT_PASS_ON(variant) 
+                               : VARIANT_NULL | VARIANT_PENDING_OK);
             }
         }
 	else {
@@ -2465,7 +2467,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	expr = tmp;
     }
     else if( TYPEOF(expr) == PROMSXP ) {
-	expr = evalv (expr, rho, variant);
+	expr = forcePromise(expr);
     } 
     else 
         ; /* expr is returned unchanged */
