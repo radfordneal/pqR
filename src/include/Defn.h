@@ -1227,7 +1227,7 @@ SEXP Rf_EnsureString(SEXP);
 /* Other Internally Used Functions */
 
 SEXP Rf_allocCharsxp(R_len_t);
-SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int);
+SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 void check1arg(SEXP, SEXP, const char *);
 void check1arg_error(SEXP, SEXP, const char *);

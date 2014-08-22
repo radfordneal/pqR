@@ -479,8 +479,8 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
     /* Otherwise, handle the general case. */
 
-    return arg2==NULL ? R_unary (call, op, arg1, variant) 
-                      : R_binary (call, op, arg1, arg2, variant);
+    return arg2==NULL ? R_unary (call, op, arg1, env, variant) 
+                      : R_binary (call, op, arg1, arg2, env, variant);
 }
 
 SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
@@ -934,7 +934,8 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 #define T_arithmetic THRESHOLD_ADJUST(24)  /* further adjusted below */
 
-SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
+SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, 
+                                SEXP env, int variant)
 {
     helpers_task_proc *task;
     SEXP klass, dims, tsp, xnames, ynames, ans;
@@ -1048,19 +1049,32 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
 
     n = nx==0 || ny==0 ? 0 : nx>ny ? nx : ny;
 
+    int local_assign1 = 0, local_assign2 = 0;
+
+    if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
+        if (n == nx && !NAMEDCNT_GT_1(x)
+          && x == findVarInFrame3 (env, CADR(call), 7))
+            local_assign1 = 1;
+    }
+    else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
+        if (n == ny && !NAMEDCNT_GT_1(y)
+          && y == findVarInFrame3 (env, CADDR(call), 7))
+            local_assign2 = 1;
+    }
+    
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
         if (oper==IDIVOP || oper==MODOP)
             errorcall(call,_("unimplemented complex operation"));
         COERCE_IF_NEEDED(x, CPLXSXP, xpi);
         COERCE_IF_NEEDED(y, CPLXSXP, ypi);
-        ans = alloc_or_reuse (x, y, CPLXSXP, n);
+        ans = alloc_or_reuse (x, y, CPLXSXP, n, local_assign1, local_assign2);
         task = task_complex_arithmetic;
         flags = 0;  /* Not bothering with pipelining yet. */
     }
     else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
          /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
             and assumes INT and LOGICAL are really the same. */
-        ans = alloc_or_reuse (x, y, REALSXP, n);
+        ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
         if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
@@ -1083,7 +1097,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
         if (oper == DIVOP || oper == POWOP)
             ans = allocVector(REALSXP, n);
         else
-            ans = alloc_or_reuse (x, y, INTSXP, n);
+            ans = alloc_or_reuse(x, y, INTSXP, n, local_assign1, local_assign2);
         task = task_integer_arithmetic;
 
        /* Only ^, /, and %/% can be done in helpers at present - others must be
@@ -1094,6 +1108,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
               : HELPERS_MASTER_NOW;
     }
 
+    if (ans != x) local_assign1 = 0;
+    if (ans != y) local_assign2 = 0;
     PROTECT(ans);
     nprotect++;
 
@@ -1157,6 +1173,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, int variant)
         ans = asS4(ans, TRUE, TRUE);
     }
 
+    R_variant_result = local_assign1 | local_assign2;
     UNPROTECT(nprotect);
     return ans;
 }
@@ -1221,10 +1238,12 @@ void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
 
 #define T_unary_minus THRESHOLD_ADJUST(20)
 
-SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
+SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, 
+                               SEXP env, int variant)
 {
     ARITHOP_TYPE operation = (ARITHOP_TYPE) PRIMVAL(op);
     int type = TYPEOF(s1);
+    int local_assign = 0;
     SEXP ans;
     int n;
 
@@ -1232,29 +1251,41 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int variant)
         errorcall(call, _("invalid argument to unary operator"));
 
     n = LENGTH(s1);
-    PROTECT(ans = type!=LGLSXP && (operation==PLUSOP || NAMEDCNT_EQ_0(s1)) ? s1 
-                : allocVector (type==LGLSXP ? INTSXP : type, n));
 
-    if (operation==MINUSOP) {
+    if (operation==PLUSOP) {
+        if (type != LGLSXP)
+            ans = s1;
+        else {
+            ans = allocVector (INTSXP, n);
+            WAIT_UNTIL_COMPUTED(s1);
+            for (int i = 0; i<LENGTH(s1); i++) INTEGER(ans)[i] = LOGICAL(s1)[i];
+        }
+    }
+    else if (operation==MINUSOP) {
+        if (type == LGLSXP) 
+            ans = allocVector (INTSXP, n);
+        else {
+            if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1
+              && !NAMEDCNT_GT_1(s1) && s1 == findVarInFrame3(env,CADR(call),7))
+                local_assign = 1;
+            ans = local_assign || NAMEDCNT_EQ_0(s1) ? s1 
+                    : allocVector(type,n);
+        }
         DO_NOW_OR_LATER1 (variant, n >= T_unary_minus,
           TYPEOF(s1)==REALSXP ? HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT
                               : HELPERS_PIPE_IN01_OUT,
           task_unary_minus, 0, ans, s1);
     }
-    else if (operation==PLUSOP) {
-        if (ans != s1) { /* will only happen when s1 is logical */
-            WAIT_UNTIL_COMPUTED(s1);
-            for (int i = 0; i<LENGTH(s1); i++) INTEGER(ans)[i] = LOGICAL(s1)[i];
-        }
-    }
     else
         errorcall(call, _("invalid argument to unary operator"));
 
     if (ans != s1) {
+        PROTECT(ans);
         DUPLICATE_ATTRIB(ans,s1);
+        UNPROTECT(1);
     }
 
-    UNPROTECT(1);
+    R_variant_result = local_assign;  /* do at end, just in case */
     return ans;
 }
 

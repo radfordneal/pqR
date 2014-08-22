@@ -4639,16 +4639,17 @@ R_FreeStringBufferL(R_StringBuffer *buf)
 }
 
 /* Allocate space for the result of an operation, or reuse the space for
-   one of its operands, if it has NAMEDCNT of zero.  Assumes independent 
-   element-by-element computation.  Attributes are assumed to be taken from 
-   the operands, with the first operand's attributes taking precedence.  The 
-   length of the result is assumed to be the maximum of the lengths of the 
-   operands (unless the result length is zero). */
+   one of its operands, if it has NAMEDCNT of zero. Attributes are assumed 
+   to be taken from the operands, with the first operand's attributes taking 
+   precedence.  The length of the result is assumed to be the maximum of the 
+   lengths of the operands (unless the result length is zero).  The two
+   local_assign[12] arguments override the requirement that NAMEDCNT be 0. */
 
-SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n)
+SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n,
+                                      int local_assign1, int local_assign2)
 {
-    if (n == 0)  /* result may not have length max(n1,n2) */
-        return allocVector (typ, 0);
+/*  if (n == 0) 
+        return allocVector (typ, 0); */
 
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
@@ -4656,8 +4657,8 @@ SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n)
     /* Try to use space for 2nd arg if both same length, so 1st argument's
        attributes will then take precedence when copied. */
 
-    if (n2>=n1) {
-        if (TYPEOF(s2)==typ && NAMEDCNT_EQ_0(s2)) {
+    if (n2==n) {
+        if (TYPEOF(s2)==typ && (local_assign2 || NAMEDCNT_EQ_0(s2))) {
             /* Must remove any "names" attribute of s2 to match action of
                copyMostAttrib.  Any "dim" and "dimnames" attributes are allowed
                to stay, since they will be overwritten anyway. */
@@ -4668,12 +4669,13 @@ SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n)
         else {
             /* Can use 1st arg's space only if 2nd arg has no attributes, else
                we may not get attributes of result right. */
-            if (n1==n2 && TYPEOF(s1)==typ && NAMEDCNT_EQ_0(s1)
-                       && ATTRIB(s2)==R_NilValue)
+            if (n1==n && TYPEOF(s1)==typ && (local_assign1 || NAMEDCNT_EQ_0(s1))
+                      && ATTRIB(s2)==R_NilValue)
                 return s1;
         }
-    } else {
-        if (TYPEOF(s1)==typ && NAMEDCNT_EQ_0(s1))
+    } 
+    else if (n1==n) {
+        if (TYPEOF(s1)==typ && (local_assign1 || NAMEDCNT_EQ_0(s1)))
             return s1;
     }
 
