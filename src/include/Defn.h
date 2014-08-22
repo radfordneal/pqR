@@ -483,9 +483,14 @@ typedef struct {
     NONVEC_SXPINFO(x).var2 = (v2); \
 } while (0)
 
-/* Symbols for eval variants.  The symbols with values less than 16 may be
-   OR'd with zero or more symbols with values 16, 32, 64, or 128.  The result
-   will fit in one unsigned char.
+/* Symbols for eval variants.  Variant 0 indicates the standard result.  
+   Variants with numbers from 0x01, 0x02, ..., 0x0f are passed on for
+   the evaluaton of arguments of "{", "(", "if" (except conditon), etc.  
+   Variants with numbers 0x10, 0x20, ..., 0xf0 are not passed on.  There
+   are no variants of the form 0xNM with N!=0 and M!=0.  These variant
+   numbers may be OR'd with flags 0x100, 0x200, 0x400, 0x800, ... in 
+   order to indicate additional aspects of variation.  Such additional 
+   flags up to 0x8000 are passed on, but flags from 0x10000 up are not.
 
    Return of a variant result is indicated either by the nature of the 
    returned value, or by R_variant_result being set to a non-zero value
@@ -497,10 +502,6 @@ typedef struct {
    return will not appear to have a variant result (unless that is what
    should happen).  
 
-   Variants that set R_variant_return may not make sense for arguments of 
-   fast primitives (ie, for ARG1VAR or ARG2VAR), since evalv does not
-   record R_variant_result for use by the primitive.
-
    A caller of evalv need not set R_variant_result to zero before a call,
    since that is done inside evalv. 
 
@@ -509,42 +510,61 @@ typedef struct {
    However, when VARIANT_NULL is combined with VARIANT_DIRECT_RETURN, a
    direct value for "return" will not be replaced by R_NilValue. */
 
-#define VARIANT_SEQ   2  /* May return a sequence spec, rather than a vector.
-                            Sets R_variant_result to 1 if so. */
+/* Macros isolating part of a variant. */
 
-#define VARIANT_AND   3  /* May return AND of a logical vec rather than vec.
-                            Does not set R_variant_result. */
+#define VARIANT_PASS_ON(v) ((v)&0xff0f) /* Isolate part of variant to be passed 
+                                           on by "{", "(", "if", etc. */
 
-#define VARIANT_OR    4  /* May return OR of a logical vec rather than vec.
-                            Does not set R_variant_result. */
+#define VARIANT_KIND(v) ((v)&0xff) /* Isolate low 8 bits to compare with symbols
+                                      defined below (excludes flag bits) */
 
-#define VARIANT_SUM   5  /* May return sum of vec elements rather than vec.
-                            Does not set R_variant_result. */
+/* Variant kinds that are passed on. */
 
-#define VARIANT_TRANS 6  /* May return the transpose of the result.  
-                            Sets R_variant_result to 1 if so. */
+#define VARIANT_SEQ   0x01  /* May return a sequence spec, rather than a vector.
+                               Sets R_variant_result to 1 if so. */
 
-#define VARIANT_ONE_NAMED 7  /* When the result is a vector list with exactly
-                                one named element, may return a one-element
-                                pairlist with this element (used for $).
-                                Does not set R_variant_result. */
+#define VARIANT_AND   0x02  /* May return AND of a logical vec rather than vec.
+                               Does not set R_variant_result. */
 
-#define VARIANT_KIND(v) ((v)&15) /* Isolate low 4 bits to compare with symbols
-                                    defined above */
+#define VARIANT_OR    0x03  /* May return OR of a logical vec rather than vec.
+                               Does not set R_variant_result. */
 
-#define VARIANT_PENDING_OK 16  /* Computation may be deferred pending completion
-                                  of a task (in a helper or the master).
-                                  Does not set R_variant_result. */
+#define VARIANT_SUM   0x04  /* May return sum of vec elements rather than vec.
+                               Does not set R_variant_result. */
 
-#define VARIANT_DIRECT_RETURN 32 /* A "return" statement may simply return the
-                                    return value, without a non-local jump.
-                                    Should be OR'd with VARIANT_PENDING_OK.
-                                    ORs R_variant_result with VARIANT_RTN */
+#define VARIANT_TRANS 0x05  /* May return the transpose of the result.  
+                               Sets R_variant_result to 1 if so. */
 
-#define VARIANT_NULL 64  /* May just return R_NilValue, while doing side
-                            effects, unless the value is for a direct return.
-                            Should usually be OR'd with VARIANT_PENDING_OK.
-                            Does not set R_variant_result. */
+#define VARIANT_ONE_NAMED 0x06  /* When the result is a vector list with exactly
+                                   one named element, may return a one-element
+                                   pairlist with this element (used for $).
+                                   Does not set R_variant_result. */
+
+/* Variant kinds that are not passed on. */
+
+   /* none so far */
+
+/* Variant flags that are passed on. */
+
+#define VARIANT_PENDING_OK 0x100  /* Computation may be deferred pending
+                                     completion of a task (in a helper or the 
+                                     master). Does not set R_variant_result. */
+
+#define VARIANT_NULL 0x200  /* May just return R_NilValue, while doing side
+                               effects, unless the value is for a direct return.
+                               Should usually be OR'd with VARIANT_PENDING_OK.
+                               Does not set R_variant_result. */
+
+#define VARIANT_DIRECT_RETURN 0x400 /* A "return" statement may simply return
+                                       the return value, without a non-local
+                                       jump. Usually OR with VARIANT_PENDING_OK.
+                                       ORs R_variant_result with VARIANT_RTN. */
+
+/* Variant flags that are not passed on. */
+
+   /* none so far */
+
+/* Flags in R_variant_result. */
 
 #define VARIANT_RTN_FLAG 0x80000000  /* Bit flagging a direct return */
 
