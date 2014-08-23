@@ -173,11 +173,11 @@ struct sxpinfo_struct {
         unsigned int rstep : 1;  /* function is to be debugged, but only once */
         unsigned int trace : 1;  /* function is being traced */
         /* Symbol binding */
-        unsigned int basec : 1;       /* sym has base binding in global cache */
+        unsigned int unused : 1;      /* not yet used */
         unsigned int spec_sym : 1;    /* this is a "special" symbol */
         unsigned int no_spec_sym : 1; /* environment has no special symbols */
         unsigned int base_env : 1;    /* this is R_BaseEnv or R_BaseNamespace */
-        unsigned int unused : 1;      /* not yet used */
+        unsigned int basec : 1;       /* sym has base binding in global cache */
         /* Primitive operations */
         unsigned char var1, var2;/* variants for evals of fast primitive args */
         unsigned char pending_ok;/* whether args can have computation pending */
