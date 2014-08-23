@@ -87,21 +87,21 @@
       immediate core dump.
 \item The environment variable \code{R_BIT_BUCKET} can be set to
       a file to receive output that would otherwise go to \file{dev/null}
-      when "make" is run.
+      when "make" is run to build pqR.
 \item The C functions \code{R_inspect} and \code{R_inspect3} functions are now
       visible to package code, so they can be used there for debugging.
       To see what they do, look in src/main/inspect.c.  They are subject
       to change, and should not appear in any code released to users.
 \item The \code{Rf_error} and related procedures declared in 
       \file{R_ext/Error.h} are now if possible declared to never return,
-      allowing for slightly better code, and avoiding spurious compiler
-      warnings.  This parallels a change in R-3.0.1, but is more general,
-      using the C11 noreturn facility if present, and otherwise resorting to 
-      the gcc facility (if gcc is used).
+      allowing for slightly better code generation byy the compiler, 
+      and avoiding spurious compiler warnings.  This parallels a change 
+      in R-3.0.1, but is more general, using the C11 noreturn facility if 
+      present, and otherwise resorting to the gcc facility (if gcc is used).
 }}
 
   \subsection{
-    FEATURES FOR INSTALLATION CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    FEATURES FOR INSTALLATION LIKE THOSE IN LATER R CORE RELEASES}{
     \itemize{
 \item From R-2.15.1:
       install.packages("pkg_version.tgz") on Mac OS X now has sanity
@@ -232,13 +232,13 @@
       more memory.
 
       This performance bug exists in R Core releases through R-3.1.1, but
-      may now fixed (differently) in the current R Core development version.
+      may now be fixed (differently) in the current R Core development version.
 }}
 
   \subsection{BUG FIXES}{
     \itemize{
 \item Fixed the non-robust checks for integer overflow, which reportedly
-      sometimes fail when using clang on a Mac.  This is PR 15774 at
+      sometimes fail when using clang on a Mac.  This is #PR 15774 at
       r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
 \item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
       \code{na.exclude} that led to a
