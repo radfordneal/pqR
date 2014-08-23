@@ -727,8 +727,10 @@ static SEXP evalv2(SEXP e, SEXP rho, int variant)
                     goto not_fast;
                 }
                 if (arg2 != NULL) {
+                   /* Use of ARG2VAR is currently disabled, since no 
+                      primitives are using it at the moment. */
                     PROTECT(arg2 = evalv(arg2, rho, 
-                              PRIMFUN_ARG2VAR(op) | VARIANT_PENDING_OK));
+                              /* PRIMFUN_ARG2VAR(op) | */ VARIANT_PENDING_OK));
                     if (isObject(arg2) && PRIMFUN_DSPTCH2(op)) {
                         args = R_NilValue;  /* == CDDR(args) */
                         goto not_fast;
