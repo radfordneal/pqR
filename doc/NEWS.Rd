@@ -28,6 +28,9 @@
       existing functions (eg, \code{rep.int}) to be made primitive without
       breaking code that relies on getting their formal arguments with
       \code{formals}.
+\item Setting the \code{deparse.max.lines} option will now limit the
+      number of lines printed when exitting debug of a function, as
+      well as when entering.
 \item The unary \code{+} operator now converts a logical vector to an
       integer vector. This follows a corresponding change in R-3.0.2.
 \item Support for "converters" for use with \code{.C} has been dropped,
@@ -89,6 +92,12 @@
       visible to package code, so they can be used there for debugging.
       To see what they do, look in src/main/inspect.c.  They are subject
       to change, and should not appear in any code released to users.
+\item The \code{Rf_error} and related procedures declared in 
+      \file{R_ext/Error.h} are now if possible declared to never return,
+      allowing for slightly better code, and avoiding spurious compiler
+      warnings.  This parallels a change in R-3.0.1, but is more general,
+      using the C11 noreturn facility if present, and otherwise resorting to 
+      the gcc facility (if gcc is used).
 }}
 
   \subsection{
@@ -124,7 +133,15 @@
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
+    Numerous improvements in speed and memory usage have been made in this
+    release of pqR.  Some of these are noted here.
     \itemize{
+\item Lookup of local variables is now usually much faster (especially when
+      the number of local variables is large), since for each symbol,
+      the last local binding found is now recorded, usually avoiding a 
+      linear search through local symbol bindings.  Those lookups that are
+      still needed are also now a bit faster, due to unrolling of the 
+      search loop.
 \item The speed of \code{.C} and \code{.Fortran} has been substantially
       improved, partly by incorporating changes in R-2.15.1 and R-2.15.2,
       but with substantial additional improvements as well.  The speed of 
@@ -147,6 +164,16 @@
       may now be done in a helper thread, in parallel with other computations.
       For example, attaching names to the result of \code{rep} (if necessary)
       may be done in parallel with replication of the data part.
+\item The amount of space used on the C stack has been reduced, with the
+      result that deeper recursion is possible within a given C stack
+      limit.  For example, the following is now possible with the default
+      stack limit (at least on one Intel Linux system with gcc 4.6.3):
+\preformatted{   f <- function (n) { if (n>0) 1+f(n-1) else 0 }
+   options(expressions=500000)
+   f(7000)
+}
+      For comparison, with pqR-2014-06-1, and R-3.1.1, trying to evaluate 
+      f(3100) gives a C stack overflow error (but f(3000) works).
 \item Expressions now sometimes return constant values, that are shared,
       and likely stored in read-only memory.  These constants include 
       \code{NULL}, the scalars (vectors of length one) \code{FALSE}, 
@@ -174,8 +201,11 @@
       attribute, but perform the operation themselves if no method is found.
 \item Integer plus, minus, and times are now somewhat faster (a side effect
       of switching to a more robust overflow check, as described below).
-\item Several speed improvements relating to garbage collection have been made.
-\item Variable lookup has been sped up a bit (by unrolling the search loop).
+\item Several improvements relating to garbage collection have been made.
+      One change is that the amount of memory used for each additional
+      symbol has been reduced from 112 bytes (two CONS cells) to 80 bytes
+      (on 64-bit platforms).
+\item Many uses of the \code{return} statement have been sped up.
 \item Functions in the \code{apply} family have been sped up when they are
       called with no additional arguments for the function being applied.
 \item The performance problem reported in PR #15798 at r-project.org has
@@ -201,8 +231,8 @@
       that would require implementation of a new method, possibly requiring
       more memory.
 
-      This performance bug has not been fixed in R Core releases, at 
-      least through R-3.1.1.
+      This performance bug exists in R Core releases through R-3.1.1, but
+      may now fixed (differently) in the current R Core development version.
 }}
 
   \subsection{BUG FIXES}{
@@ -237,6 +267,25 @@
       I reported this as PR #15910 at r-project.org, so it may be
       fixed in an R Core release after R-3.1.1.  A related bug in
       assignment to \code{substr} has also been fixed.
+\item Fixed a bug in how debugging is handled that is illustrated by the
+      following output:
+\preformatted{   > g <- function () { A <<- A+1; function (x) x+1 }
+   > f <- function () (g())(10)
+   > A <- 0; f(); print(A)
+   [1] 11
+   [1] 1
+   > debug(f);
+   > A <- 0; f(); print(A)
+   debugging in: f()
+   debug: (g())(10)
+   Browse[2]> c
+   exiting from: f()
+   [1] 11
+   [1] 2
+}
+Note that the final value of \code{A} is different (and wrong) when
+\code{f} is stepped through in the debugger.  This bug exists in
+R Core releases through at least R-3.1.1.
 \item Fixed the following pqR bug (and related bugs), in which
 \code{b} was modified by the assignment to \code{a}:
 \preformatted{   a <- list(list(1+1))
