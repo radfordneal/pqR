@@ -4577,6 +4577,8 @@ int Seql(SEXP a, SEXP b)
 
    Sharing of CHARSXPs withing a string (eg, in c("abc","abc")) is accounted
    for, but not other types of sharing (eg, in list("abc","abc")).
+
+   Constant objects (in const-objs.c) are counted as being of zero size.
 */
 
 
@@ -4588,6 +4590,9 @@ static R_size_t objectsize(SEXP s)
     SEXP tmp, dup;
     Rboolean isVec = FALSE;
     R_size_t cnt = 0;
+
+    if (IS_CONSTNAT(s)) 
+       return 0;
 
     switch (TYPEOF(s)) {
     case NILSXP:
@@ -4664,7 +4669,8 @@ static R_size_t objectsize(SEXP s)
                     ? getVecSizeInVEC(s)
                     : NodeClassSize[NODE_CLASS(s)] );
 
-    /* add in attributes: these are fake for CHARXPs */
+    /* add in attributes, except for CHARSXP, where they are actually
+       the links for the CHARSXP cache. */
     if(TYPEOF(s) != CHARSXP) cnt += objectsize(ATTRIB(s));
 
     return(cnt);
