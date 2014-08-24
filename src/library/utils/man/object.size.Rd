@@ -31,7 +31,9 @@ object.size(x)
   indication: it should be reasonably accurate for atomic vectors, but
   does not detect if elements of a list are shared, for example.
   (Sharing amongst elements of a character vector is taken into account,
-  but not that between character vectors in a single object.)
+  but not that between character vectors in a single object.)  A few
+  common values (eg, TRUE, 0, and 2L) are often represented by pointers
+  to fixed constants, in which case they are counted as taking zero space.
   
   The calculation is of the size of the object, and excludes the space
   needed to store its name in the symbol table.
