@@ -473,7 +473,9 @@ Pointers to three nodes, the name, value and internal, accessed by
 @code{PRINTNAME} (a @code{CHARSXP}), @code{SYMVALUE} and
 @code{INTERNAL}.  (If the symbol's value is a @code{.Internal} function,
 the last is a pointer to the appropriate @code{SEXPREC}.)  Many symbols
-have @code{SYMVALUE} @code{R_UnboundValue}.
+have @code{SYMVALUE} @code{R_UnboundValue}.  A fourth pointer follows
+this, and points to the next symbol in the global table of symbols.
+It is not used outside routines for maintaining this table.
 
 @item CLOSXP
 Pointers to the formals (a pairlist), the body and the environment.
