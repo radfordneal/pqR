@@ -358,11 +358,6 @@ an active binding.  (For the definition of an `active binding' see the
 header comments in file @file{src/main/envir.c}.)  Bit 15 is used for an
 environment to indicate if it participates in the global cache.
 
-@findex ARGSUSED
-@findex SET_ARGUSED
-The macros @code{ARGUSED} and @code{SET_ARGUSED} are used when matching
-actual and formal function arguments, and take the values 0, 1 and 2.
-
 @findex MISSING
 @findex SET_MISSING
 The macros @code{MISSING} and @code{SET_MISSING} are used for pairlists
