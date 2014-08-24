@@ -266,7 +266,8 @@ struct sxpinfo_struct @{
         unsigned int basec : 1;       /* sym has base binding in global cache */
         unsigned int spec_sym : 1;    /* this is a "special" symbol */
         unsigned int no_spec_sym : 1; /* environment has no special symbols */
-        unsigned int unused : 2; /* not yet used */
+        unsigned int base_env : 1;    /* this is R_BaseEnv or R_BaseNamespace */
+        unsigned int unused : 1; /* not yet used */
         /* Primitive operations */
         unsigned char var1, var2;/* variants for evals of fast primitive args */
         unsigned char pending_ok;/* whether args can have computation pending */
@@ -302,6 +303,11 @@ looking in the hash table.
 The @code{spec_sym} bit is used as the @code{SPEC_SYM} flag for
 symbols, indicating that it is one of a set of special symbols (eg, @code{+}
 and @code{if}) for which an attempt is made to have function lookup be faster.  
+
+#findex base_env bit
+The @code{base-env} bit is used to slightly speed up the check for
+whether an environment is either @code{R_BaseEnd} or @code{R_BaseNamespace}, 
+which is done in time-critical code.
 
 @findex no_spec_sym bit
 The @code{no_spec_sym} bit is used as the @code{NO_SPEC_SYM} flag for 
