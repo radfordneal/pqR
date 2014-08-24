@@ -90,7 +90,7 @@
       when "make" is run to build pqR.
 \item The C functions \code{R_inspect} and \code{R_inspect3} functions are now
       visible to package code, so they can be used there for debugging.
-      To see what they do, look in src/main/inspect.c.  They are subject
+      To see what they do, look in \file{src/main/inspect.c}.  They are subject
       to change, and should not appear in any code released to users.
 \item The \code{Rf_error} and related procedures declared in 
       \file{R_ext/Error.h} are now if possible declared to never return,
@@ -100,8 +100,7 @@
       present, and otherwise resorting to the gcc facility (if gcc is used).
 }}
 
-  \subsection{
-    FEATURES FOR INSTALLATION LIKE THOSE IN LATER R CORE RELEASES}{
+  \subsection{INSTALLATION FEATURES LIKE THOSE IN LATER R CORE RELEASES}{
     \itemize{
 \item From R-2.15.1:
       install.packages("pkg_version.tgz") on Mac OS X now has sanity
@@ -167,7 +166,8 @@
 \item The amount of space used on the C stack has been reduced, with the
       result that deeper recursion is possible within a given C stack
       limit.  For example, the following is now possible with the default
-      stack limit (at least on one Intel Linux system with gcc 4.6.3):
+      stack limit (at least on one Intel Linux system with gcc 4.6.3, results
+      will vary with platform):
 \preformatted{   f <- function (n) { if (n>0) 1+f(n-1) else 0 }
    options(expressions=500000)
    f(7000)
