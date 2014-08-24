@@ -4727,7 +4727,7 @@ static R_size_t objectsize(SEXP s)
     Rboolean isVec = FALSE;
     R_size_t cnt = 0;
 
-    if (IS_CONSTNAT(s)) 
+    if (IS_CONSTANT(s)) 
        return 0;
 
     switch (TYPEOF(s)) {
