@@ -1090,14 +1090,17 @@ static SEXP do_subassign_dflt_seq
 
     if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
 	oldtype = TYPEOF(x);
-	x = PairToVectorList(x);
+        SEXP ox = x;
+	PROTECT(x = PairToVectorList(x));
+        setAttrib (x, R_DimSymbol, getAttrib (ox, R_DimSymbol));
+        setAttrib (x, R_DimNamesSymbol, getAttrib (ox, R_DimNamesSymbol));
     }
     else if (x == R_NilValue) {
 	if (length(y) == 0) {
 	    UNPROTECT(1);
 	    return x;
 	}
-        x = coerceVector(x, TYPEOF(y));
+        PROTECT(x = coerceVector(x, TYPEOF(y)));
     }
     else if (isVector(x)) {
         if (LENGTH(x) == 0) {
@@ -1108,11 +1111,10 @@ static SEXP do_subassign_dflt_seq
 	}
         else if (NAMEDCNT_GT_1(x))
             x = dup_top_level(x);
+        PROTECT(x);
     }
     else
 	error(R_MSG_ob_nonsub, type2char(TYPEOF(x)));
-
-    PROTECT(x);
 
     if (subs == R_NilValue) {
         /* 0 subscript arguments */

@@ -16,3 +16,7 @@ to R_EmptyEnv.
 
 Merges LISTSXP, LANGSXP, and DOTSXP code in duplicate1.  No
 longer duplicates top-level attributes twice.
+
+Fixed the following bug (where the last stmt failed with an error):
+
+   p <- pairlist(1,2,3,4); dim(p) <- c(2,2); p[1,1] <- 9
