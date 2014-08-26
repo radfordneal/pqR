@@ -106,7 +106,6 @@ SEXP do_flatContour(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEvent(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_internal(SEXP, SEXP, SEXP, SEXP, int);
-SEXP do_lazyLoadDBfetch(SEXP, SEXP, SEXP, SEXP);
 SEXP do_libfixup(SEXP, SEXP, SEXP, SEXP);
 SEXP do_loadhistory(SEXP, SEXP, SEXP, SEXP);
 SEXP do_machine(SEXP, SEXP, SEXP, SEXP);

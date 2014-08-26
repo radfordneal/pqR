@@ -116,6 +116,7 @@ extern FUNTAB
     R_FunTab_coerce[], 
     R_FunTab_attrib[], 
     R_FunTab_names[],
+    R_FunTab_serialize[],
 
     R_FunTab_CommandLineArgs[],
     R_FunTab_RNG[],
@@ -191,6 +192,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_coerce,
     R_FunTab_attrib,
     R_FunTab_names,
+    R_FunTab_serialize,
 
     R_FunTab_CommandLineArgs,
     R_FunTab_RNG,
@@ -258,7 +260,7 @@ static FUNTAB *FunTab_ptrs[] = {
 
 
 /* Tables of fast built-in functions.  These tables are found in various
-   source files, with names having thee form R_FastFunTab_srcfilename. */
+   source files, with names having the form R_FastFunTab_srcfilename. */
 
 extern FASTFUNTAB 
     R_FastFunTab_arithmetic[],
@@ -285,7 +287,7 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
 };
 
 
-/* FUNTAB entries defined in this source file, otherwise in non-standard way. */
+/* FUNTAB entries defined in this source file; otherwise in non-standard way. */
 
 attribute_hidden FUNTAB R_FunTab_names[] =
 {
@@ -294,11 +296,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {".Internal",	do_internal,	0,	1200,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".Primitive",	do_primitive,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 
-{".subset",	do_subset_dflt,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-{".subset2",	do_subset2_dflt,2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-{"class",	R_do_data_class,0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{".cache_class",	R_do_data_class,	1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Note that the number of arguments in this group only applies
    to the default method */
@@ -358,8 +355,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"aqua.custom.print", do_aqua_custom_print, 0, 11, 2,   {PP_FUNCALL, PREC_FN,   0}},
 #endif
 
-{"serializeToConn",	do_serializeToConn,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
-{"unserializeFromConn",	do_unserializeFromConn,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"edit",	do_edit,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"dataentry",	do_dataentry,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"dataviewer",	do_dataviewer,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
@@ -379,8 +374,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"loadhistory", do_loadhistory,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"savehistory", do_savehistory,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"addhistory",  do_addhistory,  0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"lazyLoadDBfetch",do_lazyLoadDBfetch,0,1,	4,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
