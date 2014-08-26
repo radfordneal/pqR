@@ -163,33 +163,7 @@ static SEXP duplicate1(SEXP s)
 	UNPROTECT(2);
 	break;
     case LISTSXP:
-	PROTECT(sp = s);
-	PROTECT(h = t = CONS(R_NilValue, R_NilValue));
-	while(sp != R_NilValue) {
-	    SETCDR(t, CONS(duplicate1(CAR(sp)), R_NilValue));
-	    t = CDR(t);
-	    COPY_TAG(t, sp);
-	    DUPLICATE_ATTRIB(t, sp);
-	    sp = CDR(sp);
-	}
-	t = CDR(h);
-	UNPROTECT(2);
-	break;
     case LANGSXP:
-	PROTECT(sp = s);
-	PROTECT(h = t = CONS(R_NilValue, R_NilValue));
-	while(sp != R_NilValue) {
-	    SETCDR(t, CONS(duplicate1(CAR(sp)), R_NilValue));
-	    t = CDR(t);
-	    COPY_TAG(t, sp);
-	    DUPLICATE_ATTRIB(t, sp);
-	    sp = CDR(sp);
-	}
-	t = CDR(h);
-	SET_TYPEOF(t, LANGSXP);
-	DUPLICATE_ATTRIB(t, s);
-	UNPROTECT(2);
-	break;
     case DOTSXP:
 	PROTECT(sp = s);
 	PROTECT(h = t = CONS(R_NilValue, R_NilValue));
@@ -201,8 +175,7 @@ static SEXP duplicate1(SEXP s)
 	    sp = CDR(sp);
 	}
 	t = CDR(h);
-	SET_TYPEOF(t, DOTSXP);
-	DUPLICATE_ATTRIB(t, s);
+	SET_TYPEOF(t, TYPEOF(s));
 	UNPROTECT(2);
 	break;
     case CHARSXP:
