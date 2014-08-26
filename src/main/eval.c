@@ -41,6 +41,8 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 
+#include "arithmetic.h"
+
 #include <helpers/helpers-app.h>
 
 
@@ -3170,16 +3172,6 @@ enum {
   OPCOUNT
 };
 
-
-SEXP do_math1(SEXP, SEXP, SEXP, SEXP, int);
-SEXP do_andor(SEXP, SEXP, SEXP, SEXP, int);
-SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
-SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subset2_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
-
 #define GETSTACK_PTR(s) (*(s))
 #define GETSTACK(i) GETSTACK_PTR(R_BCNodeStackTop + (i))
 
@@ -4942,7 +4934,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    UNPROTECT(1);
 	}
 	if (! dispatched)
-	  value = R_subassign3_dflt(call, x, symbol, rhs, 0);
+	    value = R_subassign3_dflt(call, x, symbol, rhs);
 	R_BCNodeStackTop--;
 	SETSTACK(-1, value);
 	NEXT();
