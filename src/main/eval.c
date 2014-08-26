@@ -3187,10 +3187,10 @@ SEXP do_math1(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_andor(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset2_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
 
 #define GETSTACK_PTR(s) (*(s))
 #define GETSTACK(i) GETSTACK_PTR(R_BCNodeStackTop + (i))
@@ -3949,7 +3949,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
   PUSHCALLARG(rhs); \
-  value = fun(call, symbol, args, rho, 0); \
+  value = fun(call, symbol, args, rho); \
   R_BCNodeStackTop -= 4; \
   SETSTACK(-1, value);	 \
   NEXT(); \
@@ -4218,7 +4218,7 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     args = CONS(idx, args);
     args = CONS(vec, args);
     PROTECT(args);
-    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho, 0);
+    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
     UNPROTECT(1);
     SETSTACK_PTR(sv, vec);
 }
@@ -4271,7 +4271,7 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     args = CONS(idx, args);
     args = CONS(mat, args);
     SETSTACK(-1, args); /* for GC protection */
-    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho, 0);
+    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
     R_BCNodeStackTop -= 3;
     SETSTACK(-1, mat);
 }
