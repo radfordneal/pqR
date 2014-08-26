@@ -1017,9 +1017,9 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
    the vector of subscripts that are going to be replaced. */
 
 static SEXP do_subassign_dflt_seq 
-              (SEXP call, SEXP op, SEXP args, SEXP rho, int variant, int seq);
+              (SEXP call, SEXP op, SEXP args, SEXP rho, int seq);
 
-static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, a1, a2, a3;
     int argsevald = 0;
@@ -1041,7 +1041,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             /* ... in particular, it might be missing ... */
             args = CONS (a1, evalListKeepMissing(a2,rho));
             UNPROTECT(1);
-            return do_subassign_dflt (call, op, args, rho, variant); 
+            return do_subassign_dflt (call, op, args, rho);
         }
         else {
             int seq;
@@ -1050,7 +1050,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             R_variant_result = 0;
             args = CONS (a1, CONS (a2, evalListKeepMissing (a3, rho)));
             UNPROTECT(2);
-            return do_subassign_dflt_seq (call, op, args, rho, variant, seq); 
+            return do_subassign_dflt_seq (call, op, args, rho, seq); 
         }
     }
 
@@ -1061,23 +1061,21 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if(DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald))
         return(ans);
 
-    return do_subassign_dflt(call, op, ans, rho, variant);
+    return do_subassign_dflt(call, op, ans, rho);
 }
 
-/* N.B.  do_subassign_dflt is called directly from elsewhere.  For role of
-   variant, see above. */
+/* N.B.  do_subassign_dflt is called directly from elsewhere. */
 
-SEXP attribute_hidden do_subassign_dflt
-                        (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign_dflt_seq (call, op, args, rho, variant, 0);
+    return do_subassign_dflt_seq (call, op, args, rho, 0);
 }
 
 /* The last "seq" argument below is 1 if the first subscript is a sequence spec
    (a variant result). */
 
 static SEXP do_subassign_dflt_seq
-              (SEXP call, SEXP op, SEXP args, SEXP rho, int variant, int seq)
+               (SEXP call, SEXP op, SEXP args, SEXP rho, int seq)
 {
     SEXP subs, x, y;
 
@@ -1199,7 +1197,7 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
    args[3] = replacement values 
 */
 
-static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
 
@@ -1207,13 +1205,13 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 /*     if(DispatchAnyOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) */
       return(ans);
 
-    return do_subassign2_dflt(call, op, ans, rho, variant);
+    return do_subassign2_dflt(call, op, ans, rho);
 }
 
-/* Also called directly from elsewhere.  For role of variant, see above. */
+/* Also called directly from elsewhere. */
 
 SEXP attribute_hidden do_subassign2_dflt
-    (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+                               (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP dims, names, newname, subs, x, xtop, xup, y;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
@@ -1449,7 +1447,7 @@ SEXP attribute_hidden do_subassign2_dflt
    to get DispatchOrEval to work we need to first translate it
    to a string. */
 
-static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP name, ans, input;
     int iS;
@@ -1480,14 +1478,14 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (!iS)
 	name = install(translateChar(STRING_ELT(input, 0)));
 
-    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans), variant);
+    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
 }
 
-/* Also called directly from elsewhere.  For role of variant, see above. */
+/* Also called directly from elsewhere. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
-SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val, int variant)
+SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 {
     PROTECT_INDEX pvalidx, pxidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
@@ -1642,9 +1640,9 @@ attribute_hidden FUNTAB R_FunTab_subassign[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"[<-",		do_subassign,	0,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"[[<-",	do_subassign2,	1,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"$<-",		do_subassign3,	1,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"[<-",		do_subassign,	0,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"[[<-",	do_subassign2,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"$<-",		do_subassign3,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
