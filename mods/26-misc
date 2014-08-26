@@ -22,3 +22,6 @@ Fixed the following bug (where the last stmt failed with an error):
    p <- pairlist(1,2,3,4); dim(p) <- c(2,2); p[1,1] <- 9
 
 Cleaned up now-unused "variant" in subassign.c.
+
+Moved some (not all) remaining do_ declarations from names.c
+to other source files.
