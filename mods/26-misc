@@ -25,3 +25,6 @@ Cleaned up now-unused "variant" in subassign.c.
 
 Moved some (not all) remaining do_ declarations from names.c
 to other source files.
+
+Changed tuning parameters for GC, and introduced supplemental
+criterion based on recent allocation sizes for setting R_VSize.
