@@ -204,7 +204,9 @@
 \item Several improvements relating to garbage collection have been made.
       One change is that the amount of memory used for each additional
       symbol has been reduced from 112 bytes (two CONS cells) to 80 bytes
-      (on 64-bit platforms).
+      (on 64-bit platforms).  Another change is in tuning of heap sizes,
+      in order to reduce occassions in which garbage collection is very
+      frequent.
 \item Many uses of the \code{return} statement have been sped up.
 \item Functions in the \code{apply} family have been sped up when they are
       called with no additional arguments for the function being applied.
@@ -237,13 +239,6 @@
 
   \subsection{BUG FIXES}{
     \itemize{
-\item Fixed the non-robust checks for integer overflow, which reportedly
-      sometimes fail when using clang on a Mac.  This is #PR 15774 at
-      r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
-\item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
-      \code{na.exclude} that led to a
-      data frame that should have had zero rows having one row instead.
-      (Also fixed in R-3.1.1, though differently.)
 \item Fixed a bug in \code{numericDeriv} (see also the documentation
       update above), which is illustrated by the following
       code, which gave the wrong derivative:
@@ -283,16 +278,28 @@
    [1] 11
    [1] 2
 }
-Note that the final value of \code{A} is different (and wrong) when
-\code{f} is stepped through in the debugger.  This bug exists in
-R Core releases through at least R-3.1.1.
+   Note that the final value of \code{A} is different (and wrong) when
+   \code{f} is stepped through in the debugger.  This bug exists in
+   R Core releases through at least R-3.1.1.
+\item Fixed a bug illustrated by the following code, which gave
+      an error saying that \code{p[1,1]} has the wrong number of subscripts:
+\preformatted{   p <- pairlist(1,2,3,4); dim(p) <- c(2,2); p[1,1] <- 9
+}
+   This bug exists in R Core releases through at least R-3.1.1.
 \item Fixed the following pqR bug (and related bugs), in which
-\code{b} was modified by the assignment to \code{a}:
+      \code{b} was modified by the assignment to \code{a}:
 \preformatted{   a <- list(list(1+1))
    b <- a
    attr(a[[1]][[1]],"fred")<-9
    print(b)
 }
+\item Fixed the non-robust checks for integer overflow, which reportedly
+      sometimes fail when using clang on a Mac.  This is #PR 15774 at
+      r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
+\item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
+      \code{na.exclude} that led to a
+      data frame that should have had zero rows having one row instead.
+      (Also fixed in R-3.1.1, though differently.)
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
