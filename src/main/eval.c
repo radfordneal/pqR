@@ -1758,35 +1758,30 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* arguments of replaceCall must be protected by the caller. */
 
-static SEXP replaceCall(SEXP fun, SEXP val, SEXP args, SEXP rhs)
+static SEXP replaceCall(SEXP fun, SEXP var, SEXP args, SEXP rhs)
 {
-    SEXP first, p;
+    SEXP value, first;
 
-    first = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
+    first = value = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
 
-    /* For speed, handle zero arguments or one argument specially. */
+    if (args != R_NilValue) {
 
-    if (args == R_NilValue)
-        /* nothing */;
+        first = cons_with_tag (CAR(args), value, TAG(args));
 
-    else if (CDR(args) == R_NilValue)
-        first = cons_with_tag (CAR(args), first, TAG(args));
-
-    else { /* the general case with any number of arguments */
-
-        for (p = args; p != R_NilValue; p = CDR(p))
-            first = CONS (R_NilValue, first);
-
-        p = first;
-        while (args != R_NilValue) {
-            SETCAR (p, CAR(args));
-            SET_TAG (p, TAG(args));
-            args = CDR(args);
-            p = CDR(p);
+        SEXP p = CDR(args);
+        if (p != R_NilValue) {
+            PROTECT(first);
+            SEXP q = first;
+            do { 
+                SETCDR (q, cons_with_tag (CAR(p), value, TAG(p)));
+                q = CDR(q);
+                p = CDR(p);
+            } while (p != R_NilValue);
+            UNPROTECT(1);
         }
     }
 
-    first = CONS (fun, CONS(val, first));
+    first = CONS (fun, CONS(var, first));
     SET_TYPEOF (first, LANGSXP);
 
     return first;
