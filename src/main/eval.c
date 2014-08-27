@@ -611,10 +611,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else if (typeof_e == PROMSXP) {
 
-        /* We could just unconditionally use the return value from
-           forcePromise; the test below avoids the function call if the
-           promise is already evaluated.  We don't change NAMEDCNT, 
-           since for use in applydefine, that would be undesirable. */
+        /* Note that we don't change NAMEDCNT here. */
+
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
             res = forcePromiseUnbound(e);
         else
@@ -1829,10 +1827,12 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 {
     SEXP val, nval, nexpr, r;
 
-    if (isNull(expr))
+    switch (TYPEOF(expr)) {
+
+    case NILSXP:
 	error(_("invalid (NULL) left side of assignment"));
 
-    if (isSymbol(expr)) {
+    case SYMSXP:
 
         nval = forcelocal ? EnsureLocal(expr, rho) : eval(expr, ENCLOS(rho));
 
@@ -1847,9 +1847,10 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
         /* Statement below is now unnecessary (can always leave LEVELS at 0),
            given the duplication above. */
         /* SETLEVELS (r, NAMEDCNT_GT_1(nval)); */
-    }
 
-    else if (isLanguage(expr)) {
+        break;
+
+    case LANGSXP:
 
 	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
 	R_SetVarLocValue(tmploc, CAR(val));
@@ -1862,10 +1863,12 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 
         if (LEVELS(val) || NAMEDCNT_GT_1(nval))
             SETLEVELS (r, 1);
-    }
 
-    else 
+        break;
+
+    default:
         error(_("target of assignment expands to non-language object"));
+    }
 
     return r;
 }
@@ -1889,15 +1892,26 @@ static R_INLINE SEXP installAssignFcnName(SEXP fun)
     if (fun == R_DollarSymbol)
         return R_DollarAssignSymbol;
 
-    /* The general case... */
+    /* The general case for a symbol */
 
-    char buf[ASSIGNBUFSIZ];
-    const char *fname = CHAR(PRINTNAME(fun));
+    if (TYPEOF(fun) == SYMSXP) {
 
-    if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
-        error(_("overlong name in '%s'"), fname);
+        char buf[ASSIGNBUFSIZ];
+        const char *fname = CHAR(PRINTNAME(fun));
 
-    return install(buf);
+        if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
+            error(_("overlong name in '%s'"), fname);
+
+        return install(buf);
+    }
+
+    /* Handle foo::bar and foo:::bar. */
+
+    if (TYPEOF(fun)==LANGSXP && length(fun)==3 && TYPEOF(CADDR(fun))==SYMSXP
+      && (CAR(fun)==R_DoubleColonSymbol || CAR(fun)==R_TripleColonSymbol))
+        return lang3 (CAR(fun), CADR(fun), installAssignFcnName(CADDR(fun)));
+
+    error(_("invalid function in complex assignment"));
 }
 
 /* Main entry point for complex assignments; rhs has already been evaluated. */
@@ -1907,7 +1921,6 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     SEXP lhs, tmp, afun, rhsprom, v;
     R_varloc_t tmploc;
     RCNTXT cntxt;
-    int nprot;
 
     if (rho == R_BaseNamespace)
 	errorcall(call, _("cannot do complex assignments in base namespace"));
@@ -1964,24 +1977,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     WAIT_UNTIL_COMPUTED(rhs);
 
     while (isLanguage(CADR(expr))) {
-	nprot = 1; /* the PROTECT of rhs below from this iteration */
-	if (TYPEOF(CAR(expr)) == SYMSXP)
-	    tmp = installAssignFcnName(CAR(expr));
-	else {
-	    /* check for and handle assignments of the form
-	       foo::bar(x) <- y or foo:::bar(x) <- y */
-	    tmp = R_NilValue; /* avoid uninitialized variable warnings */
-	    if (TYPEOF(CAR(expr)) == LANGSXP &&
-		(CAR(CAR(expr)) == R_DoubleColonSymbol ||
-		 CAR(CAR(expr)) == R_TripleColonSymbol) &&
-		length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
-		tmp = installAssignFcnName(CADDR(CAR(expr)));
-		PROTECT(tmp = lang3(CAAR(expr), CADR(CAR(expr)), tmp));
-		nprot++;
-	    }
-	    else
-		error(_("invalid function in complex assignment"));
-	}
+        PROTECT(tmp = installAssignFcnName(CAR(expr)));
         v = CAR(lhs);
         if (LEVELS(lhs) && v != R_NilValue) {
             v = duplicate(v);
@@ -1993,33 +1989,16 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 	rhs = eval (rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
-	UNPROTECT(nprot);
+	UNPROTECT(2);
 	lhs = CDR(lhs);
 	expr = CADR(expr);
     }
 
-    nprot = 3; /* the common case */
-    if (TYPEOF(CAR(expr)) == SYMSXP)
-	afun = installAssignFcnName(CAR(expr));
-    else {
-	/* check for and handle assignments of the form
-	   foo::bar(x) <- y or foo:::bar(x) <- y */
-	afun = R_NilValue; /* avoid uninitialized variable warnings */
-	if (TYPEOF(CAR(expr)) == LANGSXP &&
-	    (CAR(CAR(expr)) == R_DoubleColonSymbol ||
-	     CAR(CAR(expr)) == R_TripleColonSymbol) &&
-	    length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
-	    afun = installAssignFcnName(CADDR(CAR(expr)));
-	    PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
-	    nprot++;
-	}
-	else
-	    error(_("invalid function in complex assignment"));
-    }
+    PROTECT(afun = installAssignFcnName(CAR(expr)));
     R_SetVarLocValue(tmploc, CAR(lhs));
     expr = assignCall(R_AssignSymbols[PRIMVAL(op)], CDR(lhs),
 		      afun, R_TmpvalSymbol, CDDR(expr), rhsprom);
-    UNPROTECT(nprot);
+    UNPROTECT(4);
     PROTECT(expr);
     (void) eval(expr, rho);
     UNPROTECT(1);
@@ -2086,9 +2065,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             INC_NAMEDCNT(rhs);
         PROTECT(rhs);
 
-        if (TYPEOF(CADR(lhs))==SYMSXP) {  
+        if (TYPEOF(CADR(lhs))==SYMSXP) {
             /* one assignment function, eg names(a) <- v, without :: / ::: */
-            SEXP assgnfcn, rplcall, res;
+            SEXP assgnfcn, rplcall, rhsprom, lhsprom, res;
             SEXP var = CADR(lhs);
             SEXP varval = PRIMVAL(op) != 2 ? EnsureLocal(var, rho) 
                                            : eval(var, ENCLOS(rho));
@@ -2096,27 +2075,29 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                (eg, Matrix 1.0-6) assume (in C code) that the object in a
                replacement function is not shared. */
             if (NAMEDCNT_GT_1(varval))
-                varval = dup_top_level(nval);
+                varval = dup_top_level(varval);
             PROTECT(varval);
             PROTECT(assgnfcn = installAssignFcnName(CAR(lhs)));
             PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
             SET_PRVALUE(rhsprom, rhs);
             WAIT_UNTIL_COMPUTED(rhs);
-            PROTECT(rplcall = replaceCall(assgnfcn,varval,CDDR(lhs),rhsprom));
+            PROTECT(lhsprom = mkPROMISE(var, rho));
+            SET_PRVALUE(lhsprom, varval);
+            PROTECT(rplcall = replaceCall(assgnfcn,lhsprom,CDDR(lhs),rhsprom));
             PROTECT(res = eval(rplcall,rho));
             if (PRIMVAL(op) == 2) /* <<- */
-                set_var_nonlocal (CAR(lhs), res, ENCLOS(rho), 3);
+                set_var_nonlocal (var, res, ENCLOS(rho), 3);
             else
-                set_var_in_frame (CAR(lhs), res, rho, TRUE, 3);
-            UNPROTECT(5);
+                set_var_in_frame (var, res, rho, TRUE, 3);
+            UNPROTECT(7);
         }
 
         else  {
             /* more complex assignment, eg names(L$a)[1] <- x, or :: / :::. */
             applydefine (call, op, lhs, rhs, rho);
+            UNPROTECT(1);
         }
 
-        UNPROTECT(1);
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
   
@@ -2248,10 +2229,8 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 }
 
 
-/* Create a promise to evaluate each argument.	Although this is most */
-/* naturally attacked with a recursive algorithm, we use the iterative */
-/* form below because it is does not cause growth of the pointer */
-/* protection stack, and because it is a little more efficient. */
+/* Create a promise to evaluate each argument.	If the argument is itself
+   a promise, it is used unchanged. */
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
@@ -2262,20 +2241,20 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 
     while(el != R_NilValue) {
 
+        SEXP a = CAR(el);
+
 	/* If we have a ... symbol, we look to see what it is bound to.
-	 * If its binding is Null (i.e. zero length)
-	 * we just ignore it and return the cdr with all its
-	 * expressions promised; if it is bound to a ... list
-	 * of promises, we repromise all the promises and then splice
-	 * the list of resulting values into the return value.
-	 * Anything else bound to a ... symbol is an error
-	 */
+	   If its binding is R_NilValue we just ignore it.  If it is bound
+           to a ... list of promises, we repromise all the promises and 
+           then splice the list of resulting values into the return value.
+	   Anything else bound to a ... symbol is an error. */
 
-	/* Is this double promise mechanism really needed? */
-
-	if (CAR(el) == R_DotsSymbol) {
-	    h = findVar(CAR(el), rho);
-	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
+	if (a == R_DotsSymbol) {
+	    h = findVar(a, rho);
+            if (h == R_NilValue) {
+                /* nothing */
+            }
+	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     ev = 
                       cons_with_tag (mkPROMISE(CAR(h),rho), R_NilValue, TAG(h));
@@ -2291,9 +2270,9 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 		dotdotdot_error();
 	}
         else {
-            ev = CAR(el) == R_MissingArg ?
-                   cons_with_tag (R_MissingArg, R_NilValue, TAG(el))
-                 : cons_with_tag (mkPROMISE(CAR(el), rho), R_NilValue, TAG(el));
+            ev = a == R_MissingArg || TYPEOF(a) == PROMSXP ?
+                   cons_with_tag (a, R_NilValue, TAG(el))
+                 : cons_with_tag (mkPROMISE(a, rho), R_NilValue, TAG(el));
             if (head==R_NilValue)
                 PROTECT(head = ev);
             else
