@@ -2230,7 +2230,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 
 /* Create a promise to evaluate each argument.	If the argument is itself
-   a promise, it is used unchanged. */
+   a promise, it is used unchanged.  See inside for handling of ... */
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
