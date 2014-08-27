@@ -1758,7 +1758,7 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* arguments of replaceCall must be protected by the caller. */
 
-static SEXP replaceCall(SEXP fun, SEXP var, SEXP args, SEXP rhs)
+static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 {
     SEXP value, first;
 
@@ -1781,7 +1781,7 @@ static SEXP replaceCall(SEXP fun, SEXP var, SEXP args, SEXP rhs)
         }
     }
 
-    first = CONS (fun, CONS(var, first));
+    first = CONS (fun, CONS(varval, first));
     SET_TYPEOF (first, LANGSXP);
 
     return first;
@@ -1790,12 +1790,12 @@ static SEXP replaceCall(SEXP fun, SEXP var, SEXP args, SEXP rhs)
 /* arguments of assignCall must be protected by the caller. */
 
 static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
-		       SEXP val, SEXP args, SEXP rhs)
+		       SEXP varval, SEXP args, SEXP rhs)
 {
     SEXP c;
 
     c = CONS (op, CONS (symbol, 
-          CONS (replaceCall(fun, val, args, rhs), R_NilValue)));
+          CONS (replaceCall(fun, varval, args, rhs), R_NilValue)));
 
     SET_TYPEOF (c, LANGSXP);
 
@@ -2086,7 +2086,35 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             INC_NAMEDCNT(rhs);
         PROTECT(rhs);
 
-        applydefine (call, op, lhs, rhs, rho);
+        if (TYPEOF(CADR(lhs))==SYMSXP) {  
+            /* one assignment function, eg names(a) <- v, without :: / ::: */
+            SEXP assgnfcn, rplcall, res;
+            SEXP var = CADR(lhs);
+            SEXP varval = PRIMVAL(op) != 2 ? EnsureLocal(var, rho) 
+                                           : eval(var, ENCLOS(rho));
+            /* This duplication should be unnecessary, but some packages
+               (eg, Matrix 1.0-6) assume (in C code) that the object in a
+               replacement function is not shared. */
+            if (NAMEDCNT_GT_1(varval))
+                varval = dup_top_level(nval);
+            PROTECT(varval);
+            PROTECT(assgnfcn = installAssignFcnName(CAR(lhs)));
+            PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
+            SET_PRVALUE(rhsprom, rhs);
+            WAIT_UNTIL_COMPUTED(rhs);
+            PROTECT(rplcall = replaceCall(assgnfcn,varval,CDDR(lhs),rhsprom));
+            PROTECT(res = eval(rplcall,rho));
+            if (PRIMVAL(op) == 2) /* <<- */
+                set_var_nonlocal (CAR(lhs), res, ENCLOS(rho), 3);
+            else
+                set_var_in_frame (CAR(lhs), res, rho, TRUE, 3);
+            UNPROTECT(5);
+        }
+
+        else  {
+            /* more complex assignment, eg names(L$a)[1] <- x, or :: / :::. */
+            applydefine (call, op, lhs, rhs, rho);
+        }
 
         UNPROTECT(1);
         if ( ! (variant & VARIANT_NULL))
