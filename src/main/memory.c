@@ -416,40 +416,43 @@ static double R_MaxKeepFrac = 0.5;
    or above the maximum values, towards maintain heap occupancy within
    a specified range.  When the number of nodes in use reaches
    R_NGrowFrac * R_NSize, the value of R_NSize is incremented by
-   R_NGrowIncrMin + R_NGrowIncrFrac * R_NSize.  When the number of
-   nodes in use falls below R_NShrinkFrac, R_NSize is decremented by
-   R_NShrinkIncrMin + R_NShrinkFrac * R_NSize.  Analogous adjustments
+   R_NGrowIncrMin + R_NGrowIncrFrac * R_NSize.  When the number of nodes
+   in use falls below R_NShrinkFrac * R_NSize, R_NSize is decremented
+   by R_NShrinkIncrMin + R_NShrinkFrac * R_NSize.  Analogous adjustments
    are made to R_VSize.
 
-   This mechanism for adjusting the heap size constants is very
-   primitive but hopefully adequate for now.  Some modeling and
-   experimentation would be useful.  We want the heap sizes to get set
-   at levels adequate for the current computations.  The present
-   mechanism uses only the size of the current live heap to provide
-   information about the current needs; since the current live heap
-   size can be very volatile, the adjustment mechanism only makes
-   gradual adjustments.  A more sophisticated strategy would use more
-   of the live heap history. */
-static double R_NGrowFrac = 0.70;
-static double R_NShrinkFrac = 0.30;
+   This mechanism for adjusting the heap size constants is supplemented
+   by a requirement that R_VSize be at least R_LargeFactor times the size
+   (in VECRECs) of the largest allocation of a large vector (up to 
+   R_MaxRecentLarge) in the last R_RECENT_GC full garbage collections.
+   This is intended to avoid situations where allocations of only a few 
+   large objects force frequent garbage collections. */
 
-static double R_VGrowFrac = 0.70;
-static double R_VShrinkFrac = 0.30;
+static double R_NGrowFrac = 0.60;
+static double R_NShrinkFrac = 0.25;
+
+static double R_VGrowFrac = 0.60;
+static double R_VShrinkFrac = 0.25;
+
+#define R_RECENT_GC 3
+static double R_LargeFactor = 10.1;
+static int R_MaxRecentLarge = 1000000;
+
 
 #ifdef SMALL_MEMORY
 /* On machines with only 32M of memory (or on a classic Mac OS port)
    it might be a good idea to use settings like these that are more
    aggressive at keeping memory usage down. */
-static double R_NGrowIncrFrac = 0.0, R_NShrinkIncrFrac = 0.2;
-static int R_NGrowIncrMin = 50000, R_NShrinkIncrMin = 0;
-static double R_VGrowIncrFrac = 0.0, R_VShrinkIncrFrac = 0.2;
-static int R_VGrowIncrMin = 100000, R_VShrinkIncrMin = 0;
+static double R_NGrowIncrFrac = 0.0,    R_NShrinkIncrFrac = 0.2;
+static int    R_NGrowIncrMin = 50000,   R_NShrinkIncrMin = 0;
+static double R_VGrowIncrFrac = 0.0,    R_VShrinkIncrFrac = 0.2;
+static int    R_VGrowIncrMin = 100000,  R_VShrinkIncrMin = 0;
 
 #else /* SMALL_MEMORY not defined */
-static double R_NGrowIncrFrac = 0.05, R_NShrinkIncrFrac = 0.2;
-static int R_NGrowIncrMin = 40000, R_NShrinkIncrMin = 0;
-static double R_VGrowIncrFrac = 0.05, R_VShrinkIncrFrac = 0.2;
-static int R_VGrowIncrMin = 80000, R_VShrinkIncrMin = 0;
+static double R_NGrowIncrFrac = 0.15,   R_NShrinkIncrFrac = 0.1;
+static int    R_NGrowIncrMin = 40000,   R_NShrinkIncrMin = 0;
+static double R_VGrowIncrFrac = 0.15,   R_VShrinkIncrFrac = 0.1;
+static int    R_VGrowIncrMin = 80000,   R_VShrinkIncrMin = 0;
 #endif
 
 /* Maximal Heap Limits.  These variables contain upper limits on the
@@ -502,6 +505,8 @@ static R_size_t R_N_maxused=0;		/* Records of maximum used (but can */
 static R_size_t R_V_maxused=0;		/*   be reset by gc(reset=TRUE)     */
 static double R_NMega_max=0.0;
 
+static R_size_t MaxAlloc[R_RECENT_GC];  /* Largest allocs in recent GCs */
+static int MaxAlloc_index = 0;          /* Index for storing into MaxAlloc */
 
 /* Node Classes.  Smallish vectors and "cons" cells are in classes 
    1, ..., NUM_SMALL_NODE_CLASSES.  Large vector nodes are in class 
@@ -1144,12 +1149,14 @@ static void DEBUG_GC_SUMMARY(int gclev)
 #endif /* DEBUG_GC>0 */
 
 #if DEBUG_ADJUST_HEAP
-static void DEBUG_ADJUST_HEAP_PRINT(double node_occup, double vect_occup)
+static void DEBUG_ADJUST_HEAP_PRINT(double node_occup, double vect_occup, 
+                                    R_size_t max)
 {
     int i;
     R_size_t alloc;
-    REprintf("Node occupancy: %.0f%%\nVector occupancy: %.0f%%\n",
-	     100.0 * node_occup, 100.0 * vect_occup);
+    REprintf(
+     "Node occupancy: %.0f%%\nVector occupancy: %.0f%%\nMax large alloc: %d\n",
+     100.0 * node_occup, 100.0 * vect_occup, max);
     alloc = R_LargeVallocSize +
 	sizeof(SEXPREC_ALIGN) * R_GenHeap[LARGE_NODE_CLASS].AllocCount;
     for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++)
@@ -1158,7 +1165,7 @@ static void DEBUG_ADJUST_HEAP_PRINT(double node_occup, double vect_occup)
     REprintf("Ncells %lu\nVcells %lu\n", R_NSize, R_VSize);
 }
 #else
-#define DEBUG_ADJUST_HEAP_PRINT(node_occup, vect_occup)
+#define DEBUG_ADJUST_HEAP_PRINT(node_occup, vect_occup, max)
 #endif /* DEBUG_ADJUST_HEAP */
 
 #if DEBUG_RELEASE
@@ -1391,8 +1398,10 @@ static void AdjustHeapSize(R_size_t size_needed)
 
     if (node_occup > R_NGrowFrac) {
 	R_size_t change = R_NGrowIncrMin + R_NGrowIncrFrac * R_NSize;
-	if (R_MaxNSize >= R_NSize + change)
+	if (change <= R_MaxNSize - R_NSize)
 	    R_NSize += change;
+        else
+            R_NSize = R_MaxNSize;
     }
     else if (node_occup < R_NShrinkFrac) {
 	R_NSize -= (R_NShrinkIncrMin + R_NShrinkIncrFrac * R_NSize);
@@ -1406,8 +1415,10 @@ static void AdjustHeapSize(R_size_t size_needed)
 	R_VSize = VNeeded;
     if (vect_occup > R_VGrowFrac) {
 	R_size_t change = R_VGrowIncrMin + R_VGrowIncrFrac * R_VSize;
-	if (R_MaxVSize - R_VSize >= change)
+	if (change <= R_MaxVSize - R_VSize)
 	    R_VSize += change;
+        else
+            R_VSize = R_MaxVSize;
     }
     else if (vect_occup < R_VShrinkFrac) {
 	R_VSize -= R_VShrinkIncrMin + R_VShrinkIncrFrac * R_VSize;
@@ -1417,7 +1428,24 @@ static void AdjustHeapSize(R_size_t size_needed)
 	    R_VSize = orig_R_VSize;
     }
 
-    DEBUG_ADJUST_HEAP_PRINT(node_occup, vect_occup);
+    /* Supplemental adjustment based on maximum size of a recent allocation. */
+
+    R_size_t max = 0;
+    for (int i = 0; i < R_RECENT_GC; i++) {
+        if (MaxAlloc[i] > max) max = MaxAlloc[i];
+    }
+    if (max > R_MaxRecentLarge) max = R_MaxRecentLarge;
+    MaxAlloc_index = (MaxAlloc_index+1) % R_RECENT_GC;
+    MaxAlloc[MaxAlloc_index] = 0;
+
+    if (R_VSize < max * R_LargeFactor) {
+        if (max * R_LargeFactor > R_MaxVSize)
+            R_VSize = R_MaxVSize;
+        else
+            R_VSize = max * R_LargeFactor;
+    }
+
+    DEBUG_ADJUST_HEAP_PRINT(node_occup, vect_occup, max);
 }
 
 
@@ -3126,6 +3154,9 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
                           _("cannot allocate vector of size %0.f Kb"),
                           dsize);
         }
+        if (size > MaxAlloc[MaxAlloc_index])
+            MaxAlloc[MaxAlloc_index] = size;
+
         s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
         SET_NODE_CLASS(s, LARGE_NODE_CLASS);
         ATTRIB(s) = R_NilValue;
