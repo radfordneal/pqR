@@ -31,7 +31,14 @@ dump(list, file = "dumpdata.R", append = FALSE,
 
   \item{envir}{the environment to search for objects.}
 
-  \item{evaluate}{logical.  Should promises be evaluated?}
+  \item{evaluate}{logical.  Should promises be evaluated?  If \code{TRUE}, 
+   the value of the promise is used.  If \code{FALSE}, they are deparsed
+   as a string of the form "<promise: code>", where "code" is the code
+   in the promise, not necessarily evaluated.  If \code{NA}, they are 
+   deparsed as the code they contain without elaboration.  This option
+   (whether explict or default) overrides the corresponding options specified
+   via \code{control}.
+  }
 }
 \details{
   If some of the objects named do not exist (in scope), they are

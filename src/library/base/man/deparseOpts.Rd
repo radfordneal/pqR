@@ -73,6 +73,11 @@
       For compatibility with S, integer values of double vectors are
       deparsed with a trailing decimal point.  Backticks are not used.
     }
+    \item{\code{codePromises}}{
+      Deparse promises as the code that they contain, rather than
+      evaluating them.  Like \code{delayPromises}, but without
+      the "promise:" comment around the code expression.
+    }
   }
   For the most readable (but perhaps incomplete) display, use
   \code{control = NULL}. This displays the object's value, but not its

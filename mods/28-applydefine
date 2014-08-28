@@ -1,1 +1,5 @@
 Modifications to do_set and applydefine for complex assignments.
+
+Also, added a codePromises option for deparse, and NA option for
+evaluate in dump, which goes with these being needed for better
+error display in the new scheme.
