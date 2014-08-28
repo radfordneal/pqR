@@ -2066,7 +2066,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         PROTECT(rhs);
 
         if (TYPEOF(CADR(lhs))==SYMSXP) {
-            /* one assignment function, eg names(a) <- v, without :: / ::: */
+            /* one assignment function, eg names(a) <- v */
             SEXP assgnfcn, rplcall, rhsprom, lhsprom, res;
             SEXP var = CADR(lhs);
             SEXP varval = PRIMVAL(op) != 2 ? EnsureLocal(var, rho) 
@@ -2093,7 +2093,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         else  {
-            /* more complex assignment, eg names(L$a)[1] <- x, or :: / :::. */
+            /* more complex assignment, eg names(L$a)[1] <- x */
             applydefine (call, op, lhs, rhs, rho);
             UNPROTECT(1);
         }
