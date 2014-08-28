@@ -2067,7 +2067,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (TYPEOF(CADR(lhs))==SYMSXP) {
             /* one assignment function, eg names(a) <- v */
-            SEXP assgnfcn, rplcall, lhsprom, rhsprom, res;
+            SEXP assgnfcn, rplcall, rhsprom, lhsprom, res;
             SEXP var = CADR(lhs);
             SEXP varval = PRIMVAL(op) != 2 ? EnsureLocal(var, rho) 
                                            : eval(var, ENCLOS(rho));
@@ -2078,13 +2078,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 varval = dup_top_level(varval);
             PROTECT(varval);
             PROTECT(assgnfcn = installAssignFcnName(CAR(lhs)));
-            if (SELF_EVAL(TYPEOF(rhs)))
-                rhsprom = rhs;
-            else {
-                rhsprom = mkPROMISE(CAR(a), rho);
-                SET_PRVALUE(rhsprom, rhs);
-            }
-            PROTECT(rhsprom);
+            PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
+            SET_PRVALUE(rhsprom, rhs);
             WAIT_UNTIL_COMPUTED(rhs);
             PROTECT(lhsprom = mkPROMISE(var, rho));
             SET_PRVALUE(lhsprom, varval);
