@@ -192,7 +192,7 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
         for (i = m; i<n; i++) RAW(result)[i] = (Rbyte) 0;
         break;
     default:
-        errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+        nonsubsettable_error(call,x);
     }
 }
 
@@ -293,7 +293,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
                 RAW(result)[i] = RAW(x)[ii];
         break;
     default:
-        errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+        nonsubsettable_error(call,x);
     }
 }
 
@@ -462,7 +462,7 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
         }
 
         if (jj < 1 || jj > nc)
-            errorcall(call, R_MSG_subs_o_b);
+            out_of_bounds_error(call);
 
         switch (typeofx) {
         case LGLSXP:
@@ -503,7 +503,7 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
     start -= 1;
 
     if (start < 0 || start+nrs > nr)
-        errorcall(call, R_MSG_subs_o_b);
+        out_of_bounds_error(call);
 
     /* Loop to handle extraction, with outer loop over columns. */
 
@@ -522,7 +522,7 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
         /* Check for bad column index. */
 
         if (jj < 1 || jj > nc)
-            errorcall(call, R_MSG_subs_o_b);
+            out_of_bounds_error(call);
 
         /* Loops over range of rows. */
 
@@ -588,7 +588,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
         if (ii == NA_INTEGER) 
             set_row_or_col_to_na (result, i, nrs, i+nrs*ncs, call);
         else if (ii < 1 || ii > nr)
-            errorcall(call, R_MSG_subs_o_b);
+            out_of_bounds_error(call);
     }
 
     /* Loop to handle extraction except for NAs.  Outer loop is over columns so
@@ -609,7 +609,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
         /* Check for bad column index. */
 
         if (jj < 1 || jj > nc)
-            errorcall(call, R_MSG_subs_o_b);
+            out_of_bounds_error(call);
 
         /* Loops over row indexes, except skips NA row indexes, done above. */
 
@@ -823,7 +823,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         for (i = 0; i < nsubs[j]; i++) {
             jj = subs[j][i];
             if (jj != NA_INTEGER && (jj < 1 || jj > INTEGER(xdims)[j])) {
-                errorcall(call, R_MSG_subs_o_b);
+                out_of_bounds_error(call);
             }
         }
     }
@@ -1336,7 +1336,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
 	    SET_VECTOR_ELT(ax, i++, CAR(px));
     }
     else
-        errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+        nonsubsettable_error(call,x);
 
     /* This is the actual subsetting code. */
     /* The separation of arrays and matrices is purely an optimization. */
@@ -1512,7 +1512,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* back to the regular program */
     if (!(isVector(x) || isList(x) || isLanguage(x)))
-	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+	nonsubsettable_error(call,x);
 
     int any_named = NAMEDCNT_GT_0(x);
 
@@ -1551,7 +1551,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 		UNPROTECT(2);
 		return R_NilValue;
 	    }
-	    else errorcall(call, R_MSG_subs_o_b);
+	    else out_of_bounds_error(call);
 	}
     } else { /* matrix indexing */
 	/* Here we use the fact that: */
@@ -1572,7 +1572,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    subs = CDR(subs);
 	    if (INTEGER(indx)[i] < 0 ||
 		INTEGER(indx)[i] >= INTEGER(dims)[i])
-		errorcall(call, R_MSG_subs_o_b);
+		out_of_bounds_error(call);
 	}
 	offset = 0;
 	for (i = (nsubs - 1); i > 0; i--)
@@ -1808,7 +1808,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
 	errorcall(call, "$ operator is invalid for atomic vectors");
     }
     else /* e.g. a function */
-	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+	nonsubsettable_error(call,x);
 
     return R_NilValue;
 }

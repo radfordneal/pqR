@@ -4,7 +4,11 @@ Also, added a codePromises option for deparse, and NA option for
 evaluate in dump, which goes with these being needed for better
 error display in the new scheme.
 
-Make deparsing for errors use the new codePromises option, and
-change length<- and environment<- to use errorcall rather than
-error so it will be used there.  Need to do the same for other
-primitive replacement functions.
+Make deparsing for errors use the new codePromises option.  Changed
+all the primitive replacement functions (eg, length<-, environment<-,
+[<-, [[<-, $<-) to use errorcall, and otherwise ratiionalized error
+handling in various places.  Modified "try" to use the codePromises
+option for deparsing.
+
+Updated the saved output of reg-tests-2.Rout and reg-tests-1b.Rout
+to show new error messages.

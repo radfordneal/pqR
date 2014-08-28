@@ -26,7 +26,8 @@ try <- function(expr, silent = FALSE) {
             ## Use identical() since call[[1L]] can be non-atomic.
             if (identical(call[[1L]], quote(doTryCatch)))
                 call <- sys.call(-4L)
-            dcall <- deparse(call)[1L]
+            dcall <- deparse (call, control = 
+              c("keepInteger", "showAttributes", "keepNA", "codePromises")) [1L]
             prefix <- paste("Error in", dcall, ": ")
             LONG <- 75L # to match value in errors.c
             msg <- conditionMessage(e)
