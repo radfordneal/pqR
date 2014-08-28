@@ -2006,6 +2006,79 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     (void) RemoveVariable (R_TmpvalSymbol, rho);
 }
 
+/* Create two lists of promises to evaluate each argument, with promises
+   shared.  When an argument is evaluated in a call using one argument list,
+   its value is then known without re-evaluation in a second call using 
+   the second argument list.  Two argument lists may be needed because some
+   primitives destructively alter their argument lists. */
+
+static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
+{
+    SEXP head1, tail1, head2, tail2, ev, h;
+
+    head1 = head2 = R_NilValue;
+
+    while(el != R_NilValue) {
+
+        SEXP a = CAR(el);
+
+	/* If we have a ... symbol, we look to see what it is bound to.
+	   If its binding is R_NilValue we just ignore it.  If it is bound
+           to a ... list of promises, we repromise all the promises and 
+           then splice the list of resulting values into the return value.
+	   Anything else bound to a ... symbol is an error. */
+
+	if (a == R_DotsSymbol) {
+	    h = findVar(a, rho);
+            if (h == R_NilValue) {
+                /* nothing */
+            }
+	    else if (TYPEOF(h) == DOTSXP) {
+		while (h != R_NilValue) {
+                    a = mkPROMISE(CAR(h),rho);
+                    ev = cons_with_tag (a, R_NilValue, TAG(h));
+                    if (head1==R_NilValue)
+                        PROTECT(head1=ev);
+                    else
+                        SETCDR(tail1,ev);
+                    tail1 = ev;
+                    ev = cons_with_tag (a, R_NilValue, TAG(h));
+                    if (head2==R_NilValue)
+                        PROTECT(head2=ev);
+                    else
+                        SETCDR(tail2,ev);
+                    tail2 = ev;
+		    h = CDR(h);
+		}
+	    }
+	    else if (h != R_MissingArg)
+		dotdotdot_error();
+	}
+        else {
+            if (a != R_MissingArg)
+               a = mkPROMISE (a, rho);
+            ev = cons_with_tag (a, R_NilValue, TAG(el));
+            if (head1 == R_NilValue)
+                PROTECT(head1 = ev);
+            else
+                SETCDR(tail1, ev);
+            tail1 = ev;
+            ev = cons_with_tag (a, R_NilValue, TAG(el));
+            if (head2 == R_NilValue)
+                PROTECT(head2 = ev);
+            else
+                SETCDR(tail2, ev);
+            tail2 = ev;
+        }
+	el = CDR(el);
+    }
+
+    if (head1!=R_NilValue)
+        UNPROTECT(2);
+
+    *a1 = head1;
+    *a2 = head2;
+}
 
 /*  Assignment in its various forms  */
 
@@ -2056,47 +2129,123 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* Assignment to complex target. */
 
-    case LANGSXP:
+    case LANGSXP: ;
+
+        SEXP var, varval, rhsprom, lhsprom;
+        int depth;
 
         /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
            to protect it from being modified by the assignment, or otherwise. */
 
         if ( ! (variant & VARIANT_NULL))
             INC_NAMEDCNT(rhs);
+
+        /* Turn the rhs value to be assigned into a promise, so it will
+           not be changed by evaluation, and can be deparsed to its
+           source form for any error message.  Later re-used. */
+
         PROTECT(rhs);
+        rhsprom = mkPROMISE(CAR(a), rho);
+        SET_PRVALUE(rhsprom, rhs);
+        UNPROTECT(1);
+        PROTECT(rhsprom);
 
-        if (TYPEOF(CADR(lhs))==SYMSXP) {
-            /* one assignment function, eg names(a) <- v */
-            SEXP assgnfcn, rplcall, rhsprom, lhsprom, res;
-            SEXP var = CADR(lhs);
-            SEXP varval = PRIMVAL(op) != 2 ? EnsureLocal(var, rho) 
-                                           : eval(var, ENCLOS(rho));
-            /* This duplication should be unnecessary, but some packages
-               (eg, Matrix 1.0-6) assume (in C code) that the object in a
-               replacement function is not shared. */
-            if (NAMEDCNT_GT_1(varval))
-                varval = dup_top_level(varval);
-            PROTECT(varval);
-            PROTECT(assgnfcn = installAssignFcnName(CAR(lhs)));
-            PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
-            SET_PRVALUE(rhsprom, rhs);
-            WAIT_UNTIL_COMPUTED(rhs);
-            PROTECT(lhsprom = mkPROMISE(var, rho));
-            SET_PRVALUE(lhsprom, varval);
-            PROTECT(rplcall = replaceCall(assgnfcn,lhsprom,CDDR(lhs),rhsprom));
-            PROTECT(res = eval(rplcall,rho));
-            if (PRIMVAL(op) == 2) /* <<- */
-                set_var_nonlocal (var, res, ENCLOS(rho), 3);
-            else
-                set_var_in_frame (var, res, rho, TRUE, 3);
-            UNPROTECT(7);
+        /* Find the variable ultimately assigned to, and its depth.
+           The depth is 1 for a variable within one replacement function
+           (eg, in names(a) <- ...). */
+
+        depth = 1;
+        for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
+            if (TYPEOF(var) != LANGSXP)
+                errorcall (call, _("invalid assignment left-hand side"));
+            var = CADR(var);
+            depth += 1;
         }
 
-        else  {
-            /* more complex assignment, eg names(L$a)[1] <- x */
-            applydefine (call, op, lhs, rhs, rho);
+        /* Get the value of the variable assigned to, and ensure it is 
+           local (unless this is the <<- operator). */
+
+        varval = PRIMVAL(op)!=2 ? EnsureLocal(var,rho) : eval(var,ENCLOS(rho));
+
+        /* This duplication should be unnecessary, but some packages
+           (eg, Matrix 1.0-6) assume (in C code) that the object in a
+           replacement function is not shared. */
+
+        if (NAMEDCNT_GT_1(varval))
+            varval = dup_top_level(varval);
+
+        PROTECT(varval);
+
+        WAIT_UNTIL_COMPUTED(rhs);  /* maybe unnecessary? */
+
+        /* For each level from 0 to depth, store the lhs expression (which is
+           the final variable at depth).  For each level except the final 
+           variable and the outermost, which only does a store, save argument 
+           lists for the fetch/store functions that share promises, so that
+           they are evaluated only once.  For the outermost, instead save
+           the original argument list.  For each level except the outermost, 
+           save the value of the expression before assignment. */
+
+        struct { SEXP expr, fetch_args, store_args, value; } s[depth+1];
+        SEXP v, e;
+        int d;
+
+        s[0].expr = lhs;
+        s[0].store_args = CDDR(lhs);
+        for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
+            promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
+                                          &s[d].store_args);
+            PROTECT2(s[d].fetch_args,s[d].store_args);
+            s[d].expr = v;
+        }
+        s[depth].expr = var;
+
+        s[depth].value = varval;
+        for (d = depth-1; d > 0; d--) {
+            SEXP prom = mkPROMISE(s[d+1].expr,rho);
+            SET_PRVALUE(prom,s[d+1].value);
+            e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
+            PROTECT(e);
+            e = eval(e,rho));
             UNPROTECT(1);
+            PROTECT(e);
+            if (d>1) INC_NAMEDCNT(e); /* don't let it change before we use it */
+            s[d].value = e;
         }
+
+        /* Call the replacement functions levels 1 to depth, changing the 
+           values at each level, using the fetched value at that level, and 
+           the new value after replacement at the lower level.  The value 
+           at the outermost level (0) is taken as the rhs value. */
+
+        for (d = 1; d <= depth; d++) {
+            /* Assume the symbol below is protected by the symbol table. */
+            SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
+            if (d == 1)
+                PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
+            else {
+                SET_PRCODE(rhsprom,s[d-1].expr);
+                SET_PRVALUE(rhsprom,s[d-1].value);
+                SET_PRCODE(lhsprom,s[d].expr);
+                if (d<depth) DEC_NAMEDCNT(s[d].value);
+            }
+            SET_PRVALUE (lhsprom, s[d].value);
+            PROTECT(e = replaceCall (assgnfcn, lhsprom, s[d-1].store_args,
+                                     rhsprom));
+            e = eval(e,rho);
+            UNPROTECT(1);
+            if (d < depth) PROTECT(e);
+            s[d].value = e;
+        }
+
+        /* Assign the final result after the top level replacement. */
+
+        if (PRIMVAL(op) == 2) /* <<- */
+            set_var_nonlocal (var, s[depth].value, ENCLOS(rho), 3);
+        else
+            set_var_in_frame (var, s[depth].value, rho, TRUE, 3);
+
+        UNPROTECT(3 + 4*(depth-1));
 
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
