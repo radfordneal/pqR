@@ -299,7 +299,7 @@ static SEXP do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (!isNull(env) && !isEnvironment(env)
                      && !isEnvironment(env = simple_as_environment(env)))
-	error(_("replacement object is not an environment"));
+	errorcall(call,_("replacement object is not an environment"));
 
     PROTECT(env);
 
@@ -310,7 +310,7 @@ static SEXP do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (TYPEOF(CAR(args)) == CLOSXP) {
 	if (isNull(env))
-	    error(_("use of NULL environment is defunct"));
+	    errorcall(call,_("use of NULL environment is defunct"));
 	if (TYPEOF(BODY(s)) == BCODESXP)
 	    /* switch to interpreted version if compiled */
 	    SET_BODY(s, R_ClosureExpr(CAR(args)));
@@ -841,13 +841,13 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 				     rho, &ans, 0, 1))
 	return(ans);
     if (!isVector(x) && !isVectorizable(x))
-       error(_("invalid argument"));
+       errorcall(call,_("invalid argument"));
     if (length(CADR(args)) != 1)
-       error(_("invalid value"));
+       errorcall(call,_("invalid value"));
     len = asVecSize(CADR(args));
     if (len == NA_INTEGER)
-       error(_("missing value for 'length'"));
-    if (len < 0) error(_("invalid value"));
+       errorcall(call,_("missing value for 'length'"));
+    if (len < 0) errorcall(call,_("invalid value"));
     return lengthgets(x, len);
 }
 

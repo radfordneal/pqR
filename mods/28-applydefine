@@ -3,3 +3,8 @@ Modifications to do_set and applydefine for complex assignments.
 Also, added a codePromises option for deparse, and NA option for
 evaluate in dump, which goes with these being needed for better
 error display in the new scheme.
+
+Make deparsing for errors use the new codePromises option, and
+change length<- and environment<- to use errorcall rather than
+error so it will be used there.  Need to do the same for other
+primitive replacement functions.

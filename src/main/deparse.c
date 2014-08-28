@@ -297,7 +297,7 @@ SEXP attribute_hidden deparse1s(SEXP call)
    Rboolean backtick=TRUE;
 
    temp = deparse1WithCutoff(call, FALSE, DEFAULT_Cutoff, backtick,
-			     DEFAULTDEPARSE, 1);
+			     DEFAULTDEPARSE | CODEPROMISES, 1);
    return(temp);
 }
 
