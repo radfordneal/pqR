@@ -1457,13 +1457,16 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
     input = allocVector(STRSXP, 1);
 
     name = CADR(args);
+    if (TYPEOF(name) == PROMSXP)
+        name = PRCODE(name);
     iS = isSymbol(name);
     if (iS)
 	SET_STRING_ELT(input, 0, PRINTNAME(name));
     else if(isString(name) )
 	SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
     else
-	error(_("invalid subscript type '%s'"), type2char(TYPEOF(name)));
+	errorcall(call, _("invalid subscript type '%s'"), 
+                        type2char(TYPEOF(name)));
 
     /* replace the second argument with a string */
     SETCADR(args, input);

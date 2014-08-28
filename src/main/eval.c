@@ -2129,7 +2129,27 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* Assignment to complex target. */
 
-    case LANGSXP: ;
+    case LANGSXP: {
+
+        /* Debugging aid:  Can be enabled below, then activated by typing
+           `switch to old applydefine` at prompt. */
+
+#       if 0
+        if (installed_already("switch to old applydefine")) {
+
+            if ( ! (variant & VARIANT_NULL))
+                INC_NAMEDCNT(rhs);
+            PROTECT(rhs);
+    
+            applydefine (call, op, lhs, rhs, rho);
+    
+            UNPROTECT(1);
+            if ( ! (variant & VARIANT_NULL))
+                DEC_NAMEDCNT(rhs);
+      
+            break;
+        }
+#       endif
 
         SEXP var, varval, rhsprom, lhsprom;
         int depth;
@@ -2158,7 +2178,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
             if (TYPEOF(var) != LANGSXP)
                 errorcall (call, _("invalid assignment left-hand side"));
-            var = CADR(var);
             depth += 1;
         }
 
@@ -2206,7 +2225,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             SET_PRVALUE(prom,s[d+1].value);
             e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
             PROTECT(e);
-            e = eval(e,rho));
+            e = eval(e,rho);
             UNPROTECT(1);
             PROTECT(e);
             if (d>1) INC_NAMEDCNT(e); /* don't let it change before we use it */
@@ -2251,10 +2270,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             DEC_NAMEDCNT(rhs);
   
         break;
-
-    /* Assignment to invalid target. */
+    }
 
     default:
+        /* Assignment to invalid target. */
         errorcall (call, _("invalid assignment left-hand side"));
     }
 

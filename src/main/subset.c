@@ -1612,6 +1612,8 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     from = CAR(args);
     what = CADR(args);
 
+    if (TYPEOF(what) == PROMSXP)
+        what = PRCODE(what);
     if (isSymbol(what))
         name = what;
     else if (isString(what)) 
