@@ -2131,8 +2131,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     case LANGSXP: {
 
-        /* Debugging aid:  Can be enabled below, then activated by typing
-           `switch to old applydefine` at prompt. */
+        /* Debugging/comparison aid:  Can be enabled below, then activated 
+           by typing `switch to old applydefine` at prompt. */
 
 #       if 0
         if (installed_already("switch to old applydefine")) {
@@ -2162,13 +2162,11 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Turn the rhs value to be assigned into a promise, so it will
            not be changed by evaluation, and can be deparsed to its
-           source form for any error message.  Later re-used. */
+           source form for any error message.  Note that such promises
+           shouldn't be re-cycled with different CODE, since they may be
+           preserved in the array of saved warnings. */
 
         PROTECT(rhs);
-        rhsprom = mkPROMISE(CAR(a), rho);
-        SET_PRVALUE(rhsprom, rhs);
-        UNPROTECT(1);
-        PROTECT(rhsprom);
 
         /* Find the variable ultimately assigned to, and its depth.
            The depth is 1 for a variable within one replacement function
@@ -2235,26 +2233,29 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Call the replacement functions at levels 1 to depth, changing the 
            values at each level, using the fetched value at that level, and 
            the new value after replacement at the lower level.  The new value 
-           at the outermost level (0) is taken as the rhs value. */
+           at the outermost level (0) is taken from the rhs value. */
 
         for (d = 1; d <= depth; d++) {
             /* Assume the symbol below is protected by the symbol table. */
             SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
-            if (d == 1)
-                PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
+            PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
+            SET_PRVALUE (lhsprom, s[d].value);
+            if (d == 1) {
+                PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
+                SET_PRVALUE(rhsprom, rhs);
+            }
             else {
-                SET_PRCODE(rhsprom,s[d-1].expr);
-                SET_PRVALUE(rhsprom,s[d-1].value);
-                SET_PRCODE(lhsprom,s[d].expr);
+                PROTECT(rhsprom = mkPROMISE (s[d-1].expr, rho));
+                SET_PRVALUE (rhsprom, s[d-1].value);
                 if (d<depth) DEC_NAMEDCNT(s[d].value);
             }
-            SET_PRVALUE (lhsprom, s[d].value);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, s[d-1].store_args,
                                      rhsprom));
             e = eval(e,rho);
-            UNPROTECT(1);
-            if (d < depth) PROTECT(e);
+            UNPROTECT(3);  /* e, rhsprom, and lhsprom */
             s[d].value = e;
+            if (d < depth)
+                PROTECT(e);
         }
 
         /* Assign the final result after the top level replacement. */
@@ -2264,7 +2265,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else
             set_var_in_frame (var, s[depth].value, rho, TRUE, 3);
 
-        UNPROTECT(3 + 4*(depth-1));
+        UNPROTECT(2 + 4*(depth-1));
 
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
