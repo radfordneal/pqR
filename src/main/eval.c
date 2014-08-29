@@ -2131,11 +2131,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     case LANGSXP: {
 
-        /* Debugging/comparison aid:  Can be enabled below, then activated 
-           by typing `switch to old applydefine` at prompt. */
+        /* Debugging/comparison aid:  Can be enabled one way or the other below,
+           then activated by typing `switch to old` or `switch to new` at the
+           prompt. */
 
 #       if 0
-        if (installed_already("switch to old applydefine")) {
+        if (1 && !installed_already("switch to new")
+         || 0 && installed_already("switch to old")) {
 
             if ( ! (variant & VARIANT_NULL))
                 INC_NAMEDCNT(rhs);
@@ -2154,19 +2156,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         SEXP var, varval, rhsprom, lhsprom;
         int depth;
 
+        PROTECT(rhs);
+
         /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
            to protect it from being modified by the assignment, or otherwise. */
 
         if ( ! (variant & VARIANT_NULL))
             INC_NAMEDCNT(rhs);
-
-        /* Turn the rhs value to be assigned into a promise, so it will
-           not be changed by evaluation, and can be deparsed to its
-           source form for any error message.  Note that such promises
-           shouldn't be re-cycled with different CODE, since they may be
-           preserved in the array of saved warnings. */
-
-        PROTECT(rhs);
 
         /* Find the variable ultimately assigned to, and its depth.
            The depth is 1 for a variable within one replacement function
@@ -2178,6 +2174,32 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 errorcall (call, _("invalid assignment left-hand side"));
             depth += 1;
         }
+
+        /* For each level from 0 to depth, store the lhs expression (which is
+           the final variable at depth).  For each level except the final 
+           variable and the outermost, which only does a store, save argument 
+           lists for the fetch/store functions that share promises, so that
+           they are evaluated only once.  For the outermost, instead save
+           the original argument list. */
+
+        struct { 
+            SEXP fetch_args, store_args;
+            SEXP expr, value; 
+            int query; 
+        } s[depth+1];
+
+        SEXP v, e;
+        int d;
+
+        s[0].expr = lhs;
+        s[0].store_args = CDDR(lhs);
+        for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
+            promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
+                                          &s[d].store_args);
+            PROTECT2(s[d].fetch_args,s[d].store_args);
+            s[d].expr = v;
+        }
+        s[depth].expr = var;
 
         /* Get the value of the variable assigned to, and ensure it is 
            local (unless this is the <<- operator). */
@@ -2192,74 +2214,79 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             varval = dup_top_level(varval);
 
         PROTECT(varval);
-
-        WAIT_UNTIL_COMPUTED(rhs);  /* maybe unnecessary? */
-
-        /* For each level from 0 to depth, store the lhs expression (which is
-           the final variable at depth).  For each level except the final 
-           variable and the outermost, which only does a store, save argument 
-           lists for the fetch/store functions that share promises, so that
-           they are evaluated only once.  For the outermost, instead save
-           the original argument list.  For each level except the outermost, 
-           save the value of the expression before assignment. */
-
-        struct { SEXP expr, fetch_args, store_args, value; } s[depth+1];
-        int must_dup = -1;
-        SEXP v, e;
-        int d;
-
-        s[0].expr = lhs;
-        s[0].store_args = CDDR(lhs);
-        for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
-            promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
-                                          &s[d].store_args);
-            PROTECT2(s[d].fetch_args,s[d].store_args);
-            s[d].expr = v;
-        }
-        s[depth].expr = var;
-
         s[depth].value = varval;
+        s[depth].query = 1; /* correct given the duplication of varval above */
+
+        /* For each level except the outermost, evaluate and save the 
+           expression as it is before the assignment, asking and saving
+           whether it is an unshared subset of the next larger expression. */
+
         for (d = depth-1; d > 0; d--) {
             SEXP prom = mkPROMISE(s[d+1].expr,rho);
             SET_PRVALUE(prom,s[d+1].value);
             e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
             PROTECT(e);
-            e = eval(e,rho);
+            e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
             PROTECT(e);
-            if (must_dup < 0 && NAMEDCNT_GT_1(e)) 
-                must_dup = d;
             /* if (d>1) INC_NAMEDCNT(e); */ /* don't let it change before we use it */
             s[d].value = e;
+            s[d].query = R_variant_result;
+            R_variant_result = 0;
         }
 
         /* Call the replacement functions at levels 1 to depth, changing the 
            values at each level, using the fetched value at that level, and 
            the new value after replacement at the lower level.  The new value 
-           at the outermost level (0) is taken from the rhs value. */
+           at the outermost level (0) is taken from the rhs value. 
+
+           We duplicate the object of a replacement call unless it is known
+           to be an unshared subset of the next larger object, or it has
+           NAMEDCNT of zero, indicating it note shared with anything. */
         
         for (d = 1; d <= depth; d++) {
-            /* Assume the symbol below is protected by the symbol table. */
-            SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
+
+            /* The rhs or result of previous replacement will be turned into 
+               a promise, so it will not be changed by argument evaluation, 
+               and it can be deparsed for any error message.  Note that such 
+               promises shouldn't be re-cycled with different CODE, since 
+               they may be preserved in the array of saved warnings. */
             if (d == 1) {
                 PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
                 SET_PRVALUE(rhsprom, rhs);
+                WAIT_UNTIL_COMPUTED(rhs);  /* maybe unnecessary? */
+            }
+            else if (s[d].query == 1) {
+                UNPROTECT(1); /* s[d].value from previous loop */
+                continue;
             }
             else {
-                PROTECT(rhsprom = mkPROMISE (s[d-1].expr, rho));
+                PROTECT(s[d-1].value);
+                rhsprom = mkPROMISE (s[d-1].expr, rho);
                 SET_PRVALUE (rhsprom, s[d-1].value);
+                UNPROTECT(1);
+                PROTECT(rhsprom);
                 /* if (d<depth) DEC_NAMEDCNT(s[d].value); */
             }
+
+            /* Assume the symbol below is protected by the symbol table. */
+            SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
+
             PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
-            SET_PRVALUE (lhsprom, d <= must_dup ? duplicate(s[d].value) 
-                                                : s[d].value);
+            SET_PRVALUE (lhsprom, s[d].query == 0 && NAMEDCNT_GT_0(s[d].value)
+                                         ? duplicate(s[d].value) : s[d].value);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, s[d-1].store_args,
                                      rhsprom));
             e = eval(e,rho);
-            UNPROTECT(3);  /* e, rhsprom, and lhsprom */
+
+            /* Unprotect e, lhsprom, rhsprom, and s[d].value from previous loop,
+               which went from depth-1 to 1 in the opposite order as this one,
+               along with the protect of varval before that. */
+            UNPROTECT(4);  
+
+            if (d < depth && s[d].value != e)
+                s[d+1].query = 0;
             s[d].value = e;
-            if (d < depth)
-                PROTECT(e);
         }
 
         /* Assign the final result after the top level replacement. */
@@ -2269,7 +2296,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else
             set_var_in_frame (var, s[depth].value, rho, TRUE, 3);
 
-        UNPROTECT(2 + 4*(depth-1));
+        UNPROTECT(2*(depth-1)+1);  /* fetch_args, store_args, rhs */
 
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
