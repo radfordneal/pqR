@@ -2204,6 +2204,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            save the value of the expression before assignment. */
 
         struct { SEXP expr, fetch_args, store_args, value; } s[depth+1];
+        int must_dup = -1;
         SEXP v, e;
         int d;
 
@@ -2226,7 +2227,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             e = eval(e,rho);
             UNPROTECT(1);
             PROTECT(e);
-            if (d>1) INC_NAMEDCNT(e); /* don't let it change before we use it */
+            if (must_dup < 0 && NAMEDCNT_GT_1(e)) 
+                must_dup = d;
+            /* if (d>1) INC_NAMEDCNT(e); */ /* don't let it change before we use it */
             s[d].value = e;
         }
 
@@ -2234,12 +2237,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            values at each level, using the fetched value at that level, and 
            the new value after replacement at the lower level.  The new value 
            at the outermost level (0) is taken from the rhs value. */
-
+        
         for (d = 1; d <= depth; d++) {
             /* Assume the symbol below is protected by the symbol table. */
             SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
-            PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
-            SET_PRVALUE (lhsprom, s[d].value);
             if (d == 1) {
                 PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
                 SET_PRVALUE(rhsprom, rhs);
@@ -2247,8 +2248,11 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             else {
                 PROTECT(rhsprom = mkPROMISE (s[d-1].expr, rho));
                 SET_PRVALUE (rhsprom, s[d-1].value);
-                if (d<depth) DEC_NAMEDCNT(s[d].value);
+                /* if (d<depth) DEC_NAMEDCNT(s[d].value); */
             }
+            PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
+            SET_PRVALUE (lhsprom, d <= must_dup ? duplicate(s[d].value) 
+                                                : s[d].value);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, s[d-1].store_args,
                                      rhsprom));
             e = eval(e,rho);
