@@ -1321,7 +1321,7 @@ SEXP R_GetTraceback(int skip)
 	    if (skip > 0)
 		skip--;
 	    else {
-		SETCAR(t, deparse1(c->call, 0, DEFAULTDEPARSE));
+		SETCAR(t, deparse1(c->call, 0, DEFAULTDEPARSE | CODEPROMISES));
 		if (c->srcref && !isNull(c->srcref)) 
 		    setAttrib(CAR(t), R_SrcrefSymbol, duplicate(c->srcref));
 		t = CDR(t);
