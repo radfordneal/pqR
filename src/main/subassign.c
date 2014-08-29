@@ -63,8 +63,9 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t newlen)
     /* Enlarge the vector itself. */
     len = LENGTH(x);
     if (LOGICAL(GetOption1(install("check.bounds")))[0])
-	warning(_("assignment outside vector/list limits (extending from %d to %d)"),
-		len, newlen);
+	warningcall (call,
+          _("assignment outside vector/list limits (extending from %d to %d)"),
+          len, newlen);
     PROTECT(x);
     PROTECT(newx = allocVector(TYPEOF(x), newlen));
 
@@ -446,7 +447,8 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	if (oldn > 0 && ny == 0)
 	    errorcall(call,_("replacement has length zero"));
 	if (oldn > 0 && n % ny)
-	    warning(_("number of items to replace is not a multiple of replacement length"));
+	    warningcall(call,
+             _("number of items to replace is not a multiple of replacement length"));
     }
 
     /* When array elements are being permuted the RHS */
@@ -1542,7 +1544,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 	if (isExpression(x)) 
 	    type = EXPRSXP;
 	else if (!isNewList(x)) {
-	    warning(_("Coercing LHS to a list"));
+	    warningcall(call,_("Coercing LHS to a list"));
 	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
 	}
 

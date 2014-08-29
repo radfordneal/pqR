@@ -2232,9 +2232,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             s[d].value = e;
         }
 
-        /* Call the replacement functions levels 1 to depth, changing the 
+        /* Call the replacement functions at levels 1 to depth, changing the 
            values at each level, using the fetched value at that level, and 
-           the new value after replacement at the lower level.  The value 
+           the new value after replacement at the lower level.  The new value 
            at the outermost level (0) is taken as the rhs value. */
 
         for (d = 1; d <= depth; d++) {
