@@ -4078,6 +4078,15 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   NEXT(); \
 } while (0)
 
+#define DO_DFLTDISPATCH0(fun, symbol) do { \
+  SEXP call = GETSTACK(-3); \
+  SEXP args = GETSTACK(-2); \
+  value = fun(call, symbol, args, rho, 0); \
+  R_BCNodeStackTop -= 3; \
+  SETSTACK(-1, value); \
+  NEXT(); \
+} while (0)
+
 #define DO_DFLTDISPATCH(fun, symbol) do { \
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
@@ -5079,7 +5088,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(STARTC, 2): DO_STARTDISPATCH("c");
     OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSym);
     OP(STARTSUBSET2, 2): DO_STARTDISPATCH("[[");
-    OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH(do_subset2_dflt, R_Subset2Sym);
+    OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH0(do_subset2_dflt, R_Subset2Sym);
     OP(STARTSUBASSIGN2, 2): DO_START_ASSIGN_DISPATCH("[[<-");
     OP(DFLTSUBASSIGN2, 0):
       DO_DFLT_ASSIGN_DISPATCH(do_subassign2_dflt, R_Subassign2Sym);
@@ -5100,7 +5109,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (dispatched)
 	    SETSTACK(-1, value);
 	else
-	    SETSTACK(-1, R_subset3_dflt(x, R_NilValue, symbol, R_NilValue));
+	    SETSTACK(-1, R_subset3_dflt(x, R_NilValue, symbol, R_NilValue, 0));
 	NEXT();
       }
     OP(DOLLARGETS, 2):

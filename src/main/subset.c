@@ -1200,7 +1200,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
                 /* ... in particular, it might be missing ... */
                 args = CONS(array,evalListKeepMissing(ixlist,rho));
                 UNPROTECT(nprotect);
-                return do_subset_dflt(call, op, args, rho); 
+                return do_subset_dflt(call, op, args, rho);
             }
             else {
                 SEXP remargs = CDR(ixlist);
@@ -1219,7 +1219,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
                 args = CONS(idx,remargs);
                 UNPROTECT(nprotect);
                 wait_until_arguments_computed(args);
-                return do_subset_dflt_seq(call, op, array, args, rho, seq); 
+                return do_subset_dflt_seq(call, op, array, args, rho, seq);
             }
         }
     }
@@ -1252,7 +1252,7 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
     return do_subset_dflt_seq (call, op, CAR(args), CDR(args), rho, 0);
 }
 
-/* The last "seq" argument below is 1 if the first subscript is a sequence spec
+/* The "seq" argument below is 1 if the first subscript is a sequence spec
    (a variant result).  The first argument (the array, x) is passed separately
    rather than as part of an argument list, for efficiency. */
 
@@ -1416,7 +1416,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
 /* The [[ subset operator.  It needs to be fast. */
 /* The arguments to this call are evaluated on entry. */
 
-static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
@@ -1436,10 +1436,11 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Method dispatch has failed. */
     /* We now run the generic internal code. */
 
-    return do_subset2_dflt(call, op, ans, rho);
+    return do_subset2_dflt(call, op, ans, rho, variant);
 }
 
-SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
+                                      int variant)
 {
     SEXP ans, dims, dimnames, indx, subs, x;
     int i, ndims, nsubs, offset = 0;
@@ -1514,7 +1515,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!(isVector(x) || isList(x) || isLanguage(x)))
 	nonsubsettable_error(call,x);
 
-    int any_named = NAMEDCNT_GT_0(x);
+    int max_named = NAMEDCNT(x);
 
     if(nsubs == 1) { /* vector indexing */
 
@@ -1531,12 +1532,13 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
                 errorcall(call, _("no such index at level %d\n"), i);
             if (isPairList(x)) {
                 x = CAR(nthcdr(x, offset));
-                any_named = 1;
+                max_named = MAX_NAMEDCNT;
             } 
             else {
                 x = VECTOR_ELT(x, offset);
-                if (NAMEDCNT_GT_0(x))
-                   any_named = 1;
+                int nm = NAMEDCNT(x);
+                if (nm > max_named) 
+                    max_named = nm;
             }
         }
 	    
@@ -1581,13 +1583,16 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNPROTECT(1);
     }
 
-    if(isPairList(x)) {
+    if (isPairList(x)) {
 	ans = CAR(nthcdr(x, offset));
         SET_NAMEDCNT_MAX(ans);
-    } else if(isVectorList(x)) {
+    } else if (isVectorList(x)) {
 	ans = VECTOR_ELT(x, offset);
-	if (any_named && NAMEDCNT_EQ_0(ans))
+	if (max_named > 0 && NAMEDCNT_EQ_0(ans))
             SET_NAMEDCNT_1(ans);
+        if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+             && max_named <= 1 && !NAMEDCNT_GT_1(ans))
+            R_variant_result = 1;
     } else {
 	ans = allocVector(TYPEOF(x), 1);
         copy_elements (ans, 0, 0, x, offset, 0, 1);
@@ -1600,7 +1605,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
    We need to be sure to only evaluate the first argument.
    The second will be a symbol that needs to be matched, not evaluated.
 */
-static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP from, what, ans, input, ncall;
 
@@ -1631,7 +1636,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
             PROTECT(from);
             argsevald = 1;
         } else 
-            return R_subset3_dflt (from, string, name, call);
+            return R_subset3_dflt (from, string, name, call, variant);
     }
 
     /* first translate CADR of args into a string so that we can
@@ -1667,7 +1672,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 	return ans;
     }
 
-    ans = R_subset3_dflt(CAR(ans), string, name, call);
+    ans = R_subset3_dflt(CAR(ans), string, name, call, variant);
     UNPROTECT(3+argsevald);
     return ans;
 }
@@ -1675,7 +1680,8 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Used above and in eval.c.  The field to extract is specified by either the
    "input" argument or the "name" argument, or both. */
 
-SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
+SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
+                                     int variant)
 {
     const char *cinp, *ctarg;
     int mtch;
@@ -1783,10 +1789,13 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
       found_veclist:
         if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
             SET_NAMEDCNT(y,1);
+        if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+             && !NAMEDCNT_GT_1(x) && !NAMEDCNT_GT_1(y))
+            R_variant_result = 1;
         UNPROTECT(1);
         return y;
     }
-    else if( isEnvironment(x) ){
+    else if (isEnvironment(x)) {
         if (name==R_NilValue) {
             name = installed_already (translateChar(input));
             if (name == NULL) {
@@ -1794,14 +1803,33 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call)
                 return R_NilValue;
             }
         }
-	y = findVarInFrame (x, name);
-        if (y == R_UnboundValue)
-            y = R_NilValue;
-	else {
-            if (TYPEOF(y) == PROMSXP)
-                y = forcePromise(y);
-            if (NAMEDCNT_EQ_0(y))
-                SET_NAMEDCNT_1(y);
+        if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET) {
+            R_varloc_t bnd = R_findVarLocInFrame(x,name);
+            if (bnd == NULL)
+                y = R_NilValue;
+            else {
+                y = R_GetVarLocValue(bnd);
+                if (TYPEOF(y) == PROMSXP)
+                    y = forcePromise(y);
+                else {
+                    if (NAMEDCNT_EQ_0(y)) SET_NAMEDCNT_1(y);
+                    if (!NAMEDCNT_GT_1(y))
+                        R_variant_result = IS_USER_DATABASE(x) 
+                          || IS_ACTIVE_BINDING((SEXP)bnd) ? 2 : 1;
+                }
+            }
+        }
+        else {
+            y = findVarInFrame (x, name);
+            if (y == R_UnboundValue)
+                y = R_NilValue;
+            else {
+                 if (TYPEOF(y) == PROMSXP)
+                     y = forcePromise(y);
+                 else {
+                     if (NAMEDCNT_EQ_0(y)) SET_NAMEDCNT_1(y);
+                 }
+            }
         }
         UNPROTECT(1);
         return y;
@@ -1822,11 +1850,11 @@ attribute_hidden FUNTAB R_FunTab_subset[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"[",		do_subset,	1,	0,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
-{"[[",		do_subset2,	2,	0,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
-{"$",		do_subset3,	3,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
+{"[[",		do_subset2,	2,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
+{"$",		do_subset3,	3,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
 {".subset",	do_subset_dflt,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-{".subset2",	do_subset2_dflt,2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{".subset2",	do_subset2_dflt,2,	1001,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
