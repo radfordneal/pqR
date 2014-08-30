@@ -2211,24 +2211,28 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         s[depth].expr = var;
 
         /* Get the value of the variable assigned to, and ensure it is local
-           (unless this is the <<- operator). */
+           (unless this is the <<- operator).  Save and protect the binding 
+           cell used. */
 
         if (PRIMVAL(op) == 2) /* <<- */
             varval = findVar (var, ENCLOS(rho));
         else {
-            varval = findVarInFrame3 (rho, var, TRUE);
+            varval = findVarInFramePendingOK (rho, var);
             if (varval == R_UnboundValue && rho != R_EmptyEnv) {
                 varval = findVar (var, ENCLOS(rho));
                 if (varval != R_UnboundValue) {
                     if (TYPEOF(varval) == PROMSXP)
-                        varval = forcePromise(varval);
+                        varval = forcePromisePendingOK(varval);
                     set_var_in_frame (var, varval, rho, TRUE, 3);
                 }
             }
         }
 
+        SEXP bcell = R_binding_cell;
+        PROTECT(bcell);
+
         if (TYPEOF(varval) == PROMSXP)
-            varval = forcePromise(varval);
+            varval = forcePromisePendingOK(varval);
         if (varval == R_UnboundValue)
             unbound_var_error(var);
 
@@ -2282,7 +2286,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (d == 1) {
                 PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
                 SET_PRVALUE(rhsprom, rhs);
-                WAIT_UNTIL_COMPUTED(rhs);  /* maybe unnecessary? */
             }
             else if (s[d-1].in_next == 1) {
                 /* nothing to do, since it's already part of the larger object,
@@ -2326,14 +2329,22 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             UNPROTECT(4);  
         }
 
-        /* Assign the final result after the top level replacement. */
+        /* Assign the final result after the top level replacement.  We
+           can often avoid the cost of this using the saved binding cell,
+           if we had one, and it hasn't somehow been removed since. */
 
-        if (PRIMVAL(op) == 2) /* <<- */
-            set_var_nonlocal (var, s[depth].value, ENCLOS(rho), 3);
+        SEXP nv = s[depth].value;
+
+        if (bcell != R_NilValue && CAR(bcell) != R_UnboundValue) {
+            if (nv != CAR(bcell))
+                SETCAR (bcell, nv);
+        }
+        else if (PRIMVAL(op) == 2) /* <<- */
+            set_var_nonlocal (var, nv, ENCLOS(rho), 3);
         else
-            set_var_in_frame (var, s[depth].value, rho, TRUE, 3);
+            set_var_in_frame (var, nv, rho, TRUE, 3);
 
-        UNPROTECT(2*(depth-1)+1);  /* fetch_args, store_args, rhs */
+        UNPROTECT(2*(depth-1)+2);  /* fetch_args, store_args, rhs, bcell */
 
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);

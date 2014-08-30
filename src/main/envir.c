@@ -973,7 +973,7 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
   Sets R_binding_cell to the CONS cell for the binding, if the value returned
   is not R_UnboundValue, and there is a cell (not one for base environment),
   and the cell is suitable for updating by the caller (is not for an active 
-  binding).  Otherwise, R_binding_cell is set to C NULL.
+  binding).  Otherwise, R_binding_cell is set to R_NilValue.
 */
 
 static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
@@ -1031,7 +1031,7 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
     SEXP loc, value;
 
-    R_binding_cell = NULL;
+    R_binding_cell = R_NilValue;
 
     if (IS_BASE(rho)) {
         if (option==2) 
@@ -1124,13 +1124,13 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
 
 /* findGlobalVar searches for a symbol value starting at R_GlobalEnv, so the
    cache can be used.  Doesn't wait for the value found to be computed.
-   Always set R_binding_cell to NULL, since fast updates here aren't needed. */
+   Always set R_binding_cell to R_NilValue - fast updates here aren't needed. */
 
 static SEXP findGlobalVar(SEXP symbol)
 {
     SEXP vl, rho;
     Rboolean canCache = TRUE;
-    R_binding_cell = NULL;
+    R_binding_cell = R_NilValue;
     vl = R_GetGlobalCache(symbol);
     if (vl != R_UnboundValue)
 	return vl;
@@ -1192,7 +1192,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
         return value;
     }
     else {
-        R_binding_cell = NULL;
+        R_binding_cell = R_NilValue;
 	return R_UnboundValue;
     }
 
@@ -1204,7 +1204,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
             return value;
 	rho = ENCLOS(rho);
     }
-    R_binding_cell = NULL;
+    R_binding_cell = R_NilValue;
     return R_UnboundValue;
 
 #endif
@@ -1232,7 +1232,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
         return value;
     }
     else {
-        R_binding_cell = NULL;
+        R_binding_cell = R_NilValue;
 	return R_UnboundValue;
     }
 
@@ -1244,7 +1244,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
             return value;
 	rho = ENCLOS(rho);
     }
-    R_binding_cell = NULL;
+    R_binding_cell = R_NilValue;
     return R_UnboundValue;
 
 #endif
@@ -1529,7 +1529,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     PROTECT3(symbol,value,rho);
 
-    R_binding_cell = NULL;
+    R_binding_cell = R_NilValue;
 
     if (rho == LASTSYMENV(symbol)) {
         loc = LASTSYMBINDING(symbol);    /* won't be an active binding */
