@@ -1678,6 +1678,8 @@ static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isMethodsDispatchOn())
 	error(_("formal classes cannot be used without the methods package"));
     nlist = CADR(args);
+    if (TYPEOF(nlist) == PROMSXP)
+        nlist = PRCODE(nlist);
     /* Do some checks here -- repeated in R_do_slot, but on repeat the
      * test expression should kick out on the first element. */
     if(!(isSymbol(nlist) || (isString(nlist) && LENGTH(nlist) == 1)))
