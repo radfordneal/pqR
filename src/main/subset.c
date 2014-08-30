@@ -1803,33 +1803,21 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
                 return R_NilValue;
             }
         }
-        if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET) {
-            R_varloc_t bnd = R_findVarLocInFrame(x,name);
-            if (bnd == NULL)
-                y = R_NilValue;
-            else {
-                y = R_GetVarLocValue(bnd);
-                if (TYPEOF(y) == PROMSXP)
-                    y = forcePromise(y);
-                else {
-                    if (NAMEDCNT_EQ_0(y)) SET_NAMEDCNT_1(y);
-                    if (!NAMEDCNT_GT_1(y))
-                        R_variant_result = IS_USER_DATABASE(x) 
-                          || IS_ACTIVE_BINDING((SEXP)bnd) ? 2 : 1;
-                }
-            }
-        }
+
+        y = findVarInFrame (x, name);
+        if (y == R_UnboundValue)
+            y = R_NilValue;
         else {
-            y = findVarInFrame (x, name);
-            if (y == R_UnboundValue)
-                y = R_NilValue;
-            else {
-                 if (TYPEOF(y) == PROMSXP)
-                     y = forcePromise(y);
-                 else {
-                     if (NAMEDCNT_EQ_0(y)) SET_NAMEDCNT_1(y);
-                 }
-            }
+             if (TYPEOF(y) == PROMSXP)
+                 y = forcePromise(y);
+             else {
+                 if (NAMEDCNT_EQ_0(y))
+                     SET_NAMEDCNT_1(y);
+                 if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET
+                       && !NAMEDCNT_GT_1(y))
+                     R_variant_result = IS_USER_DATABASE(x) 
+                       || IS_ACTIVE_BINDING(R_binding_cell) ? 2 : 1;
+             }
         }
         UNPROTECT(1);
         return y;

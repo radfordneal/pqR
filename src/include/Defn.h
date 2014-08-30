@@ -828,6 +828,10 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 #define extern0 extern
 #endif
 
+LibExtern SEXP R_binding_cell; /* NULL, or the binding cell for the variable
+                                  just found or created (if the binding uses
+                                  a CONS cell that is suitable for update */
+
 LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);

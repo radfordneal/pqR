@@ -969,6 +969,11 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 
   The findVarInFramePendingOK version is an abbreviation for option of 3.
   It may not only be more convenient, but also be faster.
+
+  Sets R_binding_cell to the CONS cell for the binding, if the value returned
+  is not R_UnboundValue, and there is a cell (not one for base environment),
+  and the cell is suitable for updating by the caller (is not for an active 
+  binding).  Otherwise, R_binding_cell is set to C NULL.
 */
 
 static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
@@ -981,8 +986,10 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
         value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
         if (value == R_UnboundValue)
             LASTSYMENV(symbol) = NULL;
-        else
+        else {
+            R_binding_cell = LASTSYMBINDING(symbol);
             return value;
+        }
     }
 
     return findVarInFrame3_nolast (rho, symbol, 3);
@@ -1008,6 +1015,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
             default:
                 break;
             }
+            R_binding_cell = LASTSYMBINDING(symbol);
             return value;
         }
     }
@@ -1022,6 +1030,8 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
     SEXP loc, value;
+
+    R_binding_cell = NULL;
 
     if (IS_BASE(rho)) {
         if (option==2) 
@@ -1071,6 +1081,8 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
             LASTSYMENV(symbol) = rho;
             LASTSYMBINDING(symbol) = loc;
         }
+        if (!IS_ACTIVE_BINDING(loc)) 
+            R_binding_cell = loc;
         if (option==2)
             return R_NilValue;
         else
@@ -1088,12 +1100,13 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
         if (loc == R_NilValue || option == 7 && IS_ACTIVE_BINDING(loc))
             return R_UnboundValue;
+        if (!IS_ACTIVE_BINDING(loc)) 
+            R_binding_cell = loc;
         if (option==2)
             return R_NilValue;
         value = BINDING_VALUE(loc);
     }
 
-  return_value:
     if ((option&2) == 0)
         WAIT_UNTIL_COMPUTED(value);
 
@@ -1110,12 +1123,14 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
 #ifdef USE_GLOBAL_CACHE
 
 /* findGlobalVar searches for a symbol value starting at R_GlobalEnv, so the
-   cache can be used.  Doesn't wait for the value found to be computed. */
+   cache can be used.  Doesn't wait for the value found to be computed.
+   Always set R_binding_cell to NULL, since fast updates here aren't needed. */
 
 static SEXP findGlobalVar(SEXP symbol)
 {
     SEXP vl, rho;
     Rboolean canCache = TRUE;
+    R_binding_cell = NULL;
     vl = R_GetGlobalCache(symbol);
     if (vl != R_UnboundValue)
 	return vl;
@@ -1150,6 +1165,8 @@ static SEXP findGlobalVar(SEXP symbol)
   findVarPendingOK 
 
      Like findVar, but doesn't wait for the value to be computed.
+
+  These set R_binding_cell as for findVarInFrame3.
 */
 
 SEXP findVar(SEXP symbol, SEXP rho)
@@ -1174,8 +1191,10 @@ SEXP findVar(SEXP symbol, SEXP rho)
         WAIT_UNTIL_COMPUTED(value);
         return value;
     }
-    else
+    else {
+        R_binding_cell = NULL;
 	return R_UnboundValue;
+    }
 
 #else
 
@@ -1185,6 +1204,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
             return value;
 	rho = ENCLOS(rho);
     }
+    R_binding_cell = NULL;
     return R_UnboundValue;
 
 #endif
@@ -1211,8 +1231,10 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 	value = findGlobalVar(symbol);
         return value;
     }
-    else
+    else {
+        R_binding_cell = NULL;
 	return R_UnboundValue;
+    }
 
 #else
 
@@ -1222,6 +1244,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
             return value;
 	rho = ENCLOS(rho);
     }
+    R_binding_cell = NULL;
     return R_UnboundValue;
 
 #endif
@@ -1494,7 +1517,10 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
   Waits for computation to finish for values stored into user databases and 
   into the base environment.
 
-  The symbol, value, and rho arguments are protected by this function. */
+  The symbol, value, and rho arguments are protected by this function. 
+
+  Sets R_binding_cell to the CONS cell for the binding, if there is one,
+  and it is suitable for updating. */
 
 int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 {
@@ -1502,6 +1528,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     SEXP loc;
 
     PROTECT3(symbol,value,rho);
+
+    R_binding_cell = NULL;
 
     if (rho == LASTSYMENV(symbol)) {
         loc = LASTSYMBINDING(symbol);    /* won't be an active binding */
@@ -1559,6 +1587,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     if (create) { /* try to create new variable */
 
+        SEXP new;
+
         if (rho == R_EmptyEnv)
             error(_("cannot assign values in the empty environment"));
 
@@ -1572,7 +1602,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             R_DirtyImage = 1;
 
         if (HASHTAB(rho) == R_NilValue) {
-            SEXP new = cons_with_tag (value, FRAME(rho), symbol);
+            new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
             if (SPEC_SYM(symbol))
                 SET_NO_SPEC_SYM(rho,0);
@@ -1580,7 +1610,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         else {
             SEXP table = HASHTAB(rho);
             SEXP chain = VECTOR_ELT(table,hashcode);
-            SEXP new = cons_with_tag (value, chain, symbol);
+            new = cons_with_tag (value, chain, symbol);
             SET_VECTOR_ELT (table, hashcode, new);
             if (chain == R_NilValue)
                 SET_HASHSLOTSUSED (table, HASHSLOTSUSED(table) + 1);
@@ -1592,6 +1622,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             INC_NAMEDCNT(value);
 
         UNPROTECT(3);
+        R_binding_cell = new;
         return TRUE;
     }
 
@@ -1607,8 +1638,11 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
     
   found:
-    if ((incdec&1) && !IS_ACTIVE_BINDING(loc))
-        DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
+    if (!IS_ACTIVE_BINDING(loc)) {
+        R_binding_cell = loc;
+        if ((incdec&1))
+            DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
+    }
     SET_BINDING_VALUE(loc,value);
     if (incdec&2) 
         INC_NAMEDCNT(value);
@@ -1629,7 +1663,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
   increment or decrement NAMEDCNT for the assigned and previous value, 
   depending on the setting of 'incdec' - 0 = no increment or decrement, 
   1 = decrement old value only, 2 = increment new value only, 3 = decrement 
-  old value and increment new value. */
+  old value and increment new value. 
+
+  Sets R_binding_cell as for set_var_in_frame. */
 
 void set_var_nonlocal (SEXP symbol, SEXP value, SEXP rho, int incdec)
 {

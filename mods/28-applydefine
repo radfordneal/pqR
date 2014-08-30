@@ -23,3 +23,7 @@ to show new error messages.
 Created a new test set, assignperf.R, which tests whether complex
 assignments avoid duplication when they should (and incidently does
 some correctness tests).
+
+Makes variable lookup and creation return (sometimes) the binding
+cell used, in R_binding_cell, so that short-cuts can sometimes be
+taken.
