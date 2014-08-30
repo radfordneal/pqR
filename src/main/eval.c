@@ -2253,7 +2253,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            is not known to be part of the next larger expression, we do a
            top-level duplicate of it, unless it has NAMEDCNT of 0. */
 
-        s[0].in_next = 0;  /* indicates rhs is not a subset of lhs (yet) */
         s[depth].value = varval;
         PROTECT(varval);
 
@@ -2285,8 +2284,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_PRVALUE(rhsprom, rhs);
                 WAIT_UNTIL_COMPUTED(rhs);  /* maybe unnecessary? */
             }
-            else if (s[d].in_next == 1) {
-                /* nothing to do, since it's already part of larger object */
+            else if (s[d-1].in_next == 1) {
+                /* nothing to do, since it's already part of the larger object,
+                   and it's also not an active binding or in a user database. */
                 UNPROTECT(1); /* s[d].value from previous loop */
                 continue;
             }
@@ -2312,14 +2312,16 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                that new object won't be part of the object at the next
                level, even if the old one was, so clear in_next. */
 
-            if (s[d].value != e)
+            if (s[d].value != e) {
                 s[d].in_next = 0;
-
-            s[d].value = e;
+                s[d].value = e;
+            }
 
             /* Unprotect e, lhsprom, rhsprom, and s[d].value from previous loop,
                which went from depth-1 to 1 in the opposite order as this one,
-               along with the protect of varval before that. */
+               along with the protect of varval before that.   The new value of
+               s[d].value will be protected if necessary at the start of the 
+               next iteration of this loop. */
 
             UNPROTECT(4);  
         }
