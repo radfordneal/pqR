@@ -2187,15 +2187,15 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             int in_next;                 /* 1 or 2 if value is unshared part */
         } s[depth+1];                    /*   of value at next level, else 0 */
 
+        SEXP v, e;
+        int d;
+
         /* For each level from 0 to depth, store the lhs expression at that
            level.  For each level except the final variable and the outermost 
            level, which only does a store, save argument lists for the 
            fetch/store functions that share promises, so that they are evaluated
            only once (sharing can be disabled by 'if' below).  For the 
            outermost, instead save the original argument list. */
-
-        SEXP v, e;
-        int d;
 
         s[0].expr = lhs;
         s[0].store_args = CDDR(lhs);
@@ -2229,7 +2229,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (TYPEOF(varval) == PROMSXP)
             varval = forcePromise(varval);
-        if (varval = R_UnboundValue)
+        if (varval == R_UnboundValue)
             unbound_var_error(var);
 
         /* We might be able to avoid this duplication sometimes (eg, in
