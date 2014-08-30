@@ -2035,7 +2035,8 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
             }
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    a = mkPROMISE(CAR(h),rho);
+                    if (a != R_MissingArg)
+                        a = mkPROMISE(CAR(h),rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head1==R_NilValue)
                         PROTECT(head1=ev);
@@ -2175,18 +2176,23 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             depth += 1;
         }
 
-        /* For each level from 0 to depth, store the lhs expression (which is
-           the final variable at depth).  For each level except the final 
-           variable and the outermost, which only does a store, save argument 
-           lists for the fetch/store functions that share promises, so that
-           they are evaluated only once.  For the outermost, instead save
-           the original argument list. */
+        /* Structure recording information on expressions at all levels of 
+           the lhs.  Level 0 is the ultimate variable, level depth is the
+           whole lhs expression. */
 
         struct { 
-            SEXP fetch_args, store_args;
-            SEXP expr, value; 
-            int query; 
-        } s[depth+1];
+            SEXP fetch_args, store_args; /* Arguments lists, sharing promises */
+            SEXP expr;                   /* Expression at this level */
+            SEXP value;                  /* Value of expr, may later change */
+            int in_next;                 /* 1 or 2 if value is unshared part */
+        } s[depth+1];                    /*   of value at next level, else 0 */
+
+        /* For each level from 0 to depth, store the lhs expression at that
+           level.  For each level except the final variable and the outermost 
+           level, which only does a store, save argument lists for the 
+           fetch/store functions that share promises, so that they are evaluated
+           only once (sharing can be disabled by 'if' below).  For the 
+           outermost, instead save the original argument list. */
 
         SEXP v, e;
         int d;
@@ -2194,32 +2200,62 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         s[0].expr = lhs;
         s[0].store_args = CDDR(lhs);
         for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
-            promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
-                                          &s[d].store_args);
-            PROTECT2(s[d].fetch_args,s[d].store_args);
+            if (TRUE)  /* TRUE to enable sharing of promises for fetch/store */
+                promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
+                                              &s[d].store_args);
+            else
+                s[d].fetch_args = s[d].store_args = CDDR(v);
+            PROTECT2 (s[d].fetch_args, s[d].store_args);
             s[d].expr = v;
         }
         s[depth].expr = var;
 
-        /* Get the value of the variable assigned to, and ensure it is 
-           local (unless this is the <<- operator). */
+        /* Get the value of the variable assigned to, and ensure it is local
+           (unless this is the <<- operator). */
 
-        varval = PRIMVAL(op)!=2 ? EnsureLocal(var,rho) : eval(var,ENCLOS(rho));
+        if (PRIMVAL(op) == 2) /* <<- */
+            varval = findVar (var, ENCLOS(rho));
+        else {
+            varval = findVarInFrame3 (rho, var, TRUE);
+            if (varval == R_UnboundValue && rho != R_EmptyEnv) {
+                varval = findVar (var, ENCLOS(rho));
+                if (varval != R_UnboundValue) {
+                    if (TYPEOF(varval) == PROMSXP)
+                        varval = forcePromise(varval);
+                    set_var_in_frame (var, varval, rho, TRUE, 3);
+                }
+            }
+        }
 
-        /* This duplication should be unnecessary, but some packages
-           (eg, Matrix 1.0-6) assume (in C code) that the object in a
+        if (TYPEOF(varval) == PROMSXP)
+            varval = forcePromise(varval);
+        if (varval = R_UnboundValue)
+            unbound_var_error(var);
+
+        /* We might be able to avoid this duplication sometimes (eg, in
+           a <- b <- integer(10); a[1] <- 0.5), except that some packages 
+           (eg, Matrix 1.0-6) assume (in C code) that the object in a 
            replacement function is not shared. */
 
         if (NAMEDCNT_GT_1(varval))
             varval = dup_top_level(varval);
 
-        PROTECT(varval);
-        s[depth].value = varval;
-        s[depth].query = 1; /* correct given the duplication of varval above */
+        /* Note: In code below, promises with the value already filled in
+                 are used to 'quote' values passsed as arguments, so they 
+                 will not be changed when the arguments are evaluated, and 
+                 so deparsed error messages will have the source expression.
+                 These promises should not be recycled, since they may be 
+                 saved in warning messages stored for later display.  */
 
-        /* For each level except the outermost, evaluate and save the 
-           expression as it is before the assignment, asking and saving
-           whether it is an unshared subset of the next larger expression. */
+        /* For each level except the outermost, evaluate and save the value of
+           the expression as it is before the assignment.  Also, ask whether
+           it is an unshared subset of the next larger expression.  If it
+           is not known to be part of the next larger expression, we do a
+           top-level duplicate of it, unless it has NAMEDCNT of 0. */
+
+        s[0].in_next = 0;  /* indicates rhs is not a subset of lhs (yet) */
+        s[depth].value = varval;
+        PROTECT(varval);
 
         for (d = depth-1; d > 0; d--) {
             SEXP prom = mkPROMISE(s[d+1].expr,rho);
@@ -2228,35 +2264,29 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             PROTECT(e);
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
-            PROTECT(e);
-            /* if (d>1) INC_NAMEDCNT(e); */ /* don't let it change before we use it */
-            s[d].value = e;
-            s[d].query = R_variant_result;
+            s[d].in_next = R_variant_result;
+            if (R_variant_result == 0 && NAMEDCNT_GT_0(e)) 
+                e = dup_top_level(e);
             R_variant_result = 0;
+            s[d].value = e;
+            PROTECT(e);
         }
 
         /* Call the replacement functions at levels 1 to depth, changing the 
-           values at each level, using the fetched value at that level, and 
-           the new value after replacement at the lower level.  The new value 
-           at the outermost level (0) is taken from the rhs value. 
-
-           We duplicate the object of a replacement call unless it is known
-           to be an unshared subset of the next larger object, or it has
-           NAMEDCNT of zero, indicating it note shared with anything. */
+           values at each level, using the fetched value at that level (which
+           was perhaps duplicated), and the new value after replacement at 
+           the lower level.  The new value at the outermost level (0) is taken
+           from the rhs value. */
         
         for (d = 1; d <= depth; d++) {
 
-            /* The rhs or result of previous replacement will be turned into 
-               a promise, so it will not be changed by argument evaluation, 
-               and it can be deparsed for any error message.  Note that such 
-               promises shouldn't be re-cycled with different CODE, since 
-               they may be preserved in the array of saved warnings. */
             if (d == 1) {
                 PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
                 SET_PRVALUE(rhsprom, rhs);
                 WAIT_UNTIL_COMPUTED(rhs);  /* maybe unnecessary? */
             }
-            else if (s[d].query == 1) {
+            else if (s[d].in_next == 1) {
+                /* nothing to do, since it's already part of larger object */
                 UNPROTECT(1); /* s[d].value from previous loop */
                 continue;
             }
@@ -2266,27 +2296,32 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_PRVALUE (rhsprom, s[d-1].value);
                 UNPROTECT(1);
                 PROTECT(rhsprom);
-                /* if (d<depth) DEC_NAMEDCNT(s[d].value); */
             }
 
             /* Assume the symbol below is protected by the symbol table. */
+
             SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
 
             PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
-            SET_PRVALUE (lhsprom, s[d].query == 0 && NAMEDCNT_GT_0(s[d].value)
-                                         ? duplicate(s[d].value) : s[d].value);
+            SET_PRVALUE (lhsprom, s[d].value);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, s[d-1].store_args,
                                      rhsprom));
             e = eval(e,rho);
 
+            /* If the replacement function returned a different object, 
+               that new object won't be part of the object at the next
+               level, even if the old one was, so clear in_next. */
+
+            if (s[d].value != e)
+                s[d].in_next = 0;
+
+            s[d].value = e;
+
             /* Unprotect e, lhsprom, rhsprom, and s[d].value from previous loop,
                which went from depth-1 to 1 in the opposite order as this one,
                along with the protect of varval before that. */
-            UNPROTECT(4);  
 
-            if (d < depth && s[d].value != e)
-                s[d+1].query = 0;
-            s[d].value = e;
+            UNPROTECT(4);  
         }
 
         /* Assign the final result after the top level replacement. */
@@ -2457,7 +2492,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
             }
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = 
+                    ev = /* should check for 'a' being R_MissingArg, as below?*/
                       cons_with_tag (mkPROMISE(CAR(h),rho), R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         PROTECT(head=ev);
