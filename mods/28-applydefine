@@ -1,4 +1,5 @@
-Modifications to do_set and applydefine for complex assignments.
+Modifications to do_set for complex assignments, replacing the
+old applydefine function (which is kept around for comparison).
 
 Also, added a codePromises option for deparse, and NA option for
 evaluate in dump, which goes with these being needed for better
@@ -18,3 +19,7 @@ traceback output for errors like the following:
 
 Updated the saved output of reg-tests-2.Rout and reg-tests-1b.Rout
 to show new error messages.
+
+Created a new test set, assignperf.R, which tests whether complex
+assignments avoid duplication when they should (and incidently does
+some correctness tests).
