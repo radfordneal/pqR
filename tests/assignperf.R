@@ -82,7 +82,7 @@ print(e$a)
 print(e$b)
 print(e$c)
 
-L <- c(list(new.env()),rep(list(1),vsize-1)
+L <- c (list (new.env()), rep(list(1),vsize-1))
 v <- numeric(vsize)
 L[[1]]$a <- v     # shouldn't duplicate
 
