@@ -13,10 +13,12 @@
   \itemize{ 
 
 \item This release contains several major performance improvements.  Notably,
-      lookup of variables will sometimes be much faster, assignments to
-      subsets of variables is much faster in the interpreter (no change 
-      for byte-compiled code), and calling of external functions with
-      \code{.C} and \code{.Fortran} is substantially faster, and can
+      lookup of variables will sometimes be much faster, variable updates
+      like \code{v <- v + 1} will often not allocate any new space,
+      assignments to parts of variables (eg, \code{a[i] <- 0)} is much faster
+      in the interpreter 
+      (no change for byte-compiled code), and calling of external functions 
+      with \code{.C} and \code{.Fortran} is substantially faster, and can
       sometimes be done in a helper thread.
 
 \item A number of updates from R Core releases after R-2.15.0 have 
@@ -26,7 +28,7 @@
 
 \item Many other feature changes and performance improvements have also
       been made, as described below, and a number of bugs have been fixed,
-      some of which are also present in recent R core releaes.
+      some of which are also present in the latest R Core release, R-3.1.1.
 }}
 
   \subsection{FEATURE CHANGES}{
@@ -36,14 +38,14 @@
       the deparsed expression use the code part of a promise, not
       the value, similarly to the existing \code{delayPromises}
       option, but without the extra output that it produces.
-\item The new \code{codePromises} option is now used when producing
+\item This new \code{codePromises} deparse option is now used when producing
       error messages and traceback output.  This improves error messages
       in the new scheme for subset assignments (see the section on
       performance improvements below), and also avoids the voluminous
       output previously produced in circumstances such as the following:
-\performatted{   `f<-` <- function (x,value) x[1,1] <- value
-   a<-1
-   f(a)<-rep(123,1000)
+\preformatted{   `f<-` <- function (x,value) x[1,1] <- value
+   a <- 1
+   f(a) <- rep(123,1000)
    traceback()
 }
       This previously produced output with 1000 repetitions of 123
@@ -51,7 +53,7 @@
       now instead shows the expression \code{rep(123,100)}.  However,
       voluminous output is still produced if the function \code{`f<-`}
       is byte-compiled.
-\item The \code{evaluate] option for \code{dump} has been extended to
+\item The \code{evaluate} option for \code{dump} has been extended to
       allow access to the new \code{codePromises} deparse option.
       See \code{help(dump)}.
 \item The formal arguments of primitive functions will now be returned
@@ -174,7 +176,7 @@
       linear search through local symbol bindings.  Those lookups that are
       still needed are also now a bit faster, due to unrolling of the 
       search loop.
-\item Assignments to subsets of variables (eg, \code{a[i,j] <- 0} or
+\item Assignments to selected parts of variables (eg, \code{a[i,j] <- 0} or
       \code{names(L$a[[f()]]) <- v}) are now much faster in the interpreter.
       (Such assignments within functions that are byte-compiled use a 
       different mechanism that has not been changed in this release.)  
