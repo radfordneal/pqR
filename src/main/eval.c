@@ -2045,8 +2045,15 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
             }
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    if (a != R_MissingArg)
-                        a = mkPROMISE(CAR(h),rho);
+                    a = CAR(h);
+                    if (TYPEOF(a) == PROMSXP) {
+                        INC_NAMEDCNT(a);
+                        INC_NAMEDCNT(a);
+                    }
+                    else if (a != R_MissingArg) {
+                       a = mkPROMISE (a, rho);
+                       INC_NAMEDCNT(a);
+                    }
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head1==R_NilValue)
                         PROTECT(head1=ev);
@@ -2066,8 +2073,14 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 		dotdotdot_error();
 	}
         else {
-            if (a != R_MissingArg)
+            if (TYPEOF(a) == PROMSXP) {
+                INC_NAMEDCNT(a);
+                INC_NAMEDCNT(a);
+            }
+            else if (a != R_MissingArg) {
                a = mkPROMISE (a, rho);
+               INC_NAMEDCNT(a);
+            }
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head1 == R_NilValue)
                 PROTECT(head1 = ev);
@@ -2509,8 +2522,8 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 
 /* Create a promise to evaluate each argument.	If the argument is itself
-   a promise, it is used unchanged, except that both it and its value 
-   have NAMEDCNT incremented.  See inside for handling of ... */
+   a promise, it is used unchanged, except that it has its NAMEDCNT
+   incremented.  See inside for handling of ... */
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
@@ -2536,8 +2549,12 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
             }
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = /* should check for 'a' being R_MissingArg, as below?*/
-                      cons_with_tag (mkPROMISE(CAR(h),rho), R_NilValue, TAG(h));
+                    a = CAR(h);
+                    if (TYPEOF(a) == PROMSXP)
+                        INC_NAMEDCNT(a);
+                    else if (a != R_MissingArg)
+                        a = mkPROMISE (a, rho);
+                    ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         PROTECT(head=ev);
                     else
@@ -2550,10 +2567,8 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 		dotdotdot_error();
 	}
         else {
-            if (TYPEOF(a) == PROMSXP) {
+            if (TYPEOF(a) == PROMSXP)
                INC_NAMEDCNT(a);
-               INC_NAMEDCNT(PRVALUE_PENDING_OK(a));
-            }
             else if (a != R_MissingArg)
                a = mkPROMISE (a, rho);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
