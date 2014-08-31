@@ -1021,7 +1021,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ans, a1, a2, a3;
     int argsevald = 0;
 
-    /* If we can easily determine that this will be handled by subset_dflt
+    /* If we can easily determine that this will be handled by subassign_dflt
        and has one index argument, evaluate the index with VARIANT_SEQ so 
        it may come as a range rather than a vector. */
 
