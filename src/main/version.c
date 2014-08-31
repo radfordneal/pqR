@@ -174,7 +174,8 @@ void attribute_hidden PrintVersion_part_1(char *s)
       "Modifications to R in pqR are Copyright (C) 2013-%s Radford M. Neal\n\n",
       R_YEAR);
     strcat(s,tmp);
-    strcat(s,"Some modules are from R-2.15.1 or later versions distributed by the R Core Team\n")
+    strcat(s,
+     "Some modules are from R-2.15.1 or later versions distributed by the R Core Team\n\n");
 
     sprintf (tmp, "Platform: %s", R_PLATFORM);
     strcat(s,tmp);
