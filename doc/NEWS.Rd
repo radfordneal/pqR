@@ -202,6 +202,18 @@
       at present only in certain limited circumstances, in which only a single
       output variable is used.  See \code{help(.C)} or \code{help(.Fortran)}
       for details.
+\item Assignments that update a local variable by applying a single unary or 
+      binary mathematical operation will now often re-use space for
+      the variable that is updated, rather than allocating new space.
+      For example, this will be done with all the assignments in the
+      second line below:
+\preformatted{   u <- rep(1,1000); v <- rep(2,1000); w <- exp(2)
+   u <- exp(u); u <- 2*u; v <- v/2; u <- u+v; w <- w+1
+}
+      This modification also has the effect of increasing the possibilities
+      for task merging.  For example, in the above code, the first two
+      updates for \code{u} will be merged into one computation that sets
+      \code{u} to \code{2*exp(u)}.
 \item The performance of \code{rep} and \code{rep.int} (which is now primitive)
       is much improved.
       These improvements (and improvements previously made in pqR) go beyond 
