@@ -1307,30 +1307,6 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     return val;
 }
 
-static SEXP EnsureLocal(SEXP symbol, SEXP rho)
-{
-    SEXP vl;
-
-    vl = findVarInFrame3 (rho, symbol, TRUE);
-    if (vl != R_UnboundValue) {
-        if (TYPEOF(vl) == PROMSXP)
-            vl = forcePromise(vl);
-        return vl;
-    }
-
-    if (rho != R_EmptyEnv) {
-        vl = findVar (symbol, ENCLOS(rho));
-        if (TYPEOF(vl) == PROMSXP)
-            vl = forcePromise(vl);
-    }
-
-    if (vl == R_UnboundValue)
-        unbound_var_error(symbol);
-
-    set_var_in_frame (symbol, vl, rho, TRUE, 3);
-    return vl;
-}
-
 static R_NORETURN void asLogicalNoNA_error (SEXP s, SEXP call)
 {
     errorcall (call, 
@@ -1743,6 +1719,13 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
+/* START OF DEFUNCT CODE ---------------------------------------------------- */
+/*                                                                            */
+/* This code is no longer used, unless a #if 0 is changed to #if 1 in do_set. */
+
+static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs);
+static SEXP installAssignFcnName(SEXP fun);
+
 /*  -------------------------------------------------------------------
  *  Assignments for complex LVAL specifications. This is the stuff that
  *  nightmares are made of ...	
@@ -1754,35 +1737,28 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
  *  example consider  e <- quote(f(x=1,y=2)); names(e) <- c("","a","b") 
  */
 
-/* arguments of replaceCall must be protected by the caller. */
-
-static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
+static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 {
-    SEXP value, first;
+    SEXP vl;
 
-    first = value = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
-
-    if (args != R_NilValue) {
-
-        first = cons_with_tag (CAR(args), value, TAG(args));
-
-        SEXP p = CDR(args);
-        if (p != R_NilValue) {
-            PROTECT(first);
-            SEXP q = first;
-            do { 
-                SETCDR (q, cons_with_tag (CAR(p), value, TAG(p)));
-                q = CDR(q);
-                p = CDR(p);
-            } while (p != R_NilValue);
-            UNPROTECT(1);
-        }
+    vl = findVarInFrame3 (rho, symbol, TRUE);
+    if (vl != R_UnboundValue) {
+        if (TYPEOF(vl) == PROMSXP)
+            vl = forcePromise(vl);
+        return vl;
     }
 
-    first = CONS (fun, CONS(varval, first));
-    SET_TYPEOF (first, LANGSXP);
+    if (rho != R_EmptyEnv) {
+        vl = findVar (symbol, ENCLOS(rho));
+        if (TYPEOF(vl) == PROMSXP)
+            vl = forcePromise(vl);
+    }
 
-    return first;
+    if (vl == R_UnboundValue)
+        unbound_var_error(symbol);
+
+    set_var_in_frame (symbol, vl, rho, TRUE, 3);
+    return vl;
 }
 
 /* arguments of assignCall must be protected by the caller. */
@@ -1878,42 +1854,6 @@ static void tmp_cleanup(void *data)
     (void) RemoveVariable (R_TmpvalSymbol, (SEXP) data);
 }
 
-#define ASSIGNBUFSIZ 32
-static R_INLINE SEXP installAssignFcnName(SEXP fun)
-{
-    /* Handle "[", "[[", and "$" specially for speed. */
-
-    if (fun == R_BracketSymbol)
-        return R_SubAssignSymbol;
-
-    if (fun == R_Bracket2Symbol)
-        return R_SubSubAssignSymbol;
-
-    if (fun == R_DollarSymbol)
-        return R_DollarAssignSymbol;
-
-    /* The general case for a symbol */
-
-    if (TYPEOF(fun) == SYMSXP) {
-
-        char buf[ASSIGNBUFSIZ];
-        const char *fname = CHAR(PRINTNAME(fun));
-
-        if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
-            error(_("overlong name in '%s'"), fname);
-
-        return install(buf);
-    }
-
-    /* Handle foo::bar and foo:::bar. */
-
-    if (TYPEOF(fun)==LANGSXP && length(fun)==3 && TYPEOF(CADDR(fun))==SYMSXP
-      && (CAR(fun)==R_DoubleColonSymbol || CAR(fun)==R_TripleColonSymbol))
-        return lang3 (CAR(fun), CADR(fun), installAssignFcnName(CADDR(fun)));
-
-    error(_("invalid function in complex assignment"));
-}
-
 /* Main entry point for complex assignments; rhs has already been evaluated. */
 
 static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
@@ -2004,6 +1944,76 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     UNPROTECT(1);
     endcontext(&cntxt); /* which does not run the remove */
     (void) RemoveVariable (R_TmpvalSymbol, rho);
+}
+
+/* END OF DEFUNCT CODE ------------------------------------------------------ */
+
+
+#define ASSIGNBUFSIZ 32
+static SEXP installAssignFcnName(SEXP fun)
+{
+    /* Handle "[", "[[", and "$" specially for speed. */
+
+    if (fun == R_BracketSymbol)
+        return R_SubAssignSymbol;
+
+    if (fun == R_Bracket2Symbol)
+        return R_SubSubAssignSymbol;
+
+    if (fun == R_DollarSymbol)
+        return R_DollarAssignSymbol;
+
+    /* The general case for a symbol */
+
+    if (TYPEOF(fun) == SYMSXP) {
+
+        char buf[ASSIGNBUFSIZ];
+        const char *fname = CHAR(PRINTNAME(fun));
+
+        if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
+            error(_("overlong name in '%s'"), fname);
+
+        return install(buf);
+    }
+
+    /* Handle foo::bar and foo:::bar. */
+
+    if (TYPEOF(fun)==LANGSXP && length(fun)==3 && TYPEOF(CADDR(fun))==SYMSXP
+      && (CAR(fun)==R_DoubleColonSymbol || CAR(fun)==R_TripleColonSymbol))
+        return lang3 (CAR(fun), CADR(fun), installAssignFcnName(CADDR(fun)));
+
+    error(_("invalid function in complex assignment"));
+}
+
+/* arguments of replaceCall must be protected by the caller. */
+
+static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
+{
+    SEXP value, first;
+
+    first = value = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
+
+    if (args != R_NilValue) {
+
+        first = cons_with_tag (CAR(args), value, TAG(args));
+
+        SEXP p = CDR(args);
+        if (p != R_NilValue) {
+            PROTECT(first);
+            SEXP q = first;
+            do { 
+                SETCDR (q, cons_with_tag (CAR(p), value, TAG(p)));
+                q = CDR(q);
+                p = CDR(p);
+            } while (p != R_NilValue);
+            UNPROTECT(1);
+        }
+    }
+
+    first = CONS (fun, CONS(varval, first));
+    SET_TYPEOF (first, LANGSXP);
+
+    return first;
 }
 
 /* Create two lists of promises to evaluate each argument, with promises
@@ -2137,21 +2147,21 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            prompt. */
 
 #       if 0
-        if (1 && !installed_already("switch to new")
-         || 0 && installed_already("switch to old")) {
+            if (1 && !installed_already("switch to new")
+             || 0 && installed_already("switch to old")) {
 
-            if ( ! (variant & VARIANT_NULL))
-                INC_NAMEDCNT(rhs);
-            PROTECT(rhs);
+                if ( ! (variant & VARIANT_NULL))
+                    INC_NAMEDCNT(rhs);
+                PROTECT(rhs);
     
-            applydefine (call, op, lhs, rhs, rho);
+                applydefine (call, op, lhs, rhs, rho);
     
-            UNPROTECT(1);
-            if ( ! (variant & VARIANT_NULL))
-                DEC_NAMEDCNT(rhs);
+                UNPROTECT(1);
+                if ( ! (variant & VARIANT_NULL))
+                    DEC_NAMEDCNT(rhs);
       
-            break;
-        }
+                break;
+            }
 #       endif
 
         SEXP var, varval, newval, rhsprom, lhsprom, e;
