@@ -33,6 +33,15 @@ a <- numeric(vsize)
 n <- paste0("xx",1:vsize)
 names(a) <- n     # shouldn't duplicate numeric part, might duplicate names
 
+e <- new.env()
+v <- numeric(vsize)
+e$a <- v          # shouldn't duplicate
+
+a <- 1
+v <- numeric(vsize)
+attr(a,"fred") <- v  # shouldn't duplicate, but does currently
+
+
 # Two-level assignments.
 
 a <- rep(list(a=1,b=1:vsize,c="xx",d="yy"),vsize/4)
@@ -60,8 +69,45 @@ print(a$x+1000)
 a$x[["y"]] <- 15  # shouldn't duplicate
 print(a$x+1000)
 
+e <- new.env()
+e$a <- numeric(vsize)
+e$a[2] <- 9       # shouldn't duplicate
+e$b <- e$a        # shouldn't duplicate
+e$a[3] <- 2       # should duplicate
+e$a[[4]] <- 3     # shouldn't duplicate
+e$c <- e$b        # shouldn't duplicate
+e$c[[5]] <- 4     # should duplicate
+print(e$a)
+print(e$b)
+print(e$c)
+
+L <- c(list(new.env()),rep(list(1),vsize-1)
+v <- numeric(vsize)
+L[[1]]$a <- v     # shouldn't duplicate
+
+e <- new.env()
+e$a <- numeric(vsize)
+e$a[2] <- 9       # shouldn't duplicate
+e$b <- e$a        # shouldn't duplicate
+e$a[3] <- 2       # should duplicate
+e$a[[4]] <- 3     # shouldn't duplicate
+e$c <- e$b
+e$c[[5]] <- 4     # should duplicate
+print(e$a)
+print(e$b)
+print(e$c)
+
+a <- 1
+v <- numeric(vsize)
+attr(a,"fred") <- v     # shouldn't duplicate, but does currently
+attr(a,"fred")[2] <- 3  # should duplicate
+attr(a,"fred")[3] <- 4  # shouldn't duplicate, but does currently
+print(a)
+print(v)
+
 a <- numeric(vsize)
 n <- paste0("xx",1:vsize)
-names(a) <- n     # shouldn't duplicate numeric part
-names(a)[2] <- "q"# shouldn't duplicate anything
+names(a) <- n     # shouldn't duplicate numeric part, maybe dup names
+names(a)[2] <- "q"# shouldn't duplicate anything, but currently dups everything
 print(a)
+print(n)
