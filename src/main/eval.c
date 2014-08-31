@@ -2296,7 +2296,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 PROTECT(e);
                 e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
                 UNPROTECT(1);
-                s[d].in_next = R_variant_result;
+                s[d].in_next = R_variant_result;  /* 0, 1, or 2 */
                 if (R_variant_result == 0 && NAMEDCNT_GT_0(e)) 
                     e = dup_top_level(e);
                 R_variant_result = 0;
@@ -2307,56 +2307,60 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             /* Call the replacement functions at levels 1 to depth, changing the
                values at each level, using the fetched value at that level 
                (was perhaps duplicated), and the new value after replacement at 
-               the lower level.  The new value at the outermost level is taken
-               from the rhs value. */
+               the lower level.  Except we don't do that if it's not necessary
+               because the new value is already part of the larger object.
+               The new value at the outermost level is the rhs value. */
             
-            for (d = 1; d <= depth; d++) {
+            PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
+            SET_PRVALUE(rhsprom, rhs);
+            s[0].in_next = 0;
 
-                if (d == 1) {
-                    PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
-                    SET_PRVALUE(rhsprom, rhs);
-                }
-                else if (s[d-1].in_next == 1) {
-                    /* nothing to do, since it's already part of larger object,
-                       and also not an active binding or in a user database. */
-                    UNPROTECT(1); /* s[d].value from previous loop */
+            for (d = 1; ; d++) {
+
+                if (s[d-1].in_next == 1) { /* don't need to do replacement */
                     newval = s[d].value;
-                    continue;
+                    UNPROTECT(1);  /* s[d].value protected in previous loop */
                 }
                 else {
-                    PROTECT(s[d-1].value);
-                    rhsprom = mkPROMISE (s[d-1].expr, rho);
-                    SET_PRVALUE (rhsprom, s[d-1].value);
-                    UNPROTECT(1);
-                    PROTECT(rhsprom);
+                    /* Assume symbol below is protected by the symbol table. */
+
+                    SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
+
+                    PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
+                    SET_PRVALUE (lhsprom, s[d].value);
+                    PROTECT(e = replaceCall (assgnfcn, lhsprom, 
+                                             s[d-1].store_args, rhsprom));
+                    newval = eval(e,rho);
+
+                    /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
+                       previous loop, which went from depth-1 to 1 in the 
+                       opposite order as this one (plus unprotect one more 
+                       from before that). */
+
+                    UNPROTECT(4);
                 }
 
-                /* Assume the symbol below is protected by the symbol table. */
+                /* See if we're done, with the final value in newval. */
 
-                SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
-
-                PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
-                SET_PRVALUE (lhsprom, s[d].value);
-                PROTECT(e = replaceCall (assgnfcn, lhsprom, s[d-1].store_args,
-                                         rhsprom));
-                newval = eval(e,rho);
+                if (d == depth) break;
 
                 /* If the replacement function returned a different object, 
                    that new object won't be part of the object at the next
-                   level, even if the old one was, so clear in_next. */
+                   level, even if the old one was. */
 
-                if (s[d].value != newval) {
+                if (s[d].value != newval)
                     s[d].in_next = 0;
-                    s[d].value = newval;
+
+                /* Create a rhs promise if this value needs to be put into
+                   the next-higher object. */
+
+                if (s[d].in_next == 0) {
+                    PROTECT(newval);
+                    rhsprom = mkPROMISE (s[d].expr, rho);
+                    SET_PRVALUE (rhsprom, newval);
+                    UNPROTECT(1);
+                    PROTECT(rhsprom);
                 }
-
-                /* Unprotect e, lhsprom, rhsprom, and s[d].value from previous
-                   loop, which went from depth-1 to 1 in the opposite order as
-                   this one (plus unprotect one more from before that).   The 
-                   new value of s[d].value will be protected if necessary at 
-                   the start of the next iteration of this loop. */
-
-                UNPROTECT(4);
             }
 
             UNPROTECT(2*(depth-1)+2);  /* fetch_args, store_args + two more */
