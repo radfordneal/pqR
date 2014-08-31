@@ -22,7 +22,7 @@
       sometimes be done in a helper thread.
 
 \item A number of updates from R Core releases after R-2.15.0 have 
-      been incorporated or adapted for use in pqR.  This include some 
+      been incorporated or adapted for use in pqR.  These provide some 
       performance improvements, some new features or feature changes, and 
       some bug fixes and documentation updates.
 
@@ -35,9 +35,9 @@
   \itemize{
 \item A \code{codePromises} option has been added to \code{deparse},
       and documented in \code{help(.deparseOpts)}.  With this option,
-      the deparsed expression use the code part of a promise, not
+      the deparsed expression uses the code part of a promise, not
       the value, similarly to the existing \code{delayPromises}
-      option, but without the extra output that it produces.
+      option, but without the extra text that that option produces.
 \item This new \code{codePromises} deparse option is now used when producing
       error messages and traceback output.  This improves error messages
       in the new scheme for subset assignments (see the section on
@@ -50,9 +50,7 @@
 }
       This previously produced output with 1000 repetitions of 123
       in the traceback following the error message.  The traceback
-      now instead shows the expression \code{rep(123,100)}.  However,
-      voluminous output is still produced if the function \code{`f<-`}
-      is byte-compiled.
+      now instead shows the expression \code{rep(123,100)}.
 \item The \code{evaluate} option for \code{dump} has been extended to
       allow access to the new \code{codePromises} deparse option.
       See \code{help(dump)}.
@@ -64,7 +62,7 @@
       breaking code that relies on getting their formal arguments with
       \code{formals}.
 \item Setting the \code{deparse.max.lines} option will now limit the
-      number of lines printed when exitting debug of a function, as
+      number of lines printed when exiting debug of a function, as
       well as when entering.
 \item In \code{.C} and \code{.Fortran}, arguments may be character strings
       even when \code{DUP=FALSE} is specified - they are duplicated regardless.
@@ -129,7 +127,7 @@
       to change, and should not appear in any code released to users.
 \item The \code{Rf_error} and related procedures declared in 
       \file{R_ext/Error.h} are now if possible declared to never return,
-      allowing for slightly better code generation byy the compiler, 
+      allowing for slightly better code generation by the compiler, 
       and avoiding spurious compiler warnings.  This parallels a change 
       in R-3.0.1, but is more general, using the C11 noreturn facility if 
       present, and otherwise resorting to the gcc facility (if gcc is used).
@@ -270,7 +268,7 @@
       One change is that the amount of memory used for each additional
       symbol has been reduced from 112 bytes (two CONS cells) to 80 bytes
       (on 64-bit platforms).  Another change is in tuning of heap sizes,
-      in order to reduce occassions in which garbage collection is very
+      in order to reduce occasions in which garbage collection is very
       frequent.
 \item Many uses of the \code{return} statement have been sped up.
 \item Functions in the \code{apply} family have been sped up when they are
