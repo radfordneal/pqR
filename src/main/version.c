@@ -154,7 +154,7 @@ void attribute_hidden PrintVersionString(char *s)
 
 void attribute_hidden PrintVersion_part_1(char *s)
 {
-    char tmp[200];
+    char tmp[300];
 
     strcpy(s,"pq"); 
     PrintVersionString(tmp); 
@@ -164,7 +164,7 @@ void attribute_hidden PrintVersion_part_1(char *s)
     strcat(s,tmp);
 
     sprintf (tmp, 
-      "R is Copyright (C) %s The R Foundation for Statistical Computing\n", 
+      "R 2.15.0 is Copyright (C) %s The R Foundation for Statistical Computing\n", 
       pqR_BASE_YEAR);
     strcat(s,tmp);
 
@@ -174,6 +174,7 @@ void attribute_hidden PrintVersion_part_1(char *s)
       "Modifications to R in pqR are Copyright (C) 2013-%s Radford M. Neal\n\n",
       R_YEAR);
     strcat(s,tmp);
+    strcat(s,"Some modules are from R-2.15.1 or later versions distributed by the R Core Team\n")
 
     sprintf (tmp, "Platform: %s", R_PLATFORM);
     strcat(s,tmp);
