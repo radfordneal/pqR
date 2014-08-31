@@ -20,6 +20,7 @@ a[10] <- 3        # shouldn't duplicate
 a[[11]] <- 4      # shouldn't duplicate
 print(unlist(a))
 
+a <- c(list(a=4,b=FALSE),rep(list(7),vsize-2))
 names(a) <- NULL  # shouldn't duplicate
 print(unlist(a))
 
@@ -51,9 +52,9 @@ print(a$b+1000L)  # don't pass a$b itself, since affects NAMEDCNT
 a$b[3] <- 99L     # shouldn't duplicate now
 print(a$b+1000L)
 print(a[[6]])     # should still be 1:vsize
-a$b[3] <- 99.1    # will have to coerce to real, shouldn't duplicate int vec
+a$b[4] <- 99.1    # will have to coerce to real, shouldn't duplicate int vec
 print(a$b+1000)
-a$b[3] <- 99.1    # shouldn't duplicate now
+a$b[5] <- 99.7    # shouldn't duplicate now
 print(a$b+1000)
 a[[10]][2] <- 40L # will need to duplicate, because of repeated elements
 print(a[[10]]+1000L)
@@ -109,10 +110,15 @@ print(v)
 a <- numeric(vsize)
 n <- paste0("xx",1:vsize)
 names(a) <- n     # shouldn't duplicate numeric part, maybe dup names
-names(a)[2] <- "q"# shouldn't duplicate anything, but currently dups everything
+names(a)[2] <- "q"# shouldn't duplicate anything, but currently dups chars twice
 print(a)
 print(n)
 
+a <- numeric(vsize)
+b <- integer(vsize)
+attr(a,"bert") <- b     # shouldn't duplicate, but does currently
+attr(a,"bert")[2] <- 7L # shouldn't duplicate, but does currently
+print(a)
 
 # Three-level assignments.
 
