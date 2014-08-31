@@ -1,9 +1,13 @@
 
-R version 2.15.0 alpha (2012-03-02 r58556)
--- modified for patch-zap-isMissing
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+
+R is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
+No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -4828,7 +4832,7 @@ coef[0] = 1
 > ## using NULL as a replacement value
 > DF <- data.frame(A=1:2, B=3:4)
 > try(DF[2, 1:3] <- NULL)
-Error in `[<-.data.frame`(`*tmp*`, 2, 1:3, value = NULL) : 
+Error in `[<-.data.frame`(DF, 2, 1:3, value = NULL) : 
   replacement has 0 items, need 3
 > ## wrong error message in R < 2.2.0
 > 
@@ -5700,7 +5704,7 @@ Levels: 2000-01-01 2001-01-01
 > ## manipulating rownames: problems in pre-2.5.0
 > A <- data.frame(a=character(0))
 > try(row.names(A) <- 1:10) # succeeded in Dec 2006
-Error in `row.names<-.data.frame`(`*tmp*`, value = 1:10) : 
+Error in `row.names<-.data.frame`(A, value = 1:10) : 
   invalid 'row.names' length
 > A <- list(a=1:3)
 > class(A) <- "data.frame"
@@ -6049,7 +6053,7 @@ $`NA`
 > attr(x, NA_character_)
 NULL
 > try(attr(x, NA_character_) <- 5)
-Error in attr(x, NA_character_) <- 5 : 
+Error in `attr<-`(x, NA_character_, value = 5) : 
   'name' must be non-null character string
 > ## prior to 2.5.0 NA was treated as "NA"
 > 
@@ -6168,7 +6172,7 @@ uY          -2.1396554 0.3644116
 > x <- data.frame(a=1:3, b=2:4)
 > x[,3] <- x
 Warning message:
-In `[<-.data.frame`(`*tmp*`, , 3, value = list(a = 1:3, b = 2:4)) :
+In `[<-.data.frame`(x, , 3, value = x) :
   provided 2 variables to replace 1 variables
 > x
   a b a.1
@@ -6372,15 +6376,15 @@ function ()
 > print.function
 function (x, ...)  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 19 1 63 19 63 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x40d1a40> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x2c62c98> 
 > f
 function ()  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 17 1 28 17 28 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x40e8e40> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x2c56198> 
  - attr(*, "note")= chr "just a note"
  - attr(*, "yada")=function ()  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 2 24 2 48 24 48 2 2
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x40e8e40> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x2c56198> 
 > rm(print.function)
 > ## auto-printing and printing differed up to R 2.9.x
 > 
@@ -6472,11 +6476,11 @@ sample estimates:
 > bar <- as.data.frame(foo)
 > val <- integer(0)
 > try(bar$NewCol <- val)
-Error in `$<-.data.frame`(`*tmp*`, "NewCol", value = integer(0)) : 
+Error in `$<-.data.frame`(bar, "NewCol", value = val) : 
   replacement has 0 rows, data has 3
 > # similar, not in the report
 > try(bar[["NewCol"]] <- val)
-Error in `[[<-.data.frame`(`*tmp*`, "NewCol", value = integer(0)) : 
+Error in `[[<-.data.frame`(bar, "NewCol", value = val) : 
   replacement has 0 rows, data has 3
 > # [ ] is tricker, so just check the result is reasonable and prints
 > bar["NewCol"] <- val
@@ -6785,7 +6789,7 @@ Levels: a b c d e f g h i j k l m n o
 Error in double(FALSE) : invalid 'length' argument
 > x <- 1:3
 > try(length(x) <- TRUE)
-Error in length(x) <- TRUE : invalid value
+Error in `length<-`(x, value = TRUE) : invalid value
 > ## coerced to integer in 2.13.x
 > 
 > 

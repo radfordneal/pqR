@@ -388,6 +388,17 @@ R_NORETURN void attribute_hidden unbound_var_error(SEXP sym)
     error(_("object '%s' not found"), CHAR(PRINTNAME(sym)));
 }
 
+R_NORETURN void nonsubsettable_error(SEXP call, SEXP x)
+{
+    errorcall (call, _("object of type '%s' is not subsettable"),
+               type2char(TYPEOF(x)));
+}
+
+R_NORETURN void out_of_bounds_error(SEXP call)
+{
+    errorcall(call, _("subscript out of bounds"));
+}
+
 
 # include <R_ext/Riconv.h>
 # include <sys/param.h>

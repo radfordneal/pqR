@@ -21,7 +21,8 @@
 #ifndef ERRORMSG_H
 #define ERRORMSG_H
 
-/* Used in ../main/sub*.c */
+/* Were used in ../main/sub*.c.  No obsoleted by routines in util.c. 
+   Kept just in case... */
 #define R_MSG_subs_o_b	_("subscript out of bounds")
 #define R_MSG_ob_nonsub _("object of type '%s' is not subsettable")
 

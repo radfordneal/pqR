@@ -199,11 +199,11 @@ Error in cor(numeric(0), numeric(0), use = "pairwise.complete.obs", method = "ke
 > z <- rep(Sys.time(),5)
 > data.frame(I(z))
              z
-1 2014-06-....
-2 2014-06-....
-3 2014-06-....
-4 2014-06-....
-5 2014-06-....
+1 2014-08-....
+2 2014-08-....
+3 2014-08-....
+4 2014-08-....
+5 2014-08-....
 > ##
 > 
 > 
@@ -481,10 +481,10 @@ Error in `[.data.frame`(dd, , "C") : undefined columns selected
 > stopifnot(sapply(x, is.numeric) == FALSE)
 > # TRUE in 2.7.1, tried to dispatch on "FUN"
 > (ds <- seq(from=Sys.Date(), by=1, length=4))
-[1] "2014-06-19" "2014-06-20" "2014-06-21" "2014-06-22"
+[1] "2014-08-27" "2014-08-28" "2014-08-29" "2014-08-30"
 > lapply(list(d=ds), round)
 $d
-[1] "2014-06-19" "2014-06-20" "2014-06-21" "2014-06-22"
+[1] "2014-08-27" "2014-08-28" "2014-08-29" "2014-08-30"
 
 > # failed in 2.7.1 with 'dispatch error' since call had '...' arg
 > ## related to calls being passed unevaluated by lapply.
@@ -1126,18 +1126,18 @@ Error in file(tmp, open = "r", encoding = "unknown") :
 > 
 > ## median should work on POSIXt objects (it did in 2.8.0)
 > median(rep(Sys.time(), 2))
-[1] "2014-06-19 19:23:53 EDT"
+[1] "2014-08-27 22:43:42 EDT"
 > ## failed in 2.8.1, 2.9.0
 > 
 > 
 > ## repeated NA in dim() (PR#13729)
 > L0 <- logical(0)
 > try(dim(L0) <- c(1,NA,NA))
-Error in dim(L0) <- c(1, NA, NA) : the dims contain missing values
+Error in try(dim(L0) <- c(1, NA, NA)) : the dims contain missing values
 > stopifnot(is.null(dim(L0)))
 > L1 <- logical(1)
 > try(dim(L1) <- c(-1,-1))
-Error in dim(L1) <- c(-1, -1) : the dims contain negative values
+Error in try(dim(L1) <- c(-1, -1)) : the dims contain negative values
 > stopifnot(is.null(dim(L)))
 > ## dim was set in 2.9.0
 > 

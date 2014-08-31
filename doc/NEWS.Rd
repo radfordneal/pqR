@@ -12,15 +12,48 @@
 
   \itemize{ 
 
-\item This release contains several performance improvements, including some
-      adapted from those in R Core releases after R-2.15.0, as well as
-      some bug fixes and documentation updates, a few feature changes, some
-      tracking later changes in R Core releases, and some new features that are 
-      mostly of interest to developers.
+\item This release contains several major performance improvements.  Notably,
+      lookup of variables will sometimes be much faster, variable updates
+      like \code{v <- v + 1} will often not allocate any new space,
+      assignments to parts of variables (eg, \code{a[i] <- 0)} is much faster
+      in the interpreter 
+      (no change for byte-compiled code), and calling of external functions 
+      with \code{.C} and \code{.Fortran} is substantially faster, and can
+      sometimes be done in a helper thread.
+
+\item A number of updates from R Core releases after R-2.15.0 have 
+      been incorporated or adapted for use in pqR.  These provide some 
+      performance improvements, some new features or feature changes, and 
+      some bug fixes and documentation updates.
+
+\item Many other feature changes and performance improvements have also
+      been made, as described below, and a number of bugs have been fixed,
+      some of which are also present in the latest R Core release, R-3.1.1.
 }}
 
   \subsection{FEATURE CHANGES}{
   \itemize{
+\item A \code{codePromises} option has been added to \code{deparse},
+      and documented in \code{help(.deparseOpts)}.  With this option,
+      the deparsed expression uses the code part of a promise, not
+      the value, similarly to the existing \code{delayPromises}
+      option, but without the extra text that that option produces.
+\item This new \code{codePromises} deparse option is now used when producing
+      error messages and traceback output.  This improves error messages
+      in the new scheme for subset assignments (see the section on
+      performance improvements below), and also avoids the voluminous
+      output previously produced in circumstances such as the following:
+\preformatted{   `f<-` <- function (x,value) x[1,1] <- value
+   a <- 1
+   f(a) <- rep(123,1000)
+   traceback()
+}
+      This previously produced output with 1000 repetitions of 123
+      in the traceback following the error message.  The traceback
+      now instead shows the expression \code{rep(123,100)}.
+\item The \code{evaluate} option for \code{dump} has been extended to
+      allow access to the new \code{codePromises} deparse option.
+      See \code{help(dump)}.
 \item The formal arguments of primitive functions will now be returned
       by \code{formals}, as they are shown when printed or with \code{args}.
       In R Core releases (at least to R-3.1.1), the result of \code{formals}
@@ -29,12 +62,8 @@
       breaking code that relies on getting their formal arguments with
       \code{formals}.
 \item Setting the \code{deparse.max.lines} option will now limit the
-      number of lines printed when exitting debug of a function, as
+      number of lines printed when exiting debug of a function, as
       well as when entering.
-\item The unary \code{+} operator now converts a logical vector to an
-      integer vector. This follows a corresponding change in R-3.0.2.
-\item Support for "converters" for use with \code{.C} has been dropped,
-      as it was in R-3.0.0.
 \item In \code{.C} and \code{.Fortran}, arguments may be character strings
       even when \code{DUP=FALSE} is specified - they are duplicated regardless.
       This differs from R Core versions, which (at least through R-3.1.1)
@@ -51,6 +80,10 @@
 
   \subsection{FEATURE CHANGES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
     \itemize{
+\item From R-3.0.2: The unary \code{+} operator now converts a logical vector
+      to an integer vector.
+\item From R-3.0.0: Support for "converters" for use with \code{.C} has been 
+      dropped.
 \item From R-2.15.1:
       \code{pmin()} and \code{pmax())} now also work when one of the inputs 
       is of length zero and others are not, returning a zero-length vector,
@@ -94,7 +127,7 @@
       to change, and should not appear in any code released to users.
 \item The \code{Rf_error} and related procedures declared in 
       \file{R_ext/Error.h} are now if possible declared to never return,
-      allowing for slightly better code generation byy the compiler, 
+      allowing for slightly better code generation by the compiler, 
       and avoiding spurious compiler warnings.  This parallels a change 
       in R-3.0.1, but is more general, using the C11 noreturn facility if 
       present, and otherwise resorting to the gcc facility (if gcc is used).
@@ -141,6 +174,24 @@
       linear search through local symbol bindings.  Those lookups that are
       still needed are also now a bit faster, due to unrolling of the 
       search loop.
+\item Assignments to selected parts of variables (eg, \code{a[i,j] <- 0} or
+      \code{names(L$a[[f()]]) <- v}) are now much faster in the interpreter.
+      (Such assignments within functions that are byte-compiled use a 
+      different mechanism that has not been changed in this release.)  
+      
+      This change also alters the error 
+      messages produced from such assignments.  They are probably not as 
+      informative (at least to unsophisticated users) as those that
+      the interpreter produced previously, though they are better than 
+      those produced from byte-compiled code.  On the plus side, the error 
+      messages are now consistent for primitive and user-written replacement 
+      functions, and some messages now contain short, intelligible expressions
+      that could previously contain huge amounts of data (see the section on 
+      new features above).  
+
+      This change also fixes the anomaly that arguments
+      of  subset expressions would sometimes be evaluated more than once
+      (eg, \code{f()} in the example above).
 \item The speed of \code{.C} and \code{.Fortran} has been substantially
       improved, partly by incorporating changes in R-2.15.1 and R-2.15.2,
       but with substantial additional improvements as well.  The speed of 
@@ -217,7 +268,7 @@
       One change is that the amount of memory used for each additional
       symbol has been reduced from 112 bytes (two CONS cells) to 80 bytes
       (on 64-bit platforms).  Another change is in tuning of heap sizes,
-      in order to reduce occassions in which garbage collection is very
+      in order to reduce occasions in which garbage collection is very
       frequent.
 \item Many uses of the \code{return} statement have been sped up.
 \item Functions in the \code{apply} family have been sped up when they are
@@ -305,6 +356,15 @@
    attr(a[[1]][[1]],"fred")<-9
    print(b)
 }
+\item Fixed the following bug in which \code{b} was modified
+      by an assignment to \code{a} with a vector subscript:
+\preformatted{   a <- list(list(mk2(1)))
+   b <- a[[1]]
+   a[[c(1,1)]][1] <- 3
+   print(b)
+}
+      This bug also exists in R-2.15.0, but was fixed in R-3.1.1 
+      (quite differently than in pqR).
 \item Fixed the non-robust checks for integer overflow, which reportedly
       sometimes fail when using clang on a Mac.  This is #PR 15774 at
       r-project.org, fixed in R-3.1.1, but fixed differently in pqR.

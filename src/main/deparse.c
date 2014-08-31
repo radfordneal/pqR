@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -297,7 +297,7 @@ SEXP attribute_hidden deparse1s(SEXP call)
    Rboolean backtick=TRUE;
 
    temp = deparse1WithCutoff(call, FALSE, DEFAULT_Cutoff, backtick,
-			     DEFAULTDEPARSE, 1);
+			     DEFAULTDEPARSE | CODEPROMISES, 1);
    return(temp);
 }
 
@@ -396,7 +396,8 @@ static SEXP do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(opts == NA_INTEGER || opts < 0 || opts > 256)
 	errorcall(call, _("'opts' should be small non-negative integer"));
     evaluate = asLogical(CAD4R(args));
-    if (!evaluate) opts |= DELAYPROMISES;
+    if (evaluate==TRUE) opts |= DELAYPROMISES;
+    if (evaluate==NA_LOGICAL) opts |= CODEPROMISES;
 
     PROTECT(o = objs = allocList(nobjs));
 
@@ -749,13 +750,13 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	print2buff("\")", d);
 	break;
     case PROMSXP:
-	if(d->opts & DELAYPROMISES) {
+	if(d->opts & (DELAYPROMISES | CODEPROMISES)) {
 	    d->sourceable = FALSE;
-	    print2buff("<promise: ", d);
+	    if (d->opts & DELAYPROMISES) print2buff("<promise: ", d);
 	    d->opts &= ~QUOTEEXPRESSIONS; /* don't want delay(quote()) */
 	    deparse2buff(PREXPR(s), d);
 	    d->opts = localOpts;
-	    print2buff(">", d);
+	    if (d->opts & DELAYPROMISES) print2buff(">", d);
 	} else {
 	    PROTECT(s = eval(s, NULL)); /* eval uses env of promise */
 	    deparse2buff(s, d);

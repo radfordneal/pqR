@@ -785,7 +785,7 @@ SEXP attribute_hidden R_do_data_class(SEXP call, SEXP op, SEXP args, SEXP env)
       check1arg(args, call, "class");
       klass = CAR(args);
       if(TYPEOF(klass) != STRSXP || LENGTH(klass) < 1)
-	  error("invalid class argument to internal .class_cache");
+	  errorcall(call,"invalid class argument to internal .cache_class");
       class = translateChar(STRING_ELT(klass, 0));
       return cache_class(class, CADR(args));
   }
@@ -814,12 +814,16 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(getAttrib(CAR(args), R_NamesSymbol) == R_NilValue) {
 	    /* S4 class w/o a names slot or attribute */
 	    if(TYPEOF(CAR(args)) == S4SXP)
-		error(_("Class '%s' has no 'names' slot"), klass);
+		errorcall(call,_("Class '%s' has no 'names' slot"), klass);
 	    else
-		warning(_("Class '%s' has no 'names' slot; assigning a names attribute will create an invalid object"), klass);
+		warningcall(call,
+                  _("Class '%s' has no 'names' slot; assigning a names attribute will create an invalid object"), 
+                  klass);
 	}
 	else if(TYPEOF(CAR(args)) == S4SXP)
-	    error(_("Illegal to use names()<- to set the 'names' slot in a non-vector class ('%s')"), klass);
+	    errorcall(call,
+              _("Illegal to use names()<- to set the 'names' slot in a non-vector class ('%s')"),
+              klass);
 	/* else, go ahead, but can't check validity of replacement*/
     }
     if (CADR(args) != R_NilValue) {
@@ -1211,16 +1215,16 @@ static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Do checks before duplication */
     if (!isNewList(attrs))
-	error(_("attributes must be a list or NULL"));
+	errorcall(call,_("attributes must be a list or NULL"));
     nattrs = length(attrs);
     if (nattrs > 0) {
 	names = getAttrib(attrs, R_NamesSymbol);
 	if (names == R_NilValue)
-	    error(_("attributes must be named"));
+	    errorcall(call,_("attributes must be named"));
 	for (i = 1; i < nattrs; i++) {
 	    if (STRING_ELT(names, i) == R_NilValue ||
 		CHAR(STRING_ELT(names, i))[0] == '\0') { /* all ASCII tests */
-		error(_("all attributes must have names [%d does not]"), i+1);
+		errorcall(call,_("all attributes must have names [%d does not]"), i+1);
 	    }
 	}
     }
@@ -1326,7 +1330,6 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(exact == NA_LOGICAL) exact = 0;
     }
 
-
     if(STRING_ELT(t, 0) == NA_STRING) {
 	UNPROTECT(1);
 	return R_NilValue;
@@ -1344,7 +1347,7 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 		match = FULL;
 		break;
 	    }
-    else if (match == PARTIAL || match == PARTIAL2) {
+            else if (match == PARTIAL || match == PARTIAL2) {
 		/* this match is partial and we already have a partial match,
 		   so the query is ambiguous and we will return R_NilValue
 		   unless a full match comes up.
@@ -1429,7 +1432,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
     name = CADR(argList);
     if (!isValidString(name) || STRING_ELT(name, 0) == NA_STRING)
-	error(_("'name' must be non-null character string"));
+	errorcall(call,_("'name' must be non-null character string"));
     /* TODO?  if (isFactor(obj) && !strcmp(asChar(name), "levels"))
      * ---         if(any_duplicated(CADDR(args)))
      *                  error(.....)
@@ -1674,6 +1677,8 @@ static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isMethodsDispatchOn())
 	error(_("formal classes cannot be used without the methods package"));
     nlist = CADR(args);
+    if (TYPEOF(nlist) == PROMSXP)
+        nlist = PRCODE(nlist);
     /* Do some checks here -- repeated in R_do_slot, but on repeat the
      * test expression should kick out on the first element. */
     if(!(isSymbol(nlist) || (isString(nlist) && LENGTH(nlist) == 1)))

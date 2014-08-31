@@ -1,6 +1,7 @@
 % File src/library/base/man/deparseOpts.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Development Team
+% Modifications for pqR copyright (C) 2014 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{deparseOpts}
@@ -72,6 +73,11 @@
       Make deparsing as far as possible compatible with S and \R < 2.5.0.
       For compatibility with S, integer values of double vectors are
       deparsed with a trailing decimal point.  Backticks are not used.
+    }
+    \item{\code{codePromises}}{
+      Deparse promises as the code that they contain, rather than
+      evaluating them.  Like \code{delayPromises}, but without
+      the "promise:" comment around the code expression.
     }
   }
   For the most readable (but perhaps incomplete) display, use

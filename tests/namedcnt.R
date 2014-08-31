@@ -1,4 +1,4 @@
-# Test possible bugs involving NAMEDCNT/NAMED.
+# Test possible bugs involving NAMEDCNT/NAMED or complex assignment.
 #
 # Added for pqR, 2013, 2014, Radford M. Neal.
 
@@ -152,6 +152,15 @@ b <- list(a)[[c(1,1)]]
 a[[1]][1] <- 9
 stopifnot(b[1]==1)
 
+a <- list(list(mk2(1)))
+b <- a[[1]]
+a[[c(1,1)]][1] <- 3
+stopifnot(b[[1]][1]==2)
+
+a <- list(list(list(list(mk2(1)))))
+b <- a[[1]][[1]]
+a[[c(1,1,1,1)]][1] <- 3
+stopifnot(b[[1]][1]==2)
 
 # Deep assignments.
 

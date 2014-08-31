@@ -1,5 +1,6 @@
 #  File src/library/base/R/New-Internal.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,7 +27,8 @@ try <- function(expr, silent = FALSE) {
             ## Use identical() since call[[1L]] can be non-atomic.
             if (identical(call[[1L]], quote(doTryCatch)))
                 call <- sys.call(-4L)
-            dcall <- deparse(call)[1L]
+            dcall <- deparse (call, control = 
+              c("keepInteger", "showAttributes", "keepNA", "codePromises")) [1L]
             prefix <- paste("Error in", dcall, ": ")
             LONG <- 75L # to match value in errors.c
             msg <- conditionMessage(e)
@@ -102,7 +104,7 @@ rbind <- function(..., deparse.level = 1)
                    c("all",
                      "keepInteger", "quoteExpressions", "showAttributes",
                      "useSource", "warnIncomplete", "delayPromises",
-                     "keepNA", "S_compatible"))
+                     "keepNA", "S_compatible", "codePromises"))
     if (any(is.na(opts)))
         stop(sprintf(ngettext(as.integer(sum(is.na(opts))),
                               "deparse option %s is not recognized",
@@ -110,7 +112,7 @@ rbind <- function(..., deparse.level = 1)
                      paste(sQuote(control[is.na(opts)]), collapse=", ")),
              call. = FALSE, domain = NA)
     if (any(opts == 1L))
-        opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L)) # not (7,9)
+        opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L)) # not (7,9,10)
     return(sum(2^(opts-2)))
 }
 

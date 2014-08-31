@@ -2693,10 +2693,7 @@ static SEXP do_unsetS4(SEXP obj, SEXP newClass) {
     return obj;
 }
 
-/* Set the class to value, return the modified object - implementing "class<-".
-   The following comment appears in R-2.15.0, but seems to make no sense:
-    "This is NOT a primitive assignment operator, because there is no 
-     code in R that changes type in place." */
+/* Set the class to value, return modified object - implementing "class<-" */
 
 static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 {
@@ -2720,7 +2717,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
             do_unsetS4(obj, value);
     }
     else if(length(value) == 0) {
-	error(_("invalid replacement object to be a class string"));
+	errorcall(call,_("invalid replacement object to be a class string"));
     }
     else {
 	const char *valueString;
@@ -2741,7 +2738,8 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 		nProtect++;
 	    }
 	    else if(valueType != TYPEOF(obj))
-		error(_("\"%s\" can only be set as the class if the object has this type; found \"%s\""),
+		errorcall(call,
+                      _("\"%s\" can only be set as the class if the object has this type; found \"%s\""),
 		      valueString, type2char(TYPEOF(obj)));
 	    /* else, leave alone */
 	}
@@ -2759,7 +2757,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	 * R_data_class */
 	else if(!strcmp("matrix", valueString)) {
 	    if(length(getAttrib(obj, R_DimSymbol)) != 2)
-		error(_("invalid to set the class to matrix unless the dimension attribute is of length 2 (was %d)"),
+		errorcall(call,_("invalid to set the class to matrix unless the dimension attribute is of length 2 (was %d)"),
 		 length(getAttrib(obj, R_DimSymbol)));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj))
@@ -2767,7 +2765,8 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	}
 	else if(!strcmp("array", valueString)) {
 	    if(length(getAttrib(obj, R_DimSymbol)) <= 0)
-		error(_("cannot set class to \"array\" unless the dimension attribute has length > 0"));
+		errorcall(call,
+                   _("cannot set class to \"array\" unless the dimension attribute has length > 0"));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
                 UNSET_S4_OBJECT(obj);
@@ -2806,20 +2805,20 @@ static SEXP do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
 
     value = CADR(args);
     if (!isValidString(value) || STRING_ELT(value, 0) == NA_STRING)
-	error(_("'value' must be non-null character string"));
+	errorcall(call,_("'value' must be non-null character string"));
     type = str2type(CHAR(STRING_ELT(value, 0)));
     if(type == (SEXPTYPE) -1) {
-	/* For backwards compatibility we allow "real" and "single" */
+	/* For backwards compatibility we used to allow "real" and "single" */
 	if(streql(CHAR(STRING_ELT(value, 0)), "real")) {
-	    error("use of 'real' is defunct: use 'double' instead");
+	    errorcall(call,"use of 'real' is defunct: use 'double' instead");
 	} else if(streql(CHAR(STRING_ELT(value, 0)), "single")) {
-	    error("use of 'single' is defunct: use mode<- instead");
+	    errorcall(call,"use of 'single' is defunct: use mode<- instead");
 	} else
-	    error(_("invalid value"));
+	    errorcall(call,_("invalid value"));
     }
     if(TYPEOF(obj) == type) return obj;
     if(isFactor(obj))
-	error(_("invalid to change the storage mode of a factor"));
+	errorcall(call,_("invalid to change the storage mode of a factor"));
     PROTECT(ans = coerceVector(obj, type));
     DUPLICATE_ATTRIB(ans, obj);
     UNPROTECT(1);

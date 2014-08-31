@@ -548,6 +548,12 @@ typedef struct {
 #define VARIANT_LOCAL_ASSIGN2 0x20  /* May assign result to the second operand.
                                        Sets R_variant_result to 1 if it does. */
 
+#define VARIANT_QUERY_UNSHARED_SUBSET 0x30  /* Returns the usual result, but 
+                                       also sets R_variant_result to 1 or 2 if
+                                       the  result is an unshared subset of
+                                       the first argument.  If set to 2, any
+                                       change still must be propaged upwards. */
+
 /* Variant flags that are passed on. */
 
 #define VARIANT_PENDING_OK 0x100  /* Computation may be deferred pending
@@ -821,6 +827,10 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 # define INI_as(v)
 #define extern0 extern
 #endif
+
+LibExtern SEXP R_binding_cell; /* NULL, or the binding cell for the variable
+                                  just found or created (if the binding uses
+                                  a CONS cell that is suitable for update */
 
 LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
@@ -1111,9 +1121,11 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define mkSYMSXP		Rf_mkSYMSXP
 # define mkTrue			Rf_mkTrue
 # define NewEnvironment		Rf_NewEnvironment
+# define nonsubsettable_error	Rf_nonsubsettable_error
 # define onintr			Rf_onintr
 # define onsigusr1              Rf_onsigusr1
 # define onsigusr2              Rf_onsigusr2
+# define out_of_bounds_error	Rf_out_of_bounds_error
 # define parse			Rf_parse
 # define PrintDefaults		Rf_PrintDefaults
 # define PrintGreeting		Rf_PrintGreeting
@@ -1208,6 +1220,7 @@ void R_SetVarLocValue(R_varloc_t, SEXP);
 #define DELAYPROMISES 		32
 #define KEEPNA			64
 #define S_COMPAT       		128
+#define CODEPROMISES		256
 /* common combinations of the above */
 #define SIMPLEDEPARSE		0
 #define DEFAULTDEPARSE		65 /* KEEPINTEGER | KEEPNA, used for calls */
@@ -1422,7 +1435,7 @@ void orderVector1(int *indx, int n, SEXP key, Rboolean nalast,
 		  Rboolean decreasing, SEXP rho);
 
 /* main/subset.c */
-SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP, int);
 
 /* main/subassign.c */
 SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);
@@ -1435,6 +1448,8 @@ R_NORETURN void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
 R_NORETURN void dotdotdot_error(void);
 R_NORETURN void arg_missing_error(SEXP sym);
 R_NORETURN void unbound_var_error(SEXP sym);
+R_NORETURN void out_of_bounds_error(SEXP call);
+R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 

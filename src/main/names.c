@@ -71,7 +71,6 @@
  *                  whose computation by a task may be pending
  *              V=0 says must not be passed operands still being computed
  *              W=1 says pass a "variant" argument to the c-entry procedure
- *                  (ignored if PPkind is PP_FOREIGN)
  *              W=0 says don't pass a "variant" argument
  *		X=1 says that we should force R_Visible off
  *		X=0 says that we should force R_Visible on
