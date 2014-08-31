@@ -6,6 +6,7 @@ print(1)  # get some stuff allocated before Rprofmemt activatived.
 vsize <- 100  # must be multiple of 4
 Rprofmemt(nelem=vsize)
 
+
 # One-level assignments.
 
 a <- numeric(vsize)
@@ -111,3 +112,15 @@ names(a) <- n     # shouldn't duplicate numeric part, maybe dup names
 names(a)[2] <- "q"# shouldn't duplicate anything, but currently dups everything
 print(a)
 print(n)
+
+
+# Three-level assignments.
+
+a <- c(list (q = c(list (x = rep(3,vsize)), rep(list(1),vsize-1))),
+       rep(list(2),vsize-1))
+
+a[[1]]$x[2] <- 9     # shouldn't duplicate
+a$q$x[vsize+2] <- 8  # should allocate for extension, not dup higher levels
+
+print(a$q$x)
+
