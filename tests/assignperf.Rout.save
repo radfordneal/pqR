@@ -402,6 +402,7 @@ attr(,"bert")
  [38] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
  [75] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 > 
+> 
 > # Three-level assignments.
 > 
 > a <- c(list (q = c(list (x = rep(3,vsize)), rep(list(1),vsize-1))),
@@ -427,4 +428,63 @@ RPROFMEM: 856 (double 102):
  [76]  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3  3
 [101] NA  8
 > 
+> 
+> # Slot assignments.
+> 
+> Rprofmemt(NULL)
+> setClass ("george", representation(a="numeric",b="logical"))
+> Rprofmemt(nelem=vsize)
+> 
+> ia <- rep(1.2,vsize)
+RPROFMEM: 840 (double 100):
+> ib <- rep(c(TRUE,FALSE),length=vsize)
+RPROFMEM: 440 (logical 100):
+> 
+> x <- new ("george", a=ia+1, b=ib)
+RPROFMEM: 840 (double 100):"initialize" "initialize" "new" 
+RPROFMEM: 552 (integer 128):"match" "initialize" "initialize" "new" 
+RPROFMEM: 840 (double 100):".Call" "slot<-" "initialize" "initialize" "new" 
+RPROFMEM: 440 (logical 100):".Call" "initialize" "initialize" "new" 
+> 
+> v <- seq.int(1/vsize,1,length=vsize)
+RPROFMEM: 840 (double 100):
+> x@a <- v      # shouldn't duplicate, but currently dups three things
+RPROFMEM: 840 (double 100):
+RPROFMEM: 440 (logical 100):
+RPROFMEM: 840 (double 100):".Call" "slot<-" "@<-" 
+> x@a[2] <- 9   # shouldn't duplicate, but currently dups four things
+RPROFMEM: 840 (double 100):
+RPROFMEM: 440 (logical 100):
+RPROFMEM: 840 (double 100):
+RPROFMEM: 840 (double 100):".Call" "slot<-" "@<-" 
+> x@b[3] <- NA  # should duplicate at most one, but currently dups four things
+RPROFMEM: 840 (double 100):
+RPROFMEM: 440 (logical 100):
+RPROFMEM: 440 (logical 100):
+RPROFMEM: 440 (logical 100):".Call" "slot<-" "@<-" 
+> 
+> Rprofmemt(NULL)
+> print(x)
+An object of class "george"
+Slot "a":
+  [1] 0.01 9.00 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.10 0.11 0.12 0.13 0.14 0.15
+ [16] 0.16 0.17 0.18 0.19 0.20 0.21 0.22 0.23 0.24 0.25 0.26 0.27 0.28 0.29 0.30
+ [31] 0.31 0.32 0.33 0.34 0.35 0.36 0.37 0.38 0.39 0.40 0.41 0.42 0.43 0.44 0.45
+ [46] 0.46 0.47 0.48 0.49 0.50 0.51 0.52 0.53 0.54 0.55 0.56 0.57 0.58 0.59 0.60
+ [61] 0.61 0.62 0.63 0.64 0.65 0.66 0.67 0.68 0.69 0.70 0.71 0.72 0.73 0.74 0.75
+ [76] 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90
+ [91] 0.91 0.92 0.93 0.94 0.95 0.96 0.97 0.98 0.99 1.00
+
+Slot "b":
+  [1]  TRUE FALSE    NA FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [13]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [25]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [37]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [49]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [61]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [73]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [85]  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE  TRUE FALSE
+ [97]  TRUE FALSE  TRUE FALSE
+
+> Rprofmemt(nelem=vsize)
 > 

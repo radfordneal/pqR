@@ -120,6 +120,7 @@ attr(a,"bert") <- b     # shouldn't duplicate, but does currently
 attr(a,"bert")[2] <- 7L # shouldn't duplicate, but does currently
 print(a)
 
+
 # Three-level assignments.
 
 a <- c(list (q = c(list (x = rep(3,vsize)), rep(list(1),vsize-1))),
@@ -130,3 +131,23 @@ a$q$x[vsize+2] <- 8  # should allocate for extension, not dup higher levels
 
 print(a$q$x)
 
+
+# Slot assignments.
+
+Rprofmemt(NULL)
+setClass ("george", representation(a="numeric",b="logical"))
+Rprofmemt(nelem=vsize)
+
+ia <- rep(1.2,vsize)
+ib <- rep(c(TRUE,FALSE),length=vsize)
+
+x <- new ("george", a=ia+1, b=ib)
+
+v <- seq.int(1/vsize,1,length=vsize)
+x@a <- v      # shouldn't duplicate, but currently dups three things
+x@a[2] <- 9   # shouldn't duplicate, but currently dups four things
+x@b[3] <- NA  # should duplicate at most one, but currently dups four things
+
+Rprofmemt(NULL)
+print(x)
+Rprofmemt(nelem=vsize)
