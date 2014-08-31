@@ -2220,7 +2220,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
             SET_PRVALUE(rhsprom, rhs);
             SEXP assgnfcn = installAssignFcnName(CAR(lhs));
-            PROTECT (lhsprom = mkPROMISE(lhs, rho));
+            PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
             SET_PRVALUE (lhsprom, varval);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
             newval = eval(e,rho);
@@ -2300,7 +2300,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                the lower level.  The new value at the outermost level is taken
                from the rhs value. */
             
-            for (d = 1; ; d++) {
+            for (d = 1; d <= depth; d++) {
 
                 if (d == 1) {
                     PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
@@ -2310,6 +2310,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     /* nothing to do, since it's already part of larger object,
                        and also not an active binding or in a user database. */
                     UNPROTECT(1); /* s[d].value from previous loop */
+                    newval = s[d].value;
                     continue;
                 }
                 else {
@@ -2330,18 +2331,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                          rhsprom));
                 newval = eval(e,rho);
 
-                /* Unprotect e, lhsprom, rhsprom, and s[d].value from previous
-                   loop, which went from depth-1 to 1 in the opposite order as
-                   this one (plus unprotect one more from before that).   The 
-                   new value of s[d].value will be protected if necessary at 
-                   the start of the next iteration of this loop. */
-
-                UNPROTECT(4);
-
-                /* Exit with final result in newval when done the top level. */
-
-                if (d == depth) break;
-
                 /* If the replacement function returned a different object, 
                    that new object won't be part of the object at the next
                    level, even if the old one was, so clear in_next. */
@@ -2350,23 +2339,29 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     s[d].in_next = 0;
                     s[d].value = newval;
                 }
+
+                /* Unprotect e, lhsprom, rhsprom, and s[d].value from previous
+                   loop, which went from depth-1 to 1 in the opposite order as
+                   this one (plus unprotect one more from before that).   The 
+                   new value of s[d].value will be protected if necessary at 
+                   the start of the next iteration of this loop. */
+
+                UNPROTECT(4);
             }
 
             UNPROTECT(2*(depth-1)+2);  /* fetch_args, store_args + two more */
         }
 
         /* Assign the final result after the top level replacement.  We
-           can often avoid the cost of this using the saved binding cell,
-           if we had one, and it hasn't somehow been removed since. */
+           can sometimes avoid the cost of this by looking at the saved
+           binding cell, if we have one. */
 
-        if (bcell != R_NilValue && CAR(bcell) != R_UnboundValue) {
-            if (newval != CAR(bcell))
-                SETCAR (bcell, newval);
+        if (bcell == R_NilValue || CAR(bcell) != newval) {
+            if (PRIMVAL(op) == 2) /* <<- */
+                set_var_nonlocal (var, newval, ENCLOS(rho), 3);
+            else
+                set_var_in_frame (var, newval, rho, TRUE, 3);
         }
-        else if (PRIMVAL(op) == 2) /* <<- */
-            set_var_nonlocal (var, newval, ENCLOS(rho), 3);
-        else
-            set_var_in_frame (var, newval, rho, TRUE, 3);
 
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
