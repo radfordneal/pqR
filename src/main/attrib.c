@@ -1330,7 +1330,6 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(exact == NA_LOGICAL) exact = 0;
     }
 
-
     if(STRING_ELT(t, 0) == NA_STRING) {
 	UNPROTECT(1);
 	return R_NilValue;
@@ -1348,7 +1347,7 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 		match = FULL;
 		break;
 	    }
-    else if (match == PARTIAL || match == PARTIAL2) {
+            else if (match == PARTIAL || match == PARTIAL2) {
 		/* this match is partial and we already have a partial match,
 		   so the query is ambiguous and we will return R_NilValue
 		   unless a full match comes up.
