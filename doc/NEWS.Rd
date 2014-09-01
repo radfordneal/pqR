@@ -399,6 +399,10 @@
 \item From R-2.15.1:
       The value returned by tools::psnice() for invalid pid values was
       not always NA as documented.
+\item Similarly to R-3.1.1-patched:
+      In package \code{parallel}, child processes now call \code{_Exit}
+      rather than \code{exit}, so that the main process is not affected
+      by flushing of input/output buffers in the child.
 }}
 }
 
