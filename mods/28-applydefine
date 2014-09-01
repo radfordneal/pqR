@@ -27,3 +27,6 @@ some correctness tests).
 Makes variable lookup and creation return (sometimes) the binding
 cell used, in R_binding_cell, so that short-cuts can sometimes be
 taken.
+
+Fixes a latent bug in byte-code interpreter activated by presence
+of promises with NAMEDCNT == 1.  Should also speed it up a bit.
