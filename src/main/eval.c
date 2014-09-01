@@ -5158,6 +5158,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = BINDING_VALUE(cell);
+        if (TYPEOF(value) == PROMSXP)
+            value = forcePromise(value);
 	if (value == R_UnboundValue || NAMEDCNT(value) != 1) {
             /* Used to call EnsureLocal, now changed, so old code is here. */
             value = findVarInFrame3 (rho, symbol, TRUE);
