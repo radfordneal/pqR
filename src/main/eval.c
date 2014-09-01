@@ -2019,8 +2019,8 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 /* Create two lists of promises to evaluate each argument, with promises
    shared.  When an argument is evaluated in a call using one argument list,
    its value is then known without re-evaluation in a second call using 
-   the second argument list.  Two argument lists may be needed because some
-   primitives destructively alter their argument lists. */
+   the second argument list.  The argument lists are terminated with the
+   initial values of *a1 and *a2. */
 
 static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 {
@@ -2028,7 +2028,7 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 
     head1 = head2 = R_NilValue;
 
-    while(el != R_NilValue) {
+    while (el != R_NilValue) {
 
         SEXP a = CAR(el);
 
@@ -2097,11 +2097,15 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 	el = CDR(el);
     }
 
-    if (head1!=R_NilValue)
+    if (head1 != R_NilValue) {
+        if (*a1 != R_NilValue)
+            SETCDR(tail1,*a1);
+        *a1 = head1;
+        if (*a2 != R_NilValue)
+            SETCDR(tail2,*a2);
+        *a2 = head2;
         UNPROTECT(2);
-
-    *a1 = head1;
-    *a2 = head2;
+    }
 }
 
 /*  Assignment in its various forms  */
@@ -2259,6 +2263,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             struct { 
                 SEXP fetch_args;      /* Arguments lists, sharing promises */
                 SEXP store_args;
+                SEXP value_arg;       /* Last cell in store_args, for value */
                 SEXP expr;            /* Expression at this level */
                 SEXP value;           /* Value of expr, may later change */
                 int in_next;          /* 1 or 2 if value is unshared part */
@@ -2267,21 +2272,22 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             SEXP v;
             int d;
 
-            /* For each level from 0 to depth, store the lhs expression at that
+            /* For each level from 1 to depth, store the lhs expression at that
                level.  For each level except the final variable and outermost 
                level, which only does a store, save argument lists for the 
                fetch/store functions that share promises, so that they are
-               evaluated only once (sharing can be disabled by 'if' below).
-               For the outermost, instead save the original argument list. */
+               evaluated only once.  The store argument list has a "value"
+               cell at the end to fill in the stored value. */
 
             s[0].expr = lhs;
-            s[0].store_args = CDDR(lhs);
+            s[0].store_args = CDDR(lhs);  /* original args, no value cell */
             for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
-                if (TRUE) /* TRUE enables sharing of promises for fetch/store */
-                    promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
-                                                  &s[d].store_args);
-                else
-                    s[d].fetch_args = s[d].store_args = CDDR(v);
+                s[d].fetch_args = R_NilValue;
+                PROTECT (s[d].value_arg = s[d].store_args =
+                    cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
+                promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
+                                              &s[d].store_args);
+                UNPROTECT(1);
                 PROTECT2 (s[d].fetch_args, s[d].store_args);
                 s[d].expr = v;
             }
@@ -2341,8 +2347,14 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
                     PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
                     SET_PRVALUE (lhsprom, s[d].value);
-                    PROTECT(e = replaceCall (assgnfcn, lhsprom, 
-                                             s[d-1].store_args, rhsprom));
+                    if (d == 1) /* original args, no value cell at end */
+                        PROTECT(e = replaceCall (assgnfcn, lhsprom, 
+                                                 s[d-1].store_args, rhsprom));
+                    else { 
+                        SETCAR (s[d-1].value_arg, rhsprom);
+                        PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
+                                                       s[d-1].store_args)));
+                    }
                     newval = eval(e,rho);
 
                     /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
