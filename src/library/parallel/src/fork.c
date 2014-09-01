@@ -2,6 +2,7 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  (C) Copyright 2008-11 Simon Urbanek
  *      Copyright 2011 R Core Development Team.
+ *  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +28,7 @@
 #include "parallel.h"
 
 #include <sys/types.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/select.h>
 #include <sys/wait.h>
@@ -118,7 +120,7 @@ static void child_sig_handler(int sig)
 #endif
 	child_can_exit = 1;
 	if (child_exit_status >= 0)
-	    exit(child_exit_status);
+	    _Exit(child_exit_status);
     }
 }
 
@@ -574,7 +576,7 @@ SEXP mc_exit(SEXP sRes)
 #ifdef MC_DEBUG
     Dprintf("child %d: exiting\n", getpid());
 #endif
-    exit(res);
+    _Exit(res);
     error(_("mcexit failed"));
     return R_NilValue;
 }
