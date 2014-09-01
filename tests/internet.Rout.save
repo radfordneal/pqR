@@ -1,8 +1,15 @@
 
-R version 2.15.0 RC (2012-03-29 r58863)
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
+Deferred evaluation disabled (no helper threadss, no task merging).
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -30,24 +37,24 @@ Type 'q()' to quit R.
 > 
 > # test do_download.
 > nrow(available.packages(contrib.url("http://cran.r-project.org")))
-[1] 3697
+[1] 4977
 > 
 > # test url connections on http
 > zz <- url("http://pqR-project.org/internet.html")
 > readLines(zz)
-[1] "<html>"                                                                   
+[1] "<html>"                                                                          
 [2] "<head><title>File used to test http connections when checking pqR</title></head>"
-[3] "<body>"                                                                   
-[4] "<h1>File used to test http connections when checking pqR</h1>"            
-[5] "This is the text in this test page.</body>"                               
-[6] "</html>"                                                                  
+[3] "<body>"                                                                          
+[4] "<h1>File used to test http connections when checking pqR</h1>"                   
+[5] "This is the text in this test page.</body>"                                      
+[6] "</html>"                                                                         
 > close(zz)
 > 
 > ## check graceful failure:
 > try(zz <- url("http://foo.bar", "r"))
 Error in url("http://foo.bar", "r") : cannot open the connection
 In addition: Warning message:
-In url("http://foo.bar", "r") : unable to resolve 'foo.bar'
+In url("http://foo.bar", "r") : unable to connect to 'foo.bar' on port 80.
 > 
 > # and via read.table, test http and ftp.
 > 
