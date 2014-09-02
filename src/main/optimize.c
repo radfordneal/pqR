@@ -43,14 +43,12 @@
 struct callinfo {
   SEXP R_fcall;
   SEXP R_env;
-} ;
-
-/*static SEXP R_fcall1;
-  static SEXP R_env1; */
+};
 
 static double fcn1(double x, struct callinfo *info)
 {
     SEXP s;
+    SETCADR (info->R_fcall, duplicate (CADR (info->R_fcall)));
     REAL(CADR(info->R_fcall))[0] = x;
     s = eval(info->R_fcall, info->R_env);
     switch(TYPEOF(s)) {
@@ -119,11 +117,10 @@ static SEXP do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     info.R_env = rho;
     PROTECT(info.R_fcall = lang2(v, R_NilValue));
-    PROTECT(res = allocVector1REAL());
     SETCADR(info.R_fcall, allocVector1REAL());
-    REAL(res)[0] = Brent_fmin(xmin, xmax,
-			      (double (*)(double, void*)) fcn1, &info, tol);
-    UNPROTECT(2);
+    res = ScalarReal (Brent_fmin(xmin, xmax,
+                                 (double (*)(double, void*)) fcn1, &info, tol));
+    UNPROTECT(1);
     return res;
 }
 
@@ -134,6 +131,7 @@ static SEXP do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 static double fcn2(double x, struct callinfo *info)
 {
     SEXP s;
+    SETCADR(info->R_fcall,duplicate(CADR(info->R_fcall)));
     REAL(CADR(info->R_fcall))[0] = x;
     s = eval(info->R_fcall, info->R_env);
     switch(TYPEOF(s)) {
@@ -384,6 +382,7 @@ static void fcn(int n, const double x[], double *f, function_info
 	return;
     }
 				/* calculate for a new value of x */
+    SETCADR(R_fcall,duplicate(CADR(R_fcall)));
     s = CADR(R_fcall);
     for (i = 0; i < n; i++) {
 	if (!R_FINITE(x[i])) error(_("non-finite value supplied by 'nlm'"));
