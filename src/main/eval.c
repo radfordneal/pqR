@@ -611,8 +611,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else if (typeof_e == PROMSXP) {
 
-        /* Note that we don't change NAMEDCNT here. */
-
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
             res = forcePromiseUnbound(e);
         else
@@ -2049,6 +2047,9 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                     if (TYPEOF(a) == PROMSXP) {
                         INC_NAMEDCNT(a);
                         INC_NAMEDCNT(a);
+                        SEXP p = PRVALUE_PENDING_OK(a);
+                        if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
+                            INC_NAMEDCNT(p);
                     }
                     else if (a != R_MissingArg) {
                        a = mkPROMISE (a, rho);
@@ -2076,6 +2077,9 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
             if (TYPEOF(a) == PROMSXP) {
                 INC_NAMEDCNT(a);
                 INC_NAMEDCNT(a);
+                SEXP p = PRVALUE_PENDING_OK(a);
+                if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
+                    INC_NAMEDCNT(p);
             }
             else if (a != R_MissingArg) {
                a = mkPROMISE (a, rho);
@@ -2535,7 +2539,8 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 /* Create a promise to evaluate each argument.	If the argument is itself
    a promise, it is used unchanged, except that it has its NAMEDCNT
-   incremented.  See inside for handling of ... */
+   incremented, and the NAMEDCNT of its value (if not unbound) incremented
+   unless it is zero.  See inside for handling of ... */
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
@@ -2562,8 +2567,12 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     a = CAR(h);
-                    if (TYPEOF(a) == PROMSXP)
+                    if (TYPEOF(a) == PROMSXP) {
                         INC_NAMEDCNT(a);
+                        SEXP p = PRVALUE_PENDING_OK(a);
+                        if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
+                            INC_NAMEDCNT(p);
+                    }
                     else if (a != R_MissingArg)
                         a = mkPROMISE (a, rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
@@ -2579,8 +2588,12 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 		dotdotdot_error();
 	}
         else {
-            if (TYPEOF(a) == PROMSXP)
-               INC_NAMEDCNT(a);
+            if (TYPEOF(a) == PROMSXP) {
+                INC_NAMEDCNT(a);
+                SEXP p = PRVALUE_PENDING_OK(a);
+                if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
+                    INC_NAMEDCNT(p);
+            }
             else if (a != R_MissingArg)
                a = mkPROMISE (a, rho);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
