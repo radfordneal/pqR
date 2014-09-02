@@ -28,3 +28,7 @@ to other source files.
 
 Changed tuning parameters for GC, and introduced supplemental
 criterion based on recent allocation sizes for setting R_VSize.
+
+Fixed bug reported on r-devel, 2014-09-02, by Thomas Petzoldt and
+Karline Soetaert.  Three routines affected:  nlm, uniroot, optimize.
+
