@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-00-00}{
+\section{CHANGES IN VERSION RELEASED 2014-09-03}{
 
   \subsection{INTRODUCTION}{
 
@@ -45,12 +45,12 @@
       output previously produced in circumstances such as the following:
 \preformatted{   `f<-` <- function (x,value) x[1,1] <- value
    a <- 1
-   f(a) <- rep(123,1000)
+   f(a) <- rep(123,1000)  # gives an error
    traceback()
 }
       This previously produced output with 1000 repetitions of 123
-      in the traceback following the error message.  The traceback
-      now instead shows the expression \code{rep(123,100)}.
+      in the traceback produced following the error message.  The traceback
+      now instead shows the expression \code{rep(123,1000)}.
 \item The \code{evaluate} option for \code{dump} has been extended to
       allow access to the new \code{codePromises} deparse option.
       See \code{help(dump)}.
@@ -69,9 +69,10 @@
       This differs from R Core versions, which (at least through R-3.1.1)
       give an error if an argument is a character string and \code{DUP=FALSE}.
 \item In \code{.C} and \code{.Fortran}, scalars (vectors of length one)
-      are duplicated even when \code{DUP=FALSE} is specified.  They are
-      not duplicated in R Core versions, however (at least through R-3.1.1),
-      so it may be unwise to rely on this.
+      are duplicated (in effect, though not necessarily physically) even 
+      when \code{DUP=FALSE} is specified.  However, they are not duplicated 
+      in R Core versions (at least through R-3.1.1), so it may be unwise to 
+      rely on this.
 \item A \code{HELPERS} argument can now be used in \code{.C} and 
       \code{.Fortran} to specify that the C or Fortran routine may
       (sometimes) be done in a helper thread.  (See the section on
@@ -213,7 +214,7 @@
       This modification also has the effect of increasing the possibilities
       for task merging.  For example, in the above code, the first two
       updates for \code{u} will be merged into one computation that sets
-      \code{u} to \code{2*exp(u)}.
+      \code{u} to \code{2*exp(u)} using a single loop over the vector.
 \item The performance of \code{rep} and \code{rep.int} (which is now primitive)
       is much improved.
       These improvements (and improvements previously made in pqR) go beyond 
@@ -267,9 +268,10 @@
 \item Several improvements relating to garbage collection have been made.
       One change is that the amount of memory used for each additional
       symbol has been reduced from 112 bytes (two CONS cells) to 80 bytes
-      (on 64-bit platforms).  Another change is in tuning of heap sizes,
-      in order to reduce occasions in which garbage collection is very
-      frequent.
+      (on 64-bit platforms), not counting the space for the symbol's name
+      (a minumum of 48 bytes on 64-bit platforms).  Another change is in 
+      tuning of heap sizes, in order to reduce occasions in which garbage 
+      collection is very frequent.
 \item Many uses of the \code{return} statement have been sped up.
 \item Functions in the \code{apply} family have been sped up when they are
       called with no additional arguments for the function being applied.
@@ -286,7 +288,7 @@
 \item A performance bug has been fixed that involved subscripting with many 
       invalid string indexes, reported on r-devel on 2010-07-15 and 
       2013-05-8.  It is illustrated by the following code, 
-      which is more than ten thousand times slower than expected:
+      which was more than ten thousand times slower than expected:
 \preformatted{   x <- c(A=10L, B=20L, C=30L)
    subscript <- c(LETTERS[1:3], sprintf("ID%05d", 1:150000))
    system.time(y1 <- x[subscript])
@@ -376,8 +378,8 @@
       at r-project.org, along with related bugs in \code{uniroot} and
       \code{optimize}.  These all involve situations where the function
       being optimized saves its argument in some manner, and then sees
-      it the saved value change when the optimizer re-uses the space for the 
-      argument on the next call.  The fix made is is to no longer reuse the 
+      the saved value change when the optimizer re-uses the space for the 
+      argument on the next call.  The fix made is to no longer reuse the 
       space, which will unfortunately cause a (fairly small) decline in 
       performance.
 
