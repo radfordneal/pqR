@@ -57,10 +57,7 @@
 \item The formal arguments of primitive functions will now be returned
       by \code{formals}, as they are shown when printed or with \code{args}.
       In R Core releases (at least to R-3.1.1), the result of \code{formals}
-      for a primitive is \code{NULL}.  This change allows some
-      existing functions (eg, \code{rep.int}) to be made primitive without
-      breaking code that relies on getting their formal arguments with
-      \code{formals}.
+      for a primitive is \code{NULL}.
 \item Setting the \code{deparse.max.lines} option will now limit the
       number of lines printed when exiting debug of a function, as
       well as when entering.
