@@ -708,8 +708,9 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         nprotect++;
     }
 
-    SEXP each_times = each != 1 ? ScalarIntegerMaybeConst(each) : times;
-
+    SEXP each_times;
+    protect(each_times = each != 1 ? ScalarIntegerMaybeConst(each) : times);
+    nprotect++;
     PROTECT(a = allocVector(TYPEOF(x), len));
     nprotect++;
 
