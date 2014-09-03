@@ -103,6 +103,10 @@ SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
 }
 
 /* Package matrix uses this .Internal with 5 args: should have 7 */
+
+/* NOTE:  In pqR, we now guarantee that the result of "matrix" is
+   unshared (relevant to .C and .Fortran with DUP=FALSE). */
+
 static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP vals, ans, snr, snc, dimnames;
