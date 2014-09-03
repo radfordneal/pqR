@@ -172,10 +172,10 @@
   to not be referred to in any other way, and so may be passed with
   \code{DUP = FALSE} and modified by the C or Fortran routine, either 
   for its internal use, or as a way of returning information to the caller.
-  The set of such functions is currently as 
-  follows:\preformatted{  numeric, integer, complex, logical, raw, matrix, array, rep}
+  The set of such functions is currently as
+  follows:\preformatted{  numeric, integer, complex, logical, raw, matrix, rep}
 
-  For \code{rep}, this applies only to the defalt method for numeric vectors.
+  For \code{rep}, this applies only to the default method for numeric vectors.
 
   For example, in the following 
   call:\preformatted{  .C("Cfunction", input = x, output = numeric(10), DUP = FALSE)}
