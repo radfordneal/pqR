@@ -57,6 +57,11 @@ is.matrix(x)
   length zero, \code{NA} of an appropriate type is used for atomic
   vectors (\code{0} for raw vectors) and \code{NULL} for lists.
 
+  The value returned by \code{matrix} is guaranteed
+  not to be shared.  This is visible to the user only in so far as
+  this value is passed as an argument to '.Call' or '.External', or
+  to '.C' or '.Fortran' with 'DUP=FALSE'.
+
   \code{is.matrix} returns \code{TRUE} if \code{x} is a vector and has a
   \code{"\link{dim}"} attribute of length 2) and \code{FALSE} otherwise.
   Note that a \code{\link{data.frame}} is \strong{not} a matrix by this
