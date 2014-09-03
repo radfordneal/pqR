@@ -319,7 +319,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 /* Version of VECTOR_SEXPREC used for defining constants in const_obj.c */
 
-typedef const struct VECTOR_SEXPREC_CONST {
+typedef const struct {
     SEXPREC_HEADER;
     struct vecsxp_struct vecsxp;
     union { double d; int w[2]; int i; char c; } data;
