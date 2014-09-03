@@ -312,6 +312,18 @@
       \code{na.exclude} that led to a
       data frame that should have had zero rows having one row instead.
       (Also fixed in R-3.1.1, though differently.)
+\item Fixed the bug in \code{nlm} reported as PR #15958
+      at r-project.org, along with related bugs in \code{uniroot} and
+      \code{optimize}.  These all involve situations where the function
+      being optimized saves its argument in some manner, and then sees
+      it the saved value change when the optimizer re-uses the space for the 
+      argument on the next call.  The fix made is is to no longer reuse the 
+      space, which will unfortunately cause a (fairly small) decline in 
+      performance.
+
+      The \code{optim} function also has this problem, but only
+      when numerical derivatives are used.  It has not yet been fixed.
+      The \code{integrate} function does not seem to have a problem.
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
