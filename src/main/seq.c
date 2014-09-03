@@ -501,8 +501,12 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     }
 }
 
-#define T_rep THRESHOLD_ADJUST(20)
+/* do_fast_rep is not called directly at the moment, since had to revert
+   to rep.int being internal so that setGeneric would work for it.  This
+   function is called from do_rep_int, however. */
 
+#define T_rep THRESHOLD_ADJUST(20)
+   
 static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
                          int variant)
 {
@@ -988,7 +992,7 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
-{"rep.int",	do_rep_int,	0,	1001,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep.int",	do_rep_int,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1004,6 +1008,6 @@ attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 
 { do_colon,	do_fast_colon,	-1,		2,	0, 0,  0, 0 },
 { do_seq_len,	do_fast_seq_len,-1,		1,	0, 0,  0, 0 },
-{ do_rep_int,	do_fast_rep,	-1,		2,	0, 0,  0, 0 },
+/* { do_rep_int,do_fast_rep,	-1,		2,	0, 0,  0, 0 }, */
 { 0,		0,		0,		0,	0, 0,  0, 0 }
 };
