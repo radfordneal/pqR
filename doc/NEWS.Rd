@@ -212,8 +212,7 @@
       for task merging.  For example, in the above code, the first two
       updates for \code{u} will be merged into one computation that sets
       \code{u} to \code{2*exp(u)} using a single loop over the vector.
-\item The performance of \code{rep} and \code{rep.int} (which is now primitive)
-      is much improved.
+\item The performance of \code{rep} and \code{rep.int} is much improved.
       These improvements (and improvements previously made in pqR) go beyond 
       those in R Core releases from R-2.15.2 on, so these functions are often 
       substantially faster in pqR than in R-2.15.2 or later R Core versions
