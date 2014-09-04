@@ -22,7 +22,7 @@
 \usage{
 rep(x, \dots)
 
-rep.int(x, times=1)
+rep.int(x, times)
 }
 \arguments{
   \item{x}{a vector (of any mode including a list) or a pairlist or a
