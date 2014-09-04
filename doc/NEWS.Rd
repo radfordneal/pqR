@@ -293,6 +293,8 @@
 \item Fixed the non-robust checks for integer overflow, which reportedly
       sometimes fail when using clang on a Mac.  This is #PR 15774 at
       r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
+\item Fixed a pqR bug with expressions of the form \code{t(x)%*%y}
+      when \code{y} is an S4 object.
 \item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
       \code{na.exclude} that led to a
       data frame that should have had zero rows having one row instead.
