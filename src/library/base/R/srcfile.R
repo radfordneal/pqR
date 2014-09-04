@@ -152,7 +152,7 @@ open.srcfilecopy <- function(con, line, ...) {
 srcfilealias <- function(filename, srcfile) {
     stopifnot(is.character(filename), length(filename) == 1L)
 
-    e <- new.env(hast=FALSE, parent=emptyenv())
+    e <- new.env(hash=FALSE, parent=emptyenv())
     
     e$filename <- filename
     e$original <- srcfile
