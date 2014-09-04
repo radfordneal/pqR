@@ -193,7 +193,7 @@ static void PrintLanguageEtc(SEXP s, Rboolean useSource, Rboolean isClosure)
     int i;
     SEXP t = getAttrib(s, R_SrcrefSymbol);
     if (!isInteger(t) || !useSource)
-	t = deparse1(s, 0, useSource | DEFAULTDEPARSE);
+	t = deparse1(s, 0, useSource | DEFAULTDEPARSE | CODEPROMISES);
     else {
         PROTECT(t = lang2(install("as.character"), t));
         t = eval(t, R_BaseEnv);
