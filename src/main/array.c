@@ -781,9 +781,14 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SEXP value;
                 /* we don't want a transposed argument if the other is an 
                    S4 object, since that's not good for dispatch. */
-                if (IS_S4_OBJECT(y) && x_transposed)
-                    REPROTECT (x = do_transpose (R_NilValue,R_NilValue,x,rho,0),
-                               ix);
+                if (IS_S4_OBJECT(y) && x_transposed) {
+                    SEXP a;
+                    PROTECT (a = CONS(x,R_NilValue));
+                    x = do_transpose (R_NilValue,R_NilValue,a,rho,0);
+                    UNPROTECT(1);
+                    REPROTECT(x,ix);
+                    x_transposed = 0;
+                }
                 PROTECT(args = CONS(x,CONS(y,R_NilValue)));
                 nprotect += 1;
                 helpers_wait_until_not_being_computed2(x,y);

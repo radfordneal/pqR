@@ -32,3 +32,5 @@ criterion based on recent allocation sizes for setting R_VSize.
 Fixed bug reported on r-devel, 2014-09-02, by Thomas Petzoldt and
 Karline Soetaert.  Three routines affected:  nlm, uniroot, optimize.
 
+Fixed a pqR bug involving expressions like t(x) %*% y when y
+is an S4 object.
