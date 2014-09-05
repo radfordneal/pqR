@@ -2363,8 +2363,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
                     /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
                        previous loop, which went from depth-1 to 1 in the 
-                       opposite order as this one (plus unprotect one more 
-                       from before that). */
+                       opposite order as this one (plus unprotect one more from
+                       before that).  Note: e used below; no alloc before. */
 
                     UNPROTECT(4);
                 }
@@ -2383,9 +2383,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 /* Create a rhs promise if this value needs to be put into
                    the next-higher object. */
 
-                if (s[d].in_next == 0) {
+                if (s[d].in_next != 1) {
                     PROTECT(newval);
-                    rhsprom = mkPROMISE (s[d].expr, rho);
+                    rhsprom = mkPROMISE (e, rho);
                     SET_PRVALUE (rhsprom, newval);
                     UNPROTECT(1);
                     PROTECT(rhsprom);
