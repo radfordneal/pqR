@@ -1,5 +1,6 @@
 #  File src/library/base/R/findInt.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,6 +16,8 @@
 #  http://www.r-project.org/Licenses/
 
 ### This is a `variant' of  approx( method = "constant" ) :
+### HAS A DUPLICATE IN STATS, FOR MYSTERIOUS REASONS...
+
 findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
 {
     ## Purpose: gives back the indices of  x in vec;  vec[] sorted
@@ -26,21 +29,31 @@ findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
     if(is.unsorted(vec))
 	stop("'vec' must be sorted non-decreasingly")
     ## deal with NA's in x:
-    if(has.na <- any(ix <- is.na(x))) x <- x[!ix]
-    nx <- length(x)
-    index <- integer(nx)
-    ## lengths are always integer
-    .C("find_interv_vec",
-       xt = as.double(vec), n = length(vec),
-       x  = as.double(x),  nx = nx,
+    if (has.na <- any(is.na(x))) {
+        ix <- is.na(x)
+        x <- x[!ix]
+    }
+    nx <- length(x)  # lengths are always integer
+    n <- length(vec)
+    index <- .C("find_interv_vec",
+       as.double(vec),
+       n,
+       as.double(x),
+       nx,
        as.logical(rightmost.closed),
        as.logical(all.inside),
-       index, DUP = FALSE, NAOK = TRUE, # NAOK: 'Inf' only
-       PACKAGE = "base")
+       index = integer(nx),
+       DUP = FALSE, 
+       NAOK = TRUE, # NAOK: 'Inf' only
+       HELPER = nx*n >= 100,
+       PACKAGE = "base") $ index
+
     if(has.na) {
-	ii <- as.integer(ix)
+	ii <- integer(nx)
 	ii[ix] <- NA
 	ii[!ix] <- index
 	ii
-    } else index
+    } 
+    else 
+        index
 }

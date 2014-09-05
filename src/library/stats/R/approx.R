@@ -121,7 +121,10 @@ approxfun <- function(x, y = NULL, method = "linear",
         PACKAGE = "stats")$xout
 }
 
+### THIS IS A DUPLICATE OF A FUNCTION IN BASE.  WHY???  KEEP IT HERE IN CASE.
+###
 ### This is a `variant' of  approx( method = "constant" ) :
+
 findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
 {
     ## Purpose: gives back the indices of  x in vec;  vec[] sorted
@@ -133,21 +136,30 @@ findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
     if(is.unsorted(vec))
 	stop("'vec' must be sorted non-decreasingly")
     ## deal with NA's in x:
-    if(has.na <- any(ix <- is.na(x)))
-	x <- x[!ix]
-    nx <- length(x)
-    index <- integer(nx)
-    .C("find_interv_vec",
-       xt = as.double(vec), n = as.integer(length(vec)),
-       x  = as.double(x),  nx = as.integer(nx),
+    if (has.na <- any(is.na(x))) {
+        ix <- is.na(x)
+        x <- x[!ix]
+    }
+    nx <- length(x) # lengths are always integer
+    index <- .C("find_interv_vec",
+       as.double(vec),    # xt
+       length(vec),       # n
+       as.double(x),      # x
+       nx,
        as.logical(rightmost.closed),
        as.logical(all.inside),
-       index, DUP = FALSE, NAOK = TRUE, # NAOK: 'Inf' only
-       PACKAGE = "base")
+       index = integer(nx),
+       DUP = FALSE, 
+       NAOK = TRUE, # NAOK: 'Inf' only
+       HELPER = TRUE,
+       PACKAGE = "base") $ index
+
     if(has.na) {
-	ii <- as.integer(ix)
+	ii <- integer(nx)
 	ii[ix] <- NA
 	ii[!ix] <- index
 	ii
-    } else index
+    } 
+    else 
+        index
 }
