@@ -2139,7 +2139,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 
     UNPROTECT(2);
 
-    /* Count named arguments, and note last one. */
+    /* Count named arguments and note index (from 0) of last one in last_pos. */
 
     name_count = 0;
     for (pa = args, i = 0; pa != R_NilValue; pa = CDR(pa), i++) {
@@ -2166,24 +2166,6 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
           name_count == 1 && VARIANT_KIND(variant) == VARIANT_ONE_NAMED;
 
     PROTECT(ans = allocVector(VECSXP, nargs));
-
-    if (name_count > 1 || name_count == 1 && !return_one_named) {
-        /* not a variant return, and need names */
-	SEXP names;
-	PROTECT(names = allocVector(STRSXP, nargs));
-        /* The names are initialized by allocVector to all R_BlankString. */
-        pa = args;
-        for (na = 0; na <= last_pos; na++) {
-	    if (TAG(pa) != R_NilValue)
-		SET_STRING_ELT(names, na, PRINTNAME(TAG(pa)));
-            pa = CDR(pa);
-        }
-	setAttrib(ans, R_NamesSymbol, names);
-	UNPROTECT(1);
-    }
-
-    if (!return_one_named || helpers_not_multithreading_now)
-        dotCode_spa.helper = 0;
 
     /* Convert the arguments for use in .C or .Fortran. */
 
@@ -2399,11 +2381,10 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	}
     }
 
-    SEXP ans1 = NULL;
-    if (return_one_named) {
-        ans1 = VECTOR_ELT(ans,last_pos);
-        if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
-    }
+    if (!return_one_named || helpers_not_multithreading_now)
+        dotCode_spa.helper = 0;
+
+    SEXP ans1 = return_one_named ? VECTOR_ELT(ans,last_pos) : NULL;
 
     if (dotCode_spa.helper) {
         /* Ensure arguments won't change while task is not complete (the
@@ -2420,12 +2401,33 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         task_dotCode (scalars, ans1, NULL, ans);
 
     /* Either return just the one named element, ans1, as a pairlist,
-       or the whole vector list of updated arguments, to which we must
-       attach the right attributes. */
+       or the whole vector list of updated arguments.  We handle attaching
+       names to the whole vector, and attributes to each element. */
 
-    if (return_one_named)
+    if (return_one_named) {
+        if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
         ans = cons_with_tag (ans1, R_NilValue, last_tag);
+    }
     else {
+
+        /* Add names to the result vector if necessary. */
+
+        if (name_count > 0) {
+            SEXP names;
+            PROTECT(names = allocVector(STRSXP, nargs));
+            /* The names are initialized by allocVector to all R_BlankString. */
+            pa = args;
+            for (na = 0; na <= last_pos; na++) {
+                if (TAG(pa) != R_NilValue)
+                    SET_STRING_ELT(names, na, PRINTNAME(TAG(pa)));
+                pa = CDR(pa);
+            }
+            setAttrib(ans, R_NamesSymbol, names);
+            UNPROTECT(1);
+        }
+
+        /* Copy attributes to elements of result. */
+
         for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
             SEXP arg = CAR(pa);
             SEXP s = VECTOR_ELT (ans, na);
