@@ -200,6 +200,10 @@
       at present only in certain limited circumstances, in which only a single
       output variable is used.  See \code{help(.C)} or \code{help(.Fortran)}
       for details.
+\item As an initial use of the previous feature, the \code{findInterval} 
+      function now will sometimes execute its C routine in a helper thread.
+      (More significant uses of the \code{HELPERS} option to \code{.C} and
+      \code{.Fortran} will follow in later releases.)
 \item Assignments that update a local variable by applying a single unary or 
       binary mathematical operation will now often re-use space for
       the variable that is updated, rather than allocating new space.
