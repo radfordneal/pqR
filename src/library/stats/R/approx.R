@@ -1,5 +1,6 @@
 #  File src/library/stats/R/approx.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -119,48 +120,4 @@ approxfun <- function(x, y = NULL, method = "linear",
         xout = as.double(v), as.integer(length(v)), as.integer(method),
         as.double(yleft), as.double(yright), as.double(f), NAOK = TRUE,
         PACKAGE = "stats")$xout
-}
-
-### THIS IS A DUPLICATE OF A FUNCTION IN BASE.  WHY???  KEEP IT HERE IN CASE.
-###
-### This is a `variant' of  approx( method = "constant" ) :
-
-findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
-{
-    ## Purpose: gives back the indices of  x in vec;  vec[] sorted
-    ## -------------------------------------------------------------------------
-    ## Author: Martin Maechler, Date:  4 Jan 2002, 10:16
-
-    if(any(is.na(vec)))
-	stop("'vec' contains NAs")
-    if(is.unsorted(vec))
-	stop("'vec' must be sorted non-decreasingly")
-    ## deal with NA's in x:
-    if (has.na <- any(is.na(x))) {
-        ix <- is.na(x)
-        x <- x[!ix]
-    }
-    nx <- length(x)  # lengths are always integer
-    n <- length(vec)
-    index <- .C("find_interv_vec",
-       as.double(vec),
-       n,
-       as.double(x),
-       nx,
-       as.logical(rightmost.closed),
-       as.logical(all.inside),
-       index = integer(nx),
-       DUP = FALSE, 
-       NAOK = TRUE, # NAOK: 'Inf' only
-       HELPER = nx*log(n) >= 50,
-       PACKAGE = "base") $ index
-
-    if(has.na) {
-	ii <- integer(nx)
-	ii[ix] <- NA
-	ii[!ix] <- index
-	ii
-    } 
-    else 
-        index
 }
