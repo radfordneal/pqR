@@ -2313,16 +2313,24 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             s[depth].value = varval;
 
             for (d = depth-1; d > 0; d--) {
+
                 SEXP prom = mkPROMISE(s[d+1].expr,rho);
                 SET_PRVALUE(prom,s[d+1].value);
+
+                /* We'll need this value for the subsequent replacement
+                   operation, so make sure it doesn't change... */
+                INC_NAMEDCNT(s[d+1].value);
+
                 e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
                 PROTECT(e);
                 e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
                 UNPROTECT(1);
                 s[d].in_next = R_variant_result;  /* 0, 1, or 2 */
+
                 if (R_variant_result == 0 && NAMEDCNT_GT_0(e)) 
                     e = dup_top_level(e);
                 R_variant_result = 0;
+
                 s[d].value = e;
                 PROTECT(e);
             }
@@ -2344,7 +2352,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     newval = s[d].value;
                     UNPROTECT(1);  /* s[d].value protected in previous loop */
                 }
+
                 else {
+
                     /* Assume symbol below is protected by the symbol table. */
 
                     SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
@@ -2355,10 +2365,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         PROTECT(e = replaceCall (assgnfcn, lhsprom, 
                                                  s[d-1].store_args, rhsprom));
                     else { 
+                        /* Now undo increment of NAMEDCNT from previous loop. */
+                        DEC_NAMEDCNT(s[d].value);
                         SETCAR (s[d-1].value_arg, rhsprom);
                         PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
                                                        s[d-1].store_args)));
                     }
+
                     newval = eval(e,rho);
 
                     /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
