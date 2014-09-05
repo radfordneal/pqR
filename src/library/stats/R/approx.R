@@ -140,18 +140,19 @@ findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
         ix <- is.na(x)
         x <- x[!ix]
     }
-    nx <- length(x) # lengths are always integer
+    nx <- length(x)  # lengths are always integer
+    n <- length(vec)
     index <- .C("find_interv_vec",
-       as.double(vec),    # xt
-       length(vec),       # n
-       as.double(x),      # x
+       as.double(vec),
+       n,
+       as.double(x),
        nx,
        as.logical(rightmost.closed),
        as.logical(all.inside),
        index = integer(nx),
        DUP = FALSE, 
        NAOK = TRUE, # NAOK: 'Inf' only
-       HELPER = TRUE,
+       HELPER = nx*log(n) >= 50,
        PACKAGE = "base") $ index
 
     if(has.na) {
