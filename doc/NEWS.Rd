@@ -222,7 +222,7 @@
       2013-05-8.  It is illustrated by the following code, 
       which is more than ten thousand times slower than expected:
 \preformatted{   x <- c(A=10L, B=20L, C=30L)
-   subscript <- c(LETTERS[1:3], sprintf("ID%05d", 1:150000))
+   subscript <- c(LETTERS[1:3], sprintf("ID\%05d", 1:150000))
    system.time(y1 <- x[subscript])
 }
       The fix in this version of pqR does not solve the related problem 
@@ -293,7 +293,7 @@
 \item Fixed the non-robust checks for integer overflow, which reportedly
       sometimes fail when using clang on a Mac.  This is #PR 15774 at
       r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
-\item Fixed a pqR bug with expressions of the form \code{t(x)%*%y}
+\item Fixed a pqR bug with expressions of the form \code{t(x)\%*\%y}
       when \code{y} is an S4 object.
 \item Fixed a bug (PR #15399 at r-project.og) in \code{na.omit} and 
       \code{na.exclude} that led to a
