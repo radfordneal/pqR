@@ -2318,8 +2318,14 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_PRVALUE(prom,s[d+1].value);
 
                 /* We'll need this value for the subsequent replacement
-                   operation, so make sure it doesn't change... */
-                INC_NAMEDCNT(s[d+1].value);
+                   operation, so make sure it doesn't change.  Incrementing
+                   NAMEDCNT would be the obvious way, but if NAMEDCNT 
+                   was already non-zero, that leads to undesirable duplication
+                   later (even if the increment is later undone).  Making sure
+                   that NAMEDCNT isn't zero seems to be sufficient. */
+
+                if (NAMEDCNT_EQ_0(s[d+1].value)) 
+                    SET_NAMEDCNT_1(s[d+1].value);
 
                 e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
                 PROTECT(e);
@@ -2365,8 +2371,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         PROTECT(e = replaceCall (assgnfcn, lhsprom, 
                                                  s[d-1].store_args, rhsprom));
                     else { 
-                        /* Now undo increment of NAMEDCNT from previous loop. */
-                        DEC_NAMEDCNT(s[d].value);
                         SETCAR (s[d-1].value_arg, rhsprom);
                         PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
                                                        s[d-1].store_args)));
