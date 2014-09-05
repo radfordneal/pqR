@@ -45,7 +45,7 @@ findInterval <- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE)
        index = integer(nx),
        DUP = FALSE, 
        NAOK = TRUE, # NAOK: 'Inf' only
-       HELPER = nx*log(n) >= 50,
+       HELPER = nx*log(n+3) >= 50,
        PACKAGE = "base") $ index
 
     if(has.na) {
