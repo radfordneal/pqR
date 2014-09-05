@@ -1,4 +1,0 @@
-Miscellaneous cleanups, including fix of bug reported on r-devel by
-Herve Pages 2013-07-12.  Also gets rid of warning for (-Inf)^(1e16).
-
-
