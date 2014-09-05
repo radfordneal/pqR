@@ -68,8 +68,8 @@
 \item In \code{.C} and \code{.Fortran}, scalars (vectors of length one)
       are duplicated (in effect, though not necessarily physically) even 
       when \code{DUP=FALSE} is specified.  However, they are not duplicated 
-      in R Core versions (at least through R-3.1.1), so it may be unwise to 
-      rely on this.
+      in R Core versions (at least through R-3.1.1), 
+      so it may be unwise to rely on this.
 \item A \code{HELPERS} argument can now be used in \code{.C} and 
       \code{.Fortran} to specify that the C or Fortran routine may
       (sometimes) be done in a helper thread.  (See the section on
