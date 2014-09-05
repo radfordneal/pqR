@@ -39,7 +39,7 @@ cmdscale <- function (d, k = 2, eig = FALSE, add = FALSE, x.ret = FALSE)
         stop("'k' must be in {1, 2, ..  n - 1}")
     storage.mode(x) <- "double"
     ## doubly center x in-place
-    .C(C_dblcen, x, as.integer(n), DUP = FALSE)
+    x <- .C(C_dblcen, x = x, as.integer(n))$x
 
     if(add) { ## solve the additive constant problem
         ## it is c* = largest eigenvalue of 2 x 2 (n x n) block matrix Z:
@@ -54,7 +54,7 @@ cmdscale <- function (d, k = 2, eig = FALSE, add = FALSE, x.ret = FALSE)
 	x <- matrix(double(n*n), n, n)
         non.diag <- row(d) != col(d)
         x[non.diag] <- (d[non.diag] + add.c)^2
-        .C(C_dblcen, x, as.integer(n), DUP = FALSE)
+        x <- .C(C_dblcen, x = x, as.integer(n))$x
     }
     e <- eigen(-x/2, symmetric = TRUE)
     ev <- e$values[seq_len(k)]

@@ -2390,8 +2390,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         /* Ensure arguments won't change while task is not complete (the
            "in use" mechanism won't work on these inner objects). */
         for (na = 0; na < nargs; na++) {
-            SEXP arg = VECTOR_ELT(args,na);
-            if (NAMEDCNT_GT_0(arg)) SET_NAMEDCNT_MAX(arg);
+            SEXP arg = VECTOR_ELT(ans,na);
+            if (NAMEDCNT_GT_0(arg))
+                SET_NAMEDCNT_MAX(arg);
         }
         SEXP rawfun = allocVector (RAWSXP, sizeof dotCode_fun);
         memcpy (RAW(rawfun), &dotCode_fun, sizeof dotCode_fun);
