@@ -70,7 +70,7 @@
       when \code{DUP=FALSE} is specified.  However, they are not duplicated 
       in R Core versions (at least through R-3.1.1), 
       so it may be unwise to rely on this.
-\item A \code{HELPERS} argument can now be used in \code{.C} and 
+\item A \code{HELPER} argument can now be used in \code{.C} and 
       \code{.Fortran} to specify that the C or Fortran routine may
       (sometimes) be done in a helper thread.  (See the section on
       performance improvements below.)
@@ -196,13 +196,13 @@
       \code{.Call} and \code{.External} has been sped up to a lesser degree.
 \item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
       can now be done in a helper thread, in parallel with other computations.
-      This is done only if requested with the \code{HELPERS} option, and
+      This is done only if requested with the \code{HELPER} option, and
       at present only in certain limited circumstances, in which only a single
       output variable is used.  See \code{help(.C)} or \code{help(.Fortran)}
       for details.
 \item As an initial use of the previous feature, the \code{findInterval} 
       function now will sometimes execute its C routine in a helper thread.
-      (More significant uses of the \code{HELPERS} option to \code{.C} and
+      (More significant uses of the \code{HELPER} option to \code{.C} and
       \code{.Fortran} will follow in later releases.)
 \item Assignments that update a local variable by applying a single unary or 
       binary mathematical operation will now often re-use space for
