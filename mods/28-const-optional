@@ -1,0 +1,6 @@
+Make constant objects be actual read-only constants only optionally
+Was thought to perhaps be the source of the problem with RStudio,
+but seems it was't.  But code is still kept, with the option for
+constant objects to be read-only currently enabled.
+
+Also other cleanups to do with constant objects.

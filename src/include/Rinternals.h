@@ -317,13 +317,15 @@ typedef struct VECTOR_SEXPREC {
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
-/* Version of VECTOR_SEXPREC used for defining constants in const_obj.c */
+/* Version of VECTOR_SEXPREC used for defining constants in const-objs.c. */
 
-typedef const struct {
+#define R_CONST const  /* Define as 'const' to get actual read-only constants,
+                          or nothing if you don't want them to be read-only */
+typedef struct {
     SEXPREC_HEADER;
     struct vecsxp_struct vecsxp;
     union { double d; int w[2]; int i; char c; } data;
-} VECTOR_SEXPREC_CONST;
+} VECTOR_SEXPREC_C;
 
 
 #ifdef USE_RINTERNALS
@@ -815,7 +817,7 @@ typedef int PROTECT_INDEX;
 
 #define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
 				    	         root of the environment tree */
-LibExtern const SEXPREC R_EmptyEnv_const; /* defined in const-objs.c */
+LibExtern R_CONST SEXPREC R_EmptyEnv_const;   /* Defined in const-objs.c */
 
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 
@@ -828,44 +830,44 @@ LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 /* R_NilValue is the R NULL object */
 
 #define R_NilValue ((SEXP) &R_NilValue_const)
-LibExtern const SEXPREC R_NilValue_const; /* defined in const-objs.c */
+LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 
 /* Special Values */
 
 #define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
-LibExtern const SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c */
+LibExtern R_CONST SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c*/
 
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
 /* Logical Values.  Defined in const-objs.c */
 
 #define R_ScalarLogicalNA ((SEXP) &R_ScalarLogicalNA_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogicalNA_const;
 
 #define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogicalFALSE_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogicalFALSE_const;
 
 #define R_ScalarLogicalTRUE ((SEXP) &R_ScalarLogicalTRUE_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogicalTRUE_const;
 
 /* Integer Values.  Defined in const-objs.c */
 
 #define R_ScalarIntegerNA ((SEXP) &R_ScalarIntegerNA_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarIntegerNA_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarIntegerNA_const;
 
 #define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger0To10_const[v])
-LibExtern VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11];
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger0To10_const[11];
 
 /* Real Values.  Defined in const-objs.c */
 
 #define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarRealNA_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealNA_const;
 
 #define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarRealZero_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealZero_const;
 
 #define R_ScalarRealOne ((SEXP) &R_ScalarRealOne_const)
-LibExtern VECTOR_SEXPREC_CONST R_ScalarRealOne_const;
+LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealOne_const;
 
 
 #ifdef __MAIN__

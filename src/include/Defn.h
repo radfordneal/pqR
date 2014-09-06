@@ -146,7 +146,7 @@ extern0 SEXP	R_previousSymbol; /* "previous" */
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
-extern const SEXPREC R_unserialize_as_constant;
+extern R_CONST SEXPREC R_unserialize_as_constant;
 #define IS_CONSTANT(x) ((x)->gengc_next_node == &R_unserialize_as_constant)
 
 #ifdef USE_RINTERNALS
