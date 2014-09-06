@@ -43,10 +43,9 @@
    a read-only area of memory.  Care must consequently be taken that they
    are not written to.  
 
-   However, we'll be a bit cowardly about this at the moment, and let
-   them not really be "const" (in case somebody insists on writing to them,
-   we hope innocuously), if the R_CONST symbol defined in Rinternals.h
-   is empty (rather than 'const'). */
+   However, cowardice is allowed for, with them not really being "const" 
+   (in case somebody insists on writing to them, we hope innocuously), if 
+   the R_CONST symbol defined in Rinternals.h is empty (rather than 'const'). */
 
 
 /* Object to link to in gengc_next_node of a constant object in order to 

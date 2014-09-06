@@ -319,8 +319,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 /* Version of VECTOR_SEXPREC used for defining constants in const-objs.c. */
 
-#define R_CONST      /* Define as 'const' to get actual read-only constants */
-
+#define R_CONST const  /* Define as 'const' to get actual read-only constants,
+                          or nothing if you don't want them to be read-only */
 typedef struct {
     SEXPREC_HEADER;
     struct vecsxp_struct vecsxp;
