@@ -35,7 +35,6 @@
 #endif
 
 #include <complex.h>
-#include "Defn.h"		/*-> Arith.h -> math.h */
 
 
 /* This module defines some commonly-used objects as shared constants.
@@ -46,6 +45,9 @@
    However, cowardice is allowed for, with them not really being "const" 
    (in case somebody insists on writing to them, we hope innocuously), if 
    the R_CONST symbol defined in Rinternals.h is empty (rather than 'const'). */
+
+
+#include "Defn.h"    /* Includes Rinternals.h, which defines R_CONST */
 
 
 /* Object to link to in gengc_next_node of a constant object in order to 
@@ -199,3 +201,17 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
             return CONS(car,R_NilValue);
     }
 }
+
+
+/* Initialize variables holding constant values, for those who need them
+   as variables (eg, RStudio).  Need to first undefine their macro forms,
+   which were defined in Rinternals.h. */
+
+#undef R_NilValue
+SEXP R_NilValue = &R_NilValue_const;
+
+#undef R_EmptyEnv
+SEXP R_EmptyEnv = &R_EmptyEnv_const;
+
+#undef R_UnboundValue
+SEXP R_UnboundValue = &R_UnboundValue_const;
