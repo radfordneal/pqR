@@ -39,16 +39,21 @@
 
 
 /* This module defines some commonly-used objects as shared constants.
-   They are declared as "const" so that many compilers will put them in
+   They may be declared as "const" so that many compilers will put them in
    a read-only area of memory.  Care must consequently be taken that they
-   are not written to. */
+   are not written to.  
+
+   However, we'll be a bit cowardly about this at the moment, and let
+   them not really be "const" (in case somebody insists on writing to them,
+   we hope innocuously), if the R_CONST symbol defined in Rinternals.h
+   is empty (rather than 'const'). */
 
 
 /* Object to link to in gengc_next_node of a constant object in order to 
    identify it as a constant that should be re-created as the same constant 
    when unserializing. */
 
-const SEXPREC R_unserialize_as_constant;
+R_CONST SEXPREC R_unserialize_as_constant;
 
 
 /* Header for a constant.
@@ -65,7 +70,7 @@ const SEXPREC R_unserialize_as_constant;
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
    R_NilValue.  */
 
-const SEXPREC R_NilValue_const = { \
+R_CONST SEXPREC R_NilValue_const = { \
     CONST_HEADER(NILSXP)
     .u = { .listsxp = 
             { .carval = R_NilValue, .cdrval = R_NilValue, .tagval = R_NilValue }
@@ -76,7 +81,7 @@ const SEXPREC R_NilValue_const = { \
 /* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
    R_EmptyEnv.  */
 
-const SEXPREC R_EmptyEnv_const = { \
+R_CONST SEXPREC R_EmptyEnv_const = { \
     CONST_HEADER(ENVSXP)
     .u = { .envsxp = 
             { .frame = R_NilValue, .enclos = R_NilValue, .hashtab = R_NilValue }
@@ -87,7 +92,7 @@ const SEXPREC R_EmptyEnv_const = { \
 /* Definition of the R_UnboundValue constant, whose address when cast to SEXP
    is R_UnboundValue.  */
 
-const SYM_SEXPREC R_UnboundValue_const = { \
+R_CONST SYM_SEXPREC R_UnboundValue_const = { \
     CONST_HEADER(SYMSXP)
     .symsxp = { .pname = R_NilValue, 
                 .value = R_UnboundValue, 
@@ -105,9 +110,9 @@ const SYM_SEXPREC R_UnboundValue_const = { \
     .data = { .i = v } \
 }
 
-VECTOR_SEXPREC_CONST R_ScalarLogicalNA_const    = LOGICAL_CONST(NA_LOGICAL);
-VECTOR_SEXPREC_CONST R_ScalarLogicalFALSE_const = LOGICAL_CONST(FALSE);
-VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
+R_CONST VECTOR_SEXPREC_C R_ScalarLogicalNA_const    = LOGICAL_CONST(NA_LOGICAL);
+R_CONST VECTOR_SEXPREC_C R_ScalarLogicalFALSE_const = LOGICAL_CONST(FALSE);
+R_CONST VECTOR_SEXPREC_C R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
 
 
 /* Integer constants. */
@@ -118,9 +123,9 @@ VECTOR_SEXPREC_CONST R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
     .data = { .i = v } \
 }
 
-VECTOR_SEXPREC_CONST R_ScalarIntegerNA_const = INTEGER_CONST(NA_INTEGER);
+R_CONST VECTOR_SEXPREC_C R_ScalarIntegerNA_const = INTEGER_CONST(NA_INTEGER);
 
-VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11] = {
+R_CONST VECTOR_SEXPREC_C R_ScalarInteger0To10_const[11] = {
     INTEGER_CONST(0), INTEGER_CONST(1), INTEGER_CONST(2), INTEGER_CONST(3),
     INTEGER_CONST(4), INTEGER_CONST(5), INTEGER_CONST(6), INTEGER_CONST(7),
     INTEGER_CONST(8), INTEGER_CONST(9), INTEGER_CONST(10) 
@@ -135,10 +140,10 @@ VECTOR_SEXPREC_CONST R_ScalarInteger0To10_const[11] = {
     .data = { .d = v } \
 }
 
-VECTOR_SEXPREC_CONST R_ScalarRealZero_const = REAL_CONST(0.0);
-VECTOR_SEXPREC_CONST R_ScalarRealOne_const = REAL_CONST(1.0);
+R_CONST VECTOR_SEXPREC_C R_ScalarRealZero_const = REAL_CONST(0.0);
+R_CONST VECTOR_SEXPREC_C R_ScalarRealOne_const = REAL_CONST(1.0);
 
-VECTOR_SEXPREC_CONST R_ScalarRealNA_const = {
+R_CONST VECTOR_SEXPREC_C R_ScalarRealNA_const = {
     CONST_HEADER(REALSXP)
     .vecsxp = { .length = 1 },
 #ifdef WORDS_BIGENDIAN
@@ -158,7 +163,7 @@ VECTOR_SEXPREC_CONST R_ScalarRealNA_const = {
        } \
 }
 
-static const SEXPREC R_list1_constants[] = {
+static R_CONST SEXPREC R_list1_constants[] = {
     LIST1_CONST(R_ScalarLogicalNA_const),
     LIST1_CONST(R_ScalarLogicalFALSE_const),
     LIST1_CONST(R_ScalarLogicalTRUE_const),
@@ -176,6 +181,7 @@ static const SEXPREC R_list1_constants[] = {
     LIST1_CONST(R_ScalarInteger0To10_const[10]),
     LIST1_CONST(R_ScalarRealZero_const),
     LIST1_CONST(R_ScalarRealOne_const),
+    LIST1_CONST(R_ScalarRealNA_const),
     LIST1_CONST(R_NilValue_const) /* may be used, and also signals end of list*/
 };
 

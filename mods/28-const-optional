@@ -1,0 +1,4 @@
+Make constant objects be actual read-only constants only optionally
+(currently disabled, in case someone writes innoccuosly).  
+
+Also other cleanups to do with constant objects.
