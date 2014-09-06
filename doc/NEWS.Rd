@@ -147,6 +147,9 @@
 \item From R-2.15.3:
       The configure tests for Objective C and Objective C++ now work on
       Mac OS 10.8 with Xcode 4.5.2 (PR#15107).
+\item The cairo-based versions of \code{X11()} now work with
+      current versions of cairographics (e.g. 1.12.10).  (\PR{15168})
+
 }}
 
   \subsection{DOCUMENTATION UPDATES}{
