@@ -815,13 +815,14 @@ typedef int PROTECT_INDEX;
 
 /* Evaluation Environment */
 
+LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
+LibExtern R_CONST SEXPREC R_EmptyEnv_const;   /* Defined in const-objs.c */
 #define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
 				    	         root of the environment tree */
-LibExtern R_CONST SEXPREC R_EmptyEnv_const;   /* Defined in const-objs.c */
 
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 
-LibExtern SEXP  R_BaseEnv;	    /* The base environment; formerly R_NilValue */
+LibExtern SEXP  R_BaseEnv;	    /* The base environment (formerly R_NilValue) */
 LibExtern SEXP	R_BaseNamespace;    /* The (fake) namespace for base */
 LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 
@@ -829,13 +830,15 @@ LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
 /* R_NilValue is the R NULL object */
 
-#define R_NilValue ((SEXP) &R_NilValue_const)
+LibExtern SEXP R_NilValue;          /* Variable form, for those that need it */
 LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
+#define R_NilValue ((SEXP) &R_NilValue_const)
 
 /* Special Values */
 
-#define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
+LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 LibExtern R_CONST SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c*/
+#define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
 
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
 
