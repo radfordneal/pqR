@@ -2965,11 +2965,13 @@ SEXP ScalarRealMaybeConst(double x)
            as doubles, since double comparison doesn't work for NA or when 
            comparing -0 and +0 (which should be distinct). */
 
-        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealZero)[0]) 
+        uint64_t xv = *(uint64_t*) &x;
+
+        if (xv == *(uint64_t*) &REAL(R_ScalarRealZero)[0])
             return R_ScalarRealZero;
-        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealOne)[0]) 
+        if (xv == *(uint64_t*) &REAL(R_ScalarRealOne)[0])
             return R_ScalarRealOne;
-        if (*(uint64_t*) &x == *(uint64_t*) &REAL(R_ScalarRealNA)[0]) 
+        if (xv == *(uint64_t*) &REAL(R_ScalarRealNA)[0])
             return R_ScalarRealNA;
     }
 
