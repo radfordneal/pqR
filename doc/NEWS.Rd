@@ -116,9 +116,10 @@
       string will prevent any attempt to produce a stack trace on a
       segmentation fault, in favour of instead producing (maybe) an
       immediate core dump.
-\item The environment variable \code{R_BIT_BUCKET} can be set to
-      a file to receive output that would otherwise go to \file{dev/null}
-      when "make" is run to build pqR.
+\item The variable \code{R_BIT_BUCKET} in \file{share/make/vars.mk}
+      now specifies a file to receive output that is normally ignored
+      when building pqR.  It set to \file{dev/null} in the distribution,
+      but this can be changed to help diagnose build problems.
 \item The C functions \code{R_inspect} and \code{R_inspect3} functions are now
       visible to package code, so they can be used there for debugging.
       To see what they do, look in \file{src/main/inspect.c}.  They are subject
