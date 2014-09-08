@@ -361,9 +361,10 @@ code.  The @code{gp} field is serialized/unserialized for the
 
 Bits 14 and 15 of @code{gp} are used for `fancy bindings'.  Bit 14 is
 used to lock a binding or an environment, and bit 15 is used to indicate
-an active binding.  (For the definition of an `active binding' see the
-header comments in file @file{src/main/envir.c}.)  Bit 15 is used for an
+an active binding.  Bit 15 is used for an
 environment to indicate if it participates in the global cache.
+See the next section on @ref{Environments and variable
+lookup} for further details.
 
 @findex MISSING
 @findex SET_MISSING
@@ -425,7 +426,6 @@ node) and the node data, a union
 @example
 union @{
     struct primsxp_struct primsxp;
-    struct symsxp_struct symsxp;
     struct listsxp_struct listsxp;
     struct envsxp_struct envsxp;
     struct closxp_struct closxp;
@@ -448,6 +448,9 @@ The data is aligned as required for a double and/or a pointer (even
 when the actual data is integer, or some other type not requiring this
 alignment).
 
+A @code{symsxp} structure is also overlaid on top of these other
+structures (see below).
+
 The `data' for the various types are given in the table below.  A lot of
 this is interpretation, i.e. the types are not checked.  In particular,
 the garbage collector assumes that all the ``three-pointer'' types
@@ -469,9 +472,19 @@ Pointers to three nodes, the name, value and internal, accessed by
 @code{PRINTNAME} (a @code{CHARSXP}), @code{SYMVALUE} and
 @code{INTERNAL}.  (If the symbol's value is a @code{.Internal} function,
 the last is a pointer to the appropriate @code{SEXPREC}.)  Many symbols
-have @code{SYMVALUE} @code{R_UnboundValue}.  A fourth pointer follows
-this, and points to the next symbol in the global table of symbols.
-It is not used outside routines for maintaining this table.
+have @code{SYMVALUE} @code{R_UnboundValue}.  
+
+A fourth pointer follows
+this, pointing to the next symbol in the global hash table of symbols.
+It is not used outside routines for maintaining this table.  Note
+that currently symbols are never removed from this table, and hence
+never garbage collected.  This is sometimes relied upon in C code,
+making it difficult to change the scheme so that space for unused
+symbols can be recovered.
+
+There are then two further pointers, used to record the last
+binding of the symbol that was found in an unhashed environment.
+See the next section on @ref{Environments and variable lookup}.
 
 @item CLOSXP
 Pointers to the formals (a pairlist), the body and the environment.
@@ -584,28 +597,39 @@ in @R{} to mean @emph{either} the frame of an @code{ENVSXP} (a pairlist
 of symbol-value pairs) @emph{or} an @code{ENVSXP}, a frame plus an
 enclosure.
 
+Some bindings of variables are `active bindings', for
+which fetching and storing activate user-supplied functions.  They
+are created by @code{makeActiveBinding}.  See the help on that function
+and comments in file @file{src/main/envir.c} for details.
+
+Bindings and environments can be locked against change.  See the
+help for @code{lockBinding} and @code{lockEnvironment}.
+
 @cindex user databases
-There are additional places that `variables' can be looked up, called
+Finally, there are additional places that `variables' can be looked up, called
 `user databases' in comments in the code.  These seem undocumented in
 the @R{} sources, but apparently refer to the @pkg{RObjectTable} package
-at @uref{http://www.omegahat.org/RObjectTables/}.
+at @uref{http://www.omegahat.org/RObjectTables/}.  
 
 @cindex base environment
 @cindex environment, base
 The base environment is special.  There is an @code{ENVSXP} environment
-with enclosure the empty environment @code{R_EmptyEnv}, but the frame of
-that environment is not used.  Rather its bindings are part of the
-global symbol table, being those symbols in the global symbol table
-whose values are not @code{R_UnboundValue}.  When @R{} is started the
-internal functions are installed (by C code) in the symbol table, with
-primitive functions having values and @code{.Internal} functions having
-what would be their values in the field accessed by the @code{INTERNAL}
-macro.  Then @code{.Platform} and @code{.Machine} are computed and the
+with enclosure the empty environment, @code{R_EmptyEnv}, but the frame of
+that environment is not used.  Rather its bindings are recorded in
+the @code{SYMVALUE} field of a symbol (which is @code{R_UnboundValue}
+if it has no value in the base environment).  This environment contains
+heavily-used symbols such as @code{+} and @code{for}.  Note that 
+the @code{INTERNAL} field of a symbol may also contain values, but
+these are not technically bindings in any environment.
+When @R{} is started the primitive and
+internal functions are installed (by C code) in these fields of symbols.
+Then @code{.Platform} and @code{.Machine} are computed and the
 base package is loaded into the base environment followed by the system
 profile.
 
-The frames of environments (and the symbol table) are normally hashed
-for faster access (including insertion and deletion).
+The frames of environments, other than local environments of functions,
+are normally hashed for faster access (including insertion and deletion).
+The frame field is unused for hashed environments.
 
 By default @R{} maintains a (hashed) global cache of `variables' (that
 is symbols and their bindings) which have been found, and this refers
@@ -615,8 +639,29 @@ environment plus environments@footnote{Remember that attaching a list or
 a saved image actually creates and populates an environment and attaches
 that.} which have been @code{attach}ed.  When an environment is either
 @code{attach}ed or @code{detach}ed, the names of its symbols are flushed
-from the cache.  The cache is used whenever searching for variables from
-the global environment (possibly as part of a recursive search).
+from the cache.  The cache is (usually) used when searching for variables when
+the global environment is reached, but not when directly searching some 
+other environment that participates in the cache (since then bindings
+in the environment masked by others in the global cache should be visible).
+
+Variables in the global cache whose binding within it is its binding
+in the base environment are marked so that they can be accessed quickly
+without consulting the hash table.
+
+Local environments for functions may be marked (by @code{NO_SPEC_SYM})
+as known not to contain certain `special' symbols, such as @code{+}
+and @code{for}, so that lookup of such symbols can quickly skip these
+environments.  The list of such symbols, marked by @code{SPEC_SYM},
+is in @file{src/main/names.c}.
+
+Every symbol contains a pointer to the environment in which the last
+unhashed binding for the symbol was found, along with a pointer to
+the binding cell that was found for that lookup.  If a binding for the
+symbol is looked for again in this environment, the binding cell can be
+returned without a search (unless it has been set to @code{R_UnboundValue}
+due to deletion of the variable).  These fields are cleared (not followed)
+by the garbage collector, so that they will not result
+in memory being occupied after the object bound is no longer used.
 
 @menu
 * Search paths::                
