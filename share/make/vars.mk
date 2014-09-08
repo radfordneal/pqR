@@ -11,7 +11,8 @@ R_PKGS_RECOMMENDED =  MASS lattice Matrix nlme survival boot cluster codetools f
 # there are dependencies in src/library/Recommended/Makefile*
 # which this order respects
 
-# Where to direct output that is usually ignored.  Can be defined by an
-# variable, but defaults to /dev/null.
+# Where to direct output that is usually ignored during a build.  Normally
+# set to /dev/null, but can be changed to get information on why something
+# failed.
 
-R_BIT_BUCKET ?= /dev/null
+R_BIT_BUCKET = /dev/null
