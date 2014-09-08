@@ -128,6 +128,10 @@
       and "Calculating numerical derivatives" sections.  The
       discussion in "Finding and Setting Variables" has also been
       clarified to reflect current behaviour.
+\item Documentation in the "R Internals" manual has been updated
+      to reflect recent changes in pqR regarding symbols and variable
+      lookup, and to remove incorrect information about the global cache
+      present in the version from R-2.15.0 (and R-3.1.1).
 \item Fixed an out-of-date comment in the section on helper threads in
       the "R Internals" manual.
 }}
