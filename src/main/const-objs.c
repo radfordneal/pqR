@@ -208,10 +208,10 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
    which were defined in Rinternals.h. */
 
 #undef R_NilValue
-SEXP R_NilValue = &R_NilValue_const;
+SEXP R_NilValue = (SEXP) &R_NilValue_const;
 
 #undef R_EmptyEnv
-SEXP R_EmptyEnv = &R_EmptyEnv_const;
+SEXP R_EmptyEnv =  (SEXP) &R_EmptyEnv_const;
 
 #undef R_UnboundValue
-SEXP R_UnboundValue = &R_UnboundValue_const;
+SEXP R_UnboundValue =  (SEXP) &R_UnboundValue_const;
