@@ -3,7 +3,8 @@ pqR - a "pretty quick" implementation of the R programming language
 This directory contains the source code (plus documentation) for an
 implementation of the R programming language, including some R
 packages.  This implementation is a modification of R-2.15.0,
-distributed by the R Core Team, and found at www.r-project.org.
+distributed by the R Core Team, and found at www.r-project.org.  
+Some modules are taken from R-2.15.1 and later R Core Team releases.
 
 The modifications in pqR substantially improve the speed of R.  Some
 extensions to R are also implemented.  These modifications were
