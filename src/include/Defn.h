@@ -1552,10 +1552,12 @@ extern void *alloca(size_t);
 /* Macro for fast stack checking */
 
 #define R_CHECKSTACK() do { \
-    int dummy; \
-    if (R_CStackDir > 0 ? (uintptr_t)&dummy < R_CStackThreshold \
-                        : (uintptr_t)&dummy > R_CStackThreshold) \
-        R_CheckStack(); \
+    if (R_CStackLimit != (uintptr_t) -1) { \
+        int dummy; \
+        if (R_CStackDir > 0 ? (uintptr_t) &dummy < R_CStackThreshold \
+                            : (uintptr_t) &dummy > R_CStackThreshold) \
+            R_CheckStack(); \
+    } \
 } while (0)
 
 

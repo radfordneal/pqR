@@ -331,6 +331,15 @@
       The \code{optim} function also has this problem, but only
       when numerical derivatives are used.  It has not yet been fixed.
       The \code{integrate} function does not seem to have a problem.
+\item Fixed a bug in the code to check for C stack overflow, that may
+      show up when the fallback method for determining the start of the
+      stack is needed, and a stack check is then done when very little stack
+      is in use, resulting in an erroneous report of stack overflow.  The
+      problem is platform dependent, but arises on a SPARC Solaris system 
+      when using gcc 3.4.3, once stack usage is reduced by the improvement
+      described above, leading to failure of one of the tests for package 
+      Matrix.  This bug exists in R Core version back to 2.11.1 (or earlier)
+      and up to at least 3.1.1.
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
