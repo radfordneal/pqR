@@ -136,7 +136,27 @@ extern void * __libc_stack_end;
 
 int R_running_as_main_program = 0;
 
+int Rf_initialize_R1(int ac, char **av, void *stackstart);
+
 int Rf_initialize_R(int ac, char **av)
+{
+    int dummy;
+    return Rf_initialize_R1 (ac, av, (void*)&dummy);
+}
+
+/* This function is split from Rf_initialize so that it can be passed
+   the address, stackstart, of a local variable that is close to the
+   start of the C stack.  Note that Rf_initialize_R1 has some large
+   local variables, and there is no guarantee that a dummy variable here
+   would be put on the stack ahead of them, it so might not be near the
+   start of the stack. 
+
+   Rf_initialize_R1 is not called directly, but is nevertheless global
+   so that the compiler will be discouraged from inlining it into
+   Rf_initialize and merging their stack frames, thereby defeating the
+   scheme. */
+
+int Rf_initialize_R1(int ac, char **av, void *stackstart)
 {
     int i, ioff = 1, j;
     Rboolean useX11 = TRUE, useTk = FALSE;
@@ -149,20 +169,24 @@ int Rf_initialize_R(int ac, char **av)
     char localedir[PATH_MAX+20];
 #endif
 
-#if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
+    R_CStackLimit = (uintptr_t) -1;  /* no check made if it stays this way */
 
-    struct rlimit rlim;
+#if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
 
     extern int R_stack_growth_direction (uintptr_t);
     int tmp;
     R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
 
+    struct rlimit rlim;
     if(getrlimit(RLIMIT_STACK, &rlim) == 0) {
-	unsigned long lim1, lim2;
-	lim1 = (unsigned long) rlim.rlim_cur;
-	lim2 = (unsigned long) rlim.rlim_max; /* Usually unlimited */
-	R_CStackLimit = lim1 < lim2 ? lim1 : lim2;
+        R_CStackLimit = 
+          rlim.rlim_cur < rlim.rlim_max ? rlim.rlim_cur : rlim.rlim_max;
+        if (R_CStackLimit == (uintptr_t) -1)
+            goto done_stack_check;
     }
+    else
+        goto done_stack_check;
+
 #if defined(HAVE_LIBC_STACK_END)
     R_CStackStart = (uintptr_t) __libc_stack_end;
 #elif defined(HAVE_KERN_USRSTACK)
@@ -175,24 +199,27 @@ int Rf_initialize_R(int ac, char **av)
 	R_CStackStart = (uintptr_t) base;
     }
 #else
-    if(R_running_as_main_program) {
-	/* This is not the main program, but unless embedded it is
-	   near the top, 5540 bytes away when checked. */
-	R_CStackStart = (uintptr_t) &i + (6000 * R_CStackDir);
+    if (R_running_as_main_program && stackstart != NULL) {
+	/* Use the address passed as the start of the stack, unless it's NULL */
+	R_CStackStart = (uintptr_t) stackstart;
     }
+    else
+        goto done_stack_check;
 #endif
-    if(R_CStackStart == -1) R_CStackLimit = -1; /* never set */
 
     R_CStackThreshold = 
-      R_CStackDir > 0 ? R_CStackStart - (uintptr_t) (0.95*R_CStackLimit)
-                      : R_CStackStart + (uintptr_t) (0.95*R_CStackLimit);
+       R_CStackDir>0 ? R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit)
+                     : R_CStackStart - 1000 + (uintptr_t) (0.95*R_CStackLimit);
 
 #if 0 /* enable for debugging */
-    printf ("stack limit %ld, start %lx, dir %d, threshold %lx\n", 
-            R_CStackLimit, R_CStackStart, R_CStackDir, R_CStackThreshold); 
+    printf ("stack limit %lu, start %lu, dir %d, threshold %lu\n", 
+            (unsigned long) R_CStackLimit, (unsigned long) R_CStackStart, 
+            R_CStackDir, (unsigned long) R_CStackThreshold); 
 #endif
 
 #endif
+
+done_stack_check:
 
     ptr_R_Suicide = Rstd_Suicide;
     ptr_R_ShowMessage = Rstd_ShowMessage;
