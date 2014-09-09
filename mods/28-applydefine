@@ -30,3 +30,5 @@ taken.
 
 Fixes a latent bug in byte-code interpreter activated by presence
 of promises with NAMEDCNT == 1.  Should also speed it up a bit.
+
+This mod also has some general updates to NEWS.Rd.
