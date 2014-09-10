@@ -235,26 +235,26 @@ void begincontext(RCNTXT * cptr, int flags,
 		  SEXP promargs, SEXP callfun)
 {
     cptr->nextcontext = R_GlobalContext;  /* store in order in structure, */
-    cptr->cstacktop = R_PPStackTop;       /*   since that may be faster   */
+    cptr->callflag = flags;               /*   since that may be faster   */
+    cptr->cstacktop = R_PPStackTop;
     cptr->evaldepth = R_EvalDepth;
-    cptr->callfun = callfun;
-    cptr->vmax = VMAXGET();
-    cptr->intsusp = R_interrupts_suspended;
-    cptr->callflag = flags;
-    cptr->handlerstack = R_HandlerStack;
-    cptr->restartstack = R_RestartStack;
     cptr->promargs = promargs;
+    cptr->callfun = callfun;
     cptr->sysparent = sysp;
     cptr->call = syscall;
     cptr->cloenv = env;
     cptr->conexit = R_NilValue;
     cptr->cend = NULL;
+    cptr->vmax = VMAXGET();
+    cptr->intsusp = R_interrupts_suspended;
+    cptr->handlerstack = R_HandlerStack;
+    cptr->restartstack = R_RestartStack;
     cptr->prstack = R_PendingPromises;
-    cptr->srcref = R_Srcref;
     cptr->nodestack = R_BCNodeStackTop;
 #ifdef BC_INT_STACK
     cptr->intstack = R_BCIntStackTop;
 #endif
+    cptr->srcref = R_Srcref;
     R_GlobalContext = cptr;
 }
 
