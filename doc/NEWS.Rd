@@ -386,7 +386,7 @@
       (Also fixed in R-3.1.1, though differently.)
 \item Fixed the problem that RStudio crashed whenever a function was
       debugged (with \code{debug}).  This was due to pqR having changed
-      the order fields in the \code{RCNTXT} structure, which is an
+      the order of fields in the \code{RCNTXT} structure, which is an
       internal data structure of the interpreter, but is nevertheless
       accessed in RStudio.  The order of fields is now back to what it was.
 \item Fixed the bug in \code{nlm} reported as PR #15958
