@@ -331,12 +331,12 @@ static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* faster versions of shellsort, following Sedgewick (1986) */
 
-static const int incs[16] = {1073790977, 268460033, 67121153, 16783361, 4197377,
+static const int incs[] = {1073790977, 268460033, 67121153, 16783361, 4197377,
 		       1050113, 262913, 65921, 16577, 4193, 1073, 281, 77,
-		       23, 8, 1};
+		       23, 8, 1, 0};
 
 #define sort2_body \
-    for (h = incs[t]; t < 16; h = incs[++t]) \
+    for (h = incs[t]; h != 0; h = incs[++t]) \
 	for (i = h; i < n; i++) { \
 	    v = x[i]; \
 	    j = i; \
@@ -383,7 +383,7 @@ static void R_csort2(Rcomplex *x, int n, Rboolean decreasing)
     int i, j, h, t;
 
     for (t = 0; incs[t] > n; t++);
-    for (h = incs[t]; t < 16; h = incs[++t])
+    for (h = incs[t]; h != 0; h = incs[++t])
 	for (i = h; i < n; i++) {
 	    v = x[i];
 	    j = i;
@@ -405,7 +405,7 @@ static void ssort2(SEXP *x, int n, Rboolean decreasing)
     int i, j, h, t;
 
     for (t = 0; incs[t] > n; t++);
-    for (h = incs[t]; t < 16; h = incs[++t])
+    for (h = incs[t]; h != 0; h = incs[++t])
 	for (i = h; i < n; i++) {
 	    v = x[i];
 	    j = i;
@@ -709,7 +709,7 @@ static void orderVector(int *indx, int n, SEXP key, Rboolean nalast,
     int itmp;
 
     for (t = 0; incs[t] > n; t++);
-    for (h = incs[t]; t < 16; h = incs[++t])
+    for (h = incs[t]; h != 0; h = incs[++t])
 	for (i = h; i < n; i++) {
 	    itmp = indx[i];
 	    j = i;
@@ -724,7 +724,7 @@ static void orderVector(int *indx, int n, SEXP key, Rboolean nalast,
 }
 
 #define sort2_with_index \
-	    for (h = incs[t]; t < 16; h = incs[++t]) \
+	    for (h = incs[t]; h != 0; h = incs[++t]) \
 		for (i = lo + h; i <= hi; i++) { \
 		    itmp = indx[i]; \
 		    j = i; \
