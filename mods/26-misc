@@ -34,3 +34,5 @@ Karline Soetaert.  Three routines affected:  nlm, uniroot, optimize.
 
 Fixed a pqR bug involving expressions like t(x) %*% y when y
 is an S4 object.
+
+Tweaked sort.c to not do (innocuous) out-of-bounds array access.
