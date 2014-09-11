@@ -319,6 +319,11 @@
       \code{na.exclude} that led to a
       data frame that should have had zero rows having one row instead.
       (Also fixed in R-3.1.1, though differently.)
+\item Fixed the problem that RStudio crashed whenever a function was
+      debugged (with \code{debug}).  This was due to pqR having changed
+      the order fields in the \code{RCNTXT} structure, which is an
+      internal data structure of the interpreter, but is nevertheless
+      accessed in RStudio.  The order of fields is now back to what it was.
 \item Fixed the bug in \code{nlm} reported as PR #15958
       at r-project.org, along with related bugs in \code{uniroot} and
       \code{optimize}.  These all involve situations where the function
