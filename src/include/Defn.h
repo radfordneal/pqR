@@ -709,7 +709,11 @@ typedef struct RPRSTACK {
     struct RPRSTACK *next;
 } RPRSTACK;
 
-/* Evaluation Context Structure */
+
+/* Evaluation Context Structure.  Note that RStudio (at least in Sept 2014)
+   looks at this structure, and so may break if it is changed (other than
+   by adding at the end, probably). */
+
 typedef struct RCNTXT {
     struct RCNTXT *nextcontext;	/* The next context up the chain */
     int callflag;		/* The context "type" */
@@ -744,7 +748,9 @@ typedef struct RCNTXT {
  * this allows us to move up the context stack easily
  * with either RETURN's or GENERIC's or RESTART's.
  * If you add a new context type for functions make sure
- *   CTXT_NEWTYPE & CTXT_FUNCTION > 0
+ * (CTXT_NEWTYPE & CTXT_FUNCTION) > 0
+ *
+ * Note that RStudio looks at this (see comment above).
  */
 enum {
     CTXT_TOPLEVEL = 0,
@@ -778,6 +784,7 @@ BUI   0 0 0 0 0 0 0 1 = 64
 #define SET_RESTART_BIT_ON(flags) (flags |= CTXT_RESTART)
 #define SET_RESTART_BIT_OFF(flags) (flags &= ~CTXT_RESTART)
 #endif
+
 
 /* Miscellaneous Definitions */
 #define streql(s, t)	(!strcmp((s), (t)))
