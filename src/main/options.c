@@ -685,11 +685,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
                  || LENGTH(argi)!=1 && LENGTH(argi)!=R_mat_mult_with_BLAS_len)
 		    error(_("invalid value for '%s'"), CHAR(namei));
                 ov = allocVector (LGLSXP, R_mat_mult_with_BLAS_len);
-                for (j = 0; j<R_mat_mult_with_BLAS_len; j++) {
+                for (j = 0; j<R_mat_mult_with_BLAS_len; j++)
                     LOGICAL(ov)[j] = LOGICAL(argi) [LENGTH(argi)==1 ? 0 : j];
-                    if (LOGICAL(ov)[j] == NA_LOGICAL)
-		        error(_("invalid value for '%s'"), CHAR(namei));
-                }
                 for (j = 0; j<R_mat_mult_with_BLAS_len; j++) 
                     R_mat_mult_with_BLAS[j] = LOGICAL(ov)[j];
 		SET_VECTOR_ELT(value, i, SetOption(tag, ov));

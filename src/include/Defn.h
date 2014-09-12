@@ -902,7 +902,8 @@ extern0 int	R_ParseContextLine; /* Line in file of the above */
 extern int	R_DirtyImage	INI_as(0);	/* Current image dirty */
 
 /* How should %*% operations be done - with C routines or BLAS routines?  
-   For four kinds of operations: vec-dot, mat-vec, vec-mat, mat-mat. */
+   For four kinds of operations: vec-dot, mat-vec, vec-mat, mat-mat.
+   NA same as FALSE except for mat-mat with big matrix and no NA/NaN. */
 #define R_mat_mult_with_BLAS_len 4
 extern0 Rboolean R_mat_mult_with_BLAS [R_mat_mult_with_BLAS_len] 
 #ifdef __MAIN__
