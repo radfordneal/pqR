@@ -24,21 +24,31 @@ x \%*\% y
   This operator is S4 generic but not S3 generic.  S4 methods need to be
   written for a function of two arguments named \code{x} and \code{y}.
 
+  With the default real or complex method, when one operand of
+  \code{\%*\%} can be recognized as being the result of a transpose
+  operation (\code{\link{t}}), the transpose is not actually computed,
+  but instead a matrix multiplication routine (either from the BLAS or
+  the appropriate C routine) is used that operates directly on the
+  transposed operand.  This is equivalent to use of the
+  \code{crossprod} or \code{tcrossprod} functions.  If both operands
+  are transposed, the transposed first operand will not actually be
+  computed, but the second will be.
+
+  With the default real or complex method, when a vector is promoted
+  to a matrix, its names are not promoted to row or column names,
+  unlike \code{\link{as.matrix}}.
+
   The default method for real matrices uses either built-in C routines
   or the appropriate BLAS routine, as controlled by the
-  \code{mat_mult_with_BLAS} option.  This option is a vector of four
-  logical values, specifying whether a BLAS routine should be used
-  when the operands of \code{\%*\%} result in the operation being a
-  vector dot product, a product of a matrix and column vector, a
-  product of a row vector and a matrix, or a general matrix-matrix
-  product.  The default is to use the builtin C routines for all operations, 
+  \code{mat_mult_with_BLAS} option (see below).  
+  The default is to use the builtin C routines for all operations, 
   unless the \code{--enable-mat-mult-with-BLAS-by-default} option is used
   when configuring pqR.
 
   If the builtin C routines are used when helper threads are enabled,
   they will take piplelined input for their second operand, and produce
   pipelined output for vector-matrix and matrix-matrix products.  Matrix
-  multiplication with the BLAS routines can be done in helper threads
+  multiplication with the BLAS routines can also be done in helper threads
   (though this can be disabled when configuring pqR with the 
   \code{--disable-mat-mult-with-BLAS-in-helpers} option), 
   but with no pipelining of inputs or output.
@@ -60,19 +70,20 @@ x \%*\% y
   of the BLAS matrix multiply routines, regardless of how the
   \code{mat_mult_with_BLAS} option is set.
 
-  With the default real or complex method, when a vector is promoted
-  to a matrix, its names are not promoted to row or column names,
-  unlike \code{\link{as.matrix}}.
-
-  With the default real or complex method, when one operand of
-  \code{\%*\%} can be recognized as being the result of a transpose
-  operation (\code{\link{t}}), the transpose is not actually computed,
-  but instead a matrix multiplication routine (either from the BLAS or
-  the appropriate C routine) is used that operates directly on the
-  transposed operand.  This is equivalent to use of the
-  \code{crossprod} or \code{tcrossprod} functions.  If both operands
-  are transposed, the transposed first operand will not actually be
-  computed, but the second will be.
+  The \code{mat_mult_with_BLAS} option is a vector of four
+  logical values, specifying whether a BLAS routine should be used
+  when the operands of \code{\%*\%} result in the operation being a
+  vector dot product, a product of a matrix and column vector, a
+  product of a row vector and a matrix, or a general matrix-matrix
+  product.  A value of \code{NA} is the same as \code{FALSE} except
+  for matrix-matrix multiplies, for which the BLAS is used except when
+  an operand contains an \code{NA} or \code{NaN} value (or the operands
+  are of a size where checking this takes time comparable to just
+  doing the operation with the C routines).  Setting \code{mat_mult_with_BLAS} 
+  to \code{NA} therefore gives the same effect as R Core releases
+  (at least to R-3.1.1), but without the substantial inefficiency
+  that R Core releases incur from checking for \code{NA} or \code{NaN}
+  values even when this takes more time than the multiply itself.
 
 }
 \value{
