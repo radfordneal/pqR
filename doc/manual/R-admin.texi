@@ -1022,11 +1022,10 @@ LANGUAGE=en LC_TIME=C
 @chapter Installing R under Windows
 @cindex Installing under Windows
 
-The current version of pqR has not been tested under Windows.
-There is no known reason why it shouldn't work, but there has
-likely been some change that will cause problems.  This section
-is retained for future reference once this has been remedied.
-It applies at present only to R-2.15.0, not to pqR.
+Recent versions of pqR have been successfully installed under Windows,
+sometimes with small tweaks required, but they have not been tested
+extensively , and some problems are likely.  This section describes
+R-2.15.0, but may also be relevant to pqR.
 
 The @file{bin/windows} directory of a @acronym{CRAN} site contains
 binaries for a base distribution and a large number of add-on packages
@@ -1550,11 +1549,11 @@ given by @code{R.home()}).
 @chapter Installing R under (Mac) OS X
 @cindex OS X
 
-The current version of pqR has not been tested under OS X.
-There is no known reason why it shouldn't work, but there has
-likely been some change that will cause problems.  This section
-is retained for future reference once this has been remedied.
-It applies at present only to R-2.15.0, not to pqR.
+The current version of pqR has tested under OS X, and works with
+the Xcode compilers (except that these do not support OpenMP, and
+hence do not support helper threas), and with recent versions of gcc
+(4.7 to 4.9).  This section describes R-2.15.0, but may apply to
+pqR as well.
 
 The @file{bin/macosx} directory of a @acronym{CRAN} site contains
 binaries for OS X for a base distribution and a large number of
@@ -3492,7 +3491,7 @@ If you need to re-configure @R{} with different options you may need to run
 Support for computations in helper threads and for merging of tasks is
 enabled by default.  
 
-Use of helper and may be disabled with the
+Use of helper threads may be disabled with the
 @code{--disable-helper-threads} configuration option.  Disabling
 support for helper threads will produce a small speed improvement,
 compared to running @pqR{} with helper thread support enabled, but
@@ -3504,7 +3503,7 @@ Merging of tasks may be disabled with the
 @code{--disable-task-merging} configuration option.  Currently, code
 for all possible merged tasks (2744 of them) is generated at compile
 time.  This code occupies space at run time, and takes time and space
-to generate when pqR is compiled.  On small systems, it may therefore
+to generate when pqR is compiled.  On very small systems, it may therefore
 be desirable (or essential) to disable task merging.
 
 The whole helpers apparatus, including deferred evaluation even with
@@ -3513,9 +3512,12 @@ no helper threads and no task merging, can be disabled with the
 produce a further slight speed improvement in situations where neither
 helper threads nor task merging are useful.
 
-If the BLAS routines used for matrix multiplication are not thread-safe,
-the @code{--disable-mat-mult-with-BLAS-in-helpers} option should be
-used, to prevent tasks that call the BLAS from being run in helper threads.
+If the BLAS routines used for matrix multiplication are not
+thread-safe, the @code{--disable-mat-mult-with-BLAS-in-helpers} option
+should be used, to prevent tasks that call the BLAS from being run in
+helper threads.  This option may also be useful if the BLAS is
+multi-threaded and runs inefficiently (even if correctly) when several
+BLAS routines are running in parallel.
 
 
 @node Internationalization support, Configuration variables, Helper threads and task merging, Configuration on a Unix-alike
