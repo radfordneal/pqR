@@ -957,36 +957,33 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             use_BLAS = R_mat_mult_with_BLAS[3];
             if (use_BLAS != NA_INTEGER) 
                 goto done_BLAS_check;
-            /* Don't use the BLAS if ISNAN check is more costly than possible
-               gain; 3 is a somewhat arbitrary fudge factor */
-            if (3*((double)nrows+ncols) >= (double)nrows*ncols) {
-                use_BLAS = 0
+            /* Don't use the BLAS if ISNAN check is more costly than
+               possible gain; 3 is a somewhat arbitrary fudge factor */
+            use_BLAS = 0;
+            if (3*((double)nrows+ncols) >= (double)nrows*ncols)
                 goto done_BLAS_check;
+            /* Use BLAS unless we find an NA/NaN below */
+            int lenx = LENGTH(x);
+            double *rx = REAL(x);
+            if ((lenx&1) != 0 && ISNAN(rx[0]))
+                goto done_BLAS_check;
+            for (int ix = lenx&1; ix < lenx; ix += 2) {
+                if (ISNAN(rx[ix]+rx[ix+1]) 
+                      && (ISNAN(rx[ix]) || ISNAN(rx[ix+1])))
+                    goto done_BLAS_check;
             }
-            use_BLAS = 1;  /* use BLAS unless we find an NA/NaN below */
-            int len;
-            len = LENGTH(x);
-            if ((len&1) != 0 && ISNAN(x[0])) {
-                use_BLAS = 0;
-                goto done_check;
-            }
-            for (int ix = len&1; ix < len; ix += 2) {
-                if (ISNAN(x[ix]+x[ix+1])) { 
-                    use_BLAS = 0; 
-                    break;
+            if (x != y) {
+                int leny = LENGTH(y);
+                double *ry = REAL(y);
+                if ((leny&1) != 0 && ISNAN(ry[0]))
+                    goto done_BLAS_check;
+                for (int iy = leny&1; iy < leny; iy += 2) {
+                    if (ISNAN(ry[iy]+ry[iy+1])
+                          && (ISNAN(ry[iy]) || ISNAN(ry[iy+1])))
+                        goto done_BLAS_check;
                 }
             }
-            len = LENGTH(y);
-            if ((len&1) != 0 && ISNAN(y[0])) {
-                use_BLAS = 0;
-                goto done_check;
-            }
-            for (int iy = len&1; iy < len; iy += 2) {
-                if (ISNAN(y[iy]+y[iy+1])) { 
-                    use_BLAS = 0; 
-                    break;
-                }
-            }
+            use_BLAS = 1;
           done_BLAS_check: ;
         }
 
