@@ -950,12 +950,15 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (LENGTH(ans) != 0) {
 
-        /* Decide whether to use the BLAS for a full-size matrix multiply. */
+        /* Decide whether to use the BLAS for a full-size matrix multiply. 
+           Done according to mat_mult_with_BLAS (with NA same as FALSE)
+           except when mat_mult_with_BLAS is NA and the op is %*%, we use
+           the BLAS for large matrices with no NA/NaN elements. */
 
-        int use_BLAS;
+        int use_BLAS; /* not used for vec-vec, vec-mat, or mat-vec multiplies */
         if (ncols > 1 && nrows > 1 && k > 0) {
             use_BLAS = R_mat_mult_with_BLAS[3];
-            if (use_BLAS != NA_INTEGER) 
+            if (use_BLAS != NA_INTEGER || PRIMVAL(op) != 0)
                 goto done_BLAS_check;
             /* Don't use the BLAS if ISNAN check is more costly than
                possible gain; 3 is a somewhat arbitrary fudge factor */
