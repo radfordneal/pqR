@@ -17,7 +17,7 @@
 
   Using \code{crossprod} and
   \code{tcrossprod} was somewhat faster than using \code{\%*\%} in
-  R-2.15.0, but the difference is negligible in pqR, since pqR recognizes
+  R-2.15.0, but the difference is small in pqR, since pqR recognizes
   when an operand of \code{\%*\%} is written as a transpose, and 
   then does the same thing as \code{crossprod} or \code{tcrossprod}.
 }
@@ -37,8 +37,10 @@ tcrossprod(x, y = NULL)
 }
 \details{
   The multiplication is done either by a BLAS routine or by a C routine,
-  in the same way as for \code{\link{\%*\%}}, referring to the setting of
-  the \code{mat_mult_with_BLAS} option.
+  in the same way as for \code{\link{\%*\%}}, based on the setting of
+  the \code{mat_mult_with_BLAS} option, except that a \code{NA}
+  value for \code{mat_mult_with_BLAS} is always equivalent to 
+  \code{FALSE} for \code{crossprod} and \code{tcrossprod}.
 
   When the C routines are used for the multiplication, and helper
   threads are enabled, \code{crossprod} and \code{tcrossprod} will

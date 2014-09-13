@@ -950,6 +950,46 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (LENGTH(ans) != 0) {
 
+        /* Decide whether to use the BLAS for a full-size matrix multiply. 
+           Done according to mat_mult_with_BLAS (with NA same as FALSE)
+           except when mat_mult_with_BLAS is NA and the op is %*%, we use
+           the BLAS for large matrices with no NA/NaN elements. */
+
+        int use_BLAS; /* not used for vec-vec, vec-mat, or mat-vec multiplies */
+        if (ncols > 1 && nrows > 1 && k > 0) {
+            use_BLAS = R_mat_mult_with_BLAS[3];
+            if (use_BLAS != NA_INTEGER || PRIMVAL(op) != 0)
+                goto done_BLAS_check;
+            /* Don't use the BLAS if ISNAN check is more costly than
+               possible gain; 3 is a somewhat arbitrary fudge factor */
+            use_BLAS = 0;
+            if (3*((double)nrows+ncols) >= (double)nrows*ncols)
+                goto done_BLAS_check;
+            /* Use BLAS unless we find an NA/NaN below */
+            int lenx = LENGTH(x);
+            double *rx = REAL(x);
+            if ((lenx&1) != 0 && ISNAN(rx[0]))
+                goto done_BLAS_check;
+            for (int ix = lenx&1; ix < lenx; ix += 2) {
+                if (ISNAN(rx[ix]+rx[ix+1]) 
+                      && (ISNAN(rx[ix]) || ISNAN(rx[ix+1])))
+                    goto done_BLAS_check;
+            }
+            if (x != y) {
+                int leny = LENGTH(y);
+                double *ry = REAL(y);
+                if ((leny&1) != 0 && ISNAN(ry[0]))
+                    goto done_BLAS_check;
+                for (int iy = leny&1; iy < leny; iy += 2) {
+                    if (ISNAN(ry[iy]+ry[iy+1])
+                          && (ISNAN(ry[iy]) || ISNAN(ry[iy+1])))
+                        goto done_BLAS_check;
+                }
+            }
+            use_BLAS = 1;
+          done_BLAS_check: ;
+        }
+
         if (k == 0) { /* result is a matrix of all zeros, real or complex */
             task_proc = mode==CPLXSXP ? task_cfill_zeros : task_fill_zeros;
         }
@@ -966,7 +1006,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         else if (nrows==1 && ncols==1) { /* dot product, real */
-            if (R_mat_mult_with_BLAS[0]) {
+            if (R_mat_mult_with_BLAS[0] == 1) {
                 task_proc = task_matprod_vec_vec_BLAS;
 #               ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                     inhlpr = 0;
@@ -982,7 +1022,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         else if (primop == 0) { /* %*%, real, not dot product, not null or 0s */
             if (ncols==1) {
-                if (R_mat_mult_with_BLAS[1]) {
+                if (R_mat_mult_with_BLAS[1] == 1) {
                     task_proc = task_matprod_mat_vec_BLAS;
 #                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                         inhlpr = 0;
@@ -996,7 +1036,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
             else if (nrows==1) {
-                if (R_mat_mult_with_BLAS[2]) {
+                if (R_mat_mult_with_BLAS[2] == 1) {
                     task_proc = task_matprod_vec_mat_BLAS;
 #                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                         inhlpr = 0;
@@ -1010,7 +1050,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
             else {
-                if (R_mat_mult_with_BLAS[3]) {
+                if (use_BLAS == 1) {
                     task_proc = task_matprod_mat_mat_BLAS;
 #                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
                         inhlpr = 0;
@@ -1025,7 +1065,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
         }
 
-        else {  /* crossprod or tcrossprod, real, not dot product, not or 0s */
+        else {  /* crossprod or tcrossprod, real, not dot product, not all 0s */
             if (nrows==1 || ncols==1) {
                 if (primop==1) {
                     if (ncols==1) { op1 = y; op2 = x; }
@@ -1059,7 +1099,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
             else {
-                if (R_mat_mult_with_BLAS[3]) {
+                if (use_BLAS == 1) {
                     task_proc = primop==1 ? task_matprod_trans1_BLAS 
                                           : task_matprod_trans2_BLAS;
 #                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
