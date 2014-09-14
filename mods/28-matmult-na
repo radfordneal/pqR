@@ -1,3 +1,6 @@
 Changes to whether BLAS is used to do matrix multiplies,
 to mimic R Core behaviour so far as it makes any sense
 at all.
+
+Also renames the --disable-mat-mult-with-BLAS-in-helpers
+configuration option to --disable-BLAS-in-helpers.

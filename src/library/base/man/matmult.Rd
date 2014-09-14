@@ -46,12 +46,12 @@ x \%*\% y
   when configuring pqR.
 
   If the builtin C routines are used when helper threads are enabled,
-  they will take piplelined input for their second operand, and produce
-  pipelined output for vector-matrix and matrix-matrix products.  Matrix
-  multiplication with the BLAS routines can also be done in helper threads
-  (though this can be disabled when configuring pqR with the 
-  \code{--disable-mat-mult-with-BLAS-in-helpers} option), 
-  but with no pipelining of inputs or output.
+  they will take piplelined input for their second operand, and
+  produce pipelined output for vector-matrix and matrix-matrix
+  products.  Matrix multiplication with the BLAS routines can also be
+  done in helper threads (though this can be disabled when configuring
+  pqR with the \code{--disable-BLAS-in-helpers} option), but with no
+  pipelining of inputs or output.
 
   Another reason one might wish to use the built-in C routines is that
   they guarantee correct behaviour when some elements are \code{NA},

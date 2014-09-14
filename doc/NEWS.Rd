@@ -120,9 +120,10 @@
       references on the stack.
 }}
 
-  \subsection{NEW FEATURES FOR BUILDING, TESTING, AND DEBUGGING}{
-    These are mostly of interest to developers, not to most users.
+  \subsection{INSTALLATION, BUILDING, TESTING, AND DEBUGGING}{
     \itemize{
+\item The \code{--disable-mat-mult-with-BLAS-in-helpers} configuration
+      option has been renamed as \code{--disable-BLAS-in-helpers}.
 \item Setting the environment variable \code{R_ABORT} to any non-null
       string will prevent any attempt to produce a stack trace on a
       segmentation fault, in favour of instead producing (maybe) an
