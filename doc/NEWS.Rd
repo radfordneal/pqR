@@ -58,6 +58,17 @@
       by \code{formals}, as they are shown when printed or with \code{args}.
       In R Core releases (at least to R-3.1.1), the result of \code{formals}
       for a primitive is \code{NULL}.
+\item The \code{mat_mult_with_BLAS} option, which controls whether the
+      BLAS routines or pqR's C routines are used for matrix multiplication,
+      may now be set to \code{NA}, which is equivalent to \code{FALSE},
+      except that for multiplication of sufficiently large matrices (not
+      vector-vector, vector-matrix, or matrix-vector multiplication) pqR 
+      will use a BLAS routine unless there is an element in one of the 
+      operands that is \code{NA} or \code{NaN}.  This mimics the behaviour 
+      of R Core implementations (at least through 3.1.1), which is motivated
+      by a desire to ensure that \code{NA} is propagated correctly even
+      if the BLAS does not do so, but avoids the substantial but needless 
+      inefficiency present in the R Core implementation.  
 \item Setting the \code{deparse.max.lines} option will now limit the
       number of lines printed when exiting debug of a function, as
       well as when entering.
