@@ -54,7 +54,7 @@ likely to be useful are as follows:
         hyperthreading.  It is necessary if your system does not
         support the OpenMP facility.
 
-    --disable-mat-mult-with-BLAS-in-helpers
+    --disable-BLAS-in-helpers
 
         Specify this option if the BLAS routines you plan to use are
         not thread-safe, and hence should not be run in parallel. The

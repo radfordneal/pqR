@@ -47,9 +47,8 @@ tcrossprod(x, y = NULL)
   produce pipelined output, and \code{crossprod} but not
   \code{tcrossprod} will take pipelined input for the second operand.
   When a BLAS routine is used, the multiplication can be done in a
-  helper thread (unless this is disabled with
-  \code{--disable-mat-mult-with-BLAS-in-helpers} when configuring
-  pqR), but with no pipelining of inputs or output.
+  helper thread (unless this is disabled with \code{--disable-BLAS-in-helpers}
+  when configuring pqR), but with no pipelining of inputs or output.
 
   When \code{crossprod} or \code{tcrossprod} is given only one
   argument (the second defaulting to be the same as the first), or when the
