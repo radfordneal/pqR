@@ -80,10 +80,10 @@ case "${host_os}" in
    ## with 11 being 10.7.  We no longer support < 10.4 (Tiger)
    ## http://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
-     AC_MSG_ERROR([The earliest supported MacOS X is 10.4.]
+     AC_MSG_ERROR([The earliest supported MacOS X is 10.4.])
      ;; 
   darwin[[567]]*)
-     AC_MSG_ERROR([The earliest supported MacOS X is 10.4.]
+     AC_MSG_ERROR([The earliest supported MacOS X is 10.4.])
      ;; 
   aix[123]*|aix4.[01]*)
     ## These need a form of linking we no longer support
