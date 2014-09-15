@@ -2762,7 +2762,7 @@ if test "${acx_blas_ok}" = "yes"; then
     "")        r_blas=none ;;
     *)         r_blas=generic ;;
   esac
-  R_SH_VAR_ADD(r_external_libs, [BLAS(${r_blas})], [, ])
+  ## R_SH_VAR_ADD(r_external_libs, [BLAS(${r_blas})], [, ])
 fi
 if test "${acx_lapack_ok}" = "yes"; then
   ## Try to figure out which LAPACK was used.
@@ -2771,7 +2771,7 @@ if test "${acx_lapack_ok}" = "yes"; then
     "")        r_lapack="in blas" ;;
     *)         r_lapack=generic ;;
   esac
-  R_SH_VAR_ADD(r_external_libs, [LAPACK(${r_lapack})], [, ])
+  ## R_SH_VAR_ADD(r_external_libs, [LAPACK(${r_lapack})], [, ])
 fi
 if test "${use_ICU}" = yes; then
   R_SH_VAR_ADD(r_external_libs, [ICU], [, ])
@@ -2841,27 +2841,65 @@ if test "${want_prebuilt_html}" = yes; then
   R_SH_VAR_ADD(r_options, [static HTML], [, ])
 fi
 
+r_blas_info1="mat-mult-with-BLAS-by-default=${mat_mult_with_BLAS_by_default}"
+if test "${want_helper_threads}" = yes; then
+  R_SH_VAR_ADD(r_blas_info1, [BLAS-in-helpers=${BLAS_in_helpers}], [, ])
+fi
+r_blas_info2=
+if test "${use_blas_shlib}" = yes; then
+  R_SH_VAR_ADD(r_blas_info2, [shared], [ ])
+fi
+if test "${use_blas_shlib}" = yes -a "x${BLAS_LIBS0}" != x; then
+  if test "${BLAS_LIBS0}" == "-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"; then
+    R_SH_VAR_ADD(r_blas_info2, [BLAS: built-in], [ ])
+  else
+    R_SH_VAR_ADD(r_blas_info2, [BLAS: ${BLAS_LIBS0}], [ ])
+  fi
+else
+  if test "x${BLAS_LIBS}" == x; then
+    R_SH_VAR_ADD(r_blas_info2, [BLAS: none], [ ])
+  elif test "${BLAS_LIBS}" == "-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"; then
+    R_SH_VAR_ADD(r_blas_info2, [BLAS: built-in], [ ])
+  else
+    R_SH_VAR_ADD(r_blas_info2, [BLAS: ${BLAS_LIBS}], [ ])
+  fi
+fi
+if test "x${LAPACK_LIBS}" == x; then
+  R_SH_VAR_ADD(r_blas_info2, [LAPACK: in BLAS], [, ])
+elif test "${LAPACK_LIBS}" == "-L\$(R_HOME)/lib\$(R_ARCH) -lRlapack"; then
+  R_SH_VAR_ADD(r_blas_info2, [LAPACK: built-in], [, ])
+else
+  R_SH_VAR_ADD(r_blas_info2, [LAPACK: ${LAPACK_LIBS}], [, ])
+fi
+
 AC_MSG_RESULT(
 [
 R is now configured for ${host}
 
-  Source directory:          ${srcdir}
-  Installation directory:    ${prefix}
+  Source directory:       ${srcdir}
+  Installation directory: ${prefix}
 
-  C compiler:                ${r_c_compiler}
-  Fortran 77 compiler:       ${r_f77_compiler}
+  C compiler:             ${r_c_compiler}
+  Fortran 77 compiler:    ${r_f77_compiler}
 
-  C++ compiler:              ${r_cxx_compiler}
-  Fortran 90/95 compiler:    ${r_f95_compiler}
-  Obj-C compiler:	     ${r_objc_compiler}
+  C++ compiler:           ${r_cxx_compiler}
+  Fortran 90/95 compiler: ${r_f95_compiler}
+  Obj-C compiler:         ${r_objc_compiler}
 
-  Interfaces supported:      ${r_interfaces}
-  External libraries:        ${r_external_libs}
-  Additional capabilities:   ${r_capabilities}
-  Options enabled:           ${r_options}
+  BLAS/LAPACK options:    ${r_blas_info1}
+                          ${r_blas_info2}
+  External libraries:     ${r_external_libs}
+  Interfaces supported:   ${r_interfaces}
+  Other capabilities:     ${r_capabilities}
+  Other options enabled:  ${r_options}
 
-  Byte compile packages:     ${want_byte_compiled_packages}
-  Recommended packages:      ${use_recommended_packages} 
+  Byte compile packages:  ${want_byte_compiled_packages}
+  Recommended packages:   ${use_recommended_packages} 
+acx_blas_ok: ${acx_blas_ok}
+BLAS_LIBS: ${BLAS_LIBS}
+BLAS_LIBS0: ${BLAS_LIBS0}
+acx_lapack_ok: ${acx_lapack_ok}
+LAPACK_LIBS: ${LAPACK_LIBS}
 ])
 if test -n "${warn_f77_cc_double_complex}"; then
   AC_MSG_WARN([${warn_f77_cc_double_complex}])
