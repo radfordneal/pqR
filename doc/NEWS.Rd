@@ -130,8 +130,11 @@
       immediate core dump.
 \item The variable \code{R_BIT_BUCKET} in \file{share/make/vars.mk}
       now specifies a file to receive output that is normally ignored
-      when building pqR.  It set to \file{dev/null} in the distribution,
+      when building pqR.  It is set to \file{dev/null} in the distribution,
       but this can be changed to help diagnose build problems.
+\item The LAPACK routines used are now the same as those in R-3.1.1.
+      However, the \code{.Call} interface to these remains as in 
+      R-2.15.0 to R-2.15.3 (it was changed to use \code{.Internal} in R-3.0.0).
 \item The C functions \code{R_inspect} and \code{R_inspect3} functions are now
       visible to package code, so they can be used there for debugging.
       To see what they do, look in \file{src/main/inspect.c}.  They are subject
