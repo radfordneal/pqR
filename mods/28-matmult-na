@@ -6,5 +6,8 @@ Changes configure.ac to be more explicit about BLAS/LAPACK.
 Changes R-admin to stop falsely claiming that vecLib is the default on
 OS X.  More changes needed.
 
-Also renames the --disable-mat-mult-with-BLAS-in-helpers
-configuration option to --disable-BLAS-in-helpers.
+Takes vecLibg95c.c from R-2.15.2, for change to accommodate recent 
+OS X versions.
+
+Renames the --disable-mat-mult-with-BLAS-in-helpers configuration
+option to --disable-BLAS-in-helpers.

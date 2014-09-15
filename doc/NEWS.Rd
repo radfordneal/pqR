@@ -116,6 +116,8 @@
       install.packages("pkg_version.tgz") on Mac OS X now has sanity
       checks that this is actually a binary package (as people have
       tried it with incorrectly named source packages).
+\item From R-2.15.2: \code{--with-blas='-framework vecLib'} now also works
+      on OS X 10.8 and 10.9.
 \item From R-2.15.3:
       Configuration and R CMD javareconf now come up with a smaller set
       of library paths for Java on Oracle-format JDK (including
