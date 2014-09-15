@@ -1587,8 +1587,8 @@ make
 @end example
 
 @noindent
-and then sit back and wait.  The first two options are the default and
-use the BLAS and LAPACK built into OS X.  This has pros and cons: it
+and then sit back and wait.  The first two options 
+use a BLAS and LAPACK built into OS X.  This has pros and cons: it
 used to be faster (but has not been on some recent multicore hardware)
 but less accurate.
 
@@ -4253,7 +4253,7 @@ tools page.
 
 @cindex BLAS library
 @cindex LAPACK library
-The @code{vecLib} library can be used @emph{via} the (default)
+The @code{vecLib} library can be used @emph{via} the
 configuration options
 
 @example
