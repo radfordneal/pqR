@@ -297,6 +297,65 @@ if test "${want_R_framework}" != no; then
       ;;
   esac
 fi
+
+
+## BLAS matrix multiply options.
+
+m4_divert_once([HELP_BEGIN], [
+Defaults for options regarding BLAS usage:
+  mat_mult_with_BLAS  Default for mat_mult_with_BLAS @<:@NA if --with-blas, else F@:>@
+  BLAS_in_helpers     Default for BLAS_in_helpers @<:@F if --with-blas, else T@:>@])dnl
+
+if test "x${with-blas}" = x; then
+  if test "x${mat_mult_with_BLAS}" = x; then
+    mat_mult_with_BLAS=FALSE
+  fi
+  if test "x${BLAS_in_helpers}" = x; then
+    BLAS_in_helpers=TRUE
+  fi
+else
+  if test "x${mat_mult_with_BLAS}" = x; then
+    mat_mult_with_BLAS=NA
+  fi
+  if test "x${BLAS_in_helpers}" = x; then
+    BLAS_in_helpers=FALSE
+  fi
+fi
+
+if test "${mat_mult_with_BLAS}" != TRUE -a \
+        "${mat_mult_with_BLAS}" != FALSE -a \
+        "${mat_mult_with_BLAS}" != T -a \
+        "${mat_mult_with_BLAS}" != F -a \
+        "${mat_mult_with_BLAS}" != NA; then 
+  if test "${mat_mult_with_BLAS}" = T; then
+    mat_mult_with_BLAS=TRUE
+  fi
+  if test "${mat_mult_with_BLAS}" = F; then
+    mat_mult_with_BLAS=FALSE
+  fi
+  AC_MSG_ERROR([Invalid value for mat_mult_with_BLAS: ${mat_mult_with_BLAS}])
+else
+  AC_DEFINE_UNQUOTED(R_MAT_MULT_WITH_BLAS_DEFAULT, ${mat_mult_with_BLAS}, 
+   [Define this to the default for mat_mult_with_BLAS.])
+fi
+
+if test "${BLAS_in_helpers}" != TRUE -a \
+        "${BLAS_in_helpers}" != FALSE -a
+        "${BLAS_in_helpers}" != T -a \
+        "${BLAS_in_helpers}" != F; then 
+  AC_MSG_ERROR([Invalid value for BLAS_in_helpers: ${BLAS_in_helpers}])
+else
+  if test "${BLAS_in_helpers}" = T; then
+    BLAS_in_helpers=TRUE
+  fi
+  if test "${BLAS_in_helpers}" = F; then
+    BLAS_in_helpers=FALSE
+  fi
+  AC_DEFINE_UNQUOTED(R_BLAS_IN_HELPERS_DEFAULT, ${BLAS_in_helpers}, 
+                     [Define this to the default for BLAS_in_helpers.])
+fi
+
+
 AM_CONDITIONAL(WANT_R_FRAMEWORK, [test "x${want_R_framework}" = xyes])
 
 ## Allow the user to specify building R as a shared library.
@@ -2802,62 +2861,6 @@ if test -n "${JAVA}"; then
 fi
 if test "${want_prebuilt_html}" = yes; then
   R_SH_VAR_ADD(r_options, [static HTML], [, ])
-fi
-
-## BLAS matrix multiply options.
-
-m4_divert_once([HELP_BEGIN], [
-Defaults for options regarding BLAS usage:
-  mat_mult_with_BLAS  Default for mat_mult_with_BLAS @<:@NA if --with-blas, else F@:>@
-  BLAS_in_helpers     Default for BLAS_in_helpers @<:@F if --with-blas, else T@:>@])dnl
-
-if test "x${with-blas}" = x; then
-  if test "x${mat_mult_with_BLAS}" = x; then
-    mat_mult_with_BLAS=FALSE
-  fi
-  if test "x${BLAS_in_helpers}" = x; then
-    BLAS_in_helpers=TRUE
-  fi
-else
-  if test "x${mat_mult_with_BLAS}" = x; then
-    mat_mult_with_BLAS=NA
-  fi
-  if test "x${BLAS_in_helpers}" = x; then
-    BLAS_in_helpers=FALSE
-  fi
-fi
-
-if test "${mat_mult_with_BLAS}" != TRUE -a \
-        "${mat_mult_with_BLAS}" != FALSE -a \
-        "${mat_mult_with_BLAS}" != T -a \
-        "${mat_mult_with_BLAS}" != F -a \
-        "${mat_mult_with_BLAS}" != NA; then 
-  if test "${mat_mult_with_BLAS}" = T; then
-    mat_mult_with_BLAS=TRUE
-  fi
-  if test "${mat_mult_with_BLAS}" = F; then
-    mat_mult_with_BLAS=FALSE
-  fi
-  AC_MSG_ERROR([Invalid value for mat_mult_with_BLAS: ${mat_mult_with_BLAS}])
-else
-  AC_DEFINE_UNQUOTED(R_MAT_MULT_WITH_BLAS_DEFAULT, ${mat_mult_with_BLAS}, 
-   [Define this to the default for mat_mult_with_BLAS.])
-fi
-
-if test "${BLAS_in_helpers}" != TRUE -a \
-        "${BLAS_in_helpers}" != FALSE -a
-        "${BLAS_in_helpers}" != T -a \
-        "${BLAS_in_helpers}" != F; then 
-  AC_MSG_ERROR([Invalid value for BLAS_in_helpers: ${BLAS_in_helpers}])
-else
-  if test "${BLAS_in_helpers}" = T; then
-    BLAS_in_helpers=TRUE
-  fi
-  if test "${BLAS_in_helpers}" = F; then
-    BLAS_in_helpers=FALSE
-  fi
-  AC_DEFINE_UNQUOTED(R_BLAS_IN_HELPERS_DEFAULT, ${BLAS_in_helpers}, 
-   [Define this to the default for BLAS_in_helpers.])
 fi
 
 r_blas_info1="mat_mult_with_BLAS=${mat_mult_with_BLAS}"
