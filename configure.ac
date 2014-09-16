@@ -24,7 +24,7 @@
 AC_PREREQ(2.62)
 
 ## We want to get the version number from file 'VERSION' (rather than
-## specifying the version info in 'configure.ac'.  Hence, we need a bit
+# specifying the version info in 'configure.ac'.  Hence, we need a bit
 ## of M4 magic.  Note that M4 esyscmd has a trailing newline because the
 ## shell command output has one, hence the patsubst() trick.
 m4_define([R_VERSION],
@@ -299,30 +299,6 @@ if test "${want_R_framework}" != no; then
 fi
 AM_CONDITIONAL(WANT_R_FRAMEWORK, [test "x${want_R_framework}" = xyes])
 
-## Allow specification of whether BLAS matrix multiplies are allowed in helpers.
-AC_ARG_ENABLE([BLAS-in-helpers],
-[AS_HELP_STRING([--enable-BLAS-in-helpers],[allow (some) BLAS calls to be done in helpers @<:@yes@:>@])],
-[if test "${enableval}" = no; then
-  BLAS_in_helpers=no
-elif test "${enableval}" = yes; then
-  BLAS_in_helpers=yes
-else
-  BLAS_in_helpers=yes
-fi],
-[BLAS_in_helpers=yes])
-
-## Allow speciication of the default for mat_mult_with_BLAS
-AC_ARG_ENABLE([mat-mult-with-BLAS-by-default],
-[AS_HELP_STRING([--enable-mat-mult-with-BLAS-by-default],[default to using BLAS for %*% @<:@no@:>@])],
-[if test "${enableval}" = no; then
-  mat_mult_with_BLAS_by_default=no
-elif test "${enableval}" = yes; then
-  mat_mult_with_BLAS_by_default=yes
-else
-  mat_mult_with_BLAS_by_default=no
-fi],
-[mat_mult_with_BLAS_by_default=no])
-
 ## Allow the user to specify building R as a shared library.
 ## (but a 'dynamic library' in the terminology of Mac OS X).
 ## <NOTE>
@@ -395,7 +371,7 @@ AC_ARG_ENABLE([lto],
 if test "x${want_lto}" != xno; then
   LTO=-flto
 fi
-if test "x${want_lto}" == xyes; then
+if test "x${want_lto}" = xyes; then
   LTOALL=-flto
 fi
 AC_SUBST(LTO)
@@ -2272,16 +2248,6 @@ if test "${want_memory_profiling}" = yes; then
   AC_DEFINE(R_MEMORY_PROFILING, 1, [Define this to enable memory profiling.])
 fi
 
-## Whether matrix multiply with BLAS in helpers allowed
-if test "${BLAS_in_helpers}" = yes; then
-  AC_DEFINE(R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK, 1, [Define if BLAS matrix multiply is thread safe.])
-fi
-
-## Default for mat_mult_with_BLAS
-if test "${mat_mult_with_BLAS_by_default}" = yes; then
-  AC_DEFINE(R_MAT_MULT_WITH_BLAS_BY_DEFAULT, 1, [Define to use BLAS for %*% by default.])
-fi
-
 ## Large-file-support
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
@@ -2816,9 +2782,6 @@ elif test "${want_R_shlib}" = yes; then
 elif test "${want_R_static}" = yes; then
   R_SH_VAR_ADD(r_options, [static R library], [, ])
 fi
-if test "${use_blas_shlib}" = yes; then
-  R_SH_VAR_ADD(r_options, [shared BLAS], [, ])
-fi
 if test "${want_R_profiling}" = yes; then
   R_SH_VAR_ADD(r_options, [R profiling], [, ])
 fi
@@ -2841,32 +2804,88 @@ if test "${want_prebuilt_html}" = yes; then
   R_SH_VAR_ADD(r_options, [static HTML], [, ])
 fi
 
-r_blas_info1="mat-mult-with-BLAS-by-default=${mat_mult_with_BLAS_by_default}"
+## BLAS matrix multiply options.
+
+m4_divert_once([HELP_BEGIN], [
+Defaults for options regarding BLAS usage:
+  mat_mult_with_BLAS  Default for mat_mult_with_BLAS @<:@NA if --with-blas, else F@:>@
+  BLAS_in_helpers     Default for BLAS_in_helpers @<:@F if --with-blas, else T@:>@])dnl
+
+if test "x${with-blas}" = x; then
+  if test "x${mat_mult_with_BLAS}" = x; then
+    mat_mult_with_BLAS=FALSE
+  fi
+  if test "x${BLAS_in_helpers}" = x; then
+    BLAS_in_helpers=TRUE
+  fi
+else
+  if test "x${mat_mult_with_BLAS}" = x; then
+    mat_mult_with_BLAS=NA
+  fi
+  if test "x${BLAS_in_helpers}" = x; then
+    BLAS_in_helpers=FALSE
+  fi
+fi
+
+if test "${mat_mult_with_BLAS}" != TRUE -a \
+        "${mat_mult_with_BLAS}" != FALSE -a \
+        "${mat_mult_with_BLAS}" != T -a \
+        "${mat_mult_with_BLAS}" != F -a \
+        "${mat_mult_with_BLAS}" != NA; then 
+  if test "${mat_mult_with_BLAS}" = T; then
+    mat_mult_with_BLAS=TRUE
+  fi
+  if test "${mat_mult_with_BLAS}" = F; then
+    mat_mult_with_BLAS=FALSE
+  fi
+  AC_MSG_ERROR([Invalid value for mat_mult_with_BLAS: ${mat_mult_with_BLAS}])
+else
+  AC_DEFINE_UNQUOTED(R_MAT_MULT_WITH_BLAS_DEFAULT, ${mat_mult_with_BLAS}, 
+   [Define this to the default for mat_mult_with_BLAS.])
+fi
+
+if test "${BLAS_in_helpers}" != TRUE -a \
+        "${BLAS_in_helpers}" != FALSE -a
+        "${BLAS_in_helpers}" != T -a \
+        "${BLAS_in_helpers}" != F; then 
+  AC_MSG_ERROR([Invalid value for BLAS_in_helpers: ${BLAS_in_helpers}])
+else
+  if test "${BLAS_in_helpers}" = T; then
+    BLAS_in_helpers=TRUE
+  fi
+  if test "${BLAS_in_helpers}" = F; then
+    BLAS_in_helpers=FALSE
+  fi
+  AC_DEFINE_UNQUOTED(R_BLAS_IN_HELPERS_DEFAULT, ${BLAS_in_helpers}, 
+   [Define this to the default for BLAS_in_helpers.])
+fi
+
+r_blas_info1="mat_mult_with_BLAS=${mat_mult_with_BLAS}"
 if test "${want_helper_threads}" = yes; then
-  R_SH_VAR_ADD(r_blas_info1, [BLAS-in-helpers=${BLAS_in_helpers}], [, ])
+  R_SH_VAR_ADD(r_blas_info1, [BLAS_in_helpers=${BLAS_in_helpers}], [, ])
 fi
 r_blas_info2=
 if test "${use_blas_shlib}" = yes; then
   R_SH_VAR_ADD(r_blas_info2, [shared], [ ])
 fi
 if test "${use_blas_shlib}" = yes -a "x${BLAS_LIBS0}" != x; then
-  if test "${BLAS_LIBS0}" == "-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"; then
+  if test "${BLAS_LIBS0}" = "-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"; then
     R_SH_VAR_ADD(r_blas_info2, [BLAS: built-in], [ ])
   else
     R_SH_VAR_ADD(r_blas_info2, [BLAS: ${BLAS_LIBS0}], [ ])
   fi
 else
-  if test "x${BLAS_LIBS}" == x; then
+  if test "x${BLAS_LIBS}" = x; then
     R_SH_VAR_ADD(r_blas_info2, [BLAS: none], [ ])
-  elif test "${BLAS_LIBS}" == "-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"; then
+  elif test "${BLAS_LIBS}" = "-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"; then
     R_SH_VAR_ADD(r_blas_info2, [BLAS: built-in], [ ])
   else
     R_SH_VAR_ADD(r_blas_info2, [BLAS: ${BLAS_LIBS}], [ ])
   fi
 fi
-if test "x${LAPACK_LIBS}" == x; then
+if test "x${LAPACK_LIBS}" = x; then
   R_SH_VAR_ADD(r_blas_info2, [LAPACK: in BLAS], [, ])
-elif test "${LAPACK_LIBS}" == "-L\$(R_HOME)/lib\$(R_ARCH) -lRlapack"; then
+elif test "${LAPACK_LIBS}" = "-L\$(R_HOME)/lib\$(R_ARCH) -lRlapack"; then
   R_SH_VAR_ADD(r_blas_info2, [LAPACK: built-in], [, ])
 else
   R_SH_VAR_ADD(r_blas_info2, [LAPACK: ${LAPACK_LIBS}], [, ])

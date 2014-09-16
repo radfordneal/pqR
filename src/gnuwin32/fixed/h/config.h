@@ -517,11 +517,11 @@
 #define HAVE_OPENMP 1
 #endif
 
-/* Define this if BLAS matrix multiplies are thread-safe. */
-#define R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK 1
+/* Define this to the default for mat_mult_with_BLAS. */
+#define R_MAT_MULT_WITH_BLAS_DEFAULT NA
 
-/* Define this to make mat_mult_with_BLAS default to TRUE. */
-/* #undef R_MAT_MULT_WITH_BLAS_BY_DEFAULT */
+/* Define this to the default for BLAS_in_helpers. */
+#undef R_BLAS_IN_HELPERS_DEFAULT FALSE
 
 /* Define this to enable deferred evaluation / helpers. */
 #define R_DEFERRED_EVAL 1
