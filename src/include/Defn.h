@@ -924,11 +924,18 @@ extern int	R_DirtyImage	INI_as(0);	/* Current image dirty */
 #define R_mat_mult_with_BLAS_len 4
 extern0 Rboolean R_mat_mult_with_BLAS [R_mat_mult_with_BLAS_len] 
 #ifdef __MAIN__
-#ifdef R_MAT_MULT_WITH_BLAS_BY_DEFAULT
-  = { TRUE, TRUE, TRUE, TRUE }
-#else
-  = { FALSE, FALSE, FALSE, FALSE }
+#define NA INT_MIN
+  = { R_MAT_MULT_WITH_BLAS_DEFAULT, R_MAT_MULT_WITH_BLAS_DEFAULT,
+      R_MAT_MULT_WITH_BLAS_DEFAULT, R_MAT_MULT_WITH_BLAS_DEFAULT };
+#undef NA
 #endif
+;
+
+/* Can BLAS routines be done in helper threads? */
+
+extern0 Rboolean R_BLAS_in_helpers
+#ifdef __MAIN__
+  = R_BLAS_IN_HELPERS_DEFAULT
 #endif
 ;
 

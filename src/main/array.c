@@ -1000,17 +1000,13 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             case 1: task_proc = task_cmatprod_trans1; break;
             case 2: task_proc = task_cmatprod_trans2; break;
             }
-#           ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                inhlpr = 0;
-#           endif
+            if (!R_BLAS_in_helpers) inhlpr = 0;
         }
 
         else if (nrows==1 && ncols==1) { /* dot product, real */
             if (R_mat_mult_with_BLAS[0] == 1) {
                 task_proc = task_matprod_vec_vec_BLAS;
-#               ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                    inhlpr = 0;
-#               endif
+                if (!R_BLAS_in_helpers) inhlpr = 0;
             }
             else if (no_pipelining)
                 task_proc = task_matprod_vec_vec;
@@ -1024,9 +1020,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (ncols==1) {
                 if (R_mat_mult_with_BLAS[1] == 1) {
                     task_proc = task_matprod_mat_vec_BLAS;
-#                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                        inhlpr = 0;
-#                   endif
+                    if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
                 else if (no_pipelining)
                     task_proc = task_matprod_mat_vec;
@@ -1038,9 +1032,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             else if (nrows==1) {
                 if (R_mat_mult_with_BLAS[2] == 1) {
                     task_proc = task_matprod_vec_mat_BLAS;
-#                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                        inhlpr = 0;
-#                   endif
+                    if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
                 else if (no_pipelining)
                     task_proc = task_matprod_vec_mat;
@@ -1052,9 +1044,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             else {
                 if (use_BLAS == 1) {
                     task_proc = task_matprod_mat_mat_BLAS;
-#                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                        inhlpr = 0;
-#                   endif
+                    if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
                 else if (no_pipelining)
                     task_proc = task_matprod_mat_mat;
@@ -1071,9 +1061,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     if (ncols==1) { op1 = y; op2 = x; }
                     if (R_mat_mult_with_BLAS[2]) {
                         task_proc = task_matprod_vec_mat_BLAS;
-#                       ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                            inhlpr = 0;
-#                        endif
+                        if (!R_BLAS_in_helpers) inhlpr = 0;
                     }
                     else if (no_pipelining)
                         task_proc = task_matprod_vec_mat;
@@ -1086,9 +1074,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     if (nrows==1) { op1 = y; op2 = x; }
                     if (R_mat_mult_with_BLAS[1]) {
                         task_proc = task_matprod_mat_vec_BLAS;
-#                       ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                            inhlpr = 0;
-#                       endif
+                        if (!R_BLAS_in_helpers) inhlpr = 0;
                     }
                     else if (no_pipelining)
                         task_proc = task_matprod_mat_vec;
@@ -1102,9 +1088,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 if (use_BLAS == 1) {
                     task_proc = primop==1 ? task_matprod_trans1_BLAS 
                                           : task_matprod_trans2_BLAS;
-#                   ifndef R_MAT_MULT_WITH_BLAS_IN_HELPERS_OK
-                        inhlpr = 0;
-#                   endif
+                    if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
                 else if (no_pipelining)
                     task_proc = primop==1 ? task_matprod_trans1 
