@@ -3513,11 +3513,18 @@ produce a further slight speed improvement in situations where neither
 helper threads nor task merging are useful.
 
 If the BLAS routines used for matrix multiplication are not
-thread-safe, the @code{--disable-BLAS-in-helpers} option should be
-used, to prevent tasks that call the BLAS from being run in helper
-threads.  This option may also be useful if the BLAS is multi-threaded
-and runs inefficiently (even if correctly) when several BLAS routines
-are running in parallel.
+thread-safe, the @code{BLAS_in_helpers=FALSE} option (whose default
+can be set by @code{configure}) should be used, to prevent tasks that
+call the BLAS from being run in helper threads.  This option may also
+be useful if the BLAS is multi-threaded and runs inefficiently (even
+if correctly) when several BLAS routines are running in parallel.  You
+may also want to set the @code{mat_mult_with_BLAS} option as desired.
+The defaults for these options are @code{BLAS_in_helpers=FALSE} and
+@code{mat_mult_with_BLAS=NA} when @code{--with-blas} is given as an
+argument to @code{configure}, and @code{BLAS_in_helpers=TRUE} and
+@code{mat_mult_with_BLAS=FALSE} when there is no @code{--with-blas}
+argument.  See @code{help(options)} for more on the meaning of these
+options.
 
 
 @node Internationalization support, Configuration variables, Helper threads and task merging, Configuration on a Unix-alike

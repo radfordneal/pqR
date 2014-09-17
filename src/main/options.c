@@ -311,6 +311,11 @@ void attribute_hidden InitOptions(void)
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
+    SET_TAG(v, install("BLAS_in_helpers"));
+    SETCAR(v, ScalarLogical(R_BLAS_in_helpers));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("mat_mult_with_BLAS"));
     SETCAR(v, allocVector (LGLSXP, R_mat_mult_with_BLAS_len));
     for (int i = 0; i < R_mat_mult_with_BLAS_len; i++) 
@@ -677,6 +682,15 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		R_DisableNLinBrowser = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
+	    else if (streql(CHAR(namei), "BLAS_in_helpers")) {
+                SEXP ov;
+		if (TYPEOF(argi)!=LGLSXP || LENGTH(argi)!=1 
+                                         || *LOGICAL(argi)==NA_LOGICAL)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+                k = asLogical(argi);
+                if (R_BLAS_IN_HELPERS_DEFAULT != FALSE)
+                    SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
 	    else if (streql(CHAR(namei), "mat_mult_with_BLAS")) {
                 SEXP ov;

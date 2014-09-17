@@ -955,13 +955,13 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            except when mat_mult_with_BLAS is NA and the op is %*%, we use
            the BLAS for large matrices with no NA/NaN elements. */
 
-        int use_BLAS; /* not used for vec-vec, vec-mat, or mat-vec multiplies */
+        int use_BLAS; /* not used for vec-vec, mat-vec, or vec-mat multiplies */
         if (ncols > 1 && nrows > 1 && k > 0) {
             use_BLAS = R_mat_mult_with_BLAS[3];
-            if (use_BLAS != NA_INTEGER || PRIMVAL(op) != 0)
+            if (use_BLAS != NA_LOGICAL || PRIMVAL(op) != 0)
                 goto done_BLAS_check;
-            /* Don't use the BLAS if ISNAN check is more costly than
-               possible gain; 3 is a somewhat arbitrary fudge factor */
+            /* Don't use the BLAS if the ISNAN check is more costly than
+               any possible gain; 3 is a somewhat arbitrary fudge factor */
             use_BLAS = 0;
             if (3*((double)nrows+ncols) >= (double)nrows*ncols)
                 goto done_BLAS_check;
@@ -1042,7 +1042,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
             else {
-                if (use_BLAS == 1) {
+                if (use_BLAS != 0) /* will always be 0 or 1, never NA */ {
                     task_proc = task_matprod_mat_mat_BLAS;
                     if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
@@ -1085,7 +1085,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
             else {
-                if (use_BLAS == 1) {
+                if (use_BLAS != 0) /* treat NA the same as TRUE */ {
                     task_proc = primop==1 ? task_matprod_trans1_BLAS 
                                           : task_matprod_trans2_BLAS;
                     if (!R_BLAS_in_helpers) inhlpr = 0;

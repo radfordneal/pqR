@@ -63,6 +63,15 @@ getOption(x, default = NULL)
       many (simulated) smooths should be added.  This is currently only
       used by \code{\link{plot.lm}}.}
 
+    \item{\code{BLAS_in_helpers}:}{logical: whether BLAS routines may
+      be run in helper threads.  The default for this option is set by
+      configure when pqR is built, with the default setting being
+      \code{FALSE} if a \code{--with-blas} argument is used, and
+      \code{TRUE} otherwise.  If the default is \code{FALSE}, attempts
+      to change this option are silently ignored.  If the default is
+      \code{TRUE}, it may be changed to \code{FALSE} (and then back to
+      \code{TRUE}).}
+
     \item{\code{browserNLdisabled}:}{logical: whether newline is
       disabled as a synonym for \code{"n"} is the browser.}
 
@@ -171,7 +180,7 @@ getOption(x, default = NULL)
       at startup.  Note that trace output is not produced when deferred
       evaluation was disabled when pqR was configured.  Also, pqR will
       do tasks directly (bypassing tracing) when there is no possibility
-      that the task will be merged or done in a helper thread, and when
+      that the task will be merged or done in a helper thread, or when
       the operands are too small to justify the overhead of task scheduling.}
 
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
@@ -189,15 +198,17 @@ getOption(x, default = NULL)
     environment variable \env{R_KEEP_PKG_SOURCE} is set to \code{yes}.}
 
     \item{\code{mat_mult_with_BLAS}:}{logical vector of length four,
-      indicating whether a BLAS routine
-      (rather than a built-in C routine) should be used for \code{\%*\%},
-      \code{crossprod}, and \code{tcrossprod},  when the operands result 
-      in the operation being a vector dot product, a product of a matrix 
-      and column vector, a product of a row vector and a matrix, or a 
-      general matrix-matrix product.  May be set using a single logical 
-      value, which is replicated to give four values.  Defaults to all 
-      \code{FALSE} unless the \code{--enable-mat-mult-with-BLAS-by-default}
-      option is used when configuring pqR.}
+      indicating whether a BLAS routine (rather than a built-in C routine) 
+      should be used for \code{\%*\%}, \code{crossprod}, and
+      \code{tcrossprod}, when the operands result in the operation
+      being a vector dot product, a product of a matrix and column
+      vector, a product of a row vector and a matrix, or a general
+      matrix-matrix product.  May be set using a single logical value,
+      which is replicated to give four values.  The default is set by
+      configure when pqR is built, with the default setting being 
+      \code{FALSE} if no \code{--with-blas} argument is used, and 
+      \code{NA} if \code{--with-blas} is specified.  See \code{\link{\%*\%}}
+      for more information on the meaning of this option.}
 
     \item{\code{max.print}:}{integer, defaulting to \code{99999}.
       \code{\link{print}} or \code{\link{show}} methods can make use of
