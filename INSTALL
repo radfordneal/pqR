@@ -54,27 +54,6 @@ likely to be useful are as follows:
         hyperthreading.  It is necessary if your system does not
         support the OpenMP facility.
 
-    --disable-BLAS-in-helpers
-
-        Specify this option if the BLAS routines you plan to use are
-        not thread-safe, and hence should not be run in parallel. The
-        BLAS routines supplied with pqR are thread-safe, so this is
-        not the default.
-
-    --enable-mat-mult-with-BLAS-by-default
-
-        Specify this if by default you want matrix multiply operations
-        in R code to be done with whatever BLAS you supply (or the one
-        supplied with pqR), rather than the C routines built into pqR.
-        Your BLAS may be faster than the builtin C routines, but on
-        the other hand, the builtin C routines guarantee that NA, Inf,
-        etc. are propagated correctly, and will pipeline output to
-        other operations when run in parallel.  This option specifies
-        only the default, which can be changed using "options" (see
-        help("%*%") for details).  Note that matrix multiplies done as
-        part of other operations (eg, eigenvector computations) are
-        always done with the BLAS.
-
     --disable-byte-compiled-packages
 
         Disables byte compilation for the builtin and recommended 
@@ -89,6 +68,45 @@ likely to be useful are as follows:
         Build R as a shared library.  This is necessary if you want to
         use RStudio.
 
+    --with-blas=...
+
+        Used to specify that an external BLAS package should be used
+        rather than the built-in BLAS supplied with pqR.  See R-admin
+        for details.
+
+    BLAS_in_helpers=TRUE
+
+        Specify this option if you use the --with-blas option to link
+        to BLAS routines other the ones built into pqR, and these
+        routines are thread-safe, and hence may be run in parallel.
+        This is the default if no --with-blas argument is specified,
+        since the BLAS routines supplied with pqR are thread-safe, but
+        an external BLAS is assumed to not be thread-safe if this
+        option is not given.  You might need BLAS_in_helpers=FALSE if
+        you're not specifying an external BLAS now, but might later
+        substitute a non-thread-safe BLAS (as is possible if the BLAS
+        is a shared library, as it is by default).
+
+    mat-mult-with-BLAS=TRUE
+
+        Specify this if by default you want matrix multiply operations
+        in R code to always be done with whatever BLAS you supply (or
+        the one supplied with pqR), rather than the C routines built
+        into pqR.  Your BLAS may be faster than the built-in C
+        routines, but on the other hand, the built-in C routines
+        guarantee that NA, Inf, etc. are propagated correctly, and
+        will pipeline output to other operations when run in parallel.
+        This option specifies only the default, which can be changed
+        using "options" (see help("%*%") and help(options) for
+        details).  Note that matrix multiplies done as part of other
+        operations are always done with the BLAS.  The default setting
+        for this option is FALSE if no --with-blas argument is given
+        to configure, and NA if --with-blas is specified.  A value of
+        NA specifies that the BLAS routines should only be used for
+        large matrix-matrix multiplies, and only if the operands do
+        not have elements that are NA or NaN (see help("%*%") for
+        details).
+
     R_PAPERSIZE=letter
 
         Sets the default paper size to 8 1/2 by 11 inch letter size.
@@ -96,14 +114,17 @@ likely to be useful are as follows:
         North Americans.
  
     CC=...
+    CXX=...
     FC=...
     F77=...
 
-        Specifies which compilers to use for C, Fortran 90/95, and
-        Fortran 77.  Suitable compilers may be chosen automatically,
-        but the GNU compilers can be specified as follows:
+        Specifies which compilers to use for C, C++, Fortran 90/95,
+        and Fortran 77.  Suitable compilers may be chosen
+        automatically, but the GNU compilers can be specified as
+        follows:
 
           CC='gcc -std=gnu99'
+          CXX='g++'
           FC='gfortran'
           F77='gfortran'
 
@@ -111,6 +132,8 @@ likely to be useful are as follows:
         on a 64-bit system.
 
     CFLAGS=...
+    CXXFLAGS=...
+    FCFLAGS=...
     FFLAGS=...
 
         Sets the compiler flags for C and Fortran.  If the GNU
@@ -118,11 +141,13 @@ likely to be useful are as follows:
         following flags are recommended:
 
           CFLAGS='-g -O2 -mtune=native -DENABLE_ISNAN_TRICK'
+          CXXLAGS='-g -O2 -mtune=native'
+          FCLAGS='-g -O2 -mtune=native'
           FFLAGS='-g -O2 -mtune=native'
 
         For a 32-bit build, adding the -mfpmath=sse option is probably
         desirable (unless you have a very old processor, Pentium III
-        or earlier).
+        or earlier, that lacks the SSE2 instructions).
 
 
 Compiling pqR
@@ -161,13 +186,14 @@ be run with
     make check-all
 
 Some discrepancies are typically shown in the output of these
-commands, because floating-point arithmetic differs slightly from one
-computer to another, because the exact form of error messages may
-differ depending on whether a package was byte compiled or not, and
-because some output depends on the set of files present, etc.
-However, any report of "ERROR" or "FAILED" that appears indicates a
-problem, except if it is due to lack of internet access, or to running
-the checks in a C/POSIX locale.
+commands, because floating-point round-off errors and sizes of objects
+differ from one computer to another (including 32-bit versus 64-bit
+builds), because the exact form of error messages may differ depending
+on whether a package was byte compiled or not, and because some output
+depends on the current date, the set of files present, etc.  However,
+any report of "ERROR" or "FAILED" that appears indicates a problem,
+except if it is due to lack of internet access, or to running the
+checks in a C/POSIX locale.
 
 
 Running and installing pqR
@@ -200,7 +226,8 @@ run the command
 
     ./create-configure
 
-You can then proceed as described above.  However, note that the
-release date may not be set to anything meaningful.  Also, the
-descriptions of the modifications done to create pqR will be in files
-in the "mods" directory, rather than the single file "MODS".
+If this succeeds (it may not if you lack some system facilities), you
+can then proceed as described above.  However, note that the release
+date may not be set to anything meaningful.  Also, the descriptions of
+the modifications done to create pqR will be in files in the "mods"
+directory, rather than the single file "MODS".

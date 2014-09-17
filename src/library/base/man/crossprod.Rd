@@ -39,16 +39,18 @@ tcrossprod(x, y = NULL)
   The multiplication is done either by a BLAS routine or by a C routine,
   in the same way as for \code{\link{\%*\%}}, based on the setting of
   the \code{mat_mult_with_BLAS} option, except that a \code{NA}
-  value for \code{mat_mult_with_BLAS} is always equivalent to 
-  \code{FALSE} for \code{crossprod} and \code{tcrossprod}.
+  value for the fourth element of the \code{mat_mult_with_BLAS} option 
+  (pertaining to matrix-matrix multiplies) is always equivalent to 
+  \code{TRUE} for \code{crossprod} and \code{tcrossprod} (thereby 
+  mimicking the behaviour of R Core releases to at least R-3.1.1).
 
   When the C routines are used for the multiplication, and helper
   threads are enabled, \code{crossprod} and \code{tcrossprod} will
   produce pipelined output, and \code{crossprod} but not
   \code{tcrossprod} will take pipelined input for the second operand.
   When a BLAS routine is used, the multiplication can be done in a
-  helper thread (unless this is disabled with \code{--disable-BLAS-in-helpers}
-  when configuring pqR), but with no pipelining of inputs or output.
+  helper thread (if allowed by the \code{BLAS_in_helpers} option),
+  but with no pipelining of inputs or output.
 
   When \code{crossprod} or \code{tcrossprod} is given only one
   argument (the second defaulting to be the same as the first), or when the
