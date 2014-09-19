@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-09-09}{
+\section{CHANGES IN VERSION RELEASED 2014-09-20}{
 
   \subsection{INTRODUCTION}{
 
@@ -20,6 +20,11 @@
       (no change for byte-compiled code), and calling of external functions 
       with \code{.C} and \code{.Fortran} is substantially faster, and can
       sometimes be done in a helper thread.
+
+\item Changes have been made to configuration options regarding use of BLAS
+      routines for matrix multiplication, as described below.  In part, these
+      changes are intended to made the default be close to what R Core 
+      releases do (but without the unnecessary inefficiency).
 
 \item A number of updates from R Core releases after R-2.15.0 have 
       been incorporated or adapted for use in pqR.  These provide some 

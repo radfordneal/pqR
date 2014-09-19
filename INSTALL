@@ -20,8 +20,8 @@ described below, and in the R-admin manual.
 Configuring pqR
 
 After uncompressing and unpacking the tar archive (with a command such
-as "tar xf pqR-2014-02-19.tar.gz"), you should make a directory in
-which to build pqR, such as "pqR-2014-02-19-myconfig".  It is possible
+as "tar xf pqR-2014-09-20.tar.gz"), you should make a directory in
+which to build pqR, such as "pqR-2014-09-20-myconfig".  It is possible
 to instead build pqR in the source directory, but using a separate
 directory is preferable, so that the source directory says clean, and
 so that you can create more than one configuration if desired.
@@ -31,7 +31,7 @@ You should then enter the build directory, and issue the command:
     path-to-source-directory/configure
 
 where "path-to-source-directory" is the path to the source directory,
-perhaps something like "../pqR-2014-02-19".
+perhaps something like "../pqR-2014-09-20".
 
 The configure command will produce a lot of output regarding the
 results of checks for various system facilities, and end (if
@@ -68,7 +68,7 @@ likely to be useful are as follows:
         Build R as a shared library.  This is necessary if you want to
         use RStudio.
 
-    --with-blas=...
+    -- with-blas  or   --with-blas=...
 
         Used to specify that an external BLAS package should be used
         rather than the built-in BLAS supplied with pqR.  See R-admin
@@ -91,8 +91,8 @@ likely to be useful are as follows:
 
         Specify this if by default you want matrix multiply operations
         in R code to always be done with whatever BLAS you supply (or
-        the one supplied with pqR), rather than the C routines built
-        into pqR.  Your BLAS may be faster than the built-in C
+        with the one supplied with pqR), rather than the C routines
+        built into pqR.  Your BLAS may be faster than the built-in C
         routines, but on the other hand, the built-in C routines
         guarantee that NA, Inf, etc. are propagated correctly, and
         will pipeline output to other operations when run in parallel.
@@ -123,13 +123,10 @@ likely to be useful are as follows:
         automatically, but the GNU compilers can be specified as
         follows:
 
-          CC='gcc -std=gnu99'
-          CXX='g++'
-          FC='gfortran'
-          F77='gfortran'
+          CC='gcc'  CXX='g++'  FC='gfortran'  F77='gfortran'
 
-        Adding a -m32 option may be useful to compile in 32-bit mode
-        on a 64-bit system.
+        Adding a -m32 option (eg, CC='gcc -m32') may be useful to
+        compile in 32-bit mode on a 64-bit system.
 
     CFLAGS=...
     CXXFLAGS=...
