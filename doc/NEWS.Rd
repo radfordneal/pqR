@@ -36,6 +36,10 @@
       by a desire to ensure that \code{NA} is propagated correctly even
       if the BLAS does not do so, but avoids the substantial but needless 
       inefficiency present in the R Core implementation.  
+\item A \code{BLAS_in_helpers} option now allows run-time control of
+      whether BLAS routines may be done in a helper thread. (But this
+      will be fixed at \code{FALSE} if that is set as the default when
+      pqR is built.)
 \item Setting the \code{deparse.max.lines} option will now limit the
       number of lines printed when exitting debug of a function, as
       well as when entering.
@@ -88,8 +92,15 @@
 
   \subsection{INSTALLATION, BUILDING, TESTING, AND DEBUGGING}{
     \itemize{
+\item The \code{--enable-mat-mult-with-BLAS} configuration
+      option has been replaced by the ability to use a configure 
+      argument of \code{mat_mult_in_BLAS=FALSE}, \code{mat_mult_in_BLAS=FALSE},
+      or \code{mat_mult_in_BLAS=NA}, to set the default value of this
+      option.
 \item The \code{--disable-mat-mult-with-BLAS-in-helpers} configuration
-      option has been renamed as \code{--disable-BLAS-in-helpers}.
+      option has been replaced by the ability to use a configure 
+      argument of \code{BLAS_in_helpers=FALSE} or \code{BLAS_in_helpers=TRUE}
+      to set the default value of this option.
 \item Setting the environment variable \code{R_ABORT} to any non-null
       string will prevent any attempt to produce a stack trace on a
       segmentation fault, in favour of instead producing (maybe) an
