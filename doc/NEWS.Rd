@@ -38,6 +38,21 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
+\item The \code{mat_mult_with_BLAS} option, which controls whether the
+      BLAS routines or pqR's C routines are used for matrix multiplication,
+      may now be set to \code{NA}, which is equivalent to \code{FALSE},
+      except that for multiplication of sufficiently large matrices (not
+      vector-vector, vector-matrix, or matrix-vector multiplication) pqR 
+      will use a BLAS routine unless there is an element in one of the 
+      operands that is \code{NA} or \code{NaN}.  This mimics the behaviour 
+      of R Core implementations (at least through 3.1.1), which is motivated
+      by a desire to ensure that \code{NA} is propagated correctly even
+      if the BLAS does not do so, but avoids the substantial but needless 
+      inefficiency present in the R Core implementation.  
+\item A \code{BLAS_in_helpers} option now allows run-time control of
+      whether BLAS routines may be done in a helper thread. (But this
+      will be fixed at \code{FALSE} if that is set as the default when
+      pqR is built.)
 \item A \code{codePromises} option has been added to \code{deparse},
       and documented in \code{help(.deparseOpts)}.  With this option,
       the deparsed expression uses the code part of a promise, not
@@ -63,21 +78,6 @@
       by \code{formals}, as they are shown when printed or with \code{args}.
       In R Core releases (at least to R-3.1.1), the result of \code{formals}
       for a primitive is \code{NULL}.
-\item The \code{mat_mult_with_BLAS} option, which controls whether the
-      BLAS routines or pqR's C routines are used for matrix multiplication,
-      may now be set to \code{NA}, which is equivalent to \code{FALSE},
-      except that for multiplication of sufficiently large matrices (not
-      vector-vector, vector-matrix, or matrix-vector multiplication) pqR 
-      will use a BLAS routine unless there is an element in one of the 
-      operands that is \code{NA} or \code{NaN}.  This mimics the behaviour 
-      of R Core implementations (at least through 3.1.1), which is motivated
-      by a desire to ensure that \code{NA} is propagated correctly even
-      if the BLAS does not do so, but avoids the substantial but needless 
-      inefficiency present in the R Core implementation.  
-\item A \code{BLAS_in_helpers} option now allows run-time control of
-      whether BLAS routines may be done in a helper thread. (But this
-      will be fixed at \code{FALSE} if that is set as the default when
-      pqR is built.)
 \item Setting the \code{deparse.max.lines} option will now limit the
       number of lines printed when exiting debug of a function, as
       well as when entering.
@@ -140,6 +140,9 @@
       option has been replaced by the ability to use a configure 
       argument of \code{BLAS_in_helpers=FALSE} or \code{BLAS_in_helpers=TRUE}
       to set the default value of this option.
+\item The LAPACK routines used are now the same as those in R-3.1.1.
+      However, the \code{.Call} interface to these remains as in 
+      R-2.15.0 to R-2.15.3 (it was changed to use \code{.Internal} in R-3.0.0).
 \item Setting the environment variable \code{R_ABORT} to any non-null
       string will prevent any attempt to produce a stack trace on a
       segmentation fault, in favour of instead producing (maybe) an
@@ -148,9 +151,6 @@
       now specifies a file to receive output that is normally ignored
       when building pqR.  It is set to \file{dev/null} in the distribution,
       but this can be changed to help diagnose build problems.
-\item The LAPACK routines used are now the same as those in R-3.1.1.
-      However, the \code{.Call} interface to these remains as in 
-      R-2.15.0 to R-2.15.3 (it was changed to use \code{.Internal} in R-3.0.0).
 \item The C functions \code{R_inspect} and \code{R_inspect3} functions are now
       visible to package code, so they can be used there for debugging.
       To see what they do, look in \file{src/main/inspect.c}.  They are subject
@@ -229,7 +229,7 @@
       new features above).  
 
       This change also fixes the anomaly that arguments
-      of  subset expressions would sometimes be evaluated more than once
+      of subset expressions would sometimes be evaluated more than once
       (eg, \code{f()} in the example above).
 \item The speed of \code{.C} and \code{.Fortran} has been substantially
       improved, partly by incorporating changes in R-2.15.1 and R-2.15.2,
