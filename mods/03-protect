@@ -1,7 +1,0 @@
-PROTECT, UNPROTECT, etc. have been made mostly macros in most of the
-files in src/main.  This applies only to files that include Defn.h
-after defining the symbol USE_FAST_PROTECT_MACROS.  If this is
-defined, macros PROTECT2 and PROTECT3 for protecting two or three
-objects at once are also defined.
-
-This change speeds up numerous operations.
