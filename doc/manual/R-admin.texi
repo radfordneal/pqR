@@ -1588,8 +1588,8 @@ make
 @noindent
 and then sit back and wait.  The first option enables use of
 a BLAS built into OS X.  This may be much faster that the BLAS
-distributed with pqR, especially you have many processor cores,
-but not necessarily.  The Accuracy of results may also differ.
+distributed with pqR, especially if you have many processor cores,
+but not necessarily.  The accuracy of results may also differ.
 
 The second line of options are also default on OS X, but needed only
 if you want to build @R{} for use with @code{R.app} Console, and imply
@@ -4263,23 +4263,23 @@ The @code{vecLib} library in the @code{Accelerate} framework
 can be used @emph{via} the configuration options
 
 @example
---with-blas='-framework Accelerate' --with-lapack='-framework Accelerate'
+--with-blas='-framework Accelerate' --with-lapack
 @end example
 
 @noindent
 to provide higher-performance versions of the @acronym{BLAS} and LAPACK
 routines.  It may also be necessary to include @code{-D__ACCELERATE__}
-in @code{CFLAGS}.
+in @code{CFLAGS}, and omitting @code{--with-lapack} may be necessary,
+especially for Snow Leopard.
 
-Building @R{} without these options @emph{via}
+Building @R{} without these options (the default) is done @emph{via}
 
 @example
 --without-blas --without-lapack
 @end example
 
 @noindent
-can be done (and is provided as an alternative in the binary
-distribution).
+This is provided as an alternative in the R Core binary distribution.
 
 @menu
 * 64-bit builds::               
