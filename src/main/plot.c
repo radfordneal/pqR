@@ -916,8 +916,8 @@ static SEXP do_axis(SEXP call, SEXP op, SEXP args, SEXP env)
     rcolor col, colticks;
     int i, n, nint = 0, ntmp, side, *ind, outer, lineoff = 0;
     int istart, iend, incr;
-    Rboolean dolabels, doticks, logflag = FALSE;
-    Rboolean create_at;
+    int dolabels, doticks, logflag = FALSE;
+    int create_at;
     double x, y, temp, tnew, tlast;
     double axp[3], usr[2], limits[2];
     double gap, labw, low, high, line, pos, lwd, lwdticks, hadj;
@@ -978,7 +978,7 @@ static SEXP do_axis(SEXP call, SEXP op, SEXP args, SEXP env)
     /* should be plotted: TRUE => show, FALSE => don't show. */
 
     doticks = asLogical(CAR(args));
-    doticks = (doticks == NA_LOGICAL) ? TRUE : (Rboolean) doticks;
+    if (doticks == NA_LOGICAL) doticks = TRUE;
     args = CDR(args);
 
     /* Optional argument: "line" */

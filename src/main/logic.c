@@ -477,7 +477,7 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
        all(logical(0)) -> TRUE
        any(logical(0)) -> FALSE
      */
-    Rboolean val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
+    int val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
 
     PROTECT(args = fixup_NaRm(args));
     PROTECT(call2 = CONS(CAR(call),args));

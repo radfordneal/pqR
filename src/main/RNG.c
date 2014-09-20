@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -479,7 +479,7 @@ void PutRNGstate()
     }
 }
 
-static void RNGkind(RNGtype newkind)
+static void RNGkind (int newkind /* sometimes -1, so not of RNGtype */ )
 {
 /* Choose a new kind of RNG.
  * Initialize its seed by calling the old RNG's unif_rand()
@@ -507,12 +507,10 @@ static void RNGkind(RNGtype newkind)
     PutRNGstate();
 }
 
-static void Norm_kind(N01type kind)
+static void Norm_kind(int kind /* sometimes -1, so not N01type */)
 {
-    /* N01type is an enumeration type, so this will probably get
-       mapped to an unsigned integer type. */
     if (kind == -1) kind = N01_DEFAULT;
-    if (kind > LAST_N01_TYPE)
+    if (kind > LAST_N01_TYPE || kind < 0)
 	error(_("invalid Normal type in RNGkind"));
     if (kind == USER_NORM) {
 	User_norm_fun = R_FindSymbol("user_norm_rand", "", NULL);

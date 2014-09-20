@@ -307,7 +307,7 @@ void revsort(double *a, int *ib, int n)
 static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
-    Rboolean decreasing;
+    int decreasing;
 
     checkArity(op, args);
 
@@ -871,7 +871,7 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ap, ans;
     int i, n = -1, narg = 0;
-    Rboolean nalast, decreasing;
+    int nalast, decreasing;
 
     nalast = asLogical(CAR(args));
     if(nalast == NA_LOGICAL)

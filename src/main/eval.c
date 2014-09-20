@@ -1323,8 +1323,7 @@ static void asLogicalNoNA_warning (SEXP s, SEXP call)
                                   /* Caller needn't protect the s arg below */
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
-    Rboolean cond;
-    int len;
+    int len, cond;
 
     switch(TYPEOF(s)) { /* common cases done here for efficiency */
     case INTSXP:  /* assume logical and integer are the same */

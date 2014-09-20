@@ -4,6 +4,8 @@
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 2001-11  The R Core Team
  *
+ *  Modifications for pqR Copyright (c) 2014 Radford M. Neal
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
@@ -719,7 +721,7 @@ SEXP PicTeX(SEXP args)
     char *vmax;
     const char *file, *bg, *fg;
     double height, width;
-    Rboolean debug;
+    int debug;
 
     vmax = vmaxget();
     args = CDR(args); /* skip entry point name */

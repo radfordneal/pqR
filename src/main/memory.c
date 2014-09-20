@@ -2279,7 +2279,7 @@ static SEXP do_gctorture(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     if (isLogical(CAR(args))) {
-	Rboolean on = asLogical(CAR(args));
+	int on = asLogical(CAR(args));
 	if (on == NA_LOGICAL) gap = NA_INTEGER;
 	else if (on) gap = 1;
 	else gap = 0;
