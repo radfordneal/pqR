@@ -1581,16 +1581,15 @@ some tools as explained in that document.  Then you have to unpack the
 @example
 tar -zxvf R-@value{VERSIONno}.tar.gz
 cd R-@value{VERSIONno}
-./configure --with-blas='-framework vecLib' --with-lapack \
-  --with-aqua --enable-R-framework
+./configure --with-blas='-framework Accelerate' --with-aqua --enable-R-framework
 make
 @end example
 
 @noindent
-and then sit back and wait.  The first two options 
-use a BLAS and LAPACK built into OS X.  This has pros and cons: it
-used to be faster (but has not been on some recent multicore hardware)
-but less accurate.
+and then sit back and wait.  The first option enables use of
+a BLAS built into OS X.  This may be much faster that the BLAS
+distributed with pqR, especially you have many processor cores,
+but not necessarily.  The Accuracy of results may also differ.
 
 The second line of options are also default on OS X, but needed only
 if you want to build @R{} for use with @code{R.app} Console, and imply
@@ -4260,16 +4259,19 @@ tools page.
 
 @cindex BLAS library
 @cindex LAPACK library
-The @code{vecLib} library can be used @emph{via} the
-configuration options
+The @code{vecLib} library in the @code{Accelerate} framework 
+can be used @emph{via} the configuration options
 
 @example
---with-blas="-framework vecLib" --with-lapack
+--with-blas='-framework Accelerate' --with-lapack='-framework Accelerate'
 @end example
 
 @noindent
 to provide higher-performance versions of the @acronym{BLAS} and LAPACK
-routines.  Building @R{} without these options @emph{via}
+routines.  It may also be necessary to include @code{-D__ACCELERATE__}
+in @code{CFLAGS}.
+
+Building @R{} without these options @emph{via}
 
 @example
 --without-blas --without-lapack
