@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-11 The R Development Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -619,7 +622,7 @@ struct _DevDesc {
     void (*textUTF8)();
     double (*strWidthUTF8)();
 #endif
-    Rboolean wantSymbolUTF8;
+    int wantSymbolUTF8;
 
     /* Is rotated text good enough to be preferable to Hershey in
        contour labels?  Old default was FALSE.

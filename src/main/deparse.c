@@ -373,7 +373,7 @@ static SEXP do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP file, names, o, objs, tval, source, outnames;
     int i, j, nobjs, nout, res;
-    Rboolean wasopen, havewarned = FALSE, evaluate;
+    int wasopen, havewarned = FALSE, evaluate;
     Rconnection con;
     int opts;
     const char *obj_name;

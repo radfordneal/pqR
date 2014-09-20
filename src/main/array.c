@@ -1901,7 +1901,7 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x, ans;
     int OP, n, p;
-    Rboolean NaRm;
+    int NaRm;
 
     checkArity(op, args);
 
