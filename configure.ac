@@ -2917,12 +2917,6 @@ R is now configured for ${host}
 
   Byte compile packages:  ${want_byte_compiled_packages}
   Recommended packages:   ${use_recommended_packages} 
-use_blas: ${use_blas}
-acx_blas_ok: ${acx_blas_ok}
-BLAS_LIBS: ${BLAS_LIBS}
-BLAS_LIBS0: ${BLAS_LIBS0}
-acx_lapack_ok: ${acx_lapack_ok}
-LAPACK_LIBS: ${LAPACK_LIBS}
 ])
 if test -n "${warn_f77_cc_double_complex}"; then
   AC_MSG_WARN([${warn_f77_cc_double_complex}])
