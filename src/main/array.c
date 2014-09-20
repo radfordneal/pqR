@@ -961,9 +961,9 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (use_BLAS != NA_LOGICAL || PRIMVAL(op) != 0)
                 goto done_BLAS_check;
             /* Don't use the BLAS if the ISNAN check is more costly than
-               any possible gain; 3 is a somewhat arbitrary fudge factor */
+               any possible gain; 5 is a somewhat arbitrary fudge factor */
             use_BLAS = 0;
-            if (3*((double)nrows+ncols) >= (double)nrows*ncols)
+            if (5*((double)nrows+ncols) >= (double)nrows*ncols)
                 goto done_BLAS_check;
             /* Use BLAS unless we find an NA/NaN below */
             int lenx = LENGTH(x);
