@@ -213,9 +213,9 @@ static void processSymbolId (SEXP op, SEXP call, DL_FUNC *fun,
 		  break;
 	      default:
 		 /* Something unintended has happened if we get here. */
-		  errorcall(call, _("Unimplemented type %d in createRSymbolObject"),
+		  errorcall(call, 
+                            _("Unimplemented type %d in createRSymbolObject"),
 			    symbol->type);
-		  break;
 	      }
 	      *symbol = *tmp;
 	   }
@@ -472,7 +472,6 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 
     PROTECT(spa.pkg);
     resolveNativeRoutine(args, &ofun, &symbol, spa.pkg, buf, call, env);
-    fun = (VarFun) ofun;
     args = CDR(args);
     UNPROTECT(1);
 
