@@ -2820,7 +2820,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind;
     int i, k, k2;
-    int /* boolean */ all, useNms, no_dots;
+    int all, useNms, no_dots;
 
     checkArity(op, args);
 
@@ -2833,6 +2833,9 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     FUN = CADR(args);
     if (!isSymbol(FUN))
 	error(_("arguments must be symbolic"));
+
+    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
 
     /* 'all.names' : */
     all = asLogical(eval(CADDR(args), rho));
