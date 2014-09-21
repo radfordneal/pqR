@@ -660,7 +660,6 @@ static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 		/* else leave alone */
 	    }
 	}
-	l = strlen(tmp);        /* needed? */
 	SET_STRING_ELT(ans, i, mkChar(tmp));
 	/* do we have a reserved word?  If so the name is invalid */
 	if (!isValidName(tmp)) {

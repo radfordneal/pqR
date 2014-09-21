@@ -1909,9 +1909,9 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     x = CAR(args); args = CDR(args);
     /* other arguments we wait for */
     wait_until_arguments_computed(args);
-    n = asInteger(CAR(args));    args = CDR(args);
-    p = asInteger(CAR(args));    args = CDR(args);
-    NaRm = asLogical(CAR(args)); args = CDR(args);
+    n = asInteger(CAR(args)); args = CDR(args);
+    p = asInteger(CAR(args)); args = CDR(args);
+    NaRm = asLogical(CAR(args));
 
     if (n == NA_INTEGER || n < 0)
 	error(_("invalid '%s' argument"), "n");

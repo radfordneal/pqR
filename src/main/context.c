@@ -294,7 +294,6 @@ void revisecontext (SEXP env, SEXP sysp)
 void R_NORETURN attribute_hidden findcontext(int mask, SEXP env, SEXP val)
 {
     RCNTXT *cptr;
-    cptr = R_GlobalContext;
     if (mask & CTXT_LOOP) {		/* break/next */
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;

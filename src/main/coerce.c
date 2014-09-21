@@ -636,7 +636,6 @@ SEXP PairToVectorList(SEXP x)
     }
     if (named) {
 	PROTECT(xnames = allocVector(STRSXP, len));
-	xptr = x;
 	for (i = 0, xptr = x; i < len; i++, xptr = CDR(xptr)) {
 	    if(TAG(xptr) == R_NilValue)
 		SET_STRING_ELT(xnames, i, R_BlankString);
@@ -857,13 +856,12 @@ static SEXP coerceToPairList(SEXP v)
 static SEXP coercePairList(SEXP v, SEXPTYPE type)
 {
     int i, n=0;
-    SEXP rval= R_NilValue, vp, names;
+    SEXP rval= R_NilValue, vp;
 
     /* Hmm, this is also called to LANGSXP, and coerceVector already
        did the check of TYPEOF(v) == type */
     if(type == LISTSXP) return v;/* IS pairlist */
 
-    names = v;
     if (type == EXPRSXP) {
 	PROTECT(rval = allocVector(type, 1));
 	SET_VECTOR_ELT(rval, 0, v);
@@ -923,9 +921,8 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 	    i = 1;
 
     if (i) {
-	i = 0;
-	names = allocVector(STRSXP, n);
-	for (vp = v; vp != R_NilValue; vp = CDR(vp), i++)
+	SEXP names = allocVector(STRSXP, n);
+	for (i = 0, vp = v; vp != R_NilValue; vp = CDR(vp), i++)
 	    if (TAG(vp) != R_NilValue)
 		SET_STRING_ELT(names, i, PRINTNAME(TAG(vp)));
 	setAttrib(rval, R_NamesSymbol, names);
@@ -938,9 +935,7 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 {
     int i, n, warn = 0, tmp;
-    SEXP rval, names;
-
-    names = v;
+    SEXP rval;
 
     /* expression -> list, new in R 2.4.0 */
     if (type == VECSXP && TYPEOF(v) == EXPRSXP) {
@@ -1018,7 +1013,7 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 	      type2char(type));
 
     if (warn) CoercionWarning(warn);
-    names = getAttrib(v, R_NamesSymbol);
+    SEXP names = getAttrib(v, R_NamesSymbol);
     if (names != R_NilValue)
 	setAttrib(rval, R_NamesSymbol, names);
     UNPROTECT(1);

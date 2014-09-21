@@ -1733,7 +1733,7 @@ static SEXP do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP sfile, sopen, ans, class, enc;
     const char *file, *open;
     int ncon, compress = 9;
-    Rconnection con = NULL;
+    Rconnection con;
     int type = PRIMVAL(op);
     int subtype = 0;
 
@@ -1793,6 +1793,8 @@ static SEXP do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     case 2:
 	con = newxzfile(file, strlen(open) ? open : "rb", subtype, compress);
 	break;
+    default:
+        abort();
     }
     ncon = NextConnection();
     Connections[ncon] = con;
@@ -4666,7 +4668,7 @@ static SEXP do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "description");
     if(length(scmd) > 1)
 	warning(_("only first element of 'description' argument used"));
-    url = CHAR(STRING_ELT(scmd, 0)); /* ASCII */
+
 #ifdef Win32
     if(PRIMVAL(op) && !IS_ASCII(STRING_ELT(scmd, 0)) ) {
 	ienc = CE_UTF8;
@@ -4679,8 +4681,9 @@ static SEXP do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	    url = translateChar(STRING_ELT(scmd, 0));
     }
 #else
-	url = translateChar(STRING_ELT(scmd, 0));
+    url = translateChar(STRING_ELT(scmd, 0));
 #endif
+
 #ifdef HAVE_INTERNET
     if (strncmp(url, "http://", 7) == 0) type = HTTPsh;
     else if (strncmp(url, "ftp://", 6) == 0) type = FTPsh;
