@@ -465,6 +465,10 @@
 \item From R-2.15.1:
       The value returned by tools::psnice() for invalid pid values was
       not always NA as documented.
+\item From R-2.15.2:
+      \code{sort.list(method = "radix")} could give incorrect
+      results on certain compilers (seen with \command{clang} on Mac OS
+      10.7 and \command{Xcode 4.4.1}).
 \item Similarly to R-3.1.1-patched:
       In package \code{parallel}, child processes now call \code{_Exit}
       rather than \code{exit}, so that the main process is not affected

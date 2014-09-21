@@ -1000,7 +1000,7 @@ static SEXP do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
     napos = off ? 0 : xmax + 1;
     off -= xmin;
     /* automatic allocation is fine here: we know this is small */
-    R_len_t cnts[xmax+1];
+    int cnts[xmax+2];
 
     for(i = 0; i <= xmax+1; i++) cnts[i] = 0;
     for(i = 0; i < n; i++) {
