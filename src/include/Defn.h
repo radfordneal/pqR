@@ -926,7 +926,7 @@ extern0 Rboolean R_mat_mult_with_BLAS [R_mat_mult_with_BLAS_len]
 #ifdef __MAIN__
 #define NA INT_MIN
   = { R_MAT_MULT_WITH_BLAS_DEFAULT, R_MAT_MULT_WITH_BLAS_DEFAULT,
-      R_MAT_MULT_WITH_BLAS_DEFAULT, R_MAT_MULT_WITH_BLAS_DEFAULT };
+      R_MAT_MULT_WITH_BLAS_DEFAULT, R_MAT_MULT_WITH_BLAS_DEFAULT }
 #undef NA
 #endif
 ;
