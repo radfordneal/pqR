@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2002--2011  The R Development Core Team
@@ -49,7 +49,7 @@ amatch_regaparams(regaparams_t *params, int patlen,
     int cost, max_cost, warn = 0;
     double bound;
 
-    cost = params->cost_ins = max_cost = costs[0];
+    params->cost_ins = max_cost = costs[0];
     cost = params->cost_del = costs[1];
     if(cost > max_cost) max_cost = cost;
     cost = params->cost_subst = costs[2];

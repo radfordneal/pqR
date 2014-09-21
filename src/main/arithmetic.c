@@ -1916,7 +1916,6 @@ SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     int nprotect = 2;
-    int n;
 
     /* Do the common case of one un-tagged, non-object, argument quickly. */
     if (!isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) 
@@ -1927,7 +1926,6 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             WAIT_UNTIL_COMPUTED(arg);
             UNPROTECT(1);
             PROTECT(args = CONS(arg, R_NilValue));
-            n = 1;
         }
         else {
             ans = do_fast_math1 (call, op, arg, env, variant);
@@ -1936,7 +1934,7 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
     else {
-        n = length(args);
+        int n = length(args);
 
         /* This seems like some sort of horrible kludge that can't possibly
            be right in general (it ignores the argument names, and silently
@@ -1955,7 +1953,8 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP res, call2;
     PROTECT(call2 = lang2(CAR(call), R_NilValue));
     SETCDR(call2, args);
-    n = length(args);
+
+    int n = length(args);
 
     if (! DispatchGroup("Math", call2, op, args, env, &res)) {
 	switch (n) {
