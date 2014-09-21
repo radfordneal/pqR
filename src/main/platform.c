@@ -297,7 +297,6 @@ static SEXP do_fileshow(SEXP call, SEXP op, SEXP args, SEXP rho)
     tl = CAR(args); args = CDR(args);
     dl = (Rboolean) asLogical(CAR(args)); args = CDR(args);
     pg = CAR(args);
-    n = 0;			/* -Wall */
     if (!isString(fn) || (n = length(fn)) < 1)
 	error(_("invalid filename specification"));
     if (!isString(hd) || length(hd) != n)
@@ -655,7 +654,7 @@ static SEXP do_filesymlink(SEXP call, SEXP op, SEXP args, SEXP rho)
 		warning(_("cannot symlink '%ls' to '%ls', reason '%s'"),
 			from, to, formatError(GetLastError()));
 #else
-	    char from[PATH_MAX], to[PATH_MAX];
+	    char from[PATH_MAX+1], to[PATH_MAX+1];
 	    const char *p;
 	    p = R_ExpandFileName(translateChar(STRING_ELT(f1, i%n1)));
 	    if (strlen(p) >= PATH_MAX - 1) {
@@ -2421,7 +2420,6 @@ static int do_copy(const char* from, const char* name, const char* to,
 	char p[PATH_MAX];
 
 	if (!recursive) return 1;
-	nc = strlen(to);
 	snprintf(dest, PATH_MAX, "%s%s", to, name);
 	/* If a directory does not have write permission for the user,
 	   we will fail to create files in that directory, so defer
@@ -2452,7 +2450,6 @@ static int do_copy(const char* from, const char* name, const char* to,
 	char buf[APPENDBUFSIZE];
 
 	nfail = 0;
-	nc = strlen(to);
 	snprintf(dest, PATH_MAX, "%s%s", to, name);
 	if (over || !R_FileExists(dest)) {
 	    /* REprintf("copying %s to %s\n", this, dest); */
@@ -2485,7 +2482,7 @@ copy_error:
 static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP fn, to, ans;
-    char *p, dir[PATH_MAX], from[PATH_MAX], name[PATH_MAX];
+    char *p, dir[PATH_MAX+1], from[PATH_MAX], name[PATH_MAX];
     int i, nfiles, over, recursive, perms, nfail;
 
     checkArity(op, args);
@@ -2509,24 +2506,26 @@ static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid '%s' argument"), "copy.mode");
 	strncpy(dir, 
 		R_ExpandFileName(translateChar(STRING_ELT(to, 0))),
-		PATH_MAX);
+		PATH_MAX-1);
+        dir[PATH_MAX-1] = 0;
 	if (*(dir + (strlen(dir) - 1)) !=  '/')
-	    strncat(dir, "/", PATH_MAX);
+	    strcat(dir, "/");
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
 		strncpy(from, 
 			R_ExpandFileName(translateChar(STRING_ELT(fn, i))),
-			PATH_MAX);
+			PATH_MAX-1);
+                from[PATH_MAX-1] = 0;
 		/* If there is a trailing sep, this is a mistake */
 		p = from + (strlen(from) - 1);
 		if(*p == '/') *p = '\0';
 		p = strrchr(from, '/') ;
 		if (p) {
-		    strncpy(name, p+1, PATH_MAX);
+		    strcpy(name, p+1);
 		    *(p+1) = '\0';
 		} else {
-		    strncpy(name, from, PATH_MAX);
-		    strncpy(from, "./", PATH_MAX);
+		    strcpy(name, from);
+		    strcpy(from, "./");
 		}
 		nfail = do_copy(from, name, dir, over, recursive, perms);
 	    } else nfail = 1;
