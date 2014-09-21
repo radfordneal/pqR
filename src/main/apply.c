@@ -46,10 +46,11 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(XX = eval(CAR(args), rho));
     FUN = CADR(args);  /* must be unevaluated for use in e.g. bquote */
 
-    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
-    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
     n = length(XX);
     if (n == NA_INTEGER) error(_("invalid length"));
+
+    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
 
     PROTECT(ans = allocVector(VECSXP, n));
     names = getAttrib(XX, R_NamesSymbol);
@@ -117,10 +118,11 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     useNames = asLogical(eval(CADDDR(args), rho));
     if (useNames == NA_LOGICAL) error(_("invalid USE.NAMES value"));
 
-    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
-    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
     n = length(XX);
     if (n == NA_INTEGER) error(_("invalid length"));
+
+    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
 
     commonLen = length(value);
     commonType = TYPEOF(value);
