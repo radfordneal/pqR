@@ -966,7 +966,7 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, ans;
-    Rboolean nalast, decreasing;
+    int nalast, decreasing;
     R_len_t i, n;
     int tmp, xmax = NA_INTEGER, xmin = NA_INTEGER, off, napos;
 
