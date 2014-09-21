@@ -736,7 +736,7 @@ const char* get_workspace_name();  /* from startup.c */
 
 void setup_Rmainloop(void)
 {
-    volatile int doneit;
+    volatile int doneit;  /* Purpose is unclear; is it supposed to be static? */
     volatile SEXP baseEnv;
     SEXP cmd;
     FILE *fp;

@@ -1465,7 +1465,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     pcre *re_pcre = NULL;
     pcre_extra *re_pe  = NULL;
     const unsigned char *tables = NULL;
-    const void *vmax = VMAXGET();
 
     checkArity(op, args);
 
@@ -1477,7 +1476,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     igcase_opt = asLogical(CAR(args)); args = CDR(args);
     perl_opt = asLogical(CAR(args)); args = CDR(args);
     fixed_opt = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args)); args = CDR(args);
+    useBytes = asLogical(CAR(args));
+
     if (igcase_opt == NA_INTEGER) igcase_opt = 0;
     if (perl_opt == NA_INTEGER) perl_opt = 0;
     if (fixed_opt == NA_INTEGER) fixed_opt = 0;
@@ -1606,7 +1606,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     PROTECT(ans = allocVector(STRSXP, n));
-    vmax = VMAXGET();
+    const void *vmax = VMAXGET();
     for (i = 0 ; i < n ; i++) {
 	/* NA pattern was handled above */
 	if (STRING_ELT(text,i) == NA_STRING) {
