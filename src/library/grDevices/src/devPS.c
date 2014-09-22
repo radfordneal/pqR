@@ -1261,15 +1261,14 @@ findEncoding(const char *encpath, encodinglist deviceEncodings, Rboolean isPDF)
 {
     encodinglist enclist = isPDF ? PDFloadedEncodings : loadedEncodings;
     encodinginfo encoding = NULL;
-    int found = 0;
     /*
      * "default" is a special encoding which means use the
      * default (FIRST) encoding set up ON THIS DEVICE.
      */
     if (!strcmp(encpath, "default")) {
-	found = 1;
 	encoding = deviceEncodings->encoding;
     } else {
+        int found = 0;
 	while (enclist && !found) {
 	    found = !strcmp(encpath, enclist->encoding->encpath);
 	    if (found)
@@ -8351,7 +8350,7 @@ SEXP PDF(SEXP args)
     double height, width, ps;
     int i, onefile, pagecentre, major, minor, dingbats, useKern, useCompression;
     SEXP fam, fonts;
-    Rboolean fillOddEven;
+    int fillOddEven;
 
     vmax = vmaxget();
     args = CDR(args); /* skip entry point name */
