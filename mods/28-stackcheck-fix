@@ -1,8 +1,0 @@
-Fixes a problem with checking for C stack overflow, which occurred
-when the fallback method was needed for determining the start of the
-stack, and a stack check was made when very little stack was used
-(which was incorrectly diagnosed as stack overflow).  Occurred in the
-check for the Matrix package when using gcc on SPARC Solaris, after
-pqR was changed to reduce stack usage.
-
-Also cleaned up the relevant code in other ways.
