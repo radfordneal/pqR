@@ -2803,7 +2803,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isSymbol(FUN))
 	error(_("arguments must be symbolic"));
 
-    dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
+    SEXP dotsv = findVarInFrame3 (rho, R_DotsSymbol, 3);
     no_dots = dotsv==R_MissingArg || dotsv==R_NilValue || dotsv==R_UnboundValue;
 
     /* 'all.names' : */
