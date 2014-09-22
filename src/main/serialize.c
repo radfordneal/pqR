@@ -529,7 +529,6 @@ static void InFormat(R_inpstream_t stream)
 	    break;
 	}
     default:
-	type = R_pstream_any_format;  /* keep compiler happy */
 	error(_("unknown input format"));
     }
     if (stream->type == R_pstream_any_format)
@@ -1698,7 +1697,6 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    PROTECT(s = allocS4Object());
 	    break;
 	default:
-	    s = R_NilValue; /* keep compiler happy */
 	    error(_("ReadItem: unknown type %i, perhaps written by later version of R"), type);
 	}
 
@@ -2737,7 +2735,7 @@ static SEXP do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP key, file, compsxp, hook;
     PROTECT_INDEX vpi;
-    Rboolean compressed;
+    int compressed;
     SEXP val;
 
     checkArity(op, args);

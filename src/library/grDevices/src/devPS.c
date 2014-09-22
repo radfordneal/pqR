@@ -1261,15 +1261,14 @@ findEncoding(const char *encpath, encodinglist deviceEncodings, Rboolean isPDF)
 {
     encodinglist enclist = isPDF ? PDFloadedEncodings : loadedEncodings;
     encodinginfo encoding = NULL;
-    int found = 0;
     /*
      * "default" is a special encoding which means use the
      * default (FIRST) encoding set up ON THIS DEVICE.
      */
     if (!strcmp(encpath, "default")) {
-	found = 1;
 	encoding = deviceEncodings->encoding;
     } else {
+        int found = 0;
 	while (enclist && !found) {
 	    found = !strcmp(encpath, enclist->encoding->encpath);
 	    if (found)
@@ -7203,9 +7202,13 @@ static void PDF_NewPage(const pGEcontext gc,
     if (pd->useCompression) {
 	char *tmp = R_tmpnam("pdf", R_TempDir);
 	pd->pdffp = fopen(tmp, "w+b");
+	if (!pd->pdffp) {
+            char tmp2[strlen(tmp)+1];
+            strcpy(tmp2,tmp);
+            free(tmp);
+            error("cannot open file '%s', reason %s", tmp2, strerror(errno));
+        }
 	free(tmp);
-	if(! pd->pdffp) error("cannot open file '%s', reason %s", 
-			      tmp, strerror(errno));
     } else {
 	fprintf(pd->pdffp, "%d 0 obj\n<<\n/Length %d 0 R\n>>\nstream\n",
 		pd->nobjs, pd->nobjs + 1);
@@ -8351,7 +8354,7 @@ SEXP PDF(SEXP args)
     double height, width, ps;
     int i, onefile, pagecentre, major, minor, dingbats, useKern, useCompression;
     SEXP fam, fonts;
-    Rboolean fillOddEven;
+    int fillOddEven;
 
     vmax = vmaxget();
     args = CDR(args); /* skip entry point name */

@@ -738,7 +738,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     data.nomatch = nmatch;
     HashTableSetup(table, &data);
     if(type == STRSXP) {
-	Rboolean useBytes = FALSE;
+	Rboolean useBytes = FALSE;  /* Now not used for anything...? */
 	Rboolean useUTF8 = FALSE;
         Rboolean useCache = TRUE;
         int len_x = length(x);
@@ -1197,12 +1197,10 @@ static SEXP do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		break;
 	    cptr = cptr->nextcontext;
 	}
-	if ( cptr == NULL ) {
-	    sysp = R_GlobalEnv;
+	if (cptr == NULL)
 	    errorcall(R_NilValue,
 		      "match.call() was called from outside a function");
-	} else
-	    sysp = cptr->sysparent;
+	sysp = cptr->sysparent;
 	if (cptr != NULL)
 	    /* Changed to use the function from which match.call was
 	       called as recorded in the context.  This change is

@@ -1142,7 +1142,6 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    for (i = 0; i < len; i++) ra[i] = r[i % n];
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-	    x = CAR(a);
 	    PROTECT(x = coerceVector(CAR(a), anstype));
 	    n = LENGTH(x);
 	    r = INTEGER(x);

@@ -62,7 +62,8 @@ static R_INLINE double fmax2(double x, double y)
 static SEXP getInlinePar(SEXP s, char *name)
 {
     SEXP result = R_NilValue;
-    int found = 0;
+    int found = 0;  /* Nonsense flag, does nothing.  Meant to ensure first value
+                       found is returned?  But it doesn't (last is returned). */
     if (isList(s) && !found) {
 	while (s != R_NilValue) {
 	    if (isList(CAR(s))) {
