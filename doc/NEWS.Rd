@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-09-20}{
+\section{CHANGES IN VERSION RELEASED 2014-09-21}{
 
   \subsection{INTRODUCTION}{
 
@@ -140,9 +140,12 @@
       option has been replaced by the ability to use a configure 
       argument of \code{BLAS_in_helpers=FALSE} or \code{BLAS_in_helpers=TRUE}
       to set the default value of this option.
-\item The LAPACK routines used are now the same as those in R-3.1.1.
+\item The LAPACK routines used are now the same as those in R-3.1.1 (version
+      3.5.0).
       However, the \code{.Call} interface to these remains as in 
       R-2.15.0 to R-2.15.3 (it was changed to use \code{.Internal} in R-3.0.0).
+      Since LAPACK 3.5.0 uses some more recent Fortran features, a 
+      Fortran 77 compiler such as \code{g77} will no longer suffice.
 \item Setting the environment variable \code{R_ABORT} to any non-null
       string will prevent any attempt to produce a stack trace on a
       segmentation fault, in favour of instead producing (maybe) an
