@@ -2372,7 +2372,7 @@ static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 			PATH_MAX);
 		/* If there was a trailing sep, this is a mistake */
 		p = from + (wcslen(from) - 1);
-		if(*p == L'\\') *p = L'\0';
+		if (wcslen(from) > 0 && *p == L'\\') *p = L'\0';
 		p = wcsrchr(from, L'\\') ;
 		if (p) {
 		    wcsncpy(name, p+1, PATH_MAX);
@@ -2517,8 +2517,8 @@ static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 			PATH_MAX-1);
                 from[PATH_MAX-1] = 0;
 		/* If there is a trailing sep, this is a mistake */
-		p = from + (strlen(from) - 1);
-		if(*p == '/') *p = '\0';
+		if (from[0] && from[strlen(from)-1] == '/') 
+                    from[strlen(from)-1] = 0;
 		p = strrchr(from, '/') ;
 		if (p) {
 		    strcpy(name, p+1);
