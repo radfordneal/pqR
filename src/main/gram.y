@@ -1790,15 +1790,17 @@ static void yyerror(const char *s)
 	if (expecting) *expecting = '\0';
 	for (i = 0; yytname_translations[i]; i += 2) {
 	    if (!strcmp(s + sizeof yyunexpected - 1, yytname_translations[i])) {
-		sprintf(R_ParseErrorMsg, _("unexpected %s"),
+		snprintf(R_ParseErrorMsg,  PARSE_ERROR_SIZE, _("unexpected %s"),
 		    i/2 < YYENGLISH ? _(yytname_translations[i+1])
 				    : yytname_translations[i+1]);
 		return;
 	    }
 	}
-	sprintf(R_ParseErrorMsg, _("unexpected %s"), s + sizeof yyunexpected - 1);
+	snprintf(R_ParseErrorMsg, PARSE_ERROR_SIZE, _("unexpected %s"), 
+                s + sizeof yyunexpected - 1);
     } else {
 	strncpy(R_ParseErrorMsg, s, PARSE_ERROR_SIZE - 1);
+	R_ParseErrorMsg[PARSE_ERROR_SIZE - 1] = '\0';
     }
 }
 

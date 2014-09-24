@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -97,8 +97,10 @@ static void getParseFilename(char* buffer, size_t buflen)
     if (R_ParseErrorFile && !isNull(R_ParseErrorFile)) {
 	SEXP filename;
 	PROTECT(filename = findVar(install("filename"), R_ParseErrorFile));
-	if (isString(filename) && length(filename))
+	if (isString(filename) && length(filename)) {
 	    strncpy(buffer, CHAR(STRING_ELT(filename, 0)), buflen - 1);
+            buffer[buflen-1] = 0;
+        }
 	UNPROTECT(1);
     }
 }
