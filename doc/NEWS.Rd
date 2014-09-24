@@ -356,6 +356,14 @@
 }
       I reported this to R Core, and it is also fixed (differently) in
       R-3.1.1.
+\item Fixed a problem in \code{.C} and \code{.Fortran} where, contrary
+      to the documentation (except when \code{DUP=TRUE} and no duplication 
+      was actually needed), logical values after the call other than 
+      \code{TRUE}, \code{FALSE}, and \code{NA} are not mapped to \code{TRUE},
+      but instead exist as invalid values that may show up later.
+      This bug exists in R Core versions 2.15.1 through at least 3.1.1.
+      I reported it as \PR{15878} at r-project.org, so it may be fixed in
+      a later R Core release.
 \item Fixed a problem with treatment of \code{ANYSXP} in specifying
       types of registered C or Fortran routines, which in particular had
       prevented the types of \code{str_signif}, used in \code{formatC},
@@ -368,7 +376,7 @@
    b <- paste0(rep(a,8000),collapse="")
    c <- substr(b,1,16000)
 }
-      I reported this as PR #15910 at r-project.org, so it may be
+      I reported this as PR{15910} at r-project.org, so it may be
       fixed in an R Core release after R-3.1.1.  A related bug in
       assignment to \code{substr} has also been fixed.
 \item Fixed a bug in how debugging is handled that is illustrated by the
