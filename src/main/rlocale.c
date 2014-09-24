@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2005-7   The R Development Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -193,6 +196,7 @@ static const char UNICODE[] = "UCS-4LE";
   size_t  rc ;							     \
 								     \
   strncpy(fromcode, locale2charset(NULL), sizeof(fromcode));         \
+  fromcode[sizeof(fromcode) - 1] = '\0';                             \
   if(0 == strcmp(fromcode, "UTF-8"))				     \
        return wcsearch(wc,table_w ## ISWNAME , table_w ## ISWNAME ## _count);\
   memset(mb_buf, 0, sizeof(mb_buf));				     \

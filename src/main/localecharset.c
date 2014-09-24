@@ -608,7 +608,9 @@ char *locale2charset(const char *locale)
     p = strrchr(locale, '.');
     if(p) {
 	strncpy(enc, p+1, sizeof(enc)-1);
+        enc[sizeof(enc) - 1] = '\0';
 	strncpy(la_loc, locale, sizeof(la_loc)-1);
+        la_loc[sizeof(la_loc) - 1] = '\0';
 	p = strrchr(la_loc, '.');
 	if(p) *p = '\0';
     }
@@ -672,6 +674,7 @@ char *locale2charset(const char *locale)
 	    if(cp != 0) return charset;
 	    /* IBM-eucXX case */
 	    strncpy(charset, (enc[3] == '-') ? enc+4: enc+3, sizeof(charset));
+            charset[sizeof(charset) - 1] = '\0';
 	    if(strncmp(charset, "euc", 3)) {
 		if (charset[3] != '-') {
 		    for(i = strlen(charset)-3; 0 < i; i--)

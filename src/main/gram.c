@@ -352,47 +352,6 @@ static int	xxvalue(SEXP, int, YYLTYPE *);
      UMINUS = 296
    };
 #endif
-/* Tokens.  */
-#define END_OF_INPUT 258
-#define ERROR 259
-#define STR_CONST 260
-#define NUM_CONST 261
-#define NULL_CONST 262
-#define SYMBOL 263
-#define FUNCTION 264
-#define INCOMPLETE_STRING 265
-#define LEFT_ASSIGN 266
-#define EQ_ASSIGN 267
-#define RIGHT_ASSIGN 268
-#define LBB 269
-#define FOR 270
-#define IN 271
-#define IF 272
-#define ELSE 273
-#define WHILE 274
-#define NEXT 275
-#define BREAK 276
-#define REPEAT 277
-#define GT 278
-#define GE 279
-#define LT 280
-#define LE 281
-#define EQ 282
-#define NE 283
-#define AND 284
-#define OR 285
-#define AND2 286
-#define OR2 287
-#define NS_GET 288
-#define NS_GET_INT 289
-#define LOW 290
-#define TILDE 291
-#define NOT 292
-#define UNOT 293
-#define SPECIAL 294
-#define UPLUS 295
-#define UMINUS 296
-
 
 
 
@@ -4048,15 +4007,17 @@ static void yyerror(const char *s)
 	if (expecting) *expecting = '\0';
 	for (i = 0; yytname_translations[i]; i += 2) {
 	    if (!strcmp(s + sizeof yyunexpected - 1, yytname_translations[i])) {
-		sprintf(R_ParseErrorMsg, _("unexpected %s"),
+		snprintf(R_ParseErrorMsg,  PARSE_ERROR_SIZE, _("unexpected %s"),
 		    i/2 < YYENGLISH ? _(yytname_translations[i+1])
 				    : yytname_translations[i+1]);
 		return;
 	    }
 	}
-	sprintf(R_ParseErrorMsg, _("unexpected %s"), s + sizeof yyunexpected - 1);
+	snprintf(R_ParseErrorMsg, PARSE_ERROR_SIZE, _("unexpected %s"), 
+                s + sizeof yyunexpected - 1);
     } else {
 	strncpy(R_ParseErrorMsg, s, PARSE_ERROR_SIZE - 1);
+	R_ParseErrorMsg[PARSE_ERROR_SIZE - 1] = '\0';
     }
 }
 

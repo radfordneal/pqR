@@ -133,6 +133,7 @@ extract_one(unzFile uf, const char *const dest, const char * const filename,
     if (filename) {
 	if (strlen(dest) + strlen(filename) > PATH_MAX - 2) return 1;
 	strncpy(fn0, filename, PATH_MAX); 
+        fn0[PATH_MAX - 1] = '\0';
 	fn = fn0;
     }
 #ifdef Win32
