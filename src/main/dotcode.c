@@ -2009,6 +2009,8 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 
     for (na = 0, sc = scalars; na < nargs; na++, sc >>= 1) {
 
+        /* Replace input-only arguments by R_NilValue, to release space. */
+
         if (dotCode_spa.dup && arg_styles && arg_styles[na] == R_ARG_IN) {
             SET_VECTOR_ELT(args, na, R_NilValue);
             continue;
@@ -2186,9 +2188,8 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                           na+1, symName);
 	}
 
-	/* Start with return value a copy of the inputs (maybe coerced above),
-           as that is what is needed for DUP = FALSE and for non-atomic-vector
-           inputs. */
+        /* Start with return value a copy of the inputs, as that is what is 
+           needed for DUP = FALSE and for non-atomic-vector inputs. */
 
 	SET_VECTOR_ELT(ans, na, s);
 
@@ -2430,9 +2431,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         /* Copy attributes to elements of result. */
 
         for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
-            SEXP arg = CAR(pa);
             SEXP s = VECTOR_ELT (ans, na);
-            if (s != arg) DUPLICATE_ATTRIB (s, arg);
+            if (s != R_NilValue) { /* will be R_NilValue if input-only */
+                SEXP arg = CAR(pa);
+                if (s != arg) DUPLICATE_ATTRIB (s, arg);
+            }
         }
     }
 
