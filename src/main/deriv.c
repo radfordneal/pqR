@@ -579,16 +579,27 @@ static int isPowerForm(SEXP expr)
 	    && CAR(expr) == PowerSymbol);
 }
 
+/* Add parentheses is some places where they are needed to get the right
+   precedence.  But not all.  It's not clear this is needed, since
+   deparsing puts parentheses in where needed, and evaluation gets it 
+   right with or without parentheses.  But we'll do it anyway, as before, 
+   but without altering the expression passed, as it used to do... */
+
 static SEXP AddParens(SEXP expr)
 {
-    SEXP e;
-    if (TYPEOF(expr) == LANGSXP) {
-	e = CDR(expr);
-	while(e != R_NilValue) {
-	    SETCAR(e, AddParens(CAR(e)));
-	    e = CDR(e);
-	}
+    if (TYPEOF(expr) != LANGSXP)
+        return expr;
+
+    SEXP e, n;
+    e = CDR(expr);
+    PROTECT(expr = LCONS (CAR(expr), R_NilValue));
+    n = expr;
+    while (e != R_NilValue) {
+        SETCDR(n, CONS(AddParens(CAR(e)),R_NilValue));
+        n = CDR(n);
+        e = CDR(e);
     }
+
     if (isPlusForm(expr)) {
 	if (isPlusForm(CADDR(expr))) {
 	    SETCADDR(expr, lang2(ParenSymbol, CADDR(expr)));
@@ -626,6 +637,7 @@ static SEXP AddParens(SEXP expr)
 	    SETCADDR(expr, lang2(ParenSymbol, CADDR(expr)));
 	}
     }
+    UNPROTECT(1);
     return expr;
 }
 
@@ -1033,14 +1045,19 @@ static SEXP do_deriv(SEXP call, SEXP op, SEXP args, SEXP env)
 	else {
             SEXP var;
             PROTECT(var = MakeVariable(i+1, tag));
-            SETCAR(ans, lang3(install("<-"), var, AddParens(CAR(ans))));
-            UNPROTECT(1);
+            SEXP par;
+            PROTECT(par = AddParens(CAR(ans)));
+            SETCAR(ans, lang3(install("<-"), var, par));
+            UNPROTECT(2);
         }
 	i = i + 1;
 	ans = CDR(ans);
     }
     /* .value <- ... */
-    SETCAR(ans, lang3(install("<-"), install(".value"), AddParens(CAR(ans))));
+    SEXP par;
+    PROTECT(par = AddParens(CAR(ans)));
+    SETCAR(ans, lang3(install("<-"), install(".value"), par));
+    UNPROTECT(1);
     ans = CDR(ans);
     /* .grad <- ... */
     SETCAR(ans, CreateGrad(names));
@@ -1049,19 +1066,21 @@ static SEXP do_deriv(SEXP call, SEXP op, SEXP args, SEXP env)
     if (hessian) { SETCAR(ans, CreateHess(names)); ans = CDR(ans); }
     /* .grad[, "..."] <- ... */
     for (i = 0; i < nderiv ; i++) {
-	SETCAR(ans, DerivAssign(STRING_ELT(names, i), AddParens(CAR(ans))));
+        SEXP par;
+        PROTECT(par = AddParens(CAR(ans)));
+	SETCAR(ans, DerivAssign(STRING_ELT(names, i), par));
+        UNPROTECT(1);
 	ans = CDR(ans);
 	if (hessian) {
 	    for (j = i; j < nderiv; j++) {
 		if (CAR(ans) != R_MissingArg) {
-		    if (i == j) {
-			SETCAR(ans, HessAssign1(STRING_ELT(names, i),
-						AddParens(CAR(ans))));
-		    } else {
-			SETCAR(ans, HessAssign2(STRING_ELT(names, i),
-						STRING_ELT(names, j),
-						AddParens(CAR(ans))));
-		    }
+                    PROTECT(par = AddParens(CAR(ans)));
+		    if (i == j)
+			SETCAR(ans, HessAssign1(STRING_ELT(names, i), par));
+		    else
+			SETCAR(ans, HessAssign2(STRING_ELT(names, i), 
+						STRING_ELT(names, j), par));
+                    UNPROTECT(1);
 		}
 		ans = CDR(ans);
 	    }
