@@ -1325,7 +1325,13 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    to itself for a Fortran string.  Single-precision arguments needing 
    to be converted to an R double vector are recognized by having ATTRIB 
    of R_CSingSymbol.  The result, ans1, must not be either of these sorts
-   of argument.
+   of argument.  
+
+   For a character vector argument for .C, the argument is a RAWSXP holding
+   pointers to the strings, with a 0 pointer at the end (not required by
+   the language spec, but assumed by some packages).  The ATTRIB field of
+   this RAWSXP is a linked list of RAWSXP objects holding the strings,
+   linked by their ATTRIB fields.
 
    The opcode, scalars, holds a bit-vector indicating which of the
    first 64 arguments are scalars that should be stored "out of their
@@ -2080,7 +2086,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
                 SET_VECTOR_ELT (args, na, ScalarString(mkChar(buf)));
             } 
             else {
-                int n = LENGTH(arg) / sizeof (char*);
+                int n = (LENGTH(arg) - 1) / sizeof (char*);
                 char **cptr = (char**) cargs[na];
                 SEXP s;
                 PROTECT (s = allocVector (STRSXP, n));
@@ -2312,15 +2318,18 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 if (len < 256) len = 256;
                 SEXP st = allocVector(RAWSXP,len);
 		strcpy((char*)RAW(st), ss);
-                SET_ATTRIB_TO_ANYTHING(st,st); /* marks it as pFortran string */
+                SET_ATTRIB_TO_ANYTHING(st,st); /* marks it as Fortran string */
                 SET_VECTOR_ELT(ans, na, st);
 	    } 
             else { /* .C */
-                if ((double)n*sizeof(char*) > INT_MAX)
+                /* put a 0 pointer at end of list, to protect against 
+                   routines that might (mistakenly) assume it's there... */
+                if (((double)n+1)*sizeof(char*) > INT_MAX)
                     error(_("too many strings to pass to C routine"));
-                SEXP sptr = allocVector(RAWSXP,n*sizeof(char*));
+                SEXP sptr = allocVector(RAWSXP,(n+1)*sizeof(char*));
                 SET_VECTOR_ELT(ans, na, sptr);
 		char **cptr = (char**) RAW(sptr);
+                cptr[n] = 0;
 		if (*encname != 0) {
 		    char *outbuf;
 		    const char *inbuf;
