@@ -517,10 +517,7 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
   R_HashFrame
 
   Hashing for environment frames.  This function ensures that the
-  first frame in the given environment has been hashed.	 Ultimately
-  all enironments should be created in hashed form.  At that point
-  this function will be redundant.
-
+  frame in the given environment has been hashed.	 
 */
 
 static SEXP R_HashFrame(SEXP rho)
@@ -550,6 +547,7 @@ static SEXP R_HashFrame(SEXP rho)
 	SET_VECTOR_ELT(table, hashcode, tmp_chain);
     }
     SET_FRAME(rho, R_NilValue);
+    SET_NO_SPEC_SYM(rho, 0);
     return rho;
 }
 
@@ -2383,7 +2381,6 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 		    error(_("all elements of a list must be named"));
 	    PROTECT(s = allocSExp(ENVSXP));
 	    SET_FRAME(s, duplicate(CAR(args)));
-            setNoSpecSymFlag(s);
 	} else if (isEnvironment(CAR(args))) {
 	    SEXP p, loadenv = CAR(args);
 
