@@ -184,7 +184,8 @@ static SEXP do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (TYPEOF(fun) == STRSXP && length(fun)==1) {
 	PROTECT(s = install(translateChar(STRING_ELT(fun, 0))));
-	SETCAR(args, findFun(s, rho));
+        fun = findFun(s, rho);
+	SETCAR(args, fun);
 	UNPROTECT(1);
     }
 
