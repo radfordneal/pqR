@@ -314,7 +314,9 @@ time-critical code.
 The @code{no_spec_sym} bit is used as the @code{NO_SPEC_SYM} flag for 
 environments to indicate that the environment has no symbols with the 
 @code{SPEC_SYM} flag set (and has never had such a symbol), 
-so that it can be bypassed in searches for such symbols.
+so that it can be bypassed in searches for such symbols.  Currently,
+this bit is maintained only for unhashed environments (always set to zero
+for hashed environments).
 
 @findex nmcnt field
 @findex named field
