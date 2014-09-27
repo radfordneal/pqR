@@ -3800,49 +3800,60 @@ SEXP (VECTOR_ELT)(SEXP x, int i) {
     return CHK(VECTOR_ELT(x, i));
 }
 
-int *(LOGICAL)(SEXP x) {
-    if(TYPEOF(x) != LGLSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "LOGICAL",  "logical", type2char(TYPEOF(x)));
-  return LOGICAL(x);
+SEXP *(STRING_PTR)(SEXP x) { return STRING_PTR(CHK(x)); }
+
+SEXP *(VECTOR_PTR)(SEXP x) { error(_("not safe to return vector pointer")); }
+
+
+/* The functions below also have macro versions, which also make use of the 
+   "error" functions */
+
+void R_NORETURN Rf_LOGICAL_error(SEXP x)
+{   error("%s() can only be applied to a '%s', not a '%s'",
+          "LOGICAL",  "logical", type2char(TYPEOF(x)));
+}
+int *(LOGICAL)(SEXP x)
+{   if(TYPEOF(x) != LGLSXP) Rf_LOGICAL_error(x);
+    return LOGICAL(x);
 }
 
 /* Maybe this should exclude logicals, but it is widely used */
-int *(INTEGER)(SEXP x) {
-    if(TYPEOF(x) != INTSXP && TYPEOF(x) != LGLSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "INTEGER", "integer", type2char(TYPEOF(x)));
+void R_NORETURN Rf_INTEGER_error(SEXP x)
+{   error("%s() can only be applied to a '%s', not a '%s'",
+          "INTEGER",  "integer", type2char(TYPEOF(x)));
+}
+int *(INTEGER)(SEXP x)
+{   if(TYPEOF(x) != INTSXP && TYPEOF(x) != LGLSXP) Rf_INTEGER_error(x);
     return INTEGER(x);
 }
 
-Rbyte *(RAW)(SEXP x) {
-    if(TYPEOF(x) != RAWSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "RAW", "raw", type2char(TYPEOF(x)));
+void R_NORETURN Rf_RAW_error(SEXP x)
+{   error("%s() can only be applied to a '%s', not a '%s'",
+          "RAW",  "raw", type2char(TYPEOF(x)));
+}
+Rbyte *(RAW)(SEXP x)
+{   if(TYPEOF(x) != RAWSXP) Rf_RAW_error(x);
     return RAW(x);
 }
 
-double *(REAL)(SEXP x) {
-    if(TYPEOF(x) != REALSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "REAL", "numeric", type2char(TYPEOF(x)));
+void R_NORETURN Rf_REAL_error(SEXP x)
+{   error("%s() can only be applied to a '%s', not a '%s'",
+          "REAL",  "numeric", type2char(TYPEOF(x)));
+}
+double *(REAL)(SEXP x)
+{   if(TYPEOF(x) != REALSXP) Rf_REAL_error(x);
     return REAL(x);
 }
 
-Rcomplex *(COMPLEX)(SEXP x) {
-    if(TYPEOF(x) != CPLXSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "COMPLEX", "complex", type2char(TYPEOF(x)));
+void R_NORETURN Rf_COMPLEX_error(SEXP x)
+{   error("%s() can only be applied to a '%s', not a '%s'",
+          "COMPLEX",  "complex", type2char(TYPEOF(x)));
+}
+Rcomplex *(COMPLEX)(SEXP x)
+{   if(TYPEOF(x) != CPLXSXP) Rf_COMPLEX_error(x);
     return COMPLEX(x);
 }
 
-SEXP *(STRING_PTR)(SEXP x) { return STRING_PTR(CHK(x)); }
-
-SEXP *(VECTOR_PTR)(SEXP x)
-{
-  error(_("not safe to return vector pointer"));
-  return NULL;
-}
 
 void (SET_STRING_ELT)(SEXP x, int i, SEXP v) {
     if(TYPEOF(x) != STRSXP)

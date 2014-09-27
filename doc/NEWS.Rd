@@ -148,8 +148,14 @@
       search loop.
 \item The speed of \code{.C} and \code{.Fortran} has been substantially
       improved, partly by incorporating changes in R-2.15.1 and R-2.15.2,
-      but with substantial additional improvements as well.  The speed of 
-      \code{.Call} and \code{.External} has been sped up to a lesser degree.
+      but with substantial additional improvements as well.  
+\item The speed of \code{.Call} and \code{.External} has been improved somewhat.
+      More importantly, the C routines called will get macro versions of 
+      \code{CAR}, \code{CDR}, \code{CADR}, etc., macro versions of \code{TYPEOF}
+      and \code{LENGTH}, and inline function versions of \code{INTEGER},
+      \code{LOGICAL}, \code{REAL}, \code{COMPLEX}, and \code{RAW}.  This
+      avoidance of procedure call overhead for these operations may speed
+      up some C procedures substantially.
 \item In some circumstances, a routine called with \code{.C} or \code{.Fortran}
       can now be done in a helper thread, in parallel with other computations.
       This is done only if requested with the \code{HELPERS} option, and

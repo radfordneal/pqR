@@ -4,3 +4,9 @@ etc. safe from assignment bypassing the old-to-new check even
 when USE_RINTERNALS is defined.  
 
 Also fixes two uses of this that recent mods had introduced.
+
+These CAR, CDR, etc. macros, along with LENGTH, TYPEOF, and
+inline functions for REAL, etc. are now also used in packages, 
+avoiding procedure call overhead for these operations.  Error
+checking as before is maintained.
+
