@@ -334,7 +334,14 @@ typedef const struct {
  *
  * Making R_NilValue a constant has necessitated exposing more of the
  * internals (some of what is above used to be after this ifdef).
+ *
+ * The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
+ * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
+ * for GC old-to-new to work properly).  It can be redefined as the identity
+ * function in those modules that actually need to assing (eg, memory.c).
  */
+
+#define NOT_LVALUE(x) (0,(x)) /* Makes using x on left of assignment an error */
 
 
 /* Macros for accessing and changing NAMEDCNT. */
@@ -522,12 +529,12 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 
 /* General Cons Cell Attributes */
-#define ATTRIB(x)	((x)->attrib)
-#define OBJECT(x)	((x)->sxpinfo.obj)
-#define MARK(x)		((x)->sxpinfo.mark)
-#define TYPEOF(x)	((x)->sxpinfo.type)
-#define RTRACE(x)	(NONVEC_SXPINFO(x).trace)
-#define LEVELS(x)	((x)->sxpinfo.gp)
+#define ATTRIB(x)	NOT_LVALUE((x)->attrib)
+#define OBJECT(x)	NOT_LVALUE((x)->sxpinfo.obj)
+#define MARK(x)		NOT_LVALUE((x)->sxpinfo.mark)
+#define TYPEOF(x)	NOT_LVALUE((x)->sxpinfo.type)
+#define RTRACE(x)	NOT_LVALUE(NONVEC_SXPINFO(x).trace)
+#define LEVELS(x)	NOT_LVALUE((x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
      in read-only memory. */
@@ -573,17 +580,17 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define RAW(x)		((Rbyte *) DATAPTR(x))
 #define COMPLEX(x)	((Rcomplex *) DATAPTR(x))
 #define REAL(x)		((double *) DATAPTR(x))
-#define STRING_ELT(x,i)	((SEXP *) DATAPTR(x))[i]
-#define VECTOR_ELT(x,i)	((SEXP *) DATAPTR(x))[i]
+#define STRING_ELT(x,i)	NOT_LVALUE(((SEXP *) DATAPTR(x))[i])
+#define VECTOR_ELT(x,i)	NOT_LVALUE(((SEXP *) DATAPTR(x))[i])
 #define STRING_PTR(x)	((SEXP *) DATAPTR(x))
 #define VECTOR_PTR(x)	((SEXP *) DATAPTR(x))
 
 /* List Access Macros */
 /* These also work for ... objects */
 #define LISTVAL(x)	((x)->u.listsxp)
-#define TAG(e)		((e)->u.listsxp.tagval)
-#define CAR(e)		((e)->u.listsxp.carval)
-#define CDR(e)		((e)->u.listsxp.cdrval)
+#define TAG(e)		NOT_LVALUE((e)->u.listsxp.tagval)
+#define CAR(e)		NOT_LVALUE((e)->u.listsxp.carval)
+#define CDR(e)		NOT_LVALUE((e)->u.listsxp.cdrval)
 #define CAAR(e)		CAR(CAR(e))
 #define CDAR(e)		CDR(CAR(e))
 #define CADR(e)		CAR(CDR(e))
@@ -601,17 +608,17 @@ extern void helpers_wait_until_not_in_use(SEXP);
 } while (0)
 
 /* Closure Access Macros */
-#define FORMALS(x)	((x)->u.closxp.formals)
-#define BODY(x)		((x)->u.closxp.body)
-#define CLOENV(x)	((x)->u.closxp.env)
-#define RDEBUG(x)	(NONVEC_SXPINFO(x).debug)
+#define FORMALS(x)	NOT_LVALUE((x)->u.closxp.formals)
+#define BODY(x)		NOT_LVALUE((x)->u.closxp.body)
+#define CLOENV(x)	NOT_LVALUE((x)->u.closxp.env)
+#define RDEBUG(x)	NOT_LVALUE(NONVEC_SXPINFO(x).debug)
 #define SET_RDEBUG(x,v)	(NONVEC_SXPINFO(x).debug=(v))
-#define RSTEP(x)	(NONVEC_SXPINFO(x).rstep)
+#define RSTEP(x)	NOT_LVALUE(NONVEC_SXPINFO(x).rstep)
 #define SET_RSTEP(x,v)	(NONVEC_SXPINFO(x).rstep=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	(((SYMSEXP) (x))->symsxp.pname)
-#define SYMVALUE(x)	(((SYMSEXP) (x))->symsxp.value)
+#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) (x))->symsxp.pname)
+#define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) (x))->symsxp.value)
 #define INTERNAL(x)	(((SYMSEXP) (x))->symsxp.internal)
 #define NEXTSYM_PTR(x)	(((SYMSEXP) (x))->symsxp.nextsym)
 #define LASTSYMENV(x)	(((SYMSEXP) (x))->symsxp.lastenv)
@@ -629,12 +636,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).spec_sym = (v)) 
 
 /* Environment Access Macros */
-#define FRAME(x)	((x)->u.envsxp.frame)
-#define ENCLOS(x)	((x)->u.envsxp.enclos)
-#define HASHTAB(x)	((x)->u.envsxp.hashtab)
-#define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
+#define FRAME(x)	NOT_LVALUE((x)->u.envsxp.frame)
+#define ENCLOS(x)	NOT_LVALUE((x)->u.envsxp.enclos)
+#define HASHTAB(x)	NOT_LVALUE((x)->u.envsxp.hashtab)
+#define ENVFLAGS(x)	NOT_LVALUE((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  (NONVEC_SXPINFO(x).no_spec_sym) /* 1 = env has no special symbol */
+#define NO_SPEC_SYM(x)  NOT_LVALUE(NONVEC_SXPINFO(x).no_spec_sym) 
+                                           /* 1 = env has no special symbol */
 #define SET_NO_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).no_spec_sym = (v))
 #define IS_BASE(x)	(NONVEC_SXPINFO(x).base_env) /* 1 = R_BaseEnv or
                                                             R_BaseNamespace */
