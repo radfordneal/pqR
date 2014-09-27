@@ -1577,7 +1577,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         }
         else {  /* Eliminate tail recursion for CDR */
             if (set_cdr) {
-                SETCDR(set_cdr, s);
+                SETCDR(set_cdr,s);
                 UNPROTECT(1);  /* s, which is now protected through ss */
             }
             else
@@ -1722,7 +1722,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 
   ret:
     if (set_cdr) {
-        SETCDR(set_cdr,s);
+        SETCDR(set_cdr, s);
         UNPROTECT(1);  /* ss */
         return ss;
     }
