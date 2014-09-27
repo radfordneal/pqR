@@ -1722,7 +1722,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 
   ret:
     if (set_cdr) {
-        CDR(set_cdr) = s;
+        SETCDR(set_cdr, s);
         UNPROTECT(1);  /* ss */
         return ss;
     }

@@ -79,6 +79,16 @@ pid_t Rf_fork(void);
 
 #include <R_ext/libextern.h>
 
+
+/* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
+ * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
+ * for GC old-to-new to work properly).  It can be redefined as the identity
+ * function in those modules that actually need to assing (eg, memory.c).
+ */
+
+#define NOT_LVALUE(x) (0,(x)) /* Makes using x on left of assignment an error */
+
+
 /* Variables that need to be declared as firstprivate in omp parallel
    constructs, since they're used in macros such as NA_REAL. */
 
@@ -327,6 +337,90 @@ typedef struct {
     union { double d; int w[2]; int i; char c; } data;
 } VECTOR_SEXPREC_C;
 
+#define DATAPTR(x)	(((SEXPREC_ALIGN *) (x)) + 1)
+
+
+/* Pairlist and data access macros.  The ones below are now used everywhere, 
+   rather than actual functions, unless PROTECT_CHECK defined.  Type checks
+   done for data access unless USE_RINTERNALS defined. */
+
+#define TYPEOF(x)	NOT_LVALUE((x)->sxpinfo.type)
+
+#ifndef PROTECT_CHECK
+
+#define TAG(e)		NOT_LVALUE((e)->u.listsxp.tagval)
+#define CAR(e)		NOT_LVALUE((e)->u.listsxp.carval)
+#define CDR(e)		NOT_LVALUE((e)->u.listsxp.cdrval)
+#define CAAR(e)		CAR(CAR(e))
+#define CDAR(e)		CDR(CAR(e))
+#define CADR(e)		CAR(CDR(e))
+#define CDDR(e)		CDR(CDR(e))
+#define CADDR(e)	CAR(CDR(CDR(e)))
+#define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
+#define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
+
+#define LENGTH(x)	NOT_LVALUE(((VECSEXP) (x))->vecsxp.length)
+
+#ifdef USE_RINTERNALS
+
+#define LOGICAL(x)	((int *) DATAPTR(x))
+#define INTEGER(x)	((int *) DATAPTR(x))
+#define RAW(x)		((Rbyte *) DATAPTR(x))
+#define COMPLEX(x)	((Rcomplex *) DATAPTR(x))
+#define REAL(x)		((double *) DATAPTR(x))
+
+#else
+
+extern R_NORETURN void Rf_LOGICAL_error(SEXP);
+static inline int *LOGICAL(SEXP x) 
+{   if (TYPEOF(x) != LGLSXP) Rf_LOGICAL_error(x);
+    return (int *) DATAPTR(x);
+}
+extern R_NORETURN void Rf_INTEGER_error(SEXP);
+static inline int *INTEGER(SEXP x) /* allows logical too, due to common usage */
+{   if (TYPEOF(x) != INTSXP && TYPEOF(x) != LGLSXP) Rf_INTEGER_error(x);
+    return (int *) DATAPTR(x);
+}
+extern R_NORETURN void Rf_RAW_error(SEXP);
+static inline Rbyte *RAW(SEXP x) 
+{   if (TYPEOF(x) != RAWSXP) Rf_RAW_error(x);
+    return (Rbyte *) DATAPTR(x);
+}
+extern R_NORETURN void Rf_COMPLEX_error(SEXP);
+static inline Rcomplex *COMPLEX(SEXP x) 
+{   if (TYPEOF(x) != CPLXSXP) Rf_COMPLEX_error(x);
+    return (Rcomplex *) DATAPTR(x);
+}
+extern R_NORETURN void Rf_REAL_error(SEXP);
+static inline double *REAL(SEXP x) 
+{   if (TYPEOF(x) != REALSXP) Rf_REAL_error(x);
+    return (double *) DATAPTR(x);
+}
+
+#endif
+
+#else 
+
+SEXP (TAG)(SEXP e);
+SEXP (CAR)(SEXP e);
+SEXP (CDR)(SEXP e);
+SEXP (CAAR)(SEXP e);
+SEXP (CDAR)(SEXP e);
+SEXP (CADR)(SEXP e);
+SEXP (CDDR)(SEXP e);
+SEXP (CADDR)(SEXP e);
+SEXP (CADDDR)(SEXP e);
+SEXP (CAD4R)(SEXP e);
+
+int  (LENGTH)(SEXP x);
+
+int  *(LOGICAL)(SEXP x);
+int  *(INTEGER)(SEXP x);
+Rbyte *(RAW)(SEXP x);
+Rcomplex *(COMPLEX)(SEXP x);
+double *(REAL)(SEXP x);
+
+#endif
 
 #ifdef USE_RINTERNALS
 /* This is intended for use only within R itself.
@@ -524,12 +618,11 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 
 /* General Cons Cell Attributes */
-#define ATTRIB(x)	((x)->attrib)
-#define OBJECT(x)	((x)->sxpinfo.obj)
-#define MARK(x)		((x)->sxpinfo.mark)
-#define TYPEOF(x)	((x)->sxpinfo.type)
-#define RTRACE(x)	(NONVEC_SXPINFO(x).trace)
-#define LEVELS(x)	((x)->sxpinfo.gp)
+#define ATTRIB(x)	NOT_LVALUE((x)->attrib)
+#define OBJECT(x)	NOT_LVALUE((x)->sxpinfo.obj)
+#define MARK(x)		NOT_LVALUE((x)->sxpinfo.mark)
+#define RTRACE(x)	NOT_LVALUE(NONVEC_SXPINFO(x).trace)
+#define LEVELS(x)	NOT_LVALUE((x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
      in read-only memory. */
@@ -562,37 +655,20 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 
 /* Vector Access Macros */
-#define LENGTH(x)	(((VECSEXP) (x))->vecsxp.length)
 #define SETLENGTH(x,v)	((((VECSEXP) (x))->vecsxp.length)=(v)) /* DEPRECATED */
 
 /* Under the generational allocator the data for vector nodes comes
    immediately after the node structure, so the data address is a
    known offset from the node SEXP. */
-#define DATAPTR(x)	(((SEXPREC_ALIGN *) (x)) + 1)
 #define CHAR(x)		((const char *) DATAPTR(x))
-#define LOGICAL(x)	((int *) DATAPTR(x))
-#define INTEGER(x)	((int *) DATAPTR(x))
-#define RAW(x)		((Rbyte *) DATAPTR(x))
-#define COMPLEX(x)	((Rcomplex *) DATAPTR(x))
-#define REAL(x)		((double *) DATAPTR(x))
-#define STRING_ELT(x,i)	((SEXP *) DATAPTR(x))[i]
-#define VECTOR_ELT(x,i)	((SEXP *) DATAPTR(x))[i]
+#define STRING_ELT(x,i)	NOT_LVALUE(((SEXP *) DATAPTR(x))[i])
+#define VECTOR_ELT(x,i)	NOT_LVALUE(((SEXP *) DATAPTR(x))[i])
 #define STRING_PTR(x)	((SEXP *) DATAPTR(x))
 #define VECTOR_PTR(x)	((SEXP *) DATAPTR(x))
 
-/* List Access Macros */
+/* List Access Macros.  Some are now found above, outside USE_RINTERNALS. */
 /* These also work for ... objects */
 #define LISTVAL(x)	((x)->u.listsxp)
-#define TAG(e)		((e)->u.listsxp.tagval)
-#define CAR(e)		((e)->u.listsxp.carval)
-#define CDR(e)		((e)->u.listsxp.cdrval)
-#define CAAR(e)		CAR(CAR(e))
-#define CDAR(e)		CDR(CAR(e))
-#define CADR(e)		CAR(CDR(e))
-#define CDDR(e)		CDR(CDR(e))
-#define CADDR(e)	CAR(CDR(CDR(e)))
-#define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
-#define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
 #define MISSING_MASK	15 /* reserve 4 bits--only 2 uses now */
 #define MISSING(x)	((x)->sxpinfo.gp & MISSING_MASK)/* for closure calls */
 #define SET_MISSING(x,v) do { \
@@ -603,17 +679,17 @@ extern void helpers_wait_until_not_in_use(SEXP);
 } while (0)
 
 /* Closure Access Macros */
-#define FORMALS(x)	((x)->u.closxp.formals)
-#define BODY(x)		((x)->u.closxp.body)
-#define CLOENV(x)	((x)->u.closxp.env)
-#define RDEBUG(x)	(NONVEC_SXPINFO(x).debug)
+#define FORMALS(x)	NOT_LVALUE((x)->u.closxp.formals)
+#define BODY(x)		NOT_LVALUE((x)->u.closxp.body)
+#define CLOENV(x)	NOT_LVALUE((x)->u.closxp.env)
+#define RDEBUG(x)	NOT_LVALUE(NONVEC_SXPINFO(x).debug)
 #define SET_RDEBUG(x,v)	(NONVEC_SXPINFO(x).debug=(v))
-#define RSTEP(x)	(NONVEC_SXPINFO(x).rstep)
+#define RSTEP(x)	NOT_LVALUE(NONVEC_SXPINFO(x).rstep)
 #define SET_RSTEP(x,v)	(NONVEC_SXPINFO(x).rstep=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	(((SYMSEXP) (x))->symsxp.pname)
-#define SYMVALUE(x)	(((SYMSEXP) (x))->symsxp.value)
+#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) (x))->symsxp.pname)
+#define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) (x))->symsxp.value)
 #define INTERNAL(x)	(((SYMSEXP) (x))->symsxp.internal)
 #define NEXTSYM_PTR(x)	(((SYMSEXP) (x))->symsxp.nextsym)
 #define LASTSYMENV(x)	(((SYMSEXP) (x))->symsxp.lastenv)
@@ -631,12 +707,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).spec_sym = (v)) 
 
 /* Environment Access Macros */
-#define FRAME(x)	((x)->u.envsxp.frame)
-#define ENCLOS(x)	((x)->u.envsxp.enclos)
-#define HASHTAB(x)	((x)->u.envsxp.hashtab)
-#define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
+#define FRAME(x)	NOT_LVALUE((x)->u.envsxp.frame)
+#define ENCLOS(x)	NOT_LVALUE((x)->u.envsxp.enclos)
+#define HASHTAB(x)	NOT_LVALUE((x)->u.envsxp.hashtab)
+#define ENVFLAGS(x)	NOT_LVALUE((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  (NONVEC_SXPINFO(x).no_spec_sym) /* 1 = env has no special symbol */
+#define NO_SPEC_SYM(x)  NOT_LVALUE(NONVEC_SXPINFO(x).no_spec_sym) 
+                                           /* 1 = env has no special symbol */
 #define SET_NO_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).no_spec_sym = (v))
 #define IS_BASE(x)	(NONVEC_SXPINFO(x).base_env) /* 1 = R_BaseEnv or
                                                             R_BaseNamespace */
@@ -688,18 +765,12 @@ void (SET_S4_OBJECT)(SEXP x);
 void (UNSET_S4_OBJECT)(SEXP x);
 
 /* Vector Access Functions */
-int  (LENGTH)(SEXP x);
 int  (TRUELENGTH)(SEXP x);
 void (SETLENGTH)(SEXP x, int v);
 void (SET_TRUELENGTH)(SEXP x, int v);
 int  (LEVELS)(SEXP x);
 int  (SETLEVELS)(SEXP x, int v);
 
-int  *(LOGICAL)(SEXP x);
-int  *(INTEGER)(SEXP x);
-Rbyte *(RAW)(SEXP x);
-double *(REAL)(SEXP x);
-Rcomplex *(COMPLEX)(SEXP x);
 SEXP (STRING_ELT)(SEXP x, int i);
 SEXP (VECTOR_ELT)(SEXP x, int i);
 void SET_STRING_ELT(SEXP x, int i, SEXP v);
@@ -709,20 +780,10 @@ void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP *(STRING_PTR)(SEXP x);
 SEXP *(VECTOR_PTR)(SEXP x);
 
-/* List Access Functions */
+/* List Access Functions. Declared here even if there are macro versions. */
 /* These also work for ... objects */
 #define CONS(a, b)	cons((a), (b))		/* data lists */
 #define LCONS(a, b)	lcons((a), (b))		/* language lists */
-SEXP (TAG)(SEXP e);
-SEXP (CAR)(SEXP e);
-SEXP (CDR)(SEXP e);
-SEXP (CAAR)(SEXP e);
-SEXP (CDAR)(SEXP e);
-SEXP (CADR)(SEXP e);
-SEXP (CDDR)(SEXP e);
-SEXP (CADDR)(SEXP e);
-SEXP (CADDDR)(SEXP e);
-SEXP (CAD4R)(SEXP e);
 int  (MISSING)(SEXP x);
 void (SET_MISSING)(SEXP x, int v);
 void SET_TAG(SEXP x, SEXP y);

@@ -131,7 +131,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
         continue;
 
       remove:
-        CDR(prev) = CDR(s);
+        SETCDR(prev, CDR(s));
     }
 
     return nargs;
