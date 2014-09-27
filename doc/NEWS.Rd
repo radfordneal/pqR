@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-09-21}{
+\section{CHANGES IN VERSION RELEASED 2014-09-28}{
 
   \subsection{INTRODUCTION}{
 
@@ -16,10 +16,12 @@
       lookup of variables will sometimes be much faster, variable updates
       like \code{v <- v + 1} will often not allocate any new space,
       assignments to parts of variables (eg, \code{a[i] <- 0)} is much faster
-      in the interpreter 
-      (no change for byte-compiled code), and calling of external functions 
-      with \code{.C} and \code{.Fortran} is substantially faster, and can
-      sometimes be done in a helper thread.
+      in the interpreter (no change for byte-compiled code), external
+      functions called with \code{.Call} or \code{.External} now get faster
+      macro or inline versions of functions such as \code{CAR}, \code{LENGTH},
+      and \code{REAL}, and calling of external functions with \code{.C} and 
+      \code{.Fortran} is substantially  faster, and can sometimes be done in 
+      a helper thread.
 
 \item Changes have been made to configuration options regarding use of BLAS
       routines for matrix multiplication, as described below.  In part, these
