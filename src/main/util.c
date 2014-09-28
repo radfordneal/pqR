@@ -1099,12 +1099,12 @@ static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
    */
 
 #ifdef Win32
-static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s;
     wchar_t buf[PATH_MAX], *p;
     const wchar_t *pp;
-    char sp[PATH_MAX];
+    char sp[4*PATH_MAX];
     int i, n;
 
     checkArity(op, args);
@@ -1115,24 +1115,26 @@ static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
 	else {
+	    memset(sp, 0, 4*PATH_MAX);
 	    pp = filenameToWchar(STRING_ELT(s, i), TRUE);
 	    if (wcslen(pp) > PATH_MAX - 1)
 		error(_("path too long"));
-	    wcscpy (buf, pp);
-	    R_wfixslash(buf);
-	    /* remove trailing file separator(s) */
-	    while ( *(p = buf + wcslen(buf) - 1) == L'/'  && p > buf
-		    && (p > buf+2 || *(p-1) != L':')) *p = L'\0';
-	    p = wcsrchr(buf, L'/');
-	    if(p == NULL) wcscpy(buf, L".");
-	    else {
-		while(p > buf && *p == L'/'
-		      /* this covers both drives and network shares */
-		      && (p > buf+2 || *(p-1) != L':')) --p;
-		p[1] = L'\0';
+	    if (wcslen(pp)) {
+		wcscpy (buf, pp);
+		R_wfixslash(buf);
+		/* remove trailing file separator(s) */
+		while ( *(p = buf + wcslen(buf) - 1) == L'/'  && p > buf
+			&& (p > buf+2 || *(p-1) != L':')) *p = L'\0';
+		p = wcsrchr(buf, L'/');
+		if(p == NULL) wcscpy(buf, L".");
+		else {
+		    while(p > buf && *p == L'/'
+			  /* this covers both drives and network shares */
+			  && (p > buf+2 || *(p-1) != L':')) --p;
+		    p[1] = L'\0';
+		}
+		wcstoutf8(sp, buf, 4*wcslen(buf)+1);
 	    }
-	    memset(sp, 0, PATH_MAX);
-	    wcstoutf8(sp, buf, 4*wcslen(buf)+1);
 	    SET_STRING_ELT(ans, i, mkCharCE(sp, CE_UTF8));
 	}
     }
@@ -1140,7 +1142,7 @@ static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 #else
-static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s;
     char buf[PATH_MAX], *p, fsp = FILESEP[0];
@@ -1158,16 +1160,19 @@ static SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    pp = R_ExpandFileName(translateChar(STRING_ELT(s, i)));
 	    if (strlen(pp) > PATH_MAX - 1)
 		error(_("path too long"));
-	    strcpy (buf, pp);
-	    /* remove trailing file separator(s) */
-	    while ( *(p = buf + strlen(buf) - 1) == fsp  && p > buf) *p = '\0';
-	    p = Rf_strrchr(buf, fsp);
-	    if(p == NULL)
-		strcpy(buf, ".");
-	    else {
-		while(p > buf && *p == fsp) --p;
-		p[1] = '\0';
-	    }
+	    size_t ll = strlen(pp);
+	    if (ll) { // svMisc calls this with ""
+		strcpy (buf, pp);
+		/* remove trailing file separator(s) */
+		while ( *(p = buf + ll - 1) == fsp  && p > buf) *p = '\0';
+		p = Rf_strrchr(buf, fsp);
+		if(p == NULL)
+		    strcpy(buf, ".");
+		else {
+		    while(p > buf && *p == fsp) --p;
+		    p[1] = '\0';
+		}
+	    } else buf[0] = '\0';
 	    SET_STRING_ELT(ans, i, mkChar(buf));
 	}
     }
