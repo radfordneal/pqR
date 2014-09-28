@@ -2338,7 +2338,7 @@ copy_error:
 static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP fn, to, ans;
-    wchar_t *p, dir[PATH_MAX], from[PATH_MAX], name[PATH_MAX];
+    wchar_t *p, dir[PATH_MAX+1], from[PATH_MAX+1], name[PATH_MAX+1];
     int i, nfiles, over, recursive, perms, nfail;
 
     checkArity(op, args);
@@ -2362,29 +2362,31 @@ static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid '%s' argument"), "copy.mode");
 	wcsncpy(dir,
 		filenameToWchar(STRING_ELT(to, 0), TRUE),
-		PATH_MAX);
-	if (*(dir + (wcslen(dir) - 1)) !=  L'\\')
-	    wcsncat(dir, L"\\", PATH_MAX);
+		PATH_MAX-1);
+        dir[PATH_MAX-1] = L'\0';
+	if (dir[0] == L'\0' || dir[wcslen(dir)-1] !=  L'\\')
+	    wcscat(dir, L"\\");
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
 		wcsncpy(from, 
 			filenameToWchar(STRING_ELT(fn, i), TRUE),
-			PATH_MAX);
+			PATH_MAX-1);
+                from[PATH_MAX-1] = L'\0';
 		/* If there was a trailing sep, this is a mistake */
-		p = from + (wcslen(from) - 1);
-		if (wcslen(from) > 0 && *p == L'\\') *p = L'\0';
+		if (from[0] != L'\0' && from[wcslen(from)-1] == L'\\') 
+                    from[wcslen(from)-1] = L'\0';
 		p = wcsrchr(from, L'\\') ;
 		if (p) {
-		    wcsncpy(name, p+1, PATH_MAX);
+		    wcscpy(name, p+1);
 		    *(p+1) = L'\0';
-		} else {
-		    if(wcslen(from) > 2 && from[1] == L':') {
-			wcsncpy(name, from+2, PATH_MAX);
-			from[2] = L'\0';
-		    } else {
-			wcsncpy(name, from, PATH_MAX);
-			wcsncpy(from, L".\\", PATH_MAX);
-		    }
+		} 
+                else if (wcslen(from) > 2 && from[1] == L':') {
+		    wcscpy(name, from+2);
+                    from[2] = L'\0';
+                }
+		else {
+		    wcscpy(name, from);
+		    wcscpy(from, L".\\");
 		}
 		nfail = do_copy(from, name, dir, over, recursive, perms);
 	    } else nfail = 1;
@@ -2482,7 +2484,7 @@ copy_error:
 static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP fn, to, ans;
-    char *p, dir[PATH_MAX+1], from[PATH_MAX], name[PATH_MAX];
+    char *p, dir[PATH_MAX+1], from[PATH_MAX+1], name[PATH_MAX+1];
     int i, nfiles, over, recursive, perms, nfail;
 
     checkArity(op, args);
@@ -2508,7 +2510,7 @@ static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 		R_ExpandFileName(translateChar(STRING_ELT(to, 0))),
 		PATH_MAX-1);
         dir[PATH_MAX-1] = 0;
-	if (*(dir + (strlen(dir) - 1)) !=  '/')
+	if (dir[0] == '\0' || dir[strlen(dir)-1] !=  '/')
 	    strcat(dir, "/");
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
@@ -2517,13 +2519,14 @@ static SEXP do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 			PATH_MAX-1);
                 from[PATH_MAX-1] = 0;
 		/* If there is a trailing sep, this is a mistake */
-		if (from[0] && from[strlen(from)-1] == '/') 
+		if (from[0] != '\0' && from[strlen(from)-1] == '/') 
                     from[strlen(from)-1] = 0;
 		p = strrchr(from, '/') ;
 		if (p) {
 		    strcpy(name, p+1);
 		    *(p+1) = '\0';
-		} else {
+		} 
+                else {
 		    strcpy(name, from);
 		    strcpy(from, "./");
 		}
