@@ -504,6 +504,9 @@
       Calling \code{file.copy()} or \code{dirname()} with the
       invalid input \code{""} (which was being used in packages, despite
       not being a file path) could have caused a segfault.
+\item From R-3.0.1:
+      \code{dirname("")} is now \code{""} rather than \code{"."} (unless
+      it segfaulted).
 \item Similarly to R-3.1.1-patched:
       In package \code{parallel}, child processes now call \code{_Exit}
       rather than \code{exit}, so that the main process is not affected
