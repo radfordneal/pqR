@@ -36,6 +36,9 @@
 \item Many other feature changes and performance improvements have also
       been made, as described below, and a number of bugs have been fixed,
       some of which are also present in the latest R Core release, R-3.1.1.
+
+\item Packages using \code{.Call} or \code{.External} should be re-installed
+      for use with this version of pqR.
 }}
 
   \subsection{FEATURE CHANGES}{
