@@ -340,36 +340,36 @@ typedef struct {
 #define DATAPTR(x)	(((SEXPREC_ALIGN *) (x)) + 1)
 
 
-/* Pairlist and data access macros.  The ones below are now used everywhere, 
-   rather than actual functions, unless PROTECT_CHECK defined.  Type checks
-   done for data access unless USE_RINTERNALS defined. */
+/* Pairlist and data access macros / static inline functions that are now 
+   used everywhere (rather than non-inline functions, though those still
+   exist in memory.c).  Type checks are done for data access unless 
+   USE_RINTERNALS is defined. 
 
-#define TYPEOF(x)	NOT_LVALUE((x)->sxpinfo.type)
-
-#ifndef PROTECT_CHECK
-
-#define TAG(e)		NOT_LVALUE((e)->u.listsxp.tagval)
-#define CAR(e)		NOT_LVALUE((e)->u.listsxp.carval)
-#define CDR(e)		NOT_LVALUE((e)->u.listsxp.cdrval)
-#define CAAR(e)		CAR(CAR(e))
-#define CDAR(e)		CDR(CAR(e))
-#define CADR(e)		CAR(CDR(e))
-#define CDDR(e)		CDR(CDR(e))
-#define CADDR(e)	CAR(CDR(CDR(e)))
-#define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
-#define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
-
-#define LENGTH(x)	NOT_LVALUE(((VECSEXP) (x))->vecsxp.length)
+   NOTE:  Need to see how this all affects PROTECTCHECK... */
 
 #ifdef USE_RINTERNALS
 
-#define LOGICAL(x)	((int *) DATAPTR(x))
-#define INTEGER(x)	((int *) DATAPTR(x))
-#define RAW(x)		((Rbyte *) DATAPTR(x))
-#define COMPLEX(x)	((Rcomplex *) DATAPTR(x))
-#define REAL(x)		((double *) DATAPTR(x))
+#define TAG(e)     NOT_LVALUE((e)->u.listsxp.tagval)  /* Don't cast e to SEXP */
+#define CAR(e)     NOT_LVALUE((e)->u.listsxp.carval)  /*  so that we will get */
+#define CDR(e)     NOT_LVALUE((e)->u.listsxp.cdrval)  /*  an error if it's not*/
 
-#else
+#define TYPEOF(x)  NOT_LVALUE((x)->sxpinfo.type)
+#define LENGTH(x)  NOT_LVALUE(((VECSEXP) (x))->vecsxp.length)
+
+#define LOGICAL(x) ((int *) DATAPTR(x))
+#define INTEGER(x) ((int *) DATAPTR(x))
+#define RAW(x)     ((Rbyte *) DATAPTR(x))
+#define COMPLEX(x) ((Rcomplex *) DATAPTR(x))
+#define REAL(x)    ((double *) DATAPTR(x))
+
+#else /* USE_RINTERNALS not defined */
+
+static inline SEXP TAG (SEXP e) { return e->u.listsxp.tagval; }
+static inline SEXP CAR (SEXP e) { return e->u.listsxp.carval; }
+static inline SEXP CDR (SEXP e) { return e->u.listsxp.cdrval; }
+
+static inline SEXPTYPE TYPEOF (SEXP x) { return x->sxpinfo.type; }
+static inline int LENGTH (SEXP x) { return ((VECSEXP)(x))->vecsxp.length; }
 
 extern R_NORETURN void Rf_LOGICAL_error(SEXP);
 static inline int *LOGICAL(SEXP x) 
@@ -399,28 +399,14 @@ static inline double *REAL(SEXP x)
 
 #endif
 
-#else 
+#define CAAR(e)		CAR(CAR(e))
+#define CDAR(e)		CDR(CAR(e))
+#define CADR(e)		CAR(CDR(e))
+#define CDDR(e)		CDR(CDR(e))
+#define CADDR(e)	CAR(CDR(CDR(e)))
+#define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
+#define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
 
-SEXP (TAG)(SEXP e);
-SEXP (CAR)(SEXP e);
-SEXP (CDR)(SEXP e);
-SEXP (CAAR)(SEXP e);
-SEXP (CDAR)(SEXP e);
-SEXP (CADR)(SEXP e);
-SEXP (CDDR)(SEXP e);
-SEXP (CADDR)(SEXP e);
-SEXP (CADDDR)(SEXP e);
-SEXP (CAD4R)(SEXP e);
-
-int  (LENGTH)(SEXP x);
-
-int  *(LOGICAL)(SEXP x);
-int  *(INTEGER)(SEXP x);
-Rbyte *(RAW)(SEXP x);
-Rcomplex *(COMPLEX)(SEXP x);
-double *(REAL)(SEXP x);
-
-#endif
 
 #ifdef USE_RINTERNALS
 /* This is intended for use only within R itself.
@@ -751,7 +737,6 @@ Rboolean (Rf_isObject)(SEXP s);
 SEXP (ATTRIB)(SEXP x);
 int  (OBJECT)(SEXP x);
 int  (MARK)(SEXP x);
-int  (TYPEOF)(SEXP x);
 int  (NAMED)(SEXP x);
 void (SET_OBJECT)(SEXP x, int v);
 void (SET_TYPEOF)(SEXP x, int v);

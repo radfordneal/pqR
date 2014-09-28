@@ -134,7 +134,7 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
        compiler on a supported architecture if it has different
        syntax for inline assembly language from gcc.
 
-   PROTECT_CHECK / TESTING_WRITE_BARRIER
+   PROTECTCHECK / TESTING_WRITE_BARRIER
 
        If defined, tries to detect unprotected SEXPs.  See below.
 

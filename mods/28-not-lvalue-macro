@@ -5,8 +5,6 @@ when USE_RINTERNALS is defined.
 
 Also fixes two uses of this that recent mods had introduced.
 
-These CAR, CDR, etc. macros, along with LENGTH, TYPEOF, and
-inline functions for REAL, etc. are now also used in packages, 
-avoiding procedure call overhead for these operations.  Error
-checking as before is maintained.
-
+These functions along with REAL, etc. are now defined as static inline
+functions for user code, avoiding procedure call overhead for these
+operations.  Error checking as before is maintained.
