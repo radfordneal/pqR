@@ -470,7 +470,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* match to foo(..., na.rm=FALSE) */
     PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = CONS(CAR(call),args));
+    PROTECT(call2 = LCONS(CAR(call),args));
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
 	UNPROTECT(2);
@@ -773,7 +773,7 @@ static SEXP do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans, prargs, call2;
 
     PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = CONS(CAR(call),args));
+    PROTECT(call2 = LCONS(CAR(call),args));
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
 	UNPROTECT(2);
