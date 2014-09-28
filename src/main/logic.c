@@ -1,4 +1,4 @@
-/*
+41;309;0c/*
  *  pqR : A pretty quick version of R
  *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
@@ -480,7 +480,7 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
     int val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
 
     PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = CONS(CAR(call),args));
+    PROTECT(call2 = LCONS(CAR(call),args));
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
 	UNPROTECT(2);

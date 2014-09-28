@@ -1657,7 +1657,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Change call used too, for compatibility with
        R-2.15.0:  It's accessible using "substitute", 
        and was a string in R-2.15.0. */
-    PROTECT(ncall = CONS(CAR(call), CONS(CADR(call), CONS(input, R_NilValue))));
+    PROTECT(ncall = LCONS(CAR(call), CONS(CADR(call), CONS(input,R_NilValue))));
 
     /* If the first argument is an object and there is */
     /* an approriate method, we dispatch to that method, */
