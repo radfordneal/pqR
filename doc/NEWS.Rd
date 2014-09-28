@@ -409,6 +409,10 @@
 }
       This bug also exists in R-2.15.0, but was fixed in R-3.1.1 
       (quite differently than in pqR).
+\item Fixed a lack of error checking bug that could cause expressions
+      such as \code{match.call(,expression())} to crash from an
+      invalid memory reference.  This bug also exists in R-2.15.0 and
+      R-3.1.1.
 \item Fixed the non-robust checks for integer overflow, which reportedly
       sometimes fail when using clang on a Mac.  This is #PR 15774 at
       r-project.org, fixed in R-3.1.1, but fixed differently in pqR.
