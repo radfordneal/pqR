@@ -480,7 +480,7 @@
       results on certain compilers (seen with \command{clang} on Mac OS
       10.7 and \command{Xcode 4.4.1}).
 \item From R-3.0.1:
-      \item Calling \code{file.copy()} or \code{dirname()} with the
+      Calling \code{file.copy()} or \code{dirname()} with the
       invalid input \code{""} (which was being used in packages, despite
       not being a file path) could have caused a segfault.
 \item Similarly to R-3.1.1-patched:
