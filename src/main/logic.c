@@ -1,4 +1,4 @@
-41;309;0c/*
+/*
  *  pqR : A pretty quick version of R
  *  Copyright (C) 2013, 2014 by Radford M. Neal
  *
