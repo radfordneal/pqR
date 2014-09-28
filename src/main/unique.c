@@ -1179,7 +1179,7 @@ static SEXP do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 
     funcall = CADR(args);
 
-    if (TYPEOF(funcall) == EXPRSXP)
+    if (TYPEOF(funcall) == EXPRSXP && LENGTH(funcall) > 0)
 	funcall = VECTOR_ELT(funcall, 0);
 
     if (TYPEOF(funcall) != LANGSXP)
