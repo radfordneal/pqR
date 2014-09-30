@@ -1538,7 +1538,7 @@ static void old_to_new(SEXP x, SEXP y)
    Haskell" by Peyton Jones, Marlow, and Elliott (at
    www.research.microsoft.com/Users/simonpj/papers/weak.ps.gz). --LT */
 
-static SEXP R_weak_refs = NULL;
+static SEXP R_weak_refs = R_NilValue;
 
 #define READY_TO_FINALIZE_MASK 1
 
@@ -2572,7 +2572,8 @@ void attribute_hidden InitMemory()
     R_BCIntStackEnd = R_BCIntStackBase + R_BCINTSTACKSIZE;
 #endif
 
-    R_weak_refs = R_NilValue;
+    R_weak_refs = R_NilValue;  /* This is redundant: it's statically initialized
+                                  above so it'll work in R_Suicide at startup */
 
     R_HandlerStack = R_RestartStack = R_NilValue;
 
