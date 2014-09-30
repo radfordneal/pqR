@@ -1,7 +1,0 @@
-Clean up code that gives (valid) warnings from Mac compiler.
-
-Also clean up from results of clang static analyser.
-
-Fixes adapted from PR 15990 (Karl Millar).
-
-Plus fix a few other bugs, etc.
