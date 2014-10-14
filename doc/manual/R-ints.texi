@@ -874,37 +874,39 @@ can work and reasonable information can be produced on error conditions
 (such as @emph{via} traceback), and otherwise (the @code{sys.@var{xxx}}
 functions).
 
-Execution contexts are a stack of C @code{structs}, with fields ordered
-with some care to pack nicely, as follows:
+Execution contexts are a stack of C @code{structs}. The exact declaration
+as below is used by RStudio, which breaks (when debugging) if it is changed: 
 
 @example
 typedef struct RCNTXT @{
-    struct RCNTXT *nextcontext; /* @r{The next context up the chain} */
-    int cstacktop;              /* @r{Top of the pointer protection stack} */
-    int evaldepth;              /* @r{evaluation depth at inception} */
-    SEXP callfun;               /* @r{The closure called} */
-    void *vmax;                 /* @r{top of R_alloc stack} */
+    struct RCNTXT *nextcontext;	/* @r{The next context up the chain} */
+    int callflag;		/* @r{The context "type"} */
+    JMP_BUF cjmpbuf;		/* @r{C stack and register information} */
+    int cstacktop;		/* @r{Top of the pointer protection stack} */
+    int evaldepth;	        /* @r{evaluation depth at inception} */
+    SEXP promargs;		/* @r{Promises supplied to closure} */
+    SEXP callfun;		/* @r{The closure called} */
+    SEXP sysparent;		/* @r{environment the closure was called from} */
+    SEXP call;			/* @r{The call that effected this context*/
+    SEXP cloenv;		/* @r{The environment} */
+    SEXP conexit;		/* @r{Interpreted "on.exit" code} */
+    void (*cend)(void *);	/* @r{C "on.exit" thunk} */
+    void *cenddata;		/* @r{data for C "on.exit" thunk} */
+    void *vmax;		        /* @r{top of R_alloc stack} */
     int intsusp;                /* @r{interrupts are suspended} */
-    int callflag;               /* @r{The context "type"} */
     SEXP handlerstack;          /* @r{condition handler stack} */
     SEXP restartstack;          /* @r{stack of available restarts} */
-    SEXP promargs;              /* @r{Promises supplied to closure} */
-    SEXP sysparent;             /* @r{environment the closure was called from} */
-    SEXP call;                  /* @r{The call that effected this context} */
-    SEXP cloenv;                /* @r{The environment} */
-    SEXP conexit;               /* @r{Interpreted "on.exit" code} */
-    void (*cend)(void *);       /* @r{C "on.exit" thunk} */
     struct RPRSTACK *prstack;   /* @r{stack of pending promises} */
-    SEXP srcref;                /* @r{The source line in effect} */
     SEXP *nodestack;
-    void *cenddata;             /* @r{data for C "on.exit" thunk} */
-    JMP_BUF cjmpbuf;            /* @r{C stack and register information} */
+#ifdef BC_INT_STACK
+    IStackval *intstack;        /* @r{BC_INT_STACK seems to never be defined} */
+#endif
+    SEXP srcref;	        /* @r{The source line in effect} */
 @} RCNTXT, *context;
 @end example
 
 @noindent
-plus an additional field for the byte-code compiler.  The `types'
-are from
+The `types' are from
 
 @example
 enum @{
@@ -933,8 +935,8 @@ jump to a specific context via @code{R_JumpToContext}.
 @code{R_ToplevelContext} is the `idle' state (normally the command
 prompt), and @code{R_GlobalContext} is the top of the stack.
 
-Note that whilst calls to closures and builtins set a context, those to special
-internal functions never do.
+Note that whilst calls to closures and (some) builtins set a context, 
+those to special internal functions never do.
 
 @findex UseMethod
 @cindex method dispatch
