@@ -2223,6 +2223,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 }
             }
         }
+        if (NAMEDCNT_EQ_0(varval)) /* may sometime happen - should mean 1 */
+            SET_NAMEDCNT_1(varval);
 
         SEXP bcell = R_binding_cell;
         PROTECT(bcell);
@@ -2415,7 +2417,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            can sometimes avoid the cost of this by looking at the saved
            binding cell, if we have one. */
 
-        if (bcell == R_NilValue || CAR(bcell) != newval) {
+        if (bcell != R_NilValue && CAR(bcell) == newval) {
+            /* The replacement function might have changed NAMEDCNT to 0. */
+            if (NAMEDCNT_EQ_0(varval))
+                SET_NAMEDCNT_1(varval);
+        }
+        else {
             if (PRIMVAL(op) == 2) /* <<- */
                 set_var_nonlocal (var, newval, ENCLOS(rho), 3);
             else
