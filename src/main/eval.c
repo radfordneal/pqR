@@ -960,7 +960,9 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
                                      SEXP suppliedenv, int variant)
 {
-    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | variant;
+    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN 
+                 | VARIANT_PASS_ON(variant);
+
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
     SEXP f, a, res;
