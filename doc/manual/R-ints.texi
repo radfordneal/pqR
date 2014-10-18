@@ -898,7 +898,7 @@ typedef struct RCNTXT @{
     SEXP promargs;		/* @r{Promises supplied to closure} */
     SEXP callfun;		/* @r{The closure called} */
     SEXP sysparent;		/* @r{environment the closure was called from} */
-    SEXP call;			/* @r{The call that effected this context*/
+    SEXP call;			/* @r{The call that effected this context} */
     SEXP cloenv;		/* @r{The environment} */
     SEXP conexit;		/* @r{Interpreted "on.exit" code} */
     void (*cend)(void *);	/* @r{C "on.exit" thunk} */
