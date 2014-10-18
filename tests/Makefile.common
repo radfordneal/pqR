@@ -17,6 +17,7 @@ test-src-strict-1 = \
 	$(test-src-gct) \
 	helpers.R \
 	namedcnt.R \
+	var-lookup.R \
 	matprod.R \
 	subsetting.R \
 	d-p-q-r-tests.R
