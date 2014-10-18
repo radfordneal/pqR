@@ -484,8 +484,10 @@ never garbage collected.  This is sometimes relied upon in C code,
 making it difficult to change the scheme so that space for unused
 symbols can be recovered.
 
-There are then two further pointers, used to record the last
-binding of the symbol that was found in an unhashed environment.
+There are then three further pointers, used to record the last
+binding of the symbol that was found in an unhashed environment,
+and the last environment in which the symbol was not found (in a
+lookup for a function).
 See the next section on @ref{Environments and variable lookup}.
 
 @item CLOSXP
@@ -657,13 +659,22 @@ environments.  The list of such symbols, marked by @code{SPEC_SYM},
 is in @file{src/main/names.c}.
 
 Every symbol contains a pointer to the environment in which the last
-unhashed binding for the symbol was found, along with a pointer to
-the binding cell that was found for that lookup.  If a binding for the
-symbol is looked for again in this environment, the binding cell can be
-returned without a search (unless it has been set to @code{R_UnboundValue}
-due to deletion of the variable).  These fields are cleared (not followed)
-by the garbage collector, so that they will not result
-in memory being occupied after the object bound is no longer used.
+unhashed binding for the symbol was found, along with a pointer to the
+binding cell that was found for that lookup.  If a binding for the
+symbol is looked for again in this environment, the binding cell can
+be returned without a search (unless it has been set to
+@code{R_UnboundValue} due to deletion of the variable). Similarly,
+every symbol contains a pointer the the last unhashed environment in
+which a lookup for the symbol failed, provided that lookup was for a
+function, and either the lookup later succeeded, or the lookup was for
+an S3 method (for which lookups often fail).
+
+These fields are cleared to the C NULL pointer (rather than being
+followed) by the garbage collector, so that they will not result in
+memory being occupied after the environment or the object bound is no
+longer used.  Note that it is possible that although these pointers
+are set only for unhashed environments, such an environment may have
+become hashed later.
 
 @menu
 * Search paths::                
