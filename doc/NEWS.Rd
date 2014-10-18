@@ -6,6 +6,53 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2014-10-18}{
+
+  \subsection{INTRODUCTION}{
+
+  \itemize{ 
+  \item This is a minor update to the release of 2014-09-30, with fixes
+        for a few problems, and a few performance improvements.  Packages
+        installed for pqR-2014-09-30 do not need to be reinstalled for
+        this release.
+}}
+  \subsection{INSTALLATION, BUILDING, AND TESTING}{
+  \itemize{
+  \item A new test (var-lookup.R) for correctness of local vs. global symbol 
+        bindings has been added, which is run with other tests done by 
+        "make check".
+}}
+  \subsection{DOCUMENTATION UPDATES}{
+    \itemize{
+    \item The documentation on "contexts" in the R Internals manual has
+          been updated to relect a change made in pqR-2014-09-30.  (This
+          manual has also been updated to reflect the change below.)
+}}
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+    \itemize{
+    \item Lookup of functions now often skips local environments that
+          were previously found not to contain the symbol being looked up.
+          In particular, this speeds up calls of base functions that are
+          not already fast due to their being recognized as "special" symbols.
+    \item The set of "special" symbols for which lookups in local environments
+          is usually particularly fast now includes \code{.C}, \code{.Fortran},
+          \code{.Call}, \code{.External}, and \code{.Internal}.
+}}
+  \subsection{BUG FIXES}{
+    \itemize{
+    \item Fixed a bug (pqR issue #27) in which a user-defined replacement
+          might get an argument that is not marked as shared, which 
+          could cause anomalous behaviour in some circumstances.
+    \item Fixed an issue with passing on variant return requests to function
+          bodies (though it's hard to construct an example where this issue
+          produces incorrect results).
+    \item [ Actually fixed in pqR-2014-09-30 but omitted from NEWS. ]
+          Fixed problems with calls of \code{strncpy} that were described in
+          PR #15990 at r-project.org.
+}}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2014-09-30}{
 
   \subsection{INTRODUCTION}{
