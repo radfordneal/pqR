@@ -396,6 +396,7 @@ static char *Spec_name[] = {
   "<-", "<<-", "=",
   "$", "[", "[[", 
   "$<-", "[<-", "[[<-", 
+  ".C", ".Fortran", ".Call", ".External", ".Internal"
   0
 };
 
