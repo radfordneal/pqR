@@ -1944,10 +1944,12 @@ static void RunGenCollect(R_size_t size_needed)
     if (R_SymbolTable != NULL) /* Symbol table, could be NULL during startup */
         for (i = 0; i < HSIZE; i++) {
             /* We follow the chain here, as DO_CHILDREN ignores NEXTSYM_PTR.
-               We clear the lastenv fields, since we don't forward them (or the
-               lastbinding fields, which are ignored when lastenv is NULL). */
+               We clear the lastenv and lastenvnotfound fields, since we don't 
+               forward them (or the lastbinding fields, which are ignored when
+               lastenv is NULL). */
             for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
                 LASTSYMENV(s) = NULL;
+                LASTSYMENVNOTFOUND(s) = NULL;
                 FORWARD_NODE(s);
             }
         }
