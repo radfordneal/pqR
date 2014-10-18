@@ -1427,12 +1427,18 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   symbols - otherwise, it might be skipped, and hence the global cache
   would be skipped as well.
 
+  An enviroment can also be skipped when the symbol has LASTSYMENVNOTFOUND
+  equal to that environment.  LASTSYMENVNOTFOUND is updated to the last
+  unhashed environment where the symbol wasn't found.
+
   There is no need to wait for computations of the values found to finish, 
   since functions never have their computation deferred.
 */
 
 SEXP findFun(SEXP symbol, SEXP rho)
 {
+    SEXP lsymnf = LASTSYMENVNOTFOUND(symbol);
+    SEXP lnohashnf = NULL;
     SEXP vl;
 
     /* If it's a special symbol, skip to the first environment that might 
@@ -1446,6 +1452,14 @@ SEXP findFun(SEXP symbol, SEXP rho)
     /* Search environments for a definition that is a function. */
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
+
+        /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
+           in this environment. */
+
+        if (rho == lsymnf) {
+            lnohashnf = rho;
+            continue;
+        }
 
         /* See if it is in the global cache, as it usually will if it's in any
            of the remaining environments (though there can be exceptions). */
@@ -1466,12 +1480,19 @@ SEXP findFun(SEXP symbol, SEXP rho)
         vl = findVarInFramePendingOK (rho, symbol);
 
       got_value:
-	if (vl == R_UnboundValue) continue;
+	if (vl == R_UnboundValue) {
+            if (HASHTAB(rho) == R_NilValue)
+                lnohashnf = rho;
+            continue;
+        }
 
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
-        if (isFunction (vl))
+        if (isFunction (vl)) {
+            if (lnohashnf != NULL)
+                LASTSYMENVNOTFOUND(symbol) = lnohashnf;
             return vl;
+        }
         if (vl == R_MissingArg)
             arg_missing_error(symbol);
     }
@@ -1480,26 +1501,40 @@ SEXP findFun(SEXP symbol, SEXP rho)
 }
 
 /* Variation on findFun that doesn't report errors itself, doesn't
-   check for special symbols, and does not use the global cache,
-   which is quicker if most searches are expected to fail.  
+   check for special symbols, does not use the global cache (which is
+   quicker if most searches are expected to fail), and records a failed
+   local search even if the whole search fails (unlike findFun).  
 
    Used for looking up methods in objects.c. */
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
+    SEXP lsymnf = LASTSYMENVNOTFOUND(symbol);
+    SEXP lnohashnf = NULL;
     SEXP vl;
 
-    while (rho != R_EmptyEnv) {
+    for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
+        if (rho == lsymnf) {
+            lnohashnf = rho;
+            continue;
+        }
 	vl = findVarInFramePendingOK(rho, symbol);
-	if (vl != R_UnboundValue) {
-	    if (TYPEOF(vl) == PROMSXP)
-		vl = forcePromise(vl);
-	    if (isFunction(vl))
-		return vl;
-	}
-	rho = ENCLOS(rho);
+	if (vl == R_UnboundValue) {
+            if (HASHTAB(rho) == R_NilValue)
+                lnohashnf = rho;
+            continue;
+        }
+        if (TYPEOF(vl) == PROMSXP)
+            vl = forcePromise(vl);
+        if (isFunction(vl)) {
+            if (lnohashnf != NULL)
+                LASTSYMENVNOTFOUND(symbol) = lnohashnf;
+            return vl;
+        }
     }
 
+    if (lnohashnf != NULL && !IS_BASE(lnohashnf))
+        LASTSYMENVNOTFOUND(symbol) = lnohashnf;
     return R_UnboundValue;
 }
 
@@ -1617,6 +1652,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             if (R_HashSizeCheck(table))
                 SET_HASHTAB(rho, R_HashResize(table));
         }
+
+        if (LASTSYMENVNOTFOUND(symbol) == rho)
+            LASTSYMENVNOTFOUND(symbol) = NULL;
 
         if (incdec&2)
             INC_NAMEDCNT(value);
