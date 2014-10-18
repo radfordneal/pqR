@@ -1,4 +1,4 @@
-Implement a scheme to save the last finding found for a symbol in an
+Implement a scheme to save the last binding found for a symbol in an
 unhashed environment in the SEXPREC for the symbol (two new fields).
 This may usually avoid linear searches for symbols in local environments.
 
@@ -10,3 +10,5 @@ only for an unhashed environment, and only if the function is
 eventually found someplace (or is for an S3 method).
 
 Defines new findVarInFramePendingOK function.
+
+Adds a new var-lookup test.
