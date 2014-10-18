@@ -12,3 +12,7 @@ eventually found someplace (or is for an S3 method).
 Defines new findVarInFramePendingOK function.
 
 Adds a new var-lookup test.
+
+Adds .C, .Fortran, .Call, .External, .Internal to the special symbol list.
+
+Tweaks tuning of loop unrolling in SEARCH_LOOP.
