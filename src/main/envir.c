@@ -185,8 +185,6 @@ static SEXP getActiveValue(SEXP fun)
         chain = CDR(chain); \
         if (TAG(chain) == symbol) statement; \
         chain = CDR(chain); \
-        if (TAG(chain) == symbol) statement; \
-        chain = CDR(chain); \
     } while (chain != R_NilValue)
 
 
