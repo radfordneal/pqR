@@ -25,7 +25,7 @@
   \subsection{DOCUMENTATION UPDATES}{
     \itemize{
     \item The documentation on "contexts" in the R Internals manual has
-          been updated to relect a change made in pqR-2014-09-30.  (This
+          been updated to reflect a change made in pqR-2014-09-30.  (This
           manual has also been updated to reflect the change below.)
 }}
   \subsection{PERFORMANCE IMPROVEMENTS}{
@@ -37,17 +37,19 @@
     \item The set of "special" symbols for which lookups in local environments
           is usually particularly fast now includes \code{.C}, \code{.Fortran},
           \code{.Call}, \code{.External}, and \code{.Internal}.
+    \item Adjusted a tuning parameter for \code{rowSums} and \code{rowMeans}
+          to be more appropriate for the cache size in modern processors.
 }}
   \subsection{BUG FIXES}{
     \itemize{
     \item Fixed a bug (pqR issue #27) in which a user-defined replacement
-          might get an argument that is not marked as shared, which 
+          function might get an argument that is not marked as shared, which 
           could cause anomalous behaviour in some circumstances.
     \item Fixed an issue with passing on variant return requests to function
           bodies (though it's hard to construct an example where this issue
           produces incorrect results).
     \item Fixed a bug in initialization of user-supplied random number
-          generators, which occassionally showed up with package rngwell19937.
+          generators, which occassionally showed up in package rngwell19937.
     \item [ Actually fixed in pqR-2014-09-30 but omitted from NEWS. ]
           Fixed problems with calls of \code{strncpy} that were described in
           PR #15990 at r-project.org.
