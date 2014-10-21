@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-10-18}{
+\section{CHANGES IN VERSION RELEASED 2014-10-21}{
 
   \subsection{INTRODUCTION}{
 
@@ -46,6 +46,8 @@
     \item Fixed an issue with passing on variant return requests to function
           bodies (though it's hard to construct an example where this issue
           produces incorrect results).
+    \item Fixed a bug in initialization of user-supplied random number
+          generators, which occassionally showed up with package rngwell19937.
     \item [ Actually fixed in pqR-2014-09-30 but omitted from NEWS. ]
           Fixed problems with calls of \code{strncpy} that were described in
           PR #15990 at r-project.org.
