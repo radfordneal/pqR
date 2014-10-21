@@ -1757,7 +1757,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     }
 }
 
-#define rowSums_together 16   /* Sum this number of rows (or fewer) together */
+#define rowSums_together 32   /* Sum this number of rows (or fewer) together */
 
 void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 {
