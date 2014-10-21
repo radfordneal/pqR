@@ -359,6 +359,8 @@ static void RNG_Init (RNGtype newkind, Int32 seed)
 	}
 	break;
     case USER_UNIF:
+        if (n_seed > 0)
+            memcpy (i_seed, u_seed, n_seed * sizeof(Int32));
         break;
     default:
 	error(_("RNG_Init: unimplemented RNG kind %d"), RNG_kind);
