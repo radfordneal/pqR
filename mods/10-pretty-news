@@ -1,6 +1,0 @@
-This mod revises doc/NEWS.Rd to be in pretty form for a release,
-removing some information that really only belongs in MODS.
-
-The MODS file is also removed here.  It was present before only
-because earlier version of some mods used it rather than the mods
-directory.  (However, MODS is recreated in release directories.)
