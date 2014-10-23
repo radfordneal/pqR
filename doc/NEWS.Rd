@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-10-21}{
+\section{CHANGES IN VERSION RELEASED 2014-10-23}{
 
   \subsection{INTRODUCTION}{
 
@@ -18,6 +18,9 @@
 }}
   \subsection{INSTALLATION, BUILDING, AND TESTING}{
   \itemize{
+  \item For Mac OS X, a change has been made to allow use of the Accelerate 
+        framework for the BLAS in OS X 10.10 (Yosemite), adapted from a patch 
+        by R Core.
   \item A new test (var-lookup.R) for correctness of local vs. global symbol 
         bindings has been added, which is run with other tests done by 
         "make check".
@@ -25,8 +28,8 @@
   \subsection{DOCUMENTATION UPDATES}{
     \itemize{
     \item The documentation on "contexts" in the R Internals manual has
-          been updated to reflect a change made in pqR-2014-09-30.  (This
-          manual has also been updated to reflect the change below.)
+          been updated to reflect a change made in pqR-2014-09-30.  (The
+          internals manual has also been updated to reflect the change below.)
 }}
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
