@@ -2039,11 +2039,6 @@ R_MKTIME_ERRNO
 
 R_C99_COMPLEX
 
-## check for vecLib framework (potentially to be used for BLAS)
-## in theory vecLib is platform-independent, in practice only
-## Apple's Mac OS X is known to provide it
-R_CHECK_FRAMEWORK(cblas_cdotu_sub, vecLib)
-
 ## BLAS.
 ## <NOTE>
 ## This has to come *after* checking for Fortran 77 compiler/converter
