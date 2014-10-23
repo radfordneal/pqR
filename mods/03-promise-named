@@ -1,3 +1,0 @@
-Values of forced promises no longer have NAMED always set to 2.
-Instead NAMED for an object is incremented when it becomes the value
-of a promise.
