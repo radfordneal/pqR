@@ -4331,7 +4331,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
     if (isObject(lhs)) { \
 	SEXP call = VECTOR_ELT(constants, callidx); \
 	SEXP rhs = GETSTACK(-1); \
-	if (NAMEDCNT_GT_1(lhs) & lhs != R_NilValue) { \
+	if (NAMEDCNT_GT_1(lhs) && lhs != R_NilValue) { \
 	    lhs = duplicate(lhs); \
 	    SETSTACK(-2, lhs); \
 	    SET_NAMEDCNT_1(lhs); \
