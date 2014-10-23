@@ -1757,7 +1757,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     }
 }
 
-#define rowSums_together 32   /* Sum this number of rows (or fewer) together */
+#define rowSums_together 1024 /* Sum this number of rows (or fewer) together */
 
 void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 {
@@ -1850,6 +1850,9 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
         int_fast64_t lsum; /* good to sum up to 2^32 integers or 2^63 logicals*/
         int cnt;
         int *ix;
+
+        /* This sums across rows, which doesn't have good cache behaviour.
+           Maybe should be improved to be like the REAL case someday... */
 
         switch (TYPEOF(x)) {
         case INTSXP:
