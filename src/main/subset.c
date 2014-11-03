@@ -131,7 +131,7 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
 
     start -= 1;
     n = end-start;
-    m = end<=nx ? n : nx-start;
+    m = start>=nx ? 0 : end<=nx ? n : nx-start;
 
     tmp = result;
 
