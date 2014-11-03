@@ -6,15 +6,16 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-10-23}{
+\section{CHANGES IN VERSION RELEASED 2014-11-??}{
 
   \subsection{INTRODUCTION}{
 
   \itemize{ 
-  \item This is a minor update to the release of 2014-09-30, with fixes
-        for a few problems, and a few performance improvements.  Packages
-        installed for pqR-2014-09-30 do not need to be reinstalled for
-        this release.
+  \item This and the previous release of 2014-10-23 (which does not have
+        a separate NEWS section) are minor updates to the 
+        release of 2014-09-30, with fixes for a few problems, and a few 
+        performance improvements.  Packages installed for pqR-2014-09-30 
+        or pqR-2014-10-23 do not need to be reinstalled for this release.
 }}
   \subsection{INSTALLATION, BUILDING, AND TESTING}{
   \itemize{
@@ -45,6 +46,9 @@
 }}
   \subsection{BUG FIXES}{
     \itemize{
+    \item Fixed a bug in which subsetting a vector with a range created
+          with the colon operator that consisted entirely of invalid indexes 
+          could cause a crash (eg, \code{c(1,2)[10:20]}.
     \item Fixed a bug (pqR issue #27) in which a user-defined replacement
           function might get an argument that is not marked as shared, which 
           could cause anomalous behaviour in some circumstances.
