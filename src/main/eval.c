@@ -74,6 +74,16 @@
 #define SELF_EVAL(t) ((SELF_EVAL_TYPES>>(t))&1)
 
 
+/* Macro version of findVarPendingOK, for speed when symbol is found
+   from LASTSYMBINDING */
+
+#define FIND_VAR_PENDING_OK(sym,rho) \
+( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
+    : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
+    : (LASTSYMENV(rho) = NULL, findVarPendingOK(sym,rho)) \
+)
+
+
 #define ARGUSED(x) LEVELS(x)
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
@@ -550,7 +560,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	if (DDVAL(e))
 	    res = ddfindVar(e,rho);
 	else {
-	    res = findVarPendingOK (e, rho);
+	    res = FIND_VAR_PENDING_OK (e, rho);
             if (res == R_MissingArg)
                 arg_missing_error(e);
         }
@@ -1705,6 +1715,7 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rval, srcref;
 
+    /* The following is as in 2.15.0, but it's not clear how it can happen. */
     if (TYPEOF(op) == PROMSXP) {
 	op = forcePromise(op);
 	SET_NAMEDCNT_MAX(op);

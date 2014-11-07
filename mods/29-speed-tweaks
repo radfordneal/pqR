@@ -1,0 +1,3 @@
+Some additional tweaks to speed things up.
+
+Defined FIND_VAR_PENDING_OK macro for use in symbol evaluation in eval.
