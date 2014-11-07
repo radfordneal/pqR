@@ -1416,11 +1416,11 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
        include n and bgn, but gcc -O2 -Wclobbered warns about these so
        to be safe we declare them volatile as well. */
     volatile int i, n, bgn;
-    volatile SEXP v, val, nval;
+    volatile SEXP v, val, nval, bcell;
     int dbg, val_type;
     SEXP sym, body;
     RCNTXT cntxt;
-    PROTECT_INDEX valpi, vpi;
+    PROTECT_INDEX valpi, vpi, bix;
     int variant;
 
     sym = CAR(args);
@@ -1472,6 +1472,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     bgn = BodyHasBraces(body);
 
     PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
+    PROTECT_WITH_INDEX(bcell = R_NilValue, &bix);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
@@ -1537,7 +1538,10 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             break;
         }
 
-        set_var_in_frame (sym, v, rho, TRUE, 3);
+        if (bcell == R_NilValue || CAR(bcell) != v) {
+            set_var_in_frame (sym, v, rho, TRUE, 3);
+            REPROTECT(bcell = R_binding_cell, bix);
+        }
 
         DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 
@@ -1550,7 +1554,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     endcontext(&cntxt);
     if (!variant) 
         DEC_NAMEDCNT(val);
-    UNPROTECT(4);
+    UNPROTECT(5);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
 }
