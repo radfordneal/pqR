@@ -34,49 +34,32 @@ diag <- function(x = 1, nrow, ncol)
     }
 
     if (is.array(x) && length(dim(x)) != 1L)
-        stop("'x' is an array, but not 1D.")
+        stop("'x' is an array, but not one-dimensional.")
 
-    if (missing(x))
-        n <- as.integer(nrow)
-    if (length(x) == 1L && nargs() == 1L) {
-	n <- as.integer(x)
-	x <- 1
-    }
-    else 
-        n <- length(x)
+    if (missing(x)) n <- nrow
+    else if (length(x) == 1L && nargs() == 1L) {
+        n <- as.integer(x)
+        x <- 1
+    } else n <- length(x)
+    if (!missing(nrow)) n <- nrow
+    if (missing(ncol)) ncol <- n
 
-    if (!missing(nrow))
-	n <- as.integer(nrow)
-    if (!missing(ncol))
-        ncol <- as.integer(ncol)
-    else
-	ncol <- n
-
-    m <- min(n,ncol)
-
-    if (is.complex(x)) {
-        y <- matrix (0i, n, ncol)
-        if (m > 0L) y[1L + 0L:(m-1L) * (n+1L)] <- x
-    }
-    else {
-        y <- matrix (0, n, ncol)
-        if (m > 0L) y[1L + 0L:(m-1L) * (n+1L)] <- as.numeric(x)
-    }
-
-    get_rm(y)
+    .Internal(diag(x, n, ncol))
 }
 
 `diag<-` <- function(x, value)
 {
     dx <- dim(x)
-    if(length(dx) != 2L)
+    if (length(dx) != 2L)
         ## no further check, to also work with 'Matrix'
         stop("only matrix diagonals can be replaced")
     len.i <- min(dx)
-    i <- seq_len(len.i)
     len.v <- length(value)
-    if(len.v != 1L && len.v != len.i)
+    if (len.v != 1L && len.v != len.i)
         stop("replacement diagonal has wrong length")
-    if(len.i > 0L) x[cbind(i, i)] <- value
+    if (len.i) {
+        i <- seq_len(len.i)
+        x[cbind(i, i)] <- value
+    }
     get_rm(x)
 }
