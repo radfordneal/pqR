@@ -1949,6 +1949,60 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return ans;
 }
 
+
+/* Adapted from R-3.0.0, Copyright (C) 2012 The R Core Team. */
+
+SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP ans, x, snr, snc;
+    int nr = 1, nc = 1, nprotect = 1;
+
+    checkArity(op, args);
+    x = CAR(args);
+    snr = CADR(args);
+    snc = CADDR(args);
+    nr = asInteger(snr);
+    if (nr == NA_INTEGER)
+	error(_("invalid 'nrow' value (too large or NA)"));
+    if (nr < 0)
+	error(_("invalid 'nrow' value (< 0)"));
+    nc = asInteger(snc);
+    if (nc == NA_INTEGER)
+	error(_("invalid 'ncol' value (too large or NA)"));
+    if (nc < 0)
+	error(_("invalid 'ncol' value (< 0)"));
+    int mn = (nr < nc) ? nr : nc;
+    if (mn > 0 && LENGTH(x) == 0)
+	error(_("'x' must have positive length"));
+
+   if ((double)nr * (double)nc > INT_MAX)
+	error(_("too many elements specified"));
+
+   if (TYPEOF(x) == CPLXSXP) {
+       PROTECT(ans = allocMatrix(CPLXSXP, nr, nc));
+       int nx = LENGTH(x);
+       R_len_t NR = nr;
+       Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
+       zero.r = zero.i = 0.0;
+       for (R_len_t i = 0; i < NR*nc; i++) ra[i] = zero;
+       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
+  } else {
+       if(TYPEOF(x) != REALSXP) {
+	   PROTECT(x = coerceVector(x, REALSXP));
+	   nprotect++;
+       }
+       PROTECT(ans = allocMatrix(REALSXP, nr, nc));
+       int nx = LENGTH(x);
+       R_len_t NR = nr;
+       double *rx = REAL(x), *ra = REAL(ans);
+       for (R_len_t i = 0; i < NR*nc; i++) ra[i] = 0.0;
+       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
+   }
+   UNPROTECT(nprotect);
+   return ans;
+}
+
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_array[] =
@@ -1974,6 +2028,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"colMeans",	do_colsum,	1,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowSums",	do_colsum,	2,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowMeans",	do_colsum,	3,	11011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"diag",        do_diag,        0,      11,     3,      {PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
