@@ -34,6 +34,11 @@
 }}
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
+    \item The speed of \code{for} loops has been improved by not bothering
+          to set the index variable again if it is still set to the old
+          value in its binding cell.
+    \item Evaluation of symbols is now a bit faster when the symbol has a 
+          binding in the local environment whose location is cached.
     \item Lookup of functions now often skips local environments that
           were previously found not to contain the symbol being looked up.
           In particular, this speeds up calls of base functions that are
@@ -43,6 +48,11 @@
           \code{.Call}, \code{.External}, and \code{.Internal}.
     \item Adjusted a tuning parameter for \code{rowSums} and \code{rowMeans}
           to be more appropriate for the cache size in modern processors.
+}}
+  \subsection{PERFORMANCE IMPROVEMENT FROM A LATER R CORE RELEASE}{
+    \itemize{
+    \item The faster C implementation of diagonal matrix creation with
+          \code{diag} from R-3.0.0 has been adapted for pqR.
 }}
   \subsection{BUG FIXES}{
     \itemize{
