@@ -1627,9 +1627,13 @@ extern void Rf_unprotect_error (void);
    R_PPStack[R_PPStackTop++] = (s3) )
 
 #undef  UNPROTECT
+#if 0  /* enable for stack underflow checking */
 #define UNPROTECT(n) \
   ( R_PPStackTop >= (n) ? (void) (R_PPStackTop -= (n)) \
                         : Rf_unprotect_error() )
+#else  /* no underflow check */
+#define UNPROTECT(n) ((void) (R_PPStackTop -= (n)))
+#endif
 
 #undef  PROTECT_WITH_INDEX
 #define PROTECT_WITH_INDEX(x,i) \
