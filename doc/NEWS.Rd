@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-11-??}{
+\section{CHANGES IN VERSION RELEASED 2014-11-10}{
 
   \subsection{INTRODUCTION}{
 
@@ -30,7 +30,7 @@
     \itemize{
     \item The documentation on "contexts" in the R Internals manual has
           been updated to reflect a change made in pqR-2014-09-30.  (The
-          internals manual has also been updated to reflect the change below.)
+          internals manual has also been updated to reflect changes below.)
 }}
   \subsection{PERFORMANCE IMPROVEMENTS}{
     \itemize{
@@ -67,7 +67,7 @@
           produces incorrect results).
     \item Fixed a bug in initialization of user-supplied random number
           generators, which occassionally showed up in package rngwell19937.
-    \item [ Actually fixed in pqR-2014-09-30 but omitted from NEWS. ]
+    \item (Actually fixed in pqR-2014-09-30 but omitted from NEWS.)	
           Fixed problems with calls of \code{strncpy} that were described in
           PR #15990 at r-project.org.
 }}
