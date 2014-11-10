@@ -6,3 +6,5 @@ Sped up "for" by using binding cell when possible.
 
 Disabled underflow check in the fast version of UNPROTECT used in the
 interprete.
+
+Tweaked threshold for deferred evaluation of arithmetic operators.

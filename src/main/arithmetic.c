@@ -1120,8 +1120,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
         threshold = T_arithmetic;
         if (TYPEOF(ans)==CPLXSXP) threshold >>= 1;
-        if (oper!=PLUSOP && oper!=MINUSOP) threshold >>= 1;
-        if (oper==POWOP) threshold >>= 1;
+        if (oper>TIMESOP) threshold >>= 1;
 
         DO_NOW_OR_LATER2 (variant, n > 1 && n >= threshold,
                           flags, task, oper, ans, x, y);
