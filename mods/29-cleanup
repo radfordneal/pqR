@@ -11,3 +11,6 @@ Plus fix a few other bugs, etc.
 Tuned rowSums.
 
 Fix for use of Accelerate in Yosemite, as in R Core patch.
+
+Changed coerceVector and asCharacterFactor to protect their arguments.
+This is assumed for coerceVector in stats/src/port.c
