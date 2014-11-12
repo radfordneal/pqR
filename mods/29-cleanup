@@ -17,3 +17,6 @@ This is assumed for coerceVector in stats/src/port.c
 
 Made numerous fixes where objects weren't properly protected, mostly
 associated with calls of "install".
+
+Added some internal error checks for symbol definition/lookup and
+attribute setting.
