@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-11-10}{
+\section{CHANGES IN VERSION RELEASED 2014-11-12}{
 
   \subsection{INTRODUCTION}{
 
@@ -56,6 +56,11 @@
 }}
   \subsection{BUG FIXES}{
     \itemize{
+    \item Fixed a number of places in the interpreter and base packages
+          where objects were not properly protected agains garbage collection
+          (many involving use of the \code{install} function).  Most of
+          these problems are in R-2.15.0 or R-2.15.1, and probably also in 
+          later R Core releases.
     \item Fixed a bug in which subsetting a vector with a range created
           with the colon operator that consisted entirely of invalid indexes 
           could cause a crash (eg, \code{c(1,2)[10:20]}.
