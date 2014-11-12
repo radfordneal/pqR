@@ -1973,8 +1973,9 @@ gregexpr_Regexc(const regex_t *reg, SEXP sstr, int useBytes, int use_WC)
 	INTEGER(matchlen)[j] = INTEGER(matchlenbuf)[j];
     }
     setAttrib(ans, install("match.length"), matchlen);
+    SEXP useBytes_install = install("useBytes"); /* protected by symbol table */
     if(useBytes) {
-	setAttrib(ans, install("useBytes"), ScalarLogical(TRUE));
+	setAttrib(ans, useBytes_install, ScalarLogical(TRUE));
     }
     UNPROTECT(4);
     return ans;
@@ -2054,8 +2055,9 @@ gregexpr_fixed(const char *pattern, const char *string,
 	INTEGER(matchlen)[j] = INTEGER(matchlenbuf)[j];
     }
     setAttrib(ans, install("match.length"), matchlen);
+    SEXP useBytes_install = install("useBytes"); /* protected by symbol table */
     if(useBytes) {
-	setAttrib(ans, install("useBytes"), ScalarLogical(TRUE));
+	setAttrib(ans, useBytes_install, ScalarLogical(TRUE));
     }
     UNPROTECT(4);
     return ans;
@@ -2200,8 +2202,9 @@ gregexpr_perl(const char *pattern, const char *string,
     /* Protect in case install("match.length") allocates */
     PROTECT(matchlen = allocVector(INTSXP, matchIndex + 1));
     setAttrib(ans, install("match.length"), matchlen);
+    SEXP useBytes_install = install("useBytes"); /* protected by symbol table */
     if(useBytes) {
-	setAttrib(ans, install("useBytes"), ScalarLogical(TRUE));
+	setAttrib(ans, useBytes_install, ScalarLogical(TRUE));
     }
     UNPROTECT(1);
     if (foundAny) {
@@ -2418,9 +2421,10 @@ static SEXP do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* Protect in case install("match.length") allocates */
 	PROTECT(matchlen = allocVector(INTSXP, n));
 	setAttrib(ans, install("match.length"), matchlen);
-	if(useBytes) {
-	    setAttrib(ans, install("useBytes"), ScalarLogical(TRUE));
-	}
+        SEXP useBytes_install = install("useBytes"); /* protected by symbol table */
+        if(useBytes) {
+	    setAttrib(ans, useBytes_install, ScalarLogical(TRUE));
+        }
 	UNPROTECT(1);
 	if (perl_opt && capture_count) {
 	    SEXP dmn;
@@ -2653,7 +2657,8 @@ static SEXP do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
     for(i = 0; i < n; i++) {
 	if(STRING_ELT(vec, i) == NA_STRING) {
 	    PROTECT(matchpos = ScalarInteger(NA_INTEGER));
-	    setAttrib(matchpos, install("match.length"),
+            SEXP match_length_install = install("match.length");
+	    setAttrib(matchpos, match_length_install,
 		      ScalarInteger(NA_INTEGER));
 	    SET_VECTOR_ELT(ans, i, matchpos);
 	    UNPROTECT(1);
@@ -2685,8 +2690,9 @@ static SEXP do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		    INTEGER(matchlen)[j] = pmatch[j].rm_eo - so;
 		}
 		setAttrib(matchpos, install("match.length"), matchlen);
+                SEXP useBytes_install = install("useBytes");
 		if(useBytes)
-		    setAttrib(matchpos, install("useBytes"),
+		    setAttrib(matchpos, useBytes_install,
 			      ScalarLogical(TRUE));
 		SET_VECTOR_ELT(ans, i, matchpos);
 		UNPROTECT(2);

@@ -362,6 +362,7 @@ SEXP port_nlminb(SEXP fn, SEXP gr, SEXP hs, SEXP rho,
     SEXP xpt;
     double *b = (double *) NULL, *g = (double *) NULL,
 	*h = (double *) NULL, fx = R_PosInf;
+    SEXP dpar_install = install(".par"); /* assume protected by symbol table */
     if (isNull(rho)) {
 	error(_("use of NULL environment is defunct"));
 	rho = R_BaseEnv;
@@ -372,13 +373,13 @@ SEXP port_nlminb(SEXP fn, SEXP gr, SEXP hs, SEXP rho,
 	error(_("'d' must be a nonempty numeric vector"));
     if (hs != R_NilValue && gr == R_NilValue)
 	error(_("When Hessian defined must also have gradient defined"));
-    if (R_NilValue == (xpt = findVarInFrame(rho, install(".par"))) ||
+    if (R_NilValue == (xpt = findVarInFrame(rho, dpar_install)) ||
 	!isReal(xpt) || LENGTH(xpt) != n)
 	error(_("environment 'rho' must contain a numeric vector '.par' of length %d"),
 	      n);
     /* We are going to alter .par, so must duplicate it */
-    defineVar(install(".par"), duplicate(xpt), rho);
-    PROTECT(xpt = findVarInFrame(rho, install(".par")));
+    defineVar(dpar_install, duplicate(xpt), rho);
+    PROTECT(xpt = findVarInFrame(rho, dpar_install));
 
     if ((LENGTH(lowerb) == n) && (LENGTH(upperb) == n)) {
 	if (isReal(lowerb) && isReal(upperb)) {

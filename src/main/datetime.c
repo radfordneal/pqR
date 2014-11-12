@@ -1143,7 +1143,8 @@ static SEXP do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     SET_STRING_ELT(klass, 0, mkChar("POSIXlt"));
     SET_STRING_ELT(klass, 1, mkChar("POSIXt"));
     classgets(ans, klass);
-    setAttrib(ans, install("tzone"), mkString("UTC"));
+    SEXP tzone_install = install("tzone");/* assume protected by symbol table */
+    setAttrib(ans, tzone_install, mkString("UTC"));
     UNPROTECT(4);
 
     return ans;

@@ -1053,6 +1053,7 @@ static SEXP coerce_numeric_or_string (SEXP v, int type)
     return ans;
 }
 
+/* The first argument of coerceVector need not be protected by the caller. */
 SEXP coerceVector(SEXP v, SEXPTYPE type)
 {
     SEXP op, vp, ans;
@@ -1060,14 +1061,18 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 
     if (TYPEOF(v) == type)
 	return v;
+
+    PROTECT(v);
+
     /* code to allow classes to extend ENVSXP, SYMSXP, etc */
     if(IS_S4_OBJECT(v) && TYPEOF(v) == S4SXP) {
         SEXP vv = R_getS4DataSlot(v, ANYSXP);
+        UNPROTECT(1);
 	if(vv == R_NilValue)
 	  error(_("no method for coercing this S4 class to a vector"));
 	else if(TYPEOF(vv) == type)
 	  return vv;
-	v = vv;
+	PROTECT(v = vv);
     }
 
     switch (TYPEOF(v)) {
@@ -1171,6 +1176,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	goto coerce_error;
     }
 
+    UNPROTECT(1);
     return ans;
 
 coerce_error:
@@ -1275,6 +1281,7 @@ SEXP asCharacterFactor(SEXP x)
 {
     SEXP ans;
 
+    PROTECT(x);
     if( !inherits(x, "factor") )
         error(_("attempting to coerce non-factor"));
 
@@ -1287,7 +1294,7 @@ SEXP asCharacterFactor(SEXP x)
 		   (ii == NA_INTEGER) ? NA_STRING
 		   : STRING_ELT(labels, ii - 1));
     }
-    UNPROTECT(1);
+    UNPROTECT(2);
     return ans;
 }
 

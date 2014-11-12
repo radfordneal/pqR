@@ -78,10 +78,11 @@ static Rboolean url_open(Rconnection con)
     {
 	SEXP sheaders, agentFun;
 	const char *headers;
+        SEXP makeUserAgent_install = install("makeUserAgent");
 #ifdef USE_WININET
-	PROTECT(agentFun = lang2(install("makeUserAgent"), ScalarLogical(0)));
+	PROTECT(agentFun = lang2(makeUserAgent_install, ScalarLogical(0)));
 #else
-	PROTECT(agentFun = lang1(install("makeUserAgent")));
+	PROTECT(agentFun = lang1(makeUserAgent_install));
 #endif
 	PROTECT(sheaders = eval(agentFun, R_FindNamespace(mkString("utils"))));
 

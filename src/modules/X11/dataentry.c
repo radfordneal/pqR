@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Langage for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998--2011  The R Development Core Team
  *
@@ -1067,7 +1070,8 @@ static SEXP processEscapes(SEXP x)
 
     PROTECT( pattern = mkString("(?<!\\\\)((\\\\\\\\)*)\"") );
     PROTECT( replacement = mkString("\\1\\\\\"") );
-    PROTECT( expr = lang5(install("gsub"), ScalarLogical(1), pattern, replacement, x) );
+    SEXP gsub_install = install("gsub"); /* assume protected by symbol table */
+    PROTECT( expr = lang5(gsub_install, ScalarLogical(1), pattern, replacement, x) );
     SET_TAG( CDR(expr), install("perl") );
 
     PROTECT( newval = eval(expr, R_BaseEnv) );
