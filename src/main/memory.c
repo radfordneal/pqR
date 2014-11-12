@@ -3743,9 +3743,10 @@ int (RTRACE)(SEXP x) { return RTRACE(CHK(x)); }
 int (LEVELS)(SEXP x) { return LEVELS(CHK(x)); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
-    if(TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
+    if (v == NULL || TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
 	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
-	      type2char(TYPEOF(x)));
+	      v == NULL ? "C null pointer" : type2char(TYPEOF(x)));
+    if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
     if (ATTRIB(x) != v) {
         CHECK_OLD_TO_NEW(x, v);
         ATTRIB(x) = v;
@@ -3753,6 +3754,10 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
 }
 
 void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
+    if (v == NULL)
+	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
+	      "C null pointer");
+    if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
     if (ATTRIB(x) != v) {
         CHECK_OLD_TO_NEW(x, v);
         ATTRIB(x) = v;

@@ -1437,6 +1437,8 @@ SEXP findFun(SEXP symbol, SEXP rho)
     SEXP lnohashnf = NULL;
     SEXP vl;
 
+    if (TYPEOF(symbol) != SYMSXP) abort();
+
     /* If it's a special symbol, skip to the first environment that might 
        contain such a symbol. */
 
@@ -1557,6 +1559,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 {
     int hashcode;
     SEXP loc;
+
+    if (TYPEOF(symbol) != SYMSXP) abort();
 
     PROTECT3(symbol,value,rho);
 
