@@ -2875,6 +2875,8 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     INTERNAL(c) = R_NilValue;
     NEXTSYM_PTR(c) = R_NilValue;
     LASTSYMENV(c) = NULL;
+    LASTSYMBINDING(c) = R_NilValue;
+    LASTSYMENVNOTFOUND(c) = NULL;
     SET_DDVAL(c, isDDName(name));
     UNPROTECT(2);
     return c;
