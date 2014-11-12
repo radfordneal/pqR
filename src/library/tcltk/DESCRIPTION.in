@@ -1,8 +1,8 @@
 Package: tcltk
 Version: @VERSION@
 Priority: base
-Title: Tcl/Tk Interface
-Author: R Development Core Team
+Title: Tcl/Tk Interface - with modifications for pqR
+Author: R Development Core Team - modifications for pqR by Radford M. Neal
 Maintainer: R Core Team <R-core@r-project.org>
 Description: Interface and language bindings to Tcl/Tk GUI elements
 License: Part of R @VERSION@

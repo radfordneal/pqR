@@ -178,11 +178,12 @@ static SEXP do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 	return ans;
     }
 
+    SEXP nchar_install = install("nchar"); /* protected by symbol table */
     if(useBytes)
-	PROTECT(call = lang3(install("nchar"), pat,
+	PROTECT(call = lang3(nchar_install, pat,
 			     ScalarString(mkChar("bytes"))));
     else
-	PROTECT(call = lang3(install("nchar"), pat,
+	PROTECT(call = lang3(nchar_install, pat,
 			     ScalarString(mkChar("chars"))));
     patlen = asInteger(eval(call, env));
     UNPROTECT(1);
@@ -792,11 +793,12 @@ static SEXP do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
         }
     }
     
+    SEXP nchar_install = install("nchar"); /* protected by symbol table */
     if(useBytes)
-	PROTECT(call = lang3(install("nchar"), pat,
+	PROTECT(call = lang3(nchar_install, pat,
 			     ScalarString(mkChar("bytes"))));
     else
-	PROTECT(call = lang3(install("nchar"), pat,
+	PROTECT(call = lang3(nchar_install, pat,
 			     ScalarString(mkChar("chars"))));
     patlen = asInteger(eval(call, env));
     UNPROTECT(1);

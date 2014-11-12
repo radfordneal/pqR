@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001--2010  The R Development Core Team.
  *  Copyright (C) 2003--2010  The R Foundation
  *
@@ -1156,7 +1159,8 @@ static SEXP moddet_ge_real(SEXP Ain, SEXP logarithm)
     SET_STRING_ELT(nm, 1, mkChar("sign"));
     setAttrib(val, R_NamesSymbol, nm);
     SET_VECTOR_ELT(val, 0, ScalarReal(modulus));
-    setAttrib(VECTOR_ELT(val, 0), install("logarithm"), ScalarLogical(useLog));
+    SEXP logarithm_install = install("logarithm"); /* protected by sym table */
+    setAttrib(VECTOR_ELT(val, 0), logarithm_install, ScalarLogical(useLog));
     SET_VECTOR_ELT(val, 1, ScalarInteger(sign));
     setAttrib(val, R_ClassSymbol, ScalarString(mkChar("det")));
     UNPROTECT(3);

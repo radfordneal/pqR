@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2011  The R Development Core Team
  *
@@ -305,9 +308,12 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    tlist = CDR(tlist);
 	}
 	if(res) {
-	    setAttrib(rval, install("status"), ScalarInteger(res));
-	    if(errno)
-		setAttrib(rval, install("errmsg"), mkString(strerror(errno)));
+            SEXP status_install = install("status");/* protected by sym table */
+	    setAttrib(rval, status_install, ScalarInteger(res));
+	    if(errno) {
+                SEXP errmsg_install = install("errmsg");
+		setAttrib(rval, errmsg_install, mkString(strerror(errno)));
+            }
 	}
 	UNPROTECT(1);
 	return rval;

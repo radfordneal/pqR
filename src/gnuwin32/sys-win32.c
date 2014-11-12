@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *
+ *  Based on R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2010  The R Development Core Team
  *
@@ -260,7 +263,10 @@ SEXP do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_STRING_ELT(rval, j, CAR(tlist));
 	    tlist = CDR(tlist);
 	}
-	if(ll) setAttrib(rval, install("status"), ScalarInteger(ll));
+	if (ll) {
+            SEXP status_install = install("status"); /* protected by symbol table */
+            setAttrib(rval, status_install, ScalarInteger(ll));
+        }
 	UNPROTECT(2);
 	return rval;
     } else {
