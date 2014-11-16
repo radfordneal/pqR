@@ -32,15 +32,15 @@ DD), with only the following changes:
     build directory (with "C" locale), and then copying them to the 
     source directory (R-admin.html from doc/manual).
 
- 4) Concatenate all files in the "mods" directory into the file 
+ 4) Remove the file ".gitignore" (using "git rm", if you're using git).
+
+ 5) Concatenate all files in the "mods" directory into the file 
     "MODS", as follows:
 
       (cd mods; cat README; for i in [0-9]*; \
        do echo " "; echo " "; echo ${i}:; echo " "; cat $i; done) >MODS
 
     Then delete the "mods" directory (with "git rm -r" if using git).
-
- 5) Remove the file ".gitignore" (using "git rm", if you're using git).
 
 The development branches that go into a release may be changed after
 the release, with the new versions forming the basis for a later
