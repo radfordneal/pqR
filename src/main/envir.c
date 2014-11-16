@@ -978,6 +978,8 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 {
     SEXP value;
 
+    if (TYPEOF(symbol) != SYMSXP) abort();
+
     if (rho == LASTSYMENV(symbol)) {
         value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
         if (value == R_UnboundValue)
@@ -994,6 +996,8 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
     SEXP value;
+
+    if (TYPEOF(symbol) != SYMSXP) abort();
 
     if (rho == LASTSYMENV(symbol)) {
         value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
@@ -1433,11 +1437,11 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 
 SEXP findFun(SEXP symbol, SEXP rho)
 {
+    if (TYPEOF(symbol) != SYMSXP) abort();
+
     SEXP lsymnf = LASTSYMENVNOTFOUND(symbol);
     SEXP lnohashnf = NULL;
     SEXP vl;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     /* If it's a special symbol, skip to the first environment that might 
        contain such a symbol. */
@@ -1507,6 +1511,8 @@ SEXP findFun(SEXP symbol, SEXP rho)
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
+    if (TYPEOF(symbol) != SYMSXP) abort();
+
     SEXP lsymnf = LASTSYMENVNOTFOUND(symbol);
     SEXP lnohashnf = NULL;
     SEXP vl;
@@ -1762,6 +1768,8 @@ void setVar(SEXP symbol, SEXP value, SEXP rho)
 
 void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 {
+    if (TYPEOF(symbol) != SYMSXP) abort();
+
     if (SYMVALUE(symbol) == R_UnboundValue) {
         if (FRAME_IS_LOCKED(rho))
             error(_("cannot add binding of '%s' to the base environment"),
@@ -1857,6 +1865,8 @@ static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 {
     SEXP list, value;
+
+    if (TYPEOF(name) != SYMSXP) abort();
 
     if (env == R_BaseNamespace)
 	error(_("cannot remove variables from base namespace"));
