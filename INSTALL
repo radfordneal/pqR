@@ -20,8 +20,8 @@ described below, and in the R-admin manual.
 Configuring pqR
 
 After uncompressing and unpacking the tar archive (with a command such
-as "tar xf pqR-2014-10-18.tar.gz"), you should make a directory in
-which to build pqR, such as "pqR-2014-10-18-myconfig".  It is possible
+as "tar xf pqR-2014-11-16.tar.gz"), you should make a directory in
+which to build pqR, such as "pqR-2014-11-16-myconfig".  It is possible
 to instead build pqR in the source directory, but using a separate
 directory is preferable, so that the source directory says clean, and
 so that you can create more than one configuration if desired.
@@ -31,7 +31,7 @@ You should then enter the build directory, and issue the command:
     path-to-source-directory/configure
 
 where "path-to-source-directory" is the path to the source directory,
-perhaps something like "../pqR-2014-10-18".
+perhaps something like "../pqR-2014-11-16".
 
 The configure command will produce a lot of output regarding the
 results of checks for various system facilities, and end (if
