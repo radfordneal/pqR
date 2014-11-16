@@ -75,12 +75,12 @@
 
 
 /* Macro version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING */
+   from LASTSYMBINDING.  Doesn't set R_binding_cell. */
 
 #define FIND_VAR_PENDING_OK(sym,rho) \
 ( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
     : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
-    : (LASTSYMENV(rho) = NULL, findVarPendingOK(sym,rho)) \
+    : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
 )
 
 
