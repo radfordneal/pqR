@@ -6,6 +6,41 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2014-??-??}{
+
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item ...
+}}
+
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item ...
+}}
+
+  \subsection{DOCUMENTATION UPDATES}{
+  \itemize{
+  \item ...
+}}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+  \itemize{
+  \item ...
+}}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item ...
+}}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+  \itemize{
+  \item ...
+}}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2014-11-16}{
 
   \subsection{INTRODUCTION}{
