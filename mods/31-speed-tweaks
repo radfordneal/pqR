@@ -1,0 +1,5 @@
+Tweaks to eval, etc. to speed things up.
+
+Defines FINDFUN macro for use in eval, to often avoid overhead
+of calling findFun.
+
