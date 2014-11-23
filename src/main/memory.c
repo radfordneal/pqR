@@ -1984,6 +1984,11 @@ static void RunGenCollect(R_size_t size_needed)
                 LASTSYMENVNOTFOUND(s) = NULL;
                 FORWARD_NODE(s);
             }
+            if ((i&0xff) == 0) {
+                /* Doing this occassionaly may improve cache performance. */
+                process_nodes (forwarded_nodes, no_snap); 
+                forwarded_nodes = NULL;
+            }
         }
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
@@ -2022,9 +2027,15 @@ static void RunGenCollect(R_size_t size_needed)
     if (framenames != NULL)		   /* used for interprocedure    */
         FORWARD_NODE(framenames);	   /*   communication in model.c */
 
-    for (i = 0; i < R_PPStackTop; i++)	   /* Protected pointers */
+    for (i = 0; i < R_PPStackTop; i++) {   /* Protected pointers */
         if (R_PPStack[i] != NULL) 
             FORWARD_NODE(R_PPStack[i]);
+        if ((i&0xff) == 0) {
+            /* Doing this occassionaly may improve cache performance. */
+            process_nodes (forwarded_nodes, no_snap); 
+            forwarded_nodes = NULL;
+        }
+    }
 
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++) /* Byte code stack */
         FORWARD_NODE(*sp);
