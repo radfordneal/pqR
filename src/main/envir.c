@@ -1439,10 +1439,6 @@ SEXP findFun(SEXP symbol, SEXP rho)
 {
     if (TYPEOF(symbol) != SYMSXP) abort();
 
-    SEXP lsymnf = LASTSYMENVNOTFOUND(symbol);
-    SEXP lnohashnf = NULL;
-    SEXP vl;
-
     /* If it's a special symbol, skip to the first environment that might 
        contain such a symbol. */
 
@@ -1451,17 +1447,13 @@ SEXP findFun(SEXP symbol, SEXP rho)
             rho = ENCLOS(rho);
     }
 
+    SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
+    SEXP last_hashed_env_nf = NULL;
+    SEXP vl;
+
     /* Search environments for a definition that is a function. */
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
-
-        /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
-           in this environment. */
-
-        if (rho == lsymnf) {
-            lnohashnf = rho;
-            continue;
-        }
 
         /* See if it is in the global cache, as it usually will if it's in any
            of the remaining environments (though there can be exceptions). */
@@ -1479,20 +1471,28 @@ SEXP findFun(SEXP symbol, SEXP rho)
             }
 #       endif
 
+        /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
+           in this environment. */
+
+        if (rho == last_sym_not_found) {
+            last_hashed_env_nf = rho;
+            continue;
+        }
+
         vl = findVarInFramePendingOK (rho, symbol);
 
       got_value:
 	if (vl == R_UnboundValue) {
             if (HASHTAB(rho) == R_NilValue)
-                lnohashnf = rho;
+                last_hashed_env_nf = rho;
             continue;
         }
 
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
         if (isFunction (vl)) {
-            if (lnohashnf != NULL)
-                LASTSYMENVNOTFOUND(symbol) = lnohashnf;
+            if (last_hashed_env_nf != NULL)
+                LASTSYMENVNOTFOUND(symbol) = last_hashed_env_nf;
             return vl;
         }
         if (vl == R_MissingArg)
@@ -1513,32 +1513,32 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
     if (TYPEOF(symbol) != SYMSXP) abort();
 
-    SEXP lsymnf = LASTSYMENVNOTFOUND(symbol);
-    SEXP lnohashnf = NULL;
+    SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
+    SEXP last_hashed_env_nf = NULL;
     SEXP vl;
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
-        if (rho == lsymnf) {
-            lnohashnf = rho;
+        if (rho == last_sym_not_found) {
+            last_hashed_env_nf = rho;
             continue;
         }
 	vl = findVarInFramePendingOK(rho, symbol);
 	if (vl == R_UnboundValue) {
             if (HASHTAB(rho) == R_NilValue)
-                lnohashnf = rho;
+                last_hashed_env_nf = rho;
             continue;
         }
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
         if (isFunction(vl)) {
-            if (lnohashnf != NULL)
-                LASTSYMENVNOTFOUND(symbol) = lnohashnf;
+            if (last_hashed_env_nf != NULL)
+                LASTSYMENVNOTFOUND(symbol) = last_hashed_env_nf;
             return vl;
         }
     }
 
-    if (lnohashnf != NULL && !IS_BASE(lnohashnf))
-        LASTSYMENVNOTFOUND(symbol) = lnohashnf;
+    if (last_hashed_env_nf != NULL && !IS_BASE(last_hashed_env_nf))
+        LASTSYMENVNOTFOUND(symbol) = last_hashed_env_nf;
     return R_UnboundValue;
 }
 

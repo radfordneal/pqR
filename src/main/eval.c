@@ -83,6 +83,24 @@
     : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
 )
 
+/* Macro version of findFun, for speed when a special symbol is found in
+   the base environmet. */
+
+#define FINDFUN(res,symbol,rho) do { \
+    if (SPEC_SYM(symbol)) { \
+        SEXP rho_ = rho; \
+        while (NO_SPEC_SYM(rho_)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */ \
+            rho_ = ENCLOS(rho_); \
+        if (rho_ == R_GlobalEnv && BASE_CACHE(symbol) \
+                                && !IS_ACTIVE_BINDING(symbol)) \
+            res = SYMVALUE(symbol); \
+        else \
+            res = findFun(symbol,rho_); \
+    } \
+    else \
+        res = findFun(symbol,rho); \
+} while (0)
+
 
 #define ARGUSED(x) LEVELS(x)
 
@@ -589,7 +607,10 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         SEXP fn = CAR(e), args = CDR(e);
 
-	op = TYPEOF(fn)==SYMSXP ? findFun (fn,rho) : eval (fn,rho);
+        if (TYPEOF(fn) == SYMSXP)
+            FINDFUN(op,fn,rho);
+        else
+            op = eval(fn,rho);
 
 	if (RTRACE(op)) R_trace_call(e,op);
 
