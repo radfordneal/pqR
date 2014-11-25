@@ -100,7 +100,6 @@ static int R_call(ClientData clientData,
     int i;
     SEXP expr, alist, ans;
     void *fun;
-    SEXP try_install = install("try"); /* assume protected by symbol table */
 
     alist = R_NilValue;
     for (i = argc - 1 ; i > 1 ; i--){
@@ -110,8 +109,11 @@ static int R_call(ClientData clientData,
     }
 
     sscanf(argv[1], "%p", &fun);
-
+    PROTECT((SEXP)fun)
+    SEXP try_install = install("try"); /* assume protected by symbol table */
     expr = LCONS (try_install, CONS (LCONS((SEXP)fun, alist), R_NilValue));
+    UNPROTECT(1)
+
     PROTECT(expr);
     ans = eval(expr, R_GlobalEnv);
     UNPROTECT(1);
@@ -128,18 +130,21 @@ static int R_call_lang(ClientData clientData,
 		       int argc,
 		       const char *argv[])
 {
-    SEXP try_install = install("try"); /* assume protected by symbol table */
     void *expr, *env; 
     SEXP sexpr, ans;
 
     sscanf(argv[1], "%p", &expr);
     sscanf(argv[2], "%p", &env);
 
-    PROTECT(sexpr);
+    PROTECT((SEXP)env);
+
+    PROTECT((SEXP)expr);
+    SEXP try_install = install("try"); /* assume protected by symbol table */
     sexpr = LCONS (try_install, CONS((SEXP)expr, R_NilValue));
     UNPROTECT(1);
 
     ans = eval(sexpr, (SEXP)env);
+    UNPROTECT(1);
 
     /* If return value is of class tclObj, use as Tcl result */
     if (inherits(ans, "tclObj"))
