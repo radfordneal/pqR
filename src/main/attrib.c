@@ -1586,19 +1586,19 @@ SEXP R_do_slot(SEXP obj, SEXP name) {
 	    if(isSymbol(name) ) {
 		PROTECT(input = ScalarString(PRINTNAME(name)));
 		classString = getAttrib(obj, R_ClassSymbol);
-		if(isNull(classString)) {
-		    UNPROTECT(1);
+		if(isNull(classString))
 		    error(_("cannot get a slot (\"%s\") from an object of type \"%s\""),
 			  translateChar(asChar(input)),
 			  CHAR(type2str(TYPEOF(obj))));
-		}
+	        UNPROTECT(1);
 	    }
-	    else classString = R_NilValue; /* make sure it is initialized */
+	    else 
+                classString = R_NilValue; /* make sure it is initialized */
+
 	    /* not there.  But since even NULL really does get stored, this
 	       implies that there is no slot of this name.  Or somebody
 	       screwed up by using attr(..) <- NULL */
 
-	    UNPROTECT(1);
 	    error(_("no slot of name \"%s\" for this object of class \"%s\""),
 		  translateChar(asChar(input)),
 		  translateChar(asChar(classString)));
