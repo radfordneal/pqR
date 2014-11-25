@@ -101,18 +101,20 @@ static int R_call(ClientData clientData,
     SEXP expr, alist, ans;
     void *fun;
 
+    sscanf(argv[1], "%p", &fun);
+    PROTECT((SEXP)fun);
+
     alist = R_NilValue;
     for (i = argc - 1 ; i > 1 ; i--){
 	PROTECT(alist);
 	alist = LCONS(mkString(argv[i]), alist);
 	UNPROTECT(1);
     }
+    PROTECT(alist);
 
-    sscanf(argv[1], "%p", &fun);
-    PROTECT((SEXP)fun)
     SEXP try_install = install("try"); /* assume protected by symbol table */
     expr = LCONS (try_install, CONS (LCONS((SEXP)fun, alist), R_NilValue));
-    UNPROTECT(1)
+    UNPROTECT(2);
 
     PROTECT(expr);
     ans = eval(expr, R_GlobalEnv);
