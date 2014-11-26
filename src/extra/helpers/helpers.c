@@ -962,7 +962,7 @@ static int runnable (mtix t)
 static mtix find_untaken_runnable (int only_needed)
 {
   int i, f, p, r, n;
-  tix u_in;
+  tix u_in, new_u_out;
   mtix t;
 
   /* We assume a flush has been done recently (explicitly, or implicity from
@@ -1021,7 +1021,8 @@ static mtix find_untaken_runnable (int only_needed)
      untaken_out can be moved forward. */
 
   untaken[f] = untaken[untaken_out];
-  ATOMIC_WRITE_CHAR (untaken_out = (untaken_out + 1) & QMask);
+  new_u_out = (untaken_out + 1) & QMask;
+  ATOMIC_WRITE_CHAR (untaken_out = new_u_out);
   FLUSH;
 
   return t;
@@ -2089,14 +2090,19 @@ out_of_merge:
 
   if (helpers_not_multithreading_now)
   { 
-    ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
+    tix new_u_in;
+    new_u_in = (untaken_in + 1) & QMask;
+    ATOMIC_WRITE_CHAR (untaken_in = new_u_in);
   }
   else
   { 
+    tix new_u_in;
+
     omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
     h = suspended;
 
-    ATOMIC_WRITE_CHAR (untaken_in = (untaken_in+1) & QMask);
+    new_u_in = (untaken_in + 1) & QMask;
+    ATOMIC_WRITE_CHAR (untaken_in = new_u_in);
 
     omp_unset_lock (&untaken_lock);  /* does an implicit FLUSH */
 
