@@ -399,8 +399,10 @@ static int getDynamicFlag(SEXP item)
 
 static void setDynamicFlag(SEXP item, int flag)
 {
-    if (flag)
-    	setAttrib(item, install("dynamicFlag"), ScalarInteger(flag));
+    if (flag) {
+        SEXP dynamicFlag_install = install("dynamicFlag"); /* prot by sym tbl */
+    	setAttrib(item, dynamicFlag_install, ScalarInteger(flag));
+    }
 }
 
 static SEXP xxnewlist(SEXP item)
@@ -596,8 +598,9 @@ static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
     	}
     }
     xxungetc(START_MACRO);
-    
-    setAttrib(ans, install("Rd_tag"), mkString("USERMACRO"));
+
+    SEXP Rd_tag_install = install("Rd_tag"); /* protected by symbol table */
+    setAttrib(ans, Rd_tag_install, mkString("USERMACRO"));
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);
@@ -716,7 +719,8 @@ static void xxsavevalue(SEXP Rd, YYLTYPE *lloc)
 
 static SEXP xxtag(SEXP item, int type, YYLTYPE *lloc)
 {
-    setAttrib(item, install("Rd_tag"), mkString(yytname[YYTRANSLATE(type)]));
+    SEXP Rd_tag_install = install("Rd_tag"); /* protected by symbol table */
+    setAttrib(item, Rd_tag_install, mkString(yytname[YYTRANSLATE(type)]));
     setAttrib(item, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     return item;
 }
