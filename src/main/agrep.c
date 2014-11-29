@@ -831,10 +831,12 @@ static SEXP do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 
     PROTECT(ans = allocVector(VECSXP, n));
 
+    SEXP match_length_install = install("match.length"); /* prot by sym tbl */
+
     for(i = 0; i < n; i++) {
 	if(STRING_ELT(vec, i) == NA_STRING) {
 	    PROTECT(matchpos = ScalarInteger(NA_INTEGER));
-	    setAttrib(matchpos, install("match.length"),
+	    setAttrib(matchpos, match_length_install,
 		      ScalarInteger(NA_INTEGER));
 	    SET_VECTOR_ELT(ans, i, matchpos);
 	    UNPROTECT(1);
@@ -869,10 +871,11 @@ static SEXP do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		    INTEGER(matchpos)[j] = so + 1;
 		    INTEGER(matchlen)[j] = match.pmatch[j].rm_eo - so;
 		}
-		setAttrib(matchpos, install("match.length"), matchlen);
-		if(useBytes)
-		    setAttrib(matchpos, install("useBytes"),
-			      ScalarLogical(TRUE));
+		setAttrib(matchpos, match_length_install, matchlen);
+		if(useBytes) {
+                    SEXP useBytes_install = install("useBytes");
+		    setAttrib(matchpos, useBytes_install, ScalarLogical(TRUE));
+                }
 		SET_VECTOR_ELT(ans, i, matchpos);
 		UNPROTECT(2);
 	    } else {
@@ -881,7 +884,7 @@ static SEXP do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		*/
 		PROTECT(matchpos = ScalarInteger(-1));
 		PROTECT(matchlen = ScalarInteger(-1));
-		setAttrib(matchpos, install("match.length"), matchlen);
+		setAttrib(matchpos, match_length_install, matchlen);
 		SET_VECTOR_ELT(ans, i, matchpos);
 		UNPROTECT(2);
 	    }

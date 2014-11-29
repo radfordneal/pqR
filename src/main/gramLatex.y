@@ -226,7 +226,8 @@ static SEXP xxenv(SEXP begin, SEXP body, SEXP end, YYLTYPE *lloc)
     }
     /* FIXME:  check that begin and end match */
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    setAttrib(ans, install("latex_tag"), mkString("ENVIRONMENT"));
+    SEXP latex_tag_install = install("latex_tag"); /* protected by sym table */
+    setAttrib(ans, latex_tag_install, mkString("ENVIRONMENT"));
     if (!isNull(end)) 
     	UNPROTECT_PTR(end);
 #if DEBUGVALS
@@ -244,7 +245,8 @@ static SEXP xxmath(SEXP body, YYLTYPE *lloc)
     PROTECT(ans = PairToVectorList(CDR(body)));
     UNPROTECT_PTR(body);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    setAttrib(ans, install("latex_tag"), mkString("MATH"));
+    SEXP latex_tag_install = install("latex_tag"); /* protected by sym table */
+    setAttrib(ans, latex_tag_install, mkString("MATH"));
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);    
 #endif
@@ -264,7 +266,8 @@ static SEXP xxblock(SEXP body, YYLTYPE *lloc)
     	UNPROTECT_PTR(body);	
     }
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    setAttrib(ans, install("latex_tag"), mkString("BLOCK"));
+    SEXP latex_tag_install = install("latex_tag"); /* protected by sym table */
+    setAttrib(ans, latex_tag_install, mkString("BLOCK"));
 
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);    
@@ -299,7 +302,8 @@ static void xxsavevalue(SEXP items, YYLTYPE *lloc)
     } else {
     	PROTECT(Value = allocVector(VECSXP, 1));
     	SET_VECTOR_ELT(Value, 0, ScalarString(mkChar("")));
-    	setAttrib(VECTOR_ELT(Value, 0), install("latex_tag"), mkString("TEXT"));
+        SEXP latex_tag_install = install("latex_tag"); /* protected by sym tbl*/
+    	setAttrib(VECTOR_ELT(Value, 0), latex_tag_install, mkString("TEXT"));
     }	
     if (!isNull(Value)) {
     	setAttrib(Value, R_ClassSymbol, mkString("LaTeX"));
@@ -309,7 +313,8 @@ static void xxsavevalue(SEXP items, YYLTYPE *lloc)
 
 static SEXP xxtag(SEXP item, int type, YYLTYPE *lloc)
 {
-    setAttrib(item, install("latex_tag"), mkString(yytname[YYTRANSLATE(type)]));
+    SEXP latex_tag_install = install("latex_tag"); /* protected by sym table */
+    setAttrib(item, latex_tag_install, mkString(yytname[YYTRANSLATE(type)]));
     setAttrib(item, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     return item;
 }
