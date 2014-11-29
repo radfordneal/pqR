@@ -1,0 +1,3 @@
+Modifications to the garbage collector.
+
+Small tweak to process nodes more often, possibly improving cache performance.
