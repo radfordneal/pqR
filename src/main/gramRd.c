@@ -4,10 +4,7 @@
    
       Copyright (C) 1984, 1989-1990, 2000-2011 Free Software Foundation, Inc.
    
-   The changes in pqR from R-2.15.0 distributed by the R Core Team are
- *  documented in the NEWS and MODS files in the top-level source directory.
- *
- *  This program is free software: you can redistribute it and/or modify
+   This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
@@ -70,15 +67,9 @@
 
 
 /*
- *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
- *
- *  Based on R : A Computer Language for Statistical Data Analysis
+ *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2011  The R Development Core Team
- *
- *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
- *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -100,7 +91,7 @@
 #endif
 
 /* Don't enable this, since many instances, but not time critical */
-/* #define USE_FAST_PROTECT_MACROS */
+/* #define USE_FAST_PROTECT_MACROS */ 
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Parse.h>
@@ -312,49 +303,6 @@ static int 	mkComment(int);
      STARTFRAGMENT = 298
    };
 #endif
-/* Tokens.  */
-#define END_OF_INPUT 258
-#define ERROR 259
-#define SECTIONHEADER 260
-#define RSECTIONHEADER 261
-#define VSECTIONHEADER 262
-#define SECTIONHEADER2 263
-#define RCODEMACRO 264
-#define SEXPR 265
-#define RDOPTS 266
-#define LATEXMACRO 267
-#define VERBMACRO 268
-#define OPTMACRO 269
-#define ESCAPE 270
-#define LISTSECTION 271
-#define ITEMIZE 272
-#define DESCRIPTION 273
-#define NOITEM 274
-#define LATEXMACRO2 275
-#define VERBMACRO2 276
-#define VERBLATEX 277
-#define LATEXMACRO3 278
-#define NEWCOMMAND 279
-#define USERMACRO 280
-#define USERMACRO1 281
-#define USERMACRO2 282
-#define USERMACRO3 283
-#define USERMACRO4 284
-#define USERMACRO5 285
-#define USERMACRO6 286
-#define USERMACRO7 287
-#define USERMACRO8 288
-#define USERMACRO9 289
-#define IFDEF 290
-#define ENDIF 291
-#define TEXT 292
-#define RCODE 293
-#define VERB 294
-#define COMMENT 295
-#define UNKNOWN 296
-#define STARTFILE 297
-#define STARTFRAGMENT 298
-
 
 
 
@@ -710,15 +658,15 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   201,   201,   202,   203,   206,   209,   212,   213,   215,
-     216,   217,   218,   219,   220,   221,   222,   223,   224,   225,
-     226,   227,   228,   230,   231,   233,   234,   235,   236,   237,
-     238,   239,   240,   241,   243,   244,   245,   246,   247,   248,
-     249,   250,   251,   252,   253,   254,   255,   256,   257,   258,
-     259,   261,   262,   263,   264,   266,   268,   270,   272,   274,
-     277,   280,   285,   287,   288,   297,   299,   301,   305,   306,
-     308,   310,   314,   315,   317,   320,   322,   324,   326,   328,
-     330,   332,   334,   336,   338,   339,   340,   341,   342,   344
+       0,   203,   203,   204,   205,   208,   211,   214,   215,   217,
+     218,   219,   220,   221,   222,   223,   224,   225,   226,   227,
+     228,   229,   230,   232,   233,   235,   236,   237,   238,   239,
+     240,   241,   242,   243,   245,   246,   247,   248,   249,   250,
+     251,   252,   253,   254,   255,   256,   257,   258,   259,   260,
+     261,   263,   264,   265,   266,   268,   270,   272,   274,   276,
+     279,   282,   287,   289,   290,   299,   301,   303,   307,   308,
+     310,   312,   316,   317,   319,   322,   324,   326,   328,   330,
+     332,   334,   336,   338,   340,   341,   342,   343,   344,   346
 };
 #endif
 
@@ -4265,7 +4213,7 @@ static void con_cleanup(void *data)
  If there is text then that is read and the other arguments are ignored.
 */
 
-static SEXP do_parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s = R_NilValue, source;
     Rconnection con;
@@ -4322,7 +4270,7 @@ static SEXP do_parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
  .Internal( deparseRd(element, state) )
 */
 
-static SEXP do_deparseRd(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_deparseRd(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP e, state, result;
     int  outlen, *statevals, quoteBraces, inRComment;
@@ -4418,15 +4366,3 @@ static SEXP do_deparseRd(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-
-/* FUNTAB entries defined in this source file. See names.c for documentation. */
-
-attribute_hidden FUNTAB R_FunTab_gramRd[] =
-{
-/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
-
-{"parse_Rd", 	do_parseRd,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"deparseRd", 	do_deparseRd, 	0, 	11, 	2,	{PP_FUNCALL, PREC_FN, 	0}},
-
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
