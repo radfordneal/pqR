@@ -40,6 +40,54 @@ static SEXP do_fast_andor (SEXP call, SEXP op, SEXP x, SEXP y, SEXP env,
                            int variant)
 {
 /* logical binary : "&" or "|" */
+}
+
+
+/* & | */
+
+SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
+                               int variant)
+{
+    SEXP ans, x, y;
+    int args_evald;
+
+    /* Evaluate arguments, setting x to first argument and y to
+       second argument.  The whole argument list is in args, already 
+       evaluated if args_evald is 1. */
+
+    x = CAR(args); 
+    y = CADR(args);
+
+    if (x==R_DotsSymbol || y==R_DotsSymbol) {
+        args = evalList (args, env, call);
+        PROTECT(x = CAR(args)); 
+        PROTECT(y = CADR(args));
+        args_evald = 1;
+    }
+    else {
+        PROTECT(x = eval(x,env));
+        PROTECT(y = eval(y,env));
+        args_evald = 0;
+    }
+
+    checkArity(op,args);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (isObject(x) || isObject(y)) {
+        if (!args_evald) 
+            args = CONS(x,CONS(y,R_NilValue));
+        PROTECT(args);
+        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+            UNPROTECT(3);
+            return ans;
+        }
+        UNPROTECT(1);
+    }
+
+    /* Arguments are now in x and y, and are protected.  The value 
+       in args may not be protected, and is not used below. */
+
     SEXP dims, tsp, klass, xnames, ynames;
     int mismatch, nx, ny, xarray, yarray, xts, yts;
     mismatch = 0;
@@ -139,24 +187,8 @@ static SEXP do_fast_andor (SEXP call, SEXP op, SEXP x, SEXP y, SEXP env,
 	UNPROTECT(2);
     }
 
-    UNPROTECT(4);
+    UNPROTECT(6);
     return x;
-}
-
-
-/* & | */
-
-SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
-                               int variant)
-{
-    SEXP ans;
-
-    if (DispatchGroup("Ops",call, op, args, env, &ans))
-	return ans;
-
-    checkArity (op, args);
-
-    return do_fast_andor (call, op, CAR(args), CADR(args), env, variant);
 }
 
 /* Handles the ! operator. */
@@ -530,9 +562,9 @@ attribute_hidden FUNTAB R_FunTab_logic[] =
 
 /* Logical Operators, all primitives */
 
-/* these are group generic and so need to eval args */
-{"&",		do_andor,	1,	1001,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"|",		do_andor,	2,	1001,	2,	{PP_BINARY,  PREC_OR,	  0}},
+/* these are group generic and so need to eval args (as builtin or themselves)*/
+{"&",		do_andor,	1,	1000,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"|",		do_andor,	2,	1000,	2,	{PP_BINARY,  PREC_OR,	  0}},
 {"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
 
 /* specials as conditionally evaluate second arg */
@@ -550,7 +582,6 @@ attribute_hidden FUNTAB R_FunTab_logic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_logic[] = {
 /*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-{ do_andor,	do_fast_andor,	-1,		2,	1, 1,  0, 0 },
 { do_not,	do_fast_not,	-1,		1,	1, 0,  0, 0 },
 { do_allany,	do_fast_allany,	OP_ALL,		1,	1, 0,  VARIANT_AND, 0 },
 { do_allany,	do_fast_allany,	OP_ANY,		1,	1, 0,  VARIANT_OR, 0 },
