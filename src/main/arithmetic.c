@@ -360,7 +360,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         args_evald = 0;
     }
 
-    if (CAR(args)==R_NilValue || CDDR(args)!=R_NilValue)
+    if (args==R_NilValue || CDDR(args)!=R_NilValue)
 	errorcall(call,_("operator needs one or two arguments"));
 
     if (arg2==NULL && opcode!=MINUSOP && opcode!=PLUSOP)
