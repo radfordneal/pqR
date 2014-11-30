@@ -58,7 +58,7 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
     x = CAR(args); 
     y = CADR(args);
 
-    if (x==R_DotsSymbol || y==R_DotsSymbol) {
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         args = evalList (args, env, call);
         PROTECT(x = CAR(args)); 
         PROTECT(y = CADR(args));
@@ -70,13 +70,13 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args_evald = 0;
     }
 
-    checkArity(op,args);
-
-    /* Check for dispatch on S3 or S4 objects. */
+    /* Check for dispatch on S3 or S4 objects.  Takes care to match length
+       of "args" to length of original (number of args in "call"). */
 
     if (isObject(x) || isObject(y)) {
         if (!args_evald) 
-            args = CONS(x,CONS(y,R_NilValue));
+            args = CDR(args)!=R_NilValue ? CONS(x,CONS(y,R_NilValue)) 
+                                         : CONS(x,R_NilValue);
         PROTECT(args);
         if (DispatchGroup("Ops", call, op, args, env, &ans)) {
             UNPROTECT(3);
@@ -84,6 +84,11 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         }
         UNPROTECT(1);
     }
+
+    /* Check argument count now (after dispatch, since other methods may allow
+       other argument count). */
+
+    checkArity(op,args);
 
     /* Arguments are now in x and y, and are protected.  The value 
        in args may not be protected, and is not used below. */

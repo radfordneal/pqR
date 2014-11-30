@@ -344,7 +344,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     else
         arg2 = CADR(args);
 
-    if (arg1==R_DotsSymbol || arg2==R_DotsSymbol) {
+    if (arg1==R_DotsSymbol || arg2==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         args = evalListPendingOK (args, env, call);
         PROTECT(arg1 = CAR(args)); 
         if (CDR(args) == R_NilValue)
@@ -360,14 +360,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         args_evald = 0;
     }
 
-    if (args==R_NilValue || CDDR(args)!=R_NilValue)
-	errorcall(call,_("operator needs one or two arguments"));
-
-    if (arg2==NULL && opcode!=MINUSOP && opcode!=PLUSOP)
-        errorcall(call, _("%d argument passed to '%s' which requires %d"),
-                        1, PRIMNAME(op), 2);
-
-    /* Check for dispatch on S3 or S4 objects. */
+    /* Check for dispatch on S3 or S4 objects.  Takes care to match length
+       of "args" to length of original (number of args in "call"). */
 
     if (isObject(arg1) || arg2!=NULL && isObject(arg2)) {
         if (!args_evald) 
@@ -380,6 +374,16 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
         UNPROTECT(1);
     }
+
+    /* Check for argument count error (not before dispatch, since other
+       methods may have different requirements). */
+
+    if (args==R_NilValue || CDDR(args)!=R_NilValue)
+	errorcall(call,_("operator needs one or two arguments"));
+
+    if (arg2==NULL && opcode!=MINUSOP && opcode!=PLUSOP)
+        errorcall(call, _("%d argument passed to '%s' which requires %d"),
+                        1, PRIMNAME(op), 2);
 
     /* Arguments are now in arg1 and arg2 (if not NULL), and are protected. 
        The value in args may not be protected, and is not used below. */
