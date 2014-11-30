@@ -1,0 +1,3 @@
+Modify primitives that are currently BUILTIN with a binary
+"fast" interface to instead be SPECIAL, so that later the
+fast interface can be simplified to be unary only.

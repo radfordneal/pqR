@@ -328,11 +328,62 @@ static double logbase(double x, double base)
 }
 
 
-/* Unary and Binary Operators */
-
-static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
-                           int variant)
+static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    int opcode = PRIMVAL(op);
+    SEXP ans, arg1, arg2;
+    int args_evald;
+
+    /* Evaluate arguments, setting arg1 to first argument and arg2 to
+       second argument (NULL if none).  The whole argument list is in
+       args, already evaluated if args_evald is 1. */
+
+    arg1 = CAR(args); 
+    if (CDR(args) == R_NilValue)
+        arg2 = NULL;
+    else
+        arg2 = CADR(args);
+
+    if (arg1==R_DotsSymbol || arg2==R_DotsSymbol) {
+        args = evalListPendingOK (args, env, call);
+        PROTECT(arg1 = CAR(args)); 
+        if (CDR(args) == R_NilValue)
+            arg2 = NULL;
+        else
+            PROTECT(arg2 = CADR(args));
+        args_evald = 1;
+    }
+    else {
+        PROTECT(arg1 = evalv(arg1,env,VARIANT_PENDING_OK));
+        if (arg2 != NULL)
+            PROTECT(arg2 = evalv(arg2,env,VARIANT_PENDING_OK));
+        args_evald = 0;
+    }
+
+    if (CAR(args)==R_NilValue || CDDR(args)!=R_NilValue)
+	errorcall(call,_("operator needs one or two arguments"));
+
+    if (arg2==NULL && opcode!=MINUSOP && opcode!=PLUSOP)
+        errorcall(call, _("%d argument passed to '%s' which requires %d"),
+                        1, PRIMNAME(op), 2);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (isObject(arg1) || arg2!=NULL && isObject(arg2)) {
+        if (!args_evald) 
+            args = arg2!=NULL ? CONS(arg1,CONS(arg2,R_NilValue)) 
+                              : CONS(arg1,R_NilValue);
+        PROTECT(args);
+        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+            UNPROTECT(2 + (arg2!=NULL));
+            return ans;
+        }
+        UNPROTECT(1);
+    }
+
+    /* Arguments are now in arg1 and arg2 (if not NULL), and are protected. 
+       The value in args may not be protected, and is not used below. */
+
     /* Quickly do real arithmetic and integer plus/minus on scalars with 
        no attributes. */
 
@@ -340,15 +391,13 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
     if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 
                                         && ATTRIB(arg1)==R_NilValue) {
-        int opcode = PRIMVAL(op);
-
         if (arg2==NULL) {
             switch (opcode) {
             case PLUSOP:
-                return arg1;
+                ans = arg1;
+                goto ret;
             case MINUSOP: ;
                 int local_assign = 0;
-                SEXP ans;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 
                   && !NAMEDCNT_GT_1(arg1)
                   && arg1 == findVarInFrame3 (env, CADR(call), 7))
@@ -366,7 +415,7 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                     *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
                                       : - *INTEGER(arg1);
                 }
-                return ans;
+                goto ret;
             default: abort();
             }
         }
@@ -387,11 +436,11 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                         R_variant_result = local_assign2 = 1;
                 }
 
-                SEXP ans = local_assign1 ? arg1
-                         : local_assign2 ? arg2
-                         : NAMEDCNT_EQ_0(arg2) ? arg2
-                         : NAMEDCNT_EQ_0(arg1) ? arg1
-                         :   allocVector1REAL();
+                ans = local_assign1 ? arg1
+                       : local_assign2 ? arg2
+                       : NAMEDCNT_EQ_0(arg2) ? arg2
+                       : NAMEDCNT_EQ_0(arg1) ? arg1
+                       :   allocVector1REAL();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
@@ -400,31 +449,31 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 switch (opcode) {
                 case PLUSOP:
                     *REAL(ans) = a1 + a2;
-                    return ans;
+                    goto ret;
                 case MINUSOP:
                     *REAL(ans) = a1 - a2;
-                    return ans;
+                    goto ret;
                 case TIMESOP:
                     *REAL(ans) = a1 * a2;
-                    return ans;
+                    goto ret;
                 case DIVOP:
                     *REAL(ans) = a1 / a2;
-                    return ans;
+                    goto ret;
                 case POWOP:
                     if (a2 == 2.0)       *REAL(ans) = a1 * a1;
                     else if (a2 == 1.0)  *REAL(ans) = a1;
                     else if (a2 == 0.0)  *REAL(ans) = 1.0;
                     else if (a2 == -1.0) *REAL(ans) = 1.0 / a1;
                     else                 *REAL(ans) = R_pow(a1,a2);
-                    return ans;
+                    goto ret;
                 case MODOP:
                     PROTECT(ans);
                     *REAL(ans) = myfmod(a1,a2);
                     UNPROTECT(1);
-                    return ans;
+                    goto ret;
                 case IDIVOP:
                     *REAL(ans) = myfloor(a1,a2);
-                    return ans;
+                    goto ret;
                 default: abort();
                 }
             }
@@ -443,11 +492,11 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                         R_variant_result = local_assign2 = 1;
                 }
 
-                SEXP ans = local_assign1 ? arg1
-                         : local_assign2 ? arg2
-                         : NAMEDCNT_EQ_0(arg2) ? arg2
-                         : NAMEDCNT_EQ_0(arg1) ? arg1 
-                         :   allocVector1INT();
+                ans = local_assign1 ? arg1
+                       : local_assign2 ? arg2
+                       : NAMEDCNT_EQ_0(arg2) ? arg2
+                       : NAMEDCNT_EQ_0(arg1) ? arg1 
+                       :   allocVector1INT();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
@@ -455,7 +504,7 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
 
                 if (a1==NA_INTEGER || a2==NA_INTEGER) {
                     *INTEGER(ans) = NA_INTEGER;
-                    return ans;
+                    goto ret;
                 }
 
                 int_fast64_t val = 
@@ -472,32 +521,19 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                     *INTEGER(ans) = NA_INTEGER;
                 }
 
-                return ans;
+                goto ret;
             }
         }
     }
 
     /* Otherwise, handle the general case. */
 
-    return arg2==NULL ? R_unary (call, op, arg1, env, variant) 
-                      : R_binary (call, op, arg1, arg2, env, variant);
-}
+    ans = arg2==NULL ? R_unary (call, op, arg1, env, variant) 
+                     : R_binary (call, op, arg1, arg2, env, variant);
 
-SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP ans, a1, a2;
-
-    if (DispatchGroup("Ops", call, op, args, env, &ans))
-	return ans;
-
-    a1 = CAR(args); args = CDR(args); a2 = CAR(args);
-
-    if (a1==R_NilValue || CDR(args)!=R_NilValue)
-	errorcall(call,_("operator needs one or two arguments"));
-    else if (a2==R_NilValue)
-        return do_fast_arith (call, op, a1, NULL, env, variant);
-    else
-        return do_fast_arith (call, op, a1, a2, env, variant);
+  ret:
+    UNPROTECT(1+(arg2!=NULL));
+    return ans;
 }
 
 
@@ -2475,15 +2511,14 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-/* Binary Operators, all primitives */
-/* these are group generic and so need to eval args */
-{"+",		do_arith,	PLUSOP,	11001,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"-",		do_arith,	MINUSOP,11001,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"*",		do_arith,	TIMESOP,11001,	2,	{PP_BINARY,  PREC_PROD,	  0}},
-{"/",		do_arith,	DIVOP,	11001,	2,	{PP_BINARY2, PREC_PROD,	  0}},
-{"^",		do_arith,	POWOP,	11001,	2,	{PP_BINARY2, PREC_POWER,  1}},
-{"%%",		do_arith,	MODOP,	11001,	2,	{PP_BINARY2, PREC_PERCENT,0}},
-{"%/%",		do_arith,	IDIVOP,	11001,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+/* Binary Operators, all primitives, now special, though they always eval args*/
+{"+",		do_arith,	PLUSOP,	1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"-",		do_arith,	MINUSOP,1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"*",		do_arith,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
+{"/",		do_arith,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
+{"^",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
+{"%%",		do_arith,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+{"%/%",		do_arith,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 
 /* Mathematical Functions */
 /* primitives: these are group generic and so need to eval args (possibly internally) */
@@ -2654,9 +2689,6 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-{ do_arith,	do_fast_arith,	PLUSOP,		3,	1, 1,  0, 0 },
-{ do_arith,	do_fast_arith,	MINUSOP,	3,	1, 1,  0, 0 },
-{ do_arith,	do_fast_arith,	-1,		2,	1, 1,  0, 0 },
 { do_math1,	do_fast_math1,	-1,		1,	1, 0,  0, 0 },
 { do_trunc,	do_fast_trunc,	-1,		1,	1, 0,  0, 0 },
 { do_abs,	do_fast_abs,	-1,		1,	1, 0,  0, 0 },
