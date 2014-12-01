@@ -3701,7 +3701,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	}
 	UNPROTECT(1);
     }
-    return do_fast_relop (call, op, x, y, rho, 0);
+    return R_relop (call, op, x, y, rho, 0);
 }
 
 static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)

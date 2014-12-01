@@ -42,8 +42,8 @@ static SEXP complex_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP raw_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 
-SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
-                                     SEXP env, int variant)
+SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
+                               SEXP env, int variant)
 {
     SEXP klass = R_NilValue, dims, tsp=R_NilValue;
     SEXP xnames, ynames, tmp, ans;
@@ -302,14 +302,55 @@ SEXP attribute_hidden do_fast_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
 static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans;
+    SEXP ans, x, y;
+    int args_evald;
 
-    if (DispatchGroup("Ops", call, op, args, env, &ans))
-	return ans;
+    /* Evaluate arguments, setting x to first argument and y to
+       second argument.  The whole argument list is in args, already 
+       evaluated if args_evald is 1. */
 
-    checkArity(op, args);
+    x = CAR(args); 
+    y = CADR(args);
 
-    return do_fast_relop (call, op, CAR(args), CADR(args), env, variant);
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
+        args = evalList (args, env, call);
+        PROTECT(x = CAR(args)); 
+        PROTECT(y = CADR(args));
+        args_evald = 1;
+    }
+    else {
+        PROTECT(x = eval(x,env));
+        PROTECT(y = eval(y,env));
+        args_evald = 0;
+    }
+
+    /* Check for dispatch on S3 or S4 objects.  Takes care to match length
+       of "args" to length of original (number of args in "call"). */
+
+    if (isObject(x) || isObject(y)) {
+        if (!args_evald) 
+            args = CDR(args)!=R_NilValue ? CONS(x,CONS(y,R_NilValue)) 
+                                         : CONS(x,R_NilValue);
+        PROTECT(args);
+        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+            UNPROTECT(3);
+            return ans;
+        }
+        UNPROTECT(1);
+    }
+
+    /* Check argument count now (after dispatch, since other methods may allow
+       other argument count). */
+
+    checkArity(op,args);
+
+    /* Arguments are now in x and y, and are protected.  The value 
+       in args may not be protected, and is not used below. */
+
+    ans = R_relop (call, op, x, y, env, variant);
+
+    UNPROTECT(2);
+    return ans;
 }
 
 /* i1 = i % n1; i2 = i % n2;
@@ -936,22 +977,14 @@ attribute_hidden FUNTAB R_FunTab_relop[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 /* Relational Operators, all primitives */
-/* these are group generic and so need to eval args */
+/* these are group generic and so need to eval args (inside, as special) */
 
-{"==",		do_relop,	EQOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"!=",		do_relop,	NEOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"<",		do_relop,	LTOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"<=",		do_relop,	LEOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{">=",		do_relop,	GEOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{">",		do_relop,	GTOP,	1001,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"==",		do_relop,	EQOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"!=",		do_relop,	NEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<",		do_relop,	LTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<=",		do_relop,	LEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">=",		do_relop,	GEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">",		do_relop,	GTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
-
-/* Fast built-in functions in this file. See names.c for documentation */
-
-attribute_hidden FASTFUNTAB R_FastFunTab_relop[] = {
-/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-{ do_relop,	do_fast_relop,	-1,		2,	1, 1,  0, 0 },
-{ 0,		0,		0,		0,	0, 0,  0, 0 }
 };

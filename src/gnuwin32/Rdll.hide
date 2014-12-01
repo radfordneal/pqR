@@ -253,6 +253,7 @@
  R_osDynSymbol
  R_possible_dispatch
  R_print
+ R_relop
  R_restore_globals
  R_run_onexits
  R_seemsOldStyleS4Object
@@ -579,7 +580,6 @@
  do_dllversion
  do_edit
  do_expression
- do_fast_relop
  do_flushconsole
  do_getClipboardFormats
  do_getGraphicsEvent

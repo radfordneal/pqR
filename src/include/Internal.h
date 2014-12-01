@@ -114,7 +114,6 @@ SEXP do_pack(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pause(SEXP, SEXP, SEXP, SEXP);
 SEXP do_primitive(SEXP, SEXP, SEXP, SEXP);
 SEXP do_printdf(SEXP, SEXP, SEXP, SEXP);
-SEXP do_fast_relop(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_restoreb(SEXP, SEXP, SEXP, SEXP);
 SEXP do_rownames(SEXP, SEXP, SEXP, SEXP);
 SEXP do_savehistory(SEXP, SEXP, SEXP, SEXP);
@@ -145,6 +144,7 @@ SEXP do_readlines(SEXP, SEXP, SEXP, SEXP);
 
 
 
+SEXP R_relop(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 SEXP R_unary(SEXP, SEXP, SEXP, SEXP, int);
 SEXP R_binary(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 
