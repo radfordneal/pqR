@@ -161,39 +161,59 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
     return ans;
 }
 
-static SEXP do_fast_colon (SEXP call, SEXP op, SEXP s1, SEXP s2, SEXP rho,
-                           int variant)
-{   double n1, n2;
 
-    if (inherits(s1, "factor") && inherits(s2, "factor"))
-	return cross_colon (call, s1, s2);
-
-    n1 = length(s1);
-    n2 = length(s2);
-
-    if (n1 == 0 || n2 == 0)
-	errorcall(call, _("argument of length 0"));
-    if (n1 > 1)
-	warningcall(call, 
-          _("numerical expression has %d elements: only the first used"), 
-          (int) n1);
-    if (n2 > 1)
-	warningcall(call, 
-          _("numerical expression has %d elements: only the first used"), 
-          (int) n2);
-
-    n1 = asReal(s1);
-    n2 = asReal(s2);
-    if (ISNAN(n1) || ISNAN(n2))
-	errorcall(call, _("NA/NaN argument"));
-
-    return seq_colon(n1, n2, call, variant);
-}
-
-static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {   
+    SEXP ans, x, y;
+    double n1, n2;
+
+    /* Evaluate arguments, setting x to first argument and y to
+       second argument.  The whole argument list is in args. */
+
+    x = CAR(args); 
+    y = CADR(args);
+
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
+        args = evalList (args, env, call);
+        PROTECT(x = CAR(args)); 
+        PROTECT(y = CADR(args));
+    }
+    else {
+        PROTECT(x = eval(x,env));
+        PROTECT(y = eval(y,env));
+    }
+
     checkArity(op, args);
-    return do_fast_colon (call, op, CAR(args), CADR(args), rho, variant);
+
+    if (inherits(x, "factor") && inherits(y, "factor")) {
+        ans = cross_colon (call, x, y);
+    }
+    else {
+
+        n1 = length(x);
+        n2 = length(y);
+
+        if (n1 == 0 || n2 == 0)
+            errorcall(call, _("argument of length 0"));
+        if (n1 > 1)
+            warningcall(call, 
+              _("numerical expression has %d elements: only the first used"), 
+              (int) n1);
+        if (n2 > 1)
+            warningcall(call, 
+              _("numerical expression has %d elements: only the first used"), 
+              (int) n2);
+
+        n1 = asReal(x);
+        n2 = asReal(y);
+        if (ISNAN(n1) || ISNAN(n2))
+            errorcall(call, _("NA/NaN argument"));
+
+        ans = seq_colon(n1, n2, call, variant);
+    }
+
+    UNPROTECT(2);
+    return ans;
 }
 
 /* Task procedure for rep and rep.int.  Repeats first input to the length
@@ -991,7 +1011,7 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{":",		do_colon,	0,	1001,	2,	{PP_BINARY2, PREC_COLON,  0}},
+{":",		do_colon,	0,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
 {"rep.int",	do_rep_int,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1006,7 +1026,6 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 /*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
 
-{ do_colon,	do_fast_colon,	-1,		2,	0, 0,  0, 0 },
 { do_seq_len,	do_fast_seq_len,-1,		1,	0, 0,  0, 0 },
 /* { do_rep_int,do_fast_rep,	-1,		2,	0, 0,  0, 0 }, */
 { 0,		0,		0,		0,	0, 0,  0, 0 }
