@@ -1,3 +1,7 @@
-Modify primitives that are currently BUILTIN with a binary
-"fast" interface to instead be SPECIAL, so that later the
-fast interface can be simplified to be unary only.
+Modifies primitives that are currently BUILTIN with a binary
+"fast" interface to instead be SPECIAL, and then simplifies
+the fast interface to handle unary calls only.
+
+This may improve speed a bit, and also prepares for later
+improvements.
+

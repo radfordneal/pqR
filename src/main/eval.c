@@ -674,7 +674,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
     SEXP res;
 
     int use_cntxt = R_Profiling;
-    SEXP arg1, arg2;
+    SEXP arg1;
 
     /* If we have an "alloca" function available, we use it to
        allocate space for a context only when one is needed, which
@@ -688,57 +688,49 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 #   endif
 
     /* See if this may be a fast primitive.  All fast primitives
-       should be BUILTIN.  We will not do a fast call if there is a
-       tag for any argument, or a missing argument, or a ... argument.
-       Otherwise, if PRIMARITY == 2, a fast call may be done if there
-       are two arguments, or one argument if the uni_too flag is
-       set. These arguments are stored in arg1 and in arg2 (which may
-       be NULL if uni_too is set).  For any PRIMARITY other than 2, a
-       fast call may be done if there is exactly one argument, which
-       is stored in arg1, with arg2 set to NULL.*/
+       should be BUILTIN.  We do a fast call only if there is exactly
+       one argument, with no tag, not missing or a ... argument.  
+       The argument is stored in arg1. */
 
-    arg2 = NULL;
-    if (PRIMFUN_FAST(op) && args!=R_NilValue && TAG(args)==R_NilValue) {
-        arg1 = CAR(args);
-        if (arg1!=R_DotsSymbol && arg1!=R_MissingArg) {
-            SEXP cdr_args = CDR(args);
-            if (PRIMARITY(op) != 2) {
-                if (cdr_args==R_NilValue)
-                    goto fast1;
+    if (args!=R_NilValue) {
+        if (PRIMFUN_FAST(op) 
+              && TAG(args)==R_NilValue && CDR(args)==R_NilValue
+              && (arg1 = CAR(args))!=R_DotsSymbol && arg1!=R_MissingArg) {
+
+            PROTECT(arg1 = evalv (arg1, rho, 
+                                  PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+    
+            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                UNPROTECT(1);
+                PROTECT(args = CONS(arg1,R_NilValue));
+                goto not_fast;
             }
-            else {
-                if (cdr_args==R_NilValue) {
-                    if (PRIMFUN_UNI_TOO(op))
-                        goto fast2;
-                }
-                else if (TAG(cdr_args)==R_NilValue
-                          && CDR(cdr_args)==R_NilValue) {
-                    arg2 = CAR(cdr_args);
-                    if (arg2!=R_DotsSymbol && arg2!=R_MissingArg)
-                        goto fast2;
-                    arg2 = NULL;
-                }
+    
+            if (use_cntxt) { /* assume fast ops are not foreign */
+#               ifdef HAVE_ALLOCA_H
+                    cntxt = alloca (sizeof *cntxt);
+#               endif
+                beginbuiltincontext (cntxt, e);
             }
+
+            if (!PRIMFUN_PENDING_OK(op)) {
+                WAIT_UNTIL_COMPUTED(arg1);
+            }
+
+            res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
+                     (e, op, arg1, rho, variant);
+
+            goto done_builtin;
         }
-    }
-    arg1 = NULL;
-
-    /* Handle a non-fast op.  We may get here after starting to handle
-       a fast op, in which case we may have already evaluated arg1 or
-       arg2 (which will be protected). */
-  not_fast: 
-    if (args != R_NilValue) {
         args = evalListPendingOK (args, rho, e);
     }
-    if (arg2 != NULL) {
-        args = CONS(arg2,args);
-        UNPROTECT(1);  /* arg2 */
-    }
-    if (arg1 != NULL) {
-        args = CONS(arg1,args);
-        UNPROTECT(1);  /* arg1 */
-    }
+
     PROTECT(args);
+
+    /* Handle a non-fast op.  We may get here after starting to handle a
+       fast op, but if so, args has been set to the evaluated argument list. */
+
+  not_fast: 
     if (use_cntxt || PRIMFOREIGN(op)) {
 #       ifdef HAVE_ALLOCA_H
             cntxt = alloca (sizeof *cntxt);
@@ -750,64 +742,6 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
         WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
     }
     res = CALL_PRIMFUN(e, op, args, rho, variant);
-    goto done_builtin;
-
-    /* Handle a fast op with one argument.  If arg is an object, may
-       turn out to not be fast after all. */
-  fast1:
-    PROTECT(arg1 = evalv (arg1, rho, 
-              PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
-    if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
-        args = CDR(args);
-        goto not_fast;
-    }
-    if (use_cntxt) { /* assume fast ops are not foreign */
-#       ifdef HAVE_ALLOCA_H
-            cntxt = alloca (sizeof *cntxt);
-#       endif
-        beginbuiltincontext (cntxt, e);
-    }
-    if (!PRIMFUN_PENDING_OK(op)) {
-        WAIT_UNTIL_COMPUTED(arg1);
-    }
-    res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
-             (e, op, arg1, rho, variant);
-    goto done_builtin;
-
-    /* Handle a fast op with two arguments (though the second argument
-       may possibly be NULL).  If either arg is an object, may turn
-       out to not be fast after all. */
-  fast2:
-    PROTECT(arg1 = evalv (arg1, rho, 
-              PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
-    if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
-        args = CDR(args);
-        arg2 = NULL;
-        goto not_fast;
-    }
-    if (arg2 != NULL) {
-        /* Use of ARG2VAR is currently disabled, since no
-           primitives are using it at the moment. */
-        PROTECT(arg2 = evalv(arg2, rho, 
-                  /* PRIMFUN_ARG2VAR(op) | */ VARIANT_PENDING_OK));
-        if (isObject(arg2) && PRIMFUN_DSPTCH2(op)) {
-            args = R_NilValue;  /* == CDDR(args) */
-            goto not_fast;
-        }
-    }
-    if (use_cntxt) { /* assume fast ops are not foreign */
-#       ifdef HAVE_ALLOCA_H
-            cntxt = alloca (sizeof *cntxt);
-#       endif
-        beginbuiltincontext (cntxt, e);
-    }
-    if (!PRIMFUN_PENDING_OK(op)) {
-        if (arg2==NULL) WAIT_UNTIL_COMPUTED(arg1);
-        else            WAIT_UNTIL_COMPUTED_2(arg1,arg2);
-    }
-    res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op))
-             (e, op, arg1, arg2, rho, variant);
-    if (arg2!=NULL) UNPROTECT(1); /* arg2 */
 
   done_builtin:
     UNPROTECT(1); /* either args or arg1 */
