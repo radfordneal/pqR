@@ -3624,7 +3624,7 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
 static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		      SEXP rho)
 {
-    SEXP op = getPrimitive(opsym, BUILTINSXP);
+    SEXP op = getPrimitive(opsym, SPECIALSXP);
     if (isObject(x) || isObject(y)) {
 	SEXP args, ans;
 	args = CONS(x, CONS(y, R_NilValue));
@@ -3640,7 +3640,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 
 static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 {
-    SEXP op = getPrimitive(opsym, BUILTINSXP);
+    SEXP op = getPrimitive(opsym, SPECIALSXP);
     if (isObject(x)) {
 	SEXP args, ans;
 	args = CONS(x, R_NilValue);
@@ -3657,7 +3657,7 @@ static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		       SEXP rho)
 {
-    SEXP op = getPrimitive(opsym, BUILTINSXP);
+    SEXP op = getPrimitive(opsym, SPECIALSXP);
     if (TYPEOF(op) == PROMSXP) {
 	op = forcePromise(op);
 	SET_NAMEDCNT_MAX(op);
@@ -3689,6 +3689,16 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SETSTACK(-2, CONS(GETSTACK(-2), tmp));     \
   R_BCNodeStackTop--; \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP),	\
+		      GETSTACK(-1), rho, 0));			\
+  NEXT(); \
+} while(0)
+
+#define Special2(do_fun,which,rho) do {		     \
+  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP tmp = CONS(GETSTACK(-1), R_NilValue); \
+  SETSTACK(-2, CONS(GETSTACK(-2), tmp));     \
+  R_BCNodeStackTop--; \
+  SETSTACK(-1, do_fun(call, getPrimitive(which, SPECIALSXP),	\
 		      GETSTACK(-1), rho, 0));			\
   NEXT(); \
 } while(0)
@@ -5168,8 +5178,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(LE, 1): FastRelop2(<=, LEOP, R_LeSym);
     OP(GE, 1): FastRelop2(>=, GEOP, R_GeSym);
     OP(GT, 1): FastRelop2(>, GTOP, R_GtSym);
-    OP(AND, 1): Builtin2(do_andor, R_AndSym, rho);
-    OP(OR, 1): Builtin2(do_andor, R_OrSym, rho);
+    OP(AND, 1): Special2(do_andor, R_AndSym, rho);
+    OP(OR, 1): Special2(do_andor, R_OrSym, rho);
     OP(NOT, 1): Builtin1(do_not, R_NotSym, rho);
     OP(DOTSERR, 0): dotdotdot_error();
     OP(STARTASSIGN, 1):
