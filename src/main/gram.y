@@ -254,8 +254,8 @@ static int	xxvalue(SEXP, int, YYLTYPE *);
 
 prog	:	END_OF_INPUT			{ return 0; }
 	|	'\n'				{ return xxvalue(NULL,2,NULL); }
-	|	expr_or_assign '\n'			{ return xxvalue($1,3,&@1); }
-	|	expr_or_assign ';'			{ return xxvalue($1,4,&@1); }
+	|	expr_or_assign '\n'		{ return xxvalue($1,3,&@1); }
+	|	expr_or_assign ';'		{ return xxvalue($1,4,&@1); }
 	|	error	 			{ YYABORT; }
 	;
 
@@ -272,7 +272,7 @@ expr	: 	NUM_CONST			{ $$ = $1; }
 	|	SYMBOL				{ $$ = $1; }
 
 	|	'{' exprlist '}'		{ $$ = xxexprlist($1,&@1,$2); }
-	|	'(' expr_or_assign ')'			{ $$ = xxparen($1,$2); }
+	|	'(' expr_or_assign ')'		{ $$ = xxparen($1,$2); }
 
 	|	'-' expr %prec UMINUS		{ $$ = xxunary($1,$2); }
 	|	'+' expr %prec UMINUS		{ $$ = xxunary($1,$2); }
@@ -309,8 +309,8 @@ expr	: 	NUM_CONST			{ $$ = $1; }
 	|	IF ifcond expr_or_assign 			{ $$ = xxif($1,$2,$3); }
 	|	IF ifcond expr_or_assign ELSE expr_or_assign	{ $$ = xxifelse($1,$2,$3,$5); }
 	|	FOR forcond expr_or_assign %prec FOR 	{ $$ = xxfor($1,$2,$3); }
-	|	WHILE cond expr_or_assign			{ $$ = xxwhile($1,$2,$3); }
-	|	REPEAT expr_or_assign			{ $$ = xxrepeat($1,$2); }
+	|	WHILE cond expr_or_assign	{ $$ = xxwhile($1,$2,$3); }
+	|	REPEAT expr_or_assign		{ $$ = xxrepeat($1,$2); }
 	|	expr LBB sublist ']' ']'	{ $$ = xxsubscript($1,$2,$3); }
 	|	expr '[' sublist ']'		{ $$ = xxsubscript($1,$2,$3); }
 	|	SYMBOL NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3); }
@@ -354,19 +354,19 @@ sublist	:	sub				{ $$ = xxsublist1($1); }
 
 sub	:					{ $$ = xxsub0(); }
 	|	expr				{ $$ = xxsub1($1, &@1); }
-	|	SYMBOL EQ_ASSIGN 			{ $$ = xxsymsub0($1, &@1); }
-	|	SYMBOL EQ_ASSIGN expr			{ $$ = xxsymsub1($1,$3, &@1); }
-	|	STR_CONST EQ_ASSIGN 			{ $$ = xxsymsub0($1, &@1); }
-	|	STR_CONST EQ_ASSIGN expr		{ $$ = xxsymsub1($1,$3, &@1); }
-	|	NULL_CONST EQ_ASSIGN 			{ $$ = xxnullsub0(&@1); }
-	|	NULL_CONST EQ_ASSIGN expr		{ $$ = xxnullsub1($3, &@1); }
+	|	SYMBOL EQ_ASSIGN 		{ $$ = xxsymsub0($1, &@1); }
+	|	SYMBOL EQ_ASSIGN expr		{ $$ = xxsymsub1($1,$3, &@1); }
+	|	STR_CONST EQ_ASSIGN 		{ $$ = xxsymsub0($1, &@1); }
+	|	STR_CONST EQ_ASSIGN expr	{ $$ = xxsymsub1($1,$3, &@1); }
+	|	NULL_CONST EQ_ASSIGN 		{ $$ = xxnullsub0(&@1); }
+	|	NULL_CONST EQ_ASSIGN expr	{ $$ = xxnullsub1($3, &@1); }
 	;
 
 formlist:					{ $$ = xxnullformal(); }
 	|	SYMBOL				{ $$ = xxfirstformal0($1); }
 	|	SYMBOL EQ_ASSIGN expr			{ $$ = xxfirstformal1($1,$3); }
 	|	formlist ',' SYMBOL		{ $$ = xxaddformal0($1,$3, &@3); }
-	|	formlist ',' SYMBOL EQ_ASSIGN expr	{ $$ = xxaddformal1($1,$3,$5,&@3); }
+	|	formlist ',' SYMBOL EQ_ASSIGN expr   { $$ = xxaddformal1($1,$3,$5,&@3); }
 	;
 
 cr	:					{ EatLines = 1; }
