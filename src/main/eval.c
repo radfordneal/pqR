@@ -3666,6 +3666,21 @@ static R_INLINE int bcStackScalar(R_bcstack_t *s, scalar_value_t *v)
     Relop2(opval, opsym); \
 } while (0)
 
+/* Handle when probably a package redefined a base function,
+   so try to get the real thing from the internal table of
+   primitives */
+
+static SEXP getLostPrimitive(SEXP symbol, SEXPTYPE type)
+{
+    SEXP value = R_Primitive(CHAR(PRINTNAME(symbol)));
+    if (TYPEOF(value) != type)
+        /* if that doesn't work we signal an error */
+        error(_("\"%s\" is not a %s function"),
+              CHAR(PRINTNAME(symbol)),
+              type == BUILTINSXP ? "BUILTIN" : "SPECIAL");
+    return value;
+}
+
 static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
 {
     SEXP value = SYMVALUE(symbol);
@@ -3673,17 +3688,8 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
 	value = forcePromise(value);
 	SET_NAMEDCNT_MAX(value);
     }
-    if (TYPEOF(value) != type) {
-	/* probably means a package redefined the base function so
-	   try to get the real thing from the internal table of
-	   primitives */
-	value = R_Primitive(CHAR(PRINTNAME(symbol)));
-	if (TYPEOF(value) != type)
-	    /* if that doesn't work we signal an error */
-	    error(_("\"%s\" is not a %s function"),
-		  CHAR(PRINTNAME(symbol)),
-		  type == BUILTINSXP ? "BUILTIN" : "SPECIAL");
-    }
+    if (TYPEOF(value) != type)
+        value = getLostPrimitive (symbol, type);
     return value;
 }
 
@@ -4437,8 +4443,8 @@ static R_INLINE int bcStackIndex(R_bcstack_t *s)
     }
 }
 
-static R_INLINE void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
-				   R_bcstack_t *sv, SEXP rho)
+static void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
+                          R_bcstack_t *sv, SEXP rho)
 {
     SEXP idx, args, value;
     SEXP vec = GETSTACK_PTR(sx);
@@ -4613,14 +4619,14 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     SETSTACK_PTR(sv, vec);
 }
 
-static R_INLINE void DO_SETVECSUBSET(SEXP rho)
+static void DO_SETVECSUBSET(SEXP rho)
 {
     SETVECSUBSET_PTR(R_BCNodeStackTop - 3, R_BCNodeStackTop - 2,
 		     R_BCNodeStackTop - 1, R_BCNodeStackTop - 3, rho);
     R_BCNodeStackTop -= 2;
 }
 
-static R_INLINE void DO_SETMATSUBSET(SEXP rho)
+static void DO_SETMATSUBSET(SEXP rho)
 {
     SEXP dim, idx, jdx, args, value;
     SEXP mat = GETSTACK(-4);
@@ -4676,34 +4682,38 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
 	} \
     } while(0)
 
+static void maybe_missing_error(SEXP call)
+{
+    SEXP c;
+    int k;
+
+    if (call == R_NilValue) 
+        return;
+
+    /* check for an empty argument in the call -- start from
+       the beginning in case of ... arguments */
+    for (k = 1, c = CDR(call); c != R_NilValue; c = CDR(c), k++)
+        if (CAR(c) == R_MissingArg)
+            errorcall(call, "argument %d is empty", k);
+
+    /* An error from evaluating a symbol will already have
+       been signaled.  The interpreter, in evalList, does
+       _not_ signal an error for a call expression that
+       produces an R_MissingArg value; for example
+       
+           c(alist(a=)$a)
+
+       does not signal an error. */
+}
+
 static R_INLINE void checkForMissings(SEXP args, SEXP call)
 {
-    SEXP a, c;
-    int n, k;
-    for (a = args, n = 1; a != R_NilValue; a = CDR(a), n++)
+    SEXP a;
+    for (a = args; a != R_NilValue; a = CDR(a))
 	if (CAR(a) == R_MissingArg) {
-	    /* check for an empty argument in the call -- start from
-	       the beginning in case of ... arguments */
-	    if (call != R_NilValue) {
-		for (k = 1, c = CDR(call); c != R_NilValue; c = CDR(c), k++)
-		    if (CAR(c) == R_MissingArg)
-			errorcall(call, "argument %d is empty", k);
-	    }
-	    /* An error from evaluating a symbol will already have
-	       been signaled.  The interpreter, in evalList, does
-	       _not_ signal an error for a call expression that
-	       produces an R_MissingArg value; for example
-	       
-	           c(alist(a=)$a)
-
-	       does not signal an error. If we decide we do want an
-	       error in this case we can modify evalList for the
-	       interpreter and here use the code below. */
-#ifdef NO_COMPUTED_MISSINGS
-	    /* otherwise signal a 'missing argument' error */
-	    errorcall(call, "argument %d is missing", n);
-#endif
-	}
+            maybe_missing_error(call);
+            return;
+        }
 }
 
 #define GET_VEC_LOOP_VALUE(var, pos) do {		\
@@ -4714,6 +4724,11 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
 	SET_NAMEDCNT_1(var);				\
     }							\
 } while (0)
+
+static R_NORETURN void bad_function_error (void)
+{
+    error(_("bad function"));
+}
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
@@ -5165,7 +5180,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	case CLOSXP:
 	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
-	default: error(_("bad function"));
+	default: bad_function_error();
 	}
 	R_BCNodeStackTop -= 2;
 	SETSTACK(-1, value);
@@ -5508,7 +5523,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* make the call */
 	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
-	default: error(_("bad function"));
+	default: bad_function_error();
 	}
 	R_BCNodeStackTop -= 4;
 	SETSTACK(-1, value);
@@ -5552,7 +5567,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* make the call */
 	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
-	default: error(_("bad function"));
+	default: bad_function_error();
 	}
 	R_BCNodeStackTop -= 2;
 	SETSTACK(-1, value);
