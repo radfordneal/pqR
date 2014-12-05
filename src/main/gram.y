@@ -209,6 +209,8 @@ static SEXP	xxfuncall(SEXP, SEXP);
 static SEXP	xxdefun(SEXP, SEXP, SEXP, YYLTYPE *);
 static SEXP	xxunary(SEXP, SEXP);
 static SEXP	xxbinary(SEXP, SEXP, SEXP);
+static SEXP	xxwithparen(SEXP);
+static SEXP	xxwithoutparen(SEXP);
 static SEXP	xxparen(SEXP, SEXP);
 static SEXP	xxsubscript(SEXP, SEXP, SEXP);
 static SEXP	xxexprlist(SEXP, YYLTYPE *, SEXP);
@@ -259,7 +261,7 @@ prog	:	END_OF_INPUT			{ return 0; }
 	|	error	 			{ YYABORT; }
 	;
 
-expr_or_assign  :    expr                       { $$ = $1; }
+expr_or_assign  :    expr                       { $$ = xxwithparen($1); }
                 |    equal_assign               { $$ = $1; }
                 ;
 
@@ -364,7 +366,7 @@ sub	:					{ $$ = xxsub0(); }
 
 formlist:					{ $$ = xxnullformal(); }
 	|	SYMBOL				{ $$ = xxfirstformal0($1); }
-	|	SYMBOL EQ_ASSIGN expr			{ $$ = xxfirstformal1($1,$3); }
+	|	SYMBOL EQ_ASSIGN expr		{ $$ = xxfirstformal1($1,$3); }
 	|	formlist ',' SYMBOL		{ $$ = xxaddformal0($1,$3, &@3); }
 	|	formlist ',' SYMBOL EQ_ASSIGN expr   { $$ = xxaddformal1($1,$3,$5,&@3); }
 	;
@@ -537,6 +539,7 @@ static SEXP xxfirstformal0(SEXP sym)
 static SEXP xxfirstformal1(SEXP sym, SEXP expr)
 {
     SEXP ans;
+    expr = xxwithparen(expr);
     if (GenerateCode)
 	PROTECT(ans = FirstArg(expr, sym));
     else
@@ -563,6 +566,7 @@ static SEXP xxaddformal0(SEXP formlist, SEXP sym, YYLTYPE *lloc)
 static SEXP xxaddformal1(SEXP formlist, SEXP sym, SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
+    expr = xxwithparen(expr);
     if (GenerateCode) {
 	CheckFormalArgs(formlist, sym, lloc);
 	PROTECT(ans = NextArg(formlist, expr, sym));
@@ -637,6 +641,7 @@ static SEXP xxsub0(void)
 static SEXP xxsub1(SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
+    expr = xxwithparen(expr);
     if (GenerateCode)
 	PROTECT(ans = TagArg(expr, R_NilValue, lloc));
     else
@@ -659,6 +664,7 @@ static SEXP xxsymsub0(SEXP sym, YYLTYPE *lloc)
 static SEXP xxsymsub1(SEXP sym, SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
+    expr = xxwithparen(expr);
     if (GenerateCode)
 	PROTECT(ans = TagArg(expr, sym, lloc));
     else
@@ -682,6 +688,7 @@ static SEXP xxnullsub0(YYLTYPE *lloc)
 static SEXP xxnullsub1(SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans = install("NULL");
+    expr = xxwithparen(expr);
     UNPROTECT_PTR(R_NilValue);
     if (GenerateCode)
 	PROTECT(ans = TagArg(expr, ans, lloc));
@@ -718,13 +725,13 @@ static SEXP xxsublist2(SEXP sublist, SEXP sub)
 static SEXP xxcond(SEXP expr)
 {
     EatLines = 1;
-    return expr;
+    return xxwithparen(expr);
 }
 
 static SEXP xxifcond(SEXP expr)
 {
     EatLines = 1;
-    return expr;
+    return xxwithparen(expr);
 }
 
 static SEXP xxif(SEXP ifsym, SEXP cond, SEXP expr)
@@ -755,6 +762,7 @@ static SEXP xxifelse(SEXP ifsym, SEXP cond, SEXP ifexpr, SEXP elseexpr)
 static SEXP xxforcond(SEXP sym, SEXP expr)
 {
     SEXP ans;
+    expr = xxwithparen(expr);
     EatLines = 1;
     if (GenerateCode)
 	PROTECT(ans = LCONS(sym, expr));
@@ -811,7 +819,9 @@ static SEXP xxnxtbrk(SEXP keyword)
 
 static SEXP xxfuncall(SEXP expr, SEXP args)
 {
-    SEXP ans, sav_expr = expr;
+    SEXP ans;
+    SEXP sav_expr = xxwithparen(expr);
+
     if(GenerateCode) {
 	if (isString(expr))
 	    expr = install(CHAR(STRING_ELT(expr, 0)));
@@ -871,6 +881,7 @@ static SEXP xxdefun(SEXP fname, SEXP formals, SEXP body, YYLTYPE *lloc)
 static SEXP xxunary(SEXP op, SEXP arg)
 {
     SEXP ans;
+    arg = xxwithoutparen(arg);
     if (GenerateCode) {
         PROTECT(op); /* maybe unnecessary, but just in case... */
 	ans = LCONS (op, MaybeConstList1(arg));
@@ -886,6 +897,8 @@ static SEXP xxunary(SEXP op, SEXP arg)
 static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 {
     SEXP ans;
+    n2 = xxwithoutparen(n2);
+    n3 = xxwithoutparen(n3);
     if (GenerateCode) {
         PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
 	ans = LCONS (n1, CONS (n2, MaybeConstList1(n3)));
@@ -899,12 +912,53 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
     return ans;
 }
 
+
+/* Paren handling.  When parenthesized expressions are created, with xxparen,
+   they have LEVELS (gp) set to 1, unlike the same expression created as a
+   call of function `(`.  Any use of an expression should process it by
+   calling either xxwithparen - which will clear LEVELS for a parenthesized
+   expression (so it will be zero, as possibly expected) - or xxwithoutparen
+    - which will return the expression with parentheses (if present) removed. */
+
+static SEXP xxwithparen(SEXP n)
+{
+    SEXP ans;
+    if (GenerateCode) {
+        if (TYPEOF(n) == LANGSXP && LEVELS(n) == 1 && CAR(n) == install("(") 
+              && CDR(n) != R_NilValue && CDDR(n) == R_NilValue)
+            SETLEVELS(n,0);  /* clear flag, now that no longer needed */
+        PROTECT(ans = n);
+    }
+    else
+	PROTECT(ans = R_NilValue);
+    UNPROTECT_PTR(n);
+    return ans;
+}
+
+static SEXP xxwithoutparen(SEXP n)
+{
+    SEXP ans;
+    if (GenerateCode) {
+        if (TYPEOF(n) == LANGSXP && LEVELS(n) == 1 && CAR(n) == install("(") 
+              && CDR(n) != R_NilValue && CDDR(n) == R_NilValue)
+            ans = CADR(n); /* get rid of the parenthesis operator */
+        else
+            ans = n;
+        PROTECT(ans);
+    }
+    else
+	PROTECT(ans = R_NilValue);
+    UNPROTECT_PTR(n);
+    return ans;
+}
+
 static SEXP xxparen(SEXP n1, SEXP n2)
 {
     SEXP ans;
     if (GenerateCode) {
         PROTECT(n1); /* maybe unnecessary, but just in case... */
 	ans = LCONS (n1, MaybeConstList1(n2));
+        SETLEVELS(ans,1);  /* flag as something like (x), not `(`(x) */
         UNPROTECT(1);
         PROTECT(ans);
     }
@@ -914,9 +968,11 @@ static SEXP xxparen(SEXP n1, SEXP n2)
     return ans;
 }
 
+
 static SEXP xxsubscript(SEXP a1, SEXP a2, SEXP a3)
 {
     SEXP ans;
+    a1 = xxwithparen(a1);
     if (GenerateCode)
 	PROTECT(ans = LCONS(a2, WrapInsert(a3,a1)));
     else
