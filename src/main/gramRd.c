@@ -4366,3 +4366,15 @@ SEXP attribute_hidden do_deparseRd(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_gramRd[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"parse_Rd", 	do_parseRd,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"deparseRd", 	do_deparseRd, 	0, 	11, 	2,	{PP_FUNCALL, PREC_FN, 	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
+

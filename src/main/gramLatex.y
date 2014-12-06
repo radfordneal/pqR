@@ -871,3 +871,15 @@ SEXP attribute_hidden do_parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
     if (status != PARSE_OK) parseError(call, R_ParseError);
     return s;
 }
+
+
+/* FUNTAB entries defined in this source file. See names.c for documentation. */
+
+attribute_hidden FUNTAB R_FunTab_gramLatex[] =
+{
+/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+
+{"parseLatex",  do_parseLatex,  0,      11,     4,      {PP_FUNCALL, PREC_FN,	0}},
+
+{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
+};
