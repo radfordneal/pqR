@@ -1878,4 +1878,3 @@ attribute_hidden FUNTAB R_FunTab_gramRd[] =
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
-
