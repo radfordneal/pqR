@@ -1937,6 +1937,46 @@ static void RunGenCollect(R_size_t size_needed)
 
     forwarded_nodes = NULL;
 
+    /* Start by scanning the symbol table.  We have to scan the symbol
+       table specially, because it's linked by NEXTSYM_PTR, which
+       DO_CHILDREN doesn't know about, and because we need to clear
+       LASTSYMENV and LASTSYMENVNOTFOUND.  So we might as well also
+       forward things pointed to by symbol table entries, to avoid the
+       need to forward the symbol itself, taking advantage of knowing
+       that the type will be SYMSXP.  The code for this below is a
+       combination of code from FORWARD_NODE and process_nodes.
+
+       We do this scan first, since otherwise many symbols will have
+       already been marked and forwarded, undoing the time savings. */
+ 
+    if (R_SymbolTable != NULL) { /* Symbol table could be NULL during startup */
+        struct gen_heap *h = &R_GenHeap[SYM_SEXPREC_class];
+        for (i = 0; i < HSIZE; i++) {
+            for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
+                LASTSYMENV(s) = NULL;
+                LASTSYMBINDING(s) = NULL; /* not required, but just in case...*/
+                LASTSYMENVNOTFOUND(s) = NULL;
+                if (!NODE_IS_MARKED(s)) {
+                    int gn = NODE_GENERATION(s);
+                    MARK_NODE(s);
+                    UNSNAP_NODE(s);
+                    h->OldCount[gn] += 1;
+                    if (!no_snap) 
+                        SNAP_NODE(s, h->Old[gn]);
+                    FORWARD_NODE(ATTRIB(s));
+                    FORWARD_NODE(PRINTNAME(s));
+                    FORWARD_NODE(SYMVALUE(s));
+                    FORWARD_NODE(INTERNAL(s));
+                }
+            }
+        }
+    }
+
+    /* Process now to maybe improve cache performance. */
+
+    process_nodes (forwarded_nodes, no_snap); 
+    forwarded_nodes = NULL;
+
 #if !EXPEL_OLD_TO_NEW
     /* scan nodes in uncollected old generations with old-to-new pointers */
     for (gen = num_old_gens_to_collect; gen < NUM_OLD_GENERATIONS; gen++)
@@ -1948,7 +1988,7 @@ static void RunGenCollect(R_size_t size_needed)
     DEBUG_CHECK_NODE_COUNTS("after scanning uncollected old generations");
 #endif
 
-    /* forward all roots */
+    /* Forward other roots. */
 
     static SEXP *root_vars[] = { 
         &NA_STRING,	          /* Builtin constants */
@@ -1972,24 +2012,6 @@ static void RunGenCollect(R_size_t size_needed)
 
     if (R_VStack != NULL)
         FORWARD_NODE(R_VStack);
-
-    if (R_SymbolTable != NULL) /* Symbol table, could be NULL during startup */
-        for (i = 0; i < HSIZE; i++) {
-            /* We follow the chain here, as DO_CHILDREN ignores NEXTSYM_PTR.
-               We clear the lastenv and lastenvnotfound fields, since we don't 
-               forward them (or the lastbinding fields, which are ignored when
-               lastenv is NULL). */
-            for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
-                LASTSYMENV(s) = NULL;
-                LASTSYMENVNOTFOUND(s) = NULL;
-                FORWARD_NODE(s);
-            }
-            if ((i&0xff) == 0) {
-                /* Doing this occassionaly may improve cache performance. */
-                process_nodes (forwarded_nodes, no_snap); 
-                forwarded_nodes = NULL;
-            }
-        }
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
 	FORWARD_NODE(R_CurrentExpr);
