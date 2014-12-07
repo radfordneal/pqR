@@ -149,6 +149,10 @@ extern0 SEXP	R_previousSymbol; /* "previous" */
 extern R_CONST SEXPREC R_unserialize_as_constant;
 #define IS_CONSTANT(x) ((x)->gengc_next_node == &R_unserialize_as_constant)
 
+/* Test whether this is a static box object (defined in const-objs.c). */
+extern R_CONST SEXPREC R_static_box;
+#define IS_STATIC_BOX(x) ((x)->gengc_next_node == &R_static_box)
+
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) (((x)->sxpinfo.gp) |= BYTES_MASK)
@@ -566,9 +570,13 @@ typedef struct {
                                Does not set R_variant_result. */
 
 #define VARIANT_DIRECT_RETURN 0x400 /* A "return" statement may simply return
-                                       the return value, without a non-local
-                                       jump. Usually OR with VARIANT_PENDING_OK.
-                                       ORs R_variant_result with VARIANT_RTN. */
+                                    the return value, without a non-local jump.
+                                    Usually OR with VARIANT_PENDING_OK. Will OR
+                                    R_variant_result with VARIANT_RTN_FLAG. */
+
+#define VARIANT_STATIC_BOX_OK 0x800 /* May return the result in a statically
+                                       allocated SEXPREC that is used for all
+                                       returns of values of its type. */
 
 /* Variant flags that are not passed on. */
 

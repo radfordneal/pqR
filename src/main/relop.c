@@ -305,9 +305,11 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP ans, x, y;
     int args_evald;
 
-    /* Evaluate arguments, setting x to first argument and y to
-       second argument.  The whole argument list is in args, already 
-       evaluated if args_evald is 1. */
+    /* Evaluate arguments, setting x to first argument and y to second
+       argument.  Arguments are usually evaluated with VARIANT_STATIC_BOX_OK.
+
+       The whole argument list ends up in args, already evaluated if 
+       args_evald is 1. */
 
     x = CAR(args); 
     y = CADR(args);
@@ -319,8 +321,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         args_evald = 1;
     }
     else {
-        PROTECT(x = eval(x,env));
-        PROTECT(y = eval(y,env));
+        PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK));
+        PROTECT(y = evalv (y, env, isObject(x) ? 0 : VARIANT_STATIC_BOX_OK));
         args_evald = 0;
     }
 
@@ -328,9 +330,24 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        of "args" to length of original (number of args in "call"). */
 
     if (isObject(x) || isObject(y)) {
-        if (!args_evald) 
-            args = CDR(args)!=R_NilValue ? CONS(x,CONS(y,R_NilValue)) 
-                                         : CONS(x,R_NilValue);
+        if (!args_evald) {
+            if (CDR(args) == R_NilValue) {
+                if (IS_STATIC_BOX(x))
+                    x = duplicate(x);
+                args = CONS(x,R_NilValue);
+            }
+            else {
+                SEXP y1;
+                UNPROTECT(1);
+                if (IS_STATIC_BOX(y))
+                    PROTECT(y1 = CONS(duplicate(y),R_NilValue));
+                else
+                    PROTECT(y1 = CONS(y,R_NilValue));
+                if (IS_STATIC_BOX(x)) 
+                    x = duplicate(x);
+                args = CONS(x,y1);
+            }
+        }
         PROTECT(args);
         if (DispatchGroup("Ops", call, op, args, env, &ans)) {
             UNPROTECT(3);
@@ -344,8 +361,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     checkArity(op,args);
 
-    /* Arguments are now in x and y, and are protected.  The value 
-       in args may not be protected, and is not used below. */
+    /* Arguments are now in x and y, and are protected.  They may be static
+       boxes.  The value in args may not be protected, and is not used below. */
 
     ans = R_relop (call, op, x, y, env, variant);
 

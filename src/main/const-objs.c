@@ -203,6 +203,24 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 }
 
 
+/* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
+   These are not actually constant, since the data they contain is changed,
+   but are allocated similarly. These boxes must be marked, and be of the 
+   oldest generation, so the garbage collector won't fiddle with them.  The
+   are marked as shared boxes with a special value for genc_next_node. */
+
+R_CONST SEXPREC R_static_box;
+
+#define SCALAR_BOX(typ) { \
+    .sxpinfo = { .nmcnt = 7, .type = typ, .gcgen = 1, .mark = 1 }, \
+    .attrib = R_NilValue, \
+    .gengc_next_node = (SEXP) &R_static_box, \
+    .vecsxp = { .length = 1 } }
+
+VECTOR_SEXPREC_C R_ScalarIntegerBox_space = SCALAR_BOX(INTSXP);
+VECTOR_SEXPREC_C R_ScalarRealBox_space = SCALAR_BOX(REALSXP);
+
+
 /* Initialize variables holding constant values, for those who need them
    as variables (eg, RStudio).  Need to first undefine their macro forms,
    which were defined in Rinternals.h. */

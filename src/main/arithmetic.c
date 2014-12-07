@@ -1479,7 +1479,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
     /* Note: need to protect sy below because some ops may produce a warning,
        and attributes may be duplicated. */
 
-    if (LENGTH(sa) == 1) { /* scalar operation */
+    if (LENGTH(sa) == 1) { /* scalar operation, including on static boxes */
 
         WAIT_UNTIL_COMPUTED(sa);
 
@@ -1496,6 +1496,10 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
         if (local_assign || NAMEDCNT_EQ_0(sa)) {
             PROTECT(sy = sa);
+            REAL(sy)[0] = res;
+        }
+        else if ((variant&VARIANT_STATIC_BOX_OK)!=0 && ATTRIB(sa)==R_NilValue) {
+            PROTECT(sy = R_ScalarRealBox);
             REAL(sy)[0] = res;
         }
         else {
@@ -2693,7 +2697,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-{ do_math1,	do_fast_math1,	-1,		1,	1, 0,  0, 0 },
+{ do_math1,	do_fast_math1,	-1,		1,	1, 0,  VARIANT_STATIC_BOX_OK, 0 },
 { do_trunc,	do_fast_trunc,	-1,		1,	1, 0,  0, 0 },
 { do_abs,	do_fast_abs,	-1,		1,	1, 0,  0, 0 },
 { 0,		0,		0,		0,	0, 0,  0, 0 }

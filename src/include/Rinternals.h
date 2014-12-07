@@ -909,6 +909,9 @@ LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarIntegerNA_const;
 #define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger0To10_const[v])
 LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger0To10_const[11];
 
+#define R_ScalarIntegerBox ((SEXP) &R_ScalarIntegerBox_space)
+LibExtern VECTOR_SEXPREC_C R_ScalarIntegerBox_space;
+
 /* Real Values.  Defined in const-objs.c */
 
 #define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
@@ -919,6 +922,9 @@ LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealZero_const;
 
 #define R_ScalarRealOne ((SEXP) &R_ScalarRealOne_const)
 LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealOne_const;
+
+#define R_ScalarRealBox ((SEXP) &R_ScalarRealBox_space)
+LibExtern VECTOR_SEXPREC_C R_ScalarRealBox_space;
 
 
 #ifdef __MAIN__
