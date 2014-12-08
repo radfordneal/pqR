@@ -2161,31 +2161,36 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP lhs = CAR(args), rhs = CAR(a);
     SEXPTYPE lhs_type = TYPEOF(lhs);
 
-    /* We decide whether we'll ask the right hand side evalutation to do
-       the assignment, for statements like v<-exp(v), v<-v+1, or v<-2*v. */
+    /* Convert lhs string to a symbol. */
 
-    int local_assign = 0;
-
-    if (lhs_type == SYMSXP && TYPEOF(rhs) == LANGSXP 
-          && PRIMVAL(op) != 2 && !IS_USER_DATABASE(rho) && !IS_BASE(rho)) {
-        if (CADR(rhs) == lhs) 
-            local_assign = VARIANT_LOCAL_ASSIGN1;
-        else if (CADDR(rhs) == lhs)
-            local_assign = VARIANT_LOCAL_ASSIGN2;
+    if (lhs_type == STRSXP) {
+        lhs = install(translateChar(STRING_ELT(lhs, 0)));
+        lhs_type = TYPEOF(lhs);
     }
-
-    /* We evaluate the right hand side now. */
-
-    rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
 
     switch (lhs_type) {
 
-    /* Assignment to simple variable. */
+    /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
 
-    case STRSXP:
-        lhs = install(translateChar(STRING_ELT(lhs, 0)));
-        /* fall through... */
-    case SYMSXP:
+    case SYMSXP: {
+
+        /* We decide whether we'll ask the right hand side evalutation to do
+           the assignment, for statements like v<-exp(v), v<-v+1, or v<-2*v. */
+
+        int local_assign = 0;
+
+        if (TYPEOF(rhs) == LANGSXP && PRIMVAL(op) != 2 
+              && !IS_USER_DATABASE(rho) && !IS_BASE(rho)) {
+            if (CADR(rhs) == lhs) 
+                local_assign = VARIANT_LOCAL_ASSIGN1;
+            else if (CADDR(rhs) == lhs)
+                local_assign = VARIANT_LOCAL_ASSIGN2;
+        }
+
+        /* We evaluate the right hand side now. */
+
+        rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
+
         if (PRIMVAL(op) == 2) /* <<- */
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
         else if (R_variant_result) {
@@ -2194,11 +2199,20 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
         else
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-        break;
 
-    /* Assignment to complex target. */
+        break;
+    }
+
+    /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
 
     case LANGSXP: {
+
+        SEXP var, varval, newval, rhsprom, lhsprom, e;
+        int depth;
+
+        /* We evaluate the right hand side now. */
+
+        PROTECT(rhs = evalv (rhs, rho, VARIANT_PENDING_OK));
 
         /* Debugging/comparison aid:  Can be enabled one way or the other below,
            then activated by typing `switch to old` or `switch to new` at the
@@ -2210,22 +2224,16 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
                 if ( ! (variant & VARIANT_NULL))
                     INC_NAMEDCNT(rhs);
-                PROTECT(rhs);
     
                 applydefine (call, op, lhs, rhs, rho);
     
-                UNPROTECT(1);
                 if ( ! (variant & VARIANT_NULL))
                     DEC_NAMEDCNT(rhs);
       
+                UNPROTECT(1);
                 break;
             }
 #       endif
-
-        SEXP var, varval, newval, rhsprom, lhsprom, e;
-        int depth;
-
-        PROTECT(rhs);
 
         /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
            to protect it from being modified by the assignment, or otherwise. */
@@ -2473,8 +2481,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         break;
     }
 
+    /* -- ASSIGNMENT TO AN INVALID TARGET -- */
+
     default:
-        /* Assignment to invalid target. */
         errorcall (call, _("invalid assignment left-hand side"));
     }
 
