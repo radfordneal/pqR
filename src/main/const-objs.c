@@ -205,8 +205,8 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 
 /* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
    These are not actually constant, since the data they contain is changed,
-   but are allocated similarly. These boxes must be marked, and be of the 
-   oldest generation, so the garbage collector won't fiddle with them.  The
+   but are allocated similarly.  These boxes must be marked, and be of the 
+   oldest generation, so the garbage collector won't fiddle with them.  They
    are marked as shared boxes with a special value for genc_next_node. */
 
 R_CONST SEXPREC R_static_box;
@@ -219,6 +219,9 @@ R_CONST SEXPREC R_static_box;
 
 VECTOR_SEXPREC_C R_ScalarIntegerBox_space = SCALAR_BOX(INTSXP);
 VECTOR_SEXPREC_C R_ScalarRealBox_space = SCALAR_BOX(REALSXP);
+
+VECTOR_SEXPREC_C R_ScalarIntegerBox0_space = SCALAR_BOX(INTSXP);
+VECTOR_SEXPREC_C R_ScalarRealBox0_space = SCALAR_BOX(REALSXP);
 
 
 /* Initialize variables holding constant values, for those who need them

@@ -576,7 +576,8 @@ typedef struct {
 
 #define VARIANT_STATIC_BOX_OK 0x800 /* May return the result in a statically
                                        allocated SEXPREC that is used for all
-                                       returns of values of its type. */
+                                       returns of values of its type.  Value
+                                       in box never has computation pending. */
 
 /* Variant flags that are not passed on. */
 

@@ -335,8 +335,11 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int args_evald;
 
     /* Evaluate arguments, setting arg1 to first argument and arg2 to
-       second argument (NULL if none).  The whole argument list is in
-       args, already evaluated if args_evald is 1. */
+       second argument (NULL if none).  Arguments are usually evaluated 
+       with VARIANT_STATIC_BOX_OK.
+
+       The whole argument list is in args, already evaluated if 
+       args_evald is 1. */
 
     arg1 = CAR(args); 
     if (CDR(args) == R_NilValue)
@@ -354,9 +357,21 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         args_evald = 1;
     }
     else {
-        PROTECT(arg1 = evalv(arg1,env,VARIANT_PENDING_OK));
-        if (arg2 != NULL)
-            PROTECT(arg2 = evalv(arg2,env,VARIANT_PENDING_OK));
+        PROTECT(arg1 = evalv (arg1, env, VARIANT_PENDING_OK 
+                                          | VARIANT_STATIC_BOX_OK));
+        if (arg2 != NULL) {
+            int intv; double realv;  /* for saving a boxed arg1 value */
+            if (arg1 == R_ScalarRealBox)
+                arg1 = SWITCH_TO_REAL_BOX0(&realv);
+            else if (arg1 == R_ScalarIntegerBox)
+                arg1 = SWITCH_TO_REAL_BOX0(&intv);
+            PROTECT(arg2 = evalv (arg2, env, isObject(arg1) ? VARIANT_PENDING_OK
+                             : VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK));
+            if (arg1 == R_ScalarRealBox0)
+                *REAL(arg1) = realv;
+            else if (arg1 == R_ScalarIntegerBox0)
+                *INTEGER(arg1) = intv;
+        }
         args_evald = 0;
     }
 
@@ -364,9 +379,24 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        of "args" to length of original (number of args in "call"). */
 
     if (isObject(arg1) || arg2!=NULL && isObject(arg2)) {
-        if (!args_evald) 
-            args = arg2!=NULL ? CONS(arg1,CONS(arg2,R_NilValue)) 
-                              : CONS(arg1,R_NilValue);
+        if (!args_evald) {
+            if (arg2 == NULL) {
+                if (IS_STATIC_BOX(arg1))
+                    arg1 = duplicate(arg1);
+                args = CONS(arg1,R_NilValue);
+            }
+            else {
+                SEXP tl;
+                UNPROTECT(1);
+                if (IS_STATIC_BOX(arg2))
+                    PROTECT(tl = CONS(duplicate(arg2),R_NilValue));
+                else
+                    PROTECT(tl = CONS(arg2,R_NilValue));
+                if (IS_STATIC_BOX(arg1)) 
+                    arg1 = duplicate(arg1);
+                args = CONS(arg1,tl);
+            }
+        }
         PROTECT(args);
         if (DispatchGroup("Ops", call, op, args, env, &ans)) {
             UNPROTECT(2 + (arg2!=NULL));
@@ -386,7 +416,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                         1, PRIMNAME(op), 2);
 
     /* Arguments are now in arg1 and arg2 (if not NULL), and are protected. 
-       The value in args may not be protected, and is not used below. */
+       They may be in static boxes.  The value in args may not be protected,
+       and is not used below. */
 
     /* Quickly do real arithmetic and integer plus/minus on scalars with 
        no attributes. */
@@ -407,14 +438,16 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                   && arg1 == findVarInFrame3 (env, CADR(call), 7))
                     R_variant_result = local_assign = 1;
                 if (type==REALSXP) {
-                    ans = local_assign || NAMEDCNT_EQ_0(arg1) 
-                            ? arg1 : allocVector1REAL();
+                    ans = local_assign || NAMEDCNT_EQ_0(arg1) ? arg1 
+                        : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
+                        :   allocVector1REAL();
                     WAIT_UNTIL_COMPUTED(arg1);
                     *REAL(ans) = - *REAL(arg1);
                 }
                 else { /* INTSXP */
-                    ans = local_assign || NAMEDCNT_EQ_0(arg1) 
-                            ? arg1 : allocVector1INT();
+                    ans = local_assign || NAMEDCNT_EQ_0(arg1) ? arg1 
+                        : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
+                        :   allocVector1INT();
                     WAIT_UNTIL_COMPUTED(arg1);
                     *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
                                       : - *INTEGER(arg1);
@@ -441,10 +474,11 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 }
 
                 ans = local_assign1 ? arg1
-                       : local_assign2 ? arg2
-                       : NAMEDCNT_EQ_0(arg2) ? arg2
-                       : NAMEDCNT_EQ_0(arg1) ? arg1
-                       :   allocVector1REAL();
+                    : local_assign2 ? arg2
+                    : NAMEDCNT_EQ_0(arg2) ? arg2
+                    : NAMEDCNT_EQ_0(arg1) ? arg1
+                    : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
+                    :   allocVector1REAL();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
@@ -497,10 +531,11 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 }
 
                 ans = local_assign1 ? arg1
-                       : local_assign2 ? arg2
-                       : NAMEDCNT_EQ_0(arg2) ? arg2
-                       : NAMEDCNT_EQ_0(arg1) ? arg1 
-                       :   allocVector1INT();
+                    : local_assign2 ? arg2
+                    : NAMEDCNT_EQ_0(arg2) ? arg2
+                    : NAMEDCNT_EQ_0(arg1) ? arg1 
+                    : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
+                    :   allocVector1INT();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
@@ -972,7 +1007,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     } \
 } while (0)
 
-#define T_arithmetic THRESHOLD_ADJUST(24)  /* further adjusted below */
+#define T_arithmetic THRESHOLD_ADJUST(24)  /* >= 8, further adjusted below */
 
 SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, 
                                 SEXP env, int variant)
@@ -1162,8 +1197,12 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (TYPEOF(ans)==CPLXSXP) threshold >>= 1;
         if (oper>TIMESOP) threshold >>= 1;
 
-        DO_NOW_OR_LATER2 (variant, n > 1 && n >= threshold,
-                          flags, task, oper, ans, x, y);
+        if (n >= threshold) {
+            /* Note: can't both be in static boxes, since one has length > 1 */
+            if (IS_STATIC_BOX(x)) x = duplicate(x);
+            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+        }
+        DO_NOW_OR_LATER2 (variant, n>=threshold, flags, task, oper, ans, x, y);
 
         if (integer_overflow)
             warningcall(call, _("NAs produced by integer overflow"));

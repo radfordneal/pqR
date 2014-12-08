@@ -93,8 +93,8 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
                 result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
                        : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
             }
-            return ScalarLogicalMaybeConst (negate && result!=NA_LOGICAL ? !result 
-                                                                     : result);
+            return ScalarLogicalMaybeConst (negate && result!=NA_LOGICAL 
+                                             ? !result : result);
         } 
         else {
    	    if (((nx > ny) ? nx % ny : ny % nx) != 0) {
@@ -321,8 +321,17 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         args_evald = 1;
     }
     else {
+        int intv; double realv;  /* for saving a boxed x value */
         PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK));
+        if (x == R_ScalarRealBox)
+            x = SWITCH_TO_REAL_BOX0(&realv);
+        else if (x == R_ScalarIntegerBox)
+            x = SWITCH_TO_INTEGER_BOX0(&intv);
         PROTECT(y = evalv (y, env, isObject(x) ? 0 : VARIANT_STATIC_BOX_OK));
+        if (x == R_ScalarRealBox0)
+            *REAL(x) = realv;
+        else if (x == R_ScalarIntegerBox0)
+            *INTEGER(x) = intv;
         args_evald = 0;
     }
 
