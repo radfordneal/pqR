@@ -364,7 +364,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             if (arg1 == R_ScalarRealBox)
                 arg1 = SWITCH_TO_REAL_BOX0(&realv);
             else if (arg1 == R_ScalarIntegerBox)
-                arg1 = SWITCH_TO_REAL_BOX0(&intv);
+                arg1 = SWITCH_TO_INTEGER_BOX0(&intv);
             PROTECT(arg2 = evalv (arg2, env, isObject(arg1) ? VARIANT_PENDING_OK
                              : VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK));
             if (arg1 == R_ScalarRealBox0)
