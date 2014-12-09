@@ -2108,13 +2108,29 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     case SYMSXP: {
 
+        /* Handle  <<-, for which the optimizations done for <- don't apply. */
+
+        if (PRIMVAL(op) == 2) {
+            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
+            set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
+            break;
+        }
+
+        /* Handle assignment into base and user database environments without
+           any special optimizations. */
+
+        if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
+            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
+            set_var_in_frame (lhs, rhs, rho, TRUE, 3);
+            break;
+        }
+
         /* We decide whether we'll ask the right hand side evalutation to do
            the assignment, for statements like v<-exp(v), v<-v+1, or v<-2*v. */
 
         int local_assign = 0;
 
-        if (TYPEOF(rhs) == LANGSXP && PRIMVAL(op) != 2 
-              && !IS_USER_DATABASE(rho) && !IS_BASE(rho)) {
+        if (TYPEOF(rhs) == LANGSXP) {
             if (CADR(rhs) == lhs) 
                 local_assign = VARIANT_LOCAL_ASSIGN1;
             else if (CADDR(rhs) == lhs)
@@ -2123,16 +2139,42 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* We evaluate the right hand side now. */
 
-        rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
+        if (! (variant & (VARIANT_STATIC_BOX_OK | VARIANT_NULL)))
+            rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
+        else 
+            rhs = evalv (rhs, rho, 
+                    local_assign | VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
 
-        if (PRIMVAL(op) == 2) /* <<- */
-            set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
-        else if (R_variant_result) {
-            /* the assignment was done by the rhs operator */
+        /* See if the assignment was done by the rhs operator. */
+
+        if (R_variant_result) {
             R_variant_result = 0;
+            break;
         }
-        else
-            set_var_in_frame (lhs, rhs, rho, TRUE, 3);
+
+        /* See if we have a value in a static box, in which case we try to
+           store it in into the object currently bound to the lhs, duplicating
+           it instead if we can't. */
+
+        if (IS_STATIC_BOX(rhs)) {
+            SEXP v = findVarInFrame3 (rho, lhs, 7);
+            if (v!=R_UnboundValue && TYPEOF(v)==TYPEOF(rhs) && !NAMEDCNT_GT_1(v)
+                                  && LENGTH(v)==1 && ATTRIB(v)==R_NilValue) {
+                if (rhs == R_ScalarRealBox) 
+                    *REAL(v) = *REAL(rhs);
+                else if (rhs == R_ScalarIntegerBox)
+                    *INTEGER(v) = *INTEGER(rhs);
+                else
+                    abort();
+                break;
+            }
+            rhs = rhs == R_ScalarRealBox ? ScalarReal(*REAL(rhs))
+                                         : ScalarInteger(*INTEGER(rhs));
+        }
+
+        /* Assign rhs object to lhs symbol. */
+
+        set_var_in_frame (lhs, rhs, rho, TRUE, 3);
 
         break;
     }
