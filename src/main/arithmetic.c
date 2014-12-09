@@ -557,7 +557,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                     PROTECT(ans);
                     warningcall(call, _("NAs produced by integer overflow"));
                     UNPROTECT(1);
-                    *INTEGER(ans) = NA_INTEGER;
+                    *INTEGER(ans) = NA_INTEGER;  /* set _after_ warning */
                 }
 
                 goto ret;
@@ -1493,6 +1493,7 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 #define T_math1 THRESHOLD_ADJUST(5)
 
 static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
+                  /* Note:  sa may be a static box. */
 {
     if (opcode == 10003) /* horrible kludge for log */
         opcode = 13;
@@ -1513,10 +1514,6 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
     PROTECT(sa);
 
     SEXP sy;
-    R_naflag = 0;
-
-    /* Note: need to protect sy below because some ops may produce a warning,
-       and attributes may be duplicated. */
 
     if (LENGTH(sa) == 1) { /* scalar operation, including on static boxes */
 
@@ -1530,48 +1527,61 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
         else {
             res = R_math1_func_table[opcode] (opr);
             if (R_math1_err_table[opcode] && ISNAN(res))
-                R_naflag = 1;
+                NaN_warningcall(call);
         }
 
         if (local_assign || NAMEDCNT_EQ_0(sa)) {
-            PROTECT(sy = sa);
-            REAL(sy)[0] = res;
+            sy = sa;
+            *REAL(sy) = res;
         }
         else if ((variant&VARIANT_STATIC_BOX_OK)!=0 && ATTRIB(sa)==R_NilValue) {
-            PROTECT(sy = R_ScalarRealBox);
-            REAL(sy)[0] = res;
+            sy = R_ScalarRealBox;
+            *REAL(sy) = res;
         }
         else {
             PROTECT(sy = ScalarReal(res));
             DUPLICATE_ATTRIB(sy, sa);
+            UNPROTECT(1);
         }
+
+        UNPROTECT(1);
     }
 
-    else if (VARIANT_KIND(variant) == VARIANT_SUM) { /* just need the sum */
+    else { /* not scalar */
 
-        PROTECT(sy = allocVector1REAL());
-        DO_NOW_OR_LATER1 (variant, 
-                       LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
-                       HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
+        /* Note: need to protect sy below because some ops may produce a warning
+           and attributes may be duplicated. */
+
+        R_naflag = 0;
+
+        if (VARIANT_KIND(variant) == VARIANT_SUM) { /* just need the sum */
+
+            PROTECT(sy = allocVector1REAL());
+            DO_NOW_OR_LATER1 (variant, 
+                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
+                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
+        }
+
+        else { /* not scalar, not just sum */
+
+            PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
+                           ? sa : allocVector(REALSXP, n));
+
+            DO_NOW_OR_LATER1 (variant,
+                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
+                        HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
+                        task_math1, opcode, sy, sa);
+
+            if (sa!=sy) 
+                DUPLICATE_ATTRIB(sy, sa);
+        }
+
+        if (R_naflag)
+            NaN_warningcall(call);
+        UNPROTECT(2);
     }
 
-    else { /* non-variant result, not scalar */
-
-        PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
-                       ? sa : allocVector(REALSXP, n));
-
-        DO_NOW_OR_LATER1 (variant,
-                       LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
-                       HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
-                       task_math1, opcode, sy, sa);
-        if (sa!=sy) 
-            DUPLICATE_ATTRIB(sy, sa);
-    }
-
-    if (R_naflag) NaN_warningcall(call);
-    UNPROTECT(2);
-
-    R_variant_result = local_assign;  /* defer setting to now, just in case */
+    R_variant_result = local_assign;  /* defer setting to just before return */
 
     return sy;
 }
@@ -1672,22 +1682,40 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
-	s = NAMEDCNT_EQ_0(x) && TYPEOF(x)==INTSXP ? x : allocVector(INTSXP, n);
-        WAIT_UNTIL_COMPUTED(x);
-	/* Note: relying on INTEGER(.) === LOGICAL(.) : */
-	for (int i = 0 ; i < n ; i++) {
-            int v = INTEGER(x)[i];
-	    INTEGER(s)[i] = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+        if (n == 1) {
+            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
+              : (variant&VARIANT_STATIC_BOX_OK) != 0 
+                    && ATTRIB(x) == R_NilValue ? R_ScalarIntegerBox
+              :   allocVector1INT();
+            int v = *INTEGER(x);
+            *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+        }
+        else {
+            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
+              :   allocVector(INTSXP,n);
+            WAIT_UNTIL_COMPUTED(x);
+            /* Note: relying on INTEGER(.) === LOGICAL(.) : */
+            for (int i = 0 ; i < n ; i++) {
+                int v = INTEGER(x)[i];
+                INTEGER(s)[i] = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+            }
         }
     } 
 
     else if (TYPEOF(x) == REALSXP) {
-	int n = LENGTH(x);
+        int n = LENGTH(x);
         if (VARIANT_KIND(variant) == VARIANT_SUM) {
             s = allocVector1REAL();
             DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
             return s;
+        }
+        else if (n == 1) {
+            s = NAMEDCNT_EQ_0(x) ? x 
+              : (variant&VARIANT_STATIC_BOX_OK) != 0 
+                    && ATTRIB(x) == R_NilValue ? R_ScalarRealBox
+              :   allocVector1REAL();
+            *REAL(s) = fabs(*REAL(x));
         }
         else {
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
@@ -1698,7 +1726,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         WAIT_UNTIL_COMPUTED(x);
         s = do_fast_cmathfuns (call, op, x, env, variant);
     } else
-	non_numeric_errorcall(call);
+        non_numeric_errorcall(call);
 
     if (x!=s) {
         PROTECT(s);
@@ -2003,7 +2031,8 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (!isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) 
           && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg) {
         SEXP arg, ans;
-        PROTECT(arg = evalv (CAR(args), env, VARIANT_PENDING_OK));
+        PROTECT(arg = evalv (CAR(args), env, 
+                             VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK));
         if (isObject(arg)) {
             WAIT_UNTIL_COMPUTED(arg);
             UNPROTECT(1);
@@ -2737,7 +2766,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
 { do_math1,	do_fast_math1,	-1,		1,	1, 0,  VARIANT_STATIC_BOX_OK, 0 },
-{ do_trunc,	do_fast_trunc,	-1,		1,	1, 0,  0, 0 },
-{ do_abs,	do_fast_abs,	-1,		1,	1, 0,  0, 0 },
+{ do_trunc,	do_fast_trunc,	-1,		1,	1, 0,  VARIANT_STATIC_BOX_OK, 0 },
+{ do_abs,	do_fast_abs,	-1,		1,	1, 0,  VARIANT_STATIC_BOX_OK, 0 },
 { 0,		0,		0,		0,	0, 0,  0, 0 }
 };
