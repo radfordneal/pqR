@@ -982,12 +982,14 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 
     if (rho == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
-        value = CAR(binding);
-        if (value == R_UnboundValue)
-            LASTSYMENV(symbol) = NULL;
-        else {
-            R_binding_cell = BINDING_IS_LOCKED(binding) ? R_NilValue : binding;
-            return value;
+        if ( ! BINDING_IS_LOCKED(binding)) {
+            value = CAR(binding);
+            if (value == R_UnboundValue)
+                LASTSYMENV(symbol) = NULL;
+            else {
+                R_binding_cell = binding;
+                return value;
+            }
         }
     }
 
@@ -1002,23 +1004,25 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
     if (rho == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
-        value = CAR(binding);
-        if (value == R_UnboundValue)
-            LASTSYMENV(symbol) = NULL;
-        else {
-            switch (option) {
-            case 0:
-            case 1:
-                WAIT_UNTIL_COMPUTED(value);
-                break;
-            case 2:
-                value = R_NilValue;
-                break;
-            default:
-                break;
+        if ( ! BINDING_IS_LOCKED(binding)) {
+            value = CAR(binding);
+            if (value == R_UnboundValue)
+                LASTSYMENV(symbol) = NULL;
+            else {
+                switch (option) {
+                case 0:
+                case 1:
+                    WAIT_UNTIL_COMPUTED(value);
+                    break;
+                case 2:
+                    value = R_NilValue;
+                    break;
+                default:
+                    break;
+                }
+                R_binding_cell = binding;
+                return value;
             }
-            R_binding_cell = BINDING_IS_LOCKED(binding) ? R_NilValue : binding;
-            return value;
         }
     }
 
@@ -1091,7 +1095,11 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
                 LASTSYMENV(symbol) = rho;
                 LASTSYMBINDING(symbol) = loc;
             }
-            if (!BINDING_IS_LOCKED(loc)) 
+            if (BINDING_IS_LOCKED(loc)) {
+                if (option==7)
+                    return R_UnboundValue;
+            }
+            else
                 R_binding_cell = loc;
         }
         if (option==2)
@@ -1109,10 +1117,12 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
-        if (loc == R_NilValue || option == 7 && IS_ACTIVE_BINDING(loc))
+        if (loc == R_NilValue)
             return R_UnboundValue;
         if (!IS_ACTIVE_BINDING(loc) && !BINDING_IS_LOCKED(loc)) 
             R_binding_cell = loc;
+        else if (option==7)
+            return R_UnboundValue;
         if (option==2)
             return R_NilValue;
         value = BINDING_VALUE(loc);
