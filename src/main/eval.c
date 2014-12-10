@@ -2108,7 +2108,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     case SYMSXP: {
 
-        /* Handle  <<-, for which the optimizations done for <- don't apply. */
+        /* Handle <<- without trying the optimizations done below. */
 
         if (PRIMVAL(op) == 2) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
@@ -2137,7 +2137,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 local_assign = VARIANT_LOCAL_ASSIGN2;
         }
 
-        /* We evaluate the right hand side now. */
+        /* Evaluate the right hand side, maybe asking for it in a static box. */
 
         if (! (variant & (VARIANT_STATIC_BOX_OK | VARIANT_NULL)))
             rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
@@ -2152,27 +2152,34 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             break;
         }
 
-        /* See if we have a value in a static box, in which case we try to
-           store it in into the object currently bound to the lhs, duplicating
-           it instead if we can't. */
+        /* Try to copy the value, not assign the object, if the rhs is scalar
+           and doesn't have zero NAMEDCNT (for which assignment would be free). 
+           This will include static boxes, which must be duplicated if the
+           copy can't be done. */
 
-        if (IS_STATIC_BOX(rhs)) {
+        if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
+            SEXPTYPE rhs_type = TYPEOF(rhs);
             SEXP v = findVarInFrame3 (rho, lhs, 7);
-            if (v!=R_UnboundValue && TYPEOF(v)==TYPEOF(rhs) && !NAMEDCNT_GT_1(v)
-                                  && LENGTH(v)==1 && ATTRIB(v)==R_NilValue) {
-                if (rhs == R_ScalarRealBox) 
-                    *REAL(v) = *REAL(rhs);
-                else if (rhs == R_ScalarIntegerBox)
-                    *INTEGER(v) = *INTEGER(rhs);
-                else
-                    abort();
+            if (v!=R_UnboundValue && R_binding_cell != R_NilValue
+                                  && TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
+                                  && LENGTH(v)==1 && ATTRIB(v)==ATTRIB(rhs)
+                                  && TRUELENGTH(v) == TRUELENGTH(rhs)
+                                  && LEVELS(v)==LEVELS(rhs)) {
+                switch (rhs_type) {
+                case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
+                case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
+                case REALSXP: *REAL(v)    = *REAL(rhs);    break;
+                case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
+                case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
+                }
                 break;
             }
-            rhs = rhs == R_ScalarRealBox ? ScalarReal(*REAL(rhs))
-                                         : ScalarInteger(*INTEGER(rhs));
+            if (IS_STATIC_BOX(rhs)) 
+                rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
+                                              : ScalarReal(*REAL(rhs));
         }
 
-        /* Assign rhs object to lhs symbol. */
+        /* Assign rhs object to lhs symbol the usual way. */
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
 
