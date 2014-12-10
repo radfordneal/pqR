@@ -1027,7 +1027,11 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
 /* Version that doesn't check LASTSYMBINDING.  Split from above so the
    simplest case will have low overhead.  Could also be called directly
-   if it's known that checking LASTSYMBINDING won't help. */
+   if it's known that checking LASTSYMBINDING won't help. 
+
+   Will fail quickly when the symbol has LASTSYMENVNOTFOUND equal to 
+   the environment.  LASTSYMENVNOTFOUND is also update on failure if the 
+   environment is unhashed. */
 
 static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
@@ -1067,8 +1071,11 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 
     else if (HASHTAB(rho) == R_NilValue) {
 
-	loc = FRAME(rho);
-        SEARCH_LOOP (loc, symbol, goto found);
+        if (LASTSYMENVNOTFOUND(symbol) != rho) {
+            loc = FRAME(rho);
+            SEARCH_LOOP (loc, symbol, goto found);
+            LASTSYMENVNOTFOUND(symbol) = rho;
+        }
 
         return R_UnboundValue;
 
@@ -1431,7 +1438,7 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   symbols - otherwise, it might be skipped, and hence the global cache
   would be skipped as well.
 
-  An enviroment can also be skipped when the symbol has LASTSYMENVNOTFOUND
+  An environment can also be skipped when the symbol has LASTSYMENVNOTFOUND
   equal to that environment.  LASTSYMENVNOTFOUND is updated to the last
   unhashed environment where the symbol wasn't found.
 
@@ -1616,8 +1623,10 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
 
     if (HASHTAB(rho) == R_NilValue) {
-        loc = FRAME(rho);
-        SEARCH_LOOP (loc, symbol, goto found_update_last);
+        if (LASTSYMENVNOTFOUND(symbol) != rho) {
+            loc = FRAME(rho);
+            SEARCH_LOOP (loc, symbol, goto found_update_last);
+        }
     }
     else { /* hashed environment */
         SEXP c = PRINTNAME(symbol);
