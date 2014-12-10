@@ -351,7 +351,8 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 SEXP ans;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 
                   && !NAMEDCNT_GT_1(arg1)
-                  && arg1 == findVarInFrame3 (env, CADR(call), 7))
+                  && arg1 == findVarInFrame3 (env, CADR(call), 7)
+                  && R_binding_cell != R_NilValue)
                     R_variant_result = local_assign = 1;
                 if (type==REALSXP) {
                     ans = local_assign || NAMEDCNT_EQ_0(arg1) 
@@ -378,12 +379,14 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 int local_assign1 = 0, local_assign2 = 0;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
                     if (!NAMEDCNT_GT_1(arg1)
-                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
+                      && arg1 == findVarInFrame3 (env, CADR(call), 7)
+                      && R_binding_cell != R_NilValue)
                         R_variant_result = local_assign1 = 1;
                 }
                 else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
                     if (!NAMEDCNT_GT_1(arg2)
-                      && arg2 == findVarInFrame3 (env, CADDR(call), 7))
+                      && arg2 == findVarInFrame3 (env, CADDR(call), 7)
+                      && R_binding_cell != R_NilValue)
                         R_variant_result = local_assign2 = 1;
                 }
 
@@ -434,12 +437,14 @@ static SEXP do_fast_arith (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env,
                 int local_assign1 = 0, local_assign2 = 0;
                 if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
                     if (!NAMEDCNT_GT_1(arg1)
-                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
+                      && arg1 == findVarInFrame3 (env, CADR(call), 7)
+                      && R_binding_cell != R_NilValue)
                         R_variant_result = local_assign1 = 1;
                 }
                 else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
                     if (!NAMEDCNT_GT_1(arg2)
-                      && arg2 == findVarInFrame3 (env, CADDR(call), 7))
+                      && arg2 == findVarInFrame3 (env, CADDR(call), 7)
+                      && R_binding_cell != R_NilValue)
                         R_variant_result = local_assign2 = 1;
                 }
 
@@ -1053,12 +1058,14 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
     if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
         if (n == nx && !NAMEDCNT_GT_1(x)
-          && x == findVarInFrame3 (env, CADR(call), 7))
+          && x == findVarInFrame3 (env, CADR(call), 7)
+          && R_binding_cell != R_NilValue)
             local_assign1 = 1;
     }
     else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
         if (n == ny && !NAMEDCNT_GT_1(y)
-          && y == findVarInFrame3 (env, CADDR(call), 7))
+          && y == findVarInFrame3 (env, CADDR(call), 7)
+          && R_binding_cell != R_NilValue)
             local_assign2 = 1;
     }
     
@@ -1265,7 +1272,8 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1,
             ans = allocVector (INTSXP, n);
         else {
             if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1
-              && !NAMEDCNT_GT_1(s1) && s1 == findVarInFrame3(env,CADR(call),7))
+              && !NAMEDCNT_GT_1(s1) && s1 == findVarInFrame3(env,CADR(call),7)
+              && R_binding_cell != R_NilValue)
                 local_assign = 1;
             ans = local_assign || NAMEDCNT_EQ_0(s1) ? s1 
                     : allocVector(type,n);
@@ -1428,7 +1436,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
     if (TYPEOF(sa) != REALSXP)
         sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
     else if (VARIANT_KIND(variant)==VARIANT_LOCAL_ASSIGN1 && !NAMEDCNT_GT_1(sa)
-               && sa == findVarInFrame3 (env, CADR(call), 7))
+              && sa == findVarInFrame3 (env, CADR(call), 7) 
+              && R_binding_cell != R_NilValue)
         local_assign = 1;
 
     PROTECT(sa);
