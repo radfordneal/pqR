@@ -2113,7 +2113,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (PRIMVAL(op) == 2) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
-            break;
+            break;  /* out of switch */
         }
 
         /* Handle assignment into base and user database environments without
@@ -2122,7 +2122,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-            break;
+            break;  /* out of switch */
         }
 
         /* We decide whether we'll ask the right hand side evalutation to do
@@ -2158,20 +2158,27 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            copy can't be done. */
 
         if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
-            SEXPTYPE rhs_type = TYPEOF(rhs);
-            SEXP v = findVarInFrame3 (rho, lhs, 7);
-            if (v!=R_UnboundValue && TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
-                                  && LENGTH(v)==1 && ATTRIB(v)==ATTRIB(rhs)
-                                  && TRUELENGTH(v) == TRUELENGTH(rhs)
-                                  && LEVELS(v)==LEVELS(rhs)) {
-                switch (rhs_type) {
-                case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
-                case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
-                case REALSXP: *REAL(v)    = *REAL(rhs);    break;
-                case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
-                case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
+            SEXP v;
+            if (rho != LASTSYMENV(lhs) 
+                  || BINDING_IS_LOCKED(LASTSYMBINDING(lhs))
+                  || (v = CAR(LAST_SYMBINDING(lhs))) == R_UnboundValue)
+                v = findVarInFrame3_nolast (rho, lhs, 7);
+            if (v != R_UnboundValue) {
+                SEXPTYPE rhs_type = TYPEOF(rhs);
+                if (TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
+                      && LENGTH(v)==1 && ATTRIB(v)==ATTRIB(rhs)
+                      && TRUELENGTH(v) == TRUELENGTH(rhs)
+                      && LEVELS(v)==LEVELS(rhs)) {
+                    WAIT_UNTIL_COMPUTED(v);
+                    switch (rhs_type) {
+                    case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
+                    case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
+                    case REALSXP: *REAL(v)    = *REAL(rhs);    break;
+                    case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
+                    case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
+                    }
+                    break; /* out of switch */
                 }
-                break;
             }
             if (IS_STATIC_BOX(rhs)) 
                 rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
@@ -2182,7 +2189,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
 
-        break;
+        break;  /* out of switch */
     }
 
     /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
@@ -2460,7 +2467,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
   
-        break;
+        break;  /* out of switch */
     }
 
     /* -- ASSIGNMENT TO AN INVALID TARGET -- */
