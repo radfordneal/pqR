@@ -2161,7 +2161,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             SEXP v;
             if (rho != LASTSYMENV(lhs) 
                   || BINDING_IS_LOCKED(LASTSYMBINDING(lhs))
-                  || (v = CAR(LAST_SYMBINDING(lhs))) == R_UnboundValue)
+                  || (v = CAR(LASTSYMBINDING(lhs))) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
             if (v != R_UnboundValue) {
                 SEXPTYPE rhs_type = TYPEOF(rhs);

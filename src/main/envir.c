@@ -972,8 +972,6 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
   binding or locked).  Otherwise, R_binding_cell is set to R_NilValue.
 */
 
-static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
-
 SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 {
     SEXP value;
