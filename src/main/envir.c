@@ -1030,14 +1030,14 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 }
 
 /* Version that doesn't check LASTSYMBINDING.  Split from above so the
-   simplest case will have low overhead.  Could also be called directly
+   simplest case will have low overhead.  Can also be called directly
    if it's known that checking LASTSYMBINDING won't help. 
 
    Will fail quickly when the symbol has LASTSYMENVNOTFOUND equal to 
-   the environment.  LASTSYMENVNOTFOUND is also update on failure if the 
+   the environment.  LASTSYMENVNOTFOUND is also updated on failure if the 
    environment is unhashed. */
 
-static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
+SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
     SEXP loc, value;
 
