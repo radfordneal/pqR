@@ -2113,7 +2113,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (PRIMVAL(op) == 2) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
-            break;  /* out of switch */
+            break;  /* out of main switch */
         }
 
         /* Handle assignment into base and user database environments without
@@ -2122,7 +2122,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-            break;  /* out of switch */
+            break;  /* out of main switch */
         }
 
         /* We decide whether we'll ask the right hand side evalutation to do
@@ -2155,16 +2155,20 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Try to copy the value, not assign the object, if the rhs is scalar
            and doesn't have zero NAMEDCNT (for which assignment would be free). 
            This will include static boxes, which must be duplicated if the
-           copy can't be done. */
+           copy can't be done.  If the copy can't be done, but a binding
+           cell was found here, the assignment is done directly into the
+           binding cell. */
 
         if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
             SEXP v;
             if (rho != LASTSYMENV(lhs) 
-                  || BINDING_IS_LOCKED(LASTSYMBINDING(lhs))
-                  || (v = CAR(LASTSYMBINDING(lhs))) == R_UnboundValue)
+                  || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
+                  || (v = CAR(R_binding_cell)) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
             if (v != R_UnboundValue) {
                 SEXPTYPE rhs_type = TYPEOF(rhs);
+                if (NAMEDCNT_EQ_0(v)) /* this will wait until v is not in use */
+                    SET_NAMEDCNT_1(v);
                 if (TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
                       && LENGTH(v)==1 && ATTRIB(v)==ATTRIB(rhs)
                       && TRUELENGTH(v) == TRUELENGTH(rhs)
@@ -2177,19 +2181,28 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
                     case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
                     }
-                    break; /* out of switch */
+                    break; /* out of main switch */
                 }
             }
             if (IS_STATIC_BOX(rhs)) 
                 rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
                                               : ScalarReal(*REAL(rhs));
+            if (R_binding_cell != R_NilValue) {
+                DEC_NAMEDCNT_AND_PRVALUE(v);
+                SETCAR(R_binding_cell, rhs);
+                SET_MISSING(R_binding_cell,0);
+                INC_NAMEDCNT(rhs);
+                if (rho == R_GlobalEnv) 
+                    R_DirtyImage = 1;
+                break; /* out of main switch */
+            }
         }
 
         /* Assign rhs object to lhs symbol the usual way. */
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
 
-        break;  /* out of switch */
+        break;  /* out of main switch */
     }
 
     /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
@@ -2467,7 +2480,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
   
-        break;  /* out of switch */
+        break;  /* out of main switch */
     }
 
     /* -- ASSIGNMENT TO AN INVALID TARGET -- */
