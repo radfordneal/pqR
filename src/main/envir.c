@@ -958,7 +958,7 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
                   to finish.
 
     7             Like 3, except that it returns R_UnboundValue if the 
-                  binding found is active.
+                  binding found is active or locked.
 
   Note that (option&1)!=0 if a get should aways be done on a user database,
   and (option&2)!=0 if we don't need to wait.
@@ -969,7 +969,7 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
   Sets R_binding_cell to the CONS cell for the binding, if the value returned
   is not R_UnboundValue, and there is a cell (not one for base environment),
   and the cell is suitable for updating by the caller (is not for an active 
-  binding).  Otherwise, R_binding_cell is set to R_NilValue.
+  binding or locked).  Otherwise, R_binding_cell is set to R_NilValue.
 */
 
 static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option);
@@ -981,11 +981,12 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
     if (TYPEOF(symbol) != SYMSXP) abort();
 
     if (rho == LASTSYMENV(symbol)) {
-        value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
+        SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
+        value = CAR(binding);
         if (value == R_UnboundValue)
             LASTSYMENV(symbol) = NULL;
         else {
-            R_binding_cell = LASTSYMBINDING(symbol);
+            R_binding_cell = BINDING_IS_LOCKED(binding) ? R_NilValue : binding;
             return value;
         }
     }
@@ -1000,7 +1001,8 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
     if (TYPEOF(symbol) != SYMSXP) abort();
 
     if (rho == LASTSYMENV(symbol)) {
-        value = CAR(LASTSYMBINDING(symbol)); /* won't be an active binding */
+        SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
+        value = CAR(binding);
         if (value == R_UnboundValue)
             LASTSYMENV(symbol) = NULL;
         else {
@@ -1015,7 +1017,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
             default:
                 break;
             }
-            R_binding_cell = LASTSYMBINDING(symbol);
+            R_binding_cell = BINDING_IS_LOCKED(binding) ? R_NilValue : binding;
             return value;
         }
     }
@@ -1075,14 +1077,16 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
             if (option==7) 
                 return R_UnboundValue;
         }
-        else if (!DDVAL(symbol)) {
-            /* Note:  R_MakeActiveBinding won't let an existing binding 
-               become active, so we later assume this can't be active. */
-            LASTSYMENV(symbol) = rho;
-            LASTSYMBINDING(symbol) = loc;
+        else {
+            if (!DDVAL(symbol)) {
+                /* Note:  R_MakeActiveBinding won't let an existing binding 
+                   become active, so we later assume this can't be active. */
+                LASTSYMENV(symbol) = rho;
+                LASTSYMBINDING(symbol) = loc;
+            }
+            if (!BINDING_IS_LOCKED(loc)) 
+                R_binding_cell = loc;
         }
-        if (!IS_ACTIVE_BINDING(loc)) 
-            R_binding_cell = loc;
         if (option==2)
             return R_NilValue;
         else
@@ -1100,7 +1104,7 @@ static SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
         if (loc == R_NilValue || option == 7 && IS_ACTIVE_BINDING(loc))
             return R_UnboundValue;
-        if (!IS_ACTIVE_BINDING(loc)) 
+        if (!IS_ACTIVE_BINDING(loc) && !BINDING_IS_LOCKED(loc)) 
             R_binding_cell = loc;
         if (option==2)
             return R_NilValue;
@@ -1683,7 +1687,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     
   found:
     if (!IS_ACTIVE_BINDING(loc)) {
-        R_binding_cell = loc;
+        R_binding_cell = BINDING_IS_LOCKED(loc) ? R_NilValue : loc;
         if ((incdec&1))
             DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
     }
