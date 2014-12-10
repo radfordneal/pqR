@@ -31,6 +31,8 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a bug in which pqR's optimization of updates such as 
+        \code{a<-a+1} could sometimes permit modification of a locked binding.
   \item ...
 }}
 
