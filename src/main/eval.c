@@ -2160,8 +2160,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
             SEXPTYPE rhs_type = TYPEOF(rhs);
             SEXP v = findVarInFrame3 (rho, lhs, 7);
-            if (v!=R_UnboundValue && R_binding_cell != R_NilValue
-                                  && TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
+            if (v!=R_UnboundValue && TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
                                   && LENGTH(v)==1 && ATTRIB(v)==ATTRIB(rhs)
                                   && TRUELENGTH(v) == TRUELENGTH(rhs)
                                   && LEVELS(v)==LEVELS(rhs)) {
