@@ -163,9 +163,12 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     if (TYPEOF(v) == SYMSXP) {
         if (v == R_UnboundValue)
             Rprintf("UnboundValue");
-        else
+        else {
 	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
                     SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
+            Rprintf(" LAST... %p %p %p",LASTSYMENV(v),LASTSYMBINDING(v),
+                                LASTSYMENVNOTFOUND(v));
+        }
     }
     switch (TYPEOF(v)) { /* for native vectors print the first elements in-line */
     case LGLSXP:
