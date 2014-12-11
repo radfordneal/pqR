@@ -1703,12 +1703,12 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
     
   found:
-    SET_BINDING_VALUE(loc,value);
     if (!IS_ACTIVE_BINDING(loc)) {
         R_binding_cell = loc;
         if (incdec&1)
             DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
     }
+    SET_BINDING_VALUE(loc,value);
     if (incdec&2) 
         INC_NAMEDCNT(value);
     SET_MISSING(loc,0);
