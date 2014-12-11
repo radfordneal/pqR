@@ -1,0 +1,3 @@
+Miscellaneous small changes.
+
+.Internal(inspect(symbol)) now displays the LAST... fields.
