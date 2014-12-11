@@ -2157,7 +2157,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            This will include static boxes, which must be duplicated if the
            copy can't be done.  If the copy can't be done, but a binding
            cell was found here, the assignment is done directly into the
-           binding cell. */
+           binding cell, avoiding the overhead of calling set_var_in_frame. */
 
         if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
             SEXP v;
@@ -2201,7 +2201,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Assign rhs object to lhs symbol the usual way. */
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-
         break;  /* out of main switch */
     }
 
