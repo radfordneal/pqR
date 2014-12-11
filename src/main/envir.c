@@ -1706,8 +1706,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     SET_BINDING_VALUE(loc,value);
     if (!IS_ACTIVE_BINDING(loc)) {
         R_binding_cell = loc;
-        if ((incdec&1))
-            DEC_NAMEDCNT_AND_PRVALUE(value);
+        if (incdec&1)
+            DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
     }
     if (incdec&2) 
         INC_NAMEDCNT(value);
