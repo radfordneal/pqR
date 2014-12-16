@@ -39,6 +39,8 @@
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
   \itemize{
   \item ...
+  \item Removed incorrect information from \code{help(call)}, as also
+        done in R-3.0.2.
 }}
 }
 
