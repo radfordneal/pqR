@@ -41,8 +41,7 @@ as.call(x)
   so should be a function or the name of one (as a symbol; a quoted
   string will not do).  
   
-  All three are \link{primitive} functions.  \code{call} is
-  \sQuote{special}: it only evaluates its first argument.
+  All three are \link{primitive} functions.
 }
 \seealso{
   \code{\link{do.call}} for calling a function by name and argument
