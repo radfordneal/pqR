@@ -4399,7 +4399,7 @@ installed) in @file{/usr/sfw/bin}, as sometimes are tools like
 @file{/usr/xpg4/bin} and @file{/usr/xpg6/bin}.
 
 A large selection of Open Source software can be installed from
-@uref{http://www.opencsw.org} (and also @uref{http://www.blastwave.org})
+@uref{http://www.opencsw.org}
 via @command{pkg-get}, by default installed under @file{/opt/csw}.
 
 You will need @acronym{GNU} @code{libiconv} and @code{readline}: the
