@@ -28,6 +28,16 @@ print(apply(M,1,f1))
 print(apply(M,2,f1))
 print(apply(M,1,f2,101.23))
 print(apply(M,2,f2,101.23))
+A <- array (1:12, c(2,2,3))
+print(A)
+print(apply(A,1,f1))
+print(apply(A,2,f1))
+print(apply(A,3,f1))
+print(apply(A,c(1,3),f1))
+print(apply(A,1,f2,101.23))
+print(apply(A,2,f2,101.23))
+print(apply(A,3,f2,101.23))
+print(apply(A,c(1,3),f2,101.23))
 
 # Check that delayed warnings refer to [[1L]] and [[3L]].  (They don't
 # if later calls modifiy earlier calls.)  The first set of warnings are
@@ -42,7 +52,10 @@ for (w in c(1,0)) {
     print(eapply(as.environment(list(a=-1,b=2,c=-1)),sqrt))
     M <- matrix(-1,3,4)
     print(apply(M,1,sqrt))
+    A <- array(-1,c(2,2,2))
+    print(apply(A,2,sqrt))
 }
+warnings()
 
 # Test that indexed value is corectly retained when the applied function
 # returns a function that references it.
@@ -65,3 +78,7 @@ fns <- apply (matrix(11:13,3,1), 1, function(x) function () x)
 print(fns)
 print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 
+fns <- apply (array(1:8,c(2,2,2)), 1, function(x) function () x)
+print(fns)
+print(fns[[1]]())
+print(fns[[2]]())
