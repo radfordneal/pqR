@@ -193,16 +193,16 @@ $b
 $a
 [1] NaN
 
-Warning in FUN(X[i, ]) : NaNs produced
-Warning in FUN(X[i, ]) : NaNs produced
-Warning in FUN(X[i, ]) : NaNs produced
+Warning in FUN(X[1L, ]) : NaNs produced
+Warning in FUN(X[2L, ]) : NaNs produced
+Warning in FUN(X[3L, ]) : NaNs produced
      [,1] [,2] [,3]
 [1,]  NaN  NaN  NaN
 [2,]  NaN  NaN  NaN
 [3,]  NaN  NaN  NaN
 [4,]  NaN  NaN  NaN
-Warning in FUN(array(X[, i], d.call, dn.call)) : NaNs produced
-Warning in FUN(array(X[, i], d.call, dn.call)) : NaNs produced
+Warning in FUN(array(X[, 1L], d.call, dn.call)) : NaNs produced
+Warning in FUN(array(X[, 2L], d.call, dn.call)) : NaNs produced
      [,1] [,2]
 [1,]  NaN  NaN
 [2,]  NaN  NaN
@@ -244,13 +244,13 @@ Warning messages:
 2: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
 3: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
 4: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
-5: In FUN(list(-1, 2, -1)[[3L]]) : NaNs produced
+5: In FUN(list(-1, 2, -1)[[1L]]) : NaNs produced
 6: In FUN(list(-1, 2, -1)[[3L]]) : NaNs produced
-7: In FUN(X[i, ]) : NaNs produced
-8: In FUN(X[i, ]) : NaNs produced
-9: In FUN(X[i, ]) : NaNs produced
-10: In FUN(array(X[, i], d.call, dn.call)) : NaNs produced
-11: In FUN(array(X[, i], d.call, dn.call)) : NaNs produced
+7: In FUN(X[1L, ]) : NaNs produced
+8: In FUN(X[2L, ]) : NaNs produced
+9: In FUN(X[3L, ]) : NaNs produced
+10: In FUN(array(X[, 1L], d.call, dn.call)) : NaNs produced
+11: In FUN(array(X[, 2L], d.call, dn.call)) : NaNs produced
 > 
 > # Test that indexed value is corectly retained when the applied function
 > # returns a function that references it.
@@ -264,17 +264,17 @@ Warning messages:
 [[1]]
 function () 
 x
-<environment: 0x208e2c8>
+<environment: 0xd7c4f0>
 
 [[2]]
 function () 
 x
-<environment: 0x208e3e0>
+<environment: 0xd7c608>
 
 [[3]]
 function () 
 x
-<environment: 0x208e520>
+<environment: 0xd7c720>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 13 13 13
@@ -284,17 +284,17 @@ x
 [[1]]
 function () 
 x
-<environment: 0x20376a8>
+<environment: 0x1fb1960>
 
 [[2]]
 function () 
 x
-<environment: 0x20377f8>
+<environment: 0x1fb1ad8>
 
 [[3]]
 function () 
 x
-<environment: 0x2037948>
+<environment: 0x1fb1c28>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 13 13 13
@@ -304,57 +304,57 @@ x
 $c
 function () 
 x
-<environment: 0x1f911e8>
+<environment: 0x1c33088>
 
 $b
 function () 
 x
-<environment: 0x1f91ba0>
+<environment: 0x1c332b8>
 
 $a
 function () 
 x
-<environment: 0x1f91cb8>
+<environment: 0x1c334e8>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
-[1] 11 11 11
+[1] 13 12 11
 > 
 > fns <- apply (matrix(11:13,3,1), 1, function(x) function () x)
 > print(fns)
 [[1]]
 function () 
 x
-<environment: 0x1cdb210>
+<environment: 0x1283c40>
 
 [[2]]
 function () 
 x
-<environment: 0x1cdb558>
+<environment: 0x12849b8>
 
 [[3]]
 function () 
 x
-<environment: 0x1cdb8d0>
+<environment: 0x12856c8>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
-[1] 13 13 13
+[1] 11 12 13
 > 
 > fns <- apply (array(1:8,c(2,2,2)), 1, function(x) function () x)
 > print(fns)
 [[1]]
 function () 
 x
-<environment: 0x1180098>
+<environment: 0x199a130>
 
 [[2]]
 function () 
 x
-<environment: 0x11803e0>
+<environment: 0x127fa08>
 
 > print(fns[[1]]())
      [,1] [,2]
-[1,]    2    6
-[2,]    4    8
+[1,]    1    5
+[2,]    3    7
 > print(fns[[2]]())
      [,1] [,2]
 [1,]    2    6
