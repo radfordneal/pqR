@@ -1,5 +1,43 @@
 
+pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
+No helper threads, task merging enabled.
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Test possible bugs involving the various apply functions.
+> #
+> # Added for pqR, 2015, Radford M. Neal.
+> 
+> # Check basic function, with and without extra arguments.
+> 
+> f1 <- function (x) sum(x)+1.23
+> f2 <- function (x,a) sum(x)+a
+> 
+> L <- list (a=3, b=c(1,7), c=c(5,2,9))
+> 
+> cat("\n-- lapply:\n")
+
 -- lapply:
+> print(lapply(L,f1))
 $a
 [1] 4.23
 
@@ -9,6 +47,7 @@ $b
 $c
 [1] 17.23
 
+> print(lapply(L,f2,101.23))
 $a
 [1] 104.23
 
@@ -18,14 +57,21 @@ $b
 $c
 [1] 117.23
 
+> 
+> cat("\n-- vapply:\n")
 
 -- vapply:
+> print(vapply(L,f1,numeric(1)))
     a     b     c 
  4.23  9.23 17.23 
+> print(vapply(L,f2,numeric(1),101.23))
      a      b      c 
 104.23 109.23 117.23 
+> 
+> cat("\n-- eapply:\n")
 
 -- eapply:
+> print(eapply(as.environment(L),f1))
 $c
 [1] 17.23
 
@@ -35,6 +81,7 @@ $b
 $a
 [1] 4.23
 
+> print(eapply(as.environment(L),f2,101.23))
 $c
 [1] 117.23
 
@@ -44,16 +91,26 @@ $b
 $a
 [1] 104.23
 
+> 
+> cat("\n-- apply:\n")
 
 -- apply:
+> M <- matrix (1:12, 3, 4)
+> print(M)
      [,1] [,2] [,3] [,4]
 [1,]    1    4    7   10
 [2,]    2    5    8   11
 [3,]    3    6    9   12
+> print(apply(M,1,f1))
 [1] 23.23 27.23 31.23
+> print(apply(M,2,f1))
 [1]  7.23 16.23 25.23 34.23
+> print(apply(M,1,f2,101.23))
 [1] 123.23 127.23 131.23
+> print(apply(M,2,f2,101.23))
 [1] 107.23 116.23 125.23 134.23
+> A <- array (1:12, c(2,2,3))
+> print(A)
 , , 1
 
      [,1] [,2]
@@ -72,22 +129,47 @@ $a
 [1,]    9   11
 [2,]   10   12
 
+> print(apply(A,1,f1))
 [1] 37.23 43.23
+> print(apply(A,2,f1))
 [1] 34.23 46.23
+> print(apply(A,3,f1))
 [1] 11.23 27.23 43.23
+> print(apply(A,c(1,3),f1))
      [,1]  [,2]  [,3]
 [1,] 5.23 13.23 21.23
 [2,] 7.23 15.23 23.23
+> print(apply(A,1,f2,101.23))
 [1] 137.23 143.23
+> print(apply(A,2,f2,101.23))
 [1] 134.23 146.23
+> print(apply(A,3,f2,101.23))
 [1] 111.23 127.23 143.23
+> print(apply(A,c(1,3),f2,101.23))
        [,1]   [,2]   [,3]
 [1,] 105.23 113.23 121.23
 [2,] 107.23 115.23 123.23
+> 
+> # Check that delayed warnings refer to [[1L]] and [[3L]].  (They don't
+> # if later calls modifiy earlier calls.)  The first set of warnings are
+> # the undelayed ones, followed at the end of this script or end of this
+> # section (depending on how it's run) by the delayed versions.
+> 
+> cat("\n-- checking warnings:\n")
 
 -- checking warnings:
-Warning in FUN(c(-1, 2, -1)[[1L]], ...) : NaNs produced
-Warning in FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
+> for (w in c(1,0)) {
++     options(warn=w)
++     print(lapply(c(-1,2,-1),sqrt))  
++     print(vapply(c(-1,2,-1),sqrt,numeric(1)))
++     print(eapply(as.environment(list(a=-1,b=2,c=-1)),sqrt))
++     M <- matrix(-1,3,4)
++     print(apply(M,1,sqrt))
++     A <- array(-1,c(2,2,2))
++     print(apply(A,2,sqrt))
++ }
+Warning in FUN(c(-1, 2, -1)[[1L]]) : NaNs produced
+Warning in FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
 [[1]]
 [1] NaN
 
@@ -97,11 +179,11 @@ Warning in FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
 [[3]]
 [1] NaN
 
-Warning in FUN(c(-1, 2, -1)[[1L]], ...) : NaNs produced
-Warning in FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
+Warning in FUN(c(-1, 2, -1)[[1L]]) : NaNs produced
+Warning in FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
 [1]      NaN 1.414214      NaN
-Warning in FUN(list(-1, 2, -1)[[1L]], ...) : NaNs produced
-Warning in FUN(list(-1, 2, -1)[[3L]], ...) : NaNs produced
+Warning in FUN(list(-1, 2, -1)[[1L]]) : NaNs produced
+Warning in FUN(list(-1, 2, -1)[[3L]]) : NaNs produced
 $c
 [1] NaN
 
@@ -111,16 +193,16 @@ $b
 $a
 [1] NaN
 
-Warning in FUN(newX[, i], ...) : NaNs produced
-Warning in FUN(newX[, i], ...) : NaNs produced
-Warning in FUN(newX[, i], ...) : NaNs produced
+Warning in FUN(X[i, ]) : NaNs produced
+Warning in FUN(X[i, ]) : NaNs produced
+Warning in FUN(X[i, ]) : NaNs produced
      [,1] [,2] [,3]
 [1,]  NaN  NaN  NaN
 [2,]  NaN  NaN  NaN
 [3,]  NaN  NaN  NaN
 [4,]  NaN  NaN  NaN
-Warning in FUN(array(newX[, i], d.call, dn.call), ...) : NaNs produced
-Warning in FUN(array(newX[, i], d.call, dn.call), ...) : NaNs produced
+Warning in FUN(array(X[, i], d.call, dn.call)) : NaNs produced
+Warning in FUN(array(X[, i], d.call, dn.call)) : NaNs produced
      [,1] [,2]
 [1,]  NaN  NaN
 [2,]  NaN  NaN
@@ -156,97 +238,125 @@ $a
 [3,]  NaN  NaN
 [4,]  NaN  NaN
 There were 11 warnings (use warnings() to see them)
+> warnings()
 Warning messages:
-1: In FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
-2: In FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
-3: In FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
-4: In FUN(c(-1, 2, -1)[[3L]], ...) : NaNs produced
-5: In FUN(list(-1, 2, -1)[[3L]], ...) : NaNs produced
-6: In FUN(list(-1, 2, -1)[[3L]], ...) : NaNs produced
-7: In FUN(newX[, i], ...) : NaNs produced
-8: In FUN(newX[, i], ...) : NaNs produced
-9: In FUN(newX[, i], ...) : NaNs produced
-10: In FUN(array(newX[, i], d.call, dn.call), ...) : NaNs produced
-11: In FUN(array(newX[, i], d.call, dn.call), ...) : NaNs produced
+1: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
+2: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
+3: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
+4: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
+5: In FUN(list(-1, 2, -1)[[3L]]) : NaNs produced
+6: In FUN(list(-1, 2, -1)[[3L]]) : NaNs produced
+7: In FUN(X[i, ]) : NaNs produced
+8: In FUN(X[i, ]) : NaNs produced
+9: In FUN(X[i, ]) : NaNs produced
+10: In FUN(array(X[, i], d.call, dn.call)) : NaNs produced
+11: In FUN(array(X[, i], d.call, dn.call)) : NaNs produced
+> 
+> # Test that indexed value is corectly retained when the applied function
+> # returns a function that references it.
+> 
+> cat("\n-- checking function environments:\n")
 
 -- checking function environments:
+> 
+> fns <- lapply (11:13, function(x) function () x)
+> print(fns)
 [[1]]
 function () 
 x
-<environment: 0x278cf28>
+<environment: 0x208e2c8>
 
 [[2]]
 function () 
 x
-<environment: 0x278cdd8>
+<environment: 0x208e3e0>
 
 [[3]]
 function () 
 x
-<environment: 0x278cc88>
+<environment: 0x208e520>
 
+> print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 13 13 13
+> 
+> fns <- vapply (11:13, function(x) list(function () x), list (function () 0))
+> print(fns)
 [[1]]
 function () 
 x
-<environment: 0x27927e8>
+<environment: 0x20376a8>
 
 [[2]]
 function () 
 x
-<environment: 0x2792660>
+<environment: 0x20377f8>
 
 [[3]]
 function () 
 x
-<environment: 0x27924d8>
+<environment: 0x2037948>
 
+> print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 13 13 13
+> 
+> fns <- eapply (as.environment(list(a=11,b=12,c=13)), function(x) function () x)
+> print(fns)
 $c
 function () 
 x
-<environment: 0x2797698>
+<environment: 0x1f911e8>
 
 $b
 function () 
 x
-<environment: 0x27984b0>
+<environment: 0x1f91ba0>
 
 $a
 function () 
 x
-<environment: 0x2798360>
+<environment: 0x1f91cb8>
 
+> print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 11 11 11
+> 
+> fns <- apply (matrix(11:13,3,1), 1, function(x) function () x)
+> print(fns)
 [[1]]
 function () 
 x
-<environment: 0x279ed78>
+<environment: 0x1cdb210>
 
 [[2]]
 function () 
 x
-<environment: 0x279eb10>
+<environment: 0x1cdb558>
 
 [[3]]
 function () 
 x
-<environment: 0x27a0008>
+<environment: 0x1cdb8d0>
 
+> print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 13 13 13
+> 
+> fns <- apply (array(1:8,c(2,2,2)), 1, function(x) function () x)
+> print(fns)
 [[1]]
 function () 
 x
-<environment: 0x27a80d0>
+<environment: 0x1180098>
 
 [[2]]
 function () 
 x
-<environment: 0x27a8dd0>
+<environment: 0x11803e0>
 
+> print(fns[[1]]())
      [,1] [,2]
 [1,]    2    6
 [2,]    4    8
+> print(fns[[2]]())
      [,1] [,2]
 [1,]    2    6
 [2,]    4    8
+> 

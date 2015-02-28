@@ -11,7 +11,6 @@ test-src-gct = \
 	lm-tests.R \
 	ok-errors.R \
 	method-dispatch.R \
-	apply.R \
 	array-subset.R \
 	any-all.R
 test-src-strict-1 = \
@@ -25,6 +24,7 @@ test-src-strict-1 = \
 test-src-strict-auto =
 test-src-sloppy-1 = \
 	complex.R \
+	apply.R \
 	print-tests.R \
 	lapack.R \
 	datasets.R \
