@@ -136,8 +136,6 @@ apply <- function(X, MARGIN, FUN, ...)
                 }
     }
 
-    X <- NULL
-
     ## answer dims and dimnames
 
     ans.list <- is.recursive(ans[[1L]]) ||
