@@ -11,6 +11,7 @@ test-src-gct = \
 	lm-tests.R \
 	ok-errors.R \
 	method-dispatch.R \
+	apply.R \
 	array-subset.R \
 	any-all.R
 test-src-strict-1 = \
