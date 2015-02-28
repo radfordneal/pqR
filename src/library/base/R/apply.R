@@ -78,12 +78,16 @@ apply <- function(X, MARGIN, FUN, ...)
             dimnames(X) <- 
               if (s.call==1) c(dn.call, list(NULL)) else c(list(NULL), dn.call)
 
-        if (s.ans == 1)
+        if (s.ans == 1) {
             call_FUN <- 
                 if (missing(...)) quote (FUN(X[i,])) else quote (FUN(X[i,],...))
-        else
+            i_index <- c(2,3)
+        }
+        else {
             call_FUN <- 
                 if (missing(...)) quote (FUN(X[,i])) else quote (FUN(X[,i],...))
+            i_index <- c(2,4)
+        }
     }
     else {
 
@@ -97,16 +101,19 @@ apply <- function(X, MARGIN, FUN, ...)
                 dimnames(X) <- c(dn.call, list(NULL))
             call_FUN <- 
                 if (missing(...)) quote (FUN(X[,i])) else quote (FUN(X[,i],...))
+            i_index <- c(2,4)
         } 
         else {
             call_FUN <- 
                 ( if (missing(...)) quote (FUN (array(X[,i], d.call, dn.call)))
                   else quote (FUN (array(X[,i], d.call, dn.call), ...)) )
+            i_index <- c(2,2,4)
         }
     }
 
     for (i in 1L:d2) {
         this_call <- call_FUN
+        this_call[[i_index]] <- i
         tmp <- eval(this_call)
         if (!is.null(tmp)) ans[[i]] <- tmp
     }
