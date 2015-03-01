@@ -32,6 +32,8 @@
   \subsection{BUG FIXES}{
   \itemize{
   \item ...
+  \item Fixed a problem with apply, lapply, vapply, and eapply.  (Add
+        more details later.)
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
