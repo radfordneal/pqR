@@ -1,0 +1,5 @@
+Fix problems with apply, lapply, vapply, and eapply, in which the
+index is changed in a way that affects applying functions that create
+functions, and also trashes saved warnings (for lapply, vapply, and
+eapply).  Adds a new test for this problem, and generally for the
+apply functions.

@@ -34,6 +34,8 @@
   \item Fixed a bug in which pqR's optimization of updates such as 
         \code{a<-a+1} could sometimes permit modification of a locked binding.
   \item ...
+  \item Fixed a problem with apply, lapply, vapply, and eapply.  (Add
+        more details later.)
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -2886,7 +2886,7 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind;
+    SEXP env, ans, R_fcall, FUN, tmp2, End;
     int i, k, k2;
     int all, useNms, no_dots;
 
@@ -2931,19 +2931,20 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	FrameValues(FRAME(env), all, tmp2, &k2);
 
-    PROTECT(ind = allocVector1INT());
-    /* tmp :=  `[`(<elist>, i) */
-    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-			CONS(tmp2, LCONS(ind, R_NilValue))));
-    /* fcall :=  <FUN>( tmp, ... ), with ... omitted if nothing */
-    if (no_dots)
-        PROTECT(R_fcall = LCONS(FUN, CONS(tmp, R_NilValue)));
-    else
-        PROTECT(R_fcall = LCONS(FUN, CONS(tmp, CONS(R_DotsSymbol,R_NilValue))));
+    /* fcall :=  <FUN>( `[`(<elist>, i), tmp, ... ), with ... maybe omitted 
+
+       Don't try to reuse the cell holding the index - causes problems. */
+
+    PROTECT(End = no_dots ? R_NilValue : CONS(R_DotsSymbol,R_NilValue));
 
     for(i = 0; i < k2; i++) {
-	INTEGER(ind)[0] = i+1;
+        PROTECT(R_fcall = LCONS(FUN, 
+                            CONS(LCONS(R_Bracket2Symbol,
+                                     CONS(tmp2, 
+                                        CONS(ScalarInteger(i+1), R_NilValue))),
+                                 End)));
         SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
+        UNPROTECT(1);
     }
 
     if (useNms) {
@@ -2960,7 +2961,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	setAttrib(ans, R_NamesSymbol, names);
 	UNPROTECT(1);
     }
-    UNPROTECT(5);
+    UNPROTECT(3);
     return(ans);
 }
 
