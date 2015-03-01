@@ -242,7 +242,7 @@ There were 11 warnings (use warnings() to see them)
 Warning messages:
 1: In FUN(c(-1, 2, -1)[[1L]]) : NaNs produced
 2: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
-3: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
+3: In FUN(c(-1, 2, -1)[[1L]]) : NaNs produced
 4: In FUN(c(-1, 2, -1)[[3L]]) : NaNs produced
 5: In FUN(list(-1, 2, -1)[[1L]]) : NaNs produced
 6: In FUN(list(-1, 2, -1)[[3L]]) : NaNs produced
@@ -264,17 +264,17 @@ Warning messages:
 [[1]]
 function () 
 x
-<environment: 0x3179900>
+<environment: 0x2765be8>
 
 [[2]]
 function () 
 x
-<environment: 0x3179b30>
+<environment: 0x2765e18>
 
 [[3]]
 function () 
 x
-<environment: 0x3179dc8>
+<environment: 0x27660a8>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 11 12 13
@@ -284,37 +284,37 @@ x
 [[1]]
 function () 
 x
-<environment: 0x317db48>
+<environment: 0x2557920>
 
 [[2]]
 function () 
 x
-<environment: 0x317dc98>
+<environment: 0x2557b88>
 
 [[3]]
 function () 
 x
-<environment: 0x317dde8>
+<environment: 0x2557e18>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
-[1] 13 13 13
+[1] 11 12 13
 > 
 > fns <- eapply (as.environment(list(a=11,b=12,c=13)), function(x) function () x)
 > print(fns)
 $c
 function () 
 x
-<environment: 0x3836c70>
+<environment: 0x1af8280>
 
 $b
 function () 
 x
-<environment: 0x3836ea0>
+<environment: 0x1af84b0>
 
 $a
 function () 
 x
-<environment: 0x38370d0>
+<environment: 0x1af86e0>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 13 12 11
@@ -324,17 +324,17 @@ x
 [[1]]
 function () 
 x
-<environment: 0x3c5f520>
+<environment: 0x1d3cd30>
 
 [[2]]
 function () 
 x
-<environment: 0x3c60268>
+<environment: 0x1d3da78>
 
 [[3]]
 function () 
 x
-<environment: 0x3190ca0>
+<environment: 0x1d3e7b8>
 
 > print(c(fns[[1]](),fns[[2]](),fns[[3]]()))
 [1] 11 12 13
@@ -344,12 +344,12 @@ x
 [[1]]
 function () 
 x
-<environment: 0x3db7178>
+<environment: 0x179e7c8>
 
 [[2]]
 function () 
 x
-<environment: 0x2a4aff0>
+<environment: 0x179ffe8>
 
 > print(fns[[1]]())
      [,1] [,2]

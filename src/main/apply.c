@@ -87,12 +87,11 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* This is a special .Internal */
 static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP R_fcall, ans, X, XX, FUN, value, dim_v, dotsv;
+    SEXP R_fcall, ans, X, XX, FUN, value, dim_v, dotsv, End;
     int i, n, commonLen, useNames, no_dots;
     Rboolean array_value;
     SEXPTYPE commonType;
     PROTECT_INDEX index;
-    SEXP ind, tmp;
 
     SEXP names=R_NilValue, rowNames=R_NilValue;
     int rnk_v = -1; // = array_rank(value) := length(dim(value))
@@ -133,26 +132,24 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
        The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
        using the evaluated version.  (It's unclear why we 
-       can't always use XX, but let's keep as is - R.N.) */
+       can't always use XX, but let's keep as is - R.N.)
 
-    PROTECT(ind = allocVector1INT());
-    if(isVectorAtomic(XX))
-        PROTECT(tmp = LCONS(R_Bracket2Symbol,
-                            CONS(XX, CONS(ind, R_NilValue))));
-    else
-        PROTECT(tmp = LCONS(R_Bracket2Symbol,
-                            CONS(X, CONS(ind, R_NilValue))));
+       Don't try to reuse the cell holding the index - causes problems. */
 
-    if (no_dots)
-        PROTECT(R_fcall = LCONS(FUN, CONS(tmp, R_NilValue)));
-    else
-        PROTECT(R_fcall = 
-                  LCONS(FUN, CONS(tmp, CONS(R_DotsSymbol, R_NilValue))));
+    if(isVectorAtomic(XX)) X = XX;
+
+    PROTECT(End = no_dots ? R_NilValue : CONS(R_DotsSymbol, R_NilValue));
 
     for(i = 0; i < n; i++) {
         SEXPTYPE tmpType;
-        INTEGER(ind)[0] = i + 1;
+        SEXP tmp;
+        PROTECT(R_fcall = LCONS (FUN, 
+                           CONS (LCONS(R_Bracket2Symbol,
+                                  CONS(X, CONS(ScalarInteger(i+1),R_NilValue))),
+                                 End)));
         tmp = eval(R_fcall, rho);
+        UNPROTECT(1);
+        PROTECT(tmp);
         if (length(tmp) != commonLen)
             error(_("values must be length %d,\n but FUN(X[[%d]]) result is length %d"),
                   commonLen, i+1, length(tmp));
@@ -202,9 +199,10 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
                 error(_("type '%s' is not supported"), type2char(commonType));
             }
         }
+        UNPROTECT(1); /* tmp */
     }
 
-    UNPROTECT(3);
+    UNPROTECT(1); /* End */
 
     if (commonLen != 1) {
 	SEXP dim;
@@ -243,7 +241,7 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
     }
-    UNPROTECT(useNames ? 6 : 4); /* X, XX, value, ans, and maybe names and rowNames */
+    UNPROTECT(useNames ? 6 : 4); /* X, XX, value, ans + maybe names, rowNames */
     return ans;
 }
 
