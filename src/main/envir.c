@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -2910,7 +2910,9 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	FrameValues(FRAME(env), all, tmp2, &k2);
 
-    /* fcall :=  <FUN>( `[`(<elist>, i), tmp, ... ), with ... maybe omitted */
+    /* fcall :=  <FUN>( `[`(<elist>, i), tmp, ... ), with ... maybe omitted 
+
+       Don't try to reuse the cell holding the index - causes problems. */
 
     PROTECT(End = no_dots ? R_NilValue : CONS(R_DotsSymbol,R_NilValue));
 

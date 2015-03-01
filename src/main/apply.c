@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2000-10  The R Development Core Team
@@ -37,7 +37,7 @@
    called from a closure wrapper, so X and FUN are promises. */
 static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP R_fcall, ans, names, X, XX, FUN, dotsv;
+    SEXP R_fcall, ans, names, X, XX, FUN, dotsv, ind, tmp;
     int i, n, no_dots;
     PROTECT_INDEX px;
 
@@ -56,41 +56,33 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     names = getAttrib(XX, R_NamesSymbol);
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
 
-    /* The R level code has ensured that XX is a vector.
+    /* Build call: FUN(XX[[<ind>]], ...), with ... omitted if not there.
+
+       The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
-       using the evaluated version.
-    */
-    {
-	SEXP ind, tmp;
-	/* Build call: FUN(XX[[<ind>]], ...), with ... omitted if not there. */
+       using the evaluated version.  (It's unclear why we 
+       can't always use XX, but let's keep as is - R.N.) */
 
-	/* Notice that it is OK to have one arg to LCONS do memory
-	   allocation and not PROTECT the result (LCONS does memory
-	   protection of its args internally), but not both of them,
-	   since the computation of one may destroy the other */
+    PROTECT(ind = allocVector1INT());
+    if(isVectorAtomic(XX))
+        PROTECT(tmp = LCONS(R_Bracket2Symbol,
+                            CONS(XX, CONS(ind, R_NilValue))));
+    else
+        PROTECT(tmp = LCONS(R_Bracket2Symbol,
+                            CONS(X, CONS(ind, R_NilValue))));
 
-	PROTECT(ind = allocVector1INT());
-	if(isVectorAtomic(XX))
-	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-				CONS(XX, CONS(ind, R_NilValue))));
-	else
-	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
-				CONS(X, CONS(ind, R_NilValue))));
+    if (no_dots)
+        PROTECT(R_fcall = LCONS (FUN, CONS (tmp, R_NilValue)));
+    else 
+        PROTECT(R_fcall = 
+                  LCONS (FUN, CONS (tmp, CONS(R_DotsSymbol, R_NilValue))));
 
-        if (no_dots)
-	    PROTECT(R_fcall = LCONS (FUN, CONS (tmp, R_NilValue)));
-        else 
-	    PROTECT(R_fcall = 
-	              LCONS (FUN, CONS (tmp, CONS(R_DotsSymbol, R_NilValue))));
-
-	for(i = 0; i < n; i++) {
-	    INTEGER(ind)[0] = i + 1;
-	    SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
-	}
-	UNPROTECT(3);
+    for(i = 0; i < n; i++) {
+        INTEGER(ind)[0] = i + 1;
+        SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
     }
 
-    UNPROTECT(3); /* X, XX, ans */
+    UNPROTECT(6); /* X, XX, ans, ind, R_fcall, tmp */
     return ans;
 }
 
@@ -144,13 +136,8 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
        The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
-       using the evaluated version.
-
-       Notice that it is OK to have one arg to LCONS do memory
-       allocation and not PROTECT the result (LCONS does memory
-       protection of its args internally), but not both of them,
-       since the computation of one may destroy the other.
-    */
+       using the evaluated version.  (It's unclear why we 
+       can't always use XX, but let's keep as is - R.N.) */
 
     PROTECT(ind = allocVector1INT());
     if(isVectorAtomic(XX))
