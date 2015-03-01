@@ -37,7 +37,7 @@
    called from a closure wrapper, so X and FUN are promises. */
 static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP R_fcall, ans, names, X, XX, FUN, dotsv, ind, tmp;
+    SEXP R_fcall, ans, names, X, XX, FUN, dotsv, End;
     int i, n, no_dots;
     PROTECT_INDEX px;
 
@@ -61,28 +61,24 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
        The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
        using the evaluated version.  (It's unclear why we 
-       can't always use XX, but let's keep as is - R.N.) */
+       can't always use XX, but let's keep as is - R.N.) 
 
-    PROTECT(ind = allocVector1INT());
-    if(isVectorAtomic(XX))
-        PROTECT(tmp = LCONS(R_Bracket2Symbol,
-                            CONS(XX, CONS(ind, R_NilValue))));
-    else
-        PROTECT(tmp = LCONS(R_Bracket2Symbol,
-                            CONS(X, CONS(ind, R_NilValue))));
+       Don't try to reuse the cell holding the index - causes problems. */
 
-    if (no_dots)
-        PROTECT(R_fcall = LCONS (FUN, CONS (tmp, R_NilValue)));
-    else 
-        PROTECT(R_fcall = 
-                  LCONS (FUN, CONS (tmp, CONS(R_DotsSymbol, R_NilValue))));
+    if(isVectorAtomic(XX)) X = XX;
+
+    PROTECT(End = no_dots ? R_NilValue : CONS(R_DotsSymbol, R_NilValue));
 
     for(i = 0; i < n; i++) {
-        INTEGER(ind)[0] = i + 1;
+        PROTECT(R_fcall = LCONS (FUN, 
+                           CONS (LCONS(R_Bracket2Symbol,
+                                  CONS(X, CONS(ScalarInteger(i+1),R_NilValue))),
+                                 End)));
         SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
+        UNPROTECT(1);
     }
 
-    UNPROTECT(6); /* X, XX, ans, ind, R_fcall, tmp */
+    UNPROTECT(4); /* X, XX, ans, End */
     return ans;
 }
 
