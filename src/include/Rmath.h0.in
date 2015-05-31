@@ -617,20 +617,44 @@ double  logspace_sub(double logx, double logy);
 #if defined(MATHLIB_STANDALONE) && !defined(MATHLIB_PRIVATE_H)
 /* second is defined by nmath.h */
 
-/* If isnan is a macro, as C99 specifies, the C++
-   math header will undefine it. This happens on OS X.
-   The optimization of ISNAN done in Arith.h is not done here, 
-   at least for now. */
+/* The following definitions of ISNAN, ISNA, and R_FINITE are the same as 
+   in Arith.h */
 
-# ifdef __cplusplus
-  int R_isnancpp(double); /* in mlutils.c */
-#  define ISNAN(x)     R_isnancpp(x)
-# else
-#  define ISNAN(x)     (isnan(x)!=0)
-# endif
+#ifdef __cplusplus
 
-# define R_FINITE(x)    R_finite(x)
-int R_finite(double);
+int R_isnancpp(double), R_IsNA(double), R_finite(double); /* in arithmetic.c */
+#define ISNAN(x) (R_isnancpp(x))
+#define ISNA(x) (R_IsNA(x))
+#define R_FINITE(x) (R_finite(x))
+
+#else
+
+#include <stdint.h>
+
+static inline int ISNAN (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u << 1) > ((uint64_t)0x7ff << 53);
+}
+
+static inline int ISNA (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return ((un.u >> 52) & 0x7ff) == 0x7ff
+           && (un.u & (((uint64_t)1<<32)-1)) == 1954;
+}
+
+static inline int R_FINITE (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u << 1) < ((uint64_t)0x7ff << 53);
+}
+
+#endif
+
 
 # ifdef WIN32  /* not Win32 as no config information */
 #  ifdef RMATH_DLL

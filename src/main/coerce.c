@@ -1961,23 +1961,8 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = TRUE; goto vret;
         }
         if (VARIANT_KIND(variant) == VARIANT_OR) {
-            int i = 0;
-            if (n&1) {
+            for (i = 0; i < n; i++)
                 if (ISNAN(REAL(x)[i])) { ret = TRUE; goto vret; }
-                i += 1;
-            }
-            if (n&2) {
-                if (ISNAN(REAL(x)[i]+REAL(x)[i+1]) 
-                  && (ISNAN(REAL(x)[i])
-                       || ISNAN(REAL(x)[i+1]))) { ret = TRUE; goto vret; }
-                i += 2;
-            }
-            for ( ; i < n; i += 4)
-                if (ISNAN(REAL(x)[i]+REAL(x)[i+1]+REAL(x)[i+2]+REAL(x)[i+3]) 
-                  && (ISNAN(REAL(x)[i]) 
-                       || ISNAN(REAL(x)[i+1]) 
-                       || ISNAN(REAL(x)[i+2]) 
-                       || ISNAN(REAL(x)[i+3]))) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
 	for (i = 0; i < n; i++)
@@ -2134,12 +2119,12 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
             for (i = 0; i < n; i++)
-                if (!R_IsNaN(REAL(x)[i])) { ret = FALSE; goto vret; }
+                if (!ISNAN_NOT_NA(REAL(x)[i])) { ret = FALSE; goto vret; }
             ret = TRUE; goto vret;
         }
         if (VARIANT_KIND(variant) == VARIANT_OR) {
             for (i = 0; i < n; i++)
-                if (R_IsNaN(REAL(x)[i])) { ret = TRUE; goto vret; }
+                if (ISNAN_NOT_NA(REAL(x)[i])) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
@@ -2148,19 +2133,19 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
             for (i = 0; i < n; i++)
-                if (! (R_IsNaN(COMPLEX(x)[i].r)
-                    || R_IsNaN(COMPLEX(x)[i].i))) { ret = FALSE; goto vret; }
+                if (! (ISNAN_NOT_NA(COMPLEX(x)[i].r)
+                  || ISNAN_NOT_NA(COMPLEX(x)[i].i))) { ret = FALSE; goto vret; }
             ret = TRUE; goto vret;
         }
         if (VARIANT_KIND(variant) == VARIANT_OR) {
             for (i = 0; i < n; i++)
-                if (R_IsNaN(COMPLEX(x)[i].r)
-                 || R_IsNaN(COMPLEX(x)[i].i)) { ret = TRUE; goto vret; }
+                if (ISNAN_NOT_NA(COMPLEX(x)[i].r)
+                 || ISNAN_NOT_NA(COMPLEX(x)[i].i)) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = (R_IsNaN(COMPLEX(x)[i].r) ||
-                               R_IsNaN(COMPLEX(x)[i].i));
+            LOGICAL(ans)[i] = (ISNAN_NOT_NA(COMPLEX(x)[i].r) ||
+                               ISNAN_NOT_NA(COMPLEX(x)[i].i));
         break;
     default:
         errorcall(call, 
@@ -2353,26 +2338,26 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
             for (i = 0; i < n; i++)
-                if (ISNAN(REAL(x)[i]) || R_FINITE(REAL(x)[i]))
+                if (!R_INFINITE(REAL(x)[i]))
                     { ret = FALSE; goto vret; }
             ret = TRUE; goto vret;
         }
         if (VARIANT_KIND(variant) == VARIANT_OR) {
             for (i = 0; i < n; i++)
-                if (!ISNAN(REAL(x)[i]) && !R_FINITE(REAL(x)[i]))
+                if (R_INFINITE(REAL(x)[i]))
                     { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = !ISNAN(REAL(x)[i]) && !R_FINITE(REAL(x)[i]);
+            LOGICAL(ans)[i] = R_INFINITE(REAL(x)[i]);
         break;
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
             for (i = 0; i < n; i++) {
                 xr = COMPLEX(x)[i].r;
                 xi = COMPLEX(x)[i].i;
-                if ((ISNAN(xr) || R_FINITE(xr)) 
-                 && (ISNAN(xi) || R_FINITE(xi))) { ret = FALSE; goto vret; }
+                if (!R_INFINITE(xr) 
+                 && !R_INFINITE(xi)) { ret = FALSE; goto vret; }
             }
             ret = TRUE; goto vret;
         }
@@ -2380,16 +2365,14 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
             for (i = 0; i < n; i++) {
                 xr = COMPLEX(x)[i].r;
                 xi = COMPLEX(x)[i].i;
-                if (!ISNAN(xr) && !R_FINITE(xr) 
-                 || !ISNAN(xi) && !R_FINITE(xi)) { ret = TRUE; goto vret; }
+                if (R_INFINITE(xr) || R_INFINITE(xi)) { ret = TRUE; goto vret; }
             }
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++) {
             xr = COMPLEX(x)[i].r;
             xi = COMPLEX(x)[i].i;
-            LOGICAL(ans)[i] = 
-              !ISNAN(xr) && !R_FINITE(xr) || !ISNAN(xi) && !R_FINITE(xi);
+            LOGICAL(ans)[i] = R_INFINITE(xr) || R_INFINITE(xi);
         }
         break;
     default:

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -29,7 +29,7 @@
 
 /* Only for use where config.h has not already been included */
 #if defined(HAVE_GLIBC2) && !defined(_BSD_SOURCE)
-/* ensure that finite and isnan are declared */
+/* ensure that finite and isnan are declared - probably now obsolete */
 # define _BSD_SOURCE 1
 #endif
 
@@ -37,7 +37,7 @@
 #ifdef  __cplusplus
 extern "C" {
 #elif !defined(NO_C_HEADERS)
-/* needed for isnan and isfinite, neither of which are used under C++ */
+/* may now be unnecessary.. */
 # include <math.h>
 #endif
 
@@ -72,32 +72,44 @@ LibExtern int	 R_NaInt;	/* NA_INTEGER:= INT_MIN currently */
 /* NA_STRING is a SEXP, so defined in Rinternals.h */
 
 int R_IsNA(double);		/* True for R's NA only */
-int R_IsNaN(double);		/* True for special NaN, *not* for NA */
+int R_IsNaN(double);		/* True for any NaN that is *not* NA */
 int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
-#define ISNA(x)	       R_IsNA(x)
 
-/* ISNAN(): True for *both* NA and NaN.
-   NOTE: some systems do not return 1 for TRUE.
-   Also note that C++ math headers specifically undefine
-   isnan if it is a macro (it is on OS X and in C99),
-   hence the workaround.  This code also appears in Rmath.h
-
-   In pqR, this definition may be changed in Defn.h when ENABLE_ISNAN_TRICK
-   is defined, to give a faster version in the interpreter. */
+/* The code below also appears in Rmath.h */
 
 #ifdef __cplusplus
-   int R_isnancpp(double); /* in arithmetic.c */
-#  define ISNAN(x) (R_isnancpp(x))
-#else
-#  define ISNAN(x) (isnan(x) != 0)
-#endif
 
-/* The following is only defined inside R */
-#ifdef HAVE_WORKING_ISFINITE
-/* isfinite is defined in <math.h> according to C99 */
-# define R_FINITE(x)    isfinite(x)
+int R_isnancpp(double); /* in arithmetic.c */
+#define ISNAN(x) (R_isnancpp(x))
+#define ISNA(x) (R_IsNA(x))
+#define R_FINITE(x) (R_finite(x))
+
 #else
-# define R_FINITE(x)    R_finite(x)
+
+#include <stdint.h>
+
+static inline int ISNAN (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u << 1) > ((uint64_t)0x7ff << 53);
+}
+
+static inline int ISNA (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return ((un.u >> 52) & 0x7ff) == 0x7ff
+           && (un.u & (((uint64_t)1<<32)-1)) == 1954;
+}
+
+static inline int R_FINITE (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u << 1) < ((uint64_t)0x7ff << 53);
+}
+
 #endif
 
 #ifdef  __cplusplus

@@ -140,7 +140,6 @@ likely to be useful are as follows:
         compilers are used with an Intel/AMD 64-bit processor, the
         following flags are recommended:
 
-          CFLAGS='-g -O2 -mtune=native -DENABLE_ISNAN_TRICK'
           CXXLAGS='-g -O2 -mtune=native'
           FCLAGS='-g -O2 -mtune=native'
           FFLAGS='-g -O2 -mtune=native'

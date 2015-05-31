@@ -109,28 +109,6 @@ int matherr(struct exception *exc)
 /* Hack to avoid possibly-incorrect constant folding. */
 volatile double R_Zero_Hack = 0.0;
 
-/* gcc had problems with static const on AIX and Solaris
-   Solaris was for gcc 3.1 and 3.2 under -O2 32-bit on 64-bit kernel */
-#ifdef _AIX
-#define CONST
-#elif defined(sparc) && defined (__GNUC__) && __GNUC__ == 3
-#define CONST
-#else
-#define CONST const
-#endif
-
-#ifdef WORDS_BIGENDIAN
-static CONST int hw = 0;
-static CONST int lw = 1;
-#else  /* !WORDS_BIGENDIAN */
-static CONST int hw = 1;
-static CONST int lw = 0;
-#endif /* WORDS_BIGENDIAN */
-
-typedef union
-{   double value;
-    unsigned int word[2];
-} R_ieee_double;
 
 static double R_ValueOfNA(void)
 {
@@ -139,42 +117,24 @@ static double R_ValueOfNA(void)
 
 int R_IsNA(double x)
 {
-    if (isnan(x)) {
-	R_ieee_double y;
-	y.value = x;
-	return (y.word[lw] == 1954);
-    }
-    return 0;
+    return ISNA(x);
 }
 
 int R_IsNaN(double x)
 {
-    if (isnan(x)) {
-	R_ieee_double y;
-	y.value = x;
-	return (y.word[lw] != 1954);
-    }
-    return 0;
+    return ISNAN_NOT_NA(x);
 }
 
-/* ISNAN uses isnan, which is undefined by C++ headers
-   This workaround is called only when ISNAN() is used
-   in a user code in a file with __cplusplus defined */
+int R_finite(double x)
+{
+    return R_FINITE(x);
+}
+
+/* Used to define ISNAN for C++ in Arith.h */
 
 int R_isnancpp(double x)
 {
-   return (isnan(x)!=0);
-}
-
-
-/* Mainly for use in packages */
-int R_finite(double x)
-{
-#ifdef HAVE_WORKING_ISFINITE
-    return isfinite(x);
-#else
-    return (!isnan(x) & (x != R_PosInf) & (x != R_NegInf));
-#endif
+   return ISNAN(x);
 }
 
 
@@ -188,13 +148,6 @@ void attribute_hidden InitArithmetic()
     R_PosInf = 1.0/R_Zero_Hack;
     R_NegInf = -1.0/R_Zero_Hack;
     R_NaN_cast_to_int = (int) R_NaN;
-
-#ifdef ENABLE_ISNAN_TRICK
-    if (R_NaN_cast_to_int != (int) R_NaReal
-     || R_NaN_cast_to_int != (int) (-R_NaReal)
-     || R_NaN_cast_to_int != (int) (-R_NaN))
-        error("Integer casts of NaN, NA, -NaN, -NA differ, don't define ENABLE_ISNAN_TRICK");
-#endif
 }
 
 /* Keep these two in step */
