@@ -41,7 +41,9 @@
 
 #include <R_ext/RS.h> /* for S4 allocation */
 
-#define USE_FAST_PROTECT_MACROS   /* MUST be defined in this module! */
+#define USE_FAST_PROTECT_MACROS   /* MUST use them in this module! */
+#define USE_FAST_PROTECT_MACROS_DISABLED  /* ... even if disabled! */
+
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <R_ext/GraphicsEngine.h> /* GEDevDesc, GEgetDevice */
@@ -3501,7 +3503,7 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-/* "protect" push a single argument onto R_PPStack.
+/* "protect" pushes a single argument onto R_PPStack.
 
    In handling a stack overflow we have to be careful not to use
    PROTECT. error("protect(): stack overflow") would call deparse1,
@@ -3516,6 +3518,10 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
    The PROTECT, UNPROTECT, PROTECT_WITH_INDEX, and REPROTECT macros at 
    the end of Defn.h do these things without procedure call overhead, and 
    are used here to define these functions, to keep the code in sync. 
+
+   The procedure versions of protect, protect2, and protect3 do an
+   error check.  Fiddling the condition for redefining PROTECT, etc.
+   in Defn.h can enable use of these for debugging in the interpeter.
 */
 
 static void reset_pp_stack(void *data)
@@ -3541,6 +3547,7 @@ void attribute_hidden Rf_protect_error (void)
 
 SEXP protect(SEXP s)
 {
+    if (s != NULL && TYPEOF(s) == NILSXP && s != R_NilValue) abort();
     return PROTECT (CHK(s));
 }
 
@@ -3550,11 +3557,18 @@ SEXP protect(SEXP s)
 
 void Rf_protect2 (SEXP s1, SEXP s2)
 {
+    if (s1 != NULL && TYPEOF(s1) == NILSXP && s1 != R_NilValue
+     || s2 != NULL && TYPEOF(s2) == NILSXP && s2 != R_NilValue) abort();
+
     PROTECT2 (CHK(s1), CHK(s2));
 }
 
 void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
 {
+    if (s1 != NULL && TYPEOF(s1) == NILSXP && s1 != R_NilValue
+     || s2 != NULL && TYPEOF(s2) == NILSXP && s2 != R_NilValue
+     || s3 != NULL && TYPEOF(s3) == NILSXP && s3 != R_NilValue) abort();
+
     PROTECT3 (CHK(s1), CHK(s2), CHK(s3));
 }
 

@@ -1610,9 +1610,13 @@ extern void *alloca(size_t);
    Macros PROTECT2 and PROTECT3 for protecting 2 or 3 objects are also defined.
 
    Defining USE_FAST_PROTECT_MACROS in source files outside src/main may
-   cause problems at link time. */
+   cause problems at link time. 
 
-#ifdef USE_FAST_PROTECT_MACROS
+   Changing the symbol in the ifdef below to USE_FAST_PROTECT_MACROS_DISABLED
+   will disable this whole scheme, enabling an error check done in Rf_protect,
+   etc., which may be useful in debugging the interpreter. */
+
+#ifdef USE_FAST_PROTECT_MACROS_DISABLED
 
 extern void Rf_protect_error (void);
 extern void Rf_unprotect_error (void);
