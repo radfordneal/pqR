@@ -1671,20 +1671,25 @@ void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
 #undef NA_LOGICAL
 #define NA_LOGICAL INT_MIN
 
-/* Redefine ISNAN to make use of a trick, if ENABLE_ISNAN_TRICK is
-   defined (with a -D argument in CFLAGS).  This is done here only, not 
-   in Arith.h, because the macro implementing the trick evaluates its 
-   argument twice, which is bad if it has side effects.  Such macro
-   calls are avoided in the interpreter, but may occur in packages. 
 
-   The trick is faster for many non-NaN and non-NA numbers.  It relies
-   on the results of converting NaN, NA, -NaN, and -NA to int all being 
-   the same, which is checked for in InitArithmetic. */
+/* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 
+   union with uint64_t.  ISNAN, ISNA, and R_FINITE are defined similarly
+   in Arith.h. */
 
-#ifdef ENABLE_ISNAN_TRICK
-#  undef ISNAN
-#  define ISNAN(x) ((int)(x) == R_NaN_cast_to_int && isnan(x) != 0)
-#endif
+static inline int R_INFINITE (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u << 1) == ((uint64_t)0x7ff << 53);
+}
+
+static inline int ISNAN_NOT_NA (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u << 1) > ((uint64_t)0x7ff << 53)  /* a NaN, but... */
+           && (un.u & (((uint64_t)1<<32)-1)) != 1954;  /* not NA */
+}
 
 #endif /* DEFN_H_ */
 /*
