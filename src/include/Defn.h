@@ -1607,7 +1607,7 @@ extern void *alloca(size_t);
    will disable this whole scheme, enabling an error check done in Rf_protect,
    etc., which may be useful in debugging the interpreter. */
 
-#ifdef USE_FAST_PROTECT_MACROS_DISABLED
+#ifdef USE_FAST_PROTECT_MACROS
 
 extern void Rf_protect_error (void);
 extern void Rf_unprotect_error (void);
