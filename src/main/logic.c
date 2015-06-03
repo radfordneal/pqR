@@ -36,13 +36,6 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2);
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
 
 
-static SEXP do_fast_andor (SEXP call, SEXP op, SEXP x, SEXP y, SEXP env, 
-                           int variant)
-{
-/* logical binary : "&" or "|" */
-}
-
-
 /* & | */
 
 SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
