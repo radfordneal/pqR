@@ -1624,20 +1624,20 @@ extern void Rf_unprotect_error (void);
 #undef  PROTECT
 #define PROTECT(s) \
 ( (R_PPStackTop >= R_PPStackSize ? Rf_protect_error() : (void)0), \
-   R_PPStack[R_PPStackTop++] = (s) )
+   R_PPStack[R_PPStackTop] = (s), R_PPStack[R_PPStackTop++] )
 
 #undef  PROTECT2
 #define PROTECT2(s1,s2) \
 ( (R_PPStackTop+1 >= R_PPStackSize ? Rf_protect_error() : (void)0), \
-   R_PPStack[R_PPStackTop++] = (s1), \
-   R_PPStack[R_PPStackTop++] = (s2) )
+   R_PPStack[R_PPStackTop] = (s1), R_PPStackTop += 1, \
+   R_PPStack[R_PPStackTop] = (s2), R_PPStackTop += 1 )
 
 #undef  PROTECT3
 #define PROTECT3(s1,s2,s3) \
 ( (R_PPStackTop+2 >= R_PPStackSize ? Rf_protect_error() : (void)0), \
-   R_PPStack[R_PPStackTop++] = (s1), \
-   R_PPStack[R_PPStackTop++] = (s2), \
-   R_PPStack[R_PPStackTop++] = (s3) )
+   R_PPStack[R_PPStackTop] = (s1), R_PPStackTop += 1, \
+   R_PPStack[R_PPStackTop] = (s2), R_PPStackTop += 1, \
+   R_PPStack[R_PPStackTop] = (s3), R_PPStackTop += 1 )
 
 #undef  UNPROTECT
 #if 0  /* enable for stack underflow checking */
