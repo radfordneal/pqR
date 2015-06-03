@@ -1,3 +1,6 @@
 Miscellaneous minor fixes, etc.
 
 Fixes bug in which updates like a <- -a could sometimes modify a locked binding.
+
+Fix bug in definition of PROTECT, etc. that shows up when compiler gcc 4.8
+optimizes.
