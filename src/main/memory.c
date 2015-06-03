@@ -525,7 +525,7 @@ static int MaxAlloc_index = 0;          /* Index for storing into MaxAlloc */
 
 static int SEXPREC_class;      /* Small node class used for "cons" cells */
 static int sizeof_SEXPREC;     /* Size of SEXPREC_class nodes */
-static int SYM_SEXPREC_class;  /* Small node class used for symbolss */
+static int SYM_SEXPREC_class;  /* Small node class used for symbols */
 static int sizeof_SYM_SEXPREC; /* Size of SYM_SEXPREC_class nodes */
 
 
