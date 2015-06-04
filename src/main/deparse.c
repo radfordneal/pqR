@@ -511,7 +511,7 @@ curlyahead(SEXP s)
    mainop is a unary or binary operator,
    arg is an argument to it, on the left if left == 1 */
 
-static Rboolean needsparens(PPinfo mainop, SEXP arg, unsigned int left)
+attribute_hidden Rboolean needsparens (PPinfo mainop, SEXP arg, int left)
 {
     PPinfo arginfo;
     if (TYPEOF(arg) == LANGSXP) {
