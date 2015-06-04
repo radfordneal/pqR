@@ -1,3 +1,4 @@
-Eliminate parentheses from the abstract syntax tree for expressions that
-are the operands of binary or unary operands.  
-
+Eliminate parentheses from the abstract syntax tree for expressions
+that are the operands of binary or unary operands, when the
+parentheses are not redundant (and hence will be put in by the
+deparser).

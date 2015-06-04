@@ -170,6 +170,8 @@ static SEXP	NextArg0(SEXP, SEXP);
 static SEXP	NextArg(SEXP, SEXP, SEXP);
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
+static SEXP     checkparens (PPinfo, SEXP, int);
+static SEXP     keepparens (SEXP);
 
 /* These routines allocate constants */
 
@@ -276,8 +278,6 @@ static SEXP	xxfuncall(SEXP, SEXP);
 static SEXP	xxdefun(SEXP, SEXP, SEXP, YYLTYPE *);
 static SEXP	xxunary(SEXP, SEXP);
 static SEXP	xxbinary(SEXP, SEXP, SEXP);
-static SEXP	xxwithparen(SEXP);
-static SEXP	xxwithoutparen(SEXP);
 static SEXP	xxparen(SEXP, SEXP);
 static SEXP	xxsubscript(SEXP, SEXP, SEXP);
 static SEXP	xxexprlist(SEXP, YYLTYPE *, SEXP);
@@ -1934,7 +1934,7 @@ yyreduce:
 
   case 7:
 
-    { (yyval) = xxwithparen((yyvsp[(1) - (1)])); }
+    { (yyval) = keepparens((yyvsp[(1) - (1)])); }
     break;
 
   case 8:
@@ -2728,12 +2728,53 @@ static int xxvalue(SEXP v, int k, YYLTYPE *lloc)
 {
     if (k > 2) {
 	if (ParseState.keepSrcRefs)
-	    REPROTECT(SrcRefs = GrowList(SrcRefs, makeSrcref(lloc, ParseState.SrcFile)), srindex);
+	    REPROTECT(SrcRefs = GrowList (SrcRefs, makeSrcref(lloc, 
+                                          ParseState.SrcFile)), srindex);
 	UNPROTECT_PTR(v);
     }
     R_CurrentExpr = v;
     return k;
 }
+
+
+/* Paren handling.  When parenthesized expressions are created, with xxparen,
+   they have LEVELS (gp) set to 1, unlike the same expression created as a
+   call of function `(`.  Any use of an expression should process it by
+   calling checkparens - which will either get rid of the parens or clear 
+   LEVELS (so it will be zero, as possibly expected) - or keepparens, which
+   always keeps the parens (clearing LEVELS to zero). */
+
+static SEXP checkparens (PPinfo mainop, SEXP n, int left)
+{
+    if (GenerateCode) {
+        if (TYPEOF(n)==LANGSXP && LEVELS(n)==1 && CAR(n)==install("(") 
+             && CDR(n)!=R_NilValue && CDDR(n)==R_NilValue) {
+            if ((mainop.kind==PP_BINARY || mainop.kind==PP_BINARY2 
+                  || mainop.kind==PP_UNARY) && needsparens(mainop,CADR(n),left))
+                n = CADR(n);  /* discard parens: deparse will put 'em back in */
+            else 
+                SETLEVELS(n,0);  /* clear flag, now that no longer needed */
+        }
+    }
+    return n;
+}
+
+static PPinfo noinfo = { PP_INVALID, 0, 0 };
+
+static PPinfo opinfo (SEXP op)
+{
+  static SEXP value;
+  if (TYPEOF(op) != SYMSXP) return noinfo;
+  value = SYMVALUE(op);
+  if (TYPEOF(value) != SPECIALSXP && TYPEOF(value) != BUILTINSXP) return noinfo;
+  return PPINFO(value);
+}
+
+static SEXP keepparens (SEXP n)
+{
+  return checkparens (noinfo, n, 0);
+}
+
 
 static SEXP xxnullformal()
 {
@@ -2756,9 +2797,8 @@ static SEXP xxfirstformal0(SEXP sym)
 static SEXP xxfirstformal1(SEXP sym, SEXP expr)
 {
     SEXP ans;
-    expr = xxwithparen(expr);
     if (GenerateCode)
-	PROTECT(ans = FirstArg(expr, sym));
+	PROTECT(ans = FirstArg(keepparens(expr), sym));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(expr);
@@ -2783,10 +2823,9 @@ static SEXP xxaddformal0(SEXP formlist, SEXP sym, YYLTYPE *lloc)
 static SEXP xxaddformal1(SEXP formlist, SEXP sym, SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
-    expr = xxwithparen(expr);
     if (GenerateCode) {
 	CheckFormalArgs(formlist, sym, lloc);
-	PROTECT(ans = NextArg(formlist, expr, sym));
+	PROTECT(ans = NextArg(formlist, keepparens(expr), sym));
     }
     else
 	PROTECT(ans = R_NilValue);
@@ -2821,7 +2860,7 @@ static SEXP xxexprlist1(SEXP expr, YYLTYPE *lloc)
 	    REPROTECT(SrcRefs = NewList(), srindex);
 	    REPROTECT(SrcRefs = GrowList(SrcRefs, makeSrcref(lloc, ParseState.SrcFile)), srindex);
 	}
-	PROTECT(ans = GrowList(tmp, expr));
+	PROTECT(ans = GrowList(tmp, keepparens(expr)));
 	UNPROTECT_PTR(tmp);
     }
     else
@@ -2836,7 +2875,7 @@ static SEXP xxexprlist2(SEXP exprlist, SEXP expr, YYLTYPE *lloc)
     if (GenerateCode) {
 	if (ParseState.keepSrcRefs)
 	    REPROTECT(SrcRefs = GrowList(SrcRefs, makeSrcref(lloc, ParseState.SrcFile)), srindex);
-	PROTECT(ans = GrowList(exprlist, expr));
+	PROTECT(ans = GrowList(exprlist, keepparens(expr)));
     }
     else
 	PROTECT(ans = R_NilValue);
@@ -2858,9 +2897,8 @@ static SEXP xxsub0(void)
 static SEXP xxsub1(SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
-    expr = xxwithparen(expr);
     if (GenerateCode)
-	PROTECT(ans = TagArg(expr, R_NilValue, lloc));
+	PROTECT(ans = TagArg(keepparens(expr), R_NilValue, lloc));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(expr);
@@ -2881,9 +2919,8 @@ static SEXP xxsymsub0(SEXP sym, YYLTYPE *lloc)
 static SEXP xxsymsub1(SEXP sym, SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
-    expr = xxwithparen(expr);
     if (GenerateCode)
-	PROTECT(ans = TagArg(expr, sym, lloc));
+	PROTECT(ans = TagArg(keepparens(expr), sym, lloc));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(expr);
@@ -2905,10 +2942,9 @@ static SEXP xxnullsub0(YYLTYPE *lloc)
 static SEXP xxnullsub1(SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans = install("NULL");
-    expr = xxwithparen(expr);
     UNPROTECT_PTR(R_NilValue);
     if (GenerateCode)
-	PROTECT(ans = TagArg(expr, ans, lloc));
+	PROTECT(ans = TagArg(keepparens(expr), ans, lloc));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(expr);
@@ -2942,13 +2978,13 @@ static SEXP xxsublist2(SEXP sublist, SEXP sub)
 static SEXP xxcond(SEXP expr)
 {
     EatLines = 1;
-    return xxwithparen(expr);
+    return keepparens(expr);
 }
 
 static SEXP xxifcond(SEXP expr)
 {
     EatLines = 1;
-    return xxwithparen(expr);
+    return keepparens(expr);
 }
 
 static SEXP xxif(SEXP ifsym, SEXP cond, SEXP expr)
@@ -2967,7 +3003,7 @@ static SEXP xxifelse(SEXP ifsym, SEXP cond, SEXP ifexpr, SEXP elseexpr)
 {
     SEXP ans;
     if( GenerateCode)
-	PROTECT(ans = lang4(ifsym, cond, ifexpr, elseexpr));
+	PROTECT(ans = lang4 (ifsym, cond, ifexpr, elseexpr));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(elseexpr);
@@ -2979,10 +3015,9 @@ static SEXP xxifelse(SEXP ifsym, SEXP cond, SEXP ifexpr, SEXP elseexpr)
 static SEXP xxforcond(SEXP sym, SEXP expr)
 {
     SEXP ans;
-    expr = xxwithparen(expr);
     EatLines = 1;
     if (GenerateCode)
-	PROTECT(ans = LCONS(sym, expr));
+	PROTECT(ans = LCONS(sym, keepparens(expr)));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(expr);
@@ -3037,7 +3072,8 @@ static SEXP xxnxtbrk(SEXP keyword)
 static SEXP xxfuncall(SEXP expr, SEXP args)
 {
     SEXP ans;
-    SEXP sav_expr = xxwithparen(expr);
+    SEXP sav_expr = expr;
+    expr = keepparens(expr);
 
     if(GenerateCode) {
 	if (isString(expr))
@@ -3076,98 +3112,6 @@ static SEXP mkString2(const char *s, int len, Rboolean escaped)
     return t;
 }
 
-static SEXP xxdefun(SEXP fname, SEXP formals, SEXP body, YYLTYPE *lloc)
-{
-
-    SEXP ans, srcref;
-
-    if (GenerateCode) {
-    	if (ParseState.keepSrcRefs) {
-    	    srcref = makeSrcref(lloc, ParseState.SrcFile);
-    	    ParseState.didAttach = TRUE;
-    	} else
-    	    srcref = R_NilValue;
-	PROTECT(ans = lang4(fname, CDR(formals), body, srcref));
-    } else
-	PROTECT(ans = R_NilValue);
-    UNPROTECT_PTR(body);
-    UNPROTECT_PTR(formals);
-    return ans;
-}
-
-static SEXP xxunary(SEXP op, SEXP arg)
-{
-    SEXP ans;
-    arg = xxwithoutparen(arg);
-    if (GenerateCode) {
-        PROTECT(op); /* maybe unnecessary, but just in case... */
-	ans = LCONS (op, MaybeConstList1(arg));
-        UNPROTECT(1);
-        PROTECT(ans);
-    }
-    else
-	PROTECT(ans = R_NilValue);
-    UNPROTECT_PTR(arg);
-    return ans;
-}
-
-static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
-{
-    SEXP ans;
-    n2 = xxwithoutparen(n2);
-    n3 = xxwithoutparen(n3);
-    if (GenerateCode) {
-        PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
-	ans = LCONS (n1, CONS (n2, MaybeConstList1(n3)));
-        UNPROTECT(2);
-        PROTECT(ans);
-    }
-    else
-	PROTECT(ans = R_NilValue);
-    UNPROTECT_PTR(n2);
-    UNPROTECT_PTR(n3);
-    return ans;
-}
-
-
-/* Paren handling.  When parenthesized expressions are created, with xxparen,
-   they have LEVELS (gp) set to 1, unlike the same expression created as a
-   call of function `(`.  Any use of an expression should process it by
-   calling either xxwithparen - which will clear LEVELS for a parenthesized
-   expression (so it will be zero, as possibly expected) - or xxwithoutparen
-    - which will return the expression with parentheses (if present) removed. */
-
-static SEXP xxwithparen(SEXP n)
-{
-    SEXP ans;
-    if (GenerateCode) {
-        if (TYPEOF(n) == LANGSXP && LEVELS(n) == 1 && CAR(n) == install("(") 
-              && CDR(n) != R_NilValue && CDDR(n) == R_NilValue)
-            SETLEVELS(n,0);  /* clear flag, now that no longer needed */
-        PROTECT(ans = n);
-    }
-    else
-	PROTECT(ans = R_NilValue);
-    UNPROTECT_PTR(n);
-    return ans;
-}
-
-static SEXP xxwithoutparen(SEXP n)
-{
-    SEXP ans;
-    if (GenerateCode) {
-        if (TYPEOF(n) == LANGSXP && LEVELS(n) == 1 && CAR(n) == install("(") 
-              && CDR(n) != R_NilValue && CDDR(n) == R_NilValue)
-            ans = CADR(n); /* get rid of the parenthesis operator */
-        else
-            ans = n;
-        PROTECT(ans);
-    }
-    else
-	PROTECT(ans = R_NilValue);
-    UNPROTECT_PTR(n);
-    return ans;
-}
 
 static SEXP xxparen(SEXP n1, SEXP n2)
 {
@@ -3186,12 +3130,65 @@ static SEXP xxparen(SEXP n1, SEXP n2)
 }
 
 
+static SEXP xxdefun(SEXP fname, SEXP formals, SEXP body, YYLTYPE *lloc)
+{
+
+    SEXP ans, srcref;
+
+    if (GenerateCode) {
+    	if (ParseState.keepSrcRefs) {
+    	    srcref = makeSrcref(lloc, ParseState.SrcFile);
+    	    ParseState.didAttach = TRUE;
+    	} else
+    	    srcref = R_NilValue;
+	PROTECT(ans = lang4 (fname, CDR(formals), body, srcref));
+    } else
+	PROTECT(ans = R_NilValue);
+    UNPROTECT_PTR(body);
+    UNPROTECT_PTR(formals);
+    return ans;
+}
+
+static SEXP xxunary(SEXP op, SEXP arg)
+{
+    SEXP ans;
+    if (GenerateCode) {
+        PPinfo mainop = opinfo(op);
+        PROTECT(op); /* maybe unnecessary, but just in case... */
+	ans = LCONS (op, MaybeConstList1(checkparens(mainop,arg,0)));
+        UNPROTECT(1);
+        PROTECT(ans);
+    }
+    else
+	PROTECT(ans = R_NilValue);
+    UNPROTECT_PTR(arg);
+    return ans;
+}
+
+static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
+{
+    SEXP ans;
+    if (GenerateCode) {
+        PPinfo mainop = opinfo(n1);
+        PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
+	ans = LCONS (n1, CONS (checkparens(mainop,n2,1), 
+                               MaybeConstList1(checkparens(mainop,n3,0))));
+        UNPROTECT(2);
+        PROTECT(ans);
+    }
+    else
+	PROTECT(ans = R_NilValue);
+    UNPROTECT_PTR(n2);
+    UNPROTECT_PTR(n3);
+    return ans;
+}
+
+
 static SEXP xxsubscript(SEXP a1, SEXP a2, SEXP a3)
 {
     SEXP ans;
-    a1 = xxwithparen(a1);
     if (GenerateCode)
-	PROTECT(ans = LCONS(a2, WrapInsert(a3,a1)));
+	PROTECT(ans = LCONS(a2, WrapInsert(a3,keepparens(a1))));
     else
 	PROTECT(ans = R_NilValue);
     UNPROTECT_PTR(a3);
