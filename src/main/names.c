@@ -615,14 +615,40 @@ void InitNames()
 }
 
 
-/*  install - probe the symbol table */
-/*  If "name" is not found, it is installed in the symbol table.
-    The symbol corresponding to the string "name" is returned. */
+/*  install - probe the symbol table. 
+    If "name" is not found, it is installed in the symbol table.
+    For install, the symbol corresponding to the C string "name" is returned.
+    For instalChar, the name is given as an R CHARSXP.  */
+
+static SEXP install_with_hashcode (const char *name, int hashcode)
+{
+    SEXP sym;
+    int i;
+
+    i = hashcode % HSIZE;
+
+    /* Check to see if the symbol is already present;  if it is, return it. */
+    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
+        const char *s = CHAR(PRINTNAME(sym));
+	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
+            return sym;
+    }
+
+    /* Create a new symbol node and link it into the table. */
+    if (strlen(name) > MAXIDSIZE)
+	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
+    sym = mkSYMSXP(mkChar(name), R_UnboundValue);
+    SET_HASHVALUE(PRINTNAME(sym), hashcode);
+    SET_HASHASH(PRINTNAME(sym), 1);
+    NEXTSYM_PTR(sym) = R_SymbolTable[i];
+    R_SymbolTable[i] = sym;
+
+    return sym;
+}
 
 SEXP install(const char *name)
 {
-    SEXP sym;
-    int i, hashcode;
+    int hashcode;
 
 #if 0  /* Enable for tuning info */
     if (strcmp(name,"HOWMANYSYMBOLS")==0) {
@@ -642,25 +668,23 @@ SEXP install(const char *name)
     if (*name == '\0')
 	error(_("attempt to use zero-length variable name"));
 
-    hashcode = R_Newhashpjw(name);
-    i = hashcode % HSIZE;
+    return install_with_hashcode (name, R_Newhashpjw(name));
+}
 
-    /* Check to see if the symbol is already present;  if it is, return it. */
-    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        const char *s = CHAR(PRINTNAME(sym));
-	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
-            return sym;
+SEXP installChar(SEXP charSXP)
+{
+    const char *name = CHAR(charSXP);
+    int hashcode;
+
+    if( !HASHASH(charSXP) ) {
+        hashcode = R_Newhashpjw(name);
+        SET_HASHVALUE(charSXP, hashcode);
+        SET_HASHASH(charSXP, 1);
+    } else {
+        hashcode = HASHVALUE(charSXP);
     }
 
-    /* Create a new symbol node and link it into the table. */
-    if (strlen(name) > MAXIDSIZE)
-	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
-    sym = mkSYMSXP(mkChar(name), R_UnboundValue);
-    SET_HASHVALUE(PRINTNAME(sym), hashcode);
-    SET_HASHASH(PRINTNAME(sym), 1);
-    NEXTSYM_PTR(sym) = R_SymbolTable[i];
-    R_SymbolTable[i] = sym;
-    return (sym);
+    return install_with_hashcode (name, hashcode);
 }
 
 /* Lookup up a symbol, returning it if it exists already, but not creating
