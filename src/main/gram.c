@@ -3154,6 +3154,12 @@ static SEXP xxunary(SEXP op, SEXP arg)
     SEXP ans;
     if (GenerateCode) {
         PPinfo mainop = opinfo(op);
+        if (mainop.kind == PP_BINARY) {
+            /* mimic what's done in deparse.c */
+            mainop.kind = PP_UNARY;
+            if (mainop.precedence == PREC_SUM)
+                mainop.precedence = PREC_SIGN;
+        }
         PROTECT(op); /* maybe unnecessary, but just in case... */
 	ans = LCONS (op, MaybeConstList1(checkparens(mainop,arg,0)));
         UNPROTECT(1);
