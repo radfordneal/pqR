@@ -1069,6 +1069,7 @@ int Rf_GetOptionWidth(void);
 SEXP Rf_GetRowNames(SEXP);
 void Rf_gsetVar(SEXP, SEXP, SEXP);
 SEXP Rf_install(const char *);
+SEXP Rf_installChar(SEXP);
 SEXP Rf_installed_already(const char *);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
@@ -1402,6 +1403,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define gsetVar			Rf_gsetVar
 #define inherits		Rf_inherits
 #define install			Rf_install
+#define installChar		Rf_installChar
 #define installed_already	Rf_installed_already
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass

@@ -1966,7 +1966,7 @@ static SEXP do_save(SEXP call, SEXP op, SEXP args, SEXP env)
 
     t = s;
     for (j = 0; j < len; j++, t = CDR(t)) {
-	SET_TAG(t, install(CHAR(STRING_ELT(CAR(args), j))));
+	SET_TAG(t, installChar(STRING_ELT(CAR(args), j)));
 	tmp = findVar(TAG(t), source);
 	if (tmp == R_UnboundValue)
             unbound_var_error(TAG(t));
@@ -2005,7 +2005,7 @@ static SEXP RestoreToEnv(SEXP ans, SEXP aenv)
 	if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(ans))
 	    error(_("not a valid named list"));
 	for (i = 0; i < LENGTH(ans); i++) {
-	    SEXP sym = install(CHAR(STRING_ELT(names, i)));
+	    SEXP sym = installChar(STRING_ELT(names, i));
 	    obj = VECTOR_ELT(ans, i);
 	    defineVar(sym, obj, aenv);
 	    if(R_seemsOldStyleS4Object(obj))
@@ -2296,7 +2296,7 @@ static SEXP do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 
     t = s;
     for (j = 0; j < len; j++, t = CDR(t)) {
-	SET_TAG(t, install(CHAR(STRING_ELT(list, j))));
+	SET_TAG(t, installChar(STRING_ELT(list, j)));
 	SETCAR(t, findVar(TAG(t), source));
 	tmp = findVar(TAG(t), source);
 	if (tmp == R_UnboundValue)
