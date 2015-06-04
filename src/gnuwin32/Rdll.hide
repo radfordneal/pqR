@@ -379,6 +379,7 @@
  Rf_mkPROMISE
  Rf_mkSYMSXP
  Rf_name2col
+ Rf_needsparens
  Rf_onsigusr1
  Rf_onsigusr2
  Rf_osDynSymbol
