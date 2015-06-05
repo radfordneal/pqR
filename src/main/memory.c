@@ -4420,12 +4420,26 @@ static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 static unsigned int char_hash(const char *s, int len)
 {
-    /* djb2 as from http://www.cse.yorku.ca/~oz/hash.html */
-    char *p;
-    int i;
+    /* Hash function due to Dan Bernstein, called "djb2" at
+       http://www.cse.yorku.ca/~oz/hash.html 
+
+       Basic idea is to iterate h = ((h << 5) + h) + *s++, but here
+       this is unrolled, allowing some merging of operations to be
+       done (though we actually end up doing more shifts and adds),
+       and more scope for instruction-level parallelism. */
+
     unsigned int h = 5381;
-    for (p = (char *) s, i = 0; i < len; p++, i++)
-	h = ((h << 5) + h) + (*p);
+    if (len & 1) {
+        h = (5381*33) + *s++;
+        len -= 1;
+    }
+    while (len > 0) {
+        unsigned int t;
+        t = *s++;
+        t = (t << 5) + t + *s++;
+        h = (h << 10) + (h << 6) + h + t;
+        len -= 2;
+    }
     return h;
 }
 
