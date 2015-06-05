@@ -1,5 +1,6 @@
-Tweaks to eval, etc. to speed things up.
+Tweaks in various places to speed things up.
 
 Defines FINDFUN macro for use in eval, to often avoid overhead
 of calling findFun.
 
+New faster version of the string hash function.
