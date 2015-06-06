@@ -41,7 +41,7 @@
 # undef __LIBM_PRIVATE
 #endif
 
-#include <static-boxes.h>  # for inline static_box_eval2 function
+#include "static-boxes.h"  /* for inline static_box_eval2 function */
 
 
 static R_NORETURN void non_numeric_errorcall (SEXP call)
