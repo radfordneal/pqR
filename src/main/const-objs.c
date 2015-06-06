@@ -233,8 +233,8 @@ VECTOR_SEXPREC_C R_ScalarRealBox0_space = SCALAR_BOX(REALSXP);
    returned, but they may (or may not) be the unevaluated arguments. 
 
    If an argument is an object, all arguments will have been computed
-   before return from this function, but they may be pending if neither
-   operand is an object.
+   before return from this function, but evaluation of arguments may 
+   be pending if neither operand is an object.
 
    Note that if there are less than two arguments, the missing ones will
    appear here to be R_NilValue (since CAR(R_NilValue) is R_NilValue).
@@ -250,8 +250,8 @@ SEXP attribute_hidden static_box_eval2
     x = CAR(args); 
     y = CADR(args);
 
-    /* We evaluate by the general procedure if ... present, without 
-       trying to put args in static boxes. */
+    /* We evaluate by the general procedure if ... present or more than
+       two arguments, not trying to put args in static boxes. */
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         argsevald = evalList (args, env, call);
@@ -273,6 +273,14 @@ SEXP attribute_hidden static_box_eval2
         argsevald = cons_with_tag (x, argsevald, TAG(args));
         UNPROTECT(1); /* x */
         WAIT_UNTIL_COMPUTED(x);
+        goto rtrn;
+    }
+
+    /* If there's no second argument, we can return now. */
+
+    if (y == R_NilValue) {
+        UNPROTECT(1);
+        argsevald = args;
         goto rtrn;
     }
 
