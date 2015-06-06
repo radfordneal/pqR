@@ -232,6 +232,10 @@ VECTOR_SEXPREC_C R_ScalarRealBox0_space = SCALAR_BOX(REALSXP);
    is an object, a list with the correct number of arguments is 
    returned, but they may (or may not) be the unevaluated arguments. 
 
+   If an argument is an object, all arguments will have been computed
+   before return from this function, but they may be pending if neither
+   operand is an object.
+
    Note that if there are less than two arguments, the missing ones will
    appear here to be R_NilValue (since CAR(R_NilValue) is R_NilValue).
 
@@ -258,7 +262,7 @@ SEXP attribute_hidden static_box_eval2
 
     /* Otherwise, we try to put the first arg in a static box. */
 
-    PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK));
+    PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK));
 
     /* If first arg is an object, we evaluate the rest of the arguments
        normally. */
@@ -268,6 +272,7 @@ SEXP attribute_hidden static_box_eval2
         y = CAR(argsevald);
         argsevald = cons_with_tag (x, argsevald, TAG(args));
         UNPROTECT(1); /* x */
+        WAIT_UNTIL_COMPUTED(x);
         goto rtrn;
     }
 
@@ -285,7 +290,7 @@ SEXP attribute_hidden static_box_eval2
         x = R_ScalarIntegerBox0;
     }
 
-    y = evalv (y, env, VARIANT_STATIC_BOX_OK);
+    y = evalv (y, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK);
 
     if (x == R_ScalarRealBox0)
         *REAL(x) = realv;
@@ -306,6 +311,7 @@ SEXP attribute_hidden static_box_eval2
         argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
         argsevald = cons_with_tag (x, argsevald, TAG(args));
         UNPROTECT(2); /* x & y */
+        WAIT_UNTIL_COMPUTED_2(x,y);
         goto rtrn;
     }
 

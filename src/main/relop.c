@@ -66,6 +66,8 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     nx = length(x);
     ny = length(y);
 
+    WAIT_UNTIL_COMPUTED_2(x,y);
+
     /* Handle integer or real vectors that have no attributes quickly. */ 
 
     if (ATTRIB(x) == R_NilValue && ATTRIB(y) == R_NilValue 
