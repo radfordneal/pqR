@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -40,6 +40,9 @@
 #ifdef __OpenBSD__
 # undef __LIBM_PRIVATE
 #endif
+
+#include <static-boxes.h>  # for inline static_box_eval2 function
+
 
 static R_NORETURN void non_numeric_errorcall (SEXP call)
 {

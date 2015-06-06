@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -33,6 +33,9 @@
 #include <Defn.h>
 #include <Rmath.h>
 #include <errno.h>
+
+#include <static-boxes.h>  # for inline static_box_eval2 function
+
 
 static SEXP integer_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP real_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);

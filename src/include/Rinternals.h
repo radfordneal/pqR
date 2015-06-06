@@ -1118,7 +1118,6 @@ void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
 void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
 SEXP Rf_MaybeConstList1(SEXP);
-SEXP Rf_static_box_eval2(SEXP, SEXP *, SEXP *, SEXP, SEXP);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1515,7 +1514,6 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define set_var_in_frame	Rf_set_var_in_frame
 #define set_var_nonlocal	Rf_set_var_nonlocal
 #define MaybeConstList1		Rf_MaybeConstList1
-#define static_box_eval2	Rf_static_box_eval2
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute

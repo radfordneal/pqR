@@ -665,6 +665,17 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
+
+#   if 0  /* Enable for debug output after typing STATIC.BOX.DEBUG */
+
+    if (IS_STATIC_BOX(res) && installed_already("STATIC.BOX.DEBUG"))
+    { REprintf("STATIC BOX RETURNED: %s %f\n",
+        TYPEOF(res)==INTSXP ? "int" : "real",
+        TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
+    }
+
+#   endif
+
     return res;
 }
 
