@@ -302,80 +302,33 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
 static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans, x, y;
-    int args_evald;
+    SEXP argsevald, ans, x, y;
 
-    /* Evaluate arguments, setting x to first argument and y to second
-       argument.  Arguments are usually evaluated with VARIANT_STATIC_BOX_OK.
+    /* Evaluate arguments, maybe putting them in static boxes. */
 
-       The whole argument list ends up in args, already evaluated if 
-       args_evald is 1. */
+    PROTECT(argsevald = static_box_eval2 (args, &x, &y, env, call));
+    PROTECT2(x,y);
 
-    x = CAR(args); 
-    y = CADR(args);
-
-    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
-        args = evalList (args, env, call);
-        PROTECT(x = CAR(args)); 
-        PROTECT(y = CADR(args));
-        args_evald = 1;
-    }
-    else {
-        int intv; double realv;  /* for saving a boxed x value */
-        PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK));
-        if (x == R_ScalarRealBox)
-            x = SWITCH_TO_REAL_BOX0(&realv);
-        else if (x == R_ScalarIntegerBox)
-            x = SWITCH_TO_INTEGER_BOX0(&intv);
-        PROTECT(y = evalv (y, env, isObject(x) ? 0 : VARIANT_STATIC_BOX_OK));
-        if (x == R_ScalarRealBox0)
-            *REAL(x) = realv;
-        else if (x == R_ScalarIntegerBox0)
-            *INTEGER(x) = intv;
-        args_evald = 0;
-    }
-
-    /* Check for dispatch on S3 or S4 objects.  Takes care to match length
-       of "args" to length of original (number of args in "call"). */
+    /* Check for dispatch on S3 or S4 objects. */
 
     if (isObject(x) || isObject(y)) {
-        if (!args_evald) {
-            if (CDR(args) == R_NilValue) {
-                if (IS_STATIC_BOX(x))
-                    x = duplicate(x);
-                args = CONS(x,R_NilValue);
-            }
-            else {
-                SEXP y1;
-                UNPROTECT(1);
-                if (IS_STATIC_BOX(y))
-                    PROTECT(y1 = CONS(duplicate(y),R_NilValue));
-                else
-                    PROTECT(y1 = CONS(y,R_NilValue));
-                if (IS_STATIC_BOX(x)) 
-                    x = duplicate(x);
-                args = CONS(x,y1);
-            }
-        }
-        PROTECT(args);
-        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
             return ans;
         }
-        UNPROTECT(1);
     }
 
     /* Check argument count now (after dispatch, since other methods may allow
        other argument count). */
 
-    checkArity(op,args);
+    checkArity(op,argsevald);
 
     /* Arguments are now in x and y, and are protected.  They may be static
-       boxes.  The value in args may not be protected, and is not used below. */
+       boxes. */
 
     ans = R_relop (call, op, x, y, env, variant);
 
-    UNPROTECT(2);
+    UNPROTECT(3);
     return ans;
 }
 

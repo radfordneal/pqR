@@ -2137,13 +2137,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 local_assign = VARIANT_LOCAL_ASSIGN2;
         }
 
-        /* Evaluate the right hand side, maybe asking for it in a static box. */
+        /* Evaluate the right hand side, asking for it in a static box. */
 
-        if (! (variant & (VARIANT_STATIC_BOX_OK | VARIANT_NULL)))
-            rhs = evalv (rhs, rho, local_assign | VARIANT_PENDING_OK);
-        else 
-            rhs = evalv (rhs, rho, 
-                    local_assign | VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
+        rhs = evalv (rhs, rho, 
+                     local_assign | VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
 
         /* See if the assignment was done by the rhs operator. */
 
@@ -2154,10 +2151,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Try to copy the value, not assign the object, if the rhs is scalar
            and doesn't have zero NAMEDCNT (for which assignment would be free). 
-           This will include static boxes, which must be duplicated if the
-           copy can't be done.  If the copy can't be done, but a binding
-           cell was found here, the assignment is done directly into the
-           binding cell, avoiding the overhead of calling set_var_in_frame. */
+           This will include static boxes, which must be replaced by regular
+           values if the copy can't be done.  If the copy can't be done, but 
+           a binding cell was found here, the assignment is done directly into
+           the binding cell, avoiding overhead of calling set_var_in_frame. */
 
         if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
             SEXP v;
@@ -2181,6 +2178,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
                     case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
                     }
+                    rhs = v; /* for return value */
                     break; /* out of main switch */
                 }
             }

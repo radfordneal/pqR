@@ -394,6 +394,7 @@
  Rf_setIVector
  Rf_setRVector
  Rf_ssort
+ Rf_static_box_eval2
  Rf_stirlerr
  Rf_strmat2intmat
  Rf_substituteList

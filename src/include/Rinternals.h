@@ -915,9 +915,6 @@ LibExtern VECTOR_SEXPREC_C R_ScalarIntegerBox_space;
 #define R_ScalarIntegerBox0 ((SEXP) &R_ScalarIntegerBox0_space)
 LibExtern VECTOR_SEXPREC_C R_ScalarIntegerBox0_space;
 
-#define SWITCH_TO_INTEGER_BOX0(v) \
-  ( *(v) = *INTEGER(R_ScalarIntegerBox), R_ScalarIntegerBox0 )
-
 /* Real Values.  Defined in const-objs.c */
 
 #define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
@@ -934,10 +931,6 @@ LibExtern VECTOR_SEXPREC_C R_ScalarRealBox_space;
 
 #define R_ScalarRealBox0 ((SEXP) &R_ScalarRealBox0_space)
 LibExtern VECTOR_SEXPREC_C R_ScalarRealBox0_space;
-
-#define SWITCH_TO_REAL_BOX0(v) \
-  ( *(v) = *REAL(R_ScalarRealBox), R_ScalarRealBox0 )
-
 
 #ifdef __MAIN__
 attribute_hidden
@@ -1125,6 +1118,7 @@ void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
 void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
 SEXP Rf_MaybeConstList1(SEXP);
+SEXP Rf_static_box_eval2(SEXP, SEXP *, SEXP *, SEXP, SEXP);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1521,6 +1515,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define set_var_in_frame	Rf_set_var_in_frame
 #define set_var_nonlocal	Rf_set_var_nonlocal
 #define MaybeConstList1		Rf_MaybeConstList1
+#define static_box_eval2	Rf_static_box_eval2
 #define str2type		Rf_str2type
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute
