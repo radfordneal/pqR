@@ -224,6 +224,108 @@ VECTOR_SEXPREC_C R_ScalarIntegerBox0_space = SCALAR_BOX(INTSXP);
 VECTOR_SEXPREC_C R_ScalarRealBox0_space = SCALAR_BOX(REALSXP);
 
 
+/* Evaluate two arguments that may be put in static boxes.  The two
+   arguments are returned in arg1 and arg2.  A list of the evaluated
+   arguments is returned as the value of the function, if one of the
+   first two is an object, so that dispatch must be attempted (note
+   that the argument count in this case may not be two).  If neither
+   is an object, a list with the correct number of arguments is 
+   returned, but they may (or may not) be the unevaluated arguments. 
+
+   Note that if there are less than two arguments, the missing ones will
+   appear here to be R_NilValue (since CAR(R_NilValue) is R_NilValue).
+
+   The args and env arguments must be protected by the caller. */
+
+SEXP attribute_hidden static_box_eval2 
+                        (SEXP args, SEXP *arg1, SEXP *arg2, SEXP env, SEXP call)
+{
+    SEXP argsevald;
+    SEXP x, y;
+
+    x = CAR(args); 
+    y = CADR(args);
+
+    /* We evaluate by the general procedure if ... present, without 
+       trying to put args in static boxes. */
+
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
+        argsevald = evalList (args, env, call);
+        x = CAR(argsevald);
+        y = CADR(argsevald);
+        goto rtrn;
+    }
+
+    /* Otherwise, we try to put the first arg in a static box. */
+
+    PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK));
+
+    /* If first arg is an object, we evaluate the rest of the arguments
+       normally. */
+
+    if (isObject(x)) {
+        argsevald = evalList (CDR(args), env, call);
+        y = CAR(argsevald);
+        argsevald = cons_with_tag (x, argsevald, TAG(args));
+        UNPROTECT(1); /* x */
+        goto rtrn;
+    }
+
+    /* If we are keeping x in a static box, we need to save its
+       value in a local variable, and switch to the other box,
+       since the second argument might use a static box too. */
+
+    int intv; double realv;  /* for saving a boxed x value */
+    if (x == R_ScalarRealBox) {
+        realv = *REAL(x);
+        x = R_ScalarRealBox0;
+    }
+    else if (x == R_ScalarIntegerBox) {
+        intv = *INTEGER(x);
+        x = R_ScalarIntegerBox0;
+    }
+
+    y = evalv (y, env, VARIANT_STATIC_BOX_OK);
+
+    if (x == R_ScalarRealBox0)
+        *REAL(x) = realv;
+    else if (x == R_ScalarIntegerBox0)
+        *INTEGER(x) = intv;
+
+    /* If the second arg is an object, we have to duplicate the first
+       arg if it is in a static box, and create the list of evaluated
+       arguments. */
+
+    if (isObject(y)) {
+        UNPROTECT(1); /* x */
+        PROTECT(y);
+        if (IS_STATIC_BOX(x))
+            x = duplicate(x);
+        PROTECT(x);
+        argsevald = evalList (CDDR(args), env, call);
+        argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
+        argsevald = cons_with_tag (x, argsevald, TAG(args));
+        UNPROTECT(2); /* x & y */
+        goto rtrn;
+    }
+
+    /* If neither of the first two arguments are an object, we
+       don't look at any possible remaining arguments.  The caller
+       is responsible for reporting an error if any are present,
+       but we assist by returning the unevaluated arguments, which
+       in this case (no ...) number the same as the actual arguments. */
+
+    UNPROTECT(1); /* x */
+    argsevald = args;
+
+  rtrn:
+    *arg1 = x;
+    *arg2 = y;
+
+    return argsevald;
+}
+
+
 /* Initialize variables holding constant values, for those who need them
    as variables (eg, RStudio).  Need to first undefine their macro forms,
    which were defined in Rinternals.h. */

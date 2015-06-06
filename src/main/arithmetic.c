@@ -331,121 +331,60 @@ static double logbase(double x, double base)
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     int opcode = PRIMVAL(op);
-    SEXP ans, arg1, arg2;
-    int args_evald;
+    SEXP argsevald, ans, arg1, arg2;
 
-    /* Evaluate arguments, setting arg1 to first argument and arg2 to
-       second argument (NULL if none).  Arguments are usually evaluated 
-       with VARIANT_STATIC_BOX_OK.
+    /* Evaluate arguments, maybe putting them in static boxes. */
 
-       The whole argument list is in args, already evaluated if 
-       args_evald is 1. */
+    PROTECT(argsevald = static_box_eval2 (args, &arg1, &arg2, env, call));
+    PROTECT2(arg1,arg2);
 
-    arg1 = CAR(args); 
-    if (CDR(args) == R_NilValue)
-        arg2 = NULL;
-    else
-        arg2 = CADR(args);
+    /* Check for dispatch on S3 or S4 objects. */
 
-    if (arg1==R_DotsSymbol || arg2==R_DotsSymbol || CDDR(args)!=R_NilValue) {
-        args = evalListPendingOK (args, env, call);
-        PROTECT(arg1 = CAR(args)); 
-        if (CDR(args) == R_NilValue)
-            arg2 = NULL;
-        else
-            PROTECT(arg2 = CADR(args));
-        args_evald = 1;
-    }
-    else {
-        PROTECT(arg1 = evalv (arg1, env, VARIANT_PENDING_OK 
-                                          | VARIANT_STATIC_BOX_OK));
-        if (arg2 != NULL) {
-            int intv; double realv;  /* for saving a boxed arg1 value */
-            if (arg1 == R_ScalarRealBox)
-                arg1 = SWITCH_TO_REAL_BOX0(&realv);
-            else if (arg1 == R_ScalarIntegerBox)
-                arg1 = SWITCH_TO_INTEGER_BOX0(&intv);
-            PROTECT(arg2 = evalv (arg2, env, isObject(arg1) ? VARIANT_PENDING_OK
-                             : VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK));
-            if (arg1 == R_ScalarRealBox0)
-                *REAL(arg1) = realv;
-            else if (arg1 == R_ScalarIntegerBox0)
-                *INTEGER(arg1) = intv;
-        }
-        args_evald = 0;
-    }
-
-    /* Check for dispatch on S3 or S4 objects.  Takes care to match length
-       of "args" to length of original (number of args in "call"). */
-
-    if (isObject(arg1) || arg2!=NULL && isObject(arg2)) {
-        if (!args_evald) {
-            if (arg2 == NULL) {
-                if (IS_STATIC_BOX(arg1))
-                    arg1 = duplicate(arg1);
-                args = CONS(arg1,R_NilValue);
-            }
-            else {
-                SEXP tl;
-                UNPROTECT(1);
-                if (IS_STATIC_BOX(arg2))
-                    PROTECT(tl = CONS(duplicate(arg2),R_NilValue));
-                else
-                    PROTECT(tl = CONS(arg2,R_NilValue));
-                if (IS_STATIC_BOX(arg1)) 
-                    arg1 = duplicate(arg1);
-                args = CONS(arg1,tl);
-            }
-        }
-        PROTECT(args);
-        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
-            UNPROTECT(2 + (arg2!=NULL));
+    if (isObject(arg1) || isObject(arg2)) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+            UNPROTECT(3);
             return ans;
         }
-        UNPROTECT(1);
     }
 
     /* Check for argument count error (not before dispatch, since other
        methods may have different requirements). */
 
-    if (args==R_NilValue || CDDR(args)!=R_NilValue)
+    if (argsevald==R_NilValue || CDDR(argsevald)!=R_NilValue)
 	errorcall(call,_("operator needs one or two arguments"));
 
-    if (arg2==NULL && opcode!=MINUSOP && opcode!=PLUSOP)
+    if (CDR(argsevald)==R_NilValue && opcode!=MINUSOP && opcode!=PLUSOP)
         errorcall(call, _("%d argument passed to '%s' which requires %d"),
                         1, PRIMNAME(op), 2);
 
-    /* Arguments are now in arg1 and arg2 (if not NULL), and are protected. 
-       They may be in static boxes.  The value in args may not be protected,
-       and is not used below. */
+    /* Arguments are now in arg1 and arg2, and are protected. 
+       They may be in static boxes. */
 
-    /* Quickly do real arithmetic and integer plus/minus on scalars with 
-       no attributes. */
+    /* We quickly do real arithmetic and integer plus/minus on scalars with 
+       no attributes (as will be the case for static boxes).  We don't
+       bother trying local assignment, since returning the result in a
+       static box should be about as fast. */
 
     int type = TYPEOF(arg1);
 
     if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 
                                         && ATTRIB(arg1)==R_NilValue) {
-        if (arg2==NULL) {
+
+        if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             switch (opcode) {
             case PLUSOP:
                 ans = arg1;
                 goto ret;
             case MINUSOP: ;
-                int local_assign = 0;
-                if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 
-                  && !NAMEDCNT_GT_1(arg1)
-                  && arg1 == findVarInFrame3 (env, CADR(call), 7))
-                    R_variant_result = local_assign = 1;
                 if (type==REALSXP) {
-                    ans = local_assign || NAMEDCNT_EQ_0(arg1) ? arg1 
+                    ans = NAMEDCNT_EQ_0(arg1) ? arg1
                         : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
                         :   allocVector1REAL();
                     WAIT_UNTIL_COMPUTED(arg1);
                     *REAL(ans) = - *REAL(arg1);
                 }
                 else { /* INTSXP */
-                    ans = local_assign || NAMEDCNT_EQ_0(arg1) ? arg1 
+                    ans = NAMEDCNT_EQ_0(arg1) ? arg1 
                         : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
                         :   allocVector1INT();
                     WAIT_UNTIL_COMPUTED(arg1);
@@ -461,21 +400,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
             if (type==REALSXP) {
 
-                int local_assign1 = 0, local_assign2 = 0;
-                if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
-                    if (!NAMEDCNT_GT_1(arg1)
-                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
-                        R_variant_result = local_assign1 = 1;
-                }
-                else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
-                    if (!NAMEDCNT_GT_1(arg2)
-                      && arg2 == findVarInFrame3 (env, CADDR(call), 7))
-                        R_variant_result = local_assign2 = 1;
-                }
-
-                ans = local_assign1 ? arg1
-                    : local_assign2 ? arg2
-                    : NAMEDCNT_EQ_0(arg2) ? arg2
+                ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1
                     : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
                     :   allocVector1REAL();
@@ -518,21 +443,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             else if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
                 /* type==INTSXP */
 
-                int local_assign1 = 0, local_assign2 = 0;
-                if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
-                    if (!NAMEDCNT_GT_1(arg1)
-                      && arg1 == findVarInFrame3 (env, CADR(call), 7))
-                        R_variant_result = local_assign1 = 1;
-                }
-                else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
-                    if (!NAMEDCNT_GT_1(arg2)
-                      && arg2 == findVarInFrame3 (env, CADDR(call), 7))
-                        R_variant_result = local_assign2 = 1;
-                }
-
-                ans = local_assign1 ? arg1
-                    : local_assign2 ? arg2
-                    : NAMEDCNT_EQ_0(arg2) ? arg2
+                ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1 
                     : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
                     :   allocVector1INT();
@@ -567,11 +478,14 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Otherwise, handle the general case. */
 
-    ans = arg2==NULL ? R_unary (call, op, arg1, env, variant) 
-                     : R_binary (call, op, arg1, arg2, env, variant);
+    ans = CDR(argsevald)==R_NilValue 
+           ? R_unary (call, op, arg1, env, variant) 
+           : R_binary (call, op, arg1, arg2, env, variant);
 
   ret:
-    UNPROTECT(1+(arg2!=NULL));
+    UNPROTECT(3);
+    if (IS_STATIC_BOX(ans) && (variant & VARIANT_STATIC_BOX_OK) == 0)
+        ans = duplicate(ans);
     return ans;
 }
 
