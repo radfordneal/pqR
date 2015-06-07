@@ -66,79 +66,85 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     case GEOP: code = LTOP; negate = 1; break;
     }
 
-    nx = length(x);
-    ny = length(y);
-
     WAIT_UNTIL_COMPUTED_2(x,y);
 
-    /* Handle integer or real vectors that have no attributes quickly. */ 
+    if (TYPEOF(x) != REALSXP && TYPEOF(x) != INTSXP
+     || TYPEOF(y) != REALSXP && TYPEOF(y) != INTSXP) {
 
-    if (ATTRIB(x) == R_NilValue && ATTRIB(y) == R_NilValue 
-        && (TYPEOF(x) == REALSXP || TYPEOF(x) == INTSXP)
-        && (TYPEOF(y) == REALSXP || TYPEOF(y) == INTSXP)
-	&& nx > 0 && ny > 0) {
-
-        /* Handle scalars even quicker, using ScalarLogicalMaybeConst. */
-
-        if (nx==1 && ny==1) {
-            /* Separate code when both integers, in case a double can't hold
-               an integer to full precision. */
-            int result;
-            if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) {
-                int x1 = INTEGER(x)[0];
-                int y1 = INTEGER(y)[0];
-                result = x1 == NA_INTEGER || y1 == NA_INTEGER ? NA_LOGICAL
-                       : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
-            }
-            else {
-                double x1 = TYPEOF(x) == REALSXP ? REAL(x)[0]
-                          : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
-                double y1 = TYPEOF(y) == REALSXP ? REAL(y)[0]
-                          : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
-                result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
-                       : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
-            }
-            return ScalarLogicalMaybeConst (negate && result!=NA_LOGICAL 
-                                             ? !result : result);
-        } 
-        else {
-   	    if (((nx > ny) ? nx % ny : ny % nx) != 0) {
-                PROTECT(ans);
-    	        warningcall(call,_("longer object length is not a multiple of shorter object length"));
-                UNPROTECT(1);
-            }
-            if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) 
-                ans = integer_relop (code, negate, x, y);
-            else {
-                if (TYPEOF(x) == INTSXP) {
-                    PROTECT(x);
-                    x = coerceVector(x,REALSXP);
-                    UNPROTECT(1);
-                }
-                if (TYPEOF(y) == INTSXP) {
-                    PROTECT(y);
-                    y = coerceVector(y,REALSXP);
-                    UNPROTECT(1);
-                }
-                PROTECT(x);
-                PROTECT(y);
-                switch (VARIANT_KIND(variant)) {
-                case VARIANT_AND: 
-                    ans = real_relop_and (code, negate, x, y); 
-                    break;
-                case VARIANT_OR:
-                    ans = real_relop_or (code, negate, x, y);
-                    break;
-                default:
-                    ans = real_relop (code, negate, x, y);
-                    break;
-                }
-                UNPROTECT(2);
-            }
-            return ans;
-        }
+        nx = length(x);
+        ny = length(y);
     }
 
+    else {
+
+        /* Handle integer or real vectors that have no attributes quickly. */ 
+
+        nx = LENGTH(x);
+        ny = LENGTH(y);
+
+        if (ATTRIB(x) == R_NilValue && ATTRIB(y) == R_NilValue 
+             && nx > 0 && ny > 0) {
+    
+            /* Handle scalars even quicker, using ScalarLogicalMaybeConst. */
+    
+            if (nx==1 && ny==1) {
+                /* Separate code when both integers, in case a double can't hold
+                   an integer to full precision. */
+                int result;
+                if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) {
+                    int x1 = INTEGER(x)[0];
+                    int y1 = INTEGER(y)[0];
+                    result = x1 == NA_INTEGER || y1 == NA_INTEGER ? NA_LOGICAL
+                           : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
+                }
+                else {
+                    double x1 = TYPEOF(x) == REALSXP ? REAL(x)[0]
+                       : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
+                    double y1 = TYPEOF(y) == REALSXP ? REAL(y)[0]
+                       : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
+                    result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
+                           : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
+                }
+                return ScalarLogicalMaybeConst (negate && result!=NA_LOGICAL 
+                                                 ? !result : result);
+            } 
+            else {
+                PROTECT2(x,y);
+                if (((nx > ny) ? nx % ny : ny % nx) != 0) {
+        	        warningcall (call,
+          _("longer object length is not a multiple of shorter object length"));
+                }
+                if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) 
+                    ans = integer_relop (code, negate, x, y);
+                else {
+                    if (TYPEOF(x) == INTSXP) {
+                        x = coerceVector(x,REALSXP);
+                        UNPROTECT(2);
+                        PROTECT2(x,y);
+                    }
+                    if (TYPEOF(y) == INTSXP) {
+                        y = coerceVector(y,REALSXP);
+                        UNPROTECT(2);
+                        PROTECT2(x,y);
+                    }
+                    switch (VARIANT_KIND(variant)) {
+                    case VARIANT_AND: 
+                        ans = real_relop_and (code, negate, x, y); 
+                        break;
+                    case VARIANT_OR:
+                        ans = real_relop_or (code, negate, x, y);
+                        break;
+                    default:
+                        ans = real_relop (code, negate, x, y);
+                        break;
+                    }
+                }
+                UNPROTECT(2);
+                return ans;
+            }
+        }
+    }
+    
     PROTECT_WITH_INDEX(x, &xpi);
     PROTECT_WITH_INDEX(y, &ypi);
 
