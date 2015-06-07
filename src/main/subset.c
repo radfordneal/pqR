@@ -1040,9 +1040,10 @@ static R_INLINE R_len_t simple_index (SEXP s)
    valid integer or real subscript that is positive or negative (not zero, 
    NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
    so simple.  The arguments x and s do not need to be protected before 
-   this function is called.  It's OK for x to still be being computed. */
+   this function is called.  It's OK for x to still be being computed. 
+   The variant for the return result is the last argument. */
 
-static SEXP one_vector_subscript (SEXP x, SEXP s)
+static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
 {
     R_len_t ix, n;
     int typeofx;
@@ -1066,12 +1067,28 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
             HELPERS_WAIT_IN_VAR (x, avail, ix, n);
         }
         switch (typeofx) {
-        case LGLSXP:  return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
-        case INTSXP:  return ScalarIntegerMaybeConst (INTEGER(x)[ix]);
-        case REALSXP: return ScalarRealMaybeConst (REAL(x)[ix]);
-        case RAWSXP:  return ScalarRawMaybeConst (RAW(x)[ix]);
-        case STRSXP:  return ScalarStringMaybeConst (STRING_ELT(x,ix));
-        case CPLXSXP: return ScalarComplexMaybeConst (COMPLEX(x)[ix]);
+        case LGLSXP:  
+            return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
+        case INTSXP:  
+            if (variant & VARIANT_STATIC_BOX_OK) {
+                *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[ix];
+                return R_ScalarIntegerBox;
+            }
+            else
+                return ScalarIntegerMaybeConst(INTEGER(x)[ix]);
+        case REALSXP: 
+            if (variant & VARIANT_STATIC_BOX_OK) {
+                *REAL(R_ScalarRealBox) = REAL(x)[ix];
+                return R_ScalarRealBox;
+            }
+            else
+                return ScalarRealMaybeConst(REAL(x)[ix]);
+        case RAWSXP:  
+            return ScalarRawMaybeConst (RAW(x)[ix]);
+        case STRSXP:  
+            return ScalarStringMaybeConst (STRING_ELT(x,ix));
+        case CPLXSXP: 
+            return ScalarComplexMaybeConst (COMPLEX(x)[ix]);
         default: abort();
         }
     }
@@ -1129,9 +1146,10 @@ static SEXP one_vector_subscript (SEXP x, SEXP s)
    NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
    so simple.  The arguments x, dim, s1, and s2 do not need to be 
    protected before this function is called. It's OK for x to still be 
-   being computed. */
+   being computed. The variant for the return result is the last argument. */
 
-static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
+static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2, 
+                                          int variant)
 {
     R_len_t ix1, ix2, nrow, ncol, avail, e;
 
@@ -1156,12 +1174,30 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
     }
 
     switch (TYPEOF(x)) {
-    case LGLSXP:  return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
-    case INTSXP:  return ScalarIntegerMaybeConst (INTEGER(x)[e]);
-    case REALSXP: return ScalarRealMaybeConst (REAL(x)[e]);
-    case RAWSXP:  return ScalarRawMaybeConst (RAW(x)[e]);
-    case STRSXP:  return ScalarStringMaybeConst (STRING_ELT(x,e));
-    case CPLXSXP: return ScalarComplexMaybeConst (COMPLEX(x)[e]);
+    case LGLSXP:  
+        return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
+    case INTSXP:  
+        if (variant & VARIANT_STATIC_BOX_OK) {
+            *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[e];
+if (installed_already("STATIC.BOX.DEBUG")) REprintf("2I: ");
+            return R_ScalarIntegerBox;
+        }
+        else
+            return ScalarIntegerMaybeConst(INTEGER(x)[e]);
+    case REALSXP: 
+        if (variant & VARIANT_STATIC_BOX_OK) {
+            *REAL(R_ScalarRealBox) = REAL(x)[e];
+if (installed_already("STATIC.BOX.DEBUG")) REprintf("2R: ");
+            return R_ScalarRealBox;
+        }
+        else
+            return ScalarRealMaybeConst(REAL(x)[e]);
+    case RAWSXP:  
+        return ScalarRawMaybeConst (RAW(x)[e]);
+    case STRSXP:  
+        return ScalarStringMaybeConst (STRING_ELT(x,e));
+    case CPLXSXP: 
+        return ScalarComplexMaybeConst (COMPLEX(x)[e]);
     default: abort();
     }
 }
@@ -1171,19 +1207,21 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2)
  * This provides the most general form of subsetting. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP array, SEXP args, 
-                                SEXP rho, int seq);
+                                SEXP rho, int variant, int seq);
 
-static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
     int argsevald = 0;
     int nprotect = 0;
-    int seq = 0;
 
     /* If we can easily determine that this will be handled by subset_dflt
        and has one or two index arguments in total, evaluate the first index
-       with VARIANT_SEQ so it may come as a range rather than a vector, and
-       evaluate the array with VARIANT_PENDING_OK. */
+       with VARIANT_SEQ, so it may come as a range rather than a vector, and 
+       evaluate the array with VARIANT_PENDING_OK.  If there is just one
+       index, evaluate it with VARIANT_STATIC_BOX, so if scalar it can
+       arrive in a static box.  (We don't do this if evaluation of the remaining
+       arguments might also use this static box.) */
 
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
@@ -1198,15 +1236,18 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
             else if (TYPEOF(CAR(ixlist)) != LANGSXP) {
                 /* ... in particular, it might be missing ... */
-                args = CONS(array,evalListKeepMissing(ixlist,rho));
+                args = evalListKeepMissing(ixlist,rho);
                 UNPROTECT(nprotect);
-                return do_subset_dflt(call, op, args, rho);
+                return do_subset_dflt_seq (call, op, array, args, rho, 
+                                           variant, 0);
             }
             else {
                 SEXP remargs = CDR(ixlist);
-                int variant = remargs==R_NilValue || CDR(remargs)==R_NilValue
-                               ? VARIANT_SEQ : 0;
-                SEXP idx = evalv (CAR(ixlist), rho, variant|VARIANT_PENDING_OK);
+                int seq = 0;
+                int avar = 
+                  remargs == R_NilValue ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK :
+                  CDR(remargs) == R_NilValue ? VARIANT_SEQ : 0;
+                SEXP idx = evalv (CAR(ixlist), rho, avar);
                 if (R_variant_result) {
                     seq = 1;
                     R_variant_result = 0;
@@ -1219,7 +1260,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
                 args = CONS(idx,remargs);
                 UNPROTECT(nprotect);
                 wait_until_arguments_computed(args);
-                return do_subset_dflt_seq(call, op, array, args, rho, seq);
+                return do_subset_dflt_seq (call, op, array, args, rho, 
+                                           variant, seq);
             }
         }
     }
@@ -1239,7 +1281,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Method dispatch has failed, we now */
     /* run the generic internal code. */
-    return do_subset_dflt_seq (call, op, CAR(ans), CDR(ans), rho, 0);
+    return do_subset_dflt_seq (call, op, CAR(ans), CDR(ans), rho, variant, 0);
 }
 
 
@@ -1249,7 +1291,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subset_dflt_seq (call, op, CAR(args), CDR(args), rho, 0);
+    return do_subset_dflt_seq (call, op, CAR(args), CDR(args), rho, 0, 0);
 }
 
 /* The "seq" argument below is 1 if the first subscript is a sequence spec
@@ -1257,7 +1299,7 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
    rather than as part of an argument list, for efficiency. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
-                                SEXP rho, int seq)
+                                SEXP rho, int variant, int seq)
 {
     SEXP cdr_subs = CDR(subs);
     int drop, i, nsubs, type;
@@ -1276,7 +1318,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
                 }
             }
             if (attr == R_NilValue) {
-                SEXP r = one_vector_subscript(x,CAR(subs));
+                SEXP r = one_vector_subscript (x, CAR(subs), variant);
                 if (r != R_NilValue)
                     return r;
             }
@@ -1291,7 +1333,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
                 if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {
                     /* x is a matrix */
                     SEXP r = two_matrix_subscripts (x, dim, CAR(subs),
-                                                            CAR(cdr_subs));
+                                                    CAR(cdr_subs), variant);
                     if (r != R_NilValue)
                         return r;
                 }
@@ -1837,7 +1879,7 @@ attribute_hidden FUNTAB R_FunTab_subset[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"[",		do_subset,	1,	0,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
+{"[",		do_subset,	1,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"[[",		do_subset2,	2,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"$",		do_subset3,	3,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
