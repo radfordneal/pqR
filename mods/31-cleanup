@@ -4,3 +4,6 @@ Fixes bug in which updates like a <- -a could sometimes modify a locked binding.
 
 Fix bug in definition of PROTECT, etc. that shows up when compiler gcc 4.8
 optimizes.
+
+Changed DUPLICATE_ATTRIB macro in arithmetic.c to call version in memory.c 
+if object bit set - just in case may be necessary for S4 objects.
