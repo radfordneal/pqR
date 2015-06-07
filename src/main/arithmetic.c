@@ -61,7 +61,7 @@ static void NaN_warningcall (SEXP call)
    not this macro. */
 
 #define DUPLICATE_ATTRIB(_to_,_from_) do { \
-    if (ATTRIB((_to_))!=ATTRIB((_from_)) && !OBJECT((_from_))) 
+    if (ATTRIB((_to_))!=ATTRIB((_from_)) || OBJECT((_from_))) \
         (DUPLICATE_ATTRIB)((_to_),(_from_)); \
 } while (0)
 
