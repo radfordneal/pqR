@@ -32,8 +32,11 @@
   \subsection{BUG FIXES}{
   \itemize{
   \item ...
-  \item Fixed a problem with apply, lapply, vapply, and eapply.  (Add
-        more details later.)
+  \item Fixed related problems with \code{apply}, \code{lapply}, \code{vapply},
+        and \code{eapply}, that can show up when the value returned by the 
+        function being applied is itself a function.  This problem also
+        resulted in incorrect display of saved warning messages.  The problems
+        are also fixed in R-3.2.0, in a different way.
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
