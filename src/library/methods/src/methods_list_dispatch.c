@@ -715,53 +715,45 @@ SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
 
 static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
 {
-    /* since this is called every time a method is dispatched with a
-       definition that has a class, it should be as efficient as
-       possible => we build in knowledge of the standard
-       MethodDefinition and MethodWithNext slots.  If these (+ the
-       class slot) don't account for all the attributes, regular
-       dispatch is done. */
-    SEXP s, attrib;
-    int found = 1; /* we "know" the class attribute is there */
+    /* Since this is called every time a method is dispatched with
+       a definition that has a class, it should be as efficient as
+       possible.  Therefore we build in knowledge of the standard
+       MethodDefinition and MethodWithNext slots.  If there are any
+       attributes other than these, plus 'class' and 'generic', 
+       regular dispatch is done. */
+
+    SEXP s;
+    int others;
+
     PROTECT(def);
-    for(s = attrib = ATTRIB(def); s != R_NilValue; s = CDR(s)) {
+    others = 0;
+    for (s = ATTRIB(def); s != R_NilValue; s = CDR(s)) {
 	SEXP t = TAG(s);
-	if(t == R_target) {
-	    defineVar(R_dot_target, CAR(s), ev); found++;
-	}
-	else if(t == R_defined) {
-	    defineVar(R_dot_defined, CAR(s), ev); found++;
-	}
-	else if(t == R_nextMethod)  {
-	    defineVar(R_dot_nextMethod, CAR(s), ev); found++;
-	}
-	else if(t == R_SourceSymbol || t == s_generic)  {
-	    /* ignore */ found++;
-	}
+	if (t == R_target)
+	    defineVar (R_dot_target, CAR(s), ev);
+	else if (t == R_defined)
+	    defineVar (R_dot_defined, CAR(s), ev);
+	else if (t == R_nextMethod)
+	    defineVar (R_dot_nextMethod, CAR(s), ev);
+	else if (t == R_ClassSymbol || t == R_SourceSymbol || t == s_generic)
+	    ; /* ignore */
+        else
+	    others = 1;
     }
     defineVar(R_dot_Method, def, ev);
+    UNPROTECT(1);
 
-    if(found < length(attrib)) {
-        /* this shouldn't be needed but check the generic being
-           "loadMethod", which would produce a recursive loop */
-        if(strcmp(CHAR(asChar(fname)), "loadMethod") == 0) {
-	    UNPROTECT(1);
-            return def;
-	}
-	SEXP e, val;
-	PROTECT(e = allocVector(LANGSXP, 4));
-	SETCAR(e, R_loadMethod_name); val = CDR(e);
-	SETCAR(val, def); val = CDR(val);
-	SETCAR(val, fname); val = CDR(val);
-	SETCAR(val, ev);
-	val = eval(e, ev);
-	UNPROTECT(2);
-	return val;
-    }
-    else {
+    if (others && strcmp(CHAR(asChar(fname)), "loadMethod") != 0) {
+                 /* the strcmp shouldn't be needed, but checks the generic being
+                   "loadMethod", which would produce a recursive loop */
+	SEXP e;
+	PROTECT(e = 
+          LCONS(R_loadMethod_name, CONS(def, CONS(fname, CONS(ev, R_NilValue)))));
+	def = eval(e, ev);
 	UNPROTECT(1);
-	return def;
     }
+
+    return def;
 }
 
 static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
