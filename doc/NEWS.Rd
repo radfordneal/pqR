@@ -45,6 +45,8 @@
         function being applied is itself a function.  This problem also
         resulted in incorrect display of saved warning messages.  The problems
         are also fixed in R-3.2.0, in a different way.
+  \item A number of fixes were made that corrected possible problems
+        with protection of pointers, many provided by Tomas Kalibera.
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
