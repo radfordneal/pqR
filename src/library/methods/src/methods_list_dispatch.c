@@ -309,16 +309,18 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	    class = "missing";
 	else
 	    class = CHAR(STRING_ELT(R_data_class(object, TRUE), 0));
+
+	/* COMMENT IN R-2.15.0:  NB:  this code replicates .SigLabel().
+	   If that changes, e.g. to include the package, the code here 
+           must change too.  Or, better, the two should use the same C code.
+           HOWEVER:  There is no .SigLabel anywhere else in the source. */
+
 	if(ptr - buf + strlen(class) + 2 > NBUF) {
 	    UNPROTECT(nprotect);
 	    return R_NilValue;
 	}
-	/* NB:  this code replicates .SigLabel().
-	   If that changes, e.g. to include
-	   the package, the code here must change too.
-	   Or, better, the two should use the same C code. */
 	if(ptr > buf) { ptr = strcpy(ptr, "#");  ptr += 1;}
-	ptr = strcpy(ptr, class); ptr += strlen(class);
+	strcpy(ptr, class); ptr += strlen(class);
 	nargs++;
     }
     for(; nargs < nsig; nargs++) {
@@ -326,8 +328,8 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	    UNPROTECT(nprotect);
 	    return R_NilValue;
 	}
-	ptr = strcpy(ptr, "#"); ptr +=1;
-	ptr = strcpy(ptr, "missing"); ptr += strlen("missing");
+	strcpy(ptr, "#"); ptr +=1;  /* BUG?  Should it only be done if ptr>buf? */
+	strcpy(ptr, "missing"); ptr += strlen("missing");
     }	    
     value = findVarInFrame(mtable, install(buf));
     if(value == R_UnboundValue)
