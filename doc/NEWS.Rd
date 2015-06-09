@@ -16,6 +16,12 @@
 
   \subsection{INSTALLATION}{
   \itemize{
+  \item The module used to support parallel computation in 
+        helper threads has been updated to avoid a syntactic 
+        construction that technically violates the OpenMP 3.1 
+        specification.  This had been accepted without error
+        by gcc 4.8 and earlier, but is not accepted by recent gcc 
+        versions.
   \item ...
 }}
 
