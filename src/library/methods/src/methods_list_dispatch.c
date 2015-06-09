@@ -390,7 +390,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	    }
 	    ok = FALSE;
 	    if(IS_GENERIC(vl)) {
-	      if(strlen(pkg)) {
+	      if (*pkg) {
 		  gpackage = PACKAGE_SLOT(vl);
 		  check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
 		  ok = !strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)));
@@ -411,7 +411,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	vl = SYMVALUE(symbol);
 	if(IS_GENERIC(vl)) {
 	    generic = vl;
-	    if(strlen(pkg)) {
+	    if (*pkg) {
 		gpackage = PACKAGE_SLOT(vl);
 		check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
 		if(strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)))) generic = R_UnboundValue;
@@ -787,13 +787,14 @@ static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
 static const char *
 check_single_string(SEXP obj, Rboolean nonEmpty, const char *what)
 {
-    const char *string = "<unset>"; /* -Wall */
-    if(isString(obj)) {
-	if(length(obj) != 1)
-	    error(_("'%s' must be a single string (got a character vector of length %d)"),
-		  what, length(obj));
+    const char *string;
+    if (isString(obj)) {
+	if (LENGTH(obj) != 1)
+	    error(_(
+            "'%s' must be a single string (got a character vector of length %d)"),
+              what, length(obj));
 	string = CHAR(STRING_ELT(obj, 0));
-	if(nonEmpty && (! string || !string[0]))
+	if (*string == 0 && nonEmpty)
 	    error(_("'%s' must be a non-empty string; got an empty string"),
 		  what);
     }
