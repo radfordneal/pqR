@@ -735,20 +735,20 @@ static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
 	else if(t == R_nextMethod)  {
 	    defineVar(R_dot_nextMethod, CAR(s), ev); found++;
 	}
-	else if(t == R_SourceSymbol)  {
+	else if(t == R_SourceSymbol || t == s_generic)  {
 	    /* ignore */ found++;
 	}
     }
     defineVar(R_dot_Method, def, ev);
-    UNPROTECT(1);
 
-    /* this shouldn't be needed but check the generic being
-       "loadMethod", which would produce a recursive loop */
-    if(strcmp(CHAR(asChar(fname)), "loadMethod") == 0)
-	return def;
     if(found < length(attrib)) {
+        /* this shouldn't be needed but check the generic being
+           "loadMethod", which would produce a recursive loop */
+        if(strcmp(CHAR(asChar(fname)), "loadMethod") == 0) {
+	    UNPROTECT(1);
+            return def;
+	}
 	SEXP e, val;
-	PROTECT(def);
 	PROTECT(e = allocVector(LANGSXP, 4));
 	SETCAR(e, R_loadMethod_name); val = CDR(e);
 	SETCAR(val, def); val = CDR(val);
@@ -758,7 +758,10 @@ static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
 	UNPROTECT(2);
 	return val;
     }
-    else return def;
+    else {
+	UNPROTECT(1);
+	return def;
+    }
 }
 
 static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
