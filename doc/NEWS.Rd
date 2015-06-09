@@ -32,6 +32,8 @@
   \subsection{BUG FIXES}{
   \itemize{
   \item ...
+  \item A number of fixes were made that corrected possible problems
+        with protection of pointers, many provided by Tomas Kalibera.
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
