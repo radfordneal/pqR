@@ -1215,6 +1215,7 @@ SEXP attribute_hidden do_subassign2_dflt
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
     Rboolean S4, recursed;
     R_len_t length_x;
+    int intreal_x;
 
     SEXP thesub = R_NilValue, xOrig = R_NilValue;
 
@@ -1277,13 +1278,15 @@ SEXP attribute_hidden do_subassign2_dflt
 	thesub = CAR(subs);
 	len = length(thesub);
         if (len > 1) {
+            int str_sym_sub = isString(thesub) || isSymbol(thesub);
             for (int i = 0; i < len-1; i++) {
                 if (!isVectorList(x) && !isPairList(x))
                     errorcall (call, 
                       _("recursive indexing failed at level %d\n"), i+1);
                 length_x = length(x);
-                off = get1index (thesub, getAttrib(x, R_NamesSymbol),
-                                 length_x, TRUE, i, call);
+                off = get1index (thesub, 
+                        str_sym_sub ? getAttrib(x, R_NamesSymbol) : R_NilValue,
+                        length_x, TRUE, i, call);
                 if (off < 0 || off >= length_x)
                     errorcall(call, _("no such index at level %d\n"), i+1);
                 xup = x;
@@ -1322,10 +1325,12 @@ SEXP attribute_hidden do_subassign2_dflt
     length_x = length(x);
 
     if (nsubs == 1) {
-        offset = get1index (thesub, getAttrib(x,R_NamesSymbol), length_x, 
-                            FALSE, (recursed ? len-1 : -1), call);
+        int str_sym_sub = isString(thesub) || isSymbol(thesub);
+        offset = get1index (thesub, 
+                   str_sym_sub ? getAttrib(x,R_NamesSymbol) : R_NilValue,
+                   length_x, FALSE, (recursed ? len-1 : -1), call);
         if (offset < 0) {
-            if (isString(thesub) || isSymbol(thesub))
+            if (str_sym_sub)
                 offset = length_x;
             else
                 errorcall(call,_("[[ ]] subscript out of bounds"));
