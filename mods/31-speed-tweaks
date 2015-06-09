@@ -4,3 +4,8 @@ Defines FINDFUN macro for use in eval, to often avoid overhead
 of calling findFun.
 
 New faster version of the string hash function.
+
+Faster indexing with [[ when index is a vector of numbers (avoids
+creating names attribute).  Used in base::apply now, so speeds it up.
+
+
