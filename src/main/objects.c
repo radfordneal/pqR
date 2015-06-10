@@ -41,16 +41,9 @@
 
 static SEXP GetObject(RCNTXT *cptr)
 {
-    SEXP s, sysp, a, b, formals, funcall, tag;
-    sysp = R_GlobalContext->sysparent;
+    SEXP s, a, b, formals, tag;
 
-    PROTECT(funcall = R_syscall(0, cptr));
-
-    if ( TYPEOF(CAR(funcall)) == SYMSXP )
-	PROTECT(b = findFun(CAR(funcall), sysp));
-    else
-	PROTECT(b = eval(CAR(funcall), sysp));
-    /**** use R_sysfunction here instead */
+    b = cptr->callfun;
     if (TYPEOF(b) != CLOSXP) error(_("generic 'function' is not a function"));
     formals = FORMALS(b);
 
@@ -105,7 +98,6 @@ static SEXP GetObject(RCNTXT *cptr)
         }
     }
 
-    UNPROTECT(2);
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE_PENDING_OK(s) == R_UnboundValue)
 	    s = forcePromisePendingOK(s);
@@ -222,6 +214,12 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
     }
     if (defrho == R_BaseEnv)
 	defrho = R_BaseNamespace;
+    else if (TYPEOF(defrho) != ENVSXP) {
+        if (defrho == R_NilValue)
+	    error(_("use of NULL environment is defunct"));
+        else 
+            error(_("bad generic definition environment"));
+    }
 
     /* This evaluates promises */
     val = findFunMethod (method, callrho);
@@ -279,26 +277,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     /* Get the context which UseMethod was called from. */
 
     cptr = R_GlobalContext;
-    if ( !(cptr->callflag & CTXT_FUNCTION) || cptr->cloenv != rho)
-	error(_("'UseMethod' used in an inappropriate fashion"));
-
-    op = CAR(cptr->call);
-    switch (TYPEOF(op)) {
-    case SYMSXP:
-	PROTECT(op = findFun(op, cptr->sysparent));
-	break;
-    case LANGSXP:
-	PROTECT(op = eval(op, cptr->sysparent));
-	break;
-    case CLOSXP:
-    case BUILTINSXP:
-    case SPECIALSXP:
-	PROTECT(op);
-	break;
-    default:
-	error(_("Invalid generic function in 'usemethod'"));
-    }
-
+    op = cptr->callfun;
     PROTECT(klass = R_data_class2(obj));
 
     nclass = length(klass);
@@ -316,8 +295,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
                     setcl = allocVector (STRSXP, nclass - i);
                     copy_string_elements (setcl, 0, klass, i, nclass-i);
                     setAttrib (setcl, R_previousSymbol, klass);
-                    UNPROTECT(1); /* klass */
-                    PROTECT(setcl);
+                    UNPROTECT(2); /*klass, method */
+                    PROTECT2(setcl,method);
                 } 
                 else
                     setcl = klass; /* protected */
@@ -337,7 +316,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         }
     }
 
-    UNPROTECT(2);
+    UNPROTECT(1);
     cptr->callflag = CTXT_RETURN;
     return 0;
 
@@ -370,12 +349,12 @@ found: ;
     defineVar(R_dot_GenericCallEnv, callrho, newrho);
     defineVar(R_dot_GenericDefEnv, defrho, newrho);
     SETCAR(newcall, method);
-    R_GlobalContext->callflag = CTXT_GENERIC;
+    cptr->callflag = CTXT_GENERIC;
 
     *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
 
-    R_GlobalContext->callflag = CTXT_RETURN;
-    UNPROTECT(6);
+    cptr->callflag = CTXT_RETURN;
+    UNPROTECT(5);
     return 1;
 }
 
@@ -437,17 +416,8 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 
     if (CADR(argList) != R_MissingArg)
 	PROTECT(obj = eval(CADR(argList), env));
-    else {
-	cptr = R_GlobalContext;
-	while (cptr != NULL) {
-	    if ( (cptr->callflag & CTXT_FUNCTION) && cptr->cloenv == env)
-		break;
-	    cptr = cptr->nextcontext;
-	}
-	if (cptr == NULL)
-	    errorcall(call, _("'UseMethod' called from outside a closure"));
+    else
 	PROTECT(obj = GetObject(cptr));
-    }
 
     if (usemethod(generic_trans, obj, call, CDR(args),
 		  env, callenv, defenv, variant, &ans) == 1) {
@@ -501,6 +471,29 @@ static SEXP fixcall(SEXP call, SEXP args)
 	}
     }
     return call;
+}
+
+
+/* equalS3Signature:  compares "signature" and "left.right";
+   arguments must be non-null */
+
+static inline Rboolean equalS3Signature(const char *signature, const char *left,
+                                        const char *right)
+{
+    const char *s = signature;
+    const char *a;
+
+    for(a = left; *a; s++, a++) {
+        if (*s != *a)
+            return FALSE;
+    }
+    if (*s++ != '.')
+        return FALSE;
+    for(a = right; *a; s++, a++) {
+        if (*s != *a)
+            return FALSE;
+    }
+    return *s == 0;
 }
 
 /* If NextMethod has any arguments the first must be the generic */
@@ -730,12 +723,11 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     sb = translateChar(STRING_ELT(basename, 0));
     for (j = 0; j < len_klass; j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-        if (!copy_3_strings (buf, sizeof buf, sb, ".", sk))
-	    error(_("class name too long in '%s'"), sb);
-	if (!strcmp(buf, b)) break;
+        if (equalS3Signature(b, sb, sk))  /*  b == sb.sk */
+            break;
     }
 
-    if (!strcmp(buf, b)) /* we found a match and start from there */
+    if (j < len_klass) /* we found a match and start from there */
       j++;
     else
       j = 0;  /*no match so start with the first element of .Class */
