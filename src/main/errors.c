@@ -1745,10 +1745,9 @@ static SEXP do_getRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return CAR(list);
     else if (i == 1) {
 	/**** need to pre-allocate */
-	SEXP name, entry;
-	PROTECT(name = mkString("abort"));
-	entry = allocVector(VECSXP, 2);
-	SET_VECTOR_ELT(entry, 0, name);
+	SEXP entry;
+	PROTECT(entry = allocVector(VECSXP, 2));
+	SET_VECTOR_ELT(entry, 0, mkString("abort"));
 	SET_VECTOR_ELT(entry, 1, R_NilValue);
 	setAttrib(entry, R_ClassSymbol, mkString("restart"));
 	UNPROTECT(1);
