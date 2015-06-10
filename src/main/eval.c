@@ -3097,13 +3097,13 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 }
 
 
-/* gr needs to be protected on return from this function.  buf must be 
-   512 characters long. */
+/* gr needs to be protected on return from this function. */
 static void findmethod(SEXP Class, const char *group, const char *generic,
 		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
-		       char *buf, SEXP rho)
+		       SEXP rho)
 {
     int len, whichclass;
+    char buf[512];
 
     len = length(Class);
 
@@ -3113,7 +3113,7 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
     */
     for (whichclass = 0 ; whichclass < len ; whichclass++) {
 	const char *ss = translateChar(STRING_ELT(Class, whichclass));
-	if (!copy_3_strings (buf, 512, generic, ".", ss))
+	if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
 	    error(_("class name too long in '%s'"), generic);
 	*meth = install(buf);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
@@ -3121,7 +3121,7 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
 	    *gr = mkString("");
 	    break;
 	}
-        if (!copy_3_strings (buf, 512, group, ".", ss))
+        if (!copy_3_strings (buf, sizeof buf, group, ".", ss))
 	    error(_("class name too long in '%s'"), group);
 	*meth = install(buf);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
@@ -3140,7 +3140,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     int i, j, nargs, lwhich, rwhich, set;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
     SEXP rclass, rmeth, rgr, rsxp, value;
-    char lbuf[512], rbuf[512], generic[128];
+    char *generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
 
     /* pre-test to avoid string computations when there is nothing to
@@ -3195,8 +3195,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if(!isObject(CAR(args)) && !isObject(CADR(args)))
 	return 0;
 
-    if (!copy_1_string (generic, sizeof generic, PRIMNAME(op)))
-	error(_("generic name too long in '%s'"), PRIMNAME(op));
+    generic = PRIMNAME(op);
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
       : getAttrib00(CAR(args), R_ClassSymbol);
@@ -3210,8 +3209,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     lsxp = R_NilValue; lgr = R_NilValue; lmeth = R_NilValue;
     rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
 
-    findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich,
-	       lbuf, rho);
+    findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich, rho);
     PROTECT(lgr);
     if(isFunction(lsxp) && IS_S4_OBJECT(CAR(args)) && lwhich > 0
        && isBasicClass(translateChar(STRING_ELT(lclass, lwhich)))) {
@@ -3225,8 +3223,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     }
 
     if( nargs == 2 )
-	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth,
-		   &rwhich, rbuf, rho);
+	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth, &rwhich, rho);
     else
 	rwhich = 0;
 
@@ -3271,7 +3268,6 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    lgr = rgr;
 	    lclass = rclass;
 	    lwhich = rwhich;
-	    strcpy(lbuf, rbuf);
 	}
     }
 
@@ -3288,7 +3284,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    for (j = 0 ; j < LENGTH(t) ; j++) {
 		if (!strcmp(translateChar(STRING_ELT(t, j)),
 			    translateChar(STRING_ELT(lclass, lwhich)))) {
-		    SET_STRING_ELT(m, i, mkChar(lbuf));
+		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
 		    set = 1;
 		    break;
 		}
