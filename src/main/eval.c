@@ -3118,7 +3118,7 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
 	*meth = install(buf);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
-	    *gr = mkString("");
+	    *gr = R_BlankScalarString;
 	    break;
 	}
         if (!copy_3_strings (buf, sizeof buf, group, ".", ss))

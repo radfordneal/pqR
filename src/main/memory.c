@@ -1993,6 +1993,7 @@ static void RunGenCollect(R_size_t size_needed)
     static SEXP *root_vars[] = { 
         &NA_STRING,	          /* Builtin constants */
         &R_BlankString,
+	&R_BlankScalarString,
         &R_RestartToken,
         &R_MissingArg,
 

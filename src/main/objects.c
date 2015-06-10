@@ -670,20 +670,22 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     if (CHAR(STRING_ELT(generic, 0))[0] == '\0')
 	error(_("generic function not specified"));
 
-    /* determine whether we are in a Group dispatch */
+    /* Determine whether we are in a Group dispatch.  Also determine the root: 
+       either the group or the generic will be it. */
 
     group = findVarInFrame3(R_GlobalContext->sysparent,
 			    R_dot_Group, TRUE);
-    if (group == R_UnboundValue) PROTECT(group = mkString(""));
-    else PROTECT(group);
 
-    if (!isString(group) || LENGTH(group) != 1)
-	error(_("invalid 'group' argument found in NextMethod"));
-
-    /* determine the root: either the group or the generic will be it */
-
-    if (CHAR(STRING_ELT(group, 0))[0] == '\0') basename = generic;
-    else basename = group;
+    if (group == R_UnboundValue) {
+       group = R_BlankScalarString;
+       basename = generic;
+    } else {
+       if (!isString(group) || LENGTH(group) != 1)
+            error(_("invalid 'group' argument found in 'NextMethod'"));
+       if (CHAR(STRING_ELT(group, 0))[0] == '\0') basename = generic;
+       else basename = group;
+    }
+    PROTECT(group);
 
     nextfun = R_NilValue;
 
