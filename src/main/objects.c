@@ -503,6 +503,29 @@ static SEXP fixcall(SEXP call, SEXP args)
     return call;
 }
 
+
+/* equalS3Signature:  compares "signature" and "left.right";
+   arguments must be non-null */
+
+static inline Rboolean equalS3Signature(const char *signature, const char *left,
+                                        const char *right)
+{
+    const char *s = signature;
+    const char *a;
+
+    for(a = left; *a; s++, a++) {
+        if (*s != *a)
+            return FALSE;
+    }
+    if (*s++ != '.')
+        return FALSE;
+    for(a = right; *a; s++, a++) {
+        if (*s != *a)
+            return FALSE;
+    }
+    return *s == 0;
+}
+
 /* If NextMethod has any arguments the first must be the generic */
 /* the second the object and any remaining are matched with the */
 /* formals of the chosen method. */
@@ -730,12 +753,11 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     sb = translateChar(STRING_ELT(basename, 0));
     for (j = 0; j < len_klass; j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-        if (!copy_3_strings (buf, sizeof buf, sb, ".", sk))
-	    error(_("class name too long in '%s'"), sb);
-	if (!strcmp(buf, b)) break;
+        if (equalS3Signature(b, sb, sk))  /*  b == sb.sk */
+            break;
     }
 
-    if (!strcmp(buf, b)) /* we found a match and start from there */
+    if (j < len_klass) /* we found a match and start from there */
       j++;
     else
       j = 0;  /*no match so start with the first element of .Class */
