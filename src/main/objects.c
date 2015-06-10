@@ -782,8 +782,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     PROTECT(s = allocVector(STRSXP, len_klass - i));
     PROTECT(klass = duplicate(klass));
     PROTECT(m = allocSExp(ENVSXP));
-    for (j = 0; j < LENGTH(s); j++)
-	SET_STRING_ELT(s, j, duplicate(STRING_ELT(klass, i++)));
+    copy_string_elements (s, 0, klass, i, LENGTH(s));
     setAttrib(s, install("previous"), klass);
     defineVar(R_dot_Class, s, m);
     /* It is possible that if a method was called directly that
