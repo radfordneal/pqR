@@ -125,7 +125,10 @@ static SEXP do_hsv(SEXP call, SEXP op, SEXP args, SEXP env)
     if (max < nv) max = nv;
     if (max < na) max = na;
     PROTECT(c = allocVector(STRSXP, max));
-    if(max == 0) return(c);
+    if(max == 0) {
+        UNPROTECT(5);
+        return c;
+    }
 
     for (i = 0; i < max; i++) {
 	hh = REAL(h)[i % nh];

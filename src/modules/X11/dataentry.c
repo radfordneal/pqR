@@ -1153,8 +1153,10 @@ static void closerect(DEstruct DE)
 		if (newcol && warn) {
 		    /* change mode to character */
 		    SEXP tmp = coerceVector(cvec, STRSXP);
+                    PROTECT(tmp);
 		    SET_STRING_ELT(tmp, wrow - 1, mkChar(buf));
 		    SET_VECTOR_ELT(DE->work, wcol - 1, tmp);
+                    UNPROTECT(tmp);
 		}
 	    } else {
 		if (TYPEOF(cvec) == STRSXP)
