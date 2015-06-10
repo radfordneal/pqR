@@ -35,6 +35,13 @@
   \item ...
 }}
 
+  \subsection{PERFORMANCE IMPROVEMENTS FROM A LATER R CORE RELEASE}{
+    \itemize{
+    \item A number of performance improvements relating to S3 and S4
+          implementation, due to Tomas Kalibera, were incorporated from
+          R 3.2.0.
+}}
+
   \subsection{BUG FIXES}{
   \itemize{
   \item Fixed a bug in which pqR's optimization of updates such as 
