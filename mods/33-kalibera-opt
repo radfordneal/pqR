@@ -11,3 +11,7 @@ Tweaked R_loadMethod to sometimes avoid string compare.  r66098
 
 
 Adapted some of Tomas's tweaks from r66388.
+
+
+Adapted some of Tomas's changes in r66693, plus fixed a couple of
+my bugs in nearby code.
