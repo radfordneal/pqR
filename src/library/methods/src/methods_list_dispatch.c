@@ -260,7 +260,7 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     /* Match the list of (evaluated) args to the methods table. */
     static SEXP  R_allmtable = NULL, R_siglength;
     SEXP object, value, mtable;
-    const char *class; int nprotect = 0, nsig, nargs;
+    const char *class; int nsig, nargs;
 #define NBUF 200
     char buf[NBUF]; char *ptr;
     if(!R_allmtable) {
@@ -272,7 +272,9 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     mtable = findVarInFrame(genericEnv, R_allmtable);
     if(mtable == R_UnboundValue || TYPEOF(mtable) != ENVSXP)
 	return R_NilValue;
+    PROTECT(mtable);
     object = findVarInFrame(genericEnv, R_siglength);
+    UNPROTECT(1);
     if(object == R_UnboundValue)
 	return R_NilValue;
     switch(TYPEOF(object)) {
@@ -291,26 +293,23 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     default:
 	return R_NilValue;
     }
+    PROTECT2(mtable,object);
     buf[0] = '\0'; ptr = buf;
     nargs = 0;
     while(!isNull(args) && nargs < nsig) {
 	object = CAR(args); args = CDR(args);
-	if(TYPEOF(object) == PROMSXP) {
-	    if(PRVALUE(object) == R_UnboundValue) {
-		SEXP tmp = eval(PRCODE(object), PRENV(object));
-		PROTECT(tmp); nprotect++;
-		SET_PRVALUE(object,  tmp);
-		object = tmp;
-	    }
-	    else
-		object = PRVALUE(object);
+	if (TYPEOF(object) == PROMSXP) {
+	    if (PRVALUE(object) == R_UnboundValue)
+		SET_PRVALUE(object, eval(PRCODE(object), PRENV(object)));
+                               /* should this really use forcePromise? */
+	    object = PRVALUE(object);
 	}
 	if(object == R_MissingArg)
 	    class = "missing";
 	else
 	    class = CHAR(STRING_ELT(R_data_class(object, TRUE), 0));
 	if(ptr - buf + strlen(class) + 2 > NBUF) {
-	    UNPROTECT(nprotect);
+	    UNPROTECT(2);
 	    return R_NilValue;
 	}
 	/* NB:  this code replicates .SigLabel().
@@ -323,7 +322,7 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     }
     for(; nargs < nsig; nargs++) {
 	if(ptr - buf + strlen("missing") + 2 > NBUF) {
-	    UNPROTECT(nprotect);
+	    UNPROTECT(2);
 	    return R_NilValue;
 	}
 	ptr = strcpy(ptr, "#"); ptr +=1;
@@ -332,7 +331,7 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     value = findVarInFrame(mtable, install(buf));
     if(value == R_UnboundValue)
 	value = R_NilValue;
-    UNPROTECT(nprotect);
+    UNPROTECT(2);
     return(value);
 }
 
