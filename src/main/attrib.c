@@ -706,9 +706,9 @@ static SEXP S4_extends(SEXP klass) {
     SETCAR(e, s_extendsForS3);
     val = CDR(e);
     SETCAR(val, klass);
-    val = eval(e, R_MethodsNamespace);
+    PROTECT(val = eval(e, R_MethodsNamespace));
     cache_class(class, val);
-    UNPROTECT(1);
+    UNPROTECT(2); /* val, e */
     return(val);
 }
 
