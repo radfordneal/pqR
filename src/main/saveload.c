@@ -1339,7 +1339,7 @@ static SEXP NewDataLoad (FILE *fp, InputRoutines *m, SaveLoadData *d)
     }
 
     /* Read the actual object back */
-    obj =  NewReadItem(sym_table, env_table, fp, m, d);
+    PROTECT(obj = NewReadItem(sym_table, env_table, fp, m, d));
 
     /* end the context after anything that could raise an error but before
        calling InTerm so it doesn't get called twice */
@@ -1347,7 +1347,7 @@ static SEXP NewDataLoad (FILE *fp, InputRoutines *m, SaveLoadData *d)
 
     /* Wrap up */
     m->InTerm(fp, d);
-    UNPROTECT(2);
+    UNPROTECT(3); /* obj, env_table, sym_table */
     return obj;
 }
 

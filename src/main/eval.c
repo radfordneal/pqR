@@ -2772,6 +2772,8 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if ( ! (variant & VARIANT_PENDING_OK))
                 WAIT_UNTIL_COMPUTED(R_ReturnedValue);
 	}
+	UNPROTECT(1);
+	PROTECT(expr);
 	endcontext(&cntxt);
     }
     else if (TYPEOF(expr) == EXPRSXP) {
@@ -2797,6 +2799,8 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if ( ! (variant & VARIANT_PENDING_OK))
                 WAIT_UNTIL_COMPUTED(R_ReturnedValue);
 	}
+	UNPROTECT(1);
+	PROTECT(tmp);
 	endcontext(&cntxt);
 	expr = tmp;
     }

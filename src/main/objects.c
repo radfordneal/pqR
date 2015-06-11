@@ -952,12 +952,12 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	    s_contains      = install("contains");
 	    s_selectSuperCl = install(".selectSuperClasses");
 	}
-
-	PROTECT(classExts = R_do_slot(R_getClassDef(class), s_contains));
+	SEXP classDef = PROTECT(R_getClassDef(class));
+	PROTECT(classExts = R_do_slot(classDef, s_contains));
 	PROTECT(_call = lang3(s_selectSuperCl, classExts,
 			      /* dropVirtual = */ ScalarLogical(1)));
 	superCl = eval(_call, rho);
-	UNPROTECT(2);
+	UNPROTECT(3); /* _call, classExts, classDef */
 	PROTECT(superCl);
         if (isString(superCl))
             for(i=0; i < LENGTH(superCl); i++) {
@@ -1519,13 +1519,14 @@ SEXP R_do_new_object(SEXP class_def)
 	error(_("trying to generate an object from a virtual class (\"%s\")"),
 	      translateChar(asChar(e)));
     }
-    e = R_do_slot(class_def, s_className);
-    value = duplicate(R_do_slot(class_def, s_prototype));
+    PROTECT(e = R_do_slot(class_def, s_className));
+    PROTECT(value = duplicate(R_do_slot(class_def, s_prototype)));
     if(TYPEOF(value) == S4SXP || getAttrib(e, R_PackageSymbol) != R_NilValue)
     { /* Anything but an object from a base "class" (numeric, matrix,..) */
 	setAttrib(value, R_ClassSymbol, e);
 	SET_S4_OBJECT(value);
     }
+    UNPROTECT(2); /* value, e */
     return value;
 }
 
