@@ -45,6 +45,11 @@
         function being applied is itself a function.  This problem also
         resulted in incorrect display of saved warning messages.  The problems
         are also fixed in R-3.2.0, in a different way.
+  \item The \code{gctorture} function now works as documented, forcing
+        a FULL garbage collection on every allocation.  This does make
+        running with gctorture enabled even slower than before, when
+        most garbage collections were partial, but is more likely to
+        find problems.
   \item A number of fixes were made that corrected possible problems
         with protection of pointers, many provided by Tomas Kalibera.
 }}
