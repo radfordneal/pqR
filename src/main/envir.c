@@ -1698,7 +1698,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
   found:
     if (!IS_ACTIVE_BINDING(loc)) {
         R_binding_cell = BINDING_IS_LOCKED(loc) ? R_NilValue : loc;
-        if ((incdec&1))
+        if (incdec&1)
             DEC_NAMEDCNT_AND_PRVALUE(BINDING_VALUE(loc));
     }
     SET_BINDING_VALUE(loc,value);
