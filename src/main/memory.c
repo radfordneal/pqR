@@ -1913,6 +1913,8 @@ static void RunGenCollect(R_size_t size_needed)
 	else break;
     }
 
+    if (gc_force_gap > 0)
+        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
 #   ifdef PROTECTCHECK
         num_old_gens_to_collect = NUM_OLD_GENERATIONS;
 #   endif
