@@ -724,7 +724,9 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	}
     }
 
-    SEXP xn = getAttrib(x, R_NamesSymbol);
+    SEXP xn;
+    PROTECT(xn = getAttrib(x, R_NamesSymbol));
+    nprotect++;
     int len_xn = length(xn);
 
     if (TYPEOF(x) == LISTSXP) {

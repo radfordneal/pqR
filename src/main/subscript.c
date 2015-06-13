@@ -667,8 +667,9 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 	UNPROTECT(1);
 	break;
     case STRSXP: {
-	SEXP names = getAttrib(x, R_NamesSymbol);
+	SEXP names = PROTECT(getAttrib(x, R_NamesSymbol));
 	ans = stringSubscript(s, ns, nx, names, (STRING_ELT), stretch, call);
+        UNPROTECT(1);
         break;
     }
     case SYMSXP:

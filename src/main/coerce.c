@@ -703,9 +703,10 @@ static SEXP coerceToSymbol(SEXP v)
     default:
 	UNIMPLEMENTED_TYPE("coerceToSymbol", v);
     }
+    PROTECT(ans);
     if (warn) CoercionWarning(warn);/*2000/10/23*/
     ans = installChar(ans);
-    UNPROTECT(1);
+    UNPROTECT(2); /* ans, v */
     return ans;
 }
 
@@ -931,7 +932,7 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
     return rval;
 }
 
-/* Coerce a vector list to the given type */
+/* Coerce a vector list to the given type.  Caller needn't protect v. */
 static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 {
     int i, n, warn = 0, tmp;
@@ -950,6 +951,8 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 	SET_TYPEOF(rval, EXPRSXP);
 	return rval;
     }
+
+    PROTECT(v);
 
     if (type == STRSXP) {
 	n = length(v);
@@ -972,6 +975,7 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     }
     else if (type == LISTSXP) {
 	rval = VectorToPairList(v);
+        UNPROTECT(1);
 	return rval;
     }
     else if (isVectorizable(v)) {
@@ -1016,7 +1020,7 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     SEXP names = getAttrib(v, R_NamesSymbol);
     if (names != R_NilValue)
 	setAttrib(rval, R_NamesSymbol, names);
-    UNPROTECT(1);
+    UNPROTECT(2);
     return rval;
 }
 
@@ -1474,7 +1478,7 @@ static SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = length(arglist);
     if (n < 1)
 	errorcall(call, _("argument must have length at least 1"));
-    names = getAttrib(arglist, R_NamesSymbol);
+    PROTECT(names = getAttrib(arglist, R_NamesSymbol));
     PROTECT(pargs = args = allocList(n - 1));
     for (i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
@@ -1496,7 +1500,7 @@ static SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    args =  mkCLOSXP(args, body, envir);
     else
 	    errorcall(call, _("invalid body for function"));
-    UNPROTECT(2);
+    UNPROTECT(3); /* body, pargs, names */
     return args;
 }
 
@@ -1519,7 +1523,7 @@ static SEXP do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
     case EXPRSXP:
 	if(0 == (n = length(args)))
 	    errorcall(call, _("invalid length 0 argument"));
-	names = getAttrib(args, R_NamesSymbol);
+	PROTECT(names = getAttrib(args, R_NamesSymbol));
 	PROTECT(ap = ans = allocList(n));
 	for (i = 0; i < n; i++) {
 	    SETCAR(ap, VECTOR_ELT(args, i));
@@ -1527,7 +1531,7 @@ static SEXP do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_TAG(ap, install(translateChar(STRING_ELT(names, i))));
 	    ap = CDR(ap);
 	}
-	UNPROTECT(1);
+	UNPROTECT(2); /* ap, names */
 	break;
     case LISTSXP:
 	ans = duplicate(args);
@@ -2476,7 +2480,7 @@ static SEXP do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("'envir' must be an environment"));
 
     n = length(args);
-    names = getAttrib(args, R_NamesSymbol);
+    PROTECT(names = getAttrib(args, R_NamesSymbol));
 
     PROTECT(c = call = allocList(n + 1));
     SET_TYPEOF(c, LANGSXP);
@@ -2493,7 +2497,7 @@ static SEXP do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     call = eval(call, envir);
 
-    UNPROTECT(1);
+    UNPROTECT(2); /* c, names */
     return call;
 }
 

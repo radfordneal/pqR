@@ -367,23 +367,25 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, SEXP call)
 		(attrib = GetRowNames(attrib)) != R_NilValue
 		)
 	    ) {
+            PROTECT(attrib);
 	    PROTECT(nattrib = allocVector(TYPEOF(attrib), n));
 	    if (sb==NULL)
                 ExtractRange(attrib, nattrib, start, end, call);
             else
                 ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_NamesSymbol, nattrib);
-	    UNPROTECT(1);
+	    UNPROTECT(2);
 	}
 	if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
 	    TYPEOF(attrib) == VECSXP) {
+            PROTECT(attrib);
 	    PROTECT(nattrib = allocVector(VECSXP, n));
 	    if (sb==NULL)
                 ExtractRange(attrib, nattrib, start, end, call);
             else
                 ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_SrcrefSymbol, nattrib);
-	    UNPROTECT(1);
+	    UNPROTECT(2);
 	}
 	/* FIXME:  this is wrong, because the slots are gone, so result is an invalid object of the S4 class! JMC 3/3/09 */
 #ifdef _S4_subsettable
@@ -742,7 +744,8 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
     if (nrs >= 0 && ncs >= 0) {
 	SEXP dimnames, dimnamesnames, newdimnames;
 	dimnames = getAttrib(x, R_DimNamesSymbol);
-	dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+	PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
+        nprotect++;
 	if (!isNull(dimnames)) {
             PROTECT(newdimnames = allocVector(VECSXP, 2));
             nprotect++;
@@ -921,7 +924,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     for(i = 0 ; i < k ; i++)
 	INTEGER(xdims)[i] = nsubs[i];
     setAttrib(result, R_DimSymbol, xdims);
-    UNPROTECT(1);
+    UNPROTECT(1); /* xdims */
 
     /* The array elements have been transferred. */
     /* Now we need to transfer the attributes. */
@@ -929,7 +932,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     /* dimnames of the returned value. */
 
     dimnames = getAttrib(x, R_DimNamesSymbol);
-    dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+    PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
     if (TYPEOF(dimnames) == VECSXP) { /* broken code for others in R-2.15.0 */
 	SEXP new_xdims;
 	PROTECT(new_xdims = allocVector(VECSXP, k));
@@ -945,6 +948,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 	setAttrib(result, R_DimNamesSymbol, new_xdims);
 	UNPROTECT(1);
     }
+    UNPROTECT(1);
 
     /* This was removed for matrices in 1998
        copyMostAttrib(x, result); */

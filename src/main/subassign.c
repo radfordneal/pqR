@@ -408,8 +408,9 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         SEXP dim = getAttrib(x, R_DimSymbol);
         if (ncols(s) == LENGTH(dim)) {
             if (isString(s)) {
-                s = strmat2intmat(s, GetArrayDimnames(x), call);
-                UNPROTECT(1);
+		SEXP dnames = PROTECT(GetArrayDimnames(x));
+		s = strmat2intmat(s, dnames, call);
+		UNPROTECT(2); /* dnames, s */
                 PROTECT(s);
             }
             if (isInteger(s) || isReal(s)) {

@@ -951,6 +951,7 @@ static SEXP do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
     default:
 	error(_("invalid '%s' argument"), "what");
     }
+    PROTECT(ans);
     endcontext(&cntxt);
 
     /* we might have a character that was unscanchar-ed.
@@ -963,6 +964,7 @@ static SEXP do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!data.ttyflag && !data.wasopen)
 	data.con->close(data.con);
     if (data.quoteset[0]) free(data.quoteset);
+    UNPROTECT(1);
     return ans;
 }
 
