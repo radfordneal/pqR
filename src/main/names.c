@@ -577,9 +577,11 @@ extern SEXP framenames; /* from model.c */
 /* initialize the symbol table */
 void InitNames()
 {
-    /* allocate the symbol table */
+    /* Allocate and initialize the symbol table. */
+
     if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
 	R_Suicide("couldn't allocate memory for symbol table");
+    for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
 
     /* R_MissingArg */
     R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
@@ -600,9 +602,6 @@ void InitNames()
     R_print.na_string = NA_STRING;
     /* R_BlankString */
     R_BlankString = mkChar("");
-
-    /* Initialize the symbol Table */
-    for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
 
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
