@@ -46,6 +46,7 @@
 
 #define R_USE_SIGNALS 1
 #include <Defn.h>
+#include <Print.h>
 #include <R_ext/GraphicsEngine.h> /* GEDevDesc, GEgetDevice */
 #include <R_ext/Rdynload.h>
 
@@ -1912,9 +1913,9 @@ static void RunGenCollect(R_size_t size_needed)
 	else break;
     }
 
-#ifdef PROTECTCHECK
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-#endif
+#   ifdef PROTECTCHECK
+        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
+#   endif
 
  again:
     gens_collected = num_old_gens_to_collect;
@@ -1997,6 +1998,9 @@ static void RunGenCollect(R_size_t size_needed)
         &R_BlankString,
         &R_RestartToken,
         &R_MissingArg,
+
+        &R_print.na_string,       /* Printing defaults - very kludgy! */
+        &R_print.na_string_noquote,
 
         &R_GlobalEnv,	          /* Global environment */
         &R_BaseEnv,
