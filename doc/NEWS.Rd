@@ -22,6 +22,14 @@
         specification.  This had been accepted without error
         by gcc 4.8 and earlier, but is not accepted by recent gcc 
         versions.
+  \item The method used to quickly test for NaN/NA has changed to one that
+        should work universally for all current processors
+        (any using IEEE floating point, as already assumed in R,
+        with consistent endianness, as is apparently the case for 
+        all current general-purpose processors, and was partially
+        assumed before).  Sometimes defining the symbol 
+        \code{ENABLE_ISNAN_TRICK} when compiling is therefore
+        no longer required (it will be ignored if defined).
   \item ...
 }}
 
