@@ -1,4 +1,4 @@
-Miscellaneous minor fixes, etc.
+Miscellaneous fixes.
 
 Fixes bug in which updates like a <- -a could sometimes modify a locked binding.
 
@@ -9,3 +9,5 @@ Changed DUPLICATE_ATTRIB macro in arithmetic.c to call version in memory.c
 if object bit set - just in case may be necessary for S4 objects.
 
 Fixed protect bug regarding R_print.na_string and R_print.na_string_noquote.
+
+Fixed protect bug around call of applyClosure_v in eval.
