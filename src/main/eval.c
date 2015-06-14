@@ -594,9 +594,10 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	if (RTRACE(op)) R_trace_call(e,op);
 
 	if (TYPEOF(op) == CLOSXP) {
-            /* op is proteced by applyClosure_v */
+            PROTECT(op);
 	    res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
                                   NULL, variant);
+            UNPROTECT(1);
         }
 	else {
             int save = R_PPStackTop;
