@@ -1140,7 +1140,6 @@ static SEXP subDots(SEXP rho)
 {
     SEXP rval, dots, a, b, t;
     int len,i;
-    char tbuf[10];
 
     dots = findVar(R_DotsSymbol, rho);
 
@@ -1153,13 +1152,15 @@ static SEXP subDots(SEXP rho)
     len = length(dots);
     PROTECT(rval=allocList(len));
     for(a=dots, b=rval, i=1; i<=len; a=CDR(a), b=CDR(b), i++) {
-	sprintf(tbuf,"..%d",i);
 	SET_TAG(b, TAG(a));
 	t = CAR(a);
 	while (TYPEOF(t) == PROMSXP)
 	    t = PREXPR(t);
-	if( isSymbol(t) || isLanguage(t) )
-	    SETCAR(b, mkSYMSXP(mkChar(tbuf), R_UnboundValue));
+	if (isSymbol(t) || isLanguage(t)) {
+            char tbuf[10];
+            sprintf(tbuf,"..%d",i);
+	    SETCAR(b,install(tbuf));
+        }
 	else
 	    SETCAR(b, t);
     }
