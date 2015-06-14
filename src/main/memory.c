@@ -1977,6 +1977,18 @@ static void RunGenCollect(R_size_t size_needed)
         }
     }
 
+    /* Clear fields in the few symbols not in the symbol table, though
+       they shouldn't ever be set anyway.  Note that R_UnboundValue is
+       a constant now, so its fields aren't going to change (if actually
+       kept in read-only memory). */
+
+    LASTSYMENV(R_MissingArg) = NULL;
+    LASTSYMENV(R_RestartToken) = NULL;
+    LASTSYMBINDING(R_MissingArg) = NULL;
+    LASTSYMBINDING(R_RestartToken) = NULL;
+    LASTSYMENVNOTFOUND(R_MissingArg) = NULL;
+    LASTSYMENVNOTFOUND(R_RestartToken) = NULL;
+
     /* Process now to maybe improve cache performance. */
 
     process_nodes (forwarded_nodes, no_snap); 
