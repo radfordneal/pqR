@@ -962,6 +962,7 @@ LibExtern SEXP  R_QuoteSymbol;	    /* "quote" */
 LibExtern SEXP	R_RowNamesSymbol;   /* "row.names" */
 LibExtern SEXP	R_SeedsSymbol;	    /* ".Random.seed" */
 LibExtern SEXP	R_SourceSymbol;     /* "source" */
+LibExtern SEXP	R_SrcrefSymbol;     /* "srcref" */
 LibExtern SEXP	R_TspSymbol;	    /* "tsp" */
 LibExtern SEXP	R_ValueSymbol;	    /* "value" */
 LibExtern SEXP	R_AssignSymbols[4]; /* 0, "<-", "<<-", "=" */

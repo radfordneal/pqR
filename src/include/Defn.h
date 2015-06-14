@@ -104,7 +104,6 @@ extern0 SEXP	R_ExactSymbol;	    /* "exact" */
 extern0 SEXP	R_RecursiveSymbol;  /* "recursive" */
 extern0 SEXP	R_SrcfileSymbol;    /* "srcfile" */
 extern0 SEXP	R_WholeSrcrefSymbol;   /* "wholeSrcref" */
-extern0 SEXP	R_SrcrefSymbol;     /* "srcref" */
 extern0 SEXP	R_TmpvalSymbol;     /* "*tmp*" */
 extern0 SEXP	R_UseNamesSymbol;   /* "use.names" */
 extern0 SEXP	R_DoubleColonSymbol;   /* "::" */

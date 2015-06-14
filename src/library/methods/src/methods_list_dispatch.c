@@ -308,16 +308,18 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	    class = "missing";
 	else
 	    class = CHAR(STRING_ELT(R_data_class(object, TRUE), 0));
+
+	/* COMMENT IN R-2.15.0:  NB:  this code replicates .SigLabel().
+	   If that changes, e.g. to include the package, the code here 
+           must change too.  Or, better, the two should use the same C code.
+           HOWEVER:  There is no .SigLabel anywhere else in the source. */
+
 	if(ptr - buf + strlen(class) + 2 > NBUF) {
 	    UNPROTECT(2);
 	    return R_NilValue;
 	}
-	/* NB:  this code replicates .SigLabel().
-	   If that changes, e.g. to include
-	   the package, the code here must change too.
-	   Or, better, the two should use the same C code. */
 	if(ptr > buf) { ptr = strcpy(ptr, "#");  ptr += 1;}
-	ptr = strcpy(ptr, class); ptr += strlen(class);
+	strcpy(ptr, class); ptr += strlen(class);
 	nargs++;
     }
     for(; nargs < nsig; nargs++) {
@@ -325,8 +327,8 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	    UNPROTECT(2);
 	    return R_NilValue;
 	}
-	ptr = strcpy(ptr, "#"); ptr +=1;
-	ptr = strcpy(ptr, "missing"); ptr += strlen("missing");
+	strcpy(ptr, "#"); ptr +=1;  /* BUG?  Should it only be done if ptr>buf? */
+	strcpy(ptr, "missing"); ptr += strlen("missing");
     }	    
     value = findVarInFrame(mtable, install(buf));
     if(value == R_UnboundValue)
@@ -389,7 +391,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	    }
 	    ok = FALSE;
 	    if(IS_GENERIC(vl)) {
-	      if(strlen(pkg)) {
+	      if (*pkg) {
 		  gpackage = PACKAGE_SLOT(vl);
 		  check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
 		  ok = !strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)));
@@ -410,7 +412,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	vl = SYMVALUE(symbol);
 	if(IS_GENERIC(vl)) {
 	    generic = vl;
-	    if(strlen(pkg)) {
+	    if (*pkg) {
 		gpackage = PACKAGE_SLOT(vl);
 		check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
 		if(strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)))) generic = R_UnboundValue;
@@ -714,53 +716,46 @@ SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
 
 static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
 {
-    /* since this is called every time a method is dispatched with a
-       definition that has a class, it should be as efficient as
-       possible => we build in knowledge of the standard
-       MethodDefinition and MethodWithNext slots.  If these (+ the
-       class slot) don't account for all the attributes, regular
-       dispatch is done. */
-    SEXP s, attrib;
-    int found = 1; /* we "know" the class attribute is there */
+    /* Since this is called every time a method is dispatched with
+       a definition that has a class, it should be as efficient as
+       possible.  Therefore we build in knowledge of the standard
+       MethodDefinition and MethodWithNext slots.  If there are any
+       attributes other than these, plus 'class' and 'generic', 
+       regular dispatch is done. */
+
+    SEXP s;
+    int others;
+
     PROTECT(def);
-    for(s = attrib = ATTRIB(def); s != R_NilValue; s = CDR(s)) {
+    others = 0;
+    for (s = ATTRIB(def); s != R_NilValue; s = CDR(s)) {
 	SEXP t = TAG(s);
-	if(t == R_target) {
-	    defineVar(R_dot_target, CAR(s), ev); found++;
-	}
-	else if(t == R_defined) {
-	    defineVar(R_dot_defined, CAR(s), ev); found++;
-	}
-	else if(t == R_nextMethod)  {
-	    defineVar(R_dot_nextMethod, CAR(s), ev); found++;
-	}
-	else if(t == R_SourceSymbol || t == s_generic)  {
-	    /* ignore */ found++;
-	}
+	if (t == R_target)
+	    defineVar (R_dot_target, CAR(s), ev);
+	else if (t == R_defined)
+	    defineVar (R_dot_defined, CAR(s), ev);
+	else if (t == R_nextMethod)
+	    defineVar (R_dot_nextMethod, CAR(s), ev);
+	else if (t == R_ClassSymbol || t == R_SourceSymbol 
+                  || t == R_SrcrefSymbol || t == s_generic)
+	    ; /* ignore */
+        else
+	    others = 1;
     }
     defineVar(R_dot_Method, def, ev);
+    UNPROTECT(1);
 
-    if(found < length(attrib)) {
-        /* this shouldn't be needed but check the generic being
-           "loadMethod", which would produce a recursive loop */
-        if(strcmp(CHAR(asChar(fname)), "loadMethod") == 0) {
-	    UNPROTECT(1);
-            return def;
-	}
-	SEXP e, val;
-	PROTECT(e = allocVector(LANGSXP, 4));
-	SETCAR(e, R_loadMethod_name); val = CDR(e);
-	SETCAR(val, def); val = CDR(val);
-	SETCAR(val, fname); val = CDR(val);
-	SETCAR(val, ev);
-	val = eval(e, ev);
-	UNPROTECT(2);
-	return val;
-    }
-    else {
+    if (others && strcmp(CHAR(asChar(fname)), "loadMethod") != 0) {
+                 /* the strcmp shouldn't be needed, but checks the generic being
+                   "loadMethod", which would produce a recursive loop */
+	SEXP e;
+	PROTECT(e = 
+          LCONS(R_loadMethod_name, CONS(def, CONS(fname, CONS(ev, R_NilValue)))));
+	def = eval(e, ev);
 	UNPROTECT(1);
-	return def;
     }
+
+    return def;
 }
 
 static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
@@ -794,13 +789,14 @@ static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
 static const char *
 check_single_string(SEXP obj, Rboolean nonEmpty, const char *what)
 {
-    const char *string = "<unset>"; /* -Wall */
-    if(isString(obj)) {
-	if(length(obj) != 1)
-	    error(_("'%s' must be a single string (got a character vector of length %d)"),
-		  what, length(obj));
+    const char *string;
+    if (isString(obj)) {
+	if (LENGTH(obj) != 1)
+	    error(_(
+            "'%s' must be a single string (got a character vector of length %d)"),
+              what, length(obj));
 	string = CHAR(STRING_ELT(obj, 0));
-	if(nonEmpty && (! string || !string[0]))
+	if (*string == 0 && nonEmpty)
 	    error(_("'%s' must be a non-empty string; got an empty string"),
 		  what);
     }
