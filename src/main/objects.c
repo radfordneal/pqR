@@ -582,7 +582,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 		for(i = 1, a = CAR(s); a != R_NilValue;
 		    a = CDR(a), i++, m = CDR(m)) {
 		    sprintf(tbuf, "..%d", i);
-		    SET_TAG(m, mkSYMSXP(mkChar(tbuf), R_UnboundValue));
+		    SET_TAG(m, install(tbuf));
 		    SETCAR(m, CAR(a));
 		}
                 i = 0; /* precaution just in case there are multiple ... args */
