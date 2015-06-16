@@ -553,8 +553,7 @@ static void SetupBuiltins(void)
                             SET_PRIMFUN_FAST_UNARY (prim, f->fast, f->dsptch1,
                                                     f->var1);
                         else
-                            SET_PRIMFUN_FAST_BINARY (prim, f->fast, f->dsptch1,
-                              f->dsptch2, f->var1, f->var2, f->arity==3);
+                            abort();  /* only unary ones are implemented now */
                         goto found;
                     }
                 }
