@@ -1567,6 +1567,43 @@ extern void *alloca(size_t);
 #endif
 
 
+/* Inline versions of eval and evalv, which checks for SELF_EVAL inline.
+   These also do not decrement evalcount, and so must not be used in a 
+   context where this might result in an uninterruptable loop. */
+
+extern SEXP Rf_evalv2 (SEXP, SEXP, int);
+
+static inline SEXP EVAL (SEXP e, SEXP rho)
+{
+    R_variant_result = 0;
+    R_Visible = TRUE;
+
+    if (SELF_EVAL(TYPEOF(e))) {
+        /* Make sure constants in expressions have maximum NAMEDCNT when
+           used as values, so they won't be modified. */
+        SET_NAMEDCNT_MAX(e);
+        return e;
+    }
+
+    return Rf_evalv2 (e, rho, 0);
+}
+
+static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
+{
+    R_variant_result = 0;
+    R_Visible = TRUE;
+
+    if (SELF_EVAL(TYPEOF(e))) {
+        /* Make sure constants in expressions have maximum NAMEDCNT when
+           used as values, so they won't be modified. */
+        SET_NAMEDCNT_MAX(e);
+        return e;
+    }
+
+    return Rf_evalv2 (e, rho, variant);
+}
+
+
 /* Macro version of SETCAR.  Assumes FLAG_OLD_TO_NEW is set to 1 in
    memory.c, though it will give correct results either way.  Avoids
    a function call when the node is already in the old-to-new list.
