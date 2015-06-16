@@ -1206,7 +1206,7 @@ In pqR, @code{eval} calls @code{evalv} (or is a macro expanding to a
 call of @code{evalv} internally), which takes one additional argument,
 that may specify that a ``variant'' result is allowed.  This argument
 should be 0 if no variant is allowed, as for plain @code{eval}.
-Symbols for other variants are defined in @file{Rinternals.h}.  
+Symbols for other variants are defined in @file{Defn.h}.  
 
 For example, a caller of @code{evalv} might specify (by
 @code{VARIANT_NULL}) that the value will not be used (evaluation being
@@ -1218,24 +1218,27 @@ need to have space allocated for it).  However, the caller of
 @code{evalv} must always be prepared to receive an ordinary value,
 rather than the variant asked for.
 
-For some variants (eg, @code{VARIANT_SUM}), there is no need to 
-specially identify that the value returned is the variant.  For
-others, a variant result is identified by the global variable 
-@code{R_variant_result} being set to a non-zero value after the
-return of @code{evalv}.  The caller of @code{evalv} should note
-the contents of @code{R_variant_result} and then reset it to zero
-before it could taken as indicating that a later return is of
-a variant. (But note that @code{evalv} will itself start by setting
-@code{R_variant_result} to zero, so there is no need to set it
-just before calling @code{evalv}.)
+For some variants (eg, @code{VARIANT_SUM}), there is no need to
+specially identify that the value returned is the variant.  For others
+(eg, @code{VARIANT_TRANS}, which may return the transpose of the
+result), a variant result is identified by the global variable
+@code{R_variant_result} being set to a non-zero value after the return
+of @code{evalv}.  The caller of @code{evalv} should note the contents
+of @code{R_variant_result} and then reset it to zero before it could
+taken as indicating that a later return is of a variant. (But note
+that @code{evalv} will itself start by setting @code{R_variant_result}
+to zero, so there is no need to set it just before calling
+@code{evalv}.)
 
-The variant argument of @code{evalv} will be passed on to a function
-implementing a primitive if the appropriate flag is set in the
-primitive's specification in @file{names.c}.  Variant arguments may be
-passed onwards from the expression passed to @code{evalv} --- for
+If the expression evaluated is a call of a primitive funciton, the
+variant argument of @code{evalv} will be passed on to the C function
+implementing this primitive if the appropriate flag is set in the
+primitive's specification (see below).  Variant arguments may
+be passed onwards from the expression passed to @code{evalv} --- for
 example, from an ``if'' statement to the evaluation of the chosen
 branch, or from a function call to the evaluation of the body of the
-function --- with any variant result propagated back.
+function --- with any variant result propagated back, as controlled
+by the @code{VARIANT_PASS_ON} macro.
 
 Primitive functions (objects of type BUILTINSXP and SPECIALSXP) are
 implemented using C functions that by convention have names of the
@@ -1247,17 +1250,17 @@ as whether the primitive is BUILTIN or SPECIAL, and whether the
 variant argument of evalv is passed on to the @code{do_XXX} function.
 
 Arguments are passed to the @code{do_XXX} function as a pairlist.
-This is inefficient, since it requires that a CONS be allocated for
-every argument passed to a primitive.  In @pqR{}, a faster interface
-is provided for simple cases of unary or binary primitives, in which
-the arguments are unnamed, and are not S3 or S4 objects.  This
-interface calls a @code{do_fast_XXX} function to handle such simple
-cases, which receives the arguments of the primitive directly as C
-arguments.  These functions are also set up with tables in the various
-source files and initialization code in @code{names.c}.  For details, 
-see @code{names.c}, the documentation in the code for @code{evalv}, and 
-the definitions for PRIMFUN_FAST and 
-related macros in @file{Rinternals.h}.
+This is inefficient, since it requires that a CONS cell be allocated
+for every argument passed to a primitive.  In @pqR{}, a faster
+interface is provided for simple cases of unary primitives, in which
+the argument is unnamed, and are not S3 or S4 objects.  This interface
+calls a @code{do_fast_XXX} function to handle such simple cases, which
+receives the argument of the primitive directly as a C argument.
+These functions are also set up with tables in the various source
+files and initialization code in @code{names.c}.  For details, see
+@code{names.c}, the documentation in the code for @code{evalv}, and
+the definitions for PRIMFUN_FAST and related macros in
+@file{Rinternals.h}.
 
 @node Reference counts and the nmcnt field, The write barrier, The eval function, R Internal Structures
 @section Reference counts and the nmcnt field
