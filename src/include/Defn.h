@@ -422,7 +422,7 @@ typedef struct {
 
 /* Set offset of primitive in table, and copy some of the information from
    the table into the primsxp structure (and misc) for fast access.  Note that 
-   primsxp_fast_cfun will (possibly) be set by the slow function, not here. */
+   primsxp_fast_cfun will (possibly) be set in SetupBuiltins in names.c. */
 
 #define SET_PRIMOFFSET(x,v) do { \
     SEXP setprim_ptr = (x); \
@@ -466,24 +466,12 @@ typedef struct {
 
 #define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
 #define PRIMFUN_DSPTCH1(x) ((x)->u.primsxp.primsxp_dsptch1)
-#define PRIMFUN_DSPTCH2(x) ((x)->u.primsxp.primsxp_dsptch2)
 #define PRIMFUN_ARG1VAR(x) (NONVEC_SXPINFO(x).var1)
-#define PRIMFUN_ARG2VAR(x) (NONVEC_SXPINFO(x).var2)
-#define PRIMFUN_UNI_TOO(x) ((x)->u.primsxp.primsxp_uni_too)
 
 #define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
     (x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
     (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
     NONVEC_SXPINFO(x).var1 = (v1); \
-} while (0)
-
-#define SET_PRIMFUN_FAST_BINARY(x,f,dsptch1,dsptch2,v1,v2,uni_too) do { \
-    (x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
-    (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
-    (x)->u.primsxp.primsxp_dsptch2 = (dsptch2); \
-    (x)->u.primsxp.primsxp_uni_too = (uni_too); \
-    NONVEC_SXPINFO(x).var1 = (v1); \
-    NONVEC_SXPINFO(x).var2 = (v2); \
 } while (0)
 
 /* Symbols for eval variants.  Variant 0 indicates the standard result.  
