@@ -46,15 +46,6 @@
 #include <helpers/helpers-app.h>
 
 
-/* Macro version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't set R_binding_cell. */
-
-#define FIND_VAR_PENDING_OK(sym,rho) \
-( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
-    : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
-    : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
-)
-
 /* Macro version of findFun, for speed when a special symbol is found in
    the base environmet. */
 

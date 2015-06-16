@@ -1567,6 +1567,16 @@ extern void *alloca(size_t);
 #endif
 
 
+/* Macro version of findVarPendingOK, for speed when symbol is found
+   from LASTSYMBINDING.  Doesn't set R_binding_cell. */
+
+#define FIND_VAR_PENDING_OK(sym,rho) \
+( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
+    : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
+    : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
+)
+
+
 /* Inline versions of eval and evalv, which checks for SELF_EVAL inline.
    These also do not decrement evalcount, and so must not be used in a 
    context where this might result in an uninterruptable loop. */
@@ -1585,6 +1595,20 @@ static inline SEXP EVAL (SEXP e, SEXP rho)
         return e;
     }
 
+    if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
+        if (LASTSYMENV(e) == rho) {
+            SEXP res = CAR(LASTSYMBINDING(e));
+            if (TYPEOF(res) == PROMSXP) 
+                res = PRVALUE_PENDING_OK(res);
+            if (res != R_MissingArg && res != R_UnboundValue) {
+                if (NAMEDCNT_EQ_0(res))
+                    SET_NAMEDCNT_1(res);
+                WAIT_UNTIL_COMPUTED(res);
+                return res;
+            }
+        }
+    }
+
     return Rf_evalv2 (e, rho, 0);
 }
 
@@ -1598,6 +1622,21 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
            used as values, so they won't be modified. */
         SET_NAMEDCNT_MAX(e);
         return e;
+    }
+
+    if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
+        if (LASTSYMENV(e) == rho) {
+            SEXP res = CAR(LASTSYMBINDING(e));
+            if (TYPEOF(res) == PROMSXP) 
+                res = PRVALUE_PENDING_OK(res);
+            if (res != R_MissingArg && res != R_UnboundValue) {
+                if (NAMEDCNT_EQ_0(res))
+                    SET_NAMEDCNT_1(res);
+                if ( ! (variant & VARIANT_PENDING_OK))
+                    WAIT_UNTIL_COMPUTED(res);
+                return res;
+            }
+        }
     }
 
     return Rf_evalv2 (e, rho, variant);
