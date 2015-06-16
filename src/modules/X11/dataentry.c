@@ -1156,7 +1156,7 @@ static void closerect(DEstruct DE)
                     PROTECT(tmp);
 		    SET_STRING_ELT(tmp, wrow - 1, mkChar(buf));
 		    SET_VECTOR_ELT(DE->work, wcol - 1, tmp);
-                    UNPROTECT(tmp);
+                    UNPROTECT(1);
 		}
 	    } else {
 		if (TYPEOF(cvec) == STRSXP)
