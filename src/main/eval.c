@@ -46,43 +46,6 @@
 #include <helpers/helpers-app.h>
 
 
-/* Bit flags that say whether each SEXP type evaluates to itself.  Used via
-   SELF_EVAL(t), which says whether something of type t evaluates to itself. 
-   Relies on the type field being 5 bits, so that the shifts below will not
-   exceed the capacity of a 32-bit word.  (Also assumes, of course, that these
-   shifts and adds will be done at compile time.) */
-
-#define SELF_EVAL_TYPES ( \
-  (1<<NILSXP) + \
-  (1<<LISTSXP) + \
-  (1<<LGLSXP) + \
-  (1<<INTSXP) + \
-  (1<<REALSXP) + \
-  (1<<STRSXP) + \
-  (1<<CPLXSXP) + \
-  (1<<RAWSXP) + \
-  (1<<S4SXP) + \
-  (1<<SPECIALSXP) + \
-  (1<<BUILTINSXP) + \
-  (1<<ENVSXP) + \
-  (1<<CLOSXP) + \
-  (1<<VECSXP) + \
-  (1<<EXTPTRSXP) + \
-  (1<<WEAKREFSXP) + \
-  (1<<EXPRSXP) )
-
-#define SELF_EVAL(t) ((SELF_EVAL_TYPES>>(t))&1)
-
-
-/* Macro version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't set R_binding_cell. */
-
-#define FIND_VAR_PENDING_OK(sym,rho) \
-( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
-    : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
-    : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
-)
-
 /* Macro version of findFun, for speed when a special symbol is found in
    the base environmet. */
 
@@ -434,7 +397,7 @@ static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
     prstack.next = R_PendingPromises;
     R_PendingPromises = &prstack;
 
-    val = evalv (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
+    val = EVALV (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
 
     /* Pop the stack, unmark the promise and set its value field.
        Also set the environment to R_NilValue to allow GC to
@@ -487,7 +450,6 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 \
     R_variant_result = 0; \
     R_Visible = TRUE; \
-    evalcount -= 1; \
 \
     /* Evaluate constants quickly, without the overhead that's necessary when \
        the computation might be complex.  This code is repeated in evalv2 \
@@ -495,7 +457,7 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
        other than evalv2 in this procedure, possibly reducing overhead \
        for constant evaluation. */ \
 \
-    if (evalcount >= 0 && SELF_EVAL(TYPEOF(e))) { \
+    if (SELF_EVAL(TYPEOF(e)) && --evalcount >= 0) { \
 	/* Make sure constants in expressions have maximum NAMEDCNT when \
 	   used as values, so they won't be modified. */ \
         SET_NAMEDCNT_MAX(e); \
@@ -526,9 +488,11 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 {
     SEXP op, res;
 
-    /* Handle check for user interrupt.  Count was decremented in evalv. */
+    /* Handle check for user interrupt.  When negative, repeats check for 
+       SELF_EVAL which would have already been done in eval or evalv, but
+       not acted on since evalcount went negative. */
 
-    if (evalcount < 0) {
+    if (--evalcount < 0) {
         R_CheckUserInterrupt();
         evalcount = 1000;
         /* Evaluate constants quickly. */
@@ -709,7 +673,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
               && TAG(args)==R_NilValue && CDR(args)==R_NilValue
               && (arg1 = CAR(args))!=R_DotsSymbol && arg1!=R_MissingArg) {
 
-            PROTECT(arg1 = evalv (arg1, rho, 
+            PROTECT(arg1 = EVALV (arg1, rho, 
                                   PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
     
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
@@ -1615,7 +1579,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue || CDR(args) != R_NilValue)
         checkArity(op, args);
 
-    return evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
+    return EVALV (CAR(args), rho, VARIANT_PASS_ON(variant));
 }
 
 /* Curly brackets.  Passes on the eval variant to the last expression.  For
@@ -1653,7 +1617,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             return s;
     }
 
-    s = evalv (arg, rho, variant);
+    s = EVALV (arg, rho, variant);
     R_Srcref = R_NilValue;
     UNPROTECT(1);
     return s;
@@ -1667,7 +1631,7 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue) /* zero arguments provided */
 	v = R_NilValue;
     else if (CDR(args) == R_NilValue) /* one argument */
-	v = evalv (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
+	v = EVALV (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
                     : VARIANT_PASS_ON(variant) & ~ VARIANT_NULL);
     else
 	errorcall(call, _("multi-argument returns are not permitted"));
@@ -2123,7 +2087,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Handle <<- without trying the optimizations done below. */
 
         if (PRIMVAL(op) == 2) {
-            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
+            rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
             break;  /* out of main switch */
         }
@@ -2151,7 +2115,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Evaluate the right hand side, asking for it in a static box. */
 
-        rhs = evalv (rhs, rho, 
+        rhs = EVALV (rhs, rho, 
                      local_assign | VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
 
         /* See if the assignment was done by the rhs operator. */
@@ -2223,7 +2187,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* We evaluate the right hand side now. */
 
-        PROTECT(rhs = evalv (rhs, rho, VARIANT_PENDING_OK));
+        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
 
         /* Debugging/comparison aid:  Can be enabled one way or the other below,
            then activated by typing `switch to old` or `switch to new` at the
@@ -2548,7 +2512,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                     ev = call == NULL && CAR(h) == R_MissingArg ? 
                          cons_with_tag (R_MissingArg, R_NilValue, TAG(h))
                        : cons_with_tag (
-                           evalv (CAR(h), rho, VARIANT_PENDING_OK),
+                           EVALV (CAR(h), rho, VARIANT_PENDING_OK),
                            R_NilValue,
                            TAG(h));
                     if (head==R_NilValue)
@@ -2578,7 +2542,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                 ev = cons_with_tag (R_MissingArg, R_NilValue, TAG(el));
             else
                 ev = cons_with_tag (
-                       evalv (CAR(el), rho, VARIANT_PENDING_OK), 
+                       EVALV (CAR(el), rho, VARIANT_PENDING_OK), 
                        R_NilValue, 
                        TAG(el));
             if (head==R_NilValue)

@@ -1,0 +1,3 @@
+Optimizations to eval and related things.
+
+Introduces EVAL and EVALV inline functions for partially-inlined eval.

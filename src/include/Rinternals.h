@@ -1583,6 +1583,34 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
   NUMERIC_TYPES + (1<<CPLXSXP) \
 )
 
+/* Bit flags that say whether each SEXP type evaluates to itself.  Used via
+   SELF_EVAL(t), which says whether something of type t evaluates to itself. 
+   Relies on the type field being 5 bits, so that the shifts below will not
+   exceed the capacity of a 32-bit word.  (Also assumes, of course, that these
+   shifts and adds will be done at compile time.) */
+
+#define SELF_EVAL_TYPES ( \
+  (1<<NILSXP) + \
+  (1<<LISTSXP) + \
+  (1<<LGLSXP) + \
+  (1<<INTSXP) + \
+  (1<<REALSXP) + \
+  (1<<STRSXP) + \
+  (1<<CPLXSXP) + \
+  (1<<RAWSXP) + \
+  (1<<S4SXP) + \
+  (1<<SPECIALSXP) + \
+  (1<<BUILTINSXP) + \
+  (1<<ENVSXP) + \
+  (1<<CLOSXP) + \
+  (1<<VECSXP) + \
+  (1<<EXTPTRSXP) + \
+  (1<<WEAKREFSXP) + \
+  (1<<EXPRSXP) )
+
+#define SELF_EVAL(t) ((SELF_EVAL_TYPES>>(t))&1)
+
+
 #if defined(CALLED_FROM_DEFN_H) && !defined(__MAIN__) && (defined(COMPILING_R) || ( __GNUC__ && !defined(__INTEL_COMPILER) ))
 #include "Rinlinedfuns.h"
 #else

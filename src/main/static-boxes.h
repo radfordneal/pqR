@@ -66,7 +66,7 @@ static inline SEXP static_box_eval2
 
     /* Otherwise, we try to put the first arg in a static box. */
 
-    PROTECT(x = evalv (x, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK));
+    PROTECT(x = EVALV (x, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK));
 
     /* If first arg is an object, we evaluate the rest of the arguments
        normally. */
@@ -102,7 +102,7 @@ static inline SEXP static_box_eval2
         x = R_ScalarIntegerBox0;
     }
 
-    y = evalv (y, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK);
+    y = EVALV (y, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK);
 
     if (x == R_ScalarRealBox0)
         *REAL(x) = realv;
