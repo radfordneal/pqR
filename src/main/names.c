@@ -540,6 +540,11 @@ static void SetupBuiltins(void)
         /* prim needs protect since install can (and does here) allocate.
            Except... mkPRIMSXP now caches them all, so maybe not. */
         PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+#       if 0  /* For identifying primitives with unusual visibility */
+            if (PRIMPRINT(prim) != 0)
+                REprintf("PRIMITIVE %s HAS PRIMPRINT %d\n",
+                          R_FunTab[i].name, PRIMPRINT(prim));
+#       endif
         if ((R_FunTab[i].eval % 100 )/10)
             SET_INTERNAL(install(R_FunTab[i].name), prim);
         else {

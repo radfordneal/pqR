@@ -437,6 +437,10 @@ typedef struct {
         = R_FunTab[setprim_value].gram.kind==PP_FOREIGN; \
     setprim_ptr->u.primsxp.primsxp_print \
         = (R_FunTab[setprim_value].eval/100)%10; \
+    setprim_ptr->u.primsxp.primsxp_force_visible \
+        = setprim_ptr->u.primsxp.primsxp_print == 0; \
+    setprim_ptr->u.primsxp.primsxp_force_invisible \
+        = setprim_ptr->u.primsxp.primsxp_print == 1; \
     setprim_ptr->u.primsxp.primsxp_variant \
         = (R_FunTab[setprim_value].eval/1000)&1; \
     setprim_ptr->u.primsxp.primsxp_internal \
@@ -456,6 +460,8 @@ typedef struct {
 #define PRIMVAL(x)	((x)->u.primsxp.primsxp_code)
 #define PRIMARITY(x)	((x)->u.primsxp.primsxp_arity)
 #define PRIMPRINT(x)	((x)->u.primsxp.primsxp_print)
+#define PRIMFORCEVIS(x)	((x)->u.primsxp.primsxp_force_visible)
+#define PRIMFORCEINVIS(x) ((x)->u.primsxp.primsxp_force_invisible)
 #define PRIMINTERNAL(x)	((x)->u.primsxp.primsxp_internal)
 #define PRIMVARIANT(x)	((x)->u.primsxp.primsxp_variant)
 #define PRIMFOREIGN(x)	((x)->u.primsxp.primsxp_foreign)

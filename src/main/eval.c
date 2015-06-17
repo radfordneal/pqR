@@ -596,12 +596,11 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             else
                 error(_("attempt to apply non-function"));
 
-            int flag = PRIMPRINT(op);
-            if (flag == 0) R_Visible = TRUE;
-            else if (flag == 1) R_Visible = FALSE;
-
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
+
+            if (PRIMFORCEVIS(op)) R_Visible = TRUE;
+            else if (PRIMFORCEINVIS(op)) R_Visible = FALSE;
         }
     }
 
