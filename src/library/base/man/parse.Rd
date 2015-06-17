@@ -75,6 +75,12 @@ parse(file = "", n = NULL, text = NULL, prompt = "?", srcfile,
   An object of type \code{"\link{expression}"}, with up to \code{n}
   elements if specified as a non-negative integer.
 
+  Parentheses in the input that is parsed are preserved as parenthesis
+  operators in the parsed expression, except when they are necessary
+  to override precedence, in which case they are omitted.  Such
+  necessary omitted parentheses will be put back in by \code{deparse}
+  if it is called on the parsed expression.
+
   When \code{srcfile} is non-\code{NULL}, a \code{"srcref"} attribute
   will be attached to the result containing a list of
   \code{\link{srcref}} records corresponding to each element, a

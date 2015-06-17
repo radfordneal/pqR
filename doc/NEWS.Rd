@@ -30,8 +30,22 @@
   \item ...
 }}
 
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+  \item Parsed expressions no longer contain explict parenthesis
+        operators when the parentheses are necessary to override
+        the precedence of operators.  These necessary parentheses
+        will be inserted when the expression is deparsed.  See
+        the help on \code{parse} and \code{deparse}.
+}}
+
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
+  \item Speed of evaluation for expressions with necessary parentheses will
+        be faster because of the feature change mentioned above.  Note that
+        including unnecessary parentheses will still (slightly) slow down
+        evaluation.  (These unnecessary parentheses are preserved so that
+        the expression will appear as written when deparsed.)
   \item ...
 }}
 
