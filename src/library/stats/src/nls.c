@@ -318,14 +318,15 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
     const void *vmax = vmaxget();
     for(i = 0; i < LENGTH(theta); i++) {
 	const char *name = translateChar(STRING_ELT(theta, i));
-	SEXP temp = findVar(install(name), rho);
+        SEXP s_name = install(name);
+	SEXP temp = findVar(s_name, rho);
 	if(isInteger(temp))
 	    error(_("variable '%s' is integer, not numeric"), name);
 	if(!isReal(temp))
 	    error(_("variable '%s' is not numeric"), name);
         if (NAMED(temp) > 1) {
             PROTECT(temp = duplicate(temp));
-            defineVar(install(name), temp, rho);
+            defineVar(s_name, temp, rho);
             SET_NAMED(temp,1);
             UNPROTECT(1);
         }

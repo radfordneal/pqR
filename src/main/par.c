@@ -457,7 +457,7 @@ static void Specify(const char *what, SEXP value, pGEDevDesc dd, SEXP call)
     }
     else if (streql(what, "mfg")) {
 	int row, col, nrow, ncol, np;
-	value = coerceVector(value, INTSXP);
+	PROTECT(value = coerceVector(value, INTSXP));
 	np = length(value);
 	if(np != 2 && np != 4)
 	    error(_("parameter \"mfg\" has the wrong length"));
@@ -479,6 +479,7 @@ static void Specify(const char *what, SEXP value, pGEDevDesc dd, SEXP call)
 	    if(ncol != INTEGER(value)[3])
 		warning(_("value of nc in \"mfg\" is wrong and will be ignored"));
 	}
+	UNPROTECT(1);
 	R_DEV_2(lastFigure) = nrow*ncol;
 	/*R_DEV__(mfind) = 1;*/
 	/* currentFigure is 1-based */

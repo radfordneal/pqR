@@ -518,7 +518,7 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
   frame in the given environment has been hashed.	 
 */
 
-static SEXP R_HashFrame(SEXP rho)
+static void R_HashFrame(SEXP rho)
 {
     int hashcode;
     SEXP frame, chain, tmp_chain, table;
@@ -546,7 +546,6 @@ static SEXP R_HashFrame(SEXP rho)
     }
     SET_FRAME(rho, R_NilValue);
     SET_NO_SPEC_SYM(rho, 0);
-    return rho;
 }
 
 
@@ -2310,7 +2309,9 @@ R_isMissing(SEXP symbol, SEXP rho)
 	    else {
 		int val;
 		SET_PRSEEN(CAR(vl), 1);
+		PROTECT(vl);
 		val = R_isMissing(PREXPR(CAR(vl)), PRENV(CAR(vl)));
+		UNPROTECT(1); /* vl */
 		SET_PRSEEN(CAR(vl), 0);
 		return val;
 	    }
@@ -2359,9 +2360,14 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
         goto true;
 
     t = CAR(t);
-    if (TYPEOF(t)==PROMSXP && isSymbol(PREXPR(t)) 
-          && R_isMissing(PREXPR(t),PRENV(t)))
-        goto true;
+    if (TYPEOF(t)==PROMSXP && isSymbol(PREXPR(t))) { 
+        PROTECT(t);
+        if (R_isMissing(PREXPR(t),PRENV(t))) {
+            UNPROTECT(1);
+            goto true;
+        }
+        UNPROTECT(1);
+    }
 
     return ScalarLogicalMaybeConst(FALSE);
 
@@ -2481,7 +2487,7 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	    hsize = HASHMINSIZE;
 
 	SET_HASHTAB(s, R_NewHashTable(hsize));
-	s = R_HashFrame(s);
+	R_HashFrame(s);
 
 	while (R_HashSizeCheck(HASHTAB(s)))
 	    SET_HASHTAB(s, R_HashResize(HASHTAB(s)));
@@ -2493,7 +2499,7 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_ObjectTable *tb = (R_ObjectTable*) R_ExternalPtrAddr(CAR(args));
 	if(tb->onAttach)
 	    tb->onAttach(tb);
-	s = allocSExp(ENVSXP);
+	PROTECT(s = allocSExp(ENVSXP));
 	SET_HASHTAB(s, CAR(args));
 	setAttrib(s, R_ClassSymbol, getAttrib(HASHTAB(s), R_ClassSymbol));
     }
@@ -2517,7 +2523,6 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_FlushGlobalCacheFromTable(HASHTAB(s));
 	MARK_AS_GLOBAL_FRAME(s);
 #endif
-	UNPROTECT(1);
     } else {
 #ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromUserTable(HASHTAB(s));
@@ -2525,6 +2530,7 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     }
 
+    UNPROTECT(1); /* s */
     return s;
 }
 
@@ -2892,7 +2898,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    env = eval(CAR(args), rho);
+    PROTECT(env = eval(CAR(args), rho));
     if (env == R_NilValue)
 	error(_("use of NULL environment is defunct"));
     if( !isEnvironment(env) )
@@ -2961,7 +2967,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	setAttrib(ans, R_NamesSymbol, names);
 	UNPROTECT(1);
     }
-    UNPROTECT(3);
+    UNPROTECT(4);
     return(ans);
 }
 
