@@ -798,6 +798,7 @@ static void RNG_Init_R_KT(Int32 seed)
     fun = findVar1(install(".TAOCP1997init"), R_BaseEnv, CLOSXP, FALSE);
     if(fun == R_UnboundValue)
 	error("function '.TAOCP1997init' is missing");
+    PROTECT(fun);
     PROTECT(sseed = ScalarInteger(seed % 1073741821));
     PROTECT(call = lang2(fun, sseed));
     ans = eval(call, R_GlobalEnv);
@@ -805,7 +806,7 @@ static void RNG_Init_R_KT(Int32 seed)
         memcpy(i_seed, INTEGER(ans), 100*sizeof(int));
     else
         for (j = 0; j < 100; j++) i_seed[j] = INTEGER(ans)[j];
-    UNPROTECT(2);
+    UNPROTECT(3);
     KT_pos = 100;
 }
 

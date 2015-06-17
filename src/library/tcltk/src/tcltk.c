@@ -70,13 +70,14 @@ static int R_eval(ClientData clientData,
 	int n = length(expr);
 	for(i = 0 ; i < n ; i++)
 	    ans = eval(VECTOR_ELT(expr, i), R_GlobalEnv);
+        PROTECT(ans);
     }
 
     /* If return value is of class tclObj, use as Tcl result */
     if (inherits(ans, "tclObj"))
 	    Tcl_SetObjResult(interp, (Tcl_Obj*) R_ExternalPtrAddr(ans));
 
-    UNPROTECT(2);
+    UNPROTECT(3);
     return TCL_OK;
 }
 
@@ -114,16 +115,15 @@ static int R_call(ClientData clientData,
 
     SEXP try_install = install("try"); /* assume protected by symbol table */
     expr = LCONS (try_install, CONS (LCONS((SEXP)fun, alist), R_NilValue));
-    UNPROTECT(2);
 
     PROTECT(expr);
-    ans = eval(expr, R_GlobalEnv);
-    UNPROTECT(1);
+    PROTECT(ans = eval(expr, R_GlobalEnv));
 
     /* If return value is of class tclObj, use as Tcl result */
     if (inherits(ans, "tclObj"))
 	Tcl_SetObjResult(interp, (Tcl_Obj*) R_ExternalPtrAddr(ans));
 
+    UNPROTECT(4);
     return TCL_OK;
 }
 
@@ -143,15 +143,15 @@ static int R_call_lang(ClientData clientData,
     PROTECT((SEXP)expr);
     SEXP try_install = install("try"); /* assume protected by symbol table */
     sexpr = LCONS (try_install, CONS((SEXP)expr, R_NilValue));
-    UNPROTECT(1);
 
-    ans = eval(sexpr, (SEXP)env);
-    UNPROTECT(1);
+    PROTECT(sexpr);
+    PROTECT(ans = eval(sexpr, (SEXP)env));
 
     /* If return value is of class tclObj, use as Tcl result */
     if (inherits(ans, "tclObj"))
 	Tcl_SetObjResult(interp, (Tcl_Obj*) R_ExternalPtrAddr(ans));
 
+    UNPROTECT(4);
     return TCL_OK;
 }
 

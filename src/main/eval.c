@@ -2542,7 +2542,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	     *	the list of resulting values into the return value.
 	     * Anything else bound to a ... symbol is an error
 	     */
-	    h = findVar(CAR(el), rho);
+	    PROTECT(h = findVar(CAR(el), rho));
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
                     ev = call == NULL && CAR(h) == R_MissingArg ? 
@@ -2561,6 +2561,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	    }
 	    else if (h != R_MissingArg)
 		dotdotdot_error();
+            UNPROTECT(1);
 
 	} else if (CAR(el) == R_MissingArg && call != NULL) {
             /* Report the missing argument as an error. */
@@ -2641,7 +2642,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	   Anything else bound to a ... symbol is an error. */
 
 	if (a == R_DotsSymbol) {
-	    h = findVar(a, rho);
+	    PROTECT(h = findVar(a, rho));
             if (h == R_NilValue) {
                 /* nothing */
             }
@@ -2667,6 +2668,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    }
 	    else if (h != R_MissingArg)
 		dotdotdot_error();
+            UNPROTECT(1);
 	}
         else {
             if (TYPEOF(a) == PROMSXP) {
@@ -3279,13 +3281,15 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     generic = PRIMNAME(op);
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
-      : getAttrib00(CAR(args), R_ClassSymbol);
+              : getAttrib00(CAR(args), R_ClassSymbol);
+    PROTECT(lclass);
 
     if( nargs == 2 )
 	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
-      : getAttrib00(CADR(args), R_ClassSymbol);
+                  : getAttrib00(CADR(args), R_ClassSymbol);
     else
 	rclass = R_NilValue;
+    PROTECT(rclass);
 
     lsxp = R_NilValue; lgr = R_NilValue; lmeth = R_NilValue;
     rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
@@ -3319,7 +3323,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     PROTECT(rgr);
 
     if( !isFunction(lsxp) && !isFunction(rsxp) ) {
-	UNPROTECT(2);
+	UNPROTECT(4);
 	return 0; /* no generic or group method so use default*/
     }
 
@@ -3338,7 +3342,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    else {
 		warning(_("Incompatible methods (\"%s\", \"%s\") for \"%s\""),
 			lname, rname, generic);
-		UNPROTECT(2);
+		UNPROTECT(4);
 		return 0;
 	    }
 	}
@@ -3403,7 +3407,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     }
 
     *ans = applyClosure_v(t, lsxp, s, rho, newrho, 0);
-    UNPROTECT(5);
+    UNPROTECT(7);
     return 1;
 }
 

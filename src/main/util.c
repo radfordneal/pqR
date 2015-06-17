@@ -1002,7 +1002,7 @@ static SEXP do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("missing value is invalid"));
 
     /* get current directory to return */
-    wd = intern_getwd();
+    PROTECT(wd = intern_getwd());
 
 #ifdef Win32
     {
@@ -1018,6 +1018,7 @@ static SEXP do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("cannot change working directory"));
     }
 #endif
+    UNPROTECT(1); /* wd */
     return(wd);
 }
 
