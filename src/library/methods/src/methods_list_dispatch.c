@@ -651,22 +651,22 @@ SEXP R_M_setPrimitiveMethods(SEXP fname, SEXP op, SEXP code_vec,
 SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
 {
     SEXP e, val, args, argsp, this_sym, op;
-    int nprotect = 0, i, nargs = length(matched_call)-1, error_flag;
+    int i, nargs = length(matched_call)-1, error_flag;
     Rboolean prim_case, dotsDone;
     /* for primitive .nextMethod's, suppress further dispatch to avoid
      * going into an infinite loop of method calls
     */
-    op = findVarInFrame3(ev, R_dot_nextMethod, TRUE);
+    PROTECT(op = findVarInFrame3(ev, R_dot_nextMethod, TRUE));
     if(op == R_UnboundValue)
-	error(_("internal error in 'callNextMethod': '.nextMethod' was not assigned in the frame of the method call"));
+	error("internal error in 'callNextMethod': '.nextMethod' was not assigned in the frame of the method call");
     /* If "..." is an argument, need to pass it down to next method;
      * (this was motivated by issues with match.call; are these still
      * valid in rev. 2.12 ? )*/
     dotsDone = (findVarInFrame3(ev, R_DotsSymbol, TRUE) == R_UnboundValue);
-    {PROTECT(e = duplicate(matched_call)); nprotect++;}
+    PROTECT(e = duplicate(matched_call));
     if(!dotsDone) {
 	SEXP ee = e, dots;
-	PROTECT(dots = allocVector(LANGSXP, 1)); nprotect++;
+	dots = allocVector(LANGSXP, 1);
 	SETCAR(dots, R_DotsSymbol);
 	for(ee = e; CDR(ee) != R_NilValue; ee = CDR(ee));
 	SETCDR(ee, dots); /* append ... symbol, with NULL CDR() */
@@ -676,7 +676,6 @@ SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
 	/* retain call to primitive function, suppress method
 	   dispatch for it */
         do_set_prim_method(op, "suppress", R_NilValue, R_NilValue);
-	PROTECT(op); nprotect++; /* needed? */
     }
     else
 	SETCAR(e, R_dot_nextMethod); /* call .nextMethod instead */
@@ -707,7 +706,7 @@ SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
     }
     else
 	val = eval(e, ev);
-    UNPROTECT(nprotect);
+    UNPROTECT(2);
     return val;
 }
 
