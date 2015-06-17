@@ -2885,7 +2885,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    env = eval(CAR(args), rho);
+    PROTECT(env = eval(CAR(args), rho));
     if (env == R_NilValue)
 	error(_("use of NULL environment is defunct"));
     if( !isEnvironment(env) )
@@ -2954,7 +2954,7 @@ static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	setAttrib(ans, R_NamesSymbol, names);
 	UNPROTECT(1);
     }
-    UNPROTECT(3);
+    UNPROTECT(4);
     return(ans);
 }
 
