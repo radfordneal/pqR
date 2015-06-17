@@ -2466,7 +2466,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	     *	the list of resulting values into the return value.
 	     * Anything else bound to a ... symbol is an error
 	     */
-	    h = findVar(CAR(el), rho);
+	    PROTECT(h = findVar(CAR(el), rho));
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
                     ev = call == NULL && CAR(h) == R_MissingArg ? 
@@ -2485,6 +2485,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	    }
 	    else if (h != R_MissingArg)
 		dotdotdot_error();
+            UNPROTECT(1);
 
 	} else if (CAR(el) == R_MissingArg && call != NULL) {
             /* Report the missing argument as an error. */
@@ -2565,7 +2566,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	   Anything else bound to a ... symbol is an error. */
 
 	if (a == R_DotsSymbol) {
-	    h = findVar(a, rho);
+	    PROTECT(h = findVar(a, rho));
             if (h == R_NilValue) {
                 /* nothing */
             }
@@ -2591,6 +2592,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    }
 	    else if (h != R_MissingArg)
 		dotdotdot_error();
+            UNPROTECT(1);
 	}
         else {
             if (TYPEOF(a) == PROMSXP) {
