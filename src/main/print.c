@@ -425,7 +425,6 @@ static void PrintGenericVector(SEXP s, SEXP env)
 			rn, cn);
 	}
 	else {
-	    names = GetArrayDimnames(s);
 	    PROTECT(names = GetArrayDimnames(s));
  	    printArray(t, dims, 0, Rprt_adj_left, names);
 	    UNPROTECT(1);
