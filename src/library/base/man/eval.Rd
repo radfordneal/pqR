@@ -1,6 +1,7 @@
 % File src/library/base/man/eval.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Development Team
+% Modifications for pqR Copyright 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{eval}
@@ -13,9 +14,7 @@
   Evaluate an \R expression in a specified environment.
 }
 \usage{
-eval(expr, envir = parent.frame(),
-           enclos = if(is.list(envir) || is.pairlist(envir))
-                       parent.frame() else baseenv())
+eval(expr, envir = parent.frame(), enclos = parent.frame())
 evalq(expr, envir, enclos)
 eval.parent(expr, n = 1)
 local(expr, envir = new.env())
@@ -24,11 +23,11 @@ local(expr, envir = new.env())
   \item{expr}{an object to be evaluated.  See \sQuote{Details}.}
   \item{envir}{the \code{\link{environment}} in which \code{expr} is to
     be evaluated.  May also be \code{NULL}, a list, a data frame,
-    a pairlist or an integer as specified to \code{\link{sys.call}}.}
-  \item{enclos}{Relevant when \code{envir} is a (pair)list or a data frame.
-    Specifies the enclosure, i.e., where \R looks for objects not found
+    a pairlist, or an integer as specified to \code{\link{sys.call}}.}
+  \item{enclos}{Relevant only when \code{envir} is a pairlist, list, or data 
+    frame. Specifies the enclosure, i.e., where \R looks for objects not found
     in \code{envir}.  This can be \code{NULL} (interpreted as the base
-    package environment, \code{\link{baseenv}()}) or an environment.}
+    package environment, \code{\link{baseenv}()}), or some other environment.}
   \item{n}{number of parent generations to go back}
 }
 \details{

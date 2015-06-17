@@ -1,5 +1,6 @@
 #  File src/library/base/R/eval.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,10 +19,8 @@
 parent.frame <- function(n = 1) .Internal(parent.frame(n))
 
 eval <-
-    function(expr, envir = parent.frame(),
-	     enclos = if(is.list(envir) || is.pairlist(envir))
-                       parent.frame() else baseenv())
-    .Internal(eval(expr, envir, enclos))
+    function(expr, envir = parent.frame(), enclos = parent.frame())
+      .Internal(eval(expr, envir, enclos))
 
 eval.parent <- function(expr, n = 1){
     p <- parent.frame(n + 1)
