@@ -290,16 +290,15 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
             if (sxp != R_UnboundValue) {
                 if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
                     continue; /* kludge because sort.list is not a method */
-                PROTECT(method);
+                PROTECT(sxp);
                 if (i > 0) {
                     setcl = allocVector (STRSXP, nclass - i);
                     copy_string_elements (setcl, 0, klass, i, nclass-i);
                     setAttrib (setcl, R_previousSymbol, klass);
-                    UNPROTECT(2); /*klass, method */
-                    PROTECT2(setcl,method);
                 } 
                 else
-                    setcl = klass; /* protected */
+                    setcl = klass;
+                PROTECT(setcl);
                 goto found;
             }
         }
@@ -310,8 +309,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     if ((method = installed_already(buf)) != NULL) {
         sxp = R_LookupMethod(method, rho, callrho, defrho);
         if (sxp != R_UnboundValue) {
-            PROTECT(method);
             setcl = R_NilValue;
+            PROTECT2(sxp,setcl);
             goto found;
         }
     }
@@ -353,8 +352,8 @@ found: ;
 
     *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
 
-    cptr->callflag = CTXT_RETURN;
-    UNPROTECT(5);
+    R_GlobalContext->callflag = CTXT_RETURN;
+    UNPROTECT(6);
     return 1;
 }
 
@@ -779,8 +778,9 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	    }
 	}
     }
-    PROTECT(s = allocVector(STRSXP, len_klass - i));
+    PROTECT(nextfun);
     PROTECT(klass = duplicate(klass));
+    PROTECT(s = allocVector(STRSXP, len_klass - i));
     PROTECT(m = allocSExp(ENVSXP));
     for (j = 0; j < LENGTH(s); j++)
 	SET_STRING_ELT(s, j, duplicate(STRING_ELT(klass, i++)));
@@ -810,7 +810,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 
     SETCAR(newcall, method);
     ans = applyMethod(newcall, nextfun, matchedarg, env, m, variant);
-    UNPROTECT(10);
+    UNPROTECT(11);
     return(ans);
 }
 
@@ -1346,12 +1346,15 @@ static SEXP get_this_generic(SEXP args)
     for(i=0;  i<n; i++) {
 	SEXP rval = R_sysfunction(i, cptr);
 	if(isObject(rval)) {
+            PROTECT(rval);
 	    SEXP generic = getAttrib(rval, gen_name);
-	    if(TYPEOF(generic) == STRSXP &&
-	       !strcmp(translateChar(asChar(generic)), fname)) {
-	      value = rval;
-	      break;
+	    if (TYPEOF(generic) == STRSXP &&
+                  !strcmp(translateChar(asChar(generic)), fname)) {
+                value = rval;
+                UNPROTECT(1); /* rval */
+                break;
 	    }
+            UNPROTECT(1); /* rval */
 	}
     }
     UNPROTECT(1);
