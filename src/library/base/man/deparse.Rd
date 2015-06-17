@@ -57,14 +57,17 @@ deparse(expr, width.cutoff = 60L,
   across lines.
 }
 \note{
+  Parentheses are shown when they are either actually present in the
+  expression, or when they need to be present in the output to 
+  produce an expression that would be parsed correctly.
+
   To avoid the risk of a source attribute out of sync with the actual
   function definition, the source attribute of a function will never 
   be deparsed as an attribute.
 
   Deparsing internal structures may not be accurate: for example the
   graphics display list recorded by \code{\link{recordPlot}} is not
-  intended to be deparsed and \code{.Internal} calls will be shown as
-  primitive calls.
+  intended to be deparsed.
 }   
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
