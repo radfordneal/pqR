@@ -1010,8 +1010,11 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	    bufptr++;
     }
     method = findVarInFrame(mtable, install(buf));
-    if(DUPLICATE_CLASS_CASE(method))
+    if(DUPLICATE_CLASS_CASE(method)) {
+        PROTECT(method);
 	method = R_selectByPackage(method, classes, nargs);
+        UNPROTECT(1);
+    }
     if(method == R_UnboundValue) {
 	method = do_inherited_table(classes, fdef, mtable, ev);
     }

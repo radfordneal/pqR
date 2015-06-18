@@ -306,7 +306,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	resetTimeLimits();
 	PROTECT(thisExpr = R_CurrentExpr);
 	R_Busy(1);
-	value = evalv(thisExpr, rho, VARIANT_PENDING_OK);
+	PROTECT(value = evalv(thisExpr, rho, VARIANT_PENDING_OK));
 	SET_SYMVALUE(R_LastvalueSymbol, value);
 	wasDisplayed = R_Visible;
 	if (R_Visible) {
@@ -317,7 +317,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	    PrintWarnings();
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
 	R_CurrentExpr = value; /* Necessary? Doubt it. */
-	UNPROTECT(1);
+	UNPROTECT(2);
 	R_IoBufferWriteReset(&R_ConsoleIob);
 	state->prompt_type = 1;
 	return(1);

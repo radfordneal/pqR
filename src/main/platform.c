@@ -1300,7 +1300,7 @@ static SEXP do_fileexists(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isString(file = CAR(args)))
 	error(_("invalid '%s' argument"), "file");
     nfile = length(file);
-    ans = allocVector(LGLSXP, nfile);
+    ans = PROTECT(allocVector(LGLSXP, nfile));
     for (i = 0; i < nfile; i++) {
 	LOGICAL(ans)[i] = 0;
 	if (STRING_ELT(file, i) != NA_STRING) {
@@ -1317,6 +1317,7 @@ static SEXP do_fileexists(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 	} else LOGICAL(ans)[i] = FALSE;
     }
+    UNPROTECT(1); /* ans */
     return ans;
 }
 

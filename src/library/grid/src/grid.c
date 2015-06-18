@@ -389,10 +389,11 @@ static SEXP findInChildren(SEXP name, SEXP strict, SEXP children, int depth)
     PROTECT(result);
     while (count < n && !found) {
 	result = findViewport(name, strict,
-			      findVar(installChar(STRING_ELT(childnames, count)),
-				      children),
+			      PROTECT(findVar(installChar(STRING_ELT(childnames, count)),
+				      children)),
 			      depth);
 	found = INTEGER(VECTOR_ELT(result, 0))[0] > 0;
+	UNPROTECT(1);
 	count = count + 1;
     }
     if (!found) {
@@ -691,9 +692,9 @@ SEXP L_unsetviewport(SEXP n)
      * in the "Writing R Extensions" manual, but the compiler didn't
      * like CAR(t) as an lvalue.
      */
+    PROTECT(gvp); PROTECT(newvp);
     {
 	SEXP fcall, false, t;
-	PROTECT(gvp); PROTECT(newvp);
 	PROTECT(false = allocVector(LGLSXP, 1));
 	LOGICAL(false)[0] = FALSE;
 	PROTECT(fcall = lang4(install("remove"), 
@@ -706,7 +707,7 @@ SEXP L_unsetviewport(SEXP n)
 	t = CDR(t);
 	SET_TAG(t, install("inherits")); 
 	eval(fcall, R_gridEvalEnv); 
-	UNPROTECT(4);
+	UNPROTECT(2); /* false, fcall */
     }
     /* Get the current device size 
      */
@@ -742,6 +743,7 @@ SEXP L_unsetviewport(SEXP n)
      * to part of the (global) grid state
      */
     SET_VECTOR_ELT(gvp, PVP_PARENT, R_NilValue);
+    UNPROTECT(2); /* gvp, newvp */
     return R_NilValue;
 }
 
@@ -3445,8 +3447,8 @@ SEXP L_locator() {
 	REAL(answer)[0] = NA_REAL;
 	REAL(answer)[1] = NA_REAL;	
     }
-    UNPROTECT(1);
     GEMode(0, dd);
+    UNPROTECT(1);
     return answer;
 }
 

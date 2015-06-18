@@ -937,8 +937,8 @@ static SEXP do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
-    UNPROTECT(2);
     if(settz) reset_tz(oldtz);
+    UNPROTECT(2);
     return ans;
 }
 
