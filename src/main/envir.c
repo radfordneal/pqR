@@ -1436,6 +1436,7 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   version of findVar which ignores values its finds if they are not
   functions.  This is extremely time-critical code, since it is used
   to lookup all the base language elements, such as "+" and "if".  
+  (Though it's often bypassed by the FINDFUN macro in eval.c.)
 
   In typical usage, rho will be an unhashed local environment with the
   NO_SPEC_SYM flag set, with ENCLOS giving further such environments, until 
@@ -1451,12 +1452,13 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 
   There is no need to wait for computations of the values found to finish, 
   since functions never have their computation deferred.
+
+  The findFun_nospecsym function skips the special symbol check, for use in 
+  the FINDFUN macro when that check has already been done.
 */
 
 SEXP findFun(SEXP symbol, SEXP rho)
 {
-    if (TYPEOF(symbol) != SYMSXP) abort();
-
     /* If it's a special symbol, skip to the first environment that might 
        contain such a symbol. */
 
@@ -1465,9 +1467,16 @@ SEXP findFun(SEXP symbol, SEXP rho)
             rho = ENCLOS(rho);
     }
 
+    return findFun_nospecsym(symbol,rho);
+}
+
+SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
+{
     SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
-    SEXP last_hashed_env_nf = NULL;
+    SEXP last_unhashed_env_nf = NULL;
     SEXP vl;
+
+    if (TYPEOF(symbol) != SYMSXP) abort();
 
     /* Search environments for a definition that is a function. */
 
@@ -1493,7 +1502,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
            in this environment. */
 
         if (rho == last_sym_not_found) {
-            last_hashed_env_nf = rho;
+            last_unhashed_env_nf = rho;
             continue;
         }
 
@@ -1502,15 +1511,15 @@ SEXP findFun(SEXP symbol, SEXP rho)
       got_value:
 	if (vl == R_UnboundValue) {
             if (HASHTAB(rho) == R_NilValue)
-                last_hashed_env_nf = rho;
+                last_unhashed_env_nf = rho;
             continue;
         }
 
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
         if (isFunction (vl)) {
-            if (last_hashed_env_nf != NULL)
-                LASTSYMENVNOTFOUND(symbol) = last_hashed_env_nf;
+            if (last_unhashed_env_nf != NULL)
+                LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
             return vl;
         }
         if (vl == R_MissingArg)
@@ -1532,31 +1541,31 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
     if (TYPEOF(symbol) != SYMSXP) abort();
 
     SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
-    SEXP last_hashed_env_nf = NULL;
+    SEXP last_unhashed_env_nf = NULL;
     SEXP vl;
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
         if (rho == last_sym_not_found) {
-            last_hashed_env_nf = rho;
+            last_unhashed_env_nf = rho;
             continue;
         }
 	vl = findVarInFramePendingOK(rho, symbol);
 	if (vl == R_UnboundValue) {
             if (HASHTAB(rho) == R_NilValue)
-                last_hashed_env_nf = rho;
+                last_unhashed_env_nf = rho;
             continue;
         }
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
         if (isFunction(vl)) {
-            if (last_hashed_env_nf != NULL)
-                LASTSYMENVNOTFOUND(symbol) = last_hashed_env_nf;
+            if (last_unhashed_env_nf != NULL)
+                LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
             return vl;
         }
     }
 
-    if (last_hashed_env_nf != NULL && !IS_BASE(last_hashed_env_nf))
-        LASTSYMENVNOTFOUND(symbol) = last_hashed_env_nf;
+    if (last_unhashed_env_nf != NULL && !IS_BASE(last_unhashed_env_nf))
+        LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
     return R_UnboundValue;
 }
 

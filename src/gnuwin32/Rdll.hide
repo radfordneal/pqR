@@ -351,6 +351,7 @@
  Rf_evalListKeepMissing
  Rf_evalListPendingOK
  Rf_evalv2
+ Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
  Rf_forcePromisePendingOK

@@ -50,18 +50,13 @@
    the base environmet. */
 
 #define FINDFUN(res,symbol,rho) do { \
-    if (SPEC_SYM(symbol)) { \
-        SEXP rho_ = rho; \
+    SEXP rho_ = rho; \
+    if (SPEC_SYM(symbol)) \
         while (NO_SPEC_SYM(rho_)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */ \
             rho_ = ENCLOS(rho_); \
-        if (rho_ == R_GlobalEnv && BASE_CACHE(symbol) \
-                                && !IS_ACTIVE_BINDING(symbol)) \
-            res = SYMVALUE(symbol); \
-        else \
-            res = findFun(symbol,rho_); \
-    } \
-    else \
-        res = findFun(symbol,rho); \
+    if (rho_ != R_GlobalEnv || !BASE_CACHE(symbol) \
+     || !IS_ACTIVE_BINDING(symbol) || !isFunction(res = SYMVALUE(symbol))) \
+        res = findFun_nospecsym(symbol,rho_); \
 } while (0)
 
 

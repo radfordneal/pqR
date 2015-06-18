@@ -1078,6 +1078,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalListPendingOK	Rf_evalListPendingOK
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
+# define findFun_nospecsym	Rf_findFun_nospecsym
 # define findVar1		Rf_findVar1
 # define forcePromise		Rf_forcePromise
 # define forcePromisePendingOK	Rf_forcePromisePendingOK
@@ -1284,6 +1285,7 @@ SEXP evalListKeepMissing(SEXP, SEXP);
 SEXP evalListPendingOK(SEXP, SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
+SEXP findFun_nospecsym(SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
 SEXP forcePromise(SEXP);
 SEXP forcePromisePendingOK(SEXP);
