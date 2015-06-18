@@ -2,3 +2,7 @@ More optimizations.
 
 Use installed_already and forcePromise in methods_list_dispatch.
 
+Got rid of the conditional use of the global cache (now always used),
+since it gets silly maintaining the alternative (which is never tested).
+
+Revised findFun and FINDFUN.

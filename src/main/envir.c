@@ -615,8 +615,6 @@ static SEXP R_HashProfile(SEXP table)
   ----------------------------------------------------------------------*/
 
 
-#define USE_GLOBAL_CACHE
-#ifdef USE_GLOBAL_CACHE  /* NB leave in place: see below */
 /* Global variable caching.  A cache is maintained in a hash table,
    R_GlobalCache.  The entry values are either R_UnboundValue (a
    flushed cache entry), the binding LISTSXP cell from the environment
@@ -640,17 +638,7 @@ static SEXP R_HashProfile(SEXP table)
    global frames can only be created by attach.  All other frames are
    considered local.  Whether a frame is local or not is recorded in
    the highest order bit of the ENVFLAGS field (the gp field of
-   sxpinfo).
-
-   It is possible that the benefit of caching may be significantly
-   reduced if we introduce namespace management.  Since maintaining
-   cache integrity is a bit tricky and since it might complicate
-   threading a bit (I'm not sure it will but it needs to be thought
-   through if nothing else) it might make sense to remove caching at
-   that time.  To make that easier, the ifdef's should probably be
-   left in place.
-
-   L. T. */
+   sxpinfo). */
 
 #define GLOBAL_FRAME_MASK (1<<15)
 #define IS_GLOBAL_FRAME(e) (ENVFLAGS(e) & GLOBAL_FRAME_MASK)
@@ -662,7 +650,7 @@ static SEXP R_HashProfile(SEXP table)
 #define INITIAL_CACHE_SIZE 1000
 
 static SEXP R_GlobalCache, R_GlobalCachePreserve;
-#endif
+
 static SEXP R_BaseNamespaceName;
 
 void attribute_hidden InitBaseEnv()
@@ -674,15 +662,12 @@ void attribute_hidden InitBaseEnv()
 void attribute_hidden InitGlobalEnv()
 {
     R_GlobalEnv = R_NewHashedEnv(R_BaseEnv, ScalarIntegerMaybeConst(0));
-#ifdef NEW_CODE /* Not used */
-    HASHTAB(R_GlobalEnv) = R_NewHashTable(100);
-#endif
-#ifdef USE_GLOBAL_CACHE
+
     MARK_AS_GLOBAL_FRAME(R_GlobalEnv);
     R_GlobalCache = R_NewHashTable(INITIAL_CACHE_SIZE);
     R_GlobalCachePreserve = CONS(R_GlobalCache, R_NilValue);
     R_PreserveObject(R_GlobalCachePreserve);
-#endif
+
     R_BaseNamespace = NewEnvironment(R_NilValue, R_NilValue, R_GlobalEnv);
     NONVEC_SXPINFO(R_BaseNamespace).base_env = 1;
     R_PreserveObject(R_BaseNamespace);
@@ -695,7 +680,6 @@ void attribute_hidden InitGlobalEnv()
     /**** needed to properly initialize the base namespace */
 }
 
-#ifdef USE_GLOBAL_CACHE
 static int hashIndex(SEXP symbol, SEXP table)
 {
     SEXP c = PRINTNAME(symbol);
@@ -783,7 +767,7 @@ static SEXP R_GetGlobalCache(SEXP symbol)
 	return R_NilValue;
     }
 }
-#endif /* USE_GLOBAL_CACHE */
+
 
 /* Remove variable from a list, return the new list, and return its old value 
    (NULL if not there) in 'value'. */
@@ -1137,9 +1121,6 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
 }
 
 
-
-#ifdef USE_GLOBAL_CACHE
-
 /* findGlobalVar searches for a symbol value starting at R_GlobalEnv, so the
    cache can be used.  Doesn't wait for the value found to be computed.
    Always set R_binding_cell to R_NilValue - fast updates here aren't needed. */
@@ -1171,7 +1152,6 @@ static SEXP findGlobalVar(SEXP symbol)
     }
     return R_UnboundValue;
 }
-#endif
 
 
 /*----------------------------------------------------------------------
@@ -1190,8 +1170,6 @@ static SEXP findGlobalVar(SEXP symbol)
 SEXP findVar(SEXP symbol, SEXP rho)
 {
     SEXP value;
-
-#ifdef USE_GLOBAL_CACHE
 
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
@@ -1213,26 +1191,11 @@ SEXP findVar(SEXP symbol, SEXP rho)
         R_binding_cell = R_NilValue;
 	return R_UnboundValue;
     }
-
-#else
-
-    while (rho != R_EmptyEnv) {
-	value = findVarInFrame3 (rho, symbol, 1);
-	if (value != R_UnboundValue) 
-            return value;
-	rho = ENCLOS(rho);
-    }
-    R_binding_cell = R_NilValue;
-    return R_UnboundValue;
-
-#endif
 }
 
 SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 {
     SEXP value;
-
-#ifdef USE_GLOBAL_CACHE
 
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
@@ -1253,19 +1216,6 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
         R_binding_cell = R_NilValue;
 	return R_UnboundValue;
     }
-
-#else
-
-    while (rho != R_EmptyEnv) {
-	value = findVarInFramePendingOK (rho, symbol);
-	if (value != R_UnboundValue) 
-            return value;
-	rho = ENCLOS(rho);
-    }
-    R_binding_cell = R_NilValue;
-    return R_UnboundValue;
-
-#endif
 }
 
 
@@ -1485,18 +1435,16 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
         /* See if it is in the global cache, as it usually will if it's in any
            of the remaining environments (though there can be exceptions). */
 
-#       ifdef USE_GLOBAL_CACHE
-	    if (rho == R_GlobalEnv) {
-#               ifdef FAST_BASE_CACHE_LOOKUP
-                    if (BASE_CACHE(symbol)) { /* quick here, as time-critical */
-                        vl = SYMBOL_BINDING_VALUE(symbol);
-                        goto got_value;
-                    }
-#               endif
-                vl = findGlobalVar(symbol);
-                goto got_value;
-            }
-#       endif
+        if (rho == R_GlobalEnv) {
+#           ifdef FAST_BASE_CACHE_LOOKUP
+                if (BASE_CACHE(symbol)) { /* quick here, as time-critical */
+                    vl = SYMBOL_BINDING_VALUE(symbol);
+                    goto got_value;
+                }
+#           endif
+            vl = findGlobalVar(symbol);
+            goto got_value;
+        }
 
         /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
            in this environment. */
@@ -1616,9 +1564,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         if (incdec&2) 
             INC_NAMEDCNT(value);
         /* don't try to do decrement on old value (getting it might be slow) */
-#ifdef USE_GLOBAL_CACHE
+
         if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
-#endif
+
         if (rho == R_GlobalEnv) 
             R_DirtyImage = 1;
         UNPROTECT(3);
@@ -1665,9 +1613,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         if (FRAME_IS_LOCKED(rho))
             error(_("cannot add bindings to a locked environment"));
 
-#ifdef USE_GLOBAL_CACHE
         if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
-#endif
+
         if (rho == R_GlobalEnv) 
             R_DirtyImage = 1;
 
@@ -1803,9 +1750,7 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
         if (FRAME_IS_LOCKED(rho))
             error(_("cannot add binding of '%s' to the base environment"),
                   CHAR(PRINTNAME(symbol)));
-#ifdef USE_GLOBAL_CACHE
         R_FlushGlobalCache(symbol);
-#endif
     }
 
     WAIT_UNTIL_COMPUTED(value);
@@ -1934,13 +1879,11 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 
     if (value != NULL) {
         if(env == R_GlobalEnv) R_DirtyImage = 1;
-#ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(env)) {
             PROTECT(value);
             R_FlushGlobalCache(name);
             UNPROTECT(1);
         }
-#endif
     }
 
     return value;
@@ -2528,15 +2471,11 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if(!isSpecial) { /* Temporary: need to remove the elements identified by objects(CAR(args)) */
-#ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromTable(HASHTAB(s));
 	MARK_AS_GLOBAL_FRAME(s);
-#endif
     } else {
-#ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromUserTable(HASHTAB(s));
 	MARK_AS_GLOBAL_FRAME(s);
-#endif
     }
 
     UNPROTECT(1); /* s */
@@ -2585,7 +2524,7 @@ static SEXP do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
 
 	SET_ENCLOS(s, R_BaseEnv);
     }
-#ifdef USE_GLOBAL_CACHE
+
     if(!isSpecial) {
 	R_FlushGlobalCacheFromTable(HASHTAB(s));
 	MARK_AS_LOCAL_FRAME(s);
@@ -2593,7 +2532,7 @@ static SEXP do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_FlushGlobalCacheFromUserTable(HASHTAB(s));
 	MARK_AS_LOCAL_FRAME(s); /* was _GLOBAL_ prior to 2.4.0 */
     }
-#endif
+
     UNPROTECT(1);
     return s;
 }
@@ -3419,9 +3358,9 @@ static SEXP do_mkUnbound(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (R_BindingIsActive(sym, R_BaseEnv))
 	error(_("cannot unbind an active binding"));
     SET_SYMVALUE(sym, R_UnboundValue);
-#ifdef USE_GLOBAL_CACHE
+
     R_FlushGlobalCache(sym);
-#endif
+
     return R_NilValue;
 }
 
