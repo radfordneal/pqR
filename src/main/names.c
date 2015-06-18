@@ -675,6 +675,9 @@ SEXP installChar(SEXP charSXP)
 {
     const char *name = CHAR(charSXP);
     int hashcode;
+    SEXP res;
+
+    PROTECT(charSXP);
 
     if( !HASHASH(charSXP) ) {
         hashcode = R_Newhashpjw(name);
@@ -684,7 +687,10 @@ SEXP installChar(SEXP charSXP)
         hashcode = HASHVALUE(charSXP);
     }
 
-    return install_with_hashcode (name, hashcode);
+    res = install_with_hashcode (name, hashcode);
+
+    UNPROTECT(1);
+    return res;
 }
 
 /* Lookup up a symbol, returning it if it exists already, but not creating
