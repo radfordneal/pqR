@@ -1,9 +1,9 @@
 Optimizations from Tomas Kalibera, via R Core version.
 
 
-Faster installChar procedure when symbol name is already a CHARSXP, from
-Modified the Tomas's installChar to accomodate pqR changes, and avoid
-code duplication with install.  r66478
+Faster installChar procedure when symbol name is already a CHARSXP,
+from r66478.  Modified Tomas's installChar to accomodate pqR changes,
+and avoid code duplication with install.
 
 
 Tweaked R_loadMethod to skip s_generic.  r66097
