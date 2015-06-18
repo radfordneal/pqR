@@ -102,9 +102,6 @@
 
 #include <helpers/helpers-app.h>
 
-#define FAST_BASE_CACHE_LOOKUP  /* Define to enable fast lookups of symbols */
-                                /*    in global cache from base environment */
-
 #define DEBUG_OUTPUT 0          /* 0 to 2 for increasing debug output */
 #define DEBUG_CHECK 0           /* 1 to enable debug check of HASHSLOTSUSED */
 
@@ -696,9 +693,7 @@ static void R_FlushGlobalCache(SEXP sym)
 			      R_GlobalCache);
     if (entry != R_NilValue) {
 	SETCAR(entry, R_UnboundValue);
-#ifdef FAST_BASE_CACHE_LOOKUP
         SET_BASE_CACHE(sym,0);
-#endif
     }
 }
 
@@ -735,9 +730,7 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
     int oldslotsused = HASHSLOTSUSED(R_GlobalCache);
     R_HashSet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache, place,
 	      FALSE);
-#ifdef FAST_BASE_CACHE_LOOKUP
     SET_BASE_CACHE (symbol, symbol==place);
-#endif
     if (oldslotsused != HASHSLOTSUSED(R_GlobalCache) &&
         R_HashSizeCheck(R_GlobalCache)) {
 	R_GlobalCache = R_HashResize(R_GlobalCache);
@@ -749,10 +742,8 @@ static SEXP R_GetGlobalCache(SEXP symbol)
 {
     SEXP vl;
 
-#ifdef FAST_BASE_CACHE_LOOKUP
     if (BASE_CACHE(symbol))
         return SYMBOL_BINDING_VALUE(symbol);
-#endif
 
     vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache);
     switch(TYPEOF(vl)) {
@@ -1436,12 +1427,10 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
            of the remaining environments (though there can be exceptions). */
 
         if (rho == R_GlobalEnv) {
-#           ifdef FAST_BASE_CACHE_LOOKUP
-                if (BASE_CACHE(symbol)) { /* quick here, as time-critical */
-                    vl = SYMBOL_BINDING_VALUE(symbol);
-                    goto got_value;
-                }
-#           endif
+            if (BASE_CACHE(symbol)) { /* quick here, as time-critical */
+                vl = SYMBOL_BINDING_VALUE(symbol);
+                goto got_value;
+            }
             vl = findGlobalVar(symbol);
             goto got_value;
         }
