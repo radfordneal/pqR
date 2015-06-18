@@ -79,8 +79,10 @@
         running with gctorture enabled even slower than before, when
         most garbage collections were partial, but is more likely to
         find problems.
-  \item A number of fixes were made that corrected possible problems
-        with protection of pointers, many provided by Tomas Kalibera.
+  \item A large number of fixes were made that corrected possible problems,
+        mostly with protection of pointers, most of them provided by Tomas 
+        Kalibera as fixes to R Core versions (sometimes with adaptation 
+        required for use in pqR).
 }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
