@@ -84,8 +84,10 @@ static Rboolean url_open(Rconnection con)
 #else
 	PROTECT(agentFun = lang1(makeUserAgent_install));
 #endif
-	PROTECT(sheaders = eval(agentFun, R_FindNamespace(mkString("utils"))));
-
+	SEXP utilsNS = PROTECT(R_FindNamespace(mkString("utils")));
+	sheaders = eval(agentFun, utilsNS);
+	UNPROTECT(1); /* utilsNS */
+	PROTECT(sheaders);
 	if(TYPEOF(sheaders) == NILSXP)
 	    headers = NULL;
 	else
@@ -307,8 +309,11 @@ static SEXP in_do_download(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
     PROTECT(agentFun = lang1(install("makeUserAgent")));
 #endif
-    PROTECT(sheaders = eval(agentFun, R_FindNamespace(mkString("utils"))));
-    UNPROTECT(1);
+    SEXP utilsNS = PROTECT(R_FindNamespace(mkString("utils")));
+    sheaders = eval(agentFun, utilsNS);
+    UNPROTECT(1); /* utilsNS */
+    PROTECT(sheaders);
+
     if(TYPEOF(sheaders) == NILSXP)
 	headers = NULL;
     else
@@ -569,7 +574,7 @@ static SEXP in_do_download(SEXP call, SEXP op, SEXP args, SEXP env)
     } else
 	error(_("unsupported URL scheme"));
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     return ScalarInteger(status);
 }
 
