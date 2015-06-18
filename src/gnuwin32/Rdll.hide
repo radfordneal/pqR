@@ -353,7 +353,6 @@
  Rf_evalv2
  Rf_findVar1
  Rf_findcontext
- Rf_forcePromise
  Rf_forcePromisePendingOK
  Rf_framedepth
  Rf_gamma_cody

@@ -327,12 +327,16 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	    UNPROTECT(2);
 	    return R_NilValue;
 	}
-	strcpy(ptr, "#"); ptr +=1;  /* BUG?  Should it only be done if ptr>buf? */
+	strcpy(ptr, "#"); ptr +=1; /* BUG? Should it only be done if ptr>buf? */
 	strcpy(ptr, "missing"); ptr += strlen("missing");
-    }	    
-    value = findVarInFrame(mtable, install(buf));
-    if(value == R_UnboundValue)
-	value = R_NilValue;
+    }
+    SEXP buf_installed = installed_already(buf);
+    value = R_NilValue;
+    if (buf_installed) {
+        value = findVarInFrame(mtable, buf_installed);
+        if (value == R_UnboundValue)
+            value = R_NilValue;
+    }
     UNPROTECT(2);
     return(value);
 }
@@ -376,34 +380,33 @@ static SEXP R_S_MethodsListSelect(SEXP fname, SEXP ev, SEXP mlist, SEXP f_env)
 
 static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 {
-    SEXP vl, generic = R_UnboundValue, gpackage; const char *pkg; Rboolean ok;
+    SEXP vl, generic, gpackage; const char *pkg; Rboolean ok;
     if(!isSymbol(symbol))
 	symbol = installChar(asChar(symbol));
-    pkg = CHAR(STRING_ELT(package, 0)); /* package is guaranteed single string */
-
+    pkg = CHAR(STRING_ELT(package,0)); /* package is guaranteed single string */
+    generic = R_UnboundValue;
     while (rho != R_EmptyEnv) {
 	vl = findVarInFrame(rho, symbol);
 	if (vl != R_UnboundValue) {
-	    if (TYPEOF(vl) == PROMSXP) {
-		PROTECT(vl);
-		vl = eval(vl, rho);
-		UNPROTECT(1);
-	    }
+	    if (TYPEOF(vl) == PROMSXP) 
+                vl = forcePromise(vl);
+            PROTECT(vl);
 	    ok = FALSE;
 	    if(IS_GENERIC(vl)) {
-	      if (*pkg) {
-		  gpackage = PACKAGE_SLOT(vl);
-		  check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
-		  ok = !strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)));
-		}
-		else
-		  ok = TRUE;
+                if (*pkg) {
+                    gpackage = PACKAGE_SLOT(vl);
+                    check_single_string(gpackage, FALSE, 
+                      "The \"package\" slot in generic function object");
+                    ok = strcmp(pkg, CHAR(STRING_ELT(gpackage, 0))) == 0;
+                }
+                else
+                    ok = TRUE;
 	    }
+            UNPROTECT(1);
 	    if(ok) {
 		generic = vl;
 		break;
-	    } else
-		vl = R_UnboundValue;
+	    }
 	}
 	rho = ENCLOS(rho);
     }
@@ -414,8 +417,10 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	    generic = vl;
 	    if (*pkg) {
 		gpackage = PACKAGE_SLOT(vl);
-		check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
-		if(strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)))) generic = R_UnboundValue;
+		check_single_string(gpackage, FALSE, 
+                  "The \"package\" slot in generic function object");
+		if (strcmp(pkg, CHAR(STRING_ELT(gpackage, 0))) != 0)
+                    generic = R_UnboundValue;
 	    }
 	}
     }
@@ -782,7 +787,9 @@ static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
     }
     /* look up the method by package -- if R_unboundValue, will go on
      to do inherited calculation */
-    return findVarInFrame(table, install(buf));
+    SEXP buf_installed = installed_already(buf);
+    return buf_installed ? findVarInFrame(table, buf_installed)
+                         : R_UnboundValue;
 }
 
 static const char *
@@ -1009,7 +1016,9 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	while(*bufptr)
 	    bufptr++;
     }
-    method = findVarInFrame(mtable, install(buf));
+    SEXP buf_installed = installed_already(buf);
+    method = buf_installed ? findVarInFrame(mtable, install(buf)) 
+                           : R_UnboundValue;
     if(DUPLICATE_CLASS_CASE(method)) {
         PROTECT(method);
 	method = R_selectByPackage(method, classes, nargs);

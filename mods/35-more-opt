@@ -1,0 +1,4 @@
+More optimizations.
+
+Use installed_already and forcePromise in methods_list_dispatch.
+

@@ -413,7 +413,7 @@ static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
     return val;
 }
 
-SEXP attribute_hidden forcePromise (SEXP e) /* e protected here if necessary */
+SEXP forcePromise (SEXP e) /* e protected here if necessary */
 {
     if (PRVALUE(e) == R_UnboundValue) {
         SEXP val = forcePromiseUnbound(e);
