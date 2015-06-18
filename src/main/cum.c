@@ -194,24 +194,30 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
     } else if( ( isInteger(CAR(args)) || isLogical(CAR(args)) ) &&
 	       PRIMVAL(op) != 2) {
 	PROTECT(t = coerceVector(CAR(args), INTSXP));
-	PROTECT(s = allocVector(INTSXP, LENGTH(t)));
+        int n = LENGTH(t);
+	PROTECT(s = allocVector(INTSXP, n));
 	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
-	UNPROTECT(2);
-	if(LENGTH(t) == 0) return s;
-	for(i = 0 ; i < LENGTH(t) ; i++) INTEGER(s)[i] = NA_INTEGER;
+	if (n == 0) {
+            UNPROTECT(2); /* t, s */
+            return s;
+        }
+	for (i = 0 ; i < n ; i++) INTEGER(s)[i] = NA_INTEGER;
+        SEXP ans;
 	switch (PRIMVAL(op) ) {
 	case 1:	/* cumsum */
-	    return icumsum(t,s);
+	    ans = icumsum(t,s);  /* may produce a warning, which allocates */
 	    break;
 	case 3: /* cummax */
-	    return icummax(t,s);
+	    ans = icummax(t,s);
 	    break;
 	case 4: /* cummin */
-	    return icummin(t,s);
+	    ans = icummin(t,s);
 	    break;
 	default:
 	    errorcall(call, _("unknown cumxxx function"));
 	}
+        UNPROTECT(2); /* t, s */
+        return ans;
     } else {
 	PROTECT(t = coerceVector(CAR(args), REALSXP));
 	PROTECT(s = allocVector(REALSXP, LENGTH(t)));

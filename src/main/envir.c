@@ -2824,8 +2824,8 @@ SEXP R_lsInternal(SEXP env, Rboolean all)
     else
         FrameNames(FRAME(env), all, ans, &k);
 
-    UNPROTECT(1);
     sortVector(ans, FALSE);
+    UNPROTECT(1);
     return ans;
 }
 

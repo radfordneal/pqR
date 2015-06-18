@@ -2551,8 +2551,11 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
                            evalv (CAR(h), rho, VARIANT_PENDING_OK),
                            R_NilValue,
                            TAG(h));
-                    if (head==R_NilValue)
+                    if (head==R_NilValue) {
+                        UNPROTECT(1); /* h */
                         PROTECT(head = ev);
+                        PROTECT(h);
+                    }
                     else
                         SETCDR(tail, ev);
                     tail = ev;
@@ -2561,7 +2564,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	    }
 	    else if (h != R_MissingArg)
 		dotdotdot_error();
-            UNPROTECT(1);
+            UNPROTECT(1); /* h */
 
 	} else if (CAR(el) == R_MissingArg && call != NULL) {
             /* Report the missing argument as an error. */
