@@ -1568,14 +1568,20 @@ extern void *alloca(size_t);
 #endif
 
 
-/* Macro version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't set R_binding_cell. */
+/* Inline version of findVarPendingOK, for speed when symbol is found
+   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
 
-#define FIND_VAR_PENDING_OK(sym,rho) \
-( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
-    : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
-    : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
-)
+static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
+{
+    if (LASTSYMENV(sym) == rho) {
+        SEXP b = CAR(LASTSYMBINDING(sym));
+        if (b != R_UnboundValue)
+            return b;
+        LASTSYMENV(sym) = NULL;
+    }
+
+    return findVarPendingOK(sym,rho);
+}
 
 
 /* Inline versions of eval and evalv, which checks for SELF_EVAL inline.
