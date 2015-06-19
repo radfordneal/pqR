@@ -1541,10 +1541,10 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
               _("no method for assigning subsets of this S4 class"));
     }
 
-    if ((isList(x) || isLanguage(x)) && x != R_NilValue) {
+    switch (TYPEOF(x)) {
 
+    case LISTSXP: case LANGSXP: ;
         int ix = tag_index(x,name);
-
         if (ix == 0) {
             if (val != R_NilValue) {
                 x = with_pairlist_appended (x,
@@ -1559,31 +1559,24 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
             x = with_changed_nth (x, ix, val);
             SET_NAMEDCNT_MAX(val);
         }
-    }
+        break;
 
-    /* cannot use isEnvironment since we do not want NULL here */
-    else if( TYPEOF(x) == ENVSXP ) {
-
+    case ENVSXP:
 	set_var_in_frame (name, val, x, TRUE, 3);
+        break;
 
-    }
-
-    else if( TYPEOF(x) == SYMSXP || /* Used to 'work' in R < 2.8.0 */
-	     TYPEOF(x) == CLOSXP ||
-	     TYPEOF(x) == SPECIALSXP ||
-	     TYPEOF(x) == BUILTINSXP) {
+    case SYMSXP: case CLOSXP: case SPECIALSXP: case BUILTINSXP:
+        /* Used to 'work' in R < 2.8.0 */
         nonsubsettable_error(call,x);
-    }
 
-    else {
-        int type = VECSXP;
+    default:
+	warningcall(call,_("Coercing LHS to a list"));
+	REPROTECT(x = coerceVector(x, VECSXP), pxidx);
+	/* fall through to VECSXP / EXPRSXP / NILSXP code */
 
-	if (isExpression(x)) 
-	    type = EXPRSXP;
-	else if (!isNewList(x)) {
-	    warningcall(call,_("Coercing LHS to a list"));
-	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
-	}
+    case VECSXP: case EXPRSXP: case NILSXP: ;
+
+        int type = TYPEOF(x);
 
         if (NAMEDCNT_GT_1(x) || x == val)
             REPROTECT(x = dup_top_level(x), pxidx);
@@ -1662,6 +1655,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 		x = ans;
 	    }
 	}
+        break;
     }
 
     UNPROTECT(2);
