@@ -215,7 +215,7 @@ static int sequal(SEXP x, int i, SEXP y, int j)
     /* Once all CHARSXPs are cached, Seql will handle this */
     if (STRING_ELT(x, i) == NA_STRING || STRING_ELT(y, j) == NA_STRING)
 	return 0;
-    return Seql(STRING_ELT(x, i), STRING_ELT(y, j));
+    return SEQL(STRING_ELT(x, i), STRING_ELT(y, j));
 }
 
 static int rawhash(SEXP x, int indx, HashData *d)

@@ -123,7 +123,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	/* Try for exact match */
 	for (i = 0; i < len_names; i++) {
 	    if (STRING_ELT(names,i) != NA_STRING 
-             && Seql(STRING_ELT(names,i),se)) {
+             && SEQL(STRING_ELT(names,i),se)) {
 	     	indx = i;
 		break;
 	    }
@@ -167,7 +167,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
         len_names = TYPEOF(names) != STRSXP ? 0 : LENGTH(names);
 	for (i = 0; i < len_names; i++) {
 	    if (STRING_ELT(names,i) != NA_STRING
-                  && Seql (STRING_ELT(names,i), PRINTNAME(s))) {
+                  && SEQL (STRING_ELT(names,i), PRINTNAME(s))) {
 		indx = i;
 		break;
 	    }
@@ -466,7 +466,7 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
                 if (!na_or_empty_string(sbe_i)) {
                     for (j = 0; j < nnames; j++) {
                         SEXP sbe_j = strg(names,j);
-                        if (!na_or_empty_string(sbe_j) && Seql(sbe_i,sbe_j)) {
+                        if (!na_or_empty_string(sbe_j) && SEQL(sbe_i,sbe_j)) {
                             sub = j + 1;
                             break;
                         }
@@ -502,7 +502,7 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
                         if (INTEGER(indx)[j] == 0) {
                             SEXP sbe_j = STRING_ELT(s,j);
                             if (!na_or_empty_string(sbe_j) 
-                             && Seql(sbe_i,sbe_j)) {
+                             && SEQL(sbe_i,sbe_j)) {
                                 INTEGER(indx)[j] = sub;
                                 SET_VECTOR_ELT (indexnames, j, sbe_i);
                             }

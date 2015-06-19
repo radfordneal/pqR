@@ -825,7 +825,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	    c1 = STRING_ELT(s1, i % n1);
 	    c2 = STRING_ELT(s2, i % n2);
 	    LOGICAL(ans)[i] = c1 == NA_STRING || c2 == NA_STRING ? NA_LOGICAL
-		            : Seql(c1, c2) ? T : F;
+		            : SEQL(c1, c2) ? T : F;
 	}
     }
     else { /* LTOP */
