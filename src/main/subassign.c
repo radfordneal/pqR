@@ -1576,25 +1576,34 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
     case VECSXP: case EXPRSXP: case NILSXP: ;
 
-        int type = TYPEOF(x);
-
-        if (NAMEDCNT_GT_1(x) || x == val)
-            REPROTECT(x = dup_top_level(x), pxidx);
-
         SEXP pname = PRINTNAME(name);
-	SEXP names = getAttrib(x, R_NamesSymbol);
-	R_len_t nx = type==NILSXP ? 0 : LENGTH(x);
-
-        /* Set imatch to the index of the selected element, -1 if not present.
-           Note that NA_STRING and "" don't match anything. */
-
+        int type = TYPEOF(x);
         int imatch = -1;
-        if (names != R_NilValue && !na_or_empty_string(pname)) {
-            for (int i = 0; i < nx; i++) {
-                SEXP ni = STRING_ELT(names, i);
-                if (SEQL(ni,pname) && !na_or_empty_string(ni)) {
-                    imatch = i;
-                    break;
+        SEXP names;
+        R_len_t nx;
+
+        if (type == NILSXP) {
+            names = R_NilValue;
+            type = VECSXP;
+            nx = 0;
+        }
+        else {
+            if (NAMEDCNT_GT_1(x) || x == val)
+                REPROTECT(x = dup_top_level(x), pxidx);
+            names = getAttrib(x, R_NamesSymbol);
+            nx = LENGTH(x);
+
+            /* Set imatch to the index of the selected element, stays at
+               -1 if not present.  Note that NA_STRING and "" don't match 
+               anything. */
+
+            if (names != R_NilValue && !na_or_empty_string(pname)) {
+                for (int i = 0; i < nx; i++) {
+                    SEXP ni = STRING_ELT(names, i);
+                    if (SEQL(ni,pname) && !na_or_empty_string(ni)) {
+                        imatch = i;
+                        break;
+                    }
                 }
             }
         }
