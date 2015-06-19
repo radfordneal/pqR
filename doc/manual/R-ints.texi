@@ -297,7 +297,8 @@ The @code{trace} bit is used for functions for @code{trace()}.
 For symbols, the @code{basec} bit is used for the @code{BASE_CACHE} flag, that
 indicates that the symbol is in the global cache with a binding in the 
 base environment, allowing its value to be obtained directly without 
-looking in the hash table.
+looking in the hash table. (Currently done only for non-active bindings
+that are functions.)
 
 @findex spec_sym bit
 The @code{spec_sym} bit is used as the @code{SPEC_SYM} flag for
