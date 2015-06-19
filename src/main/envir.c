@@ -619,13 +619,13 @@ static SEXP R_HashProfile(SEXP table)
    symbol if the globally visible binding lives in the base package.
    The cache for a variable is flushed if a new binding for it is
    created in a global frame or if the variable is removed from any
-   global frame.
+   global frame, or if a base cache entry is changed.
 
    Symbols in the global cache with values from the base environment
-   are flagged with BASE_CACHE, so that their value can be returned
-   immediately without needing to look in the hash table.  They must
-   still have entries in the hash table, however, so that they can be
-   flushed as needed.
+   that are functions (and not active bindings) are flagged with BASE_CACHE,
+   so that their value can be returned immediately without needing to look 
+   in the hash table.  They must still have entries in the hash table, 
+   however, so that they can beflushed as needed.
 
    To make sure the cache is valid, all binding creations and removals
    from global frames must go through the interface functions in this
@@ -730,7 +730,31 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
     int oldslotsused = HASHSLOTSUSED(R_GlobalCache);
     R_HashSet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache, place,
 	      FALSE);
-    SET_BASE_CACHE (symbol, symbol==place);
+
+    /* We set the BASE_CACHE flag for symbols in the base environment
+       that aren't active bindings and whose values are functions or
+       promises with function values. */
+
+    SET_BASE_CACHE (symbol, symbol==place && !IS_ACTIVE_BINDING(symbol)
+      && (isFunction(SYMVALUE(symbol)) || TYPEOF(SYMVALUE(symbol)) == PROMSXP
+            && isFunction(PRVALUE_PENDING_OK(SYMVALUE(symbol)))));
+
+#   if 0  /* enable for debug info */
+        static int chk = 1, prnt;
+        if (chk) { chk = 0; prnt = getenv("PRNT") != 0; }
+        if (prnt) {
+            REprintf("Added %s, base %d",CHAR(PRINTNAME(symbol)),symbol==place);
+            if (symbol==place) {
+                REprintf(", type %d, base cache %d", TYPEOF(SYMVALUE(symbol)),
+                                                       BASE_CACHE(symbol));
+                if (TYPEOF(SYMVALUE(symbol)) == PROMSXP)
+                    REprintf(", prvalue type %d",
+                       TYPEOF(PRVALUE_PENDING_OK(SYMVALUE(symbol))));
+            }
+            REprintf("\n");
+        }
+#   endif
+
     if (oldslotsused != HASHSLOTSUSED(R_GlobalCache) &&
         R_HashSizeCheck(R_GlobalCache)) {
 	R_GlobalCache = R_HashResize(R_GlobalCache);
@@ -743,7 +767,7 @@ static SEXP R_GetGlobalCache(SEXP symbol)
     SEXP vl;
 
     if (BASE_CACHE(symbol))
-        return SYMBOL_BINDING_VALUE(symbol);
+        return SYMVALUE(symbol);
 
     vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache);
     switch(TYPEOF(vl)) {
@@ -1119,11 +1143,15 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
 static SEXP findGlobalVar(SEXP symbol)
 {
     SEXP vl, rho;
-    Rboolean canCache = TRUE;
+
     R_binding_cell = R_NilValue;
+
     vl = R_GetGlobalCache(symbol);
     if (vl != R_UnboundValue)
 	return vl;
+
+    Rboolean canCache = TRUE;
+
     for (rho = R_GlobalEnv; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
 	if (IS_BASE(rho)) {
 	    vl = SYMBOL_BINDING_VALUE(symbol);
@@ -1428,8 +1456,10 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
         if (rho == R_GlobalEnv) {
             if (BASE_CACHE(symbol)) { /* quick here, as time-critical */
-                vl = SYMBOL_BINDING_VALUE(symbol);
-                goto got_value;
+                vl = SYMVALUE(symbol);
+                if (TYPEOF(vl) == PROMSXP)
+                    vl = PRVALUE_PENDING_OK(vl);
+                return vl;
             }
             vl = findGlobalVar(symbol);
             goto got_value;
@@ -1739,8 +1769,9 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
         if (FRAME_IS_LOCKED(rho))
             error(_("cannot add binding of '%s' to the base environment"),
                   CHAR(PRINTNAME(symbol)));
-        R_FlushGlobalCache(symbol);
     }
+
+    R_FlushGlobalCache(symbol);
 
     WAIT_UNTIL_COMPUTED(value);
     SET_SYMBOL_BINDING_VALUE(symbol, value);
