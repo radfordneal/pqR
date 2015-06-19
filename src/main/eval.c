@@ -46,25 +46,24 @@
 #include <helpers/helpers-app.h>
 
 
-/* Macro version of findFun, for speed when a special symbol is found in
+/* Inline version of findFun, for speed when a special symbol is found in
    the base environmet. */
 
-#define FINDFUN(res,symbol,rho) do { \
-    SEXP rho_ = rho; \
-    if (SPEC_SYM(symbol)) { \
-        while (NO_SPEC_SYM(rho_)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */ \
-            rho_ = ENCLOS(rho_); \
-        if (rho_ == R_GlobalEnv && BASE_CACHE(symbol)) { \
-            res = SYMVALUE(symbol); \
-            if (TYPEOF(res) == PROMSXP) \
-                res = PRVALUE_PENDING_OK(res); \
-        } \
-        else \
-            res = findFun_nospecsym(symbol,rho_); \
-    } \
-    else \
-        res = findFun_nospecsym(symbol,rho_); \
-} while (0)
+static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
+{
+    if (SPEC_SYM(symbol)) {
+        while (NO_SPEC_SYM(rho)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */
+            rho = ENCLOS(rho);
+        if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
+            SEXP res = SYMVALUE(symbol);
+            if (TYPEOF(res) == PROMSXP)
+                res = PRVALUE_PENDING_OK(res);
+            return res;
+        }
+    }
+
+    return findFun_nospecsym(symbol,rho);
+}
 
 
 #define ARGUSED(x) LEVELS(x)
@@ -574,7 +573,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         SEXP fn = CAR(e), args = CDR(e);
 
         if (TYPEOF(fn) == SYMSXP)
-            FINDFUN(op,fn,rho);
+            op = FINDFUN(fn,rho);
         else
             op = eval(fn,rho);
 
