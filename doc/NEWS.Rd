@@ -55,6 +55,8 @@
         evaluation.  (These unnecessary parentheses are preserved so that
         the expression will appear as written when deparsed.)
   \item ...
+  \item Assignment to list elements, and other uses of the \code{$<-}
+        operator, are now substantially faster.
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS FROM A LATER R CORE RELEASE}{
