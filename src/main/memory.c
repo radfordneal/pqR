@@ -4823,8 +4823,7 @@ SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n,
 
 /* ======== These need direct access to gp field for efficiency ======== */
 
-/* FIXME: consider inlining here */
-/* this has NA_STRING = NA_STRING */
+/* This has NA_STRING = NA_STRING.  Inlined version is SEQL. */
 int Seql(SEXP a, SEXP b)
 {
     /* The only case where pointer comparisons do not suffice is where

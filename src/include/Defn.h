@@ -1739,6 +1739,29 @@ static inline int ISNAN_NOT_NA (double x)
            && (un.u & (((uint64_t)1<<32)-1)) != 1954;  /* not NA */
 }
 
+
+/* Inline version of Seql from memory.c.  This has NA_STRING = NA_STRING. */
+
+static inline int SEQL(SEXP a, SEXP b)
+{
+    /* The only case where pointer comparisons do not suffice is where
+      we have two strings in different encodings (which must be
+      non-ASCII strings). Note that one of the strings could be marked
+      as unknown. */
+    if (a == b) return 1;
+    /* Leave this to compiler to optimize */
+    if (IS_CACHED(a) && IS_CACHED(b) && ENC_KNOWN(a) == ENC_KNOWN(b))
+	return 0;
+    else {
+    	SEXP vmax = R_VStack;
+    	int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
+    	R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
+    	return result;
+    }
+}
+
+
+
 #endif /* DEFN_H_ */
 /*
  *- Local Variables:
