@@ -1455,35 +1455,66 @@ SEXP attribute_hidden do_subassign2_dflt
 
 static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP name, ans, input;
-    int iS;
+    SEXP into, what, value, ans, string, ncall;
+
+    SEXP schar = R_NilValue;
+    SEXP name = R_NilValue;
+    int argsevald = 0;
 
     checkArity(op, args);
 
-    /* Note the RHS has already been evaluated at this point */
+    what = CADR(args);
+    if (TYPEOF(what) == PROMSXP)
+        what = PRCODE(what);
 
-    input = allocVector(STRSXP, 1);
-
-    name = CADR(args);
-    if (TYPEOF(name) == PROMSXP)
-        name = PRCODE(name);
-    iS = isSymbol(name);
-    if (iS)
-	SET_STRING_ELT(input, 0, PRINTNAME(name));
-    else if(isString(name) )
-	SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
+    if (isSymbol(what)) {
+        name = what;
+        schar = PRINTNAME(name);
+    }
+    else if (isString(what) && LENGTH(what) > 0)
+        schar = STRING_ELT(what,0);
     else
 	errorcall(call, _("invalid subscript type '%s'"), 
-                        type2char(TYPEOF(name)));
+                        type2char(TYPEOF(what)));
 
-    /* replace the second argument with a string */
-    SETCADR(args, input);
+    /* Handle usual case with no "..." and not into an object quickly, without
+       overhead of allocation and calling of DispatchOrEval. */
 
-    if(DispatchOrEval(call, op, "$<-", args, env, &ans, 0, 0))
-        return(ans);
+    into = CAR(args);
+    if (into != R_DotsSymbol) {
+        into = eval (into, env);
+        if (isObject(into)) {
+            argsevald = -1;
+        } 
+        else {
+            PROTECT(into);
+            if (name == R_NilValue) name = install(translateChar(schar));
+            value = eval (CADDR(args), env);
+            UNPROTECT(1);
+            return R_subassign3_dflt (call, into, name, value);
+        }
+    }
 
-    if (!iS)
-	name = install(translateChar(STRING_ELT(input, 0)));
+    /* First translate CADR of args into a string so that we can
+       pass it down to DispatchorEval and have it behave correctly.
+       We also change the call used, as in do_subset3, since the
+       destructive change in R-2.15.0 has this side effect. */
+
+    PROTECT(into);
+    string = allocVector(STRSXP,1);
+    SET_STRING_ELT (string, 0, schar);
+    PROTECT(args = CONS(into, CONS(string, CDDR(args))));
+    PROTECT(ncall = 
+      LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
+
+    if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
+        UNPROTECT(3);
+	return ans;
+    }
+
+    PROTECT(ans);
+    if (name == R_NilValue) name = install(translateChar(schar));
+    UNPROTECT(4);
 
     return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
 }
