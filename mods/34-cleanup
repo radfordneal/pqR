@@ -3,3 +3,5 @@ Some code cleanups, which possibly, though not likely, have effects.
 Now clear fields of special symbols on gc.
 
 Got rid of direct mkSYMSXP calls for ..d.
+
+Fixed memory leak for Windows in sysutils.
