@@ -135,6 +135,40 @@ Rboolean copy_3_strings(char *to, int size, const char *from1,
     return TRUE;
 }
 
+/* Put the ASCII representation of an integer in a string, with 0 termination.
+   There must be space for at least 12 characters in the string.  NA is put
+   in as "NA". */
+
+void integer_to_string (char *s, int i)
+{
+    int m;
+
+    if (i == 0)
+        *s++ = '0';
+    else if (i == NA_INTEGER) {
+        *s++ = 'N'; 
+        *s++ = 'A';
+    }
+    else {
+        if (i < 0) {
+            *s++ = '-';
+            i = -i;
+        }
+        m = i >= 100000 ? 1000000000 : 10000;
+        while (m > i) {
+            m /= 10;
+        }
+        while (m > 1) {
+            *s++ = '0' + i/m;
+            i %= m;
+            m /= 10;
+        }
+        *s++ = '0' + i;
+    }
+
+    *s = 0;
+}
+
 Rboolean tsConform(SEXP x, SEXP y)
 {
     if ((x = getAttrib(x, R_TspSymbol)) != R_NilValue &&

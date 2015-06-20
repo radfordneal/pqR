@@ -1158,8 +1158,9 @@ static SEXP subDots(SEXP rho)
 	while (TYPEOF(t) == PROMSXP)
 	    t = PREXPR(t);
 	if (isSymbol(t) || isLanguage(t)) {
-            char tbuf[10];
-            sprintf(tbuf,"..%d",i);
+            char tbuf[14];
+            tbuf[0] = tbuf[1] = '.';
+            integer_to_string(tbuf+2,i);
 	    SETCAR(b,install(tbuf));
         }
 	else

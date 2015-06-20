@@ -505,7 +505,7 @@ static inline Rboolean equalS3Signature(const char *signature, const char *left,
 static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
                                      int variant)
 {
-    char buf[512], b[512], bb[512], tbuf[10];
+    char buf[512], b[512], bb[512], tbuf[14];
     const char *sb, *sg, *sk;
     SEXP ans, s, t, klass, method, matchedarg, generic, nextfun;
     SEXP sysp, m, formals, actuals, tmp, newcall;
@@ -580,7 +580,8 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	    if(TYPEOF(CAR(s)) == DOTSXP && i!=0) {
 		for(i = 1, a = CAR(s); a != R_NilValue;
 		    a = CDR(a), i++, m = CDR(m)) {
-		    sprintf(tbuf, "..%d", i);
+                    tbuf[0] = tbuf[1] = '.';
+                    integer_to_string(tbuf+2,i);
 		    SET_TAG(m, install(tbuf));
 		    SETCAR(m, CAR(a));
 		}

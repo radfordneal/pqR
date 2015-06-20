@@ -546,7 +546,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
     else if (*CHAR(base)) {
 	const char *sb = translateChar(base);
         char sn[31];
-        sprintf(sn,"%d",seqno);
+        integer_to_string(sn,seqno);
         size_t alloc_len = strlen(sb) + strlen(sn);
 	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
         (void) copy_2_strings (cbuf, alloc_len+1, sb, sn);

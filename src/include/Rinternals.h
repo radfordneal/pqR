@@ -1039,6 +1039,7 @@ SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
 SEXP Rf_classgets(SEXP, SEXP);
 SEXP Rf_cons_with_tag(SEXP, SEXP, SEXP);
 SEXP Rf_cons(SEXP, SEXP);
+void Rf_integer_to_string(char *, int);
 Rboolean Rf_copy_1_string(char *, int, const char *);
 Rboolean Rf_copy_2_strings(char *, int, const char *, const char *);
 Rboolean Rf_copy_3_strings(char *, int, const char *, const char *, const char *);
@@ -1415,6 +1416,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
 #define inherits		Rf_inherits
+#define integer_to_string	Rf_integer_to_string
 #define install			Rf_install
 #define installChar		Rf_installChar
 #define installed_already	Rf_installed_already
