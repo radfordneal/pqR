@@ -4451,30 +4451,8 @@ SEXP mkChar(const char *name)
 static unsigned int char_hash_size = STRHASHINITSIZE;
 static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
-static unsigned int char_hash(const char *s, int len)
-{
-    /* Hash function due to Dan Bernstein, called "djb2" at
-       http://www.cse.yorku.ca/~oz/hash.html 
-
-       Basic idea is to iterate h = ((h << 5) + h) + *s++, but here
-       this is unrolled, allowing some merging of operations to be
-       done (though we actually end up doing more shifts and adds),
-       and more scope for instruction-level parallelism. */
-
-    unsigned int h = 5381;
-    if (len & 1) {
-        h = (5381*33) + *s++;
-        len -= 1;
-    }
-    while (len > 0) {
-        unsigned int t;
-        t = *s++;
-        t = (t << 5) + t + *s++;
-        h = (h << 10) + (h << 6) + h + t;
-        len -= 2;
-    }
-    return h;
-}
+/* The hashing function is in util.c to stop the compiler from inlining it. */
+unsigned int Rf_char_hash(const char *s, int len);
 
 void attribute_hidden InitStringHash()
 {
@@ -4513,7 +4491,7 @@ static void R_StringHash_resize(unsigned int newsize)
                REprintf("R_StringHash table contains a non-CHARSXP (%d, rs)!\n",
                         TYPEOF(val));
 #endif
-	    new_hashcode = char_hash (CHAR(val), LENGTH(val)) & newmask;
+	    new_hashcode = Rf_char_hash (CHAR(val), LENGTH(val)) & newmask;
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
 	    if (new_chain == R_NilValue)
@@ -4592,7 +4570,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     default: need_enc = 0;
     }
 
-    hashcode = char_hash(name, len) & char_hash_mask;
+    hashcode = Rf_char_hash(name, len) & char_hash_mask;
 
     /* Search for a cached value */
     cval = R_NilValue;
