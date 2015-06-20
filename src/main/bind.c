@@ -506,6 +506,7 @@ static SEXP NewBase(SEXP base, SEXP tag)
     base = EnsureString(base);
     tag = EnsureString(tag);
     if (*CHAR(base) && *CHAR(tag)) { /* test of length */
+	const void *vmax = VMAXGET();
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
         size_t alloc_len = strlen(st) + strlen(sb) + 1;
 	cbuf = ALLOC_STRING_BUFF(alloc_len);
@@ -513,6 +514,7 @@ static SEXP NewBase(SEXP base, SEXP tag)
 	/* This isn't strictly correct as we do not know that all the
 	   components of the name were correctly translated. */
 	ans = mkCharCE(cbuf, CE_UTF8);
+        VMAXSET(vmax);
     }
     else if (*CHAR(tag)) {
 	ans = tag;
@@ -535,6 +537,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
 
     SEXP ans;
     char *cbuf;
+    const void *vmax = VMAXGET();
     base = EnsureString(base);
     tag = EnsureString(tag);
     if (*CHAR(base) && *CHAR(tag)) {
@@ -569,6 +572,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
     }
     else 
         ans = R_BlankString;
+    VMAXSET(vmax);
     return ans;
 }
 
