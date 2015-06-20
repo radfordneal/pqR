@@ -37,6 +37,10 @@
 
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+#define MAX_CBUFF_HERE 200
+static char cbuff_here[MAX_CBUFF_HERE+1];
+#define ALLOC_STRING_BUFF(len) ((len) <= MAX_CBUFF_HERE ? cbuff_here \
+                                 : (char*)R_AllocStringBuffer((len), &cbuff))
 
 static SEXP cbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 static SEXP rbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
@@ -504,7 +508,7 @@ static SEXP NewBase(SEXP base, SEXP tag)
     if (*CHAR(base) && *CHAR(tag)) { /* test of length */
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
         size_t alloc_len = strlen(st) + strlen(sb) + 1;
-	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+	cbuf = ALLOC_STRING_BUFF(alloc_len);
         (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
 	/* This isn't strictly correct as we do not know that all the
 	   components of the name were correctly translated. */
@@ -536,7 +540,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
     if (*CHAR(base) && *CHAR(tag)) {
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
         size_t alloc_len = strlen(sb) + strlen(st) + 1;
-	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+	cbuf = ALLOC_STRING_BUFF(alloc_len);
         (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
 	ans = mkCharCE(cbuf, CE_UTF8);
     }
@@ -545,7 +549,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
         char sn[31];
         sprintf(sn,"%d",seqno);
         size_t alloc_len = strlen(sb) + strlen(sn);
-	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+	cbuf = ALLOC_STRING_BUFF(alloc_len);
         (void) copy_2_strings (cbuf, alloc_len+1, sb, sn);
 	ans = mkCharCE(cbuf, CE_UTF8);
     }
@@ -557,7 +561,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
                 ans = tag;
             else {
                 size_t alloc_len = strlen(st);
-                cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+                cbuf = ALLOC_STRING_BUFF(alloc_len);
                 strcpy(cbuf,st);
                 ans = mkCharCE(cbuf, CE_UTF8);
             }
