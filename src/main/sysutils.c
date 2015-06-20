@@ -1673,7 +1673,7 @@ static SEXP do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     UNPROTECT(1);
 #ifdef Win32
-    R_FreeStringBufferL(&cbuff);
+    R_FreeStringBuffer(&cbuff);
 #endif
     globfree(&globbuf);
     return ans;
