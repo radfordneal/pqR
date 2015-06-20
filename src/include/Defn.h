@@ -1761,6 +1761,11 @@ static inline int SEQL(SEXP a, SEXP b)
 }
 
 
+/* Macro to quickly handle special case of no alloc for R_AllocStringBuffer. */
+
+#define ALLOC_STRING_BUFF(len,buf) ((len) < (buf)->bufsize ? (buf)->data \
+                                     : R_AllocStringBuffer((len), (buf)))
+
 
 #endif /* DEFN_H_ */
 /*

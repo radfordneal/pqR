@@ -93,10 +93,6 @@ abbreviate chartr make.names strtrim tolower toupper give error.
 
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-#define MAX_CBUFF_HERE 200
-static char cbuff_here[MAX_CBUFF_HERE+1];
-#define ALLOC_STRING_BUFF(len) ((len) <= MAX_CBUFF_HERE ? cbuff_here \
-                                 : (char*)R_AllocStringBuffer((len), &cbuff))
 
 /* Functions to perform analogues of the standard C string library. */
 /* Most are vectorized */
@@ -321,7 +317,7 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
                 size_t beginning, end;
 		(void) find_substr (ss, slen, ienc, start, stop, 
                                     &beginning, &end);
-                buf = ALLOC_STRING_BUFF (end-beginning);
+                buf = ALLOC_STRING_BUFF (end-beginning,&cbuff);
                 memcpy (buf, ss+beginning, end-beginning);
                 buf[end-beginning] = 0;
             }
@@ -407,7 +403,7 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
             size_t new_len = slen - (ss_e-ss_b) + v_ss_e;
             if (new_len > INT_MAX) 
                 error(_("new string is too long"));
-            buf = ALLOC_STRING_BUFF (new_len);
+            buf = ALLOC_STRING_BUFF (new_len,&cbuff);
             if (ss_b > 0) memcpy (buf, ss, ss_b);
             memcpy (buf+ss_b, v_ss, v_ss_e);
             if (ss_e < slen) memcpy (buf+ss_b+v_ss_e, ss+ss_e, slen-ss_e);
@@ -1290,7 +1286,7 @@ static SEXP do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
 	w = INTEGER(width)[i % nw];
 	This = translateChar(STRING_ELT(x, i));
 	nc = strlen(This);
-	buf = ALLOC_STRING_BUFF(nc);
+	buf = ALLOC_STRING_BUFF(nc,&cbuff);
 	wsum = 0;
 	mbs_init(&mb_st);
 	for (p = This, w0 = 0, q = buf; *p ;) {

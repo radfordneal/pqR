@@ -41,10 +41,6 @@
 #include "Print.h"
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-#define MAX_CBUFF_HERE 200
-static char cbuff_here[MAX_CBUFF_HERE+1];
-#define ALLOC_STRING_BUFF(len) ((len) <= MAX_CBUFF_HERE ? cbuff_here \
-                                 : (char*)R_AllocStringBuffer((len), &cbuff))
 
 /*
   .Internal(paste (args, sep, collapse))
@@ -194,7 +190,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             }
             pwidth += (nx - 1) * (use_UTF8 ? u_sepw : sepw);
         }
-        cbuf = buf = ALLOC_STRING_BUFF(pwidth);
+        cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
         vmax = VMAXGET();
         for (j = 0; j < nx; j++) {
             SEXP xj = VECTOR_ELT(x,j);
@@ -289,7 +285,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         }
 
         pwidth += (nx - 1) * sepw;
-        cbuf = buf = ALLOC_STRING_BUFF(pwidth);
+        cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
         vmax = VMAXGET();
         for (i = 0; i < nx; i++) {
             SEXP cs = STRING_ELT(ans,i);
@@ -387,7 +383,7 @@ static SEXP do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 	    pwidth += strlen(translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k)));
 	}
 	pwidth += (nx - 1) * sepw;
-	cbuf = buf = ALLOC_STRING_BUFF(pwidth);
+	cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
 	for (j = 0; j < nx; j++) {
 	    k = LENGTH(VECTOR_ELT(x, j));
 	    if (k > 0) {
