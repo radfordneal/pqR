@@ -57,6 +57,8 @@
   \item ...
   \item Assignment to list elements, and other uses of the \code{$<-}
         operator, are now substantially faster.
+  \item Coercion of logical and integer vectors to character vectors is
+        now much faster, as is creation of names with sequence numbers.
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS FROM A LATER R CORE RELEASE}{

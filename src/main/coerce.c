@@ -343,18 +343,21 @@ static SEXP StringFromRaw(Rbyte x, int *warn)
 
 SEXP attribute_hidden StringFromLogical(int x, int *warn)
 {
-    int w;
-    formatLogical(&x, 1, &w);
-    if (x == NA_LOGICAL) return NA_STRING;
-    else return mkChar(EncodeLogical(x, w));
+    if (x == NA_LOGICAL) 
+        return NA_STRING;
+    else 
+        return mkChar(x ? "TRUE" : "FALSE");
 }
 
 SEXP attribute_hidden StringFromInteger(int x, int *warn)
 {
-    int w;
-    formatInteger(&x, 1, &w);
-    if (x == NA_INTEGER) return NA_STRING;
-    else return mkChar(EncodeInteger(x, w));
+    char s[12];
+    if (x == NA_INTEGER) 
+        return NA_STRING;
+    else {
+        integer_to_string(s,x);
+        return mkChar(s);
+    }
 }
 
 static const char* dropTrailing0(char *s, char cdec)
