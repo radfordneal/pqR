@@ -1,3 +1,0 @@
-Rreal arithmetic and integer plus/minus on scalars with no attributes
-are now done more quickly as special cases rather than by the
-general-purpose code.

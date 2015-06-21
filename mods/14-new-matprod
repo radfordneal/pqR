@@ -1,4 +1,0 @@
-This mod uses a new version of the "matprod" library.
-This version includes the matprod_trans1 and matprod_trans2
-routines, useful for crossprod and tcrossprod, but they
-aren't actually called yet in this mod.
