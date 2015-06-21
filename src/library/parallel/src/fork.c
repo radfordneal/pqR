@@ -2,7 +2,8 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  (C) Copyright 2008-11 Simon Urbanek
  *      Copyright 2011 R Core Development Team.
- *  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+ *
+ *  Modifications for pqR Copyright (c) 2014, 2015 Radford M. Neal.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

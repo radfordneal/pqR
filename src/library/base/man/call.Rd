@@ -1,6 +1,7 @@
 % File src/library/base/man/call.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Development Team
+% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{call}
