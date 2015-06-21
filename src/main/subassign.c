@@ -1455,35 +1455,66 @@ SEXP attribute_hidden do_subassign2_dflt
 
 static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP name, ans, input;
-    int iS;
+    SEXP into, what, value, ans, string, ncall;
+
+    SEXP schar = R_NilValue;
+    SEXP name = R_NilValue;
+    int argsevald = 0;
 
     checkArity(op, args);
 
-    /* Note the RHS has already been evaluated at this point */
+    what = CADR(args);
+    if (TYPEOF(what) == PROMSXP)
+        what = PRCODE(what);
 
-    input = allocVector(STRSXP, 1);
-
-    name = CADR(args);
-    if (TYPEOF(name) == PROMSXP)
-        name = PRCODE(name);
-    iS = isSymbol(name);
-    if (iS)
-	SET_STRING_ELT(input, 0, PRINTNAME(name));
-    else if(isString(name) )
-	SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
+    if (isSymbol(what)) {
+        name = what;
+        schar = PRINTNAME(name);
+    }
+    else if (isString(what) && LENGTH(what) > 0)
+        schar = STRING_ELT(what,0);
     else
 	errorcall(call, _("invalid subscript type '%s'"), 
-                        type2char(TYPEOF(name)));
+                        type2char(TYPEOF(what)));
 
-    /* replace the second argument with a string */
-    SETCADR(args, input);
+    /* Handle usual case with no "..." and not into an object quickly, without
+       overhead of allocation and calling of DispatchOrEval. */
 
-    if(DispatchOrEval(call, op, "$<-", args, env, &ans, 0, 0))
-        return(ans);
+    into = CAR(args);
+    if (into != R_DotsSymbol) {
+        into = eval (into, env);
+        if (isObject(into)) {
+            argsevald = -1;
+        } 
+        else {
+            PROTECT(into);
+            if (name == R_NilValue) name = install(translateChar(schar));
+            value = eval (CADDR(args), env);
+            UNPROTECT(1);
+            return R_subassign3_dflt (call, into, name, value);
+        }
+    }
 
-    if (!iS)
-	name = install(translateChar(STRING_ELT(input, 0)));
+    /* First translate CADR of args into a string so that we can
+       pass it down to DispatchorEval and have it behave correctly.
+       We also change the call used, as in do_subset3, since the
+       destructive change in R-2.15.0 has this side effect. */
+
+    PROTECT(into);
+    string = allocVector(STRSXP,1);
+    SET_STRING_ELT (string, 0, schar);
+    PROTECT(args = CONS(into, CONS(string, CDDR(args))));
+    PROTECT(ncall = 
+      LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
+
+    if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
+        UNPROTECT(3);
+	return ans;
+    }
+
+    PROTECT(ans);
+    if (name == R_NilValue) name = install(translateChar(schar));
+    UNPROTECT(4);
 
     return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
 }
@@ -1510,10 +1541,10 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
               _("no method for assigning subsets of this S4 class"));
     }
 
-    if ((isList(x) || isLanguage(x)) && x != R_NilValue) {
+    switch (TYPEOF(x)) {
 
+    case LISTSXP: case LANGSXP: ;
         int ix = tag_index(x,name);
-
         if (ix == 0) {
             if (val != R_NilValue) {
                 x = with_pairlist_appended (x,
@@ -1528,49 +1559,51 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
             x = with_changed_nth (x, ix, val);
             SET_NAMEDCNT_MAX(val);
         }
-    }
+        break;
 
-    /* cannot use isEnvironment since we do not want NULL here */
-    else if( TYPEOF(x) == ENVSXP ) {
-
+    case ENVSXP:
 	set_var_in_frame (name, val, x, TRUE, 3);
+        break;
 
-    }
-
-    else if( TYPEOF(x) == SYMSXP || /* Used to 'work' in R < 2.8.0 */
-	     TYPEOF(x) == CLOSXP ||
-	     TYPEOF(x) == SPECIALSXP ||
-	     TYPEOF(x) == BUILTINSXP) {
+    case SYMSXP: case CLOSXP: case SPECIALSXP: case BUILTINSXP:
+        /* Used to 'work' in R < 2.8.0 */
         nonsubsettable_error(call,x);
-    }
 
-    else {
-        int type = VECSXP;
+    default:
+	warningcall(call,_("Coercing LHS to a list"));
+	REPROTECT(x = coerceVector(x, VECSXP), pxidx);
+	/* fall through to VECSXP / EXPRSXP / NILSXP code */
 
-	if (isExpression(x)) 
-	    type = EXPRSXP;
-	else if (!isNewList(x)) {
-	    warningcall(call,_("Coercing LHS to a list"));
-	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
-	}
-
-        if (NAMEDCNT_GT_1(x) || x == val)
-            REPROTECT(x = dup_top_level(x), pxidx);
+    case VECSXP: case EXPRSXP: case NILSXP: ;
 
         SEXP pname = PRINTNAME(name);
-	SEXP names = getAttrib(x, R_NamesSymbol);
-	R_len_t nx = length(x);  /* x could be R_NilValue */
-
-        /* Set imatch to the index of the selected element, -1 if not present.
-           Note that NA_STRING and "" don't match anything. */
-
+        int type = TYPEOF(x);
         int imatch = -1;
-        if (names != R_NilValue && !na_or_empty_string(pname)) {
-            for (int i = 0; i < nx; i++) {
-                SEXP ni = STRING_ELT(names, i);
-                if (!na_or_empty_string(ni) && Seql(ni,pname)) {
-                    imatch = i;
-                    break;
+        SEXP names;
+        R_len_t nx;
+
+        if (type == NILSXP) {
+            names = R_NilValue;
+            type = VECSXP;
+            nx = 0;
+        }
+        else {
+            if (NAMEDCNT_GT_1(x) || x == val)
+                REPROTECT(x = dup_top_level(x), pxidx);
+            names = getAttrib(x, R_NamesSymbol);
+            nx = LENGTH(x);
+
+            /* Set imatch to the index of the selected element, stays at
+               -1 if not present.  Note that NA_STRING and "" don't match 
+               anything. */
+
+            if (names != R_NilValue && !na_or_empty_string(pname)) {
+                for (int i = 0; i < nx; i++) {
+                    SEXP ni = STRING_ELT(names, i);
+                    if (SEQL(ni,pname) && !na_or_empty_string(ni)) {
+                        imatch = i;
+                        break;
+                    }
                 }
             }
         }
@@ -1631,6 +1664,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 		x = ans;
 	    }
 	}
+        break;
     }
 
     UNPROTECT(2);

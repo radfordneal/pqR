@@ -215,7 +215,7 @@ static int sequal(SEXP x, int i, SEXP y, int j)
     /* Once all CHARSXPs are cached, Seql will handle this */
     if (STRING_ELT(x, i) == NA_STRING || STRING_ELT(y, j) == NA_STRING)
 	return 0;
-    return Seql(STRING_ELT(x, i), STRING_ELT(y, j));
+    return SEQL(STRING_ELT(x, i), STRING_ELT(y, j));
 }
 
 static int rawhash(SEXP x, int indx, HashData *d)
@@ -1158,8 +1158,9 @@ static SEXP subDots(SEXP rho)
 	while (TYPEOF(t) == PROMSXP)
 	    t = PREXPR(t);
 	if (isSymbol(t) || isLanguage(t)) {
-            char tbuf[10];
-            sprintf(tbuf,"..%d",i);
+            char tbuf[14];
+            tbuf[0] = tbuf[1] = '.';
+            integer_to_string(tbuf+2,i);
 	    SETCAR(b,install(tbuf));
         }
 	else

@@ -135,6 +135,40 @@ Rboolean copy_3_strings(char *to, int size, const char *from1,
     return TRUE;
 }
 
+/* Put the ASCII representation of an integer in a string, with 0 termination.
+   There must be space for at least 12 characters in the string.  NA is put
+   in as "NA". */
+
+void integer_to_string (char *s, int i)
+{
+    int m;
+
+    if (i == 0)
+        *s++ = '0';
+    else if (i == NA_INTEGER) {
+        *s++ = 'N'; 
+        *s++ = 'A';
+    }
+    else {
+        if (i < 0) {
+            *s++ = '-';
+            i = -i;
+        }
+        m = i >= 100000 ? 1000000000 : 10000;
+        while (m > i) {
+            m /= 10;
+        }
+        while (m > 1) {
+            *s++ = '0' + i/m;
+            i %= m;
+            m /= 10;
+        }
+        *s++ = '0' + i;
+    }
+
+    *s = 0;
+}
+
 Rboolean tsConform(SEXP x, SEXP y)
 {
     if ((x = getAttrib(x, R_TspSymbol)) != R_NilValue &&
@@ -499,6 +533,32 @@ Rboolean StringFalse(const char *name)
 	if (!strcmp(name, falsenames[i]))
 	    return TRUE;
     return FALSE;
+}
+
+/* used only in memory.c, but here to stop the compiler from inlining it. */
+attribute_hidden unsigned int Rf_char_hash(const char *s, int len)
+{
+    /* Hash function due to Dan Bernstein, called "djb2" at
+       http://www.cse.yorku.ca/~oz/hash.html 
+
+       Basic idea is to iterate h = ((h << 5) + h) + *s++, but here
+       this is unrolled, allowing some merging of operations to be
+       done (though we actually end up doing more shifts and adds),
+       and more scope for instruction-level parallelism. */
+
+    unsigned int h = 5381;
+    if (len & 1) {
+        h = (5381*33) + *s++;
+        len -= 1;
+    }
+    while (len > 0) {
+        unsigned int t;
+        t = *s++;
+        t = (t << 5) + t + *s++;
+        h = (h << 10) + (h << 6) + h + t;
+        len -= 2;
+    }
+    return h;
 }
 
 /* used in bind.c and options.c */

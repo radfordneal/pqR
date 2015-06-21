@@ -95,7 +95,7 @@ R_compute_identical(SEXP x, SEXP y, int flags)
     if(TYPEOF(x) == CHARSXP)
     {
 	/* This matches NAs */
-	return Seql(x, y);
+	return SEQL(x, y);
     }
 
     ax = ATTRIB(x); ay = ATTRIB(y);
@@ -192,7 +192,7 @@ R_compute_identical(SEXP x, SEXP y, int flags)
 		na2 = (STRING_ELT(y, i) == NA_STRING);
 	    if(na1 ^ na2) return FALSE;
 	    if(na1 && na2) continue;
-	    if (! Seql(STRING_ELT(x, i), STRING_ELT(y, i))) return FALSE;
+	    if (! SEQL(STRING_ELT(x, i), STRING_ELT(y, i))) return FALSE;
 	}
 	return TRUE;
     }

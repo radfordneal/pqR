@@ -502,13 +502,15 @@ static SEXP NewBase(SEXP base, SEXP tag)
     base = EnsureString(base);
     tag = EnsureString(tag);
     if (*CHAR(base) && *CHAR(tag)) { /* test of length */
+	const void *vmax = VMAXGET();
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
         size_t alloc_len = strlen(st) + strlen(sb) + 1;
-	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
         (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
 	/* This isn't strictly correct as we do not know that all the
 	   components of the name were correctly translated. */
 	ans = mkCharCE(cbuf, CE_UTF8);
+        VMAXSET(vmax);
     }
     else if (*CHAR(tag)) {
 	ans = tag;
@@ -531,21 +533,22 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
 
     SEXP ans;
     char *cbuf;
+    const void *vmax = VMAXGET();
     base = EnsureString(base);
     tag = EnsureString(tag);
     if (*CHAR(base) && *CHAR(tag)) {
 	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
         size_t alloc_len = strlen(sb) + strlen(st) + 1;
-	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
         (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
 	ans = mkCharCE(cbuf, CE_UTF8);
     }
     else if (*CHAR(base)) {
 	const char *sb = translateChar(base);
         char sn[31];
-        sprintf(sn,"%d",seqno);
+        integer_to_string(sn,seqno);
         size_t alloc_len = strlen(sb) + strlen(sn);
-	cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
         (void) copy_2_strings (cbuf, alloc_len+1, sb, sn);
 	ans = mkCharCE(cbuf, CE_UTF8);
     }
@@ -557,7 +560,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
                 ans = tag;
             else {
                 size_t alloc_len = strlen(st);
-                cbuf = R_AllocStringBuffer(alloc_len, &cbuff);
+                cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
                 strcpy(cbuf,st);
                 ans = mkCharCE(cbuf, CE_UTF8);
             }
@@ -565,6 +568,7 @@ static SEXP NewName(SEXP base, SEXP tag, int seqno)
     }
     else 
         ans = R_BlankString;
+    VMAXSET(vmax);
     return ans;
 }
 

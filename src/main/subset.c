@@ -1667,7 +1667,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         what = PRCODE(what);
     if (isSymbol(what))
         name = what;
-    else if (isString(what)) 
+    else if (isString(what) && LENGTH(what) > 0) 
         string = STRING_ELT(what,0);
     else
 	errorcall(call, _("invalid subscript type '%s'"), 
@@ -1687,7 +1687,8 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* first translate CADR of args into a string so that we can
        pass it down to DispatchorEval and have it behave correctly */
-    PROTECT(input = allocVector(STRSXP, 1));
+
+    input = allocVector(STRSXP,1);
 
     if (name!=R_NilValue)
 	SET_STRING_ELT(input, 0, PRINTNAME(name));
@@ -1712,19 +1713,19 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* evaluation retains any missing argument indicators. */
 
     if(DispatchOrEval(ncall, op, "$", args, env, &ans, 0, argsevald)) {
-        UNPROTECT(3+argsevald);
+        UNPROTECT(2+argsevald);
 	if (NAMEDCNT_GT_0(ans))         /* IS THIS NECESSARY? */
 	    SET_NAMEDCNT_MAX(ans);
 	return ans;
     }
 
     ans = R_subset3_dflt(CAR(ans), string, name, call, variant);
-    UNPROTECT(3+argsevald);
+    UNPROTECT(2+argsevald);
     return ans;
 }
 
-/* Used above and in eval.c.  The field to extract is specified by either the
-   "input" argument or the "name" argument, or both. */
+/* Used above and in eval.c.  The field to extract is specified by either 
+   the "input" argument or the "name" argument, or both.  Protects x. */
 
 SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
                                      int variant)

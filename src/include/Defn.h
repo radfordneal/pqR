@@ -1078,6 +1078,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalListPendingOK	Rf_evalListPendingOK
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
+# define findFun_nospecsym	Rf_findFun_nospecsym
 # define findVar1		Rf_findVar1
 # define forcePromise		Rf_forcePromise
 # define forcePromisePendingOK	Rf_forcePromisePendingOK
@@ -1284,6 +1285,7 @@ SEXP evalListKeepMissing(SEXP, SEXP);
 SEXP evalListPendingOK(SEXP, SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
+SEXP findFun_nospecsym(SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
 SEXP forcePromise(SEXP);
 SEXP forcePromisePendingOK(SEXP);
@@ -1566,50 +1568,27 @@ extern void *alloca(size_t);
 #endif
 
 
-/* Macro version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't set R_binding_cell. */
+/* Inline version of findVarPendingOK, for speed when symbol is found
+   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
 
-#define FIND_VAR_PENDING_OK(sym,rho) \
-( LASTSYMENV(sym) != (rho) ? findVarPendingOK(sym,rho) \
-    : CAR(LASTSYMBINDING(sym)) != R_UnboundValue ? CAR(LASTSYMBINDING(sym)) \
-    : (LASTSYMENV(sym) = NULL, findVarPendingOK(sym,rho)) \
-)
+static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
+{
+    if (LASTSYMENV(sym) == rho) {
+        SEXP b = CAR(LASTSYMBINDING(sym));
+        if (b != R_UnboundValue)
+            return b;
+        LASTSYMENV(sym) = NULL;
+    }
+
+    return findVarPendingOK(sym,rho);
+}
 
 
-/* Inline versions of eval and evalv, which checks for SELF_EVAL inline.
-   These also do not decrement evalcount, and so must not be used in a 
+/* Inline version of evalv, which checks for SELF_EVAL inline.
+   Also does not decrement evalcount, and so must not be used in a 
    context where this might result in an uninterruptable loop. */
 
 extern SEXP Rf_evalv2 (SEXP, SEXP, int);
-
-static inline SEXP EVAL (SEXP e, SEXP rho)
-{
-    R_variant_result = 0;
-    R_Visible = TRUE;
-
-    if (SELF_EVAL(TYPEOF(e))) {
-        /* Make sure constants in expressions have maximum NAMEDCNT when
-           used as values, so they won't be modified. */
-        SET_NAMEDCNT_MAX(e);
-        return e;
-    }
-
-    if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
-        if (LASTSYMENV(e) == rho) {
-            SEXP res = CAR(LASTSYMBINDING(e));
-            if (TYPEOF(res) == PROMSXP) 
-                res = PRVALUE_PENDING_OK(res);
-            if (res != R_MissingArg && res != R_UnboundValue) {
-                if (NAMEDCNT_EQ_0(res))
-                    SET_NAMEDCNT_1(res);
-                WAIT_UNTIL_COMPUTED(res);
-                return res;
-            }
-        }
-    }
-
-    return Rf_evalv2 (e, rho, 0);
-}
 
 static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 {
@@ -1759,6 +1738,34 @@ static inline int ISNAN_NOT_NA (double x)
   return (un.u << 1) > ((uint64_t)0x7ff << 53)  /* a NaN, but... */
            && (un.u & (((uint64_t)1<<32)-1)) != 1954;  /* not NA */
 }
+
+
+/* Inline version of Seql from memory.c.  This has NA_STRING = NA_STRING. */
+
+static inline int SEQL(SEXP a, SEXP b)
+{
+    /* The only case where pointer comparisons do not suffice is where
+      we have two strings in different encodings (which must be
+      non-ASCII strings). Note that one of the strings could be marked
+      as unknown. */
+    if (a == b) return 1;
+    /* Leave this to compiler to optimize */
+    if (IS_CACHED(a) && IS_CACHED(b) && ENC_KNOWN(a) == ENC_KNOWN(b))
+	return 0;
+    else {
+    	SEXP vmax = R_VStack;
+    	int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
+    	R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
+    	return result;
+    }
+}
+
+
+/* Macro to quickly handle special case of no alloc for R_AllocStringBuffer. */
+
+#define ALLOC_STRING_BUFF(len,buf) ((len) < (buf)->bufsize ? (buf)->data \
+                                     : R_AllocStringBuffer((len), (buf)))
+
 
 #endif /* DEFN_H_ */
 /*

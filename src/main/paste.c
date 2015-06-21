@@ -190,7 +190,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             }
             pwidth += (nx - 1) * (use_UTF8 ? u_sepw : sepw);
         }
-        cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
+        cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
         vmax = VMAXGET();
         for (j = 0; j < nx; j++) {
             SEXP xj = VECTOR_ELT(x,j);
@@ -285,7 +285,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         }
 
         pwidth += (nx - 1) * sepw;
-        cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
+        cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
         vmax = VMAXGET();
         for (i = 0; i < nx; i++) {
             SEXP cs = STRING_ELT(ans,i);
@@ -383,7 +383,7 @@ static SEXP do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 	    pwidth += strlen(translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k)));
 	}
 	pwidth += (nx - 1) * sepw;
-	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
+	cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
 	for (j = 0; j < nx; j++) {
 	    k = LENGTH(VECTOR_ELT(x, j));
 	    if (k > 0) {

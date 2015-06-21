@@ -271,7 +271,7 @@ static SEXP rapply_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 	PROTECT(klass = R_data_class(X, FALSE));
 	for(i = 0; i < LENGTH(klass) && !matched; i++)
 	    for(j = 0; j < LENGTH(classes) && !matched; j++)
-		if(Seql(STRING_ELT(klass, i), STRING_ELT(classes, j)))
+		if(SEQL(STRING_ELT(klass, i), STRING_ELT(classes, j)))
 		    matched = TRUE;
 	UNPROTECT(1);
     }
