@@ -6,39 +6,41 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2014-??-??}{
-
+\section{CHANGES IN VERSION RELEASED 2015-06-21}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item ...
+  \item This version of pqR improves reliability and portability, and
+        also contains some performance improvements, including some that
+        substantially speed up interpretive execution of programs that 
+        do many scalar operations.
 }}
 
   \subsection{INSTALLATION}{
   \itemize{
-  \item The module used to support parallel computation in 
-        helper threads has been updated to avoid a syntactic 
-        construction that technically violates the OpenMP 3.1 
-        specification.  This had been accepted without error
-        by gcc 4.8 and earlier, but is not accepted by recent gcc 
-        versions.
   \item The method used to quickly test for NaN/NA has changed to one that
         should work universally for all current processors
         (any using IEEE floating point, as already assumed in R,
         with consistent endianness, as is apparently the case for 
         all current general-purpose processors, and was partially
-        assumed before).  Sometimes defining the symbol 
-        \code{ENABLE_ISNAN_TRICK} when compiling is therefore
-        no longer required (it will be ignored if defined).
-  \item ...
+        assumed before).  There is therefore no longer any reason to define
+        the symbol \code{ENABLE_ISNAN_TRICK} when compiling pqR (it
+        will be ignored if defined).
+  \item The module used to support parallel computation in 
+        helper threads has been updated to avoid a syntactic 
+        construction that technically violates the OpenMP 3.1 
+        specification.  This construction had been accepted without error
+        by gcc 4.8 and earlier, but is not accepted by some recent
+        compilers.
 }}
 
-  \subsection{DOCUMENTATION UPDATES}{
+  \subsection{DOCUMENTATION UPDATE}{
   \itemize{
-  \item ...
+  \item The R Internals manual has been updated to better explain some
+        aspects of pqR implementation.
 }}
 
-  \subsection{FEATURE CHANGES}{
+  \subsection{FEATURE CHANGE}{
   \itemize{
   \item Parsed expressions no longer contain explict parenthesis
         operators when the parentheses are necessary to override
@@ -49,30 +51,42 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
+  \item The overhead of interpreting R code has been reduced by various
+        detailed code improvements, and by sometimes returning scalar
+        integer and real values in special ``static boxes''.  As a result,
+        the benefit of using the byte-code compiler is reduced.  Note that
+        in pqR using the byte-code compiler can often slow down functions,
+        since byte-compiled code does not support some pqR optimizations
+        such as task merging.
   \item Speed of evaluation for expressions with necessary parentheses will
-        be faster because of the feature change mentioned above.  Note that
-        including unnecessary parentheses will still (slightly) slow down
-        evaluation.  (These unnecessary parentheses are preserved so that
-        the expression will appear as written when deparsed.)
-  \item ...
+        be faster because of the feature change mentioned above that eliminates
+        them.  Note that including unnecessary parentheses will still 
+        (slightly) slow down evaluation.  (These unnecessary parentheses are 
+        preserved so that the expression will appear as written when deparsed.)
   \item Assignment to list elements, and other uses of the \code{$<-}
         operator, are now substantially faster.
   \item Coercion of logical and integer vectors to character vectors is
         now much faster, as is creation of names with sequence numbers.
+  \item Operations that create strings are now sometimes faster, due to
+        improvements in string hashing and memory allocation.
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS FROM A LATER R CORE RELEASE}{
     \itemize{
     \item A number of performance improvements relating to S3 and S4
-          implementation, due to Tomas Kalibera, were incorporated from
+          class implementation, due to Tomas Kalibera, were incorporated from
           R 3.2.0.
 }}
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item A large number of fixes were made to correct reliability problems
+        (mostly regarding protection of pointers).  Many of these were provided
+        by Tomas Kalibera as fixes to R Core versions (sometimes with 
+        adaptation required for use in pqR).  Some were fixed in pqR
+        and reported to R Core.  Others were for problems only existing in pqR.
   \item Fixed a bug in which pqR's optimization of updates such as 
         \code{a<-a+1} could sometimes permit modification of a locked binding.
-  \item ...
   \item Fixed related problems with \code{apply}, \code{lapply}, \code{vapply},
         and \code{eapply}, that can show up when the value returned by the 
         function being applied is itself a function.  This problem also
@@ -83,15 +97,10 @@
         running with gctorture enabled even slower than before, when
         most garbage collections were partial, but is more likely to
         find problems.
-  \item A large number of fixes were made that corrected possible problems,
-        mostly with protection of pointers, most of them provided by Tomas 
-        Kalibera as fixes to R Core versions (sometimes with adaptation 
-        required for use in pqR).
 }}
 
-  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+  \subsection{BUG FIX CORRESPONDING TO ONE IN A LATER R CORE RELEASE}{
   \itemize{
-  \item ...
   \item Removed incorrect information from \code{help(call)}, as also
         done in R-3.0.2.
 }}
