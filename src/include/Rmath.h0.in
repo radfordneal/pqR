@@ -622,6 +622,9 @@ double  logspace_sub(double logx, double logy);
 /* The following definitions of ISNAN, ISNA, and R_FINITE are the same as 
    in Arith.h */
 
+#ifndef R_ISNAN_ETC_DEFINED
+#define R_ISNAN_ETC_DEFINED 1
+
 #ifdef __cplusplus
 
 int R_isnancpp(double), R_IsNA(double), R_finite(double); /* in arithmetic.c */
@@ -661,6 +664,8 @@ static inline int R_FINITE_inline_fun (double x)
   un.d = x;
   return (un.u << 1) < ((uint64_t)0x7ff << 53);
 }
+
+#endif
 
 #endif
 
