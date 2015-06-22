@@ -77,6 +77,9 @@ int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
 
 /* The code below also appears in Rmath.h */
 
+#ifndef R_ISNAN_ETC_DEFINED
+#define R_ISNAN_ETC_DEFINED 1
+
 #ifdef __cplusplus
 
 int R_isnancpp(double); /* in arithmetic.c */
@@ -86,16 +89,22 @@ int R_isnancpp(double); /* in arithmetic.c */
 
 #else
 
+/* We need to keep ISNAN, etc. macros, since some packages do things like
+   "#ifndef ISNAN"  There are also uses like "if ISNAN(x)" that are OK
+   without parentheses if ISNAN is defined to have parentheses. */
+
 #include <stdint.h>
 
-static inline int ISNAN (double x)
+#define ISNAN(x) (ISNAN_inline_fun(x))
+static inline int ISNAN_inline_fun (double x)
 {
   union { double d; uint64_t u; } un;
   un.d = x;
   return (un.u << 1) > ((uint64_t)0x7ff << 53);
 }
 
-static inline int ISNA (double x)
+#define ISNA(x) (ISNA_inline_fun(x))
+static inline int ISNA_inline_fun (double x)
 {
   union { double d; uint64_t u; } un;
   un.d = x;
@@ -103,12 +112,15 @@ static inline int ISNA (double x)
            && (un.u & (((uint64_t)1<<32)-1)) == 1954;
 }
 
-static inline int R_FINITE (double x)
+#define R_FINITE(x) (R_FINITE_inline_fun(x))
+static inline int R_FINITE_inline_fun (double x)
 {
   union { double d; uint64_t u; } un;
   un.d = x;
   return (un.u << 1) < ((uint64_t)0x7ff << 53);
 }
+
+#endif
 
 #endif
 
