@@ -77,6 +77,9 @@ int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
 
 /* The code below also appears in Rmath.h */
 
+#ifndef R_ISNAN_ETC_DEFINED
+#define R_ISNAN_ETC_DEFINED 1
+
 #ifdef __cplusplus
 
 int R_isnancpp(double); /* in arithmetic.c */
@@ -116,6 +119,8 @@ static inline int R_FINITE_inline_fun (double x)
   un.d = x;
   return (un.u << 1) < ((uint64_t)0x7ff << 53);
 }
+
+#endif
 
 #endif
 
