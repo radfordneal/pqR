@@ -1,8 +1,15 @@
 
-R version 2.15.0 (2012-03-30)
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
+No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -960,4 +967,15 @@ NaNs:            0 0.000000e+00 0.00000e+00            0  0.000000e+00
               v             w X       Y      Z
 sums: -26114560 -1.070618e+12 0 3672360 163216
 NaNs:         0  0.000000e+00 0       0      0
+> 
+> 
+> # Test for bug that occurred before.
+> 
+> a <- invisible(rep(1.1,100000))  # invisible will wait until arg computed
+> b <- invisible(rep(-2.2,100000))
+> x <- abs(b%*%a)
+> print(x)
+       [,1]
+[1,] 242000
+> stopifnot(x>0)
 > 
