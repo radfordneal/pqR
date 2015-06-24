@@ -7,6 +7,7 @@ since it gets silly maintaining the alternative (which is never tested).
 
 Got rid of conditional use of fast base cache lookup.
 
-Revised findFun and FINDFUN.
+Revised findFun and FINDFUN.  Now should be faster for functions in
+packages that don't see the global cache.
 
 Created and used integer_to_string function - sprintf seems very slow.
