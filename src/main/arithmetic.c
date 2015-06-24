@@ -433,7 +433,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    /* Otherwise, handle the general case. */
+    /* Otherwise, handle the general case (but won't be a static box). */
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, env, variant) 
@@ -1559,6 +1559,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
                     && ATTRIB(x) == R_NilValue ? R_ScalarIntegerBox
               :   allocVector1INT();
             int v = *INTEGER(x);
+            WAIT_UNTIL_COMPUTED(x);
             *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
         }
         else {
@@ -1577,7 +1578,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         int n = LENGTH(x);
         if (VARIANT_KIND(variant) == VARIANT_SUM) {
             s = allocVector1REAL();
-            DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
+            DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
             return s;
         }
@@ -1586,11 +1587,12 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
               : (variant&VARIANT_STATIC_BOX_OK) != 0 
                     && ATTRIB(x) == R_NilValue ? R_ScalarRealBox
               :   allocVector1REAL();
+            WAIT_UNTIL_COMPUTED(x);
             *REAL(s) = fabs(*REAL(x));
         }
-        else {
+        else { /* x won't be a static box, since n != 1 */
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
-            DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_abs,
+            DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
         }
     } else if (isComplex(x)) {
