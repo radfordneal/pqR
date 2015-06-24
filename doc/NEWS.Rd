@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-06-21}{
+\section{CHANGES IN VERSION RELEASED 2015-06-24}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -47,6 +47,12 @@
         the precedence of operators.  These necessary parentheses
         will be inserted when the expression is deparsed.  See
         the help on \code{parse} and \code{deparse}.
+
+        This change does impact a few packages (such as coxme)
+        that consider the presence of parentheses in formulas
+        to be significant.  Formulas may be exempted from parenthesis
+        suppression in a future release, but for now, such packages
+        won't work.
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
