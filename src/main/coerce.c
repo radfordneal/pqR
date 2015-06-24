@@ -1063,6 +1063,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	return v;
 
     PROTECT(v);
+    WAIT_UNTIL_COMPUTED(v);
 
     /* code to allow classes to extend ENVSXP, SYMSXP, etc */
     if(IS_S4_OBJECT(v) && TYPEOF(v) == S4SXP) {
