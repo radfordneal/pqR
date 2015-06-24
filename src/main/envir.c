@@ -772,14 +772,14 @@ static SEXP R_GetGlobalCache(SEXP symbol)
     vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache);
     switch(TYPEOF(vl)) {
     case SYMSXP:
-	if (vl == R_UnboundValue) /* avoid test?? */
-	    return R_UnboundValue;
-	else return SYMBOL_BINDING_VALUE(vl);
+        vl = SYMBOL_BINDING_VALUE(vl);  /* Value of R_UnboundValue is itself */
+        if (TYPEOF(vl) == PROMSXP && isFunction(PRVALUE_PENDING_OK(vl)))
+            SET_BASE_CACHE(symbol,1);
+        return vl;
     case LISTSXP:
 	return BINDING_VALUE(vl);
     default:
 	error(_("invalid cached value in R_GetGlobalCache"));
-	return R_NilValue;
     }
 }
 
@@ -1451,18 +1451,28 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
 
-        /* See if it is in the global cache, as it usually will if it's in any
-           of the remaining environments (though there can be exceptions). */
+        /* Handle base environment/namespace quickly, as functions in base
+           and other packages will see it rather than the global cache. */
+
+        if (IS_BASE(rho)) {
+            vl = SYMBOL_BINDING_VALUE(symbol);
+            if (vl != R_UnboundValue) 
+                goto got_value;
+            continue;
+        }
+
+        /* See if it is in the global cache.  For lookups outside packages,
+           it usually is there if it's in any of the remaining environments. */ 
 
         if (rho == R_GlobalEnv) {
-            if (BASE_CACHE(symbol)) { /* quick here, as time-critical */
+            if (BASE_CACHE(symbol)) {
                 vl = SYMVALUE(symbol);
-                if (TYPEOF(vl) == PROMSXP)
-                    vl = PRVALUE_PENDING_OK(vl);
-                return vl;
+                goto got_value;
             }
             vl = findGlobalVar(symbol);
-            goto got_value;
+            if (vl != R_UnboundValue)
+                goto got_value;
+            continue;
         }
 
         /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
@@ -1474,21 +1484,25 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
         }
 
         vl = findVarInFramePendingOK (rho, symbol);
+	if (vl != R_UnboundValue)
+            goto got_value;
 
-      got_value:
-	if (vl == R_UnboundValue) {
-            if (HASHTAB(rho) == R_NilValue)
-                last_unhashed_env_nf = rho;
-            continue;
+        if (HASHTAB(rho) == R_NilValue)
+            last_unhashed_env_nf = rho;
+        continue;
+
+    got_value:
+        if (TYPEOF(vl) == PROMSXP) {
+            SEXP pv = PRVALUE_PENDING_OK(vl);
+            vl = pv != R_UnboundValue ? pv : forcePromise(vl);
         }
 
-        if (TYPEOF(vl) == PROMSXP)
-            vl = forcePromise(vl);
         if (isFunction (vl)) {
             if (last_unhashed_env_nf != NULL)
                 LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
             return vl;
         }
+
         if (vl == R_MissingArg)
             arg_missing_error(symbol);
     }
