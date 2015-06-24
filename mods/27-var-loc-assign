@@ -1,3 +1,0 @@
-Implement a scheme to avoid new allocation in statements like
-v <- exp(v), v <- -v, v<-v+1, and v<-2*v, when v is unshared and 
-hence can be reused.
