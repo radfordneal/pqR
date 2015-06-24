@@ -591,3 +591,12 @@ for (len in c(1,2,21,22,127,128,129,201,202))
     show_results(R)
     stopifnot(identical(R,R0))
 }
+
+
+# Test for bug that occurred before.
+
+a <- invisible(rep(1.1,100000))  # invisible will wait until arg computed
+b <- invisible(rep(-2.2,100000))
+x <- abs(b%*%a)
+print(x)
+stopifnot(x>0)
