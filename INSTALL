@@ -140,9 +140,10 @@ likely to be useful are as follows:
         compilers are used with an Intel/AMD 64-bit processor, the
         following flags are recommended:
 
-          CXXLAGS='-g -O2 -mtune=native'
-          FCLAGS='-g -O2 -mtune=native'
-          FFLAGS='-g -O2 -mtune=native'
+          CFLAGS='-g -O2 -mtune=native'
+          CXXFLAGS='-g -O2 -mtune=native'
+          FCFLAGS='-g -O3 -mtune=native'
+          FFLAGS='-g -O3 -mtune=native'
 
         For a 32-bit build, adding the -mfpmath=sse option is probably
         desirable (unless you have a very old processor, Pentium III
