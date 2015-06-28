@@ -406,11 +406,8 @@ typedef struct {
     SEXP   (*slow)();/* slow function pointer */
     SEXP   (*fast)();/* fast function pointer */
     int    code;     /* operation code, or -1 for any */
-    int    arity;    /* function arity, 1, 2, or 3 (for either 1 or 2) */
     int    dsptch1;  /* is object dispatch done on 1st argument? */
-    int    dsptch2;  /* is object dispatch done on 2nd argument? */
     int    var1;     /* variant requested when evaluating 1st argument */
-    int    var2;     /* variant requested when evaluating 2nd argument */
 } FASTFUNTAB;
 
 #ifdef USE_RINTERNALS

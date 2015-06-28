@@ -2039,7 +2039,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_array[] = {
-/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-{ do_length,	do_fast_length,	-1,		1,	1, 0,  0, 0 },	
-{ 0,		0,		0,		0,	0, 0,  0, 0 }
+/*slow func	fast func,     code or -1   dsptch  variant */
+{ do_length,	do_fast_length,	-1,		1,  0 },	
+{ 0,		0,		0,		0,  0 }
 };

@@ -1026,9 +1026,9 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
-/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+/*slow func	fast func,     code or -1   dsptch  variant */
 
-{ do_seq_len,	do_fast_seq_len,-1,		1,	0, 0,  0, 0 },
-/* { do_rep_int,do_fast_rep,	-1,		2,	0, 0,  0, 0 }, */
-{ 0,		0,		0,		0,	0, 0,  0, 0 }
+{ do_seq_len,	do_fast_seq_len,-1,		0,  0 },
+/* { do_rep_int,do_fast_rep,	-1,		0,  0 }, */
+{ 0,		0,		0,		0,  0 }
 };

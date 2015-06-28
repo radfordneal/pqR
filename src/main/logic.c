@@ -579,9 +579,9 @@ attribute_hidden FUNTAB R_FunTab_logic[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_logic[] = {
-/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-{ do_not,	do_fast_not,	-1,		1,	1, 0,  0, 0 },
-{ do_allany,	do_fast_allany,	OP_ALL,		1,	1, 0,  VARIANT_AND, 0 },
-{ do_allany,	do_fast_allany,	OP_ANY,		1,	1, 0,  VARIANT_OR, 0 },
-{ 0,		0,		0,		0,	0, 0,  0, 0 }
+/*slow func	fast func,     code or -1   dsptch  variant */
+{ do_not,	do_fast_not,	-1,		1,  0 },
+{ do_allany,	do_fast_allany,	OP_ALL,		1,  VARIANT_AND },
+{ do_allany,	do_fast_allany,	OP_ANY,		1,  VARIANT_OR },
+{ 0,		0,		0,		0,  0 }
 };

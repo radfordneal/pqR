@@ -676,7 +676,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 
             PROTECT(arg1 = EVALV (arg1, rho, 
                                   PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
-    
+
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
                 UNPROTECT(1);
                 PROTECT(args = CONS(arg1,R_NilValue));

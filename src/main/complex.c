@@ -861,8 +861,7 @@ attribute_hidden FUNTAB R_FunTab_complex[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_complex[] = {
-/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
-
-{ do_cmathfuns,	do_fast_cmathfuns, -1,		1,	1, 0,  0, 0 },
-{ 0,		0,		0,		0,	0, 0,  0, 0 }
+/*slow func	fast func,     code or -1   dsptch  variant */
+{ do_cmathfuns,	do_fast_cmathfuns, -1,		1,  0 },
+{ 0,		0,		0,		0,  0 }
 };

@@ -1,1 +1,9 @@
 Miscellaneous fixes.
+
+Fixed INSTALL doc file.
+
+Fixes problem of variant field for fast ops not being big enough,
+that disabled part of the static box optimizations.  Also cleaned
+up unused fields.
+
+

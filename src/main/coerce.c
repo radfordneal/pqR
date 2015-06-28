@@ -2906,17 +2906,17 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_coerce[] = {
-/*slow func	fast func,     code or -1  uni/bi/both dsptch  variants */
+/*slow func	fast func,     code or -1   dsptch  variant */
 
-{ do_is,	do_fast_is,	100,		1,	1, 0,  0, 0 },
-{ do_is,	do_fast_is,	101,		1,	1, 0,  0, 0 },
-{ do_is,	do_fast_is,	102,		1,	1, 0,  0, 0 },
-{ do_is,	do_fast_is,	-1,		1,	0, 0,  0, 0 },
+{ do_is,	do_fast_is,	100,		1,  0 },
+{ do_is,	do_fast_is,	101,		1,  0 },
+{ do_is,	do_fast_is,	102,		1,  0 },
+{ do_is,	do_fast_is,	-1,		0,  0 },
 
-{ do_isna,	do_fast_isna,	    -1,		1,	1, 0,  0, 0 },
-{ do_isnan,	do_fast_isnan,	    -1,		1,	1, 0,  0, 0 },
-{ do_isfinite,	do_fast_isfinite,   -1,		1,	1, 0,  0, 0 },
-{ do_isinfinite,do_fast_isinfinite, -1,		1,	1, 0,  0, 0 },
+{ do_isna,	do_fast_isna,	    -1,		1,  0 },
+{ do_isnan,	do_fast_isnan,	    -1,		1,  0 },
+{ do_isfinite,	do_fast_isfinite,   -1,		1,  0 },
+{ do_isinfinite,do_fast_isinfinite, -1,		1,  0 },
 
-{ 0,		0,		0,		0,	0, 0,  0, 0 }
+{ 0,		0,		0,		0,  0 }
 };

@@ -189,9 +189,9 @@ struct sxpinfo_struct {
         unsigned int base_env : 1;    /* this is R_BaseEnv or R_BaseNamespace */
         unsigned int basec : 1;       /* sym has base binding in global cache */
         /* Primitive operations */
-        unsigned char var1, var2;/* variants for evals of fast primitive args */
         unsigned char pending_ok;/* whether args can have computation pending */
-      } nonvec;                  /*  - only one bit, but maybe faster as byte */
+        unsigned short var1;     /* variant for eval of unary primitive arg */
+      } nonvec;
     } u;
 };
 

@@ -549,11 +549,8 @@ static void SetupBuiltins(void)
                     FASTFUNTAB *f = &FastFunTab_ptrs[j][k];
                     if (f->slow==this_cfun 
                           && (f->code==-1 || f->code==this_code)) {
-                        if (f->arity==1)
-                            SET_PRIMFUN_FAST_UNARY (prim, f->fast, f->dsptch1,
-                                                    f->var1);
-                        else
-                            abort();  /* only unary ones are implemented now */
+                        SET_PRIMFUN_FAST_UNARY (prim, f->fast, f->dsptch1,
+                                                f->var1);
                         goto found;
                     }
                 }
