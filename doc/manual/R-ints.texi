@@ -270,7 +270,7 @@ struct sxpinfo_struct @{
         unsigned int basec : 1;       /* sym has base binding in global cache */
         /* Primitive operations */
         unsigned char pending_ok;/* whether args can have computation pending */
-        unsigned char var1;      /* variant for eval of unary primitive arg */
+        unsigned short var1;     /* variant for eval of unary primitive arg */
       @} nonvec;
     @} u;
 @};
