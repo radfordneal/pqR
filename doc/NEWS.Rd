@@ -10,54 +10,16 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item ..
-  \item ..
-  \item ..
-  \item ..
-}}
-
-  \subsection{INSTALLATION}{
-  \itemize{ 
-  \item ..
-  \item ..
-  \item ..
-  \item ..
-}}
-
-  \subsection{FEATURE CHANGES}{
-  \itemize{ 
-  \item ..
-  \item ..
-  \item ..
-  \item ..
-}}
-
-  \subsection{PERFORMANCE IMPROVEMENTS}{
-  \itemize{ 
-  \item ..
-  \item ..
-  \item ..
-  \item ..
-}}
-
-  \subsection{BUG FIXES}{
-  \itemize{ 
-  \item ..
-  \item ..
-  \item ..
-  \item ..
-}}
-}
-
-
-\section{CHANGES IN VERSION RELEASED 2015-06-24}{
-
-  \subsection{INTRODUCTION}{
-  \itemize{ 
-  \item This version of pqR improves reliability and portability, and
-        also contains some performance improvements, including some that
+  \item This version is a slight modification of the version of pqR released
+        on 2015-06-24, which does not have a separate NEWS section.
+        The changes in this minor release fix some installation and testing 
+        issues that caused problems on some platforms. There are also a few
+        documentation and code cleanups, and some expansion in the use
+        of static boxes (see below).
+        Version 2015-06-24 of pqR improved reliability and portability, and
+        also contained some performance improvements, including some that
         substantially speed up interpretive execution of programs that 
-        do many scalar operations.
+        do many scalar operations.  Details are below.
 }}
 
   \subsection{INSTALLATION}{
