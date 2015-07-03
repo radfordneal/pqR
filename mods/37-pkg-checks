@@ -1,0 +1,4 @@
+Modified tests/examples in the Matrix package to increase tolerance in
+a test so it passes when long double is the same as double, and to
+eliminate a test that fails when the time taken is supposedly too
+long, which is not a portable criterion.
