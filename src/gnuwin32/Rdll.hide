@@ -312,6 +312,7 @@
  Rf_LogicalFromInteger
  Rf_LogicalFromReal
  Rf_LogicalFromString
+ Rf_PRSEEN_error_or_warning
  Rf_PrintDefaults
  Rf_PrintGreeting
  Rf_PrintValueEnv
@@ -332,7 +333,10 @@
  Rf_StringFromReal
  Rf_VectorIndex
  Rf_allocCharsxp
+ Rf_apply_non_function_error
  Rf_arg_missing_error
+ Rf_asLogicalNoNA_error
+ Rf_asLogicalNoNA_warning
  Rf_bd0
  Rf_builtin_op
  Rf_chebyshev_eval
@@ -380,9 +384,11 @@
  Rf_mkSYMSXP
  Rf_name2col
  Rf_needsparens
+ Rf_nonsubsettable_error
  Rf_onsigusr1
  Rf_onsigusr2
  Rf_osDynSymbol
+ Rf_out_of_bounds_error
  Rf_pbeta_raw
  Rf_promiseArgs
  Rf_qchisq_appr
