@@ -14,3 +14,5 @@ just in case this helps cache or other code aspects in time-critical
 code.
 
 Updates R-ints for current SEXPREC layout.
+
+Tweaks to mods/README and INSTALL.

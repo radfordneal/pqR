@@ -68,7 +68,7 @@ likely to be useful are as follows:
         Build R as a shared library.  This is necessary if you want to
         use RStudio.
 
-    -- with-blas  or   --with-blas=...
+    --with-blas  or   --with-blas=...
 
         Used to specify that an external BLAS package should be used
         rather than the built-in BLAS supplied with pqR.  See R-admin

@@ -1,7 +1,7 @@
-This directory contains a file for each git branch in the pqR
-repository, documenting what that branch is for.  These files will
-ultimately be combined in release branches to produce the MODS file in
-the main source directory.
+In a development branch, the 'mods' directory contains a file for each
+git branch in the pqR repository, documenting what that branch is for.
+These files will ultimately be combined in a release branch to produce
+the MODS file in the main source directory.
 
 Development branches start with branch 00, which is identical to the
 version of R released by the R Core Team on which pqR is based
@@ -15,32 +15,40 @@ does not contain any modifications of its own (branch 00, containing
 this text, excepted), but which forms the basis for the development
 branches starting with DD+1.
 
-Release branches have names of the form Release-YYYY-MM-DD, and are
-based on some merged development branch (ie, with a name of the form
-DD), with only the following changes:
+Release branches have names of the form Release-YYYY-MM-DD (and are
+also given tag pqR-YYYY-MM-DD).  They are based on some merged
+development branch (ie, with a name of the form DD), with only the
+following changes:
 
- 1) Update the release date, which is stored in the (now mis-named) 
+ 1) Remove the file ".gitignore" using "git rm".
+
+ 2) Update the release date, which is stored in the (now mis-named) 
     file "SVN-REVISION".  This should match the date in "NEWS.Rd", which
     would have been set in a development branch.  (The date in the
     "SVN-REVISION" file a development branch should approximately the
     correct year, but have month and day set to "00".)
 
- 2) Create the file "configure" by running create-configure.
+ 3) Create the file "configure" by running create-configure.  Add it
+    to the git repository with "git add".
 
- 3) Create the files "NEWS", "NEWS.pdf", "doc/html/NEWS.html", and 
-    "doc/html/R-admin.html" from source files, by running make in some
-    build directory (with "C" locale), and then copying them to the 
-    source directory (R-admin.html from doc/manual).
+ 4) Run configure and make in some build directory, with "C" locale.
 
- 4) Remove the file ".gitignore" (using "git rm", if you're using git).
+ 5) Create the files "NEWS", "NEWS.pdf", "doc/html/NEWS.html", and 
+    "doc/html/R-admin.html" from source files, by copying them from
+    the build directory to the source directory (R-admin.html from 
+    doc/manual).  Add them to the git repository.
 
- 5) Concatenate all files in the "mods" directory into the file 
+ 6) Concatenate all files in the "mods" directory into the file 
     "MODS", as follows:
 
       (cd mods; cat README; for i in [0-9]*; \
        do echo " "; echo " "; echo ${i}:; echo " "; cat $i; done) >MODS
 
-    Then delete the "mods" directory (with "git rm -r" if using git).
+    Add it to the git repository, then delete the "mods" directory with 
+    "git rm -r".
+
+ 7) Commit the above changes to create the final version for a release.
+    Give this commit the pqR-YYYY-MM-DD tag.
 
 The development branches that go into a release may be changed after
 the release, with the new versions forming the basis for a later
