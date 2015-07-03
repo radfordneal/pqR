@@ -422,15 +422,46 @@ R_NORETURN void attribute_hidden unbound_var_error(SEXP sym)
     error(_("object '%s' not found"), CHAR(PRINTNAME(sym)));
 }
 
-R_NORETURN void nonsubsettable_error(SEXP call, SEXP x)
+R_NORETURN void attribute_hidden nonsubsettable_error(SEXP call, SEXP x)
 {
     errorcall (call, _("object of type '%s' is not subsettable"),
                type2char(TYPEOF(x)));
 }
 
-R_NORETURN void out_of_bounds_error(SEXP call)
+R_NORETURN void attribute_hidden out_of_bounds_error(SEXP call)
 {
     errorcall(call, _("subscript out of bounds"));
+}
+
+R_NORETURN void attribute_hidden apply_non_function_error(void)
+{
+    error(_("attempt to apply non-function"));
+}
+
+void attribute_hidden PRSEEN_error_or_warning(SEXP e)
+{
+    if (PRSEEN(e) == 1)
+        errorcall(R_GlobalContext->call,
+         _("promise already under evaluation: recursive default argument reference or earlier problems?"));
+    else 
+        warningcall(R_GlobalContext->call,
+         _("restarting interrupted promise evaluation"));
+}
+
+R_NORETURN void attribute_hidden asLogicalNoNA_error (SEXP s, SEXP call)
+{
+    errorcall (call, 
+      length(s) == 0 ? _("argument is of length zero") :
+      isLogical(s) ?   _("missing value where TRUE/FALSE needed") :
+                       _("argument is not interpretable as logical"));
+}
+
+void attribute_hidden asLogicalNoNA_warning (SEXP s, SEXP call)
+{
+    PROTECT(s);
+    warningcall (call,
+     _("the condition has length > 1 and only the first element will be used"));
+    UNPROTECT(1);
 }
 
 

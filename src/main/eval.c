@@ -380,14 +380,7 @@ static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
 
     PROTECT(e);
 
-    if (PRSEEN(e)) {
-        if (PRSEEN(e) == 1)
-            errorcall(R_GlobalContext->call,
-             _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-        else 
-            warningcall(R_GlobalContext->call,
-             _("restarting interrupted promise evaluation"));
-    }
+    if (PRSEEN(e)) PRSEEN_error_or_warning(e);
 
     /* Mark the promise as under evaluation and push it on a stack
        that can be used to unmark pending promises if a jump out
@@ -595,7 +588,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             else if (TYPEOF(op) == BUILTINSXP)
                 res = Rf_builtin_op (op, e, rho, variant);
             else
-                error(_("attempt to apply non-function"));
+                apply_non_function_error();
 
             int flag = PRIMPRINT(op);
             if (flag == 0) R_Visible = TRUE;
@@ -1249,21 +1242,6 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     return val;
 }
 
-static R_NORETURN void asLogicalNoNA_error (SEXP s, SEXP call)
-{
-    errorcall (call, 
-      length(s) == 0 ? _("argument is of length zero") :
-      isLogical(s) ?   _("missing value where TRUE/FALSE needed") :
-                       _("argument is not interpretable as logical"));
-}
-
-static void asLogicalNoNA_warning (SEXP s, SEXP call)
-{
-    PROTECT(s);
-    warningcall (call,
-     _("the condition has length > 1 and only the first element will be used"));
-    UNPROTECT(1);
-}
                                   /* Caller needn't protect the s arg below */
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
@@ -1306,7 +1284,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    if (!asLogicalNoNA (eval(Cond,rho), call)) {  /* go to else part */
+    if (!asLogicalNoNA (evalv(Cond,rho,VARIANT_STATIC_BOX_OK), call)) {
+        /* go to else part */
         if (args != R_NilValue)
             Stmt = CAR(args);
         else {
@@ -1511,13 +1490,15 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
 
-	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
+    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
+	while (asLogicalNoNA 
+                 (evalv (CAR(args), rho, VARIANT_STATIC_BOX_OK), call)) {
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
     }
+
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
@@ -1544,13 +1525,14 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
-    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
 
+    if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
 	for (;;) {
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
     }
+
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
@@ -5091,7 +5073,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	value = GETSTACK(-1);
 	if (TYPEOF(value) != CLOSXP && TYPEOF(value) != BUILTINSXP &&
 	    TYPEOF(value) != SPECIALSXP)
-	  error(_("attempt to apply non-function"));
+	  apply_non_function_error();
 
 	/* initialize the function type register, and push space for
 	   creating the argument list. */

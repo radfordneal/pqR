@@ -521,15 +521,16 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     }
 }
 
-/* do_fast_rep is not called directly at the moment, since had to revert
-   to rep.int being internal so that setGeneric would work for it.  This
-   function is called from do_rep_int, however. */
 
 #define T_rep THRESHOLD_ADJUST(20)
-   
-static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
-                         int variant)
+
+static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    static char *ap[2] = { "x", "times" };
+    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+
+    SEXP s = CAR(args);
+    SEXP ncopy = CADR(args);
     SEXP a;
     int na;
 
@@ -594,17 +595,8 @@ static SEXP do_fast_rep (SEXP call, SEXP op, SEXP s, SEXP ncopy, SEXP rho,
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
-    UNPROTECT(1 + (ncopy!=NULL));
+    UNPROTECT(2 + (ncopy!=NULL));
     return a;
-}
-
-static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
-{
-    static char *ap[2] = { "x", "times" };
-    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
-    SEXP ans = do_fast_rep (call, op, CAR(args), CADR(args), rho, variant);
-    UNPROTECT(1);
-    return ans;
 }
 
 /* We are careful to use evalListKeepMissing here (inside
@@ -1028,7 +1020,6 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
 
-{ do_seq_len,	do_fast_seq_len,-1,		0,  0 },
-/* { do_rep_int,do_fast_rep,	-1,		0,  0 }, */
+{ do_seq_len,	do_fast_seq_len,-1,		0,  VARIANT_STATIC_BOX_OK },
 { 0,		0,		0,		0,  0 }
 };

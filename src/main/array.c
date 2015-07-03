@@ -383,7 +383,12 @@ static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_fast_length (SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 {   
     R_len_t len = length(arg);
-    return ScalarIntegerMaybeConst (len <= INT_MAX ? len : NA_INTEGER);
+    if (variant & VARIANT_STATIC_BOX_OK) {
+        *INTEGER(R_ScalarIntegerBox) = len;
+        return R_ScalarIntegerBox;
+    }
+    else
+        return ScalarIntegerMaybeConst (len <= INT_MAX ? len : NA_INTEGER);
 }
 
 static SEXP do_length(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
