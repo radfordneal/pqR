@@ -1,7 +1,7 @@
 # Test operations done in helper threads or with task merging, against
 # saved results and results with multithreading and merging disabled.
 #
-# Added for pqR, 2014, Radford M. Neal.
+# Added for pqR, 2014, 2015 Radford M. Neal.
 
 # These tests are designed for pqR, but should run without error in 
 # other R implementations, since the option settings should simply
@@ -9,7 +9,7 @@
 # the R_HELPERS environment variable.
 
 
-# The test procedure.  Returns a list with scalars a, b, c, d, e, f, g, h, 
+# RANDOM TEST PROCEDURE.  Returns a list with scalars a, b, c, d, e, f, g, h, 
 # vectors t, u, v, w, and matrices X, Y, Z.  Contains lots of code generated
 # randomly with the script given.
 
@@ -563,40 +563,110 @@ for (len in c(1,2,21,22,127,128,129,201,202))
 {
     cat("\n\nTESTING WITH DIMENSION",len,"\n\n")
     cat("Tests with helpers disabled:\n")
-    options(helpers_disable=T)
+    options(helpers_disable=TRUE)
     R0 <- do_helpers_tests(len)
     show_results(R0)
     
     cat("\nTests with task merging but no multithreading:\n")
-    options(helpers_disable=F)
-    options(helpers_no_multithreading=T)
-    options(helpers_no_merging=F)
+    options(helpers_disable=FALSE)
+    options(helpers_no_multithreading=TRUE)
+    options(helpers_no_merging=FALSE)
     R <- do_helpers_tests(len)
     show_results(R)
     stopifnot(identical(R,R0))
     
     cat("\nTests with no task merging and multithreading:\n")
-    options(helpers_disable=F)
-    options(helpers_no_multithreading=F)
-    options(helpers_no_merging=T)
+    options(helpers_disable=FALSE)
+    options(helpers_no_multithreading=FALSE)
+    options(helpers_no_merging=TRUE)
     R <- do_helpers_tests(len)
     show_results(R)
     stopifnot(identical(R,R0))
     
     cat("\nTests with both task merging and multithreading:\n")
-    options(helpers_disable=F)
-    options(helpers_no_multithreading=F)
-    options(helpers_no_merging=F)
+    options(helpers_disable=FALSE)
+    options(helpers_no_multithreading=FALSE)
+    options(helpers_no_merging=FALSE)
     R <- do_helpers_tests(len)
     show_results(R)
     stopifnot(identical(R,R0))
 }
 
 
-# Test for bug that occurred before.
+# TEST THAT WAITS OCCUR WHEN THEY SHOULD.
 
-a <- invisible(rep(1.1,100000))  # invisible will wait until arg computed
-b <- invisible(rep(-2.2,100000))
-x <- abs(b%*%a)
-print(x)
-stopifnot(x>0)
+wait <- invisible  # invisible will wait until its argument has been computed
+
+a <- wait(rep(1/30,100000))
+b <- wait(rep(-1/7,100000))
+
+for (f in list(abs,trunc,exp,`-`)) {
+    r <- f(wait(b%*%a))
+    x <- f(b%*%a)
+    g <- x==r
+    print(c(x))
+    stopifnot(g)
+}
+
+for (o in list(`+`,`-`,`*`,`/`,`^`)) {
+    r <- o(wait(b%*%a),10)
+    x <- o(b%*%a,10)
+    g <- x==r
+    print(c(x))
+    stopifnot(g)
+    r <- o(0.9,wait(b%*%a))
+    x <- o(0.9,b%*%a)
+    g <- x==r
+    print(c(x))
+    stopifnot(g)
+}
+
+nr <- 5000
+M <- wait(matrix(1/11,nr,1))
+
+for (f in list(abs,trunc,exp,`-`)) {
+    r <- f(wait(.colSums(M,nr,1)))
+    x <- f(.colSums(M,nr,1))
+    g <- x==r
+    print(x)
+    stopifnot(g)
+}
+
+for (o in list(`+`,`-`,`*`,`/`,`^`)) {
+    r <- o(wait(.colSums(M,nr,1)),10)
+    x <- o(.colSums(M,nr,1),10)
+    g <- x==r
+    print(x)
+    stopifnot(g)
+    r <- o(0.9,wait(.colSums(M,nr,1)))
+    x <- o(0.9,.colSums(M,nr,1))
+    g <- x==r
+    print(x)
+    stopifnot(g)
+}
+
+nr <- 500
+nc <- 1000
+M <- wait(matrix(1/3,nr,nc))
+
+for (f in list(abs,trunc,exp,`-`)) {
+    r <- f(wait(.colSums(M,nr,nc)))
+    x <- f(.colSums(M,nr,nc))
+    g <- all(wait(x==r))
+    print(x[c(1,nr)])
+    stopifnot(g)
+}
+
+for (o in list(`+`,`-`,`*`,`/`,`^`)) {
+    r <- o(wait(.colSums(M,nr,nc)),10)
+    x <- o(.colSums(M,nr,nc),10)
+    g <- all(wait(x==r))
+    print(x[c(1,nr)])
+    stopifnot(g)
+    r <- o(0.9,wait(.colSums(M,nr,nc)))
+    x <- o(0.9,.colSums(M,nr,nc))
+    g <- all(wait(x==r))
+    print(x[c(1,nr)])
+    stopifnot(g)
+}
+
