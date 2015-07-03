@@ -1,5 +1,5 @@
 
-pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.0 (2015-06-24), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
@@ -26,7 +26,7 @@ Type 'q()' to quit R.
 > # Test operations done in helper threads or with task merging, against
 > # saved results and results with multithreading and merging disabled.
 > #
-> # Added for pqR, 2014, Radford M. Neal.
+> # Added for pqR, 2014, 2015 Radford M. Neal.
 > 
 > # These tests are designed for pqR, but should run without error in 
 > # other R implementations, since the option settings should simply
@@ -34,7 +34,7 @@ Type 'q()' to quit R.
 > # the R_HELPERS environment variable.
 > 
 > 
-> # The test procedure.  Returns a list with scalars a, b, c, d, e, f, g, h, 
+> # RANDOM TEST PROCEDURE.  Returns a list with scalars a, b, c, d, e, f, g, h, 
 > # vectors t, u, v, w, and matrices X, Y, Z.  Contains lots of code generated
 > # randomly with the script given.
 > 
@@ -588,30 +588,30 @@ Type 'q()' to quit R.
 + {
 +     cat("\n\nTESTING WITH DIMENSION",len,"\n\n")
 +     cat("Tests with helpers disabled:\n")
-+     options(helpers_disable=T)
++     options(helpers_disable=TRUE)
 +     R0 <- do_helpers_tests(len)
 +     show_results(R0)
 +     
 +     cat("\nTests with task merging but no multithreading:\n")
-+     options(helpers_disable=F)
-+     options(helpers_no_multithreading=T)
-+     options(helpers_no_merging=F)
++     options(helpers_disable=FALSE)
++     options(helpers_no_multithreading=TRUE)
++     options(helpers_no_merging=FALSE)
 +     R <- do_helpers_tests(len)
 +     show_results(R)
 +     stopifnot(identical(R,R0))
 +     
 +     cat("\nTests with no task merging and multithreading:\n")
-+     options(helpers_disable=F)
-+     options(helpers_no_multithreading=F)
-+     options(helpers_no_merging=T)
++     options(helpers_disable=FALSE)
++     options(helpers_no_multithreading=FALSE)
++     options(helpers_no_merging=TRUE)
 +     R <- do_helpers_tests(len)
 +     show_results(R)
 +     stopifnot(identical(R,R0))
 +     
 +     cat("\nTests with both task merging and multithreading:\n")
-+     options(helpers_disable=F)
-+     options(helpers_no_multithreading=F)
-+     options(helpers_no_merging=F)
++     options(helpers_disable=FALSE)
++     options(helpers_no_multithreading=FALSE)
++     options(helpers_no_merging=FALSE)
 +     R <- do_helpers_tests(len)
 +     show_results(R)
 +     stopifnot(identical(R,R0))
@@ -969,13 +969,123 @@ sums: -26114560 -1.070618e+12 0 3672360 163216
 NaNs:         0  0.000000e+00 0       0      0
 > 
 > 
-> # Test for bug that occurred before.
+> # TEST THAT WAITS OCCUR WHEN THEY SHOULD.
 > 
-> a <- invisible(rep(1.1,100000))  # invisible will wait until arg computed
-> b <- invisible(rep(-2.2,100000))
-> x <- abs(b%*%a)
-> print(x)
-       [,1]
-[1,] 242000
-> stopifnot(x>0)
+> wait <- invisible  # invisible will wait until its argument has been computed
+> 
+> a <- wait(rep(1/30,100000))
+> b <- wait(rep(-1/7,100000))
+> 
+> for (f in list(abs,trunc,exp,`-`)) {
++     r <- f(wait(b%*%a))
++     x <- f(b%*%a)
++     g <- x==r
++     print(c(x))
++     stopifnot(g)
++ }
+[1] 476.1905
+[1] -476
+[1] 1.559925e-207
+[1] 476.1905
+> 
+> for (o in list(`+`,`-`,`*`,`/`,`^`)) {
++     r <- o(wait(b%*%a),10)
++     x <- o(b%*%a,10)
++     g <- x==r
++     print(c(x))
++     stopifnot(g)
++     r <- o(0.9,wait(b%*%a))
++     x <- o(0.9,b%*%a)
++     g <- x==r
++     print(c(x))
++     stopifnot(g)
++ }
+[1] -466.1905
+[1] -475.2905
+[1] -486.1905
+[1] 477.0905
+[1] -4761.905
+[1] -428.5714
+[1] -47.61905
+[1] -0.00189
+[1] 5.995247e+26
+[1] 6.155753e+21
+> 
+> nr <- 5000
+> M <- wait(matrix(1/11,nr,1))
+> 
+> for (f in list(abs,trunc,exp,`-`)) {
++     r <- f(wait(.colSums(M,nr,1)))
++     x <- f(.colSums(M,nr,1))
++     g <- x==r
++     print(x)
++     stopifnot(g)
++ }
+[1] 454.5455
+[1] 454
+[1] 2.55025e+197
+[1] -454.5455
+> 
+> for (o in list(`+`,`-`,`*`,`/`,`^`)) {
++     r <- o(wait(.colSums(M,nr,1)),10)
++     x <- o(.colSums(M,nr,1),10)
++     g <- x==r
++     print(x)
++     stopifnot(g)
++     r <- o(0.9,wait(.colSums(M,nr,1)))
++     x <- o(0.9,.colSums(M,nr,1))
++     g <- x==r
++     print(x)
++     stopifnot(g)
++ }
+[1] 464.5455
+[1] 455.4455
+[1] 444.5455
+[1] -453.6455
+[1] 4545.455
+[1] 409.0909
+[1] 45.45455
+[1] 0.00198
+[1] 3.765071e+26
+[1] 1.589061e-21
+> 
+> nr <- 500
+> nc <- 1000
+> M <- wait(matrix(1/3,nr,nc))
+> 
+> for (f in list(abs,trunc,exp,`-`)) {
++     r <- f(wait(.colSums(M,nr,nc)))
++     x <- f(.colSums(M,nr,nc))
++     g <- all(wait(x==r))
++     print(x[c(1,nr)])
++     stopifnot(g)
++ }
+[1] 166.6667 166.6667
+[1] 166 166
+[1] 2.412202e+72 2.412202e+72
+[1] -166.6667 -166.6667
+> 
+> for (o in list(`+`,`-`,`*`,`/`,`^`)) {
++     r <- o(wait(.colSums(M,nr,nc)),10)
++     x <- o(.colSums(M,nr,nc),10)
++     g <- all(wait(x==r))
++     print(x[c(1,nr)])
++     stopifnot(g)
++     r <- o(0.9,wait(.colSums(M,nr,nc)))
++     x <- o(0.9,.colSums(M,nr,nc))
++     g <- all(wait(x==r))
++     print(x[c(1,nr)])
++     stopifnot(g)
++ }
+[1] 176.6667 176.6667
+[1] 167.5667 167.5667
+[1] 156.6667 156.6667
+[1] -165.7667 -165.7667
+[1] 1666.667 1666.667
+[1] 150 150
+[1] 16.66667 16.66667
+[1] 0.0054 0.0054
+[1] 1.653817e+22 1.653817e+22
+[1] 2.364567e-08 2.364567e-08
+> 
 > 
