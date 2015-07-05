@@ -1982,12 +1982,16 @@ static void RunGenCollect(R_size_t size_needed)
        a constant now, so its fields aren't going to change (if actually
        kept in read-only memory). */
 
-    LASTSYMENV(R_MissingArg) = NULL;
-    LASTSYMENV(R_RestartToken) = NULL;
-    LASTSYMBINDING(R_MissingArg) = NULL;
-    LASTSYMBINDING(R_RestartToken) = NULL;
-    LASTSYMENVNOTFOUND(R_MissingArg) = NULL;
-    LASTSYMENVNOTFOUND(R_RestartToken) = NULL;
+    if (R_MissingArg) {
+        LASTSYMENV(R_MissingArg) = NULL;
+        LASTSYMBINDING(R_MissingArg) = NULL;
+        LASTSYMENVNOTFOUND(R_MissingArg) = NULL;
+    }
+    if (R_RestartToken) {
+        LASTSYMENV(R_RestartToken) = NULL;
+        LASTSYMBINDING(R_RestartToken) = NULL;
+        LASTSYMENVNOTFOUND(R_RestartToken) = NULL;
+    }
 
     /* Process now to maybe improve cache performance. */
 
