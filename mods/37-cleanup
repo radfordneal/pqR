@@ -16,3 +16,8 @@ code.
 Updates R-ints for current SEXPREC layout.
 
 Tweaks to mods/README and INSTALL.
+
+Fixed protect bug in promiseArgs.
+
+Now pass 0-length vectors in .C or .Fortran as pointers to a block of
+20 constant zero bytes, to accomodate/diagnose badly-written code.
