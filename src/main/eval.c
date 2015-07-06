@@ -1987,13 +1987,13 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                     }
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head1==R_NilValue)
-                        PROTECT(head1=ev);
+                        PROTECT(head1 = ev);
                     else
                         SETCDR(tail1,ev);
                     tail1 = ev;
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head2==R_NilValue)
-                        PROTECT(head2=ev);
+                        PROTECT(head2 = ev);
                     else
                         SETCDR(tail2,ev);
                     tail2 = ev;
@@ -2592,7 +2592,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	   Anything else bound to a ... symbol is an error. */
 
 	if (a == R_DotsSymbol) {
-	    PROTECT(h = findVar(a, rho));
+	    h = findVar(a, rho);
             if (h == R_NilValue) {
                 /* nothing */
             }
@@ -2609,7 +2609,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                         a = mkPROMISE (a, rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
-                        PROTECT(head=ev);
+                        PROTECT(head = ev);
                     else
                         SETCDR(tail,ev);
                     tail = ev;
@@ -2618,7 +2618,6 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    }
 	    else if (h != R_MissingArg)
 		dotdotdot_error();
-            UNPROTECT(1);
 	}
         else {
             if (TYPEOF(a) == PROMSXP) {

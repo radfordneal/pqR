@@ -16,3 +16,5 @@ code.
 Updates R-ints for current SEXPREC layout.
 
 Tweaks to mods/README and INSTALL.
+
+Fixed protect bug in promiseArgs.
