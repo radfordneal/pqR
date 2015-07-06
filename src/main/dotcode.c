@@ -1312,7 +1312,9 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    the arguments of the function to be called.  For arguments that are
    atomic vectors or vector lists, the function called is passed the DATAPTR 
    for the vector (unless this argument is marked as an out-of-the-box scalar,
-   see below).  For other argument types, the function is passed the SEXP 
+   see below), except that zero-length arguments are passed as a pointer
+   to a block of 20 zero bytes (to suppress errors from some badly-written
+   packages).  For other argument types, the function is passed the SEXP 
    for the operand itself.  If this task procedure is deferred, the arguments,
    other than ans1, must all either be unshared (NAMEDCNT of zero) or be 
    guaranteed to never change (NAMEDCNT at its maximum), since the helpers
@@ -1343,6 +1345,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    when the task is not deferred).
 */
 
+static const char zeros[20]; /* Block of zeros to pass for 0-length args */
 static VarFun dotCode_fun;  /* Function to call for .C or .Fortran */
 static struct special_args dotCode_spa;  /* Special arguments provided */
 static R_NativeArgStyle *argStyles;  /* May hold types and usages of args */
@@ -1390,7 +1393,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
             cargs[na] = &scalar_value[na];
         }
         else if (isVectorAtomic(arg) || TYPEOF(arg) == VECSXP)
-            cargs[na] = (void *) DATAPTR(arg);
+            cargs[na] = LENGTH(arg)==0 ? (void *) zeros : (void *) DATAPTR(arg);
         else
             cargs[na] = (void *) arg;
     }
