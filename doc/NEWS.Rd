@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-07-03}{
+\section{CHANGES IN VERSION RELEASED 2015-07-06}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -14,7 +14,7 @@
         on 2015-06-24, which does not have a separate NEWS section.
         The changes in this minor release fix some installation and testing 
         issues that caused problems on some platforms. There are also a few
-        documentation and code cleanups, a few more tests, and some expansion
+        documentation and code fixes, a few more tests, and some expansion
         in the use of static boxes (see below).
         Version 2015-06-24 of pqR improved reliability and portability, and
         also contained some performance improvements, including some that
