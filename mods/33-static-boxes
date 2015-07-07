@@ -1,5 +1,0 @@
-Creates and uses the apparatus for putting scalars in static boxes.
-
-Boxes used and created in arithmetic, math1, and subset([).
-
-Boxes used in relop.

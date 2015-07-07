@@ -1,9 +1,0 @@
-Miscellaneous small changes, to do with debugging.
-
-.Internal(inspect(symbol)) now displays the LAST... fields.
-
-Can now disable PROTECT macros, in favour of procedure version that
-now checks for protecting object of type NILSXP that isn't R_NilValue.
-
-gctorture now causes FULL garbage collections on each allocation,
-as documented.
