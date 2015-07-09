@@ -425,6 +425,7 @@ nls_port_fit <- function(m, start, lower, upper, control, trace, give.v=FALSE)
     }
     if(p > 0) {
         ## driver routine port_nlsb() in ../src/port.c -- modifies m & iv
+        ##   which is HORRIBLE, and it's actually worse than just that!
         .Call(C_port_nlsb, m,
               d = rep(as.double(scale), length.out = length(par)),
               df = m$gradient(), iv, v, low, upp)

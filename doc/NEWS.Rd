@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-07-06}{
+\section{CHANGES IN VERSION RELEASED 2015-07-08}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -14,7 +14,7 @@
         on 2015-06-24, which does not have a separate NEWS section.
         The changes in this minor release fix some installation and testing 
         issues that caused problems on some platforms. There are also a few
-        documentation and code fixes, a few more tests, and some expansion
+        documentation and bug fixes, a few more tests, and some expansion
         in the use of static boxes (see below).
         Version 2015-06-24 of pqR improved reliability and portability, and
         also contained some performance improvements, including some that
@@ -109,6 +109,13 @@
         running with gctorture enabled even slower than before, when
         most garbage collections were partial, but is more likely to
         find problems.
+  \item Fixed a bug in \code{nls} when the \code{algorithm="port"}
+        option is used, which could result in a call of \code{nls}
+        being terminated with a spurious error message.  This bug
+        is most likely to arise on a 64-bit big-endian platform,
+        such as a 64-bit SPARC build, but will occur with small
+        probability on most platforms.  It is also present in R Core 
+        versions of R.
 }}
 
   \subsection{BUG FIX CORRESPONDING TO ONE IN A LATER R CORE RELEASE}{

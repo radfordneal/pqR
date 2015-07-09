@@ -536,7 +536,8 @@ SEXP port_nlsb(SEXP m, SEXP d, SEXP gg, SEXP iv, SEXP v,
     gradient = PROTECT(lang1(getFunc(m, "gradient", "m")));
     neggrad(gradient, R_GlobalEnv, gg);
 
-    if ((LENGTH(lowerb) == n) && (LENGTH(upperb) == n)) {
+    if (lowerb != R_NilValue && upperb != R_NilValue
+          && LENGTH(lowerb) == n && LENGTH(upperb) == n) {
 	if (isReal(lowerb) && isReal(upperb)) {
 	    double *rl=REAL(lowerb), *ru=REAL(upperb);
 	    b = Calloc(2*n, double);
