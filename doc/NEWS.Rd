@@ -6,13 +6,14 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-07-08}{
+\section{CHANGES IN VERSION RELEASED 2015-07-11}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This version is a slight modification of the version of pqR released
-        on 2015-06-24, which does not have a separate NEWS section.
-        The changes in this minor release fix some installation and testing 
+  \item This version is a minor modification of the version of pqR released
+        on 2015-06-24, which does not have a separate NEWS section, 
+        incorporating also the changes in the version released 2015-07-08.
+        These modifications fix some installation and testing 
         issues that caused problems on some platforms. There are also a few
         documentation and bug fixes, a few more tests, and some expansion
         in the use of static boxes (see below).
@@ -38,6 +39,10 @@
         specification.  This construction had been accepted without error
         by gcc 4.8 and earlier, but is not accepted by some recent
         compilers.
+  \item The tests in the version supplied of the recommended Matrix package
+        have been changed to not assume things that may not be true
+        regarding the speed and long double precision of the machine being
+        used.  (These tests produced spurious errors on some platforms.)
 }}
 
   \subsection{DOCUMENTATION UPDATE}{
