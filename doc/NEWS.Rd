@@ -116,6 +116,9 @@
         such as a 64-bit SPARC build, but will occur with small
         probability on most platforms.  It is also present in R Core 
         versions of R.
+  \item Fixed a bug in \code{readBin} in which a crash could occur due to
+        misaligned data accesses.  This bug is also present in R Core
+        versions of R.
 }}
 
   \subsection{BUG FIX CORRESPONDING TO ONE IN A LATER R CORE RELEASE}{

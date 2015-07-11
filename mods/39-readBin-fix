@@ -1,0 +1,1 @@
+Fixes a bug in readBin, which showed up with gcc 4.9.2 on a SPARC system.
