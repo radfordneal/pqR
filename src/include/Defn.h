@@ -664,7 +664,7 @@ typedef struct {
 #define check1arg_x(args,call) \
     do { \
         if (TAG(args) != R_NilValue && TAG(args) != R_xSymbol) \
-            check1arg_error (args, call, "x"); \
+            check1arg_x_error (args, call); \
     } while (0)
 
 #else /* USE_RINTERNALS */
@@ -1045,7 +1045,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define begincontext		Rf_begincontext
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
-# define check1arg_error	Rf_check1arg_error
+# define check1arg_x_error	Rf_check1arg_x_error
 # define CheckFormals		Rf_CheckFormals
 # define CleanEd		Rf_CleanEd
 # define CoercionWarning       	Rf_CoercionWarning
@@ -1257,7 +1257,7 @@ SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 void check1arg(SEXP, SEXP, const char *);
-void check1arg_error(SEXP, SEXP, const char *);
+R_NORETURN void check1arg_x_error(SEXP, SEXP);
 void Rf_checkArityCall(SEXP, SEXP, SEXP);
 void CheckFormals(SEXP);
 void R_check_locale(void);
@@ -1667,8 +1667,8 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 
 #ifdef USE_FAST_PROTECT_MACROS
 
-extern void Rf_protect_error (void);
-extern void Rf_unprotect_error (void);
+extern R_NORETURN void Rf_protect_error (void);
+extern R_NORETURN void Rf_unprotect_error (void);
 
 #undef  PROTECT
 #define PROTECT(s) \

@@ -651,16 +651,17 @@ void attribute_hidden Rf_check1arg(SEXP arg, SEXP call, const char *formal)
     SEXP tag = TAG(arg);
     if (tag != R_NilValue) {
         if (ep_match_strings(formal,CHAR(PRINTNAME(tag))) == 0) 
-            Rf_check1arg_error (arg, call, formal); /*no exact/partial match*/
+            errorcall (call,
+              _("supplied argument name '%s' does not match '%s'"),
+              CHAR(PRINTNAME(TAG(arg))), formal);
     }
 }
 
-/* called above, and in the check1arg_x macro */
-void attribute_hidden Rf_check1arg_error 
-    (SEXP arg, SEXP call, const char *formal)
+/* Called in the check1arg_x macro */
+R_NORETURN void attribute_hidden Rf_check1arg_x_error (SEXP arg, SEXP call)
 {
     errorcall (call, _("supplied argument name '%s' does not match '%s'"),
-                     CHAR(PRINTNAME(TAG(arg))), formal);
+                     CHAR(PRINTNAME(TAG(arg))), "x");
 }
 
 
