@@ -262,7 +262,12 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	    known_to_be_utf8 = old_utf8;
 	}
 	if (num == NA_INTEGER) num = -1;
-	s = R_ParseVector(text, num, &status, source);
+        if (PRIMVAL(op)) {
+            REprintf("new parser, %d\n",num);
+            s = R_ParseVector(text, 1000000000+num, &status, source);
+        }
+        else
+	    s = R_ParseVector(text, num, &status, source);
 	if (status != PARSE_OK) parseError(call, R_ParseError);
     }
     else if (ifile >= 3) {/* file != "" */
@@ -303,6 +308,7 @@ attribute_hidden FUNTAB R_FunTab_source[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"parse",	do_parse,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"newparse",	do_parse,	1,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

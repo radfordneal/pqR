@@ -1264,6 +1264,44 @@ static void ParseContextInit(void)
     R_ParseContext[0] = '\0';
 }
 
+
+static SEXP parse_expr(void)
+{
+    int token;
+    SEXP list, last, new;
+    list = NULL;
+    for (;;) {
+        token = yylex();
+REprintf("token = %d\n",token);
+        if (token == END_OF_INPUT) break;
+	new = ScalarIntegerMaybeConst(token);
+        if (list == NULL) {
+            PROTECT(list = CONS(new,R_NilValue));
+            last = list;
+        }
+        else {
+            SETCDR(last,CONS(new,R_NilValue));
+            last = CDR(last);
+        }
+    }
+    if (list != NULL) 
+        UNPROTECT(1); /* list */
+    return list;
+}
+
+static SEXP R_NewParse1(ParseStatus *status)
+{
+    SEXP e;
+    e = parse_expr();
+    if (!e) {
+        *status = PARSE_EOF;
+        return R_NilValue;
+    }
+    *status = PARSE_OK;
+    return e;
+}
+
+
 static SEXP R_Parse1(ParseStatus *status)
 {
     switch(yyparse()) {
@@ -1391,10 +1429,17 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	PROTECT_WITH_INDEX(SrcRefs = NewList(), &srindex);
     }
     
+    int new = 0;
+    if (n >= 999999999) {
+        n -= 1000000000;
+        REprintf("new in R_Parse\n");
+        new = 1;
+    }
+
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
 	ParseInit();
-	rval = R_Parse1(status);
+	rval = new ? R_NewParse1(status) : R_Parse1(status);
 	switch(*status) {
 	case PARSE_NULL:
 	    break;
@@ -1472,6 +1517,7 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     txtb = &textb;
     GenerateCode = 1;
     ptr_getc = text_getc;
+if (n > 1000) REprintf("in R_ParseVector, %d\n",n);
     rval = R_Parse(n, status, srcfile);
     R_TextBufferFree(&textb);
     return rval;
