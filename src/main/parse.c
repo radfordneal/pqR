@@ -112,6 +112,8 @@ static int yyparse(void);
 #define R_ParseBuffer R_NewParseBuffer
 #define R_InitSrcRefState R_NewInitSrcRefState
 #define R_FinalizeSrcRefState R_NewFinalizeSrcRefState
+
+#undef isValidName
 #define isValidName NewIsValidName
 
 #undef attribute_hidden
@@ -724,16 +726,16 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   270,   270,   271,   272,   273,   274,   277,   278,   281,
-     284,   285,   286,   287,   289,   290,   292,   293,   294,   295,
-     296,   298,   299,   300,   301,   302,   303,   304,   305,   306,
-     307,   308,   309,   310,   311,   312,   313,   314,   315,   316,
-     317,   319,   320,   321,   323,   324,   325,   326,   327,   328,
-     329,   330,   331,   332,   333,   334,   335,   336,   337,   338,
-     339,   340,   341,   342,   343,   344,   348,   351,   354,   358,
-     359,   360,   361,   362,   363,   366,   367,   370,   371,   372,
-     373,   374,   375,   376,   377,   380,   381,   382,   383,   384,
-     387
+       0,   272,   272,   273,   274,   275,   276,   279,   280,   283,
+     286,   287,   288,   289,   291,   292,   294,   295,   296,   297,
+     298,   300,   301,   302,   303,   304,   305,   306,   307,   308,
+     309,   310,   311,   312,   313,   314,   315,   316,   317,   318,
+     319,   321,   322,   323,   325,   326,   327,   328,   329,   330,
+     331,   332,   333,   334,   335,   336,   337,   338,   339,   340,
+     341,   342,   343,   344,   345,   346,   350,   353,   356,   360,
+     361,   362,   363,   364,   365,   368,   369,   372,   373,   374,
+     375,   376,   377,   378,   379,   382,   383,   384,   385,   386,
+     389
 };
 #endif
 
@@ -3497,47 +3499,97 @@ static void ParseContextInit(void)
 /* -------------------------------------------------------------------------- */
 
 #define BGN_PARSE_FUN \
-    int nprotect = 0;
+    int nprotect = 0
 
 #define PARSE_SUB(w) \
     do { \
         SEXP _sub_ = (w); \
-        if (_sub_ == NULL) goto end; \
+        if (_sub_ == NULL) goto error; \
+    } while (0)
+
+#define PARSE_SUB_PROTECT(w) \
+    do { \
+        SEXP _sub_ = (w); \
+        if (_sub_ == NULL) goto error; \
         PROTECT(_sub_); \
         nprotect++; \
     } while (0)
 
-#define PARSE_SUB_NO_PROTECT(w) \
-    do { \
-        SEXP _sub_ = (w); \
-        if (_sub_ == NULL) goto end; \
-    } while (0)
-
 #define END_PARSE_FUN \
-  end: \
-    UNPROTECT(nprotect);
+    UNPROTECT(nprotect); \
+    goto end; \
+  error: \
+    UNPROTECT(nprotect); \
+    return NULL; \
+  end:
+    
 
 static int next_token;
 
-static SEXP parse_expr(void)
+static SEXP parse_factor(void), parse_term(void), parse_expr(void);
+
+static SEXP parse_factor(void)
 {
-    SEXP list, last, new;
-    list = NULL;
-    while (next_token != END_OF_INPUT) {
-        new = ScalarIntegerMaybeConst(next_token);
-        if (list == NULL) {
-            PROTECT(list = CONS(new,R_NilValue));
-            last = list;
-        }
-        else {
-            SETCDR(last,CONS(new,R_NilValue));
-            last = CDR(last);
-        }
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    if (next_token == '(') {
+        next_token = yylex();
+        PARSE_SUB (res = parse_expr());
+        if (next_token != ')') goto error;
         next_token = yylex();
     }
-    if (list != NULL)
-        UNPROTECT(1); /* list */
-    return list;
+    else if (next_token == SYMBOL || next_token == NUM_CONST
+          || next_token == STR_CONST || next_token == NULL_CONST) {
+        res = yylval;
+        next_token = yylex();
+    }
+    else
+        goto error;
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_term(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB_PROTECT (res = parse_factor());
+
+    while (next_token == '*' || next_token == '/') {
+        char s[2] = { next_token, 0 };
+        op = install(s);
+        next_token = yylex();
+        PARSE_SUB (right = parse_term());
+        PROTECT (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_expr(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    if (next_token == '+' || next_token == '-')
+        res = NULL;
+    else
+        PARSE_SUB_PROTECT (res = parse_term());
+
+    while (next_token == '+' || next_token == '-') {
+        char s[2] = { next_token, 0 };
+        op = install(s);
+        next_token = yylex();
+        PARSE_SUB (right = parse_term());
+        PROTECT (res = res ? lang3(op,res,right) : lang2(op,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
 }
 
 static SEXP R_Parse1(ParseStatus *status)
