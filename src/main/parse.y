@@ -1789,46 +1789,46 @@ static int KeywordLookup(const char *s)
 	if (strcmp(keywords[i].name, s) == 0) {
 	    switch (keywords[i].token) {
 	    case NULL_CONST:
-		PROTECT(yylval = R_NilValue);
+		yylval = R_NilValue;
 		break;
 	    case NUM_CONST:
 		if(GenerateCode) {
 		    switch(i) {
 		    case 1:
-			PROTECT(yylval = ScalarLogicalMaybeConst(NA_LOGICAL));
+			yylval = ScalarLogicalMaybeConst(NA_LOGICAL);
 			break;
 		    case 2:
-			PROTECT(yylval = ScalarLogicalMaybeConst(1));
+			yylval = ScalarLogicalMaybeConst(1);
 			break;
 		    case 3:
-			PROTECT(yylval = ScalarLogicalMaybeConst(0));
+			yylval = ScalarLogicalMaybeConst(0);
 			break;
 		    case 4:
-			PROTECT(yylval = allocVector1REAL());
+			yylval = allocVector1REAL();
 			REAL(yylval)[0] = R_PosInf;
 			break;
 		    case 5:
-			PROTECT(yylval = allocVector1REAL());
+			yylval = allocVector1REAL();
 			REAL(yylval)[0] = R_NaN;
 			break;
 		    case 6:
-                        PROTECT(yylval = ScalarIntegerMaybeConst(NA_INTEGER));
+                        yylval = ScalarIntegerMaybeConst(NA_INTEGER);
 			break;
 		    case 7:
-			PROTECT(yylval = allocVector1REAL());
+			yylval = allocVector1REAL();
 			REAL(yylval)[0] = NA_REAL;
 			break;
 		    case 8:
-			PROTECT(yylval = allocVector(STRSXP, 1));
+			yylval = allocVector(STRSXP, 1);
 			SET_STRING_ELT(yylval, 0, NA_STRING);
 			break;
 		    case 9:
-			PROTECT(yylval = allocVector(CPLXSXP, 1));
+			yylval = allocVector(CPLXSXP, 1);
 			COMPLEX(yylval)[0].r = COMPLEX(yylval)[0].i = NA_REAL;
 			break;
 		    }
 		} else
-		    PROTECT(yylval = R_NilValue);
+		    yylval = R_NilValue;
 		break;
 	    case FUNCTION:
 	    case WHILE:
@@ -1843,7 +1843,7 @@ static int KeywordLookup(const char *s)
 	    case ELSE:
 		break;
 	    case SYMBOL:
-		PROTECT(yylval = install(s));
+		yylval = install(s);
 		break;
 	    }
 	    return keywords[i].token;
@@ -2184,7 +2184,6 @@ static int NumericValue(int c)
 	yylval = GenerateCode ? mkFloat(yytext) : R_NilValue;
     }
 
-    PROTECT(yylval);
     return NUM_CONST;
 }
 
@@ -2509,11 +2508,11 @@ static int StringValue(int c, Rboolean forSymbol)
     WTEXT_PUSH(0);
     if (c == R_EOF) {
         if(stext != st0) free(stext);
-        PROTECT(yylval = R_NilValue);
+        yylval = R_NilValue;
     	return INCOMPLETE_STRING;
     }
     if(forSymbol) {
-	PROTECT(yylval = install(stext));
+	yylval = install(stext);
 	if(stext != st0) free(stext);
 	return SYMBOL;
     } else {
@@ -2521,11 +2520,11 @@ static int StringValue(int c, Rboolean forSymbol)
 	    if(oct_or_hex)
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
 	    if(wcnt < 10000)
-		PROTECT(yylval = mkStringUTF8(wcs, wcnt)); /* include terminator */
+		yylval = mkStringUTF8(wcs, wcnt); /* include terminator */
 	    else
 		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"), ParseState.xxlineno);
 	} else
-	    PROTECT(yylval = mkString2(stext,  bp - stext - 1, oct_or_hex));
+	    yylval = mkString2(stext,  bp - stext - 1, oct_or_hex);
 	if(stext != st0) free(stext);
 	return STR_CONST;
     }
@@ -2622,7 +2621,7 @@ static int SymbolValue(int c)
     if ((kw = KeywordLookup(yytext))) 
 	return kw;
     
-    PROTECT(yylval = install(yytext));
+    yylval = install(yytext);
     return SYMBOL;
 }
 
