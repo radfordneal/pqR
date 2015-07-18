@@ -35,7 +35,20 @@
 
 static void yyerror(const char *);
 static int yylex();
-int yyparse(void);
+static int yyparse(void);
+
+#define R_ParseVector R_NewParseVector
+#define R_Parse1File R_NewParse1File
+#define R_Parse1Buffer R_NewParse1Buffer
+#define R_ParseFile R_NewParseFile
+#define R_ParseConn R_NewParseConn
+#define R_ParseBuffer R_NewParseBuffer
+#define R_InitSrcRefState R_NewInitSrcRefState
+#define R_FinalizeSrcRefState R_NewFinalizeSrcRefState
+#define isValidName NewIsValidName
+
+#undef attribute_hidden
+#define attribute_hidden static
 
 /* alloca.h inclusion is now covered by Defn.h */
 
@@ -1264,27 +1277,73 @@ static void ParseContextInit(void)
     R_ParseContext[0] = '\0';
 }
 
+/* -------------------------------------------------------------------------- */
+
+#define BGN_PARSE_FUN \
+    int nprotect = 0;
+
+#define PARSE_SUB(w) \
+    do { \
+        SEXP _sub_ = (w); \
+        if (_sub_ == NULL) goto end; \
+        PROTECT(_sub_); \
+        nprotect++; \
+    } while (0)
+
+#define PARSE_SUB_NO_PROTECT(w) \
+    do { \
+        SEXP _sub_ = (w); \
+        if (_sub_ == NULL) goto end; \
+    } while (0)
+
+#define END_PARSE_FUN \
+  end: \
+    UNPROTECT(nprotect);
+
+static int next_token;
+
+static SEXP parse_expr(void)
+{
+    SEXP list, last, new;
+    list = NULL;
+    while (next_token != END_OF_INPUT) {
+        new = ScalarIntegerMaybeConst(next_token);
+        if (list == NULL) {
+            PROTECT(list = CONS(new,R_NilValue));
+            last = list;
+        }
+        else {
+            SETCDR(last,CONS(new,R_NilValue));
+            last = CDR(last);
+        }
+        next_token = yylex();
+    }
+    if (list != NULL)
+        UNPROTECT(1); /* list */
+    return list;
+}
+
 static SEXP R_Parse1(ParseStatus *status)
 {
-    switch(yyparse()) {
-    case 0:                     /* End of file */
-	*status = PARSE_EOF;
-	if (EndOfFile == 2) *status = PARSE_INCOMPLETE;
-	break;
-    case 1:                     /* Syntax error / incomplete */
-	*status = PARSE_ERROR;
-	if (EndOfFile) *status = PARSE_INCOMPLETE;
-	break;
-    case 2:                     /* Empty Line */
-	*status = PARSE_NULL;
-	break;
-    case 3:                     /* Valid expr '\n' terminated */
-    case 4:                     /* Valid expr ';' terminated */
-	*status = PARSE_OK;
-	break;
+    SEXP e;
+
+    next_token = yylex();
+    if (next_token == END_OF_INPUT) {
+        *status = PARSE_EOF;
+        return R_NilValue;
     }
-    return R_CurrentExpr;
+
+    e = parse_expr();
+    if (e == NULL)
+    { *status = next_token == END_OF_INPUT ? PARSE_INCOMPLETE : PARSE_ERROR;
+      return R_NilValue;
+    }
+
+    *status = PARSE_OK;
+    return e;
 }
+
+/* -------------------------------------------------------------------------- */
 
 static FILE *fp_parse;
 
@@ -1368,7 +1427,8 @@ static TextBuffer *txtb;
 
 static int text_getc(void)
 {
-    return R_TextBufferGetc(txtb);
+    int c = R_TextBufferGetc(txtb);
+    return c;
 }
 
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
@@ -1407,10 +1467,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	    R_PPStackTop = savestack;
 	    R_FinalizeSrcRefState(&ParseState);	    
 	    return R_NilValue;
-	    break;
 	case PARSE_EOF:
 	    goto finish;
-	    break;
 	}
     }
 
@@ -1768,6 +1826,8 @@ static SEXP mkComplex(const char *s)
     return t;
 }
 
+#if 0 
+
 SEXP mkTrue(void)
 {
     SEXP s = allocVector1LGL();
@@ -1781,6 +1841,8 @@ SEXP mkFalse(void)
     LOGICAL(s)[0] = 0;
     return s;
 }
+
+#endif
 
 static void yyerror(const char *s)
 {
@@ -2436,7 +2498,7 @@ static int SpecialValue(int c)
 }
 
 /* return 1 if name is a valid name 0 otherwise */
-int isValidName(const char *name)
+static int isValidName(const char *name)
 {
     const char *p = name;
     int i;
@@ -2586,7 +2648,6 @@ static int token(void)
     yylloc.first_parsed = ParseState.xxparseno;
 
     if (c == R_EOF) return END_OF_INPUT;
-
     /* Either digits or symbols can start with a "." */
     /* so we need to decide which it is and jump to  */
     /* the correct spot. */
