@@ -70,6 +70,8 @@ typedef struct yyltype
   int last_parsed;
 } yyltype;
 
+static yyltype prev_yylloc;
+
 # define YYLTYPE yyltype
 # define YYLLOC_DEFAULT(Current, Rhs, N)				\
     do									\
@@ -96,11 +98,6 @@ typedef struct yyltype
 	    YYRHSLOC (Rhs, 0).last_parsed;				\
 	}								\
     while (YYID (0))
-
-/* Useful defines so editors don't get confused ... */
-
-#define LBRACE	'{'
-#define RBRACE	'}'
 
 /* Functions used in the parsing process */
 
@@ -1305,7 +1302,22 @@ static void ParseContextInit(void)
     UNPROTECT(nprotect); \
     return NULL; \
   end:
-    
+
+static void start_location (yyltype *loc)
+{
+    loc->first_line   = loc->last_line   = yylloc.first_line;
+    loc->first_column = loc->last_column = yylloc.first_column;
+    loc->first_byte   = loc->last_byte   = yylloc.first_byte;
+    loc->first_parsed = loc->last_parsed = yylloc.first_parsed;
+}
+
+static void end_location (yyltype *loc)
+{
+    loc->last_line   = prev_yylloc.last_line;
+    loc->last_column = prev_yylloc.last_column;
+    loc->last_byte   = prev_yylloc.last_byte;
+    loc->last_parsed = prev_yylloc.last_parsed;
+}
 
 static int next_token;
 
@@ -1394,22 +1406,35 @@ static SEXP parse_expr(void)
 
 static SEXP R_Parse1(ParseStatus *status)
 {
-    SEXP e;
-
+    yychar = YYEMPTY;
     next_token = yylex();
+
     if (next_token == END_OF_INPUT) {
-        *status = PARSE_EOF;
-        return R_NilValue;
+        *status = EndOfFile==2 ? PARSE_INCOMPLETE : PARSE_EOF;
+        return R_CurrentExpr = R_NilValue;
     }
 
-    e = parse_expr();
-    if (e == NULL)
-    { *status = next_token == END_OF_INPUT ? PARSE_INCOMPLETE : PARSE_ERROR;
-      return R_NilValue;
+    if (next_token == '\n') {
+        *status = PARSE_NULL;
+        return R_CurrentExpr = R_NilValue;
     }
+
+    YYLTYPE loc;
+    start_location(&loc);
+    R_CurrentExpr = parse_expr();
+
+    if (R_CurrentExpr == NULL)
+    { *status = EndOfFile ? PARSE_INCOMPLETE : PARSE_ERROR;
+      return R_CurrentExpr = R_NilValue;
+    }
+
+    end_location(&loc);
+    if (ParseState.keepSrcRefs)
+        REPROTECT(SrcRefs = GrowList (SrcRefs, 
+                             makeSrcref(&loc, ParseState.SrcFile)), srindex);
 
     *status = PARSE_OK;
-    return e;
+    return R_CurrentExpr;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1544,7 +1569,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 finish:
 
     t = CDR(t);
-    rval = allocVector(EXPRSXP, length(t));
+    PROTECT(rval = allocVector(EXPRSXP, length(t)));
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
     if (ParseState.keepSrcRefs) 
@@ -1727,7 +1752,7 @@ finish:
 
 static void IfPush(void)
 {
-    if (*contextp==LBRACE ||
+    if (*contextp=='{' ||
 	*contextp=='['    ||
 	*contextp=='('    ||
 	*contextp == 'i') {
@@ -2710,6 +2735,7 @@ static int token(void)
     c = SkipSpace();
     if (c == '#') c = SkipComment();
 
+    prev_yylloc = yylloc;
     yylloc.first_line = ParseState.xxlineno;
     yylloc.first_column = ParseState.xxcolno;
     yylloc.first_byte = ParseState.xxbyteno;
@@ -2838,10 +2864,10 @@ static int token(void)
 	}
 	yylval = install("|");
 	return OR;
-    case LBRACE:
+    case '{':
 	yylval = install("{");
 	return c;
-    case RBRACE:
+    case '}':
 	return c;
     case '(':
 	yylval = install("(");
@@ -2932,7 +2958,7 @@ static int yylex(void)
 	    /* The corresponding "i" values are */
 	    /* popped off the context stack. */
 
-	    if (tok == RBRACE || tok == ')' || tok == ']' ) {
+	    if (tok == '}' || tok == ')' || tok == ']' ) {
 		while (*contextp == 'i')
 		    ifpop();
 		*contextp-- = 0;
@@ -3078,7 +3104,7 @@ static int yylex(void)
 	*++contextp = tok;
 	break;
 
-    case LBRACE:
+    case '{':
 	if(contextp - contextstack >= CONTEXTSTACK_SIZE)
 	    error(_("contextstack overflow at line %d"), ParseState.xxlineno);
 	*++contextp = tok;
@@ -3098,7 +3124,7 @@ static int yylex(void)
 	EatLines = 0;
 	break;
 
-    case RBRACE:
+    case '}':
 	while (*contextp == 'i')
 	    ifpop();
 	*contextp-- = 0;
