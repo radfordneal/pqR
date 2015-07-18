@@ -3539,6 +3539,23 @@ static SEXP parse_factor(void)
         if (next_token != ')') goto error;
         next_token = yylex();
     }
+    else if (next_token == '{') {
+        SEXP next, last;
+        next_token = yylex();
+        PROTECT(res = LCONS(install("{"),R_NilValue));
+        nprotect++;
+        last = res;
+        for (;;) {
+            while (next_token == ';')
+                next_token = yylex();
+            if (next_token == '}')
+                break;
+            PARSE_SUB (next = parse_expr());
+            SETCDR (last, CONS(next,R_NilValue));
+            last = CDR(last);
+        }
+        next_token = yylex();
+    }
     else if (next_token == SYMBOL || next_token == NUM_CONST
           || next_token == STR_CONST || next_token == NULL_CONST) {
         res = yylval;
