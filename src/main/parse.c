@@ -116,9 +116,6 @@ static int yyparse(void);
 #undef isValidName
 #define isValidName NewIsValidName
 
-#undef attribute_hidden
-#define attribute_hidden static
-
 /* alloca.h inclusion is now covered by Defn.h */
 
 #define yyconst const
@@ -723,16 +720,16 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   269,   269,   270,   271,   272,   273,   276,   277,   280,
-     283,   284,   285,   286,   288,   289,   291,   292,   293,   294,
-     295,   297,   298,   299,   300,   301,   302,   303,   304,   305,
-     306,   307,   308,   309,   310,   311,   312,   313,   314,   315,
-     316,   318,   319,   320,   322,   323,   324,   325,   326,   327,
-     328,   329,   330,   331,   332,   333,   334,   335,   336,   337,
-     338,   339,   340,   341,   342,   343,   347,   350,   353,   357,
-     358,   359,   360,   361,   362,   365,   366,   369,   370,   371,
-     372,   373,   374,   375,   376,   379,   380,   381,   382,   383,
-     386
+       0,   266,   266,   267,   268,   269,   270,   273,   274,   277,
+     280,   281,   282,   283,   285,   286,   288,   289,   290,   291,
+     292,   294,   295,   296,   297,   298,   299,   300,   301,   302,
+     303,   304,   305,   306,   307,   308,   309,   310,   311,   312,
+     313,   315,   316,   317,   319,   320,   321,   322,   323,   324,
+     325,   326,   327,   328,   329,   330,   331,   332,   333,   334,
+     335,   336,   337,   338,   339,   340,   344,   347,   350,   354,
+     355,   356,   357,   358,   359,   362,   363,   366,   367,   368,
+     369,   370,   371,   372,   373,   376,   377,   378,   379,   380,
+     383
 };
 #endif
 
@@ -3512,6 +3509,26 @@ static void ParseContextInit(void)
         nprotect++; \
     } while (0)
 
+#define PARSE_ERROR_MSG(s) \
+    do { \
+        yyerror(s); \
+        goto error; \
+    } while (0)
+
+#define PARSE_UNEXPECTED() \
+    do { \
+        char s[100] = "syntax error, unexpected"; \
+        if (next_token < 256) { \
+            char t[2] = { next_token, 0 }; \
+            copy_3_strings(s, sizeof s, "syntax error, unexpected '", t, "'"); \
+        } \
+        else { \
+            copy_2_strings (s, sizeof s, "syntax error, unexpected ", \
+                            yytname[next_token-255]); \
+        } \
+        PARSE_ERROR_MSG(s); \
+    } while (0)
+
 #define END_PARSE_FUN \
     UNPROTECT(nprotect); \
     goto end; \
@@ -3548,7 +3565,8 @@ static SEXP parse_factor(void)
     if (next_token == '(') {
         next_token = yylex();
         PARSE_SUB (res = parse_expr());
-        if (next_token != ')') goto error;
+        if (next_token != ')')
+            PARSE_UNEXPECTED();
         next_token = yylex();
     }
     else if (next_token == '{') {
@@ -3574,7 +3592,7 @@ static SEXP parse_factor(void)
         next_token = yylex();
     }
     else
-        goto error;
+        PARSE_UNEXPECTED();
 
     END_PARSE_FUN;
     return res;
@@ -3621,6 +3639,22 @@ static SEXP parse_expr(void)
     return res;
 }
 
+static SEXP parse_prog(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    PARSE_SUB_PROTECT(res = parse_expr());
+
+    if (next_token != '\n' && next_token != ';') {
+REprintf("unexpected in parse_prog\n");
+        PARSE_UNEXPECTED();
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
 static SEXP R_Parse1(ParseStatus *status)
 {
     yychar = YYEMPTY;
@@ -3638,11 +3672,12 @@ static SEXP R_Parse1(ParseStatus *status)
 
     YYLTYPE loc;
     start_location(&loc);
-    R_CurrentExpr = parse_expr();
 
-    if (R_CurrentExpr == NULL)
-    { *status = EndOfFile ? PARSE_INCOMPLETE : PARSE_ERROR;
-      return R_CurrentExpr = R_NilValue;
+    R_CurrentExpr = parse_prog();
+
+    if (R_CurrentExpr == NULL) {
+        *status = EndOfFile ? PARSE_INCOMPLETE : PARSE_ERROR;
+        return R_CurrentExpr = R_NilValue;
     }
 
     end_location(&loc);

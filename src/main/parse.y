@@ -49,9 +49,6 @@ static int yyparse(void);
 #undef isValidName
 #define isValidName NewIsValidName
 
-#undef attribute_hidden
-#define attribute_hidden static
-
 /* alloca.h inclusion is now covered by Defn.h */
 
 #define yyconst const
@@ -1295,6 +1292,26 @@ static void ParseContextInit(void)
         nprotect++; \
     } while (0)
 
+#define PARSE_ERROR_MSG(s) \
+    do { \
+        yyerror(s); \
+        goto error; \
+    } while (0)
+
+#define PARSE_UNEXPECTED() \
+    do { \
+        char s[100] = "syntax error, unexpected"; \
+        if (next_token < 256) { \
+            char t[2] = { next_token, 0 }; \
+            copy_3_strings(s, sizeof s, "syntax error, unexpected '", t, "'"); \
+        } \
+        else { \
+            copy_2_strings (s, sizeof s, "syntax error, unexpected ", \
+                            yytname[next_token-255]); \
+        } \
+        PARSE_ERROR_MSG(s); \
+    } while (0)
+
 #define END_PARSE_FUN \
     UNPROTECT(nprotect); \
     goto end; \
@@ -1331,7 +1348,8 @@ static SEXP parse_factor(void)
     if (next_token == '(') {
         next_token = yylex();
         PARSE_SUB (res = parse_expr());
-        if (next_token != ')') goto error;
+        if (next_token != ')')
+            PARSE_UNEXPECTED();
         next_token = yylex();
     }
     else if (next_token == '{') {
@@ -1357,7 +1375,7 @@ static SEXP parse_factor(void)
         next_token = yylex();
     }
     else
-        goto error;
+        PARSE_UNEXPECTED();
 
     END_PARSE_FUN;
     return res;
@@ -1404,6 +1422,22 @@ static SEXP parse_expr(void)
     return res;
 }
 
+static SEXP parse_prog(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    PARSE_SUB_PROTECT(res = parse_expr());
+
+    if (next_token != '\n' && next_token != ';') {
+REprintf("unexpected in parse_prog\n");
+        PARSE_UNEXPECTED();
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
 static SEXP R_Parse1(ParseStatus *status)
 {
     yychar = YYEMPTY;
@@ -1421,11 +1455,12 @@ static SEXP R_Parse1(ParseStatus *status)
 
     YYLTYPE loc;
     start_location(&loc);
-    R_CurrentExpr = parse_expr();
 
-    if (R_CurrentExpr == NULL)
-    { *status = EndOfFile ? PARSE_INCOMPLETE : PARSE_ERROR;
-      return R_CurrentExpr = R_NilValue;
+    R_CurrentExpr = parse_prog();
+
+    if (R_CurrentExpr == NULL) {
+        *status = EndOfFile ? PARSE_INCOMPLETE : PARSE_ERROR;
+        return R_CurrentExpr = R_NilValue;
     }
 
     end_location(&loc);

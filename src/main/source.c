@@ -278,7 +278,9 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	    cntxt.cenddata = con;
 	}
 	if(!con->canread) error(_("cannot read from this connection"));
-	s = R_ParseConn(con, num, &status, source);
+        extern SEXP R_NewParseConn(Rconnection, int, ParseStatus *, SEXP);
+	s = PRIMVAL(op) ? R_NewParseConn(con, num, &status, source)
+                        : R_ParseConn(con, num, &status, source);
 	if(!wasopen) {
 	    PROTECT(s);
 	    endcontext(&cntxt);
@@ -289,7 +291,10 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else {
 	if (num == NA_INTEGER) num = 1;
-	s = R_ParseBuffer(&R_ConsoleIob, num, &status, prompt, source);
+        extern SEXP R_NewParseBuffer(IoBuffer*, int, ParseStatus*, SEXP, SEXP);
+	s = PRIMVAL(op) 
+             ? R_NewParseBuffer(&R_ConsoleIob, num, &status, prompt, source)
+             : R_ParseBuffer(&R_ConsoleIob, num, &status, prompt, source);
 	if (status != PARSE_OK) parseError(call, R_ParseError);
     }
     UNPROTECT(2);
