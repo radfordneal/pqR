@@ -3577,11 +3577,36 @@ static int next_token;
 /* -------------------------------------------------------------------------- */
 /* THE RECURSIVE DESCENT PARSER                                               */
 
-static SEXP parse_element(void), 
+static SEXP parse_formlist(void),
+            parse_sublist(void),
+            parse_element(void), 
             parse_term(void), 
             parse_sum(void),
             parse_expr(void),
-            parse_expr_or_assign(void);
+            parse_expr_or_assign(void),
+            parse_prog(void);
+
+static SEXP parse_formlist(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    res = R_NilValue;
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_sublist(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    res = R_NilValue;
+
+    END_PARSE_FUN;
+    return res;
+}
 
 static SEXP parse_element(void)
 {
@@ -3622,7 +3647,7 @@ static SEXP parse_element(void)
         PROTECT_N(res = LCONS(install("function"),R_NilValue));
         NEXT_TOKEN();
         EXPECT('(');
-        args = R_NilValue; /* ---- MORE HERE ---- */
+        PARSE_SUB(args = parse_formlist());
         SETCDR(res,CONS(args,R_NilValue));
         EXPECT(')');
         EAT_LINES();
@@ -3693,6 +3718,49 @@ static SEXP parse_element(void)
     }
     else
         PARSE_UNEXPECTED();
+
+    /* Now parse any postfix parts. */
+
+    for (;;) {
+        if (next_token == '(') {
+            SEXP subs;
+            PROTECT_N(res = LCONS(res,R_NilValue));
+            NEXT_TOKEN();
+            PARSE_SUB(subs = parse_sublist());
+            SETCDR(res,subs);
+            EXPECT(')');
+        }
+        else if (next_token == '[') {
+            SEXP subs;
+            PROTECT_N(res = CONS(res,R_NilValue));
+            PROTECT_N(res = LCONS(install("["),res));
+            NEXT_TOKEN();
+            PARSE_SUB(subs = parse_sublist());
+            SETCDR(CDR(res),subs);
+            EXPECT(']');
+        }
+        else if (next_token == LBB) {
+            SEXP subs;
+            PROTECT_N(res = CONS(res,R_NilValue));
+            PROTECT_N(res = LCONS(install("[["),res));
+            NEXT_TOKEN();
+            PARSE_SUB(subs = parse_sublist());
+            SETCDR(CDR(res),subs);
+            EXPECT(']');
+            EXPECT(']');
+        }
+        else if (next_token == '$') {
+            PROTECT_N(res = CONS(res,R_NilValue));
+            PROTECT_N(res = LCONS(install("$"),res));
+            NEXT_TOKEN();
+            if (next_token != SYMBOL && next_token != STR_CONST)
+                PARSE_UNEXPECTED();
+            SETCDR(CDR(res),yylval);
+            NEXT_TOKEN();
+        }
+        else
+            break;
+    }
 
     END_PARSE_FUN;
     return res;
