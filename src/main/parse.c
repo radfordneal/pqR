@@ -3540,7 +3540,9 @@ static void ParseContextInit(void)
         NEXT_TOKEN(); \
     } while (0)
 
-#define PROTECT_N(w) do { PROTECT(w); nprotect++; } while (0)
+#define PROTECT_N(w) (nprotect++, PROTECT(w))
+
+#define TOKEN_VALUE() (PROTECT_N(yylval))
 
 #define END_PARSE_FUN \
     UNPROTECT(nprotect); \
@@ -3613,9 +3615,21 @@ static SEXP parse_element(void)
     BGN_PARSE_FUN;
     SEXP res;
 
-    if (next_token == SYMBOL || next_token == NUM_CONST
-          || next_token == STR_CONST || next_token == NULL_CONST) {
-        res = yylval;
+    if (next_token == SYMBOL || next_token == STR_CONST) {
+        res = TOKEN_VALUE();
+        NEXT_TOKEN();
+        if (next_token == NS_GET || next_token == NS_GET_INT) {
+            PROTECT_N(res = CONS(res,R_NilValue));
+            PROTECT_N(res = LCONS (install(next_token==NS_GET ? "::" : ":::"),
+                                   res));
+            NEXT_TOKEN();
+            if (next_token != SYMBOL && next_token != STR_CONST)
+                PARSE_UNEXPECTED();
+            SETCDR(CDR(res),TOKEN_VALUE());
+        }
+    }
+    else if (next_token == NUM_CONST || next_token == NULL_CONST) {
+        res = TOKEN_VALUE();
         NEXT_TOKEN();
     }
     else if (next_token == '(') {
@@ -3698,7 +3712,7 @@ static SEXP parse_element(void)
         EXPECT('(');
         if (next_token != SYMBOL)
             PARSE_UNEXPECTED();
-        SETCDR(res,CONS(yylval,R_NilValue));
+        SETCDR(res,CONS(TOKEN_VALUE(),R_NilValue));
         NEXT_TOKEN();
         EXPECT(IN);
         PARSE_SUB(vec = parse_expr());
@@ -3755,7 +3769,7 @@ static SEXP parse_element(void)
             NEXT_TOKEN();
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
-            SETCDR(CDR(res),yylval);
+            SETCDR(CDR(res),TOKEN_VALUE());
             NEXT_TOKEN();
         }
         else
