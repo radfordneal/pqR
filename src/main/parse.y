@@ -1274,6 +1274,7 @@ static void ParseContextInit(void)
 }
 
 /* -------------------------------------------------------------------------- */
+/* PARSING VARIABLES, MACROS, AND FUNCTIONS                                   */
 
 #define BGN_PARSE_FUN \
     int nprotect = 0
@@ -1338,16 +1339,23 @@ static void end_location (yyltype *loc)
 
 static int next_token;
 
-static SEXP parse_factor(void), parse_term(void), parse_expr(void);
+/* -------------------------------------------------------------------------- */
+/* THE RECURSIVE DESCENT PARSER                                               */
 
-static SEXP parse_factor(void)
+static SEXP parse_element(void), 
+            parse_term(void), 
+            parse_sum(void),
+            parse_expr(void),
+            parse_expr_or_assign(void);
+
+static SEXP parse_element(void)
 {
     BGN_PARSE_FUN;
     SEXP res;
 
     if (next_token == '(') {
         next_token = yylex();
-        PARSE_SUB (res = parse_expr());
+        PARSE_SUB (res = parse_expr_or_assign());
         if (next_token != ')')
             PARSE_UNEXPECTED();
         next_token = yylex();
@@ -1359,11 +1367,11 @@ static SEXP parse_factor(void)
         nprotect++;
         last = res;
         for (;;) {
-            while (next_token == ';')
+            while (next_token == ';' || next_token == '\n')
                 next_token = yylex();
             if (next_token == '}')
                 break;
-            PARSE_SUB (next = parse_expr());
+            PARSE_SUB (next = parse_expr_or_assign());
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
         }
@@ -1373,6 +1381,21 @@ static SEXP parse_factor(void)
           || next_token == STR_CONST || next_token == NULL_CONST) {
         res = yylval;
         next_token = yylex();
+    }
+    else if (next_token == FUNCTION) {
+        PROTECT(res = LCONS(install("function"),R_NilValue));
+        next_token = yylex();
+        if (next_token != '(')
+            PARSE_UNEXPECTED();
+        next_token = yylex();
+        /* ---- MORE HERE ---- */
+        SETCDR(res,CONS(R_NilValue,R_NilValue));
+        if (next_token != ')')
+            PARSE_UNEXPECTED();
+        next_token = yylex();
+        SEXP body;
+        PARSE_SUB(body = parse_expr_or_assign);
+        SETCDR(CDR(res),body);
     }
     else
         PARSE_UNEXPECTED();
@@ -1386,13 +1409,13 @@ static SEXP parse_term(void)
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB_PROTECT (res = parse_factor());
+    PARSE_SUB_PROTECT (res = parse_element());
 
     while (next_token == '*' || next_token == '/') {
         char s[2] = { next_token, 0 };
         op = install(s);
         next_token = yylex();
-        PARSE_SUB (right = parse_term());
+        PARSE_SUB (right = parse_element());
         PROTECT (res = lang3(op,res,right));
     }
 
@@ -1400,7 +1423,7 @@ static SEXP parse_term(void)
     return res;
 }
 
-static SEXP parse_expr(void)
+static SEXP parse_sum(void)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
@@ -1422,12 +1445,34 @@ static SEXP parse_expr(void)
     return res;
 }
 
+static SEXP parse_expr(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    PARSE_SUB(res = parse_sum());  /* for now */
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_expr_or_assign(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res;
+
+    PARSE_SUB(res = parse_expr());  /* for now */
+
+    END_PARSE_FUN;
+    return res;
+}
+
 static SEXP parse_prog(void)
 {
     BGN_PARSE_FUN;
     SEXP res;
 
-    PARSE_SUB_PROTECT(res = parse_expr());
+    PARSE_SUB_PROTECT(res = parse_expr_or_assign());
 
     if (next_token != '\n' && next_token != ';') {
 REprintf("unexpected in parse_prog\n");
@@ -1437,6 +1482,8 @@ REprintf("unexpected in parse_prog\n");
     END_PARSE_FUN;
     return res;
 }
+
+/* -------------------------------------------------------------------------- */
 
 static SEXP R_Parse1(ParseStatus *status)
 {
