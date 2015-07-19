@@ -1376,7 +1376,30 @@ static SEXP parse_formlist(void)
     BGN_PARSE_FUN;
     SEXP res;
 
-    res = R_NilValue;
+    if (next_token == ')')
+        res = R_NilValue;
+    else {
+        SEXP last;
+        res = PROTECT_N(CONS(R_MissingArg,R_NilValue));
+        last = res;
+        for (;;) {
+            if (next_token != SYMBOL)
+                PARSE_UNEXPECTED();
+            SET_TAG (last, TOKEN_VALUE());
+            NEXT_TOKEN();
+            if (next_token == EQ_ASSIGN) {
+                SEXP def;
+                NEXT_TOKEN();
+                PARSE_SUB(def = parse_expr());
+                SETCAR (last, def);
+            }
+            if (next_token != ',')
+                break;
+            NEXT_TOKEN();
+            SETCDR (last, CONS(R_MissingArg,R_NilValue));
+            last = CDR(last);
+        }
+    }
 
     END_PARSE_FUN;
     return res;
@@ -1387,7 +1410,43 @@ static SEXP parse_sublist(void)
     BGN_PARSE_FUN;
     SEXP res;
 
-    res = R_NilValue;
+    if (next_token == ')')
+        res = R_NilValue;
+    else {
+        SEXP last;
+        res = PROTECT_N(CONS(R_NilValue,R_NilValue));
+        last = res;
+        for (;;) {
+            SEXP arg;
+            if (next_token == ',' || next_token == ')' || next_token == ']')
+                SETCAR (last, R_MissingArg);
+            else {
+                PARSE_SUB(arg = parse_expr());
+                if (next_token == EQ_ASSIGN) {
+                    SEXP val;
+                    if (TYPEOF(arg) != SYMSXP && TYPEOF(arg) != STRSXP
+                                              && arg != R_NilValue)
+                        PARSE_UNEXPECTED();
+                    SET_TAG (last, arg);
+                    NEXT_TOKEN();
+                    if (next_token == ',' || next_token == ')' 
+                                          || next_token == ']')
+                        val = R_MissingArg;
+                    else
+                        PARSE_SUB(val = parse_expr());
+                    SETCAR (last, val);
+                }
+                else {
+                    SETCAR (last, arg);
+                }
+            }
+            if (next_token != ',')
+                break;
+            NEXT_TOKEN();
+            SETCDR (last, CONS(R_NilValue,R_NilValue));
+            last = CDR(last);
+        }
+    }
 
     END_PARSE_FUN;
     return res;
@@ -1408,7 +1467,8 @@ static SEXP parse_element(void)
             NEXT_TOKEN();
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
-            SETCDR(CDR(res),TOKEN_VALUE());
+            SETCDR(CDR(res),CONS(TOKEN_VALUE(),R_NilValue));
+            NEXT_TOKEN();
         }
     }
     else if (next_token == NUM_CONST || next_token == NULL_CONST) {
