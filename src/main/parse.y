@@ -1283,12 +1283,6 @@ static void ParseContextInit(void)
     do { \
         SEXP _sub_ = (w); \
         if (_sub_ == NULL) goto error; \
-    } while (0)
-
-#define PARSE_SUB_PROTECT(w) \
-    do { \
-        SEXP _sub_ = (w); \
-        if (_sub_ == NULL) goto error; \
         PROTECT_N(_sub_); \
     } while (0)
 
@@ -1362,14 +1356,7 @@ static int next_token;
 /* -------------------------------------------------------------------------- */
 /* THE RECURSIVE DESCENT PARSER                                               */
 
-static SEXP parse_formlist(void),
-            parse_sublist(void),
-            parse_element(void), 
-            parse_term(void), 
-            parse_sum(void),
-            parse_expr(void),
-            parse_expr_or_assign(void),
-            parse_prog(void);
+static SEXP parse_expr(void), parse_expr_or_assign(void);
 
 static SEXP parse_formlist(void)
 {
@@ -1606,9 +1593,9 @@ static SEXP parse_element(void)
             EXPECT(']');
             EXPECT(']');
         }
-        else if (next_token == '$') {
+        else if (next_token == '$' || next_token == '@') {
             PROTECT_N(res = CONS(res,R_NilValue));
-            PROTECT_N(res = LCONS(install("$"),res));
+            PROTECT_N(res = LCONS(install_char(next_token),res));
             NEXT_TOKEN();
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
@@ -1623,17 +1610,53 @@ static SEXP parse_element(void)
     return res;
 }
 
-static SEXP parse_term(void)
+static SEXP parse_power(void)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB_PROTECT (res = parse_element());
+    PARSE_SUB (res = parse_element());
 
-    while (next_token == '*' || next_token == '/') {
+    if (next_token == '^') {
+        op = install("^");
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_power());
+        res = lang3(op,res,right);
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_unary_plus_minus(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, op;
+
+    if (next_token == '+' || next_token == '-') {
         op = install_char(next_token);
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_element());
+        PARSE_SUB (res = parse_unary_plus_minus());
+        res = lang2(op,res);
+    }
+    else
+        PARSE_SUB (res = parse_power());
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_colon(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_unary_plus_minus());
+
+    while (next_token == ':') {
+        op = install(":");
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_unary_plus_minus());
         PROTECT_N (res = lang3(op,res,right));
     }
 
@@ -1641,22 +1664,218 @@ static SEXP parse_term(void)
     return res;
 }
 
-static SEXP parse_sum(void)
+static SEXP parse_special(void)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    if (next_token == '+' || next_token == '-')
-        res = NULL;
-    else
-        PARSE_SUB_PROTECT (res = parse_term());
+    PARSE_SUB (res = parse_colon());
+
+    while (next_token == SPECIAL) {
+        op = TOKEN_VALUE();
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_colon());
+        PROTECT_N (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_mul_div(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_special());
+
+    while (next_token == '*' || next_token == '/') {
+        op = install_char(next_token);
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_special());
+        PROTECT_N (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_plus_minus(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_mul_div());
 
     while (next_token == '+' || next_token == '-') {
         op = install_char(next_token);
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_term());
+        PARSE_SUB (right = parse_mul_div());
         PROTECT_N (res = res ? lang3(op,res,right) : lang2(op,right));
     }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_relation(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_plus_minus());
+
+    if (next_token == GT || next_token == GE || next_token == EQ
+     || next_token == LE || next_token == LT || next_token == NE) {
+        op = TOKEN_VALUE();
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_plus_minus());
+        PROTECT_N (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_not(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, op;
+
+    if (next_token == '!') {
+        op = install("!");
+        NEXT_TOKEN();
+        PARSE_SUB (res = parse_not());
+        res = lang2(op,res);
+    }
+    else
+        PARSE_SUB (res = parse_relation());
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_and(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_not());
+
+    while (next_token == AND || next_token == AND2) {
+        op = TOKEN_VALUE();
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_not());
+        PROTECT_N (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_or(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_and());
+
+    while (next_token == OR || next_token == OR2) {
+        op = TOKEN_VALUE();
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_and());
+        PROTECT_N (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_unary_tilde(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, op;
+
+    if (next_token == '~') {
+        op = install("~");
+        NEXT_TOKEN();
+        PARSE_SUB (res = parse_unary_tilde());
+        res = lang2(op,res);
+    }
+    else
+        PARSE_SUB (res = parse_or());
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_tilde(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_unary_tilde());
+
+    while (next_token == '~') {
+        op = install("~");
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_unary_tilde());
+        PROTECT_N (res = lang3(op,res,right));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_right_assign(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_tilde());
+
+    while (next_token == RIGHT_ASSIGN) {
+        op = install("<-");
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_tilde());
+        PROTECT_N (res = lang3(op,right,res));
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_left_assign(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, right, op;
+
+    PARSE_SUB (res = parse_right_assign());
+
+    if (next_token == LEFT_ASSIGN) {
+        op = TOKEN_VALUE();
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_left_assign());
+        res = lang3(op,res,right);
+    }
+
+    END_PARSE_FUN;
+    return res;
+}
+
+static SEXP parse_unary_query(void)
+{
+    BGN_PARSE_FUN;
+    SEXP res, op;
+
+    if (next_token == '?') {
+        op = install("?");
+        NEXT_TOKEN();
+        PARSE_SUB (res = parse_unary_query());
+        res = lang2(op,res);
+    }
+    else
+        PARSE_SUB (res = parse_left_assign());
 
     END_PARSE_FUN;
     return res;
@@ -1665,9 +1884,16 @@ static SEXP parse_sum(void)
 static SEXP parse_expr(void)
 {
     BGN_PARSE_FUN;
-    SEXP res;
+    SEXP res, right, op;
 
-    PARSE_SUB(res = parse_sum());  /* for now */
+    PARSE_SUB (res = parse_unary_query());
+
+    while (next_token == '?') {
+        op = install("?");
+        NEXT_TOKEN();
+        PARSE_SUB (right = parse_unary_query());
+        PROTECT_N (res = lang3(op,res,right));
+    }
 
     END_PARSE_FUN;
     return res;
@@ -1678,7 +1904,7 @@ static SEXP parse_expr_or_assign(void)
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB_PROTECT (res = parse_expr());
+    PARSE_SUB (res = parse_expr());
 
     if (next_token == EQ_ASSIGN) {
         op = install("=");
@@ -1696,7 +1922,7 @@ static SEXP parse_prog(void)
     BGN_PARSE_FUN;
     SEXP res;
 
-    PARSE_SUB_PROTECT(res = parse_expr_or_assign());
+    PARSE_SUB (res = parse_expr_or_assign());
 
     if (next_token != '\n' && next_token != ';') {
         PARSE_UNEXPECTED();
