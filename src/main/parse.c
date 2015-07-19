@@ -3506,8 +3506,7 @@ static void ParseContextInit(void)
     do { \
         SEXP _sub_ = (w); \
         if (_sub_ == NULL) goto error; \
-        PROTECT(_sub_); \
-        nprotect++; \
+        PROTECT_N(_sub_); \
     } while (0)
 
 #define PARSE_ERROR_MSG(s) \
@@ -3530,6 +3529,19 @@ static void ParseContextInit(void)
         PARSE_ERROR_MSG(s); \
     } while (0)
 
+#define NEXT_TOKEN() (next_token = yylex())
+
+#define EAT_LINES() while (next_token == '\n') NEXT_TOKEN()
+
+#define EXPECT(tk) \
+    do { \
+        if (next_token != (tk)) \
+            PARSE_UNEXPECTED(); \
+        NEXT_TOKEN(); \
+    } while (0)
+
+#define PROTECT_N(w) do { PROTECT(w); nprotect++; } while (0)
+
 #define END_PARSE_FUN \
     UNPROTECT(nprotect); \
     goto end; \
@@ -3537,6 +3549,12 @@ static void ParseContextInit(void)
     UNPROTECT(nprotect); \
     return NULL; \
   end:
+
+static SEXP install_char (char c)
+{
+    char s[2] = { c, 0 };
+    return install(s);
+}
 
 static void start_location (yyltype *loc)
 {
@@ -3573,95 +3591,105 @@ static SEXP parse_element(void)
     if (next_token == SYMBOL || next_token == NUM_CONST
           || next_token == STR_CONST || next_token == NULL_CONST) {
         res = yylval;
-        next_token = yylex();
+        NEXT_TOKEN();
     }
     else if (next_token == '(') {
-        next_token = yylex();
-        PARSE_SUB (res = parse_expr_or_assign());
-        if (next_token != ')')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
+        SEXP in;
+        NEXT_TOKEN();
+        PROTECT_N(res = LCONS(install("("),R_NilValue));
+        PARSE_SUB (in = parse_expr_or_assign());
+        SETCDR(res,CONS(in,R_NilValue));
+        EXPECT(')');
     }
     else if (next_token == '{') {
         SEXP next, last;
-        next_token = yylex();
-        PROTECT(res = LCONS(install("{"),R_NilValue));
-        nprotect++;
+        PROTECT_N(res = LCONS(install("{"),R_NilValue));
+        NEXT_TOKEN();
         last = res;
         for (;;) {
             while (next_token == ';' || next_token == '\n')
-                next_token = yylex();
+                NEXT_TOKEN();
             if (next_token == '}')
                 break;
             PARSE_SUB (next = parse_expr_or_assign());
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
         }
-        next_token = yylex();
+        NEXT_TOKEN();
     }
     else if (next_token == FUNCTION) {
-        PROTECT(res = LCONS(install("function"),R_NilValue));
-        next_token = yylex();
-        if (next_token != '(')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
-        /* ---- MORE HERE ---- */
-        SETCDR(res,CONS(R_NilValue,R_NilValue));
-        if (next_token != ')')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
+        SEXP args;
+        PROTECT_N(res = LCONS(install("function"),R_NilValue));
+        NEXT_TOKEN();
+        EXPECT('(');
+        args = R_NilValue; /* ---- MORE HERE ---- */
+        SETCDR(res,CONS(args,R_NilValue));
+        EXPECT(')');
+        EAT_LINES();
         SEXP body;
         PARSE_SUB(body = parse_expr_or_assign());
         SETCDR(CDR(res),CONS(body,R_NilValue));
     }
     else if (next_token == REPEAT) {
         SEXP body;
-        PROTECT(res = LCONS(install("repeat"),R_NilValue));
+        PROTECT_N(res = LCONS(install("repeat"),R_NilValue));
+        NEXT_TOKEN();
         PARSE_SUB(body = parse_expr_or_assign());
         SETCDR(res,CONS(body,R_NilValue));
     }
     else if (next_token == WHILE) {
         SEXP cond, body;
-        PROTECT(res = LCONS(install("while"),R_NilValue));
-        next_token = yylex();
-        if (next_token != '(')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
+        PROTECT_N(res = LCONS(install("while"),R_NilValue));
+        NEXT_TOKEN();
+        EXPECT('(');
         PARSE_SUB(cond = parse_expr());
-        if (next_token != ')')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
+        EXPECT(')');
+        EAT_LINES();
         SETCDR(res,CONS(cond,R_NilValue));
         PARSE_SUB(body = parse_expr_or_assign());
         SETCDR(CDR(res),CONS(body,R_NilValue));
     }
     else if (next_token == IF) {
         SEXP cond, true_stmt, false_stmt;
-        PROTECT(res = LCONS(install("if"),R_NilValue));
-        next_token = yylex();
-        if (next_token != '(')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
+        PROTECT_N(res = LCONS(install("if"),R_NilValue));
+        NEXT_TOKEN();
+        EXPECT('(');
         PARSE_SUB(cond = parse_expr());
-        if (next_token != ')')
-            PARSE_UNEXPECTED();
-        next_token = yylex();
+        EXPECT(')');
+        EAT_LINES();
         SETCDR(res,CONS(cond,R_NilValue));
         PARSE_SUB(true_stmt = parse_expr_or_assign());
         SETCDR(CDR(res),CONS(true_stmt,R_NilValue));
         if (next_token == ELSE) {
-            next_token = yylex();
+            NEXT_TOKEN();
             PARSE_SUB(false_stmt = parse_expr_or_assign());
             SETCDR(CDDR(res),CONS(false_stmt,R_NilValue));
         }
     }
+    else if (next_token == FOR) {
+        SEXP vec, body;
+        PROTECT_N(res = LCONS(install("for"),R_NilValue));
+        NEXT_TOKEN();
+        EXPECT('(');
+        if (next_token != SYMBOL)
+            PARSE_UNEXPECTED();
+        SETCDR(res,CONS(yylval,R_NilValue));
+        NEXT_TOKEN();
+        EXPECT(IN);
+        PARSE_SUB(vec = parse_expr());
+        SETCDR(CDR(res),CONS(vec,R_NilValue));
+        EXPECT(')');
+        EAT_LINES();
+        PARSE_SUB(body = parse_expr_or_assign());
+        SETCDR(CDDR(res),CONS(body,R_NilValue));
+    }
     else if (next_token == NEXT) {
         res = LCONS(install("next"),R_NilValue);
-        next_token = yylex();
+        NEXT_TOKEN();
     }
     else if (next_token == BREAK) {
         res = LCONS(install("break"),R_NilValue);
-        next_token = yylex();
+        NEXT_TOKEN();
     }
     else
         PARSE_UNEXPECTED();
@@ -3678,11 +3706,10 @@ static SEXP parse_term(void)
     PARSE_SUB_PROTECT (res = parse_element());
 
     while (next_token == '*' || next_token == '/') {
-        char s[2] = { next_token, 0 };
-        op = install(s);
-        next_token = yylex();
+        op = install_char(next_token);
+        NEXT_TOKEN();
         PARSE_SUB (right = parse_element());
-        PROTECT (res = lang3(op,res,right));
+        PROTECT_N (res = lang3(op,res,right));
     }
 
     END_PARSE_FUN;
@@ -3700,11 +3727,10 @@ static SEXP parse_sum(void)
         PARSE_SUB_PROTECT (res = parse_term());
 
     while (next_token == '+' || next_token == '-') {
-        char s[2] = { next_token, 0 };
-        op = install(s);
-        next_token = yylex();
+        op = install_char(next_token);
+        NEXT_TOKEN();
         PARSE_SUB (right = parse_term());
-        PROTECT (res = res ? lang3(op,res,right) : lang2(op,right));
+        PROTECT_N (res = res ? lang3(op,res,right) : lang2(op,right));
     }
 
     END_PARSE_FUN;
@@ -3731,7 +3757,7 @@ static SEXP parse_expr_or_assign(void)
 
     if (next_token == EQ_ASSIGN) {
         op = install("=");
-        next_token = yylex();
+        NEXT_TOKEN();
         PARSE_SUB (right = parse_expr_or_assign());
         res = lang3(op,res,right);
     }
@@ -3748,7 +3774,6 @@ static SEXP parse_prog(void)
     PARSE_SUB_PROTECT(res = parse_expr_or_assign());
 
     if (next_token != '\n' && next_token != ';') {
-REprintf("unexpected in parse_prog\n");
         PARSE_UNEXPECTED();
     }
 
