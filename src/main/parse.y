@@ -1353,7 +1353,12 @@ static SEXP parse_element(void)
     BGN_PARSE_FUN;
     SEXP res;
 
-    if (next_token == '(') {
+    if (next_token == SYMBOL || next_token == NUM_CONST
+          || next_token == STR_CONST || next_token == NULL_CONST) {
+        res = yylval;
+        next_token = yylex();
+    }
+    else if (next_token == '(') {
         next_token = yylex();
         PARSE_SUB (res = parse_expr_or_assign());
         if (next_token != ')')
@@ -1377,11 +1382,6 @@ static SEXP parse_element(void)
         }
         next_token = yylex();
     }
-    else if (next_token == SYMBOL || next_token == NUM_CONST
-          || next_token == STR_CONST || next_token == NULL_CONST) {
-        res = yylval;
-        next_token = yylex();
-    }
     else if (next_token == FUNCTION) {
         PROTECT(res = LCONS(install("function"),R_NilValue));
         next_token = yylex();
@@ -1394,8 +1394,57 @@ static SEXP parse_element(void)
             PARSE_UNEXPECTED();
         next_token = yylex();
         SEXP body;
-        PARSE_SUB(body = parse_expr_or_assign);
-        SETCDR(CDR(res),body);
+        PARSE_SUB(body = parse_expr_or_assign());
+        SETCDR(CDR(res),CONS(body,R_NilValue));
+    }
+    else if (next_token == REPEAT) {
+        SEXP body;
+        PROTECT(res = LCONS(install("repeat"),R_NilValue));
+        PARSE_SUB(body = parse_expr_or_assign());
+        SETCDR(res,CONS(body,R_NilValue));
+    }
+    else if (next_token == WHILE) {
+        SEXP cond, body;
+        PROTECT(res = LCONS(install("while"),R_NilValue));
+        next_token = yylex();
+        if (next_token != '(')
+            PARSE_UNEXPECTED();
+        next_token = yylex();
+        PARSE_SUB(cond = parse_expr());
+        if (next_token != ')')
+            PARSE_UNEXPECTED();
+        next_token = yylex();
+        SETCDR(res,CONS(cond,R_NilValue));
+        PARSE_SUB(body = parse_expr_or_assign());
+        SETCDR(CDR(res),CONS(body,R_NilValue));
+    }
+    else if (next_token == IF) {
+        SEXP cond, true_stmt, false_stmt;
+        PROTECT(res = LCONS(install("if"),R_NilValue));
+        next_token = yylex();
+        if (next_token != '(')
+            PARSE_UNEXPECTED();
+        next_token = yylex();
+        PARSE_SUB(cond = parse_expr());
+        if (next_token != ')')
+            PARSE_UNEXPECTED();
+        next_token = yylex();
+        SETCDR(res,CONS(cond,R_NilValue));
+        PARSE_SUB(true_stmt = parse_expr_or_assign());
+        SETCDR(CDR(res),CONS(true_stmt,R_NilValue));
+        if (next_token == ELSE) {
+            next_token = yylex();
+            PARSE_SUB(false_stmt = parse_expr_or_assign());
+            SETCDR(CDDR(res),CONS(false_stmt,R_NilValue));
+        }
+    }
+    else if (next_token == NEXT) {
+        res = LCONS(install("next"),R_NilValue);
+        next_token = yylex();
+    }
+    else if (next_token == BREAK) {
+        res = LCONS(install("break"),R_NilValue);
+        next_token = yylex();
     }
     else
         PARSE_UNEXPECTED();
@@ -1459,9 +1508,16 @@ static SEXP parse_expr(void)
 static SEXP parse_expr_or_assign(void)
 {
     BGN_PARSE_FUN;
-    SEXP res;
+    SEXP res, right, op;
 
-    PARSE_SUB(res = parse_expr());  /* for now */
+    PARSE_SUB_PROTECT (res = parse_expr());
+
+    if (next_token == EQ_ASSIGN) {
+        op = install("=");
+        next_token = yylex();
+        PARSE_SUB (right = parse_expr_or_assign());
+        res = lang3(op,res,right);
+    }
 
     END_PARSE_FUN;
     return res;
