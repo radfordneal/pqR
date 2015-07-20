@@ -2388,6 +2388,8 @@ static int next_token;
 
 static SEXP parse_expr(void), parse_expr_or_assign(void);
 
+/* Paarse the formals list of a function definiton. */
+
 static SEXP parse_formlist(void)
 {
     BGN_PARSE_FUN;
@@ -2400,9 +2402,19 @@ static SEXP parse_formlist(void)
         res = PROTECT_N (CONS(R_MissingArg,R_NilValue));
         last = res;
         for (;;) {
+            SEXP tag, f;
             if (next_token != SYMBOL)
                 PARSE_UNEXPECTED();
-            SET_TAG (last, TOKEN_VALUE());
+            tag = TOKEN_VALUE();
+            for (f = res; f != R_NilValue; f = CDR(f)) {
+                if (TAG(f) == tag) {
+                    YYLTYPE loc;
+                    start_location(&loc);
+                    error(_("Repeated formal argument '%s' on line %d"), 
+                            CHAR(PRINTNAME(tag)), loc.first_line);
+                }
+            }
+            SET_TAG (last, tag);
             NEXT_TOKEN();
             if (next_token == EQ_ASSIGN) {
                 SEXP def;
@@ -2421,6 +2433,8 @@ static SEXP parse_formlist(void)
     END_PARSE_FUN;
     return res;
 }
+
+/* Parse a list of subscripts or of function arguments. */
 
 static SEXP parse_sublist(void)
 {
