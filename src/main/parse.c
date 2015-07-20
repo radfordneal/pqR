@@ -2501,7 +2501,7 @@ static SEXP parse_element(void)
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
-            res = PROTECT_N (lang3 (op, res, sym));
+            res = PROTECT_N (LCONS (op, CONS (res, MaybeConstList1(sym))));
             NEXT_TOKEN();
         }
     }
@@ -2514,7 +2514,7 @@ static SEXP parse_element(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (inside = parse_expr_or_assign());
-        res = PROTECT_N (lang2 (op, inside));
+        res = PROTECT_N (LCONS (op, MaybeConstList1(inside)));
         EXPECT(')');
     }
     else if (next_token == '{') {
@@ -2601,10 +2601,12 @@ static SEXP parse_element(void)
         if (next_token == ELSE) {
             NEXT_TOKEN();
             PARSE_SUB(false_stmt = parse_expr_or_assign());
-            res = PROTECT_N (lang4 (op, cond, true_stmt, false_stmt));
+            res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
+                              MaybeConstList1(false_stmt)))));
         }
         else
-            res = PROTECT_N (lang3 (op, cond, true_stmt));
+            res = PROTECT_N (LCONS (op, CONS (cond,
+                              MaybeConstList1(true_stmt))));
     }
     else if (next_token == FOR) {
         SEXP op, sym, vec, body;
@@ -2665,7 +2667,7 @@ static SEXP parse_element(void)
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
-            res = lang3 (op, res, sym);
+            res = LCONS (op, CONS (res, MaybeConstList1(sym)));
             NEXT_TOKEN();
         }
         else
@@ -2687,7 +2689,7 @@ static SEXP parse_power(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_power());
-        res = lang3(op,res,right);
+        res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
     END_PARSE_FUN;
@@ -2703,7 +2705,7 @@ static SEXP parse_unary_plus_minus(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_unary_plus_minus());
-        res = lang2(op,res);
+        res = LCONS (op, MaybeConstList1(res));
     }
     else
         PARSE_SUB (res = parse_power());
@@ -2723,7 +2725,7 @@ static SEXP parse_colon(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_unary_plus_minus());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2741,7 +2743,7 @@ static SEXP parse_special(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_colon());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2759,7 +2761,7 @@ static SEXP parse_mul_div(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_special());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2777,7 +2779,8 @@ static SEXP parse_plus_minus(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_mul_div());
-        PROTECT_N (res = res ? lang3(op,res,right) : lang2(op,right));
+        PROTECT_N (res = res ? LCONS (op, CONS (res, MaybeConstList1(right)))
+                             : LCONS (op, MaybeConstList1(right)));
     }
 
     END_PARSE_FUN;
@@ -2796,7 +2799,7 @@ static SEXP parse_relation(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_plus_minus());
-        res = lang3(op,res,right);
+        res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
     END_PARSE_FUN;
@@ -2812,7 +2815,7 @@ static SEXP parse_not(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_not());
-        res = lang2(op,res);
+        res = LCONS (op, MaybeConstList1(res));
     }
     else
         PARSE_SUB (res = parse_relation());
@@ -2832,7 +2835,7 @@ static SEXP parse_and(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_not());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2850,7 +2853,7 @@ static SEXP parse_or(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_and());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2866,7 +2869,7 @@ static SEXP parse_unary_tilde(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_unary_tilde());
-        res = lang2(op,res);
+        res = LCONS (op, MaybeConstList1(res));
     }
     else
         PARSE_SUB (res = parse_or());
@@ -2886,7 +2889,7 @@ static SEXP parse_tilde(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_unary_tilde());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2904,7 +2907,7 @@ static SEXP parse_right_assign(void)
         op = TOKEN_VALUE();  /* already switched to left assignment */
         NEXT_TOKEN();
         PARSE_SUB (right = parse_tilde());
-        PROTECT_N (res = lang3(op,right,res));
+        PROTECT_N (res = LCONS (op, CONS (right, MaybeConstList1(res))));
     }
 
     END_PARSE_FUN;
@@ -2922,7 +2925,7 @@ static SEXP parse_left_assign(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_left_assign());
-        res = lang3(op,res,right);
+        res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
     END_PARSE_FUN;
@@ -2938,7 +2941,7 @@ static SEXP parse_unary_query(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_unary_query());
-        res = lang2(op,res);
+        res = LCONS (op, MaybeConstList1(res));
     }
     else
         PARSE_SUB (res = parse_left_assign());
@@ -2958,7 +2961,7 @@ static SEXP parse_expr(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_unary_query());
-        PROTECT_N (res = lang3(op,res,right));
+        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
     END_PARSE_FUN;
@@ -2976,7 +2979,7 @@ static SEXP parse_expr_or_assign(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_expr_or_assign());
-        res = lang3(op,res,right);
+        res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
     END_PARSE_FUN;
