@@ -348,20 +348,6 @@ cr	:
 
 #endif
 
-static SEXP mkString2(const char *s, int len, Rboolean escaped)
-{
-    SEXP t;
-    cetype_t enc = CE_NATIVE;
-
-    if(known_to_be_latin1) enc= CE_LATIN1;
-    else if(!escaped && known_to_be_utf8) enc = CE_UTF8;
-
-    PROTECT(t = allocVector(STRSXP, 1));
-    SET_STRING_ELT(t, 0, mkCharLenCE(s, len, enc));
-    UNPROTECT(1);
-    return t;
-}
-
 static int (*ptr_getc)(void);
 
 /* Private pushback, since file ungetc only guarantees one byte.
@@ -2311,6 +2297,21 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 	*ct++ = (c); \
 } while(0)
 #define CTEXT_POP() ct--
+
+
+static SEXP mkString2(const char *s, int len, Rboolean escaped)
+{
+    SEXP t;
+    cetype_t enc = CE_NATIVE;
+
+    if(known_to_be_latin1) enc= CE_LATIN1;
+    else if(!escaped && known_to_be_utf8) enc = CE_UTF8;
+
+    PROTECT(t = allocVector(STRSXP, 1));
+    SET_STRING_ELT(t, 0, mkCharLenCE(s, len, enc));
+    UNPROTECT(1);
+    return t;
+}
 
 
 /* forSymbol is true when parsing backticked symbols */
