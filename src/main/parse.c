@@ -2369,12 +2369,6 @@ static void ParseContextInit(void)
     return NULL; \
   end:
 
-static SEXP install_char (char c)
-{
-    char s[2] = { c, 0 };
-    return install(s);
-}
-
 static void start_location (yyltype *loc)
 {
     loc->first_line   = loc->last_line   = yylloc.first_line;
@@ -2435,43 +2429,59 @@ static SEXP parse_formlist(void)
 static SEXP parse_sublist(void)
 {
     BGN_PARSE_FUN;
-    SEXP res;
+    SEXP res, last, last2;
 
-    if (next_token == ')')
-        res = R_NilValue;
-    else {
-        SEXP last;
-        res = PROTECT_N (CONS(R_NilValue,R_NilValue));
-        last = res;
+    res = R_NilValue;
+    if (next_token != ')') {
+        SEXP next;
         for (;;) {
             SEXP arg;
             if (next_token == ',' || next_token == ')' || next_token == ']')
-                SETCAR (last, R_MissingArg);
+                next = MaybeConstList1(R_MissingArg);
             else {
                 PARSE_SUB(arg = parse_expr());
                 if (next_token == EQ_ASSIGN) {
-                    SEXP val;
-                    if (TYPEOF(arg) != SYMSXP && TYPEOF(arg) != STRSXP
-                                              && arg != R_NilValue)
+                    SEXP tag, val;
+                    if (TYPEOF(arg) == SYMSXP)
+                        tag = arg;
+                    else if (TYPEOF(arg) == STRSXP)
+                        tag = install (translateChar (STRING_ELT(arg,0)));
+                    else if (arg == R_NilValue)
+                        tag = install("NULL");
+                    else
                         PARSE_UNEXPECTED();
-                    SET_TAG (last, arg);
                     NEXT_TOKEN();
                     if (next_token == ',' || next_token == ')' 
                                           || next_token == ']')
                         val = R_MissingArg;
                     else
                         PARSE_SUB(val = parse_expr());
-                    SETCAR (last, val);
+                    next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
-                    SETCAR (last, arg);
+                    next = MaybeConstList1(arg);
                 }
+            }
+            if (res == R_NilValue) {
+                PROTECT_N (res = next);
+                last = res;
+                last2 = R_NilValue;
+            }
+            else {
+                if (IS_CONSTANT(last)) {
+                    last = cons_with_tag(CAR(last),CDR(last),TAG(last));
+                    if (last2 == R_NilValue)
+                        PROTECT_N (res = last);
+                    else
+                        SETCDR(last2,last);
+                }
+                SETCDR(last,next);
+                last2 = last;
+                last = next;
             }
             if (next_token != ',')
                 break;
             NEXT_TOKEN();
-            SETCDR (last, CONS(R_NilValue,R_NilValue));
-            last = CDR(last);
         }
     }
 
