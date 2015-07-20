@@ -112,8 +112,6 @@ static SEXP	NextArg0(SEXP, SEXP);
 static SEXP	NextArg(SEXP, SEXP, SEXP);
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
-static SEXP     checkparens (PPinfo, SEXP, int);
-static SEXP     keepparens (SEXP);
 
 /* These routines allocate constants */
 
@@ -501,29 +499,6 @@ static SEXP attachSrcrefs(SEXP val)
     return val;
 }
 
-
-/* Paren handling.  When parenthesized expressions are created, with xxparen,
-   they have LEVELS (gp) set to 1, unlike the same expression created as a
-   call of function `(`.  Any use of an expression should process it by
-   calling checkparens - which will either get rid of the parens or clear 
-   LEVELS (so it will be zero, as possibly expected) - or keepparens, which
-   always keeps the parens (clearing LEVELS to zero). */
-
-static SEXP checkparens (PPinfo mainop, SEXP n, int left)
-{
-    if (GenerateCode) {
-        if (TYPEOF(n)==LANGSXP && LEVELS(n)==1 && CAR(n)==install("(") 
-             && CDR(n)!=R_NilValue && CDDR(n)==R_NilValue) {
-            if ((mainop.kind==PP_BINARY || mainop.kind==PP_BINARY2 
-                  || mainop.kind==PP_UNARY) && needsparens(mainop,CADR(n),left))
-                n = CADR(n);  /* discard parens: deparse will put 'em back in */
-            else 
-                SETLEVELS(n,0);  /* clear flag, now that no longer needed */
-        }
-    }
-    return n;
-}
-
 static PPinfo noinfo = { PP_INVALID, 0, 0 };
 
 static PPinfo opinfo (SEXP op)
@@ -535,28 +510,7 @@ static PPinfo opinfo (SEXP op)
   return PPINFO(value);
 }
 
-static SEXP keepparens (SEXP n)
-{
-  return checkparens (noinfo, n, 0);
-}
-
 /*--------------------------------------------------------------------------*/
-
-/* Note that this may return a constant object, so check before modifying. */
-static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
-{
-    switch (TYPEOF(tag)) {
-    case STRSXP:
-	tag = install(translateChar(STRING_ELT(tag, 0)));
-        /* fall through... */
-    case SYMSXP:
-	return cons_with_tag (arg, R_NilValue, tag);
-    case NILSXP:
-    	return MaybeConstList1(arg);
-    default:
-	error(_("incorrect tag type at line %d"), lloc->first_line); 
-    }
-}
 
 
 /* Stretchy List Structures : Lists are created and grown using a special
@@ -633,42 +587,6 @@ static SEXP WrapInsert(SEXP l, SEXP s)
     SET_TAG(l,R_NilValue);
     return l;
 }
-
-static SEXP FirstArg0(SEXP t)
-{
-    SEXP tmp;
-    PROTECT(t);
-    PROTECT(tmp = NewList());
-    tmp = GrowList0(tmp, t);
-    UNPROTECT(2);
-    return tmp;
-}
-
-static SEXP NextArg0(SEXP l, SEXP t)
-{
-    return GrowList0(l, t);
-}
-
-static SEXP FirstArg(SEXP s, SEXP tag)
-{
-    SEXP tmp;
-    PROTECT2(s,tag);
-    tmp = NewList();
-    tmp = GrowList(tmp, s);
-    SET_TAG(CAR(tmp), tag);
-    UNPROTECT(2);
-    return tmp;
-}
-
-static SEXP NextArg(SEXP l, SEXP s, SEXP tag)
-{
-    PROTECT(tag);
-    l = GrowList(l, s);
-    SET_TAG(CAR(l), tag);
-    UNPROTECT(1);
-    return l;
-}
-
 
 
 /*--------------------------------------------------------------------------*/
