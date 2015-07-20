@@ -263,129 +263,136 @@ static int	xxvalue(SEXP, int, YYLTYPE *);
 
 %%
 
-prog	:	END_OF_INPUT			{ return 0; }
-	|	'\n'				{ return xxvalue(NULL,2,NULL); }
-	|	expr_or_assign '\n'		{ return xxvalue($1,3,&@1); }
-	|	expr_or_assign ';'		{ return xxvalue($1,4,&@1); }
+prog	:	END_OF_INPUT			{ return (&@1, 0); }
 	|	error	 			{ YYABORT; }
 	;
 
-expr_or_assign  :    expr                     { $$ = keepparens($1); }
-                |    equal_assign               { $$ = $1; }
-                ;
-
-equal_assign    :    expr EQ_ASSIGN expr_or_assign  { $$ = xxbinary($2,$1,$3); }
-                ;
-
-expr	: 	NUM_CONST			{ $$ = $1; }
-	|	STR_CONST			{ $$ = $1; }
-	|	NULL_CONST			{ $$ = $1; }
-	|	SYMBOL				{ $$ = $1; }
-
-	|	'{' exprlist '}'		{ $$ = xxexprlist($1,&@1,$2); }
-	|	'(' expr_or_assign ')'		{ $$ = xxparen($1,$2); }
-
-	|	'-' expr %prec UMINUS		{ $$ = xxunary($1,$2); }
-	|	'+' expr %prec UMINUS		{ $$ = xxunary($1,$2); }
-	|	'!' expr %prec UNOT		{ $$ = xxunary($1,$2); }
-	|	'~' expr %prec TILDE		{ $$ = xxunary($1,$2); }
-	|	'?' expr			{ $$ = xxunary($1,$2); }
-
-	|	expr ':'  expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '+'  expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '-' expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '*' expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '/' expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '^' expr 			{ $$ = xxbinary($2,$1,$3); }
-	|	expr SPECIAL expr		{ $$ = xxbinary($2,$1,$3); }
-	|	expr '%' expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '~' expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '?' expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr LT expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr LE expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr EQ expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr NE expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr GE expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr GT expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr AND expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr OR expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr AND2 expr			{ $$ = xxbinary($2,$1,$3); }
-	|	expr OR2 expr			{ $$ = xxbinary($2,$1,$3); }
-
-	|	expr LEFT_ASSIGN expr 		{ $$ = xxbinary($2,$1,$3); }
-	|	expr RIGHT_ASSIGN expr 		{ $$ = xxbinary($2,$3,$1); }
-	|	FUNCTION '(' formlist ')' cr expr_or_assign %prec LOW
-						{ $$ = xxdefun($1,$3,$6,&@$); }
-	|	expr '(' sublist ')'		{ $$ = xxfuncall($1,$3); }
-	|	IF ifcond expr_or_assign 			{ $$ = xxif($1,$2,$3); }
-	|	IF ifcond expr_or_assign ELSE expr_or_assign	{ $$ = xxifelse($1,$2,$3,$5); }
-	|	FOR forcond expr_or_assign %prec FOR 	{ $$ = xxfor($1,$2,$3); }
-	|	WHILE cond expr_or_assign	{ $$ = xxwhile($1,$2,$3); }
-	|	REPEAT expr_or_assign		{ $$ = xxrepeat($1,$2); }
-	|	expr LBB sublist ']' ']'	{ $$ = xxsubscript($1,$2,$3); }
-	|	expr '[' sublist ']'		{ $$ = xxsubscript($1,$2,$3); }
-	|	SYMBOL NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3); }
-	|	SYMBOL NS_GET STR_CONST		{ $$ = xxbinary($2,$1,$3); }
-	|	STR_CONST NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3); }
-	|	STR_CONST NS_GET STR_CONST	{ $$ = xxbinary($2,$1,$3); }
-	|	SYMBOL NS_GET_INT SYMBOL	{ $$ = xxbinary($2,$1,$3); }
-	|	SYMBOL NS_GET_INT STR_CONST	{ $$ = xxbinary($2,$1,$3); }
-	|	STR_CONST NS_GET_INT SYMBOL	{ $$ = xxbinary($2,$1,$3); }
-	|	STR_CONST NS_GET_INT STR_CONST	{ $$ = xxbinary($2,$1,$3); }
-	|	expr '$' SYMBOL			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '$' STR_CONST		{ $$ = xxbinary($2,$1,$3); }
-	|	expr '@' SYMBOL			{ $$ = xxbinary($2,$1,$3); }
-	|	expr '@' STR_CONST		{ $$ = xxbinary($2,$1,$3); }
-	|	NEXT				{ $$ = xxnxtbrk($1); }
-	|	BREAK				{ $$ = xxnxtbrk($1); }
-	;
-
-
-cond	:	'(' expr ')'			{ $$ = xxcond($2); }
-	;
-
-ifcond	:	'(' expr ')'			{ $$ = xxifcond($2); }
-	;
-
-forcond :	'(' SYMBOL IN expr ')' 		{ $$ = xxforcond($2,$4); }
-	;
-
-
-exprlist:					{ $$ = xxexprlist0(); }
-	|	expr_or_assign			{ $$ = xxexprlist1($1, &@1); }
-	|	exprlist ';' expr_or_assign	{ $$ = xxexprlist2($1, $3, &@3); }
-	|	exprlist ';'			{ $$ = $1; }
-	|	exprlist '\n' expr_or_assign	{ $$ = xxexprlist2($1, $3, &@3); }
-	|	exprlist '\n'			{ $$ = $1;}
-	;
-
-sublist	:	sub				{ $$ = xxsublist1($1); }
-	|	sublist cr ',' sub		{ $$ = xxsublist2($1,$4); }
-	;
-
-sub	:					{ $$ = xxsub0(); }
-	|	expr				{ $$ = xxsub1($1, &@1); }
-	|	SYMBOL EQ_ASSIGN 		{ $$ = xxsymsub0($1, &@1); }
-	|	SYMBOL EQ_ASSIGN expr		{ $$ = xxsymsub1($1,$3, &@1); }
-	|	STR_CONST EQ_ASSIGN 		{ $$ = xxsymsub0($1, &@1); }
-	|	STR_CONST EQ_ASSIGN expr	{ $$ = xxsymsub1($1,$3, &@1); }
-	|	NULL_CONST EQ_ASSIGN 		{ $$ = xxnullsub0(&@1); }
-	|	NULL_CONST EQ_ASSIGN expr	{ $$ = xxnullsub1($3, &@1); }
-	;
-
-formlist:					{ $$ = xxnullformal(); }
-	|	SYMBOL				{ $$ = xxfirstformal0($1); }
-	|	SYMBOL EQ_ASSIGN expr		{ $$ = xxfirstformal1($1,$3); }
-	|	formlist ',' SYMBOL		{ $$ = xxaddformal0($1,$3, &@3); }
-	|	formlist ',' SYMBOL EQ_ASSIGN expr   { $$ = xxaddformal1($1,$3,$5,&@3); }
-	;
-
-cr	:					{ EatLines = 1; }
-	;
 %%
 
+/* GRAMMAR FROM THE OLD BISON VERSION OF THE PARSER, WITHOUT THE ACTIONS. */
 
-/*----------------------------------------------------------------------------*/
+#if 0
+
+prog	:	END_OF_INPUT			
+	|	'\n'				
+	|	expr_or_assign '\n'		
+	|	expr_or_assign ';'		
+	|	error	 			
+	;
+
+expr_or_assign  :    expr                     
+                |    equal_assign               
+                ;
+
+equal_assign    :    expr EQ_ASSIGN expr_or_assign  
+                ;
+
+expr	: 	NUM_CONST			
+	|	STR_CONST			
+	|	NULL_CONST			
+	|	SYMBOL				
+
+	|	'{' exprlist '}'		
+	|	'(' expr_or_assign ')'		
+
+	|	'-' expr %prec UMINUS		
+	|	'+' expr %prec UMINUS		
+	|	'!' expr %prec UNOT		
+	|	'~' expr %prec TILDE		
+	|	'?' expr			
+
+	|	expr ':'  expr			
+	|	expr '+'  expr			
+	|	expr '-' expr			
+	|	expr '*' expr			
+	|	expr '/' expr			
+	|	expr '^' expr 			
+	|	expr SPECIAL expr		
+	|	expr '%' expr			
+	|	expr '~' expr			
+	|	expr '?' expr			
+	|	expr LT expr			
+	|	expr LE expr			
+	|	expr EQ expr			
+	|	expr NE expr			
+	|	expr GE expr			
+	|	expr GT expr			
+	|	expr AND expr			
+	|	expr OR expr			
+	|	expr AND2 expr			
+	|	expr OR2 expr			
+
+	|	expr LEFT_ASSIGN expr 		
+	|	expr RIGHT_ASSIGN expr 		
+	|	FUNCTION '(' formlist ')' cr expr_or_assign %prec LOW
+	|	expr '(' sublist ')'		
+	|	IF ifcond expr_or_assign 	
+	|	IF ifcond expr_or_assign ELSE expr_or_assign	
+	|	FOR forcond expr_or_assign %prec FOR 	
+	|	WHILE cond expr_or_assign	
+	|	REPEAT expr_or_assign		
+	|	expr LBB sublist ']' ']'	
+	|	expr '[' sublist ']'		
+	|	SYMBOL NS_GET SYMBOL		
+	|	SYMBOL NS_GET STR_CONST		
+	|	STR_CONST NS_GET SYMBOL		
+	|	STR_CONST NS_GET STR_CONST	
+	|	SYMBOL NS_GET_INT SYMBOL	
+	|	SYMBOL NS_GET_INT STR_CONST	
+	|	STR_CONST NS_GET_INT SYMBOL	
+	|	STR_CONST NS_GET_INT STR_CONST	
+	|	expr '$' SYMBOL			
+	|	expr '$' STR_CONST		
+	|	expr '@' SYMBOL			
+	|	expr '@' STR_CONST		
+	|	NEXT				
+	|	BREAK				
+	;
+
+
+cond	:	'(' expr ')'			
+	;
+
+ifcond	:	'(' expr ')'			
+	;
+
+forcond :	'(' SYMBOL IN expr ')' 		
+	;
+
+
+exprlist:					
+	|	expr_or_assign			
+	|	exprlist ';' expr_or_assign	
+	|	exprlist ';'			
+	|	exprlist '\n' expr_or_assign	
+	|	exprlist '\n'			
+	;
+
+sublist	:	sub				
+	|	sublist cr ',' sub		
+	;
+
+sub	:					
+	|	expr				
+	|	SYMBOL EQ_ASSIGN 		
+	|	SYMBOL EQ_ASSIGN expr		
+	|	STR_CONST EQ_ASSIGN 		
+	|	STR_CONST EQ_ASSIGN expr	
+	|	NULL_CONST EQ_ASSIGN 		
+	|	NULL_CONST EQ_ASSIGN expr	
+	;
+
+formlist:					
+	|	SYMBOL				
+	|	SYMBOL EQ_ASSIGN expr		
+	|	formlist ',' SYMBOL		
+	|	formlist ',' SYMBOL EQ_ASSIGN expr 
+	;
+
+cr	:	
+	;
+
+#endif
 
 static int (*ptr_getc)(void);
 
