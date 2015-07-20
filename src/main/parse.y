@@ -1367,7 +1367,7 @@ static SEXP parse_formlist(void)
         res = R_NilValue;
     else {
         SEXP last;
-        res = PROTECT_N(CONS(R_MissingArg,R_NilValue));
+        res = PROTECT_N (CONS(R_MissingArg,R_NilValue));
         last = res;
         for (;;) {
             if (next_token != SYMBOL)
@@ -1401,7 +1401,7 @@ static SEXP parse_sublist(void)
         res = R_NilValue;
     else {
         SEXP last;
-        res = PROTECT_N(CONS(R_NilValue,R_NilValue));
+        res = PROTECT_N (CONS(R_NilValue,R_NilValue));
         last = res;
         for (;;) {
             SEXP arg;
@@ -1445,16 +1445,16 @@ static SEXP parse_element(void)
     SEXP res;
 
     if (next_token == SYMBOL || next_token == STR_CONST) {
+        SEXP op, sym;
         res = TOKEN_VALUE();
         NEXT_TOKEN();
         if (next_token == NS_GET || next_token == NS_GET_INT) {
-            PROTECT_N(res = CONS(res,R_NilValue));
-            PROTECT_N(res = LCONS (install(next_token==NS_GET ? "::" : ":::"),
-                                   res));
+            op = TOKEN_VALUE();
             NEXT_TOKEN();
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
-            SETCDR(CDR(res),CONS(TOKEN_VALUE(),R_NilValue));
+            sym = TOKEN_VALUE();
+            res = PROTECT_N (lang3 (op, res, sym));
             NEXT_TOKEN();
         }
     }
@@ -1463,16 +1463,17 @@ static SEXP parse_element(void)
         NEXT_TOKEN();
     }
     else if (next_token == '(') {
-        SEXP in;
+        SEXP op, in;
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PROTECT_N(res = LCONS(install("("),R_NilValue));
         PARSE_SUB (in = parse_expr_or_assign());
-        SETCDR(res,CONS(in,R_NilValue));
+        res = PROTECT_N (lang2 (op, in));
         EXPECT(')');
     }
     else if (next_token == '{') {
-        SEXP next, last;
-        PROTECT_N(res = LCONS(install("{"),R_NilValue));
+        SEXP next, last, op;
+        op = TOKEN_VALUE();
+        res = PROTECT_N (LCONS(op,R_NilValue));
         NEXT_TOKEN();
         last = res;
         for (;;) {
@@ -1487,77 +1488,71 @@ static SEXP parse_element(void)
         NEXT_TOKEN();
     }
     else if (next_token == FUNCTION) {
-        SEXP args;
-        PROTECT_N(res = LCONS(install("function"),R_NilValue));
+        SEXP op, args, body;
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
         PARSE_SUB(args = parse_formlist());
-        SETCDR(res,CONS(args,R_NilValue));
         EXPECT(')');
         EAT_LINES();
-        SEXP body;
         PARSE_SUB(body = parse_expr_or_assign());
-        SETCDR(CDR(res),CONS(body,R_NilValue));
+        res = PROTECT_N (lang3 (op, args, body));
     }
     else if (next_token == REPEAT) {
-        SEXP body;
-        PROTECT_N(res = LCONS(install("repeat"),R_NilValue));
+        SEXP op, body;
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB(body = parse_expr_or_assign());
-        SETCDR(res,CONS(body,R_NilValue));
+        res = PROTECT_N (lang2 (op, body));
     }
     else if (next_token == WHILE) {
-        SEXP cond, body;
-        PROTECT_N(res = LCONS(install("while"),R_NilValue));
+        SEXP op, cond, body;
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
         PARSE_SUB(cond = parse_expr());
         EXPECT(')');
         EAT_LINES();
-        SETCDR(res,CONS(cond,R_NilValue));
         PARSE_SUB(body = parse_expr_or_assign());
-        SETCDR(CDR(res),CONS(body,R_NilValue));
+        res = PROTECT_N (lang3 (op, cond, body));
     }
     else if (next_token == IF) {
-        SEXP cond, true_stmt, false_stmt;
-        PROTECT_N(res = LCONS(install("if"),R_NilValue));
+        SEXP op, cond, true_stmt, false_stmt;
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
         PARSE_SUB(cond = parse_expr());
         EXPECT(')');
         EAT_LINES();
-        SETCDR(res,CONS(cond,R_NilValue));
         PARSE_SUB(true_stmt = parse_expr_or_assign());
-        SETCDR(CDR(res),CONS(true_stmt,R_NilValue));
         if (next_token == ELSE) {
             NEXT_TOKEN();
             PARSE_SUB(false_stmt = parse_expr_or_assign());
-            SETCDR(CDDR(res),CONS(false_stmt,R_NilValue));
+            res = PROTECT_N (lang4 (op, cond, true_stmt, false_stmt));
         }
+        else
+            res = PROTECT_N (lang3 (op, cond, true_stmt));
     }
     else if (next_token == FOR) {
-        SEXP vec, body;
-        PROTECT_N(res = LCONS(install("for"),R_NilValue));
+        SEXP op, sym, vec, body;
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
         if (next_token != SYMBOL)
             PARSE_UNEXPECTED();
-        SETCDR(res,CONS(TOKEN_VALUE(),R_NilValue));
+        sym = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT(IN);
         PARSE_SUB(vec = parse_expr());
-        SETCDR(CDR(res),CONS(vec,R_NilValue));
         EXPECT(')');
         EAT_LINES();
         PARSE_SUB(body = parse_expr_or_assign());
-        SETCDR(CDDR(res),CONS(body,R_NilValue));
+        res = PROTECT_N (lang4 (op, sym, vec, body));
     }
-    else if (next_token == NEXT) {
-        res = LCONS(install("next"),R_NilValue);
-        NEXT_TOKEN();
-    }
-    else if (next_token == BREAK) {
-        res = LCONS(install("break"),R_NilValue);
+    else if (next_token == NEXT || next_token == BREAK) {
+        SEXP op;
+        op = TOKEN_VALUE();
+        res = PROTECT_N (LCONS (op, R_NilValue));
         NEXT_TOKEN();
     }
     else
@@ -1568,38 +1563,36 @@ static SEXP parse_element(void)
     for (;;) {
         if (next_token == '(') {
             SEXP subs;
-            PROTECT_N(res = LCONS(res,R_NilValue));
             NEXT_TOKEN();
             PARSE_SUB(subs = parse_sublist());
-            SETCDR(res,subs);
+            res = LCONS(res,subs);
             EXPECT(')');
         }
         else if (next_token == '[') {
-            SEXP subs;
-            PROTECT_N(res = CONS(res,R_NilValue));
-            PROTECT_N(res = LCONS(install("["),res));
+            SEXP op, subs;
+            op = TOKEN_VALUE();
             NEXT_TOKEN();
             PARSE_SUB(subs = parse_sublist());
-            SETCDR(CDR(res),subs);
+            res = LCONS (op, CONS (res, subs));
             EXPECT(']');
         }
         else if (next_token == LBB) {
-            SEXP subs;
-            PROTECT_N(res = CONS(res,R_NilValue));
-            PROTECT_N(res = LCONS(install("[["),res));
+            SEXP op, subs;
+            op = TOKEN_VALUE();
             NEXT_TOKEN();
             PARSE_SUB(subs = parse_sublist());
-            SETCDR(CDR(res),subs);
+            res = LCONS (op, CONS (res, subs));
             EXPECT(']');
             EXPECT(']');
         }
         else if (next_token == '$' || next_token == '@') {
-            PROTECT_N(res = CONS(res,R_NilValue));
-            PROTECT_N(res = LCONS(install_char(next_token),res));
+            SEXP op, sym;
+            op = TOKEN_VALUE();
             NEXT_TOKEN();
             if (next_token != SYMBOL && next_token != STR_CONST)
                 PARSE_UNEXPECTED();
-            SETCDR(CDR(res),TOKEN_VALUE());
+            sym = TOKEN_VALUE();
+            res = lang3 (op, res, sym);
             NEXT_TOKEN();
         }
         else
@@ -1618,7 +1611,7 @@ static SEXP parse_power(void)
     PARSE_SUB (res = parse_element());
 
     if (next_token == '^') {
-        op = install("^");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_power());
         res = lang3(op,res,right);
@@ -1634,7 +1627,7 @@ static SEXP parse_unary_plus_minus(void)
     SEXP res, op;
 
     if (next_token == '+' || next_token == '-') {
-        op = install_char(next_token);
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_unary_plus_minus());
         res = lang2(op,res);
@@ -1654,7 +1647,7 @@ static SEXP parse_colon(void)
     PARSE_SUB (res = parse_unary_plus_minus());
 
     while (next_token == ':') {
-        op = install(":");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_unary_plus_minus());
         PROTECT_N (res = lang3(op,res,right));
@@ -1690,7 +1683,7 @@ static SEXP parse_mul_div(void)
     PARSE_SUB (res = parse_special());
 
     while (next_token == '*' || next_token == '/') {
-        op = install_char(next_token);
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_special());
         PROTECT_N (res = lang3(op,res,right));
@@ -1708,7 +1701,7 @@ static SEXP parse_plus_minus(void)
     PARSE_SUB (res = parse_mul_div());
 
     while (next_token == '+' || next_token == '-') {
-        op = install_char(next_token);
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_mul_div());
         PROTECT_N (res = res ? lang3(op,res,right) : lang2(op,right));
@@ -1730,7 +1723,7 @@ static SEXP parse_relation(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_plus_minus());
-        PROTECT_N (res = lang3(op,res,right));
+        res = lang3(op,res,right);
     }
 
     END_PARSE_FUN;
@@ -1743,7 +1736,7 @@ static SEXP parse_not(void)
     SEXP res, op;
 
     if (next_token == '!') {
-        op = install("!");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_not());
         res = lang2(op,res);
@@ -1797,7 +1790,7 @@ static SEXP parse_unary_tilde(void)
     SEXP res, op;
 
     if (next_token == '~') {
-        op = install("~");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_unary_tilde());
         res = lang2(op,res);
@@ -1817,7 +1810,7 @@ static SEXP parse_tilde(void)
     PARSE_SUB (res = parse_unary_tilde());
 
     while (next_token == '~') {
-        op = install("~");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_unary_tilde());
         PROTECT_N (res = lang3(op,res,right));
@@ -1835,7 +1828,7 @@ static SEXP parse_right_assign(void)
     PARSE_SUB (res = parse_tilde());
 
     while (next_token == RIGHT_ASSIGN) {
-        op = install("<-");
+        op = install("<-"); /* convert to left assign */
         NEXT_TOKEN();
         PARSE_SUB (right = parse_tilde());
         PROTECT_N (res = lang3(op,right,res));
@@ -1869,7 +1862,7 @@ static SEXP parse_unary_query(void)
     SEXP res, op;
 
     if (next_token == '?') {
-        op = install("?");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (res = parse_unary_query());
         res = lang2(op,res);
@@ -1889,7 +1882,7 @@ static SEXP parse_expr(void)
     PARSE_SUB (res = parse_unary_query());
 
     while (next_token == '?') {
-        op = install("?");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_unary_query());
         PROTECT_N (res = lang3(op,res,right));
@@ -1907,7 +1900,7 @@ static SEXP parse_expr_or_assign(void)
     PARSE_SUB (res = parse_expr());
 
     if (next_token == EQ_ASSIGN) {
-        op = install("=");
+        op = TOKEN_VALUE();
         NEXT_TOKEN();
         PARSE_SUB (right = parse_expr_or_assign());
         res = lang3(op,res,right);
