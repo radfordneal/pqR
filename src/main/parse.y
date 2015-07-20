@@ -367,7 +367,7 @@ static int xxgetc(void)
 {
     int c, oldpos;
 
-    if(npush) c = pushback[--npush]; else  c = ptr_getc();
+    c = npush ? pushback[--npush] : ptr_getc();
 
     oldpos = prevpos;
     prevpos = (prevpos + 1) % PUSHBACK_BUFSIZE;
@@ -375,8 +375,11 @@ static int xxgetc(void)
     prevlines[prevpos] = ParseState.xxlineno;  
     prevparse[prevpos] = ParseState.xxparseno;
 
-    /* We only advance the column for the 1st byte in UTF-8, so handle later bytes specially */
-    if (0x80 <= (unsigned char)c && (unsigned char)c <= 0xBF && known_to_be_utf8)  {
+    /* We only advance the column for the 1st byte in UTF-8, so handle later 
+       bytes specially */
+
+    if (0x80 <= (unsigned char) c && (unsigned char) c <= 0xBF 
+                                  && known_to_be_utf8) {
     	ParseState.xxcolno--;   
     	prevcols[prevpos] = prevcols[oldpos];
     } else 
@@ -409,7 +412,9 @@ static int xxgetc(void)
 
 static int xxungetc(int c)
 {
-    /* this assumes that c was the result of xxgetc; if not, some edits will be needed */
+    /* This assumes that c was the result of xxgetc; if not, some edits will 
+       be needed */
+
     ParseState.xxlineno = prevlines[prevpos];
     ParseState.xxbyteno = prevbytes[prevpos];
     ParseState.xxcolno  = prevcols[prevpos];
@@ -422,7 +427,8 @@ static int xxungetc(int c)
     xxcharcount--;
     R_ParseContext[R_ParseContextLast] = '\0';
     /* precaution as to how % is implemented for < 0 numbers */
-    R_ParseContextLast = (R_ParseContextLast + PARSE_CONTEXT_SIZE -1) % PARSE_CONTEXT_SIZE;
+    R_ParseContextLast 
+      = (R_ParseContextLast + PARSE_CONTEXT_SIZE -1) % PARSE_CONTEXT_SIZE;
     if(npush >= PUSHBACK_BUFSIZE) return EOF;
     pushback[npush++] = c;
     return c;
@@ -468,24 +474,13 @@ static void attachSrcrefs(SEXP val, SEXP t)
 	wholeFile.last_column = ParseState.xxcolno;
 	wholeFile.first_parsed = 1;
 	wholeFile.last_parsed = ParseState.xxparseno;
-	setAttrib(val, R_WholeSrcrefSymbol, makeSrcref(&wholeFile, ParseState.SrcFile));
+	setAttrib(val, R_WholeSrcrefSymbol, 
+                       makeSrcref(&wholeFile, ParseState.SrcFile));
     }
     UNPROTECT(2);
 }
 
-static PPinfo noinfo = { PP_INVALID, 0, 0 };
-
-static PPinfo opinfo (SEXP op)
-{
-  static SEXP value;
-  if (TYPEOF(op) != SYMSXP) return noinfo;
-  value = SYMVALUE(op);
-  if (TYPEOF(value) != SPECIALSXP && TYPEOF(value) != BUILTINSXP) return noinfo;
-  return PPINFO(value);
-}
-
 /*--------------------------------------------------------------------------*/
-
 
 /* Stretchy List Structures : Lists are created and grown using a special
    dotted pair.  The CAR of the list points to the last cons-cell in the
@@ -538,8 +533,7 @@ static SEXP GrowList(SEXP l, SEXP s)
 
 /*--------------------------------------------------------------------------*/
 
-/*
- *  Parsing Entry Points:
+/*  Parsing Entry Points:
  *
  *  The Following entry points provide language parsing facilities.
  *  Note that there are separate entry points for parsing IoBuffers
@@ -550,15 +544,15 @@ static SEXP GrowList(SEXP l, SEXP s)
  *
  *  The following routines parse a single expression:
  *
+ *	SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, 
+ *                        Rboolean first)
+ *        (used for R_ReplFile in main.c)
  *
- *	SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, Rboolean first)
- *   (used for R_ReplFile in main.c)
- *
- *	SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status, Rboolean first)
- *   (used for ReplIteration and R_ReplDLLdo1 in main.c)
+ *	SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status,
+ *                          Rboolean first)
+ *        (used for ReplIteration and R_ReplDLLdo1 in main.c)
  *
  *  The success of the parse is indicated as folllows:
- *
  *
  *	status = PARSE_NULL       - there was no statement to parse
  *		 PARSE_OK	  - complete statement
@@ -566,21 +560,22 @@ static SEXP GrowList(SEXP l, SEXP s)
  *		 PARSE_ERROR      - syntax error
  *		 PARSE_EOF	  - end of file
  *
- *
  *  The following routines parse several expressions and return
  *  their values in a single expression vector.
  *
  *	SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
- *    (used for do_edit in file edit.c)
+ *        (used for do_edit in file edit.c)
  *
  *	SEXP R_ParseVector(SEXP *text, int n, ParseStatus *status, SEXP srcfile)
- *    (public, and used by parse(text=) in file source.c)
+ *        (public, and used by parse(text=) in file source.c)
  *
- *	SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt, SEXP srcfile)
- *    (used by parse(file="") in file source.c)
+ *	SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, 
+ *                         SEXP prompt, SEXP srcfile)
+ *        (used by parse(file="") in file source.c)
  *
- *      SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
- *    (used by parse(file=) in file source.c)
+ *      SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, 
+ *                       SEXP srcfile)
+ *        (used by parse(file=) in file source.c)
  *
  *  Here, status is 1 for a successful parse and 0 if parsing failed
  *  for some reason.
@@ -782,7 +777,11 @@ static SEXP parse_formlist(void)
     return res;
 }
 
-/* Parse a list of subscripts or of function arguments. */
+/* Parse a list of subscripts or of function arguments.  An attempt is 
+   made to make the last part of the list be a constant object.  Note
+   that NULL is allowed as a tag (converted to `NULL`), presumably for 
+   compatibility, though it's not allowed for a formal name.  Strings
+   are also allowed for tags, though again they aren't for formal names. */
 
 static SEXP parse_sublist(void)
 {
@@ -847,11 +846,25 @@ static SEXP parse_sublist(void)
     return res;
 }
 
+/* Parse an element that acts as a unit for the operator precedence.
+   Such an element consists of an initial part followed by possible postfix
+   parts.  The initial part may be a constant, symbol, paren expression,
+   or curly expression, which may be followed by postfix parts, or a function 
+   closure, while, repeat, for, or if, which would absorb any postfix parts
+   themselves, or break, or next, which can be followed by postfix parts
+   although they make no sense.  Postfix parts may be argument lists for
+   function calls, or subsetting operators [, [[, $, or @.
+
+   Curly expressions and function closures may have source references. */
+
 static SEXP parse_element(void)
 {
     BGN_PARSE_FUN;
     YYLTYPE loc;
     SEXP res;
+
+    /* Symbols, string constants, and namespace references built from
+       one or the other or both of these. */
 
     if (next_token == SYMBOL || next_token == STR_CONST) {
         SEXP op, sym;
@@ -867,10 +880,16 @@ static SEXP parse_element(void)
             NEXT_TOKEN();
         }
     }
+
+    /* Numeric, logical, and NULL constants. */
+
     else if (next_token == NUM_CONST || next_token == NULL_CONST) {
         res = TOKEN_VALUE();
         NEXT_TOKEN();
     }
+
+    /* Paren expressions. */
+
     else if (next_token == '(') {
         SEXP op, inside;
         op = TOKEN_VALUE();
@@ -879,6 +898,9 @@ static SEXP parse_element(void)
         res = PROTECT_N (LCONS (op, MaybeConstList1(inside)));
         EXPECT(')');
     }
+
+    /* Curly expressions. */
+
     else if (next_token == '{') {
         SEXP next, last, op, refs, last_ref;
         op = TOKEN_VALUE();
@@ -914,6 +936,9 @@ static SEXP parse_element(void)
         }
         NEXT_TOKEN();
     }
+
+    /* Function closures. */
+
     else if (next_token == FUNCTION) {
         SEXP op, args, body, srcref;
         start_location(&loc);
@@ -933,6 +958,9 @@ static SEXP parse_element(void)
             srcref = R_NilValue;
         res = PROTECT_N (lang4 (op, args, body, srcref));
     }
+
+    /* Repeat statements. */
+
     else if (next_token == REPEAT) {
         SEXP op, body;
         op = TOKEN_VALUE();
@@ -940,6 +968,9 @@ static SEXP parse_element(void)
         PARSE_SUB(body = parse_expr_or_assign());
         res = PROTECT_N (lang2 (op, body));
     }
+
+    /* While statements. */
+
     else if (next_token == WHILE) {
         SEXP op, cond, body;
         op = TOKEN_VALUE();
@@ -951,6 +982,9 @@ static SEXP parse_element(void)
         PARSE_SUB(body = parse_expr_or_assign());
         res = PROTECT_N (lang3 (op, cond, body));
     }
+
+    /* If statements. */
+
     else if (next_token == IF) {
         SEXP op, cond, true_stmt, false_stmt;
         op = TOKEN_VALUE();
@@ -970,6 +1004,9 @@ static SEXP parse_element(void)
             res = PROTECT_N (LCONS (op, CONS (cond,
                               MaybeConstList1(true_stmt))));
     }
+
+    /* For statements. */
+
     else if (next_token == FOR) {
         SEXP op, sym, vec, body;
         op = TOKEN_VALUE();
@@ -986,18 +1023,25 @@ static SEXP parse_element(void)
         PARSE_SUB(body = parse_expr_or_assign());
         res = PROTECT_N (lang4 (op, sym, vec, body));
     }
+
+    /* Next and break statements. */
+
     else if (next_token == NEXT || next_token == BREAK) {
         SEXP op;
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS (op, R_NilValue));
         NEXT_TOKEN();
     }
+
     else
         PARSE_UNEXPECTED();
 
     /* Now parse any postfix parts. */
 
     for (;;) {
+
+        /* Function call. */
+
         if (next_token == '(') {
             SEXP subs;
             NEXT_TOKEN();
@@ -1007,6 +1051,8 @@ static SEXP parse_element(void)
             res = LCONS(res,subs);
             EXPECT(')');
         }
+
+        /* Subscripting with [. */
         else if (next_token == '[') {
             SEXP op, subs;
             op = TOKEN_VALUE();
@@ -1015,6 +1061,9 @@ static SEXP parse_element(void)
             res = LCONS (op, CONS (res, subs));
             EXPECT(']');
         }
+
+        /* Subscripting with [[.  Note that it may be terminated with ] ]. */
+
         else if (next_token == LBB) {
             SEXP op, subs;
             op = TOKEN_VALUE();
@@ -1024,6 +1073,9 @@ static SEXP parse_element(void)
             EXPECT(']');
             EXPECT(']');
         }
+
+        /* Subsetting with $ or @. */
+
         else if (next_token == '$' || next_token == '@') {
             SEXP op, sym;
             op = TOKEN_VALUE();
@@ -1034,6 +1086,7 @@ static SEXP parse_element(void)
             res = LCONS (op, CONS (res, MaybeConstList1(sym)));
             NEXT_TOKEN();
         }
+
         else
             break;
     }
@@ -1041,6 +1094,9 @@ static SEXP parse_element(void)
     END_PARSE_FUN;
     return res;
 }
+
+/* Binary and unary operators, arranged in recursive hierarchy by precedence.
+   Highest precedence is first below. */
 
 static SEXP parse_power(void)
 {
@@ -1349,6 +1405,9 @@ static SEXP parse_expr_or_assign(void)
     END_PARSE_FUN;
     return res;
 }
+
+/* Top level parse function, parsing and expression or assignments with =,
+   that is followed by newline or ';'. */
 
 static SEXP parse_prog(void)
 {
