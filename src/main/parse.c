@@ -165,19 +165,11 @@ static yyltype prev_yylloc;
 
 /* Functions used in the parsing process */
 
-static void	CheckFormalArgs(SEXP, SEXP, YYLTYPE *);
-static SEXP	FirstArg0(SEXP);
-static SEXP	FirstArg(SEXP, SEXP);
 static SEXP	GrowList0(SEXP, SEXP);
 static SEXP	GrowList(SEXP, SEXP);
-static SEXP	Insert(SEXP, SEXP);
-static SEXP	WrapInsert(SEXP, SEXP);
 static void	IfPush(void);
 static int	KeywordLookup(const char *);
 static SEXP	NewList(void);
-static SEXP	NextArg0(SEXP, SEXP);
-static SEXP	NextArg(SEXP, SEXP, SEXP);
-static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
 
 /* These routines allocate constants */
@@ -643,7 +635,7 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   228,   228,   229
+       0,   220,   220,   221
 };
 #endif
 
@@ -2199,33 +2191,6 @@ static SEXP GrowList(SEXP l, SEXP s)
     return tmp;
 }
 
-/* Insert a new element at the head of a stretchy list */
-
-static SEXP Insert(SEXP l, SEXP s)
-{
-    SEXP tmp;
-    PROTECT(l);
-    tmp = CONS(s, CDR(l));
-    UNPROTECT(1);
-    SETCDR(l, tmp);
-    if (CAR(l) == l) SETCAR(l,tmp);
-    else if (TAG(l) == l) SET_TAG(l,tmp);
-    return l;
-}
-
-/* Insert a new element at the head of a stretchy list, using the stretchy
-   list head itself for the CONS cell of the new element, returning the
-   new list.  The stretchy list is no more after this.  This function is
-   useful in maintaining sequential allocation of nodes for R functions and
-   expressions (with the aim of better cache performance). */
-
-static SEXP WrapInsert(SEXP l, SEXP s)
-{
-    SETCAR(l,s);
-    SET_TAG(l,R_NilValue);
-    return l;
-}
-
 
 /*--------------------------------------------------------------------------*/
 
@@ -2538,11 +2503,11 @@ static SEXP parse_element(void)
         NEXT_TOKEN();
     }
     else if (next_token == '(') {
-        SEXP op, in;
+        SEXP op, inside;
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (in = parse_expr_or_assign());
-        res = PROTECT_N (lang2 (op, in));
+        PARSE_SUB (inside = parse_expr_or_assign());
+        res = PROTECT_N (lang2 (op, inside));
         EXPECT(')');
     }
     else if (next_token == '{') {
@@ -2903,7 +2868,7 @@ static SEXP parse_right_assign(void)
     PARSE_SUB (res = parse_tilde());
 
     while (next_token == RIGHT_ASSIGN) {
-        op = install("<-"); /* convert to left assign */
+        op = TOKEN_VALUE();  /* already switched to left assignment */
         NEXT_TOKEN();
         PARSE_SUB (right = parse_tilde());
         PROTECT_N (res = lang3(op,right,res));
@@ -3622,16 +3587,6 @@ static void yyerror(const char *s)
     }
 }
 
-static void CheckFormalArgs(SEXP formlist, SEXP _new, YYLTYPE *lloc)
-{
-    while (formlist != R_NilValue) {
-	if (TAG(formlist) == _new) {
-	    error(_("Repeated formal argument '%s' on line %d"), CHAR(PRINTNAME(_new)),
-								 lloc->first_line);
-	}
-	formlist = CDR(formlist);
-    }
-}
 
 /* This is used as the buffer for NumericValue, SpecialValue and
    SymbolValue.  None of these could conceivably need 8192 bytes.
