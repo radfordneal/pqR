@@ -2654,6 +2654,8 @@ static SEXP parse_element(void)
             SEXP subs;
             NEXT_TOKEN();
             PARSE_SUB(subs = parse_sublist());
+            if (isString(res))
+                res = installChar(STRING_ELT(res,0));
             res = LCONS(res,subs);
             EXPECT(')');
         }
