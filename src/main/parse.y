@@ -461,13 +461,12 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
     return val;
 }
 
-static SEXP attachSrcrefs(SEXP val)
+static void attachSrcrefs(SEXP val, SEXP t)
 {
-    SEXP t, srval;
+    SEXP srval;
     int n;
 
     PROTECT(val);
-    t = CDR(SrcRefs);
     PROTECT(srval = allocVector(VECSXP, length(t)));
     for (n = 0 ; n < LENGTH(srval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(srval, n, CAR(t));
@@ -486,9 +485,6 @@ static SEXP attachSrcrefs(SEXP val)
 	setAttrib(val, R_WholeSrcrefSymbol, makeSrcref(&wholeFile, ParseState.SrcFile));
     }
     UNPROTECT(2);
-    SrcRefs = NULL;
-    ParseState.didAttach = TRUE;
-    return val;
 }
 
 static PPinfo noinfo = { PP_INVALID, 0, 0 };
@@ -854,6 +850,7 @@ static SEXP parse_sublist(void)
 static SEXP parse_element(void)
 {
     BGN_PARSE_FUN;
+    YYLTYPE loc;
     SEXP res;
 
     if (next_token == SYMBOL || next_token == STR_CONST) {
@@ -883,24 +880,43 @@ static SEXP parse_element(void)
         EXPECT(')');
     }
     else if (next_token == '{') {
-        SEXP next, last, op;
+        SEXP next, last, op, refs, last_ref;
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS(op,R_NilValue));
+        start_location(&loc);
         NEXT_TOKEN();
+        end_location(&loc);
+        if (ParseState.keepSrcRefs) {
+            PROTECT_N (refs = CONS (makeSrcref(&loc,ParseState.SrcFile),
+                                    R_NilValue));
+            last_ref = refs;
+        }
         last = res;
         for (;;) {
             while (next_token == ';' || next_token == '\n')
                 NEXT_TOKEN();
             if (next_token == '}')
                 break;
+            start_location(&loc);
             PARSE_SUB (next = parse_expr_or_assign());
+            end_location(&loc);
+            if (ParseState.keepSrcRefs) {
+                SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
+                                        R_NilValue));
+                last_ref = CDR(last_ref);
+            }
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
+        }
+        if (ParseState.keepSrcRefs) {
+            attachSrcrefs(res,refs);
+            ParseState.didAttach = TRUE;
         }
         NEXT_TOKEN();
     }
     else if (next_token == FUNCTION) {
-        SEXP op, args, body;
+        SEXP op, args, body, srcref;
+        start_location(&loc);
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
@@ -908,7 +924,14 @@ static SEXP parse_element(void)
         EXPECT(')');
         EAT_LINES();
         PARSE_SUB(body = parse_expr_or_assign());
-        res = PROTECT_N (lang3 (op, args, body));
+        end_location(&loc);
+        if (ParseState.keepSrcRefs) {
+            srcref = makeSrcref(&loc, ParseState.SrcFile);
+            ParseState.didAttach = TRUE;
+        } 
+        else
+            srcref = R_NilValue;
+        res = PROTECT_N (lang4 (op, args, body, srcref));
     }
     else if (next_token == REPEAT) {
         SEXP op, body;
@@ -1508,8 +1531,11 @@ finish:
     PROTECT(rval = allocVector(EXPRSXP, length(t)));
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
-    if (ParseState.keepSrcRefs) 
-	rval = attachSrcrefs(rval);
+    if (ParseState.keepSrcRefs) {
+	attachSrcrefs(rval,CDR(SrcRefs));
+        SrcRefs = NULL;
+        ParseState.didAttach = TRUE;
+    }
     R_PPStackTop = savestack;    
     R_FinalizeSrcRefState(&ParseState);
 
@@ -1654,7 +1680,9 @@ finish:
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
     if (ParseState.keepSrcRefs) {
-	rval = attachSrcrefs(rval);
+	attachSrcrefs(rval,CDR(SrcRefs));
+        SrcRefs = NULL;
+        ParseState.didAttach = TRUE;
     }
     R_PPStackTop = savestack;
     R_FinalizeSrcRefState(&ParseState);    
