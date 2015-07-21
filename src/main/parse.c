@@ -188,7 +188,6 @@ static int	xxcharcount, xxcharsave;
 static int	xxlinesave, xxbytesave, xxcolsave, xxparsesave;
 
 static SrcRefState ParseState;
-static PROTECT_INDEX srindex;
 
 #include <R_ext/rlocale.h>
 /* # include <sys/param.h> what was this for? */
@@ -630,7 +629,7 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   215,   215,   216
+       0,   214,   214,   215
 };
 #endif
 
@@ -3138,7 +3137,6 @@ static int text_getc(void)
 
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
-    volatile int savestack;
     SEXP rval, tval, tlast, cur, refs, last_ref;
     YYLTYPE loc;
     int i;
@@ -3146,7 +3144,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     R_InitSrcRefState(&ParseState);
     
     ParseContextInit();
-    savestack = R_PPStackTop;
 
     REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
     REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
@@ -3159,6 +3156,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
         PROTECT(refs = CONS(R_NilValue,R_NilValue));
         last_ref = refs;
     }
+    else
+        PROTECT(refs = R_NilValue);
     
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
@@ -3181,7 +3180,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	    break;
 	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
-	    R_PPStackTop = savestack;
+	    UNPROTECT(2); /* tval, refs */
 	    R_FinalizeSrcRefState(&ParseState);
 	    return R_NilValue;
 	case PARSE_EOF:
@@ -3198,9 +3197,9 @@ finish:
 	attachSrcrefs(rval,CDR(refs));
         ParseState.didAttach = TRUE;
     }
-    R_PPStackTop = savestack;    
-    R_FinalizeSrcRefState(&ParseState);
 
+    UNPROTECT(3); /* tval, refs, rval */
+    R_FinalizeSrcRefState(&ParseState);
     *status = PARSE_OK;
     return rval;
 }
@@ -3272,14 +3271,12 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     SEXP rval, tval, tlast, cur, refs, last_ref;
     char *bufp, buf[CONSOLE_BUFFER_SIZE];
     int c, i, prompt_type = 1;
-    volatile int savestack;
     YYLTYPE loc;
 
     R_IoBufferWriteReset(buffer);
     buf[0] = '\0';
     bufp = buf;
     R_InitSrcRefState(&ParseState);    
-    savestack = R_PPStackTop;
     
     iob = buffer;
     ptr_getc = buffer_getc;
@@ -3295,6 +3292,8 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
         PROTECT(refs = CONS(R_NilValue,R_NilValue));
         last_ref = refs;
     }
+    else
+        PROTECT(refs = R_NilValue);
     
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
@@ -3331,7 +3330,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
 	    R_IoBufferWriteReset(buffer);
-	    R_PPStackTop = savestack;
+	    UNPROTECT(2); /* tval, refs */
 	    R_FinalizeSrcRefState(&ParseState);
 	    return R_NilValue;
 	    break;
@@ -3349,7 +3348,7 @@ finish:
 	attachSrcrefs(rval,CDR(refs));
         ParseState.didAttach = TRUE;
     }
-    R_PPStackTop = savestack;
+    UNPROTECT(3); /* tval, refs, rval */
     R_FinalizeSrcRefState(&ParseState);    
     *status = PARSE_OK;
     return rval;
