@@ -1527,11 +1527,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 
 	ParseInit();
 	cur = R_Parse1(status,&loc);
-        if (ParseState.keepSrcRefs) {
-            SETCDR (last_ref, 
-                    CONS (makeSrcref(&loc, ParseState.SrcFile), R_NilValue));
-            last_ref = CDR(last_ref);
-        }
 
 	switch(*status) {
 	case PARSE_NULL:
@@ -1539,6 +1534,11 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	case PARSE_OK:
             SETCDR (tlast, CONS (cur, R_NilValue));
             tlast = CDR(tlast);
+            if (ParseState.keepSrcRefs) {
+                SETCDR (last_ref, 
+                        CONS (makeSrcref(&loc,ParseState.SrcFile), R_NilValue));
+                last_ref = CDR(last_ref);
+            }
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
@@ -1676,11 +1676,6 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	ParseInit();
 	ParseContextInit();
 	cur = R_Parse1(status,&loc);
-        if (ParseState.keepSrcRefs) {
-            SETCDR (last_ref, 
-                    CONS (makeSrcref(&loc, ParseState.SrcFile), R_NilValue));
-            last_ref = CDR(last_ref);
-        }
 
 	switch(*status) {
 	case PARSE_NULL:
@@ -1688,6 +1683,11 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	case PARSE_OK:
             SETCDR (tlast, CONS(cur,R_NilValue));
             tlast = CDR(tlast);
+            if (ParseState.keepSrcRefs) {
+                SETCDR (last_ref, 
+                        CONS (makeSrcref(&loc,ParseState.SrcFile), R_NilValue));
+                last_ref = CDR(last_ref);
+            }
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
