@@ -117,7 +117,6 @@ SEXP		mkTrue(void);
 /* Internal lexer / parser state variables */
 
 static int	EatLines = 0;
-static int	GenerateCode = 0;
 static int	EndOfFile = 0;
 static int	xxgetc();
 static int	xxungetc(int);
@@ -1426,8 +1425,12 @@ static SEXP parse_prog(void)
 
 /* -------------------------------------------------------------------------- */
 
+/* R_Parse1 currently sets R_CurrentExpr, but probably shouldn't. */
+
 static SEXP R_Parse1(ParseStatus *status)
 {
+    SEXP res;
+
     yychar = YYEMPTY;
     next_token = yylex();
 
@@ -1444,9 +1447,9 @@ static SEXP R_Parse1(ParseStatus *status)
     YYLTYPE loc;
     start_location(&loc);
 
-    R_CurrentExpr = parse_prog();
+    res = parse_prog();
 
-    if (R_CurrentExpr == NULL) {
+    if (res == NULL) {
         *status = EndOfFile ? PARSE_INCOMPLETE : PARSE_ERROR;
         return R_CurrentExpr = R_NilValue;
     }
@@ -1457,7 +1460,7 @@ static SEXP R_Parse1(ParseStatus *status)
                              makeSrcref(&loc, ParseState.SrcFile)), srindex);
 
     *status = PARSE_OK;
-    return R_CurrentExpr;
+    return R_CurrentExpr = res;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1473,15 +1476,15 @@ static int file_getc(void)
 attribute_hidden
 SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
 {
+    SEXP res;
     UseSrcRefState(state);
     ParseInit();
     ParseContextInit();
-    GenerateCode = gencode;
     fp_parse = fp;
     ptr_getc = file_getc;
-    R_Parse1(status);
+    res = R_Parse1(status);
     PutSrcRefState(state);
-    return R_CurrentExpr;
+    return gencode ? res : R_NilValue;
 }
 
 static IoBuffer *iob;
@@ -1495,6 +1498,7 @@ static int buffer_getc(void)
 attribute_hidden
 SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 {
+    SEXP res;
     Rboolean keepSource = FALSE; 
     R_InitSrcRefState(&ParseState);
     if (gencode) {
@@ -1508,10 +1512,10 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     }
     ParseInit();
     ParseContextInit();
-    GenerateCode = gencode;
     iob = buffer;
     ptr_getc = buffer_getc;
-    R_Parse1(status);
+    res = R_Parse1(status);
+    if (!gencode) res = R_NilValue;
     if (gencode && keepSource) {
     	if (ParseState.didAttach) {
             SEXP filename_install = install("filename");  /* protected by the */
@@ -1537,7 +1541,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 	UNPROTECT_PTR(SrcRefs);
     }
     R_FinalizeSrcRefState(&ParseState);
-    return R_CurrentExpr;
+    return res;
 }
 
 static TextBuffer *txtb;
@@ -1615,7 +1619,6 @@ finish:
 attribute_hidden
 SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
 {
-    GenerateCode = 1;
     fp_parse = fp;
     ptr_getc = file_getc;
     return R_Parse(n, status, srcfile);
@@ -1639,7 +1642,6 @@ static int con_getc(void)
 attribute_hidden
 SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 {
-    GenerateCode = 1;
     con_parse = con;
     ptr_getc = con_getc;
     return R_Parse(n, status, srcfile);
@@ -1652,7 +1654,6 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     TextBuffer textb;
     R_TextBufferInit(&textb, text);
     txtb = &textb;
-    GenerateCode = 1;
     ptr_getc = text_getc;
     rval = R_Parse(n, status, srcfile);
     R_TextBufferFree(&textb);
@@ -1692,7 +1693,6 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     PROTECT(tval = CONS(R_NilValue,R_NilValue));
     tlast = tval;
     
-    GenerateCode = 1;
     iob = buffer;
     ptr_getc = buffer_getc;
 
@@ -1867,43 +1867,40 @@ static int KeywordLookup(const char *s)
 		yylval = R_NilValue;
 		break;
 	    case NUM_CONST:
-		if(GenerateCode) {
-		    switch(i) {
-		    case 1:
-			yylval = ScalarLogicalMaybeConst(NA_LOGICAL);
-			break;
-		    case 2:
-			yylval = ScalarLogicalMaybeConst(1);
-			break;
-		    case 3:
-			yylval = ScalarLogicalMaybeConst(0);
-			break;
-		    case 4:
-			yylval = allocVector1REAL();
-			REAL(yylval)[0] = R_PosInf;
-			break;
-		    case 5:
-			yylval = allocVector1REAL();
-			REAL(yylval)[0] = R_NaN;
-			break;
-		    case 6:
-                        yylval = ScalarIntegerMaybeConst(NA_INTEGER);
-			break;
-		    case 7:
-			yylval = allocVector1REAL();
-			REAL(yylval)[0] = NA_REAL;
-			break;
-		    case 8:
-			yylval = allocVector(STRSXP, 1);
-			SET_STRING_ELT(yylval, 0, NA_STRING);
-			break;
-		    case 9:
-			yylval = allocVector(CPLXSXP, 1);
-			COMPLEX(yylval)[0].r = COMPLEX(yylval)[0].i = NA_REAL;
-			break;
-		    }
-		} else
-		    yylval = R_NilValue;
+                switch(i) {
+                case 1:
+                    yylval = ScalarLogicalMaybeConst(NA_LOGICAL);
+                    break;
+                case 2:
+                    yylval = ScalarLogicalMaybeConst(1);
+                    break;
+                case 3:
+                    yylval = ScalarLogicalMaybeConst(0);
+                    break;
+                case 4:
+                    yylval = allocVector1REAL();
+                    REAL(yylval)[0] = R_PosInf;
+                    break;
+                case 5:
+                    yylval = allocVector1REAL();
+                    REAL(yylval)[0] = R_NaN;
+                    break;
+                case 6:
+                    yylval = ScalarIntegerMaybeConst(NA_INTEGER);
+                    break;
+                case 7:
+                    yylval = allocVector1REAL();
+                    REAL(yylval)[0] = NA_REAL;
+                    break;
+                case 8:
+                    yylval = allocVector(STRSXP, 1);
+                    SET_STRING_ELT(yylval, 0, NA_STRING);
+                    break;
+                case 9:
+                    yylval = allocVector(CPLXSXP, 1);
+                    COMPLEX(yylval)[0].r = COMPLEX(yylval)[0].i = NA_REAL;
+                    break;
+                }
 		break;
 	    case FUNCTION:
 	    case WHILE:
@@ -1923,7 +1920,7 @@ static int KeywordLookup(const char *s)
 	    }
 	    return keywords[i].token;
 	}
-    }
+}
     return 0;
 }
 
@@ -1944,11 +1941,9 @@ static SEXP mkComplex(const char *s)
     double f;
     f = R_atof(s); /* FIXME: make certain the value is legitimate. */
 
-    if(GenerateCode) {
-       t = allocVector(CPLXSXP, 1);
-       COMPLEX(t)[0].r = 0;
-       COMPLEX(t)[0].i = f;
-    }
+    t = allocVector(CPLXSXP, 1);
+    COMPLEX(t)[0].r = 0;
+    COMPLEX(t)[0].i = f;
 
     return t;
 }
@@ -2217,36 +2212,32 @@ static int NumericValue(int c)
 	   will not lose information and so use the numeric value.
 	*/
 	if(a != (double) b) {
-	    if(GenerateCode) {
-		if(seendot == 1 && seenexp == 0)
-		    warning(_("integer literal %sL contains decimal; using numeric value"), yytext);
-		else
-		    warning(_("non-integer value %s qualified with L; using numeric value"), yytext);
-	    }
+            if(seendot == 1 && seenexp == 0)
+		warning(_("integer literal %sL contains decimal; using numeric value"), yytext);
+	    else
+		warning(_("non-integer value %s qualified with L; using numeric value"), yytext);
 	    asNumeric = 1;
 	    seenexp = 1;
 	}
     }
 
     if(c == 'i') {
-	yylval = GenerateCode ? mkComplex(yytext) : R_NilValue;
+	yylval = mkComplex(yytext);
     } else if(c == 'L' && asNumeric == 0) {
-	if(GenerateCode && seendot == 1 && seenexp == 0)
+	if (seendot == 1 && seenexp == 0)
 	    warning(_("integer literal %sL contains unnecessary decimal point"), yytext);
-	yylval = GenerateCode ? mkInt(yytext) : R_NilValue;
+	yylval = mkInt(yytext);
 #if 0  /* do this to make 123 integer not double */
     } else if(!(seendot || seenexp)) {
 	if(c != 'L') xxungetc(c);
-	if (GenerateCode) {
-	    double a = R_atof(yytext);
-	    int b = (int) a;
-	    yylval = (a != (double) b) ? mkFloat(yytext) : mkInt(yytext);
-	} else yylval = R_NilValue;
+	double a = R_atof(yytext);
+	int b = (int) a;
+	yylval = (a != (double) b) ? mkFloat(yytext) : mkInt(yytext);
 #endif
     } else {
 	if(c != 'L')
 	    xxungetc(c);
-	yylval = GenerateCode ? mkFloat(yytext) : R_NilValue;
+	yylval = mkFloat(yytext);
     }
 
     return NUM_CONST;
