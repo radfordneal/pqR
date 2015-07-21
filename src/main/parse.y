@@ -124,7 +124,7 @@ static int	xxungetc(int);
 static int	xxcharcount, xxcharsave;
 static int	xxlinesave, xxbytesave, xxcolsave, xxparsesave;
 
-static SEXP	SrcRefs = NULL;
+static SEXP SrcRefs = NULL;
 static SrcRefState ParseState;
 static PROTECT_INDEX srindex;
 
@@ -1551,14 +1551,16 @@ static int text_getc(void)
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
     volatile int savestack;
+    SEXP rval, tval, tlast, cur;
     int i;
-    SEXP t, rval;
 
     R_InitSrcRefState(&ParseState);
     
     ParseContextInit();
     savestack = R_PPStackTop;
-    PROTECT(t = NewList());
+
+    PROTECT(tval = CONS(R_NilValue,R_NilValue));
+    tlast = tval;
 
     REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
     REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
@@ -1570,13 +1572,16 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
+
 	ParseInit();
-	rval = R_Parse1(status);
+	cur = R_Parse1(status);
+
 	switch(*status) {
 	case PARSE_NULL:
 	    break;
 	case PARSE_OK:
-	    t = GrowList(t, rval);
+            SETCDR (tlast, cur);
+            tlast = CDR(tlast);
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
@@ -1590,11 +1595,10 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     }
 
 finish:
-
-    t = CDR(t);
-    PROTECT(rval = allocVector(EXPRSXP, length(t)));
-    for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
-	SET_VECTOR_ELT(rval, n, CAR(t));
+    tval = CDR(tval);
+    PROTECT(rval = allocVector(EXPRSXP, length(tval)));
+    for (n = 0 ; n < LENGTH(rval) ; n++, tval = CDR(tval))
+	SET_VECTOR_ELT(rval, n, CAR(tval));
     if (ParseState.keepSrcRefs) {
 	attachSrcrefs(rval,CDR(SrcRefs));
         SrcRefs = NULL;
@@ -1674,7 +1678,7 @@ attribute_hidden
 SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt, 
 		   SEXP srcfile)
 {
-    SEXP rval, t;
+    SEXP rval, tval, tlast, cur;
     char *bufp, buf[CONSOLE_BUFFER_SIZE];
     int c, i, prompt_type = 1;
     volatile int savestack;
@@ -1684,7 +1688,9 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     bufp = buf;
     R_InitSrcRefState(&ParseState);    
     savestack = R_PPStackTop;
-    PROTECT(t = NewList());
+
+    PROTECT(tval = CONS(R_NilValue,R_NilValue));
+    tlast = tval;
     
     GenerateCode = 1;
     iob = buffer;
@@ -1715,14 +1721,14 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	   xxlineno and xxcolno */
 	ParseInit();
 	ParseContextInit();
-	R_Parse1(status);
-	rval = R_CurrentExpr;
+	cur = R_Parse1(status);
 
 	switch(*status) {
 	case PARSE_NULL:
 	    break;
 	case PARSE_OK:
-	    t = GrowList(t, rval);
+            SETCDR (tlast, cur);
+            tlast = CDR(tlast);
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
@@ -1734,15 +1740,14 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	    break;
 	case PARSE_EOF:
 	    goto finish;
-	    break;
 	}
     }
 finish:
     R_IoBufferWriteReset(buffer);
-    t = CDR(t);
-    rval = allocVector(EXPRSXP, length(t));
-    for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
-	SET_VECTOR_ELT(rval, n, CAR(t));
+    tval = CDR(tval);
+    rval = allocVector(EXPRSXP, length(tval));
+    for (n = 0 ; n < LENGTH(rval) ; n++, tval = CDR(tval))
+	SET_VECTOR_ELT(rval, n, CAR(tval));
     if (ParseState.keepSrcRefs) {
 	attachSrcrefs(rval,CDR(SrcRefs));
         SrcRefs = NULL;
