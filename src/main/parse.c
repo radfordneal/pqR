@@ -2183,8 +2183,10 @@ void R_InitSrcRefState(SrcRefState *state)
 
 void R_FinalizeSrcRefState(SrcRefState *state)
 {
-    UNPROTECT_PTR(state->SrcFile);
-    UNPROTECT_PTR(state->Original);
+    UNPROTECT(1);
+    if (R_PPStackTop != state->OriginalProt) abort();
+    UNPROTECT(1);
+    if (R_PPStackTop != state->SrcFileProt) abort();
 }
 
 static void UseSrcRefState(SrcRefState *state)
