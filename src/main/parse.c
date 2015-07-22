@@ -545,8 +545,9 @@ static void ParseContextInit(void)
     R_ParseContext[0] = '\0';
 }
 
-/* -------------------------------------------------------------------------- */
-/* PARSING VARIABLES, MACROS, AND FUNCTIONS                                   */
+/* --------------------------------------------------------------------------
+   PARSING VARIABLES, MACROS, AND FUNCTIONS
+*/
 
 #define BGN_PARSE_FUN \
     int nprotect = 0
@@ -619,14 +620,28 @@ static void end_location (yyltype *loc)
 
 static int next_token;
 
-/* -------------------------------------------------------------------------- */
-/* THE RECURSIVE DESCENT PARSER                                               */
 
-static SEXP parse_expr(void), parse_expr_or_assign(void);
+/* --------------------------------------------------------------------------
+   THE RECURSIVE DESCENT PARSER
+
+   Each parse routine takes an int flags argument, and a pointer to an
+   int in which to return a status.  
+
+   The parse routines return the object parsed, or NULL if there was an
+   error (or errors may cause exit out of the whole parser with "error").
+
+   Parsing routines are called with next_token already set to the first
+   token of the construct they parse, and return with next_token set to
+   the token after the construct they parsed.
+*/
+
+
+static SEXP parse_expr (int flags, int *stat), 
+            parse_expr_or_assign (int flags, int *stat);
 
 /* Paarse the formals list of a function definiton. */
 
-static SEXP parse_formlist(void)
+static SEXP parse_formlist (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res;
@@ -655,7 +670,7 @@ static SEXP parse_formlist(void)
             if (next_token == EQ_ASSIGN) {
                 SEXP def;
                 NEXT_TOKEN();
-                PARSE_SUB(def = parse_expr());
+                PARSE_SUB(def = parse_expr(flags,stat));
                 SETCAR (last, def);
             }
             if (next_token != ',')
@@ -676,7 +691,7 @@ static SEXP parse_formlist(void)
    compatibility, though it's not allowed for a formal name.  Strings
    are also allowed for tags, though again they aren't for formal names. */
 
-static SEXP parse_sublist(void)
+static SEXP parse_sublist (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, last, last2;
@@ -689,7 +704,7 @@ static SEXP parse_sublist(void)
             if (next_token == ',' || next_token == ')' || next_token == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
-                PARSE_SUB(arg = parse_expr());
+                PARSE_SUB(arg = parse_expr(flags,stat));
                 if (next_token == EQ_ASSIGN) {
                     SEXP tag, val;
                     if (TYPEOF(arg) == SYMSXP)
@@ -705,7 +720,7 @@ static SEXP parse_sublist(void)
                                           || next_token == ']')
                         val = R_MissingArg;
                     else
-                        PARSE_SUB(val = parse_expr());
+                        PARSE_SUB(val = parse_expr(flags,stat));
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
@@ -750,7 +765,7 @@ static SEXP parse_sublist(void)
 
    Curly expressions and function closures may have source references. */
 
-static SEXP parse_element(void)
+static SEXP parse_element (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     YYLTYPE loc;
@@ -787,7 +802,7 @@ static SEXP parse_element(void)
         SEXP op, inside;
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (inside = parse_expr_or_assign());
+        PARSE_SUB (inside = parse_expr_or_assign(flags,stat));
         res = PROTECT_N (LCONS (op, MaybeConstList1(inside)));
         EXPECT(')');
     }
@@ -813,7 +828,7 @@ static SEXP parse_element(void)
             if (next_token == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr_or_assign());
+            PARSE_SUB (next = parse_expr_or_assign(flags,stat));
             end_location(&loc);
             if (ParseState.keepSrcRefs) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
@@ -838,10 +853,10 @@ static SEXP parse_element(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
-        PARSE_SUB(args = parse_formlist());
+        PARSE_SUB(args = parse_formlist(flags,stat));
         EXPECT(')');
         EAT_LINES();
-        PARSE_SUB(body = parse_expr_or_assign());
+        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
         end_location(&loc);
         if (ParseState.keepSrcRefs) {
             srcref = makeSrcref(&loc, ParseState.SrcFile);
@@ -858,7 +873,7 @@ static SEXP parse_element(void)
         SEXP op, body;
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB(body = parse_expr_or_assign());
+        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
         res = PROTECT_N (lang2 (op, body));
     }
 
@@ -869,10 +884,10 @@ static SEXP parse_element(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr());
+        PARSE_SUB(cond = parse_expr(flags,stat));
         EXPECT(')');
         EAT_LINES();
-        PARSE_SUB(body = parse_expr_or_assign());
+        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
         res = PROTECT_N (lang3 (op, cond, body));
     }
 
@@ -883,13 +898,13 @@ static SEXP parse_element(void)
         op = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr());
+        PARSE_SUB(cond = parse_expr(flags,stat));
         EXPECT(')');
         EAT_LINES();
-        PARSE_SUB(true_stmt = parse_expr_or_assign());
+        PARSE_SUB(true_stmt = parse_expr_or_assign(flags,stat));
         if (next_token == ELSE) {
             NEXT_TOKEN();
-            PARSE_SUB(false_stmt = parse_expr_or_assign());
+            PARSE_SUB(false_stmt = parse_expr_or_assign(flags,stat));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
                               MaybeConstList1(false_stmt)))));
         }
@@ -910,10 +925,10 @@ static SEXP parse_element(void)
         sym = TOKEN_VALUE();
         NEXT_TOKEN();
         EXPECT(IN);
-        PARSE_SUB(vec = parse_expr());
+        PARSE_SUB(vec = parse_expr(flags,stat));
         EXPECT(')');
         EAT_LINES();
-        PARSE_SUB(body = parse_expr_or_assign());
+        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
         res = PROTECT_N (lang4 (op, sym, vec, body));
     }
 
@@ -938,7 +953,7 @@ static SEXP parse_element(void)
         if (next_token == '(') {
             SEXP subs;
             NEXT_TOKEN();
-            PARSE_SUB(subs = parse_sublist());
+            PARSE_SUB(subs = parse_sublist(flags,stat));
             if (isString(res))
                 res = installChar(STRING_ELT(res,0));
             res = LCONS(res,subs);
@@ -950,7 +965,7 @@ static SEXP parse_element(void)
             SEXP op, subs;
             op = TOKEN_VALUE();
             NEXT_TOKEN();
-            PARSE_SUB(subs = parse_sublist());
+            PARSE_SUB(subs = parse_sublist(flags,stat));
             res = LCONS (op, CONS (res, subs));
             EXPECT(']');
         }
@@ -961,7 +976,7 @@ static SEXP parse_element(void)
             SEXP op, subs;
             op = TOKEN_VALUE();
             NEXT_TOKEN();
-            PARSE_SUB(subs = parse_sublist());
+            PARSE_SUB(subs = parse_sublist(flags,stat));
             res = LCONS (op, CONS (res, subs));
             EXPECT(']');
             EXPECT(']');
@@ -991,17 +1006,17 @@ static SEXP parse_element(void)
 /* Binary and unary operators, arranged in recursive hierarchy by precedence.
    Highest precedence is first below. */
 
-static SEXP parse_power(void)
+static SEXP parse_power (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_element());
+    PARSE_SUB (res = parse_element(flags,stat));
 
     if (next_token == '^') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_power());
+        PARSE_SUB (right = parse_power(flags,stat));
         res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
@@ -1009,7 +1024,7 @@ static SEXP parse_power(void)
     return res;
 }
 
-static SEXP parse_unary_plus_minus(void)
+static SEXP parse_unary_plus_minus (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, op;
@@ -1017,27 +1032,27 @@ static SEXP parse_unary_plus_minus(void)
     if (next_token == '+' || next_token == '-') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (res = parse_unary_plus_minus());
+        PARSE_SUB (res = parse_unary_plus_minus(flags,stat));
         res = LCONS (op, MaybeConstList1(res));
     }
     else
-        PARSE_SUB (res = parse_power());
+        PARSE_SUB (res = parse_power(flags,stat));
 
     END_PARSE_FUN;
     return res;
 }
 
-static SEXP parse_colon(void)
+static SEXP parse_colon (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_unary_plus_minus());
+    PARSE_SUB (res = parse_unary_plus_minus(flags,stat));
 
     while (next_token == ':') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_unary_plus_minus());
+        PARSE_SUB (right = parse_unary_plus_minus(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1045,17 +1060,17 @@ static SEXP parse_colon(void)
     return res;
 }
 
-static SEXP parse_special(void)
+static SEXP parse_special (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_colon());
+    PARSE_SUB (res = parse_colon(flags,stat));
 
     while (next_token == SPECIAL) {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_colon());
+        PARSE_SUB (right = parse_colon(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1063,17 +1078,17 @@ static SEXP parse_special(void)
     return res;
 }
 
-static SEXP parse_mul_div(void)
+static SEXP parse_mul_div (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_special());
+    PARSE_SUB (res = parse_special(flags,stat));
 
     while (next_token == '*' || next_token == '/') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_special());
+        PARSE_SUB (right = parse_special(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1081,17 +1096,17 @@ static SEXP parse_mul_div(void)
     return res;
 }
 
-static SEXP parse_plus_minus(void)
+static SEXP parse_plus_minus (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_mul_div());
+    PARSE_SUB (res = parse_mul_div(flags,stat));
 
     while (next_token == '+' || next_token == '-') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_mul_div());
+        PARSE_SUB (right = parse_mul_div(flags,stat));
         PROTECT_N (res = res ? LCONS (op, CONS (res, MaybeConstList1(right)))
                              : LCONS (op, MaybeConstList1(right)));
     }
@@ -1100,18 +1115,18 @@ static SEXP parse_plus_minus(void)
     return res;
 }
 
-static SEXP parse_relation(void)
+static SEXP parse_relation (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_plus_minus());
+    PARSE_SUB (res = parse_plus_minus(flags,stat));
 
     if (next_token == GT || next_token == GE || next_token == EQ
      || next_token == LE || next_token == LT || next_token == NE) {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_plus_minus());
+        PARSE_SUB (right = parse_plus_minus(flags,stat));
         res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
@@ -1119,7 +1134,7 @@ static SEXP parse_relation(void)
     return res;
 }
 
-static SEXP parse_not(void)
+static SEXP parse_not (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, op;
@@ -1127,27 +1142,27 @@ static SEXP parse_not(void)
     if (next_token == '!') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (res = parse_not());
+        PARSE_SUB (res = parse_not(flags,stat));
         res = LCONS (op, MaybeConstList1(res));
     }
     else
-        PARSE_SUB (res = parse_relation());
+        PARSE_SUB (res = parse_relation(flags,stat));
 
     END_PARSE_FUN;
     return res;
 }
 
-static SEXP parse_and(void)
+static SEXP parse_and (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_not());
+    PARSE_SUB (res = parse_not(flags,stat));
 
     while (next_token == AND || next_token == AND2) {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_not());
+        PARSE_SUB (right = parse_not(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1155,17 +1170,17 @@ static SEXP parse_and(void)
     return res;
 }
 
-static SEXP parse_or(void)
+static SEXP parse_or (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_and());
+    PARSE_SUB (res = parse_and(flags,stat));
 
     while (next_token == OR || next_token == OR2) {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_and());
+        PARSE_SUB (right = parse_and(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1173,7 +1188,7 @@ static SEXP parse_or(void)
     return res;
 }
 
-static SEXP parse_unary_tilde(void)
+static SEXP parse_unary_tilde (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, op;
@@ -1181,27 +1196,27 @@ static SEXP parse_unary_tilde(void)
     if (next_token == '~') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (res = parse_unary_tilde());
+        PARSE_SUB (res = parse_unary_tilde(flags,stat));
         res = LCONS (op, MaybeConstList1(res));
     }
     else
-        PARSE_SUB (res = parse_or());
+        PARSE_SUB (res = parse_or(flags,stat));
 
     END_PARSE_FUN;
     return res;
 }
 
-static SEXP parse_tilde(void)
+static SEXP parse_tilde (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_unary_tilde());
+    PARSE_SUB (res = parse_unary_tilde(flags,stat));
 
     while (next_token == '~') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_unary_tilde());
+        PARSE_SUB (right = parse_unary_tilde(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1209,17 +1224,17 @@ static SEXP parse_tilde(void)
     return res;
 }
 
-static SEXP parse_right_assign(void)
+static SEXP parse_right_assign (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_tilde());
+    PARSE_SUB (res = parse_tilde(flags,stat));
 
     while (next_token == RIGHT_ASSIGN) {
         op = TOKEN_VALUE();  /* already switched to left assignment */
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_tilde());
+        PARSE_SUB (right = parse_tilde(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (right, MaybeConstList1(res))));
     }
 
@@ -1227,17 +1242,17 @@ static SEXP parse_right_assign(void)
     return res;
 }
 
-static SEXP parse_left_assign(void)
+static SEXP parse_left_assign (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_right_assign());
+    PARSE_SUB (res = parse_right_assign(flags,stat));
 
     if (next_token == LEFT_ASSIGN) {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_left_assign());
+        PARSE_SUB (right = parse_left_assign(flags,stat));
         res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
@@ -1245,7 +1260,7 @@ static SEXP parse_left_assign(void)
     return res;
 }
 
-static SEXP parse_unary_query(void)
+static SEXP parse_unary_query (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, op;
@@ -1253,27 +1268,27 @@ static SEXP parse_unary_query(void)
     if (next_token == '?') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (res = parse_unary_query());
+        PARSE_SUB (res = parse_unary_query(flags,stat));
         res = LCONS (op, MaybeConstList1(res));
     }
     else
-        PARSE_SUB (res = parse_left_assign());
+        PARSE_SUB (res = parse_left_assign(flags,stat));
 
     END_PARSE_FUN;
     return res;
 }
 
-static SEXP parse_expr(void)
+static SEXP parse_expr (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_unary_query());
+    PARSE_SUB (res = parse_unary_query(flags,stat));
 
     while (next_token == '?') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_unary_query());
+        PARSE_SUB (right = parse_unary_query(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
@@ -1281,17 +1296,17 @@ static SEXP parse_expr(void)
     return res;
 }
 
-static SEXP parse_expr_or_assign(void)
+static SEXP parse_expr_or_assign (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
 
-    PARSE_SUB (res = parse_expr());
+    PARSE_SUB (res = parse_expr(flags,stat));
 
     if (next_token == EQ_ASSIGN) {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_expr_or_assign());
+        PARSE_SUB (right = parse_expr_or_assign(flags,stat));
         res = LCONS (op, CONS (res, MaybeConstList1(right)));
     }
 
@@ -1302,12 +1317,12 @@ static SEXP parse_expr_or_assign(void)
 /* Top level parse function, parsing and expression or assignments with =,
    that is followed by newline or ';'. */
 
-static SEXP parse_prog(void)
+static SEXP parse_prog (int flags, int *stat)
 {
     BGN_PARSE_FUN;
     SEXP res;
 
-    PARSE_SUB (res = parse_expr_or_assign());
+    PARSE_SUB (res = parse_expr_or_assign(flags,stat));
 
     if (next_token != '\n' && next_token != ';') {
         PARSE_UNEXPECTED();
@@ -1324,6 +1339,7 @@ static SEXP parse_prog(void)
 static SEXP R_Parse1(ParseStatus *status, YYLTYPE *loc)
 {
     SEXP res;
+    int stat;
 
     next_token = yylex();
 
@@ -1338,7 +1354,7 @@ static SEXP R_Parse1(ParseStatus *status, YYLTYPE *loc)
     }
 
     start_location(loc);
-    res = parse_prog();
+    res = parse_prog(0,&stat);
     end_location(loc);
 
     if (res == NULL) {
