@@ -1,2 +1,6 @@
 New parser implementation, using recursive descent rather than bottom-up
 bison parser.  Accessible with "newparse", old one still used otherwise.
+
+Removes parens from all expressions except those one right side of 
+a formula (~).  This will need to change later to removing only necessary
+parens.

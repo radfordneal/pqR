@@ -618,6 +618,8 @@ static void end_location (yyltype *loc)
     loc->last_parsed = prev_yylloc.last_parsed;
 }
 
+#define KEEP_PARENS 1
+
 static int next_token;
 
 
@@ -799,11 +801,12 @@ static SEXP parse_element (int flags, int *stat)
     /* Paren expressions. */
 
     else if (next_token == '(') {
-        SEXP op, inside;
+        SEXP op;
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (inside = parse_expr_or_assign(flags,stat));
-        res = PROTECT_N (LCONS (op, MaybeConstList1(inside)));
+        PARSE_SUB (res = parse_expr_or_assign(flags,stat));
+        if (flags & KEEP_PARENS)
+            res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
         EXPECT(')');
     }
 
@@ -961,6 +964,7 @@ static SEXP parse_element (int flags, int *stat)
         }
 
         /* Subscripting with [. */
+
         else if (next_token == '[') {
             SEXP op, subs;
             op = TOKEN_VALUE();
@@ -1196,7 +1200,7 @@ static SEXP parse_unary_tilde (int flags, int *stat)
     if (next_token == '~') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (res = parse_unary_tilde(flags,stat));
+        PARSE_SUB (res = parse_unary_tilde(flags|KEEP_PARENS,stat));
         res = LCONS (op, MaybeConstList1(res));
     }
     else
@@ -1216,7 +1220,7 @@ static SEXP parse_tilde (int flags, int *stat)
     while (next_token == '~') {
         op = TOKEN_VALUE();
         NEXT_TOKEN();
-        PARSE_SUB (right = parse_unary_tilde(flags,stat));
+        PARSE_SUB (right = parse_unary_tilde(flags|KEEP_PARENS,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
     }
 
