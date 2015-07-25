@@ -4,3 +4,15 @@ bison parser.  Accessible with "newparse", old one still used otherwise.
 Removes parens from all expressions except those one right side of 
 a formula (~).  This will need to change later to removing only necessary
 parens.
+
+Bug to fix here:
+
+  > p <- parse()
+  ?"abc;xyz"
+  Error in parse() : 1:1: unexpected INCOMPLETE_STRING
+  1: "abc;
+
+  > p <- parse()
+  ? 8 # dc;dd
+  Error in parse() : 1:8: unexpected end of input
+  1:  8 # dc;
