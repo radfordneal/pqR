@@ -435,16 +435,27 @@ int StrToInternal(const char *s)
 }
 
 static void SymbolShortcuts(void)
-{  /* ../include/Rinternals.h : */
-    R_Bracket2Symbol = install("[[");
-    R_BracketSymbol = install("[");
+{
+    /* ../include/Rinternals.h : */
+
     R_BraceSymbol = install("{");
+    R_BracketSymbol = install("[");
+    R_Bracket2Symbol = install("[[");
+    R_SubAssignSymbol = install("[<-");
+    R_SubSubAssignSymbol = install("[[<-");
+    R_DollarAssignSymbol = install("$<-");
+    R_DollarSymbol = install("$");
+    R_DotsSymbol = install("...");
+    R_LocalAssignSymbol = R_AssignSymbols[1] = install("<-");
+    R_GlobalAssignSymbol = R_AssignSymbols[2] = install("<<-");
+    R_EqAssignSymbol = R_AssignSymbols[3] = install("=");
+    R_LocalRightAssignSymbol = install("->");
+    R_GlobalRightAssignSymbol = install("->>");
+
     R_ClassSymbol = install("class");
     R_DeviceSymbol = install(".Device");
     R_DimNamesSymbol = install("dimnames");
     R_DimSymbol = install("dim");
-    R_DollarSymbol = install("$");
-    R_DotsSymbol = install("...");
     R_DropSymbol = install("drop");
     R_LastvalueSymbol = install(".Last.value");
     R_LevelsSymbol = install("levels");
@@ -457,42 +468,14 @@ static void SymbolShortcuts(void)
     R_QuoteSymbol = install("quote");
     R_RowNamesSymbol = install("row.names");
     R_SeedsSymbol = install(".Random.seed");
-    R_SourceSymbol = install("source");   /* Still present for back compatibility, but not used */
+    R_SourceSymbol = install("source");   /* for back compatibility, unused */
+    R_SrcrefSymbol = install("srcref");
     R_TspSymbol = install("tsp");
     R_ValueSymbol = install("value");
-    R_AssignSymbols[1] = install("<-");
-    R_AssignSymbols[2] = install("<<-");
-    R_AssignSymbols[3] = install("=");
-    R_SubAssignSymbol = install("[<-");
-    R_SubSubAssignSymbol = install("[[<-");
-    R_DollarAssignSymbol = install("$<-");
-    /* ../include/Defn.h , i.e. non-public : */
-    R_CommentSymbol = install("comment");
-    R_DotEnvSymbol = install(".Environment");
-    R_ExactSymbol = install("exact");
-    R_RecursiveSymbol = install("recursive");
-    R_SrcfileSymbol = install("srcfile");
-    R_SrcrefSymbol = install("srcref");
-    R_WholeSrcrefSymbol = install("wholeSrcref");
-    R_TmpvalSymbol = install("*tmp*");
-    R_UseNamesSymbol = install("use.names");
-    R_DoubleColonSymbol = install("::");
-    R_TripleColonSymbol = install(":::");
-    R_ConnIdSymbol = install("conn_id");
-    R_DevicesSymbol = install(".Devices");
 
-    R_dot_Generic = install(".Generic");
-    R_dot_Method = install(".Method");
-    R_dot_Methods = install(".Methods");
     R_dot_defined = install(".defined");
+    R_dot_Method = install(".Method");
     R_dot_target = install(".target");
-    R_dot_Group = install(".Group");
-    R_dot_Class = install(".Class");
-    R_dot_GenericCallEnv = install(".GenericCallEnv");
-    R_dot_GenericDefEnv = install(".GenericDefEnv");
-    R_sort_list = install("sort.list");
-    R_S3MethodsTable = install(".__S3MethodsTable__.");
-    R_previousSymbol = install("previous");
 
     R_NaokSymbol = install("NAOK");
     R_DupSymbol = install("DUP");
@@ -500,8 +483,60 @@ static void SymbolShortcuts(void)
     R_EncSymbol = install("ENCODING");
     R_HelperSymbol = install("HELPER");
     R_CSingSymbol = install("Csingle");
+
     R_NativeSymbolSymbol = install("native symbol");
     R_RegisteredNativeSymbolSymbol = install("registered native symbol");
+
+    /* ../include/Defn.h , i.e. non-public : */
+
+    R_FunctionSymbol = install("function");
+    R_WhileSymbol = install("while");
+    R_RepeatSymbol = install("repeat");
+    R_ForSymbol = install("for");
+    R_IfSymbol = install("if");
+    R_NextSymbol = install("next");
+    R_BreakSymbol = install("break");
+    R_ColonSymbol = install(":");
+    R_DoubleColonSymbol = install("::");
+    R_TripleColonSymbol = install(":::");
+    R_AddSymbol = install("+");
+    R_SubSymbol = install("-");
+    R_MulSymbol = install("*");
+    R_DivSymbol = install("/");
+    R_ExptSymbol = install("^");
+    R_Expt2Symbol = install("**");
+    R_EqSymbol = install("==");
+    R_NeSymbol = install("!=");
+    R_LtSymbol = install("<");
+    R_LeSymbol = install("<=");
+    R_GeSymbol = install(">=");
+    R_GtSymbol = install(">");
+    R_AndSymbol = install("&");
+    R_OrSymbol = install("|");
+    R_NotSymbol = install("!");
+    R_TildeSymbol = install("~");
+    R_QuerySymbol = install("?");
+    R_ColonEqSymbol = install(":=");
+
+    R_CommentSymbol = install("comment");
+    R_DotEnvSymbol = install(".Environment");
+    R_ExactSymbol = install("exact");
+    R_RecursiveSymbol = install("recursive");
+    R_SrcfileSymbol = install("srcfile");
+    R_WholeSrcrefSymbol = install("wholeSrcref");
+    R_TmpvalSymbol = install("*tmp*");
+    R_UseNamesSymbol = install("use.names");
+    R_ConnIdSymbol = install("conn_id");
+    R_DevicesSymbol = install(".Devices");
+    R_dot_Generic = install(".Generic");
+    R_dot_Methods = install(".Methods");
+    R_dot_Group = install(".Group");
+    R_dot_Class = install(".Class");
+    R_dot_GenericCallEnv = install(".GenericCallEnv");
+    R_dot_GenericDefEnv = install(".GenericDefEnv");
+    R_sort_list = install("sort.list");
+    R_S3MethodsTable = install(".__S3MethodsTable__.");
+    R_previousSymbol = install("previous");
 }
 
 /* Set up built-in functions from R_FunTab and the FastFunTab_srcfile tables.
