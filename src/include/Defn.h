@@ -98,28 +98,55 @@ Rcomplex Rf_ComplexFromReal(double, int*);
 				  Memory.h, PrtUtil.h, Utils.h */
 #undef CALLED_FROM_DEFN_H
 
-extern0 SEXP	R_CommentSymbol;    /* "comment" */
-extern0 SEXP	R_DotEnvSymbol;     /* ".Environment" */
-extern0 SEXP	R_ExactSymbol;	    /* "exact" */
-extern0 SEXP	R_RecursiveSymbol;  /* "recursive" */
-extern0 SEXP	R_SrcfileSymbol;    /* "srcfile" */
-extern0 SEXP	R_WholeSrcrefSymbol;   /* "wholeSrcref" */
-extern0 SEXP	R_TmpvalSymbol;     /* "*tmp*" */
-extern0 SEXP	R_UseNamesSymbol;   /* "use.names" */
-extern0 SEXP	R_DoubleColonSymbol;   /* "::" */
-extern0 SEXP	R_TripleColonSymbol;   /* ":::" */
-extern0 SEXP    R_ConnIdSymbol;  /* "conn_id" */
-extern0 SEXP    R_DevicesSymbol;  /* ".Devices" */
 
-extern0 SEXP    R_dot_Generic;  /* ".Generic" */
-extern0 SEXP    R_dot_Methods;  /* ".Methods" */
-extern0 SEXP    R_dot_Group;  /* ".Group" */
-extern0 SEXP    R_dot_Class;  /* ".Class" */
-extern0 SEXP    R_dot_GenericCallEnv;  /* ".GenericCallEnv" */
+extern0 SEXP	R_FunctionSymbol;     /* "function" */
+extern0 SEXP	R_WhileSymbol;        /* "while" */
+extern0 SEXP	R_RepeatSymbol;       /* "repeat" */
+extern0 SEXP	R_ForSymbol;          /* "for" */
+extern0 SEXP	R_IfSymbol;           /* "if" */
+extern0 SEXP	R_NextSymbol;         /* "next" */
+extern0 SEXP	R_BreakSymbol;        /* "break" */
+extern0 SEXP	R_ColonSymbol;        /* ":" */
+extern0 SEXP	R_DoubleColonSymbol;  /* "::" */
+extern0 SEXP	R_TripleColonSymbol;  /* ":::" */
+extern0 SEXP	R_AddSymbol;          /* "+" */
+extern0 SEXP	R_SubSymbol;          /* "-" */
+extern0 SEXP	R_MulSymbol;          /* "*" */
+extern0 SEXP	R_DivSymbol;          /* "/" */
+extern0 SEXP	R_ExptSymbol;         /* "^" */
+extern0 SEXP	R_Expt2Symbol;        /* "**" */
+extern0 SEXP	R_EqSymbol;           /* "==" */
+extern0 SEXP	R_NeSymbol;           /* "!=" */
+extern0 SEXP	R_LtSymbol;           /* "<" */
+extern0 SEXP	R_LeSymbol;           /* "<=" */
+extern0 SEXP	R_GeSymbol;           /* ">=" */
+extern0 SEXP	R_GtSymbol;           /* ">" */
+extern0 SEXP	R_AndSymbol;          /* "&" */
+extern0 SEXP	R_OrSymbol;           /* "|" */
+extern0 SEXP	R_NotSymbol;          /* "!" */
+extern0 SEXP	R_TildeSymbol;        /* "~" */
+extern0 SEXP	R_QuerySymbol;        /* "?" */
+extern0 SEXP	R_ColonEqSymbol;      /* ":=" */
+
+extern0 SEXP	R_CommentSymbol;      /* "comment" */
+extern0 SEXP	R_DotEnvSymbol;       /* ".Environment" */
+extern0 SEXP	R_ExactSymbol;	      /* "exact" */
+extern0 SEXP	R_RecursiveSymbol;    /* "recursive" */
+extern0 SEXP	R_SrcfileSymbol;      /* "srcfile" */
+extern0 SEXP	R_WholeSrcrefSymbol;  /* "wholeSrcref" */
+extern0 SEXP	R_TmpvalSymbol;       /* "*tmp*" */
+extern0 SEXP	R_UseNamesSymbol;     /* "use.names" */
+extern0 SEXP    R_ConnIdSymbol;       /* "conn_id" */
+extern0 SEXP    R_DevicesSymbol;      /* ".Devices" */
+extern0 SEXP    R_dot_Generic;        /* ".Generic" */
+extern0 SEXP    R_dot_Methods;        /* ".Methods" */
+extern0 SEXP    R_dot_Group;          /* ".Group" */
+extern0 SEXP    R_dot_Class;          /* ".Class" */
+extern0 SEXP    R_dot_GenericCallEnv; /* ".GenericCallEnv" */
 extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
-extern0 SEXP	R_sort_list;  /* "sort.list" */
-extern0 SEXP	R_S3MethodsTable;  /* ".__S3MethodsTable__." */
-extern0 SEXP	R_previousSymbol; /* "previous" */
+extern0 SEXP	R_sort_list;          /* "sort.list" */
+extern0 SEXP	R_S3MethodsTable;     /* ".__S3MethodsTable__." */
+extern0 SEXP	R_previousSymbol;     /* "previous" */
 
 
  /* writable char access for R internal use only */
