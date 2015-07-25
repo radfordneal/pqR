@@ -2694,8 +2694,12 @@ static int token(void)
     wchar_t wc;
 
     newline_before_token = 0;
+
     c = SkipSpace(0);
-    if (c == '#') c = SkipComment();
+    while (c == '#') {
+        c = SkipComment();
+        if (c == '\n') c = SkipSpace(0);
+    }
 
     yylloc.first_line = ParseState.xxlineno;
     yylloc.first_column = ParseState.xxcolno;
