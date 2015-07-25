@@ -3366,28 +3366,10 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 static int R_bcVersion = 7;
 static int R_bcMinVersion = 6;
 
-static SEXP R_AddSym = NULL;
-static SEXP R_SubSym = NULL;
-static SEXP R_MulSym = NULL;
-static SEXP R_DivSym = NULL;
-static SEXP R_ExptSym = NULL;
-static SEXP R_SqrtSym = NULL;
-static SEXP R_ExpSym = NULL;
-static SEXP R_EqSym = NULL;
-static SEXP R_NeSym = NULL;
-static SEXP R_LtSym = NULL;
-static SEXP R_LeSym = NULL;
-static SEXP R_GeSym = NULL;
-static SEXP R_GtSym = NULL;
-static SEXP R_AndSym = NULL;
-static SEXP R_OrSym = NULL;
-static SEXP R_NotSym = NULL;
-static SEXP R_SubsetSym = NULL;
-static SEXP R_SubassignSym = NULL;
-static SEXP R_CSym = NULL;
-static SEXP R_Subset2Sym = NULL;
-static SEXP R_Subassign2Sym = NULL;
-static SEXP R_valueSym = NULL;
+static SEXP R_SqrtSymbol = NULL;
+static SEXP R_ExpSymbol = NULL;
+static SEXP R_CSymbol = NULL;
+
 static SEXP R_TrueValue = NULL;
 static SEXP R_FalseValue = NULL;
 
@@ -3398,28 +3380,9 @@ static SEXP R_FalseValue = NULL;
 attribute_hidden
 void R_initialize_bcode(void)
 {
-  R_AddSym = install("+");
-  R_SubSym = install("-");
-  R_MulSym = install("*");
-  R_DivSym = install("/");
-  R_ExptSym = install("^");
-  R_SqrtSym = install("sqrt");
-  R_ExpSym = install("exp");
-  R_EqSym = install("==");
-  R_NeSym = install("!=");
-  R_LtSym = install("<");
-  R_LeSym = install("<=");
-  R_GeSym = install(">=");
-  R_GtSym = install(">");
-  R_AndSym = install("&");
-  R_OrSym = install("|");
-  R_NotSym = install("!");
-  R_SubsetSym = R_BracketSymbol; /* "[" */
-  R_SubassignSym = install("[<-");
-  R_CSym = install("c");
-  R_Subset2Sym = R_Bracket2Symbol; /* "[[" */
-  R_Subassign2Sym = install("[[<-");
-  R_valueSym = install("value");
+  R_SqrtSymbol = install("sqrt");
+  R_ExpSymbol = install("exp");
+  R_CSymbol = install("c");
 
   R_TrueValue = mkTrue();
   SET_NAMEDCNT_MAX(R_TrueValue);
@@ -4461,7 +4424,7 @@ static void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
     args = CONS(idx, R_NilValue);
     args = CONS(vec, args);
     PROTECT(args);
-    value = do_subset_dflt(R_NilValue, R_SubsetSym, args, rho);
+    value = do_subset_dflt(R_NilValue, R_BracketSymbol, args, rho);
     UNPROTECT(1);
     SETSTACK_PTR(sv, value);
 }
@@ -4530,7 +4493,7 @@ static R_INLINE void DO_MATSUBSET(SEXP rho)
     args = CONS(idx, args);
     args = CONS(mat, args);
     SETSTACK(-1, args); /* for GC protection */
-    value = do_subset_dflt(R_NilValue, R_SubsetSym, args, rho);
+    value = do_subset_dflt(R_NilValue, R_BracketSymbol, args, rho);
     R_BCNodeStackTop -= 2;
     SETSTACK(-1, value);
 }
@@ -4591,11 +4554,11 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     value = GETSTACK_PTR(srhs);
     idx = GETSTACK_PTR(si);
     args = CONS(value, R_NilValue);
-    SET_TAG(args, R_valueSym);
+    SET_TAG(args, R_ValueSymbol);
     args = CONS(idx, args);
     args = CONS(vec, args);
     PROTECT(args);
-    vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    vec = do_subassign_dflt(R_NilValue, R_SubAssignSymbol, args, rho);
     UNPROTECT(1);
     SETSTACK_PTR(sv, vec);
 }
@@ -4643,12 +4606,12 @@ static void DO_SETMATSUBSET(SEXP rho)
     idx = GETSTACK(-2);
     jdx = GETSTACK(-1);
     args = CONS(value, R_NilValue);
-    SET_TAG(args, R_valueSym);
+    SET_TAG(args, R_ValueSymbol);
     args = CONS(jdx, args);
     args = CONS(idx, args);
     args = CONS(mat, args);
     SETSTACK(-1, args); /* for GC protection */
-    mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    mat = do_subassign_dflt(R_NilValue, R_SubAssignSymbol, args, rho);
     R_BCNodeStackTop -= 3;
     SETSTACK(-1, mat);
 }
@@ -5215,24 +5178,24 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	BCNPUSH(value);
 	NEXT();
       }
-    OP(UMINUS, 1): Arith1(R_SubSym);
-    OP(UPLUS, 1): Arith1(R_AddSym);
-    OP(ADD, 1): FastBinary(+, PLUSOP, R_AddSym);
-    OP(SUB, 1): FastBinary(-, MINUSOP, R_SubSym);
-    OP(MUL, 1): FastBinary(*, TIMESOP, R_MulSym);
-    OP(DIV, 1): FastBinary(/, DIVOP, R_DivSym);
-    OP(EXPT, 1): Arith2(POWOP, R_ExptSym);
-    OP(SQRT, 1): Math1(R_SqrtSym);
-    OP(EXP, 1): Math1(R_ExpSym);
-    OP(EQ, 1): FastRelop2(==, EQOP, R_EqSym);
-    OP(NE, 1): FastRelop2(!=, NEOP, R_NeSym);
-    OP(LT, 1): FastRelop2(<, LTOP, R_LtSym);
-    OP(LE, 1): FastRelop2(<=, LEOP, R_LeSym);
-    OP(GE, 1): FastRelop2(>=, GEOP, R_GeSym);
-    OP(GT, 1): FastRelop2(>, GTOP, R_GtSym);
-    OP(AND, 1): Special2(do_andor, R_AndSym, rho);
-    OP(OR, 1): Special2(do_andor, R_OrSym, rho);
-    OP(NOT, 1): Builtin1(do_not, R_NotSym, rho);
+    OP(UMINUS, 1): Arith1(R_SubSymbol);
+    OP(UPLUS, 1): Arith1(R_AddSymbol);
+    OP(ADD, 1): FastBinary(+, PLUSOP, R_AddSymbol);
+    OP(SUB, 1): FastBinary(-, MINUSOP, R_SubSymbol);
+    OP(MUL, 1): FastBinary(*, TIMESOP, R_MulSymbol);
+    OP(DIV, 1): FastBinary(/, DIVOP, R_DivSymbol);
+    OP(EXPT, 1): Arith2(POWOP, R_ExptSymbol);
+    OP(SQRT, 1): Math1(R_SqrtSymbol);
+    OP(EXP, 1): Math1(R_ExpSymbol);
+    OP(EQ, 1): FastRelop2(==, EQOP, R_EqSymbol);
+    OP(NE, 1): FastRelop2(!=, NEOP, R_NeSymbol);
+    OP(LT, 1): FastRelop2(<, LTOP, R_LtSymbol);
+    OP(LE, 1): FastRelop2(<=, LEOP, R_LeSymbol);
+    OP(GE, 1): FastRelop2(>=, GEOP, R_GeSymbol);
+    OP(GT, 1): FastRelop2(>, GTOP, R_GtSymbol);
+    OP(AND, 1): Special2(do_andor, R_AndSymbol, rho);
+    OP(OR, 1): Special2(do_andor, R_OrSymbol, rho);
+    OP(NOT, 1): Builtin1(do_not, R_NotSymbol, rho);
     OP(DOTSERR, 0): dotdotdot_error();
     OP(STARTASSIGN, 1):
       {
@@ -5286,17 +5249,17 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	NEXT();
       }
     OP(STARTSUBSET, 2): DO_STARTDISPATCH("[");
-    OP(DFLTSUBSET, 0): DO_DFLTDISPATCH(do_subset_dflt, R_SubsetSym);
+    OP(DFLTSUBSET, 0): DO_DFLTDISPATCH(do_subset_dflt, R_BracketSymbol);
     OP(STARTSUBASSIGN, 2): DO_START_ASSIGN_DISPATCH("[<-");
     OP(DFLTSUBASSIGN, 0):
-      DO_DFLT_ASSIGN_DISPATCH(do_subassign_dflt, R_SubassignSym);
+      DO_DFLT_ASSIGN_DISPATCH(do_subassign_dflt, R_SubAssignSymbol);
     OP(STARTC, 2): DO_STARTDISPATCH("c");
-    OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSym);
+    OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSymbol);
     OP(STARTSUBSET2, 2): DO_STARTDISPATCH("[[");
-    OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH0(do_subset2_dflt, R_Subset2Sym);
+    OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH0(do_subset2_dflt, R_Bracket2Symbol);
     OP(STARTSUBASSIGN2, 2): DO_START_ASSIGN_DISPATCH("[[<-");
     OP(DFLTSUBASSIGN2, 0):
-      DO_DFLT_ASSIGN_DISPATCH(do_subassign2_dflt, R_Subassign2Sym);
+      DO_DFLT_ASSIGN_DISPATCH(do_subassign2_dflt, R_SubSubAssignSymbol);
     OP(DOLLAR, 2):
       {
 	int dispatched = FALSE;
@@ -5460,7 +5423,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	case BUILTINSXP:
 	  /* push RHS value onto arguments with 'value' tag */
 	  PUSHCALLARG(rhs);
-	  SET_TAG(GETSTACK(-1), R_valueSym);
+	  SET_TAG(GETSTACK(-1), R_ValueSymbol);
 	  /* replace first argument with LHS value */
 	  args = GETSTACK(-2);
 	  SETCAR(args, lhs);
@@ -5494,7 +5457,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SET_PRVALUE(prom, rhs);
           INC_NAMEDCNT(rhs);
 	  PUSHCALLARG(prom);
-	  SET_TAG(GETSTACK(-1), R_valueSym);
+	  SET_TAG(GETSTACK(-1), R_ValueSymbol);
 	  /* replace first argument with evaluated promise for LHS */
           prom = mkPROMISE(R_TmpvalSymbol, rho);
 	  SET_PRVALUE(prom, lhs);
