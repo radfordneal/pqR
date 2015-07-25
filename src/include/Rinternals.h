@@ -938,15 +938,26 @@ extern
 SEXP	R_RestartToken;     /* Marker for restarted function calls */
 
 /* Symbol Table Shortcuts */
-LibExtern SEXP	R_Bracket2Symbol;   /* "[[" */
-LibExtern SEXP	R_BracketSymbol;    /* "[" */
+
 LibExtern SEXP	R_BraceSymbol;      /* "{" */
+LibExtern SEXP	R_BracketSymbol;    /* "[" */
+LibExtern SEXP	R_Bracket2Symbol;   /* "[[" */
+LibExtern SEXP	R_DollarSymbol;	    /* "$" */
+LibExtern SEXP	R_SubAssignSymbol;  /* "[<-" */
+LibExtern SEXP	R_SubSubAssignSymbol; /* "[[<-" */
+LibExtern SEXP	R_DollarAssignSymbol; /* "$<-" */
+LibExtern SEXP	R_DotsSymbol;	    /* "..." */
+LibExtern SEXP	R_AssignSymbols[4]; /* 0, "<-", "<<-", "=" */
+LibExtern SEXP	R_LocalAssignSymbol;   /* same as R_AssignSymbols[1] */
+LibExtern SEXP	R_GlobalAssignSymbol;  /* same as R_AssignSymbols[2] */
+LibExtern SEXP	R_EqAssignSymbol;      /* same as R_AssignSymbols[3] */
+LibExtern SEXP	R_LocalRightAssignSymbol;  /* -> */
+LibExtern SEXP	R_GlobalRightAssignSymbol; /* ->> */
+
 LibExtern SEXP	R_ClassSymbol;	    /* "class" */
 LibExtern SEXP	R_DeviceSymbol;     /* ".Device" */
 LibExtern SEXP	R_DimNamesSymbol;   /* "dimnames" */
 LibExtern SEXP	R_DimSymbol;	    /* "dim" */
-LibExtern SEXP	R_DollarSymbol;	    /* "$" */
-LibExtern SEXP	R_DotsSymbol;	    /* "..." */
 LibExtern SEXP	R_DropSymbol;	    /* "drop" */
 LibExtern SEXP	R_LastvalueSymbol;  /* ".Last.value" */
 LibExtern SEXP	R_LevelsSymbol;	    /* "levels" */
@@ -963,10 +974,6 @@ LibExtern SEXP	R_SourceSymbol;     /* "source" */
 LibExtern SEXP	R_SrcrefSymbol;     /* "srcref" */
 LibExtern SEXP	R_TspSymbol;	    /* "tsp" */
 LibExtern SEXP	R_ValueSymbol;	    /* "value" */
-LibExtern SEXP	R_AssignSymbols[4]; /* 0, "<-", "<<-", "=" */
-LibExtern SEXP	R_SubAssignSymbol;  /* "[<-" */
-LibExtern SEXP	R_SubSubAssignSymbol; /* "[[<-" */
-LibExtern SEXP	R_DollarAssignSymbol; /* "$<-" */
 
 LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */
