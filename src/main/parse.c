@@ -176,6 +176,7 @@ cr	:
 /* TOKEN TYPE.  Single characters also act as tokens. */
 
 enum yytokentype {
+  MAYBE_END = 257,
   END_OF_INPUT = 258,
   ERROR = 259,
   STR_CONST = 260,
@@ -219,7 +220,7 @@ enum yytokentype {
 
 static const char *const yytname[] =
 {
-  "error", "$undefined", "END_OF_INPUT", "ERROR", "STR_CONST",
+  "error", "MAYBE_END", "END_OF_INPUT", "ERROR", "STR_CONST",
   "NUM_CONST", "NULL_CONST", "SYMBOL", "FUNCTION", "INCOMPLETE_STRING",
   "LEFT_ASSIGN", "EQ_ASSIGN", "RIGHT_ASSIGN", "LBB", "FOR", "IN", "IF",
   "ELSE", "WHILE", "NEXT", "BREAK", "REPEAT", "GT", "GE", "LT", "LE", "EQ",
@@ -228,6 +229,8 @@ static const char *const yytname[] =
   "':'", "UPLUS", "UMINUS", "'^'", "'$'", "'@'", "'('", "'['", "$accept",
   "prog", 0
 };
+
+#define SOFT_EOF (EOF == -1 ? -2 : -1)
 
 static void yyerror(const char *);
 
@@ -324,7 +327,7 @@ static int xxgetc(void)
 	return R_EOF;
 
     R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    R_ParseContext[R_ParseContextLast] = c;
+    R_ParseContext[R_ParseContextLast] = c == SOFT_EOF ? '\n' : c;
 
     if (c == '\n') {
 	ParseState.xxlineno += 1;
@@ -569,7 +572,12 @@ static void ParseContextInit(void)
 
 #define PROTECT_N(w) (nprotect++, PROTECT(w))
 
+#define NEXT_TOKEN \
+  (next_token == MAYBE_END ? (get_next_token(), next_token) : next_token) 
+
 #define TOKEN_VALUE() (PROTECT_N(yylval))
+
+#define NL_END ((flags & END_ON_NL) && newline_before_token)
 
 #define END_PARSE_FUN \
   end: \
@@ -633,13 +641,13 @@ static SEXP parse_formlist (int flags, int *stat)
 
     flags &= ~END_ON_NL;
     res = R_NilValue;
-    if (next_token != ')') {
+    if (NEXT_TOKEN != ')') {
         SEXP last;
         res = PROTECT_N (CONS(R_MissingArg,R_NilValue));
         last = res;
         for (;;) {
             SEXP tag, f;
-            if (next_token != SYMBOL)
+            if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
@@ -652,13 +660,13 @@ static SEXP parse_formlist (int flags, int *stat)
             }
             SET_TAG (last, tag);
             get_next_token();
-            if (next_token == EQ_ASSIGN) {
+            if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
                 get_next_token();
                 PARSE_SUB(def = parse_expr(flags,stat));
                 SETCAR (last, def);
             }
-            if (next_token != ',')
+            if (NEXT_TOKEN != ',')
                 break;
             get_next_token();
             SETCDR (last, CONS(R_MissingArg,R_NilValue));
@@ -683,15 +691,15 @@ static SEXP parse_sublist (int flags, int *stat)
 
     flags &= ~END_ON_NL;
     res = R_NilValue;
-    if (next_token != ')') {
+    if (NEXT_TOKEN != ')') {
         SEXP next;
         for (;;) {
             SEXP arg;
-            if (next_token == ',' || next_token == ')' || next_token == ']')
+            if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
                 PARSE_SUB(arg = parse_expr(flags,stat));
-                if (next_token == EQ_ASSIGN) {
+                if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
                     if (TYPEOF(arg) == SYMSXP)
                         tag = arg;
@@ -702,8 +710,8 @@ static SEXP parse_sublist (int flags, int *stat)
                     else
                         PARSE_UNEXPECTED();
                     get_next_token();
-                    if (next_token == ',' || next_token == ')' 
-                                          || next_token == ']')
+                    if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' 
+                                          || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
                         PARSE_SUB(val = parse_expr(flags,stat));
@@ -730,7 +738,7 @@ static SEXP parse_sublist (int flags, int *stat)
                 last2 = last;
                 last = next;
             }
-            if (next_token != ',')
+            if (NEXT_TOKEN != ',')
                 break;
             get_next_token();
         }
@@ -760,14 +768,14 @@ static SEXP parse_element (int flags, int *stat)
     /* Symbols, string constants, and namespace references built from
        one or the other or both of these. */
 
-    if (next_token == SYMBOL || next_token == STR_CONST) {
+    if (NEXT_TOKEN == SYMBOL || NEXT_TOKEN == STR_CONST) {
         SEXP op, sym;
         res = TOKEN_VALUE();
         get_next_token();
-        if (next_token == NS_GET || next_token == NS_GET_INT) {
+        if (!NL_END && (NEXT_TOKEN == NS_GET || NEXT_TOKEN == NS_GET_INT)) {
             op = TOKEN_VALUE();
             get_next_token();
-            if (next_token != SYMBOL && next_token != STR_CONST)
+            if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
             res = PROTECT_N (LCONS (op, CONS (res, MaybeConstList1(sym))));
@@ -777,14 +785,14 @@ static SEXP parse_element (int flags, int *stat)
 
     /* Numeric, logical, and NULL constants. */
 
-    else if (next_token == NUM_CONST || next_token == NULL_CONST) {
+    else if (NEXT_TOKEN == NUM_CONST || NEXT_TOKEN == NULL_CONST) {
         res = TOKEN_VALUE();
         get_next_token();
     }
 
     /* Paren expressions. */
 
-    else if (next_token == '(') {
+    else if (NEXT_TOKEN == '(') {
         SEXP op;
         op = TOKEN_VALUE();
         get_next_token();
@@ -796,7 +804,7 @@ static SEXP parse_element (int flags, int *stat)
 
     /* Curly expressions. */
 
-    else if (next_token == '{') {
+    else if (NEXT_TOKEN == '{') {
         SEXP next, last, op, refs, last_ref;
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS(op,R_NilValue));
@@ -810,9 +818,9 @@ static SEXP parse_element (int flags, int *stat)
         }
         last = res;
         for (;;) {
-            while (next_token == ';' || next_token == '\n')
+            while (NEXT_TOKEN == ';' || NEXT_TOKEN == '\n')
                 get_next_token();
-            if (next_token == '}')
+            if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
             PARSE_SUB (next = parse_expr_or_assign(flags|END_ON_NL,stat));
@@ -834,7 +842,7 @@ static SEXP parse_element (int flags, int *stat)
 
     /* Function closures. */
 
-    else if (next_token == FUNCTION) {
+    else if (NEXT_TOKEN == FUNCTION) {
         SEXP op, args, body, srcref;
         start_location(&loc);
         op = TOKEN_VALUE();
@@ -855,7 +863,7 @@ static SEXP parse_element (int flags, int *stat)
 
     /* Repeat statements. */
 
-    else if (next_token == REPEAT) {
+    else if (NEXT_TOKEN == REPEAT) {
         SEXP op, body;
         op = TOKEN_VALUE();
         get_next_token();
@@ -865,7 +873,7 @@ static SEXP parse_element (int flags, int *stat)
 
     /* While statements. */
 
-    else if (next_token == WHILE) {
+    else if (NEXT_TOKEN == WHILE) {
         SEXP op, cond, body;
         op = TOKEN_VALUE();
         get_next_token();
@@ -878,7 +886,7 @@ static SEXP parse_element (int flags, int *stat)
 
     /* If statements. */
 
-    else if (next_token == IF) {
+    else if (NEXT_TOKEN == IF) {
         SEXP op, cond, true_stmt, false_stmt;
         op = TOKEN_VALUE();
         get_next_token();
@@ -886,7 +894,7 @@ static SEXP parse_element (int flags, int *stat)
         PARSE_SUB(cond = parse_expr(flags&~END_ON_NL,stat));
         EXPECT(')');
         PARSE_SUB(true_stmt = parse_expr_or_assign(flags,stat));
-        if (next_token == ELSE) {
+        if (next_token == ELSE) { /* Lower! Don't force move past MAYBE_END */
             get_next_token();
             PARSE_SUB(false_stmt = parse_expr_or_assign(flags,stat));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
@@ -899,12 +907,12 @@ static SEXP parse_element (int flags, int *stat)
 
     /* For statements. */
 
-    else if (next_token == FOR) {
+    else if (NEXT_TOKEN == FOR) {
         SEXP op, sym, vec, body;
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        if (next_token != SYMBOL)
+        if (NEXT_TOKEN != SYMBOL)
             PARSE_UNEXPECTED();
         sym = TOKEN_VALUE();
         get_next_token();
@@ -917,7 +925,7 @@ static SEXP parse_element (int flags, int *stat)
 
     /* Next and break statements. */
 
-    else if (next_token == NEXT || next_token == BREAK) {
+    else if (NEXT_TOKEN == NEXT || NEXT_TOKEN == BREAK) {
         SEXP op;
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS (op, R_NilValue));
@@ -929,16 +937,11 @@ static SEXP parse_element (int flags, int *stat)
 
     /* Now parse any postfix parts, unless we are ending due to a newline. */
 
-    for (;;) {
-
-        /* Check for termination of this expression with newline. */
-
-        if (newline_before_token && (flags & END_ON_NL))
-            break;
+    while (!NL_END) {
 
         /* Function call. */
 
-        if (next_token == '(') {
+        if (NEXT_TOKEN == '(') {
             SEXP subs;
             get_next_token();
             PARSE_SUB(subs = parse_sublist(flags,stat));
@@ -950,7 +953,7 @@ static SEXP parse_element (int flags, int *stat)
 
         /* Subscripting with [. */
 
-        else if (next_token == '[') {
+        else if (NEXT_TOKEN == '[') {
             SEXP op, subs;
             op = TOKEN_VALUE();
             get_next_token();
@@ -961,7 +964,7 @@ static SEXP parse_element (int flags, int *stat)
 
         /* Subscripting with [[.  Note that it may be terminated with ] ]. */
 
-        else if (next_token == LBB) {
+        else if (NEXT_TOKEN == LBB) {
             SEXP op, subs;
             op = TOKEN_VALUE();
             get_next_token();
@@ -973,11 +976,11 @@ static SEXP parse_element (int flags, int *stat)
 
         /* Subsetting with $ or @. */
 
-        else if (next_token == '$' || next_token == '@') {
+        else if (NEXT_TOKEN == '$' || NEXT_TOKEN == '@') {
             SEXP op, sym;
             op = TOKEN_VALUE();
             get_next_token();
-            if (next_token != SYMBOL && next_token != STR_CONST)
+            if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
             res = LCONS (op, CONS (res, MaybeConstList1(sym)));
@@ -1002,8 +1005,7 @@ static SEXP parse_power (int flags, int *stat)
 
     PARSE_SUB (res = parse_element(flags,stat));
 
-    if (next_token == '^') {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    if (!NL_END && NEXT_TOKEN == '^') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_power(flags,stat));
@@ -1019,7 +1021,7 @@ static SEXP parse_unary_plus_minus (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res, op;
 
-    if (next_token == '+' || next_token == '-') {
+    if (NEXT_TOKEN == '+' || NEXT_TOKEN == '-') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_unary_plus_minus(flags,stat));
@@ -1039,8 +1041,7 @@ static SEXP parse_colon (int flags, int *stat)
 
     PARSE_SUB (res = parse_unary_plus_minus(flags,stat));
 
-    while (next_token == ':') {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && NEXT_TOKEN == ':') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_unary_plus_minus(flags,stat));
@@ -1058,13 +1059,11 @@ static SEXP parse_special (int flags, int *stat)
 
     PARSE_SUB (res = parse_colon(flags,stat));
 
-    while (next_token == SPECIAL) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && NEXT_TOKEN == SPECIAL) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_colon(flags,stat));
         PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
     }
 
     END_PARSE_FUN;
@@ -1078,8 +1077,7 @@ static SEXP parse_mul_div (int flags, int *stat)
 
     PARSE_SUB (res = parse_special(flags,stat));
 
-    while (next_token == '*' || next_token == '/') {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && (NEXT_TOKEN == '*' || NEXT_TOKEN == '/')) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_special(flags,stat));
@@ -1097,8 +1095,7 @@ static SEXP parse_plus_minus (int flags, int *stat)
 
     PARSE_SUB (res = parse_mul_div(flags,stat));
 
-    while (next_token == '+' || next_token == '-') {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && (NEXT_TOKEN == '+' || NEXT_TOKEN == '-')) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_mul_div(flags,stat));
@@ -1117,9 +1114,8 @@ static SEXP parse_relation (int flags, int *stat)
 
     PARSE_SUB (res = parse_plus_minus(flags,stat));
 
-    if (next_token == GT || next_token == GE || next_token == EQ
-     || next_token == LE || next_token == LT || next_token == NE) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    if (!NL_END && (NEXT_TOKEN == GT || NEXT_TOKEN == GE || NEXT_TOKEN == EQ
+                 || NEXT_TOKEN == LE || NEXT_TOKEN == LT || NEXT_TOKEN == NE)) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_plus_minus(flags,stat));
@@ -1135,7 +1131,7 @@ static SEXP parse_not (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res, op;
 
-    if (next_token == '!') {
+    if (NEXT_TOKEN == '!') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_not(flags,stat));
@@ -1155,8 +1151,7 @@ static SEXP parse_and (int flags, int *stat)
 
     PARSE_SUB (res = parse_not(flags,stat));
 
-    while (next_token == AND || next_token == AND2) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && (NEXT_TOKEN == AND || NEXT_TOKEN == AND2)) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_not(flags,stat));
@@ -1174,8 +1169,7 @@ static SEXP parse_or (int flags, int *stat)
 
     PARSE_SUB (res = parse_and(flags,stat));
 
-    while (next_token == OR || next_token == OR2) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && (NEXT_TOKEN == OR || NEXT_TOKEN == OR2)) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_and(flags,stat));
@@ -1191,7 +1185,7 @@ static SEXP parse_unary_tilde (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res, op;
 
-    if (next_token == '~') {
+    if (NEXT_TOKEN == '~') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_unary_tilde(flags|KEEP_PARENS,stat));
@@ -1211,8 +1205,7 @@ static SEXP parse_tilde (int flags, int *stat)
 
     PARSE_SUB (res = parse_unary_tilde(flags,stat));
 
-    while (next_token == '~') {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && NEXT_TOKEN == '~') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_unary_tilde(flags|KEEP_PARENS,stat));
@@ -1230,8 +1223,7 @@ static SEXP parse_right_assign (int flags, int *stat)
 
     PARSE_SUB (res = parse_tilde(flags,stat));
 
-    while (next_token == RIGHT_ASSIGN) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && NEXT_TOKEN == RIGHT_ASSIGN) {
         op = TOKEN_VALUE();  /* already switched to left assignment */
         get_next_token();
         PARSE_SUB (right = parse_tilde(flags,stat));
@@ -1249,8 +1241,7 @@ static SEXP parse_left_assign (int flags, int *stat)
 
     PARSE_SUB (res = parse_right_assign(flags,stat));
 
-    if (next_token == LEFT_ASSIGN) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    if (!NL_END && NEXT_TOKEN == LEFT_ASSIGN) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_left_assign(flags,stat));
@@ -1266,7 +1257,7 @@ static SEXP parse_unary_query (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res, op;
 
-    if (next_token == '?') {
+    if (NEXT_TOKEN == '?') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_unary_query(flags,stat));
@@ -1286,8 +1277,7 @@ static SEXP parse_expr (int flags, int *stat)
 
     PARSE_SUB (res = parse_unary_query(flags,stat));
 
-    while (next_token == '?') {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    while (!NL_END && NEXT_TOKEN == '?') {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_unary_query(flags,stat));
@@ -1305,8 +1295,7 @@ static SEXP parse_expr_or_assign (int flags, int *stat)
 
     PARSE_SUB (res = parse_expr(flags,stat));
 
-    if (next_token == EQ_ASSIGN) {
-        if (newline_before_token && (flags & END_ON_NL)) goto end;
+    if (!NL_END && NEXT_TOKEN == EQ_ASSIGN) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (right = parse_expr_or_assign(flags,stat));
@@ -1327,10 +1316,10 @@ static SEXP parse_prog (int flags, int *stat)
 
     PARSE_SUB (res = parse_expr_or_assign(flags,stat));
 
-    if (next_token == ';')
-        get_next_token();
-    else if (newline_before_token || next_token == END_OF_INPUT)
+    if (newline_before_token || NEXT_TOKEN == END_OF_INPUT)
         ; /* OK */
+    else if (NEXT_TOKEN == ';')
+        get_next_token();
     else
         PARSE_UNEXPECTED();
 
@@ -1347,12 +1336,12 @@ static SEXP R_Parse1(ParseStatus *status, YYLTYPE *loc)
     SEXP res;
     int stat;
 
-    if (next_token == END_OF_INPUT) {
+    if (NEXT_TOKEN == END_OF_INPUT) {
         *status = PARSE_EOF;
         return R_CurrentExpr = R_NilValue;
     }
 
-    if (next_token == ';') {
+    if (NEXT_TOKEN == ';') {
         get_next_token();
         *status = PARSE_NULL;
         return R_CurrentExpr = R_NilValue;
@@ -1584,7 +1573,7 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 }
 
 static int need_console_read;
-static char *prompt_string;
+static const char *prompt_string;
 
 static int console_getc(void)
 {
@@ -1601,7 +1590,7 @@ static int console_getc(void)
     c = R_IoBufferGetc(iob);
     if (c == EOF) {
         need_console_read = 1;
-        return '\n';
+        return SOFT_EOF;
     }
     return c;
 }
@@ -1651,7 +1640,6 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	if(n >= 0 && i >= n) break;
 
 	cur = R_Parse1(status,&loc);
-REprintf("Parse1:  status %d, null %d\n",*status,cur==R_NilValue);
 
 	switch(*status) {
 	case PARSE_NULL:
@@ -1884,7 +1872,7 @@ static void yyerror(const char *s)
          see these. */
 
 #       define YYENGLISH 8
-	"$undefined",	"input",
+	"MAYBE_END",	"end of input",
 	"END_OF_INPUT",	"end of input",
 	"ERROR",	"input",
 	"STR_CONST",	"string constant",
@@ -2718,7 +2706,12 @@ static int token(void)
     yylloc.first_byte = ParseState.xxbyteno;
     yylloc.first_parsed = ParseState.xxparseno;
 
-    if (c == R_EOF) return END_OF_INPUT;
+    if (c == R_EOF) 
+        return END_OF_INPUT;
+    if (c == SOFT_EOF) {
+        newline_before_token = 1;
+        return MAYBE_END;
+    }
 
     /* Either digits or symbols can start with a "." */
     /* so we need to decide which it is and jump to  */
