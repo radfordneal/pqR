@@ -260,69 +260,96 @@ cr	:
    INTERFACE FROM THE PARSER TO THE LEXICAL ANALYSER
 */
 
-
 /* Codes for token types.  Codes for single characters also act as
    token numbers. */
 
-enum yytokentype {
-  MAYBE_END = 257,
-  END_OF_INPUT = 258,
-  ERROR = 259,
-  STR_CONST = 260,
-  NUM_CONST = 261,
-  NULL_CONST = 262,
-  SYMBOL = 263,
-  FUNCTION = 264,
-  INCOMPLETE_STRING = 265,
-  LEFT_ASSIGN = 266,
-  EQ_ASSIGN = 267,
-  RIGHT_ASSIGN = 268,
-  LBB = 269,
-  FOR = 270,
-  IN = 271,
-  IF = 272,
-  ELSE = 273,
-  WHILE = 274,
-  NEXT = 275,
-  BREAK = 276,
-  REPEAT = 277,
-  GT = 278,
-  GE = 279,
-  LT = 280,
-  LE = 281,
-  EQ = 282,
-  NE = 283,
-  AND = 284,
-  OR = 285,
-  AND2 = 286,
-  OR2 = 287,
-  NS_GET = 288,
-  NS_GET_INT = 289,
-  LOW = 290,
-  TILDE = 291,
-  NOT = 292,
-  UNOT = 293,
-  SPECIAL = 294,
-  UPLUS = 295,
-  UMINUS = 296
+enum token_type {
+  MAYBE_END = 256,
+  END_OF_INPUT,
+  ERROR,
+  STR_CONST,
+  NUM_CONST,
+  SYMBOL,
+  LEFT_ASSIGN,
+  EQ_ASSIGN,
+  RIGHT_ASSIGN,
+  NULL_CONST,
+  FUNCTION,
+  LBB,
+  FOR,
+  IN,
+  IF,
+  ELSE,
+  WHILE,
+  NEXT,
+  BREAK,
+  REPEAT,
+  GT,
+  GE,
+  LT,
+  LE,
+  EQ,
+  NE,
+  AND,
+  OR,
+  AND2,
+  OR2,
+  NS_GET,
+  NS_GET_INT,
+  SPECIAL
 };
 
+/* Names for tokens with codes >= 256. */
 
-/* Names for tokens (with codes >= 256). */
+#define NUM_TRANSLATED 7  /* Number of these (at front) that are translated */
 
-static const char *const yytname[] =
-{
-  "error", "MAYBE_END", "END_OF_INPUT", "ERROR", "STR_CONST",
-  "NUM_CONST", "NULL_CONST", "SYMBOL", "FUNCTION", "INCOMPLETE_STRING",
-  "LEFT_ASSIGN", "EQ_ASSIGN", "RIGHT_ASSIGN", "LBB", "FOR", "IN", "IF",
-  "ELSE", "WHILE", "NEXT", "BREAK", "REPEAT", "GT", "GE", "LT", "LE", "EQ",
-  "NE", "AND", "OR", "AND2", "OR2", "NS_GET", "NS_GET_INT", "'?'", "LOW",
-  "'~'", "TILDE", "NOT", "UNOT", "'+'", "'-'", "'*'", "'/'", "SPECIAL",
-  "':'", "UPLUS", "UMINUS", "'^'", "'$'", "'@'", "'('", "'['", "$accept",
-  "prog", 0
+static const char *const token_name[] = {
+  "end of input",
+  "end of input",
+  "input",
+  "string constant",
+  "numeric constant",
+  "symbol",
+  "assignment",
+  "=",
+  "->",
+  "'NULL'",
+  "'function'",
+  "'[['",
+  "'for'",
+  "'in'",
+  "'if'",
+  "'else'",
+  "'while'",
+  "'next'",
+  "'break'",
+  "'repeat'",
+  "'>'",
+  "'>='",
+  "'<'",
+  "'<='",
+  "'=='",
+  "'!='",
+  "'&'",
+  "'|'",
+  "'&&'",
+  "'||'",
+  "'::'",
+  "':::'",
+  "SPECIAL",
 };
 
-static void yyerror(const char *);
+#if 0  /* These are just here to trigger the internationalization. */
+    _("end of input");
+    _("input");
+    _("string constant");
+    _("numeric constant");
+    _("symbol");
+    _("assignment");
+    _("end of line");  /* currently unused */
+#endif
+
+static void error_msg(const char *);
 
 static int KeywordLookup(const char *);
 static int processLineDirective();
@@ -345,7 +372,8 @@ typedef struct
 
 static SEXP yylval;
 
-/* Location data for the lookahead symbol, and one previous to it.  */
+/* Location data for the lookahead symbol,
+  and one previous to it.  */
 
 static token_location yylloc, prev_yylloc;
 
@@ -616,26 +644,15 @@ static void ParseInit(void)
 
 #define PARSE_ERROR_MSG(s) \
     do { \
-        yyerror(s); \
+        error_msg(s); \
         goto error; \
     } while (0)
 
 /* Produce an error message saying the current token is unexpected, and
-   exit to top level. */
+   exit to top level.  The token name is filled in by error_msg, based
+   on the current value of next_token. */
 
-#define PARSE_UNEXPECTED() \
-    do { \
-        char s[100] = "syntax error, unexpected"; \
-        if (next_token < 256) { \
-            char t[2] = { next_token, 0 }; \
-            copy_3_strings(s, sizeof s, "syntax error, unexpected '", t, "'"); \
-        } \
-        else { \
-            copy_2_strings (s, sizeof s, "syntax error, unexpected ", \
-                            yytname[next_token-256]); \
-        } \
-        PARSE_ERROR_MSG(s); \
-    } while (0)
+#define PARSE_UNEXPECTED() PARSE_ERROR_MSG("syntax error, unexpected ");
 
 /* Say the current is unexpected unless it is equal to tk. */
 
@@ -1868,91 +1885,30 @@ static SEXP mkComplex(const char *s)
     return t;
 }
 
-static void yyerror(const char *s)
+static void error_msg(const char *s)
 {
-    static const char *const yytname_translations[] =
-    {
-      /* The left column are strings coming from bison, the right
-         column are translations for users. The first YYENGLISH from the 
-         right column are English to be translated, the rest are to be 
-         copied literally.  The #if 0 block below allows xgettext to
-         see these. */
-
-#       define YYENGLISH 8
-	"MAYBE_END",	"end of input",
-	"END_OF_INPUT",	"end of input",
-	"ERROR",	"input",
-	"STR_CONST",	"string constant",
-	"NUM_CONST",	"numeric constant",
-	"SYMBOL",	"symbol",
-	"LEFT_ASSIGN",	"assignment",
-	"'\\n'",	"end of line",
-	"NULL_CONST",	"'NULL'",
-	"FUNCTION",	"'function'",
-	"EQ_ASSIGN",	"'='",
-	"RIGHT_ASSIGN",	"'->'",
-	"LBB",		"'[['",
-	"FOR",		"'for'",
-	"IN",		"'in'",
-	"IF",		"'if'",
-	"ELSE",		"'else'",
-	"WHILE",	"'while'",
-	"NEXT",		"'next'",
-	"BREAK",	"'break'",
-	"REPEAT",	"'repeat'",
-	"GT",		"'>'",
-	"GE",		"'>='",
-	"LT",		"'<'",
-	"LE",		"'<='",
-	"EQ",		"'=='",
-	"NE",		"'!='",
-	"AND",		"'&'",
-	"OR",		"'|'",
-	"AND2",		"'&&'",
-	"OR2",		"'||'",
-	"NS_GET",	"'::'",
-	"NS_GET_INT",	"':::'",
-	0
-    };
-
-#   if 0
-        /* These are just here to trigger the internationalization. */
-        _("input");
-        _("end of input");
-        _("string constant");
-        _("numeric constant");
-        _("symbol");
-        _("assignment");
-        _("end of line");
-#   endif
-
-    static char const yyunexpected[] = "syntax error, unexpected ";
-    static char const yyexpecting[] = ", expecting ";
-    char *expecting;
+    static char const unexpected[] = "syntax error, unexpected ";
 
     R_ParseError     = yylloc.first_line;
     R_ParseErrorCol  = yylloc.first_column;
     R_ParseErrorFile = ParseState.SrcFile;
 
-    if (!strncmp(s, yyunexpected, sizeof yyunexpected -1)) {
-	int i;
-	/* Edit the error message */
-	expecting = strstr(s + sizeof yyunexpected -1, yyexpecting);
-	if (expecting) *expecting = '\0';
-	for (i = 0; yytname_translations[i]; i += 2) {
-	    if (!strcmp(s + sizeof yyunexpected - 1, yytname_translations[i])) {
-		snprintf(R_ParseErrorMsg,  PARSE_ERROR_SIZE, _("unexpected %s"),
-		    i/2 < YYENGLISH ? _(yytname_translations[i+1])
-				    : yytname_translations[i+1]);
-		return;
-	    }
-	}
-	snprintf(R_ParseErrorMsg, PARSE_ERROR_SIZE, _("unexpected %s"), 
-                s + sizeof yyunexpected - 1);
-    } else {
-	strncpy(R_ParseErrorMsg, s, PARSE_ERROR_SIZE - 1);
-	R_ParseErrorMsg[PARSE_ERROR_SIZE - 1] = '\0';
+    if (strcmp(s,unexpected) == 0) {
+        if (next_token < 256) {
+            char t[4] = { '\'', next_token, '\'', 0 };
+            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, t);
+        }
+        else if (next_token-256 < NUM_TRANSLATED)
+            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
+                           _(token_name[next_token-256]));
+        else
+            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
+                           token_name[next_token-256]);
     }
+    else
+        copy_1_string(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s);
+
+    R_ParseErrorMsg [(sizeof R_ParseErrorMsg) - 1] = 0; /* just in case */
 }
 
 
@@ -1960,15 +1916,16 @@ static void yyerror(const char *s)
    SymbolValue.  None of these could conceivably need 8192 bytes.
 
    It has not been used as the buffer for input character strings
-   since Oct 2007 (released as 2.7.0), and for comments since 2.8.0
- */
+   since Oct 2007 (released as 2.7.0), and for comments since 2.8.0. */
+
 static char yytext[MAXELTSIZE];
 
 #define DECLARE_YYTEXT_BUFP(bp) char *bp = yytext
+
 #define YYTEXT_PUSH(c, bp) do { \
     if ((bp) - yytext >= sizeof(yytext) - 1) \
-	error(_("input buffer overflow at line %d"), ParseState.xxlineno); \
-	*(bp)++ = (c); \
+        error(_("input buffer overflow at line %d"), ParseState.xxlineno); \
+    *(bp)++ = (c); \
 } while(0)
 
 
@@ -2481,7 +2438,7 @@ static int StringValue(int c, Rboolean forSymbol)
     if (c == R_EOF) {
         if(stext != st0) free(stext);
         yylval = R_NilValue;
-    	return INCOMPLETE_STRING;
+    	return ERROR;
     }
     if(forSymbol) {
 	yylval = install(stext);
