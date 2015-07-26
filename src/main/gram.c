@@ -179,9 +179,6 @@ static SEXP	mkComplex(const char *);
 static SEXP     mkFloat(const char *);
 static SEXP	mkInt(const char *s);
 
-SEXP		mkFalse(void);  /* not used here, but are used elsewhere */
-SEXP		mkTrue(void);
-
 /* Internal lexer / parser state variables */
 
 static int	EatLines = 0;
@@ -711,16 +708,16 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   257,   257,   258,   259,   260,   261,   264,   265,   268,
-     271,   272,   273,   274,   276,   277,   279,   280,   281,   282,
-     283,   285,   286,   287,   288,   289,   290,   291,   292,   293,
-     294,   295,   296,   297,   298,   299,   300,   301,   302,   303,
-     304,   306,   307,   308,   310,   311,   312,   313,   314,   315,
-     316,   317,   318,   319,   320,   321,   322,   323,   324,   325,
-     326,   327,   328,   329,   330,   331,   335,   338,   341,   345,
-     346,   347,   348,   349,   350,   353,   354,   357,   358,   359,
-     360,   361,   362,   363,   364,   367,   368,   369,   370,   371,
-     374
+       0,   254,   254,   255,   256,   257,   258,   261,   262,   265,
+     268,   269,   270,   271,   273,   274,   276,   277,   278,   279,
+     280,   282,   283,   284,   285,   286,   287,   288,   289,   290,
+     291,   292,   293,   294,   295,   296,   297,   298,   299,   300,
+     301,   303,   304,   305,   307,   308,   309,   310,   311,   312,
+     313,   314,   315,   316,   317,   318,   319,   320,   321,   322,
+     323,   324,   325,   326,   327,   328,   332,   335,   338,   342,
+     343,   344,   345,   346,   347,   350,   351,   354,   355,   356,
+     357,   358,   359,   360,   361,   364,   365,   366,   367,   368,
+     371
 };
 #endif
 
@@ -3983,20 +3980,6 @@ static SEXP mkComplex(const char *s)
     }
 
     return t;
-}
-
-SEXP mkTrue(void)
-{
-    SEXP s = allocVector1LGL();
-    LOGICAL(s)[0] = 1;
-    return s;
-}
-
-SEXP mkFalse(void)
-{
-    SEXP s = allocVector1LGL();
-    LOGICAL(s)[0] = 0;
-    return s;
 }
 
 static void yyerror(const char *s)

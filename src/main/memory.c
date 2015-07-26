@@ -3009,6 +3009,24 @@ SEXP allocVector1INT(void)  { return allocVector1(INTSXP); }
 SEXP allocVector1REAL(void) { return allocVector1(REALSXP); }
 
 
+/* These are kept for compatibility, though ScalarLogicalMaybeConst
+   is preferred, unless attributes are to be attached later. */
+
+SEXP mkTrue(void)
+{
+    SEXP s = allocVector1LGL();
+    LOGICAL(s)[0] = 1;
+    return s;
+}
+
+SEXP mkFalse(void)
+{
+    SEXP s = allocVector1LGL();
+    LOGICAL(s)[0] = 0;
+    return s;
+}
+
+
 /* Versions of functions for allocation of scalars that may return a 
    shared object.  ScalarLogicalMaybeConst is in Rinlinedfuns.h. */
 
