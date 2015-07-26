@@ -1392,8 +1392,10 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
     ParseContextInit();
     fp_parse = fp;
     ptr_getc = file_getc;
+
     get_next_token();
     res = R_Parse1(status,&loc);
+
     PutSrcRefState(state);
     return gencode ? res : R_NilValue;
 }
@@ -1545,6 +1547,7 @@ SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
 {
     fp_parse = fp;
     ptr_getc = file_getc;
+
     return R_Parse(n, status, srcfile);
 }
 
@@ -1568,6 +1571,7 @@ SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 {
     con_parse = con;
     ptr_getc = con_getc;
+
     return R_Parse(n, status, srcfile);
 }
 
@@ -1579,7 +1583,9 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     R_TextBufferInit(&textb, text);
     txtb = &textb;
     ptr_getc = text_getc;
+
     rval = R_Parse(n, status, srcfile);
+
     R_TextBufferFree(&textb);
     return rval;
 }
@@ -1623,74 +1629,12 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     R_IoBufferWriteReset(buffer);
     need_console_read = 1;
 
-    R_InitSrcRefState(&ParseState);    
-
-    ParseInit();
-    ParseContextInit();
-
     iob = buffer;
     ptr_getc = console_getc;
 
-    REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
-    REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
+    rval = R_Parse (n, status, srcfile);
 
-    PROTECT(tval = CONS(R_NilValue,R_NilValue));
-    tlast = tval;
-    
-    if (!isNull(ParseState.SrcFile)) {
-    	ParseState.keepSrcRefs = TRUE;
-        PROTECT(refs = CONS(R_NilValue,R_NilValue));
-        last_ref = refs;
-    }
-    else
-        PROTECT(refs = R_NilValue);
-
-
-    get_next_token();
-    
-    for(i = 0; ; ) {
-	if(n >= 0 && i >= n) break;
-
-	cur = R_Parse1(status,&loc);
-
-	switch(*status) {
-	case PARSE_NULL:
-	    break;
-	case PARSE_OK:
-            SETCDR (tlast, CONS(cur,R_NilValue));
-            tlast = CDR(tlast);
-            if (ParseState.keepSrcRefs) {
-                SETCDR (last_ref, 
-                        CONS (makeSrcref(&loc,ParseState.SrcFile), R_NilValue));
-                last_ref = CDR(last_ref);
-            }
-	    i++;
-	    break;
-	case PARSE_INCOMPLETE:
-	case PARSE_ERROR:
-	    R_IoBufferWriteReset(buffer);
-	    UNPROTECT(2); /* tval, refs */
-	    R_FinalizeSrcRefState(&ParseState);
-	    return R_NilValue;
-	    break;
-	case PARSE_EOF:
-	    goto finish;
-	}
-    }
-
-finish:
     R_IoBufferWriteReset(buffer);
-    tval = CDR(tval);
-    PROTECT(rval = allocVector(EXPRSXP, length(tval)));
-    for (i = 0 ; i < LENGTH(rval) ; i++, tval = CDR(tval))
-	SET_VECTOR_ELT(rval, i, CAR(tval));
-    if (ParseState.keepSrcRefs) {
-	attachSrcrefs(rval,CDR(refs));
-        ParseState.didAttach = TRUE;
-    }
-    UNPROTECT(3); /* tval, refs, rval */
-    R_FinalizeSrcRefState(&ParseState);    
-    *status = PARSE_OK;
     return rval;
 }
 
