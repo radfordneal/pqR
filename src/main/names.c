@@ -512,11 +512,15 @@ static void SymbolShortcuts(void)
     R_GeSymbol = install(">=");
     R_GtSymbol = install(">");
     R_AndSymbol = install("&");
+    R_And2Symbol = install("&&");
     R_OrSymbol = install("|");
+    R_Or2Symbol = install("||");
     R_NotSymbol = install("!");
     R_TildeSymbol = install("~");
     R_QuerySymbol = install("?");
     R_ColonEqSymbol = install(":=");
+    R_AtSymbol = install("@");
+    R_ParenSymbol = install("(");
 
     R_CommentSymbol = install("comment");
     R_DotEnvSymbol = install(".Environment");
