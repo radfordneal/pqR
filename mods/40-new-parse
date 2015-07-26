@@ -5,6 +5,8 @@ Removes parens from all expressions except those one right side of
 a formula (~).  This will need to change later to removing only necessary
 parens.
 
+Allows "else" on new line in expressions read from file (unlike old parse).
+
 Bug to fix here:
 
   > p <- parse()

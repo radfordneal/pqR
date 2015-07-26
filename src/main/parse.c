@@ -1359,7 +1359,7 @@ static SEXP R_Parse1(ParseStatus *status, YYLTYPE *loc)
     }
 
     start_location(loc);
-    res = parse_prog (0, &stat);
+    res = parse_prog (END_ON_NL, &stat);
     end_location(loc);
 
     if (res == NULL) {
@@ -1498,6 +1498,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	if(n >= 0 && i >= n) break;
 
 	cur = R_Parse1(status,&loc);
+
 	switch(*status) {
 	case PARSE_NULL:
 	    break;
@@ -1582,18 +1583,27 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     return rval;
 }
 
-static const char *Prompt(SEXP prompt, int type)
+static int need_console_read;
+static char *prompt_string;
+
+static int console_getc(void)
 {
-    if(type == 1) {
-	if(length(prompt) <= 0) {
-	    return CHAR(STRING_ELT(GetOption1(install("prompt")), 0));
-	}
-	else
-	    return CHAR(STRING_ELT(prompt, 0));
+    char *bufp, console_buf[CONSOLE_BUFFER_SIZE];
+    char c;
+
+    if (need_console_read) {
+        if (R_ReadConsole (prompt_string, (unsigned char *) console_buf, 
+                           CONSOLE_BUFFER_SIZE, 1) == 0)
+            return EOF;
+        for (bufp = console_buf; *bufp; bufp++) R_IoBufferPutc(*bufp, iob);
+        need_console_read = 0;
     }
-    else {
-	return CHAR(STRING_ELT(GetOption1(install("continue")), 0));
+    c = R_IoBufferGetc(iob);
+    if (c == EOF) {
+        need_console_read = 1;
+        return '\n';
     }
+    return c;
 }
 
 /* used in source.c */
@@ -1602,16 +1612,23 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 		   SEXP srcfile)
 {
     SEXP rval, tval, tlast, cur, refs, last_ref;
-    char *bufp, buf[CONSOLE_BUFFER_SIZE];
-    int c, i, prompt_type = 1;
+    int c, i;
     YYLTYPE loc;
 
+    prompt_string = isString(prompt) && LENGTH(prompt) > 0
+                     ? CHAR(STRING_ELT(prompt,0)) 
+                     : CHAR(STRING_ELT(GetOption1(install("prompt")),0));
+
     R_IoBufferWriteReset(buffer);
+    need_console_read = 1;
 
     R_InitSrcRefState(&ParseState);    
-    
+
+    ParseInit();
+    ParseContextInit();
+
     iob = buffer;
-    ptr_getc = buffer_getc;
+    ptr_getc = console_getc;
 
     REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
     REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
@@ -1627,19 +1644,14 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     else
         PROTECT(refs = R_NilValue);
 
-    while (R_ReadConsole((char *) Prompt(prompt, prompt_type),
-                         (unsigned char *)buf, CONSOLE_BUFFER_SIZE, 1) != 0) {
-        for (bufp = buf; *bufp; bufp++)
-	    R_IoBufferPutc(*bufp, buffer);
-    }
 
-    ParseInit();
-    ParseContextInit();
+    get_next_token();
     
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
-        get_next_token();
+
 	cur = R_Parse1(status,&loc);
+REprintf("Parse1:  status %d, null %d\n",*status,cur==R_NilValue);
 
 	switch(*status) {
 	case PARSE_NULL:
@@ -1671,7 +1683,7 @@ finish:
     tval = CDR(tval);
     PROTECT(rval = allocVector(EXPRSXP, length(tval)));
     for (i = 0 ; i < LENGTH(rval) ; i++, tval = CDR(tval))
-	SET_VECTOR_ELT(rval, n, CAR(tval));
+	SET_VECTOR_ELT(rval, i, CAR(tval));
     if (ParseState.keepSrcRefs) {
 	attachSrcrefs(rval,CDR(refs));
         ParseState.didAttach = TRUE;
