@@ -573,7 +573,7 @@ static void ParseContextInit(void)
 #define PROTECT_N(w) (nprotect++, PROTECT(w))
 
 #define NEXT_TOKEN \
-  (next_token == MAYBE_END ? (get_next_token(), next_token) : next_token) 
+  (next_token == MAYBE_END ? get_next_token_not_maybe_end() : next_token) 
 
 #define TOKEN_VALUE() (PROTECT_N(yylval))
 
@@ -610,6 +610,7 @@ static void end_location (yyltype *loc)
 #define END_ON_NL   (1<<1)  /* End expression when newline seen */
 
 static void get_next_token(void);
+static int get_next_token_not_maybe_end(void);
 static int newline_before_token;
 static int next_token;
 
@@ -887,6 +888,7 @@ static SEXP parse_element (int flags, int *stat)
     /* If statements. */
 
     else if (NEXT_TOKEN == IF) {
+
         SEXP op, cond, true_stmt, false_stmt;
         op = TOKEN_VALUE();
         get_next_token();
@@ -894,7 +896,17 @@ static SEXP parse_element (int flags, int *stat)
         PARSE_SUB(cond = parse_expr(flags&~END_ON_NL,stat));
         EXPECT(')');
         PARSE_SUB(true_stmt = parse_expr_or_assign(flags,stat));
-        if (next_token == ELSE) { /* Lower! Don't force move past MAYBE_END */
+
+        /* If flags&END_ON_NL is true, the next token might now be MAYBE_END.
+           We don't want to force this to be changed to the real next token,
+           since in interactive mode, that could force reading another line
+           from the user.  So we compare next_token to ELSE, rather than 
+           NEXT_TOKEN.  If flags&END_ON_NL is false, the call above of
+           parse_expr_or_assign will have forced any MAYBE_END to be 
+           replaced by a real token, but we use NEXT_TOKEN in that case
+           anyway for clarity and robustness. */
+
+        if ((flags&END_ON_NL ? next_token : NEXT_TOKEN) == ELSE) {
             get_next_token();
             PARSE_SUB(false_stmt = parse_expr_or_assign(flags,stat));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
@@ -2706,6 +2718,8 @@ static int token(void)
     yylloc.first_byte = ParseState.xxbyteno;
     yylloc.first_parsed = ParseState.xxparseno;
 
+    yylval = R_NilValue;
+
     if (c == R_EOF) 
         return END_OF_INPUT;
     if (c == SOFT_EOF) {
@@ -2895,4 +2909,13 @@ static void get_next_token(void)
     yylloc.last_column = ParseState.xxcolno;
     yylloc.last_byte = ParseState.xxbyteno;
     yylloc.last_parsed = ParseState.xxparseno;
+}
+
+static int get_next_token_not_maybe_end(void)
+{
+    do { 
+        get_next_token(); 
+    } while (next_token == MAYBE_END);
+
+    return next_token;
 }
