@@ -122,11 +122,15 @@ extern0 SEXP	R_LeSymbol;           /* "<=" */
 extern0 SEXP	R_GeSymbol;           /* ">=" */
 extern0 SEXP	R_GtSymbol;           /* ">" */
 extern0 SEXP	R_AndSymbol;          /* "&" */
+extern0 SEXP	R_And2Symbol;         /* "&&" */
 extern0 SEXP	R_OrSymbol;           /* "|" */
+extern0 SEXP	R_Or2Symbol;          /* "||" */
 extern0 SEXP	R_NotSymbol;          /* "!" */
 extern0 SEXP	R_TildeSymbol;        /* "~" */
 extern0 SEXP	R_QuerySymbol;        /* "?" */
 extern0 SEXP	R_ColonEqSymbol;      /* ":=" */
+extern0 SEXP	R_AtSymbol;           /* "@" */
+extern0 SEXP	R_ParenSymbol;        /* "(" */
 
 extern0 SEXP	R_CommentSymbol;      /* "comment" */
 extern0 SEXP	R_DotEnvSymbol;       /* ".Environment" */
