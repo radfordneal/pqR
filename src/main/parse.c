@@ -2719,110 +2719,109 @@ static int token(void)
     switch (c) {
     case '<':
 	if (nextchar('=')) {
-	    yylval = install("<=");
+	    yylval = R_LeSymbol;
 	    return LE;
 	}
 	if (nextchar('-')) {
-	    yylval = install("<-");
+	    yylval = R_LocalAssignSymbol;
 	    return LEFT_ASSIGN;
 	}
 	if (nextchar('<')) {
 	    if (nextchar('-')) {
-		yylval = install("<<-");
+		yylval = R_GlobalAssignSymbol;
 		return LEFT_ASSIGN;
 	    }
 	    else
 		return ERROR;
 	}
-	yylval = install("<");
+	yylval = R_LtSymbol;
 	return LT;
     case '-':
 	if (nextchar('>')) {
 	    if (nextchar('>')) {
-		yylval = install("<<-");
+		yylval = R_GlobalAssignSymbol; /* currently switch R to L */
 		return RIGHT_ASSIGN;
 	    }
 	    else {
-		yylval = install("<-");
+		yylval = R_LocalAssignSymbol; /* currently switch R to L */
 		return RIGHT_ASSIGN;
 	    }
 	}
-	yylval = install("-");
+	yylval = R_SubSymbol;
 	return '-';
     case '>':
 	if (nextchar('=')) {
-	    yylval = install(">=");
+	    yylval = R_GeSymbol;
 	    return GE;
 	}
-	yylval = install(">");
+	yylval = R_GtSymbol;
 	return GT;
     case '!':
 	if (nextchar('=')) {
-	    yylval = install("!=");
+	    yylval = R_NeSymbol;
 	    return NE;
 	}
-	yylval = install("!");
+	yylval = R_NotSymbol;
 	return '!';
     case '=':
 	if (nextchar('=')) {
-	    yylval = install("==");
+	    yylval = R_EqSymbol;
 	    return EQ;
 	}
-	yylval = install("=");
+	yylval = R_EqAssignSymbol;
 	return EQ_ASSIGN;
     case ':':
 	if (nextchar(':')) {
 	    if (nextchar(':')) {
-		yylval = install(":::");
+		yylval = R_TripleColonSymbol;
 		return NS_GET_INT;
 	    }
 	    else {
-		yylval = install("::");
+		yylval = R_DoubleColonSymbol;
 		return NS_GET;
 	    }
 	}
 	if (nextchar('=')) {
-	    yylval = install(":=");
+	    yylval = R_ColonEqSymbol;
 	    return LEFT_ASSIGN;
 	}
-	yylval = install(":");
+	yylval = R_ColonSymbol;
 	return ':';
     case '&':
 	if (nextchar('&')) {
-	    yylval = install("&&");
+	    yylval = R_And2Symbol;
 	    return AND2;
 	}
-	yylval = install("&");
+	yylval = R_AndSymbol;
 	return AND;
     case '|':
 	if (nextchar('|')) {
-	    yylval = install("||");
+	    yylval = R_Or2Symbol;
 	    return OR2;
 	}
-	yylval = install("|");
+	yylval = R_OrSymbol;
 	return OR;
     case '{':
-	yylval = install("{");
+	yylval = R_BraceSymbol;
 	return c;
     case '}':
 	return c;
     case '(':
-	yylval = install("(");
+	yylval = R_ParenSymbol;
 	return c;
     case ')':
 	return c;
     case '[':
 	if (nextchar('[')) {
-	    yylval = install("[[");
+	    yylval = R_Bracket2Symbol;
 	    return LBB;
 	}
-	yylval = install("[");
+	yylval = R_BracketSymbol;
 	return c;
     case ']':
 	return c;
     case '?':
-	strcpy(yytext, "?");
-	yylval = install(yytext);
+	yylval = R_QuerySymbol;
 	return c;
     case '*':
 	/* Replace ** by ^.  This has been here since 1998, but is
@@ -2830,22 +2829,30 @@ static int token(void)
 	   the index of the Blue Book with a reference to p. 431, the
 	   help for 'Deprecated'.  S-PLUS 6.2 still allowed this, so
 	   presumably it was for compatibility with S. */
-	if (nextchar('*'))
-	    c='^';
-	yytext[0] = c;
-	yytext[1] = '\0';
-	yylval = install(yytext);
+	if (nextchar('*')) {
+	    yylval = R_ExptSymbol;  /* replace by ^ for now */
+            return '^';
+        }
+        yylval = R_MulSymbol;
 	return c;
     case '+':
+        yylval = R_AddSymbol;
+        return c;
     case '/':
+        yylval = R_DivSymbol;
+        return c;
     case '^':
+        yylval = R_ExptSymbol;
+        return c;
     case '~':
+        yylval = R_TildeSymbol;
+        return c;
     case '$':
+        yylval = R_DollarSymbol;
+        return c;
     case '@':
-	yytext[0] = c;
-	yytext[1] = '\0';
-	yylval = install(yytext);
-	return c;
+        yylval = R_AtSymbol;
+        return c;
     default:
 	return c;
     }
