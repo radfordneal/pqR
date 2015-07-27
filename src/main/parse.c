@@ -46,14 +46,12 @@
 
 
 /* --------------------------------------------------------------------------
-   PARSING ENTRY POINTS
+   PARSING ENTRY POINTS PROVIDED
  
-   The Following entry points provide language parsing facilities.
-   Note that there are separate entry points for parsing IoBuffers
-   (i.e. interactve use), files and R character strings.
- 
-   The entry points provide the same functionality, they just
-   set things up in slightly different ways.
+   There are separate entry points for parsing IoBuffers (interactve
+   use), files, and R character strings.  The entry points provide the
+   same functionality; they just set things up in slightly different
+   ways.
  
    The following routines parse a single expression:
  
@@ -95,7 +93,10 @@
          (used by parse(file=) in file source.c)
  
    Here, status is 1 for a successful parse and 0 if parsing failed
-   for some reason. */
+   for some reason. 
+
+   This module also defines the isValidName function.
+*/
 
 
 /* --------------------------------------------------------------------------
@@ -349,10 +350,15 @@ static const char *const token_name[] = {
     _("end of line");  /* currently unused */
 #endif
 
-static void error_msg(const char *);
+/* The next token from the input, and asociated variables and functions. */
 
-static int KeywordLookup(const char *);
-static int processLineDirective();
+static int next_token;            /* The next token, as an integer code */
+static SEXP next_token_val;       /* The value associated with next_token. */
+static int newline_before_token;  /* 1 if next token was preceded by '\n' */
+
+static void get_next_token(void); /* Update next_token to the next one */
+
+/* Record of the start and end of part of the source text. */
 
 typedef struct
 {
@@ -366,22 +372,11 @@ typedef struct
   
   int first_parsed;
   int last_parsed;
-} token_location;
+} source_location;
 
-/* The semantic value of the lookahead symbol.  */
+/* Location data for the lookahead token, and one previous to it.  */
 
-static SEXP yylval;
-
-/* Location data for the lookahead symbol,
-  and one previous to it.  */
-
-static token_location yylloc, prev_yylloc;
-
-/* These routines allocate constants */
-
-static SEXP	mkComplex(const char *);
-static SEXP     mkFloat(const char *);
-static SEXP	mkInt(const char *s);
+static source_location token_loc, prev_token_loc;
 
 /* Internal lexer / parser state variables */
 
@@ -498,7 +493,7 @@ static void xxungetc(int c)
    SOURCE REFERENCE ROUTINES
 */
 
-static SEXP makeSrcref(token_location *lloc, SEXP srcfile)
+static SEXP makeSrcref(source_location *lloc, SEXP srcfile)
 {
     SEXP val;
 
@@ -529,7 +524,7 @@ static void attachSrcrefs(SEXP val, SEXP t)
     setAttrib(val, R_SrcrefSymbol, srval);
     setAttrib(val, R_SrcfileSymbol, ParseState.SrcFile);
     {
-	token_location wholeFile;
+	source_location wholeFile;
 	wholeFile.first_line = 1;
 	wholeFile.first_byte = 0;
 	wholeFile.first_column = 0;
@@ -554,10 +549,10 @@ void R_InitSrcRefState(SrcRefState *state)
     state->xxcolno = 0;
     state->xxbyteno = 0;
     state->xxparseno = 1;
-    yylloc.first_line = 0;
-    yylloc.first_column = 0;
-    yylloc.first_byte = 0;
-    yylloc.first_parsed = 1;
+    token_loc.first_line = 0;
+    token_loc.first_column = 0;
+    token_loc.first_byte = 0;
+    token_loc.first_parsed = 1;
 }
 
 void R_FinalizeSrcRefState(SrcRefState *state)
@@ -615,6 +610,7 @@ static void ParseInit(void)
 #define BGN_PARSE_FUN \
     int nprotect = 0
 
+
 /* End a recursive-descent parsing routine.  Unprotects everything that
    was protected with PROTECT_N.  Allows for exitting with NULL result
    on an error. */
@@ -628,6 +624,7 @@ static void ParseInit(void)
     return NULL; \
   finish:
 
+
 /* Parse a sub-expression (or other construct), with the call given as
    its argument.  Protects the result, which will normally be assigned
    to a local variable (in the argument).  If the sub-expression parse
@@ -640,6 +637,7 @@ static void ParseInit(void)
         PROTECT_N(_sub_); \
     } while (0)
 
+
 /* Produce an error message and exit parsing (up to the top level). */
 
 #define PARSE_ERROR_MSG(s) \
@@ -648,11 +646,39 @@ static void ParseInit(void)
         goto error; \
     } while (0)
 
+static void error_msg(const char *s)
+{
+    static char const unexpected[] = "syntax error, unexpected ";
+
+    R_ParseError     = token_loc.first_line;
+    R_ParseErrorCol  = token_loc.first_column;
+    R_ParseErrorFile = ParseState.SrcFile;
+
+    if (strcmp(s,unexpected) == 0) {
+        if (next_token < 256) {
+            char t[4] = { '\'', next_token, '\'', 0 };
+            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, t);
+        }
+        else if (next_token-256 < NUM_TRANSLATED)
+            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
+                           _(token_name[next_token-256]));
+        else
+            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
+                           token_name[next_token-256]);
+    }
+    else
+        copy_1_string(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s);
+
+    R_ParseErrorMsg [(sizeof R_ParseErrorMsg) - 1] = 0; /* just in case */
+}
+
+
 /* Produce an error message saying the current token is unexpected, and
    exit to top level.  The token name is filled in by error_msg, based
    on the current value of next_token. */
 
 #define PARSE_UNEXPECTED() PARSE_ERROR_MSG("syntax error, unexpected ");
+
 
 /* Say the current is unexpected unless it is equal to tk. */
 
@@ -663,38 +689,62 @@ static void ParseInit(void)
         get_next_token(); \
     } while (0)
 
+
 /* Protect a SEXP used in a parse routine from garbage collection. */
 
 #define PROTECT_N(w) (nprotect++, PROTECT(w))
 
 
+/* Look at the next token, which will usually already be in next_token.
+   However, if next_token is MAYBE_END, advance to the next real token
+   first. */
+
 #define NEXT_TOKEN \
   (next_token == MAYBE_END ? get_next_token_not_maybe_end() : next_token) 
 
-#define TOKEN_VALUE() (PROTECT_N(yylval))
+static int get_next_token_not_maybe_end(void)
+{
+    do { 
+        get_next_token(); 
+    } while (next_token == MAYBE_END);
+
+    return next_token;
+}
+
+
+/* Get the SEXP value associated with next_token, protecting it. */
+
+#define TOKEN_VALUE() (PROTECT_N(next_token_val))
+
+
+/* Check whether the current expression is ended by a newline, based on
+   the 'flags' and 'newline_before_token' variables. */
 
 #define NL_END ((flags & END_ON_NL) && newline_before_token)
 
-static void start_location (token_location *loc)
+
+/* Save the start location of next_token as the start of a region of
+   the source text. */
+
+static void start_location (source_location *loc)
 {
-    loc->first_line   = loc->last_line   = yylloc.first_line;
-    loc->first_column = loc->last_column = yylloc.first_column;
-    loc->first_byte   = loc->last_byte   = yylloc.first_byte;
-    loc->first_parsed = loc->last_parsed = yylloc.first_parsed;
+    loc->first_line   = loc->last_line   = token_loc.first_line;
+    loc->first_column = loc->last_column = token_loc.first_column;
+    loc->first_byte   = loc->last_byte   = token_loc.first_byte;
+    loc->first_parsed = loc->last_parsed = token_loc.first_parsed;
 }
 
-static void end_location (token_location *loc)
-{
-    loc->last_line   = prev_yylloc.last_line;
-    loc->last_column = prev_yylloc.last_column;
-    loc->last_byte   = prev_yylloc.last_byte;
-    loc->last_parsed = prev_yylloc.last_parsed;
-}
 
-static void get_next_token(void);
-static int get_next_token_not_maybe_end(void);
-static int newline_before_token;
-static int next_token;
+/* Save the end location of the previous token as the end of a region
+   of source text. */
+
+static void end_location (source_location *loc)
+{
+    loc->last_line   = prev_token_loc.last_line;
+    loc->last_column = prev_token_loc.last_column;
+    loc->last_byte   = prev_token_loc.last_byte;
+    loc->last_parsed = prev_token_loc.last_parsed;
+}
 
 
 /* --------------------------------------------------------------------------
@@ -716,10 +766,12 @@ static int next_token;
 static SEXP parse_expr (int flags, int *stat), 
             parse_expr_or_assign (int flags, int *stat);
 
+
 /* Bits in the flags word passed to parsing routines. */
 
 #define KEEP_PARENS (1<<0)  /* Keep parens in this or inner expressions */
 #define END_ON_NL   (1<<1)  /* End expression when newline seen */
+
 
 /* Parse the formals list of a function definiton. */
 
@@ -741,7 +793,7 @@ static SEXP parse_formlist (int flags, int *stat)
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
                 if (TAG(f) == tag) {
-                    token_location loc;
+                    source_location loc;
                     start_location(&loc);
                     error(_("Repeated formal argument '%s' on line %d"), 
                             CHAR(PRINTNAME(tag)), loc.first_line);
@@ -851,7 +903,7 @@ static SEXP parse_sublist (int flags, int *stat)
 static SEXP parse_element (int flags, int *stat)
 {
     BGN_PARSE_FUN;
-    token_location loc;
+    source_location loc;
     SEXP res;
 
     /* Symbols, string constants, and namespace references built from
@@ -1434,7 +1486,7 @@ static SEXP parse_prog (int flags, int *stat)
 
 /* R_Parse1 currently sets R_CurrentExpr, but probably shouldn't. */
 
-static SEXP R_Parse1(ParseStatus *status, token_location *loc)
+static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 {
     SEXP res;
     int stat;
@@ -1463,7 +1515,9 @@ static SEXP R_Parse1(ParseStatus *status, token_location *loc)
     return R_CurrentExpr = res;
 }
 
-/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- 
+   PARSING ENTRY POINTS.
+*/
 
 static FILE *fp_parse;
 
@@ -1476,7 +1530,7 @@ static int file_getc(void)
 attribute_hidden
 SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
 {
-    token_location loc;
+    source_location loc;
     SEXP res;
     UseSrcRefState(state);
     ParseInit();
@@ -1490,6 +1544,7 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
     return gencode ? res : R_NilValue;
 }
 
+
 static IoBuffer *iob;
 
 static int buffer_getc(void)
@@ -1502,7 +1557,7 @@ attribute_hidden
 SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 {
     Rboolean keepSource = FALSE; 
-    token_location loc;
+    source_location loc;
     SEXP res;
 
     R_InitSrcRefState(&ParseState);
@@ -1551,18 +1606,11 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     return res;
 }
 
-static TextBuffer *txtb;
-
-static int text_getc(void)
-{
-    int c = R_TextBufferGetc(txtb);
-    return c;
-}
 
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
     SEXP rval, tval, tlast, cur, refs, last_ref;
-    token_location loc;
+    source_location loc;
     int i;
 
     R_InitSrcRefState(&ParseState);
@@ -1629,6 +1677,7 @@ finish:
     return rval;
 }
 
+
 /* used in edit.c */
 attribute_hidden
 SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
@@ -1638,6 +1687,7 @@ SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
 
     return R_Parse(n, status, srcfile);
 }
+
 
 #include "Rconnections.h"
 static Rconnection con_parse;
@@ -1653,6 +1703,7 @@ static int con_getc(void)
     return (last = c);
 }
 
+
 /* used in source.c */
 attribute_hidden
 SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
@@ -1661,6 +1712,15 @@ SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
     ptr_getc = con_getc;
 
     return R_Parse(n, status, srcfile);
+}
+
+
+static TextBuffer *txtb;
+
+static int text_getc(void)
+{
+    int c = R_TextBufferGetc(txtb);
+    return c;
 }
 
 /* This one is public, and used in source.c */
@@ -1677,6 +1737,7 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     R_TextBufferFree(&textb);
     return rval;
 }
+
 
 static int need_console_read;
 static const char *prompt_string;
@@ -1708,7 +1769,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 {
     SEXP rval, tval, tlast, cur, refs, last_ref;
     int c, i;
-    token_location loc;
+    source_location loc;
 
     prompt_string = isString(prompt) && LENGTH(prompt) > 0
                      ? CHAR(STRING_ELT(prompt,0)) 
@@ -1728,189 +1789,8 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 
 
 /* --------------------------------------------------------------------------
-   THE LEXICAL ANALYZER
- 
-   Basic lexical analysis is performed by the following routines.
-   Input is read a line at a time, and, if the program is in batch
-   mode, each input line is echoed to standard output after it is
-   read.
- 
-   The function token() scans the input, breaking it into tokens which
-   are then passed to the parser.  The lexical analyser maintains a
-   symbol table (in a very messy fashion).
+   ROUTINES FOR CREATING NUMERIC AND STRING VALUES
 */
-
-/* This is only called following ., so we only care if it is
-   an ANSI digit or not */
-static int typeofnext(void)
-{
-    int k, c;
-
-    c = xxgetc();
-    if (isdigit(c)) k = 1; else k = 2;
-    xxungetc(c);
-    return k;
-}
-
-static int nextchar(int expect)
-{
-    int c = xxgetc();
-    if (c == expect)
-	return 1;
-    else
-	xxungetc(c);
-    return 0;
-}
-
-/* Syntactic Keywords + Symbolic Constants. */
-
-struct {
-    char *name;
-    int token;
-}
-static keywords[] = {
-    { "NULL",	    NULL_CONST },
-    { "NA",	    NUM_CONST  },
-    { "TRUE",	    NUM_CONST  },
-    { "FALSE",	    NUM_CONST  },
-    { "Inf",	    NUM_CONST  },
-    { "NaN",	    NUM_CONST  },
-    { "NA_integer_", NUM_CONST  },
-    { "NA_real_",    NUM_CONST  },
-    { "NA_character_", NUM_CONST  },
-    { "NA_complex_", NUM_CONST  },
-    { "function",   FUNCTION   },
-    { "while",	    WHILE      },
-    { "repeat",	    REPEAT     },
-    { "for",	    FOR	       },
-    { "if",	    IF	       },
-    { "in",	    IN	       },
-    { "else",	    ELSE       },
-    { "next",	    NEXT       },
-    { "break",	    BREAK      },
-    { "...",	    SYMBOL     },
-    { 0,	    0	       }
-};
-
-/* KeywordLookup has side effects, it sets yylval */
-
-static int KeywordLookup(const char *s)
-{
-    int i;
-    for (i = 0; keywords[i].name; i++) {
-	if (strcmp(keywords[i].name, s) == 0) {
-	    switch (keywords[i].token) {
-	    case NULL_CONST:
-		yylval = R_NilValue;
-		break;
-	    case NUM_CONST:
-                switch(i) {
-                case 1:
-                    yylval = ScalarLogicalMaybeConst(NA_LOGICAL);
-                    break;
-                case 2:
-                    yylval = ScalarLogicalMaybeConst(1);
-                    break;
-                case 3:
-                    yylval = ScalarLogicalMaybeConst(0);
-                    break;
-                case 4:
-                    yylval = allocVector1REAL();
-                    REAL(yylval)[0] = R_PosInf;
-                    break;
-                case 5:
-                    yylval = allocVector1REAL();
-                    REAL(yylval)[0] = R_NaN;
-                    break;
-                case 6:
-                    yylval = ScalarIntegerMaybeConst(NA_INTEGER);
-                    break;
-                case 7:
-                    yylval = allocVector1REAL();
-                    REAL(yylval)[0] = NA_REAL;
-                    break;
-                case 8:
-                    yylval = allocVector(STRSXP, 1);
-                    SET_STRING_ELT(yylval, 0, NA_STRING);
-                    break;
-                case 9:
-                    yylval = allocVector(CPLXSXP, 1);
-                    COMPLEX(yylval)[0].r = COMPLEX(yylval)[0].i = NA_REAL;
-                    break;
-                }
-		break;
-	    case FUNCTION:
-	    case WHILE:
-	    case REPEAT:
-	    case FOR:
-	    case IF:
-	    case NEXT:
-	    case BREAK:
-		yylval = install(s);
-		break;
-	    case IN:
-	    case ELSE:
-		break;
-	    case SYMBOL:
-		yylval = install(s);
-		break;
-	    }
-	    return keywords[i].token;
-	}
-    }
-    return 0;
-}
-
-static SEXP mkFloat(const char *s)
-{
-    return ScalarRealMaybeConst(R_atof(s));
-}
-
-static SEXP mkInt(const char *s)
-{
-    double f = R_atof(s);  /* or R_strtol? */
-    return ScalarIntegerMaybeConst((int) f);
-}
-
-static SEXP mkComplex(const char *s)
-{
-    SEXP t = R_NilValue;
-    double f;
-    f = R_atof(s); /* FIXME: make certain the value is legitimate. */
-
-    t = allocVector(CPLXSXP, 1);
-    COMPLEX(t)[0].r = 0;
-    COMPLEX(t)[0].i = f;
-
-    return t;
-}
-
-static void error_msg(const char *s)
-{
-    static char const unexpected[] = "syntax error, unexpected ";
-
-    R_ParseError     = yylloc.first_line;
-    R_ParseErrorCol  = yylloc.first_column;
-    R_ParseErrorFile = ParseState.SrcFile;
-
-    if (strcmp(s,unexpected) == 0) {
-        if (next_token < 256) {
-            char t[4] = { '\'', next_token, '\'', 0 };
-            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, t);
-        }
-        else if (next_token-256 < NUM_TRANSLATED)
-            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
-                           _(token_name[next_token-256]));
-        else
-            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
-                           token_name[next_token-256]);
-    }
-    else
-        copy_1_string(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s);
-
-    R_ParseErrorMsg [(sizeof R_ParseErrorMsg) - 1] = 0; /* just in case */
-}
-
 
 /* This is used as the buffer for NumericValue, SpecialValue and
    SymbolValue.  None of these could conceivably need 8192 bytes.
@@ -1929,26 +1809,32 @@ static char yytext[MAXELTSIZE];
 } while(0)
 
 
-static int SkipComment(void)
+static SEXP mkReal(const char *s)
 {
-    int c='#', i;
-    Rboolean maybeLine = (ParseState.xxcolno == 1);
-    if (maybeLine) {
-    	char lineDirective[] = "#line";
-    	for (i=1; i<5; i++) {
-    	    c = xxgetc();
-  	    if (c != (int)(lineDirective[i])) {
-  	    	maybeLine = FALSE;
-  	    	break;
-  	    }
-  	}
-  	if (maybeLine)     
-	    c = processLineDirective();
-    }
-    while (c != '\n' && c != R_EOF) 
-	c = xxgetc();
-    return c;
+    return ScalarRealMaybeConst(R_atof(s));
 }
+
+
+static SEXP mkInteger(const char *s)
+{
+    double f = R_atof(s);  /* or R_strtol? */
+    return ScalarIntegerMaybeConst((int) f);
+}
+
+
+static SEXP mkComplex(const char *s)
+{
+    SEXP t = R_NilValue;
+    double f;
+    f = R_atof(s); /* FIXME: make certain the value is legitimate. */
+
+    t = allocVector(CPLXSXP, 1);
+    COMPLEX(t)[0].r = 0;
+    COMPLEX(t)[0].i = f;
+
+    return t;
+}
+
 
 static int NumericValue(int c)
 {
@@ -2034,49 +1920,33 @@ static int NumericValue(int c)
     }
 
     if(c == 'i') {
-	yylval = mkComplex(yytext);
+	next_token_val = mkComplex(yytext);
     } else if(c == 'L' && asNumeric == 0) {
 	if (seendot == 1 && seenexp == 0)
 	    warning(_("integer literal %sL contains unnecessary decimal point"), yytext);
-	yylval = mkInt(yytext);
+	next_token_val = mkInteger(yytext);
 #if 0  /* do this to make 123 integer not double */
     } else if(!(seendot || seenexp)) {
 	if(c != 'L') xxungetc(c);
 	double a = R_atof(yytext);
 	int b = (int) a;
-	yylval = (a != (double) b) ? mkFloat(yytext) : mkInt(yytext);
+	next_token_val = (a != (double) b) ? mkReal(yytext) : mkInteger(yytext);
 #endif
     } else {
 	if(c != 'L')
 	    xxungetc(c);
-	yylval = mkFloat(yytext);
+	next_token_val = mkReal(yytext);
     }
 
     return NUM_CONST;
 }
 
-/* Strings may contain the standard ANSI escapes and octal */
-/* specifications of the form \o, \oo or \ooo, where 'o' */
-/* is an octal digit. */
 
+/* Strings may contain the standard ANSI escapes and octal specifications of 
+   the form \o, \oo or \ooo, where 'o' is an octal digit. 
 
-#define STEXT_PUSH(c) do {                  \
-	unsigned int nc = bp - stext;       \
-	if (nc >= nstext - 1) {             \
-	    char *old = stext;              \
-	    nstext *= 2;                    \
-	    stext = malloc(nstext);         \
-	    if(!stext) error(_("unable to allocate buffer for long string at line %d"), ParseState.xxlineno);\
-	    memmove(stext, old, nc);        \
-	    if(old != st0) free(old);	    \
-	    bp = stext+nc; }		    \
-	*bp++ = (c);                        \
-} while(0)
-
-
-/* The idea here is that if a string contains \u escapes that are not
-   valid in the current locale, we should switch to UTF-8 for that
-   string.  Needs Unicode wide-char support.
+   If a string contains \u escapes that are not valid in the current locale, 
+   we should switch to UTF-8 for that string.  Needs Unicode wide-char support.
 */
 
 #if defined(__APPLE_CC__)
@@ -2126,15 +1996,13 @@ static int mbcs_get_next(int c, wchar_t *wc)
 
 #if defined(Win32) || defined(__STDC_ISO_10646__)
 
+#define mbcs_get_next2 mbcs_get_next
 typedef wchar_t ucs_t;
-
-# define mbcs_get_next2 mbcs_get_next
 
 #else
 
+#define WC_NOT_UNICODE 
 typedef unsigned int ucs_t;
-
-# define WC_NOT_UNICODE 
 
 static int mbcs_get_next2(int c, ucs_t *wc)
 {
@@ -2175,7 +2043,6 @@ static int mbcs_get_next2(int c, ucs_t *wc)
 
 #endif
 
-#define WTEXT_PUSH(c) do { if(wcnt < 10000) wcs[wcnt++] = c; } while(0)
 
 static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 {
@@ -2205,12 +2072,6 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
     return t;
 }
 
-#define CTEXT_PUSH(c) do { \
-	if (ct - currtext >= 1000) {memmove(currtext, currtext+100, 901); memmove(currtext, "... ", 4); ct -= 100;} \
-	*ct++ = (c); \
-} while(0)
-#define CTEXT_POP() ct--
-
 
 static SEXP mkString2(const char *s, int len, Rboolean escaped)
 {
@@ -2228,16 +2089,47 @@ static SEXP mkString2(const char *s, int len, Rboolean escaped)
 
 
 /* forSymbol is true when parsing backticked symbols */
+
 static int StringValue(int c, Rboolean forSymbol)
 {
     int quote = c;
-    char currtext[1010], *ct = currtext;
+    Rboolean oct_or_hex = FALSE, use_wcs = FALSE;
+
     char st0[MAXELTSIZE];
     unsigned int nstext = MAXELTSIZE;
     char *stext = st0, *bp = st0;
+
+#   define STEXT_PUSH(c) do {              \
+	unsigned int nc = bp - stext;       \
+	if (nc >= nstext - 1) {             \
+	    char *old = stext;              \
+	    nstext *= 2;                    \
+	    stext = malloc(nstext);         \
+	    if (!stext)                     \
+               error(_("unable to allocate buffer for long string at line %d"), ParseState.xxlineno); \
+	    memmove(stext, old, nc);        \
+	    if(old != st0) free(old);	    \
+	    bp = stext+nc; }		    \
+	*bp++ = (c);                        \
+    } while(0)
+
     int wcnt = 0;
     ucs_t wcs[10001];
-    Rboolean oct_or_hex = FALSE, use_wcs = FALSE;
+
+#   define WTEXT_PUSH(c) do { if(wcnt < 10000) wcs[wcnt++] = c; } while(0)
+
+    char currtext[1010], *ct = currtext;
+
+#   define CTEXT_PUSH(c) do {                     \
+	if (ct - currtext >= 1000) {              \
+            memmove(currtext, currtext+100, 901); \
+            memmove(currtext, "... ", 4);         \
+            ct -= 100;                            \
+        }                                         \
+	*ct++ = (c);                              \
+    } while(0)
+
+#   define CTEXT_POP() (ct--)
 
     while ((c = xxgetc()) != R_EOF && c != quote) {
 	CTEXT_PUSH(c);
@@ -2282,7 +2174,9 @@ static int StringValue(int c, Rboolean forSymbol)
 			CTEXT_POP();
 			if (i == 0) { /* was just \x */
 			    *ct = '\0';
-			    errorcall(R_NilValue, _("'\\x' used without hex digits in character string starting \"%s\""), currtext);
+			    errorcall(R_NilValue, 
+                             _("'\\x' used without hex digits in character string starting \"%s\""), 
+                             currtext);
 			}
 			break;
 		    }
@@ -2296,7 +2190,9 @@ static int StringValue(int c, Rboolean forSymbol)
 		Rboolean delim = FALSE;
 
 		if(forSymbol) 
-		    error(_("\\uxxxx sequences not supported inside backticks (line %d)"), ParseState.xxlineno);
+		    error(
+                      _("\\uxxxx sequences not supported inside backticks (line %d)"), 
+                      ParseState.xxlineno);
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
@@ -2311,7 +2207,9 @@ static int StringValue(int c, Rboolean forSymbol)
 			CTEXT_POP();
 			if (i == 0) { /* was just \u */
 			    *ct = '\0';
-			    errorcall(R_NilValue, _("'\\u' used without hex digits in character string starting \"%s\""), currtext);
+			    errorcall(R_NilValue, 
+                              _("'\\u' used without hex digits in character string starting \"%s\""), 
+                              currtext);
 			}
 			break;
 		    }
@@ -2331,7 +2229,9 @@ static int StringValue(int c, Rboolean forSymbol)
 		unsigned int val = 0; int i, ext;
 		Rboolean delim = FALSE;
 		if(forSymbol) 
-		    error(_("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), ParseState.xxlineno);
+		    error(
+                      _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), 
+                      ParseState.xxlineno);
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
@@ -2346,7 +2246,9 @@ static int StringValue(int c, Rboolean forSymbol)
 			CTEXT_POP();
 			if (i == 0) { /* was just \U */
 			    *ct = '\0';
-			    errorcall(R_NilValue, _("'\\U' used without hex digits in character string starting \"%s\""), currtext);
+			    errorcall(R_NilValue, 
+                              _("'\\U' used without hex digits in character string starting \"%s\""),
+                              currtext);
 			}
 			break;
 		    }
@@ -2354,7 +2256,8 @@ static int StringValue(int c, Rboolean forSymbol)
 		}
 		if(delim) {
 		    if((c = xxgetc()) != '}')
-			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), ParseState.xxlineno);
+			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), 
+                              ParseState.xxlineno);
 		    else CTEXT_PUSH(c);
 		}
 		WTEXT_PUSH(val);
@@ -2394,7 +2297,9 @@ static int StringValue(int c, Rboolean forSymbol)
 		    break;
 		default:
 		    *ct = '\0';
-		    errorcall(R_NilValue, _("'\\%c' is an unrecognized escape in character string starting \"%s\""), c, currtext);
+		    errorcall(R_NilValue, 
+                       _("'\\%c' is an unrecognized escape in character string starting \"%s\""), 
+                       c, currtext);
 		}
 	    }
 	} else if(mbcslocale) {
@@ -2419,17 +2324,17 @@ static int StringValue(int c, Rboolean forSymbol)
 	STEXT_PUSH(c);
 	if ((unsigned int) c < 0x80) WTEXT_PUSH(c);
 	else { /* have an 8-bit char in the current encoding */
-#ifdef WC_NOT_UNICODE
-	    ucs_t wc;
-	    char s[2] = " ";
-	    s[0] = c;
-	    mbtoucs(&wc, s, 2);
-#else
-	    wchar_t wc;
-	    char s[2] = " ";
-	    s[0] = c;
-	    mbrtowc(&wc, s, 2, NULL);
-#endif
+#           ifdef WC_NOT_UNICODE
+	        ucs_t wc;
+                char s[2] = " ";
+                s[0] = c;
+                mbtoucs(&wc, s, 2);
+#           else
+                wchar_t wc;
+                char s[2] = " ";
+                s[0] = c;
+                mbrtowc(&wc, s, 2, NULL);
+#           endif
 	    WTEXT_PUSH(wc);
 	}
     }
@@ -2437,11 +2342,11 @@ static int StringValue(int c, Rboolean forSymbol)
     WTEXT_PUSH(0);
     if (c == R_EOF) {
         if(stext != st0) free(stext);
-        yylval = R_NilValue;
+        next_token_val = R_NilValue;
     	return ERROR;
     }
     if(forSymbol) {
-	yylval = install(stext);
+	next_token_val = install(stext);
 	if(stext != st0) free(stext);
 	return SYMBOL;
     } else {
@@ -2449,15 +2354,125 @@ static int StringValue(int c, Rboolean forSymbol)
 	    if(oct_or_hex)
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
 	    if(wcnt < 10000)
-		yylval = mkStringUTF8(wcs, wcnt); /* include terminator */
+		next_token_val = mkStringUTF8(wcs, wcnt); /* include terminator */
 	    else
-		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"), ParseState.xxlineno);
+		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"),
+                      ParseState.xxlineno);
 	} else
-	    yylval = mkString2(stext,  bp - stext - 1, oct_or_hex);
+	    next_token_val = mkString2(stext,  bp - stext - 1, oct_or_hex);
 	if(stext != st0) free(stext);
 	return STR_CONST;
     }
 }
+
+
+/* --------------------------------------------------------------------------
+   THE LEXICAL ANALYZER
+*/
+
+/* Table of syntactic keywords and symbolic constants. */
+
+static struct { char *name; int token; } keywords[] = {
+    { "NULL",	    NULL_CONST },
+    { "NA",	    NUM_CONST  },
+    { "TRUE",	    NUM_CONST  },
+    { "FALSE",	    NUM_CONST  },
+    { "Inf",	    NUM_CONST  },
+    { "NaN",	    NUM_CONST  },
+    { "NA_integer_", NUM_CONST  },
+    { "NA_real_",    NUM_CONST  },
+    { "NA_character_", NUM_CONST  },
+    { "NA_complex_", NUM_CONST  },
+    { "function",   FUNCTION   },
+    { "while",	    WHILE      },
+    { "repeat",	    REPEAT     },
+    { "for",	    FOR	       },
+    { "if",	    IF	       },
+    { "in",	    IN	       },
+    { "else",	    ELSE       },
+    { "next",	    NEXT       },
+    { "break",	    BREAK      },
+    { "...",	    SYMBOL     },
+    { 0,	    0	       }
+};
+
+
+/* Check whether a string is a keyword.  Returns 0 if it is not a keyword.
+   Returns 1 if it is a keyword, and also sets next_token_val to the
+   assocaited value (constant, symbol, or R_NilValue for 'in' and 'else'). */
+
+static int KeywordLookup(const char *s)
+{
+    int i;
+    for (i = 0; keywords[i].name; i++) {
+	if (strcmp(keywords[i].name, s) == 0) {
+	    switch (keywords[i].token) {
+	    case NULL_CONST:
+		next_token_val = R_NilValue;
+		break;
+	    case NUM_CONST:
+                switch(i) {
+                case 1:
+                    next_token_val = ScalarLogicalMaybeConst(NA_LOGICAL);
+                    break;
+                case 2:
+                    next_token_val = ScalarLogicalMaybeConst(1);
+                    break;
+                case 3:
+                    next_token_val = ScalarLogicalMaybeConst(0);
+                    break;
+                case 4:
+                    next_token_val = allocVector1REAL();
+                    REAL(next_token_val)[0] = R_PosInf;
+                    break;
+                case 5:
+                    next_token_val = allocVector1REAL();
+                    REAL(next_token_val)[0] = R_NaN;
+                    break;
+                case 6:
+                    next_token_val = ScalarIntegerMaybeConst(NA_INTEGER);
+                    break;
+                case 7:
+                    next_token_val = allocVector1REAL();
+                    REAL(next_token_val)[0] = NA_REAL;
+                    break;
+                case 8:
+                    next_token_val = allocVector(STRSXP, 1);
+                    SET_STRING_ELT(next_token_val, 0, NA_STRING);
+                    break;
+                case 9:
+                    next_token_val = allocVector(CPLXSXP, 1);
+                    COMPLEX(next_token_val)[0].r = NA_REAL;
+                    COMPLEX(next_token_val)[0].i = NA_REAL;
+                    break;
+                }
+		break;
+	    case FUNCTION:
+	    case WHILE:
+	    case REPEAT:
+	    case FOR:
+	    case IF:
+	    case NEXT:
+	    case BREAK:
+		next_token_val = install(s);
+		break;
+	    case IN:
+	    case ELSE:
+		break;
+	    case SYMBOL:
+		next_token_val = install(s);
+		break;
+	    }
+	    return keywords[i].token;
+	}
+    }
+    return 0;
+}
+
+
+/* Process a special operator beginning with '%', setting next_token_val
+   to a symbol for it.  The value returned is SYMBOL or ERROR (if operator
+   is incomplete). */
 
 static int SpecialValue(int c)
 {
@@ -2473,50 +2488,14 @@ static int SpecialValue(int c)
     if (c == '%')
 	YYTEXT_PUSH(c, yyp);
     YYTEXT_PUSH('\0', yyp);
-    yylval = install(yytext);
+    next_token_val = install(yytext);
     return SPECIAL;
 }
 
-/* return 1 if name is a valid name 0 otherwise */
-static int isValidName(const char *name)
-{
-    const char *p = name;
-    int i;
 
-    if(mbcslocale) {
-	/* the only way to establish which chars are alpha etc is to
-	   use the wchar variants */
-	int n = strlen(name), used;
-	wchar_t wc;
-	used = Mbrtowc(&wc, p, n, NULL); p += used; n -= used;
-	if(used == 0) return 0;
-	if (wc != L'.' && !iswalpha(wc) ) return 0;
-	if (wc == L'.') {
-	    /* We don't care about other than ASCII digits */
-	    if(isdigit(0xff & (int)*p)) return 0;
-	    /* Mbrtowc(&wc, p, n, NULL); if(iswdigit(wc)) return 0; */
-	}
-	while((used = Mbrtowc(&wc, p, n, NULL))) {
-	    if (!(iswalnum(wc) || wc == L'.' || wc == L'_')) break;
-	    p += used; n -= used;
-	}
-	if (*p != '\0') return 0;
-    } else {
-	int c = 0xff & *p++;
-	if (c != '.' && !isalpha(c) ) return 0;
-	if (c == '.' && isdigit(0xff & (int)*p)) return 0;
-	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) ;
-	if (c != '\0') return 0;
-    }
-
-    if (strcmp(name, "...") == 0) return 1;
-
-    for (i = 0; keywords[i].name != NULL; i++)
-	if (strcmp(keywords[i].name, name) == 0) return 0;
-
-    return 1;
-}
-
+/* Process a symbol value, putting the symbol in next_token_val.  The
+   return value is SYMBOL for regular symbols, and the appropriate
+   token code for reserved words. */
 
 static int SymbolValue(int c)
 {
@@ -2550,33 +2529,14 @@ static int SymbolValue(int c)
     if ((kw = KeywordLookup(yytext))) 
 	return kw;
     
-    yylval = install(yytext);
+    next_token_val = install(yytext);
     return SYMBOL;
 }
 
-static void setParseFilename(SEXP newname) {
-    SEXP class;
-    PROTECT(newname);    
-    if (isEnvironment(ParseState.SrcFile)) {
-    	SEXP oldname = findVar(install("filename"), ParseState.SrcFile);
-    	if (isString(oldname) && length(oldname) > 0 &&
-    	    strcmp(CHAR(STRING_ELT(oldname, 0)),
-    	           CHAR(STRING_ELT(newname, 0))) == 0) return;
-	REPROTECT(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), ParseState.SrcFileProt);
-	defineVar(install("filename"), newname, ParseState.SrcFile);
-    }
-    if (ParseState.keepSrcRefs) {
-	defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
 
-        PROTECT(class = allocVector(STRSXP, 2));
-        SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
-        SET_STRING_ELT(class, 1, mkChar("srcfile"));
-	setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
-        UNPROTECT(1);
-    } 
-    UNPROTECT(1);
-}
-
+/* Skip whitespace characters.  The argument says whether or not to stop
+   when a newline is encountered.  Sets newline_before_token to 1 if
+   a newline is found (but doesn't set it to 0 if not). */
 
 static int SkipSpace(int stop_on_nl)
 {
@@ -2627,11 +2587,48 @@ static int SkipSpace(int stop_on_nl)
     return c;
 }
 
+
+/* Set the name of the source file that text is coming from. */
+
+static void setParseFilename(SEXP newname) {
+
+    SEXP class;
+    PROTECT(newname);    
+
+    if (isEnvironment(ParseState.SrcFile)) {
+    	SEXP oldname = findVar(install("filename"), ParseState.SrcFile);
+    	if (isString(oldname) && length(oldname) > 0 &&
+    	    strcmp(CHAR(STRING_ELT(oldname, 0)),
+    	           CHAR(STRING_ELT(newname, 0))) == 0) return;
+	REPROTECT(ParseState.SrcFile =
+                    NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
+                  ParseState.SrcFileProt);
+	defineVar(install("filename"), newname, ParseState.SrcFile);
+    }
+
+    if (ParseState.keepSrcRefs) {
+	defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
+        PROTECT(class = allocVector(STRSXP, 2));
+        SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
+        SET_STRING_ELT(class, 1, mkChar("srcfile"));
+	setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
+        UNPROTECT(1);
+    } 
+
+    UNPROTECT(1);
+}
+
+
+/* Process a #line nn [ file ] directive.  The #line part will have already
+   been read.  Returns the character after the directive. */
+
 static int processLineDirective()
 {
     int c, tok, linenumber;
+
     c = SkipSpace(1);
     if (!isdigit(c)) return(c);
+
     tok = NumericValue(c);
     linenumber = atoi(yytext);
     c = SkipSpace(1);
@@ -2640,188 +2637,238 @@ static int processLineDirective()
     else
     	xxungetc(c);
     if (tok == STR_CONST) 
-	setParseFilename(yylval);
+	setParseFilename(next_token_val);
+
     while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
+
     ParseState.xxlineno = linenumber;
+
     /* Don't change xxparseno here, it counts parsed lines, not official lines*/
+
     /* Context report shouldn't show the directive */
+
     R_ParseContext[R_ParseContextLast] = '\0'; 
+
     return(c);
 }
 
-/* Split the input stream into tokens. */
-/* This is the lowest of the parsing levels. */
 
-static int token(void)
+/* Skip a comment, returning the character ending it ('\n' or R_EOF).  
+   Also processes comments that are #line directives. */
+
+static int SkipComment(void)
 {
-    int c;
+    int c='#', i;
+    Rboolean maybeLine = (ParseState.xxcolno == 1);
+    if (maybeLine) {
+    	static const char lineDirective[] = "#line";
+    	for (i=1; i<5; i++) {
+    	    c = xxgetc();
+  	    if (c != (int)(lineDirective[i])) {
+  	    	maybeLine = FALSE;
+  	    	break;
+  	    }
+  	}
+  	if (maybeLine)     
+	    c = processLineDirective();
+    }
+    while (c != '\n' && c != R_EOF) 
+	c = xxgetc();
+    return c;
+}
+
+
+/* Called following '.'.  We only care if it's an ANSI digit or not */
+
+static int nextisdigit(void)
+{
+    int k, c;
+    c = xxgetc();
+    k = isdigit(c);
+    xxungetc(c);
+    return k;
+}
+
+
+/* Returns whether the next character is the one passed, advancing to
+   the next character only if it is. */
+
+static int nextchar(int expect)
+{
+    int c = xxgetc();
+    if (c == expect)
+	return 1;
+    else {
+	xxungetc(c);
+        return 0;
+    }
+}
+
+
+/* Get a token.
+
+   Passed the first non-whitespace character of the next token.  Returns
+   the token code (or ERROR if the next token is malformed).  Will also
+   set next_token_val to an associated SEXP (R_NilValue if none).  This
+   SEXP must be protected by the caller if necessary.
+
+   The character after the token may have been looked at, but if so xxungetc
+   will have been called to put it back. */
+
+static int token (int c)
+{
     wchar_t wc;
 
-    newline_before_token = 0;
+    next_token_val = R_NilValue;
 
-    c = SkipSpace(0);
-    while (c == '#') {
-        c = SkipComment();
-        if (c == '\n') c = SkipSpace(0);
-    }
-
-    yylloc.first_line = ParseState.xxlineno;
-    yylloc.first_column = ParseState.xxcolno;
-    yylloc.first_byte = ParseState.xxbyteno;
-    yylloc.first_parsed = ParseState.xxparseno;
-
-    yylval = R_NilValue;
+    /* Hard and soft end of file.  Soft end of file comes at the end of a
+       line of interactive input, which may or may not be the actual end. */
 
     if (c == R_EOF) 
         return END_OF_INPUT;
+
     if (c == SOFT_EOF) {
         newline_before_token = 1;
         return MAYBE_END;
     }
 
-    /* Either digits or symbols can start with a "." */
-    /* so we need to decide which it is and jump to  */
-    /* the correct spot. */
+    /* Literal numbers - since either digits or symbols can start with '.',
+       we need to check whether the next character is a digit. */
 
-    if (c == '.' && typeofnext() >= 2) goto symbol;
+    if (isdigit(c) || c == '.' && nextisdigit())
+        return NumericValue(c);
 
-    /* literal numbers */
-
-    if (c == '.') return NumericValue(c);
-    /* We don't care about other than ASCII digits */
-    if (isdigit(c)) return NumericValue(c);
-
-    /* literal strings */
+    /* Literal strings */
 
     if (c == '\"' || c == '\'')
 	return StringValue(c, FALSE);
 
-    /* special functions */
+    /* Special functions */
 
     if (c == '%')
 	return SpecialValue(c);
 
-    /* functions, constants and variables */
+    /* Symbols (functions, constants and variables) */
 
     if (c == '`')
 	return StringValue(c, TRUE);
- symbol:
-
-    if (c == '.') return SymbolValue(c);
+    if (c == '.') 
+        return SymbolValue(c);
     if(mbcslocale) {
 	mbcs_get_next(c, &wc);
 	if (iswalpha(wc)) return SymbolValue(c);
-    } else
+    }
+    else
 	if (isalpha(c)) return SymbolValue(c);
 
-    /* compound tokens */
+    /* Simple and compound tokens */
 
     switch (c) {
     case '<':
 	if (nextchar('=')) {
-	    yylval = R_LeSymbol;
+	    next_token_val = R_LeSymbol;
 	    return LE;
 	}
 	if (nextchar('-')) {
-	    yylval = R_LocalAssignSymbol;
+	    next_token_val = R_LocalAssignSymbol;
 	    return LEFT_ASSIGN;
 	}
 	if (nextchar('<')) {
 	    if (nextchar('-')) {
-		yylval = R_GlobalAssignSymbol;
+		next_token_val = R_GlobalAssignSymbol;
 		return LEFT_ASSIGN;
 	    }
 	    else
 		return ERROR;
 	}
-	yylval = R_LtSymbol;
+	next_token_val = R_LtSymbol;
 	return LT;
     case '-':
 	if (nextchar('>')) {
 	    if (nextchar('>')) {
-		yylval = R_GlobalAssignSymbol; /* currently switch R to L */
+		next_token_val = R_GlobalAssignSymbol; /* switch R to L */
 		return RIGHT_ASSIGN;
 	    }
 	    else {
-		yylval = R_LocalAssignSymbol; /* currently switch R to L */
+		next_token_val = R_LocalAssignSymbol;  /* switch R to L */
 		return RIGHT_ASSIGN;
 	    }
 	}
-	yylval = R_SubSymbol;
+	next_token_val = R_SubSymbol;
 	return '-';
     case '>':
 	if (nextchar('=')) {
-	    yylval = R_GeSymbol;
+	    next_token_val = R_GeSymbol;
 	    return GE;
 	}
-	yylval = R_GtSymbol;
+	next_token_val = R_GtSymbol;
 	return GT;
     case '!':
 	if (nextchar('=')) {
-	    yylval = R_NeSymbol;
+	    next_token_val = R_NeSymbol;
 	    return NE;
 	}
-	yylval = R_NotSymbol;
+	next_token_val = R_NotSymbol;
 	return '!';
     case '=':
 	if (nextchar('=')) {
-	    yylval = R_EqSymbol;
+	    next_token_val = R_EqSymbol;
 	    return EQ;
 	}
-	yylval = R_EqAssignSymbol;
+	next_token_val = R_EqAssignSymbol;
 	return EQ_ASSIGN;
     case ':':
 	if (nextchar(':')) {
 	    if (nextchar(':')) {
-		yylval = R_TripleColonSymbol;
+		next_token_val = R_TripleColonSymbol;
 		return NS_GET_INT;
 	    }
 	    else {
-		yylval = R_DoubleColonSymbol;
+		next_token_val = R_DoubleColonSymbol;
 		return NS_GET;
 	    }
 	}
 	if (nextchar('=')) {
-	    yylval = R_ColonEqSymbol;
+	    next_token_val = R_ColonEqSymbol;
 	    return LEFT_ASSIGN;
 	}
-	yylval = R_ColonSymbol;
+	next_token_val = R_ColonSymbol;
 	return ':';
     case '&':
 	if (nextchar('&')) {
-	    yylval = R_And2Symbol;
+	    next_token_val = R_And2Symbol;
 	    return AND2;
 	}
-	yylval = R_AndSymbol;
+	next_token_val = R_AndSymbol;
 	return AND;
     case '|':
 	if (nextchar('|')) {
-	    yylval = R_Or2Symbol;
+	    next_token_val = R_Or2Symbol;
 	    return OR2;
 	}
-	yylval = R_OrSymbol;
+	next_token_val = R_OrSymbol;
 	return OR;
     case '{':
-	yylval = R_BraceSymbol;
+	next_token_val = R_BraceSymbol;
 	return c;
     case '}':
 	return c;
     case '(':
-	yylval = R_ParenSymbol;
+	next_token_val = R_ParenSymbol;
 	return c;
     case ')':
 	return c;
     case '[':
 	if (nextchar('[')) {
-	    yylval = R_Bracket2Symbol;
+	    next_token_val = R_Bracket2Symbol;
 	    return LBB;
 	}
-	yylval = R_BracketSymbol;
+	next_token_val = R_BracketSymbol;
 	return c;
     case ']':
 	return c;
     case '?':
-	yylval = R_QuerySymbol;
+	next_token_val = R_QuerySymbol;
 	return c;
     case '*':
 	/* Replace ** by ^.  This has been here since 1998, but is
@@ -2830,51 +2877,114 @@ static int token(void)
 	   help for 'Deprecated'.  S-PLUS 6.2 still allowed this, so
 	   presumably it was for compatibility with S. */
 	if (nextchar('*')) {
-	    yylval = R_ExptSymbol;  /* replace by ^ for now */
+	    next_token_val = R_ExptSymbol;  /* replace by ^ for now */
             return '^';
         }
-        yylval = R_MulSymbol;
+        next_token_val = R_MulSymbol;
 	return c;
     case '+':
-        yylval = R_AddSymbol;
+        next_token_val = R_AddSymbol;
         return c;
     case '/':
-        yylval = R_DivSymbol;
+        next_token_val = R_DivSymbol;
         return c;
     case '^':
-        yylval = R_ExptSymbol;
+        next_token_val = R_ExptSymbol;
         return c;
     case '~':
-        yylval = R_TildeSymbol;
+        next_token_val = R_TildeSymbol;
         return c;
     case '$':
-        yylval = R_DollarSymbol;
+        next_token_val = R_DollarSymbol;
         return c;
     case '@':
-        yylval = R_AtSymbol;
+        next_token_val = R_AtSymbol;
         return c;
     default:
 	return c;
     }
 }
 
+
+/* Get the next token (after skipping whitespace) and put it in 
+   next_token.  Also sets next_token_val, newline_before_token, 
+   token_loc, and prev_token_loc. */
+
 static void get_next_token(void)
 {
-    prev_yylloc = yylloc;
+    int c;
 
-    next_token = token();
+    prev_token_loc = token_loc;
 
-    yylloc.last_line = ParseState.xxlineno;
-    yylloc.last_column = ParseState.xxcolno;
-    yylloc.last_byte = ParseState.xxbyteno;
-    yylloc.last_parsed = ParseState.xxparseno;
+    newline_before_token = 0;
+    c = SkipSpace(0);
+    while (c == '#') {
+        c = SkipComment();
+        if (c == '\n') {
+            newline_before_token = 1;
+            c = SkipSpace(0);
+        }
+    }
+
+    token_loc.first_line = ParseState.xxlineno;
+    token_loc.first_column = ParseState.xxcolno;
+    token_loc.first_byte = ParseState.xxbyteno;
+    token_loc.first_parsed = ParseState.xxparseno;
+
+    next_token = token(c);
+
+    token_loc.last_line   = ParseState.xxlineno;
+    token_loc.last_column = ParseState.xxcolno;
+    token_loc.last_byte   = ParseState.xxbyteno;
+    token_loc.last_parsed = ParseState.xxparseno;
 }
 
-static int get_next_token_not_maybe_end(void)
-{
-    do { 
-        get_next_token(); 
-    } while (next_token == MAYBE_END);
 
-    return next_token;
+/* --------------------------------------------------------------------------
+   ROUTINE FOR EXTERNAL USE ONLY
+*/
+
+/* Return 1 if 'name' is a valid name or 0 otherwise.  Not used by the
+   parser itself, but defined here since it needs to know which names 
+   are reserved words. */
+
+int isValidName(const char *name)
+{
+    const char *p = name;
+    int i;
+
+    if(mbcslocale) {
+	/* the only way to establish which chars are alpha etc is to
+	   use the wchar variants */
+	int n = strlen(name), used;
+	wchar_t wc;
+	used = Mbrtowc(&wc, p, n, NULL); p += used; n -= used;
+	if(used == 0) return 0;
+	if (wc != L'.' && !iswalpha(wc) ) return 0;
+	if (wc == L'.') {
+	    /* We don't care about other than ASCII digits */
+	    if(isdigit(0xff & (int)*p)) return 0;
+	    /* Mbrtowc(&wc, p, n, NULL); if(iswdigit(wc)) return 0; */
+	}
+	while((used = Mbrtowc(&wc, p, n, NULL))) {
+	    if (!(iswalnum(wc) || wc == L'.' || wc == L'_')) break;
+	    p += used; n -= used;
+	}
+	if (*p != '\0') return 0;
+    } else {
+	int c = 0xff & *p++;
+	if (c != '.' && !isalpha(c) ) return 0;
+	if (c == '.' && isdigit(0xff & (int)*p)) return 0;
+	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) ;
+	if (c != '\0') return 0;
+    }
+
+    if (strcmp(name, "...") == 0) return 1;
+
+    /* Check whether it's a reserved word. */
+
+    for (i = 0; keywords[i].name != NULL; i++)
+	if (strcmp(keywords[i].name, name) == 0) return 0;
+
+    return 1;
 }
