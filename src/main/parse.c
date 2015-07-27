@@ -2374,7 +2374,7 @@ static int StringValue(int c, Rboolean forSymbol)
 
 static struct { char *name; int token; } keywords[] = {
     { "NULL",	    NULL_CONST },
-    { "NA",	    NUM_CONST  },
+    { "NA",	    NUM_CONST  },  /* order of next 9 is significant below */
     { "TRUE",	    NUM_CONST  },
     { "FALSE",	    NUM_CONST  },
     { "Inf",	    NUM_CONST  },
@@ -2448,16 +2448,30 @@ static int KeywordLookup(const char *s)
                 }
 		break;
 	    case FUNCTION:
+		next_token_val = R_FunctionSymbol;
+		break;
 	    case WHILE:
+		next_token_val = R_WhileSymbol;
+		break;
 	    case REPEAT:
+		next_token_val = R_RepeatSymbol;
+		break;
 	    case FOR:
+		next_token_val = R_ForSymbol;
+		break;
 	    case IF:
+		next_token_val = R_IfSymbol;
+		break;
 	    case NEXT:
+		next_token_val = R_NextSymbol;
+		break;
 	    case BREAK:
-		next_token_val = install(s);
+		next_token_val = R_BreakSymbol;
+		break;
 		break;
 	    case IN:
 	    case ELSE:
+		next_token_val = R_NilValue;
 		break;
 	    case SYMBOL:
 		next_token_val = install(s);
