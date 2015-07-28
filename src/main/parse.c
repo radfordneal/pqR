@@ -55,13 +55,34 @@
  
    The following routines parse a single expression:
  
- 	SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, 
-                         Rboolean first)
+       SEXP R_Parse1File (FILE *fp, int gencode, ParseStatus *status, 
+                           SrcRefState *state)
          (used for R_ReplFile in main.c)
  
- 	SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status,
-                           Rboolean first)
+       SEXP R_Parse1Buffer (IoBuffer *buffer, int gencode, ParseStatus *status)
+
          (used for ReplIteration and R_ReplDLLdo1 in main.c)
+ 
+   The following routines parse several expressions and return their
+   values in a single expression vector.
+ 
+       SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
+
+         (public, and used by parse(text=) in file source.c)
+
+       SEXP R_ParseFile (FILE *fp, int n, ParseStatus *status, SEXP srcfile)
+
+         (used for do_edit in file edit.c)
+ 
+       SEXP R_ParseBuffer (IoBuffer *buffer, int n, ParseStatus *status, 
+                           SEXP prompt, SEXP srcfile)
+
+         (used by parse(file="") in file source.c)
+ 
+       SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, 
+                         SEXP srcfile)
+
+         (used by parse(file=) in file source.c)
  
    The success of the parse is indicated as folllows:
  
@@ -74,28 +95,13 @@
    In ReplIteration and Replconsole in main.c, the INCOMPLETE status is used
    to determine the number of lines to read for interactive input, with 
    additional lines being read until INCOMPLETE status is no longer returned.
- 
-   The following routines parse several expressions and return
-   their values in a single expression vector.
- 
- 	SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
-         (used for do_edit in file edit.c)
- 
- 	SEXP R_ParseVector(SEXP *text, int n, ParseStatus *status, SEXP srcfile)
-         (public, and used by parse(text=) in file source.c)
- 
- 	SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, 
-                          SEXP prompt, SEXP srcfile)
-         (used by parse(file="") in file source.c)
- 
-       SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, 
-                        SEXP srcfile)
-         (used by parse(file=) in file source.c)
- 
-   Here, status is 1 for a successful parse and 0 if parsing failed
-   for some reason. 
 
-   This module also defines the isValidName function.
+   R_InitSrcRefState and R_FinalizeSrcRefState are also currently exposed.
+
+   All the above are declared in Parse.h and R_ext/Parse.h.
+
+   This module also defines the isValidName function, which needs to know
+   the list of reserved words.
 */
 
 
@@ -261,84 +267,34 @@ cr	:
    INTERFACE FROM THE PARSER TO THE LEXICAL ANALYSER
 */
 
-/* Codes for token types.  Codes for single characters also act as
+
+/* Codes for token types.  ASCII codes for single characters also act as
    token numbers. */
 
 enum token_type {
-  MAYBE_END = 256,
-  END_OF_INPUT,
-  ERROR,
-  STR_CONST,
-  NUM_CONST,
-  SYMBOL,
-  LEFT_ASSIGN,
-  EQ_ASSIGN,
-  RIGHT_ASSIGN,
-  NULL_CONST,
-  FUNCTION,
-  LBB,
-  FOR,
-  IN,
-  IF,
-  ELSE,
-  WHILE,
-  NEXT,
-  BREAK,
-  REPEAT,
-  GT,
-  GE,
-  LT,
-  LE,
-  EQ,
-  NE,
-  AND,
-  OR,
-  AND2,
-  OR2,
-  NS_GET,
-  NS_GET_INT,
-  SPECIAL
+  MAYBE_END=256, END_OF_INPUT,  ERROR,     STR_CONST,        NUM_CONST,
+  SYMBOL,        LEFT_ASSIGN,   EQ_ASSIGN, RIGHT_ASSIGN,     NULL_CONST,
+  FUNCTION,      LBB,           FOR,       IN,               IF,
+  ELSE,          WHILE,         NEXT,      BREAK,            REPEAT,
+  GT,            GE,            LT,        LE,               EQ,
+  NE,            AND,           OR,        AND2,             OR2,
+  NS_GET,        NS_GET_INT,    SPECIAL
 };
 
-/* Names for tokens with codes >= 256. */
-
-#define NUM_TRANSLATED 7  /* Number of these (at front) that are translated */
+/* Names for tokens with codes >= 256.  These must correspond in order
+   with the codes for token types above.  They are used for error messages. */
 
 static const char *const token_name[] = {
-  "end of input",
-  "end of input",
-  "input",
-  "string constant",
-  "numeric constant",
-  "symbol",
-  "assignment",
-  "=",
-  "->",
-  "'NULL'",
-  "'function'",
-  "'[['",
-  "'for'",
-  "'in'",
-  "'if'",
-  "'else'",
-  "'while'",
-  "'next'",
-  "'break'",
-  "'repeat'",
-  "'>'",
-  "'>='",
-  "'<'",
-  "'<='",
-  "'=='",
-  "'!='",
-  "'&'",
-  "'|'",
-  "'&&'",
-  "'||'",
-  "'::'",
-  "':::'",
-  "SPECIAL",
+  "end of input","end of input","input",   "string constant","numeric constant",
+  "symbol",      "assignment",  "=",       "->",             "'NULL'",
+  "'function'",  "'[['",        "'for'",   "'in'",           "'if'",
+  "'else'",      "'while'",     "'next'",  "'break'",        "'repeat'",
+  "'>'",         "'>='",        "'<'",     "'<='",           "'=='",
+  "'!='",        "'&'",         "'|'",     "'&&'",           "'||'",
+  "'::'",        "':::'",       "SPECIAL"
 };
+
+#define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
 
 #if 0  /* These are just here to trigger the internationalization. */
     _("end of input");
@@ -350,6 +306,7 @@ static const char *const token_name[] = {
     _("end of line");  /* currently unused */
 #endif
 
+
 /* The next token from the input, and asociated variables and functions. */
 
 static int next_token;            /* The next token, as an integer code */
@@ -357,6 +314,7 @@ static SEXP next_token_val;       /* The value associated with next_token. */
 static int newline_before_token;  /* 1 if next token was preceded by '\n' */
 
 static void get_next_token(void); /* Update next_token to the next one */
+
 
 /* Record of the start and end of part of the source text. */
 
@@ -378,9 +336,7 @@ typedef struct
 
 static source_location token_loc, prev_token_loc;
 
-/* Internal lexer / parser state variables */
-
-static int xxlinesave, xxbytesave, xxcolsave, xxparsesave;
+/* Internal lexer / parser state. */
 
 static SrcRefState ParseState;
 
