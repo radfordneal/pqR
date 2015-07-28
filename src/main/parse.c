@@ -29,6 +29,14 @@
 #include "IOStuff.h"		/*-> Defn.h */
 #include "Fileio.h"
 #include "Parse.h"
+#include <R_ext/Print.h>
+
+#if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__))
+/* This may not be 100% true (see the comment in rlocales.h),
+   but it seems true in normal locales */
+# define __STDC_ISO_10646__
+#endif
+
 
 /* To be removed when newparse becomes parse... */
 
@@ -1912,12 +1920,6 @@ static int NumericValue(int c)
    If a string contains \u escapes that are not valid in the current locale, 
    we should switch to UTF-8 for that string.  Needs Unicode wide-char support.
 */
-
-#if defined(__APPLE_CC__)
-/* This may not be 100% true (see the comment in rlocales.h),
-   but it seems true in normal locales */
-# define __STDC_ISO_10646__
-#endif
 
 static int mbcs_get_next(int c, wchar_t *wc)
 {

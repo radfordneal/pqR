@@ -39,7 +39,7 @@
 SEXP do_X11(SEXP, SEXP, SEXP, SEXP);
 SEXP do_saveplot(SEXP, SEXP, SEXP, SEXP);
 
-#if defined(__APPLE_CC__) && defined(HAVE_AQUA)
+#if defined(__APPLE__) && defined(HAVE_AQUA)
 SEXP do_wsbrowser(SEXP, SEXP, SEXP, SEXP);
 SEXP do_browsepkgs(SEXP, SEXP, SEXP, SEXP);
 SEXP do_datamanger(SEXP, SEXP, SEXP, SEXP);
