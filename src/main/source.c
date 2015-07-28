@@ -262,7 +262,7 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	    known_to_be_utf8 = old_utf8;
 	}
 	if (num == NA_INTEGER) num = -1;
-        extern SEXP R_ParseVector(SEXP, int, ParseStatus *, SEXP);
+        extern SEXP R_NewParseVector(SEXP, int, ParseStatus *, SEXP);
         s = PRIMVAL(op) ? R_NewParseVector(text, num, &status, source)
                         : R_ParseVector(text, num, &status, source);
 	if (status != PARSE_OK) parseError(call, R_ParseError);
