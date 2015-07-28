@@ -316,7 +316,8 @@ static int newline_before_token;  /* 1 if next token was preceded by '\n' */
 static void get_next_token(void); /* Update next_token to the next one */
 
 
-/* Record of the start and end of part of the source text. */
+/* Record of the start and end of part of the source text.  See the
+   information in help(srcfile). */
 
 typedef struct
 {
@@ -1521,8 +1522,11 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     	keepSource = asLogical(GetOption1(install("keep.source")));
     	if (keepSource) {
     	    ParseState.keepSrcRefs = TRUE;
-    	    REPROTECT(ParseState.SrcFile = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), ParseState.SrcFileProt);
-	    REPROTECT(ParseState.Original = ParseState.SrcFile, ParseState.OriginalProt);
+    	    REPROTECT(ParseState.SrcFile = 
+                        NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv),
+                        ParseState.SrcFileProt);
+	    REPROTECT(ParseState.Original = ParseState.SrcFile, 
+                        ParseState.OriginalProt);
 	}
     }
 
@@ -1745,10 +1749,9 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 
 
 /* --------------------------------------------------------------------------
-   ROUTINES FOR CREATING NUMERIC AND STRING VALUES
-*/
+   TEXT BUFFER
 
-/* This is used as the buffer for NumericValue, SpecialValue and
+   This is used as the buffer for NumericValue, SpecialValue and
    SymbolValue.  None of these could conceivably need 8192 bytes.
 
    It has not been used as the buffer for input character strings
@@ -1763,6 +1766,11 @@ static char yytext[MAXELTSIZE];
         error(_("input buffer overflow at line %d"), ParseState.xxlineno); \
     *(bp)++ = (c); \
 } while(0)
+
+
+/* --------------------------------------------------------------------------
+   ROUTINES FOR CREATING NUMERIC AND STRING VALUES
+*/
 
 
 static SEXP mkReal(const char *s)
