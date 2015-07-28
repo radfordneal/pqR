@@ -379,6 +379,13 @@ static int prevparse[PUSHBACK_BUFSIZE];
    CHARACTER INPUT ROUTINES
 */
 
+static void ParseInit(void)
+{
+    npush = 0;
+    R_ParseContextLast = 0;
+    R_ParseContext[0] = '\0';
+}
+
 static int xxgetc(void)
 {
     int c, oldpos;
@@ -548,13 +555,6 @@ static void PutSrcRefState(SrcRefState *state)
 	state->xxparseno = ParseState.xxparseno;
     } else 
     	R_FinalizeSrcRefState(&ParseState);
-}
-
-static void ParseInit(void)
-{
-    npush = 0;
-    R_ParseContextLast = 0;
-    R_ParseContext[0] = '\0';
 }
 
 
@@ -2363,7 +2363,7 @@ static struct { char *name; int token; } keywords[] = {
 
 /* Check whether a string is a keyword.  Returns 0 if it is not a keyword.
    Returns 1 if it is a keyword, and also sets next_token_val to the
-   assocaited value (constant, symbol, or R_NilValue for 'in' and 'else'). */
+   associated value (constant, symbol, or R_NilValue for 'in' and 'else'). */
 
 static int KeywordLookup(const char *s)
 {
@@ -2471,9 +2471,10 @@ static int SpecialValue(int c)
 }
 
 
-/* Process a symbol value, putting the symbol in next_token_val.  The
-   return value is SYMBOL for regular symbols, and the appropriate
-   token code for reserved words. */
+/* Process a symbol value, putting the symbol in next_token_val (or
+   the corresponding numeric or logical value, for constants).  The
+   return value is SYMBOL for regular symbols, NUM_CONST for constants,
+   and the appropriate token code for reserved words. */
 
 static int SymbolValue(int c)
 {
