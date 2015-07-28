@@ -25,6 +25,8 @@ modified to reflect changes in pqR.
 
 @Rcopyright{1999}
 
+Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+
 @ignore
 Permission is granted to process this file through TeX and print the
 results, provided the printed document carries a copying permission

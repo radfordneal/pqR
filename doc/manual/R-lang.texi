@@ -1,7 +1,7 @@
 \input texinfo
 @c %**start of header
 @setfilename R-lang.info
-@settitle R Language Definition
+@settitle R Language Definition - with modifications for pqR
 @setchapternewpage on
 @c %**end of header
 
@@ -22,9 +22,11 @@
 @end macro
 
 @ifinfo
-This is the R language definition.
+This is the R language definition - with modifications for pqR
 
 @Rcopyright{2000}
+
+Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
 
 @ignore
 Permission is granted to process this file through TeX and print the
@@ -38,9 +40,9 @@ notice identical to this one except for the removal of this paragraph
 @end ifinfo
 
 @titlepage
-@title R Language Definition
-@subtitle Version @value{VERSION} @b{DRAFT}
-@author R Development Core Team
+@title R Language Definition - with modifications for pqR
+@subtitle R Version @value{VERSION} @b{DRAFT}, pqR version @value{pqRVERSION}
+@author R Development Core Team, pqR modifications by Radford Neal
 @page
 @vskip 0pt plus 1filll
 @Rcopyright{2000}
@@ -48,6 +50,9 @@ notice identical to this one except for the removal of this paragraph
 @permission{}
 
 @value{ISBN-lang}
+
+Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
+
 @end titlepage
 
 @c @ifnothtml
@@ -62,9 +67,12 @@ This is an introduction to the @R{} language, explaining evaluation,
 parsing, object oriented programming, computing on the language, and so
 forth.
 
-The current version of this document is @value{VERSION} @b{DRAFT}.
+This document is based on the version for R @value{VERSION} @b{DRAFT}.
 
 @value{ISBN-lang}
+
+Modifications for pqR are for pqR version @value{pqRVERSION}.
+
 @end ifnottex
 
 @menu
@@ -4493,12 +4501,12 @@ indices.
 
 @quotation
 @multitable @columnfractions 0.3 0.6
-@item @code{+ - * / %% ^} @tab arithmetic
+@item @code{+ - * / %% %/% ^} @tab arithmetic
 @item @code{> >= < <= == !=} @tab relational
-@item @code{! & |} @tab logical
+@item @code{! & && | ||} @tab logical
 @item @code{~} @tab model formulae
-@item @code{-> <-} @tab assignment
-@item @code{$} @tab list indexing
+@item @code{<- <<- = -> ->>} @tab assignment
+@item @code{$ @@} @tab list and slot indexing
 @item @code{:} @tab sequence
 @end multitable
 @end quotation
@@ -4591,60 +4599,81 @@ g(tag = value, , 5)
 The order of precedence (highest first) of the operators are
 
 @example
-::
-$ @@
+::  :::
+$  @@
 ^
-- +                @r{(unary)}
+-  +                  @r{(unary)}
 :
 %@var{xyz}%
-* /
-+ -                @r{(binary)}
-> >= < <= == !=
+*  /
++  -                  @r{(binary)}
+>  >=  <  <=  ==  !=
 !
-& &&
-| ||
-~                  @r{(unary and binary)}
--> ->>
-=                  @r{(as assignment)}
-<- <<-
+&  &&
+|  ||
+~                     @r{(unary)}
+~                     @r{(binary)}
+->  ->>
+<-  <<-
+=                     @r{(as assignment)}
 @end example
 
-The exponentiation operator @samp{^} and the
-@cindex assignment
-left assignment operators
-@samp{<- - = <<-} group right to left, all other operators group left to
-right.  That is, @code{2 ^ 2 ^ 3} is @math{2 ^ 8}, not @math{4 ^ 3},
-whereas @code{1 - 1 - 1} is @math{-1}, not 1.
+The @samp{::} and @samp{:::} operators can only take symbols and
+literal character strings as operands.  
+
+The @samp{$} and @samp{@@} operators (see @ref{Index constructions})
+take only symbols and literal character strings as their right
+operands, and hence are essentially suffixes to expressions, with
+higher precedence than other operators (except @samp{::} and
+@samp{:::}).  
+
+Function calls with argument list introduced by @samp{(} and
+subsetting operators with subscripts introduced by @samp{[} and
+@samp{[[} are also essentially postfix operators with the same
+precedence as @samp{$} and @samp{@@}.
+
+The exponentiation operator @samp{^} and the @cindex assignment left
+assignment operators @samp{<-}, @samp{<<-}, and @samp{=} group right
+to left, all other binary operators group left to right.  That is,
+@code{2^2^3} is @math{2^8}, not @math{4^3}, whereas @code{1-1-1} is
+@math{-1}, not 1.
 
 Notice that the operators @code{%%} and @code{%/%} for integer
 remainder and divide have higher precedence than multiply and divide.
 
 Although it is not strictly an operator, it also needs mentioning that
-the @samp{=} sign is used for tagging arguments in
-function calls and
+the @samp{=} sign is used for tagging arguments in function calls and
 for assigning default values in function definitions.
 
-The @samp{$} sign is in some sense an operator, but does not allow
-arbitrary right hand sides and is discussed under @ref{Index
-constructions}.  It has higher precedence than any of the other
-operators.
-
-The parsed form of a unary or binary operation is completely equivalent
-to a function call with the operator as the function name and the
-operands as the function arguments.
+The parsed form of a unary or binary operation is completely
+equivalent to a function call with the operator as the function name
+and the operands as the function arguments.
 
 Parentheses are recorded as equivalent to a unary operator, with name
-@code{"("}, even in cases where the parentheses could be inferred from
-operator precedence (e.g., @code{a * (b + c)}).
-@c FIXME: Will this get changed?
+@code{"("}, except where the need for parentheses could be inferred
+from operator precedence (e.g., @code{a * (b + c)}), or inside the
+right side of a formula (where some programs attach meaning to them
+beyond their grouping function).  This allows the presence of
+parentheses in a deparsed expression to match their presence or
+absence in the source.
 
-Notice that the
+Notice that the 
 @cindex assignment
 assignment symbols are operators just like the arithmetic, relational,
-and logical ones.  Any expressions is allowed also on the target side of
-an assignment, as far as the parser is concerned (@code{2 + 2 <- 5} is a
-valid expression as far as the parser is concerned.  The evaluator will
-object, though).  Similar comments apply to the model formula operator.
+and logical ones.  Any expression is allowed also on the target side
+of an assignment, as far as the parser is concerned. (For example,
+@code{2 + 2 <- 5} is a valid expression to the parser, though the
+evaluator will object.)  Similar comments apply to the model formula
+operator.
+
+Some final oddities. A unary or binary query operator, @samp{?}, is
+parsed, with precedence (unary higher) between @samp{<-} and
+@samp{=}. It is used for displaying help at present.  The operator
+@samp{**} is currently accepted as a synomym for @samp{^}.  A binary
+operator @samp{:=} is parsed, with precedence the same as @samp{<-},
+but is given no meaning in base R, though it can be given meaning in
+user code.
+
 
 @node Index constructions, Compound expressions, Infix and prefix operators, Expressions
 @subsection Index constructions

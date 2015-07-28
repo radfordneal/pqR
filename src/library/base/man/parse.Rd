@@ -44,8 +44,8 @@ parse(file = "", n = NULL, text = NULL, prompt = "?", srcfile,
   Wadsworth & Brooks/Cole.
 }
 \seealso{
-  \code{\link{scan}}, \code{\link{source}}, \code{\link{eval}},
-  \code{\link{deparse}}.
+  \code{\link{scan}}, \code{\link{source}}, \code{\link{srcfile}}, 
+  \code{\link{eval}}, \code{\link{deparse}}.
 }
 \details{
   If \code{text} has length greater than zero (after coercion) it is used in
