@@ -513,11 +513,12 @@ curlyahead(SEXP s)
 
 /* needsparens looks at an arg to a unary or binary operator to
    determine if it needs to be parenthesized when deparsed
-   mainop is a unary or binary operator,
-   arg is an argument to it, on the left if left == 1 */
+   op is a unary or binary operator, arg is an argument to it, on
+   the left if left == 1 */
 
-attribute_hidden Rboolean needsparens (PPinfo mainop, SEXP arg, int left)
+attribute_hidden Rboolean needsparens (SEXP op, SEXP arg, int left)
 {
+    PPinfo mainop = PPINFO(SYMVALUE(op));
     PPinfo arginfo;
     if (TYPEOF(arg) == LANGSXP) {
 	if (TYPEOF(CAR(arg)) == SYMSXP) {
@@ -837,8 +838,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	if (localOpts & SHOWATTRIBUTES) attr2(s, d);
 	break;
     case LANGSXP:
-        op = CAR(s);
-        s = CDR(s);
 	printcomment(s, d);
 	if (!isNull(ATTRIB(s)))
 	    d->sourceable = FALSE;
@@ -846,8 +845,10 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	    print2buff("quote(", d);
 	    d->opts &= SIMPLE_OPTS;
 	}
+        op = CAR(s);
+        s = CDR(s);
 	if (TYPEOF(op) == SYMSXP) {
-            char *opname = CHAR(PRINTNAME(op));
+            const char *opname = CHAR(PRINTNAME(op));
             int nargs = length(s);
             if (nargs >= 2 &&  strcmp(opname,"if") == 0) {
                 print2buff("if (", d);
@@ -876,7 +877,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
                 else {
                     deparse2buff(CAR(CDR(s)), d);
-                    if (d->incurly && !lookahead && !d->inlist )
+                    if (d->incurly && !lookahead && !d->inlist)
                     d->indent--;
                 }
             }
@@ -918,7 +919,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(")", d);
             }
             else if (nargs >= 2 && strcmp(opname,"[") == 0) {
-                if ((parens = needsparens(fop, CAR(s), 1)))
+                if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -928,7 +929,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff("]", d);
             }
             else if (nargs >= 2 && strcmp(opname,"[[") == 0) {
-                if ((parens = needsparens(fop, CAR(s), 1)))
+                if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -944,7 +945,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     args2buff(CAR(s), 0, 1, d);
                     print2buff(") ", d);
                     deparse2buff(CADR(s), d);
-                } else {
+                }
+                else {
                     s = CADDR(s);
                     n = length(s);
                     for(i = 0 ; i < n ; i++) {
@@ -953,25 +955,25 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     }
                 }
             }
-            else if (nargs == 2 && (isSymbol(CADR(s)) || isString(CADR(s))
-                                && (isSymbol(CADDR(s)) || isString(CADDR(s))
+            else if (nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
+                                && (isSymbol(CADR(s)) || isString(CADR(s)))
                    && (strcmp(opname,"::") == 0 || strcmp(opname,":::") == 0)) {
-                deparse2buff(CADR(s), d);
+                deparse2buff(CAR(s), d);
                 print2buff(opname, d);
-                deparse2buff(CADDR(s), d);
+                deparse2buff(CADR(s), d);
             }
-            else if (nargs == 2 && (isSymbol(CADR(s)) || isString(CADR(s))
+            else if (nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
                       && (strcmp(opname,"$") == 0 || strcmp(opname,"@") == 0)) {
-                if ((parens = needsparens(fop, CAR(s), 1)))
+                if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
                     print2buff(")", d);
                 print2buff(opname, d);
-                if (0){/* old way, unclear why deliberately does wrong thing */
+                if (0) { /* old way, unclear why deliberately does wrong thing*/
                     /*temp fix to handle printing of x$a's */
-                    if( isString(CADR(s)) &&
-                        isValidName(CHAR(STRING_ELT(CADR(s), 0))))
+                    if (isString(CADR(s))
+                           && isValidName(CHAR(STRING_ELT(CADR(s), 0))))
                         deparse2buff(STRING_ELT(CADR(s), 0), d);
                     else
                         deparse2buff(CADR(s), d);
@@ -979,11 +981,10 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 else
                     deparse2buff(CADR(s), d);
             }
-            else if (nargs == 2 &&
-                    (strcmp(opname,"<-") == 0
-                  || strcmp(opname,"=") == 0)
-                  || strcmp(opname,"<<-") == 0)) {
-                if ((parens = needsparens(fop, CAR(s), 1)))
+            else if (nargs == 2 && (strcmp(opname,"<-") == 0
+                                     || strcmp(opname,"=") == 0
+                                     || strcmp(opname,"<<-") == 0)) {
+                if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -991,7 +992,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(" ", d);
                 print2buff(opname, d);
                 print2buff(" ", d);
-                if ((parens = needsparens(fop, CADR(s), 0)))
+                if ((parens = needsparens(op, CADR(s), 0)))
                     print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (parens)
@@ -1003,29 +1004,29 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                   || strcmp(opname,"~") == 0
                   || strcmp(opname,"!") == 0)) {
                 print2buff(opname, d);
-                if ((parens = needsparens(fop, CAR(s), 0)))
+                if ((parens = needsparens(op, CAR(s), 0)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
                     print2buff(")", d);
             }
             else if (nargs == 2 &&
-                    (strcmp(opname,"+") == 0
-                  || strcmp(opname,"-") == 0
-                  || strcmp(opname,"*") == 0
-                  || strcmp(opname,"%*%") == 0
-                  || strcmp(opname,"&") == 0
-                  || strcmp(opname,"|") == 0
-                  || strcmp(opname,"&&") == 0
-                  || strcmp(opname,"||") == 0
-                  || strcmp(opname,"~+") == 0
-                  || strcmp(opname,"==") == 0
-                  || strcmp(opname,"!=") == 0
-                  || strcmp(opname,"<") == 0
-                  || strcmp(opname,"<=") == 0
-                  || strcmp(opname,">=") == 0
-                  || strcmp(opname,">") == 0)) {
-                if ((parens = needsparens(fop, CAR(s), 1)))
+                    (strcmp(opname,"+") == 0   /* space between op and args */
+                      || strcmp(opname,"-") == 0
+                      || strcmp(opname,"*") == 0
+                      || strcmp(opname,"%*%") == 0
+                      || strcmp(opname,"&") == 0
+                      || strcmp(opname,"|") == 0
+                      || strcmp(opname,"&&") == 0
+                      || strcmp(opname,"||") == 0
+                      || strcmp(opname,"~+") == 0
+                      || strcmp(opname,"==") == 0
+                      || strcmp(opname,"!=") == 0
+                      || strcmp(opname,"<") == 0
+                      || strcmp(opname,"<=") == 0
+                      || strcmp(opname,">=") == 0
+                      || strcmp(opname,">") == 0)) {
+                if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -1034,7 +1035,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(opname, d);
                 print2buff(" ", d);
                 linebreak(&lbreak, d);
-                if ((parens = needsparens(fop, CADR(s), 0)))
+                if ((parens = needsparens(op, CADR(s), 0)))
                     print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (parens)
@@ -1046,38 +1047,37 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 2 &&
                     (strcmp(opname,"/") == 0 /* no space between op and args */
-                  || strcmp(opname,"^") == 0
-                  || strcmp(opname,"%%") == 0
-                  || strcmp(opname,"%/%") == 0
-                  || strcmp(opname,":") == 0)) { 
-                if ((parens = needsparens(fop, CAR(s), 1)))
+                      || strcmp(opname,"^") == 0
+                      || strcmp(opname,"%%") == 0
+                      || strcmp(opname,"%/%") == 0
+                      || strcmp(opname,":") == 0)) { 
+                if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
                     print2buff(")", d);
                 print2buff(opname, d);
-                if ((parens = needsparens(fop, CADR(s), 0)))
+                if ((parens = needsparens(op, CADR(s), 0)))
                     print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (parens)
                     print2buff(")", d);
             }
-            else if (nargs == 0 &&
-                    (strcmp(opname,"break") == 0
-                  || strcmp(opname,"next")== 0)) {
+            else if (nargs == 0 && (strcmp(opname,"break") == 0
+                                      || strcmp(opname,"next")== 0)) {
                 print2buff(opname, d);
             }
-            else if (strcmp(opname,"[<-") == 0  /* done specially by S? */
-                  || strcmp(opname,"[[<-") == 0
-                  || strcmp(opname,"$<-") == 0) {
+            else if (strcmp(opname,"[<-") == 0     /* done specially by S? */
+                      || strcmp(opname,"[[<-") == 0
+                      || strcmp(opname,"$<-") == 0) {
                 if(d->opts & S_COMPAT) {
-                    print2buff("\"", d);
-                    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
+                    print2buff("\'", d);
+                    print2buff(opname, d); /* ASCII */
                     print2buff("\'(", d);
                 }
                 else {
                     print2buff("`", d);
-                    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
+                    print2buff(opname, d); /* ASCII */
                     print2buff("`(", d);
                 }
                 args2buff(s, 0, 0, d);
@@ -1086,7 +1086,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             else if (nargs == 2 && isUserBinop(op)) {
                 deparse2buff(CAR(s), d);
                 print2buff(" ", d);
-                print2buff(translateChar(opname), d);
+                print2buff(translateChar(PRINTNAME(op)), d);
                 print2buff(" ", d);
                 linebreak(&lbreak, d);
                 deparse2buff(CADR(s), d);
@@ -1096,7 +1096,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
                 break;
             }
-            else if (0)  /* alternative that was used when not built-in */
+            else {
                 if (isValidName(opname))
                     print2buff(opname, d);
                 else if(d->opts & S_COMPAT) {
@@ -1104,18 +1104,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     print2buff(opname, d);
                     print2buff("\'", d);
                 }
-                else {
-                    print2buff("`", d);
-                    print2buff(opname, d);
-                    print2buff("`", d);
-                }
-                print2buff("(", d);
-                args2buff(CDR(s), 0, 0, d);
-                print2buff(")", d);
-            }
-            else {
-                if (isValidName(opname))
-                    print2buff(opname, d);
                 else if (d->backtick) {
                     print2buff("`", d);
                     print2buff(opname, d);
@@ -1133,23 +1121,24 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(")", d);
             }
         }
-        else
+        else if (TYPEOF(op) == LANGSXP) {
+            /* use fact that xxx[] behaves the same as xxx() */
+            if ((parens = needsparens(R_BracketSymbol, op, 1)))
+                print2buff("(", d);
+            deparse2buff(CAR(s), d);
+            if (parens)
+                print2buff(")", d);
             deparse2buff(CAR(s), d);
             print2buff("(", d);
             args2buff(CDR(s), 0, 0, d);
             print2buff(")", d);
         }
-	else if (TYPEOF(CAR(s)) == CLOSXP || TYPEOF(CAR(s)) == SPECIALSXP
-		 || TYPEOF(CAR(s)) == BUILTINSXP) {
-	    deparse2buff(CAR(s), d);
+	else {
 	    print2buff("(", d);
-	    args2buff(CDR(s), 0, 0, d);
+	    deparse2buff(op, d);
 	    print2buff(")", d);
-	}
-	else { /* we have a lambda expression */
-	    deparse2buff(CAR(s), d);
 	    print2buff("(", d);
-	    args2buff(CDR(s), 0, 0, d);
+	    args2buff(s, 0, 0, d);
 	    print2buff(")", d);
 	}
 	if (localOpts & QUOTEEXPRESSIONS) {

@@ -7,8 +7,12 @@ Fixes these bugs along the way:
   [1] "a = (b <- c)"
   > deparse(parse(text="`+`(a,b)[1]")[[1]]) # Omits necessary parens
   [1] "a + b[1]"
-  > deparse(quote(`+`(1,2) %fred% 4))       # Omits necessary parnes
- [1] "1 + 2 %fred% 4"
+  > deparse(quote(`+`(1,2) %fred% 4))       # Omits necessary parens
+  [1] "1 + 2 %fred% 4"
+  > a <- quote(f(1,2))
+  > a[[1]] <- function(x,y)x+y
+  > deparse(a)
+  [1] "function (x, y) " "x + y(1, 2)"      # Omits necessary parens
   > deparse(parse(text="?lm")[[1]])         # Doesn't know about ? operator
   [1] "`?`(lm)"
   > deparse(parse(text="a:=b")[[1]])        # Doesn't know about := operator

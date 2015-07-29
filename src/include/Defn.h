@@ -1365,7 +1365,7 @@ SEXP mkPROMISE(SEXP, SEXP);
 SEXP mkQUOTE(SEXP);
 SEXP mkSYMSXP(SEXP, SEXP);
 SEXP mkTrue(void);
-Rboolean needsparens (PPinfo, SEXP, int);
+Rboolean needsparens (SEXP, SEXP, int);
 SEXP NewEnvironment(SEXP, SEXP, SEXP);
 void onintr(void);
 RETSIGTYPE onsigusr1(int);
