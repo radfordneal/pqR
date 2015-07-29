@@ -277,7 +277,13 @@ cr	:
 
 
 /* Codes for token types.  ASCII codes for single characters also act as
-   token numbers. */
+   token numbers.  
+
+   The MAYBE_END type is returned at the end of a line of interactive
+   input text from the console, and is treated as end of file if the
+   expression could end there, or as nothing otherwise.  Note that end
+   of line is not otherwise returned as a token, but instead results
+   in newline_before_token being set when the following token is returned. */
 
 enum token_type {
   MAYBE_END=256, END_OF_INPUT,  ERROR,     STR_CONST,        NUM_CONST,
@@ -352,7 +358,20 @@ static SrcRefState ParseState;
 
 /* --------------------------------------------------------------------------
    INTERFACE FROM THE LEXICAL ANALYSER TO CHARACTER INPUT ROUTINES
-*/
+
+   The xxgetc function returns the next character; xxungetc pushes
+   a character back to be returned by xxgetc later.  The character
+   returned may be SOFT_EOF, indicating the newline at the end of
+   a line of interactive console input (which might be the end if
+   that is syntactically allowed). 
+
+   The xxgetc function gets a character by calling the function pointed 
+   to by ptr_getc, which is set to different functions for different
+   input sources. 
+
+   The xxgetc function also maintains the lineno, etc. for source
+   references in ParseState, and the context for error reporting in 
+   R_ParseContext. */
 
 #include <R_ext/rlocale.h>
 
@@ -360,14 +379,12 @@ static SrcRefState ParseState;
 # include <langinfo.h>
 #endif
 
-#define SOFT_EOF (EOF == -1 ? -2 : -1)
-
 static int xxgetc();
 static void xxungetc(int);
 
-static int (*ptr_getc)(void);
+#define SOFT_EOF (EOF == -1 ? -2 : -1)  /* NL on interactive input */
 
-int R_fgetc(FILE*);
+static int (*ptr_getc)(void);     /* Function to call to get a character */
 
 /* Private pushback, since file ungetc only guarantees one byte.
    We need up to one MBCS-worth */
@@ -509,6 +526,8 @@ static void attachSrcrefs(SEXP val, SEXP t)
                        makeSrcref(&wholeFile, ParseState.SrcFile));
     }
     UNPROTECT(2);
+
+    ParseState.didAttach = TRUE;
 }
 
 void R_InitSrcRefState(SrcRefState *state)
@@ -719,14 +738,20 @@ static void end_location (source_location *loc)
    int in which to return a status.  
 
    The parse routines return the object parsed, or NULL if there was an
-   error (or errors may cause exit out of the whole parser with "error").
+   error (or errors may cause exit out of the whole parser with a call
+   of "error").
 
    Parsing routines are called with next_token already set to the first
    token of the construct they parse, and return with next_token set to
    the token after the construct they parsed.  Note, however, that this
    token may be MAYBE_END, which is a "soft" end-of-file that is replaced
    by an actual token if the token is accessed via NEXT_TOKEN rather than
-   next_token. */
+   next_token. 
+
+   Source references are attached if keep_source is non-zero. */
+
+
+int keep_source;  /* Attach source references to R expressions? */
 
 static SEXP parse_expr (int flags, int *stat), 
             parse_expr_or_assign (int flags, int *stat);
@@ -917,7 +942,7 @@ static SEXP parse_element (int flags, int *stat)
         start_location(&loc);
         get_next_token();
         end_location(&loc);
-        if (ParseState.keepSrcRefs) {
+        if (keep_source) {
             PROTECT_N (refs = CONS (makeSrcref(&loc,ParseState.SrcFile),
                                     R_NilValue));
             last_ref = refs;
@@ -931,7 +956,7 @@ static SEXP parse_element (int flags, int *stat)
             start_location(&loc);
             PARSE_SUB (next = parse_expr_or_assign(flags|END_ON_NL,stat));
             end_location(&loc);
-            if (ParseState.keepSrcRefs) {
+            if (keep_source) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
                                         R_NilValue));
                 last_ref = CDR(last_ref);
@@ -939,9 +964,8 @@ static SEXP parse_element (int flags, int *stat)
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
         }
-        if (ParseState.keepSrcRefs) {
+        if (keep_source) {
             attachSrcrefs(res,refs);
-            ParseState.didAttach = TRUE;
         }
         get_next_token();
     }
@@ -958,7 +982,7 @@ static SEXP parse_element (int flags, int *stat)
         EXPECT(')');
         PARSE_SUB(body = parse_expr_or_assign(flags,stat));
         end_location(&loc);
-        if (ParseState.keepSrcRefs) {
+        if (keep_source) {
             srcref = makeSrcref(&loc, ParseState.SrcFile);
             ParseState.didAttach = TRUE;
         } 
@@ -1449,7 +1473,11 @@ static SEXP parse_prog (int flags, int *stat)
 
 /* -------------------------------------------------------------------------- */
 
-/* R_Parse1 currently sets R_CurrentExpr, but probably shouldn't. */
+/* R_Parse1 is a glue function between the recursive descent parsing routines
+   and the parsing entry points.  It sets R_CurrentExpr to the expresion
+   parsed (as with the old parsing routines), but it probably shouldn't. 
+
+   The keep_source variable should be set before calling this function. */
 
 static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 {
@@ -1482,9 +1510,13 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
 /* -------------------------------------------------------------------------- 
    PARSING ENTRY POINTS.
-*/
+
+   See the documentation at the start of this module. */
+
 
 static FILE *fp_parse;
+
+extern int R_fgetc(FILE*);
 
 static int file_getc(void)
 {
@@ -1497,11 +1529,13 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
 {
     source_location loc;
     SEXP res;
+
     UseSrcRefState(state);
     ParseInit();
     fp_parse = fp;
     ptr_getc = file_getc;
 
+    keep_source = gencode && state->keepSrcRefs;
     get_next_token();
     res = R_Parse1(status,&loc);
 
@@ -1542,6 +1576,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     iob = buffer;
     ptr_getc = buffer_getc;
 
+    keep_source = gencode && ParseState.keepSrcRefs;
     get_next_token();
     res = R_Parse1(status,&loc);
     if (!gencode) res = R_NilValue;
@@ -1599,6 +1634,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     else
         PROTECT(refs = R_NilValue);
     
+    keep_source = ParseState.keepSrcRefs;
     get_next_token();
 
     for(i = 0; ; ) {
@@ -1634,10 +1670,8 @@ finish:
     PROTECT(rval = allocVector(EXPRSXP, length(tval)));
     for (i = 0 ; i < LENGTH(rval) ; i++, tval = CDR(tval))
 	SET_VECTOR_ELT(rval, i, CAR(tval));
-    if (ParseState.keepSrcRefs) {
+    if (ParseState.keepSrcRefs)
 	attachSrcrefs(rval,CDR(refs));
-        ParseState.didAttach = TRUE;
-    }
 
     UNPROTECT(3); /* tval, refs, rval */
     R_FinalizeSrcRefState(&ParseState);
