@@ -513,11 +513,12 @@ curlyahead(SEXP s)
 
 /* needsparens looks at an arg to a unary or binary operator to
    determine if it needs to be parenthesized when deparsed
-   mainop is a unary or binary operator,
-   arg is an argument to it, on the left if left == 1 */
+   op is a unary or binary operator, arg is an argument to it, on
+   the left if left == 1 */
 
-attribute_hidden Rboolean needsparens (PPinfo mainop, SEXP arg, int left)
+attribute_hidden Rboolean needsparens (SEXP op, SEXP arg, int left)
 {
+    PPinfo mainop = PPINFO(SYMVALUE(op));
     PPinfo arginfo;
     if (TYPEOF(arg) == LANGSXP) {
 	if (TYPEOF(CAR(arg)) == SYMSXP) {
@@ -844,327 +845,299 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	    print2buff("quote(", d);
 	    d->opts &= SIMPLE_OPTS;
 	}
-	if (TYPEOF(CAR(s)) == SYMSXP) {
-	    if ((TYPEOF(SYMVALUE(CAR(s))) == BUILTINSXP) ||
-		(TYPEOF(SYMVALUE(CAR(s))) == SPECIALSXP)) {
-		op = CAR(s);
-		fop = PPINFO(SYMVALUE(op));
-		s = CDR(s);
-		if (fop.kind == PP_BINARY) {
-		    switch (length(s)) {
-		    case 1:
-			fop.kind = PP_UNARY;
-			if (fop.precedence == PREC_SUM)   /* binary +/- precedence upgraded as unary */
-			    fop.precedence = PREC_SIGN;
-			break;
-		    case 2:
-			break;
-		    default:
-			fop.kind = PP_FUNCALL;
-			break;
-		    }
-		}
-		else if (fop.kind == PP_BINARY2) {
-		    if (length(s) != 2)
-			fop.kind = PP_FUNCALL;
-		}
-		switch (fop.kind) {
-		case PP_IF:
-		    print2buff("if (", d);
-		    /* print the predicate */
-		    deparse2buff(CAR(s), d);
-		    print2buff(") ", d);
-		    if (d->incurly && !d->inlist ) {
-			lookahead = curlyahead(CAR(CDR(s)));
-			if (!lookahead) {
-			    writeline(d);
-			    d->indent++;
-			}
-		    }
-		    /* need to find out if there is an else */
-		    if (length(s) > 2) {
-			deparse2buff(CAR(CDR(s)), d);
-			if (d->incurly && !d->inlist) {
-			    writeline(d);
-			    if (!lookahead)
-				d->indent--;
-			}
-			else
-			    print2buff(" ", d);
-			print2buff("else ", d);
-			deparse2buff(CAR(CDDR(s)), d);
-		    }
-		    else {
-			deparse2buff(CAR(CDR(s)), d);
-			if (d->incurly && !lookahead && !d->inlist )
-			    d->indent--;
-		    }
-		    break;
-		case PP_WHILE:
-		    print2buff("while (", d);
-		    deparse2buff(CAR(s), d);
-		    print2buff(") ", d);
-		    deparse2buff(CADR(s), d);
-		    break;
-		case PP_FOR:
-		    print2buff("for (", d);
-		    deparse2buff(CAR(s), d);
-		    print2buff(" in ", d);
-		    deparse2buff(CADR(s), d);
-		    print2buff(") ", d);
-		    deparse2buff(CADR(CDR(s)), d);
-		    break;
-		case PP_REPEAT:
-		    print2buff("repeat ", d);
-		    deparse2buff(CAR(s), d);
-		    break;
-		case PP_CURLY:
-		    print2buff("{", d);
-		    d->incurly += 1;
-		    d->indent++;
-		    writeline(d);
-		    while (s != R_NilValue) {
-			deparse2buff(CAR(s), d);
-			writeline(d);
-			s = CDR(s);
-		    }
-		    d->indent--;
-		    print2buff("}", d);
-		    d->incurly -= 1;
-		    break;
-		case PP_PAREN:
-		    print2buff("(", d);
-		    deparse2buff(CAR(s), d);
-		    print2buff(")", d);
-		    break;
-		case PP_SUBSET:
-		    deparse2buff(CAR(s), d);
-		    if (PRIMVAL(SYMVALUE(op)) == 1)
-			print2buff("[", d);
-		    else
-			print2buff("[[", d);
-		    args2buff(CDR(s), 0, 0, d);
-		    if (PRIMVAL(SYMVALUE(op)) == 1)
-			print2buff("]", d);
-		    else
-			print2buff("]]", d);
-		    break;
-		case PP_FUNCALL:
-		case PP_RETURN:
-		    if (isValidName(CHAR(PRINTNAME(op)))) /* ASCII */
-			print2buff(CHAR(PRINTNAME(op)), d);
-		    else if (d->backtick) {
-			print2buff("`", d);
-			print2buff(CHAR(PRINTNAME(op)), d);
-			print2buff("`", d);
-		    } else {
-			print2buff("\"", d);
-			print2buff(CHAR(PRINTNAME(op)), d);
-			print2buff("\"", d);
-		    }
-		    print2buff("(", d);
-		    d->inlist++;
-		    args2buff(s, 0, 0, d);
-		    d->inlist--;
-		    print2buff(")", d);
-		    break;
-		case PP_FOREIGN:
-		    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-		    print2buff("(", d);
-		    d->inlist++;
-		    args2buff(s, 1, 0, d);
-		    d->inlist--;
-		    print2buff(")", d);
-		    break;
-		case PP_FUNCTION:
-		    printcomment(s, d);
-		    if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
-			print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-			print2buff("(", d);
-			args2buff(FORMALS(s), 0, 1, d);
-			print2buff(") ", d);
-			deparse2buff(CADR(s), d);
-		    } else {
-			s = CADDR(s);
-			n = length(s);
-			for(i = 0 ; i < n ; i++) {
-			    print2buff(translateChar(STRING_ELT(s, i)), d);
-			    writeline(d);
-			}
-		    }
-		    break;
-		case PP_ASSIGN:
-		case PP_ASSIGN2:
-		    if ((parens = needsparens(fop, CAR(s), 1)))
-			print2buff("(", d);
-		    deparse2buff(CAR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    print2buff(" ", d);
-		    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-		    print2buff(" ", d);
-		    if ((parens = needsparens(fop, CADR(s), 0)))
-			print2buff("(", d);
-		    deparse2buff(CADR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    break;
-		case PP_DOLLAR:
-		    if ((parens = needsparens(fop, CAR(s), 1)))
-			print2buff("(", d);
-		    deparse2buff(CAR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-		    /*temp fix to handle printing of x$a's */
-		    if( isString(CADR(s)) &&
-			isValidName(CHAR(STRING_ELT(CADR(s), 0))))
-			deparse2buff(STRING_ELT(CADR(s), 0), d);
-		    else {
-			if ((parens = needsparens(fop, CADR(s), 0)))
-			    print2buff("(", d);
-			deparse2buff(CADR(s), d);
-			if (parens)
-			    print2buff(")", d);
-		    }
-		    break;
-		case PP_BINARY:
-		    if ((parens = needsparens(fop, CAR(s), 1)))
-			print2buff("(", d);
-		    deparse2buff(CAR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    print2buff(" ", d);
-		    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-		    print2buff(" ", d);
-		    linebreak(&lbreak, d);
-		    if ((parens = needsparens(fop, CADR(s), 0)))
-			print2buff("(", d);
-		    deparse2buff(CADR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    if (lbreak) {
-			d->indent--;
-			lbreak = FALSE;
-		    }
-		    break;
-		case PP_BINARY2:	/* no space between op and args */
-		    if ((parens = needsparens(fop, CAR(s), 1)))
-			print2buff("(", d);
-		    deparse2buff(CAR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-		    if ((parens = needsparens(fop, CADR(s), 0)))
-			print2buff("(", d);
-		    deparse2buff(CADR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    break;
-		case PP_UNARY:
-		    print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-		    if ((parens = needsparens(fop, CAR(s), 0)))
-			print2buff("(", d);
-		    deparse2buff(CAR(s), d);
-		    if (parens)
-			print2buff(")", d);
-		    break;
-		case PP_BREAK:
-		    print2buff("break", d);
-		    break;
-		case PP_NEXT:
-		    print2buff("next", d);
-		    break;
-		case PP_SUBASS:
-		    if(d->opts & S_COMPAT) {
-			print2buff("\"", d);
-			print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-			print2buff("\'(", d);
-		    } else {
-			print2buff("`", d);
-			print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
-			print2buff("`(", d);
-		    }
-		    args2buff(s, 0, 0, d);
-		    print2buff(")", d);
-		    break;
-		default:
-		    d->sourceable = FALSE;
-		    UNIMPLEMENTED("deparse2buff");
-		}
-	    }
-	    else {
-		if(isSymbol(CAR(s)) && isUserBinop(CAR(s))) {
-		    op = CAR(s);
-		    s = CDR(s);
-		    deparse2buff(CAR(s), d);
-		    print2buff(" ", d);
-		    print2buff(translateChar(PRINTNAME(op)), d);
-		    print2buff(" ", d);
-		    linebreak(&lbreak, d);
-		    deparse2buff(CADR(s), d);
-		    if (lbreak) {
-			d->indent--;
-			lbreak = FALSE;
-		    }
-		    break;
-		}
-		else {
-		    SEXP val = R_NilValue; /* -Wall */
-		    if (isSymbol(CAR(s))) {
-			val = SYMVALUE(CAR(s));
-			if (TYPEOF(val) == PROMSXP)
-			    val = eval(val, R_BaseEnv);
-		    }
-		    if ( isSymbol(CAR(s))
-		      && TYPEOF(val) == CLOSXP
-		      && streql(CHAR(PRINTNAME(CAR(s))), "::") ){ /*  :: is special case */
-			deparse2buff(CADR(s), d);
-			print2buff("::", d);
-			deparse2buff(CADDR(s), d);
-		    }
-		    else if ( isSymbol(CAR(s))
-		      && TYPEOF(val) == CLOSXP
-		      && streql(CHAR(PRINTNAME(CAR(s))), ":::") ){ /*  ::: is special case */
-			deparse2buff(CADR(s), d);
-			print2buff(":::", d);
-			deparse2buff(CADDR(s), d);
-		    }
-		    else {
-			if ( isSymbol(CAR(s)) ){
-			    const char *ss = CHAR(PRINTNAME(CAR(s)));
-			    if (isValidName(ss))
-				print2buff(ss, d);
-			    else if(d->opts & S_COMPAT) {
-				print2buff("\'", d);
-				print2buff(ss, d);
-				print2buff("\'", d);
-			    } else {
-				print2buff("`", d);
-				print2buff(ss, d);
-				print2buff("`", d);
-			    }
-			}
-			else
-			    deparse2buff(CAR(s), d);
-			print2buff("(", d);
-			args2buff(CDR(s), 0, 0, d);
-			print2buff(")", d);
-		    }
-		}
-	    }
-	}
-	else if (TYPEOF(CAR(s)) == CLOSXP || TYPEOF(CAR(s)) == SPECIALSXP
-		 || TYPEOF(CAR(s)) == BUILTINSXP) {
-	    deparse2buff(CAR(s), d);
+        op = CAR(s);
+        s = CDR(s);
+	if (TYPEOF(op) == SYMSXP) {
+            const char *opname = CHAR(PRINTNAME(op));
+            int nargs = length(s);
+            if (nargs >= 2 &&  op == R_IfSymbol) {
+                print2buff("if (", d);
+                /* print the predicate */
+                deparse2buff(CAR(s), d);
+                print2buff(") ", d);
+                if (d->incurly && !d->inlist ) {
+                    lookahead = curlyahead(CAR(CDR(s)));
+                    if (!lookahead) {
+                        writeline(d);
+                        d->indent++;
+                    }
+                }
+                /* need to find out if there is an else */
+                if (nargs > 2) {
+                    deparse2buff(CAR(CDR(s)), d);
+                    if (d->incurly && !d->inlist) {
+                        writeline(d);
+                        if (!lookahead)
+                            d->indent--;
+                    }
+                    else
+                        print2buff(" ", d);
+                    print2buff("else ", d);
+                    deparse2buff(CAR(CDDR(s)), d);
+                }
+                else {
+                    deparse2buff(CAR(CDR(s)), d);
+                    if (d->incurly && !lookahead && !d->inlist)
+                    d->indent--;
+                }
+            }
+            else if (nargs >= 2 && op == R_WhileSymbol) {
+                print2buff("while (", d);
+                deparse2buff(CAR(s), d);
+                print2buff(") ", d);
+                deparse2buff(CADR(s), d);
+            }
+            else if (nargs >= 3 && op == R_ForSymbol) {
+                print2buff("for (", d);
+                deparse2buff(CAR(s), d);
+                print2buff(" in ", d);
+                deparse2buff(CADR(s), d);
+                print2buff(") ", d);
+                deparse2buff(CADR(CDR(s)), d);
+            }
+            else if (nargs >= 2 && op == R_RepeatSymbol) {
+                print2buff("repeat ", d);
+                deparse2buff(CAR(s), d);
+            }
+            else if (op == R_BraceSymbol) {
+                print2buff("{", d);
+                d->incurly += 1;
+                d->indent++;
+                writeline(d);
+                while (s != R_NilValue) {
+                    deparse2buff(CAR(s), d);
+                    writeline(d);
+                    s = CDR(s);
+                }
+                d->indent--;
+                print2buff("}", d);
+                d->incurly -= 1;
+            }
+            else if (nargs == 1 && op == R_ParenSymbol) {
+                print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                print2buff(")", d);
+            }
+            else if (nargs >= 2 && op == R_BracketSymbol) {
+                if ((parens = needsparens(op, CAR(s), 1)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                print2buff("[", d);
+                args2buff(CDR(s), 0, 0, d);
+                print2buff("]", d);
+            }
+            else if (nargs >= 2 && op == R_Bracket2Symbol) {
+                if ((parens = needsparens(op, CAR(s), 1)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                print2buff("[[", d);
+                args2buff(CDR(s), 0, 0, d);
+                print2buff("]]", d);
+            }
+            else if (nargs >= 2 && op == R_FunctionSymbol) {
+                printcomment(s, d);
+                if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
+                    print2buff("function(", d);
+                    args2buff(CAR(s), 0, 1, d);
+                    print2buff(") ", d);
+                    deparse2buff(CADR(s), d);
+                }
+                else {
+                    s = CADDR(s);
+                    n = length(s);
+                    for(i = 0 ; i < n ; i++) {
+                        print2buff(translateChar(STRING_ELT(s, i)), d);
+                        writeline(d);
+                    }
+                }
+            }
+            else if (nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
+                                && (isSymbol(CADR(s)) || isString(CADR(s)))
+                  && (op == R_DoubleColonSymbol || op == R_TripleColonSymbol)) {
+                deparse2buff(CAR(s), d);
+                print2buff(opname, d);
+                deparse2buff(CADR(s), d);
+            }
+            else if (nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
+                      && (op == R_DollarSymbol || op == R_AtSymbol)) {
+                if ((parens = needsparens(op, CAR(s), 1)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                print2buff(opname, d);
+                if (0) { /* old way, unclear why deliberately does wrong thing*/
+                    /*temp fix to handle printing of x$a's */
+                    if (isString(CADR(s))
+                           && isValidName(CHAR(STRING_ELT(CADR(s), 0))))
+                        deparse2buff(STRING_ELT(CADR(s), 0), d);
+                    else
+                        deparse2buff(CADR(s), d);
+                }
+                else
+                    deparse2buff(CADR(s), d);
+            }
+            else if (nargs == 2 && (op == R_LocalAssignSymbol
+                                     || op == R_EqAssignSymbol
+                                     || op == R_GlobalAssignSymbol)) {
+                if ((parens = needsparens(op, CAR(s), 1)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                print2buff(" ", d);
+                print2buff(opname, d);
+                print2buff(" ", d);
+                if ((parens = needsparens(op, CADR(s), 0)))
+                    print2buff("(", d);
+                deparse2buff(CADR(s), d);
+                if (parens)
+                    print2buff(")", d);
+            }
+            else if (nargs == 1 && 
+                    (op == R_AddSymbol
+                  || op == R_SubSymbol
+                  || op == R_TildeSymbol
+                  || op == R_NotSymbol)) {
+                print2buff(opname, d);
+                if ((parens = needsparens(op, CAR(s), 0)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+            }
+            else if (nargs == 2 &&
+                    (op == R_AddSymbol  /* space between op and args */
+                      || op == R_SubSymbol
+                      || op == R_MulSymbol
+                      || op == install("%*%")
+                      || op == R_AndSymbol
+                      || op == R_OrSymbol
+                      || op == R_And2Symbol
+                      || op == R_Or2Symbol
+                      || op == R_TildeSymbol
+                      || op == R_EqSymbol
+                      || op == R_NeSymbol
+                      || op == R_LtSymbol
+                      || op == R_LeSymbol
+                      || op == R_GeSymbol
+                      || op == R_GtSymbol)) {
+                if ((parens = needsparens(op, CAR(s), 1)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                print2buff(" ", d);
+                print2buff(opname, d);
+                print2buff(" ", d);
+                linebreak(&lbreak, d);
+                if ((parens = needsparens(op, CADR(s), 0)))
+                    print2buff("(", d);
+                deparse2buff(CADR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                if (lbreak) {
+                    d->indent--;
+                    lbreak = FALSE;
+                }
+            }
+            else if (nargs == 2 &&
+                    (op == R_DivSymbol /* no space between op and args */
+                      || op == R_ExptSymbol
+                      || op == install("%%")
+                      || op == install("%/%")
+                      || op == R_ColonSymbol)) { 
+                if ((parens = needsparens(op, CAR(s), 1)))
+                    print2buff("(", d);
+                deparse2buff(CAR(s), d);
+                if (parens)
+                    print2buff(")", d);
+                print2buff(opname, d);
+                if ((parens = needsparens(op, CADR(s), 0)))
+                    print2buff("(", d);
+                deparse2buff(CADR(s), d);
+                if (parens)
+                    print2buff(")", d);
+            }
+            else if (nargs==0 && (op == R_BreakSymbol || op == R_NextSymbol)) {
+                print2buff(opname, d);
+            }
+            else if (op == R_SubAssignSymbol    /* done specially by S? */
+                      || op == R_SubSubAssignSymbol
+                      || op == R_DollarAssignSymbol) {
+                if(d->opts & S_COMPAT) {
+                    print2buff("\'", d);
+                    print2buff(opname, d); /* ASCII */
+                    print2buff("\'(", d);
+                }
+                else {
+                    print2buff("`", d);
+                    print2buff(opname, d); /* ASCII */
+                    print2buff("`(", d);
+                }
+                args2buff(s, 0, 0, d);
+                print2buff(")", d);
+            }
+            else if (nargs == 2 && isUserBinop(op)) {
+                deparse2buff(CAR(s), d);
+                print2buff(" ", d);
+                print2buff(translateChar(PRINTNAME(op)), d);
+                print2buff(" ", d);
+                linebreak(&lbreak, d);
+                deparse2buff(CADR(s), d);
+                if (lbreak) {
+                    d->indent--;
+                    lbreak = FALSE;
+                }
+                break;
+            }
+            else {
+                if (isValidName(opname))
+                    print2buff(opname, d);
+                else if(d->opts & S_COMPAT) {
+                    print2buff("\'", d);
+                    print2buff(opname, d);
+                    print2buff("\'", d);
+                }
+                else if (d->backtick) {
+                    print2buff("`", d);
+                    print2buff(opname, d);
+                    print2buff("`", d);
+                }
+                else {
+                    print2buff("\"", d);
+                    print2buff(opname, d);
+                    print2buff("\"", d);
+                }
+                print2buff("(", d);
+                d->inlist++;
+                args2buff(s, 0, 0, d);
+                d->inlist--;
+                print2buff(")", d);
+            }
+        }
+        else if (TYPEOF(op) == LANGSXP) {
+            /* use fact that xxx[] behaves the same as xxx() */
+            if ((parens = needsparens(R_BracketSymbol, op, 1)))
+                print2buff("(", d);
+            deparse2buff(CAR(s), d);
+            if (parens)
+                print2buff(")", d);
+            deparse2buff(CAR(s), d);
+            print2buff("(", d);
+            args2buff(CDR(s), 0, 0, d);
+            print2buff(")", d);
+        }
+	else {
 	    print2buff("(", d);
-	    args2buff(CDR(s), 0, 0, d);
+	    deparse2buff(op, d);
 	    print2buff(")", d);
-	}
-	else { /* we have a lambda expression */
-	    deparse2buff(CAR(s), d);
 	    print2buff("(", d);
-	    args2buff(CDR(s), 0, 0, d);
+	    args2buff(s, 0, 0, d);
 	    print2buff(")", d);
 	}
 	if (localOpts & QUOTEEXPRESSIONS) {

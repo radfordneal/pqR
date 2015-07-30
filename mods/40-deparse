@@ -1,0 +1,53 @@
+Changes deparse to look only at operator symbols, not bindings (which
+are irrelevant).  
+
+Fixes these bugs along the way:
+
+  > deparse(parse(text="a = b <- c")[[1]])  # Puts in unnecessary parens
+  [1] "a = (b <- c)"
+  > deparse(parse(text="`+`(a,b)[1]")[[1]]) # Omits necessary parens
+  [1] "a + b[1]"
+  > deparse(quote(`+`(1,2) %fred% 4))       # Omits necessary parens
+  [1] "1 + 2 %fred% 4"
+  > a <- quote(f(1,2))
+  > a[[1]] <- function(x,y)x+y
+  > deparse(a)
+  [1] "function (x, y) " "x + y(1, 2)"      # Omits necessary parens
+  > deparse(parse(text="?lm")[[1]])         # Doesn't know about ? operator
+  [1] "`?`(lm)"
+  > deparse(parse(text="a:=b")[[1]])        # Doesn't know about := operator
+  [1] "`:=`(a, b)"
+  > deparse(parse(text="a$'x'")[[1]])       # Doesn't distinguish name from char
+  [1] "a$x"
+  > deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is not syntactically valid
+  [1] "a$(b + 2)"
+  > deparse(quote(`[<-`(x,1)),control="S_compatible")  # unmatched " and '
+  [1] "\"[<-'(x, 1.)"
+  > deparse(parse(text="`*`(2)")[[1]])      # Result is not syntactically valid
+  [1] "*2"
+
+There is also inconsistent behaviour with "if" seen below:
+
+  > parse(text="{ .Call('fred',if (T) 3 else 4) }")[[1]]
+  {
+      .Call("fred", if (T) 3 else 4)
+  }
+  > parse(text="{ f('fred',if (T) 3 else 4) }")[[1]]
+  {
+      f("fred", if (T) 
+          3
+      else 4)
+  }
+  > parse(text="{ -(if (T) 3 else 4) }")[[1]]
+  {
+      -(if (T) 
+          3
+      else 4)
+  }
+  > parse(text="{ list(if (T) 3 else 4) }")[[1]]
+  {
+      list(if (T) 3 else 4)
+  }
+
+But this has not been changed, for fear of compatibility problems.
+

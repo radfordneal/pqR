@@ -103,7 +103,7 @@ static SEXP	NextArg0(SEXP, SEXP);
 static SEXP	NextArg(SEXP, SEXP, SEXP);
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
-static SEXP     checkparens (PPinfo, SEXP, int);
+static SEXP     checkparens (SEXP, SEXP, int);
 static SEXP     keepparens (SEXP);
 
 /* These routines allocate constants */
@@ -519,29 +519,6 @@ static int xxvalue(SEXP v, int k, YYLTYPE *lloc)
     return k;
 }
 
-
-/* Paren handling.  When parenthesized expressions are created, with xxparen,
-   they have LEVELS (gp) set to 1, unlike the same expression created as a
-   call of function `(`.  Any use of an expression should process it by
-   calling checkparens - which will either get rid of the parens or clear 
-   LEVELS (so it will be zero, as possibly expected) - or keepparens, which
-   always keeps the parens (clearing LEVELS to zero). */
-
-static SEXP checkparens (PPinfo mainop, SEXP n, int left)
-{
-    if (GenerateCode) {
-        if (TYPEOF(n)==LANGSXP && LEVELS(n)==1 && CAR(n)==install("(") 
-             && CDR(n)!=R_NilValue && CDDR(n)==R_NilValue) {
-            if ((mainop.kind==PP_BINARY || mainop.kind==PP_BINARY2 
-                  || mainop.kind==PP_UNARY) && needsparens(mainop,CADR(n),left))
-                n = CADR(n);  /* discard parens: deparse will put 'em back in */
-            else 
-                SETLEVELS(n,0);  /* clear flag, now that no longer needed */
-        }
-    }
-    return n;
-}
-
 static PPinfo noinfo = { PP_INVALID, 0, 0 };
 
 static PPinfo opinfo (SEXP op)
@@ -553,9 +530,35 @@ static PPinfo opinfo (SEXP op)
   return PPINFO(value);
 }
 
+/* Paren handling.  When parenthesized expressions are created, with xxparen,
+   they have LEVELS (gp) set to 1, unlike the same expression created as a
+   call of function `(`.  Any use of an expression should process it by
+   calling checkparens - which will either get rid of the parens or clear 
+   LEVELS (so it will be zero, as possibly expected) - or keepparens, which
+   always keeps the parens (clearing LEVELS to zero). */
+
+static SEXP checkparens (SEXP op, SEXP n, int left)
+{
+    PPinfo mainop = opinfo(op);
+    if (GenerateCode) {
+        if (TYPEOF(n)==LANGSXP && LEVELS(n)==1 && CAR(n)==install("(") 
+             && CDR(n)!=R_NilValue && CDDR(n)==R_NilValue) {
+            if ((mainop.kind==PP_BINARY || mainop.kind==PP_BINARY2 
+                  || mainop.kind==PP_UNARY) && needsparens(op,CADR(n),left))
+                n = CADR(n);  /* discard parens: deparse will put 'em back in */
+            else 
+                SETLEVELS(n,0);  /* clear flag, now that no longer needed */
+        }
+    }
+    return n;
+}
+
 static SEXP keepparens (SEXP n)
 {
-  return checkparens (noinfo, n, 0);
+  if (TYPEOF(n)==LANGSXP && LEVELS(n)==1 && CAR(n)==install("(")
+       && CDR(n)!=R_NilValue && CDDR(n)==R_NilValue)
+      SETLEVELS(n,0);
+  return n;
 }
 
 
@@ -936,15 +939,8 @@ static SEXP xxunary(SEXP op, SEXP arg)
 {
     SEXP ans;
     if (GenerateCode) {
-        PPinfo mainop = opinfo(op);
-        if (mainop.kind == PP_BINARY) {
-            /* mimic what's done in deparse.c */
-            mainop.kind = PP_UNARY;
-            if (mainop.precedence == PREC_SUM)
-                mainop.precedence = PREC_SIGN;
-        }
         PROTECT(op); /* maybe unnecessary, but just in case... */
-	ans = LCONS (op, MaybeConstList1(checkparens(mainop,arg,0)));
+	ans = LCONS (op, MaybeConstList1(checkparens(op,arg,0)));
         UNPROTECT(1);
         PROTECT(ans);
     }
@@ -958,10 +954,9 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 {
     SEXP ans;
     if (GenerateCode) {
-        PPinfo mainop = opinfo(n1);
         PROTECT2(n1,n2); /* maybe unnecessary, but just in case... */
-	ans = LCONS (n1, CONS (checkparens(mainop,n2,1), 
-                               MaybeConstList1(checkparens(mainop,n3,0))));
+	ans = LCONS (n1, CONS (checkparens(n1,n2,1), 
+                               MaybeConstList1(checkparens(n1,n3,0))));
         UNPROTECT(2);
         PROTECT(ans);
     }
