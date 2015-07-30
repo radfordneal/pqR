@@ -112,9 +112,6 @@ static SEXP	mkComplex(const char *);
 static SEXP     mkFloat(const char *);
 static SEXP	mkInt(const char *s);
 
-SEXP		mkFalse(void);  /* not used here, but are used elsewhere */
-SEXP		mkTrue(void);
-
 /* Internal lexer / parser state variables */
 
 static int	EatLines = 0;
@@ -1761,20 +1758,6 @@ static SEXP mkComplex(const char *s)
     }
 
     return t;
-}
-
-SEXP mkTrue(void)
-{
-    SEXP s = allocVector1LGL();
-    LOGICAL(s)[0] = 1;
-    return s;
-}
-
-SEXP mkFalse(void)
-{
-    SEXP s = allocVector1LGL();
-    LOGICAL(s)[0] = 0;
-    return s;
 }
 
 static void yyerror(const char *s)

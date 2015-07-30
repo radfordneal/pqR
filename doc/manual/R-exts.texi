@@ -25,6 +25,8 @@ This is a guide to extending R - with modifications for pqR.
 
 @Rcopyright{1999}
 
+Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+
 @ignore
 Permission is granted to process this file through TeX and print the
 results, provided the printed document carries a copying permission
@@ -47,9 +49,9 @@ notice identical to this one except for the removal of this paragraph
 
 @Rcopyright{1999}
 
-@value{ISBN-exts}
-
 Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+
+@value{ISBN-exts}
 
 @end titlepage
 

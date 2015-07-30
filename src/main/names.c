@@ -341,7 +341,7 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 {"setWinProgressBar",do_setwinprogressbar,0,11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 #endif
 
-#if defined(__APPLE_CC__) && defined(HAVE_AQUA)
+#if defined(__APPLE__) && defined(HAVE_AQUA)
 {"wsbrowser",	do_wsbrowser,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
 {"pkgbrowser",	do_browsepkgs,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"data.manager",	do_datamanger,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
