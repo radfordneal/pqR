@@ -3553,7 +3553,7 @@ static void reset_pp_stack(void *data)
     R_PPStackSize =  *poldpps;
 }
 
-void attribute_hidden Rf_protect_error (void)
+R_NORETURN void attribute_hidden Rf_protect_error (void)
 {
     RCNTXT cntxt;
     R_size_t oldpps = R_PPStackSize;
@@ -3598,7 +3598,7 @@ void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
 
 /* "unprotect" pop argument list from top of R_PPStack */
 
-void attribute_hidden Rf_unprotect_error (void)
+R_NORETURN void attribute_hidden Rf_unprotect_error (void)
 {
     error(_("unprotect(): only %d protected items"), R_PPStackTop);
 }
