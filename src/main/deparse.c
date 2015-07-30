@@ -962,7 +962,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(opname, d);
                 deparse2buff(CADR(s), d);
             }
-            else if (nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
+            else if (nargs == 2 && (isSymbol(CADR(s)) || isString(CADR(s)))
                       && (op == R_DollarSymbol || op == R_AtSymbol)) {
                 if ((parens = needsparens(op, CAR(s), 1)))
                     print2buff("(", d);
@@ -1124,12 +1124,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             /* use fact that xxx[] behaves the same as xxx() */
             if ((parens = needsparens(R_BracketSymbol, op, 1)))
                 print2buff("(", d);
-            deparse2buff(CAR(s), d);
+            deparse2buff(op, d);
             if (parens)
                 print2buff(")", d);
-            deparse2buff(CAR(s), d);
             print2buff("(", d);
-            args2buff(CDR(s), 0, 0, d);
+            args2buff(s, 0, 0, d);
             print2buff(")", d);
         }
 	else {
