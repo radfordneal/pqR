@@ -1,10 +1,12 @@
 
-pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
 
-R is Copyright (C) 2012 The R Foundation for Statistical Computing
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
 No helper threads, task merging enabled.
@@ -5045,8 +5047,8 @@ Reaction ~ Days + (Days | Subject) + I(Days^2)
 > op <- options(deparse.max.lines = 3)
 > f <- function(...) browser()
 > do.call(f, mtcars)
-Called from: function (...) 
-browser()(mpg = c(21, 21, 22.8, 21.4, 18.7, 18.1, 14.3, 24.4, 
+Called from: (function (...) 
+browser())(mpg = c(21, 21, 22.8, 21.4, 18.7, 18.1, 14.3, 24.4, 
 22.8, 19.2, 17.8, 16.4, 17.3, 15.2, 10.4, 10.4, 14.7, 32.4, 30.4, 
   ...
 Browse[1]> c
@@ -5054,12 +5056,12 @@ Browse[1]> c
 > options(error = expression(NULL))
 > f <- function(...) stop()
 > do.call(f, mtcars)
-Error in function (...)  : 
+Error in (function (...)  : 
 Calls: do.call -> <Anonymous>
 > traceback()
 3: stop()
-2: function (...) 
-   stop()(mpg = c(21, 21, 22.8, 21.4, 18.7, 18.1, 14.3, 24.4, 22.8, 
+2: (function (...) 
+   stop())(mpg = c(21, 21, 22.8, 21.4, 18.7, 18.1, 14.3, 24.4, 22.8, 
    19.2, 17.8, 16.4, 17.3, 15.2, 10.4, 10.4, 14.7, 32.4, 30.4, 33.9, 
      ...
 1: do.call(f, mtcars)
@@ -6376,15 +6378,15 @@ function ()
 > print.function
 function (x, ...)  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 19 1 63 19 63 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x2c62c98> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3365290> 
 > f
 function ()  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 17 1 28 17 28 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x2c56198> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3353070> 
  - attr(*, "note")= chr "just a note"
  - attr(*, "yada")=function ()  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 2 24 2 48 24 48 2 2
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x2c56198> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3353070> 
 > rm(print.function)
 > ## auto-printing and printing differed up to R 2.9.x
 > 
