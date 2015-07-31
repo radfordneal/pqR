@@ -38,21 +38,6 @@
 #endif
 
 
-/* To be removed when newparse becomes parse... */
-
-#define R_ParseVector R_NewParseVector
-#define R_Parse1File R_NewParse1File
-#define R_Parse1Buffer R_NewParse1Buffer
-#define R_ParseFile R_NewParseFile
-#define R_ParseConn R_NewParseConn
-#define R_ParseBuffer R_NewParseBuffer
-#define R_InitSrcRefState R_NewInitSrcRefState
-#define R_FinalizeSrcRefState R_NewFinalizeSrcRefState
-
-#undef isValidName
-#define isValidName NewIsValidName
-
-
 /* --------------------------------------------------------------------------
    PARSING ENTRY POINTS PROVIDED
  
@@ -1527,6 +1512,7 @@ static int file_getc(void)
 attribute_hidden
 SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
 {
+REprintf("In R_Parse1File\n");
     source_location loc;
     SEXP res;
 
@@ -1538,6 +1524,7 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
     keep_source = gencode && state->keepSrcRefs;
     get_next_token();
     res = R_Parse1(status,&loc);
+REprintf("R_Parse1 has returned %d\n",*status);
 
     PutSrcRefState(state);
     return gencode ? res : R_NilValue;

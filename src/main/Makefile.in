@@ -23,7 +23,7 @@ SOURCES_C = \
 	dotcode.c dounzip.c duplicate.c \
 	engine.c envir.c errors.c eval.c \
 	format.c fourier.c \
-	gevents.c gram.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
+	gevents.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
 	identical.c inlined.c inspect.c internet.c iosupport.c \
 	lapack.c list.c localecharset.c logic.c \
 	main.c mapply.c match.c memory.c merged-ops.c model.c \
@@ -66,7 +66,6 @@ DISTFILES = Makefile.in Makefile.win \
 	$(SOURCES_C) \
 	$(EXTRA_SOURCES_C) \
 	$(SOURCES_F) \
-	gram.y \
 	gramRd.y \
 	gramLatex.y
 
@@ -193,10 +192,6 @@ install-lib-local: $(libR_la)
 # suppress #line directives
 YFLAGS=-l
 
-$(srcdir)/gram.c: @MAINTAINER_MODE_TRUE@ $(srcdir)/gram.y
-	@$(ECHO) "re-making gram.c"
-	$(YACC) $(YFLAGS) $(srcdir)/gram.y
-	$(SHELL) $(top_srcdir)/tools/move-if-change y.tab.c $(srcdir)/gram.c
 $(srcdir)/gramRd.c: @MAINTAINER_MODE_TRUE@ $(srcdir)/gramRd.y
 	@$(ECHO) "re-making gramRd.c"
 	$(YACC) $(YFLAGS) $(srcdir)/gramRd.y
@@ -249,7 +244,7 @@ distclean: clean
 maintainer-clean: distclean
 	@$(ECHO) "This command is intended for maintainers to use; it"
 	@$(ECHO) "deletes files that may need special rules to rebuild"
-	@-rm -f $(srcdir)/gram.c $(srcdir)/gramRd.c
+	@-rm -f $(srcdir)/gramRd.c
 
 tags: TAGS
 TAGS: $(SOURCES) $(EXTRA_SOURCES_C) $(HEADERS)

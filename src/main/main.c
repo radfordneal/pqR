@@ -747,7 +747,7 @@ void setup_Rmainloop(void)
     volatile int ndeferred_warnings = 0;
 
     InitConnections(); /* needed to get any output at all */
-
+REprintf("Starting setup_Rmainloop\n");
     /* Initialize the interpreter's internal structures. */
 
 #ifdef HAVE_LOCALE_H
@@ -894,6 +894,7 @@ void setup_Rmainloop(void)
        Perhaps it makes more sense to quit gracefully?
     */
 
+REprintf("About to repl on base\n");
     fp = R_OpenLibraryFile("base");
     if (fp == NULL)
 	R_Suicide(_("unable to open the base package\n"));
@@ -907,6 +908,8 @@ void setup_Rmainloop(void)
 	R_ReplFile(fp, baseEnv);
     }
     fclose(fp);
+
+REprintf("About to source profiles\n");
 
     /* This is where we source the system-wide, the site's and the
        user's profile (in that order).  If there is an error, we
@@ -948,6 +951,7 @@ void setup_Rmainloop(void)
 	snprintf(buf, PATH_MAX, "%s/library/tcltk/exec/Tk-frontend.R", R_Home);
 	R_LoadProfile(R_fopen(buf, "r"), R_GlobalEnv);
     }
+REprintf("About to print greeting\n");
 
     /* Print a platform and version dependent greeting and a pointer to
      * the copyleft.
@@ -981,6 +985,7 @@ void setup_Rmainloop(void)
        At this point we try to invoke the .First Function.
        If there is an error we continue. */
 
+REprintf("Initial loading done\n");
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
@@ -1026,6 +1031,7 @@ void setup_Rmainloop(void)
 
     /* trying to do this earlier seems to run into bootstrapping issues. */
     R_init_jit_enabled();
+REprintf("Finishing setup_Rmainloop\n");
 }
 
 extern SA_TYPE SaveAction; /* from src/main/startup.c */
