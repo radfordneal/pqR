@@ -657,7 +657,6 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
 }
 
 /* This is used only in this module, but isn't static to discourage inlining. */
-
 attribute_hidden void Rf_file_switch_to_read (Rfileconn this)
 {
     this->wpos = f_tell(this->fp);
@@ -3194,9 +3193,28 @@ static SEXP do_flush(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* ------------------- read, write  text --------------------- */
 
-int Rconn_fgetc(Rconnection con)
+/* Used only here, but not static to discourage compiler from inlining it. */
+attribute_hidden int Rf_Rconn_fgetc_pushback(Rconnection con)
 {
     char *curLine;
+    int c;
+
+    curLine = con->PushBack[con->nPushBack-1];
+    c = (unsigned char) curLine[con->posPushBack++];
+
+    if(con->posPushBack >= strlen(curLine)) {
+	/* last character on a line, so pop the line */
+	free(curLine);
+	con->nPushBack--;
+	con->posPushBack = 0;
+	if(con->nPushBack == 0) free(con->PushBack);
+    }
+
+    return c;
+}
+
+int Rconn_fgetc(Rconnection con)
+{
     int c;
 
     if (con->save2 != -1000) {
@@ -3204,6 +3222,7 @@ int Rconn_fgetc(Rconnection con)
 	con->save2 = -1000;
 	return c;
     }
+
     if(con->nPushBack <= 0) {
 	/* map CR or CRLF to LF */
 	if (con->save != -1000) {
@@ -3221,16 +3240,8 @@ int Rconn_fgetc(Rconnection con)
 	}
 	return c;
     }
-    curLine = con->PushBack[con->nPushBack-1];
-    c = (unsigned char) curLine[con->posPushBack++];
-    if(con->posPushBack >= strlen(curLine)) {
-	/* last character on a line, so pop the line */
-	free(curLine);
-	con->nPushBack--;
-	con->posPushBack = 0;
-	if(con->nPushBack == 0) free(con->PushBack);
-    }
-    return c;
+
+    return Rf_Rconn_fgetc_pushback(con);
 }
 
 int Rconn_ungetc(int c, Rconnection con)
