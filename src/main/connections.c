@@ -385,60 +385,70 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
     return res;
 }
 
-int dummy_fgetc(Rconnection con)
+int iconv_navail_fgetc(Rconnection con)
 {
     int c;
     Rboolean checkBOM = FALSE;
 
-    if(con->inconv) {
-	if(con->navail <= 0) {
-	    unsigned int i, inew = 0;
-	    char *p, *ob;
-	    const char *ib;
-	    size_t inb, onb, res;
+    unsigned int i, inew = 0;
+    char *p, *ob;
+    const char *ib;
+    size_t inb, onb, res;
 
-	    if(con->EOF_signalled) return R_EOF;
-	    if(con->inavail == -2) {
-		con->inavail = 0;
-		checkBOM = TRUE;
-	    }
-	    p = con->iconvbuff + con->inavail;
-	    for(i = con->inavail; i < 25; i++) {
-		c = con->fgetc_internal(con);
-		if(c == R_EOF){ con->EOF_signalled = TRUE; break; }
-		*p++ = c;
-		con->inavail++;
-		inew++;
-	    }
-	    if(inew == 0) return R_EOF;
-	    if(checkBOM && con->inavail >= 2 &&
-	       ((int)con->iconvbuff[0] & 0xff) == 255 &&
-	       ((int)con->iconvbuff[1] & 0xff) == 254) {
-		con->inavail -= 2;
-		memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
-	    }
-	    ib = con->iconvbuff; inb = con->inavail;
-	    ob = con->oconvbuff; onb = 50;
-	    errno = 0;
-	    res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
-	    con->inavail = inb;
-	    if(res == (size_t)-1) { /* an error condition */
-		if(errno == EINVAL || errno == E2BIG) {
-		    /* incomplete input char or no space in output buffer */
-		    memmove(con->iconvbuff, ib, inb);
-		} else {/*  EILSEQ invalid input */
-		    warning(_("invalid input found on input connection '%s'"),
-			    con->description);
-		    con->inavail = 0;
-		    con->EOF_signalled = TRUE;
-		}
-	    }
-	    con->next = con->oconvbuff;
-	    con->navail = 50 - onb;
+    if (con->EOF_signalled)
+        return R_EOF;
+    if (con->inavail == -2) {
+	con->inavail = 0;
+	checkBOM = TRUE;
+    }
+    p = con->iconvbuff + con->inavail;
+    for (i = con->inavail; i < 25; i++) {
+	c = con->fgetc_internal(con);
+	if (c == R_EOF){ con->EOF_signalled = TRUE; break; }
+	*p++ = c;
+	con->inavail++;
+	inew++;
+    }
+    if (inew == 0)
+        return R_EOF;
+    if (checkBOM && con->inavail >= 2 &&
+       ((int)con->iconvbuff[0] & 0xff) == 255 &&
+       ((int)con->iconvbuff[1] & 0xff) == 254) {
+	con->inavail -= 2;
+	memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
+    }
+    ib = con->iconvbuff; inb = con->inavail;
+    ob = con->oconvbuff; onb = 50;
+    errno = 0;
+    res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
+    con->inavail = inb;
+    if (res == (size_t)-1) { /* an error condition */
+	if (errno == EINVAL || errno == E2BIG) {
+	    /* incomplete input char or no space in output buffer */
+	    memmove(con->iconvbuff, ib, inb);
+	} else {/*  EILSEQ invalid input */
+	    warning(_("invalid input found on input connection '%s'"),
+		    con->description);
+	    con->inavail = 0;
+	    con->EOF_signalled = TRUE;
 	}
+    }
+    con->next = con->oconvbuff;
+    con->navail = 50 - onb;
+    return 0;
+}
+
+int dummy_fgetc(Rconnection con)
+{
+    if (con->inconv) {
+	while (con->navail <= 0) {
+            if (iconv_navail_fgetc(con) == R_EOF) 
+                return R_EOF;
+        }
 	con->navail--;
 	return *con->next++;
-    } else
+    } 
+    else
 	return con->fgetc_internal(con);
 }
 
