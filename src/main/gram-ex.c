@@ -67,6 +67,6 @@ int R_fgetc(FILE *fp)
 #ifdef Win32
     return c;
 #else
-    return feof(fp) ? R_EOF : c;
+    return c == EOF ? R_EOF : c;
 #endif
 }

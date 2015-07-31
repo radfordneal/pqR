@@ -385,60 +385,72 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
     return res;
 }
 
-int dummy_fgetc(Rconnection con)
+/* This is used only in this module, but isn't static to discourage inlining. */
+
+attribute_hidden int Rf_iconv_navail_fgetc(Rconnection con)
 {
     int c;
     Rboolean checkBOM = FALSE;
 
-    if(con->inconv) {
-	if(con->navail <= 0) {
-	    unsigned int i, inew = 0;
-	    char *p, *ob;
-	    const char *ib;
-	    size_t inb, onb, res;
+    unsigned int i, inew = 0;
+    char *p, *ob;
+    const char *ib;
+    size_t inb, onb, res;
 
-	    if(con->EOF_signalled) return R_EOF;
-	    if(con->inavail == -2) {
-		con->inavail = 0;
-		checkBOM = TRUE;
-	    }
-	    p = con->iconvbuff + con->inavail;
-	    for(i = con->inavail; i < 25; i++) {
-		c = con->fgetc_internal(con);
-		if(c == R_EOF){ con->EOF_signalled = TRUE; break; }
-		*p++ = c;
-		con->inavail++;
-		inew++;
-	    }
-	    if(inew == 0) return R_EOF;
-	    if(checkBOM && con->inavail >= 2 &&
-	       ((int)con->iconvbuff[0] & 0xff) == 255 &&
-	       ((int)con->iconvbuff[1] & 0xff) == 254) {
-		con->inavail -= 2;
-		memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
-	    }
-	    ib = con->iconvbuff; inb = con->inavail;
-	    ob = con->oconvbuff; onb = 50;
-	    errno = 0;
-	    res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
-	    con->inavail = inb;
-	    if(res == (size_t)-1) { /* an error condition */
-		if(errno == EINVAL || errno == E2BIG) {
-		    /* incomplete input char or no space in output buffer */
-		    memmove(con->iconvbuff, ib, inb);
-		} else {/*  EILSEQ invalid input */
-		    warning(_("invalid input found on input connection '%s'"),
-			    con->description);
-		    con->inavail = 0;
-		    con->EOF_signalled = TRUE;
-		}
-	    }
-	    con->next = con->oconvbuff;
-	    con->navail = 50 - onb;
+    if (con->EOF_signalled)
+        return R_EOF;
+    if (con->inavail == -2) {
+	con->inavail = 0;
+	checkBOM = TRUE;
+    }
+    p = con->iconvbuff + con->inavail;
+    for (i = con->inavail; i < 25; i++) {
+	c = con->fgetc_internal(con);
+	if (c == R_EOF){ con->EOF_signalled = TRUE; break; }
+	*p++ = c;
+	con->inavail++;
+	inew++;
+    }
+    if (inew == 0)
+        return R_EOF;
+    if (checkBOM && con->inavail >= 2 &&
+       ((int)con->iconvbuff[0] & 0xff) == 255 &&
+       ((int)con->iconvbuff[1] & 0xff) == 254) {
+	con->inavail -= 2;
+	memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
+    }
+    ib = con->iconvbuff; inb = con->inavail;
+    ob = con->oconvbuff; onb = 50;
+    errno = 0;
+    res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
+    con->inavail = inb;
+    if (res == (size_t)-1) { /* an error condition */
+	if (errno == EINVAL || errno == E2BIG) {
+	    /* incomplete input char or no space in output buffer */
+	    memmove(con->iconvbuff, ib, inb);
+	} else {/*  EILSEQ invalid input */
+	    warning(_("invalid input found on input connection '%s'"),
+		    con->description);
+	    con->inavail = 0;
+	    con->EOF_signalled = TRUE;
 	}
+    }
+    con->next = con->oconvbuff;
+    con->navail = 50 - onb;
+    return 0;
+}
+
+int dummy_fgetc(Rconnection con)
+{
+    if (con->inconv) {
+	while (con->navail <= 0) {
+            if (Rf_iconv_navail_fgetc(con) == R_EOF) 
+                return R_EOF;
+        }
 	con->navail--;
 	return *con->next++;
-    } else
+    } 
+    else
 	return con->fgetc_internal(con);
 }
 
@@ -644,19 +656,25 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
     else return vfprintf(this->fp, format, ap);
 }
 
+/* This is used only in this module, but isn't static to discourage inlining. */
+
+attribute_hidden void Rf_file_switch_to_read (Rfileconn this)
+{
+    this->wpos = f_tell(this->fp);
+    this->last_was_write = FALSE;
+    f_seek(this->fp, this->rpos, SEEK_SET);
+}
+
 static int file_fgetc_internal(Rconnection con)
 {
     Rfileconn this = con->private;
-    FILE *fp = this->fp;
     int c;
 
-    if(this->last_was_write) {
-	this->wpos = f_tell(this->fp);
-	this->last_was_write = FALSE;
-	f_seek(this->fp, this->rpos, SEEK_SET);
-    }
-    c =fgetc(fp);
-    return feof(fp) ? R_EOF : c;
+    if (this->last_was_write)
+        Rf_file_switch_to_read(this);
+
+    c = fgetc(this->fp);
+    return c == EOF ? R_EOF : c;
 }
 
 static double file_seek(Rconnection con, double where, int origin, int rw)
@@ -3335,16 +3353,18 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 	    PROTECT(ans = ans2);
 	}
 	nbuf = 0;
-	while((c = Rconn_fgetc(con)) != R_EOF) {
-	    if(nbuf == buf_size-1) {  /* need space for the null */
+	while ((c = Rconn_fgetc(con)) != R_EOF && c != '\n') {
+	    if (nbuf == buf_size-1) {  /* need space for the null */
 		buf_size *= 2;
 		char *tmp = (char *) realloc(buf, buf_size);
-		if(!buf) {
+		if (tmp == NULL) {
 		    free(buf);
 		    error(_("cannot allocate buffer in readLines"));
-		} else buf = tmp;
+		} 
+                else 
+                    buf = tmp;
 	    }
-	    if(c != '\n') buf[nbuf++] = c; else break;
+	    buf[nbuf++] = c;
 	}
 	buf[nbuf] = '\0';
 	SET_STRING_ELT(ans, nread, mkCharCE(buf, oenc));
