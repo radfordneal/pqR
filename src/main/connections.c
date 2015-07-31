@@ -385,7 +385,9 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
     return res;
 }
 
-int iconv_navail_fgetc(Rconnection con)
+/* This is used only in this module, but isn't static to discourage inlining. */
+
+attribute_hidden int Rf_iconv_navail_fgetc(Rconnection con)
 {
     int c;
     Rboolean checkBOM = FALSE;
@@ -442,7 +444,7 @@ int dummy_fgetc(Rconnection con)
 {
     if (con->inconv) {
 	while (con->navail <= 0) {
-            if (iconv_navail_fgetc(con) == R_EOF) 
+            if (Rf_iconv_navail_fgetc(con) == R_EOF) 
                 return R_EOF;
         }
 	con->navail--;
@@ -665,8 +667,8 @@ static int file_fgetc_internal(Rconnection con)
 	this->last_was_write = FALSE;
 	f_seek(this->fp, this->rpos, SEEK_SET);
     }
-    c =fgetc(fp);
-    return feof(fp) ? R_EOF : c;
+    c = fgetc(fp);
+    return c == EOF ? R_EOF : c;
 }
 
 static double file_seek(Rconnection con, double where, int origin, int rw)
@@ -3345,16 +3347,18 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 	    PROTECT(ans = ans2);
 	}
 	nbuf = 0;
-	while((c = Rconn_fgetc(con)) != R_EOF) {
-	    if(nbuf == buf_size-1) {  /* need space for the null */
+	while ((c = Rconn_fgetc(con)) != R_EOF && c != '\n') {
+	    if (nbuf == buf_size-1) {  /* need space for the null */
 		buf_size *= 2;
 		char *tmp = (char *) realloc(buf, buf_size);
-		if(!buf) {
+		if (tmp == NULL) {
 		    free(buf);
 		    error(_("cannot allocate buffer in readLines"));
-		} else buf = tmp;
+		} 
+                else 
+                    buf = tmp;
 	    }
-	    if(c != '\n') buf[nbuf++] = c; else break;
+	    buf[nbuf++] = c;
 	}
 	buf[nbuf] = '\0';
 	SET_STRING_ELT(ans, nread, mkCharCE(buf, oenc));
