@@ -656,18 +656,24 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
     else return vfprintf(this->fp, format, ap);
 }
 
+/* This is used only in this module, but isn't static to discourage inlining. */
+
+attribute_hidden void Rf_file_switch_to_read (Rfileconn this)
+{
+    this->wpos = f_tell(this->fp);
+    this->last_was_write = FALSE;
+    f_seek(this->fp, this->rpos, SEEK_SET);
+}
+
 static int file_fgetc_internal(Rconnection con)
 {
     Rfileconn this = con->private;
-    FILE *fp = this->fp;
     int c;
 
-    if(this->last_was_write) {
-	this->wpos = f_tell(this->fp);
-	this->last_was_write = FALSE;
-	f_seek(this->fp, this->rpos, SEEK_SET);
-    }
-    c = fgetc(fp);
+    if (this->last_was_write)
+        Rf_file_switch_to_read(this);
+
+    c = fgetc(this->fp);
     return c == EOF ? R_EOF : c;
 }
 
