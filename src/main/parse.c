@@ -1692,26 +1692,20 @@ SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
 
 
 #include "Rconnections.h"
-static Rconnection con_parse;
 
-/* need to handle incomplete last line */
-static int con_getc(void)
+static Rconnection conn_parse;
+
+static int conn_getc(void)
 {
-    int c;
-    static int last=-1000;
-
-    c = Rconn_fgetc(con_parse);
-    if (c == EOF && last != '\n') c = '\n';
-    return (last = c);
+    return Rconn_fgetc(conn_parse);
 }
-
-
+ 
 /* used in source.c */
 attribute_hidden
 SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 {
-    con_parse = con;
-    ptr_getc = con_getc;
+    conn_parse = con;
+    ptr_getc = conn_getc;
 
     return R_Parse(n, status, srcfile);
 }
@@ -2739,8 +2733,10 @@ static int token (int c)
     /* Hard and soft end of file.  Soft end of file comes at the end of a
        line of interactive input, which may or may not be the actual end. */
 
-    if (c == R_EOF) 
+    if (c == R_EOF) {
+        newline_before_token = 1;
         return END_OF_INPUT;
+    }
 
     if (c == SOFT_EOF) {
         newline_before_token = 1;
@@ -2956,7 +2952,7 @@ static void get_next_token(void)
 
 
 /* --------------------------------------------------------------------------
-   ROUTINE FOR EXTERNAL USE ONLY
+   ROUTINE USED ONLY EXTERNALLY
 */
 
 /* Return 1 if 'name' is a valid name or 0 otherwise.  Not used by the
