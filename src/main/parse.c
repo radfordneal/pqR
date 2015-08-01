@@ -1336,7 +1336,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     }
 
     start_location(loc);
-    res = parse_prog (END_ON_NL | NO_PEEKING, &stat);
+    res = parse_prog (KEEP_PARENS | END_ON_NL | NO_PEEKING, &stat);
     end_location(loc);
 
     if (res == NULL) {
