@@ -1054,8 +1054,6 @@ static SEXP parse_expr (int prec, int flags, int *stat)
                 get_next_token();
             if (NEXT_TOKEN == '}')
                 break;
-            if (!newline_before_token)
-                PARSE_UNEXPECTED();
             start_location(&loc);
             PARSE_SUB (next = parse_expr (0, flags&~END_ON_NL, stat));
             end_location(&loc);
@@ -1066,6 +1064,8 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             }
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
+            if (!newline_before_token && NEXT_TOKEN != ';' && NEXT_TOKEN != '}')
+                PARSE_UNEXPECTED();
         }
         if (keep_source) {
             attachSrcrefs(res,refs);
