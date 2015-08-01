@@ -439,7 +439,7 @@ static int xxgetc(void)
     R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
     R_ParseContext[R_ParseContextLast] = c == SOFT_EOF ? '\n' : c;
 
-    if (c == '\n') {
+    if (R_ParseContext[R_ParseContextLast] == '\n') {
 	ParseState.xxlineno += 1;
 	ParseState.xxcolno = 0;
     	ParseState.xxbyteno = 0;
@@ -452,6 +452,7 @@ static int xxgetc(void)
     if (c == '\t') ParseState.xxcolno = ((ParseState.xxcolno + 7) & ~7);
     
     R_ParseContextLine = ParseState.xxlineno;    
+
     return c;
 }
 
@@ -692,6 +693,8 @@ static int get_next_token_not_maybe_end(void)
         get_next_token(); 
     } while (next_token == MAYBE_END);
 
+    newline_before_token = 1;
+
     return next_token;
 }
 
@@ -792,11 +795,20 @@ static int unary_op(void)
     SEXP sym;
     int i;
 
-    NEXT_TOKEN;  /* to force next_token_val to be the next value */
+    /* Operators must be special tokens, not symbols like `+`. */
 
-    sym = next_token_val;  /* Not TOKEN_VALUE - we don't want a PROTECT */
+    if (NEXT_TOKEN == SYMBOL)
+        return 0;
+
+   /* But a symbol corresponding to the operator will be in next_token_val
+      (since the reference to NEXT_TOKEN above will force out MAYBE_END).
+      We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
+
+    sym = next_token_val;
     if (TYPEOF(sym) != SYMSXP)
         return 0;
+
+    /* We now see if this symbol is in the table of unary operators. */
 
     for (i = 0; unary_prec_tbl[i].prec != 0; i++) {
         if (sym == *unary_prec_tbl[i].sym_ptr)
@@ -811,12 +823,25 @@ static int binary_op(void)
     SEXP sym;
     int i;
 
+    /* The special binary operators of the form %xxx% are handled specially. */
+
     if (NEXT_TOKEN == SPECIAL)
         return SPECIAL_PREC;
 
-    sym = next_token_val;  /* Not TOKEN_VALUE - we don't want a PROTECT */
+    /* Operators must be special tokens, not symbols like `+`. */
+
+    if (NEXT_TOKEN == SYMBOL)
+        return 0;
+
+   /* But a symbol corresponding to the operator will be in next_token_val
+      (since the reference to NEXT_TOKEN above will force out MAYBE_END).
+      We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
+
+    sym = next_token_val;
     if (TYPEOF(sym) != SYMSXP)
         return 0;
+
+    /* We now see if this symbol is in the table of binary operators. */
 
     for (i = 0; binary_prec_tbl[i].prec != 0; i++) {
         if (sym == *binary_prec_tbl[i].sym_ptr)
@@ -856,7 +881,8 @@ static SEXP parse_expr (int prec, int flags, int *stat);
 
 #define KEEP_PARENS (1<<0)  /* Keep parens in this or inner expressions */
 #define END_ON_NL   (1<<1)  /* End expression when newline seen */
-
+#define NO_PEEKING  (1<<2)  /* Don't look ahead for ELSE after newline
+                               (only relevant when END_ON_NL set) */
 
 /* Parse the formals list of a function definiton. */
 
@@ -865,7 +891,8 @@ static SEXP parse_formlist (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res;
 
-    flags &= ~END_ON_NL;
+    int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
+
     res = R_NilValue;
     if (NEXT_TOKEN != ')') {
         SEXP last;
@@ -889,7 +916,7 @@ static SEXP parse_formlist (int flags, int *stat)
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
                 get_next_token();
-                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, flags, stat));
+                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, stat));
                 SETCAR (last, def);
             }
             if (NEXT_TOKEN != ',')
@@ -916,7 +943,8 @@ static SEXP parse_sublist (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res, last, last2;
 
-    flags &= ~END_ON_NL;
+    int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
+
     res = R_NilValue;
     if (NEXT_TOKEN != ')') { /* check only ')', not ']':  [] has missing arg */
         SEXP next;
@@ -925,7 +953,7 @@ static SEXP parse_sublist (int flags, int *stat)
             if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
-                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, flags, stat));
+                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, stat));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
                     if (TYPEOF(arg) == SYMSXP)
@@ -941,7 +969,8 @@ static SEXP parse_sublist (int flags, int *stat)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
-                        PARSE_SUB(val = parse_expr(EQASSIGN_PREC, flags, stat));
+                        PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, 
+                                                    stat));
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
@@ -986,6 +1015,8 @@ static SEXP parse_expr (int prec, int flags, int *stat)
     int op_prec, next_op_prec;
     source_location loc;
 
+    int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
+
     /* Unary operators. */
     
     if (op_prec = unary_op()) {
@@ -1028,7 +1059,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         SEXP op;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB (res = parse_expr (0, flags&~END_ON_NL, stat));
+        PARSE_SUB (res = parse_expr (0, subflags, stat));
         if (flags & KEEP_PARENS)
             res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
         EXPECT(')');
@@ -1055,7 +1086,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr (0, flags&~END_ON_NL, stat));
+            PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL, stat));
             end_location(&loc);
             if (keep_source) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
@@ -1081,7 +1112,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(args = parse_formlist(flags,stat));
+        PARSE_SUB(args = parse_formlist (flags, stat));
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, stat));
         end_location(&loc);
@@ -1111,7 +1142,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, flags&~END_ON_NL, stat));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, stat));
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, stat));
         res = PROTECT_N (lang3 (op, cond, body));
@@ -1125,11 +1156,11 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, flags&~END_ON_NL, stat));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, stat));
         EXPECT(')');
         PARSE_SUB(true_stmt = parse_expr(0, flags, stat));
 
-        if (!NL_END && NEXT_TOKEN == ELSE) {
+        if ( ! (NL_END && (flags & NO_PEEKING)) && NEXT_TOKEN == ELSE) {
             get_next_token();
             PARSE_SUB(false_stmt = parse_expr (0, flags, stat));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
@@ -1152,7 +1183,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         sym = TOKEN_VALUE();
         get_next_token();
         EXPECT(IN);
-        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, flags&~END_ON_NL, stat));
+        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, stat));
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, stat));
         res = PROTECT_N (lang4 (op, sym, vec, body));
@@ -1192,7 +1223,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             SEXP op, subs;
             op = TOKEN_VALUE();
             get_next_token();
-            PARSE_SUB(subs = parse_sublist(flags,stat));
+            PARSE_SUB(subs = parse_sublist (flags, stat));
             PROTECT_N (res = LCONS (op, CONS (res, subs)));
             EXPECT(']');
         }
@@ -1203,7 +1234,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             SEXP op, subs;
             op = TOKEN_VALUE();
             get_next_token();
-            PARSE_SUB(subs = parse_sublist(flags,stat));
+            PARSE_SUB(subs = parse_sublist (flags, stat));
             PROTECT_N (res = LCONS (op, CONS (res, subs)));
             EXPECT(']');
             EXPECT(']');
@@ -1281,7 +1312,8 @@ static SEXP parse_prog (int flags, int *stat)
     PARSE_SUB (res = parse_expr (0, flags, stat));
 
     /* By first checking newline_before_token, we avoid forcing MAYBE_END
-       to be replaced by an actual token when taking interactive input. */
+       to be replaced by an actual token when taking interactive input,
+       or input from a file in R_Parse1File. */
        
     if (newline_before_token || NEXT_TOKEN == END_OF_INPUT)
         ; /* OK */
@@ -1319,7 +1351,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     }
 
     start_location(loc);
-    res = parse_prog (END_ON_NL, &stat);
+    res = parse_prog (KEEP_PARENS | END_ON_NL | NO_PEEKING, &stat);
     end_location(loc);
 
     if (res == NULL) {
@@ -1343,7 +1375,9 @@ extern int R_fgetc(FILE*);
 
 static int file_getc(void)
 {
-    return R_fgetc(fp_parse);
+    int c;
+    c = R_fgetc(fp_parse);
+    return c == '\n' ? SOFT_EOF : c;
 }
 
 /* used in main.c */
@@ -2366,9 +2400,10 @@ static int SymbolValue(int c)
 }
 
 
-/* Skip whitespace characters.  The argument says whether or not to stop
-   when a newline is encountered.  Sets newline_before_token to 1 if
-   a newline is found (but doesn't set it to 0 if not). */
+/* Skip whitespace characters.  The argument says whether or not to stop 
+   when a newline is encountered.  Returns the character after the whitespace
+   (possibly '\n', R_EOF, or SOFT_EOF).   Sets newline_before_token to 1 
+   if a newline is seen (but doesn't set it to 0 if not). */
 
 static int SkipSpace(int stop_on_nl)
 {
@@ -2398,8 +2433,10 @@ static int SkipSpace(int stop_on_nl)
             continue;
         }
 
-        if (c == R_EOF)
+        if (c == R_EOF || c == SOFT_EOF) {
+            newline_before_token = 1;
             break;
+        }
 
 #       if defined(Win32) || defined(__STDC_ISO_10646__)
             if (mbcslocale) {
@@ -2471,7 +2508,7 @@ static int processLineDirective()
     if (tok == STR_CONST) 
 	setParseFilename(next_token_val);
 
-    while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
+    while ((c = xxgetc()) != '\n' && c != R_EOF && c != SOFT_EOF) /* skip */ ;
 
     ParseState.xxlineno = linenumber;
 
@@ -2485,13 +2522,14 @@ static int processLineDirective()
 }
 
 
-/* Skip a comment, returning the character ending it ('\n' or R_EOF).  
+/* Skip a comment, returning the character ending it ('\n', R_EOF, or SOFT_EOF).
    Also processes comments that are #line directives. */
 
 static int SkipComment(void)
 {
     int c='#', i;
     Rboolean maybeLine = (ParseState.xxcolno == 1);
+
     if (maybeLine) {
     	static const char lineDirective[] = "#line";
     	for (i=1; i<5; i++) {
@@ -2504,8 +2542,10 @@ static int SkipComment(void)
   	if (maybeLine)     
 	    c = processLineDirective();
     }
-    while (c != '\n' && c != R_EOF) 
+
+    while (c != '\n' && c != R_EOF && c != SOFT_EOF) 
 	c = xxgetc();
+
     return c;
 }
 
@@ -2751,13 +2791,13 @@ static void get_next_token(void)
     prev_token_loc = token_loc;
 
     newline_before_token = 0;
-    c = SkipSpace(0);
-    while (c == '#') {
-        c = SkipComment();
-        if (c == '\n') {
-            newline_before_token = 1;
-            c = SkipSpace(0);
-        }
+    for (;;) {
+        c = SkipSpace(0);
+        if (c == '#') 
+            c = SkipComment();
+        if (c != '\n') 
+            break;
+        newline_before_token = 1;
     }
 
     token_loc.first_line = ParseState.xxlineno;
