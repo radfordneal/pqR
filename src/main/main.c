@@ -254,7 +254,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     int c, browsevalue;
     SEXP value, thisExpr;
     Rboolean wasDisplayed = FALSE;
-REprintf("Starting ReplIteration\n");
+
     if(!*state->bufp) {
 	    R_Busy(0);
 	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
@@ -275,9 +275,8 @@ REprintf("Starting ReplIteration\n");
     }
 
     R_PPStackTop = savestack;
-REprintf("Before initial Parse1Buffer\n");    
     R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
-REprintf("After initial Parse1Buffer: %d\n",state->status);    
+    
     switch(state->status) {
 
     case PARSE_NULL:
@@ -293,12 +292,7 @@ REprintf("After initial Parse1Buffer: %d\n",state->status);
     case PARSE_OK:
 
 	R_IoBufferReadReset(&R_ConsoleIob);
-REprintf("Before second Parse1Buffer\n");    
 	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
-REprintf("After second Parse1Buffer: %d %d\n",state->status,TYPEOF(R_CurrentExpr));
-REprintf("----------------\n");
-R_inspect(R_CurrentExpr);
-REprintf("----------------\n");
 	if (browselevel) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
 	    if(browsevalue == 1) return -1;
@@ -753,7 +747,7 @@ void setup_Rmainloop(void)
     volatile int ndeferred_warnings = 0;
 
     InitConnections(); /* needed to get any output at all */
-REprintf("Starting setup_Rmainloop\n");
+
     /* Initialize the interpreter's internal structures. */
 
 #ifdef HAVE_LOCALE_H
@@ -900,7 +894,6 @@ REprintf("Starting setup_Rmainloop\n");
        Perhaps it makes more sense to quit gracefully?
     */
 
-REprintf("About to repl on base\n");
     fp = R_OpenLibraryFile("base");
     if (fp == NULL)
 	R_Suicide(_("unable to open the base package\n"));
@@ -914,8 +907,6 @@ REprintf("About to repl on base\n");
 	R_ReplFile(fp, baseEnv);
     }
     fclose(fp);
-
-REprintf("About to source profiles\n");
 
     /* This is where we source the system-wide, the site's and the
        user's profile (in that order).  If there is an error, we
@@ -957,7 +948,6 @@ REprintf("About to source profiles\n");
 	snprintf(buf, PATH_MAX, "%s/library/tcltk/exec/Tk-frontend.R", R_Home);
 	R_LoadProfile(R_fopen(buf, "r"), R_GlobalEnv);
     }
-REprintf("About to print greeting\n");
 
     /* Print a platform and version dependent greeting and a pointer to
      * the copyleft.
@@ -991,7 +981,6 @@ REprintf("About to print greeting\n");
        At this point we try to invoke the .First Function.
        If there is an error we continue. */
 
-REprintf("Initial loading done\n");
     doneit = 0;
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
@@ -1037,7 +1026,6 @@ REprintf("Initial loading done\n");
 
     /* trying to do this earlier seems to run into bootstrapping issues. */
     R_init_jit_enabled();
-REprintf("Finishing setup_Rmainloop\n");
 }
 
 extern SA_TYPE SaveAction; /* from src/main/startup.c */

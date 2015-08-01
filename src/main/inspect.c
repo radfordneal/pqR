@@ -37,8 +37,6 @@
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
-#define Rprintf REprintf
-
 #define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in
                                      a LISTSXP or LANGSXP be shown? */
 
