@@ -716,6 +716,102 @@ static void end_location (source_location *loc)
 }
 
 
+/* Tables of operator precedence.  The lower two bits are 1 for binary
+   operators that are left associative, 2 for binary operators that are
+   right associative, and 0 for relational operators and unary operators. */
+
+static struct { SEXP *sym_ptr; int prec; } unary_prec_tbl[] =
+{
+    { &R_AddSymbol,               /* +   */ 0xc8 },
+    { &R_SubSymbol,               /* -   */ 0xc8 },
+    { &R_NotSymbol,               /* !   */ 0x78 },
+    { &R_TildeSymbol,             /* ~   */ 0x58 },
+    { &R_QuerySymbol,             /* ?   */ 0x28 },
+    { 0, 0 }
+};
+
+static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
+{
+    { &R_DoubleColonSymbol,       /* ::  */ 0xf0 },
+    { &R_TripleColonSymbol,       /* ::: */ 0xf0 },
+    { &R_DollarSymbol,            /* $   */ 0xe1 },
+    { &R_AtSymbol,                /* @   */ 0xe1 },
+    { &R_BracketSymbol,           /* [   */ 0xe1 },
+    { &R_Bracket2Symbol,          /* [[  */ 0xe1 },
+    { &R_ExptSymbol,              /* ^   */ 0xd2 },
+    { &R_Expt2Symbol,             /* **  */ 0xd2 },
+    { &R_ColonSymbol,             /* :   */ 0xc1 },
+#   define SPECIAL_PREC           /* %x% */ 0xb1
+    { &R_MulSymbol,               /* *   */ 0xa1 },
+    { &R_DivSymbol,               /* /   */ 0xa1 },
+    { &R_AddSymbol,               /* +   */ 0x91 },
+    { &R_SubSymbol,               /* -   */ 0x91 },
+    { &R_EqSymbol,                /* ==  */ 0x80 },
+    { &R_NeSymbol,                /* !=  */ 0x80 },
+    { &R_LtSymbol,                /* <   */ 0x80 },
+    { &R_LeSymbol,                /* <=  */ 0x80 },
+    { &R_GeSymbol,                /* >=  */ 0x80 },
+    { &R_GtSymbol,                /* >   */ 0x80 },
+    { &R_AndSymbol,               /* &   */ 0x71 },
+    { &R_And2Symbol,              /* &&  */ 0x71 },
+    { &R_OrSymbol,                /* |   */ 0x61 },
+    { &R_Or2Symbol,               /* ||  */ 0x61 },
+    { &R_TildeSymbol,             /* ~   */ 0x51 },
+    { &R_LocalRightAssignSymbol,  /* ->  */ 0x41 },
+    { &R_GlobalRightAssignSymbol, /* ->> */ 0x41 },
+    { &R_LocalAssignSymbol,       /* <-  */ 0x32 },
+    { &R_GlobalAssignSymbol,      /* <<- */ 0x32 },
+    { &R_ColonEqSymbol,           /* :=  */ 0x32 },
+    { &R_QuerySymbol,             /* ?   */ 0x21 },
+    { &R_EqAssignSymbol,          /* =   */ 0x12 },
+    { 0, 0 }
+#   define EQASSIGN_PREC 0x12
+};
+
+#define NON_ASSOC(p)   (((p)&3) == 0)
+#define LEFT_ASSOC(p)  (((p)&3) == 1)
+#define RIGHT_ASSOC(p) (((p)&3) == 2)
+
+static int unary_op(void)
+{
+    SEXP sym;
+    int i;
+
+    NEXT_TOKEN;  /* to force next_token_val to be the next value */
+
+    sym = next_token_val;  /* Not TOKEN_VALUE - we don't want a PROTECT */
+    if (TYPEOF(sym) != SYMSXP)
+        return 0;
+
+    for (i = 0; unary_prec_tbl[i].prec != 0; i++) {
+        if (sym == *unary_prec_tbl[i].sym_ptr)
+            return unary_prec_tbl[i].prec;
+    }
+
+    return 0;
+}
+
+static int binary_op(void)
+{
+    SEXP sym;
+    int i;
+
+    if (NEXT_TOKEN == SPECIAL)
+        return SPECIAL_PREC;
+
+    sym = next_token_val;  /* Not TOKEN_VALUE - we don't want a PROTECT */
+    if (TYPEOF(sym) != SYMSXP)
+        return 0;
+
+    for (i = 0; binary_prec_tbl[i].prec != 0; i++) {
+        if (sym == *binary_prec_tbl[i].sym_ptr)
+            return binary_prec_tbl[i].prec;
+    }
+
+    return 0;
+}
+
+
 /* --------------------------------------------------------------------------
    THE RECURSIVE DESCENT PARSER
 
@@ -738,8 +834,7 @@ static void end_location (source_location *loc)
 
 int keep_source;  /* Attach source references to R expressions? */
 
-static SEXP parse_expr (int flags, int *stat), 
-            parse_expr_or_assign (int flags, int *stat);
+static SEXP parse_expr (int prec, int flags, int *stat);
 
 
 /* Bits in the flags word passed to parsing routines. */
@@ -779,7 +874,7 @@ static SEXP parse_formlist (int flags, int *stat)
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
                 get_next_token();
-                PARSE_SUB(def = parse_expr(flags,stat));
+                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, flags, stat));
                 SETCAR (last, def);
             }
             if (NEXT_TOKEN != ',')
@@ -793,6 +888,7 @@ static SEXP parse_formlist (int flags, int *stat)
     END_PARSE_FUN;
     return res;
 }
+
 
 /* Parse a list of subscripts or of function arguments.  An attempt is 
    made to make the last part of the list be a constant object.  Note
@@ -814,7 +910,7 @@ static SEXP parse_sublist (int flags, int *stat)
             if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
-                PARSE_SUB(arg = parse_expr(flags,stat));
+                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, flags, stat));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
                     if (TYPEOF(arg) == SYMSXP)
@@ -830,7 +926,7 @@ static SEXP parse_sublist (int flags, int *stat)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
-                        PARSE_SUB(val = parse_expr(flags,stat));
+                        PARSE_SUB(val = parse_expr(EQASSIGN_PREC, flags, stat));
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
@@ -864,27 +960,32 @@ static SEXP parse_sublist (int flags, int *stat)
     return res;
 }
 
-/* Parse an element that acts as a unit for the operator precedence.
-   Such an element consists of an initial part followed by possible postfix
-   parts.  The initial part may be a constant, symbol, paren expression,
-   or curly expression, which may be followed by postfix parts, or a function 
-   closure, while, repeat, for, or if, which would absorb any postfix parts
-   themselves, or break, or next, which can be followed by postfix parts
-   although they make no sense.  Postfix parts may be argument lists for
-   function calls, or subsetting operators [, [[, $, or @.
 
-   Curly expressions and function closures may have source references. */
+/* Parse an expression, with any non-enclosed operator having precedence 
+   greater than prec. */
 
-static SEXP parse_element (int flags, int *stat)
+static SEXP parse_expr (int prec, int flags, int *stat)
 {
     BGN_PARSE_FUN;
+    SEXP res, right, op;
+    int op_prec, next_op_prec;
     source_location loc;
-    SEXP res;
+
+    /* Unary operators. */
+    
+    if (op_prec = unary_op()) {
+        op = TOKEN_VALUE();
+        get_next_token();
+        PARSE_SUB (res = parse_expr (op_prec, 
+                           op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
+                           stat));
+        PROTECT_N (res = LCONS (op, MaybeConstList1(res)));
+    }
 
     /* Symbols, string constants, and namespace references built from
        one or the other or both of these. */
 
-    if (NEXT_TOKEN == SYMBOL || NEXT_TOKEN == STR_CONST) {
+    else if (NEXT_TOKEN == SYMBOL || NEXT_TOKEN == STR_CONST) {
         SEXP op, sym;
         res = TOKEN_VALUE();
         get_next_token();
@@ -912,7 +1013,7 @@ static SEXP parse_element (int flags, int *stat)
         SEXP op;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB (res = parse_expr_or_assign(flags&~END_ON_NL,stat));
+        PARSE_SUB (res = parse_expr (0, flags&~END_ON_NL, stat));
         if (flags & KEEP_PARENS)
             res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
         EXPECT(')');
@@ -934,12 +1035,12 @@ static SEXP parse_element (int flags, int *stat)
         }
         last = res;
         for (;;) {
-            while (NEXT_TOKEN == ';' || NEXT_TOKEN == '\n')
+            while (NEXT_TOKEN == ';')
                 get_next_token();
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr_or_assign(flags&~END_ON_NL,stat));
+            PARSE_SUB (next = parse_expr (0, flags&~END_ON_NL, stat));
             end_location(&loc);
             if (keep_source) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
@@ -948,6 +1049,8 @@ static SEXP parse_element (int flags, int *stat)
             }
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
+            if (!newline_before_token && NEXT_TOKEN != ';' && NEXT_TOKEN != '}')
+                PARSE_UNEXPECTED();
         }
         if (keep_source) {
             attachSrcrefs(res,refs);
@@ -965,7 +1068,7 @@ static SEXP parse_element (int flags, int *stat)
         EXPECT('(');
         PARSE_SUB(args = parse_formlist(flags,stat));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
+        PARSE_SUB(body = parse_expr (0, flags, stat));
         end_location(&loc);
         if (keep_source) {
             srcref = makeSrcref(&loc, ParseState.SrcFile);
@@ -982,7 +1085,7 @@ static SEXP parse_element (int flags, int *stat)
         SEXP op, body;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
+        PARSE_SUB(body = parse_expr (0, flags, stat));
         res = PROTECT_N (lang2 (op, body));
     }
 
@@ -993,9 +1096,9 @@ static SEXP parse_element (int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr(flags&~END_ON_NL,stat));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, flags&~END_ON_NL, stat));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
+        PARSE_SUB(body = parse_expr (0, flags, stat));
         res = PROTECT_N (lang3 (op, cond, body));
     }
 
@@ -1007,13 +1110,13 @@ static SEXP parse_element (int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr(flags&~END_ON_NL,stat));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, flags&~END_ON_NL, stat));
         EXPECT(')');
-        PARSE_SUB(true_stmt = parse_expr_or_assign(flags,stat));
+        PARSE_SUB(true_stmt = parse_expr(0, flags, stat));
 
         if (!NL_END && NEXT_TOKEN == ELSE) {
             get_next_token();
-            PARSE_SUB(false_stmt = parse_expr_or_assign(flags,stat));
+            PARSE_SUB(false_stmt = parse_expr (0, flags, stat));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
                               MaybeConstList1(false_stmt)))));
         }
@@ -1034,9 +1137,9 @@ static SEXP parse_element (int flags, int *stat)
         sym = TOKEN_VALUE();
         get_next_token();
         EXPECT(IN);
-        PARSE_SUB(vec = parse_expr(flags&~END_ON_NL,stat));
+        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, flags&~END_ON_NL, stat));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr_or_assign(flags,stat));
+        PARSE_SUB(body = parse_expr (0, flags, stat));
         res = PROTECT_N (lang4 (op, sym, vec, body));
     }
 
@@ -1052,7 +1155,7 @@ static SEXP parse_element (int flags, int *stat)
     else
         PARSE_UNEXPECTED();
 
-    /* Now parse any postfix parts, unless we are ending due to a newline. */
+    /* Now handle any postfix parts. */
 
     while (!NL_END) {
 
@@ -1064,7 +1167,7 @@ static SEXP parse_element (int flags, int *stat)
             PARSE_SUB(subs = parse_sublist(flags,stat));
             if (isString(res))
                 res = installChar(STRING_ELT(res,0));
-            res = LCONS(res,subs);
+            PROTECT_N (res = LCONS(res,subs));
             EXPECT(')');
         }
 
@@ -1075,7 +1178,7 @@ static SEXP parse_element (int flags, int *stat)
             op = TOKEN_VALUE();
             get_next_token();
             PARSE_SUB(subs = parse_sublist(flags,stat));
-            res = LCONS (op, CONS (res, subs));
+            PROTECT_N (res = LCONS (op, CONS (res, subs)));
             EXPECT(']');
         }
 
@@ -1086,7 +1189,7 @@ static SEXP parse_element (int flags, int *stat)
             op = TOKEN_VALUE();
             get_next_token();
             PARSE_SUB(subs = parse_sublist(flags,stat));
-            res = LCONS (op, CONS (res, subs));
+            PROTECT_N (res = LCONS (op, CONS (res, subs)));
             EXPECT(']');
             EXPECT(']');
         }
@@ -1100,7 +1203,7 @@ static SEXP parse_element (int flags, int *stat)
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
-            res = LCONS (op, CONS (res, MaybeConstList1(sym)));
+            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(sym))));
             get_next_token();
         }
 
@@ -1108,320 +1211,49 @@ static SEXP parse_element (int flags, int *stat)
             break;
     }
 
-    END_PARSE_FUN;
-    return res;
-}
+    /* Now handle binary operators following any of the above. */
 
-/* Binary and unary operators, arranged in recursive hierarchy by precedence.
-   Highest precedence is first below. */
+    int last_prec = 0;
 
-static SEXP parse_power (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
+    while (!NL_END) {
 
-    PARSE_SUB (res = parse_element(flags,stat));
+        op_prec = binary_op();
 
-    if (!NL_END && NEXT_TOKEN == '^') {
+        if (op_prec <= prec || op_prec == last_prec)
+            break;
+
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB (right = parse_power(flags,stat));
-        res = LCONS (op, CONS (res, MaybeConstList1(right)));
+
+        if (LEFT_ASSOC(op_prec)) {
+            for (;;) {
+                PARSE_SUB(right = parse_expr (op_prec, 
+                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
+                            stat));
+                PROTECT_N (res = 
+                            LCONS (op, CONS (res, MaybeConstList1(right))));
+                if (NL_END || binary_op() != op_prec) 
+                    break;
+                op = TOKEN_VALUE();
+                get_next_token();
+            }
+        }
+        else if (RIGHT_ASSOC(op_prec)) {
+            PARSE_SUB(right = parse_expr (op_prec-1, flags, stat));
+            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
+        }
+        else { /* NON_ASSOC */
+            PARSE_SUB(right = parse_expr (op_prec, flags, stat));
+            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
+        }
+
+        last_prec = op_prec;
     }
 
     END_PARSE_FUN;
     return res;
 }
 
-static SEXP parse_unary_plus_minus (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, op;
-
-    if (NEXT_TOKEN == '+' || NEXT_TOKEN == '-') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (res = parse_unary_plus_minus(flags,stat));
-        res = LCONS (op, MaybeConstList1(res));
-    }
-    else
-        PARSE_SUB (res = parse_power(flags,stat));
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_colon (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_unary_plus_minus(flags,stat));
-
-    while (!NL_END && NEXT_TOKEN == ':') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_unary_plus_minus(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_special (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_colon(flags,stat));
-
-    while (!NL_END && NEXT_TOKEN == SPECIAL) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_colon(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_mul_div (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_special(flags,stat));
-
-    while (!NL_END && (NEXT_TOKEN == '*' || NEXT_TOKEN == '/')) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_special(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_plus_minus (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_mul_div(flags,stat));
-
-    while (!NL_END && (NEXT_TOKEN == '+' || NEXT_TOKEN == '-')) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_mul_div(flags,stat));
-        PROTECT_N (res = res ? LCONS (op, CONS (res, MaybeConstList1(right)))
-                             : LCONS (op, MaybeConstList1(right)));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_relation (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_plus_minus(flags,stat));
-
-    if (!NL_END && (NEXT_TOKEN == GT || NEXT_TOKEN == GE || NEXT_TOKEN == EQ
-                 || NEXT_TOKEN == LE || NEXT_TOKEN == LT || NEXT_TOKEN == NE)) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_plus_minus(flags,stat));
-        res = LCONS (op, CONS (res, MaybeConstList1(right)));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_not (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, op;
-
-    if (NEXT_TOKEN == '!') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (res = parse_not(flags,stat));
-        res = LCONS (op, MaybeConstList1(res));
-    }
-    else
-        PARSE_SUB (res = parse_relation(flags,stat));
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_and (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_not(flags,stat));
-
-    while (!NL_END && (NEXT_TOKEN == AND || NEXT_TOKEN == AND2)) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_not(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_or (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_and(flags,stat));
-
-    while (!NL_END && (NEXT_TOKEN == OR || NEXT_TOKEN == OR2)) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_and(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_unary_tilde (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, op;
-
-    if (NEXT_TOKEN == '~') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (res = parse_unary_tilde(flags|KEEP_PARENS,stat));
-        res = LCONS (op, MaybeConstList1(res));
-    }
-    else
-        PARSE_SUB (res = parse_or(flags,stat));
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_tilde (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_unary_tilde(flags,stat));
-
-    while (!NL_END && NEXT_TOKEN == '~') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_unary_tilde(flags|KEEP_PARENS,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_right_assign (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_tilde(flags,stat));
-
-    while (!NL_END && NEXT_TOKEN == RIGHT_ASSIGN) {
-        op = TOKEN_VALUE();  /* already switched to left assignment */
-        get_next_token();
-        PARSE_SUB (right = parse_tilde(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (right, MaybeConstList1(res))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_left_assign (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_right_assign(flags,stat));
-
-    if (!NL_END && NEXT_TOKEN == LEFT_ASSIGN) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_left_assign(flags,stat));
-        res = LCONS (op, CONS (res, MaybeConstList1(right)));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_unary_query (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, op;
-
-    if (NEXT_TOKEN == '?') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (res = parse_unary_query(flags,stat));
-        res = LCONS (op, MaybeConstList1(res));
-    }
-    else
-        PARSE_SUB (res = parse_left_assign(flags,stat));
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_expr (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_unary_query(flags,stat));
-
-    while (!NL_END && NEXT_TOKEN == '?') {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_unary_query(flags,stat));
-        PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
-
-static SEXP parse_expr_or_assign (int flags, int *stat)
-{
-    BGN_PARSE_FUN;
-    SEXP res, right, op;
-
-    PARSE_SUB (res = parse_expr(flags,stat));
-
-    if (!NL_END && NEXT_TOKEN == EQ_ASSIGN) {
-        op = TOKEN_VALUE();
-        get_next_token();
-        PARSE_SUB (right = parse_expr_or_assign(flags,stat));
-        res = LCONS (op, CONS (res, MaybeConstList1(right)));
-    }
-
-    END_PARSE_FUN;
-    return res;
-}
 
 /* Top level parse function, parsing an expression or assignments with =,
    which is followed by newline or ';' or end of file. */
@@ -1431,7 +1263,7 @@ static SEXP parse_prog (int flags, int *stat)
     BGN_PARSE_FUN;
     SEXP res;
 
-    PARSE_SUB (res = parse_expr_or_assign(flags,stat));
+    PARSE_SUB (res = parse_expr (0, flags, stat));
 
     /* By first checking newline_before_token, we avoid forcing MAYBE_END
        to be replaced by an actual token when taking interactive input,
