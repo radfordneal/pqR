@@ -2385,9 +2385,10 @@ static int SymbolValue(int c)
 }
 
 
-/* Skip whitespace characters.  The argument says whether or not to stop
-   when a newline is encountered.  Sets newline_before_token to 1 if
-   a newline is found (but doesn't set it to 0 if not). */
+/* Skip whitespace characters.  The argument says whether or not to stop 
+   when a newline is encountered.  Returns the character after the whitespace
+   (possibly '\n', R_EOF, or SOFT_EOF).   Sets newline_before_token to 1 
+   if a newline is seen (but doesn't set it to 0 if not). */
 
 static int SkipSpace(int stop_on_nl)
 {
@@ -2417,8 +2418,10 @@ static int SkipSpace(int stop_on_nl)
             continue;
         }
 
-        if (c == R_EOF || c == SOFT_EOF)
+        if (c == R_EOF || c == SOFT_EOF) {
+            newline_before_token = 1;
             break;
+        }
 
 #       if defined(Win32) || defined(__STDC_ISO_10646__)
             if (mbcslocale) {
@@ -2511,6 +2514,7 @@ static int SkipComment(void)
 {
     int c='#', i;
     Rboolean maybeLine = (ParseState.xxcolno == 1);
+
     if (maybeLine) {
     	static const char lineDirective[] = "#line";
     	for (i=1; i<5; i++) {
@@ -2523,8 +2527,10 @@ static int SkipComment(void)
   	if (maybeLine)     
 	    c = processLineDirective();
     }
+
     while (c != '\n' && c != R_EOF && c != SOFT_EOF) 
 	c = xxgetc();
+
     return c;
 }
 
@@ -2770,13 +2776,13 @@ static void get_next_token(void)
     prev_token_loc = token_loc;
 
     newline_before_token = 0;
-    c = SkipSpace(0);
-    while (c == '#') {
-        c = SkipComment();
-        if (c == '\n') {
-            newline_before_token = 1;
-            c = SkipSpace(0);
-        }
+    for (;;) {
+        c = SkipSpace(0);
+        if (c == '#') 
+            c = SkipComment();
+        if (c != '\n') 
+            break;
+        newline_before_token = 1;
     }
 
     token_loc.first_line = ParseState.xxlineno;
