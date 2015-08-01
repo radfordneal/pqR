@@ -731,6 +731,56 @@ static void end_location (source_location *loc)
 }
 
 
+/* Tables of operator precedence.  For binary operators, odd precedence
+   levels are left associative and even precedence levels are right 
+   associative.  (The choice is arbitrary for relational operators.) */
+
+static struct { SEXP *sym; int prec; } unary_prec_tbl[] =
+{
+    { &R_AddSymbol,               /* +   */ 125 },
+    { &R_SubSymbol,               /* -   */ 125 },
+    { &R_NotSymbol,               /* !   */  75 },
+    { &R_TildeSymbol,             /* ~   */  55 },
+    { &R_QuerySymbol,             /* ?   */  25 }
+}
+
+static struct { SEXP *sym; int prec; } binary_prec_tbl[] =
+{
+    { &R_DoubleColonSymbol,       /* ::  */ 150 },
+    { &R_TripleColonSymbol,       /* ::: */ 150 },
+    { &R_DollarSymbol,            /* $   */ 141 },
+    { &R_AtSymbol,                /* @   */ 141 },
+    { &R_BracketSymbol,           /* [   */ 141 },
+    { &R_Bracket2Symbol,          /* [[  */ 141 },
+    { &R_ExptSymbol,              /* ^   */ 130 },
+    { &R_Expt2Symbol,             /* **  */ 130 },
+    { &R_ColonSymbol,             /* :   */ 121 },
+#   define SPECIAL_PREC           /* %x% */ 111
+    { &R_MulSymbol,               /* *   */ 101 },
+    { &R_DivSymbol,               /* /   */ 101 },
+    { &R_AddSymbol,               /* +   */  91 },
+    { &R_SubSymbol,               /* -   */  91 },
+    { &R_EqSymbol,                /* ==  */  80 },
+    { &R_NeSymbol,                /* !=  */  80 },
+    { &R_LtSymbol,                /* <   */  80 },
+    { &R_LeSymbol,                /* <=  */  80 },
+    { &R_GeSymbol,                /* >=  */  80 },
+    { &R_GtSymbol,                /* >   */  80 },
+    { &R_AndSymbol,               /* &   */  71 },
+    { &R_And2Symbol,              /* &&  */  71 },
+    { &R_OrSymbol,                /* |   */  61 },
+    { &R_Or2Symbol,               /* ||  */  61 },
+    { &R_TildeSymbol,             /* ~   */  51 },
+    { &R_LocalRightAssignSymbol,  /* ->  */  41 },
+    { &R_GlobalRightAssignSymbol, /* ->> */  41 },
+    { &R_LocalAssignSymbol,       /* <-  */  30 },
+    { &R_GlobalAssignSymbol,      /* <<- */  30 },
+    { &R_ColonEqSymbol,           /* :=  */  30 },
+    { &R_QuerySymbol,             /* ?   */  21 },
+    { &R_EqAssignSymbol,          /* =   */  11 }
+}
+
+
 /* --------------------------------------------------------------------------
    THE RECURSIVE DESCENT PARSER
 
