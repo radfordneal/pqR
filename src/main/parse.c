@@ -1011,16 +1011,7 @@ static SEXP parse_element (int flags, int *stat)
         EXPECT(')');
         PARSE_SUB(true_stmt = parse_expr_or_assign(flags,stat));
 
-        /* If flags&END_ON_NL is true, the next token might now be MAYBE_END.
-           We don't want to force this to be changed to the real next token,
-           since in interactive mode, that would force reading another line
-           from the user.  So the comparison with ELSE is to next_token, not 
-           NEXT_TOKEN.  If flags&END_ON_NL is false, the call above of
-           parse_expr_or_assign will have forced any MAYBE_END to be 
-           replaced by a real token, but we use NEXT_TOKEN in that case
-           anyway for clarity and robustness. */
-
-        if ((flags&END_ON_NL ? next_token : NEXT_TOKEN) == ELSE) {
+        if (!NL_END && NEXT_TOKEN == ELSE) {
             get_next_token();
             PARSE_SUB(false_stmt = parse_expr_or_assign(flags,stat));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
@@ -1505,7 +1496,9 @@ extern int R_fgetc(FILE*);
 
 static int file_getc(void)
 {
-    return R_fgetc(fp_parse);
+    int c;
+    c = R_fgetc(fp_parse);
+    return c == '\n' ? SOFT_EOF : c;
 }
 
 /* used in main.c */
