@@ -254,7 +254,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     int c, browsevalue;
     SEXP value, thisExpr;
     Rboolean wasDisplayed = FALSE;
-
+REprintf("Starting ReplIteration\n");
     if(!*state->bufp) {
 	    R_Busy(0);
 	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
@@ -275,8 +275,9 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     }
 
     R_PPStackTop = savestack;
+REprintf("Before initial Parse1Buffer\n");    
     R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
-    
+REprintf("After initial Parse1Buffer: %d\n",state->status);    
     switch(state->status) {
 
     case PARSE_NULL:
@@ -292,7 +293,12 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     case PARSE_OK:
 
 	R_IoBufferReadReset(&R_ConsoleIob);
+REprintf("Before second Parse1Buffer\n");    
 	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
+REprintf("After second Parse1Buffer: %d %d\n",state->status,TYPEOF(R_CurrentExpr));
+REprintf("----------------\n");
+R_inspect(R_CurrentExpr);
+REprintf("----------------\n");
 	if (browselevel) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
 	    if(browsevalue == 1) return -1;

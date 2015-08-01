@@ -424,7 +424,7 @@ static int xxgetc(void)
     R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
     R_ParseContext[R_ParseContextLast] = c == SOFT_EOF ? '\n' : c;
 
-    if (c == '\n') {
+    if (R_ParseContext[R_ParseContextLast] == '\n') {
 	ParseState.xxlineno += 1;
 	ParseState.xxcolno = 0;
     	ParseState.xxbyteno = 0;
@@ -939,7 +939,7 @@ static SEXP parse_element (int flags, int *stat)
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr_or_assign(flags|END_ON_NL,stat));
+            PARSE_SUB (next = parse_expr_or_assign(flags&~END_ON_NL,stat));
             end_location(&loc);
             if (keep_source) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
@@ -1434,7 +1434,8 @@ static SEXP parse_prog (int flags, int *stat)
     PARSE_SUB (res = parse_expr_or_assign(flags,stat));
 
     /* By first checking newline_before_token, we avoid forcing MAYBE_END
-       to be replaced by an actual token when taking interactive input. */
+       to be replaced by an actual token when taking interactive input,
+       or input from a file in R_Parse1File. */
        
     if (newline_before_token || NEXT_TOKEN == END_OF_INPUT)
         ; /* OK */
@@ -2555,7 +2556,7 @@ static int SkipSpace(int stop_on_nl)
             continue;
         }
 
-        if (c == R_EOF)
+        if (c == R_EOF || c == SOFT_EOF)
             break;
 
 #       if defined(Win32) || defined(__STDC_ISO_10646__)
@@ -2661,7 +2662,7 @@ static int SkipComment(void)
   	if (maybeLine)     
 	    c = processLineDirective();
     }
-    while (c != '\n' && c != R_EOF) 
+    while (c != '\n' && c != R_EOF && c != SOFT_EOF) 
 	c = xxgetc();
     return c;
 }
