@@ -193,7 +193,7 @@ static void conn_cleanup(void *data)
 
 static int conn_getc (void *con) { return Rconn_fgetc ((Rconnection) con); }
 
-static unsigned char console_buf[CONSOLE_BUFFER_SIZE];
+static unsigned char console_buf[CONSOLE_BUFFER_SIZE+1];
 static unsigned char *console_bufp;
 
 static int console_getc (void *prompt_string)
@@ -202,6 +202,7 @@ static int console_getc (void *prompt_string)
         if (R_ReadConsole ((const char *) prompt_string, console_buf, 
                            CONSOLE_BUFFER_SIZE, 1) == 0)
             return EOF;
+        console_buf[CONSOLE_BUFFER_SIZE] = 0;  /* just in case... */
         console_bufp = console_buf;
     }
 

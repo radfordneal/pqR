@@ -174,13 +174,14 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 	case PARSE_ERROR:
 	    parseError(R_NilValue, R_ParseError);
 	    break;
+
 	case PARSE_EOF:
 	    R_FinalizeSrcRefState(&ParseState);
 	    return;
 	    break;
-	case PARSE_INCOMPLETE:
-	    /* can't happen: just here to quieten -Wall */
-	    break;
+
+	default:
+            abort();
 	}
     }
 }
@@ -262,28 +263,38 @@ typedef struct {
  The "cursor" for the input buffer is moved to the next starting
  point, i.e. the end of the first line or after the first ;.
  */
-int
-Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
+
+static int ReplGetc (void *vstate)
+{
+    R_ReplState *state = (R_ReplState *) vstate;
+
+    while (*state->bufp == 0) {
+        R_Busy(0);
+        if (R_ReadConsole(R_PromptString(state->browselevel,state->prompt_type),
+                          state->buf, CONSOLE_BUFFER_SIZE, 1) == 0)
+            return EOF;
+        state->buf[CONSOLE_BUFFER_SIZE] = 0;  /* just in case... */
+        state->bufp = state->buf;
+        state->prompt_type = 2;
+    }
+
+    return *state->bufp++;
+}
+
+int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
 {
     int c, browsevalue;
     SEXP value, thisExpr;
+    SrcRefState ParseState;
     Rboolean wasDisplayed = FALSE;
 
-    if(!*state->bufp) {
-	    R_Busy(0);
-	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
-			      state->buf, CONSOLE_BUFFER_SIZE, 1) == 0)
-		return(-1);
-	    state->bufp = state->buf;
-    }
-
-    while((c = *state->bufp++)) {
-	    R_IoBufferPutc(c, &R_ConsoleIob);
-	    if(c == ';' || c == '\n') break;
-    }
-
     R_PPStackTop = savestack;
-    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
+
+    state->prompt_type = 1;
+    R_InitSrcRefState(&ParseState);
+    R_CurrentExpr = R_Parse1Stream (ReplGetc, state, &state->status, 
+                                    &ParseState);
+    R_FinalizeSrcRefState(&ParseState);
     
     switch(state->status) {
 
@@ -291,21 +302,18 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
-	if (browselevel && !R_DisableNLinBrowser
+	if (state->browselevel > 0 && !R_DisableNLinBrowser
 	    && !strcmp((char *) state->buf, "\n")) return -1;
-	R_IoBufferWriteReset(&R_ConsoleIob);
-	state->prompt_type = 1;
 	return 1;
 
     case PARSE_OK:
 
-	R_IoBufferReadReset(&R_ConsoleIob);
-	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
-	if (browselevel) {
+	if (state->browselevel > 0) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
-	    if(browsevalue == 1) return -1;
+	    if(browsevalue == 1) 
+                return -1;
 	    if(browsevalue == 2) {
-		R_IoBufferWriteReset(&R_ConsoleIob);
+		*state->bufp = 0;  /* discard rest of line */
 		return 0;
 	    }
 	}
@@ -314,7 +322,9 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	resetTimeLimits();
 	PROTECT(thisExpr = R_CurrentExpr);
 	R_Busy(1);
+
 	PROTECT(value = evalv(thisExpr, rho, VARIANT_PENDING_OK));
+
 	SET_SYMVALUE(R_LastvalueSymbol, value);
 	wasDisplayed = R_Visible;
 	if (R_Visible) {
@@ -326,27 +336,21 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
 	R_CurrentExpr = value; /* Necessary? Doubt it. */
 	UNPROTECT(2);
-	R_IoBufferWriteReset(&R_ConsoleIob);
-	state->prompt_type = 1;
-	return(1);
+	return 1;
 
     case PARSE_ERROR:
 
-	state->prompt_type = 1;
 	parseError(R_NilValue, 0);
-	R_IoBufferWriteReset(&R_ConsoleIob);
-	return(1);
-
-    case PARSE_INCOMPLETE:
-
-	R_IoBufferReadReset(&R_ConsoleIob);
-	state->prompt_type = 2;
-	return(2);
+	*state->bufp = 0;  /* discard rest of line */
+	return 1;
 
     case PARSE_EOF:
 
-	return(-1);
+	return -1;
 	break;
+
+    default:
+        abort();
     }
 
     return(0);
@@ -354,21 +358,23 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 
 static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 {
+    R_ReplState state;
     int status;
-    R_ReplState state = { PARSE_NULL, 1, 0, "", NULL};
 
-    R_IoBufferWriteReset(&R_ConsoleIob);
-    state.buf[0] = '\0';
-    state.buf[CONSOLE_BUFFER_SIZE] = '\0';
-    /* stopgap measure if line > CONSOLE_BUFFER_SIZE chars */
+    state.status = PARSE_NULL;
+    state.prompt_type = 1;
+    state.browselevel = browselevel;
+    state.buf[0] = 0;
     state.bufp = state.buf;
-    if(R_Verbose)
+
+    if (R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
-    for(;;) {
-	status = Rf_ReplIteration(rho, savestack, browselevel, &state);
-	if(status < 0)
-	  return;
-    }
+
+    do {
+
+	status = Rf_ReplIteration (rho, savestack, &state);
+
+    } while (status >= 0);
 }
 
 

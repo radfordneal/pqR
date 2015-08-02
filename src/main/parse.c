@@ -1294,13 +1294,11 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
     if (!get_next_token()) {
         *status = PARSE_EOF;
-REprintf("PARSE1 A %d %d\n",*status,next_token);
         return R_CurrentExpr = R_NilValue;
     }
 
     if (next_token == END_OF_INPUT || next_token == '\n' || next_token == ';') {
         *status = PARSE_NULL;
-REprintf("PARSE1 B %d %d\n",*status,next_token);
         return R_CurrentExpr = R_NilValue;
     }
 
@@ -1310,12 +1308,10 @@ REprintf("PARSE1 B %d %d\n",*status,next_token);
 
     if (res == NULL) {
         *status = next_token == END_OF_INPUT ? PARSE_INCOMPLETE : PARSE_ERROR;
-REprintf("PARSE1 C %d %d\n",*status,next_token);
         return R_CurrentExpr = R_NilValue;
     }
 
     *status = PARSE_OK;
-REprintf("PARSE1 D %d %d\n",*status,next_token);
     return R_CurrentExpr = res;
 }
 
@@ -1369,7 +1365,6 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     Rboolean keepSource = FALSE; 
     source_location loc;
     SEXP res;
-REprintf("PARSE1BUFFER\n");
 
     R_InitSrcRefState(&ParseState);
     if (gencode) {
@@ -1426,7 +1421,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     SEXP rval, tval, tlast, cur, refs, last_ref;
     source_location loc;
     int i;
-REprintf("PARSE\n");
 
     R_InitSrcRefState(&ParseState);
     
@@ -1506,7 +1500,6 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     R_TextBufferInit(&textb, text);
     txtb = &textb;
     ptr_getc = text_getc;
-REprintf("PARSEVECTOR\n");
 
     rval = R_Parse(n, status, srcfile);
 
@@ -2407,14 +2400,13 @@ static int skip_comment (void)
 {
     Rboolean maybeLine = (ParseState.xxcolno == 1);
     int c, i;
-REprintf("skip comment: ");
+
     c = '#';
 
     if (maybeLine) {
     	static const char lineDirective[] = "#line";
     	for (i = 1; i < 5; i++) {
     	    c = xxgetc();
-REprintf("%c",c);
   	    if (c != lineDirective[i]) {
   	    	maybeLine = FALSE;
   	    	break;
@@ -2424,11 +2416,9 @@ REprintf("%c",c);
 	    c = processLineDirective();
     }
 
-    while (c != '\n' && c != R_EOF) {
+    while (c != '\n' && c != R_EOF)
 	c = xxgetc();
-REprintf("%c",c);
-    }
-REprintf("(end)\n");
+
     return c;
 }
 
