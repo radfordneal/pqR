@@ -2421,28 +2421,31 @@ static int skip_whitespace (int c)
 
 /* Set the name of the source file that text is coming from. */
 
-static void setParseFilename(SEXP newname) {
-
+static void set_parse_filename(SEXP newname) 
+{
     SEXP class;
+
+    if (!isEnvironment(ParseState.SrcFile)) 
+        return;
+
     PROTECT(newname);    
 
-    if (isEnvironment(ParseState.SrcFile)) {
-    	SEXP oldname = findVar(install("filename"), ParseState.SrcFile);
-    	if (isString(oldname) && length(oldname) > 0 &&
-    	    strcmp(CHAR(STRING_ELT(oldname, 0)),
-    	           CHAR(STRING_ELT(newname, 0))) == 0) return;
-	REPROTECT(ParseState.SrcFile =
-                    NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
-                  ParseState.SrcFileProt);
-	defineVar(install("filename"), newname, ParseState.SrcFile);
-    }
+    SEXP oldname = findVar(install("filename"), ParseState.SrcFile);
+    if (isString(oldname) && length(oldname) > 0 &&
+         strcmp (CHAR(STRING_ELT(oldname,0)), CHAR(STRING_ELT(newname,0))) == 0)
+        return;
+
+    REPROTECT(ParseState.SrcFile =
+                 NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
+              ParseState.SrcFileProt);
+    defineVar(install("filename"), newname, ParseState.SrcFile);
 
     if (ParseState.keepSrcRefs) {
-	defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
+        defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
         PROTECT(class = allocVector(STRSXP, 2));
         SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
         SET_STRING_ELT(class, 1, mkChar("srcfile"));
-	setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
+        setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
         UNPROTECT(1);
     } 
 
@@ -2468,7 +2471,7 @@ static int processLineDirective()
     else
     	xxungetc(c);
     if (tok == STR_CONST) 
-	setParseFilename(next_token_val);
+	set_parse_filename(next_token_val);
 
     while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
 
