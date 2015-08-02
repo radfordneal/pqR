@@ -2467,6 +2467,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"*",		do_arith,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
 {"/",		do_arith,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
 {"^",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
+{"**",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
 {"%%",		do_arith,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 {"%/%",		do_arith,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 

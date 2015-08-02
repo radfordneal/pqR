@@ -2529,11 +2529,11 @@ static int token (int c)
     case '-':
 	if (nextchar('>')) {
 	    if (nextchar('>')) {
-		next_token_val = R_GlobalAssignSymbol; /* switch R to L */
+		next_token_val = R_GlobalRightAssignSymbol;
 		return RIGHT_ASSIGN;
 	    }
 	    else {
-		next_token_val = R_LocalAssignSymbol;  /* switch R to L */
+		next_token_val = R_LocalRightAssignSymbol;
 		return RIGHT_ASSIGN;
 	    }
 	}
@@ -2614,13 +2614,10 @@ static int token (int c)
 	next_token_val = R_QuerySymbol;
 	return c;
     case '*':
-	/* Replace ** by ^.  This has been here since 1998, but is
-	   undocumented (at least in the obvious places).  It is in
-	   the index of the Blue Book with a reference to p. 431, the
-	   help for 'Deprecated'.  S-PLUS 6.2 still allowed this, so
-	   presumably it was for compatibility with S. */
 	if (nextchar('*')) {
-	    next_token_val = R_ExptSymbol;  /* replace by ^ for now */
+            /* We accept ** as a synonym for ^, with its own primitive
+               definition, but return '^' as the token type. */
+	    next_token_val = R_Expt2Symbol;
             return '^';
         }
         next_token_val = R_MulSymbol;
