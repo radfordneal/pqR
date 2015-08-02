@@ -1,2 +1,5 @@
 Mods to the new parser and deparser.  The new parser now replaces the
 old parser.
+
+ReplIteration has been (will be) changed to no longer employ a
+horrible kludge regarding semicolons, and otherwise be more sane.

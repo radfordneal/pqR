@@ -262,13 +262,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 		return(-1);
 	    state->bufp = state->buf;
     }
-#ifdef SHELL_ESCAPE /* not default */
-    if (*state->bufp == '!') {
-	    R_system(&(state->buf[1]));
-	    state->buf[0] = '\0';
-	    return(0);
-    }
-#endif /* SHELL_ESCAPE */
+
     while((c = *state->bufp++)) {
 	    R_IoBufferPutc(c, &R_ConsoleIob);
 	    if(c == ';' || c == '\n') break;

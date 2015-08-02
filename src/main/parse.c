@@ -264,33 +264,32 @@ cr	:
 /* Codes for token types.  ASCII codes for single characters also act as
    token numbers.  
 
-   The MAYBE_END type is returned at the end of a line of interactive
-   input text from the console, and is treated as end of file if the
-   expression could end there, or as nothing otherwise.  Note that end
-   of line is not otherwise returned as a token, but instead results
-   in newline_before_token being set when the following token is returned. */
+   Note that '\n' is returned at the end of a line of input text, and
+   is treated the same as end of file if the expression could end
+   there.  Otherwise, it is skipped as a token, except that
+   newline_before_token is set when the following token is returned. */
 
 enum token_type {
-  MAYBE_END=256, END_OF_INPUT,  ERROR,     STR_CONST,        NUM_CONST,
-  SYMBOL,        LEFT_ASSIGN,   EQ_ASSIGN, RIGHT_ASSIGN,     NULL_CONST,
-  FUNCTION,      LBB,           FOR,       IN,               IF,
-  ELSE,          WHILE,         NEXT,      BREAK,            REPEAT,
-  GT,            GE,            LT,        LE,               EQ,
-  NE,            AND,           OR,        AND2,             OR2,
-  NS_GET,        NS_GET_INT,    SPECIAL
+  UNUSED=256,   END_OF_INPUT,   ERROR,     STR_CONST,        NUM_CONST,
+  SYMBOL,       LEFT_ASSIGN,    EQ_ASSIGN, RIGHT_ASSIGN,     NULL_CONST,
+  FUNCTION,     LBB,            FOR,       IN,               IF,
+  ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
+  GT,           GE,             LT,        LE,               EQ,
+  NE,           AND,            OR,        AND2,             OR2,
+  NS_GET,       NS_GET_INT,     SPECIAL
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
    with the codes for token types above.  They are used for error messages. */
 
 static const char *const token_name[] = {
-  "end of input","end of input","input",   "string constant","numeric constant",
-  "symbol",      "assignment",  "=",       "->",             "'NULL'",
-  "'function'",  "'[['",        "'for'",   "'in'",           "'if'",
-  "'else'",      "'while'",     "'next'",  "'break'",        "'repeat'",
-  "'>'",         "'>='",        "'<'",     "'<='",           "'=='",
-  "'!='",        "'&'",         "'|'",     "'&&'",           "'||'",
-  "'::'",        "':::'",       "SPECIAL"
+  "input",      "end of input", "input",   "string constant","numeric constant",
+  "symbol",     "assignment",   "=",       "->",             "'NULL'",
+  "'function'", "'[['",         "'for'",   "'in'",           "'if'",
+  "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
+  "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
+  "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
+  "'::'",       "':::'",        "SPECIAL"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -312,7 +311,7 @@ static int next_token;            /* The next token, as an integer code */
 static SEXP next_token_val;       /* The value associated with next_token. */
 static int newline_before_token;  /* 1 if next token was preceded by '\n' */
 
-static void get_next_token(void); /* Update next_token to the next one */
+static int get_next_token(void);  /* Update next_token to the next one */
 
 
 /* Record of the start and end of part of the source text.  See the
@@ -345,10 +344,7 @@ static SrcRefState ParseState;
    INTERFACE FROM THE LEXICAL ANALYSER TO CHARACTER INPUT ROUTINES
 
    The xxgetc function returns the next character; xxungetc pushes
-   a character back to be returned by xxgetc later.  The character
-   returned may be SOFT_EOF, indicating the newline at the end of
-   a line of interactive console input (which might be the end if
-   that is syntactically allowed). 
+   a character back to be returned by xxgetc later.
 
    The xxgetc function gets a character by calling the function pointed 
    to by ptr_getc, which is set to different functions for different
@@ -366,8 +362,6 @@ static SrcRefState ParseState;
 
 static int xxgetc();
 static void xxungetc(int);
-
-#define SOFT_EOF (EOF == -1 ? -2 : -1)  /* NL on interactive input */
 
 static int (*ptr_getc)(void);     /* Function to call to get a character */
 
@@ -422,9 +416,9 @@ static int xxgetc(void)
 	return R_EOF;
 
     R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    R_ParseContext[R_ParseContextLast] = c == SOFT_EOF ? '\n' : c;
+    R_ParseContext[R_ParseContextLast] = c;
 
-    if (R_ParseContext[R_ParseContextLast] == '\n') {
+    if (c == '\n') {
 	ParseState.xxlineno += 1;
 	ParseState.xxcolno = 0;
     	ParseState.xxbyteno = 0;
@@ -666,17 +660,16 @@ static void error_msg(const char *s)
 
 
 /* Look at the next token, which will usually already be in next_token.
-   However, if next_token is MAYBE_END, advance to the next real token
-   first. */
+   However, if next_token is '\n', advance to the next token first. */
 
 #define NEXT_TOKEN \
-  (next_token == MAYBE_END ? get_next_token_not_maybe_end() : next_token) 
+  (next_token == '\n' ? get_next_token_not_newline() : next_token) 
 
-static int get_next_token_not_maybe_end(void)
+static int get_next_token_not_newline(void)
 {
     do { 
         get_next_token(); 
-    } while (next_token == MAYBE_END);
+    } while (next_token == '\n');
 
     newline_before_token = 1;
 
@@ -785,8 +778,7 @@ static int unary_op(void)
     if (NEXT_TOKEN == SYMBOL)
         return 0;
 
-   /* But a symbol corresponding to the operator will be in next_token_val
-      (since the reference to NEXT_TOKEN above will force out MAYBE_END).
+   /* A symbol corresponding to an operator will be in next_token_val.
       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
     sym = next_token_val;
@@ -818,8 +810,7 @@ static int binary_op(void)
     if (NEXT_TOKEN == SYMBOL)
         return 0;
 
-   /* But a symbol corresponding to the operator will be in next_token_val
-      (since the reference to NEXT_TOKEN above will force out MAYBE_END).
+   /* A symbol corresponding to an operator will be in next_token_val.
       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
     sym = next_token_val;
@@ -850,8 +841,8 @@ static int binary_op(void)
    Parsing routines are called with next_token already set to the first
    token of the construct they parse, and return with next_token set to
    the token after the construct they parsed.  Note, however, that this
-   token may be MAYBE_END, which is a "soft" end-of-file that is replaced
-   by an actual token if the token is accessed via NEXT_TOKEN rather than
+   token may be '\n', which acts as a "soft" end-of-file that is replaced
+   by another token if the token is accessed via NEXT_TOKEN rather than
    next_token. 
 
    Source references are attached if keep_source is non-zero. */
@@ -990,8 +981,9 @@ static SEXP parse_sublist (int flags, int *stat)
 }
 
 
-/* Parse an expression, with any non-enclosed operator having precedence 
-   greater than prec. */
+/* Parse an expression in which any non-enclosed operator has precedence 
+   greater than prec.  An attempt is made to make the last operand of an
+   operator be a constant objects. */
 
 static SEXP parse_expr (int prec, int flags, int *stat)
 {
@@ -1286,8 +1278,8 @@ static SEXP parse_expr (int prec, int flags, int *stat)
 }
 
 
-/* Top level parse function, parsing an expression or assignments with =,
-   which is followed by newline or ';' or end of file. */
+/* Top level parse function, parsing an expression (including assignment
+   with '=') that is followed by ';', newline, or end of file. */
 
 static SEXP parse_prog (int flags, int *stat)
 {
@@ -1295,16 +1287,8 @@ static SEXP parse_prog (int flags, int *stat)
     SEXP res;
 
     PARSE_SUB (res = parse_expr (0, flags, stat));
-
-    /* By first checking newline_before_token, we avoid forcing MAYBE_END
-       to be replaced by an actual token when taking interactive input,
-       or input from a file in R_Parse1File. */
        
-    if (newline_before_token || NEXT_TOKEN == END_OF_INPUT)
-        ; /* OK */
-    else if (NEXT_TOKEN == ';')
-        get_next_token();
-    else
+    if (!newline_before_token && NEXT_TOKEN != ';')
         PARSE_UNEXPECTED();
 
     END_PARSE_FUN;
@@ -1324,14 +1308,15 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     SEXP res;
     int stat;
 
-    if (NEXT_TOKEN == END_OF_INPUT) {
+    if (!get_next_token()) {
         *status = PARSE_EOF;
+REprintf("PARSE1 A %d %d\n",*status,next_token);
         return R_CurrentExpr = R_NilValue;
     }
 
-    if (NEXT_TOKEN == ';') {
-        get_next_token();
+    if (next_token == END_OF_INPUT || next_token == '\n' || next_token == ';') {
         *status = PARSE_NULL;
+REprintf("PARSE1 B %d %d\n",*status,next_token);
         return R_CurrentExpr = R_NilValue;
     }
 
@@ -1341,10 +1326,12 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
     if (res == NULL) {
         *status = next_token == END_OF_INPUT ? PARSE_INCOMPLETE : PARSE_ERROR;
+REprintf("PARSE1 C %d %d\n",*status,next_token);
         return R_CurrentExpr = R_NilValue;
     }
 
     *status = PARSE_OK;
+REprintf("PARSE1 D %d %d\n",*status,next_token);
     return R_CurrentExpr = res;
 }
 
@@ -1360,9 +1347,7 @@ extern int R_fgetc(FILE*);
 
 static int file_getc(void)
 {
-    int c;
-    c = R_fgetc(fp_parse);
-    return c == '\n' ? SOFT_EOF : c;
+    return R_fgetc(fp_parse);
 }
 
 /* used in main.c */
@@ -1371,6 +1356,7 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
 {
     source_location loc;
     SEXP res;
+REprintf("PARSE1FILE\n");
 
     UseSrcRefState(state);
     ParseInit();
@@ -1378,7 +1364,6 @@ SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state
     ptr_getc = file_getc;
 
     keep_source = gencode && state->keepSrcRefs;
-    get_next_token();
     res = R_Parse1(status,&loc);
 
     PutSrcRefState(state);
@@ -1400,6 +1385,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     Rboolean keepSource = FALSE; 
     source_location loc;
     SEXP res;
+REprintf("PARSE1BUFFER\n");
 
     R_InitSrcRefState(&ParseState);
     if (gencode) {
@@ -1419,7 +1405,6 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
     ptr_getc = buffer_getc;
 
     keep_source = gencode && ParseState.keepSrcRefs;
-    get_next_token();
     res = R_Parse1(status,&loc);
     if (!gencode) res = R_NilValue;
 
@@ -1457,6 +1442,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     SEXP rval, tval, tlast, cur, refs, last_ref;
     source_location loc;
     int i;
+REprintf("PARSE\n");
 
     R_InitSrcRefState(&ParseState);
     
@@ -1477,7 +1463,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
         PROTECT(refs = R_NilValue);
     
     keep_source = ParseState.keepSrcRefs;
-    get_next_token();
 
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
@@ -1528,6 +1513,7 @@ SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
 {
     fp_parse = fp;
     ptr_getc = file_getc;
+REprintf("PARSEFILE\n");
 
     return R_Parse(n, status, srcfile);
 }
@@ -1548,6 +1534,7 @@ SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 {
     conn_parse = con;
     ptr_getc = conn_getc;
+REprintf("PARSECON\n");
 
     return R_Parse(n, status, srcfile);
 }
@@ -1557,8 +1544,7 @@ static TextBuffer *txtb;
 
 static int text_getc(void)
 {
-    int c = R_TextBufferGetc(txtb);
-    return c;
+    return R_TextBufferGetc(txtb);
 }
 
 /* This one is public, and used in source.c */
@@ -1569,6 +1555,7 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     R_TextBufferInit(&textb, text);
     txtb = &textb;
     ptr_getc = text_getc;
+REprintf("PARSEVECTOR\n");
 
     rval = R_Parse(n, status, srcfile);
 
@@ -1595,7 +1582,7 @@ static int console_getc(void)
     c = R_IoBufferGetc(iob);
     if (c == EOF) {
         need_console_read = 1;
-        return SOFT_EOF;
+        return '\n';
     }
     return c;
 }
@@ -1608,6 +1595,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     SEXP rval, tval, tlast, cur, refs, last_ref;
     int c, i;
     source_location loc;
+REprintf("PARSEBUFFER\n");
 
     prompt_string = isString(prompt) && LENGTH(prompt) > 0
                      ? CHAR(STRING_ELT(prompt,0)) 
@@ -2385,12 +2373,11 @@ static int SymbolValue(int c)
 }
 
 
-/* Skip whitespace characters.  The argument says whether or not to stop 
-   when a newline is encountered.  Returns the character after the whitespace
-   (possibly '\n', R_EOF, or SOFT_EOF).   Sets newline_before_token to 1 
-   if a newline is seen (but doesn't set it to 0 if not). */
+/* Skip whitespace characters, starting with the character passed,
+   and stopping on '\n', R_EOF, or a non-whitespace character.  The 
+   character stopped on is returned. */
 
-static int SkipSpace(int stop_on_nl)
+static int skip_whitespace (int c)
 {
     int NBSP = ' ';
 
@@ -2403,42 +2390,32 @@ static int SkipSpace(int stop_on_nl)
     if (!mbcslocale) NBSP = 0xa0; /* 0xa0 is NBSP in 8-bit Windows locales */
 #endif 
 
-    int c;
+    for (;;) {
 
-    while (1) {
+        if (c == '\n' || c == R_EOF)
+            return c;
+
+        if (c != ' ' && c != '\t' && c != '\f' && c != NBSP) {
+#           if defined(Win32) || defined(__STDC_ISO_10646__)
+            {   if (mbcslocale) {
+                    if ((unsigned int) c < 0x80)
+                        return c;
+                    clen = mbcs_get_next(c, &wc);
+                    if ( ! Ri18n_iswctype (wc, Ri18n_wctype("blank")))
+                        return c;
+                    for (i = 1; i < clen; i++)
+                        c = xxgetc();
+                }
+                else
+                    return c;
+            }
+#           else
+                return c;
+#           endif
+        }
 
         c = xxgetc();
-
-        if (c == ' ' || c == '\t' || c == '\f' || c == NBSP) 
-            continue;
-
-        if (c == '\n') { 
-            if (stop_on_nl) break;
-            newline_before_token = 1;
-            continue;
-        }
-
-        if (c == R_EOF || c == SOFT_EOF) {
-            newline_before_token = 1;
-            break;
-        }
-
-#       if defined(Win32) || defined(__STDC_ISO_10646__)
-            if (mbcslocale) {
-                if ((unsigned int) c < 0x80)
-                    break;
-                clen = mbcs_get_next(c, &wc);
-                if ( ! Ri18n_iswctype (wc, Ri18n_wctype("blank")))
-                    break;
-                for (i = 1; i < clen; i++)
-                    c = xxgetc();
-            }
-#       endif
-
-        break;
     }
-
-    return c;
 }
 
 
@@ -2480,12 +2457,12 @@ static int processLineDirective()
 {
     int c, tok, linenumber;
 
-    c = SkipSpace(1);
-    if (!isdigit(c)) return(c);
-
+    c = skip_whitespace(xxgetc());
+    if (!isdigit(c)) 
+        return c;
     tok = NumericValue(c);
     linenumber = atoi(yytext);
-    c = SkipSpace(1);
+    c = skip_whitespace(xxgetc());
     if (c == '"') 
         tok = StringValue(c, FALSE);
     else
@@ -2493,7 +2470,7 @@ static int processLineDirective()
     if (tok == STR_CONST) 
 	setParseFilename(next_token_val);
 
-    while ((c = xxgetc()) != '\n' && c != R_EOF && c != SOFT_EOF) /* skip */ ;
+    while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
 
     ParseState.xxlineno = linenumber;
 
@@ -2503,23 +2480,27 @@ static int processLineDirective()
 
     R_ParseContext[R_ParseContextLast] = '\0'; 
 
-    return(c);
+    return c;
 }
 
 
-/* Skip a comment, returning the character ending it ('\n', R_EOF, or SOFT_EOF).
-   Also processes comments that are #line directives. */
+/* Skip a comment, returning the character ending it ('\n' or R_EOF).
+   Also processes comments that are #line directives.  The initial #
+   will have already been read. */
 
-static int SkipComment(void)
+static int skip_comment (void)
 {
-    int c='#', i;
     Rboolean maybeLine = (ParseState.xxcolno == 1);
+    int c, i;
+REprintf("skip comment: ");
+    c = '#';
 
     if (maybeLine) {
     	static const char lineDirective[] = "#line";
-    	for (i=1; i<5; i++) {
+    	for (i = 1; i < 5; i++) {
     	    c = xxgetc();
-  	    if (c != (int)(lineDirective[i])) {
+REprintf("%c",c);
+  	    if (c != lineDirective[i]) {
   	    	maybeLine = FALSE;
   	    	break;
   	    }
@@ -2528,14 +2509,16 @@ static int SkipComment(void)
 	    c = processLineDirective();
     }
 
-    while (c != '\n' && c != R_EOF && c != SOFT_EOF) 
+    while (c != '\n' && c != R_EOF) {
 	c = xxgetc();
-
+REprintf("%c",c);
+    }
+REprintf("(end)\n");
     return c;
 }
 
 
-/* Called following '.'.  We only care if it's an ANSI digit or not */
+/* Called following '.'.  We only care if it's an ANSI digit or not. */
 
 static int nextisdigit(void)
 {
@@ -2581,15 +2564,11 @@ static int token (int c)
     /* Hard and soft end of file.  Soft end of file comes at the end of a
        line of interactive input, which may or may not be the actual end. */
 
-    if (c == R_EOF) {
-        newline_before_token = 1;
+    if (c == R_EOF)
         return END_OF_INPUT;
-    }
 
-    if (c == SOFT_EOF) {
-        newline_before_token = 1;
-        return MAYBE_END;
-    }
+    if (c == '\n')
+        return c;
 
     /* Literal numbers - since either digits or symbols can start with '.',
        we need to check whether the next character is a digit. */
@@ -2765,37 +2744,46 @@ static int token (int c)
 }
 
 
-/* Get the next token (after skipping whitespace) and put it in 
-   next_token.  Also sets next_token_val, newline_before_token, 
-   token_loc, and prev_token_loc. */
+/* Get the next token after skipping whitespace and put it in
+   next_token.  Also sets next_token_val, newline_before_token,
+   token_loc, and prev_token_loc.  Always sets newline_before_token
+   to 1 when returning END_OF_INPUT or '\n', regardless of 
+   whether a newline was actually present before. 
 
-static void get_next_token(void)
+   Returns 0 if end of file was immediately encountered, with no
+   whitespace before, and 1 if not (even when END_OF_INPUT is the 
+   next token). */
+
+static int get_next_token(void)
 {
-    int c;
+    int c, val;
 
     prev_token_loc = token_loc;
 
     newline_before_token = 0;
-    for (;;) {
-        c = SkipSpace(0);
-        if (c == '#') 
-            c = SkipComment();
-        if (c != '\n') 
-            break;
-        newline_before_token = 1;
-    }
 
-    token_loc.first_line = ParseState.xxlineno;
+    c = xxgetc();
+    val = c != R_EOF;
+
+    c = skip_whitespace(c);
+    if (c == '#')
+        c = skip_comment();
+    if (c == '\n' || c == R_EOF)
+        newline_before_token = 1;
+
+    token_loc.first_line   = ParseState.xxlineno;
     token_loc.first_column = ParseState.xxcolno;
-    token_loc.first_byte = ParseState.xxbyteno;
+    token_loc.first_byte   = ParseState.xxbyteno;
     token_loc.first_parsed = ParseState.xxparseno;
 
     next_token = token(c);
 
-    token_loc.last_line   = ParseState.xxlineno;
-    token_loc.last_column = ParseState.xxcolno;
-    token_loc.last_byte   = ParseState.xxbyteno;
-    token_loc.last_parsed = ParseState.xxparseno;
+    token_loc.last_line    = ParseState.xxlineno;
+    token_loc.last_column  = ParseState.xxcolno;
+    token_loc.last_byte    = ParseState.xxbyteno;
+    token_loc.last_parsed  = ParseState.xxparseno;
+
+    return val;
 }
 
 
