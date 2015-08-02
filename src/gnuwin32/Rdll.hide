@@ -144,10 +144,7 @@
  R_PPStack
  R_PPStackSize
  R_PPStackTop
- R_Parse1Buffer
- R_Parse1File
- R_ParseBuffer
- R_ParseConn
+ R_Parse1Stream
  R_ParseContext
  R_ParseContextLast
  R_ParseContextLine

@@ -46,13 +46,11 @@
    same functionality; they just set things up in slightly different
    ways.
  
-   The following routines parse a single expression:
+   The following routine parses a single expression:
  
        SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
                             ParseStatus *status, SrcRefState *state);
 
-       SEXP R_Parse1Buffer (IoBuffer *buffer, int gencode, ParseStatus *status)
- 
    The following routines parse several expressions and return their
    values in a single expression vector.
  
@@ -69,10 +67,6 @@
  		 PARSE_ERROR      - syntax error
  		 PARSE_EOF	  - end of file
  
-   In ReplIteration and Replconsole in main.c, the INCOMPLETE status is used
-   to determine the number of lines to read for interactive input, with 
-   additional lines being read until INCOMPLETE status is no longer returned.
-
    R_InitSrcRefState and R_FinalizeSrcRefState are also currently exposed.
 
    All the above are declared in Parse.h and R_ext/Parse.h.
@@ -1352,71 +1346,6 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 }
 
 
-static IoBuffer *iob;
-
-static int buffer_getc(void)
-{
-    return R_IoBufferGetc(iob);
-}
-
-/* Used only in main.c */
-attribute_hidden
-SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
-{
-    Rboolean keepSource = FALSE; 
-    source_location loc;
-    SEXP res;
-
-    R_InitSrcRefState(&ParseState);
-    if (gencode) {
-    	keepSource = asLogical(GetOption1(install("keep.source")));
-    	if (keepSource) {
-    	    ParseState.keepSrcRefs = TRUE;
-    	    REPROTECT(ParseState.SrcFile = 
-                        NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv),
-                        ParseState.SrcFileProt);
-	    REPROTECT(ParseState.Original = ParseState.SrcFile, 
-                        ParseState.OriginalProt);
-	}
-    }
-
-    ParseInit();
-    iob = buffer;
-    ptr_getc = buffer_getc;
-
-    keep_source = gencode && ParseState.keepSrcRefs;
-    res = R_Parse1(status,&loc);
-    if (!gencode) res = R_NilValue;
-
-    if (gencode && keepSource) {
-    	if (ParseState.didAttach) {
-            SEXP filename_install = install("filename");  /* protected by the */
-            SEXP lines_install = install("lines");        /*   symbol table   */
-   	    int buflen = R_IoBufferReadOffset(buffer);
-   	    char buf[buflen+1];
-   	    SEXP class;
-   	    R_IoBufferReadReset(buffer);
-   	    for (int i=0; i<buflen; i++)
-   	    	buf[i] = R_IoBufferGetc(buffer);
-
-   	    buf[buflen] = 0;
-    	    defineVar (filename_install, ScalarString(mkChar("")), 
-                       ParseState.Original);
-    	    defineVar (lines_install, ScalarString(mkChar(buf)),
-                       ParseState.Original);
-    	    PROTECT(class = allocVector(STRSXP, 2));
-            SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
-            SET_STRING_ELT(class, 1, mkChar("srcfile"));
-	    setAttrib(ParseState.Original, R_ClassSymbol, class);
-	    UNPROTECT(1);
-	}
-    }
-
-    R_FinalizeSrcRefState(&ParseState);
-    return res;
-}
-
-
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
     SEXP rval, tval, tlast, cur, refs, last_ref;
@@ -1493,7 +1422,6 @@ static int text_getc(void)
     return R_TextBufferGetc(txtb);
 }
 
-/* This one is public, and used in source.c */
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
     SEXP rval;
@@ -2338,8 +2266,10 @@ static void set_parse_filename(SEXP newname)
 
     SEXP oldname = findVar(install("filename"), ParseState.SrcFile);
     if (isString(oldname) && length(oldname) > 0 &&
-         strcmp (CHAR(STRING_ELT(oldname,0)), CHAR(STRING_ELT(newname,0))) == 0)
+         strcmp (CHAR(STRING_ELT(oldname,0)), CHAR(STRING_ELT(newname,0)))==0) {
+        UNPROTECT(1);
         return;
+    }
 
     REPROTECT(ParseState.SrcFile =
                  NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),

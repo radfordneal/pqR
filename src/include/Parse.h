@@ -47,7 +47,6 @@ void R_InitSrcRefState(SrcRefState *state);
 void R_FinalizeSrcRefState(SrcRefState *state);
 
 SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
-SEXP R_Parse1Buffer(IoBuffer*, int, ParseStatus *); /* in ReplIteration */
 
 	/* Report a parse error */
 	
