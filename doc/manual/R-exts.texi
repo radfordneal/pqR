@@ -11613,33 +11613,7 @@ internal defaults are used and that control is handed over to the
 @R{} main loop.  There are a number of small examples@footnote{but these
 are not part of the automated test procedures and so little tested.} in the
 @file{tests/Embedding} directory.  These make use of
-@code{Rf_initEmbeddedR} in @file{src/main/Rembedded.c}, and essentially
-use
-@example
-#include <Rembedded.h>
-
-int main(int ac, char **av)
-@{
-    /* do some setup */
-    Rf_initEmbeddedR(argc, argv);
-    /* do some more setup */
-
-    /* submit some code to R, which is done interactively via
-        run_Rmainloop();
-
-        A possible substitute for a pseudo-console is
-
-        R_ReplDLLinit();
-        while(R_ReplDLLdo1() > 0) @{
-        /* add user actions here if desired */
-       @}
-
-     */
-    Rf_endEmbeddedR(0);
-    /* final tidying up after R is shutdown */
-    return 0;
-@}
-@end example
+@code{Rf_initEmbeddedR} in @file{src/unix/Rembedded.c}.
 
 @noindent
 If you don't want to pass @R{} arguments, you can fake an @code{argv}

@@ -38,7 +38,6 @@ extern int UserBreak;
 extern char *getDLLVersion(), *getRUser(), *get_R_HOME();
 extern void R_DefParams(Rstart), R_SetParams(Rstart), R_setStartTime();
 extern void ProcessEvents(void);
-extern int R_ReplDLLdo1();
 
 
 /* simple input, simple output */
