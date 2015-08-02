@@ -46,17 +46,8 @@ typedef struct {
 void R_InitSrcRefState(SrcRefState *state);
 void R_FinalizeSrcRefState(SrcRefState *state);
 
-SEXP R_Parse1Buffer(IoBuffer*, int, ParseStatus *); /* in ReplIteration,
-						       R_ReplDLLdo1 */
-SEXP R_ParseBuffer(IoBuffer*, int, ParseStatus *, SEXP, SEXP); /* in source.c */
-SEXP R_Parse1File(FILE*, int, ParseStatus *, SrcRefState *); /* in R_ReplFile */
-SEXP R_ParseFile(FILE*, int, ParseStatus *, SEXP);  /* in edit.c */
-
-#ifndef HAVE_RCONNECTION_TYPEDEF
-typedef struct Rconn  *Rconnection;
-#define HAVE_RCONNECTION_TYPEDEF
-#endif
-SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile);
+SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
+SEXP R_Parse1Buffer(IoBuffer*, int, ParseStatus *); /* in ReplIteration */
 
 	/* Report a parse error */
 	

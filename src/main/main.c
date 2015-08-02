@@ -126,7 +126,12 @@ static int ParseBrowser(SEXP, SEXP);
 
 extern void InitDynload(void);
 
-	/* Read-Eval-Print Loop [ =: REPL = repl ] with input from a file */
+
+/* Read-Eval-Print Loop [ =: REPL = repl ] with input from a file */
+
+extern int R_fgetc (FILE*);
+
+static int file_getc (void *fp) { return R_fgetc ((FILE *) fp); }
 
 static void R_ReplFile(FILE *fp, SEXP rho)
 {
@@ -137,26 +142,35 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     
     R_InitSrcRefState(&ParseState);
     savestack = R_PPStackTop;    
+
     for(;;) {
 	R_PPStackTop = savestack;
-	R_CurrentExpr = R_Parse1File(fp, 1, &status, &ParseState);
+
+	R_CurrentExpr = R_Parse1Stream (file_getc, fp, &status, &ParseState);
+
 	switch (status) {
 	case PARSE_NULL:
 	    break;
+
 	case PARSE_OK:
+
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
 	    count++;
+
 	    PROTECT(R_CurrentExpr);
 	    R_CurrentExpr = eval(R_CurrentExpr, rho);
 	    SET_SYMVALUE(R_LastvalueSymbol, R_CurrentExpr);
 	    UNPROTECT(1);
+
 	    if (R_Visible)
 		PrintValueEnv(R_CurrentExpr, rho);
 	    if( R_CollectWarnings )
 		PrintWarnings();
+
 	    break;
+
 	case PARSE_ERROR:
 	    parseError(R_NilValue, R_ParseError);
 	    break;

@@ -48,22 +48,20 @@
  
    The following routines parse a single expression:
  
-       SEXP R_Parse1File (FILE *fp, int gencode, ParseStatus *status, 
-                           SrcRefState *state)
-         (used for R_ReplFile in main.c)
- 
-       SEXP R_Parse1Buffer (IoBuffer *buffer, int gencode, ParseStatus *status)
+       SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
+                            ParseStatus *status, SrcRefState *state);
 
-         (used for ReplIteration and R_ReplDLLdo1 in main.c)
+       SEXP R_Parse1Buffer (IoBuffer *buffer, int gencode, ParseStatus *status)
  
    The following routines parse several expressions and return their
    values in a single expression vector.
  
        SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
 
-         (public, and used by parse(text=) in file source.c)
- 
-   The success of the parse is indicated as folllows:
+       SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
+                           ParseStatus *status, SEXP srcfile);
+
+   The success of the parse is indicated as follows:
  
  	status = PARSE_NULL       - there was no statement to parse
  		 PARSE_OK	  - complete statement
@@ -1327,33 +1325,33 @@ REprintf("PARSE1 D %d %d\n",*status,next_token);
    See the documentation at the start of this module. */
 
 
-static FILE *fp_parse;
+static void *stream_getc_arg;
+static int (*stream_getc)(void *);
 
-extern int R_fgetc(FILE*);
-
-static int file_getc(void)
-{
-    return R_fgetc(fp_parse);
+static int call_stream_getc(void)
+{ 
+    return (*stream_getc)(stream_getc_arg);
 }
 
-/* used in main.c */
-attribute_hidden
-SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
+
+attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg, 
+                                      ParseStatus *status, SrcRefState *state)
 {
     source_location loc;
     SEXP res;
-REprintf("PARSE1FILE\n");
+
+    stream_getc = getc;
+    stream_getc_arg = getc_arg;
+    ptr_getc = call_stream_getc;
 
     UseSrcRefState(state);
     ParseInit();
-    fp_parse = fp;
-    ptr_getc = file_getc;
 
-    keep_source = gencode && state->keepSrcRefs;
-    res = R_Parse1(status,&loc);
+    keep_source = state->keepSrcRefs;
+    res = R_Parse1 (status, &loc);
 
     PutSrcRefState(state);
-    return gencode ? res : R_NilValue;
+    return res;
 }
 
 
@@ -1516,14 +1514,6 @@ REprintf("PARSEVECTOR\n");
     return rval;
 }
 
-
-static void *stream_getc_arg;
-static int (*stream_getc)(void *);
-
-static int call_stream_getc(void)
-{ 
-    return (*stream_getc)(stream_getc_arg);
-}
 
 SEXP R_ParseStream (int (*getc) (void *), void *getc_arg, 
                     int n, ParseStatus *status, SEXP srcfile)
