@@ -254,7 +254,7 @@ enum token_type {
   ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
-  NS_GET,       NS_GET_INT,     SPECIAL
+  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -267,7 +267,7 @@ static const char *const token_name[] = {
   "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
-  "'::'",       "':::'",        "SPECIAL"
+  "'::'",       "':::'",        "**",      "SPECIAL"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -2546,10 +2546,10 @@ static int token (int c)
 	return c;
     case '*':
 	if (nextchar('*')) {
-            /* We accept ** as a synonym for ^, with its own primitive
-               definition, but return '^' as the token type. */
+            /* We accept ** as a synonym for ^, with its own token type 
+               and primitive definition. */
 	    next_token_val = R_Expt2Symbol;
-            return '^';
+            return EXPT2;
         }
         next_token_val = R_MulSymbol;
 	return c;
