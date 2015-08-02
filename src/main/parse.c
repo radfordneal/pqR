@@ -1614,6 +1614,25 @@ REprintf("PARSEBUFFER\n");
 }
 
 
+static void *stream_getc_arg;
+static int (*stream_getc)(void *);
+
+static int call_stream_getc(void)
+{ 
+    return (*stream_getc)(stream_getc_arg);
+}
+
+SEXP R_ParseStream (int (*getc) (void *), void *getc_arg, 
+                    int n, ParseStatus *status, SEXP srcfile)
+{
+    stream_getc = getc;
+    stream_getc_arg = getc_arg;
+    ptr_getc = call_stream_getc;
+
+    return R_Parse (n, status, srcfile);
+}
+
+
 /* --------------------------------------------------------------------------
    TEXT BUFFER
 

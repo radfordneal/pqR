@@ -39,6 +39,7 @@ typedef enum {
 } ParseStatus;
 
 SEXP R_ParseVector(SEXP, int, ParseStatus *, SEXP);
+SEXP R_ParseStream(int (*)(void *), void *, int, ParseStatus *, SEXP);
 
 #ifdef __cplusplus
 }

@@ -180,22 +180,38 @@ void attribute_hidden parseError(SEXP call, int linenum)
     UNPROTECT(1);
 }
 
-static void con_cleanup(void *data)
+/* "do_parse" - the user interface for parsing
+
+   .Internal( parse(file, n, text, prompt, srcfile, encoding) )
+   If there is text then that is read and the other arguments are ignored. */
+
+static void conn_cleanup(void *data)
 {
     Rconnection con = data;
     if(con->isopen) con->close(con);
 }
 
-/* "do_parse" - the user interface input/output to files.
+static int conn_getc (void *con) { return Rconn_fgetc ((Rconnection) con); }
 
- The internal R_Parse.. functions are defined in ./gram.y (-> gram.c)
+static unsigned char console_buf[CONSOLE_BUFFER_SIZE];
+static unsigned char *console_bufp;
 
- .Internal( parse(file, n, text, prompt, srcfile, encoding) )
- If there is text then that is read and the other arguments are ignored.
-*/
+static int console_getc (void *prompt_string)
+{
+    while (*console_bufp == 0) {
+        if (R_ReadConsole ((const char *) prompt_string, console_buf, 
+                           CONSOLE_BUFFER_SIZE, 1) == 0)
+            return EOF;
+        console_bufp = console_buf;
+    }
+
+    return *console_bufp++;
+}
+
 static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP text, prompt, s, source;
+    const char *prompt_string;
     Rconnection con;
     Rboolean wasopen, old_latin1 = known_to_be_latin1,
 	old_utf8 = known_to_be_utf8, allKnown = TRUE;
@@ -242,6 +258,7 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(prompt = coerceVector(prompt, STRSXP));
 
     if (length(text) > 0) {
+
 	/* If 'text' has known encoding then we can be sure it will be
 	   correctly re-encoded to the current encoding by
 	   translateChar in the parser and so could mark the result in
@@ -262,34 +279,48 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	    known_to_be_utf8 = old_utf8;
 	}
 	if (num == NA_INTEGER) num = -1;
+
         s = R_ParseVector(text, num, &status, source);
-	if (status != PARSE_OK) parseError(call, R_ParseError);
     }
     else if (ifile >= 3) {/* file != "" */
+
 	if (num == NA_INTEGER) num = -1;
+
 	if(!wasopen) {
 	    if(!con->open(con)) error(_("cannot open the connection"));
 	    /* Set up a context which will close the connection on error */
 	    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
 			 R_NilValue, R_NilValue);
-	    cntxt.cend = &con_cleanup;
+	    cntxt.cend = &conn_cleanup;
 	    cntxt.cenddata = con;
 	}
 	if(!con->canread) error(_("cannot read from this connection"));
-	s = R_ParseConn(con, num, &status, source);
+
+        s = R_ParseStream (conn_getc, con, num, &status, source);
+
 	if(!wasopen) {
 	    PROTECT(s);
 	    endcontext(&cntxt);
 	    con->close(con);
 	    UNPROTECT(1);
 	}
-	if (status != PARSE_OK) parseError(call, R_ParseError);
     }
     else {
+
 	if (num == NA_INTEGER) num = 1;
-	s = R_ParseBuffer(&R_ConsoleIob, num, &status, prompt, source);
-	if (status != PARSE_OK) parseError(call, R_ParseError);
+
+        prompt_string = isString(prompt) && LENGTH(prompt) > 0
+                         ? CHAR(STRING_ELT(prompt,0))
+                         : CHAR(STRING_ELT(GetOption1(install("prompt")),0));
+
+        console_bufp = console_buf;  /* empty buffer initially */
+        *console_bufp = 0;
+
+        s = R_ParseStream (console_getc, prompt_string, num, &status, source);
     }
+
+    if (status != PARSE_OK) parseError(call, R_ParseError);
+
     UNPROTECT(2);
     known_to_be_latin1 = old_latin1;
     known_to_be_utf8 = old_utf8;
