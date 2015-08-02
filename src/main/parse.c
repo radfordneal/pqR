@@ -472,23 +472,24 @@ static void attachSrcrefs(SEXP val, SEXP t)
 
     PROTECT(val);
     PROTECT(srval = allocVector(VECSXP, length(t)));
+
     for (n = 0 ; n < LENGTH(srval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(srval, n, CAR(t));
     setAttrib(val, R_SrcrefSymbol, srval);
     setAttrib(val, R_SrcfileSymbol, ParseState.SrcFile);
-    {
-	source_location wholeFile;
-	wholeFile.first_line = 1;
-	wholeFile.first_byte = 0;
-	wholeFile.first_column = 0;
-	wholeFile.last_line = ParseState.xxlineno;
-	wholeFile.last_byte = ParseState.xxbyteno;
-	wholeFile.last_column = ParseState.xxcolno;
-	wholeFile.first_parsed = 1;
-	wholeFile.last_parsed = ParseState.xxparseno;
-	setAttrib(val, R_WholeSrcrefSymbol, 
-                       makeSrcref(&wholeFile, ParseState.SrcFile));
-    }
+
+    source_location wholeFile;
+    wholeFile.first_line = 1;
+    wholeFile.first_byte = 0;
+    wholeFile.first_column = 0;
+    wholeFile.last_line = ParseState.xxlineno;
+    wholeFile.last_byte = ParseState.xxbyteno;
+    wholeFile.last_column = ParseState.xxcolno;
+    wholeFile.first_parsed = 1;
+    wholeFile.last_parsed = ParseState.xxparseno;
+    setAttrib(val, R_WholeSrcrefSymbol, 
+                   makeSrcref(&wholeFile, ParseState.SrcFile));
+
     UNPROTECT(2);
 
     ParseState.didAttach = TRUE;
