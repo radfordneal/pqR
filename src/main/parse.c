@@ -62,20 +62,6 @@
        SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
 
          (public, and used by parse(text=) in file source.c)
-
-       SEXP R_ParseFile (FILE *fp, int n, ParseStatus *status, SEXP srcfile)
-
-         (used for do_edit in file edit.c)
- 
-       SEXP R_ParseBuffer (IoBuffer *buffer, int n, ParseStatus *status, 
-                           SEXP prompt, SEXP srcfile)
-
-         (used by parse(file="") in file source.c)
- 
-       SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, 
-                         SEXP srcfile)
-
-         (used by parse(file=) in file source.c)
  
    The success of the parse is indicated as folllows:
  
@@ -1507,39 +1493,6 @@ finish:
 }
 
 
-/* used in edit.c */
-attribute_hidden
-SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
-{
-    fp_parse = fp;
-    ptr_getc = file_getc;
-REprintf("PARSEFILE\n");
-
-    return R_Parse(n, status, srcfile);
-}
-
-
-#include "Rconnections.h"
-
-static Rconnection conn_parse;
-
-static int conn_getc(void)
-{
-    return Rconn_fgetc(conn_parse);
-}
- 
-/* used in source.c */
-attribute_hidden
-SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
-{
-    conn_parse = con;
-    ptr_getc = conn_getc;
-REprintf("PARSECON\n");
-
-    return R_Parse(n, status, srcfile);
-}
-
-
 static TextBuffer *txtb;
 
 static int text_getc(void)
@@ -1560,56 +1513,6 @@ REprintf("PARSEVECTOR\n");
     rval = R_Parse(n, status, srcfile);
 
     R_TextBufferFree(&textb);
-    return rval;
-}
-
-
-static int need_console_read;
-static const char *prompt_string;
-
-static int console_getc(void)
-{
-    char *bufp, console_buf[CONSOLE_BUFFER_SIZE];
-    char c;
-
-    if (need_console_read) {
-        if (R_ReadConsole (prompt_string, (unsigned char *) console_buf, 
-                           CONSOLE_BUFFER_SIZE, 1) == 0)
-            return EOF;
-        for (bufp = console_buf; *bufp; bufp++) R_IoBufferPutc(*bufp, iob);
-        need_console_read = 0;
-    }
-    c = R_IoBufferGetc(iob);
-    if (c == EOF) {
-        need_console_read = 1;
-        return '\n';
-    }
-    return c;
-}
-
-/* used in source.c */
-attribute_hidden
-SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt, 
-		   SEXP srcfile)
-{
-    SEXP rval, tval, tlast, cur, refs, last_ref;
-    int c, i;
-    source_location loc;
-REprintf("PARSEBUFFER\n");
-
-    prompt_string = isString(prompt) && LENGTH(prompt) > 0
-                     ? CHAR(STRING_ELT(prompt,0)) 
-                     : CHAR(STRING_ELT(GetOption1(install("prompt")),0));
-
-    R_IoBufferWriteReset(buffer);
-    need_console_read = 1;
-
-    iob = buffer;
-    ptr_getc = console_getc;
-
-    rval = R_Parse (n, status, srcfile);
-
-    R_IoBufferWriteReset(buffer);
     return rval;
 }
 
