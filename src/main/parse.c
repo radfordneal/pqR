@@ -753,10 +753,51 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
 #define LEFT_ASSOC(p)  (((p)&3) == 1)
 #define RIGHT_ASSOC(p) (((p)&3) == 2)
 
+/* Return the unary precedence of an operator symbol, or 0 if the 
+   symbol is not a unary operator. */
+
+attribute_hidden int Rf_unary_prec (SEXP sym)
+{
+    int i;
+
+    for (i = 0; unary_prec_tbl[i].prec != 0; i++) {
+        if (sym == *unary_prec_tbl[i].sym_ptr)
+            return unary_prec_tbl[i].prec;
+    }
+
+    return 0;
+}
+
+/* Return the binary precedence of an operator symbol, or 0 if the 
+   symbol is not a binary operator. */
+
+attribute_hidden int Rf_binary_prec (SEXP sym)
+{
+    int i;
+
+    for (i = 0; binary_prec_tbl[i].prec != 0; i++) {
+        if (sym == *binary_prec_tbl[i].sym_ptr)
+            return binary_prec_tbl[i].prec;
+    }
+
+    if (TYPEOF(sym) == SYMSXP) {
+        const char *s = CHAR(PRINTNAME(sym));
+        if (s[0] == '%') {
+            for (i = 1; s[i] != 0; i++) {
+               if (s[i] == '%')
+                   return s[i+1] == 0 ? SPECIAL_PREC : 0;
+            }
+        }
+    }
+
+    return 0;
+}
+   
+
 /* Return 0 if NEXT_TOKEN is not a unary operator, and otherwise
    the precedence of the unary operator. */
 
-attribute_hidden int Rf_unary_op(void)
+static int unary_op(void)
 {
     SEXP sym;
     int i;
@@ -773,25 +814,21 @@ attribute_hidden int Rf_unary_op(void)
     if (TYPEOF(sym) != SYMSXP)
         return 0;
 
-    /* We now see if this symbol is in the table of unary operators. */
+    /* Return the unary precedence of the symbol, or 0 if not a unary op. */
 
-    for (i = 0; unary_prec_tbl[i].prec != 0; i++) {
-        if (sym == *unary_prec_tbl[i].sym_ptr)
-            return unary_prec_tbl[i].prec;
-    }
-
-    return 0;
+    return Rf_unary_prec (sym);
 }
 
 /* Return 0 if NEXT_TOKEN is not a binary operator, and otherwise
    the precedence of the binary operator. */
 
-attribute_hidden int Rf_binary_op(void)
+static int binary_op(void)
 {
     SEXP sym;
     int i;
 
-    /* The special binary operators of the form %xxx% are handled specially. */
+    /* The special binary operators of the form %xxx% are handled specially
+       here (though they could instead be passed on to Rf_binary_prec). */
 
     if (NEXT_TOKEN == SPECIAL)
         return SPECIAL_PREC;
@@ -808,14 +845,9 @@ attribute_hidden int Rf_binary_op(void)
     if (TYPEOF(sym) != SYMSXP)
         return 0;
 
-    /* We now see if this symbol is in the table of binary operators. */
+    /* Return the binary precedence of the symbol, or 0 if not a binary op. */
 
-    for (i = 0; binary_prec_tbl[i].prec != 0; i++) {
-        if (sym == *binary_prec_tbl[i].sym_ptr)
-            return binary_prec_tbl[i].prec;
-    }
-
-    return 0;
+    return Rf_binary_prec (sym);
 }
 
 
@@ -986,7 +1018,7 @@ static SEXP parse_expr (int prec, int flags)
 
     /* Unary operators. */
     
-    if (op_prec = Rf_unary_op()) {
+    if (op_prec = unary_op()) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_expr (op_prec, 
@@ -1229,7 +1261,7 @@ static SEXP parse_expr (int prec, int flags)
 
     while (!NL_END) {
 
-        op_prec = Rf_binary_op();
+        op_prec = binary_op();
 
         if (op_prec <= prec || op_prec == last_prec)
             break;
@@ -1243,7 +1275,7 @@ static SEXP parse_expr (int prec, int flags)
                             op == R_TildeSymbol ? flags|KEEP_PARENS : flags));
                 PROTECT_N (res = 
                             LCONS (op, CONS (res, MaybeConstList1(right))));
-                if (NL_END || Rf_binary_op() != op_prec) 
+                if (NL_END || binary_op() != op_prec) 
                     break;
                 op = TOKEN_VALUE();
                 get_next_token();

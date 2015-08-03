@@ -48,8 +48,13 @@ void R_FinalizeSrcRefState(SrcRefState *state);
 
 SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
 
-	/* Report a parse error */
+/* Report a parse error */
 	
 void parseError(SEXP call, int linenum);
+
+/* Operator precedence functions.  Used in deparse.c. */
+
+int Rf_unary_prec (SEXP);
+int Rf_binary_prec (SEXP);
 
 #endif /* not R_PARSE_H */
