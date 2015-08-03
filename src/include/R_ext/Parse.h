@@ -29,14 +29,22 @@
 extern "C" {
 #endif
 
-/* PARSE_NULL will not be returned by R_ParseVector */
+/* Possible status returns for R_ParseVector and R_ParseStream. 
+   In actuality, only PARSE_OK and PARSE_ERROR are possible status
+   returns from these functions, though the others are used for other 
+   internal interfaces. */
+
 typedef enum {
     PARSE_NULL,
     PARSE_OK,
-    PARSE_INCOMPLETE,
     PARSE_ERROR,
     PARSE_EOF
 } ParseStatus;
+
+/* Define PARSE_INCOMPLETE, which is no longer ever returned, but which
+   may be looked for by callers. */
+
+#define PARSE_INCOMPLETE (PARSE_EOF+1)
 
 SEXP R_ParseVector(SEXP, int, ParseStatus *, SEXP);
 SEXP R_ParseStream(int (*)(void *), void *, int, ParseStatus *, SEXP);

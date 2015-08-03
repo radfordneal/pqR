@@ -64,9 +64,11 @@
  
  	status = PARSE_NULL       - there was no statement to parse
  		 PARSE_OK	  - complete statement
- 		 PARSE_INCOMPLETE - incomplete statement
  		 PARSE_ERROR      - syntax error
  		 PARSE_EOF	  - end of file
+
+   PARSE_NULL and PARSE_EOF are not possible for R_ParseVector and
+   R_ParseStream.
  
    R_InitSrcRefState and R_FinalizeSrcRefState are also currently exposed.
 
@@ -1308,7 +1310,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     end_location(loc);
 
     if (res == NULL) {
-        *status = next_token == END_OF_INPUT ? PARSE_INCOMPLETE : PARSE_ERROR;
+        *status = PARSE_ERROR;
         return R_CurrentExpr = R_NilValue;
     }
 
@@ -1396,7 +1398,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
             }
 	    i++;
 	    break;
-	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
 	    UNPROTECT(2); /* tval, refs */
 	    R_FinalizeSrcRefState(&ParseState);
