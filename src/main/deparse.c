@@ -1036,7 +1036,10 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 2 && (op == R_LocalAssignSymbol
                                      || op == R_EqAssignSymbol
-                                     || op == R_GlobalAssignSymbol)) {
+                                     || op == R_GlobalAssignSymbol
+                                     || op == R_LocalRightAssignSymbol
+                                     || op == R_GlobalRightAssignSymbol
+                                     || op == R_ColonEqSymbol)) {
                 if ((parens = needsparens_binary(op,CAR(s),1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
@@ -1079,7 +1082,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                       || op == R_LtSymbol
                       || op == R_LeSymbol
                       || op == R_GeSymbol
-                      || op == R_GtSymbol)) {
+                      || op == R_GtSymbol
+                      || op == R_QuerySymbol)) {
                 if ((parens = needsparens_binary(op,CAR(s),1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
@@ -1102,6 +1106,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             else if (nargs == 2 &&
                     (op == R_DivSymbol /* no space between op and args */
                       || op == R_ExptSymbol
+                      || op == R_Expt2Symbol
                       || op == install("%%")
                       || op == install("%/%")
                       || op == R_ColonSymbol)) { 
