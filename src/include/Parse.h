@@ -52,9 +52,24 @@ SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
 	
 void parseError(SEXP call, int linenum);
 
-/* Operator precedence functions.  Used in deparse.c. */
+/* Operator precedence functions.  Used in deparse.c.  Defined in parse.c,
+   where the documentation is located. */
+
+#define unary_prec  Rf_unary_prec
+#define binary_prec Rf_binary_prec
+#define misc_prec   Rf_misc_prec
 
 int Rf_unary_prec (SEXP);
 int Rf_binary_prec (SEXP);
+int Rf_misc_prec (SEXP);
+
+#define NON_ASSOC(p)   (((p)&3) == 0)
+#define LEFT_ASSOC(p)  (((p)&3) == 1)
+#define RIGHT_ASSOC(p) (((p)&3) == 2)
+
+#define needsparens_postfix Rf_needsparens_postfix
+#define needsparens_unary   Rf_needsparens_unary
+#define needsparens_binary  Rf_needsparens_binary
+
 
 #endif /* not R_PARSE_H */

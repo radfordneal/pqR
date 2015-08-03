@@ -30,7 +30,6 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include <R_ext/Print.h>
-#include <limits.h>
 
 #if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__))
 /* This may not be 100% true (see the comment in rlocales.h),
@@ -696,10 +695,9 @@ static void end_location (source_location *loc)
 
 /* Tables of operator precedence.  The lower two bits are 1 for binary
    operators that are left associative, 2 for binary operators that are
-   right associative, and 0 for relational operators and unary operators. 
-   This is expressed in the NON_ASSOC, LEFT_ASSOC, and RIGHT_ASSOC macros. */
-
-#define INF_PREC INT_MAX  /* Value greater than any precedence value below */
+   right associative, and 0 for relational operators, unary operators,
+   and miscellanious operators.  This is expressed in the NON_ASSOC, 
+   LEFT_ASSOC, and RIGHT_ASSOC macros in Parse.h. */
 
 static struct { SEXP *sym_ptr; int prec; } unary_prec_tbl[] =
 {
@@ -715,10 +713,6 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
 {
     { &R_DoubleColonSymbol,       /* ::  */ 0xf0 },
     { &R_TripleColonSymbol,       /* ::: */ 0xf0 },
-    { &R_DollarSymbol,            /* $   */ 0xe1 },
-    { &R_AtSymbol,                /* @   */ 0xe1 },
-    { &R_BracketSymbol,           /* [   */ 0xe1 },
-    { &R_Bracket2Symbol,          /* [[  */ 0xe1 },
     { &R_ExptSymbol,              /* ^   */ 0xd2 },
     { &R_Expt2Symbol,             /* **  */ 0xd2 },
     { &R_ColonSymbol,             /* :   */ 0xc1 },
@@ -749,14 +743,25 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
 #   define EQASSIGN_PREC 0x12
 };
 
-#define NON_ASSOC(p)   (((p)&3) == 0)
-#define LEFT_ASSOC(p)  (((p)&3) == 1)
-#define RIGHT_ASSOC(p) (((p)&3) == 2)
+static struct { SEXP *sym_ptr; int prec; } misc_prec_tbl[] =
+{
+    { &R_BracketSymbol,           /* [   */ 0xe8 },
+    { &R_Bracket2Symbol,          /* [[  */ 0xe8 },
+    { &R_DollarSymbol,            /* $   */ 0xe8 },
+    { &R_AtSymbol,                /* @   */ 0xe8 },
+
+    { &R_FunctionSymbol,          /*     */ 0x08 },
+    { &R_IfSymbol,                /*     */ 0x08 },
+    { &R_WhileSymbol,             /*     */ 0x08 },
+    { &R_RepeatSymbol,            /*     */ 0x08 },
+
+    { 0, 0 }
+};
 
 /* Return the unary precedence of an operator symbol, or 0 if the 
    symbol is not a unary operator. */
 
-attribute_hidden int Rf_unary_prec (SEXP sym)
+attribute_hidden int unary_prec (SEXP sym)
 {
     int i;
 
@@ -771,7 +776,7 @@ attribute_hidden int Rf_unary_prec (SEXP sym)
 /* Return the binary precedence of an operator symbol, or 0 if the 
    symbol is not a binary operator. */
 
-attribute_hidden int Rf_binary_prec (SEXP sym)
+attribute_hidden int binary_prec (SEXP sym)
 {
     int i;
 
@@ -792,10 +797,27 @@ attribute_hidden int Rf_binary_prec (SEXP sym)
 
     return 0;
 }
+
+/* Return the precedence of a miscellaneous operator symbol, or 0 if the 
+   symbol is not a miscellaneous operator. */
+
+attribute_hidden int misc_prec (SEXP sym)
+{
+    int i;
+
+    for (i = 0; misc_prec_tbl[i].prec != 0; i++) {
+        if (sym == *misc_prec_tbl[i].sym_ptr)
+            return misc_prec_tbl[i].prec;
+    }
+
+    return 0;
+}
    
 
 /* Return 0 if NEXT_TOKEN is not a unary operator, and otherwise
-   the precedence of the unary operator. */
+   the precedence of the unary operator.  Note that only precedence
+   values above LOW_REAL_UNARY and below HIGH_REAL_UNARY correspond
+   to real unary operators. */
 
 static int unary_op(void)
 {
@@ -816,7 +838,7 @@ static int unary_op(void)
 
     /* Return the unary precedence of the symbol, or 0 if not a unary op. */
 
-    return Rf_unary_prec (sym);
+    return unary_prec (sym);
 }
 
 /* Return 0 if NEXT_TOKEN is not a binary operator, and otherwise
@@ -828,7 +850,7 @@ static int binary_op(void)
     int i;
 
     /* The special binary operators of the form %xxx% are handled specially
-       here (though they could instead be passed on to Rf_binary_prec). */
+       here (though they could instead be passed on to binary_prec). */
 
     if (NEXT_TOKEN == SPECIAL)
         return SPECIAL_PREC;
@@ -847,7 +869,7 @@ static int binary_op(void)
 
     /* Return the binary precedence of the symbol, or 0 if not a binary op. */
 
-    return Rf_binary_prec (sym);
+    return binary_prec (sym);
 }
 
 
@@ -1017,7 +1039,7 @@ static SEXP parse_expr (int prec, int flags)
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
 
     /* Unary operators. */
-    
+
     if (op_prec = unary_op()) {
         op = TOKEN_VALUE();
         get_next_token();
