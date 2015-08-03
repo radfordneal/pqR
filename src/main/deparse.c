@@ -991,7 +991,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 args2buff(CDR(s), 0, 0, d);
                 print2buff("]]", d);
             }
-            else if (nargs == 2 && op == R_FunctionSymbol) {
+            else if ((nargs == 2 || nargs == 3) && op == R_FunctionSymbol) {
+                /* may have hidden third argument with source references */
                 printcomment(s, d);
                 if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
                     print2buff("function(", d);
@@ -1404,6 +1405,14 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		/* versions of R < 2.7.0 cannot parse strings longer than 8192 chars */
 		if(strlen(ts) >= 8192) d->longstring = TRUE;
 		strp = EncodeElement(vector, i, quote, '.');
+            } else if (TYPEOF(vector) == CPLXSXP &&
+                      !ISNAN(COMPLEX(vector)[i].r) && COMPLEX(vector)[i].r==0) {
+		int w, d, e;
+		formatReal(&COMPLEX(vector)[i].i, 1, &w, &d, &e, 0);
+		strp = EncodeReal(COMPLEX(vector)[i].i, w, d, e, '.');
+                static char buf[50];
+                copy_2_strings (buf, sizeof buf, strp, "i");
+                strp = buf;
 	    } else
 		strp = EncodeElement(vector, i, quote, '.');
 	    print2buff(strp, d);

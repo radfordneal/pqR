@@ -2,8 +2,8 @@ Mods to the new parser and deparser.  The new parser now replaces the
 old parser.
 
 ReplIteration has been changed to no longer employ a horrible kludge
-regarding semicolons, and otherwise be more sane.  It's interface
-is different than previously.
+regarding semicolons, and otherwise be more sane.  Its interface is
+different than previously.
 
 The ->, ->>, and ** operators are now real operators.  This fixes the
 following error reporting bug:
