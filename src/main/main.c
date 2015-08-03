@@ -290,20 +290,21 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
 
     R_PPStackTop = savestack;
 
-    state->prompt_type = 1;
+    state->prompt_type = *state->bufp == 0 ? 1 : 2;
     R_InitSrcRefState(&ParseState);
     R_CurrentExpr = R_Parse1Stream (ReplGetc, state, &state->status, 
                                     &ParseState);
     R_FinalizeSrcRefState(&ParseState);
     
-    switch(state->status) {
+    switch (state->status) {
 
     case PARSE_NULL:
 
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
 	if (state->browselevel > 0 && !R_DisableNLinBrowser
-	    && !strcmp((char *) state->buf, "\n")) return -1;
+	    && !strcmp((char *) state->buf, "\n")) 
+            return -1;
 	return 1;
 
     case PARSE_OK:
@@ -347,13 +348,10 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
     case PARSE_EOF:
 
 	return -1;
-	break;
 
     default:
         abort();
     }
-
-    return(0);
 }
 
 static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
