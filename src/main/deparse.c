@@ -851,7 +851,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	if (TYPEOF(op) == SYMSXP) {
             const char *opname = CHAR(PRINTNAME(op));
             int nargs = length(s);
-            if (nargs >= 2 &&  op == R_IfSymbol) {
+            if (nargs >= 2 && nargs <= 3 &&  op == R_IfSymbol) {
                 print2buff("if (", d);
                 /* print the predicate */
                 deparse2buff(CAR(s), d);
@@ -882,13 +882,13 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     d->indent--;
                 }
             }
-            else if (nargs >= 2 && op == R_WhileSymbol) {
+            else if (nargs == 2 && op == R_WhileSymbol) {
                 print2buff("while (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(") ", d);
                 deparse2buff(CADR(s), d);
             }
-            else if (nargs >= 3 && op == R_ForSymbol) {
+            else if (nargs == 3 && op == R_ForSymbol) {
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(" in ", d);
@@ -896,7 +896,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(CDR(s)), d);
             }
-            else if (nargs >= 2 && op == R_RepeatSymbol) {
+            else if (nargs == 1 && op == R_RepeatSymbol) {
                 print2buff("repeat ", d);
                 deparse2buff(CAR(s), d);
             }
@@ -939,7 +939,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 args2buff(CDR(s), 0, 0, d);
                 print2buff("]]", d);
             }
-            else if (nargs >= 2 && op == R_FunctionSymbol) {
+            else if (nargs == 2 && op == R_FunctionSymbol) {
                 printcomment(s, d);
                 if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
                     print2buff("function(", d);
