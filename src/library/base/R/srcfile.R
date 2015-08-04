@@ -214,9 +214,10 @@ as.character.srcref <- function(x, useSource = TRUE, ...)
 {
     srcfile <- attr(x, "srcfile")
     if (!is.null(srcfile) && !inherits(srcfile, "srcfile")) {
-       cat("forcing class on") ## debug
+        cat("forcing class on ") ## debug
 	print(str(srcfile))
-       class(srcfile) <- c("srcfilealias", "srcfile")
+        .Internal(inspect(srcfile))
+        class(srcfile) <- c("srcfilealias", "srcfile")
     }
     if (useSource) {
     	if (inherits(srcfile, "srcfilecopy") || inherits(srcfile, "srcfilealias"))
