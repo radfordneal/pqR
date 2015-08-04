@@ -146,7 +146,8 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     for(;;) {
 	R_PPStackTop = savestack;
 
-	R_CurrentExpr = R_Parse1Stream (file_getc, fp, &status, &ParseState);
+	R_CurrentExpr = R_Parse1Stream (file_getc, (void *) fp, 
+                                        &status, &ParseState);
 
 	switch (status) {
 	case PARSE_NULL:
@@ -305,8 +306,8 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
                    ParseState.OriginalProt);
     }
 
-    PROTECT (R_CurrentExpr = R_Parse1Stream (ReplGetc, state, &state->status, 
-                                             &ParseState));
+    PROTECT (R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
+                                             &state->status, &ParseState));
     if (keepSource) {
         if (ParseState.didAttach) {
             SEXP filename_install = install("filename");  /* protected by the */

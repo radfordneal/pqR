@@ -297,7 +297,7 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	if(!con->canread) error(_("cannot read from this connection"));
 
-        s = R_ParseStream (conn_getc, con, num, &status, source);
+        s = R_ParseStream (conn_getc, (void *) con, num, &status, source);
 
 	if(!wasopen) {
 	    PROTECT(s);
@@ -317,7 +317,8 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
         console_bufp = console_buf;  /* empty buffer initially */
         *console_bufp = 0;
 
-        s = R_ParseStream (console_getc, prompt_string, num, &status, source);
+        s = R_ParseStream (console_getc, (void *) prompt_string, num, 
+                           &status, source);
     }
 
     if (status != PARSE_OK) parseError(call, R_ParseError);
