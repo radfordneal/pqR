@@ -1,4 +1,2 @@
 Eliminates the R_ReplDLLinit and R_replDLLd1 procedures in main.c,
-and the directory src/gnuwin32/front-ends in which they were used.
-The directory seems to be horribly out of date.  The procedures
-were poorly documented, and kludgy.
+and the calls of R_ReplDLL... in the front-ends/rtest.c program.
