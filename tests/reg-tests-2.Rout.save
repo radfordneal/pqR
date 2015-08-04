@@ -5005,8 +5005,7 @@ Error : no valid set of coefficients has been found: please supply starting valu
 Error in solve.default(temp) : only square matrices can be inverted
 > # also complex
 > try(solve(temp+0i))
-Error in solve.default(temp + (0+0i)) : 
-  only square matrices can be inverted
+Error in solve.default(temp + 0i) : only square matrices can be inverted
 > # and non-comformant systems
 > try(solve(temp, diag(3)))
 Error in solve.default(temp, diag(3)) : 'b' must be compatible with 'a'
@@ -6378,15 +6377,15 @@ function ()
 > print.function
 function (x, ...)  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 19 1 63 19 63 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3365290> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3bf1328> 
 > f
 function ()  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 17 1 28 17 28 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3353070> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3be4ba8> 
  - attr(*, "note")= chr "just a note"
  - attr(*, "yada")=function ()  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 2 24 2 48 24 48 2 2
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3353070> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3be4ba8> 
 > rm(print.function)
 > ## auto-printing and printing differed up to R 2.9.x
 > 
