@@ -1353,7 +1353,14 @@ static SEXP parse_prog (int flags)
 
 static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 {
+    int flags;
+    SEXP keepp;
     SEXP res;
+
+    flags = END_ON_NL | NO_PEEKING;
+    keepp = GetOption1(install("keep.parens"));
+    if (TYPEOF(keepp) == LGLSXP && LOGICAL(keepp)[0] == 1)
+        flags |= KEEP_PARENS;
 
     if (!get_next_token()) {
         *status = PARSE_EOF;
@@ -1366,7 +1373,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     }
 
     start_location(loc);
-    res = parse_prog (KEEP_PARENS | END_ON_NL | NO_PEEKING);
+    res = parse_prog (flags);
     end_location(loc);
 
     if (res == NULL) {

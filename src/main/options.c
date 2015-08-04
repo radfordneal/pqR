@@ -60,6 +60,7 @@
  *	"digits"
  *	"echo"
  *	"verbose"
+ *	"keep.parens"
  *	"keep.source"
  *	"keep.source.pkgs"
  *	"browserNLdisabled"
@@ -280,6 +281,11 @@ void attribute_hidden InitOptions(void)
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
+    SET_TAG(v, install("keep.parens"));
+    SETCAR(v, ScalarLogical(0));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     p = getenv("R_KEEP_PKG_SOURCE");
     R_KeepSource = (p && (strcmp(p, "yes") == 0)) ? 1 : 0;
     SET_TAG(v, install("keep.source")); /* overridden in common.R */
@@ -473,6 +479,12 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 			  R_MIN_EXPRESSIONS_OPT, R_MAX_EXPRESSIONS_OPT);
 		R_Expressions = R_Expressions_keep = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
+	    }
+	    else if (streql(CHAR(namei), "keep.parens")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
 	    else if (streql(CHAR(namei), "keep.source")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
