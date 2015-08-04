@@ -290,6 +290,12 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op);
     SEXP argsevald, ans, arg1, arg2;
 
+    /* Make `**` dispatch on methods for `^`.  This works because dispatch is
+       done according to PRIMNAME(op). */
+
+    if (opcode == POWOP && op == SYMVALUE(R_Expt2Symbol)) 
+        op = SYMVALUE(R_ExptSymbol);
+
     /* Evaluate arguments, maybe putting them in static boxes. */
 
     PROTECT(argsevald = static_box_eval2 (args, &arg1, &arg2, env, call));
