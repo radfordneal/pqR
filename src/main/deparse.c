@@ -952,6 +952,9 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff("repeat ", d);
                 deparse2buff(CAR(s), d);
             }
+            else if (nargs==0 && (op == R_BreakSymbol || op == R_NextSymbol)) {
+                print2buff(opname, d);
+            }
             else if (op == R_BraceSymbol) {
                 print2buff("{", d);
                 d->incurly += 1;
@@ -1069,7 +1072,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     print2buff(")", d);
             }
             else if (nargs == 2 &&
-                    (op == R_AddSymbol  /* space between op and args */
+                    (isUserBinop(op)         /* space between op and args */
+                      || op == R_AddSymbol
                       || op == R_SubSymbol
                       || op == R_MulSymbol
                       || op == install("%*%")
@@ -1091,7 +1095,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 if (parens)
                     print2buff(")", d);
                 print2buff(" ", d);
-                print2buff(opname, d);
+                print2buff(translateChar(PRINTNAME(op)), d);
                 print2buff(" ", d);
                 linebreak(&lbreak, d);
                 if ((parens = needsparens_binary(op,CADR(s),0)))
@@ -1105,7 +1109,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
             }
             else if (nargs == 2 &&
-                    (op == R_DivSymbol /* no space between op and args */
+                    (op == R_DivSymbol      /* no space between op and args */
                       || op == R_ExptSymbol
                       || op == R_Expt2Symbol
                       || op == install("%%")
@@ -1123,9 +1127,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 if (parens)
                     print2buff(")", d);
             }
-            else if (nargs==0 && (op == R_BreakSymbol || op == R_NextSymbol)) {
-                print2buff(opname, d);
-            }
             else if (op == R_SubAssignSymbol    /* done specially by S? */
                       || op == R_SubSubAssignSymbol
                       || op == R_DollarAssignSymbol) {
@@ -1141,19 +1142,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
                 args2buff(s, 0, 0, d);
                 print2buff(")", d);
-            }
-            else if (nargs == 2 && isUserBinop(op)) {
-                deparse2buff(CAR(s), d);
-                print2buff(" ", d);
-                print2buff(translateChar(PRINTNAME(op)), d);
-                print2buff(" ", d);
-                linebreak(&lbreak, d);
-                deparse2buff(CADR(s), d);
-                if (lbreak) {
-                    d->indent--;
-                    lbreak = FALSE;
-                }
-                break;
             }
             else {
                 if (isValidName(opname))

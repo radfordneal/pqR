@@ -20,3 +20,16 @@ happens:
 with the result instead being "3 * 5i".
 
 Introduced the keep.parens option.
+
+Now fixes these bugs mentioned in mods/40-deparse:
+
+  > deparse(parse(text="a = b <- c")[[1]])  # Puts in unnecessary parens
+  [1] "a = (b <- c)"
+  > deparse(parse(text="a+!b")[[1]])        # Puts in unnecessary parens
+  [1] "a + (!b)"
+  > deparse(quote(`+`(1,2) %fred% 4))       # Omits necessary parens
+  [1] "1 + 2 %fred% 4"
+  > deparse(parse(text="?lm")[[1]])         # Doesn't know about ? operator
+  [1] "`?`(lm)"
+  > deparse(parse(text="a:=b")[[1]])        # Doesn't know about := operator
+  [1] "`:=`(a, b)"
