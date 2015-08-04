@@ -95,3 +95,4 @@
 ## keep in sync with R/zzz.R
 as.numeric <- as.real <- as.double
 is.name <- is.symbol
+`**` <- `^`

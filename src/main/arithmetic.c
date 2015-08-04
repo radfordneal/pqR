@@ -290,12 +290,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op);
     SEXP argsevald, ans, arg1, arg2;
 
-    /* Make `**` dispatch on methods for `^`.  This works because dispatch is
-       done according to PRIMNAME(op). */
-
-    if (opcode == POWOP && op == SYMVALUE(R_Expt2Symbol)) 
-        op = SYMVALUE(R_ExptSymbol);
-
     /* Evaluate arguments, maybe putting them in static boxes. */
 
     PROTECT(argsevald = static_box_eval2 (args, &arg1, &arg2, env, call));
@@ -2473,7 +2467,6 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"*",		do_arith,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
 {"/",		do_arith,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
 {"^",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
-{"**",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
 {"%%",		do_arith,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 {"%/%",		do_arith,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 
