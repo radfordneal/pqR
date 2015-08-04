@@ -30,13 +30,13 @@
 
 typedef struct {
 
-    Rboolean keepSrcRefs;	/* Whether to attach srcrefs to objects as they are parsed */
-    Rboolean didAttach;		/* Record of whether a srcref was attached */
+    Rboolean keepSrcRefs;	/* Attach srcrefs to objects as parsed? */
+    Rboolean didAttach;		/* Was a srcref attached? */
     SEXP SrcFile;		/* The srcfile object currently being parsed */
     SEXP Original;		/* The underlying srcfile object */
     PROTECT_INDEX SrcFileProt;	/* The SrcFile may change */
     PROTECT_INDEX OriginalProt; /* ditto */
-    				/* Position information about the current parse */
+    /* Position information about the current parse... */
     int xxlineno;		/* Line number according to #line directives */
     int xxcolno;		/* Character number on line */
     int xxbyteno;		/* Byte number on line */

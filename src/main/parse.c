@@ -509,6 +509,8 @@ void R_InitSrcRefState(SrcRefState *state)
 
 void R_FinalizeSrcRefState(SrcRefState *state)
 {
+    /* We could just do an UNPROTECT(2), but this detects some bugs... */
+
     UNPROTECT(1);
     if (R_PPStackTop != state->OriginalProt) abort();
     UNPROTECT(1);
@@ -519,9 +521,11 @@ static void UseSrcRefState(SrcRefState *state)
 {
     if (state) {
 	ParseState.keepSrcRefs = state->keepSrcRefs;
+	ParseState.didAttach = state->didAttach;
 	ParseState.SrcFile = state->SrcFile;
 	ParseState.Original = state->Original;
 	ParseState.SrcFileProt = state->SrcFileProt;
+	ParseState.OriginalProt = state->OriginalProt;
 	ParseState.xxlineno = state->xxlineno;
 	ParseState.xxcolno = state->xxcolno;
 	ParseState.xxbyteno = state->xxbyteno;
@@ -534,9 +538,11 @@ static void PutSrcRefState(SrcRefState *state)
 {
     if (state) {
 	state->keepSrcRefs = ParseState.keepSrcRefs;
+	state->didAttach = ParseState.didAttach;
 	state->SrcFile = ParseState.SrcFile;
 	state->Original = ParseState.Original;
 	state->SrcFileProt = ParseState.SrcFileProt;
+	state->OriginalProt = ParseState.OriginalProt;
 	state->xxlineno = ParseState.xxlineno;
 	state->xxcolno = ParseState.xxcolno;
 	state->xxbyteno = ParseState.xxbyteno;

@@ -313,7 +313,7 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
             SEXP filename_install = install("filename");  /* protected by the */
             SEXP lines_install = install("lines");        /*   symbol table   */
     
-            int buflen = R_IoBufferReadOffset(&R_ConsoleIob);
+            int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
             char buf[buflen+1];
             SEXP class;
             int i;
