@@ -154,20 +154,22 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 
 	case PARSE_OK:
 
+	    PROTECT(R_CurrentExpr);
+
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
 	    count++;
 
-	    PROTECT(R_CurrentExpr);
 	    R_CurrentExpr = eval(R_CurrentExpr, rho);
 	    SET_SYMVALUE(R_LastvalueSymbol, R_CurrentExpr);
-	    UNPROTECT(1);
 
 	    if (R_Visible)
 		PrintValueEnv(R_CurrentExpr, rho);
 	    if( R_CollectWarnings )
 		PrintWarnings();
+
+	    UNPROTECT(1);
 
 	    break;
 
@@ -281,14 +283,12 @@ static int ReplGetc (void *vstate)
     return c;
 }
 
-int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
+int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 {
     int c, browsevalue;
     SEXP value, thisExpr;
     SrcRefState ParseState;
     Rboolean wasDisplayed = FALSE;
-
-    R_PPStackTop = savestack;
 
     state->prompt_type = *state->bufp == 0 ? 1 : 2;
     R_InitSrcRefState(&ParseState);
@@ -305,9 +305,8 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
                    ParseState.OriginalProt);
     }
 
-    R_CurrentExpr = R_Parse1Stream (ReplGetc, state, &state->status, 
-                                    &ParseState);
-
+    PROTECT (R_CurrentExpr = R_Parse1Stream (ReplGetc, state, &state->status, 
+                                             &ParseState));
     if (keepSource) {
         if (ParseState.didAttach) {
             SEXP filename_install = install("filename");  /* protected by the */
@@ -337,6 +336,8 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
         R_IoBufferWriteReset(&R_ConsoleIob);
     }
 
+    UNPROTECT(1);  /* R_CurrentExpr */
+
     R_FinalizeSrcRefState(&ParseState);
     
     switch (state->status) {
@@ -352,22 +353,27 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
 
     case PARSE_OK:
 
+        PROTECT(R_CurrentExpr);
+
 	if (state->browselevel > 0) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
-	    if(browsevalue == 1) 
+	    if (browsevalue == 1) {
+                UNPROTECT(1);
                 return -1;
-	    if(browsevalue == 2) {
+            }
+	    if (browsevalue == 2) {
 		*state->bufp = 0;  /* discard rest of line */
+                UNPROTECT(1);
 		return 0;
 	    }
 	}
 	R_Visible = FALSE;
 	R_EvalDepth = 0;
 	resetTimeLimits();
-	PROTECT(thisExpr = R_CurrentExpr);
+	thisExpr = R_CurrentExpr;
 	R_Busy(1);
 
-	PROTECT(value = evalv(thisExpr, rho, VARIANT_PENDING_OK));
+	PROTECT(value = evalv (thisExpr, rho, VARIANT_PENDING_OK));
 
 	SET_SYMVALUE(R_LastvalueSymbol, value);
 	wasDisplayed = R_Visible;
@@ -378,8 +384,10 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
 	if (R_CollectWarnings)
 	    PrintWarnings();
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
-	R_CurrentExpr = value; /* Necessary? Doubt it. */
+	R_CurrentExpr = R_NilValue;  /* just in case... */
+
 	UNPROTECT(2);
+
 	return 1;
 
     case PARSE_ERROR:
@@ -413,7 +421,8 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     do {
 
-	status = Rf_ReplIteration (rho, savestack, &state);
+        R_PPStackTop = savestack;
+        status = Rf_ReplIteration (rho, &state);
 
     } while (status >= 0);
 }
