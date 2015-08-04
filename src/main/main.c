@@ -226,18 +226,17 @@ char *R_PromptString(int browselevel, int type)
   The modifications here are intended to leave the semantics of the REPL
   unchanged, just separate into routines. So the variables that maintain
   the state across iterations of the loop are organized into a structure
-  and passed to Rf_ReplIteration() from Rf_ReplConsole().
+  and passed to Rf_ReplIteration() from Rf_ReplConsole(). 
 */
 
 
-/**
-  (local) Structure for maintaining and exchanging the state between
-  Rf_ReplConsole and its worker routine Rf_ReplIteration which is the
-  implementation of the body of the REPL.
+/* (local) Structure for maintaining and exchanging the state between
+   Rf_ReplConsole and its worker routine Rf_ReplIteration which is the
+   implementation of the body of the REPL.
 
-  In the future, we may need to make this accessible to packages
-  and so put it into one of the public R header files.
- */
+   In the future, we may need to make this accessible to packages
+   and so put it into one of the public R header files. */
+
 typedef struct {
   ParseStatus    status;
   int            prompt_type;
@@ -247,26 +246,23 @@ typedef struct {
 } R_ReplState;
 
 
-/**
-  This is the body of the REPL.
-  It attempts to parse the first line or expression of its input,
-  and optionally request input from the user if none is available.
-  If the input can be parsed correctly,
-     i) the resulting expression is evaluated,
-    ii) the result assigned to .Last.Value,
-   iii) top-level task handlers are invoked.
+/* The body of the Read-Eval-Print Loop.
 
- If the input cannot be parsed, i.e. there is a syntax error,
- it is incomplete, or we encounter an end-of-file, then we
- change the prompt accordingly.
+   If the input can be parsed correctly,
 
- The "cursor" for the input buffer is moved to the next starting
- point, i.e. the end of the first line or after the first ;.
- */
+       1) the resulting expression is evaluated,
+       2) the result assigned to .Last.Value,
+       3) top-level task handlers are invoked.
+
+   The bufp pointer into buf is moved to the next starting point, 
+   i.e. the end of the first line or after the terminating ';'. */
+
+static int keepSource;
 
 static int ReplGetc (void *vstate)
 {
     R_ReplState *state = (R_ReplState *) vstate;
+    int c;
 
     while (*state->bufp == 0) {
         R_Busy(0);
@@ -278,7 +274,11 @@ static int ReplGetc (void *vstate)
         state->prompt_type = 2;
     }
 
-    return *state->bufp++;
+    c = *state->bufp++;
+    if (keepSource) 
+        R_IoBufferPutc (c, &R_ConsoleIob);
+
+    return c;
 }
 
 int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
@@ -292,8 +292,51 @@ int Rf_ReplIteration (SEXP rho, int savestack, R_ReplState *state)
 
     state->prompt_type = *state->bufp == 0 ? 1 : 2;
     R_InitSrcRefState(&ParseState);
+
+    keepSource = asLogical (GetOption1 (install ("keep.source")));
+
+    if (keepSource) {
+        R_IoBufferWriteReset(&R_ConsoleIob);
+        ParseState.keepSrcRefs = TRUE;
+        REPROTECT (ParseState.SrcFile = 
+                     NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), 
+                   ParseState.SrcFileProt);
+        REPROTECT (ParseState.Original = ParseState.SrcFile, 
+                   ParseState.OriginalProt);
+    }
+
     R_CurrentExpr = R_Parse1Stream (ReplGetc, state, &state->status, 
                                     &ParseState);
+
+    if (keepSource) {
+        if (ParseState.didAttach) {
+            SEXP filename_install = install("filename");  /* protected by the */
+            SEXP lines_install = install("lines");        /*   symbol table   */
+    
+            int buflen = R_IoBufferReadOffset(&R_ConsoleIob);
+            char buf[buflen+1];
+            SEXP class;
+            int i;
+    
+            R_IoBufferReadReset(&R_ConsoleIob);
+            for (i = 0; i < buflen; i++)
+                buf[i] = R_IoBufferGetc(&R_ConsoleIob);
+            buf[buflen] = 0;
+
+            set_var_in_frame (filename_install, ScalarString(mkChar("")),
+                              ParseState.Original, TRUE, 3);
+            set_var_in_frame (lines_install, ScalarString(mkChar(buf)),
+                              ParseState.Original, TRUE, 3);
+    
+            PROTECT(class = allocVector(STRSXP, 2));
+            SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
+            SET_STRING_ELT(class, 1, mkChar("srcfile"));
+            setAttrib(ParseState.Original, R_ClassSymbol, class);
+            UNPROTECT(1);
+        }
+        R_IoBufferWriteReset(&R_ConsoleIob);
+    }
+
     R_FinalizeSrcRefState(&ParseState);
     
     switch (state->status) {

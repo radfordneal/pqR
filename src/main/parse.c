@@ -1381,10 +1381,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 static void *stream_getc_arg;
 static int (*stream_getc)(void *);
 
-static int call_stream_getc(void)
-{ 
-    return (*stream_getc)(stream_getc_arg);
-}
+static int call_stream_getc(void) { return (*stream_getc)(stream_getc_arg); }
 
 
 attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg, 
@@ -1478,10 +1475,7 @@ finish:
 
 static TextBuffer *txtb;
 
-static int text_getc(void)
-{
-    return R_TextBufferGetc(txtb);
-}
+static int text_getc(void) { return R_TextBufferGetc(txtb); }
 
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
@@ -2335,10 +2329,12 @@ static void set_parse_filename(SEXP newname)
     REPROTECT(ParseState.SrcFile =
                  NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
               ParseState.SrcFileProt);
-    defineVar(install("filename"), newname, ParseState.SrcFile);
+    set_var_in_frame (install("filename"), newname, ParseState.SrcFile,
+                      TRUE, 3);
 
     if (ParseState.keepSrcRefs) {
-        defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
+        set_var_in_frame (install("original"), ParseState.Original, 
+                          ParseState.SrcFile, TRUE, 3);
         PROTECT(class = allocVector(STRSXP, 2));
         SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
         SET_STRING_ELT(class, 1, mkChar("srcfile"));
