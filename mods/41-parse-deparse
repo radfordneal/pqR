@@ -33,3 +33,5 @@ Now fixes these bugs mentioned in mods/40-deparse:
   [1] "`?`(lm)"
   > deparse(parse(text="a:=b")[[1]])        # Doesn't know about := operator
   [1] "`:=`(a, b)"
+
+Corrected documentation on the = assignment operator.
