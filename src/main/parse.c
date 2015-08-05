@@ -849,7 +849,19 @@ static int binary_op(void)
    THE RECURSIVE DESCENT PARSER
 
    Each parse routine takes an int flags argument, whose bits have
-   the meanings defined below.
+   the meanings defined below.  
+
+   The parse_expr routine also has a 'paren' argument for controlling
+   how parentheses are handled.  If 'paren' is NULL, it is ignored,
+   and no check regarding parentheses is done.  If 'paren' is not
+   NULL, the int that it points to is set to 0 if the expression is
+   not a parenthesized expression, or if the expression inside the
+   parentheses is not one with a unary, binary, or relational
+   operator.  If the expression is a parenthesized unary, binary, or
+   relational operator, *paren is set to the precedence of the
+   operator.  This allows the caller to decide whether to remove the
+   parentheses if they are necessary (and hence will be re-inserted
+   when the expression is deparsed).
 
    The parse routines return the object parsed, or NULL if there was an
    error (or errors may cause exit out of the whole parser with a call
@@ -867,7 +879,7 @@ static int binary_op(void)
 
 int keep_source;  /* Attach source references to R expressions? */
 
-static SEXP parse_expr (int prec, int flags);
+static SEXP parse_expr (int prec, int flags, int *paren);
 
 
 /* Bits in the flags word passed to parsing routines. */
@@ -909,7 +921,7 @@ static SEXP parse_formlist (int flags)
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
                 get_next_token();
-                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags));
+                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 SETCAR (last, def);
             }
             if (NEXT_TOKEN != ',')
@@ -946,7 +958,7 @@ static SEXP parse_sublist (int flags)
             if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
-                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags));
+                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
                     if (TYPEOF(arg) == SYMSXP)
@@ -962,7 +974,8 @@ static SEXP parse_sublist (int flags)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
-                        PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags));
+                        PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags,
+                                                    NULL));
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
@@ -1001,7 +1014,7 @@ static SEXP parse_sublist (int flags)
    greater than prec.  An attempt is made to make the last operand of an
    operator be a constant objects. */
 
-static SEXP parse_expr (int prec, int flags)
+static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
@@ -1009,6 +1022,7 @@ static SEXP parse_expr (int prec, int flags)
     source_location loc;
 
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
+    int par = 0;  /* parenthesis precedence indicator */
 
     /* Unary operators. */
 
@@ -1016,7 +1030,8 @@ static SEXP parse_expr (int prec, int flags)
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_expr (op_prec, 
-                           op == R_TildeSymbol ? flags|KEEP_PARENS : flags));
+                           op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
+                           NULL));
         PROTECT_N (res = LCONS (op, MaybeConstList1(res)));
     }
 
@@ -1045,15 +1060,20 @@ static SEXP parse_expr (int prec, int flags)
         get_next_token();
     }
 
-    /* Paren expressions. */
+    /* Paren expressions.  Sets 'par'. */
 
     else if (NEXT_TOKEN == '(') {
         SEXP op;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB (res = parse_expr (0, subflags));
-        if (flags & KEEP_PARENS)
-            res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
+        PARSE_SUB (res = parse_expr (0, subflags, NULL));
+        if (TYPEOF(res) == LANGSXP) {
+            int nargs = length(CDR(res));
+            if (par == 0 && nargs == 1) par = unary_prec(CAR(res));
+            if (par == 0 && nargs == 2) par = binary_prec(CAR(res));
+            if (par == 0)               par = misc_prec(CAR(res));
+        }
+        res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
         EXPECT(')');
     }
 
@@ -1078,7 +1098,7 @@ static SEXP parse_expr (int prec, int flags)
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL));
+            PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL, NULL));
             end_location(&loc);
             if (keep_source) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState->SrcFile),
@@ -1106,7 +1126,7 @@ static SEXP parse_expr (int prec, int flags)
         EXPECT('(');
         PARSE_SUB(args = parse_formlist (flags));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         end_location(&loc);
         if (keep_source) {
             srcref = makeSrcref(&loc, ParseState->SrcFile);
@@ -1123,7 +1143,7 @@ static SEXP parse_expr (int prec, int flags)
         SEXP op, body;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB(body = parse_expr (0, flags));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang2 (op, body));
     }
 
@@ -1134,9 +1154,9 @@ static SEXP parse_expr (int prec, int flags)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, NULL));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang3 (op, cond, body));
     }
 
@@ -1148,13 +1168,13 @@ static SEXP parse_expr (int prec, int flags)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, NULL));
         EXPECT(')');
-        PARSE_SUB(true_stmt = parse_expr(0, flags));
+        PARSE_SUB(true_stmt = parse_expr(0, flags, NULL));
 
         if ( ! (NL_END && (flags & NO_PEEKING)) && NEXT_TOKEN == ELSE) {
             get_next_token();
-            PARSE_SUB(false_stmt = parse_expr (0, flags));
+            PARSE_SUB(false_stmt = parse_expr (0, flags, NULL));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
                               MaybeConstList1(false_stmt)))));
         }
@@ -1175,9 +1195,9 @@ static SEXP parse_expr (int prec, int flags)
         sym = TOKEN_VALUE();
         get_next_token();
         EXPECT(IN);
-        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags));
+        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, NULL));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang4 (op, sym, vec, body));
     }
 
@@ -1193,7 +1213,21 @@ static SEXP parse_expr (int prec, int flags)
     else
         PARSE_UNEXPECTED();
 
-    /* Now handle any postfix parts. */
+    /* Now handle any postfix parts.  
+ 
+       We first see if there will be any such parts, and if so see if
+       necessary parentheses preceded them - if so, the parentheses
+       can be eliminated, unless the KEEP_PARENS flag is set.
+
+       Then we loop over all the postfix parts. */
+
+    if (!NL_END && par != 0 && (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' 
+          || NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || NEXT_TOKEN == '@')) {
+        /* Note:  all the postfix operators act the same as [. */
+        if ( ! (flags & KEEP_PARENS) && par < misc_prec(R_BracketSymbol))
+            res = CADR(res);  /* get rid of parens */
+        par = 0;
+    }
 
     while (!NL_END) {
 
@@ -1255,6 +1289,8 @@ static SEXP parse_expr (int prec, int flags)
 
     while (!NL_END) {
 
+        int paren = par;
+
         op_prec = binary_op();
 
         if (op_prec <= prec || op_prec == last_prec)
@@ -1263,29 +1299,33 @@ static SEXP parse_expr (int prec, int flags)
         op = TOKEN_VALUE();
         get_next_token();
 
-        if (LEFT_ASSOC(op_prec)) {
-            for (;;) {
+        for (;;) {
+            if (LEFT_ASSOC(op_prec)) {
                 PARSE_SUB(right = parse_expr (op_prec, 
-                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags));
-                PROTECT_N (res = 
-                            LCONS (op, CONS (res, MaybeConstList1(right))));
+                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
+                            &paren));
                 if (NL_END || binary_op() != op_prec) 
                     break;
+                PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
                 op = TOKEN_VALUE();
                 get_next_token();
             }
+            else if (RIGHT_ASSOC(op_prec)) {
+                PARSE_SUB(right = parse_expr (op_prec-1, flags, &paren));
+                break;
+            }
+            else { /* NON_ASSOC */
+                PARSE_SUB(right = parse_expr (op_prec, flags, &paren));
+                break;
+            }
         }
-        else if (RIGHT_ASSOC(op_prec)) {
-            PARSE_SUB(right = parse_expr (op_prec-1, flags));
-            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-        }
-        else { /* NON_ASSOC */
-            PARSE_SUB(right = parse_expr (op_prec, flags));
-            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
-        }
+
+        PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
 
         last_prec = op_prec;
     }
+
+    if (paren != NULL) *paren = par;
 
     END_PARSE_FUN;
     return res;
@@ -1300,7 +1340,7 @@ static SEXP parse_prog (int flags)
     BGN_PARSE_FUN;
     SEXP res;
 
-    PARSE_SUB (res = parse_expr (0, flags));
+    PARSE_SUB (res = parse_expr (0, flags, NULL));
        
     if (!newline_before_token && NEXT_TOKEN != ';')
         PARSE_UNEXPECTED();
