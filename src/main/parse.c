@@ -1021,8 +1021,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     int op_prec, next_op_prec;
     source_location loc;
 
+    int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
-    int par = 0;  /* parenthesis precedence indicator */
+    int par = 0;  /* paren precedence indicator - initially not parenthesized */
 
     /* Unary operators. */
 
@@ -1031,8 +1032,11 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         get_next_token();
         PARSE_SUB (res = parse_expr (op_prec, 
                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
-                           NULL));
+                           &par));
+        if (!keep_parens && par != 0 && par < op_prec)
+            res = CADR(res);  /* get rid of parens */
         PROTECT_N (res = LCONS (op, MaybeConstList1(res)));
+        par = 0;  /* indicate not a parenthesized expression */
     }
 
     /* Symbols, string constants, and namespace references built from
@@ -1223,10 +1227,13 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (!NL_END && par != 0 && (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' 
           || NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || NEXT_TOKEN == '@')) {
+
         /* Note:  all the postfix operators act the same as [. */
-        if ( ! (flags & KEEP_PARENS) && par < misc_prec(R_BracketSymbol))
+
+        if (!keep_parens && par < misc_prec(R_BracketSymbol))
             res = CADR(res);  /* get rid of parens */
-        par = 0;
+
+        par = 0;  /* indicate that this is not a parenthesized expression */
     }
 
     while (!NL_END) {
@@ -1289,40 +1296,48 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     while (!NL_END) {
 
-        int paren = par;
-
         op_prec = binary_op();
 
         if (op_prec <= prec || op_prec == last_prec)
             break;
 
+        if (!keep_parens && par != 0 
+               && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
+            res = CADR(res);  /* get rid of parens */
+
         op = TOKEN_VALUE();
         get_next_token();
 
-        for (;;) {
-            if (LEFT_ASSOC(op_prec)) {
+        if (LEFT_ASSOC(op_prec)) {
+            for (;;) {
                 PARSE_SUB(right = parse_expr (op_prec, 
                             op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
-                            &paren));
+                            &par));
+                if (!keep_parens && par != 0 && par <= op_prec)
+                    right = CADR(right);  /* get rid of parens */
+                PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
                 if (NL_END || binary_op() != op_prec) 
                     break;
-                PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
                 op = TOKEN_VALUE();
                 get_next_token();
             }
-            else if (RIGHT_ASSOC(op_prec)) {
-                PARSE_SUB(right = parse_expr (op_prec-1, flags, &paren));
-                break;
-            }
-            else { /* NON_ASSOC */
-                PARSE_SUB(right = parse_expr (op_prec, flags, &paren));
-                break;
-            }
+        }
+        else if (RIGHT_ASSOC(op_prec)) {
+            PARSE_SUB(right = parse_expr (op_prec-1, flags, &par));
+            if ( ! (flags & KEEP_PARENS) && par != 0 && par < op_prec)
+                right = CADR(right);  /* get rid of parens */
+            PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
+        }
+        else { /* NON_ASSOC */
+            PARSE_SUB(right = parse_expr (op_prec, flags, &par));
+            if (!keep_parens && par != 0 && par <= op_prec)
+                right = CADR(right);  /* get rid of parens */
+            PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
         }
 
-        PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
-
         last_prec = op_prec;
+
+        par = 0;  /* indicate that this is not a parenthesized expression */
     }
 
     if (paren != NULL) *paren = par;
