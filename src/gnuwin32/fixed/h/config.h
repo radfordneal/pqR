@@ -521,7 +521,7 @@
 #define R_MAT_MULT_WITH_BLAS_DEFAULT NA
 
 /* Define this to the default for BLAS_in_helpers. */
-#undef R_BLAS_IN_HELPERS_DEFAULT FALSE
+#define R_BLAS_IN_HELPERS_DEFAULT FALSE
 
 /* Define this to enable deferred evaluation / helpers. */
 #define R_DEFERRED_EVAL 1
