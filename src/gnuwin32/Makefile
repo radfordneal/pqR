@@ -54,7 +54,7 @@ MkRules: MkRules.dist MkRules.rules
 	cat MkRules.dist MkRules.rules > MkRules
 endif
 
-CFLAGS=-O3 -Wall -pedantic $(EOPTS)
+CFLAGS=-O3 -Wall -pedantic -Wno-unused-value -Wno-parentheses $(EOPTS)
 FFLAGS=-O3 $(EOPTS)
 ifdef DEBUG
  CFLAGS+=$(G_FLAG)
