@@ -103,3 +103,5 @@ lib%.dll.a: %.def
 
 %.o: %.rc
 	$(RESCOMP) $(RESFLAGS) $($*-RESFLAGS) -i $< -o $@
+
+R_BIT_BUCKET = /dev/null
