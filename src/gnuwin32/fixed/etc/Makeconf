@@ -3,6 +3,8 @@
 
 # Hand-edited version for gnuwin32.
 
+R_BIT_BUCKET = /dev/null
+
 ifdef DEBUG
   DLLFLAGS=
   DEBUGFLAG=-gdwarf-2
