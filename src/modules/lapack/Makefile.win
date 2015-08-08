@@ -16,7 +16,7 @@ LIBSOURCES = dlamch.f dlapack.f cmplx.f
 LIBOBJECTS = $(LIBSOURCES:.f=.o) init_win.o Rlapackrc.o
 
 CPPFLAGS=-I../../include -DHAVE_CONFIG_H
-dlamch-FFLAGS=-ffloat-store
+dlamch-FFLAGS=-mfpmath=sse
 
 install: $(MODULE).dll
 	@$(MKDIR) -p ../../../modules$(R_ARCH)

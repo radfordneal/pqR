@@ -71,11 +71,13 @@
  * single int, which is the signal it handles.
 */
 typedef	void (*sighandler_t)(int nSig);
-/* mingw-w64's sys/types.h also defines this and we want this defn */ 
-#ifndef _SIGSET_T_
-#define	_SIGSET_T_
-typedef int sigset_t;
-#endif	/* Not _SIGSET_T_ */
+
+/* Define sigset_t as long int, regardless of what mingw wants, which
+   is confused with whether or not _POSIX is defined.  Note that uses
+   of this type are here in psignal.c, so we should be able to decide
+   for ourselves what it is. */
+
+typedef long int sigset_t;
 
 
 /*

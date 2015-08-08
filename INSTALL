@@ -16,6 +16,10 @@ process for pqR is basically the same.  However, there are some
 configuration options specific to pqR that you may wish to set, as
 described below, and in the R-admin manual.
 
+The instructions here are for Linux or Unix (including Mac OS X and
+Solaris).  See src/gnuwin32/INSTALL for instructions on installing
+pqR on Microsoft Windows systems.
+
 
 Configuring pqR
 
