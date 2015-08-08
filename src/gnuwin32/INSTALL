@@ -28,29 +28,33 @@ adequate, is as follows:
      in the build process appearing to hang if the window that MiKTeX
      puts up asking about this is covered by another window.)
 
-  4) Start a Windows Console window, and change to the src/gnuwin32
+  4) Start a Windows Console window, and change to the src\gnuwin32
      sub-directory of the source directory your created at step (1).
 
   5) Copy either MkRules.dist or MkRules.dist64 to MkRules.local
      and possibly edit MkRules.local as appropriate.
 
   6) Possibly edit the options (eg, whether helper threads are
-     enabled) at the start of fixed/h/config.h (in src/gnuwin32).
+     enabled) at the start of fixed\h\config.h (in src\gnuwin32).
 
-  7) Issue the following commands (in a Windows console window), which
-     will build pqR in-place in the source directory.
+  7) Issue the following commands in a Windows console (command
+     prompt) window in order to build pqR in-place in the source
+     directory:
 
-          mkdir c:/tmp
-          set TMPDIR=c:/tmp
+          mkdir c:\tmp
+          set TMPDIR=c:\tmp
           set CYGWIN=nodosfilewarning
-          make all recommended
+          make all recommended >make.out 2>&1
           cd bitmap
-          make
+          make >make.out 2>&1
 
-   8) You should now be able to run Rterm.exe, which is located in 
-      <build-dir>/bin/<arch>, where <build-dir> is the source/build
-      directory you are using and <arch> is i386 for 32-bit builds
-      and x64 for 64-bit builds.
+      You can monitor the make.out files from another console window
+      to see how things are progressing during the build.
+
+   8) You should now be able to run Rterm.exe, by typing the command
+      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
+      <build-dir> is the source/build directory you are using and
+      <arch> is i386 for 32-bit builds and x64 for 64-bit builds.
 
       The number of helper threads to use can be specified by 
 
