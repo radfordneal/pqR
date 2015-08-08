@@ -1,23 +1,48 @@
-R for Windows
-=============
+This distribution contains the sources to build pqR on Windows.  See
+the file `README' for fuller details (written for R-2.15.0, but
+generally applicable to pqR).
 
-This distribution contains the sources to build a port of R to run on
-Windows.  See the file `README' for fuller details, including how
-to install the binary versions.
-
-
-Building From Source on Windows
-===============================
-
-Details on building R are given in the `R Installation and
+Details on building pqR are given in the `R Installation and
 Administration Manual' in the doc/manual directory.  An HTML version
-is at doc/html/R-admin.html, unless you obtained R using Subversion.
+is at doc/html/R-admin.html, unless you're using a development version
+of pqR (from github).
 
+The short version of these instructions, which may not always be
+adequate, is as follows:
 
-Feedback
-========
+  1) Obtain the pqR source from pqR-project.org, and untar it to
+     create a source directory.  (This assume you already have a tar
+     program.  If not, create an empty source directory, go on
+     to step (2), and then come back here, redoing steps (1) and (2)
+     with the real source directory.)
 
-Please send comments and bug reports to
+  2) Obtain Rtools215.exe distibuted at r-project.org (or get it
+     from http:pqR-project.org/Rtools215.exe).  Run this to install
+     the required tools, choosing options appropriate for either
+     a 32-bit or 64-bit build, and specifying the source directory
+     you created in step (1) for the destination.
 
-	R-windows@r-project.org
+  3) Start a Windows Console window, and change to the src/gnuwin32
+     sub-directory of the source directory your created at step (1).
 
+  4) Copy either MkRules.dist or MkRules.dist64 to MkRules.local
+     and possibly edit MkRules.local as appropriate.
+
+  5) Possibly edit the options (eg, whether helper threads are
+     enabled) at the start of fixed/h/config.h (in src/gnuwin32).n
+
+  5) Issue the following commands (in a Windows console window), which
+     will build pqR in-place in the source directory.
+
+          mkdir c:/tmp
+          set TMPDIR=c:/tmp
+          set CYGWIN=nodosfilewarning
+          make all recommended
+          cd bitmap
+          make
+
+   4) You should now be able to run Rterm.exe, which is located in 
+      the src/gnuwin32/front-ends sub-directory of the source (and
+      build) directory.
+
+There is also a Windows GUI, which is not discussed here.
