@@ -22,16 +22,22 @@ adequate, is as follows:
      a 32-bit or 64-bit build, and specifying the source directory
      you created in step (1) for the destination.
 
-  3) Start a Windows Console window, and change to the src/gnuwin32
+  3) Obtain TeX from somewhere, such as http://miktex.org.  (If you
+     get the basic MiKTeX version, note that it will at times ask
+     about downloading more parts of TeX, and that this may result
+     in the build process appearing to hang if the window that MiKTeX
+     puts up asking about this is covered by another window.)
+
+  4) Start a Windows Console window, and change to the src/gnuwin32
      sub-directory of the source directory your created at step (1).
 
-  4) Copy either MkRules.dist or MkRules.dist64 to MkRules.local
+  5) Copy either MkRules.dist or MkRules.dist64 to MkRules.local
      and possibly edit MkRules.local as appropriate.
 
-  5) Possibly edit the options (eg, whether helper threads are
-     enabled) at the start of fixed/h/config.h (in src/gnuwin32).n
+  6) Possibly edit the options (eg, whether helper threads are
+     enabled) at the start of fixed/h/config.h (in src/gnuwin32).
 
-  5) Issue the following commands (in a Windows console window), which
+  7) Issue the following commands (in a Windows console window), which
      will build pqR in-place in the source directory.
 
           mkdir c:/tmp
@@ -41,7 +47,7 @@ adequate, is as follows:
           cd bitmap
           make
 
-   4) You should now be able to run Rterm.exe, which is located in 
+   8) You should now be able to run Rterm.exe, which is located in 
       the src/gnuwin32/front-ends sub-directory of the source (and
       build) directory.
 
