@@ -38,21 +38,6 @@
 #endif
 
 
-/* To be removed when newparse becomes parse... */
-
-#define R_ParseVector R_NewParseVector
-#define R_Parse1File R_NewParse1File
-#define R_Parse1Buffer R_NewParse1Buffer
-#define R_ParseFile R_NewParseFile
-#define R_ParseConn R_NewParseConn
-#define R_ParseBuffer R_NewParseBuffer
-#define R_InitSrcRefState R_NewInitSrcRefState
-#define R_FinalizeSrcRefState R_NewFinalizeSrcRefState
-
-#undef isValidName
-#define isValidName NewIsValidName
-
-
 /* --------------------------------------------------------------------------
    PARSING ENTRY POINTS PROVIDED
  
@@ -61,49 +46,29 @@
    same functionality; they just set things up in slightly different
    ways.
  
-   The following routines parse a single expression:
+   The following routine parses a single expression:
  
-       SEXP R_Parse1File (FILE *fp, int gencode, ParseStatus *status, 
-                           SrcRefState *state)
-         (used for R_ReplFile in main.c)
- 
-       SEXP R_Parse1Buffer (IoBuffer *buffer, int gencode, ParseStatus *status)
+       SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
+                            ParseStatus *status, SrcRefState *state);
 
-         (used for ReplIteration and R_ReplDLLdo1 in main.c)
- 
    The following routines parse several expressions and return their
    values in a single expression vector.
  
        SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
 
-         (public, and used by parse(text=) in file source.c)
+       SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
+                           ParseStatus *status, SEXP srcfile);
 
-       SEXP R_ParseFile (FILE *fp, int n, ParseStatus *status, SEXP srcfile)
-
-         (used for do_edit in file edit.c)
- 
-       SEXP R_ParseBuffer (IoBuffer *buffer, int n, ParseStatus *status, 
-                           SEXP prompt, SEXP srcfile)
-
-         (used by parse(file="") in file source.c)
- 
-       SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, 
-                         SEXP srcfile)
-
-         (used by parse(file=) in file source.c)
- 
-   The success of the parse is indicated as folllows:
+   The success of the parse is indicated as follows:
  
  	status = PARSE_NULL       - there was no statement to parse
  		 PARSE_OK	  - complete statement
- 		 PARSE_INCOMPLETE - incomplete statement
  		 PARSE_ERROR      - syntax error
  		 PARSE_EOF	  - end of file
- 
-   In ReplIteration and Replconsole in main.c, the INCOMPLETE status is used
-   to determine the number of lines to read for interactive input, with 
-   additional lines being read until INCOMPLETE status is no longer returned.
 
+   PARSE_NULL and PARSE_EOF are not possible for R_ParseVector and
+   R_ParseStream.
+ 
    R_InitSrcRefState and R_FinalizeSrcRefState are also currently exposed.
 
    All the above are declared in Parse.h and R_ext/Parse.h.
@@ -279,33 +244,32 @@ cr	:
 /* Codes for token types.  ASCII codes for single characters also act as
    token numbers.  
 
-   The MAYBE_END type is returned at the end of a line of interactive
-   input text from the console, and is treated as end of file if the
-   expression could end there, or as nothing otherwise.  Note that end
-   of line is not otherwise returned as a token, but instead results
-   in newline_before_token being set when the following token is returned. */
+   Note that '\n' is returned at the end of a line of input text, and
+   is treated the same as end of file if the expression could end
+   there.  Otherwise, it is skipped as a token, except that
+   newline_before_token is set when the following token is returned. */
 
 enum token_type {
-  MAYBE_END=256, END_OF_INPUT,  ERROR,     STR_CONST,        NUM_CONST,
-  SYMBOL,        LEFT_ASSIGN,   EQ_ASSIGN, RIGHT_ASSIGN,     NULL_CONST,
-  FUNCTION,      LBB,           FOR,       IN,               IF,
-  ELSE,          WHILE,         NEXT,      BREAK,            REPEAT,
-  GT,            GE,            LT,        LE,               EQ,
-  NE,            AND,           OR,        AND2,             OR2,
-  NS_GET,        NS_GET_INT,    SPECIAL
+  UNUSED=256,   END_OF_INPUT,   ERROR,     STR_CONST,        NUM_CONST,
+  SYMBOL,       LEFT_ASSIGN,    EQ_ASSIGN, RIGHT_ASSIGN,     NULL_CONST,
+  FUNCTION,     LBB,            FOR,       IN,               IF,
+  ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
+  GT,           GE,             LT,        LE,               EQ,
+  NE,           AND,            OR,        AND2,             OR2,
+  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
    with the codes for token types above.  They are used for error messages. */
 
 static const char *const token_name[] = {
-  "end of input","end of input","input",   "string constant","numeric constant",
-  "symbol",      "assignment",  "=",       "->",             "'NULL'",
-  "'function'",  "'[['",        "'for'",   "'in'",           "'if'",
-  "'else'",      "'while'",     "'next'",  "'break'",        "'repeat'",
-  "'>'",         "'>='",        "'<'",     "'<='",           "'=='",
-  "'!='",        "'&'",         "'|'",     "'&&'",           "'||'",
-  "'::'",        "':::'",       "SPECIAL"
+  "input",      "end of input", "input",   "string constant","numeric constant",
+  "symbol",     "assignment",   "=",       "->",             "'NULL'",
+  "'function'", "'[['",         "'for'",   "'in'",           "'if'",
+  "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
+  "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
+  "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
+  "'::'",       "':::'",        "**",      "SPECIAL"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -327,7 +291,7 @@ static int next_token;            /* The next token, as an integer code */
 static SEXP next_token_val;       /* The value associated with next_token. */
 static int newline_before_token;  /* 1 if next token was preceded by '\n' */
 
-static void get_next_token(void); /* Update next_token to the next one */
+static int get_next_token(void);  /* Update next_token to the next one */
 
 
 /* Record of the start and end of part of the source text.  See the
@@ -351,19 +315,16 @@ typedef struct
 
 static source_location token_loc, prev_token_loc;
 
-/* Internal lexer / parser state. */
+/* Pointer to lexer / parser state. */
 
-static SrcRefState ParseState;
+static SrcRefState *ParseState;
 
 
 /* --------------------------------------------------------------------------
    INTERFACE FROM THE LEXICAL ANALYSER TO CHARACTER INPUT ROUTINES
 
    The xxgetc function returns the next character; xxungetc pushes
-   a character back to be returned by xxgetc later.  The character
-   returned may be SOFT_EOF, indicating the newline at the end of
-   a line of interactive console input (which might be the end if
-   that is syntactically allowed). 
+   a character back to be returned by xxgetc later.
 
    The xxgetc function gets a character by calling the function pointed 
    to by ptr_getc, which is set to different functions for different
@@ -381,8 +342,6 @@ static SrcRefState ParseState;
 
 static int xxgetc();
 static void xxungetc(int);
-
-#define SOFT_EOF (EOF == -1 ? -2 : -1)  /* NL on interactive input */
 
 static int (*ptr_getc)(void);     /* Function to call to get a character */
 
@@ -419,39 +378,39 @@ static int xxgetc(void)
 
     oldpos = prevpos;
     prevpos = (prevpos + 1) % PUSHBACK_BUFSIZE;
-    prevbytes[prevpos] = ParseState.xxbyteno;
-    prevlines[prevpos] = ParseState.xxlineno;  
-    prevparse[prevpos] = ParseState.xxparseno;
+    prevbytes[prevpos] = ParseState->xxbyteno;
+    prevlines[prevpos] = ParseState->xxlineno;  
+    prevparse[prevpos] = ParseState->xxparseno;
 
     /* We only advance the column for the 1st byte in UTF-8, so handle later 
        bytes specially */
 
     if (0x80 <= (unsigned char) c && (unsigned char) c <= 0xBF 
                                   && known_to_be_utf8) {
-    	ParseState.xxcolno--;   
+    	ParseState->xxcolno--;   
     	prevcols[prevpos] = prevcols[oldpos];
     } else 
-    	prevcols[prevpos] = ParseState.xxcolno;
+    	prevcols[prevpos] = ParseState->xxcolno;
     	
     if (c == EOF)
 	return R_EOF;
 
     R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    R_ParseContext[R_ParseContextLast] = c == SOFT_EOF ? '\n' : c;
+    R_ParseContext[R_ParseContextLast] = c;
 
-    if (R_ParseContext[R_ParseContextLast] == '\n') {
-	ParseState.xxlineno += 1;
-	ParseState.xxcolno = 0;
-    	ParseState.xxbyteno = 0;
-    	ParseState.xxparseno += 1;
+    if (c == '\n') {
+	ParseState->xxlineno += 1;
+	ParseState->xxcolno = 0;
+    	ParseState->xxbyteno = 0;
+    	ParseState->xxparseno += 1;
     } else {
-        ParseState.xxcolno += 1;
-    	ParseState.xxbyteno += 1;
+        ParseState->xxcolno += 1;
+    	ParseState->xxbyteno += 1;
     }
 
-    if (c == '\t') ParseState.xxcolno = ((ParseState.xxcolno + 7) & ~7);
+    if (c == '\t') ParseState->xxcolno = ((ParseState->xxcolno + 7) & ~7);
     
-    R_ParseContextLine = ParseState.xxlineno;    
+    R_ParseContextLine = ParseState->xxlineno;    
 
     return c;
 }
@@ -461,14 +420,14 @@ static void xxungetc(int c)
     /* This assumes that c was the result of xxgetc; if not, some edits will 
        be needed */
 
-    ParseState.xxlineno = prevlines[prevpos];
-    ParseState.xxbyteno = prevbytes[prevpos];
-    ParseState.xxcolno  = prevcols[prevpos];
-    ParseState.xxparseno = prevparse[prevpos];
+    ParseState->xxlineno = prevlines[prevpos];
+    ParseState->xxbyteno = prevbytes[prevpos];
+    ParseState->xxcolno  = prevcols[prevpos];
+    ParseState->xxparseno = prevparse[prevpos];
     
     prevpos = (prevpos + PUSHBACK_BUFSIZE - 1) % PUSHBACK_BUFSIZE;
 
-    R_ParseContextLine = ParseState.xxlineno;
+    R_ParseContextLine = ParseState->xxlineno;
 
     R_ParseContext[R_ParseContextLast] = '\0';
     /* precaution as to how % is implemented for < 0 numbers */
@@ -509,26 +468,27 @@ static void attachSrcrefs(SEXP val, SEXP t)
 
     PROTECT(val);
     PROTECT(srval = allocVector(VECSXP, length(t)));
+
     for (n = 0 ; n < LENGTH(srval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(srval, n, CAR(t));
     setAttrib(val, R_SrcrefSymbol, srval);
-    setAttrib(val, R_SrcfileSymbol, ParseState.SrcFile);
-    {
-	source_location wholeFile;
-	wholeFile.first_line = 1;
-	wholeFile.first_byte = 0;
-	wholeFile.first_column = 0;
-	wholeFile.last_line = ParseState.xxlineno;
-	wholeFile.last_byte = ParseState.xxbyteno;
-	wholeFile.last_column = ParseState.xxcolno;
-	wholeFile.first_parsed = 1;
-	wholeFile.last_parsed = ParseState.xxparseno;
-	setAttrib(val, R_WholeSrcrefSymbol, 
-                       makeSrcref(&wholeFile, ParseState.SrcFile));
-    }
+    setAttrib(val, R_SrcfileSymbol, ParseState->SrcFile);
+
+    source_location wholeFile;
+    wholeFile.first_line = 1;
+    wholeFile.first_byte = 0;
+    wholeFile.first_column = 0;
+    wholeFile.last_line = ParseState->xxlineno;
+    wholeFile.last_byte = ParseState->xxbyteno;
+    wholeFile.last_column = ParseState->xxcolno;
+    wholeFile.first_parsed = 1;
+    wholeFile.last_parsed = ParseState->xxparseno;
+    setAttrib(val, R_WholeSrcrefSymbol, 
+                   makeSrcref(&wholeFile, ParseState->SrcFile));
+
     UNPROTECT(2);
 
-    ParseState.didAttach = TRUE;
+    ParseState->didAttach = TRUE;
 }
 
 void R_InitSrcRefState(SrcRefState *state)
@@ -549,40 +509,12 @@ void R_InitSrcRefState(SrcRefState *state)
 
 void R_FinalizeSrcRefState(SrcRefState *state)
 {
+    /* We could just do an UNPROTECT(2), but this detects some bugs... */
+
     UNPROTECT(1);
     if (R_PPStackTop != state->OriginalProt) abort();
     UNPROTECT(1);
     if (R_PPStackTop != state->SrcFileProt) abort();
-}
-
-static void UseSrcRefState(SrcRefState *state)
-{
-    if (state) {
-	ParseState.keepSrcRefs = state->keepSrcRefs;
-	ParseState.SrcFile = state->SrcFile;
-	ParseState.Original = state->Original;
-	ParseState.SrcFileProt = state->SrcFileProt;
-	ParseState.xxlineno = state->xxlineno;
-	ParseState.xxcolno = state->xxcolno;
-	ParseState.xxbyteno = state->xxbyteno;
-	ParseState.xxparseno = state->xxparseno;
-    } else 
-    	R_InitSrcRefState(&ParseState);
-}
-
-static void PutSrcRefState(SrcRefState *state)
-{
-    if (state) {
-	state->keepSrcRefs = ParseState.keepSrcRefs;
-	state->SrcFile = ParseState.SrcFile;
-	state->Original = ParseState.Original;
-	state->SrcFileProt = ParseState.SrcFileProt;
-	state->xxlineno = ParseState.xxlineno;
-	state->xxcolno = ParseState.xxcolno;
-	state->xxbyteno = ParseState.xxbyteno;
-	state->xxparseno = ParseState.xxparseno;
-    } else 
-    	R_FinalizeSrcRefState(&ParseState);
 }
 
 
@@ -637,7 +569,7 @@ static void error_msg(const char *s)
 
     R_ParseError     = token_loc.first_line;
     R_ParseErrorCol  = token_loc.first_column;
-    R_ParseErrorFile = ParseState.SrcFile;
+    R_ParseErrorFile = ParseState->SrcFile;
 
     if (strcmp(s,unexpected) == 0) {
         if (next_token < 256) {
@@ -681,17 +613,16 @@ static void error_msg(const char *s)
 
 
 /* Look at the next token, which will usually already be in next_token.
-   However, if next_token is MAYBE_END, advance to the next real token
-   first. */
+   However, if next_token is '\n', advance to the next token first. */
 
 #define NEXT_TOKEN \
-  (next_token == MAYBE_END ? get_next_token_not_maybe_end() : next_token) 
+  (next_token == '\n' ? get_next_token_not_newline() : next_token) 
 
-static int get_next_token_not_maybe_end(void)
+static int get_next_token_not_newline(void)
 {
     do { 
         get_next_token(); 
-    } while (next_token == MAYBE_END);
+    } while (next_token == '\n');
 
     newline_before_token = 1;
 
@@ -736,7 +667,9 @@ static void end_location (source_location *loc)
 
 /* Tables of operator precedence.  The lower two bits are 1 for binary
    operators that are left associative, 2 for binary operators that are
-   right associative, and 0 for relational operators and unary operators. */
+   right associative, and 0 for relational operators, unary operators,
+   and miscellanious operators.  This is expressed in the NON_ASSOC, 
+   LEFT_ASSOC, and RIGHT_ASSOC macros in Parse.h. */
 
 static struct { SEXP *sym_ptr; int prec; } unary_prec_tbl[] =
 {
@@ -752,10 +685,6 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
 {
     { &R_DoubleColonSymbol,       /* ::  */ 0xf0 },
     { &R_TripleColonSymbol,       /* ::: */ 0xf0 },
-    { &R_DollarSymbol,            /* $   */ 0xe1 },
-    { &R_AtSymbol,                /* @   */ 0xe1 },
-    { &R_BracketSymbol,           /* [   */ 0xe1 },
-    { &R_Bracket2Symbol,          /* [[  */ 0xe1 },
     { &R_ExptSymbol,              /* ^   */ 0xd2 },
     { &R_Expt2Symbol,             /* **  */ 0xd2 },
     { &R_ColonSymbol,             /* :   */ 0xc1 },
@@ -786,9 +715,81 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
 #   define EQASSIGN_PREC 0x12
 };
 
-#define NON_ASSOC(p)   (((p)&3) == 0)
-#define LEFT_ASSOC(p)  (((p)&3) == 1)
-#define RIGHT_ASSOC(p) (((p)&3) == 2)
+static struct { SEXP *sym_ptr; int prec; } misc_prec_tbl[] =
+{
+    { &R_BracketSymbol,           /* [   */ 0xe8 },
+    { &R_Bracket2Symbol,          /* [[  */ 0xe8 },
+    { &R_DollarSymbol,            /* $   */ 0xe8 },
+    { &R_AtSymbol,                /* @   */ 0xe8 },
+
+    { &R_FunctionSymbol,          /*     */ 0x08 },
+    { &R_IfSymbol,                /*     */ 0x08 },
+    { &R_WhileSymbol,             /*     */ 0x08 },
+    { &R_RepeatSymbol,            /*     */ 0x08 },
+
+    { 0, 0 }
+};
+
+/* Return the unary precedence of an operator symbol, or 0 if the 
+   symbol is not a unary operator. */
+
+attribute_hidden int unary_prec (SEXP sym)
+{
+    int i;
+
+    for (i = 0; unary_prec_tbl[i].prec != 0; i++) {
+        if (sym == *unary_prec_tbl[i].sym_ptr)
+            return unary_prec_tbl[i].prec;
+    }
+
+    return 0;
+}
+
+/* Return the binary precedence of an operator symbol, or 0 if the 
+   symbol is not a binary operator. */
+
+attribute_hidden int binary_prec (SEXP sym)
+{
+    int i;
+
+    for (i = 0; binary_prec_tbl[i].prec != 0; i++) {
+        if (sym == *binary_prec_tbl[i].sym_ptr)
+            return binary_prec_tbl[i].prec;
+    }
+
+    if (TYPEOF(sym) == SYMSXP) {
+        const char *s = CHAR(PRINTNAME(sym));
+        if (s[0] == '%') {
+            for (i = 1; s[i] != 0; i++) {
+               if (s[i] == '%')
+                   return s[i+1] == 0 ? SPECIAL_PREC : 0;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/* Return the precedence of a miscellaneous operator symbol, or 0 if the 
+   symbol is not a miscellaneous operator. */
+
+attribute_hidden int misc_prec (SEXP sym)
+{
+    int i;
+
+    for (i = 0; misc_prec_tbl[i].prec != 0; i++) {
+        if (sym == *misc_prec_tbl[i].sym_ptr)
+            return misc_prec_tbl[i].prec;
+    }
+
+    return 0;
+}
+   
+
+/* Return 0 if NEXT_TOKEN is not a unary operator, and otherwise
+   the precedence of the unary operator.  Note that only precedence
+   values above LOW_REAL_UNARY and below HIGH_REAL_UNARY correspond
+   to real unary operators. */
 
 static int unary_op(void)
 {
@@ -800,30 +801,28 @@ static int unary_op(void)
     if (NEXT_TOKEN == SYMBOL)
         return 0;
 
-   /* But a symbol corresponding to the operator will be in next_token_val
-      (since the reference to NEXT_TOKEN above will force out MAYBE_END).
+   /* A symbol corresponding to an operator will be in next_token_val.
       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
     sym = next_token_val;
     if (TYPEOF(sym) != SYMSXP)
         return 0;
 
-    /* We now see if this symbol is in the table of unary operators. */
+    /* Return the unary precedence of the symbol, or 0 if not a unary op. */
 
-    for (i = 0; unary_prec_tbl[i].prec != 0; i++) {
-        if (sym == *unary_prec_tbl[i].sym_ptr)
-            return unary_prec_tbl[i].prec;
-    }
-
-    return 0;
+    return unary_prec (sym);
 }
+
+/* Return 0 if NEXT_TOKEN is not a binary operator, and otherwise
+   the precedence of the binary operator. */
 
 static int binary_op(void)
 {
     SEXP sym;
     int i;
 
-    /* The special binary operators of the form %xxx% are handled specially. */
+    /* The special binary operators of the form %xxx% are handled specially
+       here (though they could instead be passed on to binary_prec). */
 
     if (NEXT_TOKEN == SPECIAL)
         return SPECIAL_PREC;
@@ -833,30 +832,36 @@ static int binary_op(void)
     if (NEXT_TOKEN == SYMBOL)
         return 0;
 
-   /* But a symbol corresponding to the operator will be in next_token_val
-      (since the reference to NEXT_TOKEN above will force out MAYBE_END).
+   /* A symbol corresponding to an operator will be in next_token_val.
       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
     sym = next_token_val;
     if (TYPEOF(sym) != SYMSXP)
         return 0;
 
-    /* We now see if this symbol is in the table of binary operators. */
+    /* Return the binary precedence of the symbol, or 0 if not a binary op. */
 
-    for (i = 0; binary_prec_tbl[i].prec != 0; i++) {
-        if (sym == *binary_prec_tbl[i].sym_ptr)
-            return binary_prec_tbl[i].prec;
-    }
-
-    return 0;
+    return binary_prec (sym);
 }
 
 
 /* --------------------------------------------------------------------------
    THE RECURSIVE DESCENT PARSER
 
-   Each parse routine takes an int flags argument, and a pointer to an
-   int in which to return a status.  
+   Each parse routine takes an int flags argument, whose bits have
+   the meanings defined below.  
+
+   The parse_expr routine also has a 'paren' argument for controlling
+   how parentheses are handled.  If 'paren' is NULL, it is ignored,
+   and no check regarding parentheses is done.  If 'paren' is not
+   NULL, the int that it points to is set to 0 if the expression is
+   not a parenthesized expression, or if the expression inside the
+   parentheses is not one with a unary, binary, or relational
+   operator.  If the expression is a parenthesized unary, binary, or
+   relational operator, *paren is set to the precedence of the
+   operator.  This allows the caller to decide whether to remove the
+   parentheses if they are necessary (and hence will be re-inserted
+   when the expression is deparsed).
 
    The parse routines return the object parsed, or NULL if there was an
    error (or errors may cause exit out of the whole parser with a call
@@ -865,8 +870,8 @@ static int binary_op(void)
    Parsing routines are called with next_token already set to the first
    token of the construct they parse, and return with next_token set to
    the token after the construct they parsed.  Note, however, that this
-   token may be MAYBE_END, which is a "soft" end-of-file that is replaced
-   by an actual token if the token is accessed via NEXT_TOKEN rather than
+   token may be '\n', which acts as a "soft" end-of-file that is replaced
+   by another token if the token is accessed via NEXT_TOKEN rather than
    next_token. 
 
    Source references are attached if keep_source is non-zero. */
@@ -874,7 +879,7 @@ static int binary_op(void)
 
 int keep_source;  /* Attach source references to R expressions? */
 
-static SEXP parse_expr (int prec, int flags, int *stat);
+static SEXP parse_expr (int prec, int flags, int *paren);
 
 
 /* Bits in the flags word passed to parsing routines. */
@@ -886,7 +891,7 @@ static SEXP parse_expr (int prec, int flags, int *stat);
 
 /* Parse the formals list of a function definiton. */
 
-static SEXP parse_formlist (int flags, int *stat)
+static SEXP parse_formlist (int flags)
 {
     BGN_PARSE_FUN;
     SEXP res;
@@ -916,7 +921,7 @@ static SEXP parse_formlist (int flags, int *stat)
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
                 get_next_token();
-                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, stat));
+                PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 SETCAR (last, def);
             }
             if (NEXT_TOKEN != ',')
@@ -938,7 +943,7 @@ static SEXP parse_formlist (int flags, int *stat)
    compatibility, though it's not allowed for a formal name.  Strings
    are also allowed for tags, though again they aren't for formal names. */
 
-static SEXP parse_sublist (int flags, int *stat)
+static SEXP parse_sublist (int flags)
 {
     BGN_PARSE_FUN;
     SEXP res, last, last2;
@@ -953,7 +958,7 @@ static SEXP parse_sublist (int flags, int *stat)
             if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
-                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, stat));
+                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
                     if (TYPEOF(arg) == SYMSXP)
@@ -969,8 +974,8 @@ static SEXP parse_sublist (int flags, int *stat)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
-                        PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, 
-                                                    stat));
+                        PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags,
+                                                    NULL));
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
@@ -1005,27 +1010,33 @@ static SEXP parse_sublist (int flags, int *stat)
 }
 
 
-/* Parse an expression, with any non-enclosed operator having precedence 
-   greater than prec. */
+/* Parse an expression in which any non-enclosed operator has precedence 
+   greater than prec.  An attempt is made to make the last operand of an
+   operator be a constant objects. */
 
-static SEXP parse_expr (int prec, int flags, int *stat)
+static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
     SEXP res, right, op;
     int op_prec, next_op_prec;
     source_location loc;
 
+    int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
+    int par = 0;  /* paren precedence indicator - initially not parenthesized */
 
     /* Unary operators. */
-    
+
     if (op_prec = unary_op()) {
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_expr (op_prec, 
                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
-                           stat));
+                           &par));
+        if (!keep_parens && par != 0 && par < op_prec)
+            res = CADR(res);  /* get rid of parens */
         PROTECT_N (res = LCONS (op, MaybeConstList1(res)));
+        par = 0;  /* indicate not a parenthesized expression */
     }
 
     /* Symbols, string constants, and namespace references built from
@@ -1053,15 +1064,20 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         get_next_token();
     }
 
-    /* Paren expressions. */
+    /* Paren expressions.  Sets 'par'. */
 
     else if (NEXT_TOKEN == '(') {
         SEXP op;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB (res = parse_expr (0, subflags, stat));
-        if (flags & KEEP_PARENS)
-            res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
+        PARSE_SUB (res = parse_expr (0, subflags, NULL));
+        if (TYPEOF(res) == LANGSXP) {
+            int nargs = length(CDR(res));
+            if (par == 0 && nargs == 1) par = unary_prec(CAR(res));
+            if (par == 0 && nargs == 2) par = binary_prec(CAR(res));
+            if (par == 0)               par = misc_prec(CAR(res));
+        }
+        res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
         EXPECT(')');
     }
 
@@ -1075,7 +1091,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         get_next_token();
         end_location(&loc);
         if (keep_source) {
-            PROTECT_N (refs = CONS (makeSrcref(&loc,ParseState.SrcFile),
+            PROTECT_N (refs = CONS (makeSrcref(&loc,ParseState->SrcFile),
                                     R_NilValue));
             last_ref = refs;
         }
@@ -1086,10 +1102,10 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL, stat));
+            PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL, NULL));
             end_location(&loc);
             if (keep_source) {
-                SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState.SrcFile),
+                SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState->SrcFile),
                                         R_NilValue));
                 last_ref = CDR(last_ref);
             }
@@ -1112,13 +1128,13 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(args = parse_formlist (flags, stat));
+        PARSE_SUB(args = parse_formlist (flags));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags, stat));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         end_location(&loc);
         if (keep_source) {
-            srcref = makeSrcref(&loc, ParseState.SrcFile);
-            ParseState.didAttach = TRUE;
+            srcref = makeSrcref(&loc, ParseState->SrcFile);
+            ParseState->didAttach = TRUE;
         } 
         else
             srcref = R_NilValue;
@@ -1131,7 +1147,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         SEXP op, body;
         op = TOKEN_VALUE();
         get_next_token();
-        PARSE_SUB(body = parse_expr (0, flags, stat));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang2 (op, body));
     }
 
@@ -1142,9 +1158,9 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, stat));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, NULL));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags, stat));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang3 (op, cond, body));
     }
 
@@ -1156,13 +1172,13 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, stat));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, NULL));
         EXPECT(')');
-        PARSE_SUB(true_stmt = parse_expr(0, flags, stat));
+        PARSE_SUB(true_stmt = parse_expr(0, flags, NULL));
 
         if ( ! (NL_END && (flags & NO_PEEKING)) && NEXT_TOKEN == ELSE) {
             get_next_token();
-            PARSE_SUB(false_stmt = parse_expr (0, flags, stat));
+            PARSE_SUB(false_stmt = parse_expr (0, flags, NULL));
             res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
                               MaybeConstList1(false_stmt)))));
         }
@@ -1183,9 +1199,9 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         sym = TOKEN_VALUE();
         get_next_token();
         EXPECT(IN);
-        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, stat));
+        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, NULL));
         EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags, stat));
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang4 (op, sym, vec, body));
     }
 
@@ -1201,7 +1217,24 @@ static SEXP parse_expr (int prec, int flags, int *stat)
     else
         PARSE_UNEXPECTED();
 
-    /* Now handle any postfix parts. */
+    /* Now handle any postfix parts.  
+ 
+       We first see if there will be any such parts, and if so see if
+       necessary parentheses preceded them - if so, the parentheses
+       can be eliminated, unless the KEEP_PARENS flag is set.
+
+       Then we loop over all the postfix parts. */
+
+    if (!NL_END && par != 0 && (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' 
+          || NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || NEXT_TOKEN == '@')) {
+
+        /* Note:  all the postfix operators act the same as [. */
+
+        if (!keep_parens && par < misc_prec(R_BracketSymbol))
+            res = CADR(res);  /* get rid of parens */
+
+        par = 0;  /* indicate that this is not a parenthesized expression */
+    }
 
     while (!NL_END) {
 
@@ -1210,7 +1243,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         if (NEXT_TOKEN == '(') {
             SEXP subs;
             get_next_token();
-            PARSE_SUB(subs = parse_sublist(flags,stat));
+            PARSE_SUB(subs = parse_sublist(flags));
             if (isString(res))
                 res = installChar(STRING_ELT(res,0));
             PROTECT_N (res = LCONS(res,subs));
@@ -1223,7 +1256,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             SEXP op, subs;
             op = TOKEN_VALUE();
             get_next_token();
-            PARSE_SUB(subs = parse_sublist (flags, stat));
+            PARSE_SUB(subs = parse_sublist (flags));
             PROTECT_N (res = LCONS (op, CONS (res, subs)));
             EXPECT(']');
         }
@@ -1234,7 +1267,7 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             SEXP op, subs;
             op = TOKEN_VALUE();
             get_next_token();
-            PARSE_SUB(subs = parse_sublist (flags, stat));
+            PARSE_SUB(subs = parse_sublist (flags));
             PROTECT_N (res = LCONS (op, CONS (res, subs)));
             EXPECT(']');
             EXPECT(']');
@@ -1268,6 +1301,10 @@ static SEXP parse_expr (int prec, int flags, int *stat)
         if (op_prec <= prec || op_prec == last_prec)
             break;
 
+        if (!keep_parens && par != 0 
+               && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
+            res = CADR(res);  /* get rid of parens */
+
         op = TOKEN_VALUE();
         get_next_token();
 
@@ -1275,9 +1312,10 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             for (;;) {
                 PARSE_SUB(right = parse_expr (op_prec, 
                             op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
-                            stat));
-                PROTECT_N (res = 
-                            LCONS (op, CONS (res, MaybeConstList1(right))));
+                            &par));
+                if (!keep_parens && par != 0 && par <= op_prec)
+                    right = CADR(right);  /* get rid of parens */
+                PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
                 if (NL_END || binary_op() != op_prec) 
                     break;
                 op = TOKEN_VALUE();
@@ -1285,41 +1323,41 @@ static SEXP parse_expr (int prec, int flags, int *stat)
             }
         }
         else if (RIGHT_ASSOC(op_prec)) {
-            PARSE_SUB(right = parse_expr (op_prec-1, flags, stat));
-            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
+            PARSE_SUB(right = parse_expr (op_prec-1, flags, &par));
+            if ( ! (flags & KEEP_PARENS) && par != 0 && par < op_prec)
+                right = CADR(right);  /* get rid of parens */
+            PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
         }
         else { /* NON_ASSOC */
-            PARSE_SUB(right = parse_expr (op_prec, flags, stat));
-            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(right))));
+            PARSE_SUB(right = parse_expr (op_prec, flags, &par));
+            if (!keep_parens && par != 0 && par <= op_prec)
+                right = CADR(right);  /* get rid of parens */
+            PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
         }
 
         last_prec = op_prec;
+
+        par = 0;  /* indicate that this is not a parenthesized expression */
     }
+
+    if (paren != NULL) *paren = par;
 
     END_PARSE_FUN;
     return res;
 }
 
 
-/* Top level parse function, parsing an expression or assignments with =,
-   which is followed by newline or ';' or end of file. */
+/* Top level parse function, parsing an expression (including assignment
+   with '=') that is followed by ';', newline, or end of file. */
 
-static SEXP parse_prog (int flags, int *stat)
+static SEXP parse_prog (int flags)
 {
     BGN_PARSE_FUN;
     SEXP res;
 
-    PARSE_SUB (res = parse_expr (0, flags, stat));
-
-    /* By first checking newline_before_token, we avoid forcing MAYBE_END
-       to be replaced by an actual token when taking interactive input,
-       or input from a file in R_Parse1File. */
+    PARSE_SUB (res = parse_expr (0, flags, NULL));
        
-    if (newline_before_token || NEXT_TOKEN == END_OF_INPUT)
-        ; /* OK */
-    else if (NEXT_TOKEN == ';')
-        get_next_token();
-    else
+    if (!newline_before_token && NEXT_TOKEN != ';')
         PARSE_UNEXPECTED();
 
     END_PARSE_FUN;
@@ -1336,26 +1374,31 @@ static SEXP parse_prog (int flags, int *stat)
 
 static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 {
+    int flags;
+    SEXP keepp;
     SEXP res;
-    int stat;
 
-    if (NEXT_TOKEN == END_OF_INPUT) {
+    flags = END_ON_NL | NO_PEEKING;
+    keepp = GetOption1(install("keep.parens"));
+    if (TYPEOF(keepp) == LGLSXP && LOGICAL(keepp)[0] == 1)
+        flags |= KEEP_PARENS;
+
+    if (!get_next_token()) {
         *status = PARSE_EOF;
         return R_CurrentExpr = R_NilValue;
     }
 
-    if (NEXT_TOKEN == ';') {
-        get_next_token();
+    if (next_token == END_OF_INPUT || next_token == '\n' || next_token == ';') {
         *status = PARSE_NULL;
         return R_CurrentExpr = R_NilValue;
     }
 
     start_location(loc);
-    res = parse_prog (KEEP_PARENS | END_ON_NL | NO_PEEKING, &stat);
+    res = parse_prog (flags);
     end_location(loc);
 
     if (res == NULL) {
-        *status = next_token == END_OF_INPUT ? PARSE_INCOMPLETE : PARSE_ERROR;
+        *status = PARSE_ERROR;
         return R_CurrentExpr = R_NilValue;
     }
 
@@ -1369,100 +1412,27 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
    See the documentation at the start of this module. */
 
 
-static FILE *fp_parse;
+static void *stream_getc_arg;
+static int (*stream_getc)(void *);
 
-extern int R_fgetc(FILE*);
+static int call_stream_getc(void) { return (*stream_getc)(stream_getc_arg); }
 
-static int file_getc(void)
-{
-    int c;
-    c = R_fgetc(fp_parse);
-    return c == '\n' ? SOFT_EOF : c;
-}
 
-/* used in main.c */
-attribute_hidden
-SEXP R_Parse1File(FILE *fp, int gencode, ParseStatus *status, SrcRefState *state)
+attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg, 
+                                      ParseStatus *status, SrcRefState *state)
 {
     source_location loc;
     SEXP res;
 
-    UseSrcRefState(state);
+    stream_getc = getc;
+    stream_getc_arg = getc_arg;
+    ptr_getc = call_stream_getc;
+    ParseState = state;
+    keep_source = state->keepSrcRefs;
     ParseInit();
-    fp_parse = fp;
-    ptr_getc = file_getc;
 
-    keep_source = gencode && state->keepSrcRefs;
-    get_next_token();
-    res = R_Parse1(status,&loc);
+    res = R_Parse1 (status, &loc);
 
-    PutSrcRefState(state);
-    return gencode ? res : R_NilValue;
-}
-
-
-static IoBuffer *iob;
-
-static int buffer_getc(void)
-{
-    return R_IoBufferGetc(iob);
-}
-
-/* Used only in main.c */
-attribute_hidden
-SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
-{
-    Rboolean keepSource = FALSE; 
-    source_location loc;
-    SEXP res;
-
-    R_InitSrcRefState(&ParseState);
-    if (gencode) {
-    	keepSource = asLogical(GetOption1(install("keep.source")));
-    	if (keepSource) {
-    	    ParseState.keepSrcRefs = TRUE;
-    	    REPROTECT(ParseState.SrcFile = 
-                        NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv),
-                        ParseState.SrcFileProt);
-	    REPROTECT(ParseState.Original = ParseState.SrcFile, 
-                        ParseState.OriginalProt);
-	}
-    }
-
-    ParseInit();
-    iob = buffer;
-    ptr_getc = buffer_getc;
-
-    keep_source = gencode && ParseState.keepSrcRefs;
-    get_next_token();
-    res = R_Parse1(status,&loc);
-    if (!gencode) res = R_NilValue;
-
-    if (gencode && keepSource) {
-    	if (ParseState.didAttach) {
-            SEXP filename_install = install("filename");  /* protected by the */
-            SEXP lines_install = install("lines");        /*   symbol table   */
-   	    int buflen = R_IoBufferReadOffset(buffer);
-   	    char buf[buflen+1];
-   	    SEXP class;
-   	    R_IoBufferReadReset(buffer);
-   	    for (int i=0; i<buflen; i++)
-   	    	buf[i] = R_IoBufferGetc(buffer);
-
-   	    buf[buflen] = 0;
-    	    defineVar (filename_install, ScalarString(mkChar("")), 
-                       ParseState.Original);
-    	    defineVar (lines_install, ScalarString(mkChar(buf)),
-                       ParseState.Original);
-    	    PROTECT(class = allocVector(STRSXP, 2));
-            SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
-            SET_STRING_ELT(class, 1, mkChar("srcfile"));
-	    setAttrib(ParseState.Original, R_ClassSymbol, class);
-	    UNPROTECT(1);
-	}
-    }
-
-    R_FinalizeSrcRefState(&ParseState);
     return res;
 }
 
@@ -1470,29 +1440,30 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
     SEXP rval, tval, tlast, cur, refs, last_ref;
+    SrcRefState state;
     source_location loc;
     int i;
 
-    R_InitSrcRefState(&ParseState);
+    ParseState = &state;
+    R_InitSrcRefState(ParseState);
     
     ParseInit();
 
-    REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
-    REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
+    REPROTECT(ParseState->SrcFile = srcfile, ParseState->SrcFileProt);
+    REPROTECT(ParseState->Original = srcfile, ParseState->OriginalProt);
 
     PROTECT(tval = CONS(R_NilValue,R_NilValue));
     tlast = tval;
 
-    if (!isNull(ParseState.SrcFile)) {
-    	ParseState.keepSrcRefs = TRUE;
+    if (!isNull(ParseState->SrcFile)) {
+    	ParseState->keepSrcRefs = TRUE;
         PROTECT(refs = CONS(R_NilValue,R_NilValue));
         last_ref = refs;
     }
     else
         PROTECT(refs = R_NilValue);
     
-    keep_source = ParseState.keepSrcRefs;
-    get_next_token();
+    keep_source = ParseState->keepSrcRefs;
 
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
@@ -1505,17 +1476,16 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	case PARSE_OK:
             SETCDR (tlast, CONS (cur, R_NilValue));
             tlast = CDR(tlast);
-            if (ParseState.keepSrcRefs) {
+            if (ParseState->keepSrcRefs) {
                 SETCDR (last_ref, 
-                        CONS (makeSrcref(&loc,ParseState.SrcFile), R_NilValue));
+                        CONS (makeSrcref(&loc,ParseState->SrcFile),R_NilValue));
                 last_ref = CDR(last_ref);
             }
 	    i++;
 	    break;
-	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
 	    UNPROTECT(2); /* tval, refs */
-	    R_FinalizeSrcRefState(&ParseState);
+	    R_FinalizeSrcRefState(ParseState);
 	    return R_NilValue;
 	case PARSE_EOF:
 	    goto finish;
@@ -1527,56 +1497,20 @@ finish:
     PROTECT(rval = allocVector(EXPRSXP, length(tval)));
     for (i = 0 ; i < LENGTH(rval) ; i++, tval = CDR(tval))
 	SET_VECTOR_ELT(rval, i, CAR(tval));
-    if (ParseState.keepSrcRefs)
+    if (ParseState->keepSrcRefs)
 	attachSrcrefs(rval,CDR(refs));
 
     UNPROTECT(3); /* tval, refs, rval */
-    R_FinalizeSrcRefState(&ParseState);
+    R_FinalizeSrcRefState(ParseState);
     *status = PARSE_OK;
     return rval;
 }
 
 
-/* used in edit.c */
-attribute_hidden
-SEXP R_ParseFile(FILE *fp, int n, ParseStatus *status, SEXP srcfile)
-{
-    fp_parse = fp;
-    ptr_getc = file_getc;
-
-    return R_Parse(n, status, srcfile);
-}
-
-
-#include "Rconnections.h"
-
-static Rconnection conn_parse;
-
-static int conn_getc(void)
-{
-    return Rconn_fgetc(conn_parse);
-}
- 
-/* used in source.c */
-attribute_hidden
-SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile)
-{
-    conn_parse = con;
-    ptr_getc = conn_getc;
-
-    return R_Parse(n, status, srcfile);
-}
-
-
 static TextBuffer *txtb;
 
-static int text_getc(void)
-{
-    int c = R_TextBufferGetc(txtb);
-    return c;
-}
+static int text_getc(void) { return R_TextBufferGetc(txtb); }
 
-/* This one is public, and used in source.c */
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
     SEXP rval;
@@ -1592,52 +1526,14 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 }
 
 
-static int need_console_read;
-static const char *prompt_string;
-
-static int console_getc(void)
+SEXP R_ParseStream (int (*getc) (void *), void *getc_arg, 
+                    int n, ParseStatus *status, SEXP srcfile)
 {
-    char *bufp, console_buf[CONSOLE_BUFFER_SIZE];
-    char c;
+    stream_getc = getc;
+    stream_getc_arg = getc_arg;
+    ptr_getc = call_stream_getc;
 
-    if (need_console_read) {
-        if (R_ReadConsole (prompt_string, (unsigned char *) console_buf, 
-                           CONSOLE_BUFFER_SIZE, 1) == 0)
-            return EOF;
-        for (bufp = console_buf; *bufp; bufp++) R_IoBufferPutc(*bufp, iob);
-        need_console_read = 0;
-    }
-    c = R_IoBufferGetc(iob);
-    if (c == EOF) {
-        need_console_read = 1;
-        return SOFT_EOF;
-    }
-    return c;
-}
-
-/* used in source.c */
-attribute_hidden
-SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt, 
-		   SEXP srcfile)
-{
-    SEXP rval, tval, tlast, cur, refs, last_ref;
-    int c, i;
-    source_location loc;
-
-    prompt_string = isString(prompt) && LENGTH(prompt) > 0
-                     ? CHAR(STRING_ELT(prompt,0)) 
-                     : CHAR(STRING_ELT(GetOption1(install("prompt")),0));
-
-    R_IoBufferWriteReset(buffer);
-    need_console_read = 1;
-
-    iob = buffer;
-    ptr_getc = console_getc;
-
-    rval = R_Parse (n, status, srcfile);
-
-    R_IoBufferWriteReset(buffer);
-    return rval;
+    return R_Parse (n, status, srcfile);
 }
 
 
@@ -1656,7 +1552,7 @@ static char yytext[MAXELTSIZE];
 
 #define YYTEXT_PUSH(c, bp) do { \
     if ((bp) - yytext >= sizeof(yytext) - 1) \
-        error(_("input buffer overflow at line %d"), ParseState.xxlineno); \
+        error(_("input buffer overflow at line %d"), ParseState->xxlineno); \
     *(bp)++ = (c); \
 } while(0)
 
@@ -1768,9 +1664,13 @@ static int NumericValue(int c)
 	*/
 	if(a != (double) b) {
             if(seendot == 1 && seenexp == 0)
-		warning(_("integer literal %sL contains decimal; using numeric value"), yytext);
+		warning(
+                _("integer literal %sL contains decimal; using numeric value"),
+                yytext);
 	    else
-		warning(_("non-integer value %s qualified with L; using numeric value"), yytext);
+		warning(
+                _("non-integer value %s qualified with L; using numeric value"),
+                yytext);
 	    asNumeric = 1;
 	    seenexp = 1;
 	}
@@ -1780,7 +1680,8 @@ static int NumericValue(int c)
 	next_token_val = mkComplex(yytext);
     } else if(c == 'L' && asNumeric == 0) {
 	if (seendot == 1 && seenexp == 0)
-	    warning(_("integer literal %sL contains unnecessary decimal point"), yytext);
+	    warning(_("integer literal %sL contains unnecessary decimal point"),
+                    yytext);
 	next_token_val = mkInteger(yytext);
 #if 0  /* do this to make 123 integer not double */
     } else if(!(seendot || seenexp)) {
@@ -1822,11 +1723,15 @@ static int mbcs_get_next(int c, wchar_t *wc)
 	clen = utf8clen(c);
 	for(i = 1; i < clen; i++) {
 	    s[i] = xxgetc();
-	    if(s[i] == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    if(s[i] == R_EOF) 
+                error(_("EOF whilst reading MBCS char at line %d"), 
+                        ParseState->xxlineno);
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbrtowc(wc, s, clen, NULL);
-	if(res == -1) error(_("invalid multibyte character in parser at line %d"), ParseState.xxlineno);
+	if(res == -1) 
+            error(_("invalid multibyte character in parser at line %d"), 
+                    ParseState->xxlineno);
     } else {
 	/* This is not necessarily correct for stateful MBCS */
 	while(clen <= MB_CUR_MAX) {
@@ -1834,10 +1739,13 @@ static int mbcs_get_next(int c, wchar_t *wc)
 	    res = mbrtowc(wc, s, clen, &mb_st);
 	    if(res >= 0) break;
 	    if(res == -1)
-		error(_("invalid multibyte character in parser at line %d"), ParseState.xxlineno);
+		error(_("invalid multibyte character in parser at line %d"),
+                         ParseState->xxlineno);
 	    /* so res == -2 */
 	    c = xxgetc();
-	    if(c == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    if(c == R_EOF)
+                error(_("EOF whilst reading MBCS char at line %d"),
+                         ParseState->xxlineno);
 	    s[clen++] = c;
 	} /* we've tried enough, so must be complete or invalid by now */
     }
@@ -1862,7 +1770,7 @@ static int mbcs_get_next2(int c, ucs_t *wc)
     s[0] = c;
     /* This assumes (probably OK) that all MBCS embed ASCII as single-byte
        lead bytes, including control chars */
-    if((unsigned int) c < 0x80) {
+    if ((unsigned int) c < 0x80) {
 	*wc = (wchar_t) c;
 	return 1;
     }
@@ -1870,21 +1778,28 @@ static int mbcs_get_next2(int c, ucs_t *wc)
 	clen = utf8clen(c);
 	for(i = 1; i < clen; i++) {
 	    s[i] = xxgetc();
-	    if(s[i] == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    if(s[i] == R_EOF)
+                error(_("EOF whilst reading MBCS char at line %d"),
+                         ParseState->xxlineno);
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbtoucs(wc, s, clen);
-	if(res == -1) error(_("invalid multibyte character in parser at line %d"), ParseState.xxlineno);
+	if (res == -1) 
+            error(_("invalid multibyte character in parser at line %d"),
+                     ParseState->xxlineno);
     } else {
 	/* This is not necessarily correct for stateful MBCS */
 	while(clen <= MB_CUR_MAX) {
 	    res = mbtoucs(wc, s, clen);
-	    if(res >= 0) break;
-	    if(res == -1)
-		error(_("invalid multibyte character in parser at line %d"), ParseState.xxlineno);
+	    if (res >= 0) break;
+	    if (res == -1)
+		error(_("invalid multibyte character in parser at line %d"),
+                         ParseState->xxlineno);
 	    /* so res == -2 */
 	    c = xxgetc();
-	    if(c == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    if (c == R_EOF)
+                error(_("EOF whilst reading MBCS char at line %d"),
+                         ParseState->xxlineno);
 	    s[clen++] = c;
 	} /* we've tried enough, so must be complete or invalid by now */
     }
@@ -1950,14 +1865,15 @@ static int StringValue(int c, Rboolean forSymbol)
     unsigned int nstext = MAXELTSIZE;
     char *stext = st0, *bp = st0;
 
-#   define STEXT_PUSH(c) do {              \
+#   define STEXT_PUSH(c) do {               \
 	unsigned int nc = bp - stext;       \
 	if (nc >= nstext - 1) {             \
 	    char *old = stext;              \
 	    nstext *= 2;                    \
 	    stext = malloc(nstext);         \
 	    if (!stext)                     \
-               error(_("unable to allocate buffer for long string at line %d"), ParseState.xxlineno); \
+               error(_("unable to allocate buffer for long string at line %d"),\
+                     ParseState->xxlineno); \
 	    memmove(stext, old, nc);        \
 	    if(old != st0) free(old);	    \
 	    bp = stext+nc; }		    \
@@ -2043,7 +1959,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(forSymbol) 
 		    error(
                       _("\\uxxxx sequences not supported inside backticks (line %d)"), 
-                      ParseState.xxlineno);
+                      ParseState->xxlineno);
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
@@ -2069,7 +1985,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(delim) {
 		    if((c = xxgetc()) != '}')
 			error(_("invalid \\u{xxxx} sequence (line %d)"),
-			      ParseState.xxlineno);
+			      ParseState->xxlineno);
 		    else CTEXT_PUSH(c);
 		}
 		WTEXT_PUSH(val); /* this assumes wchar_t is Unicode */
@@ -2082,7 +1998,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(forSymbol) 
 		    error(
                       _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), 
-                      ParseState.xxlineno);
+                      ParseState->xxlineno);
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
@@ -2108,7 +2024,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(delim) {
 		    if((c = xxgetc()) != '}')
 			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), 
-                              ParseState.xxlineno);
+                              ParseState->xxlineno);
 		    else CTEXT_PUSH(c);
 		}
 		WTEXT_PUSH(val);
@@ -2202,13 +2118,13 @@ static int StringValue(int c, Rboolean forSymbol)
 	return SYMBOL;
     } else {
 	if(use_wcs) {
-	    if(oct_or_hex)
+	    if (oct_or_hex)
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
-	    if(wcnt < 10000)
-		next_token_val = mkStringUTF8(wcs, wcnt); /* include terminator */
+	    if (wcnt < 10000)
+		next_token_val = mkStringUTF8(wcs, wcnt); /*include terminator*/
 	    else
 		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"),
-                      ParseState.xxlineno);
+                      ParseState->xxlineno);
 	} else
 	    next_token_val = mkString2(stext,  bp - stext - 1, oct_or_hex);
 	if(stext != st0) free(stext);
@@ -2230,10 +2146,10 @@ static struct { char *name; int token; } keywords[] = {
     { "FALSE",	    NUM_CONST  },
     { "Inf",	    NUM_CONST  },
     { "NaN",	    NUM_CONST  },
-    { "NA_integer_", NUM_CONST  },
-    { "NA_real_",    NUM_CONST  },
-    { "NA_character_", NUM_CONST  },
-    { "NA_complex_", NUM_CONST  },
+    { "NA_integer_", NUM_CONST },
+    { "NA_real_",    NUM_CONST },
+    { "NA_character_", NUM_CONST },
+    { "NA_complex_", NUM_CONST },
     { "function",   FUNCTION   },
     { "while",	    WHILE      },
     { "repeat",	    REPEAT     },
@@ -2400,12 +2316,11 @@ static int SymbolValue(int c)
 }
 
 
-/* Skip whitespace characters.  The argument says whether or not to stop 
-   when a newline is encountered.  Returns the character after the whitespace
-   (possibly '\n', R_EOF, or SOFT_EOF).   Sets newline_before_token to 1 
-   if a newline is seen (but doesn't set it to 0 if not). */
+/* Skip whitespace characters, starting with the character passed,
+   and stopping on '\n', R_EOF, or a non-whitespace character.  The 
+   character stopped on is returned. */
 
-static int SkipSpace(int stop_on_nl)
+static int skip_whitespace (int c)
 {
     int NBSP = ' ';
 
@@ -2418,69 +2333,66 @@ static int SkipSpace(int stop_on_nl)
     if (!mbcslocale) NBSP = 0xa0; /* 0xa0 is NBSP in 8-bit Windows locales */
 #endif 
 
-    int c;
+    for (;;) {
 
-    while (1) {
+        if (c == '\n' || c == R_EOF)
+            return c;
+
+        if (c != ' ' && c != '\t' && c != '\f' && c != NBSP) {
+#           if defined(Win32) || defined(__STDC_ISO_10646__)
+            {   if (mbcslocale) {
+                    if ((unsigned int) c < 0x80)
+                        return c;
+                    clen = mbcs_get_next(c, &wc);
+                    if ( ! Ri18n_iswctype (wc, Ri18n_wctype("blank")))
+                        return c;
+                    for (i = 1; i < clen; i++)
+                        c = xxgetc();
+                }
+                else
+                    return c;
+            }
+#           else
+                return c;
+#           endif
+        }
 
         c = xxgetc();
-
-        if (c == ' ' || c == '\t' || c == '\f' || c == NBSP) 
-            continue;
-
-        if (c == '\n') { 
-            if (stop_on_nl) break;
-            newline_before_token = 1;
-            continue;
-        }
-
-        if (c == R_EOF || c == SOFT_EOF) {
-            newline_before_token = 1;
-            break;
-        }
-
-#       if defined(Win32) || defined(__STDC_ISO_10646__)
-            if (mbcslocale) {
-                if ((unsigned int) c < 0x80)
-                    break;
-                clen = mbcs_get_next(c, &wc);
-                if ( ! Ri18n_iswctype (wc, Ri18n_wctype("blank")))
-                    break;
-                for (i = 1; i < clen; i++)
-                    c = xxgetc();
-            }
-#       endif
-
-        break;
     }
-
-    return c;
 }
 
 
 /* Set the name of the source file that text is coming from. */
 
-static void setParseFilename(SEXP newname) {
-
+static void set_parse_filename(SEXP newname) 
+{
     SEXP class;
+
+    if (!isEnvironment(ParseState->SrcFile)) 
+        return;
+
     PROTECT(newname);    
 
-    if (isEnvironment(ParseState.SrcFile)) {
-    	SEXP oldname = findVar(install("filename"), ParseState.SrcFile);
-    	if (isString(oldname) && length(oldname) > 0 &&
-    	    strcmp(CHAR(STRING_ELT(oldname, 0)),
-    	           CHAR(STRING_ELT(newname, 0))) == 0) return;
-	REPROTECT(ParseState.SrcFile =
-                    NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
-                  ParseState.SrcFileProt);
-	defineVar(install("filename"), newname, ParseState.SrcFile);
+    SEXP oldname = findVar(install("filename"), ParseState->SrcFile);
+    if (isString(oldname) && length(oldname) > 0 &&
+         strcmp (CHAR(STRING_ELT(oldname,0)), CHAR(STRING_ELT(newname,0)))==0) {
+        UNPROTECT(1);
+        return;
     }
 
-    if (ParseState.keepSrcRefs) {
-	defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
+    REPROTECT(ParseState->SrcFile =
+                 NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
+              ParseState->SrcFileProt);
+    set_var_in_frame (install("filename"), newname, ParseState->SrcFile,
+                      TRUE, 3);
+
+    if (ParseState->keepSrcRefs) {
+        set_var_in_frame (install("original"), ParseState->Original, 
+                          ParseState->SrcFile, TRUE, 3);
         PROTECT(class = allocVector(STRSXP, 2));
         SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
         SET_STRING_ELT(class, 1, mkChar("srcfile"));
-	setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
+        setAttrib(ParseState->SrcFile, R_ClassSymbol, class);
         UNPROTECT(1);
     } 
 
@@ -2495,22 +2407,22 @@ static int processLineDirective()
 {
     int c, tok, linenumber;
 
-    c = SkipSpace(1);
-    if (!isdigit(c)) return(c);
-
+    c = skip_whitespace(xxgetc());
+    if (!isdigit(c)) 
+        return c;
     tok = NumericValue(c);
     linenumber = atoi(yytext);
-    c = SkipSpace(1);
+    c = skip_whitespace(xxgetc());
     if (c == '"') 
         tok = StringValue(c, FALSE);
     else
     	xxungetc(c);
     if (tok == STR_CONST) 
-	setParseFilename(next_token_val);
+	set_parse_filename(next_token_val);
 
-    while ((c = xxgetc()) != '\n' && c != R_EOF && c != SOFT_EOF) /* skip */ ;
+    while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
 
-    ParseState.xxlineno = linenumber;
+    ParseState->xxlineno = linenumber;
 
     /* Don't change xxparseno here, it counts parsed lines, not official lines*/
 
@@ -2518,23 +2430,26 @@ static int processLineDirective()
 
     R_ParseContext[R_ParseContextLast] = '\0'; 
 
-    return(c);
+    return c;
 }
 
 
-/* Skip a comment, returning the character ending it ('\n', R_EOF, or SOFT_EOF).
-   Also processes comments that are #line directives. */
+/* Skip a comment, returning the character ending it ('\n' or R_EOF).
+   Also processes comments that are #line directives.  The initial #
+   will have already been read. */
 
-static int SkipComment(void)
+static int skip_comment (void)
 {
-    int c='#', i;
-    Rboolean maybeLine = (ParseState.xxcolno == 1);
+    Rboolean maybeLine = (ParseState->xxcolno == 1);
+    int c, i;
+
+    c = '#';
 
     if (maybeLine) {
     	static const char lineDirective[] = "#line";
-    	for (i=1; i<5; i++) {
+    	for (i = 1; i < 5; i++) {
     	    c = xxgetc();
-  	    if (c != (int)(lineDirective[i])) {
+  	    if (c != lineDirective[i]) {
   	    	maybeLine = FALSE;
   	    	break;
   	    }
@@ -2543,14 +2458,14 @@ static int SkipComment(void)
 	    c = processLineDirective();
     }
 
-    while (c != '\n' && c != R_EOF && c != SOFT_EOF) 
+    while (c != '\n' && c != R_EOF)
 	c = xxgetc();
 
     return c;
 }
 
 
-/* Called following '.'.  We only care if it's an ANSI digit or not */
+/* Called following '.'.  We only care if it's an ANSI digit or not. */
 
 static int nextisdigit(void)
 {
@@ -2596,15 +2511,11 @@ static int token (int c)
     /* Hard and soft end of file.  Soft end of file comes at the end of a
        line of interactive input, which may or may not be the actual end. */
 
-    if (c == R_EOF) {
-        newline_before_token = 1;
+    if (c == R_EOF)
         return END_OF_INPUT;
-    }
 
-    if (c == SOFT_EOF) {
-        newline_before_token = 1;
-        return MAYBE_END;
-    }
+    if (c == '\n')
+        return c;
 
     /* Literal numbers - since either digits or symbols can start with '.',
        we need to check whether the next character is a digit. */
@@ -2660,11 +2571,11 @@ static int token (int c)
     case '-':
 	if (nextchar('>')) {
 	    if (nextchar('>')) {
-		next_token_val = R_GlobalAssignSymbol; /* switch R to L */
+		next_token_val = R_GlobalRightAssignSymbol;
 		return RIGHT_ASSIGN;
 	    }
 	    else {
-		next_token_val = R_LocalAssignSymbol;  /* switch R to L */
+		next_token_val = R_LocalRightAssignSymbol;
 		return RIGHT_ASSIGN;
 	    }
 	}
@@ -2745,14 +2656,11 @@ static int token (int c)
 	next_token_val = R_QuerySymbol;
 	return c;
     case '*':
-	/* Replace ** by ^.  This has been here since 1998, but is
-	   undocumented (at least in the obvious places).  It is in
-	   the index of the Blue Book with a reference to p. 431, the
-	   help for 'Deprecated'.  S-PLUS 6.2 still allowed this, so
-	   presumably it was for compatibility with S. */
 	if (nextchar('*')) {
-	    next_token_val = R_ExptSymbol;  /* replace by ^ for now */
-            return '^';
+            /* We accept ** as a synonym for ^, with its own token type 
+               and primitive definition. */
+	    next_token_val = R_Expt2Symbol;
+            return EXPT2;
         }
         next_token_val = R_MulSymbol;
 	return c;
@@ -2780,37 +2688,46 @@ static int token (int c)
 }
 
 
-/* Get the next token (after skipping whitespace) and put it in 
-   next_token.  Also sets next_token_val, newline_before_token, 
-   token_loc, and prev_token_loc. */
+/* Get the next token after skipping whitespace and put it in
+   next_token.  Also sets next_token_val, newline_before_token,
+   token_loc, and prev_token_loc.  Always sets newline_before_token
+   to 1 when returning END_OF_INPUT or '\n', regardless of 
+   whether a newline was actually present before. 
 
-static void get_next_token(void)
+   Returns 0 if end of file was immediately encountered, with no
+   whitespace before, and 1 if not (even when END_OF_INPUT is the 
+   next token). */
+
+static int get_next_token(void)
 {
-    int c;
+    int c, val;
 
     prev_token_loc = token_loc;
 
     newline_before_token = 0;
-    for (;;) {
-        c = SkipSpace(0);
-        if (c == '#') 
-            c = SkipComment();
-        if (c != '\n') 
-            break;
-        newline_before_token = 1;
-    }
 
-    token_loc.first_line = ParseState.xxlineno;
-    token_loc.first_column = ParseState.xxcolno;
-    token_loc.first_byte = ParseState.xxbyteno;
-    token_loc.first_parsed = ParseState.xxparseno;
+    c = xxgetc();
+    val = c != R_EOF;
+
+    c = skip_whitespace(c);
+    if (c == '#')
+        c = skip_comment();
+    if (c == '\n' || c == R_EOF)
+        newline_before_token = 1;
+
+    token_loc.first_line   = ParseState->xxlineno;
+    token_loc.first_column = ParseState->xxcolno;
+    token_loc.first_byte   = ParseState->xxbyteno;
+    token_loc.first_parsed = ParseState->xxparseno;
 
     next_token = token(c);
 
-    token_loc.last_line   = ParseState.xxlineno;
-    token_loc.last_column = ParseState.xxcolno;
-    token_loc.last_byte   = ParseState.xxbyteno;
-    token_loc.last_parsed = ParseState.xxparseno;
+    token_loc.last_line    = ParseState->xxlineno;
+    token_loc.last_column  = ParseState->xxcolno;
+    token_loc.last_byte    = ParseState->xxbyteno;
+    token_loc.last_parsed  = ParseState->xxparseno;
+
+    return val;
 }
 
 

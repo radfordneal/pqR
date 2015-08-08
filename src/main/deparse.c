@@ -101,6 +101,7 @@
 #include <float.h> /* for DBL_DIG */
 #include <Print.h>
 #include <Fileio.h>
+#include <Parse.h>
 
 #define BUFSIZE 512
 
@@ -511,62 +512,114 @@ curlyahead(SEXP s)
     return FALSE;
 }
 
-/* needsparens looks at an arg to a unary or binary operator to
-   determine if it needs to be parenthesized when deparsed
-   op is a unary or binary operator, arg is an argument to it, on
-   the left if left == 1 */
+/* Determine whether an argument to a postfix operator needs to be 
+   parenthesized when deparsed.  The symbol op is the outer postfix
+   operator (eg, $).  The expression arg is the first operand. */
 
-attribute_hidden Rboolean needsparens (SEXP op, SEXP arg, int left)
+attribute_hidden Rboolean needsparens_postfix (SEXP op, SEXP arg)
 {
-    PPinfo mainop = PPINFO(SYMVALUE(op));
-    PPinfo arginfo;
-    if (TYPEOF(arg) == LANGSXP) {
-	if (TYPEOF(CAR(arg)) == SYMSXP) {
-	    if ((TYPEOF(SYMVALUE(CAR(arg))) == BUILTINSXP) ||
-		(TYPEOF(SYMVALUE(CAR(arg))) == SPECIALSXP)) {
-		arginfo = PPINFO(SYMVALUE(CAR(arg)));
-		switch(arginfo.kind) {
-		case PP_BINARY:	      /* Not all binary ops are binary! */
-		case PP_BINARY2:
-		    switch(length(CDR(arg))) {
-		    case 1:
-			if (!left)
-			    return FALSE;
-			if (arginfo.precedence == PREC_SUM)   /* binary +/- precedence upgraded as unary */
-			    arginfo.precedence = PREC_SIGN;
-		    case 2:
-			break;
-		    default:
-			return FALSE;
-		    }
-		case PP_ASSIGN:
-		case PP_ASSIGN2:
-		case PP_SUBSET:
-		case PP_UNARY:
-		case PP_DOLLAR:
-		    if (mainop.precedence > arginfo.precedence
-			|| (mainop.precedence == arginfo.precedence && left == mainop.rightassoc)) {
-			return TRUE;
-		    }
-		    break;
-		case PP_FOR:
-		case PP_IF:
-		case PP_WHILE:
-		case PP_REPEAT:
-		    return left == 1;
-		    break;
-		default:
-		    return FALSE;
-		}
-	    }
-	}
+    int op_prec = misc_prec(op);
+    int in_prec;
+
+    if (!op_prec) abort();
+
+    if (TYPEOF(arg) == LANGSXP && TYPEOF(CAR(arg)) == SYMSXP) {
+        int nargs = length(CDR(arg));
+        if (nargs == 1) {
+            in_prec = unary_prec(CAR(arg));
+            if (in_prec && in_prec < op_prec)
+               return TRUE;
+        }
+        if (nargs == 2) {
+            in_prec = binary_prec(CAR(arg));
+            if (in_prec && in_prec < op_prec)
+                return TRUE;
+        }
+        in_prec = misc_prec(CAR(arg));
+        if (in_prec && in_prec < op_prec)
+            return TRUE;
     }
-    else if ((TYPEOF(arg) == CPLXSXP) && (length(arg) == 1)) {
-	if (mainop.precedence > PREC_SUM
-	    || (mainop.precedence == PREC_SUM && left == mainop.rightassoc)) {
-	    return TRUE;
-	}
+    else if (TYPEOF(arg) == CPLXSXP && LENGTH(arg)==1 && !ISNAN(COMPLEX(arg)->r)
+                                    && COMPLEX(arg)->r != 0) {
+        /* Handle a complex number that will be deparsed as a sum */
+        in_prec = binary_prec(R_AddSymbol);
+        if (!in_prec) abort();
+        if (in_prec < op_prec)
+            return TRUE;
     }
+
+    return FALSE;
+}
+
+/* Determine whether an argument to a unary operator needs to be 
+   parenthesized when deparsed.  The symbol op is the outer unary
+   operator.  The expression arg is the operand. */
+
+attribute_hidden Rboolean needsparens_unary (SEXP op, SEXP arg)
+{
+    int op_prec = unary_prec(op);
+    int in_prec;
+
+    if (!op_prec) abort();
+
+    if (TYPEOF(arg) == LANGSXP && TYPEOF(CAR(arg)) == SYMSXP) {
+        int nargs = length(CDR(arg));
+        if (nargs == 2) {
+            in_prec = binary_prec(CAR(arg));
+            if (in_prec && in_prec < op_prec)
+                return TRUE;
+        }
+    }
+    else if (TYPEOF(arg) == CPLXSXP && LENGTH(arg)==1 && !ISNAN(COMPLEX(arg)->r)
+                                    && COMPLEX(arg)->r != 0) {
+        /* Handle a complex number that will be deparsed as a sum */
+        in_prec = binary_prec(R_AddSymbol);
+        if (!in_prec) abort();
+        if (in_prec < op_prec)
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+/* Determine whether an argument to a binary operator needs to be 
+   parenthesized when deparsed.  The symbol op is the outer binary
+   operator.  The expression arg is the operand, on the left if
+   left is 1. */
+
+attribute_hidden Rboolean needsparens_binary (SEXP op, SEXP arg, int left)
+{
+    int op_prec = binary_prec(op);
+    int in_prec;
+
+    if (!op_prec) abort();
+
+    if (TYPEOF(arg) == LANGSXP && TYPEOF(CAR(arg)) == SYMSXP) {
+        int nargs = length(CDR(arg));
+        if (nargs == 2) {
+            in_prec = binary_prec(CAR(arg));
+            if (in_prec && (in_prec < op_prec || in_prec == op_prec 
+                  && (NON_ASSOC(op_prec) || LEFT_ASSOC(op_prec) != left)))
+                return TRUE;
+        }
+        if (left) {
+            in_prec = unary_prec(CAR(arg));
+            if (in_prec && in_prec < op_prec)
+               return TRUE;
+            in_prec = misc_prec(CAR(arg));
+            if (in_prec && in_prec < op_prec)
+               return TRUE;
+        }
+    }
+    else if (TYPEOF(arg) == CPLXSXP && LENGTH(arg)==1 && !ISNAN(COMPLEX(arg)->r)
+                                    && COMPLEX(arg)->r != 0) {
+        /* Handle a complex number that will be deparsed as a sum */
+        in_prec = binary_prec(R_AddSymbol); /* Note: + is left associative */
+        if (!in_prec) abort();
+        if (in_prec < op_prec || in_prec == op_prec && !left)
+            return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -850,7 +903,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	if (TYPEOF(op) == SYMSXP) {
             const char *opname = CHAR(PRINTNAME(op));
             int nargs = length(s);
-            if (nargs >= 2 &&  op == R_IfSymbol) {
+            if (nargs >= 2 && nargs <= 3 &&  op == R_IfSymbol) {
                 print2buff("if (", d);
                 /* print the predicate */
                 deparse2buff(CAR(s), d);
@@ -881,13 +934,13 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     d->indent--;
                 }
             }
-            else if (nargs >= 2 && op == R_WhileSymbol) {
+            else if (nargs == 2 && op == R_WhileSymbol) {
                 print2buff("while (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(") ", d);
                 deparse2buff(CADR(s), d);
             }
-            else if (nargs >= 3 && op == R_ForSymbol) {
+            else if (nargs == 3 && op == R_ForSymbol) {
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(" in ", d);
@@ -895,9 +948,12 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(CDR(s)), d);
             }
-            else if (nargs >= 2 && op == R_RepeatSymbol) {
+            else if (nargs == 1 && op == R_RepeatSymbol) {
                 print2buff("repeat ", d);
                 deparse2buff(CAR(s), d);
+            }
+            else if (nargs==0 && (op == R_BreakSymbol || op == R_NextSymbol)) {
+                print2buff(opname, d);
             }
             else if (op == R_BraceSymbol) {
                 print2buff("{", d);
@@ -919,7 +975,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(")", d);
             }
             else if (nargs >= 2 && op == R_BracketSymbol) {
-                if ((parens = needsparens(op, CAR(s), 1)))
+                if ((parens = needsparens_postfix(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -929,7 +985,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff("]", d);
             }
             else if (nargs >= 2 && op == R_Bracket2Symbol) {
-                if ((parens = needsparens(op, CAR(s), 1)))
+                if ((parens = needsparens_postfix(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -938,7 +994,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 args2buff(CDR(s), 0, 0, d);
                 print2buff("]]", d);
             }
-            else if (nargs >= 2 && op == R_FunctionSymbol) {
+            else if ((nargs == 2 || nargs == 3) && op == R_FunctionSymbol) {
+                /* may have hidden third argument with source references */
                 printcomment(s, d);
                 if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
                     print2buff("function(", d);
@@ -964,7 +1021,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 2 && (isSymbol(CADR(s)) || isString(CADR(s)))
                       && (op == R_DollarSymbol || op == R_AtSymbol)) {
-                if ((parens = needsparens(op, CAR(s), 1)))
+                if ((parens = needsparens_postfix(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -983,8 +1040,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 2 && (op == R_LocalAssignSymbol
                                      || op == R_EqAssignSymbol
-                                     || op == R_GlobalAssignSymbol)) {
-                if ((parens = needsparens(op, CAR(s), 1)))
+                                     || op == R_GlobalAssignSymbol
+                                     || op == R_LocalRightAssignSymbol
+                                     || op == R_GlobalRightAssignSymbol
+                                     || op == R_ColonEqSymbol)) {
+                if ((parens = needsparens_binary(op,CAR(s),1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
@@ -992,7 +1052,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(" ", d);
                 print2buff(opname, d);
                 print2buff(" ", d);
-                if ((parens = needsparens(op, CADR(s), 0)))
+                if ((parens = needsparens_binary(op,CADR(s),0)))
                     print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (parens)
@@ -1000,18 +1060,20 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 1 && 
                     (op == R_AddSymbol
-                  || op == R_SubSymbol
-                  || op == R_TildeSymbol
-                  || op == R_NotSymbol)) {
+                      || op == R_SubSymbol
+                      || op == R_TildeSymbol
+                      || op == R_NotSymbol
+                      || op == R_QuerySymbol)) {
                 print2buff(opname, d);
-                if ((parens = needsparens(op, CAR(s), 0)))
+                if ((parens = needsparens_unary(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
                     print2buff(")", d);
             }
             else if (nargs == 2 &&
-                    (op == R_AddSymbol  /* space between op and args */
+                    (isUserBinop(op)         /* space between op and args */
+                      || op == R_AddSymbol
                       || op == R_SubSymbol
                       || op == R_MulSymbol
                       || op == install("%*%")
@@ -1025,17 +1087,18 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                       || op == R_LtSymbol
                       || op == R_LeSymbol
                       || op == R_GeSymbol
-                      || op == R_GtSymbol)) {
-                if ((parens = needsparens(op, CAR(s), 1)))
+                      || op == R_GtSymbol
+                      || op == R_QuerySymbol)) {
+                if ((parens = needsparens_binary(op,CAR(s),1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
                     print2buff(")", d);
                 print2buff(" ", d);
-                print2buff(opname, d);
+                print2buff(translateChar(PRINTNAME(op)), d);
                 print2buff(" ", d);
                 linebreak(&lbreak, d);
-                if ((parens = needsparens(op, CADR(s), 0)))
+                if ((parens = needsparens_binary(op,CADR(s),0)))
                     print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (parens)
@@ -1046,25 +1109,23 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
             }
             else if (nargs == 2 &&
-                    (op == R_DivSymbol /* no space between op and args */
+                    (op == R_DivSymbol      /* no space between op and args */
                       || op == R_ExptSymbol
+                      || op == R_Expt2Symbol
                       || op == install("%%")
                       || op == install("%/%")
                       || op == R_ColonSymbol)) { 
-                if ((parens = needsparens(op, CAR(s), 1)))
+                if ((parens = needsparens_binary(op,CAR(s),1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (parens)
                     print2buff(")", d);
                 print2buff(opname, d);
-                if ((parens = needsparens(op, CADR(s), 0)))
+                if ((parens = needsparens_binary(op,CADR(s),0)))
                     print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (parens)
                     print2buff(")", d);
-            }
-            else if (nargs==0 && (op == R_BreakSymbol || op == R_NextSymbol)) {
-                print2buff(opname, d);
             }
             else if (op == R_SubAssignSymbol    /* done specially by S? */
                       || op == R_SubSubAssignSymbol
@@ -1081,19 +1142,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
                 args2buff(s, 0, 0, d);
                 print2buff(")", d);
-            }
-            else if (nargs == 2 && isUserBinop(op)) {
-                deparse2buff(CAR(s), d);
-                print2buff(" ", d);
-                print2buff(translateChar(PRINTNAME(op)), d);
-                print2buff(" ", d);
-                linebreak(&lbreak, d);
-                deparse2buff(CADR(s), d);
-                if (lbreak) {
-                    d->indent--;
-                    lbreak = FALSE;
-                }
-                break;
             }
             else {
                 if (isValidName(opname))
@@ -1122,7 +1170,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
         }
         else if (TYPEOF(op) == LANGSXP) {
             /* use fact that xxx[] behaves the same as xxx() */
-            if ((parens = needsparens(R_BracketSymbol, op, 1)))
+            if ((parens = needsparens_postfix(R_BracketSymbol,op)))
                 print2buff("(", d);
             deparse2buff(op, d);
             if (parens)
@@ -1345,6 +1393,14 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		/* versions of R < 2.7.0 cannot parse strings longer than 8192 chars */
 		if(strlen(ts) >= 8192) d->longstring = TRUE;
 		strp = EncodeElement(vector, i, quote, '.');
+            } else if (TYPEOF(vector) == CPLXSXP &&
+                      !ISNAN(COMPLEX(vector)[i].r) && COMPLEX(vector)[i].r==0) {
+		int w, d, e;
+		formatReal(&COMPLEX(vector)[i].i, 1, &w, &d, &e, 0);
+		strp = EncodeReal(COMPLEX(vector)[i].i, w, d, e, '.');
+                static char buf[50];
+                copy_2_strings (buf, sizeof buf, strp, "i");
+                strp = buf;
 	    } else
 		strp = EncodeElement(vector, i, quote, '.');
 	    print2buff(strp, d);

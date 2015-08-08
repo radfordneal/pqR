@@ -1,7 +1,7 @@
 include ../MkRules
 R_HOME = ../../..
 
-CFLAGS=-O2 -Wall -pedantic
+CFLAGS=-O2 -Wall -pedantic $(EOPTS) $(EWARN)
 ifdef DEBUG
  CFLAGS+=$(G_FLAG)
  LINKFLAGS=

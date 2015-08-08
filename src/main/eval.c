@@ -2052,6 +2052,16 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         checkArity(op,args);
 
     SEXP lhs = CAR(args), rhs = CAR(a);
+    int opval = PRIMVAL(op);
+
+    /* Swap operands for -> and ->>. */
+
+    if (opval >= 10) {
+        rhs = lhs;
+        lhs = CAR(a);
+        opval -= 10;
+    }
+
     SEXPTYPE lhs_type = TYPEOF(lhs);
 
     /* Convert lhs string to a symbol. */
@@ -2069,7 +2079,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Handle <<- without trying the optimizations done below. */
 
-        if (PRIMVAL(op) == 2) {
+        if (opval == 2) {
             rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
             break;  /* out of main switch */
@@ -2214,7 +2224,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            (unless this is the <<- operator).  Save and protect the binding 
            cell used. */
 
-        if (PRIMVAL(op) == 2) /* <<- */
+        if (opval == 2) /* <<- */
             varval = findVar (var, ENCLOS(rho));
         else {
             varval = findVarInFramePendingOK (rho, var);
@@ -2427,7 +2437,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_NAMEDCNT_1(varval);
         }
         else {
-            if (PRIMVAL(op) == 2) /* <<- */
+            if (opval == 2) /* <<- */
                 set_var_nonlocal (var, newval, ENCLOS(rho), 3);
             else
                 set_var_in_frame (var, newval, rho, TRUE, 3);
@@ -6053,6 +6063,8 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
 {"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
 {"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
+{"->",		do_set,		11,	1100,	2,	{PP_ASSIGN,  PREC_RIGHT,	  1}},
+{"->>",		do_set,		12,	1100,	2,	{PP_ASSIGN2, PREC_RIGHT,	  1}},
 {"eval",	do_eval,	0,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"eval.with.vis",do_eval,	1,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"Recall",	do_recall,	0,	210,	-1,	{PP_FUNCALL, PREC_FN,	  0}},

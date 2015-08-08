@@ -32,9 +32,10 @@
 
   The operators \code{<-} and \code{=} assign into the environment in
   which they are evaluated.  The  operator \code{<-} can be used
-  anywhere, whereas the operator \code{=} is only allowed at the top
-  level (e.g., in the complete expression typed at the command prompt)
-  or as one of the subexpressions in a braced list of expressions.
+  anywhere, whereas the operator \code{=}
+  is not allowed as the outer operator in arguments to functions, 
+  \code{if} or \code{while} conditions, or the object iterated over
+  for \code{for}.
 
   The operators \code{<<-} and \code{->>} cause a search to made through
   the environment for an existing definition of the variable being
@@ -51,7 +52,9 @@
   though it can be (preferably by \link{backtick}s).
 
   The leftwards forms of assignment \code{<- = <<-} group right to left,
-  the other from left to right.
+  the other from left to right.  The \code{=} operator has lowest
+  precedence, followed by \code{<-} and \code{<<-}, with \code{->}
+  and \code{->>} having highest precedence.
 }
 \value{
   \code{value}.  Thus one can use \code{a <- b <- c <- 6}.

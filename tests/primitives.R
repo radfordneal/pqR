@@ -5,6 +5,8 @@ xx <- structure("OK", class="testOK")
 
 for(f in ls(.GenericArgsEnv, all.names=TRUE))
 {
+    if (f == "**") next  # skip, since dispatches on methods for ^, not **
+
     cat("testing S3 generic '", f, "'\n", sep="")
     method <- paste(f, "testit", sep=".")
     if(f %in% "seq.int") {
@@ -52,7 +54,7 @@ for(f in ls(.ArgsEnv, all.names=TRUE))
 ff <- ls("package:base", all.names=TRUE)
 ff <- ff[sapply(ff, function(x) is.primitive(get(x, "package:base")))]
 lang_elements <-
-    c('$', '$<-', '&&', '(', ':', '<-', '<<-', '=', '@',
+    c('$', '$<-', '&&', '(', ':', '<-', '<<-', '=', '->', '->>', '@',
       '[', '[<-', '[[', '[[<-', 'break', 'for', 'function', 'if', 'next',
       'repeat', 'return', 'while', '{', '||', '~')
 

@@ -83,6 +83,8 @@ void CleanEd()
     if(EdFileUsed) unlink(DefaultFileName);
 }
 
+static int file_getc (void *fp) { return R_fgetc ((FILE *) fp); }
+
 SEXP attribute_hidden do_edit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int   i, rc;
@@ -189,7 +191,7 @@ SEXP attribute_hidden do_edit(SEXP call, SEXP op, SEXP args, SEXP rho)
     if((fp = R_fopen(R_ExpandFileName(filename), "r")) == NULL)
 	errorcall(call, _("unable to open file to read"));
 
-    x = PROTECT(R_ParseFile(fp, -1, &status, srcfile));
+    PROTECT(x = R_ParseStream (file_getc, fp, -1, &status, srcfile));
     fclose(fp);
 
     if (status != PARSE_OK)

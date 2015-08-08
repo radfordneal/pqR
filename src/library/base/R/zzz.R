@@ -18,6 +18,7 @@
 ## top-level assignments that need to be copied to baseloader.R
 as.numeric <- as.real <- as.double
 is.name <- is.symbol
+`**` <- `^`
 
 
 ## extracted from existing NAMESPACE files in Dec 2003
@@ -235,4 +236,9 @@ assign("trunc", function(x, ...) UseMethod("trunc"), envir = .GenericArgsEnv)
 assign("as.numeric", get("as.double", envir = .GenericArgsEnv),
        envir = .GenericArgsEnv)
 assign("as.real", get("as.double", envir = .GenericArgsEnv),
+       envir = .GenericArgsEnv)
+
+## make `**` the same object as `^`
+
+assign("**", get("^", envir = .GenericArgsEnv),
        envir = .GenericArgsEnv)

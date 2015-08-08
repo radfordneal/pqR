@@ -177,6 +177,17 @@ int attribute_hidden R_IoBufferReadOffset(IoBuffer *iob)
     }
     return result;
 }
+
+int attribute_hidden R_IoBufferWriteOffset(IoBuffer *iob)
+{
+    int result = iob->write_offset;
+    BufferListItem* buf = iob->start_buf;
+    while(buf && buf != iob->write_buf) {
+    	result += IOBSIZE;
+    	buf = buf->next;
+    }
+    return result;
+}
     
 /* Initialization code for text buffers */
 

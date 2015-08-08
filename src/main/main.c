@@ -126,7 +126,12 @@ static int ParseBrowser(SEXP, SEXP);
 
 extern void InitDynload(void);
 
-	/* Read-Eval-Print Loop [ =: REPL = repl ] with input from a file */
+
+/* Read-Eval-Print Loop [ =: REPL = repl ] with input from a file */
+
+extern int R_fgetc (FILE*);
+
+static int file_getc (void *fp) { return R_fgetc ((FILE *) fp); }
 
 static void R_ReplFile(FILE *fp, SEXP rho)
 {
@@ -137,36 +142,49 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     
     R_InitSrcRefState(&ParseState);
     savestack = R_PPStackTop;    
+
     for(;;) {
 	R_PPStackTop = savestack;
-	R_CurrentExpr = R_Parse1File(fp, 1, &status, &ParseState);
+
+	R_CurrentExpr = R_Parse1Stream (file_getc, (void *) fp, 
+                                        &status, &ParseState);
+
 	switch (status) {
 	case PARSE_NULL:
 	    break;
+
 	case PARSE_OK:
+
+	    PROTECT(R_CurrentExpr);
+
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
 	    count++;
-	    PROTECT(R_CurrentExpr);
+
 	    R_CurrentExpr = eval(R_CurrentExpr, rho);
 	    SET_SYMVALUE(R_LastvalueSymbol, R_CurrentExpr);
-	    UNPROTECT(1);
+
 	    if (R_Visible)
 		PrintValueEnv(R_CurrentExpr, rho);
 	    if( R_CollectWarnings )
 		PrintWarnings();
+
+	    UNPROTECT(1);
+
 	    break;
+
 	case PARSE_ERROR:
 	    parseError(R_NilValue, R_ParseError);
 	    break;
+
 	case PARSE_EOF:
 	    R_FinalizeSrcRefState(&ParseState);
 	    return;
 	    break;
-	case PARSE_INCOMPLETE:
-	    /* can't happen: just here to quieten -Wall */
-	    break;
+
+	default:
+            abort();
 	}
     }
 }
@@ -211,18 +229,17 @@ char *R_PromptString(int browselevel, int type)
   The modifications here are intended to leave the semantics of the REPL
   unchanged, just separate into routines. So the variables that maintain
   the state across iterations of the loop are organized into a structure
-  and passed to Rf_ReplIteration() from Rf_ReplConsole().
+  and passed to Rf_ReplIteration() from Rf_ReplConsole(). 
 */
 
 
-/**
-  (local) Structure for maintaining and exchanging the state between
-  Rf_ReplConsole and its worker routine Rf_ReplIteration which is the
-  implementation of the body of the REPL.
+/* (local) Structure for maintaining and exchanging the state between
+   Rf_ReplConsole and its worker routine Rf_ReplIteration which is the
+   implementation of the body of the REPL.
 
-  In the future, we may need to make this accessible to packages
-  and so put it into one of the public R header files.
- */
+   In the future, we may need to make this accessible to packages
+   and so put it into one of the public R header files. */
+
 typedef struct {
   ParseStatus    status;
   int            prompt_type;
@@ -232,81 +249,133 @@ typedef struct {
 } R_ReplState;
 
 
-/**
-  This is the body of the REPL.
-  It attempts to parse the first line or expression of its input,
-  and optionally request input from the user if none is available.
-  If the input can be parsed correctly,
-     i) the resulting expression is evaluated,
-    ii) the result assigned to .Last.Value,
-   iii) top-level task handlers are invoked.
+/* The body of the Read-Eval-Print Loop.
 
- If the input cannot be parsed, i.e. there is a syntax error,
- it is incomplete, or we encounter an end-of-file, then we
- change the prompt accordingly.
+   If the input can be parsed correctly,
 
- The "cursor" for the input buffer is moved to the next starting
- point, i.e. the end of the first line or after the first ;.
- */
-int
-Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
+       1) the resulting expression is evaluated,
+       2) the result assigned to .Last.Value,
+       3) top-level task handlers are invoked.
+
+   The bufp pointer into buf is moved to the next starting point, 
+   i.e. the end of the first line or after the terminating ';'. */
+
+static int keepSource;
+
+static int ReplGetc (void *vstate)
+{
+    R_ReplState *state = (R_ReplState *) vstate;
+    int c;
+
+    while (*state->bufp == 0) {
+        R_Busy(0);
+        if (R_ReadConsole(R_PromptString(state->browselevel,state->prompt_type),
+                          state->buf, CONSOLE_BUFFER_SIZE, 1) == 0)
+            return EOF;
+        state->buf[CONSOLE_BUFFER_SIZE] = 0;  /* just in case... */
+        state->bufp = state->buf;
+        state->prompt_type = 2;
+    }
+
+    c = *state->bufp++;
+    if (keepSource) 
+        R_IoBufferPutc (c, &R_ConsoleIob);
+
+    return c;
+}
+
+int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 {
     int c, browsevalue;
     SEXP value, thisExpr;
+    SrcRefState ParseState;
     Rboolean wasDisplayed = FALSE;
 
-    if(!*state->bufp) {
-	    R_Busy(0);
-	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
-			      state->buf, CONSOLE_BUFFER_SIZE, 1) == 0)
-		return(-1);
-	    state->bufp = state->buf;
-    }
-#ifdef SHELL_ESCAPE /* not default */
-    if (*state->bufp == '!') {
-	    R_system(&(state->buf[1]));
-	    state->buf[0] = '\0';
-	    return(0);
-    }
-#endif /* SHELL_ESCAPE */
-    while((c = *state->bufp++)) {
-	    R_IoBufferPutc(c, &R_ConsoleIob);
-	    if(c == ';' || c == '\n') break;
+    state->prompt_type = *state->bufp == 0 ? 1 : 2;
+    R_InitSrcRefState(&ParseState);
+
+    keepSource = asLogical (GetOption1 (install ("keep.source")));
+
+    if (keepSource) {
+        R_IoBufferWriteReset(&R_ConsoleIob);
+        ParseState.keepSrcRefs = TRUE;
+        REPROTECT (ParseState.SrcFile = 
+                     NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), 
+                   ParseState.SrcFileProt);
+        REPROTECT (ParseState.Original = ParseState.SrcFile, 
+                   ParseState.OriginalProt);
     }
 
-    R_PPStackTop = savestack;
-    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);
+    PROTECT (R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
+                                             &state->status, &ParseState));
+    if (keepSource) {
+        if (ParseState.didAttach) {
+            SEXP filename_install = install("filename");  /* protected by the */
+            SEXP lines_install = install("lines");        /*   symbol table   */
     
-    switch(state->status) {
+            int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
+            char buf[buflen+1];
+            SEXP class;
+            int i;
+    
+            R_IoBufferReadReset(&R_ConsoleIob);
+            for (i = 0; i < buflen; i++)
+                buf[i] = R_IoBufferGetc(&R_ConsoleIob);
+            buf[buflen] = 0;
+
+            set_var_in_frame (filename_install, ScalarString(mkChar("")),
+                              ParseState.Original, TRUE, 3);
+            set_var_in_frame (lines_install, ScalarString(mkChar(buf)),
+                              ParseState.Original, TRUE, 3);
+    
+            PROTECT(class = allocVector(STRSXP, 2));
+            SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
+            SET_STRING_ELT(class, 1, mkChar("srcfile"));
+            setAttrib(ParseState.Original, R_ClassSymbol, class);
+            UNPROTECT(1);
+        }
+        R_IoBufferWriteReset(&R_ConsoleIob);
+    }
+
+    UNPROTECT(1);  /* R_CurrentExpr */
+
+    R_FinalizeSrcRefState(&ParseState);
+    
+    switch (state->status) {
 
     case PARSE_NULL:
 
 	/* The intention here is to break on CR but not on other
 	   null statements: see PR#9063 */
-	if (browselevel && !R_DisableNLinBrowser
-	    && !strcmp((char *) state->buf, "\n")) return -1;
-	R_IoBufferWriteReset(&R_ConsoleIob);
-	state->prompt_type = 1;
+	if (state->browselevel > 0 && !R_DisableNLinBrowser
+	    && !strcmp((char *) state->buf, "\n")) 
+            return -1;
 	return 1;
 
     case PARSE_OK:
 
-	R_IoBufferReadReset(&R_ConsoleIob);
-	R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
-	if (browselevel) {
+        PROTECT(R_CurrentExpr);
+
+	if (state->browselevel > 0) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
-	    if(browsevalue == 1) return -1;
-	    if(browsevalue == 2) {
-		R_IoBufferWriteReset(&R_ConsoleIob);
+	    if (browsevalue == 1) {
+                UNPROTECT(1);
+                return -1;
+            }
+	    if (browsevalue == 2) {
+		*state->bufp = 0;  /* discard rest of line */
+                UNPROTECT(1);
 		return 0;
 	    }
 	}
 	R_Visible = FALSE;
 	R_EvalDepth = 0;
 	resetTimeLimits();
-	PROTECT(thisExpr = R_CurrentExpr);
+	thisExpr = R_CurrentExpr;
 	R_Busy(1);
-	PROTECT(value = evalv(thisExpr, rho, VARIANT_PENDING_OK));
+
+	PROTECT(value = evalv (thisExpr, rho, VARIANT_PENDING_OK));
+
 	SET_SYMVALUE(R_LastvalueSymbol, value);
 	wasDisplayed = R_Visible;
 	if (R_Visible) {
@@ -316,51 +385,47 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	if (R_CollectWarnings)
 	    PrintWarnings();
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
-	R_CurrentExpr = value; /* Necessary? Doubt it. */
+	R_CurrentExpr = R_NilValue;  /* just in case... */
+
 	UNPROTECT(2);
-	R_IoBufferWriteReset(&R_ConsoleIob);
-	state->prompt_type = 1;
-	return(1);
+
+	return 1;
 
     case PARSE_ERROR:
 
-	state->prompt_type = 1;
 	parseError(R_NilValue, 0);
-	R_IoBufferWriteReset(&R_ConsoleIob);
-	return(1);
-
-    case PARSE_INCOMPLETE:
-
-	R_IoBufferReadReset(&R_ConsoleIob);
-	state->prompt_type = 2;
-	return(2);
+	*state->bufp = 0;  /* discard rest of line */
+	return 1;
 
     case PARSE_EOF:
 
-	return(-1);
-	break;
-    }
+	return -1;
 
-    return(0);
+    default:
+        abort();
+    }
 }
 
 static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 {
+    R_ReplState state;
     int status;
-    R_ReplState state = { PARSE_NULL, 1, 0, "", NULL};
 
-    R_IoBufferWriteReset(&R_ConsoleIob);
-    state.buf[0] = '\0';
-    state.buf[CONSOLE_BUFFER_SIZE] = '\0';
-    /* stopgap measure if line > CONSOLE_BUFFER_SIZE chars */
+    state.status = PARSE_NULL;
+    state.prompt_type = 1;
+    state.browselevel = browselevel;
+    state.buf[0] = 0;
     state.bufp = state.buf;
-    if(R_Verbose)
+
+    if (R_Verbose)
 	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
-    for(;;) {
-	status = Rf_ReplIteration(rho, savestack, browselevel, &state);
-	if(status < 0)
-	  return;
-    }
+
+    do {
+
+        R_PPStackTop = savestack;
+        status = Rf_ReplIteration (rho, &state);
+
+    } while (status >= 0);
 }
 
 

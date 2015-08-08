@@ -30,13 +30,13 @@
 
 typedef struct {
 
-    Rboolean keepSrcRefs;	/* Whether to attach srcrefs to objects as they are parsed */
-    Rboolean didAttach;		/* Record of whether a srcref was attached */
+    Rboolean keepSrcRefs;	/* Attach srcrefs to objects as parsed? */
+    Rboolean didAttach;		/* Was a srcref attached? */
     SEXP SrcFile;		/* The srcfile object currently being parsed */
     SEXP Original;		/* The underlying srcfile object */
     PROTECT_INDEX SrcFileProt;	/* The SrcFile may change */
     PROTECT_INDEX OriginalProt; /* ditto */
-    				/* Position information about the current parse */
+    /* Position information about the current parse... */
     int xxlineno;		/* Line number according to #line directives */
     int xxcolno;		/* Character number on line */
     int xxbyteno;		/* Byte number on line */
@@ -46,20 +46,30 @@ typedef struct {
 void R_InitSrcRefState(SrcRefState *state);
 void R_FinalizeSrcRefState(SrcRefState *state);
 
-SEXP R_Parse1Buffer(IoBuffer*, int, ParseStatus *); /* in ReplIteration,
-						       R_ReplDLLdo1 */
-SEXP R_ParseBuffer(IoBuffer*, int, ParseStatus *, SEXP, SEXP); /* in source.c */
-SEXP R_Parse1File(FILE*, int, ParseStatus *, SrcRefState *); /* in R_ReplFile */
-SEXP R_ParseFile(FILE*, int, ParseStatus *, SEXP);  /* in edit.c */
+SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
 
-#ifndef HAVE_RCONNECTION_TYPEDEF
-typedef struct Rconn  *Rconnection;
-#define HAVE_RCONNECTION_TYPEDEF
-#endif
-SEXP R_ParseConn(Rconnection con, int n, ParseStatus *status, SEXP srcfile);
-
-	/* Report a parse error */
+/* Report a parse error */
 	
 void parseError(SEXP call, int linenum);
+
+/* Operator precedence functions.  Used in deparse.c.  Defined in parse.c,
+   where the documentation is located. */
+
+#define unary_prec  Rf_unary_prec
+#define binary_prec Rf_binary_prec
+#define misc_prec   Rf_misc_prec
+
+int Rf_unary_prec (SEXP);
+int Rf_binary_prec (SEXP);
+int Rf_misc_prec (SEXP);
+
+#define NON_ASSOC(p)   (((p)&3) == 0)
+#define LEFT_ASSOC(p)  (((p)&3) == 1)
+#define RIGHT_ASSOC(p) (((p)&3) == 2)
+
+#define needsparens_postfix Rf_needsparens_postfix
+#define needsparens_unary   Rf_needsparens_unary
+#define needsparens_binary  Rf_needsparens_binary
+
 
 #endif /* not R_PARSE_H */

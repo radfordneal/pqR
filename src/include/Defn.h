@@ -1164,7 +1164,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define mkSYMSXP		Rf_mkSYMSXP
 # define mkTrue			Rf_mkTrue
 # define NewEnvironment		Rf_NewEnvironment
-# define needsparens		Rf_needsparens
 # define nonsubsettable_error	Rf_nonsubsettable_error
 # define onintr			Rf_onintr
 # define onsigusr1              Rf_onsigusr1
@@ -1365,7 +1364,6 @@ SEXP mkPROMISE(SEXP, SEXP);
 SEXP mkQUOTE(SEXP);
 SEXP mkSYMSXP(SEXP, SEXP);
 SEXP mkTrue(void);
-Rboolean needsparens (SEXP, SEXP, int);
 SEXP NewEnvironment(SEXP, SEXP, SEXP);
 void onintr(void);
 RETSIGTYPE onsigusr1(int);
