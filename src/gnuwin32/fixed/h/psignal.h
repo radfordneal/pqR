@@ -72,12 +72,12 @@
 */
 typedef	void (*sighandler_t)(int nSig);
 
-/* Define sigset_t as long int, regardless of what mingw wants, which
+/* Define sigset_t as long long int, regardless of what mingw wants, which
    is confused with whether or not _POSIX is defined.  Note that uses
    of this type are here in psignal.c, so we should be able to decide
    for ourselves what it is. */
 
-typedef long int sigset_t;
+typedef long long int sigset_t;
 
 
 /*
