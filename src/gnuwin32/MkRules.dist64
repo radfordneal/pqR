@@ -1,11 +1,11 @@
 #-*- Makefile -*-
 
-## THIS IS THE VERSION FOR 32-BIT BUILDS ON A 32-BIT WINDOWS SYSTEM.
+## THIS IS THE VERSION FOR 64-BIT BUILDS ON A 64-BIT WINDOWS SYSTEM.
 ##
-## Edit as needed locally, putting the modified vesion in MkRules.local
-## or just do nothing to use this version.
+## Edit as needed locally, putting the modified vesion in MkRules.local,
+## or just copy this version unchanged to MkRules.local.
 ##
-## Use MkRules.dist64 as a starting point if you are doing a 64-bit build.
+## Use MkRules.dist as a starting point if you are doing a 32-bit build.
 ##
 ## You'll have to customize this yourself for a 32-bit build on 64-bit Windows.
 
@@ -37,7 +37,7 @@ ATLAS_PATH=/R/ATLAS/lib/WinNT_P4SSE2
 # USE_SVNVERSION = YES
 
 # With the recommended toolchain, set this to 32 or 64
-MULTI = 32
+MULTI = 64
 # If the toolchain's bin directory is not in your path, set this to the path
 # (including the trailing /, and use / not \).
 TOOL_PATH =
@@ -54,16 +54,16 @@ BINPREF =
 BINPREF64 = x86_64-w64-mingw32-
 
 # Others use a -m64 or -m32 option to select architectures
-M_ARCH = -m32
+M_ARCH = -m64
 # and for as (--32 or --64)
-AS_ARCH = --32
+AS_ARCH = --64
 # and for windres (-F pe-i386 or pe-x86-64)
-RC_ARCH = -F pe-i386
+RC_ARCH = -F pe-x86-64
 # and for dlltool ("-m i386 --as-flags --32" vs "-m i386:x86-64 --as-flags --64")
-DT_ARCH = -m i386 --as-flags --32
+DT_ARCH = -m i386:x86-64 --as-flags --64
 
 # 32- or 64-bit Windows?
-WIN = 32
+WIN = 64
 
 # We normally link directly against DLLs, 
 # but this macro forces the use of import libs
