@@ -100,6 +100,9 @@ MIKTEX = TRUE
 # additional optimization flags
 EOPTS = -march=native -mtune=native -mfpmath=sse
 
+# additional flags regarding warnings
+EWARN = -Wno-unused-value -Wno-parentheses
+
 # define to -fopenmp if the toolchain has OpenMP support
 OPENMP = -fopenmp
 

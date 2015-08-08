@@ -1,1 +1,4 @@
 Some fixes to get pqR to build on Windows, using Rtools215.
+
+Changes default type for install.packages to "source" for all
+platforms.

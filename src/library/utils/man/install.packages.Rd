@@ -174,8 +174,8 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   the CRAN distribution for Mac OS X.  This function can install either
   type where supported, either by downloading a file from a repository
   or from a local file.  The default type is given by
-  \code{\link{getOption}("pkgType")}: this defaults to \code{"source"}
-  apart from under Windows or a CRAN binary distribution for Mac OS X.
+  \code{\link{getOption}("pkgType")}, which defaults to \code{"source"}
+  for pqR (since a binary repository for pqR is not currently provided).
   
   This is the main function to install packages. It takes
   a vector of names and a destination library, downloads the packages
