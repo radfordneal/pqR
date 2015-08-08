@@ -8167,12 +8167,13 @@ automatically protects them) or unprotect them immediately after use.
 Protection is not needed for objects which @R{} already knows are in
 use.  In particular, this applies to function arguments.
 
-There is a less-used macro @code{UNPROTECT_PTR(@var{s})} that unprotects
-the object pointed to by the @code{SEXP} @var{s}, even if it is not the
-top item on the pointer protection stack. This is rarely needed outside
-the parser (the @R{} sources currently have three examples, one in
-@file{src/main/plot3d.c}).
-@findex UNPROTECT_PTR
+There is a less-used macro @code{UNPROTECT_PTR(@var{s})} that
+unprotects the object pointed to by the @code{SEXP} @var{s}, even if
+it is not the top item on the pointer protection stack.  For this to
+be reliable, it must be the only means used to unprotect pointers,
+since it would be difficult to guarantee that another @code{PROTECT}
+for the same pointer will not be done, rendering the effect of
+mixtures of @code{UNPROTECT} and @code{UNPROTECT_PTR} unpredictable.
 
 Sometimes an object is changed (for example duplicated, coerced or
 grown) yet the current value needs to be protected.  For these cases
@@ -8189,6 +8190,10 @@ For example (from the internal code for @code{optim})
     PROTECT_WITH_INDEX(s = eval(OS->R_fcall, OS->R_env), &ipx);
     REPROTECT(s = coerceVector(s, REALSXP), ipx);
 @end example
+
+This must not be done in conjunction with use of @code{UNPROTECT_PTR},
+since it may change the location where a pointer resides on the
+protect stack.
 
 
 @node Allocating storage, Details of R types, Garbage Collection, Handling R objects in C
