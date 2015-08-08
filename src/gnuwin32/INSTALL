@@ -48,7 +48,14 @@ adequate, is as follows:
           make
 
    8) You should now be able to run Rterm.exe, which is located in 
-      the src/gnuwin32/front-ends sub-directory of the source (and
-      build) directory.
+      <build-dir>/bin/<arch>, where <build-dir> is the source/build
+      directory you are using and <arch> is i386 for 32-bit builds
+      and x86-64 for 64-bit builds.
+
+      The number of helper threads to use can be specified by 
+
+          set R_HELPERS=<n>
+
+      before running Rterm.      
 
 There is also a Windows GUI, which is not discussed here.
