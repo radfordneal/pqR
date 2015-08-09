@@ -5,14 +5,14 @@ AllowNoIcons=yes
 DisableReadyPage=yes
 DisableStartupPrompt=yes
 OutputDir=.
-WizardSmallImageFile=R.bmp
+WizardSmallImageFile=pqR.bmp
 UsePreviousAppDir=no
 ChangesAssociations=yes
 Compression=lzma/ultra
 SolidCompression=yes
-AppPublisherURL=http://www.r-project.org
-AppSupportURL=http://www.r-project.org
-AppUpdatesURL=http://www.r-project.org
+AppPublisherURL=http://www.pqR-project.org
+AppSupportURL=http://www.pqR-project.org
+AppUpdatesURL=http://www.pqR-project.org
 
 [Languages]
 Name: en; MessagesFile: "compiler:Default.isl"
