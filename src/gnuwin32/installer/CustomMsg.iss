@@ -1,13 +1,13 @@
-﻿; Custom messages for R
+﻿; Custom messages for pqR
 ; Coded in UTF-8 *with a byte-order mark*
 
 [CustomMessages]
 en.regentries=Registry entries:
-en.associate=&Associate R with .RData files
+en.associate=&Associate pqR with .RData files
 en.user=User installation
 en.custom=Custom installation
-en.adminprivilegesrequired=You should be logged in as an administrator when installing R
-en.adminexplanation=Note:  A full R installation requires administrative privileges, and it appears that those are not available.  If you continue with this installation, you will not be able to associate R with .RData files.  Installation must be made to a directory where you have write permission.
+en.adminprivilegesrequired=You should be logged in as an administrator when installing pqR
+en.adminexplanation=Note:  A full pqR installation requires administrative privileges, and it appears that those are not available.  If you continue with this installation, you will not be able to associate pqR with .RData files.  Installation must be made to a directory where you have write permission.
 en.recordversion=Save version number in registry
 en.startupt=Startup options
 en.startupq=Do you want to customize the startup options?
@@ -31,11 +31,11 @@ en.Internet0=Standard
 en.Internet1=Internet2
 
 br.regentries=Entradas no registro:
-br.associate=&Associar arquivos .RData ao R
+br.associate=&Associar arquivos .RData ao pqR
 br.user=Instalação modo usuário
 br.custom=Instalação personalizada
-br.adminprivilegesrequired=Você deve efetuar logon como Administrador para instalar o R
-br.adminexplanation=Observação: Uma instalação completa do R requer privilégios de administrador, e aparentemente estes não estão disponíveis. Se você continuar com a instalação, você não vai poder instalar o suporte a DCOM nem associar o R com arquivos do tipo .RData. A instalação deve ser feita em um diretório no qual você tenha direitos de escrita.
+br.adminprivilegesrequired=Você deve efetuar logon como Administrador para instalar o pqR
+br.adminexplanation=Observação: Uma instalação completa do pqR requer privilégios de administrador, e aparentemente estes não estão disponíveis. Se você continuar com a instalação, você não vai poder instalar o suporte a DCOM nem associar o pqR com arquivos do tipo .RData. A instalação deve ser feita em um diretório no qual você tenha direitos de escrita.
 br.recordversion=Salvar número da versão no registro
 br.startupt=Opções de inicialização
 br.startupq=Você deseja personalizar as opções de inicialização?
@@ -59,11 +59,11 @@ br.Internet0=Padrão
 br.Internet1=Internet2
 
 dk.regentries=Indgange i registreringsdatabasen:
-dk.associate=&Associer R med .RData-filer
+dk.associate=&Associer pqR med .RData-filer
 dk.user=Brugerinstallation
 dk.custom=Brugerdefineret installation
-dk.adminprivilegesrequired=Du skal helst være logget ind som administrator for at installere R
-dk.adminexplanation=Bemærk: En fuld R-installation kræver administratorrettigheder, og disse ser ikke ud til at være til stede. Hvis du fortsætter installationen, vil du ikke kunne associere R med .RData-filer. Installation skal være til en mappe, hvor du har skrivetilladelse til.
+dk.adminprivilegesrequired=Du skal helst være logget ind som administrator for at installere pqR
+dk.adminexplanation=Bemærk: En fuld R-installation kræver administratorrettigheder, og disse ser ikke ud til at være til stede. Hvis du fortsætter installationen, vil du ikke kunne associere pqR med .RData-filer. Installation skal være til en mappe, hvor du har skrivetilladelse til.
 dk.recordversion=Gem versionsnummer i registreringsdatabasen
 dk.startupt=Opstartsindstillinger
 dk.startupq=Ønsker du at tilpasse opstartsindstillingerne?
@@ -87,11 +87,11 @@ dk.Internet0=Standard
 dk.Internet1=Internet2
 
 es.regentries=Registro de entradas:
-es.associate=&Asociar archivos .RData con R
+es.associate=&Asociar archivos .RData con pqR
 es.user=Instalación del usuario
 es.custom=Instalación a medida
-es.adminprivilegesrequired=Debe registrarse como administrador cuando instala R
-es.adminexplanation=Nota: Una instalación completa de R requiere de privilegios de administrador.  Si continua esta instalación, no podrá instalar el soporte DCOM ni asociar archivos .RData con R.  La instalación debe realizase en un directorio donde tiene permiso de escritura.
+es.adminprivilegesrequired=Debe registrarse como administrador cuando instala pqR
+es.adminexplanation=Nota: Una instalación completa de pqR requiere de privilegios de administrador.  Si continua esta instalación, no podrá instalar el soporte DCOM ni asociar archivos .RData con pqR.  La instalación debe realizase en un directorio donde tiene permiso de escritura.
 es.recordversion=Guarde el número de versión en el registro
 es.startupt=Opciones de configuración
 es.startupq=Desea utilizar las opciones de configuración ?
@@ -115,11 +115,11 @@ es.Internet0=Standard
 es.Internet1=Internet2
 
 fr.regentries=Entrées dans le registre :
-fr.associate=&Associer R avec les fichiers .RData
+fr.associate=&Associer pqR avec les fichiers .RData
 fr.user=Installation utilisateur
 fr.custom=Installation personnalisée
-fr.adminprivilegesrequired=Vous devez être loggé avec des droits d'administrateur pour installer R
-fr.adminexplanation=Note : une installation complète de R nécessite des privilèges d'administrateur, et il semble que ceux-ci ne soient pas disponibles. Si vous continuer l'installation, vous ne pourrez pas installer DCOM, ni associer R avec les fichiers .RData. L'installation doit se faire dans un répertoire où vous avez des droits en écriture.
+fr.adminprivilegesrequired=Vous devez être loggé avec des droits d'administrateur pour installer pqR
+fr.adminexplanation=Note : une installation complète de pqR nécessite des privilèges d'administrateur, et il semble que ceux-ci ne soient pas disponibles. Si vous continuer l'installation, vous ne pourrez pas installer DCOM, ni associer pqR avec les fichiers .RData. L'installation doit se faire dans un répertoire où vous avez des droits en écriture.
 fr.recordversion=Enregistrer le numéro de version dans le registre
 fr.startupt=Options de démarrage
 fr.startupq=Voulez-vous personnaliser les options de démarrage ?
@@ -143,11 +143,11 @@ fr.Internet0=Standard
 fr.Internet1=Internet2
 
 de.regentries=Einträge in der Windows-Registrierung:
-de.associate=&Verknüpfe R mit .RData Dateien
+de.associate=&Verknüpfe pqR mit .RData Dateien
 de.user=Benutzerinstallation
 de.custom=Benutzerdefinierte Installation
-de.adminprivilegesrequired=Sie sollten als Administrator angemeldet sein, um R zu installieren
-de.adminexplanation=Eine vollständige R Installation verlangt Administratorrechte und diese scheinen nicht vorhanden zu sein. Wenn Sie die Installation fortsetzen, können die DCOM Unterstützung und die Verknüpfung von R mit .RData Dateien nicht installiert werden. Die Installation muss in ein Verzeichnis geschehen, für das sie Schreibrechte besitzen.
+de.adminprivilegesrequired=Sie sollten als Administrator angemeldet sein, um pqR zu installieren
+de.adminexplanation=Eine vollständige pqR Installation verlangt Administratorrechte und diese scheinen nicht vorhanden zu sein. Wenn Sie die Installation fortsetzen, können die DCOM Unterstützung und die Verknüpfung von pqR mit .RData Dateien nicht installiert werden. Die Installation muss in ein Verzeichnis geschehen, für das sie Schreibrechte besitzen.
 de.recordversion=Speichere Versionsnummer in der Registry
 de.startupt=Startoptionen
 de.startupq=Möchten Sie die Startoptionen anpassen?
@@ -171,11 +171,11 @@ de.Internet0=Standard
 de.Internet1=Internet2
 
 it.regentries=Valori registri:
-it.associate=Associa R ai file .RData
+it.associate=Associa pqR ai file .RData
 it.user=Installazione utente
 it.custom=Installazione personalizzata
-it.adminprivilegesrequired=Sarebbe meglio installare R entrando come amministratore
-it.adminexplanation=Nota: l'installazione completa richiede i privilegi da amministratore e sembrerebbe che non siano disponibili. Se si procede con l'installazione non sarà possibile installare il supporto per DCOM o associare R ai files .RData.  L'installazione deve essere eseguita in una cartella di cui si possiedono i permessi in scrittura.
+it.adminprivilegesrequired=Sarebbe meglio installare pqR entrando come amministratore
+it.adminexplanation=Nota: l'installazione completa richiede i privilegi da amministratore e sembrerebbe che non siano disponibili. Se si procede con l'installazione non sarà possibile installare il supporto per DCOM o associare pqR ai files .RData.  L'installazione deve essere eseguita in una cartella di cui si possiedono i permessi in scrittura.
 it.recordversion=Memorizza il numero della versione nel registro
 it.startupt=Opzioni avvio
 it.startupq=Vuoi impostare le opzioni di avvio?
@@ -202,8 +202,8 @@ nl.regentries=Register entries:
 nl.associate=&R associëren met .RData bestanden
 nl.user=Gebruikersinstallatie
 nl.custom=Gepersonaliseerde installatie
-nl.adminprivilegesrequired=Om R te installeren moet men ingelogd zijn als administrator
-nl.adminexplanation=Noot:  Voor een volledige R installatie heeft men administratieve rechten nodig, rechten die in dit geval kennelijk niet beschikbaar zijn. Wanneer u de installatie verderzet, zult u geen DCOM ondersteuning kunnen installeren en geen .RData bestanden met R kunnen associëren. Installatie dient te gebeuren naar een map waar u over schrijfrechten beschikt.
+nl.adminprivilegesrequired=Om pqR te installeren moet men ingelogd zijn als administrator
+nl.adminexplanation=Noot:  Voor een volledige pqR installatie heeft men administratieve rechten nodig, rechten die in dit geval kennelijk niet beschikbaar zijn. Wanneer u de installatie verderzet, zult u geen DCOM ondersteuning kunnen installeren en geen .RData bestanden met pqR kunnen associëren. Installatie dient te gebeuren naar een map waar u over schrijfrechten beschikt.
 nl.recordversion=Versie-nummer opslaan in het register
 nl.startupt=Opstartinstellingen
 nl.startupq=Wenst u de opstartopties aan te passen?
@@ -227,11 +227,11 @@ nl.Internet0=Standaard
 nl.Internet1=Internet2
 
 no.regentries=Registernøkler:
-no.associate=Knytt R til .RData-filer
+no.associate=Knytt pqR til .RData-filer
 no.user=Brukerinstallering
 no.custom=Tilpasset installering
-no.adminprivilegesrequired=Du bør være pålogget med rettighter til administratoren under installering av R
-no.adminexplanation=Merk: Full installering av R krever administratorens rettigheter, og de synes ikke å være tilgjengelige. Dersom du fortsetter med denne installeringen, vil du ikke kunne knytte R til .RData-filer. Installering er kun mulig til en katalog der du har skriverettigheter.
+no.adminprivilegesrequired=Du bør være pålogget med rettighter til administratoren under installering av pqR
+no.adminexplanation=Merk: Full installering av pqR krever administratorens rettigheter, og de synes ikke å være tilgjengelige. Dersom du fortsetter med denne installeringen, vil du ikke kunne knytte pqR til .RData-filer. Installering er kun mulig til en katalog der du har skriverettigheter.
 no.recordversion=Lagre versjonsnummer i registeret
 no.startupt=Startinnstillinger
 no.startupq=Ønsker du å tilpasse startinnstillinger?
@@ -256,20 +256,20 @@ no.Internet1=Internet2
 
 
 sl.regentries=Vnosi v registru:
-sl.associate=Poveži datoteke .RData z R
+sl.associate=Poveži datoteke .RData z pqR
 sl.user=Uporabniška namestitev
 sl.custom=Prikrojena namestitev
 sl.adminprivilegesrequired=Namestitev programa lahko opravi le administrator
-sl.adminexplanation=Za polno namestitev R potrebujete pravice administratorja, a teh očitno nimate. Če boste z namestitvijo nadaljevali, ne boste mogli namestiti podporo DCOM niti povezati datoteke .RData z R. Namestitev mora biti opravljena v mapo, kjer imate dovoljenje za pisanje.
+sl.adminexplanation=Za polno namestitev pqR potrebujete pravice administratorja, a teh očitno nimate. Če boste z namestitvijo nadaljevali, ne boste mogli namestiti podporo DCOM niti povezati datoteke .RData z pqR. Namestitev mora biti opravljena v mapo, kjer imate dovoljenje za pisanje.
 sl.recordversion=Shrani številko verzije v register
 
 
 po.regentries=Wpisy rejestru:
-po.associate=Powiąż R z plikami z rozszerzeniem .RData
+po.associate=Powiąż pqR z plikami z rozszerzeniem .RData
 po.user=Instalacja użytkownika
 po.custom=Dopasowana instalacja
 po.adminprivilegesrequired=Dla instalacji R, trzeba posiadać uprawnienia administratora
-po.adminexplanation=Pełna instalacja R wymaga uprawnienia administratora, które nie są dostępne. Jeśli ta instalacja będzie kontinuowana, powiążanie pliki .RData z R nie będą możliwe. Instalacja R jest tylko możliwe w katalogu z prawem zapisu dla użytkownika dokonującego instalacji.
+po.adminexplanation=Pełna instalacja pqR wymaga uprawnienia administratora, które nie są dostępne. Jeśli ta instalacja będzie kontinuowana, powiążanie pliki .RData z pqR nie będą możliwe. Instalacja pqR jest tylko możliwe w katalogu z prawem zapisu dla użytkownika dokonującego instalacji.
 po.recordversion=Złóż numer wersji w rejestrze
 po.startupt=Opcje startowe
 po.startupq=Czy chcesz dopasować opcje startowe?
@@ -355,7 +355,7 @@ ko.associate=R을 .RData 파일들과 연결합니다
 ko.user=사용자 편의를 위한 쉬운 설치
 ko.custom=사용자 정의 고급 설치
 ko.adminprivilegesrequired=R 설치를 위해서 당신은 반드시 관리자로서 로그인을 해야합니다
-ko.adminexplanation=Note: R 전체설치를 위해서는 관리자 권한이 요구되는데, 그렇지 않은 것 같습니다. 만약, 이 설치를 계속 진행한다면, 아마도 .RData 파일을 R 시스템과 연결하지 못 할수있습니다. 따라서 당신은 반드시 쓰기 권한을 가지고 있는 디렉토리에 설치해야 합니다.
+ko.adminexplanation=Note: pqR 전체설치를 위해서는 관리자 권한이 요구되는데, 그렇지 않은 것 같습니다. 만약, 이 설치를 계속 진행한다면, 아마도 .RData 파일을 pqR 시스템과 연결하지 못 할수있습니다. 따라서 당신은 반드시 쓰기 권한을 가지고 있는 디렉토리에 설치해야 합니다.
 ko.recordversion=레지스트리에 버전정보를 저장하세요
 ko.startupt=스타트업 옵션
 ko.startupq=스타트업 옵션을 조정하길 원하시나요?
@@ -379,20 +379,20 @@ ko.Internet0=표준
 ko.Internet1=Internet2
 
 cht.regentries=登錄表項目:
-cht.associate=將資料檔副檔名 .R 關聯至 R
+cht.associate=將資料檔副檔名 .R 關聯至 pqR
 cht.user=一般安裝
 cht.custom=自訂安裝
-cht.adminprivilegesrequired=安裝 R 時您必須以管理者身分登入
-cht.adminexplanation=說明: R 的完整安裝需要系統管理權限，但是看起來並無法取得。如果您繼續進行此程序，您將無法安裝 DCOM 的支援，也無法將資料檔副檔名 .R 關聯至 R。安裝作業必須在您有寫入權限的目錄之中進行。
+cht.adminprivilegesrequired=安裝 pqR 時您必須以管理者身分登入
+cht.adminexplanation=說明: pqR 的完整安裝需要系統管理權限，但是看起來並無法取得。如果您繼續進行此程序，您將無法安裝 DCOM 的支援，也無法將資料檔副檔名 .R 關聯至 R。安裝作業必須在您有寫入權限的目錄之中進行。
 cht.recordversion=在登錄表中儲存版本號碼
 
 
 ru.regentries=Записи в системном регистре:
-ru.associate=Связать R с файлами .RData
+ru.associate=Связать pqR с файлами .RData
 ru.user=Пользовательская установка
 ru.custom=Выборочная установка
-ru.adminprivilegesrequired=Для установки R Вы должны войти в систему как администратор
-ru.adminexplanation=Замечание: Полная установка R требует прав администратора, но похоже, что они недоступны. Если Вы продолжите установку, то не сможете установить ни поддержки DCOM, ни связать R с файлами .RData. Установка должна быть проведена в ту папку, для которой Вы имеете права записи.
+ru.adminprivilegesrequired=Для установки pqR Вы должны войти в систему как администратор
+ru.adminexplanation=Замечание: Полная установка pqR требует прав администратора, но похоже, что они недоступны. Если Вы продолжите установку, то не сможете установить ни поддержки DCOM, ни связать pqR с файлами .RData. Установка должна быть проведена в ту папку, для которой Вы имеете права записи.
 ru.recordversion=Сохранить номер версии в системном регистре
 ru.startupt=Настройки запуска
 ru.startupq=Вы хотите изменить настройки запуска?

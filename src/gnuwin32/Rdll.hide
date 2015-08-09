@@ -569,8 +569,8 @@
  do_addhistory
  do_arrangeWindows
  do_atan
- do_browser
  do_bringtotop
+ do_browser
  do_bzfile
  do_c_dflt
  do_chooseDir

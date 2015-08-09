@@ -1,0 +1,4 @@
+cairo-1.10.2
+pixman-0.20.2
+libpng-1.5.1
+zlib-1.2.5
