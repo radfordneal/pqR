@@ -282,15 +282,7 @@ Also:
 BDR 2008-01-06
 
 
-7) Changing the parser
-
-By default the parser in gram.y is only processed in maintainer mode, 
-which isn't supported in Windows builds.  Defining RUN_BISON will 
-cause src/main/Makefile.win to process it (and correct for the erroneous
-line number records caused by our renaming of the output).
-
-
-8) Making iconv.dll
+7) Making iconv.dll
 
 In the past this was done from the libiconv sources using VC++ 6, but
 as from version 1.12 that is no longer supported.  It does not build

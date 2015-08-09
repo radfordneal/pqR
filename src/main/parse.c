@@ -41,16 +41,6 @@
 /* --------------------------------------------------------------------------
    PARSING ENTRY POINTS PROVIDED
  
-   There are separate entry points for parsing IoBuffers (interactve
-   use), files, and R character strings.  The entry points provide the
-   same functionality; they just set things up in slightly different
-   ways.
- 
-   The following routine parses a single expression:
- 
-       SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
-                            ParseStatus *status, SrcRefState *state);
-
    The following routines parse several expressions and return their
    values in a single expression vector.
  
@@ -58,6 +48,14 @@
 
        SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
                            ParseStatus *status, SEXP srcfile);
+
+   The following routine parses a single expression:
+ 
+       SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
+                            ParseStatus *status, SrcRefState *state);
+
+   The R_InitSrcRefState and R_FinalizeSrcRefState will be needed in
+   conjunction with this routine, and possibly R_TextForSrcRefState.
 
    The success of the parse is indicated as follows:
  
@@ -68,13 +66,11 @@
 
    PARSE_NULL and PARSE_EOF are not possible for R_ParseVector and
    R_ParseStream.
- 
-   R_InitSrcRefState and R_FinalizeSrcRefState are also currently exposed.
 
    All the above are declared in Parse.h and R_ext/Parse.h.
 
-   This module also defines the isValidName function, which needs to know
-   the list of reserved words.
+   This module also defines the isValidName function, since it needs to 
+   know the list of reserved words.
 */
 
 
@@ -491,12 +487,24 @@ static void attachSrcrefs(SEXP val, SEXP t)
     ParseState->didAttach = TRUE;
 }
 
-void R_InitSrcRefState(SrcRefState *state)
+void R_InitSrcRefState (SrcRefState *state, int keepSource)
 {
-    state->keepSrcRefs = FALSE;
+    state->keepSrcRefs = keepSource;
     state->didAttach = FALSE;
-    PROTECT_WITH_INDEX(state->SrcFile = R_NilValue, &(state->SrcFileProt));
-    PROTECT_WITH_INDEX(state->Original = R_NilValue, &(state->OriginalProt));
+
+    if (keepSource) {
+        PROTECT_WITH_INDEX (state->SrcFile =
+                             NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv),
+                            &state->SrcFileProt);
+        PROTECT_WITH_INDEX (state->Original = state->SrcFile, 
+                            &state->OriginalProt);
+
+    }
+    else {
+        PROTECT_WITH_INDEX (state->SrcFile = R_NilValue, &state->SrcFileProt);
+        PROTECT_WITH_INDEX (state->Original = R_NilValue, &state->OriginalProt);
+    }
+
     state->xxlineno = 1;
     state->xxcolno = 0;
     state->xxbyteno = 0;
@@ -507,7 +515,26 @@ void R_InitSrcRefState(SrcRefState *state)
     token_loc.first_parsed = 1;
 }
 
-void R_FinalizeSrcRefState(SrcRefState *state)
+void R_TextForSrcRefState (SrcRefState *state, const char *text)
+{
+    if (state->didAttach) {
+        SEXP filename_install = install("filename");  /* protected by the */
+        SEXP lines_install = install("lines");        /*   symbol table   */
+        SEXP class;
+        set_var_in_frame (filename_install, ScalarString(mkChar("")),
+                          state->Original, TRUE, 3);
+        set_var_in_frame (lines_install, ScalarString(mkChar(text)),
+                          state->Original, TRUE, 3);
+
+        PROTECT(class = allocVector(STRSXP, 2));
+        SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
+        SET_STRING_ELT(class, 1, mkChar("srcfile"));
+        setAttrib(state->Original, R_ClassSymbol, class);
+        UNPROTECT(1);
+    }
+}
+
+void R_FinalizeSrcRefState (SrcRefState *state)
 {
     /* We could just do an UNPROTECT(2), but this detects some bugs... */
 
@@ -1445,7 +1472,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     int i;
 
     ParseState = &state;
-    R_InitSrcRefState(ParseState);
+    R_InitSrcRefState (ParseState, !isNull(srcfile));
     
     ParseInit();
 
@@ -1455,8 +1482,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     PROTECT(tval = CONS(R_NilValue,R_NilValue));
     tlast = tval;
 
-    if (!isNull(ParseState->SrcFile)) {
-    	ParseState->keepSrcRefs = TRUE;
+    if (ParseState->keepSrcRefs) {
         PROTECT(refs = CONS(R_NilValue,R_NilValue));
         last_ref = refs;
     }

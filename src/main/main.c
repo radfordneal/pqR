@@ -140,7 +140,7 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     SrcRefState ParseState;
     int savestack;
     
-    R_InitSrcRefState(&ParseState);
+    R_InitSrcRefState (&ParseState, FALSE);
     savestack = R_PPStackTop;    
 
     for(;;) {
@@ -292,49 +292,24 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
     Rboolean wasDisplayed = FALSE;
 
     state->prompt_type = *state->bufp == 0 ? 1 : 2;
-    R_InitSrcRefState(&ParseState);
 
     keepSource = asLogical (GetOption1 (install ("keep.source")));
-
-    if (keepSource) {
+    R_InitSrcRefState (&ParseState, keepSource);
+    if (keepSource)
         R_IoBufferWriteReset(&R_ConsoleIob);
-        ParseState.keepSrcRefs = TRUE;
-        REPROTECT (ParseState.SrcFile = 
-                     NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv), 
-                   ParseState.SrcFileProt);
-        REPROTECT (ParseState.Original = ParseState.SrcFile, 
-                   ParseState.OriginalProt);
-    }
 
     PROTECT (R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
                                              &state->status, &ParseState));
     if (keepSource) {
-        if (ParseState.didAttach) {
-            SEXP filename_install = install("filename");  /* protected by the */
-            SEXP lines_install = install("lines");        /*   symbol table   */
-    
-            int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
-            char buf[buflen+1];
-            SEXP class;
-            int i;
-    
-            R_IoBufferReadReset(&R_ConsoleIob);
-            for (i = 0; i < buflen; i++)
-                buf[i] = R_IoBufferGetc(&R_ConsoleIob);
-            buf[buflen] = 0;
-
-            set_var_in_frame (filename_install, ScalarString(mkChar("")),
-                              ParseState.Original, TRUE, 3);
-            set_var_in_frame (lines_install, ScalarString(mkChar(buf)),
-                              ParseState.Original, TRUE, 3);
-    
-            PROTECT(class = allocVector(STRSXP, 2));
-            SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
-            SET_STRING_ELT(class, 1, mkChar("srcfile"));
-            setAttrib(ParseState.Original, R_ClassSymbol, class);
-            UNPROTECT(1);
-        }
+        int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
+        char buf[buflen+1];
+        int i;
+        R_IoBufferReadReset(&R_ConsoleIob);
+        for (i = 0; i < buflen; i++)
+            buf[i] = R_IoBufferGetc(&R_ConsoleIob);
+        buf[buflen] = 0;
         R_IoBufferWriteReset(&R_ConsoleIob);
+        R_TextForSrcRefState (&ParseState, buf);
     }
 
     UNPROTECT(1);  /* R_CurrentExpr */
