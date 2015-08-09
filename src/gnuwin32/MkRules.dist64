@@ -86,10 +86,11 @@ ICU_PATH=/sources/icu
 # For the cairographics devices
 # Optionally use a static build of cairographics from
 #   http://www.rforge.net/Cairo/files/cairo-current-win.tar.gz
-# and set CAIRO_HOME to the parent of the win32/win64 directories
+# which are also in the src/gnuwin32/cairo directory, and set
+# set CAIRO_HOME to the parent of the win32/win64 directories
 #
 # If CAIRO_HOME is not set the devices are not built.
-CAIRO_HOME =
+CAIRO_HOME = ../../../../gnuwin32/cairo  # relative to grDevices/src/cairo
 
 # set this to YES to build static HTML help
 BUILD_HTML = NO

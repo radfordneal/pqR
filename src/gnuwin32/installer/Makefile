@@ -1,4 +1,4 @@
-# Makefile for R for Windows Installers
+# Makefile for pqR for Windows Installers
 
 include ../MkRules
 

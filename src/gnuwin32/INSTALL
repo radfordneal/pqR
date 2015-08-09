@@ -47,20 +47,33 @@ adequate, is as follows:
           make all recommended >make.out 2>&1
           cd bitmap
           make >make.out 2>&1
+          cd ..
+          make cairodevices >&make-cairo.out 2>&1
 
-      You can monitor the make.out files from another console window
-      to see how things are progressing during the build.
+     You can monitor the make.out files from another console window
+     to see how things are progressing during the build.
 
-   8) You should now be able to run Rterm.exe, by typing the command
-      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
-      <build-dir> is the source/build directory you are using and
-      <arch> is i386 for 32-bit builds and x64 for 64-bit builds.
+  8) You should now be able to run Rterm.exe, by typing the command
+     <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
+     <build-dir> is the source/build directory you are using and
+     <arch> is i386 for 32-bit builds and x64 for 64-bit builds.
 
-      The number of helper threads to use can be specified by 
+     The number of helper threads to use can be specified by 
 
-          set R_HELPERS=<number>
+         set R_HELPERS=<number>
 
-      before running Rterm.      
+     before running Rterm.      
+
+  9) You can check the installation with the command
+
+         make check-all >check-all.out 2>&1
+
+     monitoring the results by looking at check-all.out in another
+     console window.
+
+ 10) You can make the PDF manuals with
+
+         make manuals >make-manuals.out 2>&1
 
 Note that the Windows GUI is a separate program, which is not
 discussed here.
