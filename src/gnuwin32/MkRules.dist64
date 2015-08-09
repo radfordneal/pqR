@@ -90,7 +90,7 @@ ICU_PATH=/sources/icu
 # set CAIRO_HOME to the parent of the win32/win64 directories
 #
 # If CAIRO_HOME is not set the devices are not built.
-CAIRO_HOME = ../../../../gnuwin32/cairo  # relative to grDevices/src/cairo
+CAIRO_HOME = ../../../../gnuwin32/cairo/src  # relative to grDevices/src/cairo
 
 # set this to YES to build static HTML help
 BUILD_HTML = NO
