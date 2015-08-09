@@ -13,11 +13,10 @@ src/gnuwin32/shext.c
 src/gnuwin32/sys-win32.c
 src/gnuwin32/system.c
 src/include/Errormsg.h
-src/main/CConverters.c
 src/main/CommandLineArgs.c
 src/main/RNG.c
 src/main/Rdynload.c
-src/main/Rstrptime.h
+src/main/Renviron.c
 src/main/Rmain.c
 src/main/agrep.c
 src/main/apply.c
@@ -32,6 +31,7 @@ src/main/coerce.c
 src/main/colors.c
 src/main/complex.c
 src/main/connections.c
+src/main/const-objs.c
 src/main/context.c
 src/main/cov.c
 src/main/cum.c
@@ -43,7 +43,6 @@ src/main/deriv.c
 src/main/devices.c
 src/main/dotcode.c
 src/main/dounzip.c
-src/main/dstruct.c
 src/main/duplicate.c
 src/main/engine.c
 src/main/envir.c
@@ -53,9 +52,10 @@ src/main/format.c
 src/main/fourier.c
 src/main/gevents.c
 src/main/gram-ex.c
-src/main/gram.y
 src/main/graphics.c
 src/main/grep.c
+src/main/identical.c
+src/main/inspect.c
 src/main/internet.c
 src/main/iosupport.c
 src/main/lapack.c
@@ -66,6 +66,7 @@ src/main/main.c
 src/main/mapply.c
 src/main/match.c
 src/main/memory.c
+src/main/merged-ops.c
 src/main/mkdtemp.c
 src/main/model.c
 src/main/names.c
@@ -75,6 +76,7 @@ src/main/optimize.c
 src/main/options.c
 src/main/par-common.c
 src/main/par.c
+src/main/parse.c
 src/main/paste.c
 src/main/platform.c
 src/main/plot.c
@@ -82,9 +84,12 @@ src/main/plot3d.c
 src/main/plotmath.c
 src/main/print.c
 src/main/printarray.c
+src/main/printutils.c
+src/main/printvector.c
 src/main/qsort-body.c
 src/main/qsort.c
 src/main/random.c
+src/main/raw.c
 src/main/registration.c
 src/main/relop.c
 src/main/rlocale.c
