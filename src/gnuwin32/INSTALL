@@ -48,10 +48,18 @@ adequate, is as follows:
           cd bitmap
           make >make.out 2>&1
           cd ..
-          make cairodevices >&make-cairo.out 2>&1
+          make cairodevices >make-cairo.out 2>&1
 
      You can monitor the make.out files from another console window
      to see how things are progressing during the build.
+
+     Including the command 
+
+          set R_NO_BASE_COMPILE=TRUE
+
+     before the "make all recommended" command will inhibit byte
+     compilation of the base and recommended packages.  (Do not
+     set R_NO_BASE_COMPILE at all if you want byte compilation.)
 
   8) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
