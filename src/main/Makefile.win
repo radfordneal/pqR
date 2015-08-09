@@ -19,13 +19,13 @@ CSOURCES=\
 	dotcode.c dounzip.c duplicate.c \
 	engine.c envir.c errors.c eval.c \
 	format.c fourier.c \
-	gevents.c gram.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
+	gevents.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
 	identical.c inlined.c inspect.c internet.c iosupport.c \
 	lapack.c list.c localecharset.c logic.c \
 	main.c mapply.c match.c memory.c merged-ops.c mkdtemp.c model.c \
 	names.c \
 	objects.c optim.c optimize.c options.c \
-	par.c paste.c platform.c plot.c plot3d.c plotmath.c \
+	par.c parse.c paste.c platform.c plot.c plot3d.c plotmath.c \
 	print.c printarray.c printvector.c printutils.c qsort.c \
 	random.c raw.c registration.c relop.c rlocale.c \
 	saveload.c scan.c seq.c serialize.c sort.c source.c split.c \
@@ -37,11 +37,6 @@ FSOURCES=xxxpr.f
 OBJS=$(CSOURCES:.c=.o) $(FSOURCES:.f=.o)
 
 ifdef RUN_BISON
-gram.c: gram.y
-	bison gram.y
-	$(SED) -e "s/gram.tab.c/gram.c/" gram.tab.c > gram.c
-	$(RM) gram.tab.c
-
 gramRd.c: gramRd.y
 	bison gramRd.y
 	$(SED) -e "s/gramRd.tab.c/gramRd.c/" gramRd.tab.c > gramRd.c

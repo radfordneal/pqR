@@ -554,8 +554,6 @@ INLINE_FUN SEXP mkNamed(SEXPTYPE TYP, const char **names)
 }
 
 
-/* from gram.y */
-
 /* short cut for  ScalarString(mkChar(s)) : */
 INLINE_FUN SEXP mkString(const char *s)
 {
