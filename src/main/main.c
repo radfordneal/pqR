@@ -190,7 +190,7 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 }
 
 /* Read-Eval-Print loop with interactive input */
-static int prompt_type;
+
 static char BrowsePrompt[20];
 
 
@@ -286,7 +286,7 @@ static int ReplGetc (void *vstate)
 
 int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 {
-    int c, browsevalue;
+    int browsevalue;
     SEXP value, thisExpr;
     SrcRefState ParseState;
     Rboolean wasDisplayed = FALSE;
