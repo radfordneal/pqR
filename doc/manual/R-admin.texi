@@ -416,8 +416,8 @@ such files do not normally need to be re-created.  In particular, you
 will not usually need to re-create @file{configure}, which is derived
 from @file{configure.ac}, @file{VERSION}, and the macro definitions in
 the @file{m4} directory.  If you do want to re-create this or other
-other automatically built files (such as @file{src/main/gram.c} from
-@file{src/main/gram.y}), you will need to run @file{./configure} with the
+other automatically built files (such as @file{src/main/gramRd.c} from
+@file{src/main/gramRd.y}), you will need to run @file{./configure} with the
 @code{--enable-maintainer-mode} option, which creates a
 @file{Makefile} with the appropriate rules.  Note that these files are
 always recreated in the source directory, even if you are using a
