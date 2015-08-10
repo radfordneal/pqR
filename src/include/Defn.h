@@ -410,6 +410,7 @@ typedef enum {
     PREC_SUBSET	 = 17
 } PPprec;
 
+/* THIS INFO IS NO LONGER USED, EXCEPT IN PRIMFOREIGN */
 typedef struct {
 	PPkind kind; 	 /* deparse kind */
 	PPprec precedence; /* operator precedence */
@@ -488,7 +489,7 @@ typedef struct {
 #define PRIMVARIANT(x)	((x)->u.primsxp.primsxp_variant)
 #define PRIMFOREIGN(x)	((x)->u.primsxp.primsxp_foreign)
 #define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
-#define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)
+#define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
 
 #define PRIMFUN_PENDING_OK(x) (NONVEC_SXPINFO(x).pending_ok)
 
