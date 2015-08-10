@@ -759,7 +759,6 @@ static const char * backquotify(const char *s)
 
 static void deparse2buff(SEXP s, LocalParseData *d)
 {
-    PPinfo fop;
     Rboolean lookahead = FALSE, lbreak = FALSE, parens;
     SEXP op, t;
     int localOpts = d->opts, i, n;
