@@ -85,10 +85,13 @@
  * arity:	How many arguments are required/allowed;  "-1"	meaning ``any''
  *
  * pp-kind:	Deparsing Info (-> PPkind in ../include/Defn.h )
+ *              --- NO LONGER USED, EXCEPT IN PRIMFOREIGN ---
  *
- * precedence: Operator precedence (-> PPprec in ../include/Defn.h )
+ * precedence:  Operator precedence (-> PPprec in ../include/Defn.h )
+ *              --- NO LONGER USED ---
  *
- * rightassoc: Right (1) or left (0) associative operator
+ * rightassoc:  Right (1) or left (0) associative operator
+ *              --- NO LONGER USED ---
  */
 
 
