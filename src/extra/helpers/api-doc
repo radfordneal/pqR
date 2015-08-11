@@ -567,6 +567,13 @@ task was scheduled with the HELPERS_PIPE_OUT flag, not on whether
 another task is currently looking for such pipelined output (which may
 change as the task runs).
 
+If the helpers facility has not been initialized (by calling
+helpers_startup), the helpers_amount_out function will do nothing, the
+helpers_avail0, helpers_avail1, helpers_avail2, and helpers_avail_var
+(see below) functions will just return their argument, and the
+helpers_output_perhaps_pipelined function will return 0.  There will
+of course be a small amount of overhead as these functions do nothing.
+
 
 PIPELINING FOR ELEMENT-BY-ELEMENT VECTOR COMPUTATIONS
 
