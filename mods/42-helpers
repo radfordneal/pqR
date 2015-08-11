@@ -1,0 +1,3 @@
+New version of helpers module with slight technical fix
+and ability to ignore some calls before helpers_startup
+called.

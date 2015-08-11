@@ -364,7 +364,7 @@ static omp_lock_t suspend_lock[2];/* Locks used alternately to suspend helper */
 static int which_suspends; /* Which lock a helper sets to suspend itself */
 static int which_wakes;    /* Which lock the master unsets to wake helper */
 
-static int suspend_initialized;  /* Set to 1 when master has done initial set */
+static char suspend_initialized; /* Set to 1 when master has done initial set */
 
 #endif
 
@@ -384,7 +384,8 @@ static mtix this_task;    /* The task this thread is doing, undefined if none,
                              except 0 in the master when it's not doing a task
                              so directly-called pipelined task procedures work*/
 
-static struct task_info *this_task_info;  /* Pointer to info for this_task */
+static struct task_info *this_task_info     /* Pointer to info for this_task, */
+                          = &task[0].info;  /*    initialized for master here */
 
 #ifndef HELPERS_NO_MULTITHREADING
 
@@ -2976,7 +2977,7 @@ void helpers_startup (int n)
 
       omp_set_lock (&suspend_lock[0]);
 
-      suspend_initialized = 1;
+      ATOMIC_WRITE_CHAR (suspend_initialized = 1);
       FLUSH;
 
       /* Run the user-supplied master procedure. */
@@ -2988,12 +2989,15 @@ void helpers_startup (int n)
     else
     {
       /* CODE EXECUTED BY THE HELPER THREADS. */
+
+      char si;
   
       /* Wait for master to set suspend lock. */
   
       do {
         FLUSH;
-      } while (!suspend_initialized);
+        ATOMIC_READ_CHAR (si = suspend_initialized);
+      } while (!si);
   
       /* Run the procedure done in each helper. */
   
