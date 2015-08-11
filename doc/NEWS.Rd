@@ -6,6 +6,58 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2015-??-??}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{INSTALLATION AND TESTING}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{DOCUMENTATION UPDATES}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2015-07-11}{
 
   \subsection{INTRODUCTION}{
