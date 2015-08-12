@@ -695,6 +695,9 @@ unsigned int TimeToSeed(void); /* datetime.c */
 
 const char* get_workspace_name();  /* from startup.c */
 
+static int R_num_helpers;  /* Requested number of helpers to use, negative
+                              if deferred evaluation is to be disabled */
+
 void setup_Rmainloop(void)
 {
     volatile int doneit;  /* Purpose is unclear; is it supposed to be static? */
@@ -1001,10 +1004,31 @@ void end_Rmainloop(void)
     R_CleanUp(SA_DEFAULT, 0, 1);
 }
 
-void run_Rmainloop(void)
+void helpers_master (void)
 {
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
+
+    static int printed_already = 0;
+
+    if (!printed_already && !R_Quiet) {
+
+        Rprintf("\n");
+        if (helpers_are_disabled)
+            Rprintf (_("Deferred evaluation disabled (no helper threadss, no task merging).\n"));
+        else if (helpers_not_multithreading_now && helpers_not_merging)
+            Rprintf (_("No helper threads, no task merging.\n"));
+        else if (helpers_not_multithreading_now)
+            Rprintf (_("No helper threads, task merging enabled.\n"));
+        else if (helpers_not_merging)
+            Rprintf (_("%d helper threads, no task merging.\n"), helpers_num);
+        else
+            Rprintf (_("%d helper threads, task merging enabled.\n"), helpers_num);
+        Rprintf("\n");
+
+        printed_already = 1;
+    }
+
     R_IoBufferInit(&R_ConsoleIob);
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
@@ -1012,24 +1036,24 @@ void run_Rmainloop(void)
     end_Rmainloop(); /* must go here */
 }
 
-void helpers_master (void)
+void run_Rmainloop(void)
 {
-    setup_Rmainloop();
-    run_Rmainloop();
+    R_num_helpers = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
+
+    if (R_num_helpers < 0)
+        helpers_disable(1);
+
+    helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
+
+    /* The call of helpers_startup below will call helpers_master above. */
+
+    helpers_startup (R_num_helpers > 0 ? R_num_helpers : 0);
 }
 
 void mainloop(void)
 {
-    int n;
-
-    n = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
-    if (n < 0)
-    { helpers_disable(1);
-      n = 0;
-    }
-
-    helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
-    helpers_startup(n);  /* will call helpers_master above */
+    setup_Rmainloop();
+    run_Rmainloop();
 }
 
 /*this functionality now appears in 3

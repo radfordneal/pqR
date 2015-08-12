@@ -1,0 +1,5 @@
+Change how helpers are done in relation to startup of R - rather than
+have helpers_startup called in mainloop, with helpers_master calling
+setup_Rmainloop and then run_Rmainloop, have helpers_startup be called
+inside run_Rmainloop.  This accommodates programs that don't call
+mainloop, but call setup_Rmainloop and run_Rmainloop themselves.
