@@ -403,12 +403,6 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
     } while (status >= 0);
 }
 
-
-/* Main Loop: It is assumed that at this point that operating system */
-/* specific tasks (dialog window creation etc) have been performed. */
-/* We can now print a greeting, run the .First function and then enter */
-/* the read-eval-print loop. */
-
 static RETSIGTYPE handleInterrupt(int dummy)
 {
     R_interrupts_pending = 1;
@@ -689,18 +683,27 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
 }
 
 
+/* ------------------------------------------------------------------------
+   Routines that set up for the Read-Eval-Print Loop, calling R_ReplConsole
+   to actually do it.
+*/
+
+
 int R_SignalHandlers = 1;  /* Exposed in R_interface.h */
 
 unsigned int TimeToSeed(void); /* datetime.c */
 
 const char* get_workspace_name();  /* from startup.c */
 
-static int R_num_helpers;  /* Requested number of helpers to use, negative
-                              if deferred evaluation is to be disabled */
+
+/* Setup for main loop.  It is assumed that at this point that
+   operating system specific tasks (dialog window creation etc) have
+   been performed.  We can now print a greeting, run the .First
+   function, in preparation for entering the read-eval-print loop. */
 
 void setup_Rmainloop(void)
 {
-    volatile int doneit;  /* Purpose is unclear; is it supposed to be static? */
+    volatile int doneit;
     volatile SEXP baseEnv;
     SEXP cmd;
     FILE *fp;
@@ -937,7 +940,8 @@ void setup_Rmainloop(void)
     }
     else {
     	if (! SETJMP(R_Toplevel.cjmpbuf)) {
-	    warning(_("unable to restore saved data in %s\n"), get_workspace_name());
+	    warning(_("unable to restore saved data in %s\n"), 
+                    get_workspace_name());
 	}
     }
     
@@ -992,7 +996,6 @@ void setup_Rmainloop(void)
     R_init_jit_enabled();
 }
 
-extern SA_TYPE SaveAction; /* from src/main/startup.c */
 
 void end_Rmainloop(void)
 {
@@ -1004,11 +1007,9 @@ void end_Rmainloop(void)
     R_CleanUp(SA_DEFAULT, 0, 1);
 }
 
+
 void helpers_master (void)
 {
-    /* Here is the real R read-eval-loop. */
-    /* We handle the console until end-of-file. */
-
     static int printed_already = 0;
 
     if (!printed_already && !R_Quiet) {
@@ -1032,23 +1033,35 @@ void helpers_master (void)
     R_IoBufferInit(&R_ConsoleIob);
     SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
-    R_ReplConsole(R_GlobalEnv, 0, 0);
+
+    R_ReplConsole(R_GlobalEnv, 0, 0);   /* --- Actually do the REPL --- */
+
     end_Rmainloop(); /* must go here */
 }
 
+
+/* The main Read-Eval-Print Loop.  Should be called after setup_Rmainloop.
+   Creates helper threads (if enabled) for the duration of the REPL. */
+
 void run_Rmainloop(void)
 {
-    R_num_helpers = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
+    int n_helpers;  /* Requested number of helpers to use, negative
+                       if deferred evaluation is to be disabled */
 
-    if (R_num_helpers < 0)
+    n_helpers = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
+
+    if (n_helpers < 0)
         helpers_disable(1);
 
     helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
 
     /* The call of helpers_startup below will call helpers_master above. */
 
-    helpers_startup (R_num_helpers > 0 ? R_num_helpers : 0);
+    helpers_startup (n_helpers > 0 ? n_helpers : 0);
 }
+
+
+/* Procedures that does the setup and the actual loop. */
 
 void mainloop(void)
 {
@@ -1056,8 +1069,11 @@ void mainloop(void)
     run_Rmainloop();
 }
 
-/*this functionality now appears in 3
-  places-jump_to_toplevel/profile/here */
+
+/* -------------------------------------------------------------------------- */
+
+
+/*this functionality now appears in 3 places-jump_to_toplevel/profile/here */
 
 static void printwhere(void)
 {
