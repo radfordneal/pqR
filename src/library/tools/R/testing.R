@@ -118,12 +118,17 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE, nullPointers=TRUE, L
     clean <- function(txt)
     {
         if(!length(txt)) return(txt)
+
         ## remove R header
-        if(length(top <- 
-            grep("^(pqR version|R version|R : Copyright|R Under development)",
-                 txt, perl = TRUE, useBytes = TRUE)) > 0
-        && length(bot <- 
-              grep("quit R.$", txt, perl = TRUE, useBytes = TRUE)) > 0) {
+        top <- 
+          grep("^(pqR version|R version|R : Copyright|R Under development)",
+               txt, perl = TRUE, useBytes = TRUE)
+        bot <- grep("quit R.$", txt, perl = TRUE, useBytes = TRUE)
+        bot2 <- grep("helper threads", txt, perl = TRUE, useBytes = TRUE)
+        if (length(top) > 0 && top[1L] < 100
+              && length(bot) > 0 && bot[1L] < top[1L]+100) {
+            if (length(bot2) > 0 && bot2[1L] > bot[1L] && bot2[1L] < bot[1L]+5) 
+                bot <- bot2
             txt <- txt[-(top[1L]:bot[1L])]
         }
 

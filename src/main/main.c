@@ -1051,7 +1051,7 @@ void helpers_master (void)
 
         Rprintf("\n");
         if (helpers_are_disabled)
-            Rprintf (_("Deferred evaluation disabled (no helper threadss, no task merging).\n"));
+            Rprintf (_("Deferred evaluation disabled (no helper threads, no task merging).\n"));
         else if (helpers_not_multithreading_now && helpers_not_merging)
             Rprintf (_("No helper threads, no task merging.\n"));
         else if (helpers_not_multithreading_now)
