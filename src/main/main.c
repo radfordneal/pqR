@@ -249,7 +249,7 @@ typedef struct {
 } R_ReplState;
 
 
-/* The body of the Read-Eval-Print Loop.
+/* The body of an Read-Eval-Print iteration.
 
    If the input can be parsed correctly,
 
@@ -402,6 +402,35 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     } while (status >= 0);
 }
+
+
+/* A version of REPL for use with embedded R; just an interface to
+   Rf_ReplIteration.  Caller calls R_ReplDLLinit, then repeatedly
+   calls R_ReplDLLdo1, which returns -1 on EOF, and +1 otherwise. */
+
+static R_ReplState DLLstate;
+
+void R_ReplDLLinit(void)
+{
+    R_IoBufferInit(&R_ConsoleIob);  /* No longer needed here. Used elsewhere? */
+    SETJMP(R_Toplevel.cjmpbuf);
+    R_GlobalContext = R_ToplevelContext = &R_Toplevel;
+    DLLstate.browselevel = 0;
+    DLLstate.prompt_type = 1;
+    DLLstate.buf[0] = DLLstate.buf[CONSOLE_BUFFER_SIZE] = 0;
+    DLLstate.bufp = DLLstate.buf;
+    keepSource = 0;
+}
+
+int R_ReplDLLdo1(void)
+{
+    int status;
+    R_PPStackTop = 0;
+    status = Rf_ReplIteration (R_GlobalEnv, &DLLstate);
+    R_CurrentExpr = SYMVALUE(R_LastvalueSymbol);
+    return status;
+}
+
 
 static RETSIGTYPE handleInterrupt(int dummy)
 {

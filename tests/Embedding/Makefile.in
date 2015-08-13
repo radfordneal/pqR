@@ -22,6 +22,7 @@ distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
 SOURCES_R = error.R foo.R
 SOURCES_C = \
+  ReplDLL.c \
   RNamedCall.c \
   RParseEval.c \
   Rerror.c \
@@ -33,7 +34,8 @@ SOURCES_C = \
   tryEval.c
 
 HEADERS = embeddedRCall.h
-PROGRAMS = Rtest Rplot Rpostscript Rerror RNamedCall RParseEval Rpackage tryEval
+PROGRAMS = ReplDLL Rtest Rplot Rpostscript Rerror RNamedCall RParseEval \
+           Rpackage tryEval
 
 ## <FIXME>
 ## Currently Rshutdown.c is not used.
@@ -70,6 +72,9 @@ tests: $(PROGRAMS)
 	$(R_EXE) ./Rplot --silent
 	$(R_EXE) ./Rpostscript --silent --no-save
 	$(R_EXE) ./tryEval --silent
+
+ReplDLL: ReplDLL.o
+	$(R_CMD_LINK) -o $@ ReplDLL.o $(MY_LIBR)
 
 Rtest: Rtest.o embeddedRCall.o
 	$(R_CMD_LINK) -o $@ Rtest.o embeddedRCall.o $(MY_LIBR)

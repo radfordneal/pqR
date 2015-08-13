@@ -108,10 +108,16 @@ int main (int argc, char **argv)
     signal(SIGBREAK, my_onintr);
     GA_initapp(0, 0);
     readconsolecfg();
-
     setup_Rmainloop();
+#ifdef SIMPLE_CASE
     run_Rmainloop();
-
+#else
+    R_ReplDLLinit();
+    while(R_ReplDLLdo1() > 0) {
+/* add user actions here if desired */
+    }
+/* only get here on EOF (not q()) */
+#endif
     Rf_endEmbeddedR(0);
     return 0;
 }
