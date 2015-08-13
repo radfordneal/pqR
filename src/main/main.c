@@ -413,7 +413,6 @@ static R_ReplState DLLstate;
 void R_ReplDLLinit(void)
 {
     R_IoBufferInit(&R_ConsoleIob);  /* No longer needed here. Used elsewhere? */
-    SETJMP(R_Toplevel.cjmpbuf);
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
     DLLstate.browselevel = 0;
     DLLstate.prompt_type = 1;
@@ -1060,12 +1059,16 @@ void helpers_master (void)
     }
 
     R_IoBufferInit(&R_ConsoleIob);
+
     SETJMP(R_Toplevel.cjmpbuf);
+
+    /* IF AN ERROR CAUSES A LONGJMP TO THE TOP LEVEL, WE WILL RESTART HERE */
+
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
 
     R_ReplConsole(R_GlobalEnv, 0, 0);   /* --- Actually do the REPL --- */
 
-    end_Rmainloop(); /* must go here */
+    end_Rmainloop();
 }
 
 
@@ -1090,7 +1093,7 @@ void run_Rmainloop(void)
 }
 
 
-/* Procedures that does the setup and the actual loop. */
+/* Procedure that does both the setup and the actual loop. */
 
 void mainloop(void)
 {
