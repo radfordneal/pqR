@@ -11,3 +11,8 @@ errors.  Also, R_ReplDLLinit called SETJMP, which received a LONGJMP
 after it had returned, which is definitely a no-no.  A better version
 is implemented.
 
+Changed the build process so that setting R_NO_BASE_COMPILE to FALSE
+(as well as to an empty string or to nothing) means packages are byte
+compiled.
+
+Documentation changes as well, regarding embedding, Windows, etc.

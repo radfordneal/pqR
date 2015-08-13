@@ -904,11 +904,11 @@ this manual are either standard @command{autoconf} options not relevant
 to @R{} or intended for specialist uses by the @R{} developers.
 
 One that may be useful when working on @R{} itself is the option
-@option{--disable-byte-compiled-packages}, which ensures that the base and
-recommended packages are lazyloaded but not byte-compiled.
+@option{--disable-byte-compiled-packages}, which ensures that the base
+and recommended packages are lazyloaded but not byte-compiled.
 (Alternatively the (make or environment) variable
-@env{R_NO_BASE_COMPILE} can be set to a non-empty value for the duration
-of the build.)
+@env{R_NO_BASE_COMPILE} can be set to a non-empty value other than
+FALSE for the duration of the build.)
 
 @menu
 * Inter-Procedure Optimization::  
@@ -1251,10 +1251,9 @@ but this is only likely to be worthwhile on a multi-core machine with
 ample memory, and is not 100% reliable.
 
 @item 
-It is possible (mainly for those working on @R{} itself) to set the
-(make or environment) variable @env{R_NO_BASE_COMPILE} to a non-empty
-value, which inhibits the byte-compilation of the base and recommended
-packages.
+To inhibit the byte-compilation of the base and recommended
+package, set the (make or environment) variable @env{R_NO_BASE_COMPILE}
+to a non-empty value other than FALSE.
 
 @end itemize
 

@@ -6,7 +6,7 @@
     name="Rterm.exe"
     type="win32"
 />
-<description>R terminal</description>
+<description>pqR terminal</description>
 <dependency>
     <dependentAssembly>
         <assemblyIdentity

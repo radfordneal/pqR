@@ -51,7 +51,7 @@ INSTALL_OPTS2 =@BYTE_COMPILE_PACKAGES_TRUE@ --byte-compile
 	@$(ECHO) "begin installing recommended package" `basename $< .tgz`
 	@rm -f $@.out
 ## Avoid user/site libraries, pass down MAKE
-	@if test -n "$(R_NO_BASE_COMPILE)"; then \
+	@if [ x$(R_NO_BASE_COMPILE) != x -a x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	  MAKE="$(MAKE)" R_LIBS_USER= R_LIBS_SITE= \
 	  $(R) CMD INSTALL $(INSTALL_OPTS) -l "$(top_builddir)/library" $< > $@.out 2>&1 || (cat $@.out && exit 1); \
 	else \

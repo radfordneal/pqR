@@ -19,7 +19,7 @@ all:
 	@$(MKINSTALLDIRS) $(top_builddir)/library/$(pkg)
 	@$(MAKE) -f Makefile.win mkR2 front mkdesc mkpo
 	@$(MAKE) -f Makefile.win mksrc-win2
-	@if test -n "$(R_NO_BASE_COMPILE)"; then \
+	@if [ x$(R_NO_BASE_COMPILE) != x -a x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	  $(MAKE) -f Makefile.win RfilesLazy; \
 	else \
 	  $(MAKE) -f Makefile.win RfilesLazy EXTRAS2=$(EXTRAS); \

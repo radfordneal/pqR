@@ -59,7 +59,8 @@ adequate, is as follows:
 
      before the "make all recommended" command will inhibit byte
      compilation of the base and recommended packages.  (Do not
-     set R_NO_BASE_COMPILE at all if you want byte compilation.)
+     set R_NO_BASE_COMPILE at all, or set it to FALSE, if you want 
+     byte compilation.)
 
   8) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
@@ -70,7 +71,7 @@ adequate, is as follows:
 
          set R_HELPERS=<number>
 
-     before running Rterm.      
+     before running Rterm.  The default if this is not set is 0.
 
   9) You can check the installation with the command
 
@@ -83,5 +84,9 @@ adequate, is as follows:
 
          make manuals >make-manuals.out 2>&1
 
-Note that the Windows GUI is a separate program, which is not
-discussed here.
+ 11) You should be able to run the R Gui by typing the command
+     <build-dir>\bin\<arch>\RGui.exe to the Windows command prompt.
+     The number of helper threads can be set as for Rterm.
+
+ 12) The programs R.exe and Rscript.exe in <build-dir>\bin should 
+     also work now, with the number of helper threads set as above.

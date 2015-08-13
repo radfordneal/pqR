@@ -37,7 +37,7 @@ RCMD = $(top_builddir)/$(BINDIR)/Rcmd
 .tgz.ts:
 	@echo
 	@echo "----- installing recommended package" `basename $< .tgz`
-	@if test -n "$(R_NO_BASE_COMPILE)"; then \
+	@if [ x$(R_NO_BASE_COMPILE) != x -a x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	R_INSTALL_TAR='tar.exe --no-same-owner --no-same-permissions' \
 	  R_LIBS_USER= R_LIBS_SITE= \
 	  $(RCMD) INSTALL $(INSTALL_OPTS) -l $(top_builddir)/library `basename $< .tgz`_*.tar.gz; \
