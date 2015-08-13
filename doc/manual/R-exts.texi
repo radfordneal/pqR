@@ -11620,9 +11620,43 @@ internal defaults are used and that control is handed over to the
 @R{} main loop.  There are a number of small examples@footnote{but these
 are not part of the automated test procedures and so little tested.} in the
 @file{tests/Embedding} directory.  These make use of
-@code{Rf_initEmbeddedR} in @file{src/main/Rembedded.c}, and essentially
-use
+@code{Rf_initEmbeddedR} in @file{src/main/Rembedded.c}.  Here is one
+example:
 @example
+#include <Rinternals.h>
+#include <Rembedded.h>
+
+int main(int argc, char **argv)
+@{
+    /* some application-specific code could go here */
+
+    Rf_initEmbeddedR(argc, argv);
+
+    /* more application-specific code could go here */
+
+    R_ReplDLLinit();
+
+    /* and yet more application-specific code could go here */
+
+    while (R_ReplDLLdo1() > 0) { /* terminates on EOF */
+
+        /* a silly example of how the result could be handled specially 
+           by an application */
+
+        if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            Rprintf("Logical!\n");
+
+    }
+
+    /* application-specific finalization code could go here */
+
+    Rf_endEmbeddedR(0);
+
+    /* more application-specific finalization code could go here */
+
+    return 0;
+}
+
 #include <Rembedded.h>
 
 int main(int ac, char **av)

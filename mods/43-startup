@@ -5,4 +5,7 @@ inside run_Rmainloop.  This accommodates programs that don't call
 mainloop, but call setup_Rmainloop and run_Rmainloop themselves.
 
 Also restores the replDLL stuff for embedded applications, rewritten
-for revised scheme in main.c.  Adds a test of this to tests/Embedding.
+for revised scheme in main.c.  Adds a test of this to tests/Embedding,
+based on a rewriting of an example in R-exts.texi, which had several
+errors.  Also, R_ReplDLLinit called SETJMP, which received a LONGJMP
+after it had returned, which is definitely a no-no.

@@ -425,8 +425,13 @@ int R_ReplDLLdo1(void)
 {
     int status;
     R_PPStackTop = 0;
-    status = Rf_ReplIteration (R_GlobalEnv, &DLLstate);
-    R_CurrentExpr = SYMVALUE(R_LastvalueSymbol);
+    if (SETJMP(R_Toplevel.cjmpbuf) == 0) {
+        status = Rf_ReplIteration (R_GlobalEnv, &DLLstate);
+        R_CurrentExpr = SYMVALUE(R_LastvalueSymbol);
+    }
+    else
+        R_CurrentExpr = R_NilValue;
+
     return status;
 }
 

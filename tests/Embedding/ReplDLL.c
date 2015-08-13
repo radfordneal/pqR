@@ -1,25 +1,18 @@
-/* Adapted from the example in R-exts.texi */
+/* An example in the Writing R Extensions manual */
 
 #include <Rinternals.h>
 #include <Rembedded.h>
 
-int main(int ac, char **av)
+int main(int argc, char **argv)
 {
-    Rprintf("Stage 1\n");
     Rf_initEmbeddedR(argc, argv);
-
-    Rprintf("Stage 2\n");
     R_ReplDLLinit();
 
-    Rprintf("Stage 3\n");
     while (R_ReplDLLdo1() > 0) {
-        if (TYPEOF(R_CurrentExpr) == LGLSXP) 
+        if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
             Rprintf("Logical!\n");
     }
 
-    Rprintf("Stage 4\n");
     Rf_endEmbeddedR(0);
-
-    Rprintf("Stage 5\n");
     return 0;
 }
