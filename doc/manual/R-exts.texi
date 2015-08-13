@@ -11621,63 +11621,29 @@ internal defaults are used and that control is handed over to the
 are not part of the automated test procedures and so little tested.} in the
 @file{tests/Embedding} directory.  These make use of
 @code{Rf_initEmbeddedR} in @file{src/main/Rembedded.c}.  Here is one
-example:
+example, which mimics the usual Real-Eval-Print Loop, but using code
+in which application-specific actions could be added at varous points:
 @example
 #include <Rinternals.h>
 #include <Rembedded.h>
 
 int main(int argc, char **argv)
 @{
-    /* some application-specific code could go here */
-
     Rf_initEmbeddedR(argc, argv);
-
-    /* more application-specific code could go here */
-
     R_ReplDLLinit();
 
-    /* and yet more application-specific code could go here */
-
-    while (R_ReplDLLdo1() > 0) { /* terminates on EOF */
-
-        /* a silly example of how the result could be handled specially 
-           by an application */
-
-        if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
-            Rprintf("Logical!\n");
-
-    }
-
-    /* application-specific finalization code could go here */
+    for (;;) @{
+        int status;
+        status = R_ReplDLLdo1();
+        if (status < 0)  /* EOF */
+            break;
+        else if (status == 2)  /* error trapped at top level */
+            Rprintf("Oops!\n");     /* example of extra error action */
+        else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            Rprintf("Logical!\n");  /* another example of an extra action */
+    @}
 
     Rf_endEmbeddedR(0);
-
-    /* more application-specific finalization code could go here */
-
-    return 0;
-}
-
-#include <Rembedded.h>
-
-int main(int ac, char **av)
-@{
-    /* do some setup */
-    Rf_initEmbeddedR(argc, argv);
-    /* do some more setup */
-
-    /* submit some code to R, which is done interactively via
-        run_Rmainloop();
-
-        A possible substitute for a pseudo-console is
-
-        R_ReplDLLinit();
-        while(R_ReplDLLdo1() > 0) @{
-        /* add user actions here if desired */
-       @}
-
-     */
-    Rf_endEmbeddedR(0);
-    /* final tidying up after R is shutdown */
     return 0;
 @}
 @end example
@@ -11712,6 +11678,12 @@ change this.
 Note that @R{} expects to be run with the locale category
 @samp{LC_NUMERIC} set to its default value of @code{C}, and so should
 not be embedded into an application which changes that.
+
+Finally, the deferred evaluation apparatus used for task merging and
+helper threads is set up in @code{run_Rmainloop} (which is called from
+@code{Rf_mainloop}) and goes away at the end of @code{run_Rmainloop}.
+If @code{run_Rmainloop} is bypassed, with @code{R_ReplDLLdo1} used
+instead, there will be no helper threads and no task merging.
 
 @menu
 * Compiling against the R library::

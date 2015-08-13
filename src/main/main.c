@@ -406,7 +406,9 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
 /* A version of REPL for use with embedded R; just an interface to
    Rf_ReplIteration.  Caller calls R_ReplDLLinit, then repeatedly
-   calls R_ReplDLLdo1, which returns -1 on EOF, and +1 otherwise. */
+   calls R_ReplDLLdo1, which returns -1 on EOF, +1 on evaluation
+   without error, and +2 on evaluation that causes an error to
+   be trapped at top level. */
 
 static R_ReplState DLLstate;
 
@@ -425,12 +427,12 @@ int R_ReplDLLdo1(void)
 {
     int status;
     R_PPStackTop = 0;
-    if (SETJMP(R_Toplevel.cjmpbuf) == 0) {
+    if (SETJMP(R_Toplevel.cjmpbuf) == 0)
         status = Rf_ReplIteration (R_GlobalEnv, &DLLstate);
-        R_CurrentExpr = SYMVALUE(R_LastvalueSymbol);
+    else { /* Error trapped */
+        *DLLstate.bufp = 0;  /* Discard rest of line */
+        status = 2;
     }
-    else
-        R_CurrentExpr = R_NilValue;
 
     return status;
 }
