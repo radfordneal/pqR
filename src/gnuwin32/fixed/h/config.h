@@ -4,19 +4,19 @@
 /* on Mingw-w64 defines the MING64_ version */
 #include <_mingw.h>
 
-/* Define if you have C OpenMP support. */
+/* Define if you have C OpenMP support.  Comment out if not. */
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR >= 2
-#define HAVE_OPENMP 1
+#define HAVE_OPENMP
 #endif
 
-/* Define this to enable deferred evaluation / helpers. */
-#define R_DEFERRED_EVAL 1
+/* Define this to enable deferred evaluation / helpers.  Comment out to not. */
+#define R_DEFERRED_EVAL
 
-/* Define this to enable helper threads (requires OpenMP). */
-#define R_HELPER_THREADS 1
+/* Define this to enable helper threads (requires OpenMP). Comment out to not.*/
+#define R_HELPER_THREADS
 
-/* Define this to enable task merging. */
-#define R_TASK_MERGING 1
+/* Define this to enable task merging.  Comment out to not. */
+#define R_TASK_MERGING
 
 /* Define this to the default for mat_mult_with_BLAS. */
 #define R_MAT_MULT_WITH_BLAS_DEFAULT FALSE
