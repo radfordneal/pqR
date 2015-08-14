@@ -99,7 +99,7 @@ BUILD_HTML = NO
 MIKTEX = TRUE
 
 # additional optimization flags
-EOPTS = -mtune=core-2
+EOPTS=-mtune=core2
 
 # additional flags regarding warnings
 EWARN = -Wno-unused-value -Wno-parentheses
