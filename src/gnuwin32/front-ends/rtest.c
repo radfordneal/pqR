@@ -27,6 +27,7 @@
 #include <R_ext/RStartup.h>
 /* for askok and askyesnocancel */
 #include <graphapp.h>
+#include <Rinternals.h>
 
 /* for signal-handling code */
 #include <psignal.h>
@@ -100,7 +101,7 @@ int main (int argc, char **argv)
     Rp->Busy = myBusy;
 
     Rp->R_Quiet = TRUE;
-    Rp->R_Interactive = FALSE;
+    Rp->R_Interactive = TRUE;
     Rp->RestoreAction = SA_RESTORE;
     Rp->SaveAction = SA_NOSAVE;
     R_SetParams(Rp);
@@ -130,12 +131,11 @@ int main (int argc, char **argv)
         if (status < 0)  /* EOF */
             break;
         else if (status == 2)  /* error trapped at top level */
-            Rprintf("Oops!\n");     /* example of extra error action */
+            printf("Oops!\n");     /* example of extra error action */
         else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
-            Rprintf("Logical!\n");  /* another example of an extra action */
+            printf("Logical!\n");  /* another example of an extra action */
     }
 
-    }
     /* only get here on EOF (not q()) */
 
 #endif
