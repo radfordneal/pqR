@@ -15,4 +15,6 @@ Changed the build process so that setting R_NO_BASE_COMPILE to FALSE
 (as well as to an empty string or to nothing) means packages are byte
 compiled.
 
+Also makes more mods for Windows.  
+
 Documentation changes as well, regarding embedding, Windows, etc.
