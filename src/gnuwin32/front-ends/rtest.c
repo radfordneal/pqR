@@ -68,6 +68,9 @@ static void my_onintr(int sig)
 
 int main (int argc, char **argv)
 {
+    /* The code below is very similar that in gnuwin32/embeddedR.c, but
+       illustrates how slight modifications could be made. */
+
     structRstart rp;
     Rstart Rp = &rp;
     char Rversion[25], *RHome;
@@ -109,15 +112,34 @@ int main (int argc, char **argv)
     GA_initapp(0, 0);
     readconsolecfg();
     setup_Rmainloop();
-#ifdef SIMPLE_CASE
+
+    /* Now we implement a REPL, one way or another. */
+
+#if 0  /* the simple case */
+
     run_Rmainloop();
+
 #else
+
     R_ReplDLLinit();
-    while(R_ReplDLLdo1() > 0) {
-/* add user actions here if desired */
+
+    for (;;) {
+        int status;
+        status = R_ReplDLLdo1();
+        /* Add other user actions here if desired.  This is an illustration. */
+        if (status < 0)  /* EOF */
+            break;
+        else if (status == 2)  /* error trapped at top level */
+            Rprintf("Oops!\n");     /* example of extra error action */
+        else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            Rprintf("Logical!\n");  /* another example of an extra action */
     }
-/* only get here on EOF (not q()) */
+
+    }
+    /* only get here on EOF (not q()) */
+
 #endif
+
     Rf_endEmbeddedR(0);
     return 0;
 }
