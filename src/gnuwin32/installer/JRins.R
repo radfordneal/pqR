@@ -46,8 +46,8 @@
     suffix <- "win"
 
     cat(paste("OutputBaseFilename=", RW, "-", suffix, sep = ""),
-        paste("AppName=R for Windows ", Rver, sep = ""),
-        paste("AppVerName=R for Windows ", Rver, sep = ""),
+        paste("AppName=pqR for Windows ", Rver, sep = ""),
+        paste("AppVerName=pqR for Windows ", Rver, sep = ""),
         paste("AppVersion=", Rver, sep = ""),
         paste("VersionInfoVersion=", Rver0, sep = ""),
         paste("DefaultDirName={code:UserPF}\\R\\", RW, sep = ""),
