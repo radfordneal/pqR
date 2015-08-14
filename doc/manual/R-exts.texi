@@ -12230,9 +12230,9 @@ front-ends may allow a looser match.
 @item
 Find and set the @R{} home directory and the user's home directory.  The
 former may be available from the Windows Registry: it will be in
-@code{HKEY_LOCAL_MACHINE\Software\R-core\R\InstallPath} from an
+@code{HKEY_LOCAL_MACHINE\Software\pqR\R\InstallPath} from an
 administrative install and
-@code{HKEY_CURRENT_USER\Software\R-core\R\InstallPath} otherwise, if
+@code{HKEY_CURRENT_USER\Software\pqR\R\InstallPath} otherwise, if
 selected during installation (as it is by default).
 
 @item
@@ -12319,16 +12319,16 @@ changed over the years to allow for multiple versions of @R{} to be
 installed at once, and to allow 32- and 64-bit versions of @R{} to be
 installed on the same machine.
 
-The basic Registry location is @code{Software\R-core\R}.  For an
+The basic Registry location is @code{Software\pqR\R}.  For an
 administrative install this is under @code{HKEY_LOCAL_MACHINE} and on a
-64-bit OS @code{HKEY_LOCAL_MACHINE\Software\R-core\R} is by default
+64-bit OS @code{HKEY_LOCAL_MACHINE\Software\pqR\R} is by default
 redirected for a 32-bit application, so a 32-bit application will see
 the information for the last 32-bit install, and a 64-bit application
 that for the last 64-bit install.  For a personal install, the
-information is under @code{HKEY_CURRENT_USER\Software\R-core\R} which is
+information is under @code{HKEY_CURRENT_USER\Software\pqR\R} which is
 seen by both 32-bit and 64-bit applications and so records the last
 install of either architecture.  To circumvent this, there are locations
-@code{Software\R-core\R32} and @code{Software\R-core\R64} which always
+@code{Software\pqR\R32} and @code{Software\pqR\R64} which always
 refer to one architecture.
 
 When @R{} is installed and recording is not disabled then two string
@@ -12351,9 +12351,9 @@ an earlier version.  Do the following for one or both of
 @code{HKEY_CURRENT_USER} and @code{HKEY_LOCAL_MACHINE}.
 
 @item
-If the desired architecture is known, look in @code{Software\R-core\R32}
-or @code{Software\R-core\R64}, and if that does not exist or the
-architecture is immaterial, in @code{Software\R-core\R}.
+If the desired architecture is known, look in @code{Software\pqR\R32}
+or @code{Software\pqR\R64}, and if that does not exist or the
+architecture is immaterial, in @code{Software\pqR\R}.
 
 @item
 If key @code{InstallPath} exists then this is @code{R_HOME} (recorded
