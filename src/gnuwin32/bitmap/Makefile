@@ -26,7 +26,7 @@ buildzlib:
 ## prefix=foo shuts up a warning
 buildpng:
 	$(MAKE) CC='$(CC)' AR='$(AR)' AR_RC='$(AR) rcs' \
-	  CFLAGS="-O3 -I../../../extra/zlib -DPNG_NO_MMX_CODE $(EOPTS)" \
+	  CFLAGS="-O2 -I../../../extra/zlib -DPNG_NO_MMX_CODE $(EOPTS)" \
 	  RANLIB=$(RANLIB) ZLIBLIB=../../../extra/zlib -C $(PNGDIR) \
 	  -f scripts/makefile.gcc prefix=foo libpng.a
 
@@ -42,7 +42,7 @@ buildtiff: $(JPEGDIR)/jconfig.h Makefile.tiff
 	$(MAKE) CC='$(CC)' AR='$(AR)' RANLIB=$(RANLIB) -C $(TIFFDIR) -f ../Makefile.tiff JPEGDIR=$(JPEGDIR)
 
 rbitmap-CPPFLAGS=-DHAVE_PNG -DHAVE_JPEG -DHAVE_TIFF -I. -I../../extra/zlib -I./$(PNGDIR) -I$(JPEGDIR) -I./$(TIFFDIR) -I../../include
-CFLAGS=-O3 -Wall -pedantic $(EOPTS)
+CFLAGS=-O2 -Wall -pedantic $(EOPTS)
 
 ../../../library/grDevices/libs$(R_ARCH)/Rbitmap.dll: rbitmap.o $(TIFFDIR)/libtiff.a $(PNGDIR)/libpng.a $(JPEGDIR)/libjpeg.a
 	$(DLL) -shared -s -o $@ $^ -L../../../$(IMPDIR) -lR -lRzlib

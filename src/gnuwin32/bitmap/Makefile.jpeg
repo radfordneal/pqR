@@ -7,7 +7,7 @@
 ## 2006-01-15 checked under current tools.
 
 CC= gcc
-CFLAGS= -O3 -I.
+CFLAGS= -O2 -I.
 
 # Put here the object file name for the correct system-dependent memory
 # manager file.  For Unix this is usually jmemnobs.o, but you may want
