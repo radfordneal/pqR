@@ -38,6 +38,7 @@ ATLAS_PATH=/R/ATLAS/lib/WinNT_P4SSE2
 
 # With the recommended toolchain, set this to 32 or 64
 MULTI = 64
+
 # If the toolchain's bin directory is not in your path, set this to the path
 # (including the trailing /, and use / not \).
 TOOL_PATH =
@@ -55,9 +56,11 @@ BINPREF =
 # prefix for 64-bit: path or x86_64-w64-mingw32-
 BINPREF64 = x86_64-w64-mingw32-
 
-# Compilers use a -m64 or -m32 option to select architectures.
+# Compilers use a -m64 or -m32 option to select architectures.  Include
+# -msse2 and -mfpmath=sse as well to ensure reproducibility of floating-point
+# operations.
 
-M_ARCH = -m64
+M_ARCH = -m64 -msse2 -mfpmath=sse
 
 # and for as (--32 or --64)
 AS_ARCH = --64
