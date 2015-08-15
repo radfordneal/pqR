@@ -1093,10 +1093,17 @@ Windows toolset} (and perhaps updates in
 The @file{Rtools*.exe} executable installer described in @ref{The
 Windows toolset} also includes some source files in addition to the @R{}
 source as noted below.  You should run it first, to obtain a working
-@code{tar} and other necessities.  Choose a ``Full installation'', and
-install the extra files into your intended @R{} source directory, e.g.@:
-@file{C:/R}. The directory name @emph{should not contain spaces}. We
-will call this directory @file{@var{R_HOME}} below.
+@code{tar} and other necessities.  
+
+The installer has the option of adding extra files to the source
+directory, but this is not advised, since file ownership problems can
+arise.  It is better to add them (plus files needed for cairo) by
+untarring a win-extras file obtained from pqR-project.org, as
+described in src/gnuwin32/INSTALL.
+
+Note that the name of the intended source directory,
+e.g. pqR-YYYY-MM-DD, @emph{should not contain spaces}.  We will call
+this directory @file{@var{R_HOME}} below.
 
 The toolchain used as from @R{} 2.14.2 differs from from that used for
 @R{} 2.12.0 to @R{} 2.14.1.
@@ -1287,6 +1294,8 @@ cairographics libraries built by Simon Urbanek at
 the macro @samp{CAIRO_HOME} in @file{MkRules.local}.  (Note that this
 tarball unpacks with a top-level directory @file{src/}:
 @samp{CAIRO_HOME} needs to include that directory in its path.)
+These files are also included in the win-extras tarball that you
+can obtain from pqR-project.org, as described in src/gnuwin32/INSTALL.
 
 
 @node Checking the build, Building the manuals, Building the cairo devices files, Building from source

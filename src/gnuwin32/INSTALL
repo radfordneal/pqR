@@ -10,34 +10,45 @@ of pqR (from github).
 The short version of these instructions, which may not always be
 adequate, is as follows:
 
-  1) Obtain the pqR source from pqR-project.org, and untar it to
-     create a source directory.  (This assume you already have a tar
-     program.  If not, create an empty source directory, go on
-     to step (2), and then come back here, redoing steps (1) and (2)
-     with the real source directory.)
+  1) Obtain Rtools215.exe distibuted at r-project.org (or get it from
+     http://pqR-project.org/Rtools215.exe).  Run this to install the
+     required build tools, but do not choose the options to install
+     "extra" material for 32 or 64 bit builds of R itself (since this
+     can cause problems with ownership or permissions for files).
 
-  2) Obtain Rtools215.exe distibuted at r-project.org (or get it
-     from http://pqR-project.org/Rtools215.exe).  Run this to install
-     the required tools, choosing options appropriate for either
-     a 32-bit or 64-bit build, and specifying the source directory
-     you created in step (1) for the destination of "extras".
+  2) Obtain the pqR source from pqR-project.org, and untar it to
+     create a source directory.  Step (1) will have gotten you a tar
+     program.  You should use it as follows:
 
-  3) Obtain TeX from somewhere, such as http://miktex.org.  (If you
+         tar --no-same-owner -xvf pqR-YYYY-MM-DD.tar.gz
+
+     where pqR-YYYY-MM-DD.tar.gz is the gzipped tar file from
+     pqR-project.org.  This will create the directory pqR-YYYY-MM-DD,
+     which is both the source directory and the directory in which pqR
+     will be built.
+
+  3) Download one or the other of the files pqR-win-extras-32.tar.gz
+     or pqR-win-extras-64.tar.gz from pqR-project.org, and untar this
+     file as in step (2), when inside the pqR-YYYY-MM-DD directory you
+     created in step (2).  This will add some extra stuff to the
+     source directory needed for Windows builds.
+
+  4) Obtain TeX from somewhere, such as http://miktex.org.  (If you
      get the basic MiKTeX version, note that it will at times ask
-     about downloading more parts of TeX, and that this may result
-     in the build process appearing to hang if the window that MiKTeX
+     about downloading more parts of TeX, and that this may result in
+     the build process appearing to hang if the window that MiKTeX
      puts up asking about this is covered by another window.)
 
-  4) Start a Windows Console window, and change to the src\gnuwin32
-     sub-directory of the source directory your created at step (1).
+  5) Start a Windows Console window, and change to the src\gnuwin32
+     sub-directory of the source directory your created in step (2).
 
-  5) Copy either MkRules.dist or MkRules.dist64 to MkRules.local
-     and possibly edit MkRules.local as appropriate.
+  6) Copy either MkRules.dist or MkRules.dist64 to MkRules.local and
+     possibly edit MkRules.local as appropriate.
 
-  6) Possibly edit the options (eg, whether helper threads are
+  7) Possibly edit the options (eg, whether helper threads are
      enabled) at the start of fixed\h\config.h (in src\gnuwin32).
 
-  7) Issue the following commands in a Windows console (command
+  8) Issue the following commands in a Windows console (command
      prompt) window in order to build pqR in-place in the source
      directory:
 
@@ -50,19 +61,19 @@ adequate, is as follows:
           cd ..
           make cairodevices >make-cairo.out 2>&1
 
-     You can monitor the make.out files from another console window
-     to see how things are progressing during the build.
+     You can monitor the make.out files from another console window to
+     see how things are progressing during the build.
 
      Including the command 
 
           set R_NO_BASE_COMPILE=TRUE
 
      before the "make all recommended" command will inhibit byte
-     compilation of the base and recommended packages.  (Do not
-     set R_NO_BASE_COMPILE at all, or set it to FALSE, if you want 
-     byte compilation.)
+     compilation of the base and recommended packages.  (Do not set
+     R_NO_BASE_COMPILE at all, or set it to FALSE, if you want byte
+     compilation.)
 
-  8) You should now be able to run Rterm.exe, by typing the command
+  9) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
      <build-dir> is the source/build directory you are using and
      <arch> is i386 for 32-bit builds and x64 for 64-bit builds.
@@ -73,20 +84,20 @@ adequate, is as follows:
 
      before running Rterm.  The default if this is not set is 0.
 
-  9) You can check the installation with the command
+ 10) You can check the installation with the command
 
          make check-all >check-all.out 2>&1
 
      monitoring the results by looking at check-all.out in another
      console window.
 
- 10) You can make the PDF manuals with
+ 11) You can make the PDF manuals with
 
          make manuals >make-manuals.out 2>&1
 
- 11) You should be able to run the R Gui by typing the command
+ 12) You should be able to run the R Gui by typing the command
      <build-dir>\bin\<arch>\RGui.exe to the Windows command prompt.
      The number of helper threads can be set as for Rterm.
 
- 12) The programs R.exe and Rscript.exe in <build-dir>\bin should 
-     also work now, with the number of helper threads set as above.
+ 13) The programs R.exe and Rscript.exe in <build-dir>\bin should also
+     work now, with the number of helper threads set as above.
