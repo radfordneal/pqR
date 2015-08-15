@@ -54,8 +54,8 @@ MkRules: MkRules.dist MkRules.rules
 	cat MkRules.dist MkRules.rules > MkRules
 endif
 
-CFLAGS=-O2 -Wall -pedantic $(EOPTS) $(EWARN)
-FFLAGS=-O3 $(EOPTS)
+CFLAGS=$(C_OPT_LEVEL) -Wall -pedantic $(EOPTS) $(EWARN)
+FFLAGS=$(F_OPT_LEVEL) $(EOPTS)
 ifdef DEBUG
  CFLAGS+=$(G_FLAG)
  FFLAGS+=$(G_FLAG)

@@ -6,7 +6,7 @@ include ../../MkRules
 all: makeMakedeps libtiff.a
 
 CPPFLAGS+=$(DEFS) -I.. -I../$(JPEGDIR) -I../../../extra/zlib
-CFLAGS=-O2
+CFLAGS=-O1
 
 SOURCES = \
 	tif_aux.c \

@@ -7,7 +7,7 @@ R_BIT_BUCKET = /dev/null
 
 ifdef DEBUG
   DLLFLAGS=
-  DEBUGFLAG=-gdwarf-2
+  DEBUGFLAG=$(G_FLAG)
 else
   DLLFLAGS=-s
   DEBUGFLAG=
@@ -16,7 +16,7 @@ endif
 DLLFLAGS+= -static-libgcc
 LINKFLAGS+= -static-libgcc
 
-## Things which are substituted by fixed/Makefile (and also -O3 -> -O2)
+## Things which are substituted by fixed/Makefile
 WIN = 32
 BINPREF =
 # SYMPAT = 's/^.* [BCDRT] _/ /p' for 32-bit
@@ -67,12 +67,12 @@ AWK = gawk
 BLAS_LIBS = -L"$(R_HOME)/$(IMPDIR)" -lRblas
 C_VISIBILITY = 
 CC = $(BINPREF)gcc $(M_ARCH)
-CFLAGS = -O2 -Wall $(DEBUGFLAG) -std=gnu99 @EOPTS@ @EWARN@
+CFLAGS = $(C_OPT_LEVEL) -Wall $(DEBUGFLAG) -std=gnu99 @EOPTS@ @EWARN@
 CPICFLAGS = 
 CPPFLAGS =
 CXX = $(BINPREF)g++ $(M_ARCH)
 CXXCPP = $(CXX) -E
-CXXFLAGS = -O2 -Wall $(DEBUGFLAG) @EOPTS@
+CXXFLAGS = $(C_OPT_LEVEL) -Wall $(DEBUGFLAG) @EOPTS@
 CXXPICFLAGS = 
 DYLIB_EXT = .dll
 DYLIB_LD = $(DLL)
@@ -83,12 +83,12 @@ ECHO_C =
 ECHO_N = -n
 ECHO_T = 
 FC = $(BINPREF)gfortran $(M_ARCH)
-FCFLAGS = -O3 $(DEBUGFLAG) @EOPTS@
+FCFLAGS = $(F_OPT_LEVEL) $(DEBUGFLAG) @EOPTS@
 # additional libs needed when linking with $(FC), e.g. on Solaris
 FCLIBS =
 F77 = $(BINPREF)gfortran $(M_ARCH)
 F77_VISIBILITY = 
-FFLAGS = -O3 $(DEBUGFLAG) @EOPTS@
+FFLAGS = $(F_OPT_LEVEL) $(DEBUGFLAG) @EOPTS@
 FLIBS = -lgfortran
 FCPICFLAGS =
 FPICFLAGS = 
@@ -119,12 +119,12 @@ LDFLAGS =
 # don't have this: would 'mkdir -p' do?
 # MKINSTALLDIRS = $(R_HOME)/bin/mkinstalldirs
 OBJC = $(CC)
-OBJCFLAGS = -O2
+OBJCFLAGS = $(C_OPT_LEVEL)
 OBJC_LIBS = -lobjc
 OBJCXX =
 R_ARCH =
 RANLIB = $(BINPREF)ranlib
-SAFE_FFLAGS = -O2 -mfpmath=sse
+SAFE_FFLAGS = $(F_OPT_LEVEL) -mfpmath=sse
 SED = sed
 ## it seems some makes (but not ours) get upset if SHELL is set.
 # SHELL = /bin/sh

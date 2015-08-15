@@ -9,14 +9,15 @@ for revised scheme in main.c.  Adds a test of this to tests/Embedding,
 based on a rewriting of an example in R-exts.texi, which had several
 errors.  Also, R_ReplDLLinit called SETJMP, which received a LONGJMP
 after it had returned, which is definitely a no-no.  A better version
-is implemented.
+is implemented.  Changed rtest in gnuwin32/front-ends as well.
 
 Changed the build process so that setting R_NO_BASE_COMPILE to FALSE
 (as well as to an empty string or to nothing) means packages are byte
 compiled.
 
-Also makes more mods for Windows.  Change optimization level to O2
-rather than O3, since the compiler seems to buggy at O3 when
-architecture is set to native (on a sandy bridge machine).
+Also makes more mods for Windows.  Changes how optimization levels are
+set.  (Note the compiler seems to buggy at -O3 (and -O2?) when
+architecture is set to native (on a sandy bridge machine), or
+otherwise not minimal i386.
 
 Documentation changes as well, regarding embedding, Windows, etc.

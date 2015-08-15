@@ -24,9 +24,11 @@ buildzlib:
 ## the compiler defines __MMX__ , which the win64 gcc does.
 ## So we need to explicitly disable it.
 ## prefix=foo shuts up a warning
+## -O1 because the gcc pre-4.6.3 compiler seems unreliable for some
+## architecture specifications if -O2 or -O3 is used.
 buildpng:
 	$(MAKE) CC='$(CC)' AR='$(AR)' AR_RC='$(AR) rcs' \
-	  CFLAGS="-O2 -I../../../extra/zlib -DPNG_NO_MMX_CODE $(EOPTS)" \
+	  CFLAGS="-O1 -I../../../extra/zlib -DPNG_NO_MMX_CODE $(EOPTS)" \
 	  RANLIB=$(RANLIB) ZLIBLIB=../../../extra/zlib -C $(PNGDIR) \
 	  -f scripts/makefile.gcc prefix=foo libpng.a
 
@@ -42,7 +44,7 @@ buildtiff: $(JPEGDIR)/jconfig.h Makefile.tiff
 	$(MAKE) CC='$(CC)' AR='$(AR)' RANLIB=$(RANLIB) -C $(TIFFDIR) -f ../Makefile.tiff JPEGDIR=$(JPEGDIR)
 
 rbitmap-CPPFLAGS=-DHAVE_PNG -DHAVE_JPEG -DHAVE_TIFF -I. -I../../extra/zlib -I./$(PNGDIR) -I$(JPEGDIR) -I./$(TIFFDIR) -I../../include
-CFLAGS=-O2 -Wall -pedantic $(EOPTS)
+CFLAGS=-O1 -Wall -pedantic $(EOPTS)
 
 ../../../library/grDevices/libs$(R_ARCH)/Rbitmap.dll: rbitmap.o $(TIFFDIR)/libtiff.a $(PNGDIR)/libpng.a $(JPEGDIR)/libjpeg.a
 	$(DLL) -shared -s -o $@ $^ -L../../../$(IMPDIR) -lR -lRzlib
