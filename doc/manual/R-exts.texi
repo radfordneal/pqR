@@ -12123,6 +12123,7 @@ front end @file{rtest.c} whose code is
 
 @smallexample
 #define Win32
+#define WIN32_LEAN_AND_MEAN 1
 #include <windows.h>
 #include <stdio.h>
 #include <Rversion.h>
@@ -12131,6 +12132,7 @@ front end @file{rtest.c} whose code is
 #include <R_ext/RStartup.h>
 /* for askok and askyesnocancel */
 #include <graphapp.h>
+#include <Rinternals.h>
 
 /* for signal-handling code */
 #include <psignal.h>
@@ -12145,11 +12147,13 @@ int myReadConsole(const char *prompt, char *buf, int len, int addtohistory)
 @{
     fputs(prompt, stdout);
     fflush(stdout);
-    if(fgets(buf, len, stdin)) return 1; else return 0;
+    if(fgets(buf, len, stdin)) return 1;
+    else return 0;
 @}
 
-void myWriteConsole(const char *buf, int len)
+void myWriteConsoleEx(const char *buf, int len, int otype)
 @{
+    /* we could distinguish between ouput (type=0) and errors (otype=1) ... */
     printf("%s", buf);
 @}
 
@@ -12163,15 +12167,21 @@ void myBusy(int which)
     /* set a busy cursor ... if which = 1, unset if which = 0 */
 @}
 
-static void my_onintr(int sig) @{ UserBreak = 1; @}
+static void my_onintr(int sig)
+@{
+    UserBreak = 1;
+@}
 
 int main (int argc, char **argv)
 @{
+    /* The code below is very similar that in gnuwin32/embeddedR.c, but
+       illustrates how slight modifications could be made. */
+
     structRstart rp;
     Rstart Rp = &rp;
     char Rversion[25], *RHome;
 
-    sprintf(Rversion, "%s.%s", R_MAJOR, R_MINOR);
+    snprintf(Rversion, 25, "%s.%s", R_MAJOR, R_MINOR);
     if(strcmp(getDLLVersion(), Rversion) != 0) @{
         fprintf(stderr, "Error: R.DLL version does not match\n");
         exit(1);
@@ -12180,21 +12190,23 @@ int main (int argc, char **argv)
     R_setStartTime();
     R_DefParams(Rp);
     if((RHome = get_R_HOME()) == NULL) @{
-         fprintf(stderr, "R_HOME must be set in the environment or Registry\n");
-         exit(1);
+	fprintf(stderr, 
+		"R_HOME must be set in the environment or Registry\n");
+	exit(1);
     @}
     Rp->rhome = RHome;
     Rp->home = getRUser();
     Rp->CharacterMode = LinkDLL;
     Rp->ReadConsole = myReadConsole;
-    Rp->WriteConsole = myWriteConsole;
+    Rp->WriteConsole = NULL; /* for illustration purposes we use more flexible WriteConsoleEx */
+    Rp->WriteConsoleEx = myWriteConsoleEx;
     Rp->CallBack = myCallBack;
     Rp->ShowMessage = askok;
     Rp->YesNoCancel = askyesnocancel;
     Rp->Busy = myBusy;
 
-    Rp->R_Quiet = TRUE;        /* Default is FALSE */
-    Rp->R_Interactive = FALSE; /* Default is TRUE */
+    Rp->R_Quiet = TRUE;
+    Rp->R_Interactive = TRUE;
     Rp->RestoreAction = SA_RESTORE;
     Rp->SaveAction = SA_NOSAVE;
     R_SetParams(Rp);
@@ -12206,15 +12218,33 @@ int main (int argc, char **argv)
     GA_initapp(0, 0);
     readconsolecfg();
     setup_Rmainloop();
-#ifdef SIMPLE_CASE
+
+    /* Now we implement a REPL, one way or another. */
+
+#if 0  /* the simple case */
+
     run_Rmainloop();
+
 #else
+
     R_ReplDLLinit();
-    while(R_ReplDLLdo1() > 0) @{
-/* add user actions here if desired */
+
+    for (;;) @{
+        int status;
+        status = R_ReplDLLdo1();
+        /* Add other user actions here if desired.  This is an illustration. */
+        if (status < 0)  /* EOF */
+            break;
+        else if (status == 2)  /* error trapped at top level */
+            printf("Oops!\n");     /* example of extra error action */
+        else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            printf("Logical!\n");  /* another example of an extra action */
     @}
-/* only get here on EOF (not q()) */
+
+    /* only get here on EOF (not q()) */
+
 #endif
+
     Rf_endEmbeddedR(0);
     return 0;
 @}

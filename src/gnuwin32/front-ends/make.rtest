@@ -12,7 +12,7 @@ else
   LINKFLAGS+=-s
 endif
 
-CFLAGS=-Wall $C_OPT_LEVEL -pedantic
+CFLAGS=-Wall $(C_OPT_LEVEL) -pedantic
 
 rtest-CFLAGS=-I.. -I../../include -I../../../include $(DEBUGFLAG)
 Rtest.exe: rtest.o
