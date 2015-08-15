@@ -23,8 +23,11 @@ fixetc: $(ETC) ../MkRules Makefile
 	$(MKDIR) -p $(R_HOME)/etc/$(R_ARCH)
 ifeq "$(WIN)" "64"
 	$(SED) -e 's/WIN = 32/WIN = 64/' \
+	  -e "s/@G_FLAG@/$(G_FLAG)/" \
 	  -e "s/@EOPTS@/$(EOPTS)/" \
 	  -e "s/@EWARN@/$(EWARN)/" \
+	  -e "s/@C_OPT_LEVEL@/$(C_OPT_LEVEL)/" \
+	  -e "s/@F_OPT_LEVEL@/$(F_OPT_LEVEL)/" \
 	  -e "s|BINPREF =|BINPREF = $(BINPREF)|" \
 	  -e "s|IMPDIR = bin|IMPDIR = $(IMPDIR)|" \
 	  -e "s|LOCAL_SOFT =|LOCAL_SOFT = $(LOCAL_SOFT)|" \
@@ -39,8 +42,11 @@ ifeq "$(WIN)" "64"
 	  etc/Makeconf > $(R_HOME)/etc$(R_ARCH)/Makeconf
 else
 	$(SED) -e "s|IMPDIR = bin|IMPDIR = $(IMPDIR)|" \
+	  -e "s/@G_FLAG@/$(G_FLAG)/" \
 	  -e "s/@EOPTS@/$(EOPTS)/" \
 	  -e "s/@EWARN@/$(EWARN)/" \
+	  -e "s/@C_OPT_LEVEL@/$(C_OPT_LEVEL)/" \
+	  -e "s/@F_OPT_LEVEL@/$(F_OPT_LEVEL)/" \
 	  -e "s|BINPREF =|BINPREF = $(BINPREF)|" \
 	  -e "s|LOCAL_SOFT =|LOCAL_SOFT = $(LOCAL_SOFT)|" \
 	  -e "s|R_ARCH =|R_ARCH = $(R_ARCH)|" \
