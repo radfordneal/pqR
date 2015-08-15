@@ -52,10 +52,12 @@ TOOL_PATH =
 
 M_ARCH = -m32 -msse2 -mfpmath=sse
 
-# Optimization levels for most C and Fortran compiles.
+# Optimization levels for most C and Fortran compiles.  A high level is
+# not necessarily better than a lower level, both because it may actually
+# give slower code, and because it may activate compiler bugs.
 
 C_OPT_LEVEL = -O2
-F_OPT_LEVEL = -O3
+F_OPT_LEVEL = -O2
 
 # Additional optimization flags used sometimes.
 
