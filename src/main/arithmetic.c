@@ -146,6 +146,11 @@ int R_isnancpp(double x)
 
 void attribute_hidden InitArithmetic()
 {
+#ifdef Win32
+    /* This resets the precision, rounding and exception modes of a ix86 fpu. */
+    __asm__ ( "fninit" );
+#endif
+
     R_NaInt = INT_MIN; /* now mostly unused: NA_INTEGER defined as INT_MIN */
     R_NaN = 0.0/R_Zero_Hack;
     R_NaReal = R_ValueOfNA();
