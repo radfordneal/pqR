@@ -50,7 +50,7 @@ struct downhill_Signal_Struct
 /* Static stuff **************************************************************/
 static struct downhill_Signal_Struct* downhill_Signal_Info = NULL;
 static sigset_t                       downhill_Sigset_Mask = 0;
-static HANDLE                            IGotASignal;
+static HANDLE                         IGotASignal;
 
 /* Function stuff ************************************************************/
 
@@ -253,7 +253,7 @@ sighandler_t signal(int signal_Number, sighandler_t signal_Handler)
 int sigaddset(sigset_t* sigset_Info,int signal_Number)
 {
     if (IS_SIGNAL(signal_Number)) {
-	(*sigset_Info) |= (1 << (signal_Number - 1));
+	(*sigset_Info) |= ((sigset_t)1 << (signal_Number - 1));
 	return 0;
     }
     else {
@@ -267,7 +267,7 @@ int sigaddset(sigset_t* sigset_Info,int signal_Number)
 int sigdelset(sigset_t* sigset_Info,int signal_Number)
 {
     if (IS_SIGNAL(signal_Number)) {
-	*sigset_Info &= ~(1<< (signal_Number - 1));
+	*sigset_Info &= ~((sigset_t)1<< (signal_Number-1));
 	return 0;
     }
     else {
@@ -295,7 +295,7 @@ int sigfillset(sigset_t* sigset_Info)
 int sigismember(sigset_t* sigset_Info,int signal_Number)
 {
     if (IS_SIGNAL(signal_Number)) {
-	if ( *sigset_Info & (1 << (signal_Number-1)))
+	if ( *sigset_Info & ((sigset_t)1 << (signal_Number-1)))
 	    return 1;
 	else
 	    return 0;
@@ -327,8 +327,8 @@ int sigpending(sigset_t* sigset_Info)
 }
 
 /* Change the blocked signals ============================================== */
-int sigprocmask(int mask_Function,sigset_t* sigset_Info,
-     sigset_t* sigset_InfoOld)
+int sigprocmask (int mask_Function, sigset_t *sigset_Info,
+                 sigset_t *sigset_InfoOld)
 {
     int      signal_Index;
     sigset_t sigset_MaskOld = downhill_Sigset_Mask;
@@ -380,9 +380,9 @@ int sigprocmask(int mask_Function,sigset_t* sigset_Info,
 }
 
 /* Set signal mask ========================================================= */
-int sigsetmask(int signal_MaskNew)
+sigset_t sigsetmask(sigset_t signal_MaskNew)
 {
-    int signal_MaskOld = downhill_Sigset_Mask;
+    sigset_t signal_MaskOld = downhill_Sigset_Mask;
 
     if (sigprocmask(SIG_SETMASK, &signal_MaskNew, NULL) == -1)
 	return (int)-1;
@@ -391,7 +391,7 @@ int sigsetmask(int signal_MaskNew)
 }
 
 /* Add signals to mask ===================================================== */
-int sigblock(int signal_MaskNew)
+sigset_t sigblock(sigset_t signal_MaskNew)
 {
     /* Block a specific group of signals */
     return sigsetmask(downhill_Sigset_Mask|signal_MaskNew);
