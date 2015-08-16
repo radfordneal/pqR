@@ -248,7 +248,7 @@ cr	:
 
    The xxgetc function also maintains the lineno, etc. for source
    references in ps->sr, and the context for error reporting in 
-   R_ParseContext. */
+   ps->ParseContext (later copied to R_ParseContext). */
 
 
 /* Codes for token types.  ASCII codes for single characters also act as
@@ -318,12 +318,7 @@ typedef struct
    referenced by this static global pointer in many routines.  The old
    pointer is saved in the outermost parsing routine and then restored
    at the end, allowing the parser to be called recursively as part of
-   getting in input character.
-
-   R_ParseContext, R_ParseContextLast, R_ParseContextLine also need to
-   be saved/restored to allow recursive calls, but since they return
-   error state from the parse, this has to be done in xxgetc rather
-   than the outermost parse routine. */
+   getting in input character. */
 
 struct parse_state {
 
@@ -339,6 +334,12 @@ struct parse_state {
     source_location prev_token_loc;  /*  ... and the one previous to it */
 
     SrcRefState *sr;           /* Pointer to source reference info */
+
+    /* Context for error report */
+
+    char ParseContext[PARSE_CONTEXT_SIZE];  /* Circular buffer */
+    int ParseContextLast;
+    int ParseContextLine;
 
     /* State of character getting and ungetting (see xxgetc below). */
 
@@ -384,30 +385,10 @@ static int xxgetc(void)
 
     int c, oldpos;
 
-    if (ps->npush > 0) {
+    if (ps->npush > 0)
         c = ps->pushback[--(ps->npush)];
-    }
-    else {
-
-        /* We save the error context, creating a new context for any
-           recursive call that might occur within ptr_getc. */
-
-        char new_ParseContext[PARSE_CONTEXT_SIZE];
-
-        char *sv_pc = R_ParseContext;
-        int sv_pclast = R_ParseContextLast;
-        int sv_pcline = R_ParseContextLine;
-
-        R_ParseContext = new_ParseContext;
-        R_ParseContextLast = 0;
-        R_ParseContext[0] = 0;
-
+    else
         c = ps->ptr_getc();
-
-        R_ParseContext = sv_pc;
-        R_ParseContextLast = sv_pclast;
-        R_ParseContextLine = sv_pcline;
-    }
 
     oldpos = ps->prevpos;
     ps->prevpos = (ps->prevpos + 1) % PUSHBACK_BUFSIZE;
@@ -428,8 +409,8 @@ static int xxgetc(void)
     if (c == EOF)
 	return R_EOF;
 
-    R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    R_ParseContext[R_ParseContextLast] = c;
+    ps->ParseContextLast = (ps->ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
+    ps->ParseContext[ps->ParseContextLast] = c;
 
     if (c == '\n') {
 	ps->sr->xxlineno += 1;
@@ -443,7 +424,7 @@ static int xxgetc(void)
 
     if (c == '\t') ps->sr->xxcolno = ((ps->sr->xxcolno + 7) & ~7);
     
-    R_ParseContextLine = ps->sr->xxlineno;    
+    ps->ParseContextLine = ps->sr->xxlineno;    
 
     return c;
 }
@@ -460,12 +441,12 @@ static void xxungetc(int c)
     
     ps->prevpos = (ps->prevpos + PUSHBACK_BUFSIZE - 1) % PUSHBACK_BUFSIZE;
 
-    R_ParseContextLine = ps->sr->xxlineno;
+    ps->ParseContextLine = ps->sr->xxlineno;
 
-    R_ParseContext[R_ParseContextLast] = '\0';
+    ps->ParseContext[ps->ParseContextLast] = '\0';
     /* precaution as to how % is implemented for < 0 numbers */
-    R_ParseContextLast 
-      = (R_ParseContextLast + PARSE_CONTEXT_SIZE - 1) % PARSE_CONTEXT_SIZE;
+    ps->ParseContextLast 
+      = (ps->ParseContextLast + PARSE_CONTEXT_SIZE - 1) % PARSE_CONTEXT_SIZE;
     if (ps->npush >= PUSHBACK_BUFSIZE) abort();
     ps->pushback[ps->npush++] = c;
 }
@@ -1478,10 +1459,16 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     ps->token_loc.first_column = 0; \
     ps->token_loc.first_byte = 0; \
     ps->token_loc.first_parsed = 1; \
+    ps->ParseContext[0] = 0; \
+    ps->ParseContextLast = 0; \
+    ps->ParseContextLine = 0; \
     ps->prevpos = 0; \
     ps->npush = 0;
 
 #define PARSE_FINI \
+    memcpy (R_ParseContext, ps->ParseContext, PARSE_CONTEXT_SIZE); \
+    R_ParseContextLast = ps->ParseContextLast; \
+    R_ParseContextLine = ps->ParseContextLine; \
     ps = sv_ps;
 
 
@@ -2518,7 +2505,7 @@ static int processLineDirective()
 
     /* Context report shouldn't show the directive */
 
-    R_ParseContext[R_ParseContextLast] = '\0'; 
+    ps->ParseContext[ps->ParseContextLast] = '\0'; 
 
     return c;
 }

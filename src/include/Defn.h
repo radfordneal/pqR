@@ -936,8 +936,7 @@ extern0 SEXP	R_ParseErrorFile;   /* Source file where parse error was seen */
 #define PARSE_ERROR_SIZE 256	    /* Parse error messages saved here */
 extern0 char	R_ParseErrorMsg[PARSE_ERROR_SIZE] INI_as("");
 #define PARSE_CONTEXT_SIZE 256	    /* Recent parse context kept in a circular buffer */
-extern0 char	R_ParseContextBuf[PARSE_CONTEXT_SIZE];
-extern0 char   *R_ParseContext  INI_as(R_ParseContextBuf);
+extern0 char	R_ParseContext[PARSE_CONTEXT_SIZE] INI_as("");
 extern0 int	R_ParseContextLast INI_as(0); /* last character in context buffer */
 extern0 int	R_ParseContextLine; /* Line in file of the above */
 
