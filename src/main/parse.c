@@ -65,9 +65,13 @@
  		 PARSE_EOF	  - end of file
 
    PARSE_NULL and PARSE_EOF are not possible for R_ParseVector and
-   R_ParseStream.
+   R_ParseStream.  
 
-   All the above are declared in Parse.h and R_ext/Parse.h.
+   All the above are declared in Parse.h or R_ext/Parse.h.
+
+   If PARSE_ERROR is returned, the error message and context is in 
+   the global variables R_ParseErrorMsg, R_ParseContext, etc., which
+   are declared in Defn.h.
 
    This module also defines the isValidName function, since it needs to 
    know the list of reserved words.
@@ -233,8 +237,18 @@ cr	:
 
 
 /* --------------------------------------------------------------------------
-   INTERFACE FROM THE PARSER TO THE LEXICAL ANALYSER
-*/
+   INTERFACE FROM THE PARSER, TO THE LEXICAL ANALYSER, TO CHARACTER INPUT
+
+   The xxgetc function returns the next character; xxungetc pushes
+   a character back to be returned by xxgetc later.
+
+   The xxgetc function gets a character by calling the function pointed 
+   to by ps->ptr_getc, which is set to different functions for different
+   input sources. 
+
+   The xxgetc function also maintains the lineno, etc. for source
+   references in ps->sr, and the context for error reporting in 
+   ps->ParseContext (later copied to R_ParseContext). */
 
 
 /* Codes for token types.  ASCII codes for single characters also act as
@@ -281,15 +295,6 @@ static const char *const token_name[] = {
 #endif
 
 
-/* The next token from the input, and asociated variables and functions. */
-
-static int next_token;            /* The next token, as an integer code */
-static SEXP next_token_val;       /* The value associated with next_token. */
-static int newline_before_token;  /* 1 if next token was preceded by '\n' */
-
-static int get_next_token(void);  /* Update next_token to the next one */
-
-
 /* Record of the start and end of part of the source text.  See the
    information in help(srcfile). */
 
@@ -307,28 +312,59 @@ typedef struct
   int last_parsed;
 } source_location;
 
-/* Location data for the lookahead token, and one previous to it.  */
 
-static source_location token_loc, prev_token_loc;
+/* Pointer to the complete state of the parser.  The structure pointed
+   to is allocated local to the outermost parsing function, then
+   referenced by this static global pointer in many routines.  The old
+   pointer is saved in the outermost parsing routine and then restored
+   at the end, allowing the parser to be called recursively as part of
+   getting in input character. */
 
-/* Pointer to lexer / parser state. */
+struct parse_state {
 
-static SrcRefState *ParseState;
+    /* The next token from the input, and asociated variables and functions. */
 
+    int next_token;            /* The next token, as an integer code */
+    SEXP next_token_val;       /* The value associated with next_token */
+    int newline_before_token;  /* 1 if next token was preceded by '\n' */
 
-/* --------------------------------------------------------------------------
-   INTERFACE FROM THE LEXICAL ANALYSER TO CHARACTER INPUT ROUTINES
+    int keep_source;           /* Attach source references to R expressions? */
 
-   The xxgetc function returns the next character; xxungetc pushes
-   a character back to be returned by xxgetc later.
+    source_location token_loc; /* Location data for the lookahead token */
+    source_location prev_token_loc;  /*  ... and the one previous to it */
 
-   The xxgetc function gets a character by calling the function pointed 
-   to by ptr_getc, which is set to different functions for different
-   input sources. 
+    SrcRefState *sr;           /* Pointer to source reference info */
 
-   The xxgetc function also maintains the lineno, etc. for source
-   references in ParseState, and the context for error reporting in 
-   R_ParseContext. */
+    /* Context for error report */
+
+    char ParseContext[PARSE_CONTEXT_SIZE];  /* Circular buffer */
+    int ParseContextLast;
+    int ParseContextLine;
+
+    /* State of character getting and ungetting (see xxgetc below). */
+
+    int (*ptr_getc)(void);     /* Function to call to get a character */
+
+    void *stream_getc_arg;
+    int (*stream_getc)(void *);
+    TextBuffer *textb_ptr;
+
+#   define PUSHBACK_BUFSIZE 16
+
+    int pushback[PUSHBACK_BUFSIZE];
+
+    int prevlines[PUSHBACK_BUFSIZE];
+    int prevcols[PUSHBACK_BUFSIZE];
+    int prevbytes[PUSHBACK_BUFSIZE];
+    int prevparse[PUSHBACK_BUFSIZE];
+
+    unsigned int npush;
+    int prevpos;
+};
+
+static struct parse_state *ps; /* currently active parse */
+
+static int get_next_token(void);  /* Update ps->next_token to the next one */
 
 #include <R_ext/rlocale.h>
 
@@ -339,74 +375,56 @@ static SrcRefState *ParseState;
 static int xxgetc();
 static void xxungetc(int);
 
-static int (*ptr_getc)(void);     /* Function to call to get a character */
-
-/* Private pushback, since file ungetc only guarantees one byte.
-   We need up to one MBCS-worth */
-
-#define PUSHBACK_BUFSIZE 16
-static int pushback[PUSHBACK_BUFSIZE];
-static unsigned int npush = 0;
-
-static int prevpos = 0;
-static int prevlines[PUSHBACK_BUFSIZE];
-static int prevcols[PUSHBACK_BUFSIZE];
-static int prevbytes[PUSHBACK_BUFSIZE];
-static int prevparse[PUSHBACK_BUFSIZE];
-
 
 /* --------------------------------------------------------------------------
    CHARACTER INPUT ROUTINES
 */
 
-static void ParseInit(void)
-{
-    npush = 0;
-    R_ParseContextLast = 0;
-    R_ParseContext[0] = '\0';
-}
-
 static int xxgetc(void)
 {
+
     int c, oldpos;
 
-    c = npush > 0 ? pushback[--npush] : ptr_getc();
+    if (ps->npush > 0)
+        c = ps->pushback[--(ps->npush)];
+    else
+        c = ps->ptr_getc();
 
-    oldpos = prevpos;
-    prevpos = (prevpos + 1) % PUSHBACK_BUFSIZE;
-    prevbytes[prevpos] = ParseState->xxbyteno;
-    prevlines[prevpos] = ParseState->xxlineno;  
-    prevparse[prevpos] = ParseState->xxparseno;
+    oldpos = ps->prevpos;
+    ps->prevpos = (ps->prevpos + 1) % PUSHBACK_BUFSIZE;
+    ps->prevbytes[ps->prevpos] = ps->sr->xxbyteno;
+    ps->prevlines[ps->prevpos] = ps->sr->xxlineno;  
+    ps->prevparse[ps->prevpos] = ps->sr->xxparseno;
 
     /* We only advance the column for the 1st byte in UTF-8, so handle later 
        bytes specially */
 
     if (0x80 <= (unsigned char) c && (unsigned char) c <= 0xBF 
                                   && known_to_be_utf8) {
-    	ParseState->xxcolno--;   
-    	prevcols[prevpos] = prevcols[oldpos];
+    	ps->sr->xxcolno--;   
+    	ps->prevcols[ps->prevpos] = ps->prevcols[oldpos];
     } else 
-    	prevcols[prevpos] = ParseState->xxcolno;
+    	ps->prevcols[ps->prevpos] = ps->sr->xxcolno;
     	
     if (c == EOF)
 	return R_EOF;
 
-    R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    R_ParseContext[R_ParseContextLast] = c;
+    ps->ParseContextLast = (ps->ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
+    ps->ParseContext[ps->ParseContextLast] = c;
 
     if (c == '\n') {
-	ParseState->xxlineno += 1;
-	ParseState->xxcolno = 0;
-    	ParseState->xxbyteno = 0;
-    	ParseState->xxparseno += 1;
+	ps->sr->xxlineno += 1;
+	ps->sr->xxcolno = 0;
+    	ps->sr->xxbyteno = 0;
+    	ps->sr->xxparseno += 1;
     } else {
-        ParseState->xxcolno += 1;
-    	ParseState->xxbyteno += 1;
+        ps->sr->xxcolno += 1;
+    	ps->sr->xxbyteno += 1;
     }
 
-    if (c == '\t') ParseState->xxcolno = ((ParseState->xxcolno + 7) & ~7);
+    if (c == '\t') ps->sr->xxcolno = ((ps->sr->xxcolno + 7) & ~7);
     
-    R_ParseContextLine = ParseState->xxlineno;    
+    ps->ParseContextLine = ps->sr->xxlineno;    
 
     return c;
 }
@@ -416,21 +434,21 @@ static void xxungetc(int c)
     /* This assumes that c was the result of xxgetc; if not, some edits will 
        be needed */
 
-    ParseState->xxlineno = prevlines[prevpos];
-    ParseState->xxbyteno = prevbytes[prevpos];
-    ParseState->xxcolno  = prevcols[prevpos];
-    ParseState->xxparseno = prevparse[prevpos];
+    ps->sr->xxlineno = ps->prevlines[ps->prevpos];
+    ps->sr->xxbyteno = ps->prevbytes[ps->prevpos];
+    ps->sr->xxcolno  = ps->prevcols[ps->prevpos];
+    ps->sr->xxparseno = ps->prevparse[ps->prevpos];
     
-    prevpos = (prevpos + PUSHBACK_BUFSIZE - 1) % PUSHBACK_BUFSIZE;
+    ps->prevpos = (ps->prevpos + PUSHBACK_BUFSIZE - 1) % PUSHBACK_BUFSIZE;
 
-    R_ParseContextLine = ParseState->xxlineno;
+    ps->ParseContextLine = ps->sr->xxlineno;
 
-    R_ParseContext[R_ParseContextLast] = '\0';
+    ps->ParseContext[ps->ParseContextLast] = '\0';
     /* precaution as to how % is implemented for < 0 numbers */
-    R_ParseContextLast 
-      = (R_ParseContextLast + PARSE_CONTEXT_SIZE - 1) % PARSE_CONTEXT_SIZE;
-    if(npush >= PUSHBACK_BUFSIZE) abort();
-    pushback[npush++] = c;
+    ps->ParseContextLast 
+      = (ps->ParseContextLast + PARSE_CONTEXT_SIZE - 1) % PARSE_CONTEXT_SIZE;
+    if (ps->npush >= PUSHBACK_BUFSIZE) abort();
+    ps->pushback[ps->npush++] = c;
 }
 
 
@@ -468,23 +486,23 @@ static void attachSrcrefs(SEXP val, SEXP t)
     for (n = 0 ; n < LENGTH(srval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(srval, n, CAR(t));
     setAttrib(val, R_SrcrefSymbol, srval);
-    setAttrib(val, R_SrcfileSymbol, ParseState->SrcFile);
+    setAttrib(val, R_SrcfileSymbol, ps->sr->SrcFile);
 
     source_location wholeFile;
     wholeFile.first_line = 1;
     wholeFile.first_byte = 0;
     wholeFile.first_column = 0;
-    wholeFile.last_line = ParseState->xxlineno;
-    wholeFile.last_byte = ParseState->xxbyteno;
-    wholeFile.last_column = ParseState->xxcolno;
+    wholeFile.last_line = ps->sr->xxlineno;
+    wholeFile.last_byte = ps->sr->xxbyteno;
+    wholeFile.last_column = ps->sr->xxcolno;
     wholeFile.first_parsed = 1;
-    wholeFile.last_parsed = ParseState->xxparseno;
+    wholeFile.last_parsed = ps->sr->xxparseno;
     setAttrib(val, R_WholeSrcrefSymbol, 
-                   makeSrcref(&wholeFile, ParseState->SrcFile));
+                   makeSrcref(&wholeFile, ps->sr->SrcFile));
 
     UNPROTECT(2);
 
-    ParseState->didAttach = TRUE;
+    ps->sr->didAttach = TRUE;
 }
 
 void R_InitSrcRefState (SrcRefState *state, int keepSource)
@@ -509,10 +527,6 @@ void R_InitSrcRefState (SrcRefState *state, int keepSource)
     state->xxcolno = 0;
     state->xxbyteno = 0;
     state->xxparseno = 1;
-    token_loc.first_line = 0;
-    token_loc.first_column = 0;
-    token_loc.first_byte = 0;
-    token_loc.first_parsed = 1;
 }
 
 void R_TextForSrcRefState (SrcRefState *state, const char *text)
@@ -594,21 +608,21 @@ static void error_msg(const char *s)
 {
     static char const unexpected[] = "syntax error, unexpected ";
 
-    R_ParseError     = token_loc.first_line;
-    R_ParseErrorCol  = token_loc.first_column;
-    R_ParseErrorFile = ParseState->SrcFile;
+    R_ParseError     = ps->token_loc.first_line;
+    R_ParseErrorCol  = ps->token_loc.first_column;
+    R_ParseErrorFile = ps->sr->SrcFile;
 
     if (strcmp(s,unexpected) == 0) {
-        if (next_token < 256) {
-            char t[4] = { '\'', next_token, '\'', 0 };
+        if (ps->next_token < 256) {
+            char t[4] = { '\'', ps->next_token, '\'', 0 };
             copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, t);
         }
-        else if (next_token-256 < NUM_TRANSLATED)
+        else if (ps->next_token-256 < NUM_TRANSLATED)
             copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
-                           _(token_name[next_token-256]));
+                           _(token_name[ps->next_token-256]));
         else
             copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
-                           token_name[next_token-256]);
+                           token_name[ps->next_token-256]);
     }
     else
         copy_1_string(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s);
@@ -628,7 +642,7 @@ static void error_msg(const char *s)
 
 #define EXPECT(tk) \
     do { \
-        if (next_token != (tk)) \
+        if (ps->next_token != (tk)) \
             PARSE_UNEXPECTED(); \
         get_next_token(); \
     } while (0)
@@ -643,29 +657,29 @@ static void error_msg(const char *s)
    However, if next_token is '\n', advance to the next token first. */
 
 #define NEXT_TOKEN \
-  (next_token == '\n' ? get_next_token_not_newline() : next_token) 
+  (ps->next_token == '\n' ? get_next_token_not_newline() : ps->next_token) 
 
 static int get_next_token_not_newline(void)
 {
     do { 
         get_next_token(); 
-    } while (next_token == '\n');
+    } while (ps->next_token == '\n');
 
-    newline_before_token = 1;
+    ps->newline_before_token = 1;
 
-    return next_token;
+    return ps->next_token;
 }
 
 
 /* Get the SEXP value associated with next_token, protecting it. */
 
-#define TOKEN_VALUE() (PROTECT_N(next_token_val))
+#define TOKEN_VALUE() (PROTECT_N(ps->next_token_val))
 
 
 /* Check whether the current expression is ended by a newline, based on
    the 'flags' and 'newline_before_token' variables. */
 
-#define NL_END ((flags & END_ON_NL) && newline_before_token)
+#define NL_END ((flags & END_ON_NL) && ps->newline_before_token)
 
 
 /* Save the start location of next_token as the start of a region of
@@ -673,10 +687,10 @@ static int get_next_token_not_newline(void)
 
 static void start_location (source_location *loc)
 {
-    loc->first_line   = loc->last_line   = token_loc.first_line;
-    loc->first_column = loc->last_column = token_loc.first_column;
-    loc->first_byte   = loc->last_byte   = token_loc.first_byte;
-    loc->first_parsed = loc->last_parsed = token_loc.first_parsed;
+    loc->first_line   = loc->last_line   = ps->token_loc.first_line;
+    loc->first_column = loc->last_column = ps->token_loc.first_column;
+    loc->first_byte   = loc->last_byte   = ps->token_loc.first_byte;
+    loc->first_parsed = loc->last_parsed = ps->token_loc.first_parsed;
 }
 
 
@@ -685,10 +699,10 @@ static void start_location (source_location *loc)
 
 static void end_location (source_location *loc)
 {
-    loc->last_line   = prev_token_loc.last_line;
-    loc->last_column = prev_token_loc.last_column;
-    loc->last_byte   = prev_token_loc.last_byte;
-    loc->last_parsed = prev_token_loc.last_parsed;
+    loc->last_line   = ps->prev_token_loc.last_line;
+    loc->last_column = ps->prev_token_loc.last_column;
+    loc->last_byte   = ps->prev_token_loc.last_byte;
+    loc->last_parsed = ps->prev_token_loc.last_parsed;
 }
 
 
@@ -831,7 +845,7 @@ static int unary_op(void)
    /* A symbol corresponding to an operator will be in next_token_val.
       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
-    sym = next_token_val;
+    sym = ps->next_token_val;
     if (TYPEOF(sym) != SYMSXP)
         return 0;
 
@@ -862,7 +876,7 @@ static int binary_op(void)
    /* A symbol corresponding to an operator will be in next_token_val.
       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
-    sym = next_token_val;
+    sym = ps->next_token_val;
     if (TYPEOF(sym) != SYMSXP)
         return 0;
 
@@ -902,9 +916,6 @@ static int binary_op(void)
    next_token. 
 
    Source references are attached if keep_source is non-zero. */
-
-
-int keep_source;  /* Attach source references to R expressions? */
 
 static SEXP parse_expr (int prec, int flags, int *paren);
 
@@ -1117,8 +1128,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         start_location(&loc);
         get_next_token();
         end_location(&loc);
-        if (keep_source) {
-            PROTECT_N (refs = CONS (makeSrcref(&loc,ParseState->SrcFile),
+        if (ps->keep_source) {
+            PROTECT_N (refs = CONS (makeSrcref(&loc,ps->sr->SrcFile),
                                     R_NilValue));
             last_ref = refs;
         }
@@ -1131,17 +1142,18 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             start_location(&loc);
             PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL, NULL));
             end_location(&loc);
-            if (keep_source) {
-                SETCDR (last_ref, CONS (makeSrcref(&loc,ParseState->SrcFile),
+            if (ps->keep_source) {
+                SETCDR (last_ref, CONS (makeSrcref(&loc,ps->sr->SrcFile),
                                         R_NilValue));
                 last_ref = CDR(last_ref);
             }
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
-            if (!newline_before_token && NEXT_TOKEN != ';' && NEXT_TOKEN != '}')
+            if (!ps->newline_before_token && NEXT_TOKEN != ';' 
+                                          && NEXT_TOKEN != '}')
                 PARSE_UNEXPECTED();
         }
-        if (keep_source) {
+        if (ps->keep_source) {
             attachSrcrefs(res,refs);
         }
         get_next_token();
@@ -1159,9 +1171,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, NULL));
         end_location(&loc);
-        if (keep_source) {
-            srcref = makeSrcref(&loc, ParseState->SrcFile);
-            ParseState->didAttach = TRUE;
+        if (ps->keep_source) {
+            srcref = makeSrcref(&loc, ps->sr->SrcFile);
+            ps->sr->didAttach = TRUE;
         } 
         else
             srcref = R_NilValue;
@@ -1384,7 +1396,7 @@ static SEXP parse_prog (int flags)
 
     PARSE_SUB (res = parse_expr (0, flags, NULL));
        
-    if (!newline_before_token && NEXT_TOKEN != ';')
+    if (!ps->newline_before_token && NEXT_TOKEN != ';')
         PARSE_UNEXPECTED();
 
     END_PARSE_FUN;
@@ -1415,7 +1427,8 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
         return R_CurrentExpr = R_NilValue;
     }
 
-    if (next_token == END_OF_INPUT || next_token == '\n' || next_token == ';') {
+    if (ps->next_token == END_OF_INPUT || ps->next_token == '\n' 
+                                       || ps->next_token == ';') {
         *status = PARSE_NULL;
         return R_CurrentExpr = R_NilValue;
     }
@@ -1438,27 +1451,49 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
    See the documentation at the start of this module. */
 
+#define PARSE_INIT \
+    struct parse_state new_parse_state; \
+    struct parse_state *sv_ps = ps; \
+    ps = &new_parse_state; \
+    ps->token_loc.first_line = 0; \
+    ps->token_loc.first_column = 0; \
+    ps->token_loc.first_byte = 0; \
+    ps->token_loc.first_parsed = 1; \
+    ps->ParseContext[0] = 0; \
+    ps->ParseContextLast = 0; \
+    ps->ParseContextLine = 0; \
+    ps->prevpos = 0; \
+    ps->npush = 0;
 
-static void *stream_getc_arg;
-static int (*stream_getc)(void *);
+#define PARSE_FINI \
+    memcpy (R_ParseContext, ps->ParseContext, PARSE_CONTEXT_SIZE); \
+    R_ParseContextLast = ps->ParseContextLast; \
+    R_ParseContextLine = ps->ParseContextLine; \
+    ps = sv_ps;
 
-static int call_stream_getc(void) { return (*stream_getc)(stream_getc_arg); }
 
+static int call_stream_getc(void) 
+{ 
+    return (*ps->stream_getc)(ps->stream_getc_arg);
+}
 
 attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg, 
                                       ParseStatus *status, SrcRefState *state)
 {
+    PARSE_INIT
+
     source_location loc;
     SEXP res;
 
-    stream_getc = getc;
-    stream_getc_arg = getc_arg;
-    ptr_getc = call_stream_getc;
-    ParseState = state;
-    keep_source = state->keepSrcRefs;
-    ParseInit();
+    ps->stream_getc = getc;
+    ps->stream_getc_arg = getc_arg;
+    ps->ptr_getc = call_stream_getc;
+    ps->sr = state;
+    ps->keep_source = state->keepSrcRefs;
 
     res = R_Parse1 (status, &loc);
+
+    PARSE_FINI
 
     return res;
 }
@@ -1471,25 +1506,23 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     source_location loc;
     int i;
 
-    ParseState = &state;
-    R_InitSrcRefState (ParseState, !isNull(srcfile));
-    
-    ParseInit();
+    ps->sr = &state;
+    R_InitSrcRefState (ps->sr, !isNull(srcfile));
 
-    REPROTECT(ParseState->SrcFile = srcfile, ParseState->SrcFileProt);
-    REPROTECT(ParseState->Original = srcfile, ParseState->OriginalProt);
+    REPROTECT(ps->sr->SrcFile = srcfile, ps->sr->SrcFileProt);
+    REPROTECT(ps->sr->Original = srcfile, ps->sr->OriginalProt);
 
     PROTECT(tval = CONS(R_NilValue,R_NilValue));
     tlast = tval;
 
-    if (ParseState->keepSrcRefs) {
+    if (ps->sr->keepSrcRefs) {
         PROTECT(refs = CONS(R_NilValue,R_NilValue));
         last_ref = refs;
     }
     else
         PROTECT(refs = R_NilValue);
     
-    keep_source = ParseState->keepSrcRefs;
+    ps->keep_source = ps->sr->keepSrcRefs;
 
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
@@ -1502,16 +1535,16 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	case PARSE_OK:
             SETCDR (tlast, CONS (cur, R_NilValue));
             tlast = CDR(tlast);
-            if (ParseState->keepSrcRefs) {
+            if (ps->sr->keepSrcRefs) {
                 SETCDR (last_ref, 
-                        CONS (makeSrcref(&loc,ParseState->SrcFile),R_NilValue));
+                        CONS (makeSrcref(&loc,ps->sr->SrcFile),R_NilValue));
                 last_ref = CDR(last_ref);
             }
 	    i++;
 	    break;
 	case PARSE_ERROR:
 	    UNPROTECT(2); /* tval, refs */
-	    R_FinalizeSrcRefState(ParseState);
+	    R_FinalizeSrcRefState(ps->sr);
 	    return R_NilValue;
 	case PARSE_EOF:
 	    goto finish;
@@ -1523,31 +1556,40 @@ finish:
     PROTECT(rval = allocVector(EXPRSXP, length(tval)));
     for (i = 0 ; i < LENGTH(rval) ; i++, tval = CDR(tval))
 	SET_VECTOR_ELT(rval, i, CAR(tval));
-    if (ParseState->keepSrcRefs)
+    if (ps->sr->keepSrcRefs)
 	attachSrcrefs(rval,CDR(refs));
 
     UNPROTECT(3); /* tval, refs, rval */
-    R_FinalizeSrcRefState(ParseState);
+    R_FinalizeSrcRefState(ps->sr);
     *status = PARSE_OK;
     return rval;
 }
 
-
-static TextBuffer *txtb;
-
-static int text_getc(void) { return R_TextBufferGetc(txtb); }
+static int text_getc(void)
+{
+    return R_TextBufferGetc(ps->textb_ptr);
+}
 
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
+    PARSE_INIT
+
     SEXP rval;
     TextBuffer textb;
+
+    PROTECT(text);
     R_TextBufferInit(&textb, text);
-    txtb = &textb;
-    ptr_getc = text_getc;
+    UNPROTECT(1);
+
+    ps->textb_ptr = &textb;
+    ps->ptr_getc = text_getc;
 
     rval = R_Parse(n, status, srcfile);
 
     R_TextBufferFree(&textb);
+
+    PARSE_FINI
+
     return rval;
 }
 
@@ -1555,11 +1597,19 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 SEXP R_ParseStream (int (*getc) (void *), void *getc_arg, 
                     int n, ParseStatus *status, SEXP srcfile)
 {
-    stream_getc = getc;
-    stream_getc_arg = getc_arg;
-    ptr_getc = call_stream_getc;
+    PARSE_INIT
 
-    return R_Parse (n, status, srcfile);
+    SEXP res;
+
+    ps->stream_getc = getc;
+    ps->stream_getc_arg = getc_arg;
+    ps->ptr_getc = call_stream_getc;
+
+    res = R_Parse (n, status, srcfile);
+
+    PARSE_FINI
+
+    return res;
 }
 
 
@@ -1578,7 +1628,7 @@ static char yytext[MAXELTSIZE];
 
 #define YYTEXT_PUSH(c, bp) do { \
     if ((bp) - yytext >= sizeof(yytext) - 1) \
-        error(_("input buffer overflow at line %d"), ParseState->xxlineno); \
+        error(_("input buffer overflow at line %d"), ps->sr->xxlineno); \
     *(bp)++ = (c); \
 } while(0)
 
@@ -1703,23 +1753,24 @@ static int NumericValue(int c)
     }
 
     if(c == 'i') {
-	next_token_val = mkComplex(yytext);
+	ps->next_token_val = mkComplex(yytext);
     } else if(c == 'L' && asNumeric == 0) {
 	if (seendot == 1 && seenexp == 0)
 	    warning(_("integer literal %sL contains unnecessary decimal point"),
                     yytext);
-	next_token_val = mkInteger(yytext);
+	ps->next_token_val = mkInteger(yytext);
 #if 0  /* do this to make 123 integer not double */
     } else if(!(seendot || seenexp)) {
 	if(c != 'L') xxungetc(c);
 	double a = R_atof(yytext);
 	int b = (int) a;
-	next_token_val = (a != (double) b) ? mkReal(yytext) : mkInteger(yytext);
+	ps->next_token_val = (a != (double) b) ? mkReal(yytext) 
+                                               : mkInteger(yytext);
 #endif
     } else {
 	if(c != 'L')
 	    xxungetc(c);
-	next_token_val = mkReal(yytext);
+	ps->next_token_val = mkReal(yytext);
     }
 
     return NUM_CONST;
@@ -1751,13 +1802,13 @@ static int mbcs_get_next(int c, wchar_t *wc)
 	    s[i] = xxgetc();
 	    if(s[i] == R_EOF) 
                 error(_("EOF whilst reading MBCS char at line %d"), 
-                        ParseState->xxlineno);
+                        ps->sr->xxlineno);
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbrtowc(wc, s, clen, NULL);
 	if(res == -1) 
             error(_("invalid multibyte character in parser at line %d"), 
-                    ParseState->xxlineno);
+                    ps->sr->xxlineno);
     } else {
 	/* This is not necessarily correct for stateful MBCS */
 	while(clen <= MB_CUR_MAX) {
@@ -1766,12 +1817,12 @@ static int mbcs_get_next(int c, wchar_t *wc)
 	    if(res >= 0) break;
 	    if(res == -1)
 		error(_("invalid multibyte character in parser at line %d"),
-                         ParseState->xxlineno);
+                         ps->sr->xxlineno);
 	    /* so res == -2 */
 	    c = xxgetc();
 	    if(c == R_EOF)
                 error(_("EOF whilst reading MBCS char at line %d"),
-                         ParseState->xxlineno);
+                         ps->sr->xxlineno);
 	    s[clen++] = c;
 	} /* we've tried enough, so must be complete or invalid by now */
     }
@@ -1806,13 +1857,13 @@ static int mbcs_get_next2(int c, ucs_t *wc)
 	    s[i] = xxgetc();
 	    if(s[i] == R_EOF)
                 error(_("EOF whilst reading MBCS char at line %d"),
-                         ParseState->xxlineno);
+                         ps->sr->xxlineno);
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbtoucs(wc, s, clen);
 	if (res == -1) 
             error(_("invalid multibyte character in parser at line %d"),
-                     ParseState->xxlineno);
+                     ps->sr->xxlineno);
     } else {
 	/* This is not necessarily correct for stateful MBCS */
 	while(clen <= MB_CUR_MAX) {
@@ -1820,12 +1871,12 @@ static int mbcs_get_next2(int c, ucs_t *wc)
 	    if (res >= 0) break;
 	    if (res == -1)
 		error(_("invalid multibyte character in parser at line %d"),
-                         ParseState->xxlineno);
+                         ps->sr->xxlineno);
 	    /* so res == -2 */
 	    c = xxgetc();
 	    if (c == R_EOF)
                 error(_("EOF whilst reading MBCS char at line %d"),
-                         ParseState->xxlineno);
+                         ps->sr->xxlineno);
 	    s[clen++] = c;
 	} /* we've tried enough, so must be complete or invalid by now */
     }
@@ -1899,7 +1950,7 @@ static int StringValue(int c, Rboolean forSymbol)
 	    stext = malloc(nstext);         \
 	    if (!stext)                     \
                error(_("unable to allocate buffer for long string at line %d"),\
-                     ParseState->xxlineno); \
+                     ps->sr->xxlineno); \
 	    memmove(stext, old, nc);        \
 	    if(old != st0) free(old);	    \
 	    bp = stext+nc; }		    \
@@ -1985,7 +2036,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(forSymbol) 
 		    error(
                       _("\\uxxxx sequences not supported inside backticks (line %d)"), 
-                      ParseState->xxlineno);
+                      ps->sr->xxlineno);
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
@@ -2011,7 +2062,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(delim) {
 		    if((c = xxgetc()) != '}')
 			error(_("invalid \\u{xxxx} sequence (line %d)"),
-			      ParseState->xxlineno);
+			      ps->sr->xxlineno);
 		    else CTEXT_PUSH(c);
 		}
 		WTEXT_PUSH(val); /* this assumes wchar_t is Unicode */
@@ -2024,7 +2075,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(forSymbol) 
 		    error(
                       _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), 
-                      ParseState->xxlineno);
+                      ps->sr->xxlineno);
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
@@ -2050,7 +2101,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		if(delim) {
 		    if((c = xxgetc()) != '}')
 			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), 
-                              ParseState->xxlineno);
+                              ps->sr->xxlineno);
 		    else CTEXT_PUSH(c);
 		}
 		WTEXT_PUSH(val);
@@ -2135,11 +2186,11 @@ static int StringValue(int c, Rboolean forSymbol)
     WTEXT_PUSH(0);
     if (c == R_EOF) {
         if(stext != st0) free(stext);
-        next_token_val = R_NilValue;
+        ps->next_token_val = R_NilValue;
     	return ERROR;
     }
     if(forSymbol) {
-	next_token_val = install(stext);
+	ps->next_token_val = install(stext);
 	if(stext != st0) free(stext);
 	return SYMBOL;
     } else {
@@ -2147,12 +2198,12 @@ static int StringValue(int c, Rboolean forSymbol)
 	    if (oct_or_hex)
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
 	    if (wcnt < 10000)
-		next_token_val = mkStringUTF8(wcs, wcnt); /*include terminator*/
+		ps->next_token_val = mkStringUTF8(wcs,wcnt); /*incl terminator*/
 	    else
 		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"),
-                      ParseState->xxlineno);
+                      ps->sr->xxlineno);
 	} else
-	    next_token_val = mkString2(stext,  bp - stext - 1, oct_or_hex);
+	    ps->next_token_val = mkString2(stext,  bp - stext - 1, oct_or_hex);
 	if(stext != st0) free(stext);
 	return STR_CONST;
     }
@@ -2201,73 +2252,73 @@ static int KeywordLookup(const char *s)
 	if (strcmp(keywords[i].name, s) == 0) {
 	    switch (keywords[i].token) {
 	    case NULL_CONST:
-		next_token_val = R_NilValue;
+		ps->next_token_val = R_NilValue;
 		break;
 	    case NUM_CONST:
                 switch(i) {
                 case 1:
-                    next_token_val = ScalarLogicalMaybeConst(NA_LOGICAL);
+                    ps->next_token_val = ScalarLogicalMaybeConst(NA_LOGICAL);
                     break;
                 case 2:
-                    next_token_val = ScalarLogicalMaybeConst(1);
+                    ps->next_token_val = ScalarLogicalMaybeConst(1);
                     break;
                 case 3:
-                    next_token_val = ScalarLogicalMaybeConst(0);
+                    ps->next_token_val = ScalarLogicalMaybeConst(0);
                     break;
                 case 4:
-                    next_token_val = allocVector1REAL();
-                    REAL(next_token_val)[0] = R_PosInf;
+                    ps->next_token_val = allocVector1REAL();
+                    REAL(ps->next_token_val)[0] = R_PosInf;
                     break;
                 case 5:
-                    next_token_val = allocVector1REAL();
-                    REAL(next_token_val)[0] = R_NaN;
+                    ps->next_token_val = allocVector1REAL();
+                    REAL(ps->next_token_val)[0] = R_NaN;
                     break;
                 case 6:
-                    next_token_val = ScalarIntegerMaybeConst(NA_INTEGER);
+                    ps->next_token_val = ScalarIntegerMaybeConst(NA_INTEGER);
                     break;
                 case 7:
-                    next_token_val = allocVector1REAL();
-                    REAL(next_token_val)[0] = NA_REAL;
+                    ps->next_token_val = allocVector1REAL();
+                    REAL(ps->next_token_val)[0] = NA_REAL;
                     break;
                 case 8:
-                    next_token_val = allocVector(STRSXP, 1);
-                    SET_STRING_ELT(next_token_val, 0, NA_STRING);
+                    ps->next_token_val = allocVector(STRSXP, 1);
+                    SET_STRING_ELT(ps->next_token_val, 0, NA_STRING);
                     break;
                 case 9:
-                    next_token_val = allocVector(CPLXSXP, 1);
-                    COMPLEX(next_token_val)[0].r = NA_REAL;
-                    COMPLEX(next_token_val)[0].i = NA_REAL;
+                    ps->next_token_val = allocVector(CPLXSXP, 1);
+                    COMPLEX(ps->next_token_val)[0].r = NA_REAL;
+                    COMPLEX(ps->next_token_val)[0].i = NA_REAL;
                     break;
                 }
 		break;
 	    case FUNCTION:
-		next_token_val = R_FunctionSymbol;
+		ps->next_token_val = R_FunctionSymbol;
 		break;
 	    case WHILE:
-		next_token_val = R_WhileSymbol;
+		ps->next_token_val = R_WhileSymbol;
 		break;
 	    case REPEAT:
-		next_token_val = R_RepeatSymbol;
+		ps->next_token_val = R_RepeatSymbol;
 		break;
 	    case FOR:
-		next_token_val = R_ForSymbol;
+		ps->next_token_val = R_ForSymbol;
 		break;
 	    case IF:
-		next_token_val = R_IfSymbol;
+		ps->next_token_val = R_IfSymbol;
 		break;
 	    case NEXT:
-		next_token_val = R_NextSymbol;
+		ps->next_token_val = R_NextSymbol;
 		break;
 	    case BREAK:
-		next_token_val = R_BreakSymbol;
+		ps->next_token_val = R_BreakSymbol;
 		break;
 		break;
 	    case IN:
 	    case ELSE:
-		next_token_val = R_NilValue;
+		ps->next_token_val = R_NilValue;
 		break;
 	    case SYMBOL:
-		next_token_val = install(s);
+		ps->next_token_val = install(s);
 		break;
 	    }
 	    return keywords[i].token;
@@ -2295,7 +2346,7 @@ static int SpecialValue(int c)
     if (c == '%')
 	YYTEXT_PUSH(c, yyp);
     YYTEXT_PUSH('\0', yyp);
-    next_token_val = install(yytext);
+    ps->next_token_val = install(yytext);
     return SPECIAL;
 }
 
@@ -2337,7 +2388,7 @@ static int SymbolValue(int c)
     if ((kw = KeywordLookup(yytext))) 
 	return kw;
     
-    next_token_val = install(yytext);
+    ps->next_token_val = install(yytext);
     return SYMBOL;
 }
 
@@ -2394,31 +2445,31 @@ static void set_parse_filename(SEXP newname)
 {
     SEXP class;
 
-    if (!isEnvironment(ParseState->SrcFile)) 
+    if (!isEnvironment(ps->sr->SrcFile)) 
         return;
 
     PROTECT(newname);    
 
-    SEXP oldname = findVar(install("filename"), ParseState->SrcFile);
+    SEXP oldname = findVar(install("filename"), ps->sr->SrcFile);
     if (isString(oldname) && length(oldname) > 0 &&
          strcmp (CHAR(STRING_ELT(oldname,0)), CHAR(STRING_ELT(newname,0)))==0) {
         UNPROTECT(1);
         return;
     }
 
-    REPROTECT(ParseState->SrcFile =
+    REPROTECT(ps->sr->SrcFile =
                  NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
-              ParseState->SrcFileProt);
-    set_var_in_frame (install("filename"), newname, ParseState->SrcFile,
+              ps->sr->SrcFileProt);
+    set_var_in_frame (install("filename"), newname, ps->sr->SrcFile,
                       TRUE, 3);
 
-    if (ParseState->keepSrcRefs) {
-        set_var_in_frame (install("original"), ParseState->Original, 
-                          ParseState->SrcFile, TRUE, 3);
+    if (ps->sr->keepSrcRefs) {
+        set_var_in_frame (install("original"), ps->sr->Original, 
+                          ps->sr->SrcFile, TRUE, 3);
         PROTECT(class = allocVector(STRSXP, 2));
         SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
         SET_STRING_ELT(class, 1, mkChar("srcfile"));
-        setAttrib(ParseState->SrcFile, R_ClassSymbol, class);
+        setAttrib(ps->sr->SrcFile, R_ClassSymbol, class);
         UNPROTECT(1);
     } 
 
@@ -2444,17 +2495,17 @@ static int processLineDirective()
     else
     	xxungetc(c);
     if (tok == STR_CONST) 
-	set_parse_filename(next_token_val);
+	set_parse_filename(ps->next_token_val);
 
     while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
 
-    ParseState->xxlineno = linenumber;
+    ps->sr->xxlineno = linenumber;
 
     /* Don't change xxparseno here, it counts parsed lines, not official lines*/
 
     /* Context report shouldn't show the directive */
 
-    R_ParseContext[R_ParseContextLast] = '\0'; 
+    ps->ParseContext[ps->ParseContextLast] = '\0'; 
 
     return c;
 }
@@ -2466,7 +2517,7 @@ static int processLineDirective()
 
 static int skip_comment (void)
 {
-    Rboolean maybeLine = (ParseState->xxcolno == 1);
+    Rboolean maybeLine = (ps->sr->xxcolno == 1);
     int c, i;
 
     c = '#';
@@ -2532,7 +2583,7 @@ static int token (int c)
 {
     wchar_t wc;
 
-    next_token_val = R_NilValue;
+    ps->next_token_val = R_NilValue;
 
     /* Hard and soft end of file.  Soft end of file comes at the end of a
        line of interactive input, which may or may not be the actual end. */
@@ -2577,136 +2628,136 @@ static int token (int c)
     switch (c) {
     case '<':
 	if (nextchar('=')) {
-	    next_token_val = R_LeSymbol;
+	    ps->next_token_val = R_LeSymbol;
 	    return LE;
 	}
 	if (nextchar('-')) {
-	    next_token_val = R_LocalAssignSymbol;
+	    ps->next_token_val = R_LocalAssignSymbol;
 	    return LEFT_ASSIGN;
 	}
 	if (nextchar('<')) {
 	    if (nextchar('-')) {
-		next_token_val = R_GlobalAssignSymbol;
+		ps->next_token_val = R_GlobalAssignSymbol;
 		return LEFT_ASSIGN;
 	    }
 	    else
 		return ERROR;
 	}
-	next_token_val = R_LtSymbol;
+	ps->next_token_val = R_LtSymbol;
 	return LT;
     case '-':
 	if (nextchar('>')) {
 	    if (nextchar('>')) {
-		next_token_val = R_GlobalRightAssignSymbol;
+		ps->next_token_val = R_GlobalRightAssignSymbol;
 		return RIGHT_ASSIGN;
 	    }
 	    else {
-		next_token_val = R_LocalRightAssignSymbol;
+		ps->next_token_val = R_LocalRightAssignSymbol;
 		return RIGHT_ASSIGN;
 	    }
 	}
-	next_token_val = R_SubSymbol;
+	ps->next_token_val = R_SubSymbol;
 	return '-';
     case '>':
 	if (nextchar('=')) {
-	    next_token_val = R_GeSymbol;
+	    ps->next_token_val = R_GeSymbol;
 	    return GE;
 	}
-	next_token_val = R_GtSymbol;
+	ps->next_token_val = R_GtSymbol;
 	return GT;
     case '!':
 	if (nextchar('=')) {
-	    next_token_val = R_NeSymbol;
+	    ps->next_token_val = R_NeSymbol;
 	    return NE;
 	}
-	next_token_val = R_NotSymbol;
+	ps->next_token_val = R_NotSymbol;
 	return '!';
     case '=':
 	if (nextchar('=')) {
-	    next_token_val = R_EqSymbol;
+	    ps->next_token_val = R_EqSymbol;
 	    return EQ;
 	}
-	next_token_val = R_EqAssignSymbol;
+	ps->next_token_val = R_EqAssignSymbol;
 	return EQ_ASSIGN;
     case ':':
 	if (nextchar(':')) {
 	    if (nextchar(':')) {
-		next_token_val = R_TripleColonSymbol;
+		ps->next_token_val = R_TripleColonSymbol;
 		return NS_GET_INT;
 	    }
 	    else {
-		next_token_val = R_DoubleColonSymbol;
+		ps->next_token_val = R_DoubleColonSymbol;
 		return NS_GET;
 	    }
 	}
 	if (nextchar('=')) {
-	    next_token_val = R_ColonEqSymbol;
+	    ps->next_token_val = R_ColonEqSymbol;
 	    return LEFT_ASSIGN;
 	}
-	next_token_val = R_ColonSymbol;
+	ps->next_token_val = R_ColonSymbol;
 	return ':';
     case '&':
 	if (nextchar('&')) {
-	    next_token_val = R_And2Symbol;
+	    ps->next_token_val = R_And2Symbol;
 	    return AND2;
 	}
-	next_token_val = R_AndSymbol;
+	ps->next_token_val = R_AndSymbol;
 	return AND;
     case '|':
 	if (nextchar('|')) {
-	    next_token_val = R_Or2Symbol;
+	    ps->next_token_val = R_Or2Symbol;
 	    return OR2;
 	}
-	next_token_val = R_OrSymbol;
+	ps->next_token_val = R_OrSymbol;
 	return OR;
     case '{':
-	next_token_val = R_BraceSymbol;
+	ps->next_token_val = R_BraceSymbol;
 	return c;
     case '}':
 	return c;
     case '(':
-	next_token_val = R_ParenSymbol;
+	ps->next_token_val = R_ParenSymbol;
 	return c;
     case ')':
 	return c;
     case '[':
 	if (nextchar('[')) {
-	    next_token_val = R_Bracket2Symbol;
+	    ps->next_token_val = R_Bracket2Symbol;
 	    return LBB;
 	}
-	next_token_val = R_BracketSymbol;
+	ps->next_token_val = R_BracketSymbol;
 	return c;
     case ']':
 	return c;
     case '?':
-	next_token_val = R_QuerySymbol;
+	ps->next_token_val = R_QuerySymbol;
 	return c;
     case '*':
 	if (nextchar('*')) {
             /* We accept ** as a synonym for ^, with its own token type 
                and primitive definition. */
-	    next_token_val = R_Expt2Symbol;
+	    ps->next_token_val = R_Expt2Symbol;
             return EXPT2;
         }
-        next_token_val = R_MulSymbol;
+        ps->next_token_val = R_MulSymbol;
 	return c;
     case '+':
-        next_token_val = R_AddSymbol;
+        ps->next_token_val = R_AddSymbol;
         return c;
     case '/':
-        next_token_val = R_DivSymbol;
+        ps->next_token_val = R_DivSymbol;
         return c;
     case '^':
-        next_token_val = R_ExptSymbol;
+        ps->next_token_val = R_ExptSymbol;
         return c;
     case '~':
-        next_token_val = R_TildeSymbol;
+        ps->next_token_val = R_TildeSymbol;
         return c;
     case '$':
-        next_token_val = R_DollarSymbol;
+        ps->next_token_val = R_DollarSymbol;
         return c;
     case '@':
-        next_token_val = R_AtSymbol;
+        ps->next_token_val = R_AtSymbol;
         return c;
     default:
 	return c;
@@ -2728,9 +2779,9 @@ static int get_next_token(void)
 {
     int c, val;
 
-    prev_token_loc = token_loc;
+    ps->prev_token_loc = ps->token_loc;
 
-    newline_before_token = 0;
+    ps->newline_before_token = 0;
 
     c = xxgetc();
     val = c != R_EOF;
@@ -2739,19 +2790,19 @@ static int get_next_token(void)
     if (c == '#')
         c = skip_comment();
     if (c == '\n' || c == R_EOF)
-        newline_before_token = 1;
+        ps->newline_before_token = 1;
 
-    token_loc.first_line   = ParseState->xxlineno;
-    token_loc.first_column = ParseState->xxcolno;
-    token_loc.first_byte   = ParseState->xxbyteno;
-    token_loc.first_parsed = ParseState->xxparseno;
+    ps->token_loc.first_line   = ps->sr->xxlineno;
+    ps->token_loc.first_column = ps->sr->xxcolno;
+    ps->token_loc.first_byte   = ps->sr->xxbyteno;
+    ps->token_loc.first_parsed = ps->sr->xxparseno;
 
-    next_token = token(c);
+    ps->next_token = token(c);
 
-    token_loc.last_line    = ParseState->xxlineno;
-    token_loc.last_column  = ParseState->xxcolno;
-    token_loc.last_byte    = ParseState->xxbyteno;
-    token_loc.last_parsed  = ParseState->xxparseno;
+    ps->token_loc.last_line    = ps->sr->xxlineno;
+    ps->token_loc.last_column  = ps->sr->xxcolno;
+    ps->token_loc.last_byte    = ps->sr->xxbyteno;
+    ps->token_loc.last_parsed  = ps->sr->xxparseno;
 
     return val;
 }
