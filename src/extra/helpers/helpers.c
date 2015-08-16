@@ -2990,6 +2990,10 @@ void helpers_startup (int n)
     {
       /* CODE EXECUTED BY THE HELPER THREADS. */
 
+#     ifdef helpers_helper_init
+        helpers_helper_init();
+#     endif
+
       char si;
   
       /* Wait for master to set suspend lock. */

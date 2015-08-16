@@ -21,6 +21,17 @@
 
 #ifndef HELPERS_DISABLED
 
+
+/* FLOATING-POINT ROUNDING FOR WINDOWS.  Sets the rounding mode in each
+   helper thread, to allow long double arithmetic.  It seems this is not
+   inherited from the master thread (at least in Windows 7 32-bit, using 
+   the Rtools215 compiler). */
+
+#ifdef Win32
+#define helpers_helper_init() __asm__("fninit")
+#endif
+
+
 /* NAMES OF TASKS.  The list below has to be manually updated when new 
    task procedures are defined. */
 
