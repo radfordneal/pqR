@@ -53,10 +53,13 @@ M_ARCH = -m64 -msse2 -mfpmath=sse
 
 # Optimization levels for most C and Fortran compiles.  A high level is
 # not necessarily better than a lower level, both because it may actually
-# give slower code, and because it may activate compiler bugs.
+# give slower code, and because it may activate compiler bugs.  The Windows
+# front-ends might be compiled with lower optimization level to avoid bugs.
 
 C_OPT_LEVEL = -O2
 F_OPT_LEVEL = -O2
+
+C_OPT_LEVEL_FRONT_ENDS = -O1
 
 # Additional optimization flags used sometimes.
 
