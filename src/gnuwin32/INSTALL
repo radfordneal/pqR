@@ -40,6 +40,8 @@ adequate, is as follows:
          set CYGWIN=nodosfilewarning
          set TAR_OPTIONS=--no-same-owner
 
+     You can replace c:\tmp some other directory if you wish.
+
   6) Change to a directory in which you wish the pqR source/build
      directory to be created, and untar the file you downloaded
      in step (2) with the following command:
