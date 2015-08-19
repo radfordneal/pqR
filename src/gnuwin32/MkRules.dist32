@@ -2,12 +2,13 @@
 
 ## THIS IS THE VERSION FOR 32-BIT BUILDS ON A 32-BIT WINDOWS SYSTEM.
 ##
-## Edit as needed locally, putting the modified vesion in MkRules.local
-## or just do nothing to use this version.
+## This version should work on any non-ancient Intel/AMD procesor, including
+## i386 processors without SSE2 support (eg, Pentium III).
 ##
-## Use MkRules.dist64 as a starting point if you are doing a 64-bit build.
+## To use, copy to MkRules.local, and then edit options below if desired.
 ##
-## You'll have to customize this yourself for a 32-bit build on 64-bit Windows.
+## Use MkRules.dist32-sse2 or MkRules.dist64 as a starting point if you are
+## building for a 32-bit system with SSE2 instructions or for a 64-bit system.
 
 
 ## This is only used when building R itself but it does customize
@@ -45,17 +46,17 @@ MULTI = 32
 # (including the trailing /, and use / not \).
 TOOL_PATH =
 
-# Compilers use a -m64 or -m32 option to select architectures.  Include
-# -msse2 and -mfpmath=sse as well to ensure reproducibility of floating-point
-# operations (except that these must be omitted for processors earlier
-# than the Pentium 4, which lack SSE2 instructions).
+# Compilers use a -m64 or -m32 option to select architectures.  If only
+# -m32 is specified, it will work for processors earlier than the Pentium 4,
+# which lack SSE2 instructions.
 
-M_ARCH = -m32 -msse2 -mfpmath=sse
+M_ARCH = -m32
 
 # Optimization levels for most C and Fortran compiles.  A high level is
 # not necessarily better than a lower level, both because it may actually
 # give slower code, and because it may activate compiler bugs.  The Windows
-# front-ends might be compiled with lower optimization level to avoid bugs.
+# front-ends might be compiled with lower optimization level to avoid 
+# possible bugs, since this is probably not time-critical code.
 
 C_OPT_LEVEL = -O2
 F_OPT_LEVEL = -O2

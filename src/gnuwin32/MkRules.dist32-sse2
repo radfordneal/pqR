@@ -1,13 +1,14 @@
 #-*- Makefile -*-
 
-## THIS IS THE VERSION FOR 64-BIT BUILDS ON A 64-BIT WINDOWS SYSTEM.
+## THIS IS THE VERSION FOR 32-BIT BUILDS ON A 32-BIT WINDOWS SYSTEM, USING SSE2.
 ##
-## This version should work on any 64-bit Intel or AMD processor.
+## This version should work on any procesors from the Pentium 4 on, but
+## not on processors without SSE2 support (eg, Pentium III).
 ##
 ## To use, copy to MkRules.local, and then edit options below if desired.
 ##
-## Use MkRules.dist32 or MkRules.dist32-sse2 as a starting point if you are
-## building for a 32-bit system (without or with SSE2 instructions).
+## Use MkRules.dist32 or MkRules.dist64 as a starting point if you are building
+## for a 32-bit system without SSE2 instructions or for a 64-bit system.
 
 
 ## This is only used when building R itself but it does customize
@@ -39,18 +40,20 @@ ATLAS_PATH=/R/ATLAS/lib/WinNT_P4SSE2
 
 # Set this to 32 or 64, or leave blank if using some other toolchain.
 
-MULTI = 64
+MULTI = 32
 
 # If the toolchain's bin directory is not in your path, set this to the path
 # (including the trailing /, and use / not \).
 TOOL_PATH =
 
-# Compilers use a -m64 or -m32 option to select architectures.  The compiler
-# defaults to using SSE2 instructions when -m64 is specified, but these
-# options are specified explicitly below just to make this clear.  (Specify
-# -mfpmath=387 instead to use the older FPU for floating-point math).
+# Compilers use a -m64 or -m32 option to select architectures.  Including
+# -msse2 and -mfpmath=sse as well will ensure reproducibility of floating-point
+# operations, but this assumes a Pentium 4 or later machine.  SSE2 instructions
+# require 16-byte stack alignment, which appears to not be ensured by setup code
+# for Windows, so the -mstackrealign option is specified to force C procedures
+# to ensure this alignment.
 
-M_ARCH = -m64 -msse2 -mfpmath=sse
+M_ARCH = -m32 -msse2 -mfpmath=sse -mstackrealign
 
 # Optimization levels for most C and Fortran compiles.  A high level is
 # not necessarily better than a lower level, both because it may actually
@@ -80,16 +83,16 @@ BINPREF =
 BINPREF64 = x86_64-w64-mingw32-
 
 # and for as (--32 or --64)
-AS_ARCH = --64
+AS_ARCH = --32
 
 # and for windres (-F pe-i386 or pe-x86-64)
-RC_ARCH = -F pe-x86-64
+RC_ARCH = -F pe-i386
 
 # and for dlltool ("-m i386 --as-flags --32" vs "-m i386:x86-64 --as-flags --64")
-DT_ARCH = -m i386:x86-64 --as-flags --64
+DT_ARCH = -m i386 --as-flags --32
 
 # 32- or 64-bit Windows?
-WIN = 64
+WIN = 32
 
 # We normally link directly against DLLs, 
 # but this macro forces the use of import libs
