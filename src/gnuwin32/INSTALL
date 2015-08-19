@@ -26,10 +26,10 @@ adequate, is as follows:
      name of the form pqR-YYYY-MM-DD.tar.gz.
 
   4) Download one or the other of the files pqR-win-extras-32.tar.gz
-     or pqR-win-extras-64.tar.gz from pqR-project.org.  This contains
-     some extra stuff to be added to the source that is needed for
-     some features of Windows builds, which you will have skipped 
-     installing in step (1).
+     or pqR-win-extras-64.tar.gz from pqR-project.org, for a 32-bit or
+     64-bit build.  These files contain some extra stuff to be added
+     to the source that is needed for some features of Windows builds,
+     which you will have skipped installing in step (1).
 
   5) Start a Windows console ("command prompt") window, and issue the
      following commands (which, apart from the first, you should also
@@ -50,6 +50,7 @@ adequate, is as follows:
 
      This will create the directory pqR-YYYY-MM-DD, which is both the
      source directory and the directory in which pqR will be built.
+     If you wish, you can rename this directory now (but not later).
 
   7) Change into the pqR-YYYY-MM-DD directory, and in it untar the 
      win-extra file you downloaded in step (4), as follows (or 
@@ -65,7 +66,7 @@ adequate, is as follows:
      MkRules.dist32 should work for any Windows XP, 7, 8, or 10 system
      (in conjunction with pqR-win-extras-32), but will not produce as 
      fast a version of pqR on recent processors as the other options.
-     The the comments in these file for more details.
+     See the comments in these file for more details.
 
  10) Possibly edit the options (eg, whether helper threads are
      enabled) at the start of fixed\h\config.h (in src\gnuwin32).
