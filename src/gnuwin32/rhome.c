@@ -89,7 +89,7 @@ char *get_R_HOME(void)
 	return (rhomebuf);
 
     /* And then the registry */
-    rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\R-core\\R", 0,
+    rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\pqR\\R", 0,
 		      KEY_READ, &hkey);
     if (rc == ERROR_SUCCESS) {
 	rc = RegQueryValueEx(hkey, "InstallPath", 0, &keytype,

@@ -44,7 +44,7 @@ readRegistry(key, hive = c("HLM", "HCR", "HCU", "HU", "HCC", "HPD"),
 }
 \examples{\donttest{
 ## only in HLM if set in an admin-mode install.
-readRegistry("SOFTWARE\\\\R-core", maxdepth = 3)
+readRegistry("SOFTWARE\\\\pqR", maxdepth = 3)
 
 gmt <- file.path("SOFTWARE", "Microsoft", "Windows NT",
                  "CurrentVersion", "Time Zones",
@@ -55,6 +55,6 @@ readRegistry(gmt, "HLM")
 readRegistry("SOFTWARE\\\\JAGS-1.0.3", maxdepth = 3, view="32")
 
 ## See if there is a 64-bit user install
-readRegistry("SOFTWARE\\\\R-core\\\\R64", "HCU", maxdepth = 2)
+readRegistry("SOFTWARE\\\\pqR\\\\R64", "HCU", maxdepth = 2)
 }}
 \keyword{ utilities }

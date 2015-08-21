@@ -23,12 +23,23 @@
 
 #include <Defn.h>
 
+
 /* Defn.h defines the macros helpers_mark_in_use, helpers_mark_being_computed,
    helpers_mark_not_in_use, helpers_mark_not_being_computed, helpers_is_in_use,
    and helpers_is_being_computed. */
 
 #undef helpers_wait_until_not_being_computed  /* May've been def'd in Defn.h */
 #undef helpers_wait_until_not_being_computed2 /* so helpers.h not always req */
+
+
+/* FLOATING-POINT ROUNDING FOR WINDOWS.  Sets the rounding mode in each
+   helper thread, to allow long double arithmetic.  It seems this is not
+   inherited from the master thread (at least in Windows 7 32-bit, using 
+   the Rtools215 compiler). */
+
+#ifdef Win32
+#define helpers_helper_init() __asm__("fninit")
+#endif
 
 
 /* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two

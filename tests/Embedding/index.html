@@ -9,17 +9,23 @@
 
 This a collection of tests for verifying that using R as a library
 within another application (i.e. embedded R) works for this
-installation. This is only relevant if one has configured R with the
-<code>--enable-R-shlib </code> argument for the top-level
-<code>configure</code>.  
+installation. These will only work if one has configured R with the
+<code>--enable-R-shlib </code> argument or with the
+<code>--enable-R-static-lib</code> for the top-level
+<code>configure</code>.
 
 <p>
 
 More information can be found at the 
 <a href="http://developer.r-project.org/embedded.html">R Developer's site</a>
+(somewhat out-of-date), or in the Writing R Extensions manual.
 
 <h3>Test Applications</h3>
 <dl>
+  <dt>
+  <li> <a href="ReplDLL.c">ReplDLL</a>
+  <dd>
+      A simple Read-Eval-Print Loop.
   <dt>
   <li> <a href="Rtest.c">Rtest</a>
   <dd>
@@ -37,7 +43,7 @@ More information can be found at the
   <dt>
   <li><a href="Rerror.c"> Rerror</a>
   <dd> Reads a function definition from an external file (<a
-      href="code.R"><code>code.R</code></a>) and calls it
+      href="error.R"><code>error.R</code></a>) and calls it
         which in turn generates an "error" via <code>stop()</code>.
       The local error handler defined for this application
       catches this error and recovers.

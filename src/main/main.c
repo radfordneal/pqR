@@ -249,7 +249,7 @@ typedef struct {
 } R_ReplState;
 
 
-/* The body of the Read-Eval-Print Loop.
+/* The body of an Read-Eval-Print iteration.
 
    If the input can be parsed correctly,
 
@@ -404,10 +404,39 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 }
 
 
-/* Main Loop: It is assumed that at this point that operating system */
-/* specific tasks (dialog window creation etc) have been performed. */
-/* We can now print a greeting, run the .First function and then enter */
-/* the read-eval-print loop. */
+/* A version of REPL for use with embedded R; just an interface to
+   Rf_ReplIteration.  Caller calls R_ReplDLLinit, then repeatedly
+   calls R_ReplDLLdo1, which returns -1 on EOF, +1 on evaluation
+   without error, and +2 on evaluation that causes an error to
+   be trapped at top level. */
+
+static R_ReplState DLLstate;
+
+void R_ReplDLLinit(void)
+{
+    R_IoBufferInit(&R_ConsoleIob);  /* No longer needed here. Used elsewhere? */
+    R_GlobalContext = R_ToplevelContext = &R_Toplevel;
+    DLLstate.browselevel = 0;
+    DLLstate.prompt_type = 1;
+    DLLstate.buf[0] = DLLstate.buf[CONSOLE_BUFFER_SIZE] = 0;
+    DLLstate.bufp = DLLstate.buf;
+    keepSource = 0;
+}
+
+int R_ReplDLLdo1(void)
+{
+    int status;
+    R_PPStackTop = 0;
+    if (SETJMP(R_Toplevel.cjmpbuf) == 0)
+        status = Rf_ReplIteration (R_GlobalEnv, &DLLstate);
+    else { /* Error trapped */
+        *DLLstate.bufp = 0;  /* Discard rest of line */
+        status = 2;
+    }
+
+    return status;
+}
+
 
 static RETSIGTYPE handleInterrupt(int dummy)
 {
@@ -689,15 +718,27 @@ static void R_LoadProfile(FILE *fparg, SEXP env)
 }
 
 
+/* ------------------------------------------------------------------------
+   Routines that set up for the Read-Eval-Print Loop, calling R_ReplConsole
+   to actually do it.
+*/
+
+
 int R_SignalHandlers = 1;  /* Exposed in R_interface.h */
 
 unsigned int TimeToSeed(void); /* datetime.c */
 
 const char* get_workspace_name();  /* from startup.c */
 
+
+/* Setup for main loop.  It is assumed that at this point that
+   operating system specific tasks (dialog window creation etc) have
+   been performed.  We can now print a greeting, run the .First
+   function, in preparation for entering the read-eval-print loop. */
+
 void setup_Rmainloop(void)
 {
-    volatile int doneit;  /* Purpose is unclear; is it supposed to be static? */
+    volatile int doneit;
     volatile SEXP baseEnv;
     SEXP cmd;
     FILE *fp;
@@ -934,7 +975,8 @@ void setup_Rmainloop(void)
     }
     else {
     	if (! SETJMP(R_Toplevel.cjmpbuf)) {
-	    warning(_("unable to restore saved data in %s\n"), get_workspace_name());
+	    warning(_("unable to restore saved data in %s\n"), 
+                    get_workspace_name());
 	}
     }
     
@@ -989,7 +1031,6 @@ void setup_Rmainloop(void)
     R_init_jit_enabled();
 }
 
-extern SA_TYPE SaveAction; /* from src/main/startup.c */
 
 void end_Rmainloop(void)
 {
@@ -1001,39 +1042,77 @@ void end_Rmainloop(void)
     R_CleanUp(SA_DEFAULT, 0, 1);
 }
 
-void run_Rmainloop(void)
-{
-    /* Here is the real R read-eval-loop. */
-    /* We handle the console until end-of-file. */
-    R_IoBufferInit(&R_ConsoleIob);
-    SETJMP(R_Toplevel.cjmpbuf);
-    R_GlobalContext = R_ToplevelContext = &R_Toplevel;
-    R_ReplConsole(R_GlobalEnv, 0, 0);
-    end_Rmainloop(); /* must go here */
-}
 
 void helpers_master (void)
+{
+    static int printed_already = 0;
+
+    if (!printed_already && !R_Quiet) {
+
+        Rprintf("\n");
+        if (helpers_are_disabled)
+            Rprintf (_("Deferred evaluation disabled (no helper threads, no task merging).\n"));
+        else if (helpers_not_multithreading_now && helpers_not_merging)
+            Rprintf (_("No helper threads, no task merging.\n"));
+        else if (helpers_not_multithreading_now)
+            Rprintf (_("No helper threads, task merging enabled.\n"));
+        else if (helpers_not_merging)
+            Rprintf (_("%d helper threads, no task merging.\n"), helpers_num);
+        else
+            Rprintf (_("%d helper threads, task merging enabled.\n"), helpers_num);
+        Rprintf("\n");
+
+        printed_already = 1;
+    }
+
+    R_IoBufferInit(&R_ConsoleIob);
+
+    SETJMP(R_Toplevel.cjmpbuf);
+
+    /* IF AN ERROR CAUSES A LONGJMP TO THE TOP LEVEL, WE WILL RESTART HERE */
+
+    R_GlobalContext = R_ToplevelContext = &R_Toplevel;
+
+    R_ReplConsole(R_GlobalEnv, 0, 0);   /* --- Actually do the REPL --- */
+
+    end_Rmainloop();
+}
+
+
+/* The main Read-Eval-Print Loop.  Should be called after setup_Rmainloop.
+   Creates helper threads (if enabled) for the duration of the REPL. */
+
+void run_Rmainloop(void)
+{
+    int n_helpers;  /* Requested number of helpers to use, negative
+                       if deferred evaluation is to be disabled */
+
+    n_helpers = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
+
+    if (n_helpers < 0)
+        helpers_disable(1);
+
+    helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
+
+    /* The call of helpers_startup below will call helpers_master above. */
+
+    helpers_startup (n_helpers > 0 ? n_helpers : 0);
+}
+
+
+/* Procedure that does both the setup and the actual loop. */
+
+void mainloop(void)
 {
     setup_Rmainloop();
     run_Rmainloop();
 }
 
-void mainloop(void)
-{
-    int n;
 
-    n = getenv("R_HELPERS") ? atoi(getenv("R_HELPERS")) : 0;
-    if (n < 0)
-    { helpers_disable(1);
-      n = 0;
-    }
+/* -------------------------------------------------------------------------- */
 
-    helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
-    helpers_startup(n);  /* will call helpers_master above */
-}
 
-/*this functionality now appears in 3
-  places-jump_to_toplevel/profile/here */
+/*this functionality now appears in 3 places-jump_to_toplevel/profile/here */
 
 static void printwhere(void)
 {

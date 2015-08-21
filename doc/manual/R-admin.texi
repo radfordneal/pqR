@@ -904,11 +904,11 @@ this manual are either standard @command{autoconf} options not relevant
 to @R{} or intended for specialist uses by the @R{} developers.
 
 One that may be useful when working on @R{} itself is the option
-@option{--disable-byte-compiled-packages}, which ensures that the base and
-recommended packages are lazyloaded but not byte-compiled.
+@option{--disable-byte-compiled-packages}, which ensures that the base
+and recommended packages are lazyloaded but not byte-compiled.
 (Alternatively the (make or environment) variable
-@env{R_NO_BASE_COMPILE} can be set to a non-empty value for the duration
-of the build.)
+@env{R_NO_BASE_COMPILE} can be set to a non-empty value other than
+FALSE for the duration of the build.)
 
 @menu
 * Inter-Procedure Optimization::  
@@ -1093,10 +1093,17 @@ Windows toolset} (and perhaps updates in
 The @file{Rtools*.exe} executable installer described in @ref{The
 Windows toolset} also includes some source files in addition to the @R{}
 source as noted below.  You should run it first, to obtain a working
-@code{tar} and other necessities.  Choose a ``Full installation'', and
-install the extra files into your intended @R{} source directory, e.g.@:
-@file{C:/R}. The directory name @emph{should not contain spaces}. We
-will call this directory @file{@var{R_HOME}} below.
+@code{tar} and other necessities.  
+
+The installer has the option of adding extra files to the source
+directory, but this is not advised, since file ownership problems can
+arise.  It is better to add them (plus files needed for cairo) by
+untarring a win-extras file obtained from pqR-project.org, as
+described in src/gnuwin32/INSTALL.
+
+Note that the name of the intended source directory,
+e.g. pqR-YYYY-MM-DD, @emph{should not contain spaces}.  We will call
+this directory @file{@var{R_HOME}} below.
 
 The toolchain used as from @R{} 2.14.2 differs from from that used for
 @R{} 2.12.0 to @R{} 2.14.1.
@@ -1251,10 +1258,9 @@ but this is only likely to be worthwhile on a multi-core machine with
 ample memory, and is not 100% reliable.
 
 @item 
-It is possible (mainly for those working on @R{} itself) to set the
-(make or environment) variable @env{R_NO_BASE_COMPILE} to a non-empty
-value, which inhibits the byte-compilation of the base and recommended
-packages.
+To inhibit the byte-compilation of the base and recommended
+package, set the (make or environment) variable @env{R_NO_BASE_COMPILE}
+to a non-empty value other than FALSE.
 
 @end itemize
 
@@ -1288,6 +1294,8 @@ cairographics libraries built by Simon Urbanek at
 the macro @samp{CAIRO_HOME} in @file{MkRules.local}.  (Note that this
 tarball unpacks with a top-level directory @file{src/}:
 @samp{CAIRO_HOME} needs to include that directory in its path.)
+These files are also included in the win-extras tarball that you
+can obtain from pqR-project.org, as described in src/gnuwin32/INSTALL.
 
 
 @node Checking the build, Building the manuals, Building the cairo devices files, Building from source

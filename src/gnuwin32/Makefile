@@ -54,8 +54,8 @@ MkRules: MkRules.dist MkRules.rules
 	cat MkRules.dist MkRules.rules > MkRules
 endif
 
-CFLAGS=-O2 -Wall -pedantic $(EOPTS) $(EWARN)
-FFLAGS=-O3 $(EOPTS)
+CFLAGS=$(C_OPT_LEVEL) -Wall -pedantic $(EOPTS) $(EWARN)
+FFLAGS=$(F_OPT_LEVEL) $(EOPTS)
 ifdef DEBUG
  CFLAGS+=$(G_FLAG)
  FFLAGS+=$(G_FLAG)
@@ -122,7 +122,8 @@ rlibs:
 	$(MK) -C ../nmath CFLAGS='$(CFLAGS)' FFLAGS='${FFLAGS}' -f Makefile.win
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
-	@for ex in graphapp pcre bzip2 zlib xdr tre trio tzone win_iconv xz; do \
+	@for ex in graphapp pcre bzip2 zlib xdr tre trio \
+                   helpers matprod tzone win_iconv xz; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
 

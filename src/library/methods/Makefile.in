@@ -24,7 +24,7 @@ all: Makefile DESCRIPTION
 	@$(MKINSTALLDIRS) $(top_builddir)/library/$(pkg)
 	@$(MAKE) mkR2 mkdesc mkpo
 	@$(MAKE) mksrc
-	@if test -n "$(R_NO_BASE_COMPILE)"; then \
+	@if [ x$(R_NO_BASE_COMPILE) != x -a x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	  $(MAKE) RfilesLazy; \
 	else \
 	  $(MAKE) RfilesLazy EXTRAS2=$(EXTRAS); \

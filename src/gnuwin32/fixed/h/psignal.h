@@ -72,12 +72,16 @@
 */
 typedef	void (*sighandler_t)(int nSig);
 
-/* Define sigset_t as long long int, regardless of what mingw wants, which
-   is confused with whether or not _POSIX is defined.  Note that uses
-   of this type are here in psignal.c, so we should be able to decide
-   for ourselves what it is. */
 
-typedef long long int sigset_t;
+/* Manually define sigset_t as in the MINGW sys/types.h file, since
+   it gets defined there only if _POSIX is defined, which it seems 
+   it isn't, and defining it could break something else... */
+
+#ifdef _WIN64
+typedef unsigned long long sigset_t;
+#else
+typedef unsigned long sigset_t;
+#endif
 
 
 /*
@@ -124,8 +128,8 @@ typedef struct
 
 
 /* Prototype stuff ***********************************************************/
-int           sigsetmask(int signal_Block_MaskNew);
-int           sigblock(int signal_Block_MaskNew);
+sigset_t      sigsetmask(sigset_t signal_Block_MaskNew);
+sigset_t      sigblock(sigset_t signal_Block_MaskNew);
 int           sighold(int signal_Number);
 int           sigrelse(int signal_Number);
 int           sigaction(int signal_Number,struct sigaction* sigaction_Info,
@@ -145,7 +149,7 @@ int sigsuspend(sigset_t* sigset_Info);
 
 /* Re-mapped functions ===================================================== */
 
-#define sigmask(signal_Index) (1<<(signal_Index-1))
+#define sigmask(signal_Index) ((sigset_t)1<<(signal_Index-1))
 
 /* 
    This must be a macro, since we want setjmp working in the

@@ -31,6 +31,25 @@
 #endif
 
 
+#ifdef __MINGW64__
+
+/* KLUDGE TO BYPASS A PROBLEM WITH OPENMP IN THE 64-BIT VERSION OF RTOOLS.
+
+   The omp.h file for 32-bit systems gets used for 64-bit builds too.
+   This results in omp_lock_t being too small.  We replace it with a
+   type with extra padding (4 bytes seems like it would be enough, but
+   more is used just in case). 
+
+   Lots of compiler warnings result, but it works, and should continue
+   to work even if the bug is fixed. */
+
+typedef struct { omp_lock_t lock; char pad[12]; } my_omp_lock_t;
+
+#define omp_lock_t my_omp_lock_t
+
+#endif
+
+
 /* -----------------------------  OPTIONS  ---------------------------------- */
 
 /* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
@@ -2989,6 +3008,10 @@ void helpers_startup (int n)
     else
     {
       /* CODE EXECUTED BY THE HELPER THREADS. */
+
+#     ifdef helpers_helper_init
+        helpers_helper_init();
+#     endif
 
       char si;
   

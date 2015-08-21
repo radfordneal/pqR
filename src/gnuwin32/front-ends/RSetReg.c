@@ -22,7 +22,7 @@
 #include <stdlib.h>		/* for exit */
 #include <Rversion.h>
 
-#define PRODUCER "R-core"
+#define PRODUCER "pqR"
 
 #ifdef WIN64
 # define RK "R64"
@@ -74,7 +74,7 @@ int main (int argc, char **argv)
 	    RegCloseKey(hkey);
 	    /* delete key if empty */
 	    if (!subkeys && 
-		RegOpenKeyEx(hk, "Software\\R-core", 0, KEY_SET_VALUE, &hkey)
+		RegOpenKeyEx(hk, "Software\\pqR", 0, KEY_SET_VALUE, &hkey)
 		== ERROR_SUCCESS) {
 		RegDeleteKey(hkey, RK);
 		RegCloseKey(hkey);
@@ -101,7 +101,7 @@ int main (int argc, char **argv)
 	    RegCloseKey(hkey);
 	    /* delete key if empty */
 	    if (!subkeys && 
-		RegOpenKeyEx(hk, "Software\\R-core", 0, KEY_SET_VALUE, &hkey)
+		RegOpenKeyEx(hk, "Software\\pqR", 0, KEY_SET_VALUE, &hkey)
 		== ERROR_SUCCESS) {
 		RegDeleteKey(hkey, "R");
 		RegCloseKey(hkey);

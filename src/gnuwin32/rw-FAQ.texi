@@ -513,16 +513,16 @@ Administrator installs) @samp{Associate R with .RData files}.
 If you tick the first option, the following string entries are added to the
 Windows registry:
 @itemize @bullet
-@item  @code{HKEY_LOCAL_MACHINE\Software\R-core\R\Current Version}  
+@item  @code{HKEY_LOCAL_MACHINE\Software\pqR\R\Current Version}  
     contains the version number, currently @RVER@.
-@item @code{HKEY_LOCAL_MACHINE\Software\R-core\R\[version]\InstallPath}
+@item @code{HKEY_LOCAL_MACHINE\Software\pqR\R\[version]\InstallPath}
     (where @code{[version]} is currently @RVER@) contains the path to the R 
     home directory.
 @end itemize
 If you do not have administrative privileges on the machine while
 running the installer, then the entries are created under
 @code{HKEY_CURRENT_USER}.  The same entries are also created under
-@code{Software\R-core\R32} or @code{Software\R-core\R64}, for 32- and
+@code{Software\pqR\R32} or @code{Software\pqR\R64}, for 32- and
 64-bit R respectively.
 
 If you tick the second option (shown with administrative privileges

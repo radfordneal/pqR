@@ -5,7 +5,7 @@
 
 $(top_builddir)/library/$(pkg)/R/$(pkg).rdb: all.R
 	@$(INSTALL_DATA) all.R $(top_builddir)/library/$(pkg)/R/$(pkg)
-	@if test -n "$(R_NO_BASE_COMPILE)"; then \
+	@if [ x$(R_NO_BASE_COMPILE) != x -a x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	 $(ECHO) "tools:::makeLazyLoading(\"$(pkg)\")" | \
 	  R_DEFAULT_PACKAGES=$(DEFPKGS) LC_ALL=C $(R_EXE) > /dev/null; \
 	else \

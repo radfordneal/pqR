@@ -12,11 +12,12 @@ else
   LINKFLAGS+=-s
 endif
 
-CFLAGS=-Wall -O2 -pedantic
+CFLAGS=-Wall $(C_OPT_LEVEL) -pedantic
 
 rtest-CFLAGS=-I.. -I../../include -I../../../include $(DEBUGFLAG)
 Rtest.exe: rtest.o
-	$(CC) $(LINKFLAGS) -o $@ rtest.o -L../../../bin -lR -lRgraphapp
+	$(CC) $(LINKFLAGS) -o $@ rtest.o -L../../../bin$(R_ARCH) -lR -lRgraphapp
+	cp Rtest.exe ../../../bin/$(R_ARCH)
 
 rtest.c: ../../include/Rversion.h
 

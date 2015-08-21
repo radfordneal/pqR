@@ -10,58 +10,93 @@ of pqR (from github).
 The short version of these instructions, which may not always be
 adequate, is as follows:
 
-  1) Obtain the pqR source from pqR-project.org, and untar it to
-     create a source directory.  (This assume you already have a tar
-     program.  If not, create an empty source directory, go on
-     to step (2), and then come back here, redoing steps (1) and (2)
-     with the real source directory.)
+  1) Obtain Rtools215.exe distibuted at r-project.org (or get it from
+     http://pqR-project.org/Rtools215.exe).  Run this to install the
+     required build tools, but do not choose the options to install
+     "extra" material for 32 or 64 bit builds of R itself (since this
+     can cause problems with ownership or permissions for files).
 
-  2) Obtain Rtools215.exe distibuted at r-project.org (or get it
-     from http:pqR-project.org/Rtools215.exe).  Run this to install
-     the required tools, choosing options appropriate for either
-     a 32-bit or 64-bit build, and specifying the source directory
-     you created in step (1) for the destination.
-
-  3) Obtain TeX from somewhere, such as http://miktex.org.  (If you
+  2) Obtain TeX from somewhere, such as http://miktex.org.  (If you
      get the basic MiKTeX version, note that it will at times ask
-     about downloading more parts of TeX, and that this may result
-     in the build process appearing to hang if the window that MiKTeX
+     about downloading more parts of TeX, and that this may result in
+     the build process appearing to hang if the window that MiKTeX
      puts up asking about this is covered by another window.)
 
-  4) Start a Windows Console window, and change to the src\gnuwin32
-     sub-directory of the source directory your created at step (1).
+  3) Download the pqR source from pqR-project.org, as a file with a
+     name of the form pqR-YYYY-MM-DD.tar.gz.
 
-  5) Copy either MkRules.dist or MkRules.dist64 to MkRules.local
-     and possibly edit MkRules.local as appropriate.
+  4) Download one or the other of the files pqR-win-extras-32.tar.gz
+     or pqR-win-extras-64.tar.gz from pqR-project.org, for a 32-bit or
+     64-bit build.  (If you like, you can do a 32-bit build on a
+     64-bit system.)  These files contain some extra stuff to be added
+     to the source that is needed for some features of Windows builds,
+     which you will have skipped installing in step (1).
 
-  6) Possibly edit the options (eg, whether helper threads are
+  5) Start a Windows console ("command prompt") window, and issue the
+     following commands (which, apart from the first, you should also
+     issue when starting any other console windows you use):
+
+         mkdir c:\tmp
+         set TMPDIR=c:\tmp
+         set CYGWIN=nodosfilewarning
+         set TAR_OPTIONS=--no-same-owner
+
+     You can replace c:\tmp some other directory if you wish.
+
+  6) Change to a directory in which you wish the pqR source/build
+     directory to be created, and untar the file you downloaded
+     in step (2) with the following command:
+
+         tar -xvf <path-to-where-you-put>\pqR-YYYY-MM-DD.tar.gz
+
+     This will create the directory pqR-YYYY-MM-DD, which is both the
+     source directory and the directory in which pqR will be built.
+     If you wish, you can rename this directory now (but not later).
+
+  7) Change into the pqR-YYYY-MM-DD directory, and in it untar the 
+     win-extra file you downloaded in step (4), as follows (or 
+     similarly for 64 rather than 32):
+
+         tar -xvf <path-to-where-you-put>\pqR-win-extras-32.tar.gz
+
+  8) Change to the src\gnuwin32 sub-directory of the source/build
+     directory.
+
+  9) Copy one of MkRules.dist32, MkRules.dist32-sse2, or MkRules.dist64
+     to MkRules.local and possibly edit MkRules.local as appropriate.
+     MkRules.dist32 should work for any Windows XP, 7, 8, or 10 system
+     (in conjunction with pqR-win-extras-32), but will not produce as 
+     fast a version of pqR on recent processors as the other options.
+     See the comments in these file for more details.
+
+ 10) Possibly edit the options (eg, whether helper threads are
      enabled) at the start of fixed\h\config.h (in src\gnuwin32).
 
-  7) Issue the following commands in a Windows console (command
+ 11) Issue the following commands in a Windows console (command
      prompt) window in order to build pqR in-place in the source
      directory:
 
-          mkdir c:\tmp
-          set TMPDIR=c:\tmp
-          set CYGWIN=nodosfilewarning
           make all recommended >make.out 2>&1
           cd bitmap
           make >make.out 2>&1
           cd ..
           make cairodevices >make-cairo.out 2>&1
 
-     You can monitor the make.out files from another console window
-     to see how things are progressing during the build.
+     This assumes you issued the commands in step (5) already.
+
+     You can monitor the make.out files from another console window to
+     see how things are progressing during the build.
 
      Including the command 
 
           set R_NO_BASE_COMPILE=TRUE
 
      before the "make all recommended" command will inhibit byte
-     compilation of the base and recommended packages.  (Do not
-     set R_NO_BASE_COMPILE at all if you want byte compilation.)
+     compilation of the base and recommended packages.  (Do not set
+     R_NO_BASE_COMPILE at all, or set it to FALSE, if you want byte
+     compilation.)
 
-  8) You should now be able to run Rterm.exe, by typing the command
+ 12) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
      <build-dir> is the source/build directory you are using and
      <arch> is i386 for 32-bit builds and x64 for 64-bit builds.
@@ -70,18 +105,26 @@ adequate, is as follows:
 
          set R_HELPERS=<number>
 
-     before running Rterm.      
+     before running Rterm.  The default if this is not set is 0.
 
-  9) You can check the installation with the command
+ 13) You can check the installation by running the command
 
          make check-all >check-all.out 2>&1
 
-     monitoring the results by looking at check-all.out in another
-     console window.
+     in src/gnuwin32.  You can monitorthe results by looking 
+     at check-all.out in another console window.
 
- 10) You can make the PDF manuals with
+ 14) You can make the PDF manuals (when in src/gnuwin32) with
 
          make manuals >make-manuals.out 2>&1
 
-Note that the Windows GUI is a separate program, which is not
-discussed here.
+ 15) You should be able to run the R Gui by typing the command
+     <build-dir>\bin\<arch>\RGui.exe to the Windows command prompt.
+     The number of helper threads can be set as for Rterm.
+
+ 16) The programs R.exe and Rscript.exe in <build-dir>\bin should also
+     work now, with the number of helper threads set as above.  Note
+     that R.exe is not really suitable for interactive use, since it
+     doesn't handle interuption with control-C properly (not a pqR
+     issue, since it's the same in R-2.15.0).  Use Rterm or Rgui
+     instead.  R and Rscript are useful for non-interactive uses.

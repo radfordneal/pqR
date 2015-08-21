@@ -6,7 +6,7 @@
     name="Rgui.exe"
     type="win32"
 />
-<description>RGui console</description>
+<description>RGui console for pqR</description>
 <dependency>
     <dependentAssembly>
         <assemblyIdentity

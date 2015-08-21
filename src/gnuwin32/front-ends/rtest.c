@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1998--2007  R Development Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -27,6 +30,7 @@
 #include <R_ext/RStartup.h>
 /* for askok and askyesnocancel */
 #include <graphapp.h>
+#include <Rinternals.h>
 
 /* for signal-handling code */
 #include <psignal.h>
@@ -68,6 +72,9 @@ static void my_onintr(int sig)
 
 int main (int argc, char **argv)
 {
+    /* The code below is very similar that in gnuwin32/embeddedR.c, but
+       illustrates how slight modifications could be made. */
+
     structRstart rp;
     Rstart Rp = &rp;
     char Rversion[25], *RHome;
@@ -97,7 +104,7 @@ int main (int argc, char **argv)
     Rp->Busy = myBusy;
 
     Rp->R_Quiet = TRUE;
-    Rp->R_Interactive = FALSE;
+    Rp->R_Interactive = TRUE;
     Rp->RestoreAction = SA_RESTORE;
     Rp->SaveAction = SA_NOSAVE;
     R_SetParams(Rp);
@@ -108,9 +115,33 @@ int main (int argc, char **argv)
     signal(SIGBREAK, my_onintr);
     GA_initapp(0, 0);
     readconsolecfg();
-
     setup_Rmainloop();
+
+    /* Now we implement a REPL, one way or another. */
+
+#if 0  /* the simple case */
+
     run_Rmainloop();
+
+#else
+
+    R_ReplDLLinit();
+
+    for (;;) {
+        int status;
+        status = R_ReplDLLdo1();
+        /* Add other user actions here if desired.  This is an illustration. */
+        if (status < 0)  /* EOF */
+            break;
+        else if (status == 2)  /* error trapped at top level */
+            printf("Oops!\n");     /* example of extra error action */
+        else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            printf("Logical!\n");  /* another example of an extra action */
+    }
+
+    /* only get here on EOF (not q()) */
+
+#endif
 
     Rf_endEmbeddedR(0);
     return 0;

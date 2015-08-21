@@ -9,7 +9,10 @@ another front end.  To build it
 
 - to make with gcc,  make -f make.rtest
 
-This provides an rterm-like test front end. 
+This provides an rterm-like test front end.  It is copied to the
+bin directory for the current architecture, so when run from there
+it will find the right DLLs.
+
 
 There is a callback available during evaluation, plotting and console
 I/O, intended to be used for processing GUI events.  (The pager and
@@ -24,11 +27,13 @@ function.  Rterm uses a separate thread to achieve this.
 An alternative to linking the import library would be to explicitly
 load the DLL from a known location or after searching for it.
 
+
 The example shows one way to handle user interrupts, although it might
 be as easy to generate a SIGINT directly from a GUI front end.  For
 this to be useful you will want to set R_Interactive to be true, and
 you will need to use SETJMP to jump back to somewhere useful in your
 code.
+
 
 You will not (easily) be able to use Borland C++, as that uses leading
 underscores in its library functions, and R.dll is built without.

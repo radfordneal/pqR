@@ -960,6 +960,16 @@ in helpers.c, and which is intended mostly for debugging and tuning
 the helpers implementation,
 
 
+HELPER THREAD INITIALIZATION
+
+The application may define a macro called helpers_helper_init in
+helpers-app.h that takes no arguments (is called with an empty
+parenthesized argument list).  If defined, this macro is called in
+each helper thread immediately after the thread is created.  It might
+be used, for example, to set the floating-point rounding mode that
+will be used for computations done in helper threads.
+
+
 DISABLING ALL OR PART OF THE HELPERS FACILITY
 
 If HELPERS_DISABLED is defined prior to helpers.h being included
@@ -1192,6 +1202,8 @@ helpers facility):
 
   helpers_var_name                  char *    helpers_var_ptr
   helpers_task_name                 char *    helpers_var_ptr
+
+  helpers_helper_init               void      none
 
   helpers_printf                    symbol - no arguments
 

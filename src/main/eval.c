@@ -519,10 +519,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     R_CHECKSTACK();
 
 #ifdef Win32
-    /* This is an inlined version of Rwin_fpreset (src/gnuwin/extra.c)
-       and resets the precision, rounding and exception modes of a ix86
-       fpu.
-     */
+    /* This resets the precision, rounding and exception modes of a ix86 fpu. */
     __asm__ ( "fninit" );
 #endif
 

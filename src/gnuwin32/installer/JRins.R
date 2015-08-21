@@ -18,7 +18,7 @@
 ### JRins.R Rversion srcdir MDISDI HelpStyle Internet Producer
 
 .make_R.iss <- function(RW, srcdir, MDISDI=0, HelpStyle=1, Internet=0,
-                       Producer = "R-core")
+                       Producer = "pqR")
 {
     have32bit <- file_test("-d", file.path(srcdir, "bin", "i386"))
     have64bit <- file_test("-d", file.path(srcdir, "bin", "x64"))
@@ -46,13 +46,13 @@
     suffix <- "win"
 
     cat(paste("OutputBaseFilename=", RW, "-", suffix, sep = ""),
-        paste("AppName=R for Windows ", Rver, sep = ""),
-        paste("AppVerName=R for Windows ", Rver, sep = ""),
+        paste("AppName=pqR for Windows ", Rver, sep = ""),
+        paste("AppVerName=pqR for Windows ", Rver, sep = ""),
         paste("AppVersion=", Rver, sep = ""),
         paste("VersionInfoVersion=", Rver0, sep = ""),
         paste("DefaultDirName={code:UserPF}\\R\\", RW, sep = ""),
         paste("InfoBeforeFile=", srcdir, "\\COPYING", sep = ""),
-        if(Producer == "R-core") "AppPublisher=R Development Core Team"
+        if(Producer == "pqR") "AppPublisher=pqR project"
         else paste("AppPublisher=", Producer, sep = ""),
         file = con, sep = "\n")
 

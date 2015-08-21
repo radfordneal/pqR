@@ -37,7 +37,7 @@ R:
 	@for pkg in profile base tools compiler; do \
 	  (cd $${pkg} && $(MAKE) all) || exit 1; \
 	done
-	@if test -z "$(R_NO_BASE_COMPILE)"; then \
+	@if [ x$(R_NO_BASE_COMPILE) = x -o x$(R_NO_BASE_COMPILE) = xFALSE ]; then \
 	  for pkg in base tools; do \
 	    (cd $${pkg} && $(MAKE) mklazycomp) || exit 1; \
 	  done; \

@@ -11620,7 +11620,33 @@ internal defaults are used and that control is handed over to the
 @R{} main loop.  There are a number of small examples@footnote{but these
 are not part of the automated test procedures and so little tested.} in the
 @file{tests/Embedding} directory.  These make use of
-@code{Rf_initEmbeddedR} in @file{src/unix/Rembedded.c}.
+@code{Rf_initEmbeddedR} in @file{src/main/Rembedded.c}.  Here is one
+example, which mimics the usual Real-Eval-Print Loop, but using code
+in which application-specific actions could be added at varous points:
+@example
+#include <Rinternals.h>
+#include <Rembedded.h>
+
+int main(int argc, char **argv)
+@{
+    Rf_initEmbeddedR(argc, argv);
+    R_ReplDLLinit();
+
+    for (;;) @{
+        int status;
+        status = R_ReplDLLdo1();
+        if (status < 0)  /* EOF */
+            break;
+        else if (status == 2)  /* error trapped at top level */
+            Rprintf("Oops!\n");     /* example of extra error action */
+        else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            Rprintf("Logical!\n");  /* another example of an extra action */
+    @}
+
+    Rf_endEmbeddedR(0);
+    return 0;
+@}
+@end example
 
 @noindent
 If you don't want to pass @R{} arguments, you can fake an @code{argv}
@@ -11652,6 +11678,12 @@ change this.
 Note that @R{} expects to be run with the locale category
 @samp{LC_NUMERIC} set to its default value of @code{C}, and so should
 not be embedded into an application which changes that.
+
+Finally, the deferred evaluation apparatus used for task merging and
+helper threads is set up in @code{run_Rmainloop} (which is called from
+@code{Rf_mainloop}) and goes away at the end of @code{run_Rmainloop}.
+If @code{run_Rmainloop} is bypassed, with @code{R_ReplDLLdo1} used
+instead, there will be no helper threads and no task merging.
 
 @menu
 * Compiling against the R library::
@@ -12091,6 +12123,7 @@ front end @file{rtest.c} whose code is
 
 @smallexample
 #define Win32
+#define WIN32_LEAN_AND_MEAN 1
 #include <windows.h>
 #include <stdio.h>
 #include <Rversion.h>
@@ -12099,6 +12132,7 @@ front end @file{rtest.c} whose code is
 #include <R_ext/RStartup.h>
 /* for askok and askyesnocancel */
 #include <graphapp.h>
+#include <Rinternals.h>
 
 /* for signal-handling code */
 #include <psignal.h>
@@ -12113,11 +12147,13 @@ int myReadConsole(const char *prompt, char *buf, int len, int addtohistory)
 @{
     fputs(prompt, stdout);
     fflush(stdout);
-    if(fgets(buf, len, stdin)) return 1; else return 0;
+    if(fgets(buf, len, stdin)) return 1;
+    else return 0;
 @}
 
-void myWriteConsole(const char *buf, int len)
+void myWriteConsoleEx(const char *buf, int len, int otype)
 @{
+    /* we could distinguish between ouput (type=0) and errors (otype=1) ... */
     printf("%s", buf);
 @}
 
@@ -12131,15 +12167,21 @@ void myBusy(int which)
     /* set a busy cursor ... if which = 1, unset if which = 0 */
 @}
 
-static void my_onintr(int sig) @{ UserBreak = 1; @}
+static void my_onintr(int sig)
+@{
+    UserBreak = 1;
+@}
 
 int main (int argc, char **argv)
 @{
+    /* The code below is very similar that in gnuwin32/embeddedR.c, but
+       illustrates how slight modifications could be made. */
+
     structRstart rp;
     Rstart Rp = &rp;
     char Rversion[25], *RHome;
 
-    sprintf(Rversion, "%s.%s", R_MAJOR, R_MINOR);
+    snprintf(Rversion, 25, "%s.%s", R_MAJOR, R_MINOR);
     if(strcmp(getDLLVersion(), Rversion) != 0) @{
         fprintf(stderr, "Error: R.DLL version does not match\n");
         exit(1);
@@ -12148,21 +12190,23 @@ int main (int argc, char **argv)
     R_setStartTime();
     R_DefParams(Rp);
     if((RHome = get_R_HOME()) == NULL) @{
-         fprintf(stderr, "R_HOME must be set in the environment or Registry\n");
-         exit(1);
+	fprintf(stderr, 
+		"R_HOME must be set in the environment or Registry\n");
+	exit(1);
     @}
     Rp->rhome = RHome;
     Rp->home = getRUser();
     Rp->CharacterMode = LinkDLL;
     Rp->ReadConsole = myReadConsole;
-    Rp->WriteConsole = myWriteConsole;
+    Rp->WriteConsole = NULL; /* for illustration purposes we use more flexible WriteConsoleEx */
+    Rp->WriteConsoleEx = myWriteConsoleEx;
     Rp->CallBack = myCallBack;
     Rp->ShowMessage = askok;
     Rp->YesNoCancel = askyesnocancel;
     Rp->Busy = myBusy;
 
-    Rp->R_Quiet = TRUE;        /* Default is FALSE */
-    Rp->R_Interactive = FALSE; /* Default is TRUE */
+    Rp->R_Quiet = TRUE;
+    Rp->R_Interactive = TRUE;
     Rp->RestoreAction = SA_RESTORE;
     Rp->SaveAction = SA_NOSAVE;
     R_SetParams(Rp);
@@ -12174,15 +12218,33 @@ int main (int argc, char **argv)
     GA_initapp(0, 0);
     readconsolecfg();
     setup_Rmainloop();
-#ifdef SIMPLE_CASE
+
+    /* Now we implement a REPL, one way or another. */
+
+#if 0  /* the simple case */
+
     run_Rmainloop();
+
 #else
+
     R_ReplDLLinit();
-    while(R_ReplDLLdo1() > 0) @{
-/* add user actions here if desired */
+
+    for (;;) @{
+        int status;
+        status = R_ReplDLLdo1();
+        /* Add other user actions here if desired.  This is an illustration. */
+        if (status < 0)  /* EOF */
+            break;
+        else if (status == 2)  /* error trapped at top level */
+            printf("Oops!\n");     /* example of extra error action */
+        else if (TYPEOF(SYMVALUE(R_LastvalueSymbol)) == LGLSXP) 
+            printf("Logical!\n");  /* another example of an extra action */
     @}
-/* only get here on EOF (not q()) */
+
+    /* only get here on EOF (not q()) */
+
 #endif
+
     Rf_endEmbeddedR(0);
     return 0;
 @}
@@ -12198,9 +12260,9 @@ front-ends may allow a looser match.
 @item
 Find and set the @R{} home directory and the user's home directory.  The
 former may be available from the Windows Registry: it will be in
-@code{HKEY_LOCAL_MACHINE\Software\R-core\R\InstallPath} from an
+@code{HKEY_LOCAL_MACHINE\Software\pqR\R\InstallPath} from an
 administrative install and
-@code{HKEY_CURRENT_USER\Software\R-core\R\InstallPath} otherwise, if
+@code{HKEY_CURRENT_USER\Software\pqR\R\InstallPath} otherwise, if
 selected during installation (as it is by default).
 
 @item
@@ -12287,16 +12349,16 @@ changed over the years to allow for multiple versions of @R{} to be
 installed at once, and to allow 32- and 64-bit versions of @R{} to be
 installed on the same machine.
 
-The basic Registry location is @code{Software\R-core\R}.  For an
+The basic Registry location is @code{Software\pqR\R}.  For an
 administrative install this is under @code{HKEY_LOCAL_MACHINE} and on a
-64-bit OS @code{HKEY_LOCAL_MACHINE\Software\R-core\R} is by default
+64-bit OS @code{HKEY_LOCAL_MACHINE\Software\pqR\R} is by default
 redirected for a 32-bit application, so a 32-bit application will see
 the information for the last 32-bit install, and a 64-bit application
 that for the last 64-bit install.  For a personal install, the
-information is under @code{HKEY_CURRENT_USER\Software\R-core\R} which is
+information is under @code{HKEY_CURRENT_USER\Software\pqR\R} which is
 seen by both 32-bit and 64-bit applications and so records the last
 install of either architecture.  To circumvent this, there are locations
-@code{Software\R-core\R32} and @code{Software\R-core\R64} which always
+@code{Software\pqR\R32} and @code{Software\pqR\R64} which always
 refer to one architecture.
 
 When @R{} is installed and recording is not disabled then two string
@@ -12319,9 +12381,9 @@ an earlier version.  Do the following for one or both of
 @code{HKEY_CURRENT_USER} and @code{HKEY_LOCAL_MACHINE}.
 
 @item
-If the desired architecture is known, look in @code{Software\R-core\R32}
-or @code{Software\R-core\R64}, and if that does not exist or the
-architecture is immaterial, in @code{Software\R-core\R}.
+If the desired architecture is known, look in @code{Software\pqR\R32}
+or @code{Software\pqR\R64}, and if that does not exist or the
+architecture is immaterial, in @code{Software\pqR\R}.
 
 @item
 If key @code{InstallPath} exists then this is @code{R_HOME} (recorded
