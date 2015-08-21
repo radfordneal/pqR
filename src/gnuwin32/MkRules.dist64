@@ -1,5 +1,3 @@
-#-*- Makefile -*-
-
 ## THIS IS THE VERSION FOR 64-BIT BUILDS ON A 64-BIT WINDOWS SYSTEM.
 ##
 ## This version should work on any 64-bit Intel or AMD processor.

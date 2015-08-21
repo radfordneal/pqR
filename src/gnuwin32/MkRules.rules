@@ -1,5 +1,3 @@
-#-*- Makefile -*-
-
 ifeq "$(MULTI)" "64"
 WIN = 64
 AS_ARCH = --64

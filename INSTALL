@@ -1,5 +1,7 @@
 Installing pqR on a Unix/Linux system
 
+(For installing pqR on a MS Windows system, see src/gnuwin32/INSTALL)
+
 This document describes how to build and install pqR from a tar
 archive of the source, as distributed at pqR-project.org.  If you are
 building pqR from a download of a development version from the

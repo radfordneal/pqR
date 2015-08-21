@@ -1,5 +1,3 @@
-#-*- Makefile -*-
-
 ## THIS IS THE VERSION FOR 32-BIT BUILDS ON A 32-BIT WINDOWS SYSTEM.
 ##
 ## This version should work on any non-ancient Intel/AMD procesor, including
@@ -9,6 +7,8 @@
 ##
 ## Use MkRules.dist32-sse2 or MkRules.dist64 as a starting point if you are
 ## building for a 32-bit system with SSE2 instructions or for a 64-bit system.
+## But note that if used with pqR-win-extras-32, MkRules.dist32 can be used
+## on 64-bit system (though it's likely not as fast as a 64-bit build).
 
 
 ## This is only used when building R itself but it does customize

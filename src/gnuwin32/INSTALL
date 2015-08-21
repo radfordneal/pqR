@@ -27,7 +27,8 @@ adequate, is as follows:
 
   4) Download one or the other of the files pqR-win-extras-32.tar.gz
      or pqR-win-extras-64.tar.gz from pqR-project.org, for a 32-bit or
-     64-bit build.  These files contain some extra stuff to be added
+     64-bit build.  (If you like, you can do a 32-bit build on a
+     64-bit system.)  These files contain some extra stuff to be added
      to the source that is needed for some features of Windows builds,
      which you will have skipped installing in step (1).
 
@@ -122,4 +123,8 @@ adequate, is as follows:
      The number of helper threads can be set as for Rterm.
 
  16) The programs R.exe and Rscript.exe in <build-dir>\bin should also
-     work now, with the number of helper threads set as above.
+     work now, with the number of helper threads set as above.  Note
+     that R.exe is not really suitable for interactive use, since it
+     doesn't handle interuption with control-C properly (not a pqR
+     issue, since it's the same in R-2.15.0).  Use Rterm or Rgui
+     instead.  R and Rscript are useful for non-interactive uses.

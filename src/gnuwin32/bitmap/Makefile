@@ -28,7 +28,7 @@ buildzlib:
 ## architecture specifications if -O2 or -O3 is used.
 buildpng:
 	$(MAKE) CC='$(CC)' AR='$(AR)' AR_RC='$(AR) rcs' \
-	  CFLAGS="-O1 -I../../../extra/zlib -DPNG_NO_MMX_CODE $(EOPTS)" \
+	  CFLAGS="-O2 -I../../../extra/zlib -DPNG_NO_MMX_CODE $(EOPTS)" \
 	  RANLIB=$(RANLIB) ZLIBLIB=../../../extra/zlib -C $(PNGDIR) \
 	  -f scripts/makefile.gcc prefix=foo libpng.a
 
