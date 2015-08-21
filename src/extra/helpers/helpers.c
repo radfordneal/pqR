@@ -31,7 +31,7 @@
 #endif
 
 
-#ifdef _WIN64
+#ifdef __MINGW64__
 
 /* KLUDGE TO BYPASS A PROBLEM WITH OPENMP IN THE 64-BIT VERSION OF RTOOLS.
 
@@ -45,7 +45,7 @@
 
 typedef struct { omp_lock_t lock; char pad[12]; } my_omp_lock_t;
 
-#define omp_lock_t my_omp_lock_t;
+#define omp_lock_t my_omp_lock_t
 
 #endif
 
