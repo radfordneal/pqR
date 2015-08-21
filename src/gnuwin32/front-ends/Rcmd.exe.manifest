@@ -6,7 +6,7 @@
     name="Rcmd.exe"
     type="win32"
 />
-<description>R utility</description>
+<description>pqR utility</description>
 <ms_asmv2:trustInfo xmlns:ms_asmv2="urn:schemas-microsoft-com:asm.v2">
    <ms_asmv2:security>
       <ms_asmv2:requestedPrivileges>
