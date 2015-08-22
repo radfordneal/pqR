@@ -71,7 +71,10 @@
   \item A
   \item B
   \item C
-  \item D
+  \item From R-2.15.3:  On Windows, work around an event-timing problem when
+      the RGui console was closed from the \sQuote{X} control and the closure
+      cancelled. (This would on some 64-bit systems crash \R, typically
+      those with a slow GPU relative to the CPU.)
 }}
 
   \subsection{BUG FIXES}{
