@@ -883,6 +883,16 @@ static int binary_op(void)
 }
 
 
+/* Macros to create language pairlists in which the last CONS cell may
+   be a shared constant.  Note that unlike lang2, lang3, and lang4,
+   the arguments must be protected by the caller. */
+
+#define LANG2(y,z) LCONS((y),MaybConstList1(z))
+#define LANG3(x,y,z) LCONS((x),CONS((y),MaybeConstList1(z)))
+#define LANG4(w,x,y,z) LCONS((w),CONS((x),CONS((y),MaybeConstList1(z))))
+
+
+
 /* --------------------------------------------------------------------------
    THE RECURSIVE DESCENT PARSER
 
@@ -1018,7 +1028,7 @@ static SEXP parse_sublist (int flags)
                 }
             }
             if (res == R_NilValue) {
-                PROTECT_N (res = next);
+                res = PROTECT_N (next);
                 last = res;
                 last2 = R_NilValue;
             }
@@ -1026,7 +1036,7 @@ static SEXP parse_sublist (int flags)
                 if (IS_CONSTANT(last)) {
                     last = cons_with_tag(CAR(last),CDR(last),TAG(last));
                     if (last2 == R_NilValue)
-                        PROTECT_N (res = last);
+                        res = PROTECT_N (last);
                     else
                         SETCDR(last2,last);
                 }
@@ -1070,7 +1080,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                            &par));
         if (!keep_parens && par != 0 && par < op_prec)
             res = CADR(res);  /* get rid of parens */
-        PROTECT_N (res = LCONS (op, MaybeConstList1(res)));
+        res = PROTECT_N (LANG2 (op, res));
         par = 0;  /* indicate not a parenthesized expression */
     }
 
@@ -1087,7 +1097,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
-            res = PROTECT_N (LCONS (op, CONS (res, MaybeConstList1(sym))));
+            res = PROTECT_N (LANG3 (op, res, sym));
             get_next_token();
         }
     }
@@ -1112,7 +1122,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (par == 0 && nargs == 2) par = binary_prec(CAR(res));
             if (par == 0)               par = misc_prec(CAR(res));
         }
-        res = PROTECT_N (LCONS (op, MaybeConstList1(res)));
+        res = PROTECT_N (LANG2 (op, res));
         EXPECT(')');
     }
 
@@ -1215,12 +1225,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         if ( ! (NL_END && (flags & NO_PEEKING)) && NEXT_TOKEN == ELSE) {
             get_next_token();
             PARSE_SUB(false_stmt = parse_expr (0, flags, NULL));
-            res = PROTECT_N (LCONS (op, CONS (cond, CONS (true_stmt,
-                              MaybeConstList1(false_stmt)))));
+            res = PROTECT_N (LANG4 (op, cond, true_stmt, false_stmt));
         }
         else
-            res = PROTECT_N (LCONS (op, CONS (cond,
-                              MaybeConstList1(true_stmt))));
+            res = PROTECT_N (LANG3 (op, cond, true_stmt));
     }
 
     /* For statements. */
@@ -1282,7 +1290,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             PARSE_SUB(subs = parse_sublist(flags));
             if (isString(res))
                 res = installChar(STRING_ELT(res,0));
-            PROTECT_N (res = LCONS(res,subs));
+            res = PROTECT_N (LCONS(res,subs));
             EXPECT(')');
         }
 
@@ -1293,7 +1301,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             op = TOKEN_VALUE();
             get_next_token();
             PARSE_SUB(subs = parse_sublist (flags));
-            PROTECT_N (res = LCONS (op, CONS (res, subs)));
+            res = PROTECT_N (LCONS (op, CONS (res, subs)));
             EXPECT(']');
         }
 
@@ -1304,7 +1312,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             op = TOKEN_VALUE();
             get_next_token();
             PARSE_SUB(subs = parse_sublist (flags));
-            PROTECT_N (res = LCONS (op, CONS (res, subs)));
+            res = PROTECT_N (LCONS (op, CONS (res, subs)));
             EXPECT(']');
             EXPECT(']');
         }
@@ -1318,7 +1326,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
-            PROTECT_N (res = LCONS (op, CONS (res, MaybeConstList1(sym))));
+            res = PROTECT_N (LANG3 (op, res, sym));
             get_next_token();
         }
 
@@ -1351,7 +1359,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                             &par));
                 if (!keep_parens && par != 0 && par <= op_prec)
                     right = CADR(right);  /* get rid of parens */
-                PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
+                res = PROTECT_N (LANG3 (op, res, right));
                 if (NL_END || binary_op() != op_prec) 
                     break;
                 op = TOKEN_VALUE();
@@ -1362,13 +1370,13 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             PARSE_SUB(right = parse_expr (op_prec-1, flags, &par));
             if ( ! (flags & KEEP_PARENS) && par != 0 && par < op_prec)
                 right = CADR(right);  /* get rid of parens */
-            PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
+            res = PROTECT_N (LANG3 (op, res, right));
         }
         else { /* NON_ASSOC */
             PARSE_SUB(right = parse_expr (op_prec, flags, &par));
             if (!keep_parens && par != 0 && par <= op_prec)
                 right = CADR(right);  /* get rid of parens */
-            PROTECT_N (res = LCONS (op, CONS (res,MaybeConstList1(right))));
+            res = PROTECT_N (LANG3 (op, res, right));
         }
 
         last_prec = op_prec;
