@@ -887,7 +887,7 @@ static int binary_op(void)
    be a shared constant.  Note that unlike lang2, lang3, and lang4,
    the arguments must be protected by the caller. */
 
-#define LANG2(y,z) LCONS((y),MaybConstList1(z))
+#define LANG2(y,z) LCONS((y),MaybeConstList1(z))
 #define LANG3(x,y,z) LCONS((x),CONS((y),MaybeConstList1(z)))
 #define LANG4(w,x,y,z) LCONS((w),CONS((x),CONS((y),MaybeConstList1(z))))
 
