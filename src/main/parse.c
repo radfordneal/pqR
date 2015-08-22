@@ -828,9 +828,7 @@ attribute_hidden int misc_prec (SEXP sym)
    
 
 /* Return 0 if NEXT_TOKEN is not a unary operator, and otherwise
-   the precedence of the unary operator.  Note that only precedence
-   values above LOW_REAL_UNARY and below HIGH_REAL_UNARY correspond
-   to real unary operators. */
+   the precedence of the unary operator. */
 
 static int unary_op(void)
 {
@@ -842,8 +840,8 @@ static int unary_op(void)
     if (NEXT_TOKEN == SYMBOL)
         return 0;
 
-   /* A symbol corresponding to an operator will be in next_token_val.
-      We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
+    /* A symbol corresponding to an operator will be in next_token_val.
+       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
     sym = ps->next_token_val;
     if (TYPEOF(sym) != SYMSXP)
@@ -860,7 +858,6 @@ static int unary_op(void)
 static int binary_op(void)
 {
     SEXP sym;
-    int i;
 
     /* The special binary operators of the form %xxx% are handled specially
        here (though they could instead be passed on to binary_prec). */
@@ -873,8 +870,8 @@ static int binary_op(void)
     if (NEXT_TOKEN == SYMBOL)
         return 0;
 
-   /* A symbol corresponding to an operator will be in next_token_val.
-      We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
+    /* A symbol corresponding to an operator will be in next_token_val.
+       We don't use TOKEN_VALUE below, since we don't want a PROTECT. */
 
     sym = ps->next_token_val;
     if (TYPEOF(sym) != SYMSXP)
