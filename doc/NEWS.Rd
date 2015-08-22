@@ -45,7 +45,9 @@
   \item A
   \item B
   \item C
-  \item D
+  \item The methods by which the Read-Eval-Print Loop (REPL) is
+        done (in various context) have been rationalized, in
+        coordination with the new parsing scheme.
 }}
 
   \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
@@ -53,7 +55,8 @@
   \item A
   \item B
   \item C
-  \item D
+  \item From R-2.15.2: On Windows, the C stack size has been increased 
+        to 64MB (it has been 10MB since the days of 32MB RAM systems).
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
@@ -68,8 +71,12 @@
   \itemize{
   \item A
   \item B
-  \item C
-  \item D
+  \item From R-2.15.2: On Windows, starting \command{Rterm} via \command{R.exe}
+        caused Ctrl-C to misbehave.  (\PR{14948})
+  \item From R-2.15.3:  On Windows, work around an event-timing problem when
+      the RGui console was closed from the \sQuote{X} control and the closure
+      cancelled. (This would on some 64-bit systems crash \R, typically
+      those with a slow GPU relative to the CPU.)
 }}
 
   \subsection{BUG FIXES}{

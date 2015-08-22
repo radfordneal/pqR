@@ -1059,6 +1059,10 @@ Windows @acronym{FAQ}} for more details on the binary installer.
 @node Building from source, Testing a Windows Installation, Installing R under Windows, Installing R under Windows
 @section Building from source
 
+Step-by-step directions for installing pqR on Windows are in 
+@file{src/gnuwin32/INSTALL}.  The instructions below also
+generally apply to pqR as well as to R Core versions.
+
 @R{} can be built as either a 32-bit or 64-bit application on Windows:
 to build the 64-bit application you need a 64-bit edition of Windows:
 such an OS can also be used to build 32-bit @R{}.
@@ -1183,9 +1187,10 @@ Working in the directory @file{@var{R_HOME}/src/gnuwin32/bitmap},
 install the @code{libpng} and @code{jpeg} sources in sub-directories.
 The @code{jpeg} sub-directory for version 8c is named @file{jpeg-8c}; if
 you use a different version (e.g.@: @file{jpeg-7} or
-@file{libjpeg-turbo}), copy file @file{src/gnuwin32/MkRules.dist} to
-@file{src/gnuwin32/MkRules.local} and edit the definition of
-@code{JPEGDIR}: the names of the @file{libpng} and @file{libtiff}
+@file{libjpeg-turbo}), edit the definition of
+@code{JPEGDIR} in @file{src/gnuwin32/MkRules.local}, which you
+should have copied from @file{src/gnuwin32/MkRules.dist32} (or
+@file{32-sse}, or {64}).  The names of the @file{libpng} and @file{libtiff}
 directories can also be set there.
 
 Example:
@@ -1216,10 +1221,10 @@ You may need to compile under a case-honouring file system: we found
 that a @command{samba}-mounted file system (which maps all file names to
 lower case) did not work.
 
-Open a command window at @file{@var{R_HOME}/src/gnuwin32}.  Look at
-@file{MkRules.dist} and if settings need to be altered, copy it to
-@file{MkRules.local} and edit the settings there.  In particular, this
-is where a 64-bit build is selected.  Then run
+Open a command window at @file{@var{R_HOME}/src/gnuwin32}.  Copy one
+of the files @file{MkRules.dist32}, @file{MkRules.dist32-sse2}, or
+@file{MkRules.dist64} to @file{MkRules.local} and edit the settings
+there.  Then run
 
 @example
 make all recommended
@@ -1241,7 +1246,7 @@ the build down several-fold.
 By default Doug Lea's @code{malloc} in the file
 @file{@var{R_HOME}/src/gnuwin32/malloc.c} is used for R's internal
 memory allocations.  You can opt out of this by setting
-@code{LEA_MALLOC=NO} in @file{MkRules.dist}, in which case the @code{malloc}
+@code{LEA_MALLOC=NO} in @file{MkRules.local}, in which case the @code{malloc}
 in @file{msvcrt.dll} is used.  This does impose a considerable
 performance penalty and has not been tested recently.
 

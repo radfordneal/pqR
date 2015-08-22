@@ -67,6 +67,8 @@ int AppMain(int argc, char **argv)
 	FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
     cmdlineoptions(argc, argv);
     mainThreadId = GetCurrentThreadId() ;
+    /* The following restores Ctrl-C handling if we were started from R.exe */
+    SetConsoleCtrlHandler(NULL, FALSE);
     signal(SIGBREAK, my_onintr);
     GA_initapp(0, NULL);
     readconsolecfg();
@@ -76,9 +78,9 @@ int AppMain(int argc, char **argv)
 	if (R_RestoreHistory) gl_loadhistory(R_HistoryFile);
 	saveConsoleTitle();
 #ifdef WIN64
-	SetConsoleTitle("Rterm (64-bit)");
+	SetConsoleTitle("Rterm for pqR (64-bit)");
 #else
-	SetConsoleTitle("Rterm (32-bit)");
+	SetConsoleTitle("Rterm for pqR (32-bit)");
 #endif
     }
     Rf_mainloop();

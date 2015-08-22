@@ -38,12 +38,13 @@
    The omp.h file for 32-bit systems gets used for 64-bit builds too.
    This results in omp_lock_t being too small.  We replace it with a
    type with extra padding (4 bytes seems like it would be enough, but
-   more is used just in case). 
+   more is used just in case), also ensuring 8-byte alignment just in
+   case that matters. 
 
    Lots of compiler warnings result, but it works, and should continue
    to work even if the bug is fixed. */
 
-typedef struct { omp_lock_t lock; char pad[12]; } my_omp_lock_t;
+typedef union { omp_lock_t lock; void *pad[2]; } my_omp_lock_t;
 
 #define omp_lock_t my_omp_lock_t
 
