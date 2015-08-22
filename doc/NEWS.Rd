@@ -45,7 +45,9 @@
   \item A
   \item B
   \item C
-  \item D
+  \item The methods by which the Read-Eval-Print Loop (REPL) is
+        done (in various context) have been rationalized, in
+        coordination with the new parsing scheme.
 }}
 
   \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
