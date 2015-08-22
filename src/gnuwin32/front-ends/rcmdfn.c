@@ -174,7 +174,8 @@ int rcmdfn (int cmdarg, int argc, char **argv)
 	    } else strcat(cmd, argv[i]);
 	}
 	/* R.exe should ignore Ctrl-C, and let Rterm.exe handle it */
-	SetConsoleCtrlHandler(NULL, TRUE);
+        extern void no_ctrl_C(void);
+        no_ctrl_C();
 	return system(cmd);
     }
 

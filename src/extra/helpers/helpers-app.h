@@ -32,16 +32,18 @@
 #undef helpers_wait_until_not_being_computed2 /* so helpers.h not always req */
 
 
-/* HELPER THREAD INITIALIZATION.  Sets the rounding mode in each
-   helper thread, to allow long double arithmetic.  It seems this is
-   not inherited from the master thread (at least in Windows 7 32-bit,
-   using the Rtools215 compiler).  Also sets things to ignore cntrl-C. */
+/* HELPER THREAD INITIALIZATION.  Needed only for MS Windows.  Sets
+   the rounding mode in each helper thread, to allow long double
+   arithmetic.  It seems this is not inherited from the master thread
+   (at least in Windows 7 32-bit, using the Rtools215 compiler).  Also
+   sets things to ignore cntrl-C. */
 
 #ifdef Win32
 #define helpers_helper_init() do { \
-        SetConsoleCtrlHandler (NULL, TRUE); \
-        __asm__("fninit"); \
-    } while (0)
+    extern void no_ctrl_C(void); \
+    no_ctrl_C(); \
+    __asm__("fninit"); \
+} while (0)
 #endif
 
 

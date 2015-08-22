@@ -53,6 +53,11 @@ SEXP do_flushconsole(SEXP call, SEXP op, SEXP args, SEXP env)
 
 #include <winbase.h>
 
+void no_ctrl_C(void)
+{
+    SetConsoleCtrlHandler (NULL, TRUE);  /* ignore ctrl-C */
+}
+
 typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
 
 SEXP do_winver(SEXP call, SEXP op, SEXP args, SEXP env)
