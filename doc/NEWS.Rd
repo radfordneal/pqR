@@ -16,7 +16,15 @@
   \item D
 }}
 
-  \subsection{INSTALLATION AND TESTING}{
+  \subsection{INSTALLATION ON MS WINDOWS}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{EMBEDDED R FACILITIES AND EXAMPLES}{
   \itemize{
   \item A
   \item B
@@ -32,7 +40,15 @@
   \item D
 }}
 
-  \subsection{FEATURE CHANGES}{
+  \subsection{INTERNAL CODE REWRITES}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
   \itemize{
   \item A
   \item B
@@ -41,6 +57,14 @@
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
+  \itemize{
+  \item A
+  \item B
+  \item C
+  \item D
+}}
+
+  \subsection{BUG FIXES FROM LATER R CORE VERSIONS}{
   \itemize{
   \item A
   \item B
