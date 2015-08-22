@@ -1190,8 +1190,8 @@ you use a different version (e.g.@: @file{jpeg-7} or
 @file{libjpeg-turbo}), edit the definition of
 @code{JPEGDIR} in @file{src/gnuwin32/MkRules.local}, which you
 should have copied from @file{src/gnuwin32/MkRules.dist32} (or
-@file{32-sse}, or {64}).  The names of the @file{libpng} and @file{libtiff}
-directories can also be set there.
+@file{MkRules.dist32-sse}, or @file{MkRules.dist64}).  The names 
+of the @file{libpng} and @file{libtiff} directories can also be set there.
 
 Example:
 
