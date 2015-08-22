@@ -55,7 +55,8 @@
   \item A
   \item B
   \item C
-  \item D
+  \item From R-2.15.2: On Windows, the C stack size has been increased 
+        to 64MB (it has been 10MB since the days of 32MB RAM systems).
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
