@@ -19,10 +19,15 @@ Also makes more mods for Windows.  Changes how optimization levels are
 set.  Introduced -mstackrealign when -msse2 is used to bypass problem
 that gcc assumes greater alignment than Windows provides on startup.
 
-Fixed a problem in src/gnuwin32 with psignalc and psignal.h, where
-"int" was used where "sigset_t" was needed.
+Better documentation on Windows installation in gnuwin32/INSTALL,
+with separate MkRules.dist32, MkRules.dist32-sse2, and MkRules.dist64.
 
 Documentation changes as well, regarding embedding, Windows, etc.
 
 Kludged helpers.c to bypass problem with omp.h in Rtools.
 
+Fixed a problem in src/gnuwin32 with psignalc and psignal.h, where
+"int" was used where "sigset_t" was needed.
+
+Adds some fixes and other things for Windows from later R Core
+versions.
