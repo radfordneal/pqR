@@ -83,6 +83,7 @@
         numbers in scientific format with extremely large exponents.  
         (PR#16358).  Fixed in pqR partly as in R Core fix.  Was actually a 
         problem with any numerical input, not just with the parser.
+  \item C
   \item D
 }}
 
