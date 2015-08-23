@@ -69,6 +69,8 @@
   \item From R-2.15.1: Names containing characters which need to be escaped 
         were not deparsed properly (PR#14846).  Fixed in pqR partly based
         on R Core fix.
+  \item From R-2.15.2: When given a 0-byte file and asked to keep source
+        references, parse() read input from stdin() instead.
   \item From R-2.15.3: Expressions involving user defined operators were not 
         always deparsed faithfully (PR#15179).  Fixed in pqR as part of
         the rewrite of the parse and deparser.
