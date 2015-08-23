@@ -21,6 +21,11 @@ always completely adequate, is as follows:
      required build tools, but do not choose the options to install
      "extra" material for 32 or 64 bit builds of R itself (since this
      can cause problems with ownership or permissions for files).
+     Enable the option to update your path to include Rtools programs.
+
+     Later version of Rtools, up at least to Rtools33, also seem to
+     work, so if you have already installed a later Rtools, you may
+     be able to use it without installing Rtools215.
 
   3) Download the pqR source from pqR-project.org, as a file with a
      name of the form pqR-YYYY-MM-DD.tar.gz.
