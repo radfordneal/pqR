@@ -1,5 +1,6 @@
 #  File src/library/base/R/parse.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,6 +32,7 @@ parse <- function(file = "", n = NULL, text = NULL, prompt = "?",
             file <- file(filename, "r")
             if (missing(srcfile) && keep.source) {
             	text <- readLines(file)
+                if (length(text) == 0) text = ""
             	close(file)
             	file <- stdin()
         	srcfile <- srcfilecopy(filename, text, file.info(filename)[1,"mtime"],
