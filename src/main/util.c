@@ -1870,6 +1870,8 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
     else return 0;
 }
 
+#define MAX_EXPONENT_PREFIX 9999
+
 double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 {
     long double ans = 0.0, p10 = 10.0, fac = 1.0;
@@ -1925,7 +1927,12 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	    case '+': p++;
 	    default: ;
 	    }
-	    for (n = 0; *p >= '0' && *p <= '9'; p++) n = n * 10 + (*p - '0');
+	    /* The test for n is in response to PR#16358; for large exponents,
+               later underflow or overflow will produce 0 or Inf. */
+            for (n = 0; *p >= '0' && *p <= '9'; p++) {
+                n = n * 10 + (*p - '0');
+                if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
+            }
 	    expn += expsign * n;
 	    if(exph > 0) expn -= exph;
 	    if (expn < 0) {
@@ -1941,7 +1948,8 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	goto done;
     }
 
-    for ( ; *p >= '0' && *p <= '9'; p++, ndigits++) ans = 10*ans + (*p - '0');
+    for ( ; *p >= '0' && *p <= '9'; p++, ndigits++) 
+        ans = 10*ans + (*p - '0');
     if (*p == dec)
 	for (p++; *p >= '0' && *p <= '9'; p++, ndigits++, expn--)
 	    ans = 10*ans + (*p - '0');
@@ -1959,7 +1967,10 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	case '+': p++;
 	default: ;
 	}
-	for (n = 0; *p >= '0' && *p <= '9'; p++) n = n * 10 + (*p - '0');
+        for (n = 0; *p >= '0' && *p <= '9'; p++) {
+            n = n * 10 + (*p - '0');
+            if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
+        }
 	expn += expsign * n;
     }
 

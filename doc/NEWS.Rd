@@ -79,7 +79,10 @@
         (PR#16350).  Fixed in pqR as part of the rewrite of the parser
         and deparser.
   \item B
-  \item C
+  \item From R-3.2.1: The parser could overflow internally when given 
+        numbers in scientific format with extremely large exponents.  
+        (PR#16358).  Fixed in pqR partly as in R Core fix.  Was actually a 
+        problem with any numerical input, not just with the parser.
   \item D
 }}
 
