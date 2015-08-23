@@ -382,7 +382,7 @@ SEXP type2symbol(SEXPTYPE t)
        character string and to the symbol would be better */
     for (i = 0; TypeTable[i].str; i++) {
 	if (TypeTable[i].type == t)
-	    return install((char *) &TypeTable[i].str);
+	    return install((const char *)&TypeTable[i].str);
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2symbol");
 }
@@ -894,7 +894,7 @@ void attribute_hidden setRVector(double * vec, int len, double val)
 	vec[i] = val;
 }
 
-
+/* unused in R, in Rinternals.h */
 void setSVector(SEXP * vec, int len, SEXP val)
 {
     int i;
@@ -1870,6 +1870,8 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
     else return 0;
 }
 
+#define MAX_EXPONENT_PREFIX 9999
+
 double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 {
     long double ans = 0.0, p10 = 10.0, fac = 1.0;
@@ -1925,7 +1927,12 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	    case '+': p++;
 	    default: ;
 	    }
-	    for (n = 0; *p >= '0' && *p <= '9'; p++) n = n * 10 + (*p - '0');
+	    /* The test for n is in response to PR#16358; for large exponents,
+               later underflow or overflow will produce 0 or Inf. */
+            for (n = 0; *p >= '0' && *p <= '9'; p++) {
+                n = n * 10 + (*p - '0');
+                if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
+            }
 	    expn += expsign * n;
 	    if(exph > 0) expn -= exph;
 	    if (expn < 0) {
@@ -1941,7 +1948,8 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	goto done;
     }
 
-    for ( ; *p >= '0' && *p <= '9'; p++, ndigits++) ans = 10*ans + (*p - '0');
+    for ( ; *p >= '0' && *p <= '9'; p++, ndigits++) 
+        ans = 10*ans + (*p - '0');
     if (*p == dec)
 	for (p++; *p >= '0' && *p <= '9'; p++, ndigits++, expn--)
 	    ans = 10*ans + (*p - '0');
@@ -1959,7 +1967,10 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	case '+': p++;
 	default: ;
 	}
-	for (n = 0; *p >= '0' && *p <= '9'; p++) n = n * 10 + (*p - '0');
+        for (n = 0; *p >= '0' && *p <= '9'; p++) {
+            n = n * 10 + (*p - '0');
+            if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
+        }
 	expn += expsign * n;
     }
 
@@ -2014,7 +2025,8 @@ static SEXP do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
     ans = CAR(args);
     for (i = 0; i < LENGTH(ans); i++) {
 	el = STRING_ELT(ans, i);
-	if(PRIMVAL(op) && !known_to_be_utf8) { /* enc2utf8 */
+	if (el == NA_STRING) { /* do nothing */ }
+	else if(PRIMVAL(op) && !known_to_be_utf8) { /* enc2utf8 */
 	    if(!IS_UTF8(el) && !IS_ASCII(el)) {
 		if (!duped) { PROTECT(ans = duplicate(ans)); duped = TRUE; }
 		SET_STRING_ELT(ans, i, 
@@ -2157,6 +2169,7 @@ static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     UErrorCode  status = U_ZERO_ERROR;
 
     for (; args != R_NilValue; args = CDR(args)) {
+	if (isNull(TAG(args))) error(_("all arguments must be named"));
 	const char *this = CHAR(PRINTNAME(TAG(args)));
 	const char *s;
 
