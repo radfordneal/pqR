@@ -64,9 +64,14 @@
   \item D
 }}
 
-  \subsection{BUG FIXES FROM LATER R CORE VERSIONS}{
+  \subsection{BUG FIXES MATCHING THOSE IN LATER R CORE VERSIONS}{
   \itemize{
-  \item A
+  \item From R-2.15.1: Names containing characters which need to be escaped 
+        were not deparsed properly (PR#14846).  Fixed in pqR partly based
+        on R Core fix.
+  \item From R-2.15.3: Expressions involving user defined operators were not 
+        always deparsed faithfully (PR#15179).  Fixed in pqR as part of
+        the rewrite of the parse and deparser.
   \item B
   \item C
   \item D
