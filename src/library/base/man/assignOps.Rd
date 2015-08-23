@@ -1,6 +1,7 @@
 % File src/library/base/man/assignOps.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Development Team
+% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{assignOps}
@@ -30,14 +31,14 @@
   There are three different assignment operators: two of them
   have leftwards and rightwards forms.
 
-  The operators \code{<-} and \code{=} assign into the environment in
-  which they are evaluated.  The  operator \code{<-} can be used
-  anywhere, whereas the operator \code{=}
-  is not allowed as the outer operator in arguments to functions, 
-  \code{if} or \code{while} conditions, or the object iterated over
-  for \code{for}.
+  The \code{<-}, \code{=}, and \code{->} operators assign into the
+  environment in which they are evaluated.  The \code{<-} and
+  \code{->} operators can be used anywhere, whereas the \code{=}
+  operator is not allowed as the outer operator in arguments to
+  functions, \code{if} or \code{while} conditions, or the object
+  iterated over for \code{for}.
 
-  The operators \code{<<-} and \code{->>} cause a search to made through
+  The \code{<<-} and \code{->>} operators cause a search to made through
   the environment for an existing definition of the variable being
   assigned.  If such a variable is found (and its binding is not locked)
   then its value is redefined, otherwise assignment takes place in the
@@ -51,13 +52,15 @@
   \code{z[[1]]}).  A syntactic name does not need to be quoted,
   though it can be (preferably by \link{backtick}s).
 
-  The leftwards forms of assignment \code{<- = <<-} group right to left,
-  the other from left to right.  The \code{=} operator has lowest
-  precedence, followed by \code{<-} and \code{<<-}, with \code{->}
-  and \code{->>} having highest precedence.
+  The leftwards forms of assignment \code{<-}, \code{=}, and
+  \code{<<-}, group right to left, whereas \code{->} and \code{->>}
+  group from from left to right.  The \code{=} operator has lowest
+  precedence, followed by \code{<-} and \code{<<-}, with \code{->} and
+  \code{->>} having highest precedence.
 }
 \value{
-  \code{value}.  Thus one can use \code{a <- b <- c <- 6}.
+  \code{value}.  Thus one can use \code{a <- b <- c <- 6} to set
+  three variables to 6.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
