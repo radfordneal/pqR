@@ -134,12 +134,10 @@ int rcmdfn (int cmdarg, int argc, char **argv)
 	return(0);
     }
 
-    if (argc == cmdarg+1 &&
-	(!strcmp(argv[cmdarg], "--help") || !strcmp(argv[cmdarg], "-h"))
-	) {
+    if (argc == cmdarg+1
+          && (!strcmp(argv[cmdarg], "--help") || !strcmp(argv[cmdarg], "-h"))) {
 	/* need to cover Rcmd --help, R CMD --help and R --help,
-	   as well as -h versions.
-	 */
+	   as well as -h versions. */
 	if(cmdarg >= 2 || (cmdarg == 1 && !strcmp(RCMD, "Rcmd"))) {
 	    fprintf(stderr, "%s%s%s", "Usage: ", RCMD, " command args\n\n");
 	    rcmdusage(RCMD);
@@ -174,8 +172,7 @@ int rcmdfn (int cmdarg, int argc, char **argv)
 	    } else strcat(cmd, argv[i]);
 	}
 	/* R.exe should ignore Ctrl-C, and let Rterm.exe handle it */
-        extern void no_ctrl_C(void);
-        no_ctrl_C();
+        SetConsoleCtrlHandler (NULL, TRUE);
 	return system(cmd);
     }
 

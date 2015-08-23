@@ -31,3 +31,7 @@ Fixed a problem in src/gnuwin32 with psignalc and psignal.h, where
 
 Adds some fixes and other things for Windows from later R Core
 versions.
+
+Fixed ctrl-C problem only partially fixed by R Core.  In the 
+process, split Rfe into Rfe (for R) and Rscriptfe (for RScript),
+which is cleaner.

@@ -17,8 +17,6 @@
  *  http://www.r-project.org/Licenses/
  */
 
-#define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
 #include <stdlib.h> /* for exit */
 #include <string.h>
 #include <stdio.h>
@@ -40,18 +38,17 @@ static void Usage (char *RCMD, char *arch)
 int main (int argc, char **argv)
 {
     int cmdarg = 1;
-    int has_CMD = 0;
     char arch[MXA] = R_ARCH, cmd[CMD_LEN], *p;
 
     if (argc > 1 && strcmp(argv[1], "--help") == 0) {
-	Usage("R", arch);
+	Usage("Rscript", arch);
 	exit(0);
     }
     
     if (argc > 1 && strcmp(argv[1], "--arch") == 0) {
 	cmdarg = 3;
 	if(argc < 3) {
-	    Usage("R", arch);
+	    Usage("Rscript", arch);
 	    exit(0);
 	}
 	strncpy(arch, argv[2], MXA); arch[MXA-1] = '\0';
@@ -65,10 +62,9 @@ int main (int argc, char **argv)
 	strncpy(arch, p+1, 10); /* skip leading slash */
     
 
-    snprintf(cmd, CMD_LEN, "%s\\bin\\%s\\R.exe", getRHOME(2), arch);
+    snprintf(cmd, CMD_LEN, "%s\\bin\\%s\\Rscript.exe", getRHOME(2), arch);
 
     for(int i = cmdarg; i < argc; i++) {
-        if (strcmp(argv[i],"CMD") == 0) has_CMD = 1;
 	strcat(cmd, " ");
 	if(strchr(argv[i], ' ')) {
 	    strcat(cmd, "\"");
@@ -77,9 +73,6 @@ int main (int argc, char **argv)
 	    strcat(cmd, "\"");
 	} else strcat(cmd, argv[i]);
     }
-
-    if (!has_CMD) /* ignore Ctrl-C here, letting Rterm.exe handle it */
-        SetConsoleCtrlHandler (NULL, TRUE);
     
     exit(system(cmd));
  }
