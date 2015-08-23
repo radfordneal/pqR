@@ -102,7 +102,7 @@
   \subsection{BUG FIXES}{
   \itemize{
   \item The new parser fixes bugs arising from the old parser's kludge
-        to handle semicolons, illustrated below:
+        to handle semicolons, illustrated by the incorrect output seen below:
 \preformatted{  > p<-parse()
   ?"abc;xyz"
   Error in parse() : <stdin>:1:1: unexpected INCOMPLETE_STRING
@@ -122,7 +122,7 @@
   [1] "3 * (0+5i)"
 }
         This is now deparsed to \code{"3 * 5i"}.  This bug exists
-        in all R Core version to at least R-3.2.2.
+        in all R Core versions through at least R-3.2.2.
   \item Fixed a number of bugs in the deparser that are illustrated
         by the following, which produce incorrect output as noted, in
         R Core versions through at least R-3.2.2:
@@ -132,13 +132,13 @@
   deparse(parse(text="a+!b")[[1]])        # Puts in unnecessary parens
   deparse(parse(text="?lm")[[1]])         # Doesn't know about ? operator
   deparse(parse(text="a:=b")[[1]])        # Doesn't know about := operator
-  deparse(parse(text="a$'x'")[[1]])       # Doesn't distinguish name from char
-  deparse(parse(text="`*`(2)")[[1]])      # Result is not syntactically valid
-  deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is not syntactically valid
+  deparse(parse(text="a$'x'")[[1]])       # Conflates name and character
+  deparse(parse(text="`*`(2)")[[1]])      # Result is syntactically invalid
+  deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is syntactically invalid
 }
 In addition, the bugs illustrated below were fixed, which were 
 fixed differently in R-2.15.3 and R-3.0.0, respectively:
-\preformatted{  deparse(quote(`+`(1,2) %fred% 4))       # Omits necessary parens
+\preformatted{  deparse(quote(`+`(1,2) \%fred\% 4))       # Omits necessary parens
   a <- quote(f(1,2)); a[[1]] <- function(x,y)x+y; deparse(a) # Omits parens
 }
   \item C
