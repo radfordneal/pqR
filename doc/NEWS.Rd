@@ -71,8 +71,7 @@
   \itemize{
   \item A
   \item B
-  \item From R-2.15.2: On Windows, starting \command{Rterm} via \command{R.exe}
-        caused Ctrl-C to misbehave.  (\PR{14948})
+  \item C
   \item From R-2.15.3:  On Windows, work around an event-timing problem when
       the RGui console was closed from the \sQuote{X} control and the closure
       cancelled. (This would on some 64-bit systems crash \R, typically
@@ -84,7 +83,12 @@
   \item A
   \item B
   \item C
-  \item D
+  \item On Windows, running R.exe from a command prompt window would result in
+        Ctrl-C misbehaving.  This was \PR{14948} at R Core, which was 
+        supposedly fixed in R-2.15.2, but the fix only works if a 32 or
+        64 bit version of R.exe is selected manually, not if the version of R.exe
+        that automatically runs the R.exe for a selected architecture is used
+        (which is the intended normal usage).
 }}
 }
 
