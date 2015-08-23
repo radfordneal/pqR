@@ -102,7 +102,7 @@
 \preformatted{  > p<-parse()
   ?"abc;xyz"
   Error in parse() : <stdin>:1:1: unexpected INCOMPLETE_STRING
- 1: "abc;
+  1: "abc;
       ^
   > p<-parse()
   ?8 #abc;xyz
@@ -110,7 +110,33 @@
   1: 8 #abc;
           ^
 }
-  \item B
+  \item Fixed deparsing of complex numbers, which were always deparsed
+        as the sum of a real and an imaginary part, even though the
+        parser can only produce complex numbers that are pure imaginary.
+        For example, the following output was produced before:
+\preformatted{  > deparse(quote(3*5i))
+  [1] "3 * (0+5i)"
+}
+        This is now deparsed to \code{"3 * 5i"}.  This bug exists
+        in all R Core version to at least R-3.2.2.
+  \item Fixed a number of bugs in the deparser that are illustrated
+        by the following, which produce incorrect output as noted, in
+        R Core versions through at least R-3.2.2:
+\preformatted{  deparse(parse(text="`+`(a,b)[1]")[[1]]) # Omits necessary parens
+  deparse(quote(`[<-`(x,1)),control="S_compatible")  # unmatched " and '
+  deparse(parse(text="a = b <- c")[[1]])  # Puts in unnecessary parens
+  deparse(parse(text="a+!b")[[1]])        # Puts in unnecessary parens
+  deparse(parse(text="?lm")[[1]])         # Doesn't know about ? operator
+  deparse(parse(text="a:=b")[[1]])        # Doesn't know about := operator
+  deparse(parse(text="a$'x'")[[1]])       # Doesn't distinguish name from char
+  deparse(parse(text="`*`(2)")[[1]])      # Result is not syntactically valid
+  deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is not syntactically valid
+}
+In addition, the bugs illustrated below were fixed, which were 
+fixed differently in R-2.15.3 and R-3.0.0, respectively:
+\preformatted{  deparse(quote(`+`(1,2) %fred% 4))       # Omits necessary parens
+  a <- quote(f(1,2)); a[[1]] <- function(x,y)x+y; deparse(a) # Omits parens
+}
   \item C
   \item On Windows, running R.exe from a command prompt window would result in
         Ctrl-C misbehaving.  This was \PR{14948} at R Core, which was 
