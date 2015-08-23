@@ -10,10 +10,17 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item A
-  \item B
-  \item C
-  \item D
+  \item With this release, pqR now works on Microsoft Windows systems.
+        See below for details.
+  \item The facilities for embedding R in other applications have also
+        been tested in this release, and some problems with how this is
+        done in R Core versions have been fixed.
+  \item The parser and deparser, and the method for
+        performing the basic Read-Eval-Print Loop, have 
+        been substantially rewritten.  This has few user-visible effects
+        at present (though some bugs are fixed), but sets the stage for 
+        future improvements in pqR.
+  \item There are also a few other improvements and bug fixes.
 }}
 
   \subsection{INSTALLATION ON MS WINDOWS}{
@@ -66,7 +73,9 @@
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item A
-  \item B
+  \item Character-at-a time input has been sped up by reducing procedure
+        call overhead.  This significantly speeds up \code{readLines},
+        \code{scan}, and parsing of text files.
   \item C
   \item D
 }}
