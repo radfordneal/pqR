@@ -77,6 +77,8 @@
   \item From R-2.15.3: Expressions involving user defined operators were not 
         always deparsed faithfully (PR#15179).  Fixed in pqR as part of
         the rewrite of the parser and deparser.
+  \item From R-3.1.3: The parser now gives an error if a null character 
+        is included in a string using Unicode escapes. (PR#16046)
   \item From R-3.2.2: Rscript and command line R silently ignored incomplete
         statements at the end of a script; now they are reported as parse errors
         (PR#16350).  Fixed in pqR as part of the rewrite of the parser
