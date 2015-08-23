@@ -34,7 +34,11 @@
 
   \subsection{DOCUMENTATION UPDATES}{
   \itemize{
-  \item A
+  \item The R Language Definition and the help files on
+        assignment operators (eg, \code{help("=")}) contained
+        incorrect and incomplete information on the precedence
+        of operators, especially the assignment operators.  
+        This and other incorrect information has been corrected.
   \item B
   \item C
   \item D
@@ -87,7 +91,19 @@
 
   \subsection{BUG FIXES}{
   \itemize{
-  \item A
+  \item The new parser fixes bugs arising from the old parser's kludge
+        to handle semicolons, illustrated below:
+\preformatted{  > p<-parse()
+  ?"abc;xyz"
+  Error in parse() : <stdin>:1:1: unexpected INCOMPLETE_STRING
+ 1: "abc;
+      ^
+  > p<-parse()
+  ?8 #abc;xyz
+  Error in parse() : <stdin>:1:7: unexpected end of input
+  1: 8 #abc;
+          ^
+}
   \item B
   \item C
   \item D
