@@ -1,26 +1,26 @@
 This distribution contains the sources to build pqR on Windows.  See
-the file `README' for fuller details (written for R-2.15.0, but
-generally applicable to pqR).
+the file `README' for fuller details (written for R-2.15.0, but mostly
+also applicable to pqR).
 
 Details on building pqR are given in the `R Installation and
 Administration Manual' in the doc/manual directory.  An HTML version
 is at doc/html/R-admin.html, unless you're using a development version
 of pqR (from github).
 
-The short version of these instructions, which may not always be
-adequate, is as follows:
+The short version of these instructions, easier to read but maybe not
+always completely adequate, is as follows:
 
-  1) Obtain Rtools215.exe distibuted at r-project.org (or get it from
-     http://pqR-project.org/Rtools215.exe).  Run this to install the
-     required build tools, but do not choose the options to install
-     "extra" material for 32 or 64 bit builds of R itself (since this
-     can cause problems with ownership or permissions for files).
-
-  2) Obtain TeX from somewhere, such as http://miktex.org.  (If you
+  1) Obtain TeX from somewhere, such as http://miktex.org.  (If you
      get the basic MiKTeX version, note that it will at times ask
      about downloading more parts of TeX, and that this may result in
      the build process appearing to hang if the window that MiKTeX
      puts up asking about this is covered by another window.)
+
+  2) Obtain Rtools215.exe distibuted at r-project.org (or get it from
+     http://pqR-project.org/Rtools215.exe).  Run this to install the
+     required build tools, but do not choose the options to install
+     "extra" material for 32 or 64 bit builds of R itself (since this
+     can cause problems with ownership or permissions for files).
 
   3) Download the pqR source from pqR-project.org, as a file with a
      name of the form pqR-YYYY-MM-DD.tar.gz.
@@ -30,7 +30,7 @@ adequate, is as follows:
      64-bit build.  (If you like, you can do a 32-bit build on a
      64-bit system.)  These files contain some extra stuff to be added
      to the source that is needed for some features of Windows builds,
-     which you will have skipped installing in step (1).
+     which you will have skipped installing in step (2).
 
   5) Start a Windows console ("command prompt") window, and issue the
      following commands (which, apart from the first, you should also
@@ -64,9 +64,9 @@ adequate, is as follows:
 
   9) Copy one of MkRules.dist32, MkRules.dist32-sse2, or MkRules.dist64
      to MkRules.local and possibly edit MkRules.local as appropriate.
-     MkRules.dist32 should work for any Windows XP, 7, 8, or 10 system
-     (in conjunction with pqR-win-extras-32), but will not produce as 
-     fast a version of pqR on recent processors as the other options.
+     MkRules.dist32 should work for any Windows XP, Vista, 7, 8, or 10
+     system (in conjunction with pqR-win-extras-32), but will not produce
+     as fast a version of pqR on recent processors as the other options.
      See the comments in these file for more details.
 
  10) Possibly edit the options (eg, whether helper threads are
@@ -92,9 +92,9 @@ adequate, is as follows:
           set R_NO_BASE_COMPILE=TRUE
 
      before the "make all recommended" command will inhibit byte
-     compilation of the base and recommended packages.  (Do not set
-     R_NO_BASE_COMPILE at all, or set it to FALSE, if you want byte
-     compilation.)
+     compilation of the base and recommended packages.  (If you want
+     byte compilation, do not set R_NO_BASE_COMPILE at all, or set it
+     to FALSE.)
 
  12) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
@@ -111,8 +111,9 @@ adequate, is as follows:
 
          make check-all >check-all.out 2>&1
 
-     in src/gnuwin32.  You can monitorthe results by looking 
-     at check-all.out in another console window.
+     in src/gnuwin32.  You can monitorthe results by looking at
+     check-all.out in another console window.  You can run this check
+     with varying numbers of helper threads, set as above.
 
  14) You can make the PDF manuals (when in src/gnuwin32) with
 
@@ -123,8 +124,4 @@ adequate, is as follows:
      The number of helper threads can be set as for Rterm.
 
  16) The programs R.exe and Rscript.exe in <build-dir>\bin should also
-     work now, with the number of helper threads set as above.  Note
-     that R.exe is not really suitable for interactive use, since it
-     doesn't handle interuption with control-C properly (not a pqR
-     issue, since it's the same in R-2.15.0).  Use Rterm or Rgui
-     instead.  R and Rscript are useful for non-interactive uses.
+     work now, with the number of helper threads set as above. 
