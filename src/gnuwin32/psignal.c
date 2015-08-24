@@ -8,6 +8,8 @@
  *                                                                           *
  *****************************************************************************/
 
+/* Aug 2015, R. Neal:  fixed problems with int used rather than sigset_t. */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif

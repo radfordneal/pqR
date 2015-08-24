@@ -1,6 +1,7 @@
 % File src/library/utils/man/windows/shortPathName.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 2008-10 R Core Team
+% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{readRegistry}
