@@ -46,8 +46,14 @@
 
   \subsection{INTERNAL CODE REWRITES}{
   \itemize{
-  \item A
-  \item B
+  \item The parser has been rewritten to use top-down recursive
+        descent, rather than a bottom-up parser produced by Bison
+        as was used previously.  This substantially simplifies
+        the parser, and allows several kludges in the previous
+        scheme to be eliminated.
+  \item Much of the deparser has been rewritten.  It no longer
+        looks at the definitions of operators, which are irrelevant,
+        since the parser does not look at them.
   \item C
   \item The methods by which the Read-Eval-Print Loop (REPL) is
         done (in various context) have been rationalized, in
