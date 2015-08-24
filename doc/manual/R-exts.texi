@@ -1610,8 +1610,12 @@ users have recent versions (there are some years-old versions of Linux
 in use), and it may be safest to assume version 2.5.
 
 OpenMP support is expected to be available on Windows in the toolchain
-used for @R{} 2.15.0 and these macros will be set appropriately.  It is
-not available on Windows prior to @R{} 2.14.2.
+used for @R{} 2.15.0 and these macros will be set appropriately.  It
+is not available on Windows prior to @R{} 2.14.2.  WARNING: With the
+Windows toolchain, OpenMP threads may be initialized with the floating
+point unit's state set so that long double arithmetic is the same as
+double arithmetic; use \code{__asm__{"fninit"}} in C to reset the FPU so
+that long double arithmetic will work.
 
 The performance of OpenMP varies substantially between platforms.  Both
 the Mac OS X and Windows implementations have substantial overheads and

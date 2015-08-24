@@ -35,3 +35,5 @@ versions.
 Fixed ctrl-C problem only partially fixed by R Core.  In the 
 process, split Rfe into Rfe (for R) and Rscriptfe (for RScript),
 which is cleaner.
+
+Add warning about OpenMP threads not having long double arithmetic.
