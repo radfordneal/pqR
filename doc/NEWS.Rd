@@ -28,7 +28,11 @@
   \item A
   \item B
   \item C
-  \item D
+  \item The Writing R Extensions manual now warns that on Windows,
+        with the Rtools toolchain, a thread started by OpenMP may have 
+        its floating point unit set so that long double arithmetic is 
+        the same as double arithmetic  Use \code{__asm__{"fninit"}} in 
+        C to reset the FPU so that long double arithmetic will work.
 }}
 
   \subsection{EMBEDDED R FACILITIES AND EXAMPLES}{
