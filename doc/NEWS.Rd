@@ -56,7 +56,7 @@
         since the parser does not look at them.
   \item C
   \item The methods by which the Read-Eval-Print Loop (REPL) is
-        done (in various context) have been rationalized, in
+        done (in various contexts) have been rationalized, in
         coordination with the new parsing scheme.
 }}
 
