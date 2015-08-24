@@ -1,6 +1,9 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
- *  file extra.c
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2015 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
+ * 
  *  Copyright (C) 1998--2003  Guido Masarotto and Brian Ripley
  *  Copyright (C) 2004	      The R Foundation
  *  Copyright (C) 2005--2010  The R Development Core Team
