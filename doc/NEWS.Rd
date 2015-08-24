@@ -26,10 +26,16 @@
 
   \subsection{EMBEDDED R FACILITIES AND EXAMPLES}{
   \itemize{
-  \item A
-  \item B
-  \item C
-  \item D
+  \item The \code{R_ReplDLLinit} and \code{R_ReplDLLdo1} functions in
+        \file{src/main/main.c} have been fixed to handle errors 
+        correctly, and to avoid code duplication with \code{R_ReplIteration}.
+  \item Another test of embedded R has been added to \file{tests/Embedding},
+        which is the same as an example in the R Extensions manual, which
+        has been improved.
+  \item Another example in the R Extensions manual has been changed to
+        mimic \file{src/gnuwin32/embeddedR.c}.  
+  \item The example in \file{src/gnuwin32/front-ends/rtest.c} has also been 
+        updated.
 }}
 
   \subsection{DOCUMENTATION UPDATES}{
@@ -56,7 +62,7 @@
         since the parser does not look at them.
   \item C
   \item The methods by which the Read-Eval-Print Loop (REPL) is
-        done (in various context) have been rationalized, in
+        done (in various contexts) have been rationalized, in
         coordination with the new parsing scheme.
 }}
 

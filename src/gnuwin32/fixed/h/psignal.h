@@ -20,7 +20,8 @@
                define DONT_HAVE_SLEEP)
    27/06/1999: (BDR) convert sigsetjmp and siglongjmp macros to (,,)
    12/07/1999: (BDR) fix sigsetjmp macro to set saved_mask
-   
+   Aug 2015, R. Neal: fixed use of int rather than sigset_t, manually
+                      defined sigset_t for use in Rtools.
 */
 
 #ifndef	_PSIGNAL_H_
