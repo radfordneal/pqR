@@ -1,3 +1,5 @@
 Mods from R-3.0.0 regarding parse data, and related mods.
 
 Allow srcfile arg to parse be a filename, from R-3.0.0.
+Fix error in help(parse) about srcfile non-NULL but a string.
+

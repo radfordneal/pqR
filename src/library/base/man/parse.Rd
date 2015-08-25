@@ -103,7 +103,7 @@ parse(file = "", n = NULL, text = NULL, prompt = "?",
   necessary parentheses will be put back in by \code{deparse}
   if it is called on the parsed expression.
 
-  When \code{srcfile} is non-\code{NULL}, a \code{"srcref"} attribute
+  When \code{srcfile} is a \code{srcfile} object, a \code{"srcref"} attribute
   will be attached to the result containing a list of
   \code{\link{srcref}} records corresponding to each element, a
   \code{"srcfile"} attribute will be attached containing a copy of
