@@ -74,7 +74,8 @@ open.srcfile <- function(con, line, ...) {
 	if (!is.null(srcfile$timestamp)
 	    && !is.na(srcfile$timestamp)
 	    && ( is.na(timestamp) || timestamp != srcfile$timestamp) )
-	    warning("Timestamp of '",srcfile$filename,"' has changed", call.=FALSE)
+            warning(gettextf("Timestamp of %s has changed", sQuote(srcfile$filename)),
+                    call. = FALSE, domain = NA)
 	if (is.null(srcfile$encoding)) encoding <- getOption("encoding")
 	else encoding <- srcfile$encoding
 	# Specifying encoding below means that reads will convert to the native encoding
@@ -229,7 +230,7 @@ as.character.srcref <- function(x, useSource = TRUE, ...)
     if (!useSource || inherits(lines, "try-error"))
     	lines <- paste("<srcref: file \"", srcfile$filename, "\" chars ",
                        x[1L],":",x[5L], " to ",x[3L],":",x[6L], ">", sep="")
-    else {
+    else if (length(lines)) {
     	enc <- Encoding(lines)
     	Encoding(lines) <- "latin1"  # so byte counting works
         if (length(lines) < x[3L] - x[1L] + 1L)

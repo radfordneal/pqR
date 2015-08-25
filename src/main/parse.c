@@ -1512,7 +1512,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     int i;
 
     ps->sr = &state;
-    R_InitSrcRefState (ps->sr, !isNull(srcfile));
+    R_InitSrcRefState (ps->sr, !isNull(srcfile) && !isString(srcfile));
 
     REPROTECT(ps->sr->SrcFile = srcfile, ps->sr->SrcFileProt);
     REPROTECT(ps->sr->Original = srcfile, ps->sr->OriginalProt);

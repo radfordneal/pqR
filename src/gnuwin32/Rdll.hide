@@ -934,7 +934,6 @@
  pagercol
  pagerhighlight
  pagerrow
- parseError
  pause
  pcre_callout
  pcre_compile
