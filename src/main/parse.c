@@ -376,6 +376,32 @@ static int xxgetc();
 static void xxungetc(int);
 
 
+#define DATA_ROWS 8    /* Rows in the parseData matrix */
+
+static void record_parseData (char *token, char *text)
+{
+    SEXP idat, rec;
+    int i;
+
+    if (!ps->keep_source) return;
+
+    PROTECT (idat = allocVector (INTSXP, DATA_ROWS));
+    PROTECT (rec = allocVector (VECSXP, 4));
+
+    SET_VECTOR_ELT (rec, 0, idat);
+    for (i = 0; i < DATA_ROWS; i++) 
+        INTEGER(idat)[i] = 1;                    /* FOR NOW */
+    INTEGER(idat)[6] = ps->sr->next_id++;
+    SET_VECTOR_ELT (rec, 1, mkChar(token));
+    SET_VECTOR_ELT (rec, 2, mkChar(text));
+    SET_VECTOR_ELT (rec, 3, ps->sr->ParseData);
+
+    ps->sr->ParseData = rec;
+
+    UNPROTECT(2); /* rec, idat */
+}
+
+
 /* --------------------------------------------------------------------------
    CHARACTER INPUT ROUTINES
 */
@@ -516,17 +542,20 @@ void R_InitSrcRefState (SrcRefState *state, int keepSource)
                             &state->SrcFileProt);
         PROTECT_WITH_INDEX (state->Original = state->SrcFile, 
                             &state->OriginalProt);
-
     }
     else {
         PROTECT_WITH_INDEX (state->SrcFile = R_NilValue, &state->SrcFileProt);
         PROTECT_WITH_INDEX (state->Original = R_NilValue, &state->OriginalProt);
     }
 
+    PROTECT_WITH_INDEX (state->ParseData = R_NilValue, &state->ParseDataProt);
+
     state->xxlineno = 1;
     state->xxcolno = 0;
     state->xxbyteno = 0;
     state->xxparseno = 1;
+
+    state->next_id = 1;
 }
 
 void R_TextForSrcRefState (SrcRefState *state, const char *text)
@@ -550,12 +579,62 @@ void R_TextForSrcRefState (SrcRefState *state, const char *text)
 
 void R_FinalizeSrcRefState (SrcRefState *state)
 {
-    /* We could just do an UNPROTECT(2), but this detects some bugs... */
+    /* Convert parse data to final form. */
 
+    int pdlen;
+    SEXP p;
+
+    pdlen = 0;
+    for (p = state->ParseData; p != R_NilValue; p = VECTOR_ELT(p,3))
+        pdlen += 1;
+
+    if (pdlen > 0 && isEnvironment(state->SrcFile)) {
+
+        SEXP dims, mat, tokens, text, pdat, idat;
+        int i, j, k;
+
+        PROTECT (dims = allocVector (INTSXP, 2));
+        INTEGER(dims)[0] = DATA_ROWS;
+        INTEGER(dims)[1] = pdlen;
+
+        PROTECT (mat = allocVector (INTSXP, DATA_ROWS*pdlen));
+
+        PROTECT (tokens = allocVector (STRSXP, pdlen));
+        PROTECT (text = allocVector (STRSXP, pdlen));
+
+        pdat = state->ParseData;
+        k = 0;
+        for (i = 0; i < pdlen; i++) {
+            idat = VECTOR_ELT(pdat,0);
+            for (j = 0; j < DATA_ROWS; j++)
+                INTEGER(mat)[k++] = INTEGER(idat)[j];
+            SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,1));
+            SET_STRING_ELT (text, i, VECTOR_ELT(pdat,2));
+            pdat = VECTOR_ELT(pdat,3);
+        }
+
+        setAttrib (mat, install("dim"), dims);
+        setAttrib (mat, install("tokens"), tokens);
+        setAttrib (mat, install("text"), text);
+        setAttrib (mat, R_ClassSymbol, mkString("parseData"));
+
+        set_var_in_frame (install("parseData"), mat, state->SrcFile, TRUE, 3);
+
+        UNPROTECT(4); /* text, tokens, mat, dims */
+    }
+
+    /* We could just do an UNPROTECT(3), but this detects some bugs... */
+
+    UNPROTECT(1);
+    if (R_PPStackTop != state->ParseDataProt) abort();
     UNPROTECT(1);
     if (R_PPStackTop != state->OriginalProt) abort();
     UNPROTECT(1);
     if (R_PPStackTop != state->SrcFileProt) abort();
+
+    state->ParseData = R_NilValue;  /* just in case... */
+    state->Original = R_NilValue;
+    state->SrcFile = R_NilValue;
 }
 
 
@@ -709,7 +788,7 @@ static void end_location (source_location *loc)
 /* Tables of operator precedence.  The lower two bits are 1 for binary
    operators that are left associative, 2 for binary operators that are
    right associative, and 0 for relational operators, unary operators,
-   and miscellanious operators.  This is expressed in the NON_ASSOC, 
+   and miscellaneous operators.  This is expressed in the NON_ASSOC, 
    LEFT_ASSOC, and RIGHT_ASSOC macros in Parse.h. */
 
 static struct { SEXP *sym_ptr; int prec; } unary_prec_tbl[] =
@@ -1057,7 +1136,7 @@ static SEXP parse_sublist (int flags)
 
 /* Parse an expression in which any non-enclosed operator has precedence 
    greater than prec.  An attempt is made to make the last operand of an
-   operator be a constant objects. */
+   operator be a constant object. */
 
 static SEXP parse_expr (int prec, int flags, int *paren)
 {
@@ -1386,6 +1465,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (paren != NULL) *paren = par;
 
+    record_parseData("expr","");
     END_PARSE_FUN;
     return res;
 }
@@ -1512,7 +1592,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     int i;
 
     ps->sr = &state;
-    R_InitSrcRefState (ps->sr, !isNull(srcfile));
+    R_InitSrcRefState (ps->sr, !isNull(srcfile) && !isString(srcfile));
 
     REPROTECT(ps->sr->SrcFile = srcfile, ps->sr->SrcFileProt);
     REPROTECT(ps->sr->Original = srcfile, ps->sr->OriginalProt);
@@ -2820,6 +2900,9 @@ static int get_next_token(void)
     ps->token_loc.last_column  = ps->sr->xxcolno;
     ps->token_loc.last_byte    = ps->sr->xxbyteno;
     ps->token_loc.last_parsed  = ps->sr->xxparseno;
+
+    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n')
+        record_parseData("token","text");
 
     return val;
 }
