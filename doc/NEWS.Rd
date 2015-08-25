@@ -72,7 +72,8 @@
 
   \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
   \itemize{
-  \item A
+  \item From R-3.0.0: The \code{srcfile} argument to \code{parse()} may now 
+        be a character string, to be used in error messages.
   \item B
   \item C
   \item From R-2.15.2: On Windows, the C stack size has been increased 
