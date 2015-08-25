@@ -376,29 +376,60 @@ static int xxgetc();
 static void xxungetc(int);
 
 
-#define DATA_ROWS 8    /* Rows in the parseData matrix */
+#define PDATA_ROWS 8           /* Rows in the parseData matrix */
 
-static void record_parseData (char *token, char *text)
+#define PDATA_FIRST_PARSED 0   /* Indexes for rows in the parseData matrix */
+#define PDATA_FIRST_COLUMN 1
+#define PDATA_LAST_PARSED  2
+#define PDATA_LAST_COLUMN  3
+#define PDATA_TERMINAL     4
+#define PDATA_TOKEN        5
+#define PDATA_ID           6
+#define PDATA_PARENT       7
+
+#define PDATA_REC_LEN   4      /* Number of elements in parseData records */
+
+#define PDATA_REC_LINK  0
+#define PDATA_REC_IDATA 1
+#define PDATA_REC_TOKEN 2
+#define PDATA_REC_TEXT  3
+
+static SEXP start_parseData_record (source_location *start_loc, 
+                                    char *token, char *text, int terminal)
 {
     SEXP idat, rec;
     int i;
 
-    if (!ps->keep_source) return;
+    if (!ps->keep_source) return R_NilValue;
 
-    PROTECT (idat = allocVector (INTSXP, DATA_ROWS));
-    PROTECT (rec = allocVector (VECSXP, 4));
+    rec = allocVector (VECSXP, PDATA_REC_LEN);
+    SET_VECTOR_ELT (rec, PDATA_REC_LINK,  ps->sr->ParseData);
+    REPROTECT (ps->sr->ParseData = rec, ps->sr->ParseDataProt);
 
-    SET_VECTOR_ELT (rec, 0, idat);
-    for (i = 0; i < DATA_ROWS; i++) 
-        INTEGER(idat)[i] = 1;                    /* FOR NOW */
-    INTEGER(idat)[6] = ps->sr->next_id++;
-    SET_VECTOR_ELT (rec, 1, mkChar(token));
-    SET_VECTOR_ELT (rec, 2, mkChar(text));
-    SET_VECTOR_ELT (rec, 3, ps->sr->ParseData);
+    idat = allocVector (INTSXP, PDATA_ROWS);
 
-    ps->sr->ParseData = rec;
+    for (i = 0; i < PDATA_ROWS; i++) 
+        INTEGER(idat)[i] = NA_INTEGER;             /* FOR NOW */
 
-    UNPROTECT(2); /* rec, idat */
+    INTEGER(idat)[PDATA_FIRST_PARSED] = start_loc->first_parsed;
+    INTEGER(idat)[PDATA_FIRST_COLUMN] = start_loc->first_column;
+    INTEGER(idat)[PDATA_TERMINAL] = terminal;
+    INTEGER(idat)[PDATA_ID] = ps->sr->next_id++;
+
+    SET_VECTOR_ELT (rec, PDATA_REC_IDATA, idat);
+    SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
+    SET_VECTOR_ELT (rec, PDATA_REC_TEXT,  mkChar(text));
+
+    return rec;
+}
+
+static void end_parseData_record (SEXP rec, source_location *end_loc)
+{
+    if (rec == R_NilValue) return;
+
+    SEXP idat = VECTOR_ELT (rec, PDATA_REC_IDATA);
+    INTEGER(idat)[PDATA_LAST_PARSED] = end_loc->last_parsed;
+    INTEGER(idat)[PDATA_LAST_COLUMN] = end_loc->last_column;
 }
 
 
@@ -585,7 +616,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
     SEXP p;
 
     pdlen = 0;
-    for (p = state->ParseData; p != R_NilValue; p = VECTOR_ELT(p,3))
+    for (p = state->ParseData; p!=R_NilValue; p = VECTOR_ELT(p,PDATA_REC_LINK))
         pdlen += 1;
 
     if (pdlen > 0 && isEnvironment(state->SrcFile)) {
@@ -594,10 +625,10 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         int i, j, k;
 
         PROTECT (dims = allocVector (INTSXP, 2));
-        INTEGER(dims)[0] = DATA_ROWS;
+        INTEGER(dims)[0] = PDATA_ROWS;
         INTEGER(dims)[1] = pdlen;
 
-        PROTECT (mat = allocVector (INTSXP, DATA_ROWS*pdlen));
+        PROTECT (mat = allocVector (INTSXP, PDATA_ROWS*pdlen));
 
         PROTECT (tokens = allocVector (STRSXP, pdlen));
         PROTECT (text = allocVector (STRSXP, pdlen));
@@ -605,12 +636,12 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         pdat = state->ParseData;
         k = 0;
         for (i = 0; i < pdlen; i++) {
-            idat = VECTOR_ELT(pdat,0);
-            for (j = 0; j < DATA_ROWS; j++)
+            idat = VECTOR_ELT(pdat,PDATA_REC_IDATA);
+            for (j = 0; j < PDATA_ROWS; j++)
                 INTEGER(mat)[k++] = INTEGER(idat)[j];
-            SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,1));
-            SET_STRING_ELT (text, i, VECTOR_ELT(pdat,2));
-            pdat = VECTOR_ELT(pdat,3);
+            SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,PDATA_REC_TOKEN));
+            SET_STRING_ELT (text, i, VECTOR_ELT(pdat,PDATA_REC_TEXT));
+            pdat = VECTOR_ELT(pdat,PDATA_REC_LINK);
         }
 
         setAttrib (mat, install("dim"), dims);
@@ -1141,13 +1172,16 @@ static SEXP parse_sublist (int flags)
 static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
-    SEXP res, right, op;
+    SEXP rec, res, right, op;
     int op_prec, next_op_prec;
-    source_location loc;
 
     int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
     int par = 0;  /* paren precedence indicator - initially not parenthesized */
+
+    source_location loc;
+    start_location(&loc);
+    rec = start_parseData_record(&loc,"expr","",FALSE);
 
     /* Unary operators. */
 
@@ -1465,7 +1499,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (paren != NULL) *paren = par;
 
-    record_parseData("expr","");
+    end_location(&loc);
+    end_parseData_record(rec,&loc);
     END_PARSE_FUN;
     return res;
 }
@@ -2901,8 +2936,11 @@ static int get_next_token(void)
     ps->token_loc.last_byte    = ps->sr->xxbyteno;
     ps->token_loc.last_parsed  = ps->sr->xxparseno;
 
-    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n')
-        record_parseData("token","text");
+    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n') {
+        SEXP rec = start_parseData_record (&ps->token_loc, 
+                     "token", "text", TRUE);
+        end_parseData_record (rec, &ps->token_loc);
+    }
 
     return val;
 }
