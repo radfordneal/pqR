@@ -66,8 +66,9 @@ getParseText(parseData, id)
   The rownames of the dataframe will be equal to the \code{id} values,
   and the dataframe will have a \code{"srcfile"} attribute containing
   the \code{\link{srcfile}} record which was used.  The rows will be
-  ordered by starting position within the source file, with parent items
-  occurring before their children.
+  ordered first by starting position within the source file (\code{line1}
+  and \col{1}), then by decreasing end position (\code{line2} and \code{col2}), 
+  and finally with terminals before non-terminals.
 
   For \code{getParseText}:\cr
   A character vector of the same length as \code{id} containing the associated
