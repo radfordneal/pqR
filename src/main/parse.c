@@ -432,6 +432,26 @@ static void end_parseData_record (SEXP rec, source_location *end_loc)
     INTEGER(idat)[PDATA_LAST_COLUMN] = end_loc->last_column;
 }
 
+/* A kludge routine that deletes the second from the latest parse data
+   record.  Used to fix up arg lists with keywords, like f(k=x), where
+   k initially looks like it could be an expression.  Fiddles IDs too. */
+
+static void delete_second_parseData_record (void)
+{
+    if (!ps->keep_source) return;
+
+    SEXP rec = ps->sr->ParseData;
+    if (rec == R_NilValue) abort();
+    SEXP rec2 = VECTOR_ELT(rec,PDATA_REC_LINK);
+    if (rec2 == R_NilValue) abort();
+
+    SET_VECTOR_ELT (rec, PDATA_REC_LINK, VECTOR_ELT(rec2,PDATA_REC_LINK));
+
+    SEXP idat = VECTOR_ELT(rec,PDATA_REC_IDATA);
+    INTEGER(idat)[PDATA_ID] -= 1;
+    ps->sr->next_id -= 1;
+}
+
 
 /* --------------------------------------------------------------------------
    CHARACTER INPUT ROUTINES
@@ -1123,6 +1143,7 @@ static SEXP parse_sublist (int flags)
                         tag = install("NULL");
                     else
                         PARSE_UNEXPECTED();
+                    delete_second_parseData_record();
                     get_next_token();
                     if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' 
                                           || NEXT_TOKEN == ']')
@@ -1178,6 +1199,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
     int par = 0;  /* paren precedence indicator - initially not parenthesized */
+
+    NEXT_TOKEN;  /* so location will be correct */
 
     start_location(&begin_loc);
     outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
@@ -1398,6 +1421,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     while (!NL_END && POSTFIX_TOKEN()) {
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        end_location(&loc);
+        end_parseData_record(rec,&loc);
 
         /* Function call. */
 
@@ -1449,9 +1474,6 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
         else
             abort();
-
-        end_location(&loc);
-        end_parseData_record(rec,&loc);
     }
 
     /* Now handle binary operators following any of the above. */
@@ -2689,7 +2711,7 @@ static int skip_comment (void)
 
         SEXP rec;
 
-        if (c == '\n') xxungetc(c);
+        if (c == '\n') xxungetc(c);  /* newline shouldn't be part of record */
 
         rec = start_parseData_record (&loc, "COMMENT", "", TRUE);
         loc.last_parsed = ps->sr->xxparseno;

@@ -130,7 +130,7 @@ getParseData <- function(x, includeText = NA) {
     	                   terminal=as.logical(data[,"terminal"]),
     	                   text=text, stringsAsFactors=FALSE)
     	o <- order(data$line1, data$col1, -data$line2, -data$col2, 
-                   as.integer(data$terminal))
+                   -data$terminal)
     	data <- data[o,]
     	rownames(data) <- data$id
     	attr(data, "srcfile") <- srcfile
