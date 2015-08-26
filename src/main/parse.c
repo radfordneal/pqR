@@ -462,12 +462,6 @@ static int xxgetc(void)
     	ps->prevcols[ps->prevpos] = ps->prevcols[oldpos];
     } else 
     	ps->prevcols[ps->prevpos] = ps->sr->xxcolno;
-    	
-    if (c == EOF)
-	return R_EOF;
-
-    ps->ParseContextLast = (ps->ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    ps->ParseContext[ps->ParseContextLast] = c;
 
     if (c == '\n') {
 	ps->sr->xxlineno += 1;
@@ -480,7 +474,12 @@ static int xxgetc(void)
     }
 
     if (c == '\t') ps->sr->xxcolno = ((ps->sr->xxcolno + 7) & ~7);
+    	
+    if (c == EOF)
+	return R_EOF;
     
+    ps->ParseContextLast = (ps->ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
+    ps->ParseContext[ps->ParseContextLast] = c;
     ps->ParseContextLine = ps->sr->xxlineno;    
 
     return c;
@@ -1172,16 +1171,16 @@ static SEXP parse_sublist (int flags)
 static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
-    SEXP rec, res, right, op;
+    SEXP outer_rec, rec, res, right, op;
     int op_prec, next_op_prec;
+    source_location begin_loc, loc;
 
     int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
     int par = 0;  /* paren precedence indicator - initially not parenthesized */
 
-    source_location loc;
-    start_location(&loc);
-    rec = start_parseData_record(&loc,"expr","",FALSE);
+    start_location(&begin_loc);
+    outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
 
     /* Unary operators. */
 
@@ -1382,8 +1381,11 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
        Then we loop over all the postfix parts. */
 
-    if (!NL_END && par != 0 && (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' 
-          || NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || NEXT_TOKEN == '@')) {
+#   define POSTFIX_TOKEN() (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' || \
+                            NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || \
+                            NEXT_TOKEN == '@')
+
+    if (!NL_END && par != 0 && POSTFIX_TOKEN()) {
 
         /* Note:  all the postfix operators act the same as [. */
 
@@ -1393,7 +1395,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         par = 0;  /* indicate that this is not a parenthesized expression */
     }
 
-    while (!NL_END) {
+    while (!NL_END && POSTFIX_TOKEN()) {
+
+        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
 
         /* Function call. */
 
@@ -1444,7 +1448,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         }
 
         else
-            break;
+            abort();
+
+        end_location(&loc);
+        end_parseData_record(rec,&loc);
     }
 
     /* Now handle binary operators following any of the above. */
@@ -1457,6 +1464,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
         if (op_prec <= prec || op_prec == last_prec)
             break;
+
+        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        end_location(&loc);
+        end_parseData_record(rec,&loc);
 
         if (!keep_parens && par != 0 
                && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
@@ -1500,7 +1511,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     if (paren != NULL) *paren = par;
 
     end_location(&loc);
-    end_parseData_record(rec,&loc);
+    end_parseData_record(outer_rec,&loc);
     END_PARSE_FUN;
     return res;
 }
@@ -2650,7 +2661,11 @@ static int processLineDirective()
 static int skip_comment (void)
 {
     Rboolean maybeLine = (ps->sr->xxcolno == 1);
+    source_location loc;
     int c, i;
+
+    loc.first_parsed = ps->sr->xxparseno;
+    loc.first_column = ps->sr->xxcolno;
 
     c = '#';
 
@@ -2669,6 +2684,20 @@ static int skip_comment (void)
 
     while (c != '\n' && c != R_EOF)
 	c = xxgetc();
+
+    if (ps->keep_source) {
+
+        SEXP rec;
+
+        if (c == '\n') xxungetc(c);
+
+        rec = start_parseData_record (&loc, "COMMENT", "", TRUE);
+        loc.last_parsed = ps->sr->xxparseno;
+        loc.last_column = ps->sr->xxcolno;
+        end_parseData_record(rec,&loc);
+
+        if (c == '\n') xxgetc();
+    }
 
     return c;
 }
@@ -2938,7 +2967,7 @@ static int get_next_token(void)
 
     if (ps->next_token != END_OF_INPUT && ps->next_token != '\n') {
         SEXP rec = start_parseData_record (&ps->token_loc, 
-                     "token", "text", TRUE);
+                     "token", "", TRUE);
         end_parseData_record (rec, &ps->token_loc);
     }
 
