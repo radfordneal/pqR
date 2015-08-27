@@ -294,6 +294,19 @@ static const char *const token_name[] = {
     _("end of line");  /* currently unused */
 #endif
 
+/* Another set of names for tokens with codes >= 256.  These ones are used
+   for the results of getParseData. */
+
+static const char *const pdata_token_name[] = {
+  "INPUT",      "END_OF_INPUT", "ERROR",   "STR_CONST",      "NUM_CONST",
+  "SYMBOL",     "LEFT_ASSIGN",  "EQ_ASSIGN", "RIGHT_ASSIGN", "NULL_CONST",
+  "FUNCTION",   "LBB",          "FOR",     "IN",             "IF",
+  "ELSE",       "WHILE",        "NEXT",    "BREAK",          "REPEAT",
+  "GT",         "GE",           "LT",      "LE",             "EQ",
+  "NE",         "AND",          "OR",      "AND2",           "OR2",
+  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL"
+};
+
 
 /* Record of the start and end of part of the source text.  See the
    information in help(srcfile). */
@@ -376,6 +389,10 @@ static int xxgetc();
 static void xxungetc(int);
 
 
+/* --------------------------------------------------------------------------
+   DECLARATIONS AND ROUTINES TO SUPPORT PRODUCTION OF PARSE DATA
+ */
+
 #define PDATA_ROWS 8           /* Rows in the parseData matrix */
 
 #define PDATA_FIRST_PARSED 0   /* Indexes for rows in the parseData matrix */
@@ -395,7 +412,8 @@ static void xxungetc(int);
 #define PDATA_REC_TEXT  3
 
 static SEXP start_parseData_record (source_location *start_loc, 
-                                    char *token, char *text, int terminal)
+                                    const char *token, const char *text, 
+                                    int terminal)
 {
     SEXP idat, rec;
     int i;
@@ -2991,8 +3009,11 @@ static int get_next_token(void)
     ps->token_loc.last_parsed  = ps->sr->xxparseno;
 
     if (ps->next_token != END_OF_INPUT && ps->next_token != '\n') {
-        SEXP rec = start_parseData_record (&ps->token_loc, 
-                     "token", "", TRUE);
+        SEXP rec;
+        char t[4] = { '\'', (char) ps->next_token, '\'', 0 };
+        rec = start_parseData_record (&ps->token_loc, ps->next_token < 256 ? t
+                                        : pdata_token_name[ps->next_token-256],
+                                      "", TRUE);
         end_parseData_record (rec, &ps->token_loc);
     }
 
