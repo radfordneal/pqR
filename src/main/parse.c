@@ -1931,14 +1931,6 @@ static int NumericValue(int c)
 	    warning(_("integer literal %sL contains unnecessary decimal point"),
                     yytext);
 	ps->next_token_val = mkInteger(yytext);
-#if 0  /* do this to make 123 integer not double */
-    } else if(!(seendot || seenexp)) {
-	if(c != 'L') xxungetc(c);
-	double a = R_atof(yytext);
-	int b = (int) a;
-	ps->next_token_val = (a != (double) b) ? mkReal(yytext) 
-                                               : mkInteger(yytext);
-#endif
     } else {
 	if(c != 'L')
 	    xxungetc(c);
