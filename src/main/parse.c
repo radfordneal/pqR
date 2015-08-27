@@ -1772,8 +1772,9 @@ SEXP R_ParseStream (int (*getc) (void *), void *getc_arg,
    This is used as the buffer for NumericValue, SpecialValue and
    SymbolValue.  None of these could conceivably need 8192 bytes.
 
-   It has not been used as the buffer for input character strings
-   since Oct 2007 (released as 2.7.0), and for comments since 2.8.0. */
+   For inclusion in parse data, it is also used to store text from 
+   strings, or a  message saying the text was truncated, and text
+   from comments that fit. */
 
 static char yytext[MAXELTSIZE];
 
@@ -2089,7 +2090,7 @@ static SEXP mkString2(const char *s, int len, Rboolean escaped)
 static int StringValue(int c, Rboolean forSymbol)
 {
     int quote = c;
-    Rboolean oct_or_hex = FALSE, use_wcs = FALSE;
+    Rboolean oct_or_hex = FALSE, use_wcs = FALSE, currtext_truncated = FALSE;
 
     char st0[MAXELTSIZE];
     unsigned int nstext = MAXELTSIZE;
@@ -2101,11 +2102,13 @@ static int StringValue(int c, Rboolean forSymbol)
 	    char *old = stext;              \
 	    nstext *= 2;                    \
 	    stext = malloc(nstext);         \
-	    if (!stext)                     \
+	    if (!stext) {                   \
+               if (old != st0) free(old);   \
                error(_("unable to allocate buffer for long string at line %d"),\
                      ps->sr->xxlineno); \
+            }                               \
 	    memmove(stext, old, nc);        \
-	    if(old != st0) free(old);	    \
+	    if (old != st0) free(old);	    \
 	    bp = stext+nc; }		    \
 	*bp++ = (c);                        \
     } while(0)
@@ -2113,7 +2116,7 @@ static int StringValue(int c, Rboolean forSymbol)
     int wcnt = 0;
     ucs_t wcs[10001];
 
-#   define WTEXT_PUSH(c) do { if(wcnt < 10000) wcs[wcnt++] = c; } while(0)
+#   define WTEXT_PUSH(c) do { if(wcnt <= 10000) wcs[wcnt++] = c; } while(0)
 
     char currtext[1010], *ct = currtext;
 
@@ -2122,16 +2125,18 @@ static int StringValue(int c, Rboolean forSymbol)
             memmove(currtext, currtext+100, 901); \
             memmove(currtext, "... ", 4);         \
             ct -= 100;                            \
+	    currtext_truncated = TRUE;            \
         }                                         \
 	*ct++ = (c);                              \
     } while(0)
 
 #   define CTEXT_POP() (ct--)
 
+    CTEXT_PUSH(c); /* push opening quote */
     while ((c = xxgetc()) != R_EOF && c != quote) {
 	CTEXT_PUSH(c);
 	if (c == '\n') {
-	    xxungetc(c);
+	    xxungetc(c); CTEXT_POP();
 	    /* Fix suggested by Mark Bravington to allow multiline strings
 	     * by pretending we've seen a backslash. Was:
 	     * return ERROR;
@@ -2148,17 +2153,15 @@ static int StringValue(int c, Rboolean forSymbol)
 		    if ('0' <= (c = xxgetc()) && c <= '7') {
 			CTEXT_PUSH(c);
 			octal = 8 * octal + c - '0';
-		    } else {
+		    } else
 			xxungetc(c);
-			CTEXT_POP();
-		    }
-		} else {
+		} else
 		    xxungetc(c);
-		    CTEXT_POP();
-		}
-		if (!octal)
+		if (!octal) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"), 
                           ps->sr->xxlineno);
+                }
 		c = octal;
 		oct_or_hex = TRUE;
 	    }
@@ -2170,10 +2173,10 @@ static int StringValue(int c, Rboolean forSymbol)
 		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
 		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
 		    else {
-			xxungetc(c);
-			CTEXT_POP();
+			xxungetc(c); CTEXT_POP();
 			if (i == 0) { /* was just \x */
 			    *ct = '\0';
+                            if (stext != st0) free(stext);
 			    errorcall(R_NilValue, 
                              _("'\\x' used without hex digits in character string starting \"%s\""), 
                              currtext);
@@ -2182,9 +2185,11 @@ static int StringValue(int c, Rboolean forSymbol)
 		    }
 		    val = 16*val + ext;
 		}
-		if (!val)
+		if (!val) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"), 
                           ps->sr->xxlineno);
+                }
 		c = val;
 		oct_or_hex = TRUE;
 	    }
@@ -2192,24 +2197,28 @@ static int StringValue(int c, Rboolean forSymbol)
 		unsigned int val = 0; int i, ext; 
 		Rboolean delim = FALSE;
 
-		if(forSymbol) 
+		if(forSymbol) {
+                    if (stext != st0) free(stext);
 		    error(
                       _("\\uxxxx sequences not supported inside backticks (line %d)"), 
                       ps->sr->xxlineno);
+                }
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
-		} else xxungetc(c);
+		} 
+                else
+                    xxungetc(c);
 		for(i = 0; i < 4; i++) {
 		    c = xxgetc(); CTEXT_PUSH(c);
 		    if(c >= '0' && c <= '9') ext = c - '0';
 		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
 		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
 		    else {
-			xxungetc(c);
-			CTEXT_POP();
+			xxungetc(c); CTEXT_POP();
 			if (i == 0) { /* was just \u */
 			    *ct = '\0';
+                            if (stext != st0) free(stext);
 			    errorcall(R_NilValue, 
                               _("'\\u' used without hex digits in character string starting \"%s\""), 
                               currtext);
@@ -2219,14 +2228,18 @@ static int StringValue(int c, Rboolean forSymbol)
 		    val = 16*val + ext;
 		}
 		if(delim) {
-		    if((c = xxgetc()) != '}')
+		    c = xxgetc(); CTEXT_PUSH(c);
+		    if (c != '}') {
+                        if (stext != st0) free(stext);
 			error(_("invalid \\u{xxxx} sequence (line %d)"),
 			      ps->sr->xxlineno);
-		    else CTEXT_PUSH(c);
+                    }
 		}
-		if (!val)
+		if (!val) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"),
                           ps->sr->xxlineno);
+                }
 		WTEXT_PUSH(val); /* this assumes wchar_t is Unicode */
 		use_wcs = TRUE;
 		continue;
@@ -2234,24 +2247,28 @@ static int StringValue(int c, Rboolean forSymbol)
 	    else if(c == 'U') {
 		unsigned int val = 0; int i, ext;
 		Rboolean delim = FALSE;
-		if(forSymbol) 
+		if(forSymbol) {
+                    if (stext != st0) free(stext);
 		    error(
                       _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), 
                       ps->sr->xxlineno);
+                }
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
-		} else xxungetc(c);
+		}
+                else
+                    xxungetc(c);
 		for(i = 0; i < 8; i++) {
 		    c = xxgetc(); CTEXT_PUSH(c);
 		    if(c >= '0' && c <= '9') ext = c - '0';
 		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
 		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
 		    else {
-			xxungetc(c);
-			CTEXT_POP();
+			xxungetc(c); CTEXT_POP();
 			if (i == 0) { /* was just \U */
 			    *ct = '\0';
+                            if (stext != st0) free(stext);
 			    errorcall(R_NilValue, 
                               _("'\\U' used without hex digits in character string starting \"%s\""),
                               currtext);
@@ -2261,14 +2278,18 @@ static int StringValue(int c, Rboolean forSymbol)
 		    val = 16*val + ext;
 		}
 		if(delim) {
-		    if((c = xxgetc()) != '}')
+		    c = xxgetc(); CTEXT_PUSH(c);
+		    if (c != '}') {
+                        if (stext != st0) free(stext);
 			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), 
                               ps->sr->xxlineno);
-		    else CTEXT_PUSH(c);
+                    }
 		}
-		if (!val)
+		if (!val) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"),
                           ps->sr->xxlineno);		
+                }
 		WTEXT_PUSH(val);
 		use_wcs = TRUE;
 		continue;
@@ -2302,10 +2323,12 @@ static int StringValue(int c, Rboolean forSymbol)
 		case '"':
 		case '\'':
 		case ' ':
+		case '`':
 		case '\n':
 		    break;
 		default:
 		    *ct = '\0';
+                    if (stext != st0) free(stext);
 		    errorcall(R_NilValue, 
                        _("'\\%c' is an unrecognized escape in character string starting \"%s\""), 
                        c, currtext);
@@ -2347,29 +2370,56 @@ static int StringValue(int c, Rboolean forSymbol)
 	    WTEXT_PUSH(wc);
 	}
     }
-    STEXT_PUSH('\0');
-    WTEXT_PUSH(0);
+
     if (c == R_EOF) {
-        if(stext != st0) free(stext);
         ps->next_token_val = R_NilValue;
+        yytext[0] = 0;
+        if (stext != st0) free(stext);
     	return ERROR;
     }
-    if(forSymbol) {
+
+    CTEXT_PUSH(c); /* push closing quote */
+    CTEXT_PUSH('\0');
+
+    /* Copy the string as in the source to yytext, to use for parse data,
+       of copy a message about it being to long to yytext. */
+
+    if (!currtext_truncated)
+        strcpy(yytext, currtext);
+    else if (forSymbol || !use_wcs) {
+        size_t total = strlen(stext);
+        snprintf (yytext, MAXELTSIZE, "[%u chars quoted with '%c']",
+                  (unsigned int)total, quote);
+    }
+    else 
+        snprintf (yytext, MAXELTSIZE, "[%d wide chars quoted with '%c']", 
+                  wcnt, quote);
+
+    /* Create symbol or string from text in stext or wcs. */
+
+    STEXT_PUSH('\0');
+    if (forSymbol) {
 	ps->next_token_val = install(stext);
-	if(stext != st0) free(stext);
+	if (stext != st0) free(stext);
 	return SYMBOL;
-    } else {
-	if(use_wcs) {
-	    if (oct_or_hex)
+    } 
+    else {
+	if (use_wcs) {
+	    if (oct_or_hex) {
+                if (stext != st0) free(stext);
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
-	    if (wcnt < 10000)
-		ps->next_token_val = mkStringUTF8(wcs,wcnt); /*incl terminator*/
-	    else
+            }
+	    if (wcnt > 10000) {
+                if (stext != st0) free(stext);
 		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"),
                       ps->sr->xxlineno);
-	} else
+            }
+            WTEXT_PUSH(0);
+            ps->next_token_val = mkStringUTF8(wcs,wcnt); /*incl terminator*/
+	} 
+        else
 	    ps->next_token_val = mkString2(stext,  bp - stext - 1, oct_or_hex);
-	if(stext != st0) free(stext);
+	if (stext != st0) free(stext);
 	return STR_CONST;
     }
 }
