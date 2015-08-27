@@ -109,7 +109,10 @@ substr_with_tabs <- function(x, start, stop, tabsize = 8) {
 }
 
 getParseData <- function(x, includeText = NA) {
-    srcfile <- getSrcfile(x)
+    if (inherits(x, "srcfile")) 
+	srcfile <- x
+    else 
+	srcfile <- getSrcfile(x)
 
     if (is.null(srcfile))
     	return(NULL)
@@ -117,20 +120,24 @@ getParseData <- function(x, includeText = NA) {
     	data <- srcfile$parseData
     if (!is.null(data)) {
         tokens <- attr(data, "tokens")
+        text <- attr(data, "text")
+        if (is.null(text))
+            text <- character(length(tokens))
         data <- t(unclass(data))
-        colnames(data) <- c( "line1", "col1",
-		 	     "line2", "col2",
+        colnames(data) <- c( "line1", "col1", "line2", "col2",
 		 	     "terminal", "token.num", "id", "parent" )
-    	data <- data.frame(data[,-c(5,6)], token=tokens,
+    	data <- data.frame(data[,-c(5,6), drop=FALSE], token=tokens,
     	                   terminal=as.logical(data[,"terminal"]),
-    	                   text=attr(data, "text"),
-    			   stringsAsFactors=FALSE)
-    	o <- order(data[,1], data[,2], -data[,3], -data[,4])
+    	                   text=text, stringsAsFactors=FALSE)
+    	o <- order(data$line1, data$col1, -data$line2, -data$col2, 
+                   -data$terminal)
     	data <- data[o,]
     	rownames(data) <- data$id
     	attr(data, "srcfile") <- srcfile
-    	if (isTRUE(includeText)) gettext <- which(!nzchar(data$text))
-        else if (is.na(includeText)) gettext <- which(!nzchar(data$text) & data$terminal)
+    	if (isTRUE(includeText))
+            gettext <- which(!nzchar(data$text))
+        else if (is.na(includeText)) 
+            gettext <- which(!nzchar(data$text) & data$terminal)
         else {
             gettext <- integer(0)
             data$text <- NULL
@@ -147,10 +154,12 @@ getParseText <- function(parseData, id) {
     d <- parseData[as.character(id),]
     text <- d$text
     if (is.null(text)) {
-    	text <- character(nrow(text))
+    	text <- character(nrow(d))
     	blank <- seq_along(text)
-    } else
-    	blank <- which(!nzchar(text))
+    } 
+    else
+        blank <- 
+          which(!nzchar(text) | (d$token == "STR_CONST" & grepl("^[[]", text)))
     for (i in blank) {
 	lines <- getSrcLines(srcfile, d$line1[i], d$line2[i])
         n <- length(lines)

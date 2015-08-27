@@ -376,29 +376,80 @@ static int xxgetc();
 static void xxungetc(int);
 
 
-#define DATA_ROWS 8    /* Rows in the parseData matrix */
+#define PDATA_ROWS 8           /* Rows in the parseData matrix */
 
-static void record_parseData (char *token, char *text)
+#define PDATA_FIRST_PARSED 0   /* Indexes for rows in the parseData matrix */
+#define PDATA_FIRST_COLUMN 1
+#define PDATA_LAST_PARSED  2
+#define PDATA_LAST_COLUMN  3
+#define PDATA_TERMINAL     4
+#define PDATA_TOKEN        5
+#define PDATA_ID           6
+#define PDATA_PARENT       7
+
+#define PDATA_REC_LEN   4      /* Number of elements in parseData records */
+
+#define PDATA_REC_LINK  0
+#define PDATA_REC_IDATA 1
+#define PDATA_REC_TOKEN 2
+#define PDATA_REC_TEXT  3
+
+static SEXP start_parseData_record (source_location *start_loc, 
+                                    char *token, char *text, int terminal)
 {
     SEXP idat, rec;
     int i;
 
+    if (!ps->keep_source) return R_NilValue;
+
+    rec = allocVector (VECSXP, PDATA_REC_LEN);
+    SET_VECTOR_ELT (rec, PDATA_REC_LINK,  ps->sr->ParseData);
+    REPROTECT (ps->sr->ParseData = rec, ps->sr->ParseDataProt);
+
+    idat = allocVector (INTSXP, PDATA_ROWS);
+
+    for (i = 0; i < PDATA_ROWS; i++) 
+        INTEGER(idat)[i] = NA_INTEGER;             /* FOR NOW */
+
+    INTEGER(idat)[PDATA_FIRST_PARSED] = start_loc->first_parsed;
+    INTEGER(idat)[PDATA_FIRST_COLUMN] = start_loc->first_column;
+    INTEGER(idat)[PDATA_TERMINAL] = terminal;
+    INTEGER(idat)[PDATA_ID] = ps->sr->next_id++;
+
+    SET_VECTOR_ELT (rec, PDATA_REC_IDATA, idat);
+    SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
+    SET_VECTOR_ELT (rec, PDATA_REC_TEXT,  mkChar(text));
+
+    return rec;
+}
+
+static void end_parseData_record (SEXP rec, source_location *end_loc)
+{
+    if (rec == R_NilValue) return;
+
+    SEXP idat = VECTOR_ELT (rec, PDATA_REC_IDATA);
+    INTEGER(idat)[PDATA_LAST_PARSED] = end_loc->last_parsed;
+    INTEGER(idat)[PDATA_LAST_COLUMN] = end_loc->last_column;
+}
+
+/* A kludge routine that deletes the second from the latest parse data
+   record.  Used to fix up arg lists with keywords, like f(k=x), where
+   k initially looks like it could be an expression.  Fiddles IDs too. */
+
+static void delete_second_parseData_record (void)
+{
     if (!ps->keep_source) return;
 
-    PROTECT (idat = allocVector (INTSXP, DATA_ROWS));
-    PROTECT (rec = allocVector (VECSXP, 4));
+    SEXP rec = ps->sr->ParseData;
+    if (rec == R_NilValue) abort();
+    SEXP rec2 = VECTOR_ELT(rec,PDATA_REC_LINK);
+    if (rec2 == R_NilValue) abort();
 
-    SET_VECTOR_ELT (rec, 0, idat);
-    for (i = 0; i < DATA_ROWS; i++) 
-        INTEGER(idat)[i] = 1;                    /* FOR NOW */
-    INTEGER(idat)[6] = ps->sr->next_id++;
-    SET_VECTOR_ELT (rec, 1, mkChar(token));
-    SET_VECTOR_ELT (rec, 2, mkChar(text));
-    SET_VECTOR_ELT (rec, 3, ps->sr->ParseData);
+    SET_VECTOR_ELT (rec, PDATA_REC_LINK, VECTOR_ELT(rec2,PDATA_REC_LINK));
 
-    ps->sr->ParseData = rec;
-
-    UNPROTECT(2); /* rec, idat */
+    SEXP idat = VECTOR_ELT(rec,PDATA_REC_IDATA);
+    INTEGER(idat)[PDATA_ID] -= 1;
+    ps->sr->next_id -= 1;
 }
 
 
@@ -431,12 +482,6 @@ static int xxgetc(void)
     	ps->prevcols[ps->prevpos] = ps->prevcols[oldpos];
     } else 
     	ps->prevcols[ps->prevpos] = ps->sr->xxcolno;
-    	
-    if (c == EOF)
-	return R_EOF;
-
-    ps->ParseContextLast = (ps->ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
-    ps->ParseContext[ps->ParseContextLast] = c;
 
     if (c == '\n') {
 	ps->sr->xxlineno += 1;
@@ -449,7 +494,12 @@ static int xxgetc(void)
     }
 
     if (c == '\t') ps->sr->xxcolno = ((ps->sr->xxcolno + 7) & ~7);
+    	
+    if (c == EOF)
+	return R_EOF;
     
+    ps->ParseContextLast = (ps->ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
+    ps->ParseContext[ps->ParseContextLast] = c;
     ps->ParseContextLine = ps->sr->xxlineno;    
 
     return c;
@@ -585,7 +635,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
     SEXP p;
 
     pdlen = 0;
-    for (p = state->ParseData; p != R_NilValue; p = VECTOR_ELT(p,3))
+    for (p = state->ParseData; p!=R_NilValue; p = VECTOR_ELT(p,PDATA_REC_LINK))
         pdlen += 1;
 
     if (pdlen > 0 && isEnvironment(state->SrcFile)) {
@@ -594,10 +644,10 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         int i, j, k;
 
         PROTECT (dims = allocVector (INTSXP, 2));
-        INTEGER(dims)[0] = DATA_ROWS;
+        INTEGER(dims)[0] = PDATA_ROWS;
         INTEGER(dims)[1] = pdlen;
 
-        PROTECT (mat = allocVector (INTSXP, DATA_ROWS*pdlen));
+        PROTECT (mat = allocVector (INTSXP, PDATA_ROWS*pdlen));
 
         PROTECT (tokens = allocVector (STRSXP, pdlen));
         PROTECT (text = allocVector (STRSXP, pdlen));
@@ -605,12 +655,12 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         pdat = state->ParseData;
         k = 0;
         for (i = 0; i < pdlen; i++) {
-            idat = VECTOR_ELT(pdat,0);
-            for (j = 0; j < DATA_ROWS; j++)
+            idat = VECTOR_ELT(pdat,PDATA_REC_IDATA);
+            for (j = 0; j < PDATA_ROWS; j++)
                 INTEGER(mat)[k++] = INTEGER(idat)[j];
-            SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,1));
-            SET_STRING_ELT (text, i, VECTOR_ELT(pdat,2));
-            pdat = VECTOR_ELT(pdat,3);
+            SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,PDATA_REC_TOKEN));
+            SET_STRING_ELT (text, i, VECTOR_ELT(pdat,PDATA_REC_TEXT));
+            pdat = VECTOR_ELT(pdat,PDATA_REC_LINK);
         }
 
         setAttrib (mat, install("dim"), dims);
@@ -1093,6 +1143,7 @@ static SEXP parse_sublist (int flags)
                         tag = install("NULL");
                     else
                         PARSE_UNEXPECTED();
+                    delete_second_parseData_record();
                     get_next_token();
                     if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' 
                                           || NEXT_TOKEN == ']')
@@ -1141,13 +1192,18 @@ static SEXP parse_sublist (int flags)
 static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
-    SEXP res, right, op;
+    SEXP outer_rec, rec, res, right, op;
     int op_prec, next_op_prec;
-    source_location loc;
+    source_location begin_loc, loc;
 
     int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
     int par = 0;  /* paren precedence indicator - initially not parenthesized */
+
+    NEXT_TOKEN;  /* so location will be correct */
+
+    start_location(&begin_loc);
+    outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
 
     /* Unary operators. */
 
@@ -1348,8 +1404,11 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
        Then we loop over all the postfix parts. */
 
-    if (!NL_END && par != 0 && (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' 
-          || NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || NEXT_TOKEN == '@')) {
+#   define POSTFIX_TOKEN() (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' || \
+                            NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || \
+                            NEXT_TOKEN == '@')
+
+    if (!NL_END && par != 0 && POSTFIX_TOKEN()) {
 
         /* Note:  all the postfix operators act the same as [. */
 
@@ -1359,7 +1418,11 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         par = 0;  /* indicate that this is not a parenthesized expression */
     }
 
-    while (!NL_END) {
+    while (!NL_END && POSTFIX_TOKEN()) {
+
+        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        end_location(&loc);
+        end_parseData_record(rec,&loc);
 
         /* Function call. */
 
@@ -1410,7 +1473,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         }
 
         else
-            break;
+            abort();
     }
 
     /* Now handle binary operators following any of the above. */
@@ -1423,6 +1486,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
         if (op_prec <= prec || op_prec == last_prec)
             break;
+
+        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        end_location(&loc);
+        end_parseData_record(rec,&loc);
 
         if (!keep_parens && par != 0 
                && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
@@ -1465,7 +1532,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (paren != NULL) *paren = par;
 
-    record_parseData("expr","");
+    end_location(&loc);
+    end_parseData_record(outer_rec,&loc);
     END_PARSE_FUN;
     return res;
 }
@@ -1704,8 +1772,9 @@ SEXP R_ParseStream (int (*getc) (void *), void *getc_arg,
    This is used as the buffer for NumericValue, SpecialValue and
    SymbolValue.  None of these could conceivably need 8192 bytes.
 
-   It has not been used as the buffer for input character strings
-   since Oct 2007 (released as 2.7.0), and for comments since 2.8.0. */
+   For inclusion in parse data, it is also used to store text from 
+   strings, or a  message saying the text was truncated, and text
+   from comments that fit. */
 
 static char yytext[MAXELTSIZE];
 
@@ -2021,7 +2090,7 @@ static SEXP mkString2(const char *s, int len, Rboolean escaped)
 static int StringValue(int c, Rboolean forSymbol)
 {
     int quote = c;
-    Rboolean oct_or_hex = FALSE, use_wcs = FALSE;
+    Rboolean oct_or_hex = FALSE, use_wcs = FALSE, currtext_truncated = FALSE;
 
     char st0[MAXELTSIZE];
     unsigned int nstext = MAXELTSIZE;
@@ -2033,11 +2102,13 @@ static int StringValue(int c, Rboolean forSymbol)
 	    char *old = stext;              \
 	    nstext *= 2;                    \
 	    stext = malloc(nstext);         \
-	    if (!stext)                     \
+	    if (!stext) {                   \
+               if (old != st0) free(old);   \
                error(_("unable to allocate buffer for long string at line %d"),\
                      ps->sr->xxlineno); \
+            }                               \
 	    memmove(stext, old, nc);        \
-	    if(old != st0) free(old);	    \
+	    if (old != st0) free(old);	    \
 	    bp = stext+nc; }		    \
 	*bp++ = (c);                        \
     } while(0)
@@ -2045,7 +2116,7 @@ static int StringValue(int c, Rboolean forSymbol)
     int wcnt = 0;
     ucs_t wcs[10001];
 
-#   define WTEXT_PUSH(c) do { if(wcnt < 10000) wcs[wcnt++] = c; } while(0)
+#   define WTEXT_PUSH(c) do { if(wcnt <= 10000) wcs[wcnt++] = c; } while(0)
 
     char currtext[1010], *ct = currtext;
 
@@ -2054,16 +2125,18 @@ static int StringValue(int c, Rboolean forSymbol)
             memmove(currtext, currtext+100, 901); \
             memmove(currtext, "... ", 4);         \
             ct -= 100;                            \
+	    currtext_truncated = TRUE;            \
         }                                         \
 	*ct++ = (c);                              \
     } while(0)
 
 #   define CTEXT_POP() (ct--)
 
+    CTEXT_PUSH(c); /* push opening quote */
     while ((c = xxgetc()) != R_EOF && c != quote) {
 	CTEXT_PUSH(c);
 	if (c == '\n') {
-	    xxungetc(c);
+	    xxungetc(c); CTEXT_POP();
 	    /* Fix suggested by Mark Bravington to allow multiline strings
 	     * by pretending we've seen a backslash. Was:
 	     * return ERROR;
@@ -2080,17 +2153,15 @@ static int StringValue(int c, Rboolean forSymbol)
 		    if ('0' <= (c = xxgetc()) && c <= '7') {
 			CTEXT_PUSH(c);
 			octal = 8 * octal + c - '0';
-		    } else {
+		    } else
 			xxungetc(c);
-			CTEXT_POP();
-		    }
-		} else {
+		} else
 		    xxungetc(c);
-		    CTEXT_POP();
-		}
-		if (!octal)
+		if (!octal) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"), 
                           ps->sr->xxlineno);
+                }
 		c = octal;
 		oct_or_hex = TRUE;
 	    }
@@ -2102,10 +2173,10 @@ static int StringValue(int c, Rboolean forSymbol)
 		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
 		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
 		    else {
-			xxungetc(c);
-			CTEXT_POP();
+			xxungetc(c); CTEXT_POP();
 			if (i == 0) { /* was just \x */
 			    *ct = '\0';
+                            if (stext != st0) free(stext);
 			    errorcall(R_NilValue, 
                              _("'\\x' used without hex digits in character string starting \"%s\""), 
                              currtext);
@@ -2114,36 +2185,44 @@ static int StringValue(int c, Rboolean forSymbol)
 		    }
 		    val = 16*val + ext;
 		}
-		if (!val)
+		if (!val) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"), 
                           ps->sr->xxlineno);
+                }
 		c = val;
 		oct_or_hex = TRUE;
 	    }
-	    else if(c == 'u') {
+	    else if (c == 'u' || c == 'U') {
 		unsigned int val = 0; int i, ext; 
 		Rboolean delim = FALSE;
+                int bigU = c == 'U';
 
-		if(forSymbol) 
-		    error(
-                      _("\\uxxxx sequences not supported inside backticks (line %d)"), 
+		if(forSymbol) {
+                    if (stext != st0) free(stext);
+		    error (bigU ? _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)")
+                                : _("\\uxxxx sequences not supported inside backticks (line %d)"), 
                       ps->sr->xxlineno);
+                }
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
-		} else xxungetc(c);
-		for(i = 0; i < 4; i++) {
+		}
+                else
+                    xxungetc(c);
+		for (i = 0; i < (bigU ? 8 : 4); i++) {
 		    c = xxgetc(); CTEXT_PUSH(c);
 		    if(c >= '0' && c <= '9') ext = c - '0';
 		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
 		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
 		    else {
-			xxungetc(c);
-			CTEXT_POP();
-			if (i == 0) { /* was just \u */
+			xxungetc(c); CTEXT_POP();
+			if (i == 0) { /* was just \u or \U */
 			    *ct = '\0';
-			    errorcall(R_NilValue, 
-                              _("'\\u' used without hex digits in character string starting \"%s\""), 
+                            if (stext != st0) free(stext);
+			    errorcall (R_NilValue, 
+                              bigU ? _("'\\U' used without hex digits in character string starting \"%s\"")
+                                   : _("'\\u' used without hex digits in character string starting \"%s\""), 
                               currtext);
 			}
 			break;
@@ -2151,57 +2230,20 @@ static int StringValue(int c, Rboolean forSymbol)
 		    val = 16*val + ext;
 		}
 		if(delim) {
-		    if((c = xxgetc()) != '}')
-			error(_("invalid \\u{xxxx} sequence (line %d)"),
+		    c = xxgetc(); CTEXT_PUSH(c);
+		    if (c != '}') {
+                        if (stext != st0) free(stext);
+			error (bigU ? _("invalid \\U{xxxxxxxx} sequence (line %d)")
+                                    : _("invalid \\u{xxxx} sequence (line %d)"),
 			      ps->sr->xxlineno);
-		    else CTEXT_PUSH(c);
+                    }
 		}
-		if (!val)
+		if (!val) {
+                    if (stext != st0) free(stext);
 		    error(_("nul character not allowed (line %d)"),
                           ps->sr->xxlineno);
+                }
 		WTEXT_PUSH(val); /* this assumes wchar_t is Unicode */
-		use_wcs = TRUE;
-		continue;
-	    }
-	    else if(c == 'U') {
-		unsigned int val = 0; int i, ext;
-		Rboolean delim = FALSE;
-		if(forSymbol) 
-		    error(
-                      _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), 
-                      ps->sr->xxlineno);
-		if((c = xxgetc()) == '{') {
-		    delim = TRUE;
-		    CTEXT_PUSH(c);
-		} else xxungetc(c);
-		for(i = 0; i < 8; i++) {
-		    c = xxgetc(); CTEXT_PUSH(c);
-		    if(c >= '0' && c <= '9') ext = c - '0';
-		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
-		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
-		    else {
-			xxungetc(c);
-			CTEXT_POP();
-			if (i == 0) { /* was just \U */
-			    *ct = '\0';
-			    errorcall(R_NilValue, 
-                              _("'\\U' used without hex digits in character string starting \"%s\""),
-                              currtext);
-			}
-			break;
-		    }
-		    val = 16*val + ext;
-		}
-		if(delim) {
-		    if((c = xxgetc()) != '}')
-			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), 
-                              ps->sr->xxlineno);
-		    else CTEXT_PUSH(c);
-		}
-		if (!val)
-		    error(_("nul character not allowed (line %d)"),
-                          ps->sr->xxlineno);		
-		WTEXT_PUSH(val);
 		use_wcs = TRUE;
 		continue;
 	    }
@@ -2234,10 +2276,12 @@ static int StringValue(int c, Rboolean forSymbol)
 		case '"':
 		case '\'':
 		case ' ':
+		case '`':
 		case '\n':
 		    break;
 		default:
 		    *ct = '\0';
+                    if (stext != st0) free(stext);
 		    errorcall(R_NilValue, 
                        _("'\\%c' is an unrecognized escape in character string starting \"%s\""), 
                        c, currtext);
@@ -2279,29 +2323,56 @@ static int StringValue(int c, Rboolean forSymbol)
 	    WTEXT_PUSH(wc);
 	}
     }
-    STEXT_PUSH('\0');
-    WTEXT_PUSH(0);
+
     if (c == R_EOF) {
-        if(stext != st0) free(stext);
         ps->next_token_val = R_NilValue;
+        yytext[0] = 0;
+        if (stext != st0) free(stext);
     	return ERROR;
     }
-    if(forSymbol) {
+
+    CTEXT_PUSH(c); /* push closing quote */
+    CTEXT_PUSH('\0');
+
+    /* Copy the string as in the source to yytext, to use for parse data,
+       of copy a message about it being to long to yytext. */
+
+    if (!currtext_truncated)
+        strcpy(yytext, currtext);
+    else if (forSymbol || !use_wcs) {
+        size_t total = strlen(stext);
+        snprintf (yytext, MAXELTSIZE, "[%u chars quoted with '%c']",
+                  (unsigned int)total, quote);
+    }
+    else 
+        snprintf (yytext, MAXELTSIZE, "[%d wide chars quoted with '%c']", 
+                  wcnt, quote);
+
+    /* Create symbol or string from text in stext or wcs. */
+
+    STEXT_PUSH('\0');
+    if (forSymbol) {
 	ps->next_token_val = install(stext);
-	if(stext != st0) free(stext);
+	if (stext != st0) free(stext);
 	return SYMBOL;
-    } else {
-	if(use_wcs) {
-	    if (oct_or_hex)
+    } 
+    else {
+	if (use_wcs) {
+	    if (oct_or_hex) {
+                if (stext != st0) free(stext);
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
-	    if (wcnt < 10000)
-		ps->next_token_val = mkStringUTF8(wcs,wcnt); /*incl terminator*/
-	    else
+            }
+	    if (wcnt > 10000) {
+                if (stext != st0) free(stext);
 		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"),
                       ps->sr->xxlineno);
-	} else
+            }
+            WTEXT_PUSH(0);
+            ps->next_token_val = mkStringUTF8(wcs,wcnt); /*incl terminator*/
+	} 
+        else
 	    ps->next_token_val = mkString2(stext,  bp - stext - 1, oct_or_hex);
-	if(stext != st0) free(stext);
+	if (stext != st0) free(stext);
 	return STR_CONST;
     }
 }
@@ -2615,7 +2686,11 @@ static int processLineDirective()
 static int skip_comment (void)
 {
     Rboolean maybeLine = (ps->sr->xxcolno == 1);
+    source_location loc;
     int c, i;
+
+    loc.first_parsed = ps->sr->xxparseno;
+    loc.first_column = ps->sr->xxcolno;
 
     c = '#';
 
@@ -2634,6 +2709,20 @@ static int skip_comment (void)
 
     while (c != '\n' && c != R_EOF)
 	c = xxgetc();
+
+    if (ps->keep_source) {
+
+        SEXP rec;
+
+        if (c == '\n') xxungetc(c);  /* newline shouldn't be part of record */
+
+        rec = start_parseData_record (&loc, "COMMENT", "", TRUE);
+        loc.last_parsed = ps->sr->xxparseno;
+        loc.last_column = ps->sr->xxcolno;
+        end_parseData_record(rec,&loc);
+
+        if (c == '\n') xxgetc();
+    }
 
     return c;
 }
@@ -2901,8 +2990,11 @@ static int get_next_token(void)
     ps->token_loc.last_byte    = ps->sr->xxbyteno;
     ps->token_loc.last_parsed  = ps->sr->xxparseno;
 
-    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n')
-        record_parseData("token","text");
+    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n') {
+        SEXP rec = start_parseData_record (&ps->token_loc, 
+                     "token", "", TRUE);
+        end_parseData_record (rec, &ps->token_loc);
+    }
 
     return val;
 }

@@ -167,6 +167,25 @@ fixed differently in R-2.15.3 and R-3.0.0, respectively:
 \preformatted{  deparse(quote(`+`(1,2) \%fred\% 4))       # Omits necessary parens
   a <- quote(f(1,2)); a[[1]] <- function(x,y)x+y; deparse(a) # Omits parens
 }
+  \item Fixed the following bug (also in R Core versions to at least 
+        R-3.2.2):
+\preformatted{  > parse()
+  ?'\12a\x.'
+  Error: '\x' used without hex digits in character string starting "'\1a\x"
+}
+        Note that the "2" has disappeared from the error message.  This
+        bug also affected the results of \code{getParseData}.
+  \item Fixed a memory leak that can be seen by running the code below:
+\preformatted{  > long <- paste0 (c('"', rep("1234567890",820), '\\x."'), collapse="")
+  > for (i in 1:1000000) try (e <- parse(text=long), silent=TRUE)
+}
+        The leak will not occur if 820 is changed to 810 in the above.
+        This bug also exists in R Core versions to at least R-3.2.2.
+  \item Entering a string constant containing Unicode escapes that was
+        9999 or 10000 characters long would produce an error message saying
+        "String is too long (max 10000 chars)".  This has been fixed
+        so that the maximum now really is 10000 characters.  (Also present
+        in R Core versions, to at least R-3.2.2.)
   \item C
   \item On Windows, running R.exe from a command prompt window would result in
         Ctrl-C misbehaving.  This was \PR{14948} at R Core, which was 
