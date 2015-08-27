@@ -37,15 +37,18 @@ typedef struct {
     Rboolean didAttach;		/* Was a srcref attached? */
     SEXP SrcFile;		/* The srcfile object currently being parsed */
     SEXP Original;		/* The underlying srcfile object */
-    SEXP ParseData;		/* Parse data in non-matrix form or R_NilValue*/
     PROTECT_INDEX SrcFileProt;	/* The SrcFile may change */
     PROTECT_INDEX OriginalProt; /* ditto */
-    PROTECT_INDEX ParseDataProt;/* ParseData will often change */
     /* Position information about the current parse... */
     int xxlineno;		/* Line number according to #line directives */
     int xxcolno;		/* Character number on line */
     int xxbyteno;		/* Byte number on line */
     int xxparseno;              /* Line number ignoring #line directives */
+
+    SEXP ParseData;		/* Parse data in non-matrix form or R_NilValue;
+                                   this first record links to later ones */
+    PROTECT_INDEX ParseDataProt;/* ParseData will often change */
+    SEXP current_parse_rec;     /* Parse data record for current expression */
     int next_id;                /* Next id number of an element in parseData */
 } SrcRefState;
 

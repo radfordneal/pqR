@@ -331,7 +331,7 @@ typedef struct
    referenced by this static global pointer in many routines.  The old
    pointer is saved in the outermost parsing routine and then restored
    at the end, allowing the parser to be called recursively as part of
-   getting in input character. */
+   getting an input character. */
 
 struct parse_state {
 
@@ -404,24 +404,29 @@ static void xxungetc(int);
 #define PDATA_ID           6
 #define PDATA_PARENT       7
 
-#define PDATA_REC_LEN   4      /* Number of elements in parseData records */
+#define PDATA_REC_LEN    5     /* Number of elements in parseData records */
 
-#define PDATA_REC_LINK  0
-#define PDATA_REC_IDATA 1
-#define PDATA_REC_TOKEN 2
-#define PDATA_REC_TEXT  3
+#define PDATA_REC_LINK   0
+#define PDATA_REC_IDATA  1
+#define PDATA_REC_TOKEN  2
+#define PDATA_REC_TEXT   3
+#define PDATA_REC_UPLINK 4
 
 static SEXP start_parseData_record (source_location *start_loc, 
                                     const char *token, const char *text, 
                                     int terminal)
 {
-    SEXP idat, rec;
+    SEXP idat, rec, up;
     int i;
 
     if (!ps->keep_source) return R_NilValue;
 
     rec = allocVector (VECSXP, PDATA_REC_LEN);
-    SET_VECTOR_ELT (rec, PDATA_REC_LINK,  ps->sr->ParseData);
+    SET_VECTOR_ELT (rec, PDATA_REC_LINK,   ps->sr->ParseData);
+    up = ps->sr->current_parse_rec;
+    SET_VECTOR_ELT (rec, PDATA_REC_UPLINK, up);
+    ps->sr->current_parse_rec = rec;
+
     REPROTECT (ps->sr->ParseData = rec, ps->sr->ParseDataProt);
 
     idat = allocVector (INTSXP, PDATA_ROWS);
@@ -432,11 +437,14 @@ static SEXP start_parseData_record (source_location *start_loc,
     INTEGER(idat)[PDATA_FIRST_PARSED] = start_loc->first_parsed;
     INTEGER(idat)[PDATA_FIRST_COLUMN] = start_loc->first_column;
     INTEGER(idat)[PDATA_TERMINAL] = terminal;
-    INTEGER(idat)[PDATA_ID] = ps->sr->next_id++;
+    INTEGER(idat)[PDATA_PARENT] = 
+      up==R_NilValue ? 0 : INTEGER (VECTOR_ELT (up,PDATA_REC_IDATA)) [PDATA_ID];
+    INTEGER(idat)[PDATA_ID] = ps->sr->next_id;
+    ps->sr->next_id += 1;
 
-    SET_VECTOR_ELT (rec, PDATA_REC_IDATA, idat);
-    SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
-    SET_VECTOR_ELT (rec, PDATA_REC_TEXT,  mkChar(text));
+    SET_VECTOR_ELT (rec, PDATA_REC_IDATA,  idat);
+    SET_VECTOR_ELT (rec, PDATA_REC_TOKEN,  mkChar(token));
+    SET_VECTOR_ELT (rec, PDATA_REC_TEXT,   mkChar(text));
 
     return rec;
 }
@@ -444,6 +452,9 @@ static SEXP start_parseData_record (source_location *start_loc,
 static void end_parseData_record (SEXP rec, source_location *end_loc)
 {
     if (rec == R_NilValue) return;
+
+    ps->sr->current_parse_rec = 
+      VECTOR_ELT (ps->sr->current_parse_rec, PDATA_REC_UPLINK);
 
     SEXP idat = VECTOR_ELT (rec, PDATA_REC_IDATA);
     INTEGER(idat)[PDATA_LAST_PARSED] = end_loc->last_parsed;
@@ -616,13 +627,13 @@ void R_InitSrcRefState (SrcRefState *state, int keepSource)
         PROTECT_WITH_INDEX (state->Original = R_NilValue, &state->OriginalProt);
     }
 
-    PROTECT_WITH_INDEX (state->ParseData = R_NilValue, &state->ParseDataProt);
-
     state->xxlineno = 1;
     state->xxcolno = 0;
     state->xxbyteno = 0;
     state->xxparseno = 1;
 
+    PROTECT_WITH_INDEX (state->ParseData = R_NilValue, &state->ParseDataProt);
+    state->current_parse_rec = R_NilValue;
     state->next_id = 1;
 }
 
@@ -691,7 +702,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         UNPROTECT(4); /* text, tokens, mat, dims */
     }
 
-    /* We could just do an UNPROTECT(3), but this detects some bugs... */
+    /* We could just do an UNPROTECT(3), but this might detect some bugs... */
 
     UNPROTECT(1);
     if (R_PPStackTop != state->ParseDataProt) abort();
@@ -700,7 +711,8 @@ void R_FinalizeSrcRefState (SrcRefState *state)
     UNPROTECT(1);
     if (R_PPStackTop != state->SrcFileProt) abort();
 
-    state->ParseData = R_NilValue;  /* just in case... */
+    state->current_parse_rec = R_NilValue;  /* just in case... */
+    state->ParseData = R_NilValue;
     state->Original = R_NilValue;
     state->SrcFile = R_NilValue;
 }
