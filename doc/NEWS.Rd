@@ -95,6 +95,9 @@
         numbers in scientific format with extremely large exponents.  
         (PR#16358).  Fixed in pqR partly as in R Core fix.  Was actually a 
         problem with any numerical input, not just with the parser.
+  \item From R-3.1.3: Extremely large exponents on zero expressed in scientific
+        notation (e.g. \code{0.0e50000}) could give \code{NaN} (\PR{15976}).
+        Fixed as in R Core fix.
   \item C
   \item D
 }}
