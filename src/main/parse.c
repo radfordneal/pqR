@@ -2193,34 +2193,36 @@ static int StringValue(int c, Rboolean forSymbol)
 		c = val;
 		oct_or_hex = TRUE;
 	    }
-	    else if(c == 'u') {
+	    else if (c == 'u' || c == 'U') {
 		unsigned int val = 0; int i, ext; 
 		Rboolean delim = FALSE;
+                int bigU = c == 'U';
 
 		if(forSymbol) {
                     if (stext != st0) free(stext);
-		    error(
-                      _("\\uxxxx sequences not supported inside backticks (line %d)"), 
+		    error (bigU ? _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)")
+                                : _("\\uxxxx sequences not supported inside backticks (line %d)"), 
                       ps->sr->xxlineno);
                 }
 		if((c = xxgetc()) == '{') {
 		    delim = TRUE;
 		    CTEXT_PUSH(c);
-		} 
+		}
                 else
                     xxungetc(c);
-		for(i = 0; i < 4; i++) {
+		for (i = 0; i < (bigU ? 8 : 4); i++) {
 		    c = xxgetc(); CTEXT_PUSH(c);
 		    if(c >= '0' && c <= '9') ext = c - '0';
 		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
 		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
 		    else {
 			xxungetc(c); CTEXT_POP();
-			if (i == 0) { /* was just \u */
+			if (i == 0) { /* was just \u or \U */
 			    *ct = '\0';
                             if (stext != st0) free(stext);
-			    errorcall(R_NilValue, 
-                              _("'\\u' used without hex digits in character string starting \"%s\""), 
+			    errorcall (R_NilValue, 
+                              bigU ? _("'\\U' used without hex digits in character string starting \"%s\"")
+                                   : _("'\\u' used without hex digits in character string starting \"%s\""), 
                               currtext);
 			}
 			break;
@@ -2231,7 +2233,8 @@ static int StringValue(int c, Rboolean forSymbol)
 		    c = xxgetc(); CTEXT_PUSH(c);
 		    if (c != '}') {
                         if (stext != st0) free(stext);
-			error(_("invalid \\u{xxxx} sequence (line %d)"),
+			error (bigU ? _("invalid \\U{xxxxxxxx} sequence (line %d)")
+                                    : _("invalid \\u{xxxx} sequence (line %d)"),
 			      ps->sr->xxlineno);
                     }
 		}
@@ -2241,56 +2244,6 @@ static int StringValue(int c, Rboolean forSymbol)
                           ps->sr->xxlineno);
                 }
 		WTEXT_PUSH(val); /* this assumes wchar_t is Unicode */
-		use_wcs = TRUE;
-		continue;
-	    }
-	    else if(c == 'U') {
-		unsigned int val = 0; int i, ext;
-		Rboolean delim = FALSE;
-		if(forSymbol) {
-                    if (stext != st0) free(stext);
-		    error(
-                      _("\\Uxxxxxxxx sequences not supported inside backticks (line %d)"), 
-                      ps->sr->xxlineno);
-                }
-		if((c = xxgetc()) == '{') {
-		    delim = TRUE;
-		    CTEXT_PUSH(c);
-		}
-                else
-                    xxungetc(c);
-		for(i = 0; i < 8; i++) {
-		    c = xxgetc(); CTEXT_PUSH(c);
-		    if(c >= '0' && c <= '9') ext = c - '0';
-		    else if (c >= 'A' && c <= 'F') ext = c - 'A' + 10;
-		    else if (c >= 'a' && c <= 'f') ext = c - 'a' + 10;
-		    else {
-			xxungetc(c); CTEXT_POP();
-			if (i == 0) { /* was just \U */
-			    *ct = '\0';
-                            if (stext != st0) free(stext);
-			    errorcall(R_NilValue, 
-                              _("'\\U' used without hex digits in character string starting \"%s\""),
-                              currtext);
-			}
-			break;
-		    }
-		    val = 16*val + ext;
-		}
-		if(delim) {
-		    c = xxgetc(); CTEXT_PUSH(c);
-		    if (c != '}') {
-                        if (stext != st0) free(stext);
-			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), 
-                              ps->sr->xxlineno);
-                    }
-		}
-		if (!val) {
-                    if (stext != st0) free(stext);
-		    error(_("nul character not allowed (line %d)"),
-                          ps->sr->xxlineno);		
-                }
-		WTEXT_PUSH(val);
 		use_wcs = TRUE;
 		continue;
 	    }
