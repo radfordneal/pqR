@@ -266,7 +266,7 @@ enum token_type {
   ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
-  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL
+  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -279,7 +279,7 @@ static const char *const token_name[] = {
   "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
-  "'::'",       "':::'",        "**",      "SPECIAL"
+  "'::'",       "':::'",        "**",      "SPECIAL",        "':='"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -304,7 +304,7 @@ static const char *const pdata_token_name[] = {
   "ELSE",       "WHILE",        "NEXT",    "BREAK",          "REPEAT",
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
-  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL"
+  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN"
 };
 
 
@@ -957,7 +957,7 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
     { &R_GlobalRightAssignSymbol, /* ->> */ 0x41 },
     { &R_LocalAssignSymbol,       /* <-  */ 0x32 },
     { &R_GlobalAssignSymbol,      /* <<- */ 0x32 },
-    { &R_ColonEqSymbol,           /* :=  */ 0x32 },
+    { &R_ColonAssignSymbol,       /* :=  */ 0x32 },
     { &R_QuerySymbol,             /* ?   */ 0x21 },
     { &R_EqAssignSymbol,          /* =   */ 0x12 },
     { 0, 0 }
@@ -2954,8 +2954,8 @@ static int token (int c)
 	    }
 	}
 	if (nextchar('=')) {
-	    ps->next_token_val = R_ColonEqSymbol;
-	    return LEFT_ASSIGN;
+	    ps->next_token_val = R_ColonAssignSymbol;
+	    return COLON_ASSIGN;
 	}
 	ps->next_token_val = R_ColonSymbol;
 	return ':';
