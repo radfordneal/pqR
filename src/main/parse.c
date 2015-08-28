@@ -461,7 +461,7 @@ static SEXP start_parseData_record (source_location *start_loc,
     INTEGER(idat)[PDATA_FIRST_COLUMN] = start_loc->first_column;
     INTEGER(idat)[PDATA_TERMINAL] = terminal;
     INTEGER(idat)[PDATA_PARENT] = 
-      up==R_NilValue ? 0 : INTEGER (VECTOR_ELT (up,PDATA_REC_IDATA)) [PDATA_ID];
+      up == R_NilValue ? 0 : PDATA_IDATA_VAL (up, PDATA_ID);
 
     INTEGER(idat)[PDATA_ID] = ps->sr->next_id;
     ps->sr->next_id += 1;
@@ -507,6 +507,12 @@ static void set_parent (SEXP rec, SEXP parent_rec)
     }
 }
 
+static void set_token (SEXP rec, char *token)
+{
+    if (rec != R_NilValue)
+        SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
+}
+
 /* A kludge routine that deletes the second from the latest parse data
    record.  Used to fix up arg lists with keywords, like f(k=x), where
    k initially looks like it could be an expression.  Fiddles IDs too. */
@@ -515,16 +521,19 @@ static void delete_second_parseData_record (void)
 {
     if (!ps->keep_source) return;
 
-    SEXP rec = ps->sr->ParseData;
-    if (rec == R_NilValue) abort();
-    SEXP rec2 = VECTOR_ELT(rec,PDATA_REC_LINK);
+    SEXP rec1 = ps->sr->ParseData;
+    if (rec1 == R_NilValue) abort();
+    SEXP rec2 = VECTOR_ELT(rec1,PDATA_REC_LINK);
     if (rec2 == R_NilValue) abort();
+    SEXP rec3 = VECTOR_ELT(rec2,PDATA_REC_LINK);
+    if (rec3 == R_NilValue) abort();
 
-    SET_VECTOR_ELT (rec, PDATA_REC_LINK, VECTOR_ELT(rec2,PDATA_REC_LINK));
+    SET_VECTOR_ELT (rec1, PDATA_REC_LINK, VECTOR_ELT(rec2,PDATA_REC_LINK));
 
-    SEXP idat = VECTOR_ELT(rec,PDATA_REC_IDATA);
-    INTEGER(idat)[PDATA_ID] -= 1;
+    PDATA_IDATA_VAL (rec1, PDATA_ID) -= 1;
     ps->sr->next_id -= 1;
+
+    set_parent (rec3, ps->sr->containing_parse_rec);
 }
 
 
@@ -1160,6 +1169,7 @@ static SEXP parse_formlist (int flags)
             SEXP tag, f;
             if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
+            set_token (most_recent_token_rec(), "SYMBOL_FORMALS");
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
                 if (TAG(f) == tag) {
@@ -1214,8 +1224,10 @@ static SEXP parse_sublist (int flags)
                 PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
-                    if (TYPEOF(arg) == SYMSXP)
+                    if (TYPEOF(arg) == SYMSXP) {
                         tag = arg;
+                        set_token (most_recent_token_rec(), "SYMBOL_SUB");
+                    }
                     else if (TYPEOF(arg) == STRSXP)
                         tag = install (translateChar (STRING_ELT(arg,0)));
                     else if (arg == R_NilValue)
