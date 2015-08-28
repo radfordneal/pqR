@@ -48,7 +48,7 @@ typedef struct {
     SEXP ParseData;		/* Parse data in non-matrix form or R_NilValue;
                                    this first record links to later ones */
     PROTECT_INDEX ParseDataProt;/* ParseData will often change */
-    SEXP current_parse_rec;     /* Parse data record for current expression */
+    SEXP containing_parse_rec;  /* Parse data record of containing expression */
     int next_id;                /* Next id number of an element in parseData */
 } SrcRefState;
 
