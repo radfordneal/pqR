@@ -9,7 +9,6 @@ Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
-No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -22,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+3 helper threads, task merging enabled.
 
 > ###---- ALL tests here should return  TRUE !
 > ###
@@ -57,7 +59,8 @@ non-integer value 1e-3 qualified with L; using numeric value
 Warning message:
 integer literal 1.L contains unnecessary decimal point 
 > try(parse(text = "12iL")) # gives syntax error
-Error in parse(text = "12iL") : 1:4: syntax error, unexpected symbol
+Error in parse(text = "12iL") : 
+  <text>:1:4: syntax error, unexpected symbol
 1: 12iL
       ^
 > 
