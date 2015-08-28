@@ -487,11 +487,15 @@ static void end_parseData_record (SEXP rec, source_location *end_loc)
       VECTOR_ELT (ps->sr->containing_parse_rec, PDATA_REC_UPLINK);
 }
 
-static SEXP most_recent_token_rec (void)
+static SEXP prev_token_rec (int n)
 {
     SEXP rec = ps->sr->ParseData; 
 
-    while (rec != R_NilValue && ! PDATA_IDATA_VAL (rec, PDATA_TERMINAL)) {
+    while (rec != R_NilValue) {
+        if (PDATA_IDATA_VAL (rec, PDATA_TERMINAL)) {
+            n -= 1;
+            if (n == 0) break;
+        }
         rec = VECTOR_ELT (rec, PDATA_REC_LINK);
     }
 
@@ -783,7 +787,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
 
 #define BGN_PARSE_FUN \
     NEXT_TOKEN;  /* so location and bgn_token_rec will be correct */ \
-    SEXP bgn_token_rec = most_recent_token_rec(); \
+    SEXP bgn_token_rec = prev_token_rec(1); \
     int nprotect = 0;
 
 /* End a recursive-descent parsing routine.  Unprotects everything that
@@ -1169,7 +1173,7 @@ static SEXP parse_formlist (int flags)
             SEXP tag, f;
             if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
-            set_token (most_recent_token_rec(), "SYMBOL_FORMALS");
+            set_token (prev_token_rec(1), "SYMBOL_FORMALS");
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
                 if (TAG(f) == tag) {
@@ -1183,6 +1187,7 @@ static SEXP parse_formlist (int flags)
             get_next_token();
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
+                set_token (prev_token_rec(1), "EQ_FORMALS");
                 get_next_token();
                 PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 SETCAR (last, def);
@@ -1224,9 +1229,10 @@ static SEXP parse_sublist (int flags)
                 PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
+                    set_token (prev_token_rec(1), "EQ_SUB");
                     if (TYPEOF(arg) == SYMSXP) {
                         tag = arg;
-                        set_token (most_recent_token_rec(), "SYMBOL_SUB");
+                        set_token (prev_token_rec(2), "SYMBOL_SUB");
                     }
                     else if (TYPEOF(arg) == STRSXP)
                         tag = install (translateChar (STRING_ELT(arg,0)));
@@ -1319,6 +1325,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         get_next_token();
         if (!NL_END && (NEXT_TOKEN == NS_GET || NEXT_TOKEN == NS_GET_INT)) {
             op = TOKEN_VALUE();
+            set_token (prev_token_rec(2), "SYMBOL_PACKAGE");
             get_next_token();
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
@@ -1515,12 +1522,17 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         set_parent (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent (most_recent_token_rec(), outer_rec);
+        set_parent (prev_token_rec(1), outer_rec);
 
         /* Function call. */
 
         if (NEXT_TOKEN == '(') {
             SEXP subs;
+            if (TYPEOF(res) == SYMSXP || TYPEOF(res) == LANGSXP &&
+                                          (CAR(res) == R_DoubleColonSymbol || 
+                                           CAR(res) == R_TripleColonSymbol)) {
+                set_token (prev_token_rec(2), "SYMBOL_FUNCTION_CALL");
+            }
             get_next_token();
             PARSE_SUB(subs = parse_sublist(flags));
             if (isString(res))
@@ -1584,7 +1596,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         set_parent (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent (most_recent_token_rec(), outer_rec);
+        set_parent (prev_token_rec(1), outer_rec);
 
         if (!keep_parens && par != 0 
                && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
@@ -1630,7 +1642,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     end_location(&loc);
     end_parseData_record(outer_rec,&loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
-        set_parent (most_recent_token_rec(), ps->sr->containing_parse_rec);
+        set_parent (prev_token_rec(1), ps->sr->containing_parse_rec);
     END_PARSE_FUN;
     return res;
 }
