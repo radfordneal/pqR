@@ -266,7 +266,7 @@ enum token_type {
   ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
-  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL
+  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -279,7 +279,7 @@ static const char *const token_name[] = {
   "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
-  "'::'",       "':::'",        "**",      "SPECIAL"
+  "'::'",       "':::'",        "**",      "SPECIAL",        "':='"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -304,7 +304,7 @@ static const char *const pdata_token_name[] = {
   "ELSE",       "WHILE",        "NEXT",    "BREAK",          "REPEAT",
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
-  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL"
+  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN"
 };
 
 
@@ -331,7 +331,7 @@ typedef struct
    referenced by this static global pointer in many routines.  The old
    pointer is saved in the outermost parsing routine and then restored
    at the end, allowing the parser to be called recursively as part of
-   getting in input character. */
+   getting an input character. */
 
 struct parse_state {
 
@@ -404,50 +404,113 @@ static void xxungetc(int);
 #define PDATA_ID           6
 #define PDATA_PARENT       7
 
-#define PDATA_REC_LEN   4      /* Number of elements in parseData records */
+#define PDATA_REC_LEN    5     /* Number of elements in parseData records */
 
-#define PDATA_REC_LINK  0
-#define PDATA_REC_IDATA 1
-#define PDATA_REC_TOKEN 2
-#define PDATA_REC_TEXT  3
+#define PDATA_REC_LINK   0
+#define PDATA_REC_IDATA  1
+#define PDATA_REC_TOKEN  2
+#define PDATA_REC_TEXT   3
+#define PDATA_REC_UPLINK 4
+
+#define PDATA_IDATA_VAL(pd,ix) \
+    INTEGER (VECTOR_ELT (pd, PDATA_REC_IDATA)) [ix]
+
+
+/* Routine to be called for each token seen and each expression parsed, 
+   that creates a parse data record for it. */
 
 static SEXP start_parseData_record (source_location *start_loc, 
                                     const char *token, const char *text, 
                                     int terminal)
 {
-    SEXP idat, rec;
+    SEXP idat, rec, up;
     int i;
 
     if (!ps->keep_source) return R_NilValue;
 
+    /* Allocate a record for this syntactic object, and add it to the
+       front of the linked list of parse data records. */
+
     rec = allocVector (VECSXP, PDATA_REC_LEN);
-    SET_VECTOR_ELT (rec, PDATA_REC_LINK,  ps->sr->ParseData);
+    SET_VECTOR_ELT (rec, PDATA_REC_LINK, ps->sr->ParseData);
     REPROTECT (ps->sr->ParseData = rec, ps->sr->ParseDataProt);
+
+    /* Set the parent of this record to the record of the current 
+       containing object.  (But this may be changed later.)  This
+       record then becomes the new containing record. */
+
+    up = ps->sr->containing_parse_rec;
+    SET_VECTOR_ELT (rec, PDATA_REC_UPLINK, up);
+    ps->sr->containing_parse_rec = rec;
+
+    /* Allocate space for the integer portion of the record. */
 
     idat = allocVector (INTSXP, PDATA_ROWS);
 
     for (i = 0; i < PDATA_ROWS; i++) 
         INTEGER(idat)[i] = NA_INTEGER;             /* FOR NOW */
 
+    /* Put information in the record.  The last parsed and column fields
+       can't be filled in yet, however. */
+
+    SET_VECTOR_ELT (rec, PDATA_REC_IDATA,  idat);
+    SET_VECTOR_ELT (rec, PDATA_REC_TOKEN,  mkChar(token));
+    SET_VECTOR_ELT (rec, PDATA_REC_TEXT,   mkChar(text));
+
     INTEGER(idat)[PDATA_FIRST_PARSED] = start_loc->first_parsed;
     INTEGER(idat)[PDATA_FIRST_COLUMN] = start_loc->first_column;
     INTEGER(idat)[PDATA_TERMINAL] = terminal;
-    INTEGER(idat)[PDATA_ID] = ps->sr->next_id++;
+    INTEGER(idat)[PDATA_PARENT] = 
+      up == R_NilValue ? 0 : PDATA_IDATA_VAL (up, PDATA_ID);
 
-    SET_VECTOR_ELT (rec, PDATA_REC_IDATA, idat);
-    SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
-    SET_VECTOR_ELT (rec, PDATA_REC_TEXT,  mkChar(text));
+    INTEGER(idat)[PDATA_ID] = ps->sr->next_id;
+    ps->sr->next_id += 1;
 
     return rec;
 }
+
+/* Routine to be called to complete a parse data record, once the end 
+   location is known. */
 
 static void end_parseData_record (SEXP rec, source_location *end_loc)
 {
     if (rec == R_NilValue) return;
 
-    SEXP idat = VECTOR_ELT (rec, PDATA_REC_IDATA);
-    INTEGER(idat)[PDATA_LAST_PARSED] = end_loc->last_parsed;
-    INTEGER(idat)[PDATA_LAST_COLUMN] = end_loc->last_column;
+    /* Store the end location in the parse data record. */
+
+    PDATA_IDATA_VAL (rec, PDATA_LAST_PARSED) = end_loc->last_parsed;
+    PDATA_IDATA_VAL (rec, PDATA_LAST_COLUMN) = end_loc->last_column;
+
+    /* Make the containing record be the one containing this record. */
+
+    ps->sr->containing_parse_rec = 
+      VECTOR_ELT (ps->sr->containing_parse_rec, PDATA_REC_UPLINK);
+}
+
+static SEXP most_recent_token_rec (void)
+{
+    SEXP rec = ps->sr->ParseData; 
+
+    while (rec != R_NilValue && ! PDATA_IDATA_VAL (rec, PDATA_TERMINAL)) {
+        rec = VECTOR_ELT (rec, PDATA_REC_LINK);
+    }
+
+    return rec;
+}
+
+static void set_parent (SEXP rec, SEXP parent_rec)
+{
+    if (rec != R_NilValue) {
+        SET_VECTOR_ELT (rec, PDATA_REC_UPLINK, parent_rec);
+        PDATA_IDATA_VAL (rec, PDATA_PARENT) 
+          = PDATA_IDATA_VAL (parent_rec, PDATA_ID);
+    }
+}
+
+static void set_token (SEXP rec, char *token)
+{
+    if (rec != R_NilValue)
+        SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
 }
 
 /* A kludge routine that deletes the second from the latest parse data
@@ -458,16 +521,19 @@ static void delete_second_parseData_record (void)
 {
     if (!ps->keep_source) return;
 
-    SEXP rec = ps->sr->ParseData;
-    if (rec == R_NilValue) abort();
-    SEXP rec2 = VECTOR_ELT(rec,PDATA_REC_LINK);
+    SEXP rec1 = ps->sr->ParseData;
+    if (rec1 == R_NilValue) abort();
+    SEXP rec2 = VECTOR_ELT(rec1,PDATA_REC_LINK);
     if (rec2 == R_NilValue) abort();
+    SEXP rec3 = VECTOR_ELT(rec2,PDATA_REC_LINK);
+    if (rec3 == R_NilValue) abort();
 
-    SET_VECTOR_ELT (rec, PDATA_REC_LINK, VECTOR_ELT(rec2,PDATA_REC_LINK));
+    SET_VECTOR_ELT (rec1, PDATA_REC_LINK, VECTOR_ELT(rec2,PDATA_REC_LINK));
 
-    SEXP idat = VECTOR_ELT(rec,PDATA_REC_IDATA);
-    INTEGER(idat)[PDATA_ID] -= 1;
+    PDATA_IDATA_VAL (rec1, PDATA_ID) -= 1;
     ps->sr->next_id -= 1;
+
+    set_parent (rec3, ps->sr->containing_parse_rec);
 }
 
 
@@ -616,13 +682,13 @@ void R_InitSrcRefState (SrcRefState *state, int keepSource)
         PROTECT_WITH_INDEX (state->Original = R_NilValue, &state->OriginalProt);
     }
 
-    PROTECT_WITH_INDEX (state->ParseData = R_NilValue, &state->ParseDataProt);
-
     state->xxlineno = 1;
     state->xxcolno = 0;
     state->xxbyteno = 0;
     state->xxparseno = 1;
 
+    PROTECT_WITH_INDEX (state->ParseData = R_NilValue, &state->ParseDataProt);
+    state->containing_parse_rec = R_NilValue;
     state->next_id = 1;
 }
 
@@ -691,7 +757,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         UNPROTECT(4); /* text, tokens, mat, dims */
     }
 
-    /* We could just do an UNPROTECT(3), but this detects some bugs... */
+    /* We could just do an UNPROTECT(3), but this might detect some bugs... */
 
     UNPROTECT(1);
     if (R_PPStackTop != state->ParseDataProt) abort();
@@ -700,7 +766,8 @@ void R_FinalizeSrcRefState (SrcRefState *state)
     UNPROTECT(1);
     if (R_PPStackTop != state->SrcFileProt) abort();
 
-    state->ParseData = R_NilValue;  /* just in case... */
+    state->containing_parse_rec = R_NilValue;  /* just in case... */
+    state->ParseData = R_NilValue;
     state->Original = R_NilValue;
     state->SrcFile = R_NilValue;
 }
@@ -710,11 +777,14 @@ void R_FinalizeSrcRefState (SrcRefState *state)
    VARIABLES, MACROS, AND FUNCTIONS SUPPORTING THE PARSER
 */
 
-/* Begin a recursive-descent parsing routine.  Sets up for PROTECT_N. */
+/* Begin a recursive-descent parsing routine.  Sets up for PROTECT_N. 
+   Sets bgn_token_rec to the parse data record of the most recently
+   obtained token (or to R_NilValue is source isn't kept). */
 
 #define BGN_PARSE_FUN \
-    int nprotect = 0
-
+    NEXT_TOKEN;  /* so location and bgn_token_rec will be correct */ \
+    SEXP bgn_token_rec = most_recent_token_rec(); \
+    int nprotect = 0;
 
 /* End a recursive-descent parsing routine.  Unprotects everything that
    was protected with PROTECT_N.  Allows for exitting with NULL result
@@ -896,7 +966,7 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
     { &R_GlobalRightAssignSymbol, /* ->> */ 0x41 },
     { &R_LocalAssignSymbol,       /* <-  */ 0x32 },
     { &R_GlobalAssignSymbol,      /* <<- */ 0x32 },
-    { &R_ColonEqSymbol,           /* :=  */ 0x32 },
+    { &R_ColonAssignSymbol,       /* :=  */ 0x32 },
     { &R_QuerySymbol,             /* ?   */ 0x21 },
     { &R_EqAssignSymbol,          /* =   */ 0x12 },
     { 0, 0 }
@@ -1099,6 +1169,7 @@ static SEXP parse_formlist (int flags)
             SEXP tag, f;
             if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
+            set_token (most_recent_token_rec(), "SYMBOL_FORMALS");
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
                 if (TAG(f) == tag) {
@@ -1153,8 +1224,10 @@ static SEXP parse_sublist (int flags)
                 PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
-                    if (TYPEOF(arg) == SYMSXP)
+                    if (TYPEOF(arg) == SYMSXP) {
                         tag = arg;
+                        set_token (most_recent_token_rec(), "SYMBOL_SUB");
+                    }
                     else if (TYPEOF(arg) == STRSXP)
                         tag = install (translateChar (STRING_ELT(arg,0)));
                     else if (arg == R_NilValue)
@@ -1210,6 +1283,7 @@ static SEXP parse_sublist (int flags)
 static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
+
     SEXP outer_rec, rec, res, right, op;
     int op_prec, next_op_prec;
     source_location begin_loc, loc;
@@ -1218,10 +1292,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
     int par = 0;  /* paren precedence indicator - initially not parenthesized */
 
-    NEXT_TOKEN;  /* so location will be correct */
-
     start_location(&begin_loc);
     outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+    set_parent (bgn_token_rec, outer_rec);
 
     /* Unary operators. */
 
@@ -1439,8 +1512,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     while (!NL_END && POSTFIX_TOKEN()) {
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        set_parent (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
+        set_parent (most_recent_token_rec(), outer_rec);
 
         /* Function call. */
 
@@ -1506,8 +1581,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             break;
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        set_parent (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
+        set_parent (most_recent_token_rec(), outer_rec);
 
         if (!keep_parens && par != 0 
                && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
@@ -1552,6 +1629,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     end_location(&loc);
     end_parseData_record(outer_rec,&loc);
+    if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
+        set_parent (most_recent_token_rec(), ps->sr->containing_parse_rec);
     END_PARSE_FUN;
     return res;
 }
@@ -1931,14 +2010,6 @@ static int NumericValue(int c)
 	    warning(_("integer literal %sL contains unnecessary decimal point"),
                     yytext);
 	ps->next_token_val = mkInteger(yytext);
-#if 0  /* do this to make 123 integer not double */
-    } else if(!(seendot || seenexp)) {
-	if(c != 'L') xxungetc(c);
-	double a = R_atof(yytext);
-	int b = (int) a;
-	ps->next_token_val = (a != (double) b) ? mkReal(yytext) 
-                                               : mkInteger(yytext);
-#endif
     } else {
 	if(c != 'L')
 	    xxungetc(c);
@@ -2895,8 +2966,8 @@ static int token (int c)
 	    }
 	}
 	if (nextchar('=')) {
-	    ps->next_token_val = R_ColonEqSymbol;
-	    return LEFT_ASSIGN;
+	    ps->next_token_val = R_ColonAssignSymbol;
+	    return COLON_ASSIGN;
 	}
 	ps->next_token_val = R_ColonSymbol;
 	return ':';

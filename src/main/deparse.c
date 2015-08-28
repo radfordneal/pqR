@@ -1013,7 +1013,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                                      || op == R_GlobalAssignSymbol
                                      || op == R_LocalRightAssignSymbol
                                      || op == R_GlobalRightAssignSymbol
-                                     || op == R_ColonEqSymbol)) {
+                                     || op == R_ColonAssignSymbol)) {
                 if ((parens = needsparens_binary(op,CAR(s),1)))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);

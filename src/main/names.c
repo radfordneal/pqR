@@ -521,7 +521,7 @@ static void SymbolShortcuts(void)
     R_NotSymbol = install("!");
     R_TildeSymbol = install("~");
     R_QuerySymbol = install("?");
-    R_ColonEqSymbol = install(":=");
+    R_ColonAssignSymbol = install(":=");
     R_AtSymbol = install("@");
     R_ParenSymbol = install("(");
 

@@ -128,7 +128,7 @@ extern0 SEXP	R_Or2Symbol;          /* "||" */
 extern0 SEXP	R_NotSymbol;          /* "!" */
 extern0 SEXP	R_TildeSymbol;        /* "~" */
 extern0 SEXP	R_QuerySymbol;        /* "?" */
-extern0 SEXP	R_ColonEqSymbol;      /* ":=" */
+extern0 SEXP	R_ColonAssignSymbol;  /* ":=" */
 extern0 SEXP	R_AtSymbol;           /* "@" */
 extern0 SEXP	R_ParenSymbol;        /* "(" */
 
