@@ -697,6 +697,7 @@ static R_NORETURN void errorcall_dflt(SEXP call, const char *format,...)
 
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
+    va_end(ap); /* possibly required by C99 even though never reached */
 }
 
 R_NORETURN void errorcall(SEXP call, const char *format,...)
@@ -719,6 +720,7 @@ R_NORETURN void errorcall(SEXP call, const char *format,...)
 
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
+    va_end(ap); /* possibly required by C99 even though never reached */
 }
 
 static SEXP do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
