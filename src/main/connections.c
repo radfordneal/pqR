@@ -3279,7 +3279,7 @@ int Rconn_getline(Rconnection con, char *buf, int bufsize)
 int Rconn_printf(Rconnection con, const char *format, ...)
 {
     int res;
-    va_list(ap);
+    va_list ap;
 
     va_start(ap, format);
     /* Parentheses added for FC4 with gcc4 and -D_FORTIFY_SOURCE=2 */
