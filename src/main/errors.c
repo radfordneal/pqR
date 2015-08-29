@@ -257,7 +257,7 @@ void warning(const char *format, ...)
     char buf[BUFSIZE], *p;
     RCNTXT *c = R_GlobalContext;
 
-    va_list(ap);
+    va_list ap;
     va_start(ap, format);
     Rvsnprintf(buf, min(BUFSIZE, R_WarnLength+1), format, ap);
     va_end(ap);
@@ -392,7 +392,7 @@ static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 
 static void warningcall_dflt(SEXP call, const char *format,...)
 {
-    va_list(ap);
+    va_list ap;
 
     va_start(ap, format);
     vwarningcall_dflt(call, format, ap);
@@ -401,7 +401,7 @@ static void warningcall_dflt(SEXP call, const char *format,...)
 
 void warningcall(SEXP call, const char *format, ...)
 {
-    va_list(ap);
+    va_list ap;
     va_start(ap, format);
     vsignalWarning(call, format, ap);
     va_end(ap);
@@ -409,7 +409,7 @@ void warningcall(SEXP call, const char *format, ...)
 
 void warningcall_immediate(SEXP call, const char *format, ...)
 {
-    va_list(ap);
+    va_list ap;
 
     immediateWarning = 1;
     va_start(ap, format);
@@ -693,15 +693,16 @@ static R_NORETURN void verrorcall_dflt
 
 static R_NORETURN void errorcall_dflt(SEXP call, const char *format,...)
 {
-    va_list(ap);
+    va_list ap;
 
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
+    va_end(ap); /* possibly required by C99 even though never reached */
 }
 
 R_NORETURN void errorcall(SEXP call, const char *format,...)
 {
-    va_list(ap);
+    va_list ap;
 
     va_start(ap, format);
     vsignalError(call, format, ap);
@@ -719,6 +720,7 @@ R_NORETURN void errorcall(SEXP call, const char *format,...)
 
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
+    va_end(ap); /* possibly required by C99 even though never reached */
 }
 
 static SEXP do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -737,7 +739,7 @@ R_NORETURN void error(const char *format, ...)
     char buf[BUFSIZE];
     RCNTXT *c = R_GlobalContext;
 
-    va_list(ap);
+    va_list ap;
     va_start(ap, format);
     Rvsnprintf(buf, min(BUFSIZE, R_WarnLength), format, ap);
     va_end(ap);
@@ -1191,7 +1193,7 @@ R_NORETURN void ErrorMessage(SEXP call, int which_error, ...)
 {
     int i;
     char buf[BUFSIZE];
-    va_list(ap);
+    va_list ap;
 
     i = 0;
     while(ErrorDB[i].code != ERROR_UNKNOWN) {
@@ -1210,7 +1212,7 @@ void WarningMessage(SEXP call, R_WARNING which_warn, ...)
 {
     int i;
     char buf[BUFSIZE];
-    va_list(ap);
+    va_list ap;
 
     i = 0;
     while(WarningDB[i].code != WARNING_UNKNOWN) {
