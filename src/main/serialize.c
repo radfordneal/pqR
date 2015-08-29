@@ -186,7 +186,7 @@ static const int R_DefaultSerializeVersion = 2;
 static int Rsnprintf(char *buf, int size, const char *format, ...)
 {
     int val;
-    va_list(ap);
+    va_list ap;
     va_start(ap, format);
     /* On Windows this uses the non-C99 MSVCRT.dll version, which is OK */
     val = vsnprintf(buf, size, format, ap);
