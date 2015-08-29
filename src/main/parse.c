@@ -502,7 +502,7 @@ static SEXP prev_token_rec (int n)
     return rec;
 }
 
-static void set_parent (SEXP rec, SEXP parent_rec)
+static void set_parent_in_rec (SEXP rec, SEXP parent_rec)
 {
     if (rec != R_NilValue) {
         SET_VECTOR_ELT (rec, PDATA_REC_UPLINK, parent_rec);
@@ -511,7 +511,7 @@ static void set_parent (SEXP rec, SEXP parent_rec)
     }
 }
 
-static void set_token (SEXP rec, char *token)
+static void set_token_in_rec (SEXP rec, char *token)
 {
     if (rec != R_NilValue)
         SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
@@ -548,7 +548,7 @@ static void delete_second_parseData_record (void)
     PDATA_IDATA_VAL (rec1, PDATA_ID) -= 1;
     ps->sr->next_id -= 1;
 
-    set_parent (rec3, ps->sr->containing_parse_rec);
+    set_parent_in_rec (rec3, ps->sr->containing_parse_rec);
 }
 
 
@@ -752,11 +752,11 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         PROTECT (text = allocVector (STRSXP, pdlen));
 
         pdat = state->ParseData;
-        k = 0;
-        for (i = 0; i < pdlen; i++) {
+        k = pdlen * PDATA_ROWS;
+        for (i = pdlen-1; i >= 0; i--) {
             idat = VECTOR_ELT(pdat,PDATA_REC_IDATA);
-            for (j = 0; j < PDATA_ROWS; j++)
-                INTEGER(mat)[k++] = INTEGER(idat)[j];
+            for (j = PDATA_ROWS-1; j >= 0; j--)
+                INTEGER(mat)[--k] = INTEGER(idat)[j];
             SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,PDATA_REC_TOKEN));
             SET_STRING_ELT (text, i, VECTOR_ELT(pdat,PDATA_REC_TEXT));
             pdat = VECTOR_ELT(pdat,PDATA_REC_LINK);
@@ -1184,7 +1184,7 @@ static SEXP parse_formlist (int flags)
             SEXP tag, f;
             if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
-            set_token (prev_token_rec(1), "SYMBOL_FORMALS");
+            set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
                 if (TAG(f) == tag) {
@@ -1198,7 +1198,7 @@ static SEXP parse_formlist (int flags)
             get_next_token();
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
-                set_token (prev_token_rec(1), "EQ_FORMALS");
+                set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
                 get_next_token();
                 PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 SETCAR (last, def);
@@ -1240,10 +1240,10 @@ static SEXP parse_sublist (int flags)
                 PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
-                    set_token (prev_token_rec(1), "EQ_SUB");
+                    set_token_in_rec (prev_token_rec(1), "EQ_SUB");
                     if (TYPEOF(arg) == SYMSXP) {
                         tag = arg;
-                        set_token (prev_token_rec(2), "SYMBOL_SUB");
+                        set_token_in_rec (prev_token_rec(2), "SYMBOL_SUB");
                     }
                     else if (TYPEOF(arg) == STRSXP)
                         tag = install (translateChar (STRING_ELT(arg,0)));
@@ -1311,7 +1311,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     start_location(&begin_loc);
     outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-    set_parent (bgn_token_rec, outer_rec);
+    set_parent_in_rec (bgn_token_rec, outer_rec);
 
     /* Unary operators. */
 
@@ -1336,7 +1336,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         get_next_token();
         if (!NL_END && (NEXT_TOKEN == NS_GET || NEXT_TOKEN == NS_GET_INT)) {
             op = TOKEN_VALUE();
-            set_token (prev_token_rec(2), "SYMBOL_PACKAGE");
+            set_token_in_rec (prev_token_rec(2), "SYMBOL_PACKAGE");
             get_next_token();
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
@@ -1530,10 +1530,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     while (!NL_END && POSTFIX_TOKEN()) {
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-        set_parent (bgn_token_rec, rec);
+        set_parent_in_rec (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent (prev_token_rec(1), outer_rec);
+        set_parent_in_rec (prev_token_rec(1), outer_rec);
 
         /* Function call. */
 
@@ -1542,7 +1542,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (TYPEOF(res) == SYMSXP || TYPEOF(res) == LANGSXP &&
                                           (CAR(res) == R_DoubleColonSymbol || 
                                            CAR(res) == R_TripleColonSymbol)) {
-                set_token (prev_token_rec(2), "SYMBOL_FUNCTION_CALL");
+                set_token_in_rec (prev_token_rec(2), "SYMBOL_FUNCTION_CALL");
             }
             get_next_token();
             PARSE_SUB(subs = parse_sublist(flags));
@@ -1597,7 +1597,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             if (NEXT_TOKEN == SYMBOL)
-                set_token (prev_token_rec(1), "SLOT");
+                set_token_in_rec (prev_token_rec(1), "SLOT");
             sym = TOKEN_VALUE();
             res = PROTECT_N (LANG3 (op, res, sym));
             get_next_token();
@@ -1619,10 +1619,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             break;
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-        set_parent (bgn_token_rec, rec);
+        set_parent_in_rec (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent (prev_token_rec(1), outer_rec);
+        set_parent_in_rec (prev_token_rec(1), outer_rec);
 
         if (!keep_parens && par != 0 
                && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
@@ -1668,7 +1668,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     end_location(&loc);
     end_parseData_record(outer_rec,&loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
-        set_parent (prev_token_rec(1), ps->sr->containing_parse_rec);
+        set_parent_in_rec (prev_token_rec(1), ps->sr->containing_parse_rec);
     END_PARSE_FUN;
     return res;
 }
