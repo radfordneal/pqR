@@ -520,10 +520,9 @@ static void set_token_in_rec (SEXP rec, char *token)
 static void set_initial_comments_parent (void)
 {
     SEXP rec = ps->sr->ParseData;
-    while (rec != R_NilValue
-            && strcmp ("COMMENT", CHAR (VECTOR_ELT (rec, PDATA_REC_TOKEN))) == 0
-            && PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0) {
-        PDATA_IDATA_VAL (rec, PDATA_PARENT) = - ps->sr->next_id;
+    while (rec != R_NilValue && PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0) {
+        if (strcmp ("COMMENT", CHAR (VECTOR_ELT (rec, PDATA_REC_TOKEN))) == 0)
+            PDATA_IDATA_VAL (rec, PDATA_PARENT) = - ps->sr->next_id;
         rec = VECTOR_ELT (rec, PDATA_REC_LINK);
     }
 }
@@ -886,7 +885,7 @@ static void error_msg(const char *s)
 
 
 /* Look at the next token, which will usually already be in next_token.
-   However, if next_token is '\n', advance to the next token first. */
+   However, if next_token is '\n', advance to the next other token first. */
 
 #define NEXT_TOKEN \
   (ps->next_token == '\n' ? get_next_token_not_newline() : ps->next_token) 
@@ -2778,13 +2777,19 @@ static void set_parse_filename(SEXP newname)
 
 /* Skip a comment, returning the character ending it ('\n' or R_EOF).
    Also processes comments that are #line directives.  The initial #
-   will have already been read. */
+   will have already been read. 
+
+   Only short comments (<= 200 chars) are recorded for parse data (longer
+   ones can be fetched at the R level).  Line directives are not recorded. */
+
+#define MAX_REC_COMMENT 200  /* must be less than MAXELTSIZE == sizeof yytext */
 
 static int skip_comment (void)
 {
     int directive = FALSE;
     int hasfile = FALSE;
     int linenumber;
+    int text_ix;
     source_location loc;
     char *dir;
     int c, i;
@@ -2793,17 +2798,24 @@ static int skip_comment (void)
     loc.first_column = ps->sr->xxcolno;
 
     c = '#';  /* character that will have been read before */
+    yytext[0] = c;
+    text_ix = 1;
 
-    /* Process it as a #line directive if it is one. */
+    /* Start processing it as a #line directive if it is one. */
 
-    if (ps->sr->xxcolno != 1)
+    c = xxgetc();
+
+    if (ps->sr->xxcolno != 2)  /* directives are only at beginning of line */
         goto skip;
 
     for (dir = "line"; *dir; dir++) {
-        c = xxgetc();
         if (c != *dir)
             goto skip;
+        yytext[text_ix++] = c;
+        c = xxgetc();
     }
+
+    text_ix = 0;  /* Don't record directive for parse data */
 
     c = skip_whitespace(xxgetc());
     if (!isdigit(c)) 
@@ -2826,11 +2838,21 @@ static int skip_comment (void)
     /* Skip to end of comment. */
 
   skip:
-    while (c != '\n' && c != R_EOF) c = xxgetc();
+    while (c != '\n' && c != R_EOF) {
+        if (text_ix) {
+            if (text_ix >= MAX_REC_COMMENT)
+                text_ix = 0;
+            else
+                yytext[text_ix++] = c;
+        }
+        c = xxgetc();
+    }
+
+    yytext[text_ix] = 0;
 
     if (ps->keep_source) {
         SEXP rec = start_parseData_record 
-                     (&loc, directive ? "LINE_DIRECTIVE" : "COMMENT", "", TRUE);
+               (&loc, directive ? "LINE_DIRECTIVE" : "COMMENT", yytext, TRUE);
         if (c == '\n') xxungetc(c);  /* newline shouldn't be in parse record */
         loc.last_parsed = ps->sr->xxparseno;
         loc.last_column = ps->sr->xxcolno;
