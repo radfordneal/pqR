@@ -686,7 +686,7 @@ const char *EncodeElement(SEXP x, int indx, int quote, char dec)
 
 void Rprintf(const char *format, ...)
 {
-    va_list(ap);
+    va_list ap;
 
     va_start(ap, format);
     Rvprintf(format, ap);
@@ -700,7 +700,7 @@ void Rprintf(const char *format, ...)
 */
 void REprintf(const char *format, ...)
 {
-    va_list(ap);
+    va_list ap;
     va_start(ap, format);
     REvprintf(format, ap);
     va_end(ap);
