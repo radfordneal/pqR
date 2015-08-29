@@ -39,6 +39,8 @@
 
 extern IoBuffer R_ConsoleIob;
 
+/* Return a vector of string swith the recent context of a parse error. */
+
 SEXP attribute_hidden getParseContext(void)
 {
     int i, last = PARSE_CONTEXT_SIZE;
@@ -58,7 +60,8 @@ SEXP attribute_hidden getParseContext(void)
 	}
     }
 
-    nn = 16; /* initially allocate space for 16 lines */
+    /* Initially allocate space for 16 lines.  (Do we really ever want more?) */
+    nn = 16; 
     PROTECT(ans = allocVector(STRSXP, nn));
     c = context[last];
     nread = 0;
