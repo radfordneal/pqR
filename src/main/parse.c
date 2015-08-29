@@ -502,7 +502,7 @@ static SEXP prev_token_rec (int n)
     return rec;
 }
 
-static void set_parent (SEXP rec, SEXP parent_rec)
+static void set_parent_in_rec (SEXP rec, SEXP parent_rec)
 {
     if (rec != R_NilValue) {
         SET_VECTOR_ELT (rec, PDATA_REC_UPLINK, parent_rec);
@@ -511,7 +511,7 @@ static void set_parent (SEXP rec, SEXP parent_rec)
     }
 }
 
-static void set_token (SEXP rec, char *token)
+static void set_token_in_rec (SEXP rec, char *token)
 {
     if (rec != R_NilValue)
         SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
@@ -520,10 +520,9 @@ static void set_token (SEXP rec, char *token)
 static void set_initial_comments_parent (void)
 {
     SEXP rec = ps->sr->ParseData;
-    while (rec != R_NilValue
-            && strcmp ("COMMENT", CHAR (VECTOR_ELT (rec, PDATA_REC_TOKEN))) == 0
-            && PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0) {
-        PDATA_IDATA_VAL (rec, PDATA_PARENT) = - ps->sr->next_id;
+    while (rec != R_NilValue && PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0) {
+        if (strcmp ("COMMENT", CHAR (VECTOR_ELT (rec, PDATA_REC_TOKEN))) == 0)
+            PDATA_IDATA_VAL (rec, PDATA_PARENT) = - ps->sr->next_id;
         rec = VECTOR_ELT (rec, PDATA_REC_LINK);
     }
 }
@@ -548,7 +547,7 @@ static void delete_second_parseData_record (void)
     PDATA_IDATA_VAL (rec1, PDATA_ID) -= 1;
     ps->sr->next_id -= 1;
 
-    set_parent (rec3, ps->sr->containing_parse_rec);
+    set_parent_in_rec (rec3, ps->sr->containing_parse_rec);
 }
 
 
@@ -752,11 +751,11 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         PROTECT (text = allocVector (STRSXP, pdlen));
 
         pdat = state->ParseData;
-        k = 0;
-        for (i = 0; i < pdlen; i++) {
+        k = pdlen * PDATA_ROWS;
+        for (i = pdlen-1; i >= 0; i--) {
             idat = VECTOR_ELT(pdat,PDATA_REC_IDATA);
-            for (j = 0; j < PDATA_ROWS; j++)
-                INTEGER(mat)[k++] = INTEGER(idat)[j];
+            for (j = PDATA_ROWS-1; j >= 0; j--)
+                INTEGER(mat)[--k] = INTEGER(idat)[j];
             SET_STRING_ELT (tokens, i, VECTOR_ELT(pdat,PDATA_REC_TOKEN));
             SET_STRING_ELT (text, i, VECTOR_ELT(pdat,PDATA_REC_TEXT));
             pdat = VECTOR_ELT(pdat,PDATA_REC_LINK);
@@ -886,7 +885,7 @@ static void error_msg(const char *s)
 
 
 /* Look at the next token, which will usually already be in next_token.
-   However, if next_token is '\n', advance to the next token first. */
+   However, if next_token is '\n', advance to the next other token first. */
 
 #define NEXT_TOKEN \
   (ps->next_token == '\n' ? get_next_token_not_newline() : ps->next_token) 
@@ -1184,7 +1183,7 @@ static SEXP parse_formlist (int flags)
             SEXP tag, f;
             if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
-            set_token (prev_token_rec(1), "SYMBOL_FORMALS");
+            set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
             tag = TOKEN_VALUE();
             for (f = res; f != R_NilValue; f = CDR(f)) {
                 if (TAG(f) == tag) {
@@ -1198,7 +1197,7 @@ static SEXP parse_formlist (int flags)
             get_next_token();
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
-                set_token (prev_token_rec(1), "EQ_FORMALS");
+                set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
                 get_next_token();
                 PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 SETCAR (last, def);
@@ -1240,10 +1239,10 @@ static SEXP parse_sublist (int flags)
                 PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
-                    set_token (prev_token_rec(1), "EQ_SUB");
+                    set_token_in_rec (prev_token_rec(1), "EQ_SUB");
                     if (TYPEOF(arg) == SYMSXP) {
                         tag = arg;
-                        set_token (prev_token_rec(2), "SYMBOL_SUB");
+                        set_token_in_rec (prev_token_rec(2), "SYMBOL_SUB");
                     }
                     else if (TYPEOF(arg) == STRSXP)
                         tag = install (translateChar (STRING_ELT(arg,0)));
@@ -1311,7 +1310,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     start_location(&begin_loc);
     outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-    set_parent (bgn_token_rec, outer_rec);
+    set_parent_in_rec (bgn_token_rec, outer_rec);
 
     /* Unary operators. */
 
@@ -1336,7 +1335,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         get_next_token();
         if (!NL_END && (NEXT_TOKEN == NS_GET || NEXT_TOKEN == NS_GET_INT)) {
             op = TOKEN_VALUE();
-            set_token (prev_token_rec(2), "SYMBOL_PACKAGE");
+            set_token_in_rec (prev_token_rec(2), "SYMBOL_PACKAGE");
             get_next_token();
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
@@ -1530,10 +1529,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     while (!NL_END && POSTFIX_TOKEN()) {
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-        set_parent (bgn_token_rec, rec);
+        set_parent_in_rec (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent (prev_token_rec(1), outer_rec);
+        set_parent_in_rec (prev_token_rec(1), outer_rec);
 
         /* Function call. */
 
@@ -1542,7 +1541,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (TYPEOF(res) == SYMSXP || TYPEOF(res) == LANGSXP &&
                                           (CAR(res) == R_DoubleColonSymbol || 
                                            CAR(res) == R_TripleColonSymbol)) {
-                set_token (prev_token_rec(2), "SYMBOL_FUNCTION_CALL");
+                set_token_in_rec (prev_token_rec(2), "SYMBOL_FUNCTION_CALL");
             }
             get_next_token();
             PARSE_SUB(subs = parse_sublist(flags));
@@ -1597,7 +1596,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             if (NEXT_TOKEN == SYMBOL)
-                set_token (prev_token_rec(1), "SLOT");
+                set_token_in_rec (prev_token_rec(1), "SLOT");
             sym = TOKEN_VALUE();
             res = PROTECT_N (LANG3 (op, res, sym));
             get_next_token();
@@ -1619,10 +1618,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             break;
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-        set_parent (bgn_token_rec, rec);
+        set_parent_in_rec (bgn_token_rec, rec);
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent (prev_token_rec(1), outer_rec);
+        set_parent_in_rec (prev_token_rec(1), outer_rec);
 
         if (!keep_parens && par != 0 
                && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
@@ -1668,7 +1667,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     end_location(&loc);
     end_parseData_record(outer_rec,&loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
-        set_parent (prev_token_rec(1), ps->sr->containing_parse_rec);
+        set_parent_in_rec (prev_token_rec(1), ps->sr->containing_parse_rec);
     END_PARSE_FUN;
     return res;
 }
@@ -2778,13 +2777,19 @@ static void set_parse_filename(SEXP newname)
 
 /* Skip a comment, returning the character ending it ('\n' or R_EOF).
    Also processes comments that are #line directives.  The initial #
-   will have already been read. */
+   will have already been read. 
+
+   Only short comments (<= 200 chars) are recorded for parse data (longer
+   ones can be fetched at the R level).  Line directives are not recorded. */
+
+#define MAX_REC_COMMENT 200  /* must be less than MAXELTSIZE == sizeof yytext */
 
 static int skip_comment (void)
 {
     int directive = FALSE;
     int hasfile = FALSE;
     int linenumber;
+    int text_ix;
     source_location loc;
     char *dir;
     int c, i;
@@ -2793,17 +2798,24 @@ static int skip_comment (void)
     loc.first_column = ps->sr->xxcolno;
 
     c = '#';  /* character that will have been read before */
+    yytext[0] = c;
+    text_ix = 1;
 
-    /* Process it as a #line directive if it is one. */
+    /* Start processing it as a #line directive if it is one. */
 
-    if (ps->sr->xxcolno != 1)
+    c = xxgetc();
+
+    if (ps->sr->xxcolno != 2)  /* directives are only at beginning of line */
         goto skip;
 
     for (dir = "line"; *dir; dir++) {
-        c = xxgetc();
         if (c != *dir)
             goto skip;
+        yytext[text_ix++] = c;
+        c = xxgetc();
     }
+
+    text_ix = 0;  /* Don't record directive for parse data */
 
     c = skip_whitespace(xxgetc());
     if (!isdigit(c)) 
@@ -2826,11 +2838,21 @@ static int skip_comment (void)
     /* Skip to end of comment. */
 
   skip:
-    while (c != '\n' && c != R_EOF) c = xxgetc();
+    while (c != '\n' && c != R_EOF) {
+        if (text_ix) {
+            if (text_ix >= MAX_REC_COMMENT)
+                text_ix = 0;
+            else
+                yytext[text_ix++] = c;
+        }
+        c = xxgetc();
+    }
+
+    yytext[text_ix] = 0;
 
     if (ps->keep_source) {
         SEXP rec = start_parseData_record 
-                     (&loc, directive ? "LINE_DIRECTIVE" : "COMMENT", "", TRUE);
+               (&loc, directive ? "LINE_DIRECTIVE" : "COMMENT", yytext, TRUE);
         if (c == '\n') xxungetc(c);  /* newline shouldn't be in parse record */
         loc.last_parsed = ps->sr->xxparseno;
         loc.last_column = ps->sr->xxcolno;
@@ -2875,13 +2897,18 @@ static int nextisdigit(void)
 
 
 /* Returns whether the next character is the one passed, advancing to
-   the next character only if it is. */
+   the next character only if it is (in which case the expected character
+   is also appended to yytext). */
 
 static int nextchar(int expect)
 {
     int c = xxgetc();
-    if (c == expect)
+    if (c == expect) {
+        int l = strlen(yytext);
+        yytext[l] = c;
+        yytext[l+1] = 0;
 	return 1;
+    }
     else {
 	xxungetc(c);
         return 0;
@@ -2904,9 +2931,10 @@ static int token (int c)
     wchar_t wc;
 
     ps->next_token_val = R_NilValue;
+    yytext[0] = 0;
 
     /* Hard and soft end of file.  Soft end of file comes at the end of a
-       line of interactive input, which may or may not be the actual end. */
+       line of input, which may or may not be the actual end. */
 
     if (c == R_EOF)
         return END_OF_INPUT;
@@ -2944,6 +2972,9 @@ static int token (int c)
 	if (isalpha(c)) return SymbolValue(c);
 
     /* Simple and compound tokens */
+
+    yytext[0] = c;
+    yytext[1] = 0;
 
     switch (c) {
     case '<':
@@ -3129,7 +3160,7 @@ static int get_next_token(void)
         char t[4] = { '\'', (char) ps->next_token, '\'', 0 };
         rec = start_parseData_record (&ps->token_loc, ps->next_token < 256 ? t
                                         : pdata_token_name[ps->next_token-256],
-                                      "", TRUE);
+                                      yytext, TRUE);
         end_parseData_record (rec, &ps->token_loc);
     }
 
