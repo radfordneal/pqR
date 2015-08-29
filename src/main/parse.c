@@ -517,6 +517,17 @@ static void set_token (SEXP rec, char *token)
         SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
 }
 
+static void set_initial_comments_parent (void)
+{
+    SEXP rec = ps->sr->ParseData;
+    while (rec != R_NilValue
+            && strcmp ("COMMENT", CHAR (VECTOR_ELT (rec, PDATA_REC_TOKEN))) == 0
+            && PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0) {
+        PDATA_IDATA_VAL (rec, PDATA_PARENT) = - ps->sr->next_id;
+        rec = VECTOR_ELT (rec, PDATA_REC_LINK);
+    }
+}
+
 /* A kludge routine that deletes the second from the latest parse data
    record.  Used to fix up arg lists with keywords, like f(k=x), where
    k initially looks like it could be an expression.  Fiddles IDs too. */
@@ -1552,7 +1563,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             EXPECT(']');
         }
 
-        /* Subscripting with [[.  Note that it may be terminated with ] ]. */
+        /* Subscripting with [[. */
 
         else if (NEXT_TOKEN == LBB) {
             SEXP op, subs;
@@ -1564,14 +1575,29 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             EXPECT(']');
         }
 
-        /* Subsetting with $ or @. */
+        /* Subsetting with $. */
 
-        else if (NEXT_TOKEN == '$' || NEXT_TOKEN == '@') {
+        else if (NEXT_TOKEN == '$') {
             SEXP op, sym;
             op = TOKEN_VALUE();
             get_next_token();
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
+            sym = TOKEN_VALUE();
+            res = PROTECT_N (LANG3 (op, res, sym));
+            get_next_token();
+        }
+
+        /* Slot access with @. */
+
+        else if (NEXT_TOKEN == '@') {
+            SEXP op, sym;
+            op = TOKEN_VALUE();
+            get_next_token();
+            if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
+                PARSE_UNEXPECTED();
+            if (NEXT_TOKEN == SYMBOL)
+                set_token (prev_token_rec(1), "SLOT");
             sym = TOKEN_VALUE();
             res = PROTECT_N (LANG3 (op, res, sym));
             get_next_token();
@@ -1655,6 +1681,8 @@ static SEXP parse_prog (int flags)
 {
     BGN_PARSE_FUN;
     SEXP res;
+
+    set_initial_comments_parent();
 
     PARSE_SUB (res = parse_expr (0, flags, NULL));
        
@@ -2747,15 +2775,17 @@ static void set_parse_filename(SEXP newname)
 
 
 /* Process a #line nn [ file ] directive.  The #line part will have already
-   been read.  Returns the character after the directive. */
+   been read.  Returns the character after the directive.  Sets *tokenp
+   to "LINE_DIRECTIVE" if the line directive was valid. */
 
-static int processLineDirective()
+static int processLineDirective (char **tokenp)
 {
     int c, tok, linenumber;
 
     c = skip_whitespace(xxgetc());
     if (!isdigit(c)) 
         return c;
+
     tok = NumericValue(c);
     linenumber = atoi(yytext);
     c = skip_whitespace(xxgetc());
@@ -2776,6 +2806,8 @@ static int processLineDirective()
 
     ps->ParseContext[ps->ParseContextLast] = '\0'; 
 
+    *tokenp = "LINE_DIRECTIVE";
+
     return c;
 }
 
@@ -2788,6 +2820,7 @@ static int skip_comment (void)
 {
     Rboolean maybeLine = (ps->sr->xxcolno == 1);
     source_location loc;
+    char *token = "COMMENT";
     int c, i;
 
     loc.first_parsed = ps->sr->xxparseno;
@@ -2805,7 +2838,7 @@ static int skip_comment (void)
   	    }
   	}
   	if (maybeLine)     
-	    c = processLineDirective();
+	    c = processLineDirective(&token);
     }
 
     while (c != '\n' && c != R_EOF)
@@ -2817,7 +2850,7 @@ static int skip_comment (void)
 
         if (c == '\n') xxungetc(c);  /* newline shouldn't be part of record */
 
-        rec = start_parseData_record (&loc, "COMMENT", "", TRUE);
+        rec = start_parseData_record (&loc, token, "", TRUE);
         loc.last_parsed = ps->sr->xxparseno;
         loc.last_column = ps->sr->xxcolno;
         end_parseData_record(rec,&loc);
