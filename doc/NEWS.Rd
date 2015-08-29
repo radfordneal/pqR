@@ -159,6 +159,11 @@ fixed differently in R-2.15.3 and R-3.0.0, respectively:
         "String is too long (max 10000 chars)".  This has been fixed
         so that the maximum now really is 10000 characters.  (Also present
         in R Core versions, to at least R-3.2.2.)
+  \item Fixed a bug that caused the error caret in syntax error reports
+        to be misplaced when more than one line of context was shown.
+        (This was supposedly fixed in R-3.0.2, but incorrectly, resulting
+        in the error caret being misplaced when only one line of 
+        context is shown, in R Core version to at least R-3.2.2.)
   \item C
   \item D
 }}
