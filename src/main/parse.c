@@ -2875,13 +2875,18 @@ static int nextisdigit(void)
 
 
 /* Returns whether the next character is the one passed, advancing to
-   the next character only if it is. */
+   the next character only if it is (in which case the expected character
+   is also appended to yytext). */
 
 static int nextchar(int expect)
 {
     int c = xxgetc();
-    if (c == expect)
+    if (c == expect) {
+        int l = strlen(yytext);
+        yytext[l] = c;
+        yytext[l+1] = 0;
 	return 1;
+    }
     else {
 	xxungetc(c);
         return 0;
@@ -2904,9 +2909,10 @@ static int token (int c)
     wchar_t wc;
 
     ps->next_token_val = R_NilValue;
+    yytext[0] = 0;
 
     /* Hard and soft end of file.  Soft end of file comes at the end of a
-       line of interactive input, which may or may not be the actual end. */
+       line of input, which may or may not be the actual end. */
 
     if (c == R_EOF)
         return END_OF_INPUT;
@@ -2944,6 +2950,9 @@ static int token (int c)
 	if (isalpha(c)) return SymbolValue(c);
 
     /* Simple and compound tokens */
+
+    yytext[0] = c;
+    yytext[1] = 0;
 
     switch (c) {
     case '<':
@@ -3129,7 +3138,7 @@ static int get_next_token(void)
         char t[4] = { '\'', (char) ps->next_token, '\'', 0 };
         rec = start_parseData_record (&ps->token_loc, ps->next_token < 256 ? t
                                         : pdata_token_name[ps->next_token-256],
-                                      "", TRUE);
+                                      yytext, TRUE);
         end_parseData_record (rec, &ps->token_loc);
     }
 
