@@ -77,7 +77,10 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
             stop("unable to find a plausible encoding")
         if(verbose)
             cat(gettextf('encoding = "%s" chosen', encoding), "\n", sep = "")
-        if(file == "") file <- stdin()
+        if(file == "") {
+            file <- stdin()
+            srcfile <- "<stdin>"
+        }
         else {
             filename <- file
 	    file <- file(filename, "r", encoding = encoding)
@@ -88,8 +91,11 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 	    	close(file)
             	srcfile <- srcfilecopy(filename, lines, file.info(filename)[1,"mtime"], 
             			       isFile = TRUE)
-	    } else
+	    }
+            else {
             	from_file <- TRUE
+                srcfile <- filename
+            }
 
             ## We translated the file (possibly via a guess),
             ## so don't want to mark the strings.as from that encoding

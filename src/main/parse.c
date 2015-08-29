@@ -2742,8 +2742,10 @@ static void set_parse_filename(SEXP newname)
 {
     SEXP class;
 
-    if (!isEnvironment(ps->sr->SrcFile)) 
+    if (!isEnvironment(ps->sr->SrcFile)) {
+        REPROTECT(ps->sr->SrcFile = duplicate(newname), ps->sr->SrcFileProt);
         return;
+    }
 
     PROTECT(newname);    
 
@@ -2754,9 +2756,9 @@ static void set_parse_filename(SEXP newname)
         return;
     }
 
-    REPROTECT(ps->sr->SrcFile =
+    REPROTECT (ps->sr->SrcFile =
                  NewEnvironment (R_NilValue, R_NilValue, R_EmptyEnv),
-              ps->sr->SrcFileProt);
+               ps->sr->SrcFileProt);
     set_var_in_frame (install("filename"), newname, ps->sr->SrcFile,
                       TRUE, 3);
 
@@ -2774,88 +2776,86 @@ static void set_parse_filename(SEXP newname)
 }
 
 
-/* Process a #line nn [ file ] directive.  The #line part will have already
-   been read.  Returns the character after the directive.  Sets *tokenp
-   to "LINE_DIRECTIVE" if the line directive was valid. */
-
-static int processLineDirective (char **tokenp)
-{
-    int c, tok, linenumber;
-
-    c = skip_whitespace(xxgetc());
-    if (!isdigit(c)) 
-        return c;
-
-    tok = NumericValue(c);
-    linenumber = atoi(yytext);
-    c = skip_whitespace(xxgetc());
-    if (c == '"') 
-        tok = StringValue(c, FALSE);
-    else
-    	xxungetc(c);
-    if (tok == STR_CONST) 
-	set_parse_filename(ps->next_token_val);
-
-    while ((c = xxgetc()) != '\n' && c != R_EOF) /* skip */ ;
-
-    ps->sr->xxlineno = linenumber;
-
-    /* Don't change xxparseno here, it counts parsed lines, not official lines*/
-
-    /* Context report shouldn't show the directive */
-
-    ps->ParseContext[ps->ParseContextLast] = '\0'; 
-
-    *tokenp = "LINE_DIRECTIVE";
-
-    return c;
-}
-
-
 /* Skip a comment, returning the character ending it ('\n' or R_EOF).
    Also processes comments that are #line directives.  The initial #
    will have already been read. */
 
 static int skip_comment (void)
 {
-    Rboolean maybeLine = (ps->sr->xxcolno == 1);
+    int directive = FALSE;
+    int hasfile = FALSE;
+    int linenumber;
     source_location loc;
-    char *token = "COMMENT";
+    char *dir;
     int c, i;
 
     loc.first_parsed = ps->sr->xxparseno;
     loc.first_column = ps->sr->xxcolno;
 
-    c = '#';
+    c = '#';  /* character that will have been read before */
 
-    if (maybeLine) {
-    	static const char lineDirective[] = "#line";
-    	for (i = 1; i < 5; i++) {
-    	    c = xxgetc();
-  	    if (c != lineDirective[i]) {
-  	    	maybeLine = FALSE;
-  	    	break;
-  	    }
-  	}
-  	if (maybeLine)     
-	    c = processLineDirective(&token);
+    /* Process it as a #line directive if it is one. */
+
+    if (ps->sr->xxcolno != 1)
+        goto skip;
+
+    for (dir = "line"; *dir; dir++) {
+        c = xxgetc();
+        if (c != *dir)
+            goto skip;
     }
 
-    while (c != '\n' && c != R_EOF)
-	c = xxgetc();
+    c = skip_whitespace(xxgetc());
+    if (!isdigit(c)) 
+        goto skip;
+
+    if (NumericValue(c) != NUM_CONST)
+        goto skip;
+
+    directive = TRUE;
+    linenumber = atoi(yytext);
+
+    c = skip_whitespace(xxgetc());
+
+    if (c == '"') {
+        if (StringValue(c, FALSE) == STR_CONST)
+            hasfile = TRUE;
+        c = xxgetc();
+    }
+
+    /* Skip to end of comment. */
+
+  skip:
+    while (c != '\n' && c != R_EOF) c = xxgetc();
 
     if (ps->keep_source) {
-
-        SEXP rec;
-
-        if (c == '\n') xxungetc(c);  /* newline shouldn't be part of record */
-
-        rec = start_parseData_record (&loc, token, "", TRUE);
+        SEXP rec = start_parseData_record 
+                     (&loc, directive ? "LINE_DIRECTIVE" : "COMMENT", "", TRUE);
+        if (c == '\n') xxungetc(c);  /* newline shouldn't be in parse record */
         loc.last_parsed = ps->sr->xxparseno;
         loc.last_column = ps->sr->xxcolno;
         end_parseData_record(rec,&loc);
-
         if (c == '\n') xxgetc();
+    }
+
+    /* Finish processing directive. */
+
+    if (directive) {
+
+        /* Set file name if there was one. */
+
+        if (hasfile)
+	    set_parse_filename(ps->next_token_val);
+
+        /* Set the line number only now, since StringValue might raise an error,
+           and we don't want the ungetc above to set it back.  Note that 
+           we don't change xxparseno, which counts physical lines. */
+
+        ps->sr->xxlineno = linenumber;
+
+        /* Stop the directive from appearing in the error context. */
+
+        ps->ParseContext[ps->ParseContextLast] = '\0'; 
     }
 
     return c;

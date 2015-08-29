@@ -98,6 +98,8 @@
   \item From R-2.15.3: Expressions involving user defined operators were not 
         always deparsed faithfully (PR#15179).  Fixed in pqR as part of
         the rewrite of the parser and deparser.
+  \item From R-3.0.2: source() did not display filenames when reporting 
+        syntax errors.
   \item From R-3.1.3: The parser now gives an error if a null character 
         is included in a string using Unicode escapes. (PR#16046)
   \item From R-3.2.2: Rscript and command line R silently ignored incomplete
@@ -180,6 +182,11 @@ fixed differently in R-2.15.3 and R-3.0.0, respectively:
         "String is too long (max 10000 chars)".  This has been fixed
         so that the maximum now really is 10000 characters.  (Also present
         in R Core versions, to at least R-3.2.2.)
+  \item Fixed a bug that caused the error caret in syntax error reports
+        to be misplaced when more than one line of context was shown.
+        (This was supposedly fixed in R-3.0.2, but incorrectly, resulting
+        in the error caret being misplaced when only one line of 
+        context is shown, in R Core version to at least R-3.2.2.)
   \item C
   \item On Windows, running R.exe from a command prompt window would result in
         Ctrl-C misbehaving.  This was \PR{14948} at R Core, which was 

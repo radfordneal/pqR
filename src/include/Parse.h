@@ -77,9 +77,4 @@ int Rf_misc_prec (SEXP);
 #define LEFT_ASSOC(p)  (((p)&3) == 1)
 #define RIGHT_ASSOC(p) (((p)&3) == 2)
 
-#define needsparens_postfix Rf_needsparens_postfix
-#define needsparens_unary   Rf_needsparens_unary
-#define needsparens_binary  Rf_needsparens_binary
-
-
 #endif /* not R_PARSE_H */
