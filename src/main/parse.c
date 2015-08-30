@@ -400,7 +400,7 @@ static void xxungetc(int);
 #define PDATA_LAST_PARSED  2
 #define PDATA_LAST_COLUMN  3
 #define PDATA_TERMINAL     4
-#define PDATA_TOKEN        5
+#define PDATA_TOKEN        5   /* Not set in pqR version */
 #define PDATA_ID           6
 #define PDATA_PARENT       7
 
@@ -447,8 +447,7 @@ static SEXP start_parseData_record (source_location *start_loc,
 
     idat = allocVector (INTSXP, PDATA_ROWS);
 
-    for (i = 0; i < PDATA_ROWS; i++) 
-        INTEGER(idat)[i] = NA_INTEGER;             /* FOR NOW */
+    for (i = 0; i < PDATA_ROWS; i++) INTEGER(idat)[i] = NA_INTEGER;
 
     /* Put information in the record.  The last parsed and column fields
        can't be filled in yet, however. */
