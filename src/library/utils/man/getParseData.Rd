@@ -87,7 +87,7 @@ getParseText(parseData, id)
   package version 0.0-16. \url{https://github.com/halpo/parser}.
 }
 \author{
-Original R Core version by Duncan Murdoch, rewritten in pqR by Radford Neal
+Original R Core version by Duncan Murdoch, rewritten for pqR by Radford Neal
 }
 \note{
   There are a number of differences in the results returned by

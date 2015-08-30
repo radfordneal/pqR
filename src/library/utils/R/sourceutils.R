@@ -132,6 +132,13 @@ getParseData <- function(x, includeText = NA) {
     	o <- order(data$line1, data$col1, -data$line2, -data$col2, 
                    -data$terminal)
     	data <- data[o,]
+
+        # Fix up data from a partial parse.
+        if (any(is.na(data$line2)))
+            data <- data[!is.na(data$line2),]
+        if (!all(data$parent %in% data$id))
+            data$parent[!(data$parent %in% data$id)] <- 0
+
     	rownames(data) <- data$id
     	attr(data, "srcfile") <- srcfile
     	if (isTRUE(includeText))
