@@ -21,3 +21,5 @@ Fixed off-by two in limit of 10000 characters in unicode string (limit
 said to be 10000, but actually 9998).
 
 Fixed bug in which caret for error report was misplaced.
+
+Put working example in help(getParseData).
