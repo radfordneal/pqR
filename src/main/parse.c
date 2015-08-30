@@ -513,8 +513,8 @@ static void set_parent_in_rec (SEXP rec, SEXP parent_rec)
 {
     if (rec != R_NilValue) {
         SET_VECTOR_ELT (rec, PDATA_REC_UPLINK, parent_rec);
-        PDATA_IDATA_VAL (rec, PDATA_PARENT) 
-          = PDATA_IDATA_VAL (parent_rec, PDATA_ID);
+        PDATA_IDATA_VAL (rec, PDATA_PARENT) = parent_rec == R_NilValue ? 0
+         : PDATA_IDATA_VAL (parent_rec, PDATA_ID);
     }
 }
 

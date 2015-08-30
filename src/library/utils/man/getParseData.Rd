@@ -87,7 +87,7 @@ getParseText(parseData, id)
   package version 0.0-16. \url{https://github.com/halpo/parser}.
 }
 \author{
-Original R Core version by Duncan Murdoch, rewritten in pqR by Radford Neal
+Original R Core version by Duncan Murdoch, rewritten for pqR by Radford Neal
 }
 \note{
   There are a number of differences in the results returned by
@@ -122,5 +122,10 @@ if (!is.null(d)) {
   b <- d[as.character(body),]
   print (c (b$line1, b$col1, b$line2, b$col2))
 }
+
+txt <- c("a<-1","b<-2","c<*3")
+srf <- srcfilecopy("<text>",txt)
+try(prs <- parse(text=txt,srcfile=srf))  # syntax error
+getParseData(srf)
 }
 \keyword{  utilities  }
