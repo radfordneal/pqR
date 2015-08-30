@@ -35,3 +35,6 @@ Now fixes these bugs mentioned in mods/40-deparse:
   [1] "`:=`(a, b)"
 
 Corrected documentation on the = assignment operator.
+
+Made %..% ops not deparse as ops if args have names (as in R Core
+fix for PR15350).
