@@ -89,6 +89,11 @@
         syntax errors.
   \item From R-3.1.3: The parser now gives an error if a null character 
         is included in a string using Unicode escapes. (PR#16046)
+  \item From R-3.0.2: Deparsing of infix operators with named arguments is 
+        improved (PR#15350). [ In fact, the change, both in pqR and in 
+        R Core versions, is only with respect to operators in percent 
+        signs, such as \code{\%fred\%}, with these now being deparsed as
+        function calls if either argument is named. ]
   \item From R-3.2.2: Rscript and command line R silently ignored incomplete
         statements at the end of a script; now they are reported as parse errors
         (PR#16350).  Fixed in pqR as part of the rewrite of the parser
@@ -135,10 +140,9 @@
   deparse(parse(text="`*`(2)")[[1]])      # Result is syntactically invalid
   deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is syntactically invalid
 }
-In addition, the bugs illustrated below were fixed, which were 
-fixed differently in R-2.15.3 and R-3.0.0, respectively:
-\preformatted{  deparse(quote(`+`(1,2) \%fred\% 4))       # Omits necessary parens
-  a <- quote(f(1,2)); a[[1]] <- function(x,y)x+y; deparse(a) # Omits parens
+In addition, the bug illustrated below was fixed, which was fixed
+(differently) in R-3.0.0:
+\preformatted{  a <- quote(f(1,2)); a[[1]] <- function(x,y)x+y; deparse(a) # Omits parens
 }
   \item Fixed the following bug (also in R Core versions to at least 
         R-3.2.2):
