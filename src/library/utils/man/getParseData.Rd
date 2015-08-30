@@ -1,6 +1,7 @@
 % File src/library/utils/man/getParseData.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 2012 R Core Team
+% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
@@ -36,12 +37,16 @@ getParseText(parseData, id)
   }
 }
 \details{
-  In version 3.0.0, the \R{} parser was modified to include code written
+  In R Core version 3.0.0, the \R{} parser was modified to include code written
   by Romain Francois in his \pkg{parser} package.  This constructs a
   detailed table of information about every token and higher level
   construct in parsed code.  This table is stored in the
   \code{\link{srcfile}} record associated with source references in the
-  parsed code, and retrieved by the \code{getParseData} function.
+  parsed code, and retrieved by the \code{getParseData} function.  
+
+  In pqR, the parser has been rewritten, but this functionality has been
+  included, apart from some differences in internal representation, and
+  a few differences in which parent comments are attached to.
 }
 \value{
   For \code{getParseData}:\cr
@@ -55,7 +60,8 @@ getParseText(parseData, id)
   \item{line2}{integer. The line number where the item ends.}
   \item{col2}{integer. The column number where the item ends.}
   \item{id}{integer. An identifier associated with this item.}
-  \item{parent}{integer. The \code{id} of the parent of this item.}
+  \item{parent}{integer. The \code{id} of the parent of this item.  Note
+  that id numbers are arbitrary and subject to change.}
   \item{token}{character. The type of the token.}
   \item{terminal}{logical.  Whether the token is \dQuote{terminal}, i.e.
     a leaf in the parse tree.}
@@ -66,21 +72,22 @@ getParseText(parseData, id)
   The rownames of the dataframe will be equal to the \code{id} values,
   and the dataframe will have a \code{"srcfile"} attribute containing
   the \code{\link{srcfile}} record which was used.  The rows will be
-  ordered first by starting position within the source file (\code{line1}
-  and \col{1}), then by decreasing end position (\code{line2} and \code{col2}), 
-  and finally with terminals before non-terminals.
+  ordered first by starting position within the source file
+  (\code{line1} and \code{col1}), then by decreasing end position
+  (\code{line2} and \code{col2}), and finally with terminals before
+  non-terminals.
 
   For \code{getParseText}:\cr
   A character vector of the same length as \code{id} containing the associated
-  text items.  If they are not included in \code{parseData}, they will be
-  retrieved from the original file.
+  text items.  Some of these items are included in \code{parseData}; those
+  that are not are retrieved from the original file.
 }
 \references{
   Romain Francois (2012). parser: Detailed R source code parser. R
   package version 0.0-16. \url{https://github.com/halpo/parser}.
 }
 \author{
-Duncan Murdoch
+Original R Core version by Duncan Murdoch, rewritten in pqR by Radford Neal
 }
 \note{
   There are a number of differences in the results returned by
@@ -101,16 +108,19 @@ Duncan Murdoch
 \code{\link{parse}}, \code{\link{srcref}}
 }
 \examples{
-fn <- function(x) {
-  x + 1 # A comment, kept as part of the source
-}
+expr <- parse (text = "y <- 1; fn <- function(x) {
+      x   +   y # A comment
+  }")
 
-d <- getParseData(fn)
+d <- getParseData(expr)
 if (!is.null(d)) {
   plus <- which(d$token == "'+'")
   sum <- d$parent[plus]
-  print(d[as.character(sum),])
-  print(getParseText(d, sum))
+  print (getParseText(d,sum))
+  body <- d[as.character(sum),"parent"]
+  print (getParseText(d,body))
+  b <- d[as.character(body),]
+  print (c (b$line1, b$col1, b$line2, b$col2))
 }
 }
 \keyword{  utilities  }
