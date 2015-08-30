@@ -1041,8 +1041,9 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 if (parens)
                     print2buff(")", d);
             }
-            else if (nargs == 2 &&
-                    (isUserBinop(op)         /* space between op and args */
+            else if (nargs == 2 &&              /* space between op and args */
+                    (isUserBinop(op) && TAG(s) == R_NilValue
+                         && TAG(CDR(s)) == R_NilValue  /* no arg names */
                       || op == R_AddSymbol
                       || op == R_SubSymbol
                       || op == R_MulSymbol
@@ -1078,8 +1079,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     lbreak = FALSE;
                 }
             }
-            else if (nargs == 2 &&
-                    (op == R_DivSymbol      /* no space between op and args */
+            else if (nargs == 2 &&            /* no space between op and args */
+                    (op == R_DivSymbol
                       || op == R_ExptSymbol
                       || op == R_Expt2Symbol
                       || op == install("%%")
