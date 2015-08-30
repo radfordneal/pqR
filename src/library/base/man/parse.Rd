@@ -139,8 +139,8 @@ unlink("xyz.Rdmped")
 
 # A partial parse with a syntax error
 txt <- "
-x <- 1
-an error
+  x <- 1
+  y <* 2
 "
 sf <- srcfile("txt")
 try(parse(text = txt, srcfile = sf))
