@@ -139,39 +139,42 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     int count=0;
     SrcRefState ParseState;
     int savestack;
+    SEXP value;
     
     R_InitSrcRefState (&ParseState, FALSE);
     savestack = R_PPStackTop;    
 
     for(;;) {
+
 	R_PPStackTop = savestack;
+
+        /* Note: R_CurrentExpr is protected as a root by the garbage collector*/
 
 	R_CurrentExpr = R_Parse1Stream (file_getc, (void *) fp, 
                                         &status, &ParseState);
-
 	switch (status) {
 	case PARSE_NULL:
 	    break;
 
 	case PARSE_OK:
 
-	    PROTECT(R_CurrentExpr);
-
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
 	    count++;
 
-	    R_CurrentExpr = eval(R_CurrentExpr, rho);
-	    SET_SYMVALUE(R_LastvalueSymbol, R_CurrentExpr);
+	    PROTECT(value = evalv (R_CurrentExpr, rho, VARIANT_PENDING_OK));
+	    SET_SYMVALUE(R_LastvalueSymbol, value);
 
-	    if (R_Visible)
-		PrintValueEnv(R_CurrentExpr, rho);
-	    if( R_CollectWarnings )
+	    if (R_Visible) {
+                WAIT_UNTIL_COMPUTED(value);
+		PrintValueEnv (value, rho);
+            }
+	    if (R_CollectWarnings)
 		PrintWarnings();
 
-	    UNPROTECT(1);
-
+            R_CurrentExpr = R_NilValue;  /* recover memory */
+            UNPROTECT(1);
 	    break;
 
 	case PARSE_ERROR:
@@ -298,8 +301,12 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
     if (keepSource)
         R_IoBufferWriteReset(&R_ConsoleIob);
 
-    PROTECT (R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
-                                             &state->status, &ParseState));
+   /* Note:  R_CurrentExpr is protected as a root by the garbage collector.
+      If it were protected explicitly, the pairing of R_InitSrcRefState with
+      R_FinalizeSrcRefState would be disrupted. */
+
+    R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
+                                    &state->status, &ParseState);
     if (keepSource) {
         int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
         char buf[buflen+1];
@@ -311,8 +318,6 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
         R_IoBufferWriteReset(&R_ConsoleIob);
         R_TextForSrcRefState (&ParseState, buf);
     }
-
-    UNPROTECT(1);  /* R_CurrentExpr */
 
     R_FinalizeSrcRefState(&ParseState);
     
@@ -328,8 +333,6 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 	return 1;
 
     case PARSE_OK:
-
-        PROTECT(R_CurrentExpr);
 
 	if (state->browselevel > 0) {
 	    browsevalue = ParseBrowser(R_CurrentExpr, rho);
@@ -349,6 +352,7 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 	thisExpr = R_CurrentExpr;
 	R_Busy(1);
 
+        PROTECT(thisExpr);
 	PROTECT(value = evalv (thisExpr, rho, VARIANT_PENDING_OK));
 
 	SET_SYMVALUE(R_LastvalueSymbol, value);
@@ -360,8 +364,8 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 	if (R_CollectWarnings)
 	    PrintWarnings();
 	Rf_callToplevelHandlers(thisExpr, value, TRUE, wasDisplayed);
-	R_CurrentExpr = R_NilValue;  /* just in case... */
 
+	R_CurrentExpr = R_NilValue;  /* recover memory */
 	UNPROTECT(2);
 
 	return 1;
