@@ -55,7 +55,15 @@
                             ParseStatus *status, SrcRefState *state);
 
    The R_InitSrcRefState and R_FinalizeSrcRefState will be needed in
-   conjunction with this routine, and possibly R_TextForSrcRefState.
+   conjunction with this routine.  Calls to these two routines must be
+   paired, with the protect stack at the same level for the call of
+   R_FinalizeSrcRefState as after the call of R_InitSrcRefState.
+   However, a non-local error exit (causing the call of R_FinalizeSrcRefState
+   to be bypassed) is allowed.  Note that R_FinalizeSrcRefState may
+   allocate storage, so objects needed after its call must be protected
+   before its call (and hence before the call of R_InitializeSrcRefState,
+   or using REPROTECT after a PROTECT call before).  R_TextForSrcRefState 
+   may also be needed.
 
    The success of the parse is indicated as follows:
  
@@ -653,7 +661,7 @@ static void attachSrcrefs(SEXP val, SEXP t)
     SEXP srval;
     int n;
 
-    PROTECT(val);
+    PROTECT2(val,t);
     PROTECT(srval = allocVector(VECSXP, length(t)));
 
     for (n = 0 ; n < LENGTH(srval) ; n++, t = CDR(t))
@@ -673,7 +681,7 @@ static void attachSrcrefs(SEXP val, SEXP t)
     setAttrib(val, R_WholeSrcrefSymbol, 
                    makeSrcref(&wholeFile, ps->sr->SrcFile));
 
-    UNPROTECT(2);
+    UNPROTECT(3);
 
     ps->sr->didAttach = TRUE;
 }
@@ -1790,9 +1798,14 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 {
     SEXP rval, tval, tlast, cur, refs, last_ref;
+    PROTECT_INDEX rval_prot;
     SrcRefState state;
     source_location loc;
     int i;
+
+    /* We must make a place to protect rval before calling R_InitSrcRefState. */
+
+    PROTECT_WITH_INDEX (rval = R_NilValue, &rval_prot);
 
     ps->sr = &state;
     R_InitSrcRefState (ps->sr, !isNull(srcfile) && !isString(srcfile));
@@ -1812,8 +1825,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     
     ps->keep_source = ps->sr->keepSrcRefs;
 
-    for(i = 0; ; ) {
-	if(n >= 0 && i >= n) break;
+    i = 0;
+    while (n < 0 || i < n) {
 
 	cur = R_Parse1(status,&loc);
 
@@ -1831,25 +1844,26 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	    i++;
 	    break;
 	case PARSE_ERROR:
-	    UNPROTECT(2); /* tval, refs */
-	    R_FinalizeSrcRefState(ps->sr);
-	    return R_NilValue;
+            rval = R_NilValue;
+            goto ret;
 	case PARSE_EOF:
 	    goto finish;
 	}
     }
 
 finish:
+    *status = PARSE_OK;
     tval = CDR(tval);
-    PROTECT(rval = allocVector(EXPRSXP, length(tval)));
+    REPROTECT (rval = allocVector(EXPRSXP, length(tval)), rval_prot);
     for (i = 0 ; i < LENGTH(rval) ; i++, tval = CDR(tval))
 	SET_VECTOR_ELT(rval, i, CAR(tval));
     if (ps->sr->keepSrcRefs)
 	attachSrcrefs(rval,CDR(refs));
 
-    UNPROTECT(3); /* tval, refs, rval */
+ret:
+    UNPROTECT(2); /* tval, refs - must unprotect before R_FinalizeSrcRefState */
     R_FinalizeSrcRefState(ps->sr);
-    *status = PARSE_OK;
+    UNPROTECT(1); /* rval - must unprotect after R_FinalizeSrcRefState */
     return rval;
 }
 
