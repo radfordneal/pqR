@@ -70,11 +70,47 @@
         coordination with the new parsing scheme.
 }}
 
+  \subsection{NEW FEATURES}{
+  \itemize{
+  \item In pqR-2015-07-11, the parser was changed to not include
+        parentheses in R language objects if they were necessary
+        in order for the expression to be parsed correctly.  Omitting
+        such parentheses improves performance.  In  this version, 
+        such parentheses are removed only if the \code{keep.parens}
+        option is \code{FALSE} (the default).  Also, parentheses
+        are never removed from expressions that are on the right
+        side of a formula, since some packages asssign significance
+        to such parentheses beyond their grouping function.
+  \item The right assignment operators, \code{->} and \code{->>},
+        are now real operators.  Previously (and in current R Core
+        versions), expressions involving these operators were converted
+        to the corresponding left assignment expressions.  This
+        has the potential to cause pointless confusion.
+  \item The \code{**} operator, which has always been accepted as
+        a synonym for the \code{^} operator, is now recorded as
+        itself, rather than being converted to \code{^} by the
+        parser.  This avoids unnecessary anomalies such as the following
+        confusing error report:
+\preformatted{  > a - **b
+  Error: unexpected '^' in "a - **"
+}
+        The \code{**} operator is defined to be the same primitive
+        as \code{^}, which is associated with the name \code{^}, and
+        hence dispatches on methods for \code{^} even if called via
+        \code{**}.
+  \item D
+}}
+
   \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
   \itemize{
   \item From R-3.0.0: The \code{srcfile} argument to \code{parse()} may now 
         be a character string, to be used in error messages.
-  \item B
+  \item The facilities for recording detailed parsing information
+        from R-3.0.0 are now implemented in pqR, as part of the
+        rewrite of the parser, along with the
+        extension to provide partial parse information when a syntax error
+        occurs that was introduced in R-3.0.2.  See help on \code{parse}
+        and \code{getParseData} for details.
   \item C
   \item From R-2.15.2: On Windows, the C stack size has been increased 
         to 64MB (it has been 10MB since the days of 32MB RAM systems).
