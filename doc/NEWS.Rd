@@ -23,15 +23,25 @@
   \item There are also a few other improvements and bug fixes.
 }}
 
-  \subsection{INSTALLATION ON MS WINDOWS}{
+  \subsection{INSTALLATION ON MICROSOFT WINDOWS}{
   \itemize{
-  \item A
-  \item B
-  \item C
+  \item Building pqR on Microsoft Windows systems, using the Rtools
+        facilities, has now been tested, and some problems found in 
+        this environment have been fixed.  Binary distributions are
+        not yet provided, however.
+  \item Detailed and explicit instructions for building pqR from
+        source on Windows systems are now provided, in the 
+        \file{src/gnuwin32/INSTALL} file of the pqR source directory.
+        These instructions mostly correspond to information in
+        The R Installation and Administration manual, but in more
+        accessible form.
+  \item See \url{pqR-project.org} for more information on Windows systems 
+        on which pqR has been tested, and on any problems and workarounds
+        that may have been discovered.
   \item The Writing R Extensions manual now warns that on Windows,
         with the Rtools toolchain, a thread started by OpenMP may have 
         its floating point unit set so that long double arithmetic is 
-        the same as double arithmetic  Use \code{__asm__{"fninit"}} in 
+        the same as double arithmetic  Use \code{__asm__("fninit")} in 
         C to reset the FPU so that long double arithmetic will work.
 }}
 
