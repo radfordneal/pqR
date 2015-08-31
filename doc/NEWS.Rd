@@ -93,13 +93,13 @@
   \itemize{
   \item From R-3.0.0: The \code{srcfile} argument to \code{parse()} may now 
         be a character string, to be used in error messages.
-  \item B
   \item The facilities for recording detailed parsing information
         from R-3.0.0 are now implemented in pqR, as part of the
         rewrite of the parser, along with the
         extension to provide partial parse information when a syntax error
         occurs that was introduced in R-3.0.2.  See help on \code{parse}
         and \code{getParseData} for details.
+  \item C
   \item D
 }}
 
