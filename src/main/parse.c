@@ -37,19 +37,26 @@
 # define __STDC_ISO_10646__
 #endif
 
+#include <R_ext/rlocale.h>
+
+#ifdef HAVE_LANGINFO_CODESET
+# include <langinfo.h>
+#endif
+
 
 /* --------------------------------------------------------------------------
    PARSING ENTRY POINTS PROVIDED
  
-   The following routines parse several expressions and return their
-   values in a single expression vector.
+   The following routines, declared in R_ext/Parse.h, parse several
+   expressions and return their values in a single expression vector.
  
        SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
 
        SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
                            ParseStatus *status, SEXP srcfile);
 
-   The following routine parses a single expression:
+   The following routine, declared in the less public Parse.h, parses
+   a single expression:
  
        SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
                             ParseStatus *status, SrcRefState *state);
@@ -74,8 +81,6 @@
 
    PARSE_NULL and PARSE_EOF are not possible for R_ParseVector and
    R_ParseStream.  
-
-   All the above are declared in Parse.h or R_ext/Parse.h.
 
    If PARSE_ERROR is returned, the error message and context is in 
    the global variables R_ParseErrorMsg, R_ParseContext, etc., which
@@ -245,10 +250,13 @@ cr	:
 
 
 /* --------------------------------------------------------------------------
-   INTERFACE FROM THE PARSER, TO THE LEXICAL ANALYSER, TO CHARACTER INPUT
+   INTERFACE GOING FROM THE PARSER -> THE LEXICAL ANALYSER -> CHARACTER INPUT
 
-   The xxgetc function returns the next character; xxungetc pushes
-   a character back to be returned by xxgetc later.
+   The xxgetc function returns the next character; xxungetc pushes a
+   character back to be returned by xxgetc later.  The convention
+   followed is that after a character is "peeked at" (eg, to see if
+   ">" is followed by "=" to make the ">=" token), it will be pushed
+   back with xxungetc.
 
    The xxgetc function gets a character by calling the function pointed 
    to by ps->ptr_getc, which is set to different functions for different
@@ -256,7 +264,19 @@ cr	:
 
    The xxgetc function also maintains the lineno, etc. for source
    references in ps->sr, and the context for error reporting in 
-   ps->ParseContext (later copied to R_ParseContext). */
+   ps->ParseContext (later copied to R_ParseContext). 
+
+   The get_next_token function obtains the next token, calling xxgetc
+   as required, and returning 1 if end of file is encountered immediately. 
+   The convention for get_next_token is that a "lookahead" token after
+   what has been parsed so far is normally present (the opposite of the 
+   convention for xxgetc). */
+
+
+static int xxgetc(void);       /* Return next input character, or EOF */
+static void xxungetc(int);     /* Put back a character */
+
+static int get_next_token(void);  /* Update ps->next_token to the next token */
 
 
 /* Codes for token types.  ASCII codes for single characters also act as
@@ -334,12 +354,17 @@ typedef struct
 } source_location;
 
 
-/* Pointer to the complete state of the parser.  The structure pointed
-   to is allocated local to the outermost parsing function, then
-   referenced by this static global pointer in many routines.  The old
-   pointer is saved in the outermost parsing routine and then restored
-   at the end, allowing the parser to be called recursively as part of
-   getting an input character. */
+/* --------------------------------------------------------------------------
+   POINTER TO THE COMPLETE STATE OF THE PARSER
+
+   The structure pointed to is allocated on the stack, local to the
+   outermost parsing function, then referenced by this static global
+   pointer in many routines.  The old pointer is saved in the
+   outermost parsing routine and then restored at the end, allowing
+   the parser to be called recursively as part of getting an input
+   character. */
+
+static struct parse_state *ps; /* currently active parse */
 
 struct parse_state {
 
@@ -370,6 +395,8 @@ struct parse_state {
     int (*stream_getc)(void *);
     TextBuffer *textb_ptr;
 
+    /* 
+
 #   define PUSHBACK_BUFSIZE 16
 
     int pushback[PUSHBACK_BUFSIZE];
@@ -383,23 +410,14 @@ struct parse_state {
     int prevpos;
 };
 
-static struct parse_state *ps; /* currently active parse */
-
-static int get_next_token(void);  /* Update ps->next_token to the next one */
-
-#include <R_ext/rlocale.h>
-
-#ifdef HAVE_LANGINFO_CODESET
-# include <langinfo.h>
-#endif
-
-static int xxgetc();
-static void xxungetc(int);
-
 
 /* --------------------------------------------------------------------------
    DECLARATIONS AND ROUTINES TO SUPPORT PRODUCTION OF PARSE DATA
- */
+
+   See help(getParseData), and its R-level implementation for the final
+   format of the data returned.  A temporary linked record format is
+   used during parsing, then converted to the format seen at the R
+   level in R_FinalizeSrcRefState. */
 
 #define PDATA_ROWS 8           /* Rows in the parseData matrix */
 
@@ -408,7 +426,7 @@ static void xxungetc(int);
 #define PDATA_LAST_PARSED  2
 #define PDATA_LAST_COLUMN  3
 #define PDATA_TERMINAL     4
-#define PDATA_TOKEN        5   /* Not set in pqR version */
+#define PDATA_TOKEN        5   /* Not set in pqR version - always NA */
 #define PDATA_ID           6
 #define PDATA_PARENT       7
 
@@ -424,8 +442,8 @@ static void xxungetc(int);
     INTEGER (VECTOR_ELT (pd, PDATA_REC_IDATA)) [ix]
 
 
-/* Routine to be called for each token seen and each expression parsed, 
-   that creates a parse data record for it. */
+/* Routine to be called for each token seen and each expression parsed, that
+   creates a parse data record for it, with some information filled in. */
 
 static SEXP start_parseData_record (source_location *start_loc, 
                                     const char *token, const char *text, 
@@ -477,7 +495,8 @@ static SEXP start_parseData_record (source_location *start_loc,
 }
 
 /* Routine to be called to complete a parse data record, once the end 
-   location is known. */
+   location is known.  Also updates the containing record to account
+   for this expression being finished. */
 
 static void end_parseData_record (SEXP rec, source_location *end_loc)
 {
@@ -494,6 +513,8 @@ static void end_parseData_record (SEXP rec, source_location *end_loc)
       VECTOR_ELT (ps->sr->containing_parse_rec, PDATA_REC_UPLINK);
 }
 
+/* Find the n'th previous token record. */
+
 static SEXP prev_token_rec (int n)
 {
     SEXP rec = ps->sr->ParseData; 
@@ -509,6 +530,10 @@ static SEXP prev_token_rec (int n)
     return rec;
 }
 
+/* Set the parent record and parent id of a parse data record (if it's
+   not R_NilValue), to another record (setting parent id to 0 if this 
+   one is R_NilValue). */
+
 static void set_parent_in_rec (SEXP rec, SEXP parent_rec)
 {
     if (rec != R_NilValue) {
@@ -518,11 +543,19 @@ static void set_parent_in_rec (SEXP rec, SEXP parent_rec)
     }
 }
 
+/* Change the token identifier string in a record.  This is used to 
+   change to pretend token types, such as SYMBOL_FORMALS, that are
+   used to put some higher-level syntactic context into the token
+   itself. */
+
 static void set_token_in_rec (SEXP rec, char *token)
 {
     if (rec != R_NilValue)
         SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
 }
+
+/* Somewhat of a kludge, used to set the parents of comments outside
+   any expression to MINUS the id of the following expression. */
 
 static void set_initial_comments_parent (void)
 {
@@ -796,16 +829,20 @@ void R_FinalizeSrcRefState (SrcRefState *state)
 
 /* --------------------------------------------------------------------------
    VARIABLES, MACROS, AND FUNCTIONS SUPPORTING THE PARSER
-*/
+
+   The parser operates by recursive descent, with parsing decisions made
+   by examining a lookahead token (in ps->next_token). */
+
 
 /* Begin a recursive-descent parsing routine.  Sets up for PROTECT_N. 
    Sets bgn_token_rec to the parse data record of the most recently
-   obtained token (or to R_NilValue is source isn't kept). */
+   obtained token (or to R_NilValue if source isn't kept). */
 
 #define BGN_PARSE_FUN \
     NEXT_TOKEN;  /* so location and bgn_token_rec will be correct */ \
     SEXP bgn_token_rec = prev_token_rec(1); \
     int nprotect = 0;
+
 
 /* End a recursive-descent parsing routine.  Unprotects everything that
    was protected with PROTECT_N.  Allows for exitting with NULL result
@@ -1009,6 +1046,7 @@ static struct { SEXP *sym_ptr; int prec; } misc_prec_tbl[] =
     { 0, 0 }
 };
 
+
 /* Return the unary precedence of an operator symbol, or 0 if the 
    symbol is not a unary operator. */
 
@@ -1023,6 +1061,7 @@ attribute_hidden int unary_prec (SEXP sym)
 
     return 0;
 }
+
 
 /* Return the binary precedence of an operator symbol, or 0 if the 
    symbol is not a binary operator. */
@@ -1048,6 +1087,7 @@ attribute_hidden int binary_prec (SEXP sym)
 
     return 0;
 }
+
 
 /* Return the precedence of a miscellaneous operator symbol, or 0 if the 
    symbol is not a miscellaneous operator. */
@@ -1089,6 +1129,7 @@ static int unary_op(void)
 
     return unary_prec (sym);
 }
+
 
 /* Return 0 if NEXT_TOKEN is not a binary operator, and otherwise
    the precedence of the binary operator. */
@@ -1153,14 +1194,23 @@ static int binary_op(void)
    error (or errors may cause exit out of the whole parser with a call
    of "error").
 
-   Parsing routines are called with next_token already set to the first
-   token of the construct they parse, and return with next_token set to
-   the token after the construct they parsed.  Note, however, that this
-   token may be '\n', which acts as a "soft" end-of-file that is replaced
-   by another token if the token is accessed via NEXT_TOKEN rather than
-   next_token. 
+   Maintainence of a lookahead token is complicated by the need for
+   care in handling newlines.  A newline is sometimes a "soft EOF".
+   For example, during interactive input, a newline after "f(x)" or
+   "if (a<1) a <- 0" indicates the end of the expression, which is
+   then evaluated.  But in other cases, such as within curly braces,
+   newlines do not indicate the end of input, but only the end of a
+   sub-expression.  This issue is handled by usually, but not always,
+   automatically advancing past a newline to the next non-newline
+   token, and by recording whether a newline preceeded the current
+   token (so lookahead to the next non-newline token doesn't loose 
+   this information).  The NEXT_TOKEN macro handles this automatic
+   advancement, while the END_NL macro can test for newline ending
+   an expression without forcing the read of a token following the
+   newline (which in an interactive context would force user input).
 
-   Source references are attached if keep_source is non-zero. */
+   Source references are attached if ps->keep_source is non-zero. */
+
 
 static SEXP parse_expr (int prec, int flags, int *paren);
 
@@ -1171,6 +1221,7 @@ static SEXP parse_expr (int prec, int flags, int *paren);
 #define END_ON_NL   (1<<1)  /* End expression when newline seen */
 #define NO_PEEKING  (1<<2)  /* Don't look ahead for ELSE after newline
                                (only relevant when END_ON_NL set) */
+
 
 /* Parse the formals list of a function definiton. */
 
@@ -1300,8 +1351,19 @@ static SEXP parse_sublist (int flags)
 
 
 /* Parse an expression in which any non-enclosed operator has precedence 
-   greater than prec.  An attempt is made to make the last operand of an
-   operator be a constant object. */
+   greater than prec.  
+
+   An expression - for instance, abc[i]/2+1 - is seen as being formed
+   from an initial part - in this example, abc - zero or more postfix
+   parts - in this example, [i] - which form a unit that is then possibly 
+   contained in one or more binary operators - in this example, / and +.
+   An expression starting with a unary operator will have the unary
+   operator expression as its initial part (and there will be no possibility
+   of a postfix part, since any such will have been absorbed into the 
+   operand of the unary operator).  
+
+   An attempt is made to make the last operand of an operator be a constant
+   object. */
 
 static SEXP parse_expr (int prec, int flags, int *paren)
 {
@@ -1675,6 +1737,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     end_parseData_record(outer_rec,&loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
         set_parent_in_rec (prev_token_rec(1), ps->sr->containing_parse_rec);
+
     END_PARSE_FUN;
     return res;
 }
@@ -1702,8 +1765,7 @@ static SEXP parse_prog (int flags)
 /* -------------------------------------------------------------------------- */
 
 /* R_Parse1 is a glue function between the recursive descent parsing routines
-   and the parsing entry points.  It sets R_CurrentExpr to the expresion
-   parsed (as with the old parsing routines), but it probably shouldn't. 
+   and the parsing entry points. 
 
    The keep_source variable should be set before calling this function. */
 
@@ -1720,13 +1782,13 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
     if (!get_next_token()) {
         *status = PARSE_EOF;
-        return R_CurrentExpr = R_NilValue;
+        return R_NilValue;
     }
 
     if (ps->next_token == END_OF_INPUT || ps->next_token == '\n' 
                                        || ps->next_token == ';') {
         *status = PARSE_NULL;
-        return R_CurrentExpr = R_NilValue;
+        return R_NilValue;
     }
 
     start_location(loc);
@@ -1735,17 +1797,18 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
     if (res == NULL) {
         *status = PARSE_ERROR;
-        return R_CurrentExpr = R_NilValue;
+        return R_NilValue;
     }
 
     *status = PARSE_OK;
-    return R_CurrentExpr = res;
+    return res;
 }
 
 /* -------------------------------------------------------------------------- 
    PARSING ENTRY POINTS.
 
    See the documentation at the start of this module. */
+
 
 #define PARSE_INIT \
     struct parse_state new_parse_state; \
@@ -1761,6 +1824,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     ps->prevpos = 0; \
     ps->npush = 0;
 
+
 #define PARSE_FINI \
     memcpy (R_ParseContext, ps->ParseContext, PARSE_CONTEXT_SIZE); \
     R_ParseContextLast = ps->ParseContextLast; \
@@ -1772,6 +1836,7 @@ static int call_stream_getc(void)
 { 
     return (*ps->stream_getc)(ps->stream_getc_arg);
 }
+
 
 attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg, 
                                       ParseStatus *status, SrcRefState *state)
@@ -1867,10 +1932,12 @@ ret:
     return rval;
 }
 
+
 static int text_getc(void)
 {
     return R_TextBufferGetc(ps->textb_ptr);
 }
+
 
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
@@ -1922,8 +1989,8 @@ SEXP R_ParseStream (int (*getc) (void *), void *getc_arg,
    SymbolValue.  None of these could conceivably need 8192 bytes.
 
    For inclusion in parse data, it is also used to store text from 
-   strings, or a  message saying the text was truncated, and text
-   from comments that fit. */
+   strings, or a message saying the text was truncated, and text
+   from comments that aren't very long. */
 
 static char yytext[MAXELTSIZE];
 
