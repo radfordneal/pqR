@@ -395,8 +395,6 @@ struct parse_state {
     int (*stream_getc)(void *);
     TextBuffer *textb_ptr;
 
-    /* 
-
 #   define PUSHBACK_BUFSIZE 16
 
     int pushback[PUSHBACK_BUFSIZE];
