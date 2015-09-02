@@ -359,10 +359,9 @@ typedef struct
 
    The structure pointed to is allocated on the stack, local to the
    outermost parsing function, then referenced by this static global
-   pointer in many routines.  The old pointer is saved in the
-   outermost parsing routine and then restored at the end, allowing
-   the parser to be called recursively as part of getting an input
-   character. */
+   pointer in many routines.  This pointer is saved and then restored
+   in the xxgetc function, allowing the parser to be called
+   recursively as part of getting an input character. */
 
 static struct parse_state *ps; /* currently active parse */
 
@@ -600,8 +599,12 @@ static int xxgetc(void)
 
     if (ps->npush > 0)
         c = ps->pushback[--(ps->npush)];
-    else
+    else {
+        /* Note that the getc function might call the parser recursively. */
+        struct parse_state *sv_ps = ps;
         c = ps->ptr_getc();
+        ps = sv_ps;
+    }
 
     oldpos = ps->prevpos;
     ps->prevpos = (ps->prevpos + 1) % PUSHBACK_BUFSIZE;
@@ -1810,7 +1813,6 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 
 #define PARSE_INIT \
     struct parse_state new_parse_state; \
-    struct parse_state *sv_ps = ps; \
     ps = &new_parse_state; \
     ps->token_loc.first_line = 0; \
     ps->token_loc.first_column = 0; \
@@ -1826,8 +1828,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 #define PARSE_FINI \
     memcpy (R_ParseContext, ps->ParseContext, PARSE_CONTEXT_SIZE); \
     R_ParseContextLast = ps->ParseContextLast; \
-    R_ParseContextLine = ps->ParseContextLine; \
-    ps = sv_ps;
+    R_ParseContextLine = ps->ParseContextLine;
 
 
 static int call_stream_getc(void) 
