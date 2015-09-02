@@ -1,7 +1,7 @@
 /* HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
              C Procedures Implementing the Facility
 
-   Copyright (c) 2013, 2014 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2015 Radford M. Neal.
 
    The helpers library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

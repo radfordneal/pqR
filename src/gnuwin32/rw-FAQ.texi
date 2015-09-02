@@ -34,6 +34,7 @@ R for Windows FAQ                           @*
 Frequently Asked Questions on R for Windows @*
 Version for @value{VERSION}                 @*
 B. D. Ripley and D. J. Murdoch              @*
+Modified for pqR by Radford Neal, 2015      @*
 
 @sp 2
 @end ifinfo
@@ -42,6 +43,7 @@ B. D. Ripley and D. J. Murdoch              @*
 @html
 <h2>Version for <tt>@value{VERSION}</tt></h2>
 <address>B. D. Ripley and D. J. Murdoch</address>
+Modified for pqR by Radford Neal, 2015
 <hr>
 @end html
 @end ifhtml

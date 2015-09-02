@@ -1,4 +1,5 @@
 ## check that the 'internal generics' are indeed generic.
+## Modified for pqR by Radford Neal, 2015.
 
 x <- structure(pi, class="testit")
 xx <- structure("OK", class="testOK")
