@@ -1051,7 +1051,7 @@ void helpers_master (void)
 {
     static int printed_already = 0;
 
-    if (!printed_already && !R_Quiet) {
+    if (!printed_already && !R_Quiet && !SETJMP(R_Toplevel.cjmpbuf)) {
 
         Rprintf("\n");
         if (helpers_are_disabled)
