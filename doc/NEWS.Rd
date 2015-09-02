@@ -43,6 +43,8 @@
         its floating point unit set so that long double arithmetic is 
         the same as double arithmetic  Use \code{__asm__("fninit")} in 
         C to reset the FPU so that long double arithmetic will work.
+  \item The default is now to install packages from source, since there
+        is no binary repository for pqR.
 }}
 
   \subsection{EMBEDDED R FACILITIES AND EXAMPLES}{
@@ -66,10 +68,8 @@
         incorrect and incomplete information on the precedence
         of operators, especially the assignment operators.  
         This and other incorrect information has been corrected.
-  \item B
   \item The examples in \code{help(parse)} and \code{help(getParseData}
         have been improved.
-  \item D
 }}
 
   \subsection{INTERNAL CODE REWRITES}{
@@ -82,7 +82,6 @@
   \item Much of the deparser has been rewritten.  It no longer
         looks at the definitions of operators, which are irrelevant,
         since the parser does not look at them.
-  \item C
   \item The methods by which the Read-Eval-Print Loop (REPL) is
         done (in various contexts) have been rationalized, in
         coordination with the new parsing scheme.
@@ -116,7 +115,6 @@
         as \code{^}, which is associated with the name \code{^}, and
         hence dispatches on methods for \code{^} even if called via
         \code{**}.
-  \item D
 }}
 
   \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
@@ -129,19 +127,15 @@
         extension to provide partial parse information when a syntax error
         occurs that was introduced in R-3.0.2.  See help on \code{parse}
         and \code{getParseData} for details.
-  \item C
   \item From R-2.15.2: On Windows, the C stack size has been increased 
         to 64MB (it has been 10MB since the days of 32MB RAM systems).
 }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
-  \item A
   \item Character-at-a time input has been sped up by reducing procedure
         call overhead.  This significantly speeds up \code{readLines},
         \code{scan}, and parsing of text files.
-  \item C
-  \item D
 }}
 
   \subsection{BUG FIXES MATCHING THOSE IN LATER R CORE VERSIONS}{
@@ -167,7 +161,6 @@
         statements at the end of a script; now they are reported as parse errors
         (PR#16350).  Fixed in pqR as part of the rewrite of the parser
         and deparser.
-  \item B
   \item From R-3.2.1: The parser could overflow internally when given 
         numbers in scientific format with extremely large exponents.  
         (PR#16358).  Fixed in pqR partly as in R Core fix.  Was actually a 
@@ -247,7 +240,6 @@ In addition, the bug illustrated below was fixed, which was fixed
         This was supposedly fixed in R-3.0.2, but incorrectly, resulting
         in the error caret being misplaced when only one line of 
         context is shown (in R Core versions to at least R-3.2.2).
-  \item C
   \item On Windows, running R.exe from a command prompt window would result in
         Ctrl-C misbehaving.  This was \PR{14948} at R Core, which was 
         supposedly fixed in R-2.15.2, but the fix only works if a 32 or
