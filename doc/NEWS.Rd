@@ -67,7 +67,8 @@
         of operators, especially the assignment operators.  
         This and other incorrect information has been corrected.
   \item B
-  \item C
+  \item The examples in \code{help(parse)} and \code{help(getParseData}
+        have been improved.
   \item D
 }}
 
