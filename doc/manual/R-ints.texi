@@ -2423,12 +2423,12 @@ return  function  quote  switch
 @item
 Language elements and basic @emph{operator}s (i.e., functions usually
 @emph{not} called as @code{foo(a, b, ...)}) for subsetting, assignment,
-arithmetic and logic:
+arithmetic and logic (but @code{@@<-} is currently not primitive):
 
 @example
 @group
-               [    [[    $    @@
-<-   <<-  =    [<-  [[<-  $<-
+[    [[   $    @@     [<-  [[<-  $<-
+<-   <<-  =    ->    ->>
 
 +    -    *    /     ^    %%   %*%  %/%
 <    <=   ==   !=    >=   >
@@ -2505,7 +2505,7 @@ The programming and session management utilities
 
 @example
 @group
-browser  proc.time  gc.time tracemem retracemem untracemem
+browser  proc.time  gc.time  pnamedcnt
 @end group
 @end example
 
@@ -2664,7 +2664,7 @@ included are better thought of as language elements (at the time of
 writing
 
 @example
-$  $<-  &&  (  :  @@  [  [[  [[<-  [<-  @{  ||  ~  <-  <<-  =
+$  $<-  &&  (  :  @@  [  [[  [[<-  [<-  @{  ||  ~  <-  <<-  =  ->   ->>
 break  for function  if  next  repeat  return  while
 @end example
 
