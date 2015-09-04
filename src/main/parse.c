@@ -832,7 +832,8 @@ void R_FinalizeSrcRefState (SrcRefState *state)
    VARIABLES, MACROS, AND FUNCTIONS SUPPORTING THE PARSER
 
    The parser operates by recursive descent, with parsing decisions made
-   by examining a lookahead token (in ps->next_token). */
+   by examining a lookahead token, which is in ps->next_token, though
+   it's normally accessed by the NEXT_TOKEN macro. */
 
 
 /* Begin a recursive-descent parsing routine.  Sets up for PROTECT_N. 
@@ -929,7 +930,7 @@ static void error_msg(const char *s)
 #define PROTECT_N(w) (nprotect++, PROTECT(w))
 
 
-/* Look at the next token, which will usually already be in next_token.
+/* Look at the next token, which will usually already be in ps->next_token.
    However, if next_token is '\n', advance to the next other token first. */
 
 #define NEXT_TOKEN \
@@ -1163,8 +1164,8 @@ static int binary_op(void)
 }
 
 
-/* Macros to create language pairlists in which the last CONS cell may
-   be a shared constant.  Note that unlike lang2, lang3, and lang4,
+/* Macros to create language pairlists in which the last CONS cell (and its
+   CAR) may be a shared constant.  Note that unlike lang2, lang3, and lang4,
    the arguments must be protected by the caller. */
 
 #define LANG2(y,z) LCONS((y),MaybeConstList1(z))
