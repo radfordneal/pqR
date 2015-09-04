@@ -1,5 +1,0 @@
-Miscellaneous cleanup.
-
-Update R-ints.texi about primitives.
-
-Make -> and ->> not be counted as undocumented primitives in QC.R.
