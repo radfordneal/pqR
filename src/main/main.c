@@ -127,7 +127,12 @@ static int ParseBrowser(SEXP, SEXP);
 extern void InitDynload(void);
 
 
-/* Read-Eval-Print Loop [ =: REPL = repl ] with input from a file */
+/* --------------------------------------------------------------------------
+   READ-EVAL-PRINT LOOP (REPL) WITH INPUT FROM A FILE
+
+   Repeatedly calls R_Parse1Stream (in parse.c) to read an expression 
+   to evaluate.  See R_ReplIteration below for some relevant comments. 
+*/
 
 extern int R_fgetc (FILE*);
 
@@ -140,8 +145,10 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     SrcRefState ParseState;
     int savestack;
     SEXP value;
-    
+
+    /* next must be paired with R_FinalizeSrcRefState (see parse.c) */
     R_InitSrcRefState (&ParseState, FALSE);
+
     savestack = R_PPStackTop;    
 
     for(;;) {
@@ -182,7 +189,10 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 	    break;
 
 	case PARSE_EOF:
+
+            /* next must be paired with R_InitSrcRefState (see parse.c) */
 	    R_FinalizeSrcRefState(&ParseState);
+
 	    return;
 	    break;
 
@@ -192,32 +202,14 @@ static void R_ReplFile(FILE *fp, SEXP rho)
     }
 }
 
-/* Read-Eval-Print loop with interactive input */
 
-static char BrowsePrompt[20];
-
-
-char *R_PromptString(int browselevel, int type)
-{
-    if (R_Slave) {
-	BrowsePrompt[0] = '\0';
-	return BrowsePrompt;
-    }
-    else {
-	if(type == 1) {
-	    if(browselevel) {
-		sprintf(BrowsePrompt, "Browse[%d]> ", browselevel);
-		return BrowsePrompt;
-	    }
-	    return (char *)CHAR(STRING_ELT(GetOption1(install("prompt")), 0));
-	}
-	else {
-	    return (char *)CHAR(STRING_ELT(GetOption1(install("continue")), 0));
-	}
-    }
-}
+/* --------------------------------------------------------------------------
+   READ-EVAL-PRINT LOOP WITH INTERACTIVE INPUT
+ */
 
 /*
+  Comment from 2.15.0 (still more-or-less right, though a bit misplaced):
+
   This is a reorganization of the REPL (Read-Eval-Print Loop) to separate
   the loop from the actions of the body. The motivation is to make the iteration
   code (Rf_ReplIteration) available as a separately callable routine
@@ -251,17 +243,27 @@ typedef struct {
   unsigned char *bufp;
 } R_ReplState;
 
+static char BrowsePrompt[20];
 
-/* The body of an Read-Eval-Print iteration.
-
-   If the input can be parsed correctly,
-
-       1) the resulting expression is evaluated,
-       2) the result assigned to .Last.Value,
-       3) top-level task handlers are invoked.
-
-   The bufp pointer into buf is moved to the next starting point, 
-   i.e. the end of the first line or after the terminating ';'. */
+char *R_PromptString(int browselevel, int type)
+{
+    if (R_Slave) {
+	BrowsePrompt[0] = '\0';
+	return BrowsePrompt;
+    }
+    else {
+	if(type == 1) {
+	    if(browselevel) {
+		sprintf(BrowsePrompt, "Browse[%d]> ", browselevel);
+		return BrowsePrompt;
+	    }
+	    return (char *)CHAR(STRING_ELT(GetOption1(install("prompt")), 0));
+	}
+	else {
+	    return (char *)CHAR(STRING_ELT(GetOption1(install("continue")), 0));
+	}
+    }
+}
 
 static int keepSource;
 
@@ -287,6 +289,17 @@ static int ReplGetc (void *vstate)
     return c;
 }
 
+/* The body of the Read-Eval-Print Loop.
+
+   If the input can be parsed correctly,
+
+       1) the resulting expression is evaluated,
+       2) the result assigned to .Last.Value,
+       3) top-level task handlers are invoked.
+
+   The bufp pointer into buf is moved to the next starting point, 
+   i.e. the end of the first line or after the terminating ';'. */
+
 int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 {
     int browsevalue;
@@ -297,7 +310,10 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
     state->prompt_type = *state->bufp == 0 ? 1 : 2;
 
     keepSource = asLogical (GetOption1 (install ("keep.source")));
+
+    /* next must be paired with R_FinalizeSrcRefState (see parse.c) */
     R_InitSrcRefState (&ParseState, keepSource);
+
     if (keepSource)
         R_IoBufferWriteReset(&R_ConsoleIob);
 
@@ -319,6 +335,7 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
         R_TextForSrcRefState (&ParseState, buf);
     }
 
+    /* next must be paired with R_InitSrcRefState (see parse.c) */
     R_FinalizeSrcRefState(&ParseState);
     
     switch (state->status) {
@@ -406,6 +423,8 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
     } while (status >= 0);
 }
+
+/* --------------------------------------------------------------------------
 
 
 /* A version of REPL for use with embedded R; just an interface to
