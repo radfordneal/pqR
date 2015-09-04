@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-??-??}{
+\section{CHANGES IN VERSION RELEASED 2015-09-04}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -243,9 +243,9 @@ In addition, the bug illustrated below was fixed, which was fixed
   \item On Windows, running R.exe from a command prompt window would result in
         Ctrl-C misbehaving.  This was \PR{14948} at R Core, which was 
         supposedly fixed in R-2.15.2, but the fix only works if a 32 or
-        64 bit version of R.exe is selected manually, not if the version of R.exe
-        that automatically runs the R.exe for a selected architecture is used
-        (which is the intended normal usage).
+        64 bit version of R.exe is selected manually, not if the version of
+        R.exe that automatically runs the R.exe for a selected architecture 
+        is used (which is the intended normal usage).
 }}
 }
 
