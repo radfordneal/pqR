@@ -872,6 +872,14 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         PROTECT_N(_sub_); \
     } while (0)
 
+/* Version that doesn't protect. */
+
+#define PARSE_SUB_NO_PROTECT(w) \
+    do { \
+        SEXP _sub_ = (w); \
+        if (_sub_ == NULL) goto error; \
+    } while (0)
+
 
 /* Produce an error message and exit parsing (up to the top level). */
 
@@ -1316,14 +1324,17 @@ static SEXP parse_sublist (int flags)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
-                        PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags,
-                                                    NULL));
+                        /* Don't protect until end of parse_sublist - there
+                           could be a very large number of arguments. */
+                        PARSE_SUB_NO_PROTECT (val = 
+                          parse_expr (EQASSIGN_PREC, subflags, NULL));
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
                     next = MaybeConstList1(arg);
                 }
             }
+            /* Beware: 'next' may not be protected at this point. */
             if (res == R_NilValue) {
                 res = PROTECT_N (next);
                 last = res;
@@ -1331,7 +1342,9 @@ static SEXP parse_sublist (int flags)
             }
             else {
                 if (IS_CONSTANT(last)) {
+                    PROTECT(next);
                     last = cons_with_tag(CAR(last),CDR(last),TAG(last));
+                    UNPROTECT(1);
                     if (last2 == R_NilValue)
                         res = PROTECT_N (last);
                     else
@@ -1461,7 +1474,12 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
-            PARSE_SUB (next = parse_expr (0, subflags | END_ON_NL, NULL));
+            /* Don't use the usual protect scheme, with unprotect only
+               at the end of parse_expr, because that might use up too 
+               much of the protect stack. */
+            PARSE_SUB_NO_PROTECT (next = 
+                                   parse_expr (0, subflags | END_ON_NL, NULL));
+            PROTECT(next);
             end_location(&loc);
             if (ps->keep_source) {
                 SETCDR (last_ref, CONS (makeSrcref(&loc,ps->sr->SrcFile),
@@ -1470,6 +1488,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             }
             SETCDR (last, CONS(next,R_NilValue));
             last = CDR(last);
+            UNPROTECT(1); /* next */
             if (!ps->newline_before_token && NEXT_TOKEN != ';' 
                                           && NEXT_TOKEN != '}')
                 PARSE_UNEXPECTED();
