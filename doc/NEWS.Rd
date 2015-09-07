@@ -177,6 +177,10 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a bug in which a "cons memory exhausted" error could
+        be raised even though a full garbage collection that might
+        recover more memory had not been attempted.  (This bug appears
+        to be present in R Core versions as well.)
   \item The new parser fixes bugs arising from the old parser's kludge
         to handle semicolons, illustrated by the incorrect output seen below:
 \preformatted{  > p<-parse()

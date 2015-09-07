@@ -3,3 +3,6 @@ Miscellaneous cleanup.
 Update R-ints.texi about primitives.
 
 Make -> and ->> not be counted as undocumented primitives in QC.R.
+
+Fix failure to try harder when no free nodes but could collect
+older generations.

@@ -2269,10 +2269,10 @@ static void RunGenCollect(R_size_t size_needed)
     R_NodesInUse = R_NSize - R_Collected;
 
     if (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
-	if (R_Collected < R_MinFreeFrac * R_NSize ||
-	    VHEAP_FREE() < size_needed + R_MinFreeFrac * R_VSize) {
+	if (R_Collected < R_MinFreeFrac * R_NSize || NO_FREE_NODES() 
+             || VHEAP_FREE() < size_needed + R_MinFreeFrac * R_VSize) {
 	    num_old_gens_to_collect++;
-	    if (R_Collected <= 0 || VHEAP_FREE() < size_needed)
+	    if (R_Collected<=0 || VHEAP_FREE()<size_needed || NO_FREE_NODES())
 		goto again;
 	}
 	else num_old_gens_to_collect = 0;
