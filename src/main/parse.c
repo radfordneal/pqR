@@ -919,7 +919,7 @@ static void error_msg(const char *s)
 
 #define EXPECT(tk) \
     do { \
-        if (ps->next_token != (tk)) \
+        if (NEXT_TOKEN != (tk)) \
             PARSE_UNEXPECTED(); \
         get_next_token(); \
     } while (0)
