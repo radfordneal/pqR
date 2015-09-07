@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-09-04}{
+\section{CHANGES IN VERSION RELEASED 2015-09-07}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -20,6 +20,9 @@
         been substantially rewritten.  This has few user-visible effects
         at present (though some bugs are fixed), but sets the stage for 
         future improvements in pqR.
+  \item The facility for recording detailed parsing data introduced n
+        R-3.0.0 has now been implemented in pqR as part of the parser
+        rewrite.
   \item There are also a few other improvements and bug fixes.
 }}
 
@@ -78,7 +81,13 @@
         descent, rather than a bottom-up parser produced by Bison
         as was used previously.  This substantially simplifies
         the parser, and allows several kludges in the previous
-        scheme to be eliminated.
+        scheme to be eliminated.  Also, the rewritten parser can now
+        record detailed parse information (see below).
+
+        The new parser for pqR is usually about a factor of 1.5 faster
+        than the parser in R-3.2.2, but it is sometimes enormously faster,
+        since the parser in R-3.2.2 will in some contexts take time growing
+        as the square of the length of the source file.
   \item Much of the deparser has been rewritten.  It no longer
         looks at the definitions of operators, which are irrelevant,
         since the parser does not look at them.
@@ -134,8 +143,8 @@
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item Character-at-a time input has been sped up by reducing procedure
-        call overhead.  This significantly speeds up \code{readLines},
-        \code{scan}, and parsing of text files.
+        call overhead.  This significantly speeds up \code{readLines}
+        and \code{scan}.
 }}
 
   \subsection{BUG FIXES MATCHING THOSE IN LATER R CORE VERSIONS}{
