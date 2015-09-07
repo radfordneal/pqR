@@ -1298,13 +1298,24 @@ static SEXP parse_sublist (int flags)
 
     res = R_NilValue;
     if (NEXT_TOKEN != ')') { /* check only ')', not ']':  [] has missing arg */
+
         SEXP next;
+
         for (;;) {
-            SEXP arg;
+
             if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
                 next = MaybeConstList1(R_MissingArg);
             else {
-                PARSE_SUB(arg = parse_expr (EQASSIGN_PREC, subflags, NULL));
+
+                /* We don't use the usual PROTECT_N scheme (inside PARSE_SUB)
+                   here, because that would protect until end of parse_sublist,
+                   and there could be a very large number of arguments. */
+
+                SEXP arg;
+                PARSE_SUB_NO_PROTECT (arg = 
+                  parse_expr (EQASSIGN_PREC, subflags, NULL));
+                PROTECT(arg);
+
                 if (NEXT_TOKEN == EQ_ASSIGN) {
                     SEXP tag, val;
                     set_token_in_rec (prev_token_rec(1), "EQ_SUB");
@@ -1324,8 +1335,8 @@ static SEXP parse_sublist (int flags)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else
-                        /* Don't protect until end of parse_sublist - there
-                           could be a very large number of arguments. */
+                        /* Don't protect until end of parse_sublist, since 
+                           could be too many. */
                         PARSE_SUB_NO_PROTECT (val = 
                           parse_expr (EQASSIGN_PREC, subflags, NULL));
                     next = cons_with_tag(val,R_NilValue,tag);
@@ -1333,8 +1344,12 @@ static SEXP parse_sublist (int flags)
                 else {
                     next = MaybeConstList1(arg);
                 }
+
+                UNPROTECT(1); /* arg */
             }
+
             /* Beware: 'next' may not be protected at this point. */
+
             if (res == R_NilValue) {
                 res = PROTECT_N (next);
                 last = res;
@@ -1354,8 +1369,10 @@ static SEXP parse_sublist (int flags)
                 last2 = last;
                 last = next;
             }
+
             if (NEXT_TOKEN != ',')
                 break;
+
             get_next_token();
         }
     }
