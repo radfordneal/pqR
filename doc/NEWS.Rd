@@ -177,11 +177,10 @@
   \item From R-3.1.3: Extremely large exponents on zero expressed in scientific
         notation (e.g. \code{0.0e50000}) could give \code{NaN} (\PR{15976}).
         Fixed as in R Core fix.
-  \item C
   \item From R-2.15.3:  On Windows, work around an event-timing problem when
-      the RGui console was closed from the \sQuote{X} control and the closure
-      cancelled. (This would on some 64-bit systems crash \R, typically
-      those with a slow GPU relative to the CPU.)
+        the RGui console was closed from the \sQuote{X} control and the closure
+        cancelled. (This would on some 64-bit systems crash \R, typically
+        those with a slow GPU relative to the CPU.)
 }}
 
   \subsection{BUG FIXES}{
