@@ -424,13 +424,13 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
     } while (status >= 0);
 }
 
-/* -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
 
 
-/* Main Loop: It is assumed that at this point that operating system
-   specific tasks (dialog window creation etc) have been performed.
-   We can now print a greeting, run the .First function and then enter
-   the read-eval-print loop. */
+/* Main Loop: It is assumed that at this point that operating system */
+/* specific tasks (dialog window creation etc) have been performed. */
+/* We can now print a greeting, run the .First function and then enter */
+/* the read-eval-print loop. */
 
 static RETSIGTYPE handleInterrupt(int dummy)
 {
