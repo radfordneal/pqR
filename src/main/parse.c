@@ -1394,10 +1394,10 @@ static SEXP parse_sublist (int flags)
    of a postfix part, since any such will have been absorbed into the 
    operand of the unary operator).  
 
-   The 'paren' argument points to where to store an indicator of the
-   precedence of the expression inside a parenthesized expression, or
-   0 if the parsed expression isn't parenthesized.  If 'paren' is 
-   the C NULL pointer, this information isn't stored.
+   The 'paren' argument points to where to store an indicator of whether
+   the parsed expression is parenthesized.  Note that (x) is considered to
+   be parenthesized, but `(`(x) is not, even though they produce the same
+   expression. If 'paren' is the C NULL pointer, this information isn't stored.
 
    An attempt is made to make the last operand of an operator be a constant
    object. */
@@ -1412,7 +1412,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
-    int par = 0;  /* paren precedence indicator - initially not parenthesized */
+    int par = 0;  /* parenthesization indicator - initially not parenthesized */
 
     start_location(&begin_loc);
     outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
@@ -1427,7 +1427,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         PARSE_SUB (res = parse_expr (op_prec, 
                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
                            &ipar));
-        if (!keep_parens && ipar != 0 && ipar < op_prec)
+        if (!keep_parens && ipar && needsparens_unary(op,CADR(res)))
             res = CADR(res);  /* get rid of parens */
         res = PROTECT_N (LANG2 (op, res));
     }
@@ -1458,21 +1458,16 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         get_next_token();
     }
 
-    /* Paren expressions.  Sets 'par'. */
+    /* Paren expressions.  Sets 'par' to 1 to indicate it's parenthesized. */
 
     else if (NEXT_TOKEN == '(') {
         SEXP op;
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_expr (0, subflags, NULL));
-        if (TYPEOF(res) == LANGSXP) {
-            int nargs = length(CDR(res));
-            if (par == 0 && nargs == 1) par = unary_prec(CAR(res));
-            if (par == 0 && nargs == 2) par = binary_prec(CAR(res));
-            if (par == 0)               par = misc_prec(CAR(res));
-        }
         res = PROTECT_N (LANG2 (op, res));
         EXPECT(')');
+        par = 1;
     }
 
     /* Curly expressions. */
@@ -1616,29 +1611,21 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     else
         PARSE_UNEXPECTED();
 
-    /* Now handle any postfix parts.  
- 
-       We first see if there will be any such parts, and if so see if
-       necessary parentheses preceded them - if so, the parentheses
-       can be eliminated, unless the KEEP_PARENS flag is set.
+    /* Now handle postfix parts, looping over all of them. */
 
-       Then we loop over all the postfix parts. */
+    while (!NL_END && (NEXT_TOKEN=='(' || NEXT_TOKEN=='[' || NEXT_TOKEN==LBB
+                         || NEXT_TOKEN=='$' || NEXT_TOKEN=='@')) {
 
-#   define POSTFIX_TOKEN() (NEXT_TOKEN == '(' || NEXT_TOKEN == '[' || \
-                            NEXT_TOKEN == LBB || NEXT_TOKEN == '$' || \
-                            NEXT_TOKEN == '@')
+        SEXP op = TOKEN_VALUE();
 
-    if (!NL_END && par != 0 && POSTFIX_TOKEN()) {
+        /* See if necessary parentheses preceded the (first) postfix part.
+           If so, the parentheses are eliminated (unless KEEP_PARENS is set).
+           Note that par will be 0 for second and later postfix parts. 
+           Note also that all postfix operators act the same way as [. */
 
-        /* Note:  all the postfix operators act the same as [. */
-
-        if (!keep_parens && par < misc_prec(R_BracketSymbol))
+        if (par && !keep_parens 
+                && needsparens_postfix (R_BracketSymbol, CADR(res)))
             res = CADR(res);  /* get rid of parens */
-
-        par = 0;  /* indicate that this is not a parenthesized expression */
-    }
-
-    while (!NL_END && POSTFIX_TOKEN()) {
 
         rec = start_parseData_record(&begin_loc,"expr","",FALSE);
         set_parent_in_rec (bgn_token_rec, rec);
@@ -1666,8 +1653,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         /* Subscripting with [. */
 
         else if (NEXT_TOKEN == '[') {
-            SEXP op, subs;
-            op = TOKEN_VALUE();
+            SEXP subs;
             get_next_token();
             PARSE_SUB(subs = parse_sublist (flags));
             res = PROTECT_N (LCONS (op, CONS (res, subs)));
@@ -1677,8 +1663,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         /* Subscripting with [[. */
 
         else if (NEXT_TOKEN == LBB) {
-            SEXP op, subs;
-            op = TOKEN_VALUE();
+            SEXP subs;
             get_next_token();
             PARSE_SUB(subs = parse_sublist (flags));
             res = PROTECT_N (LCONS (op, CONS (res, subs)));
@@ -1689,8 +1674,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         /* Subsetting with $. */
 
         else if (NEXT_TOKEN == '$') {
-            SEXP op, sym;
-            op = TOKEN_VALUE();
+            SEXP sym;
             get_next_token();
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
@@ -1702,8 +1686,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         /* Slot access with @. */
 
         else if (NEXT_TOKEN == '@') {
-            SEXP op, sym;
-            op = TOKEN_VALUE();
+            SEXP sym;
             get_next_token();
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
@@ -1716,13 +1699,18 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
         else
             abort();
+
+        par = 0;  /* indicate that this is not a parenthesized expression */
     }
 
-    /* Now handle binary operators following any of the above. */
+    /* Now handle binary operators following any of the above, absorbing
+       all of them that we can given the precedence constraint. */
 
     int last_prec = 0;
 
     while (!NL_END) {
+
+        int ipar;
 
         op_prec = binary_op();
 
@@ -1735,19 +1723,25 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         end_parseData_record(rec,&loc);
         set_parent_in_rec (prev_token_rec(1), outer_rec);
 
-        if (!keep_parens && par != 0 
-               && (par < op_prec || par == op_prec && !LEFT_ASSOC(op_prec)))
+        op = TOKEN_VALUE();
+
+        if (!keep_parens && par && needsparens_binary (op, CADR(res), TRUE))
             res = CADR(res);  /* get rid of parens */
 
-        op = TOKEN_VALUE();
         get_next_token();
 
         if (LEFT_ASSOC(op_prec)) {
+
+            /* For left-associate operators, we loop over successive right
+               operands.  For example, with a+b+c+d, we will call parse_expr
+               three times in this loop to parse b, c, and d. */
+
             for (;;) {
                 PARSE_SUB(right = parse_expr (op_prec, 
                             op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
-                            &par));
-                if (!keep_parens && par != 0 && par <= op_prec)
+                            &ipar));
+                if (!keep_parens && ipar 
+                                 && needsparens_binary (op, CADR(right), FALSE))
                     right = CADR(right);  /* get rid of parens */
                 res = PROTECT_N (LANG3 (op, res, right));
                 if (NL_END || binary_op() != op_prec) 
@@ -1756,15 +1750,21 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 get_next_token();
             }
         }
-        else if (RIGHT_ASSOC(op_prec)) {
-            PARSE_SUB(right = parse_expr (op_prec-1, flags, &par));
-            if ( ! (flags & KEEP_PARENS) && par != 0 && par < op_prec)
-                right = CADR(right);  /* get rid of parens */
-            res = PROTECT_N (LANG3 (op, res, right));
-        }
-        else { /* NON_ASSOC */
-            PARSE_SUB(right = parse_expr (op_prec, flags, &par));
-            if (!keep_parens && par != 0 && par <= op_prec)
+        else {
+
+            /* For right-associative and non-associative operators, a
+               recursive call of parse_expr will absorb the whole right
+               side.  For example, with a<-b<-c<-d, one call of parse_expr
+               will parse b<-c<-d, and for a<b<c, the call will parse
+               b only, leaving the second < to produce an error. */
+
+            if (RIGHT_ASSOC(op_prec))
+                PARSE_SUB(right = parse_expr (op_prec-1, flags, &ipar));
+            else /* NON_ASSOC */
+                PARSE_SUB(right = parse_expr (op_prec, flags, &ipar));
+
+            if (!keep_parens && ipar 
+                             && needsparens_binary (op, CADR(right), FALSE))
                 right = CADR(right);  /* get rid of parens */
             res = PROTECT_N (LANG3 (op, res, right));
         }
