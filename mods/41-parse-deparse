@@ -38,3 +38,10 @@ Corrected documentation on the = assignment operator.
 
 Made %..% ops not deparse as ops if args have names (as in R Core
 fix for PR15350).
+
+Fixed the following bug (also in R-3.2.2):
+
+  > a <- quote(if (x) X else Y)
+  > a[[3]] <- quote(if (T) 3)
+  > a
+  if (x) if (T) 3 else Y                    # Omits necessary parens
