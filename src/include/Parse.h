@@ -77,4 +77,10 @@ int Rf_misc_prec (SEXP);
 #define LEFT_ASSOC(p)  (((p)&3) == 1)
 #define RIGHT_ASSOC(p) (((p)&3) == 2)
 
+/* Functions defined in deparse.c and used in parse.c. */
+
+Rboolean needsparens_postfix (SEXP, SEXP);
+Rboolean needsparens_unary   (SEXP, SEXP);
+Rboolean needsparens_binary  (SEXP, SEXP, int);
+
 #endif /* not R_PARSE_H */

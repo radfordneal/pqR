@@ -516,7 +516,7 @@ curlyahead(SEXP s)
    parenthesized when deparsed.  The symbol op is the outer postfix
    operator (eg, $).  The expression arg is the first operand. */
 
-static Rboolean needsparens_postfix (SEXP op, SEXP arg)
+attribute_hidden Rboolean needsparens_postfix (SEXP op, SEXP arg)
 {
     int op_prec = misc_prec(op);
     int in_prec;
@@ -555,7 +555,7 @@ static Rboolean needsparens_postfix (SEXP op, SEXP arg)
    parenthesized when deparsed.  The symbol op is the outer unary
    operator.  The expression arg is the operand. */
 
-static Rboolean needsparens_unary (SEXP op, SEXP arg)
+attribute_hidden Rboolean needsparens_unary (SEXP op, SEXP arg)
 {
     int op_prec = unary_prec(op);
     int in_prec;
@@ -587,7 +587,7 @@ static Rboolean needsparens_unary (SEXP op, SEXP arg)
    operator.  The expression arg is the operand, on the left if
    left is 1. */
 
-static Rboolean needsparens_binary (SEXP op, SEXP arg, int left)
+attribute_hidden Rboolean needsparens_binary (SEXP op, SEXP arg, int left)
 {
     int op_prec = binary_prec(op);
     int in_prec;
