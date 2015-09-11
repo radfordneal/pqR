@@ -1394,6 +1394,11 @@ static SEXP parse_sublist (int flags)
    of a postfix part, since any such will have been absorbed into the 
    operand of the unary operator).  
 
+   The 'paren' argument points to where to store an indicator of the
+   precedence of the expression inside a parenthesized expression, or
+   0 if the parsed expression isn't parenthesized.  If 'paren' is 
+   the C NULL pointer, this information isn't stored.
+
    An attempt is made to make the last operand of an operator be a constant
    object. */
 
@@ -1416,15 +1421,15 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     /* Unary operators. */
 
     if (op_prec = unary_op()) {
+        int ipar;
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_expr (op_prec, 
                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
-                           &par));
-        if (!keep_parens && par != 0 && par < op_prec)
+                           &ipar));
+        if (!keep_parens && ipar != 0 && ipar < op_prec)
             res = CADR(res);  /* get rid of parens */
         res = PROTECT_N (LANG2 (op, res));
-        par = 0;  /* indicate not a parenthesized expression */
     }
 
     /* Symbols, string constants, and namespace references built from
