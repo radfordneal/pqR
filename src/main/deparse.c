@@ -885,9 +885,13 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                         d->indent++;
                     }
                 }
-                /* need to find out if there is an else */
-                if (nargs > 2) {
-                    deparse2buff(CAR(CDR(s)), d);
+                if (nargs > 2) { /* else present */
+                    SEXP e = CADR(s);
+                    int inner_if_with_no_else = TYPEOF(e) == LANGSXP 
+                          && CAR(e) == R_IfSymbol && length(e) == 3;
+                    if (inner_if_with_no_else)
+                        print2buff("( ", d);
+                    deparse2buff(e, d);
                     if (d->incurly && !d->inlist) {
                         writeline(d);
                         if (!lookahead)
@@ -895,10 +899,12 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     }
                     else
                         print2buff(" ", d);
+                    if (inner_if_with_no_else)
+                        print2buff(") ", d);
                     print2buff("else ", d);
                     deparse2buff(CAR(CDDR(s)), d);
                 }
-                else {
+                else { /* no else present */
                     deparse2buff(CAR(CDR(s)), d);
                     if (d->incurly && !lookahead && !d->inlist)
                     d->indent--;
