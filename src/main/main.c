@@ -424,7 +424,7 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
     } while (status >= 0);
 }
 
-/* --------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
 
 
 /* A version of REPL for use with embedded R; just an interface to
