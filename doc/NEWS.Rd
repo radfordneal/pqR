@@ -219,6 +219,7 @@
   deparse(parse(text="a$'x'")[[1]])       # Conflates name and character
   deparse(parse(text="`*`(2)")[[1]])      # Result is syntactically invalid
   deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is syntactically invalid
+  a<-quote(if(x) X else Y); a[[3]]<-quote(if(T)3); deparse(a)# needs parens
 }
 In addition, the bug illustrated below was fixed, which was fixed
 (differently) in R-3.0.0:
