@@ -1292,7 +1292,9 @@ static SEXP parse_formlist (int flags)
 static SEXP parse_sublist (int flags)
 {
     BGN_PARSE_FUN;
+    int keep_parens = flags & KEEP_PARENS;
     SEXP res, last, last2;
+    int ipar;
 
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
 
@@ -1313,7 +1315,7 @@ static SEXP parse_sublist (int flags)
 
                 SEXP arg;
                 PARSE_SUB_NO_PROTECT (arg = 
-                  parse_expr (EQASSIGN_PREC, subflags, NULL));
+                  parse_expr (EQASSIGN_PREC, subflags, &ipar));
                 PROTECT(arg);
 
                 if (NEXT_TOKEN == EQ_ASSIGN) {
@@ -1334,14 +1336,19 @@ static SEXP parse_sublist (int flags)
                     if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' 
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
-                    else
+                    else {
                         /* Don't protect until end of parse_sublist, since 
                            could be too many. */
                         PARSE_SUB_NO_PROTECT (val = 
-                          parse_expr (EQASSIGN_PREC, subflags, NULL));
+                          parse_expr (EQASSIGN_PREC, subflags, &ipar));
+                        if (!keep_parens && ipar && needsparens_arg(CADR(val)))
+                            val = CADR(val);  /* get rid of parens */
+                    }
                     next = cons_with_tag(val,R_NilValue,tag);
                 }
                 else {
+                    if (!keep_parens && ipar && needsparens_arg(CADR(arg)))
+                        arg = CADR(arg);  /* get rid of parens */
                     next = MaybeConstList1(arg);
                 }
 
@@ -1407,7 +1414,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     BGN_PARSE_FUN;
 
     SEXP outer_rec, rec, res, right, op;
-    int op_prec, next_op_prec;
+    int op_prec, next_op_prec, ipar;
     source_location begin_loc, loc;
 
     int keep_parens = flags & KEEP_PARENS;
@@ -1421,7 +1428,6 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     /* Unary operators. */
 
     if (op_prec = unary_op()) {
-        int ipar;
         op = TOKEN_VALUE();
         get_next_token();
         PARSE_SUB (res = parse_expr (op_prec, 
@@ -1554,7 +1560,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, NULL));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, &ipar));
+        if (!keep_parens && ipar && needsparens_arg(CADR(cond)))
+            cond = CADR(cond);  /* get rid of parens */
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang3 (op, cond, body));
@@ -1568,11 +1576,18 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         op = TOKEN_VALUE();
         get_next_token();
         EXPECT('(');
-        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, NULL));
+        PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, &ipar));
+        if (!keep_parens && ipar && needsparens_arg(CADR(cond)))
+            cond = CADR(cond);  /* get rid of parens */
         EXPECT(')');
-        PARSE_SUB(true_stmt = parse_expr(0, flags, NULL));
+        PARSE_SUB(true_stmt = parse_expr(0, flags, &ipar));
 
         if ( ! (NL_END && (flags & NO_PEEKING)) && NEXT_TOKEN == ELSE) {
+            if (!keep_parens && ipar) {
+                SEXP e = CADR(true_stmt);
+                if (TYPEOF(e)==LANGSXP && CAR(e)==R_IfSymbol && length(e)==3)
+                    true_stmt = e;  /* get rid of parens */
+            }
             get_next_token();
             PARSE_SUB(false_stmt = parse_expr (0, flags, NULL));
             res = PROTECT_N (LANG4 (op, cond, true_stmt, false_stmt));
@@ -1593,7 +1608,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         sym = TOKEN_VALUE();
         get_next_token();
         EXPECT(IN);
-        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, NULL));
+        PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, &ipar));
+        if (!keep_parens && ipar && needsparens_arg(CADR(vec)))
+            vec = CADR(vec);  /* get rid of parens */
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang4 (op, sym, vec, body));
@@ -1709,8 +1726,6 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     int last_prec = 0;
 
     while (!NL_END) {
-
-        int ipar;
 
         op_prec = binary_op();
 
