@@ -176,7 +176,12 @@
   deparse(parse(text="a$'x'")[[1]])       # Conflates name and character
   deparse(parse(text="`*`(2)")[[1]])      # Result is syntactically invalid
   deparse(parse(text="`$`(a,b+2)")[[1]])  # Result is syntactically invalid
-  a<-quote(if(x) X else Y); a[[3]]<-quote(if(T)3); deparse(a)# needs parens
+  e<-quote(if(x) X else Y); e[[3]]<-quote(if(T)3); deparse(e)# all here and
+  e <- quote(f(x)); e[[2]] <- quote((a=1))[[2]]; deparse(e)  # below need
+  e <- quote(f(Q=x)); e[[2]] <- quote((a=1))[[2]]; deparse(e)# parens
+  e <- quote(while(x) 1); e[[2]] <- quote((a=1))[[2]]; deparse(e)
+  e <- quote(if(x) 1 else 2); e[[2]] <- quote((a=1))[[2]]; deparse(e)
+  e <- quote(for(x in y) 1); e[[3]] <- quote((a=1))[[2]]; deparse(e)
 }
 In addition, the bug illustrated below was fixed, which was fixed
 (differently) in R-3.0.0:
