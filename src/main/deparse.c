@@ -1147,6 +1147,16 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             args2buff(s, 0, 0, d);
             print2buff(")", d);
         }
+	else if (op == R_NilValue ||  /* silly things accepted by parser */
+                 length(op) == 1 &&   /* (though giving run-time errors) */
+                 ( TYPEOF(op) == LGLSXP || TYPEOF(op) == REALSXP ||
+                   TYPEOF(op) == CPLXSXP && !ISNAN(COMPLEX(op)->r)
+                                         && COMPLEX(op)->r == 0)) {
+	    deparse2buff(op, d);
+	    print2buff("(", d);
+	    args2buff(s, 0, 0, d);
+	    print2buff(")", d);
+	}
 	else {
 	    print2buff("(", d);
 	    deparse2buff(op, d);
