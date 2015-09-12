@@ -108,10 +108,10 @@ parse(file = "", n = NULL, text = NULL, prompt = "?",
 
   Parentheses in the input that is parsed are preserved as parenthesis
   operators in the parsed expression, except when they are necessary
-  to override precedence, in which case they are omitted (unless the
-  \code{keep.parens} option is set to \code{TRUE}).  Such omitted
-  necessary parentheses will be put back in by \code{deparse}
-  if it is called on the parsed expression.
+  to override precedence, or otherwise syntactically required, in which
+  case they are omitted (unless the \code{keep.parens} option is set to
+  \code{TRUE}).  Such omitted necessary parentheses will be put back in
+  by \code{deparse} if it is called on the parsed expression.
 
   When \code{srcfile} is a \code{srcfile} object, a \code{"srcref"} attribute
   will be attached to the result containing a list of
