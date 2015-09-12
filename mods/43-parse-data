@@ -23,3 +23,12 @@ said to be 10000, but actually 9998).
 Fixed bug in which caret for error report was misplaced.
 
 Put working example in help(getParseData).
+
+Fixed bugs with parens not being deparse in the following:
+
+  e <- quote(f(x)); e[[2]] <- quote((a=1))[[2]]; deparse(e)
+  e <- quote(f(Q=x)); e[[2]] <- quote((a=1))[[2]]; deparse(e)
+  e <- quote(while(x) 1); e[[2]] <- quote((a=1))[[2]]; deparse(e)
+  e <- quote(if(x) 1 else 2); e[[2]] <- quote((a=1))[[2]]; deparse(e)
+  e <- quote(for(x in y) 1); e[[3]] <- quote((a=1))[[2]]; deparse(e)
+
