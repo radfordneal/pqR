@@ -623,6 +623,17 @@ attribute_hidden Rboolean needsparens_binary (SEXP op, SEXP arg, int left)
     return FALSE;
 }
 
+
+/* Determine whether an argument of a function call, a subscript, or the
+   condition in an if or while statement needs to be parenthesized when 
+   deparsed.  It's necessary only for assignments with the = operator. */
+
+attribute_hidden Rboolean needsparens_arg (SEXP arg)
+{
+    return TYPEOF(arg) == LANGSXP && CAR(arg) == R_EqAssignSymbol;
+}
+
+
 /* check for attributes other than function source */
 static Rboolean hasAttributes(SEXP s)
 {
@@ -876,7 +887,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             if (nargs >= 2 && nargs <= 3 &&  op == R_IfSymbol) {
                 print2buff("if (", d);
                 /* print the predicate */
-                int np = TYPEOF(CAR(s))==LANGSXP && CAAR(s)==R_EqAssignSymbol;
+                int np = needsparens_arg(CAR(s));
                 if (np) print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (np) print2buff(")", d);
@@ -915,7 +926,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 2 && op == R_WhileSymbol) {
                 print2buff("while (", d);
-                int np = TYPEOF(CAR(s))==LANGSXP && CAAR(s)==R_EqAssignSymbol;
+                int np = needsparens_arg(CAR(s));
                 if (np) print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 if (np) print2buff(")", d);
@@ -926,8 +937,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(" in ", d);
-                int np = TYPEOF(CAR(CDR(s)))==LANGSXP 
-                          && CAAR(CDR(s))==R_EqAssignSymbol;
+                int np = needsparens_arg(CADR(s));
                 if (np) print2buff("(", d);
                 deparse2buff(CADR(s), d);
                 if (np) print2buff(")", d);
@@ -1469,7 +1479,7 @@ static void args2buff(SEXP arglist, int lineb, int formals, LocalParseData *d)
                 print2buff(" = ", d);
 
             if (a != R_MissingArg) {
-                int np = TYPEOF(a) == LANGSXP && CAR(a) == R_EqAssignSymbol;
+                int np = needsparens_arg(a);
                 if (np) print2buff("(", d);
                 deparse2buff(a, d);
                 if (np) print2buff(")", d);
@@ -1478,7 +1488,7 @@ static void args2buff(SEXP arglist, int lineb, int formals, LocalParseData *d)
 	else {
             /* If we get here with formals being TRUE, the expression
                is malformed.  Not clear what to do... */
-            int np = TYPEOF(a) == LANGSXP && CAR(a) == R_EqAssignSymbol;
+            int np = needsparens_arg(a);
             if (np) print2buff("(", d);
             deparse2buff(a, d);
             if (np) print2buff(")", d);

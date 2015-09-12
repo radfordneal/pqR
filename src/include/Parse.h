@@ -82,5 +82,6 @@ int Rf_misc_prec (SEXP);
 Rboolean needsparens_postfix (SEXP, SEXP);
 Rboolean needsparens_unary   (SEXP, SEXP);
 Rboolean needsparens_binary  (SEXP, SEXP, int);
+Rboolean needsparens_arg     (SEXP);
 
 #endif /* not R_PARSE_H */

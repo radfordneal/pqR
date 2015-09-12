@@ -94,7 +94,7 @@ exprs <- eval (parse (text = "list (
     quote (a <<- b),
     quote (a := b),
     quote (a ? b),
-    quote ((a = b))[[2]],
+    as.call(list(quote(`=`),quote(a),quote(b))),
     quote (a [b]),
     quote (a [[b]]),
     quote (a $ x),
@@ -103,8 +103,7 @@ exprs <- eval (parse (text = "list (
     quote (function (x) a),
     quote (if (c) a else b),
     quote (while (a) b),
-    quote (repeat a),
-    quote ({ a; b })
+    quote (repeat a)
 )" ))
 
 for (kp in c(FALSE,TRUE)) {
