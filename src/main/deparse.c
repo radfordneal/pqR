@@ -876,7 +876,10 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             if (nargs >= 2 && nargs <= 3 &&  op == R_IfSymbol) {
                 print2buff("if (", d);
                 /* print the predicate */
+                int np = TYPEOF(CAR(s))==LANGSXP && CAAR(s)==R_EqAssignSymbol;
+                if (np) print2buff("(", d);
                 deparse2buff(CAR(s), d);
+                if (np) print2buff(")", d);
                 print2buff(") ", d);
                 if (d->incurly && !d->inlist ) {
                     lookahead = curlyahead(CAR(CDR(s)));
@@ -912,7 +915,10 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 2 && op == R_WhileSymbol) {
                 print2buff("while (", d);
+                int np = TYPEOF(CAR(s))==LANGSXP && CAAR(s)==R_EqAssignSymbol;
+                if (np) print2buff("(", d);
                 deparse2buff(CAR(s), d);
+                if (np) print2buff(")", d);
                 print2buff(") ", d);
                 deparse2buff(CADR(s), d);
             }
@@ -920,7 +926,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(" in ", d);
+                int np = TYPEOF(CAR(CDR(s)))==LANGSXP 
+                          && CAAR(CDR(s))==R_EqAssignSymbol;
+                if (np) print2buff("(", d);
                 deparse2buff(CADR(s), d);
+                if (np) print2buff(")", d);
                 print2buff(") ", d);
                 deparse2buff(CADR(CDR(s)), d);
             }
@@ -1447,28 +1457,32 @@ static void args2buff(SEXP arglist, int lineb, int formals, LocalParseData *d)
     while (arglist != R_NilValue) {
 	if (TYPEOF(arglist) != LISTSXP && TYPEOF(arglist) != LANGSXP)
 	    error(_("badly formed function expression"));
-	if (TAG(arglist) != R_NilValue) {
-	    SEXP s = TAG(arglist);
+        SEXP a = CAR(arglist), s = TAG(arglist);
+	if (s != R_NilValue) {
 
 	    if (d->backtick) 
 		print2buff(quotify(PRINTNAME(s), '`'), d);
 	    else 
 	        print2buff(quotify(PRINTNAME(s), '"'), d);
 	    
-	    if(formals) {
-		if (CAR(arglist) != R_MissingArg) {
-		    print2buff(" = ", d);
-		    deparse2buff(CAR(arglist), d);
-		}
-	    }
-	    else {
-		print2buff(" = ", d);
-		if (CAR(arglist) != R_MissingArg) {
-		    deparse2buff(CAR(arglist), d);
-		}
-	    }
+            if (a != R_MissingArg || !formals)
+                print2buff(" = ", d);
+
+            if (a != R_MissingArg) {
+                int np = TYPEOF(a) == LANGSXP && CAR(a) == R_EqAssignSymbol;
+                if (np) print2buff("(", d);
+                deparse2buff(a, d);
+                if (np) print2buff(")", d);
+            }
 	}
-	else deparse2buff(CAR(arglist), d);
+	else {
+            /* If we get here with formals being TRUE, the expression
+               is malformed.  Not clear what to do... */
+            int np = TYPEOF(a) == LANGSXP && CAR(a) == R_EqAssignSymbol;
+            if (np) print2buff("(", d);
+            deparse2buff(a, d);
+            if (np) print2buff(")", d);
+        }
 	arglist = CDR(arglist);
 	if (arglist != R_NilValue) {
 	    print2buff(", ", d);
