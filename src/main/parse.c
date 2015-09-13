@@ -439,8 +439,9 @@ struct parse_state {
     INTEGER (VECTOR_ELT (pd, PDATA_REC_IDATA)) [ix]
 
 
-/* Routine to be called for each token seen and each expression parsed, that
-   creates a parse data record for it, with some information filled in. */
+/* Routine to be called for each token seen and each expression (or other
+   construct) parsed, that creates a parse data record for it, with some 
+   information filled in. */
 
 static SEXP start_parseData_record (source_location *start_loc, 
                                     const char *token, const char *text, 
@@ -1423,7 +1424,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     int par = 0;  /* parenthesization indicator - initially not parenthesized */
 
     start_location(&begin_loc);
-    outer_rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+    outer_rec = start_parseData_record (&begin_loc, "expr", "", FALSE);
     set_parent_in_rec (bgn_token_rec, outer_rec);
 
     /* Unary operators. */
@@ -1598,9 +1599,15 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     /* For statements. */
 
     else if (NEXT_TOKEN == FOR) {
-        SEXP op, sym, vec, body;
+        SEXP op, sym, vec, body, for_cond_rec;
+        source_location for_cond_loc;
         op = TOKEN_VALUE();
         get_next_token();
+        NEXT_TOKEN;  /* force update of location */
+        start_location (&for_cond_loc);
+        for_cond_rec = 
+          start_parseData_record (&for_cond_loc, "forcond", "", FALSE);
+        set_parent_in_rec (prev_token_rec(1), for_cond_rec);
         EXPECT('(');
         if (NEXT_TOKEN != SYMBOL)
             PARSE_UNEXPECTED();
@@ -1611,6 +1618,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         if (!keep_parens && ipar && needsparens_arg(CADR(vec)))
             vec = CADR(vec);  /* get rid of parens */
         EXPECT(')');
+        end_location (&for_cond_loc);
+        end_parseData_record (for_cond_rec, &for_cond_loc);
         PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang4 (op, sym, vec, body));
     }
@@ -1790,8 +1799,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (paren != NULL) *paren = par;
 
-    end_location(&loc);
-    end_parseData_record(outer_rec,&loc);
+    end_location (&loc);
+    end_parseData_record (outer_rec, &loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
         set_parent_in_rec (prev_token_rec(1), ps->sr->containing_parse_rec);
 
