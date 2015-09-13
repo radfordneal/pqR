@@ -128,6 +128,17 @@
 
   \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
   \itemize{
+  \item From R-3.0.0: For compatibility with packages written to
+        be able to handle the long vectors introduced in R-3.0.0, 
+        definitions for \code{R_xlen_t},
+        \code{R_XLEN_T_MAX}, \code{XLENGTH}, \code{XTRUELENGTH}, 
+        \code{SHORT_VEC_LENGTH}, \code{SET_SHORT_VEC_TRUELENGTH} are now 
+        provided, all the same as the corresponding regular versions (as
+        is also the case for R-3.0.0+ on 32-bit platforms).  The 
+        \code{IS_LONG_VEC} macro is also defined (as always false).
+        Note, however, that packages that declare a dependency on
+        R >= 3.0.0 will not install even if they would in fact work
+        with pqR because of these compatibility definitions.
   \item From R-3.0.0: The \code{srcfile} argument to \code{parse()} may now 
         be a character string, to be used in error messages.
   \item The facilities for recording detailed parsing information
