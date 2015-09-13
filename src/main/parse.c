@@ -891,7 +891,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
 
 static void error_msg(const char *s)
 {
-    static char const unexpected[] = "syntax error, unexpected ";
+    static char const unexpected[] = "unexpected ";
 
     R_ParseError     = ps->token_loc.first_line;
     R_ParseErrorCol  = ps->token_loc.first_column;
@@ -900,14 +900,14 @@ static void error_msg(const char *s)
     if (strcmp(s,unexpected) == 0) {
         if (ps->next_token < 256) {
             char t[4] = { '\'', ps->next_token, '\'', 0 };
-            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, t);
+            sprintf (R_ParseErrorMsg, _("unexpected %s"), t);
         }
         else if (ps->next_token-256 < NUM_TRANSLATED)
-            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
-                           _(token_name[ps->next_token-256]));
+            sprintf (R_ParseErrorMsg, _("unexpected %s"),
+                                      _(token_name[ps->next_token-256]));
         else
-            copy_2_strings(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s, 
-                           token_name[ps->next_token-256]);
+            sprintf (R_ParseErrorMsg, _("unexpected %s"),
+                                      token_name[ps->next_token-256]);
     }
     else
         copy_1_string(R_ParseErrorMsg, sizeof R_ParseErrorMsg, s);
@@ -920,7 +920,7 @@ static void error_msg(const char *s)
    exit to top level.  The token name is filled in by error_msg, based
    on the current value of next_token. */
 
-#define PARSE_UNEXPECTED() PARSE_ERROR_MSG("syntax error, unexpected ");
+#define PARSE_UNEXPECTED() PARSE_ERROR_MSG("unexpected ");
 
 
 /* Say the current is unexpected unless it is equal to tk. */
