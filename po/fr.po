@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R-2.12.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2015-09-12 21:31-0400\n"
+"POT-Creation-Date: 2015-09-12 22:12-0400\n"
 "PO-Revision-Date: 2012-03-06 22:22+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -6727,6 +6727,56 @@ msgstr "valeur strictement négative en 'x'"
 msgid "too large a range of values in 'x'"
 msgstr "intervalle de valeurs trop grand en 'x'"
 
+#: src/main/source.c:155
+#, c-format
+msgid "%s%d:%d: %s"
+msgstr "%s%d:%d: %s"
+
+#: src/main/source.c:160
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%*s"
+
+#: src/main/source.c:167
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%d: %s\n"
+"%*s"
+
+#: src/main/source.c:177
+#, c-format
+msgid "%s"
+msgstr "%s"
+
+#: src/main/source.c:180
+#, c-format
+msgid "%s in \"%s\""
+msgstr "%s dans \"%s\""
+
+#: src/main/source.c:184
+#, c-format
+msgid ""
+"%s in:\n"
+"\"%s\n"
+"%s\""
+msgstr ""
+"%s dans :\n"
+"\"%s\n"
+"%s\""
+
 #: src/main/source.c:250
 msgid "coercion of 'text' to character was unsuccessful"
 msgstr ""
@@ -8412,44 +8462,6 @@ msgstr "impossible de charger le module X11"
 #: src/unix/X11.c:177 src/unix/X11.c:183 src/unix/X11.c:189
 msgid "X11 is not available"
 msgstr "X11 indisponible"
-
-#~ msgid "%s%d:%d: %s"
-#~ msgstr "%s%d:%d: %s"
-
-#~ msgid ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-#~ msgstr ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-
-#~ msgid ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-#~ msgstr ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-
-#~ msgid "%s"
-#~ msgstr "%s"
-
-#~ msgid "%s in \"%s\""
-#~ msgstr "%s dans \"%s\""
-
-#~ msgid ""
-#~ "%s in:\n"
-#~ "\"%s\n"
-#~ "%s\""
-#~ msgstr ""
-#~ "%s dans :\n"
-#~ "\"%s\n"
-#~ "%s\""
 
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr ""

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R-2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2015-09-12 21:31-0400\n"
+"POT-Creation-Date: 2015-09-12 22:12-0400\n"
 "PO-Revision-Date: 2012-03-05 15:33+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-core <R-core@r-project.org>\n"
@@ -6593,6 +6593,56 @@ msgstr "negativer Wert in 'x'"
 msgid "too large a range of values in 'x'"
 msgstr "zu großer Wertebereich in 'x'"
 
+#: src/main/source.c:155
+#, c-format
+msgid "%s%d:%d: %s"
+msgstr "%s%d:%d: %s"
+
+#: src/main/source.c:160
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+"%s%d:%d :%s\n"
+"%d: %s\n"
+"%*s"
+
+#: src/main/source.c:167
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%d: %s\n"
+"%*s"
+
+#: src/main/source.c:177
+#, c-format
+msgid "%s"
+msgstr "%s"
+
+#: src/main/source.c:180
+#, c-format
+msgid "%s in \"%s\""
+msgstr "%s in \"%s\""
+
+#: src/main/source.c:184
+#, c-format
+msgid ""
+"%s in:\n"
+"\"%s\n"
+"%s\""
+msgstr ""
+"%s in: \n"
+"\"%s\n"
+"%s\""
+
 #: src/main/source.c:250
 msgid "coercion of 'text' to character was unsuccessful"
 msgstr "Umwandlung von 'text' in Zeichenkette fehlgeschlagen"
@@ -8259,44 +8309,6 @@ msgstr "X11 Modul kann nicht geladen werden"
 #: src/unix/X11.c:177 src/unix/X11.c:183 src/unix/X11.c:189
 msgid "X11 is not available"
 msgstr "X11 nicht verfügbar"
-
-#~ msgid "%s%d:%d: %s"
-#~ msgstr "%s%d:%d: %s"
-
-#~ msgid ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-#~ msgstr ""
-#~ "%s%d:%d :%s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-
-#~ msgid ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-#~ msgstr ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-
-#~ msgid "%s"
-#~ msgstr "%s"
-
-#~ msgid "%s in \"%s\""
-#~ msgstr "%s in \"%s\""
-
-#~ msgid ""
-#~ "%s in:\n"
-#~ "\"%s\n"
-#~ "%s\""
-#~ msgstr ""
-#~ "%s in: \n"
-#~ "\"%s\n"
-#~ "%s\""
 
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "kein R-to-C Konvertierer gefunden, der zum Bezeichner passt"
