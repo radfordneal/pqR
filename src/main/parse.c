@@ -1415,7 +1415,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 {
     BGN_PARSE_FUN;
 
-    SEXP outer_rec, rec, res, right, op;
+    SEXP inner_rec = bgn_token_rec;
+    SEXP rec, res, right, op;
     int op_prec, next_op_prec, ipar;
     source_location begin_loc, loc;
 
@@ -1423,9 +1424,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
     int par = 0;  /* parenthesization indicator - initially not parenthesized */
 
-    start_location(&begin_loc);
-    outer_rec = start_parseData_record (&begin_loc, "expr", "", FALSE);
-    set_parent_in_rec (bgn_token_rec, outer_rec);
+    start_location (&begin_loc);
+    rec = start_parseData_record (&begin_loc, "expr", "", FALSE);
+    set_parent_in_rec (inner_rec, rec);
 
     /* Unary operators. */
 
@@ -1636,7 +1637,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     else
         PARSE_UNEXPECTED();
 
-    /* Now handle postfix parts, looping over all of them. */
+    /* Now handle postfix parts, looping over all of them.  New parse data
+       records are created for the 'expr' non-terminals that make up the
+       expression (eg, a$x[1] has 'expr' records for a, a$x, and a$x[i]). */
 
     while (!NL_END && (NEXT_TOKEN=='(' || NEXT_TOKEN=='[' || NEXT_TOKEN==LBB
                          || NEXT_TOKEN=='$' || NEXT_TOKEN=='@')) {
@@ -1652,11 +1655,17 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 && needsparens_postfix (R_BracketSymbol, CADR(res)))
             res = CADR(res);  /* get rid of parens */
 
-        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-        set_parent_in_rec (bgn_token_rec, rec);
+        /* We need to create a new, outer, parse data record, since we
+           now know that the one we created previously wasn't for the
+           outermost expression. */
+
         end_location(&loc);
         end_parseData_record(rec,&loc);
-        set_parent_in_rec (prev_token_rec(1), outer_rec);
+        inner_rec = rec;
+
+        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        set_parent_in_rec (inner_rec, rec);
+        set_parent_in_rec (prev_token_rec(1), rec);
 
         /* Function call. */
 
@@ -1729,7 +1738,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     }
 
     /* Now handle binary operators following any of the above, absorbing
-       all of them that we can given the precedence constraint. */
+       all of them that we can given the precedence constraint.  New 
+       parse data records are created as we discover that there are more
+       subexpressions. */
 
     int last_prec = 0;
 
@@ -1740,16 +1751,18 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         if (op_prec <= prec || op_prec == last_prec)
             break;
 
-        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
-        set_parent_in_rec (bgn_token_rec, rec);
-        end_location(&loc);
-        end_parseData_record(rec,&loc);
-        set_parent_in_rec (prev_token_rec(1), outer_rec);
-
         op = TOKEN_VALUE();
 
         if (!keep_parens && par && needsparens_binary (op, CADR(res), TRUE))
             res = CADR(res);  /* get rid of parens */
+
+        end_location(&loc);
+        end_parseData_record(rec,&loc);
+        inner_rec = rec;
+
+        rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+        set_parent_in_rec (inner_rec, rec);
+        set_parent_in_rec (prev_token_rec(1), rec);
 
         get_next_token();
 
@@ -1770,6 +1783,12 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 if (NL_END || binary_op() != op_prec) 
                     break;
                 op = TOKEN_VALUE();
+                end_location(&loc);
+                end_parseData_record(rec,&loc);
+                inner_rec = rec;
+                rec = start_parseData_record(&begin_loc,"expr","",FALSE);
+                set_parent_in_rec (inner_rec, rec);
+                set_parent_in_rec (prev_token_rec(1), rec);
                 get_next_token();
             }
         }
@@ -1800,7 +1819,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     if (paren != NULL) *paren = par;
 
     end_location (&loc);
-    end_parseData_record (outer_rec, &loc);
+    end_parseData_record (rec, &loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
         set_parent_in_rec (prev_token_rec(1), ps->sr->containing_parse_rec);
 
