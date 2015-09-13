@@ -137,8 +137,8 @@ getParseData <- function(x, includeText = NA) {
         # Fix up data from a partial parse.
         if (any(is.na(data$line2)))
             data <- data[!is.na(data$line2),]
-        if (!all(data$parent %in% data$id))
-            data$parent[!(data$parent %in% data$id)] <- 0
+        if (!all(abs(data$parent) %in% data$id))
+            data$parent[!(abs(data$parent) %in% data$id)] <- 0
 
     	rownames(data) <- data$id
     	attr(data, "srcfile") <- srcfile
