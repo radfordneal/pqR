@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.5.0 \n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2015-09-12 21:31-0400\n"
+"POT-Creation-Date: 2015-09-12 22:12-0400\n"
 "PO-Revision-Date: 2012-02-26 14:21+0200 \n"
 "Last-Translator: Shigeru Mase <maseshigeru@gmail.com> \n"
 "Language-Team: R-core <R-core@R-project.org> \n"
@@ -6587,6 +6587,56 @@ msgstr " 'x' 中に負の値があります "
 msgid "too large a range of values in 'x'"
 msgstr " 'x' 中の値の範囲が大きすぎます "
 
+#: src/main/source.c:155
+#, c-format
+msgid "%s%d:%d: %s"
+msgstr " %s%d:%d: %s "
+
+#: src/main/source.c:160
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+" %s%d:%d: %s \n"
+" %d: %s \n"
+" %*s "
+
+#: src/main/source.c:167
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+" %s%d:%d: %s \n"
+" %d: %s \n"
+" %d: %s \n"
+" %*s "
+
+#: src/main/source.c:177
+#, c-format
+msgid "%s"
+msgstr "  %s "
+
+#: src/main/source.c:180
+#, c-format
+msgid "%s in \"%s\""
+msgstr " %s ( \"%s\" の) "
+
+#: src/main/source.c:184
+#, c-format
+msgid ""
+"%s in:\n"
+"\"%s\n"
+"%s\""
+msgstr ""
+" %s 以下の部分: \n"
+" \"%s \n"
+" %s\" "
+
 #: src/main/source.c:250
 msgid "coercion of 'text' to character was unsuccessful"
 msgstr " 'text'から文字列への変換に失敗しました "
@@ -8247,44 +8297,6 @@ msgstr " X11 モジュールをロードできません "
 #: src/unix/X11.c:177 src/unix/X11.c:183 src/unix/X11.c:189
 msgid "X11 is not available"
 msgstr " X11 が利用できません "
-
-#~ msgid "%s%d:%d: %s"
-#~ msgstr " %s%d:%d: %s "
-
-#~ msgid ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-#~ msgstr ""
-#~ " %s%d:%d: %s \n"
-#~ " %d: %s \n"
-#~ " %*s "
-
-#~ msgid ""
-#~ "%s%d:%d: %s\n"
-#~ "%d: %s\n"
-#~ "%d: %s\n"
-#~ "%*s"
-#~ msgstr ""
-#~ " %s%d:%d: %s \n"
-#~ " %d: %s \n"
-#~ " %d: %s \n"
-#~ " %*s "
-
-#~ msgid "%s"
-#~ msgstr "  %s "
-
-#~ msgid "%s in \"%s\""
-#~ msgstr " %s ( \"%s\" の) "
-
-#~ msgid ""
-#~ "%s in:\n"
-#~ "\"%s\n"
-#~ "%s\""
-#~ msgstr ""
-#~ " %s 以下の部分: \n"
-#~ " \"%s \n"
-#~ " %s\" "
 
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr " 識別子に対応する R-to-C コンバータがありません "

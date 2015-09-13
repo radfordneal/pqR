@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2015-09-12 21:31-0400\n"
+"POT-Creation-Date: 2015-09-12 22:12-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6426,6 +6426,46 @@ msgstr ""
 
 #: src/main/sort.c:999
 msgid "too large a range of values in 'x'"
+msgstr ""
+
+#: src/main/source.c:155
+#, c-format
+msgid "%s%d:%d: %s"
+msgstr ""
+
+#: src/main/source.c:160
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+
+#: src/main/source.c:167
+#, c-format
+msgid ""
+"%s%d:%d: %s\n"
+"%d: %s\n"
+"%d: %s\n"
+"%*s"
+msgstr ""
+
+#: src/main/source.c:177
+#, c-format
+msgid "%s"
+msgstr ""
+
+#: src/main/source.c:180
+#, c-format
+msgid "%s in \"%s\""
+msgstr ""
+
+#: src/main/source.c:184
+#, c-format
+msgid ""
+"%s in:\n"
+"\"%s\n"
+"%s\""
 msgstr ""
 
 #: src/main/source.c:250
