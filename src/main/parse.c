@@ -552,17 +552,35 @@ static void set_token_in_rec (SEXP rec, char *token)
         SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
 }
 
-/* Somewhat of a kludge, used to set the parents of comments outside
-   any expression to MINUS the id of the following expression. */
+/* Set comments outside any expression (and not previously handled) to 
+   have MINUS the id of the current top-level expression as their parent. */
 
 static void set_initial_comments_parent (void)
 {
-    SEXP rec = ps->sr->ParseData;
-    while (rec != R_NilValue && PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0) {
-        if (strcmp ("COMMENT", CHAR (VECTOR_ELT (rec, PDATA_REC_TOKEN))) == 0)
-            PDATA_IDATA_VAL (rec, PDATA_PARENT) = - ps->sr->next_id;
+    SEXP rec, prec;
+
+    prec = ps->sr->ParseData;
+
+    if (prec == R_NilValue || ps->sr->unattached_comment_id == 0)
+        return;
+
+    while (VECTOR_ELT (prec, PDATA_REC_UPLINK) != R_NilValue) 
+        prec = VECTOR_ELT (prec, PDATA_REC_UPLINK);
+
+    int PID = - PDATA_IDATA_VAL (prec, PDATA_ID);
+
+    rec = ps->sr->ParseData;
+
+    while (rec != R_NilValue) {
+        if (PDATA_IDATA_VAL (rec, PDATA_PARENT) == 0
+             && strcmp ("COMMENT", CHAR(VECTOR_ELT(rec,PDATA_REC_TOKEN))) == 0)
+            PDATA_IDATA_VAL (rec, PDATA_PARENT) = PID;
+        if (PDATA_IDATA_VAL(rec,PDATA_ID) == ps->sr->unattached_comment_id)
+            break;
         rec = VECTOR_ELT (rec, PDATA_REC_LINK);
     }
+
+    ps->sr->unattached_comment_id = 0;
 }
 
 /* A kludge routine that deletes the second from the latest parse data
@@ -745,6 +763,7 @@ void R_InitSrcRefState (SrcRefState *state, int keepSource)
 
     PROTECT_WITH_INDEX (state->ParseData = R_NilValue, &state->ParseDataProt);
     state->containing_parse_rec = R_NilValue;
+    state->unattached_comment_id = 0;
     state->next_id = 1;
 }
 
@@ -1836,9 +1855,9 @@ static SEXP parse_prog (int flags)
     BGN_PARSE_FUN;
     SEXP res;
 
-    set_initial_comments_parent();
-
     PARSE_SUB (res = parse_expr (0, flags, NULL));
+
+    set_initial_comments_parent();
        
     if (!ps->newline_before_token && NEXT_TOKEN != ';')
         PARSE_UNEXPECTED();
@@ -3020,6 +3039,8 @@ static int skip_comment (void)
         loc.last_parsed = ps->sr->xxparseno;
         loc.last_column = ps->sr->xxcolno;
         end_parseData_record(rec,&loc);
+        if (ps->sr->unattached_comment_id == 0)
+            ps->sr->unattached_comment_id = PDATA_IDATA_VAL (rec, PDATA_ID);
         if (c == '\n') xxgetc();
     }
 
