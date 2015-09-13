@@ -49,6 +49,7 @@ typedef struct {
                                    this first record links to later ones */
     PROTECT_INDEX ParseDataProt;/* ParseData will often change */
     SEXP containing_parse_rec;  /* Parse data record of containing expression */
+    int unattached_comment_id;  /* Id of earliest unattached comment, or 0 */
     int next_id;                /* Next id number of an element in parseData */
 } SrcRefState;
 
@@ -78,6 +79,11 @@ int Rf_misc_prec (SEXP);
 #define RIGHT_ASSOC(p) (((p)&3) == 2)
 
 /* Functions defined in deparse.c and used in parse.c. */
+
+#define needsparens_postfix  Rf_needsparens_postfix
+#define needsparens_unary    Rf_needsparens_unary
+#define needsparens_binary   Rf_needsparens_binary
+#define needsparens_arg      Rf_needsparens_arg
 
 Rboolean needsparens_postfix (SEXP, SEXP);
 Rboolean needsparens_unary   (SEXP, SEXP);
