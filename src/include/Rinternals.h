@@ -96,9 +96,14 @@ pid_t Rf_fork(void);
 
 typedef unsigned char Rbyte;
 
-/* type for length of vectors etc */
-typedef int R_len_t;  /* might later be unsigned or long */
+/* Type for length of vectors, etc.  For compatibility with R-3.x.y, the
+   "long vector" versions are also defined, same as the regular versions. */
+
+typedef int R_len_t;
+typedef int R_xlen_t;
+
 #define R_LEN_T_MAX INT_MAX
+#define R_XLEN_T_MAX R_LEN_T_MAX
 
 /* Fundamental Data Types:  These are largely Lisp
  * influenced structures, with the exception of LGLSXP,
@@ -396,7 +401,15 @@ static inline double *REAL(SEXP x)
     return (double *) DATAPTR(x);
 }
 
-#endif
+#endif /* USE_RINTERNALS */
+
+/* Long/short versions for compatibility with R-3.x.y. */
+
+#define XLENGTH(x) LENGTH(x)
+#define XTRUELENGTH(x) TRUELENGTH(x)
+#define SHORT_VEC_LENGTH(x) LENGTH(x)
+#define SET_SHORT_VEC_TRUELENGTH(x,v) SET_TRUELENGTH((x),(v))
+#define IS_LONG_VEC(x) 0
 
 #define CAAR(e)		CAR(CAR(e))
 #define CDAR(e)		CDR(CAR(e))
