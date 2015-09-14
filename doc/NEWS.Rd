@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2015-09-07}{
+\section{CHANGES IN VERSION RELEASED 2015-09-14}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -156,6 +156,9 @@
   \item Character-at-a time input has been sped up by reducing procedure
         call overhead.  This significantly speeds up \code{readLines}
         and \code{scan}.
+  \item The new parser is faster than the old parser, both because of the
+        parser rewrite (see above) and because of the faster character
+        input.
 }}
 
   \subsection{BUG FIXES MATCHING THOSE IN LATER R CORE VERSIONS}{
