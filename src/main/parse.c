@@ -61,7 +61,8 @@
        SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
                             ParseStatus *status, SrcRefState *state);
 
-   The R_InitSrcRefState and R_FinalizeSrcRefState will be needed in
+   The R_InitSrcRefState and R_FinalizeSrcRefState routines (which in
+   fact deal with more than source references) will need to be used in
    conjunction with this routine.  Calls to these two routines must be
    paired, with the protect stack at the same level for the call of
    R_FinalizeSrcRefState as after the call of R_InitSrcRefState.
@@ -765,6 +766,10 @@ void R_InitSrcRefState (SrcRefState *state, int keepSource)
     state->containing_parse_rec = R_NilValue;
     state->unattached_comment_id = 0;
     state->next_id = 1;
+
+    /* Here, we establish a place where the value of a token is protected. */
+
+    PROTECT_WITH_INDEX (R_NilValue, &state->TokenValProt);
 }
 
 void R_TextForSrcRefState (SrcRefState *state, const char *text)
@@ -832,8 +837,10 @@ void R_FinalizeSrcRefState (SrcRefState *state)
         UNPROTECT(4); /* text, tokens, mat, dims */
     }
 
-    /* We could just do an UNPROTECT(3), but this might detect some bugs... */
+    /* We could just do an UNPROTECT(4), but this might detect some bugs... */
 
+    UNPROTECT(1);
+    if (R_PPStackTop != state->TokenValProt) abort();
     UNPROTECT(1);
     if (R_PPStackTop != state->ParseDataProt) abort();
     UNPROTECT(1);
@@ -3104,8 +3111,7 @@ static int nextchar(int expect)
 
    Passed the first non-whitespace character of the next token.  Returns
    the token code (or ERROR if the next token is malformed).  Will also
-   set next_token_val to an associated SEXP (R_NilValue if none).  This
-   SEXP must be protected by the caller if necessary.
+   set next_token_val to an associated SEXP (R_NilValue if none).
 
    The character after the token may have been looked at, but if so xxungetc
    will have been called to put it back. */
@@ -3308,7 +3314,11 @@ static int token (int c)
 
    Returns 0 if end of file was immediately encountered, with no
    whitespace before, and 1 if not (even when END_OF_INPUT is the 
-   next token). */
+   next token). 
+
+   The value in next_token_val is protected from immediate reclamation
+   via the ps->sr->TokenValProt index, but must be protected by the
+   caller if it will be used after the following token is obtained. */
 
 static int get_next_token(void)
 {
@@ -3333,6 +3343,8 @@ static int get_next_token(void)
     ps->token_loc.first_parsed = ps->sr->xxparseno;
 
     ps->next_token = token(c);
+
+    REPROTECT (ps->next_token_val, ps->sr->TokenValProt);
 
     ps->token_loc.last_line    = ps->sr->xxlineno;
     ps->token_loc.last_column  = ps->sr->xxcolno;
