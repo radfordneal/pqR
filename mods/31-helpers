@@ -1,2 +1,0 @@
-New version of helpers module, with slight fix to avoid technically
-incorrect form of atomic write (though accepted by gcc).
