@@ -18,8 +18,8 @@
   \item The parser and deparser, and the method for
         performing the basic Read-Eval-Print Loop, have 
         been substantially rewritten.  This has few user-visible effects
-        at present (though some bugs are fixed), but sets the stage for 
-        future improvements in pqR.
+        at present (apart from bug fixes and performance improvements),
+        but sets the stage for future improvements in pqR.
   \item The facility for recording detailed parsing data introduced n
         R-3.0.0 has now been implemented in pqR as part of the parser
         rewrite.
