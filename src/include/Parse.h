@@ -51,6 +51,7 @@ typedef struct {
     SEXP containing_parse_rec;  /* Parse data record of containing expression */
     int unattached_comment_id;  /* Id of earliest unattached comment, or 0 */
     int next_id;                /* Next id number of an element in parseData */
+    PROTECT_INDEX TokenValProt; /* Index for protecting token value */
 } SrcRefState;
 
 void R_InitSrcRefState(SrcRefState *state, int kepSource);
