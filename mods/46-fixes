@@ -1,0 +1,4 @@
+Miscellaneous fixes.
+
+Fix to methods_list_dispatch.c that caused make check-all failure
+in no-segfault test on Windows 10 (pqR issue #29 + related fix).
