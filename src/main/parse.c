@@ -2852,26 +2852,43 @@ static int SymbolValue(int c)
     if(mbcslocale) {
 	wchar_t wc; int i, clen;
 	clen = mbcs_get_next(c, &wc);
-	while(1) {
+	while (1) {
 	    /* at this point we have seen one char, so push its bytes
 	       and get one more */
-	    for(i = 0; i < clen; i++) {
+	    for (i = 0; i < clen; i++) {
 		YYTEXT_PUSH(c, yyp);
 		c = xxgetc();
 	    }
-	    if(c == R_EOF) break;
-	    if(c == '.' || c == '_') {
+	    if (c == R_EOF)
+                break;
+	    if (c == '_') {
+		clen = 1;
+		continue;
+	    }
+	    if (c == '.') {
 		clen = 1;
 		continue;
 	    }
 	    clen = mbcs_get_next(c, &wc);
-	    if(!iswalnum(wc)) break;
+	    if (!iswalnum(wc))
+                break;
 	}
-    } else
-	do {
+    } 
+    else {
+	while (1) {
 	    YYTEXT_PUSH(c, yyp);
-	} while ((c = xxgetc()) != R_EOF &&
-		 (isalnum(c) || c == '.' || c == '_'));
+            c = xxgetc();
+	    if (c == R_EOF)
+                break;
+	    if (c == '_')
+		continue;
+	    if (c == '.') {
+		continue;
+	    }
+	    if (!isalnum(c))
+                break;
+	}
+    }
     xxungetc(c);
     YYTEXT_PUSH('\0', yyp);
     if ((kw = KeywordLookup(yytext))) 
