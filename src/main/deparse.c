@@ -1074,6 +1074,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                       || op == R_SubSymbol
                       || op == R_MulSymbol
                       || op == install("%*%")
+                      || op == R_DotDotSymbol
                       || op == R_AndSymbol
                       || op == R_OrSymbol
                       || op == R_And2Symbol

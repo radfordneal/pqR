@@ -130,6 +130,7 @@ extern0 SEXP	R_TildeSymbol;        /* "~" */
 extern0 SEXP	R_QuerySymbol;        /* "?" */
 extern0 SEXP	R_ColonAssignSymbol;  /* ":=" */
 extern0 SEXP	R_AtSymbol;           /* "@" */
+extern0 SEXP	R_DotDotSymbol;       /* ".." */
 extern0 SEXP	R_ParenSymbol;        /* "(" */
 
 extern0 SEXP	R_CommentSymbol;      /* "comment" */

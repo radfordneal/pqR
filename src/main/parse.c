@@ -295,7 +295,8 @@ enum token_type {
   ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
-  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN
+  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN,
+  DOTDOT,
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -308,7 +309,8 @@ static const char *const token_name[] = {
   "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
-  "'::'",       "':::'",        "**",      "SPECIAL",        "':='"
+  "'::'",       "':::'",        "**",      "SPECIAL",        "':='",
+  ".."
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -333,7 +335,8 @@ static const char *const pdata_token_name[] = {
   "ELSE",       "WHILE",        "NEXT",    "BREAK",          "REPEAT",
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
-  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN"
+  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN",
+  "DOTDOT"
 };
 
 
@@ -1051,6 +1054,7 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
     { &R_DivSymbol,               /* /   */ 0xa1 },
     { &R_AddSymbol,               /* +   */ 0x91 },
     { &R_SubSymbol,               /* -   */ 0x91 },
+    { &R_DotDotSymbol,            /* ..  */ 0x84 },
     { &R_EqSymbol,                /* ==  */ 0x80 },
     { &R_NeSymbol,                /* !=  */ 0x80 },
     { &R_LtSymbol,                /* <   */ 0x80 },
@@ -3124,7 +3128,7 @@ static int token (int c)
     yytext[0] = 0;
 
     /* Hard and soft end of file.  Soft end of file comes at the end of a
-       line of input, which may or may not be the actual end. */
+             line of input, which may or may not be the actual end. */
 
     if (c == R_EOF)
         return END_OF_INPUT;
@@ -3148,12 +3152,27 @@ static int token (int c)
     if (c == '%')
 	return SpecialValue(c);
 
-    /* Symbols (functions, constants and variables) */
+    /* The .. operator.  For the moment, must be followed by space. */
 
+    if (c == '.' && nextchar('.')) {
+        c = xxgetc();
+        xxungetc(c);
+        if (c == ' ') {
+            ps->next_token_val = R_DotDotSymbol;
+            return DOTDOT;
+        }
+        else {
+            xxungetc('.');
+            c = '.';
+       }
+    }
+
+    /* Symbols (functions, constants and variables). */
+
+    if (c == '.')
+        return SymbolValue(c);
     if (c == '`')
 	return StringValue(c, TRUE);
-    if (c == '.') 
-        return SymbolValue(c);
     if(mbcslocale) {
 	mbcs_get_next(c, &wc);
 	if (iswalpha(wc)) return SymbolValue(c);

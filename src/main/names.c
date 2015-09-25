@@ -523,6 +523,7 @@ static void SymbolShortcuts(void)
     R_QuerySymbol = install("?");
     R_ColonAssignSymbol = install(":=");
     R_AtSymbol = install("@");
+    R_DotDotSymbol = install("..");
     R_ParenSymbol = install("(");
 
     R_CommentSymbol = install("comment");
