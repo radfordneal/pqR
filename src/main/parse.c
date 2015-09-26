@@ -2115,6 +2115,8 @@ static char yytext[MAXELTSIZE];
     *(bp)++ = (c); \
 } while(0)
 
+#define YYTEXT_UNPUSH(bp) ((bp) -= 1)
+
 
 /* --------------------------------------------------------------------------
    ROUTINES FOR CREATING NUMERIC AND STRING VALUES
@@ -2847,12 +2849,18 @@ static int SpecialValue(int c)
 
 static int SymbolValue(int c)
 {
+    int prev_is_dot;
     int kw;
     DECLARE_YYTEXT_BUFP(yyp);
     if(mbcslocale) {
 	wchar_t wc; int i, clen;
 	clen = mbcs_get_next(c, &wc);
+        prev_is_dot = -1;
 	while (1) {
+            if (c != '.')
+                prev_is_dot = 0;
+            else if (prev_is_dot != -1) 
+                prev_is_dot = 1;
 	    /* at this point we have seen one char, so push its bytes
 	       and get one more */
 	    for (i = 0; i < clen; i++) {
@@ -2861,11 +2869,16 @@ static int SymbolValue(int c)
 	    }
 	    if (c == R_EOF)
                 break;
-	    if (c == '_') {
+	    if (c == '.') {
+                if (prev_is_dot == 1) {
+                    xxungetc(c);
+                    YYTEXT_UNPUSH(yyp);
+                    break;
+                }
 		clen = 1;
 		continue;
 	    }
-	    if (c == '.') {
+	    if (c == '_') {
 		clen = 1;
 		continue;
 	    }
@@ -2875,16 +2888,26 @@ static int SymbolValue(int c)
 	}
     } 
     else {
+        prev_is_dot = -1;
 	while (1) {
+            if (c != '.')
+                prev_is_dot = 0;
+            else if (prev_is_dot != -1) 
+                prev_is_dot = 1;
 	    YYTEXT_PUSH(c, yyp);
             c = xxgetc();
 	    if (c == R_EOF)
                 break;
-	    if (c == '_')
-		continue;
 	    if (c == '.') {
+                if (prev_is_dot == 1) {
+                    xxungetc(c);
+                    YYTEXT_UNPUSH(yyp);
+                    break;
+                }
 		continue;
 	    }
+	    if (c == '_')
+		continue;
 	    if (!isalnum(c))
                 break;
 	}

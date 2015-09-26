@@ -48,11 +48,11 @@ windows.options <- function(..., reset=FALSE)
                get(".Windows.Options.default", envir = .WindowsEnv),
                envir = .WindowsEnv)
     }
-    l... <- length(new <- list(...))
+    dots_len <- length(new <- list(...))
     check.options(new = new, envir = .WindowsEnv,
                   name.opt = ".Windows.Options",
-                  assign.opt = l... > 0)
-    if(reset || l... > 0) invisible(old) else old
+                  assign.opt = dots_len > 0)
+    if(reset || dots_len > 0) invisible(old) else old
 }
 
 windows <-

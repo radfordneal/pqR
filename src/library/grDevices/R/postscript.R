@@ -99,15 +99,15 @@ ps.options <- function(..., reset = FALSE, override.check = FALSE)
                get(".PostScript.Options.default", envir = .PSenv),
                envir = .PSenv)
     }
-    l... <- length(new <- list(...))
+    dots_len <- length(new <- list(...))
     if(m <- match("append", names(new), 0L)) {
         warning("argument 'append' is for back-compatibility and will be ignored",
                 immediate. = TRUE)
         new <- new[-m]
     }
     check.options(new, name.opt = ".PostScript.Options", envir = .PSenv,
-                  assign.opt = l... > 0, override.check = override.check)
-    if(reset || l... > 0) invisible(old) else old
+                  assign.opt = dots_len > 0, override.check = override.check)
+    if(reset || dots_len > 0) invisible(old) else old
 }
 
 setEPS <- function(...)
@@ -140,10 +140,10 @@ pdf.options <- function(..., reset=FALSE)
                get(".PDF.Options.default", envir = .PSenv),
                envir = .PSenv)
     }
-    l... <- length(new <- list(...))
+    dots_len <- length(new <- list(...))
     check.options(new, name.opt = ".PDF.Options", envir = .PSenv,
-                  assign.opt = l... > 0)
-    if(reset || l... > 0) invisible(old) else old
+                  assign.opt = dots_len > 0)
+    if(reset || dots_len > 0) invisible(old) else old
 }
 
 guessEncoding <- function(family)
