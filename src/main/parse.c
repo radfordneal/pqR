@@ -1040,7 +1040,7 @@ static void end_location (source_location *loc)
 
 /* Tables of operator precedence.  The lower two bits are 1 for binary
    operators that are left associative, 2 for binary operators that are
-   right associative, and 0 for relational operators, unary operators,
+   right associative, and 0 for relational .. operators, unary operators,
    and miscellaneous operators.  This is expressed in the NON_ASSOC, 
    LEFT_ASSOC, and RIGHT_ASSOC macros in Parse.h. */
 

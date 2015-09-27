@@ -1,10 +1,11 @@
 Implement the .. operator, as a better version of :
 
-Also fix bug where 0x1.2.3 gave no error, and bug where
-"i" and "L" didn't end up in parse data in "1i" and "1L".
+Also fix bug where 0x1.2.3 gave no error, and bug where "i" and "L"
+didn't end up in parse data in "1i" and "1L".
 
-Allow real constants like 0x1.8 (equal to 1.5), which are
-inexplicably disallowed in R Core versions.  (Previously
-allowed but with . ignored in pqR.)  Also allow this for
-input from 'scan', etc.
+Allow real constants like 0x1.8 (equal to 1.5), which are inexplicably
+disallowed in R Core versions.  (Previously allowed but with . ignored
+in pqR.)  Also allow this for input from 'scan', etc.
 
+Updates R-lang.texi and several help files to document .. (and fix a
+few other things).

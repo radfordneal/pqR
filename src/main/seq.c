@@ -99,6 +99,7 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 
 /* Create a simple integer sequence, or as variant, a description of it. 
    Sets R_variant_result to 1 if a sequence description is returned. */
+
 static SEXP make_seq (int from, int len, int variant)
 {
     SEXP ans;
@@ -120,14 +121,18 @@ static SEXP make_seq (int from, int len, int variant)
     return ans;
 }
 
-static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
+static SEXP seq_colon(double n1, double n2, int up_only, SEXP call, int variant)
 {
     int i, n, in1;
     double r;
     SEXP ans;
     Rboolean useInt;
 
-    r = fabs(n2 - n1);
+    if (up_only)  /* .. */
+        r = n2 >= n1 - FLT_EPSILON ? n2 - n1 : -1;
+    else  /* : */
+        r = fabs (n2 - n1);
+
     if(r >= INT_MAX) errorcall(call,_("result would be too long a vector"));
 
     n = r + 1 + FLT_EPSILON;
@@ -139,13 +144,13 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
 	    useInt = FALSE;
 	else {
 	    /* r := " the effective 'to' "  of  from:to */
-	    r = n1 + ((n1 <= n2) ? n-1 : -(n-1));
+	    r = up_only ? n1 + (n-1) : n1 + ((n1 <= n2) ? n-1 : -(n-1));
 	    if(r <= INT_MIN || r > INT_MAX)
 		useInt = FALSE;
 	}
     }
     if (useInt) {
-        if (n1 <= n2)
+        if (up_only || n1 <= n2)
             ans = make_seq (in1, n, variant);
         else {
 	    ans = allocVector(INTSXP, n);
@@ -153,7 +158,7 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
         }
     } else {
 	ans = allocVector(REALSXP, n);
-	if (n1 <= n2)
+	if (up_only || n1 <= n2)
 	    for (i = 0; i < n; i++) REAL(ans)[i] = n1 + i;
 	else
 	    for (i = 0; i < n; i++) REAL(ans)[i] = n1 - i;
@@ -164,6 +169,7 @@ static SEXP seq_colon(double n1, double n2, SEXP call, int variant)
 
 static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {   
+    int opcode = PRIMVAL(op);
     SEXP ans, x, y;
     double n1, n2;
 
@@ -209,7 +215,7 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (ISNAN(n1) || ISNAN(n2))
             errorcall(call, _("NA/NaN argument"));
 
-        ans = seq_colon(n1, n2, call, variant);
+        ans = seq_colon(n1, n2, opcode, call, variant);
     }
 
     UNPROTECT(2);
@@ -787,9 +793,9 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if(One && from != R_MissingArg) {
 	lf = length(from);
 	if(lf == 1 && (TYPEOF(from) == INTSXP || TYPEOF(from) == REALSXP))
-	    ans = seq_colon(1.0, asReal(from), call, variant);
+	    ans = seq_colon(1.0, asReal(from), 0, call, variant);
 	else if (lf)
-	    ans = seq_colon(1.0, (double)lf, call, variant);
+	    ans = seq_colon(1.0, (double)lf, 0, call, variant);
 	else
 	    ans = allocVector(INTSXP, 0);
 	goto done;
@@ -797,7 +803,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if(along != R_MissingArg) {
 	lout = LENGTH(along);
 	if(One) {
-	    ans = lout ? seq_colon(1.0, (double)lout, call, variant) 
+	    ans = lout ? seq_colon(1.0, (double)lout, 0, call, variant) 
                        : allocVector(INTSXP, 0);
 	    goto done;
 	}
@@ -822,7 +828,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             rto = asReal(to);
         }
 	if(by == R_MissingArg)
-	    ans = seq_colon(rfrom, rto, call, variant);
+	    ans = seq_colon(rfrom, rto, 0, call, variant);
 	else {
             if (length(by) != 1) error("'by' must be of length 1");
             rby = asReal(by);
@@ -885,7 +891,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     } else if (lout == 0) {
 	ans = allocVector(INTSXP, 0);
     } else if (One) {
-	ans = seq_colon(1.0, (double)lout, call, variant);
+	ans = seq_colon(1.0, (double)lout, 0, call, variant);
     } else if (by == R_MissingArg) {
 	double rfrom = asReal(from), rto = asReal(to), rby;
 	if(to == R_MissingArg) rto = rfrom + lout - 1;
@@ -1006,6 +1012,7 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {":",		do_colon,	0,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
+{"..",		do_colon,	1,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
 {"rep.int",	do_rep_int,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
