@@ -1,6 +1,7 @@
 % File src/library/grDevices/man/make.rgb.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Team
+% Modifications for pqR Copyright 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{make.rgb}
@@ -70,7 +71,7 @@ hexcolor <- colorConverter(toXYZ = function(hex,...) {
                             rgb <- t(col2rgb(hex))/255
                             colorspaces$sRGB$toXYZ(rgb, ...) },
                            fromXYZ = function(xyz,...) {
-                              rgb <- colorspaces$sRGB$fromXYZ(xyz, ..)
+                              rgb <- colorspaces$sRGB$fromXYZ(xyz, ...)
                               rgb <- round(rgb,5)
                               if (min(rgb) < 0 || max(rgb) > 1)
                                    as.character(NA)
