@@ -3463,10 +3463,13 @@ static int get_next_token(void)
 int isValidName(const char *name)
 {
     const char *p = name;
+    int prev_is_dot;
     int i;
 
     if (strcmp(name, "...") == 0)
         return 1;
+    if (strcmp(name, "..") == 0)
+        return 0;
 
     if(mbcslocale) {
 	/* the only way to establish which chars are alpha etc is to
@@ -3484,9 +3487,19 @@ int isValidName(const char *name)
                 return 0;
 	    /* Mbrtowc(&wc, p, n, NULL); if(iswdigit(wc)) return 0; */
 	}
+        prev_is_dot = wc != L'.' ? 0 : -1;  /* initial dots don't count */
 	while ((used = Mbrtowc(&wc, p, n, NULL))) {
 	    if (!(iswalnum(wc) || wc == L'.' || wc == L'_'))
                 break;
+            if (wc == L'.') {
+                if (prev_is_dot != -1) {
+                    if (prev_is_dot == 1)
+                        return 0;  /* don't allow ".." after start */
+                    prev_is_dot = 1;
+                }
+            }
+            else
+                prev_is_dot = 0;
 	    p += used; n -= used;
 	}
 	if (*p != '\0')
@@ -3497,7 +3510,18 @@ int isValidName(const char *name)
             return 0;
 	if (c == '.' && isdigit(0xff & (int)*p))
             return 0;
-	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) ;
+        prev_is_dot = c != '.' ? 0 : -1;  /* initial dots don't count */
+	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) {
+            if (c == '.') {
+                if (prev_is_dot != -1) {
+                    if (prev_is_dot == 1)
+                        return 0;  /* don't allow ".." after start */
+                    prev_is_dot = 1;
+                }
+            }
+            else
+                prev_is_dot = 0;
+        }
 	if (c != '\0')
             return 0;
     }
