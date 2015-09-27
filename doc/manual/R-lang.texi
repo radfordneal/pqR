@@ -4307,9 +4307,12 @@ once.
 @end example
 
 Numeric constants can also be hexadecimal, starting with @samp{0x} or
-@samp{0x} followed by zero or more digits, @samp{a-f} or @samp{A-F}.
+@samp{0x} followed by zero or more digits, @samp{a-f}, or @samp{A-F},
+possibly with a decimal point.  This may be followed by @samp{P} or
+@samp{p}, and optional sign, and a string of decimal digits, giving
+a binary exponent.
 
-There is now a separate class of integer constants.  They are created
+There is a separate class of integer constants.  They are created
 by using the qualifier @code{L} at the end of the number.  For
 example, @code{123L} gives an integer value rather than a numeric
 value.  The suffix @code{L} can be used to qualify any non-complex

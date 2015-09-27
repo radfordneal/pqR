@@ -2161,19 +2161,31 @@ static int NumericValue(int c)
 
     DECLARE_YYTEXT_BUFP(yyp);
     YYTEXT_PUSH(c, yyp);
+
     /* We don't care about other than ASCII digits */
     while (isdigit(c = xxgetc()) || c == '.' || c == 'e' || c == 'E'
-	   || c == 'x' || c == 'X' || c == 'L')
+	   || c == 'x' || c == 'X')
     {
 	count++;
-	if (c == 'L') /* must be at the end.  Won't allow 1Le3 (at present). */
-	    break;
 
 	if (c == 'x' || c == 'X') {
 	    if (count > 2 || last != '0') break;  /* 0x must be first */
 	    YYTEXT_PUSH(c, yyp);
 	    while(isdigit(c = xxgetc()) || ('a' <= c && c <= 'f') ||
 		  ('A' <= c && c <= 'F') || c == '.') {
+                if (c == '.') {
+                    if (seendot) {
+                        if (*(yyp-1) == '.') {  /* we see ".."; stop before */
+                            YYTEXT_UNPUSH(yyp);
+                            xxungetc(c);
+                            seendot = 0;
+                            goto out;
+                        }
+                        else
+                            return ERROR;
+                    }
+                    seendot = 1;
+                }
 		YYTEXT_PUSH(c, yyp);
 		nd++;
 	    }
@@ -2192,6 +2204,7 @@ static int NumericValue(int c)
 	    }
 	    break;
 	}
+
 	if (c == 'E' || c == 'e') {
 	    if (seenexp)
 		break;
@@ -2206,23 +2219,33 @@ static int NumericValue(int c)
 		if (!isdigit(c)) return ERROR;
 	    }
 	}
+
 	if (c == '.') {
-	    if (seendot)
+	    if (seendot) {
+                if (*(yyp-1) == '.') { /* we see ".."; stop before */
+                    YYTEXT_UNPUSH(yyp);
+                    xxungetc(c);
+                    seendot = 0;
+                }
 		break;
+            }
 	    seendot = 1;
 	}
+
 	YYTEXT_PUSH(c, yyp);
 	last = c;
     }
+
+out:
     YYTEXT_PUSH('\0', yyp);
-    /* Make certain that things are okay. */
-    if(c == 'L') {
-	double a = R_atof(yytext);
-	int b = (int) a;
+
+    if (c == 'L') {
 	/* We are asked to create an integer via the L, so we check that the
 	   double and int values are the same. If not, this is a problem and we
 	   will not lose information and so use the numeric value.
 	*/
+	double a = R_atof(yytext);
+	int b = (int) a;
 	if(a != (double) b) {
             if(seendot == 1 && seenexp == 0)
 		warning(
@@ -2232,22 +2255,28 @@ static int NumericValue(int c)
 		warning(
                 _("non-integer value %s qualified with L; using numeric value"),
                 yytext);
-	    asNumeric = 1;
-	    seenexp = 1;
+            ps->next_token_val = mkReal(yytext);
 	}
+        else {
+            if (seendot == 1 && seenexp == 0)
+	        warning(
+                _("integer literal %sL contains unnecessary decimal point"),
+                yytext);
+            ps->next_token_val = mkInteger(yytext);
+        }
+    }
+    else if (c == 'i') {
+	ps->next_token_val = mkComplex(yytext);
+    }
+    else {
+        ps->next_token_val = mkReal(yytext);
+        xxungetc(c);
     }
 
-    if(c == 'i') {
-	ps->next_token_val = mkComplex(yytext);
-    } else if(c == 'L' && asNumeric == 0) {
-	if (seendot == 1 && seenexp == 0)
-	    warning(_("integer literal %sL contains unnecessary decimal point"),
-                    yytext);
-	ps->next_token_val = mkInteger(yytext);
-    } else {
-	if(c != 'L')
-	    xxungetc(c);
-	ps->next_token_val = mkReal(yytext);
+    if (c == 'i' || c == 'L') { /* include for getParseData */
+        YYTEXT_UNPUSH(yyp);
+        YYTEXT_PUSH(c, yyp);
+        YYTEXT_PUSH('\0', yyp);
     }
 
     return NUM_CONST;

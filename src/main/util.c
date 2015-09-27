@@ -1887,7 +1887,7 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	goto done;
     }
 
-   /* optional sign */
+    /* optional sign */
     switch (*p) {
     case '-': sign = -1;
     case '+': p++;
@@ -1921,7 +1921,6 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 	}
 	if (*p == 'p' || *p == 'P') {
 	    int expsign = 1;
-	    double p2 = 2.0;
 	    switch(*++p) {
 	    case '-': expsign = -1;
 	    case '+': p++;
@@ -1933,20 +1932,21 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
                 n = n * 10 + (*p - '0');
                 if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
             }
-            if (ans != 0.0) { /* PR#15976:  allow big exponents on 0 */
-                expn += expsign * n;
-                if(exph > 0) expn -= exph;
-                if (expn < 0) {
-                    for (n = -expn, fac = 1.0; n; n >>= 1, p2 *= p2)
-                        if (n & 1) fac *= p2;
-                    ans /= fac;
-                } else {
-                    for (n = expn, fac = 1.0; n; n >>= 1, p2 *= p2)
-                        if (n & 1) fac *= p2;
-                    ans *= fac;
-                }
-            }
+            expn += expsign * n;
 	}
+        if (ans != 0.0) { /* PR#15976:  allow big exponents on 0 */
+	    double p2 = 2.0;
+            if(exph > 0) expn -= exph;
+            if (expn < 0) {
+                for (n = -expn, fac = 1.0; n; n >>= 1, p2 *= p2)
+                    if (n & 1) fac *= p2;
+                ans /= fac;
+            } else {
+                for (n = expn, fac = 1.0; n; n >>= 1, p2 *= p2)
+                    if (n & 1) fac *= p2;
+                ans *= fac;
+            }
+        }
 	goto done;
     }
 
