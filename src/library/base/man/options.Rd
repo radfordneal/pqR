@@ -268,6 +268,13 @@ getOption(x, default = NULL)
 #endif
     }
 
+    \item{\code{pqR_extensions}:}{Whether or not pqR language extensions,
+      such as the \code{..} operator, are recognized.  The default is
+      \code{TRUE}.  Setting it to \code{FALSE} is useful for allowing
+      old code to be parsed (eg, with identifiers ending in ".."), and for
+      ensuring that new code will work with R implementations without
+      these extensions.}
+
     \item{\code{printcmd}:}{the command used by \code{\link{postscript}}
       for printing; set by environment variable \env{R_PRINTCMD} when
       \R is started.  This should be a command that expects either input

@@ -373,6 +373,8 @@ static struct parse_state *ps; /* currently active parse */
 
 struct parse_state {
 
+    int pqR_extensions;		/* Recognize pqR language extensions? */
+
     /* The next token from the input, and asociated variables and functions. */
 
     int next_token;            /* The next token, as an integer code */
@@ -1944,6 +1946,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 #define PARSE_INIT \
     struct parse_state new_parse_state; \
     ps = &new_parse_state; \
+    ps->pqR_extensions = pqR_extensions; \
     ps->token_loc.first_line = 0; \
     ps->token_loc.first_column = 0; \
     ps->token_loc.first_byte = 0; \
@@ -2916,7 +2919,7 @@ static int SymbolValue(int c)
 	    if (c == R_EOF)
                 break;
 	    if (c == '.') {
-                if (prev_is_dot == 1) {
+                if (prev_is_dot == 1 && ps->pqR_extensions) {
                     xxungetc(c);
                     YYTEXT_UNPUSH(yyp);
                     break;
@@ -2945,7 +2948,7 @@ static int SymbolValue(int c)
 	    if (c == R_EOF)
                 break;
 	    if (c == '.') {
-                if (prev_is_dot == 1) {
+                if (prev_is_dot == 1 && ps->pqR_extensions) {
                     xxungetc(c);
                     YYTEXT_UNPUSH(yyp);
                     break;
@@ -3242,9 +3245,10 @@ static int token (int c, int no_symbol)
     if (c == '%')
 	return SpecialValue(c);
 
-    /* The .. operator.  Only recognized if no_symbol is true. */
+    /* The .. operator.  Only recognized if no_symbol is true (and if 
+       pqR_extensions is enabled). */
 
-    if (no_symbol && c == '.' && nextchar('.')) {
+    if (ps->pqR_extensions && no_symbol && c == '.' && nextchar('.')) {
         ps->next_token_val = R_DotDotSymbol;
         return DOTDOT;
     }

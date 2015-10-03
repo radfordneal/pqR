@@ -18,7 +18,7 @@ from..to
   \item{to}{(maximal) end value of the sequence (numeric or integer).}
 }
 \details{
-  The binary operator \code{..} generates an increasing sequence of
+  The primitive binary operator \code{..} generates an increasing sequence of
   values, starting at \code{from}, with each value in the sequence one
   greater than previous value, ending when the next value would be
   greater than \code{to} (plus a small allowance for roundoff error of
@@ -46,7 +46,10 @@ from..to
 \preformatted{    for (i in 1..n) X()
 }
   will call \code{X()} zero times, as is probably the intent.
-  
+
+  Note that parsing of \code{..} will be disabled if the \code{pqR_extensions}
+  option is \code{FALSE} (though the primitive will still exist, and be
+  accessible by calling it as a function named \code{`..`}).
 }
 \value{
   A vector of type \code{\link{integer}} if \code{from} has a value
