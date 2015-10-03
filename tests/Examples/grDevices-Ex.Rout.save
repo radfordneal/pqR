@@ -1,7 +1,13 @@
 
-R version 2.15.0 Patched (2012-04-12 r58988) -- "Easter Beagle"
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -17,6 +23,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > pkgname <- "grDevices"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -2070,7 +2079,7 @@ display gamma = 2.2
 +                             rgb <- t(col2rgb(hex))/255
 +                             colorspaces$sRGB$toXYZ(rgb, ...) },
 +                            fromXYZ = function(xyz,...) {
-+                               rgb <- colorspaces$sRGB$fromXYZ(xyz, ..)
++                               rgb <- colorspaces$sRGB$fromXYZ(xyz, ...)
 +                               rgb <- round(rgb,5)
 +                               if (min(rgb) < 0 || max(rgb) > 1)
 +                                    as.character(NA)
@@ -3518,7 +3527,7 @@ $zlab
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.137 0.045 2.32 0 0 
+Time elapsed:  1.244 0.012 1.261 0 0 
 > grDevices::dev.off()
 null device 
           1 
