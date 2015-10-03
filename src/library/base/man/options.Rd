@@ -272,8 +272,19 @@ getOption(x, default = NULL)
       such as the \code{..} operator, are recognized.  The default is
       \code{TRUE}.  Setting it to \code{FALSE} is useful for allowing
       old code to be parsed (eg, with identifiers ending in ".."), and for
-      ensuring that new code will work with R implementations without
-      these extensions.}
+      checking that new code will work with R implementations without
+      these extensions.
+
+      Note that this option affects only the parser and deparser, not
+      the behaviour of any functions that may differ between pqR and
+      other R implementations.  When \code{pqR_extensions} is \code{FALSE},
+      the parser will accept unquoted symbols with consecutive "."
+      characters that are not at the beginning, but such symbols are 
+      deparsed with backquotes regardless of the setting of 
+      \code{pqR_extensions}. Also, when \code{pqR_extensions} is \code{FALSE},
+      pqR operators such as \code{..} are deparsed as function calls 
+      (with function name in backquotes).
+      }
 
     \item{\code{printcmd}:}{the command used by \code{\link{postscript}}
       for printing; set by environment variable \env{R_PRINTCMD} when
