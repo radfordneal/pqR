@@ -62,6 +62,7 @@ from..to
   \code{\link{seq_along}}
 }
 \examples{
+options(pqR_extensions=TRUE)
 11..14 # length 4
 11..0  # length 0
 pi..6  # real
