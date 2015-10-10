@@ -103,6 +103,8 @@ extern0 SEXP	R_FunctionSymbol;     /* "function" */
 extern0 SEXP	R_WhileSymbol;        /* "while" */
 extern0 SEXP	R_RepeatSymbol;       /* "repeat" */
 extern0 SEXP	R_ForSymbol;          /* "for" */
+extern0 SEXP	R_InSymbol;           /* "in" */
+extern0 SEXP	R_AlongSymbol;        /* "along" */
 extern0 SEXP	R_IfSymbol;           /* "if" */
 extern0 SEXP	R_NextSymbol;         /* "next" */
 extern0 SEXP	R_BreakSymbol;        /* "break" */

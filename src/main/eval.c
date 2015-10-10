@@ -1322,44 +1322,68 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
        the setjmp and longjmp calls. Theoretically this does not
        include n and bgn, but gcc -O2 -Wclobbered warns about these so
        to be safe we declare them volatile as well. */
+
     volatile int i, n, bgn;
     volatile SEXP v, val, nval, bcell;
     int dbg, val_type;
-    SEXP sym, body;
+    SEXP a, syms, sym, body;
     RCNTXT cntxt;
     PROTECT_INDEX valpi, vpi, bix;
+    int seq_start;
     int variant;
+    int along;
+    int nsyms;
 
-    sym = CAR(args);
-    val = CADR(args);
-    body = CADDR(args);
+    PROTECT(args);
 
-    if ( !isSymbol(sym) ) errorcall(call, _("non-symbol loop variable"));
+    syms = args;
+    nsyms = 1;
+    a = args;
+    for (;;) {
+        if (!isSymbol(CAR(a))) errorcall(call, _("non-symbol loop variable"));
+        a = CDR(a);
+        if (CDDR(a) == R_NilValue) break;
+        nsyms += 1;
+    }
 
-    if (R_jit_enabled > 2 && ! R_PendingPromises) {
+    along = TAG(a) == R_AlongSymbol;  /* We don't check nsymbs==1 when !along */
+
+    val = CAR(a);
+    body = CADR(a);
+
+    if (!along && R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho); 
 	return R_NilValue;
     }
 
-    PROTECT(args);
+    sym = CAR(syms);
+
     PROTECT(rho);
 
     PROTECT_WITH_INDEX(val = evalv (val, rho, VARIANT_SEQ), &valpi);
     variant = R_variant_result;
 
-    if (variant) {
+    if (along) { /* "along" value (maybe variant) */
+        R_variant_result = 0;
+        variant = 0;
+        seq_start = 1;
+        n = length(val);
+        val_type = INTSXP;
+    }
+    else if (variant) {  /* variant "in" value */
         R_variant_result = 0;
         if (TYPEOF(val)!=INTSXP || LENGTH(val)!=2) /* shouldn't happen*/
             errorcall(call, "internal inconsistency with variant op in for!");
+        seq_start = INTEGER(val)[0];
         n = INTEGER(val)[1] - INTEGER(val)[0] + 1;
         val_type = INTSXP;
     }
-    else { /* non-variant return value */
+    else { /* non-variant "in" value */
 
         /* deal with the case where we are iterating over a factor
            we need to coerce to character - then iterate */
 
-        if ( inherits(val, "factor") )
+        if (inherits (val, "factor"))
             REPROTECT(val = asCharacterFactor(val), valpi);
 
         /* increment NAMEDCNT for sequence to avoid modification by loop code */
@@ -1389,8 +1413,10 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     case CTXT_NEXT: goto for_next;
     }
 
-    if (n == 0) 
-        defineVar (sym, R_NilValue, rho);  /* mimic previous behaviour */
+    if (n == 0) {
+        /* mimic previous behaviour */
+        set_var_in_frame (sym, R_NilValue, rho, TRUE, 3);
+    }
 
     for (i = 0; i < n; i++) {
 
@@ -1423,8 +1449,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
                 LOGICAL(v)[0] = LOGICAL(val)[i];
                 break;
             case INTSXP:
-                INTEGER(v)[0] = variant ? INTEGER(val)[0] + i 
-                                        : INTEGER(val)[i];
+                INTEGER(v)[0] = variant || along ? seq_start + i 
+                                                 : INTEGER(val)[i];
                 break;
             case REALSXP:
                 REAL(v)[0] = REAL(val)[i];

@@ -496,6 +496,8 @@ static void SymbolShortcuts(void)
     R_WhileSymbol = install("while");
     R_RepeatSymbol = install("repeat");
     R_ForSymbol = install("for");
+    R_InSymbol = install("in");
+    R_AlongSymbol = install("along");
     R_IfSymbol = install("if");
     R_NextSymbol = install("next");
     R_BreakSymbol = install("break");
