@@ -9,3 +9,6 @@ in pqR.)  Also allow this for input from 'scan', etc.
 
 Updates R-lang.texi and several help files to document .. (and fix a
 few other things).
+
+Introduce pqR_extensions option, currently with default FALSE (but
+meant to switch to TRUE once setting for packages is implemented).

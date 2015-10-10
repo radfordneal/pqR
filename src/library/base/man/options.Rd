@@ -270,7 +270,8 @@ getOption(x, default = NULL)
 
     \item{\code{pqR_extensions}:}{Whether or not pqR language extensions,
       such as the \code{..} operator, are recognized.  The default is
-      \code{TRUE}.  Setting it to \code{FALSE} is useful for allowing
+      \code{FALSE} (for the moment).  Setting it to \code{FALSE} is useful 
+      for allowing
       old code to be parsed (eg, with identifiers ending in ".."), and for
       checking that new code will work with R implementations without
       these extensions.
