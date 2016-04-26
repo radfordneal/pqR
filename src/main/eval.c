@@ -1326,15 +1326,17 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int i, n, bgn;
     volatile SEXP v, val, nval, bcell;
     int dbg, val_type;
-    SEXP a, syms, sym, body;
+    SEXP a, syms, sym, body, dims;
     RCNTXT cntxt;
     PROTECT_INDEX valpi, vpi, bix;
-    int seq_start;
-    int variant;
+    int is_seq, seq_start;
     int along;
     int nsyms;
 
     PROTECT(args);
+
+    /* Count how many variables there are before the argument after the "in" 
+       or "along" keyword.  Set 'a' to the cell for argument after the vars. */
 
     syms = args;
     nsyms = 1;
@@ -1360,17 +1362,21 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(rho);
 
-    PROTECT_WITH_INDEX(val = evalv (val, rho, VARIANT_SEQ), &valpi);
-    variant = R_variant_result;
+    PROTECT_WITH_INDEX(val = evalv (val, rho, along ? 0 : VARIANT_SEQ), &valpi);
 
-    if (along) { /* "along" value (maybe variant) */
-        R_variant_result = 0;
-        variant = 0;
+    INC_NAMEDCNT(val);  /* increment NAMEDCNT to avoid mods by loop code */
+    nval = val;  /* for scanning pairlist */
+
+    if (along) { /* "along", not variant */
+
+        is_seq = 1;
         seq_start = 1;
         n = length(val);
         val_type = INTSXP;
     }
-    else if (variant) {  /* variant "in" value */
+    else if (R_variant_result) {  /* variant "in" value */
+
+        is_seq = 1;
         R_variant_result = 0;
         if (TYPEOF(val)!=INTSXP || LENGTH(val)!=2) /* shouldn't happen*/
             errorcall(call, "internal inconsistency with variant op in for!");
@@ -1380,23 +1386,23 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else { /* non-variant "in" value */
 
-        /* deal with the case where we are iterating over a factor
-           we need to coerce to character - then iterate */
+        is_seq = 0;
+
+        /* Deal with the case where we are iterating over a factor.
+           We need to coerce to character, then iterate */
 
         if (inherits (val, "factor"))
             REPROTECT(val = asCharacterFactor(val), valpi);
 
-        /* increment NAMEDCNT for sequence to avoid modification by loop code */
-        INC_NAMEDCNT(val);
-
-        if (isList(val) || isNull(val)) {
-	    n = length(val);
-            nval = val;
-        }
-        else
-	    n = LENGTH(val);
-
+        n = length(val);
         val_type = TYPEOF(val);
+    }
+
+    if (nsyms > 1) {
+        dims = getAttrib (val, R_DimSymbol);
+        if (length(dims) != nsyms)
+            error (_("incorrect number of dimensions"));
+        INC_NAMEDCNT(dims);
     }
 
     dbg = RDEBUG(rho);
@@ -1413,9 +1419,11 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     case CTXT_NEXT: goto for_next;
     }
 
-    if (n == 0) {
-        /* mimic previous behaviour */
-        set_var_in_frame (sym, R_NilValue, rho, TRUE, 3);
+    /* mimic previous behaviour in initializing vars to R NULL. */
+    int j;
+    for (j = 0; j < nsyms; j++) { 
+        set_var_in_frame (CAR(syms), R_NilValue, rho, TRUE, 3);
+        syms = CDR(syms);
     }
 
     for (i = 0; i < n; i++) {
@@ -1436,10 +1444,9 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	default:
 
-            /* Allocate space for the loop variable value the first time through
-               (when v == R_NilValue), when the value has been assigned to
-               another variable (NAMEDCNT(v) > 1), and when an attribute
-               has been attached to it. */
+            /* Allocate new space for the loop variable value when the value has
+               been assigned to another variable (NAMEDCNT(v) > 1), and when an
+               attribute has been attached to it. */
 
             if (v == R_NilValue || NAMEDCNT_GT_1(v) || ATTRIB(v) != R_NilValue)
                 REPROTECT(v = allocVector(val_type, 1), vpi);
@@ -1449,8 +1456,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
                 LOGICAL(v)[0] = LOGICAL(val)[i];
                 break;
             case INTSXP:
-                INTEGER(v)[0] = variant || along ? seq_start + i 
-                                                 : INTEGER(val)[i];
+                INTEGER(v)[0] = is_seq ? seq_start + i : INTEGER(val)[i];
                 break;
             case REALSXP:
                 REAL(v)[0] = REAL(val)[i];
@@ -1485,8 +1491,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
  for_break:
     endcontext(&cntxt);
-    if (!variant) 
-        DEC_NAMEDCNT(val);
+    DEC_NAMEDCNT(val);
     UNPROTECT(5);
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
