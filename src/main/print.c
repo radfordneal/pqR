@@ -950,10 +950,11 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 
 void attribute_hidden PrintValueEnv(SEXP s, SEXP env)
 {
+    PROTECT(s);
     PrintDefaults();
     tagbuf[0] = '\0';
-    PROTECT(s);
-    if(isObject(s) || isFunction(s)) {
+
+    if (isObject(s) || isFunction(s)) {
 	/*
 	  The intention here is to call show() on S4 objects, otherwise
 	  print(), so S4 methods for show() have precedence over those for
@@ -986,7 +987,10 @@ void attribute_hidden PrintValueEnv(SEXP s, SEXP env)
 
 	eval(call, env);
 	UNPROTECT(1);
-    } else PrintValueRec(s, env);
+    }
+    else {
+        PrintValueRec(s, env);
+    }
     UNPROTECT(1);
 }
 
