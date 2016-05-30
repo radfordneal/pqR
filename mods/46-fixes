@@ -6,3 +6,5 @@ in no-segfault test on Windows 10 (pqR issue #29 + related fix).
 Fixed bug illustrated by 
 
      atan; show<-function(x)cat("HI\n"); atan
+
+Put in check for non-existent primitives when unserializing, from R-3.0.1.
