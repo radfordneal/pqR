@@ -641,7 +641,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 /* S4 object bit, set by R_do_new_object for all new() calls.  Avoid writes
    of what's already there, in case object is a constant in read-only memory. */
-#define S4_OBJECT_MASK (1<<4)
+#define S4_OBJECT_BIT_POS 4
+#define S4_OBJECT_MASK (1<<S4_OBJECT_BIT_POS)
 #define IS_S4_OBJECT(x) (((x)->sxpinfo.gp & S4_OBJECT_MASK) != 0)
 #define SET_S4_OBJECT(x) do { \
     SEXP _x_ = (x); \

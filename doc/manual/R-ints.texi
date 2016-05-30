@@ -350,9 +350,14 @@ for the object.
 See @ref{Reference counts and the nmcnt field} for details.
 
 
-The @code{gp} bits are by definition `general purpose'.  We label these
-from 0 to 15.  Bits 0--5 and bits 14--15 have been used as described below
-(mainly from detective work on the sources).
+The @code{gp} bits are called that because they are supposedly
+`general purpose'.  This term is misleading, however, since at least
+one (bit 4) is not at all general purpose, but is instead reserved in
+all objects.  The only meaning of `general purpose' seems to have been
+that people using them felt no obligation to document their usage.
+
+We label these bit from 0 to 15.  Bits 0--5 and bits 14--15 have been
+used as described below (mainly from detective work on the sources).
 
 @findex gp bits
 @findex LEVELS
@@ -417,9 +422,9 @@ that is @code{NA_STRING} or is in the @code{CHARSXP} cache (this is not
 serialized).  Only exceptionally is a @code{CHARSXP} not hashed, and
 this should never happen in end-user code.
 
-The whole gp field is used for the table offset in a @code{BUILTINSXP}
-or @code{SPECIALSXP}.  This offset is found again from the name when
-restoring saved data.
+Bits 5 to 15 of the gp field are used for the table offset in a
+@code{BUILTINSXP} or @code{SPECIALSXP}.  This offset is found again
+from the name when restoring saved data.
 
 @node The 'data', Allocation classes, Rest of header, SEXPs
 @subsection The `data'
@@ -1763,7 +1768,9 @@ S4 objects can be of any @code{SEXPTYPE}.  They are either an object of
 a simple type (such as an atomic vector or function) with S4 class
 information or of type @code{S4SXP}.  In all cases, the `S4 bit' (bit 4
 of the `general purpose' field) is set, and can be tested by the
-macro/function @code{IS_S4_OBJECT}.
+macro/function @code{IS_S4_OBJECT}.  Note that some code tests
+@code{IS_S4_OBJECT} without first checking that it is an object of any sort,
+so the `S4 bit' is reserved even for things like primitive functions.
 
 S4 objects are created via @code{new()}@footnote{This can also create
 non-S4 objects, as in @code{new("integer")}.} and thence via the C

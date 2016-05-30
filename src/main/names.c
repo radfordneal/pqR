@@ -99,7 +99,8 @@
    files where the functions are defined, and copied to the table below on
    initialization.  Some entries are defined in this source file (names.c). */
 
-#define MAX_FUNTAB_ENTRIES 1000  /* Increase as needed (may be spare slots) */
+#define MAX_FUNTAB_ENTRIES 1000 /* Increase as needed; spare slots are allowed*/
+                                /* but no more than 2048, due to 16 bits in gp*/
 
 attribute_hidden FUNTAB R_FunTab[MAX_FUNTAB_ENTRIES+1]; /* terminated by NULL */
 
