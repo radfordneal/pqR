@@ -268,13 +268,11 @@ getOption(x, default = NULL)
 #endif
     }
 
-    \item{\code{pqR_extensions}:}{Whether or not pqR language extensions,
-      such as the \code{..} operator, are recognized.  The default is
+    \item{\code{pqR_extensions}:}{Whether or not pqR language extensions
+      with non-negligible backwards-compatibility issues, such as the \code{..}
+      operator, are recognized by the parser.  The default is
       \code{FALSE} (for the moment).  Setting it to \code{FALSE} is useful 
-      for allowing
-      old code to be parsed (eg, with identifiers ending in ".."), and for
-      checking that new code will work with R implementations without
-      these extensions.
+      for allowing old code to be parsed (eg, with identifiers ending in "..").
 
       Note that this option affects only the parser and deparser, not
       the behaviour of any functions that may differ between pqR and

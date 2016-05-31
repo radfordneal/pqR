@@ -36,7 +36,7 @@ from..to
   for example, \code{i..i+9} will generate a sequence of length 10, 
   whereas \code{i:i+9} generates a sequence of length one.
 
-  The inconvenient precedence of \code{:}, and fact it may generate a
+  The inconvenient precedence of \code{:}, and the fact it may generate a
   sequence in either direction depending on its arguments, are sources
   of bugs.  For example, if \code{n} is zero, the loop 
 \preformatted{    for (i in 1:n) X()
