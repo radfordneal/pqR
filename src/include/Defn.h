@@ -869,10 +869,9 @@ LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
 
-/* Are pqR language extensions (such as the .. operator) enabled?  Linked 
-   to option "pqR_extensions". */
+/* Is parsing of the .. operator enabled?  Linked to option "parse_dotdot". */
 
-extern0 int pqR_extensions INI_as(0); /* 1 = pqR extensions enabled, 0 = not */
+extern0 int R_parse_dotdot INI_as(0); /* 1 = parsing .. enabled, 0 = not */
 
 /* R Home Directory */
 LibExtern char *R_Home;		    /* Root of the R tree */

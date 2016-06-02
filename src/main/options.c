@@ -53,7 +53,7 @@
   
    A (complete?!) list of these (2):
 
-        "pqR_extensions"
+        "parse_dotdot"
   
   	"prompt"
   	"continue"
@@ -243,8 +243,8 @@ void attribute_hidden InitOptions(void)
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
-    SET_TAG(v, install("pqR_extensions"));
-    SETCAR(v, ScalarLogical(pqR_extensions));
+    SET_TAG(v, install("parse_dotdot"));
+    SETCAR(v, ScalarLogical(R_parse_dotdot));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
@@ -465,11 +465,11 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	if (*CHAR(namei)) { /* name = value  ---> assignment */
 	    tag = install(translateChar(namei));
-	    if (streql(CHAR(namei), "pqR_extensions")) {
+	    if (streql(CHAR(namei), "parse_dotdot")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		k = asLogical(argi);
-                pqR_extensions = k;
+                R_parse_dotdot = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
 	    if (streql(CHAR(namei), "width")) {

@@ -257,6 +257,20 @@ getOption(x, default = NULL)
 #endif
     }
 
+    \item{\code{parse_dotdot}:}{Controls whether or not the pqR \code{..}
+      operator is accepted by the parser.  The default is
+      \code{FALSE}, for the moment, pending a better compatibility
+      scheme.
+
+      When \code{parse_dotdot} is \code{FALSE},
+      the parser will accept unquoted symbols with consecutive "."
+      characters that are not at the beginning, but such symbols are 
+      deparsed with backquotes regardless of the setting of 
+      \code{parse_dotdot}. Also, when \code{parse_dotdot} is \code{FALSE},
+      the \code{..} operator is deparsed as a function call
+      (with function name in backquotes).
+      }
+
     \item{\code{pdfviewer}:}{default PDF viewer.
       The default is set from the environment variable \env{R_PDFVIEWER},
 #ifdef unix
@@ -267,23 +281,6 @@ getOption(x, default = NULL)
       supplied with \R.
 #endif
     }
-
-    \item{\code{pqR_extensions}:}{Whether or not pqR language extensions
-      with non-negligible backwards-compatibility issues, such as the \code{..}
-      operator, are recognized by the parser.  The default is
-      \code{FALSE} (for the moment).  Setting it to \code{FALSE} is useful 
-      for allowing old code to be parsed (eg, with identifiers ending in "..").
-
-      Note that this option affects only the parser and deparser, not
-      the behaviour of any functions that may differ between pqR and
-      other R implementations.  When \code{pqR_extensions} is \code{FALSE},
-      the parser will accept unquoted symbols with consecutive "."
-      characters that are not at the beginning, but such symbols are 
-      deparsed with backquotes regardless of the setting of 
-      \code{pqR_extensions}. Also, when \code{pqR_extensions} is \code{FALSE},
-      pqR operators such as \code{..} are deparsed as function calls 
-      (with function name in backquotes).
-      }
 
     \item{\code{printcmd}:}{the command used by \code{\link{postscript}}
       for printing; set by environment variable \env{R_PRINTCMD} when

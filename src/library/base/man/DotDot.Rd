@@ -18,6 +18,13 @@ from..to
   \item{to}{(maximal) end value of the sequence (numeric or integer).}
 }
 \details{
+
+  Note: The parsing of \code{..} will be disabled if the
+  \code{parse_dotdot}option is \code{FALSE} (though the primitive will
+  still exist, and be accessible by calling it as a function named
+  \code{`..`}).  The default is \code{FALSE} at the moment, to ensure
+  compatibility with old code, but a better compatibility scheme is planned.
+
   The primitive binary operator \code{..} generates an increasing sequence of
   values, starting at \code{from}, with each value in the sequence one
   greater than previous value, ending when the next value would be
@@ -47,9 +54,6 @@ from..to
 }
   will call \code{X()} zero times, as is probably the intent.
 
-  Note that parsing of \code{..} will be disabled if the \code{pqR_extensions}
-  option is \code{FALSE} (though the primitive will still exist, and be
-  accessible by calling it as a function named \code{`..`}).
 }
 \value{
   A vector of type \code{\link{integer}} if \code{from} has a value
@@ -62,7 +66,7 @@ from..to
   \code{\link{seq_along}}
 }
 \examples{
-options(pqR_extensions=TRUE)
+options(parse_dotdot=TRUE)
 11..14 # length 4
 11..0  # length 0
 pi..6  # real
