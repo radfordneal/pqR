@@ -45,7 +45,8 @@ from..to
 
   The inconvenient precedence of \code{:}, and the fact it may generate a
   sequence in either direction depending on its arguments, are sources
-  of bugs.  For example, if \code{n} is zero, the loop 
+  of bugs, which can be avoided by using\code{..}.  For example, if 
+  \code{n} is zero, the loop 
 \preformatted{    for (i in 1:n) X()
 } 
   behaves in probably-unintended fashion, calling 
@@ -53,13 +54,17 @@ from..to
 \preformatted{    for (i in 1..n) X()
 }
   will call \code{X()} zero times, as is probably the intent.
-
 }
 \value{
   A vector of type \code{\link{integer}} if \code{from} has a value
   that can be represented as an integer, and so can the other values
   in the sequence, and otherwise of type \code{double} (aka
-  \code{\link{mode}} \code{"\link{numeric}"}).
+  \code{\link{mode}} \code{"\link{numeric}"}).  
+
+  The vector returned will have a \code{dim} attribute specifying that
+  it is a one-dimensional array, which allows the result of an
+  expression such as \code{1..n} when \code{n} is 1 to be
+  distinguished from the scalar 1.
 }
 \seealso{
   \code{\link{:}}, \code{\link{seq}}, \code{\link{seq_len}},

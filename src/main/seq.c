@@ -98,15 +98,18 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 }
 
 /* Create a simple integer sequence, or as variant, a description of it. 
-   Sets R_variant_result to 1 if a sequence description is returned. */
+   Sets R_variant_result to 1 if a sequence description is returned. 
+   If dotdot is true, attaches 1D dim attribute, or for variant result,
+   sets the gp field (LEVELS) to 1. */
 
-static SEXP make_seq (int from, int len, int variant)
+static SEXP make_seq (int from, int len, int variant, int dotdot)
 {
     SEXP ans;
     int *p;
 
     if (VARIANT_KIND(variant) == VARIANT_SEQ) {
         ans = allocVector (INTSXP, 2);
+        SETLEVELS(ans,dotdot);
         p = INTEGER(ans);
         p[0] = from;
         p[1] = from + len - 1;
@@ -116,19 +119,26 @@ static SEXP make_seq (int from, int len, int variant)
         ans = allocVector (INTSXP, len);
         p = INTEGER(ans);
         for (int i = 0; i < len; i++) p[i] = from + i;
+        if (dotdot) {
+            SEXP dim1;
+            PROTECT(ans);
+            PROTECT(dim1 = ScalarInteger(len));
+            setAttrib (ans, R_DimSymbol, dim1);
+            UNPROTECT(2);
+        }
     }
 
     return ans;
 }
 
-static SEXP seq_colon(double n1, double n2, int up_only, SEXP call, int variant)
+static SEXP seq_colon(double n1, double n2, int dotdot, SEXP call, int variant)
 {
     int i, n, in1;
     double r;
     SEXP ans;
     Rboolean useInt;
 
-    if (up_only)  /* .. */
+    if (dotdot)  /* .. operator */
         r = n2 >= n1 - FLT_EPSILON ? n2 - n1 : -1;
     else  /* : */
         r = fabs (n2 - n1);
@@ -144,21 +154,21 @@ static SEXP seq_colon(double n1, double n2, int up_only, SEXP call, int variant)
 	    useInt = FALSE;
 	else {
 	    /* r := " the effective 'to' "  of  from:to */
-	    r = up_only ? n1 + (n-1) : n1 + ((n1 <= n2) ? n-1 : -(n-1));
+	    r = dotdot? n1 + (n-1) : n1 + ((n1 <= n2) ? n-1 : -(n-1));
 	    if(r <= INT_MIN || r > INT_MAX)
 		useInt = FALSE;
 	}
     }
     if (useInt) {
-        if (up_only || n1 <= n2)
-            ans = make_seq (in1, n, variant);
+        if (dotdot || n1 <= n2)
+            ans = make_seq (in1, n, variant, dotdot);
         else {
 	    ans = allocVector(INTSXP, n);
             for (i = 0; i < n; i++) INTEGER(ans)[i] = in1 - i;
         }
     } else {
 	ans = allocVector(REALSXP, n);
-	if (up_only || n1 <= n2)
+	if (dotdot || n1 <= n2)
 	    for (i = 0; i < n; i++) REAL(ans)[i] = n1 + i;
 	else
 	    for (i = 0; i < n; i++) REAL(ans)[i] = n1 - i;
@@ -982,7 +992,7 @@ static SEXP do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     else
 	len = length(arg);
 
-    return make_seq (1, len, variant);
+    return make_seq (1, len, variant, 0);
 }
 
 static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho, 
@@ -994,7 +1004,7 @@ static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho,
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");
 
-    return make_seq (1, len, variant);
+    return make_seq (1, len, variant, 0);
 }
 
 static SEXP do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
