@@ -20,14 +20,14 @@ from..to
 \details{
 
   Note: The parsing of \code{..} will be disabled if the
-  \code{parse_dotdot}option is \code{FALSE} (though the primitive will
+  \code{parse_dotdot} option is \code{FALSE} (though the primitive will
   still exist, and be accessible by calling it as a function named
   \code{`..`}).  The default is \code{FALSE} at the moment, to ensure
   compatibility with old code, but a better compatibility scheme is planned.
 
   The primitive binary operator \code{..} generates an increasing sequence of
   values, starting at \code{from}, with each value in the sequence one
-  greater than previous value, ending when the next value would be
+  greater than the previous value, ending when the next value would be
   greater than \code{to} (plus a small allowance for roundoff error of
   about 1e-7).  If \code{to} is less than \code{from} (minus about
   1e-7), the sequence will be of length zero.
@@ -41,11 +41,11 @@ from..to
   zero-length sequence.  Also, \code{..} has precedence just lower
   than arithmetic operators (and hence lower than \code{:}), so that,
   for example, \code{i..i+9} will generate a sequence of length 10, 
-  whereas \code{i:i+9} generates a sequence of length one.
+  whereas \code{i:i+9} results in a sequence of length one.
 
   The inconvenient precedence of \code{:}, and the fact it may generate a
   sequence in either direction depending on its arguments, are sources
-  of bugs, which can be avoided by using\code{..}.  For example, if 
+  of bugs, which can be avoided by using \code{..}.  For example, if 
   \code{n} is zero, the loop 
 \preformatted{    for (i in 1:n) X()
 } 
