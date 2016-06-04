@@ -1388,7 +1388,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         else { /* "along" for array, with several dimensions */
             dims = getAttrib (val, R_DimSymbol);
             if (length(dims) != nsyms)
-                error (_("incorrect number of dimensions"));
+                errorcall (call, _("incorrect number of dimensions"));
             PROTECT(dims);
             INC_NAMEDCNT(dims);
             PROTECT(indexes = allocVector(INTSXP,nsyms));

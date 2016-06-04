@@ -1626,7 +1626,8 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     /* For statements. */
 
     else if (NEXT_TOKEN == FOR) {
-        SEXP op, sym, vec, body, for_cond_rec;
+        SEXP op, sym, vec, body, for_cond_rec, more_syms;
+        int along = 0;
         source_location for_cond_loc;
         op = TOKEN_VALUE();
         get_next_token();
@@ -1640,7 +1641,29 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             PARSE_UNEXPECTED();
         sym = TOKEN_VALUE();
         get_next_token();
-        EXPECT(IN);
+        more_syms = R_NilValue;
+        while (NEXT_TOKEN == ',') {
+            get_next_token();
+            if (NEXT_TOKEN != SYMBOL)
+                PARSE_UNEXPECTED();
+            if (ps->next_token_val == sym)
+                PARSE_ERROR_MSG("repeated 'for' variable");
+            for (SEXP s = more_syms; s != R_NilValue; s = CDR(s))
+                if (ps->next_token_val == s)
+                    PARSE_ERROR_MSG("repeated 'for' variable");
+            PROTECT_N(more_syms = CONS(ps->next_token_val,more_syms));
+            get_next_token();
+        }
+        if (NEXT_TOKEN == SYMBOL && ps->next_token_val == R_AlongSymbol) {
+            along = 1;
+            get_next_token();
+        }
+        else {
+            if (more_syms != R_NilValue)
+                PARSE_ERROR_MSG(
+                  "multiple 'for' variables are only allowed with 'along'");
+            EXPECT(IN);
+        }
         PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, &ipar));
         if (!keep_parens && ipar && needsparens_arg(CADR(vec)))
             vec = CADR(vec);  /* get rid of parens */
@@ -1648,7 +1671,14 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         end_location (&for_cond_loc);
         end_parseData_record (for_cond_rec, &for_cond_loc);
         PARSE_SUB(body = parse_expr (0, flags, NULL));
-        res = PROTECT_N (lang4 (op, sym, vec, body));
+        res = CONS (vec, CONS(body,R_NilValue));
+        if (along)
+            SET_TAG (res, R_AlongSymbol);
+        while (more_syms != R_NilValue) {
+            res = CONS (CAR(more_syms), res);
+            more_syms = CDR(more_syms);
+        }
+        res = PROTECT_N (LCONS (op, CONS(sym,res)));
     }
 
     /* Next and break statements. */
