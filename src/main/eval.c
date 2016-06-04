@@ -1306,7 +1306,15 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 
-/* For statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
+/* For statement.  Unevaluated arguments for different formats are as follows:
+
+       for (i in v) body          i, v, body    (extra vars before "in" ignored)
+       for (i along v) body       i, along=v, body     (ok for vec or for array)
+       for (i, j along M) body    i, j, along=M, body     (requires correct dim)
+       etc.
+
+   Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK.
+ */
 
 #define DO_LOOP_RDEBUG(call, op, body, rho, bgn) do { \
     if (!bgn && RDEBUG(rho)) { \
@@ -1324,7 +1332,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
        to be safe we declare them volatile as well. */
 
     volatile int i, n, bgn;
-    volatile SEXP v, val, nval, bcell;
+    volatile SEXP v, val, nval, bcell, indexes, ixvals;
     int dbg, val_type;
     SEXP a, syms, sym, body, dims;
     RCNTXT cntxt;
@@ -1336,43 +1344,60 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(args);
 
     /* Count how many variables there are before the argument after the "in" 
-       or "along" keyword.  Set 'a' to the cell for argument after the vars. */
+       or "along" keyword.  Set 'a' to the cell for the argument after these
+       variables. */
 
     syms = args;
-    nsyms = 1;
+    nsyms = 0;
     a = args;
-    for (;;) {
+    do {
         if (!isSymbol(CAR(a))) errorcall(call, _("non-symbol loop variable"));
         a = CDR(a);
-        if (CDDR(a) == R_NilValue) break;
         nsyms += 1;
-    }
+    } while (CDDR(a) != R_NilValue);
 
-    along = TAG(a) == R_AlongSymbol;  /* We don't check nsymbs==1 when !along */
+    along = TAG(a) == R_AlongSymbol;
 
-    val = CAR(a);
-    body = CADR(a);
+    /* Sometimes handled by bytecode... */
 
-    if (!along && R_jit_enabled > 2 && ! R_PendingPromises) {
+    if (!along && nsyms == 1 && R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho); 
 	return R_NilValue;
     }
 
+    if (!along) nsyms = 1;  /* ignore extras for "in" */
+
+    val = CAR(a);
+    body = CADR(a);
     sym = CAR(syms);
 
     PROTECT(rho);
 
-    PROTECT_WITH_INDEX(val = evalv (val, rho, along ? 0 : VARIANT_SEQ), &valpi);
+    val = evalv (val, rho, along ? 0 : VARIANT_SEQ);
+    dims = R_NilValue;
 
-    INC_NAMEDCNT(val);  /* increment NAMEDCNT to avoid mods by loop code */
-    nval = val;  /* for scanning pairlist */
+    is_seq = 0;
 
-    if (along) { /* "along", not variant */
+    if (along) { /* "along", and therefore not variant */
 
-        is_seq = 1;
-        seq_start = 1;
+        if (nsyms == 1) { /* go along vector/pairlist (may also be an array) */
+            is_seq = 1;
+            seq_start = 1;
+            val_type = INTSXP;
+        }
+        else { /* "along" for array, with several dimensions */
+            dims = getAttrib (val, R_DimSymbol);
+            if (length(dims) != nsyms)
+                error (_("incorrect number of dimensions"));
+            PROTECT(dims);
+            INC_NAMEDCNT(dims);
+            PROTECT(indexes = allocVector(INTSXP,nsyms));
+            INTEGER(indexes)[0] = 0; /* so will be 1 after first increment */
+            for (int j = 1; j < nsyms; j++) 
+                INTEGER(indexes)[j] = 1;
+            PROTECT(ixvals = allocVector(VECSXP,nsyms));
+        }
         n = length(val);
-        val_type = INTSXP;
     }
     else if (R_variant_result) {  /* variant "in" value */
 
@@ -1386,7 +1411,9 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else { /* non-variant "in" value */
 
-        is_seq = 0;
+        PROTECT_WITH_INDEX (val, &valpi);
+        INC_NAMEDCNT(val);  /* increment NAMEDCNT to avoid mods by loop code */
+        nval = val;  /* for scanning pairlist */
 
         /* Deal with the case where we are iterating over a factor.
            We need to coerce to character, then iterate */
@@ -1398,18 +1425,13 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         val_type = TYPEOF(val);
     }
 
-    if (nsyms > 1) {
-        dims = getAttrib (val, R_DimSymbol);
-        if (length(dims) != nsyms)
-            error (_("incorrect number of dimensions"));
-        INC_NAMEDCNT(dims);
-    }
-
     dbg = RDEBUG(rho);
     bgn = BodyHasBraces(body);
 
-    PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
-    PROTECT_WITH_INDEX(bcell = R_NilValue, &bix);
+    if (nsyms == 1) {
+        PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
+        PROTECT_WITH_INDEX(bcell = R_NilValue, &bix);
+    }
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
@@ -1419,14 +1441,42 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     case CTXT_NEXT: goto for_next;
     }
 
-    /* mimic previous behaviour in initializing vars to R NULL. */
+    /* Loop variables are initialized to R NULL. */
+
     int j;
-    for (j = 0; j < nsyms; j++) { 
-        set_var_in_frame (CAR(syms), R_NilValue, rho, TRUE, 3);
-        syms = CDR(syms);
+    SEXP s;
+    for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) { 
+        set_var_in_frame (CAR(s), R_NilValue, rho, TRUE, 3);
     }
 
+    /* MAIN LOOP. */
+
     for (i = 0; i < n; i++) {
+
+        /* Handle multi-dimensional "along". */
+
+        if (nsyms > 1) {
+
+            for (j = 0; INTEGER(indexes)[j] == INTEGER(dims)[j]; j++) {
+                if (j == nsyms-1) abort();
+                INTEGER(indexes)[j] = 1;
+            }
+            INTEGER(indexes)[j] += 1;
+
+            for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {
+                SEXP v = VECTOR_ELT(ixvals,j);
+                if (v==R_NilValue || NAMEDCNT_GT_1(v) || ATTRIB(v)!=R_NilValue){
+                    v = allocVector(INTSXP,1);
+                    SET_VECTOR_ELT(ixvals,j,v);
+                }
+                *INTEGER(v) = INTEGER(indexes)[j];
+                set_var_in_frame (CAR(s), v, rho, TRUE, 3);
+            }
+            
+            goto do_iter;
+        }
+
+        /* Handle "in" and univariate "along". */
 
 	switch (val_type) {
 
@@ -1482,6 +1532,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             REPROTECT(bcell = R_binding_cell, bix);
         }
 
+    do_iter: ;
+
         DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 
         evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
@@ -1491,8 +1543,15 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
  for_break:
     endcontext(&cntxt);
-    DEC_NAMEDCNT(val);
-    UNPROTECT(5);
+    if (!along && !is_seq) {
+        DEC_NAMEDCNT(val);
+        UNPROTECT(1);  /* val */
+    }
+    if (nsyms == 1)
+        UNPROTECT(2);  /* v, bcell */
+    else 
+        UNPROTECT(3);  /* dims, indexes, ixvals */
+    UNPROTECT(2);      /* rho, args */
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
 }
