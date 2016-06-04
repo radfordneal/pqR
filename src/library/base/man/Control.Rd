@@ -20,11 +20,14 @@
   language.  They are all \link{reserved} words.
 }
 \usage{
-if(cond) expr
-if(cond) cons.expr  else  alt.expr
+if (cond) expr
+if (cond) cons.expr  else  alt.expr
 
-for(var in seq) expr
-while(cond) expr
+for (var in seq) expr
+for (var along vector) expr
+for (var1, var2 along matrix) expr
+for (var1, var2, var3 along array) expr
+while (cond) expr
 repeat expr
 break
 next
@@ -35,10 +38,16 @@ next
     only the first element is used.  Other types are coerced to logical
     if possible, ignoring any class.
   }
-  \item{var}{A syntactical name for a variable.}
+  \item{var, var1, var2, var3}{A syntactical name for a variable.}
   \item{seq}{An expression evaluating to a vector (including a list and
     an \link{expression}) or to a \link{pairlist} or \code{NULL}.  A
     factor value will be coerced to a character vector.}
+  \item{vector}{Also an expression evaluating to a vector of some length 
+                (or actually anything, with non-vectors consider to have
+                 length one).}
+  \item{matrix}{An expression evaluating to a matrix.}
+  \item{array}{An expression evaluating to an array with some number of
+               dimensions (three dimensions in the example above).}
   \item{expr, cons.expr, alt.expr}{
     An \emph{expression} in a formal sense.  This is either a
     simple expression or a so called \emph{compound expression}, usually
@@ -53,20 +62,35 @@ next
   \code{next} apply only to the innermost of nested loops.
   
   Note that it is a common mistake to forget to put braces (\code{\{ .. \}})
-  around your statements, e.g., after \code{if(..)} or \code{for(....)}.
-  In particular, you should not have a newline between \code{\}} and 
-  \code{else} to avoid a syntax error in entering a \code{if ... else}
-  construct at the keyboard or via \code{source}.
+  around your statements, e.g., after \code{if (..)} or \code{for (....)}.
   For that reason, one (somewhat extreme) attitude of defensive programming
   is to always use braces, e.g., for \code{if} clauses.
 
-  The \code{seq} in a \code{for} loop is evaluated at the start of
-  the loop; changing it subsequently does not affect the loop.  If
+  To avoid a syntax error in entering a \code{if ... else}
+  construct at the keyboard or via \code{source}, you need to avoid
+  putting a newline between the end of \code{cons.expr} (often a \code{\}})
+  and \code{else}.
+
+  The \code{seq}, \code{vector}, \code{matrix}, or \code{array} in a 
+  \code{for} loop is evaluated at the start of
+  the loop; changing it subsequently does not affect the loop.  
+
+  For the \code{in} variant of \code{for}, if
   \code{seq} has length zero the body of the loop is skipped. Otherwise the
   variable \code{var} is assigned in turn the value of each element of
-  \code{seq}. You can assign to \code{var} within the body of the loop,
+  \code{seq}. You can assign to \code{var} (or remove it) within the body of 
+  the loop,
   but this will not affect the next iteration.  When the loop terminates,
   \code{var} remains as a variable containing its latest value.
+
+  For the \code{along} variant of \code{for}, if a single variable is
+  given before \code{along}, the loop is performed with this variable set 
+  to integer values from 1 to the length of \code{vector}.  If more than one 
+  variable is given before \code{along}, the \code{matrix} or \code{array} value
+  must have a dimension attribute with the number of dimensions matching
+  the number of variables given.  The loop is done for all combinations
+  of values for these variables, in sequence from 1 to the corresponding
+  dimension, with the first variable varying the fastest.
 
 }
 \value{
@@ -75,11 +99,15 @@ next
   \code{else}).
 
   \code{for}, \code{while} and \code{repeat} return \code{NULL} invisibly.
-  \code{for} sets \code{var} to the last used element of \code{seq},
-  or to \code{NULL} if it was of length zero.
+
+  \code{for} leaves the variables it controls set to the values they had
+  at the end of the last iteration of the loop, or to \code{NULL} if the loop
+  was done zero times.
 
   \code{break} and \code{next} do not return a value as they transfer
-  control within the loop.
+  control within the loop.  When \code{break} terminates a \code{for} loop,
+  the variables controlled by the \code{for} loop will have the values
+  they had at the time of the \code{break}.
 }
 
 \references{
@@ -94,13 +122,41 @@ next
   \code{\link{ifelse}}, \code{\link{switch}} for other ways to control flow.
 }
 \examples{
-for(i in 1:5) print(1:i)
-for(n in c(2,5,10,20,50)) {
+for (i in 1:5) print(1:i)
+for (n in c(2,5,10,20,50)) {
    x <- stats::rnorm(n)
    cat(n,":", sum(x^2),"\n")
 }
 f = factor(sample(letters[1:5], 10, replace=TRUE))
-for( i in unique(f) ) print(i)
+for (i in unique(f)) print(i)
+
+s <- character()
+for (i along letters) s[i] <- paste0(".",letters[i])
+print(s)
+stopifnot(identical(s,paste0(".",letters)))
+
+M <- matrix(0,nrow=4,ncol=5)
+for (i, j along M) M[i,j] <- i*j
+print(M)
+stopifnot(identical(M,outer(1:4,1:5)))
+print(c(i,j))
+stopifnot(identical(c(i,j),c(4L,5L)))
+
+# Some senseless operations for demonstration purposes...
+v <- c(7,0,-1,3,-2,0,1,-3,9)
+for (i along v) {
+    if (v[i] < 0) {
+        v[i] <- -v[i]
+        next
+    }
+    if (v[i] == 1)
+        break
+    v[i] <- v[i] + if (v[i] < 5) 2 else 1
+}
+print(v) 
+stopifnot(identical(v,c(8,2,1,5,2,2,1,-3,9)))
+print(i)
+stopifnot(identical(i,7L))
 }
 \keyword{programming}
 \keyword{iteration}

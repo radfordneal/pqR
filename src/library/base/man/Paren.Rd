@@ -19,7 +19,11 @@
 
   Effectively, \code{(} is semantically equivalent to the identity
   \code{function(x) x}, whereas \code{\{} is slightly more interesting,
-  see examples.
+  see examples.  However, unless the \code{keep.parens} option is
+  set, parentheses necessary to over-ride operator precedence (except 
+  when inside a formula) are eliminated from the internal representation 
+  of an expression.  Such necessary parentheses are automatically
+  provided when an expression is deparsed.
 }
 \value{
   For \code{(}, the result of evaluating the argument.  This has
@@ -38,6 +42,8 @@
   the \R language itself.
 
   \code{\link{Syntax}} for operator precedence.
+
+  \code{deparse}.
 }
 \examples{
 f <- get("(")
