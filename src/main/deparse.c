@@ -933,7 +933,9 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(s), d);
             }
-            else if (nargs == 3 && op == R_ForSymbol) {
+            else if (nargs == 3 && op == R_ForSymbol 
+                                && isSymbol(CAR(s))
+                                && TAG(CDR(s))==R_NilValue) {
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 print2buff(" in ", d);
@@ -943,6 +945,25 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 if (np) print2buff(")", d);
                 print2buff(") ", d);
                 deparse2buff(CADR(CDR(s)), d);
+            }
+            else if (nargs >= 3 && op == R_ForSymbol 
+                                && isSymbol(CAR(s))
+                                && TAG(nthcdr(s,nargs-2))==R_AlongSymbol) {
+                print2buff("for (", d);
+                deparse2buff(CAR(s), d);
+                SEXP t = CDR(s);
+                while (CDDR(t) != R_NilValue) {
+                    print2buff(",", d);
+                    deparse2buff(CAR(t), d);
+                    t = CDR(t);
+                }
+                print2buff(" along ", d);
+                int np = needsparens_arg(CAR(t));
+                if (np) print2buff("(", d);
+                deparse2buff(CAR(t), d);
+                if (np) print2buff(")", d);
+                print2buff(") ", d);
+                deparse2buff(CADR(t), d);
             }
             else if (nargs == 1 && op == R_RepeatSymbol) {
                 print2buff("repeat ", d);
