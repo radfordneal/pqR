@@ -125,3 +125,41 @@ class(a) <- "fred"
 seq.fred <- function (x, y) deparse(substitute(y))
 seq(a,1+2)      # should both be "1 + 2"
 seq.int(a,1+2)  # ...  but this one used to be "3"
+
+
+## Tests of 'for', including 'along', mostly like in help("for"), but 
+## here using stopifnot.
+
+s <- character()
+for (i in s) 0
+print(i)
+stopifnot(identical(i,NULL))
+
+s <- character()
+for (i along letters) s[i] <- paste0(".",letters[i])
+print(s)
+stopifnot(identical(s,paste0(".",letters)))
+print(i)
+stopifnot(identical(i,length(letters)))
+
+M <- matrix(0,nrow=4,ncol=5)
+for (i, j along M) M[i,j] <- i*j
+print(M)
+stopifnot(identical(M,outer(1:4,1:5)))
+print(c(i,j))
+stopifnot(identical(c(i,j),c(4L,5L)))
+
+v <- c(7,0,-1,3,-2,0,1,-3,9)
+for (i along v) {
+    if (v[i] < 0) {
+        v[i] <- -v[i]
+        next
+    }
+    if (v[i] == 1)
+        break
+    v[i] <- v[i] + if (v[i] < 5) 2 else 1
+}
+print(v) 
+stopifnot(identical(v,c(8,2,1,5,2,2,1,-3,9)))
+print(i)
+stopifnot(identical(i,7L))

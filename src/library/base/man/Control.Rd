@@ -132,15 +132,15 @@ for (i in unique(f)) print(i)
 
 s <- character()
 for (i along letters) s[i] <- paste0(".",letters[i])
-print(s)
-stopifnot(identical(s,paste0(".",letters)))
+
+identical(s,paste0(".",letters))  # These should be TRUE
+identical(i,length(letters))
 
 M <- matrix(0,nrow=4,ncol=5)
 for (i, j along M) M[i,j] <- i*j
-print(M)
-stopifnot(identical(M,outer(1:4,1:5)))
-print(c(i,j))
-stopifnot(identical(c(i,j),c(4L,5L)))
+
+identical(M,outer(1:4,1:5))  # These should be TRUE
+identical(c(i,j),c(4L,5L))
 
 # Some senseless operations for demonstration purposes...
 v <- c(7,0,-1,3,-2,0,1,-3,9)
@@ -153,10 +153,9 @@ for (i along v) {
         break
     v[i] <- v[i] + if (v[i] < 5) 2 else 1
 }
-print(v) 
-stopifnot(identical(v,c(8,2,1,5,2,2,1,-3,9)))
-print(i)
-stopifnot(identical(i,7L))
+
+identical(v,c(8,2,1,5,2,2,1,-3,9))  # These should be TRUE
+identical(i,7L)
 }
 \keyword{programming}
 \keyword{iteration}
