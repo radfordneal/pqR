@@ -163,3 +163,51 @@ print(v)
 stopifnot(identical(v,c(8,2,1,5,2,2,1,-3,9)))
 print(i)
 stopifnot(identical(i,7L))
+
+
+## Special 'for' tests about when loop variables are modified, or removed,
+## or have contents referenced from elsewhere.
+
+for (i in 1:5) {
+    print(i)
+    i <- 10
+}
+
+for (i in 1:5) {
+    print(i)
+    if (i==3) j <- i
+}
+
+print(i)
+print(j)
+
+for (i in 1:5) {
+    print(i)
+    rm(i)
+    i <- 10
+}
+
+print(i)
+
+M <- matrix(0,3,2)
+
+for (i,j along M) {
+    print(c(i,j))
+    i <- 1000
+    j <- 2000
+}
+
+print(c(i,j))
+
+for (i, j along M) {
+    print(c(i,j))
+    rm(i,j)
+}
+
+for (i, j along M) {
+    print(c(i,j))
+    if (i==2 && j==2) { a <- i; b <- j }
+}
+
+print(c(i,j))
+print(c(a,b))
