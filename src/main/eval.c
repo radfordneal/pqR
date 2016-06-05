@@ -1326,13 +1326,15 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Need to declare volatile variables whose values are relied on
-       after for_next or for_break longjmps and might change between
-       the setjmp and longjmp calls. Theoretically this does not
-       include n and bgn, but gcc -O2 -Wclobbered warns about these so
-       to be safe we declare them volatile as well. */
+       after for_next or for_break longjmps and that might change between
+       the setjmp and longjmp calls.  Theoretically this does not include
+       n, bgn, and some others, but gcc -O2 -Wclobbered warns about some, 
+       so to be safe we declare them volatile as well. */
 
     volatile int i, n, bgn;
-    volatile SEXP v, val, nval, bcell, indexes, ixvals;
+    volatile SEXP val, nval;
+    volatile SEXP v, bcell;                /* for use with one 'for' variable */
+    volatile SEXP indexes, ixvals, bcells; /* for use with >1 'for' variables */
     int dbg, val_type;
     SEXP a, syms, sym, body, dims;
     RCNTXT cntxt;
@@ -1396,6 +1398,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             for (int j = 1; j < nsyms; j++) 
                 INTEGER(indexes)[j] = 1;
             PROTECT(ixvals = allocVector(VECSXP,nsyms));
+            PROTECT(bcells = allocVector(VECSXP,nsyms));
         }
         n = length(val);
     }
@@ -1457,11 +1460,16 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
         if (nsyms > 1) {
 
+            /* Increment to next combination of indexes. */
+
             for (j = 0; INTEGER(indexes)[j] == INTEGER(dims)[j]; j++) {
                 if (j == nsyms-1) abort();
                 INTEGER(indexes)[j] = 1;
             }
             INTEGER(indexes)[j] += 1;
+
+            /* Make sure all 'for' variables are set to the right index,
+               using records of the binding cells used for speed. */
 
             for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {
                 SEXP v = VECTOR_ELT(ixvals,j);
@@ -1469,8 +1477,12 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
                     v = allocVector(INTSXP,1);
                     SET_VECTOR_ELT(ixvals,j,v);
                 }
-                *INTEGER(v) = INTEGER(indexes)[j];
-                set_var_in_frame (CAR(s), v, rho, TRUE, 3);
+                INTEGER(v)[0] = INTEGER(indexes)[j];
+                SEXP bcell = VECTOR_ELT(bcells,j);
+                if (bcell == R_NilValue || CAR(bcell) != v) {
+                    set_var_in_frame (CAR(s), v, rho, TRUE, 3);
+                    SET_VECTOR_ELT(bcells,j,R_binding_cell);
+                }
             }
             
             goto do_iter;
@@ -1550,7 +1562,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (nsyms == 1)
         UNPROTECT(2);  /* v, bcell */
     else 
-        UNPROTECT(3);  /* dims, indexes, ixvals */
+        UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
     UNPROTECT(2);      /* rho, args */
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
