@@ -64,7 +64,7 @@ print.by <- function(x, ..., vsep)
     lapply(X = seq_along(x), FUN = function(i, x, vsep, ...) {
         if(i != 1L && !is.null(vsep)) cat(vsep, "\n")
         ii <- i - 1L
-        for(j in seq_along(dn)) {
+        for(j along dn) {
             iii <- ii %% d[j] + 1L; ii <- ii %/% d[j]
             cat(dnn[j], ": ", dn[[j]][iii], "\n", sep = "")
         }

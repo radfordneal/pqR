@@ -21,7 +21,7 @@ labels.default <- function(object, ...)
     if(length(d <- dim(object))) {	# array or data frame
 	nt <- dimnames(object)
 	if(is.null(nt)) nt <- vector("list", length(d))
-	for(i in seq_along(d))
+	for(i along d)
 	    if(!length(nt[[i]])) nt[[i]] <- as.character(seq_len(d[i]))
     } else {
 	nt <- names(object)

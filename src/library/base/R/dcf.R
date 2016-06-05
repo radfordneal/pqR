@@ -170,7 +170,7 @@ function(x, file = "", append = FALSE,
 
     foldable <- is.na(match(nmx, keep.white))
 
-    for(j in seq_along(x)) {
+    for(j along x) {
         xj <- x[[j]]
         if(is.atomic(xj)) {
             ## For atomic ("character") columns, things are simple ...

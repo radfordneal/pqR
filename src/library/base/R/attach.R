@@ -25,7 +25,7 @@ attach <- function(what, pos = 2, name = deparse(substitute(what)),
                        ".packageName", ".noGenerics", ".required",
                        ".no_S3_generics", ".requireCachedGenerics")
         sp <- search()
-        for (i in seq_along(sp)) {
+        for (i along sp) {
             if (identical(env, as.environment(i))) {
                 db.pos <- i
                 break

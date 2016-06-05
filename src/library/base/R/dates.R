@@ -461,7 +461,7 @@ split.Date <-
 function(x, f, drop = FALSE, ...)
 {
     y <- split.default(as.integer(x), f, drop = drop)
-    for(i in seq_along(y)) class(y[[i]]) <- "Date"
+    for(i along y) class(y[[i]]) <- "Date"
     y
 }
 

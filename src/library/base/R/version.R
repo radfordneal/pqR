@@ -151,7 +151,7 @@ function(x, base = NULL)
     if(!is.numeric(base)) stop("wrong argument")
     lens <- attr(x, "lens")
     y <- vector("list", length = length(x))
-    for(i in seq_along(x)) {
+    for(i along x) {
         n <- lens[i]
         encoded <- x[i]
         decoded <- integer(n)

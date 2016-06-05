@@ -443,7 +443,7 @@ data.frame <-
             ## make some attempt to recycle column i
             xi <- unclass(xi) # avoid data-frame methods
             fixed <- TRUE
-            for(j in seq_along(xi)) {
+            for(j along xi) {
                 xi1 <- xi[[j]]
                 if(is.vector(xi1) || is.factor(xi1))
                     xi[[j]] <- rep(xi1, length.out = nr)
@@ -617,7 +617,7 @@ data.frame <-
         rows <- attr(xx, "row.names")
         i <- pmatch(i, rows, duplicates.ok = TRUE)
     }
-    for(j in seq_along(x)) {
+    for(j along x) {
         xj <- xx[[ sxx[j] ]]
         ## had drop = drop prior to 1.8.0
         x[[j]] <- if(length(dim(xj)) != 2L) xj[i] else xj[i, , drop = FALSE]
@@ -849,7 +849,7 @@ data.frame <-
 	## value <- as.data.frame(value)
         value <- unclass(value) # to avoid data frame indexing
         lens <- vapply(value, NROW, 1L)
-        for(k in seq_along(lens)) {
+        for(k along lens) {
             N <- lens[k]
             if(n != N && length(dim(value[[k]])) == 2L)
                 stop(gettextf("replacement element %d is a matrix/data frame of %d rows, need %d", k, N, n),
@@ -1455,7 +1455,7 @@ Ops.data.frame <- function(e1, e2 = NULL)
                                     rep.int(nrow(e2), ncol(e2))))
 	}
     }
-    for(j in seq_along(cn)) {
+    for(j along cn) {
 	left <- if(!lscalar) e1[[j]] else e1
 	right <-if(!rscalar) e2[[j]] else e2
 	value[[j]] <- eval(f)

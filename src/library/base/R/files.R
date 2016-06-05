@@ -45,7 +45,7 @@ file.show <-
     if(l10n_info()[["UTF-8"]] && encoding == "UTF-8") encoding <- ""
     if(l10n_info()[["Latin-1"]] && encoding == "latin1") encoding <- ""
     if(!is.na(encoding) && encoding != "") {
-        for(i in seq_along(files)) {
+        for(i along files) {
             f <- files[i]
             tf <- tempfile()
             tmp <- readLines(f, warn = FALSE)

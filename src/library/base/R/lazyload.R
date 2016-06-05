@@ -56,7 +56,7 @@ lazyLoadDBexec <- function(filebase, fun, filter)
     vars <- names(map$variables)
     rvars <- names(map$references)
     compressed <- map$compressed
-    for (i in seq_along(rvars))
+    for (i along rvars)
         set(rvars[i], map$references[[i]], env)
     envenv <- mkenv()
     envhook <- function(n) {
@@ -78,7 +78,7 @@ lazyLoadDBexec <- function(filebase, fun, filter)
             else
                 parent.env(e) <- data$enclos
             vars <- names(data$bindings)
-            for (i in seq_along(vars))
+            for (i along vars)
                 set(vars[i], data$bindings[[i]], e)
             if (! is.null(data$attributes))
                 attributes(e) <-data$attributes

@@ -491,7 +491,7 @@ loadNamespace <- function (package, lib.loc = NULL,
         ## load any dynamic libraries
         dlls <- list()
         dynLibs <- nsInfo$dynlibs
-        for (i in seq_along(dynLibs)) {
+        for (i along dynLibs) {
             lib <- dynLibs[i]
             dlls[[lib]]  <- library.dynam(lib, package, package.lib)
                assignNativeRoutines(dlls[[lib]], lib, env,
@@ -635,13 +635,13 @@ loadNamespace <- function (package, lib.loc = NULL,
                 pm <- allGenerics[!(allGenerics %in% expMethods)]
                 if(length(pm)) {
                     prim <- logical(length(pm))
-                    for(i in seq_along(prim)) {
+                    for(i along prim) {
                         f <- methods:::getFunction(pm[[i]], FALSE, FALSE, ns)
                         prim[[i]] <- is.primitive(f)
                     }
                     expMethods <- c(expMethods, pm[prim])
                 }
-                for(i in seq_along(expMethods)) {
+                for(i along expMethods) {
                     mi <- expMethods[[i]]
                     if(!(mi %in% exports) &&
                        exists(mi, envir = ns, mode = "function",
@@ -920,7 +920,7 @@ namespaceImportFrom <- function(self, ns, vars, generics, packages)
 }
 
 namespaceImportClasses <- function(self, ns, vars) {
-    for(i in seq_along(vars))
+    for(i along vars)
         vars[[i]] <- methods:::classMetaName(vars[[i]])
     namespaceImportFrom(self, asNamespace(ns), vars)
 }
@@ -943,7 +943,7 @@ namespaceImportMethods <- function(self, ns, vars) {
                       sQuote(pkg),
                       paste(vars[is.na(match(vars, allFuns))],
                             collapse = ", ")), call. = FALSE, domain = NA)
-    for(i in seq_along(allFuns)) {
+    for(i along allFuns) {
         ## import methods tables if asked for
         ## or if the corresponding generic was imported
         g <- allFuns[[i]]
@@ -1019,7 +1019,7 @@ namespaceExport <- function(ns, vars) {
                                          "previous exports '%s' are being replaced"),
                                 paste(sQuote(expnames[ex]), collapse = ", ")),
                         call. = FALSE, domain = NA)
-            for (i in seq_along(new))
+            for (i along new)
                 assign(expnames[i], intnames[i], envir = exports)
         }
         makeImportExportNames <- function(spec) {

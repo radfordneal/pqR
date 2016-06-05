@@ -19,7 +19,7 @@ conflicts <- function(where = search(), detail = FALSE)
     if(length(where) < 1L) stop("argument 'where' of length 0")
     z <- vector(length(where), mode="list")
     names(z) <- where
-    for(i in seq_along(where)) z[[i]] <- objects(pos = where[i])
+    for(i along where) z[[i]] <- objects(pos = where[i])
     all <- unlist(z, use.names=FALSE)
     dups <- duplicated(all)
     dups <- all[dups]

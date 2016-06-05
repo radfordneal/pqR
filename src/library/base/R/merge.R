@@ -152,7 +152,7 @@ merge.data.frame <-
         y <- y[c(m$yi, if(all.x) rep.int(1L, nxx), if(all.y) m$y.alone),
                -by.y, drop = FALSE]
         if(all.x)
-            for(i in seq_along(y))
+            for(i along y)
                 ## do it this way to invoke methods for e.g. factor
                 is.na(y[[i]]) <- (lxy+1L):(lxy+nxx)
 

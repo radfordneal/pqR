@@ -104,7 +104,7 @@ as.logical.factor <- function(x,...) as.logical(levels(x))[x]
 as.list.factor <- function(x,...)
 {
     res <- vector("list", length(x))
-    for(i in seq_along(x)) res[[i]] <- x[i]
+    for(i along x) res[[i]] <- x[i]
     res
 }
 
