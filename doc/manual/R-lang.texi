@@ -1374,11 +1374,9 @@ permitted.
 @R{} has three statements that provide explicit
 looping.@footnote{Looping is the repeated evaluation of a statement or
 block of statements.}  They are @code{for}, @code{while} and
-@code{repeat}.  The two built-in constructs, @code{next} and
-@code{break}, provide additional control over the evaluation.  Each of
-the three statements returns the value of the last statement that was
-evaluated.  It is possible, although uncommon, to assign the result of
-one of these statements to a symbol.  @R{} provides other functions for
+@code{repeat}, which may be used in conjunction with @code{next} and
+@code{break}.
+@R{} provides other functions for
 implicit looping such as @code{tapply}, @code{apply}, and @code{lapply}.
 In addition many operations, especially arithmetic ones, are vectorized
 so you may not need to use a loop.
@@ -1409,9 +1407,9 @@ loop.  The syntax of the @code{repeat} loop is
 repeat @var{statement}
 @end example
 
-When using @code{repeat}, @var{statement} must be a block statement.
-You need to both perform some computation and test whether or not to
-break from the loop and usually this requires two statements.
+When using @code{repeat}, @var{statement} will usually be a block statement,
+since you need to both perform some computation and test whether or not to
+break from the loop, and usually this requires two statements.
 
 @node while, for, repeat, Control structures
 @subsection while
@@ -1433,20 +1431,57 @@ where @var{statement1} is evaluated and if its value is @code{TRUE} then
 @subsection for
 @findex for
 
-The syntax of the @code{for} loop is
+There are two forms of the @code{for} loop.  The first is
 
 @example
 for ( @var{name} in @var{vector} )
-   @var{statement1}
+   @var{statement}
 @end example
 
 @noindent
 where @var{vector} can be either a vector or a list.  For each element
 in @var{vector} the variable @var{name} is set to the value of that
-element and @var{statement1} is evaluated.  A side effect is that the
-variable @var{name} still exists after the loop has concluded and it has
-the value of the last element of @var{vector} that the loop was
-evaluated for.
+element and @var{statement} is evaluated.  It is possible that @var{vector}
+will have length zero, in which case @var{statement} will not be
+evaluated even once.
+
+The second form (currently available only in pqR) sets a variable (or 
+variables) to the indexes of elements in a vector (or matrix, or array),
+rather than to the elements themselves.  For a vector, this form is
+
+@example
+for ( @var{name} along @var{vector} )
+   @var{statement}
+@end example
+
+This loop evaluates @var{statement} with @var{name} set to the integer
+values from 1 up to the length of @var{vector}. Here, @var{vector} can
+actually be anything, with objects like function closures regarded as
+having length one.  A matrix or higher-dimensional array can be regarded
+as a vector, with length equal to the total number of elements.
+
+For a matrix, the form is
+
+@example
+for ( @var{name1}, @var{name2} along @var{matrix} )
+   @var{statement}
+@end example
+
+The loop evaluates @var{statement} once for each element of @var{matrix},
+with @var{name1} set to the row index of the element and @var{name2} set
+to the column index, in order with the row index changing fastest (ie,
+down the first column, then down the second, etc.).
+
+For higher-dimensional arrays, more than two variables are used, corresponding
+to the indexes of the array.  They are each set to integer values from 1 to the
+corresponding array dimension, with the first variable changing most quickly,
+and the last most slowly.  The number of variables specified must match the
+number of dimensions in the array.
+
+The variable or variables controlled by a for loop will still exist
+after the loop has concluded, and will have the values they had at the
+end of the last iteration of the loop, or @code{NULL} if no iterations
+were done.
 
 @node switch,  , for, Control structures
 @subsection switch
