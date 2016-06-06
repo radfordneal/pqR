@@ -1,0 +1,2 @@
+Implement suppression of dimension dropping when
+a numeric subscript has a 1D dim attribute.
