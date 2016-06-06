@@ -252,6 +252,11 @@ SEXP allocArray(SEXPTYPE mode, SEXP dims)
 
 SEXP DropDims(SEXP x)
 {
+    return DropDimsNotSuppressed(x,NULL);
+}
+
+SEXP DropDimsNotSuppressed (SEXP x, int *suppress_drop)
+{
     SEXP dims, dimnames, newnames = R_NilValue;
     int i, n, ndims;
 
@@ -268,9 +273,14 @@ SEXP DropDims(SEXP x)
     ndims = LENGTH(dims);
 
     /* (2) Check whether there are redundant extents */
+
+    int keep_dim[ndims];  /* 1 for dimensions to keep, 0 for those to drop */
     n = 0;
-    for (i = 0; i < ndims; i++)
-	if (INTEGER(dims)[i] != 1) n++;
+    for (i = 0; i < ndims; i++) {
+	keep_dim[i] = INTEGER(dims)[i]!=1 || suppress_drop && suppress_drop[i];
+        n += keep_dim[i];
+    }
+        
     if (n == ndims) {
 	UNPROTECT(1); /* x */
 	return x;
@@ -285,7 +295,7 @@ SEXP DropDims(SEXP x)
 	if (dimnames != R_NilValue) {
 	    if(LENGTH(x) != 1) {
 		for (i = 0; i < LENGTH(dims); i++) {
-		    if (INTEGER(dims)[i] != 1) {
+		    if (keep_dim[i]) {
 			newnames = VECTOR_ELT(dimnames, i);
 			break;
 		    }
@@ -321,19 +331,18 @@ SEXP DropDims(SEXP x)
 	PROTECT(dnn = getAttrib(dimnames, R_NamesSymbol));
 	PROTECT(newdims = allocVector(INTSXP, n));
 	for (i = 0, n = 0; i < ndims; i++)
-	    if (INTEGER(dims)[i] != 1)
+	    if (keep_dim[i])
 		INTEGER(newdims)[n++] = INTEGER(dims)[i];
 	if (!isNull(dimnames)) {
 	    int havenames = 0;
 	    for (i = 0; i < ndims; i++)
-		if (INTEGER(dims)[i] != 1 &&
-		    VECTOR_ELT(dimnames, i) != R_NilValue)
+		if (keep_dim[i] && VECTOR_ELT(dimnames, i) != R_NilValue)
 		    havenames = 1;
 	    if (havenames) {
 		PROTECT(newnames = allocVector(VECSXP, n));
 		PROTECT(newnamesnames = allocVector(STRSXP, n));
 		for (i = 0, n = 0; i < ndims; i++) {
-		    if (INTEGER(dims)[i] != 1) {
+		    if (keep_dim[i]) {
 			if(!isNull(dnn))
 			    SET_STRING_ELT(newnamesnames, n,
 					   STRING_ELT(dnn, i));

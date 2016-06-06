@@ -371,7 +371,7 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
     if (sb != NULL) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
         SEXP d;
-        suppress_drop = whether_suppress_drop(sb);
+        if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
         PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
         n = length(indx);
     }
@@ -759,13 +759,13 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
     }
 
     if (s0 != NULL) {
-        suppress_drop_row = whether_suppress_drop(s0);
+        if (drop == NA_LOGICAL) suppress_drop_row = whether_suppress_drop(s0);
         PROTECT (sr = arraySubscript(0, s0, dim, getAttrib, (STRING_ELT), x));
         nprotect++;
         nrs = LENGTH(sr);
     }
 
-    suppress_drop_col = whether_suppress_drop(s1);
+    if (drop == NA_LOGICAL) suppress_drop_col = whether_suppress_drop(s1);
     PROTECT (sc = arraySubscript(1, s1, dim, getAttrib, (STRING_ELT), x));
     nprotect++;
     ncs = LENGTH(sc);
@@ -866,11 +866,12 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     SEXP dimnames, dimnamesnames, r, result;
     int mode = TYPEOF(x);
 
-    int *subs[k], indx[k], nsubs[k], offset[k];
+    int *subs[k], indx[k], nsubs[k], offset[k], suppress_drop[k];
     SEXP subv[k];
 
     n = 1; r = s;
     for (i = 0; i < k; i++) {
+        if (drop==NA_LOGICAL) suppress_drop[i] = whether_suppress_drop(CAR(r));
         PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
                                        (STRING_ELT), x));
         subs[i] = INTEGER(subv[i]);
@@ -887,6 +888,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     /* Check for out-of-bounds indexes.  Disabled, since it seems unnecessary,
        given that arraySubscript checks bounds. */
 
+#if 0
     for (j = 0; j < k; j++) {
         for (i = 0; i < nsubs[j]; i++) {
             jj = subs[j][i];
@@ -895,6 +897,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
             }
         }
     }
+#endif
 
     /* Vector to contain the returned values. */
 
@@ -1015,10 +1018,13 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     }
     UNPROTECT(1);
 
-    /* This was removed for matrices in 1998
-       copyMostAttrib(x, result); */
-    if (drop)
+    /* See if we need to drop any dimensions */
+
+    if (drop == TRUE)
 	DropDims(result);
+    else if (drop == NA_LOGICAL)
+        DropDimsNotSuppressed(result,suppress_drop);
+
     UNPROTECT(k+1);
     return result;
 }
