@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-2009   The R Core Team.
- *  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+ *  Modifications for pqR Copyright (c) 2014, 2015 Radford M. Neal.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -860,15 +860,15 @@ SEXP R_identC(SEXP e1, SEXP e2)
 SEXP R_getClassFromCache(SEXP class, SEXP table)
 {
     SEXP value;
-    if(TYPEOF(class) == STRSXP) {
+    if(TYPEOF(class) == STRSXP && LENGTH(class) > 0) {
 	SEXP package = PACKAGE_SLOT(class);
 	value = findVarInFrame(table, installChar(STRING_ELT(class, 0)));
 	if(value == R_UnboundValue)
 	    return R_NilValue;
-	else if(TYPEOF(package) == STRSXP) {
+	else if(TYPEOF(package) == STRSXP && LENGTH(package) == 1) {
 	    SEXP defPkg = PACKAGE_SLOT(value);
 	    /* check equality of package */
-	    if(TYPEOF(defPkg) == STRSXP && length(defPkg) ==1 &&
+	    if(TYPEOF(defPkg) == STRSXP && LENGTH(defPkg) == 1 &&
 	       STRING_ELT(defPkg,0) != STRING_ELT(package, 0))
 		return R_NilValue;
 	    else

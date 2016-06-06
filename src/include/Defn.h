@@ -458,7 +458,9 @@ typedef struct {
 #define SET_PRIMOFFSET(x,v) do { \
     SEXP setprim_ptr = (x); \
     int setprim_value = (v); \
-    setprim_ptr->sxpinfo.gp = setprim_value; \
+    /* special fudge because the S4 bit is actually looked at some places */ \
+    setprim_ptr->sxpinfo.gp = (setprim_ptr->sxpinfo.gp & (2*S4_OBJECT_MASK-1)) \
+                               | (setprim_value << (S4_OBJECT_BIT_POS+1)); \
     setprim_ptr->u.primsxp.primsxp_cfun = \
       (void *(*)()) R_FunTab[setprim_value].cfun; \
     setprim_ptr->u.primsxp.primsxp_fast_cfun = 0; \
@@ -476,7 +478,7 @@ typedef struct {
         = R_FunTab[setprim_value].eval/10000; \
 } while (0)
 
-#define PRIMOFFSET(x)	((x)->sxpinfo.gp)
+#define PRIMOFFSET(x)	((x)->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
 
 #define PRIMFUN(x)	((CCODE)((x)->u.primsxp.primsxp_cfun))
 #define PRIMFUNV(x)	((CCODEV)((x)->u.primsxp.primsxp_cfun))

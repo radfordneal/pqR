@@ -203,15 +203,18 @@ AC_DEFUN([_R_PROG_MAKEINFO_VERSION],
 [AC_CACHE_CHECK([whether makeinfo version is at least 4.7],
                 [r_cv_prog_makeinfo_v4],
 [makeinfo_version=`${MAKEINFO} --version | \
-  grep "^makeinfo" | sed 's/[[^)]]*) \(.*\)/\1/'`
+  grep "(GNU texinfo)" | sed 's/[[^)]]*) \(.*\)/\1/'`
 makeinfo_version_maj=`echo ${makeinfo_version} | cut -f1 -d.`
 makeinfo_version_min=`echo ${makeinfo_version} | \
-  cut -f2 -d. | tr -dc '0123456789.' `
+  cut -f2 -d. | tr -dc '0123456789' `
 if test -z "${makeinfo_version_maj}" \
      || test -z "${makeinfo_version_min}"; then
   r_cv_prog_makeinfo_v4=no
-elif test ${makeinfo_version_maj} -lt 4 \
-     || test ${makeinfo_version_min} -lt 7; then
+elif test ${makeinfo_version_maj} -lt 4; then
+  r_cv_prog_makeinfo_v4=no
+elif test ${makeinfo_version_maj} -gt 4; then
+  r_cv_prog_makeinfo_v4=yes
+elif test ${makeinfo_version_min} -lt 7; then
   r_cv_prog_makeinfo_v4=no
 else
   r_cv_prog_makeinfo_v4=yes
