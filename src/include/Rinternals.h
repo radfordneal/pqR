@@ -1075,6 +1075,7 @@ void Rf_defineVar(SEXP, SEXP, SEXP);
 SEXP Rf_dimgets(SEXP, SEXP);
 SEXP Rf_dimnamesgets(SEXP, SEXP);
 SEXP Rf_DropDims(SEXP);
+SEXP Rf_DropDimsNotSuppressed(SEXP,int*);
 SEXP Rf_duplicate(SEXP);
 SEXP Rf_duplicated(SEXP, Rboolean);
 int Rf_ep_match_strings(const char *, const char *);
@@ -1406,6 +1407,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define dimgets			Rf_dimgets
 #define dimnamesgets		Rf_dimnamesgets
 #define DropDims                Rf_DropDims
+#define DropDimsNotSuppressed   Rf_DropDimsNotSuppressed
 #define duplicate		Rf_duplicate
 #define duplicated		Rf_duplicated
 #define elt			Rf_elt

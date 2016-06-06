@@ -298,6 +298,19 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 }
 
 
+/* Check whether subscript is such that we suppress dropping dimensions 
+   when the drop argument is NA (the default). */
+
+static inline int whether_suppress_drop (SEXP sb)
+{
+    SEXP d;
+    return TYPEOF(sb) != LGLSXP 
+             && ATTRIB(sb) != R_NilValue
+             && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
+             && LENGTH(d) == 1;
+}
+
+
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
 static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
@@ -351,16 +364,16 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
         }
     }
 
-    /* Convert sb to a vector of integer subscripts (unless we have a range) */
+    /* Convert sb to a vector of integer subscripts (unless we have a range).
+       We suppress dropping when drop is NA when the index is not logical
+       and is a 1D array. */
 
     if (sb != NULL) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
         SEXP d;
+        if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
         PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
         n = length(indx);
-        suppress_drop = ATTRIB(sb) != R_NilValue 
-                         && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
-                         && LENGTH(d) == 1;
     }
 
     /* Allocate and extract the result. */
@@ -412,12 +425,13 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
 
   done:
     /* One-dimensional arrays should have their dimensions dropped only 
-       if the result has length one and drop is not FALSE. */
+       if the result has length one and drop TRUE or is NA_INTEGER without
+       the drop being suppressed by the index being a 1D array. */
 
     if (ndim == 1) {
         int len = length(result);
 
-        if (!drop || len > 1) {
+        if (len > 1 || drop == FALSE || drop == NA_INTEGER && suppress_drop) {
             SEXP attr, nm;
             PROTECT(result);
             PROTECT(attr = allocVector1INT());
@@ -716,9 +730,10 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
 {
-    SEXP attr, result, sr, sc;
+    SEXP dims, result, sr, sc;
     int start = 1, end = 0;
     int nr, nc, nrs = 0, ncs = 0;
+    int suppress_drop_row = 0, suppress_drop_col = 0;
     int nprotect = 0;
     int ii;
 
@@ -736,6 +751,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
         nrs = nr;
     }
     else if (seq) {
+        suppress_drop_row = LEVELS(s0);
         PROTECT(s0 = Rf_DecideVectorOrRange(s0,&start,&end,call));
         nprotect++;
         if (s0 == NULL)
@@ -743,14 +759,19 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
     }
 
     if (s0 != NULL) {
+        if (drop == NA_LOGICAL) suppress_drop_row = whether_suppress_drop(s0);
         PROTECT (sr = arraySubscript(0, s0, dim, getAttrib, (STRING_ELT), x));
         nprotect++;
         nrs = LENGTH(sr);
     }
 
+    if (drop == NA_LOGICAL) suppress_drop_col = whether_suppress_drop(s1);
     PROTECT (sc = arraySubscript(1, s1, dim, getAttrib, (STRING_ELT), x));
     nprotect++;
     ncs = LENGTH(sc);
+
+    if (nrs < 0 || ncs < 0)
+        abort();  /* shouldn't happend, but code was conditional before... */
 
     /* Check this does not overflow */
     if ((double)nrs * (double)ncs > R_LEN_T_MAX)
@@ -771,66 +792,68 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
 
     /* Set up dimensions attribute. */
 
-    if(nrs >= 0 && ncs >= 0) {
-	PROTECT(attr = allocVector(INTSXP, 2));
-        nprotect++;
-	INTEGER(attr)[0] = nrs;
-	INTEGER(attr)[1] = ncs;
-	setAttrib(result, R_DimSymbol, attr);
-    }
+    PROTECT(dims = allocVector(INTSXP, 2));
+    nprotect++;
+    INTEGER(dims)[0] = nrs;
+    INTEGER(dims)[1] = ncs;
+    setAttrib(result, R_DimSymbol, dims);
 
     /* The matrix elements have been transferred.  Now we need to */
     /* transfer the attributes.	 Most importantly, we need to subset */
     /* the dimnames of the returned value. */
 
-    if (nrs >= 0 && ncs >= 0) {
-	SEXP dimnames, dimnamesnames, newdimnames;
-	dimnames = getAttrib(x, R_DimNamesSymbol);
-	PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
+    SEXP dimnames, dimnamesnames, newdimnames;
+    dimnames = getAttrib(x, R_DimNamesSymbol);
+    PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
+    nprotect++;
+
+    if (!isNull(dimnames)) {
+        PROTECT(newdimnames = allocVector(VECSXP, 2));
         nprotect++;
-	if (!isNull(dimnames)) {
-            PROTECT(newdimnames = allocVector(VECSXP, 2));
-            nprotect++;
-            if (TYPEOF(dimnames) == VECSXP) {
-                if (VECTOR_ELT(dimnames,0) != R_NilValue) {
-                    SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
-                    if (s0 == NULL)
-                        ExtractRange (VECTOR_ELT(dimnames,0),
-                          VECTOR_ELT(newdimnames,0), start, end, call);
-                    else
-                        ExtractSubset(VECTOR_ELT(dimnames,0),
-                          VECTOR_ELT(newdimnames,0), sr, call);
-                }
-                if (VECTOR_ELT(dimnames,1) != R_NilValue) {
-                    SET_VECTOR_ELT (newdimnames, 1, allocVector(STRSXP, ncs));
-                    ExtractSubset(VECTOR_ELT(dimnames,1),
-                      VECTOR_ELT(newdimnames,1), sc, call);
-                }
+        if (TYPEOF(dimnames) == VECSXP) {
+            if (VECTOR_ELT(dimnames,0) != R_NilValue) {
+                SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
+                if (s0 == NULL)
+                    ExtractRange (VECTOR_ELT(dimnames,0),
+                      VECTOR_ELT(newdimnames,0), start, end, call);
+                else
+                    ExtractSubset(VECTOR_ELT(dimnames,0),
+                      VECTOR_ELT(newdimnames,0), sr, call);
             }
-            else {
-                if (CAR(dimnames) != R_NilValue) {
-                    SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
-                    if (s0 == NULL)
-                        ExtractRange (CAR(dimnames),
-                          VECTOR_ELT(newdimnames,0), start, end, call);
-                    else
-                        ExtractSubset(CAR(dimnames),
-                          VECTOR_ELT(newdimnames,0), sr, call);
-                }
-                if (CADR(dimnames) != R_NilValue) {
-                    SET_VECTOR_ELT (newdimnames, 1, allocVector(STRSXP, ncs));
-                    ExtractSubset(CADR(dimnames),
-                      VECTOR_ELT(newdimnames,1), sc, call);
-                }
+            if (VECTOR_ELT(dimnames,1) != R_NilValue) {
+                SET_VECTOR_ELT (newdimnames, 1, allocVector(STRSXP, ncs));
+                ExtractSubset(VECTOR_ELT(dimnames,1),
+                  VECTOR_ELT(newdimnames,1), sc, call);
             }
-            setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
-            setAttrib(result, R_DimNamesSymbol, newdimnames);
         }
+        else {
+            if (CAR(dimnames) != R_NilValue) {
+                SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
+                if (s0 == NULL)
+                    ExtractRange (CAR(dimnames),
+                      VECTOR_ELT(newdimnames,0), start, end, call);
+                else
+                    ExtractSubset(CAR(dimnames),
+                      VECTOR_ELT(newdimnames,0), sr, call);
+            }
+            if (CADR(dimnames) != R_NilValue) {
+                SET_VECTOR_ELT (newdimnames, 1, allocVector(STRSXP, ncs));
+                ExtractSubset(CADR(dimnames),
+                  VECTOR_ELT(newdimnames,1), sc, call);
+            }
+        }
+        setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
+        setAttrib(result, R_DimNamesSymbol, newdimnames);
     }
-    /*  Probably should not do this:
-    copyMostAttrib(x, result); */
-    if (drop)
-	DropDims(result);
+
+    /* Possibly drop the dimensions.  For compatibility, we always drop
+       either neither or both, though this doesn't really make sense. */
+
+    if (nrs == 1 || ncs == 1) {
+        if (drop == TRUE || drop == NA_LOGICAL 
+          && (nrs == 1 && !suppress_drop_row || ncs == 1 && !suppress_drop_col))
+            DropDims(result);
+    }
 
     UNPROTECT(nprotect);
     return result;
@@ -843,11 +866,12 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     SEXP dimnames, dimnamesnames, r, result;
     int mode = TYPEOF(x);
 
-    int *subs[k], indx[k], nsubs[k], offset[k];
+    int *subs[k], indx[k], nsubs[k], offset[k], suppress_drop[k];
     SEXP subv[k];
 
     n = 1; r = s;
     for (i = 0; i < k; i++) {
+        if (drop==NA_LOGICAL) suppress_drop[i] = whether_suppress_drop(CAR(r));
         PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
                                        (STRING_ELT), x));
         subs[i] = INTEGER(subv[i]);
@@ -864,6 +888,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     /* Check for out-of-bounds indexes.  Disabled, since it seems unnecessary,
        given that arraySubscript checks bounds. */
 
+#if 0
     for (j = 0; j < k; j++) {
         for (i = 0; i < nsubs[j]; i++) {
             jj = subs[j][i];
@@ -872,6 +897,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
             }
         }
     }
+#endif
 
     /* Vector to contain the returned values. */
 
@@ -992,10 +1018,13 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     }
     UNPROTECT(1);
 
-    /* This was removed for matrices in 1998
-       copyMostAttrib(x, result); */
-    if (drop)
+    /* See if we need to drop any dimensions */
+
+    if (drop == TRUE)
 	DropDims(result);
+    else if (drop == NA_LOGICAL)
+        DropDimsNotSuppressed(result,suppress_drop);
+
     UNPROTECT(k+1);
     return result;
 }

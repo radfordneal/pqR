@@ -24,7 +24,7 @@
 }
 \usage{
 x[i]
-x[i, j, \dots , drop = TRUE]
+x[i, j, \dots , drop = NA]
 x[[i, exact = TRUE]]
 x[[i, j, \dots, exact = TRUE]]
 x$name
@@ -68,9 +68,12 @@ x$i <- value
     of the object.
   }
   \item{drop}{For matrices and arrays.  If \code{TRUE} the result is
-    coerced to the lowest possible dimension (see the examples).  This
-    only works for extracting elements, not for the replacement.  See
-    \code{\link{drop}} for further details.
+    coerced to the lowest possible dimension (see the examples).  If
+    \code{FALSE}, all dimensions are kept.  If \code{NA} (the default),
+    dimensions of one are dropped unless the index for that dimension
+    was a 1D non-logical array.  This argument is relevant only for
+    extracting elements, not for replacement.  See \code{\link{drop}} for 
+    further details.
   }
   \item{exact}{Controls possible partial matching of \code{[[} when
     extracting by a character vector (for most objects, but see under
@@ -304,6 +307,7 @@ x[10]                 # the tenth element of x
 x <- x[-1]            # delete the 1st element of x
 m[1,]                 # the first row of matrix m
 m[1, , drop = FALSE]  # is a 1-row matrix
+m[array(1), ]         # also a 1-row matrix
 m[,c(TRUE,FALSE,TRUE)]# logical indexing
 m[cbind(c(1,2,1),3:1)]# matrix numeric index
 ci <- cbind(c("a", "b", "a"), c("A", "C", "B"))
