@@ -359,8 +359,7 @@ $allowed
 [10,] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
 > 
 > ## Don't show: 
-> stopifnot(r[] == r,
-+           identical(r[3:5], colors()[3:5]))
+> stopifnot(identical(r[3:5], colors()[3:5]))
 > r[2:4] <- "black"
 > stopifnot(identical(r[1:4, 1], as.raster(c("white", rep("black",3)))))
 > ## End Don't show
@@ -3527,7 +3526,7 @@ $zlab
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.244 0.012 1.261 0 0 
+Time elapsed:  1.248 0.024 1.273 0 0 
 > grDevices::dev.off()
 null device 
           1 
