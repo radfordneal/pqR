@@ -784,7 +784,7 @@ the first).  Here `most' means all except the @code{names}, @code{dim}
 and @code{dimnames} which are set appropriately by the code for the
 operator.
 
-Subsetting (other than by an empty index) generally drops all attributes
+Subsetting generally drops all attributes
 except @code{names}, @code{dim} and @code{dimnames} which are reset as
 appropriate.  On the other hand, subassignment generally preserves
 attributes even if the length is changed.  Coercion drops all
@@ -1651,7 +1651,7 @@ x$"a"
 For vectors and matrices the @code{[[} forms are rarely used, although
 they have some slight semantic differences from the @code{[} form (e.g.
 it drops any @code{names} or @code{dimnames} attribute, and that partial
-matching is used for character indices).  When indexing
+matching can be used for character indices).  When indexing
 multi-dimensional structures with a single index, @code{x[[i]]} or
 @code{x[i]} will return the @code{i}th sequential element of @code{x}.
 
@@ -1721,15 +1721,16 @@ selected values of @code{x} are those for which @code{i} is @code{TRUE}.
 @item
 @strong{Character}.  The strings in @code{i} are matched against the
 names attribute of @code{x} and the resulting integers are used.  For
-@code{[[} and @code{$} partial matching is used if exact matching fails,
+@code{$} and @code{[[} (if enabled) partial matching is used if exact matching
+fails,
 so @code{x$aa} will match @code{x$aabb} if @code{x} does not contain a component
 named @code{"aa"} and @code{"aabb"} is the only name which has prefix
 @code{"aa"}.  For @code{[[}, partial matching can be controlled via the
-@code{exact} argument which defaults to @code{NA} indicating that
-partial matching is allowed, but should result in a warning when it
-occurs.  Setting @code{exact} to @code{TRUE} prevents partial matching
-from occurring, a @code{FALSE} value allows it and does not issue any
-warnings.  Note that @code{[} always requires an exact match.  The string
+@code{exact} argument which defaults to @code{TRUE} indicating that
+partial matching is not allowed.
+Setting @code{exact} to @code{FALSE} value allows it, and setting
+it to @code{NA} allows it but with a warning.  Note that @code{[} always 
+requires an exact match.  The string
 @code{""} is treated specially: it indicates `no name' and matches no
 element (not even those without a name).  Note that partial matching is
 only used when extracting and not when replacing.
@@ -1817,18 +1818,24 @@ present, as had the structure been one-dimensional.
 
 If an indexing operation causes the result to have one of its extents of
 length one, as in selecting a single slice of a three-dimensional matrix
-with (say) @code{m[2, , ]}, the corresponding dimension is generally
+with (say) @code{m[2, , ]}, the corresponding dimension is sometimes
 dropped from the result.  If a single-dimensional structure results, a
-vector is obtained.  This is occasionally undesirable and can be turned
-off by adding the @samp{drop = FALSE} to the indexing operation.  Notice
-that this is an additional argument to the @code{[} function and doesn't
-add to the index count.  Hence the correct way of selecting the first
-row of a matrix as a @math{1} by @math{n} matrix is @code{m[1, , drop =
-FALSE]}.  Forgetting to disable the dropping feature is a common cause
-of failure in general subroutines where an index occasionally, but not
-usually has length one.  This rule still applies to a one-dimensional
-array, where any subsetting will give a vector result unless @samp{drop
-= FALSE} is used.
+vector is obtained.  This dropping is always done when @samp{drop = TRUE} 
+is added to the indexing operation, and is never done if @samp{drop = FALSE}
+is added.  The default is @samp{drop = NA}, in which case dimensions
+of size one are dropped unless the indexing expression was a non-logical
+one-dimensional array.
+
+Hence two correct ways of selecting the first row of a matrix as a
+@math{1} by @math{n} matrix are @code{m[1, , drop = FALSE]} and
+@code{m[array(1), ]}.  Forgetting to disable the dropping feature is a
+common cause of failure in general subroutines where an index
+occasionally, but not usually has length one.  This rule still applies
+to a one-dimensional array, where any subsetting will give a vector
+result unless (for example) @samp{drop = FALSE} is used.
+
+Notice that @code{drop} is an additional argument to the @code{[} 
+function and doesn't add to the index count.  
 
 Notice that vectors are distinct from one-dimensional arrays in that the
 latter have @code{dim} and @code{dimnames} attributes (both of length
