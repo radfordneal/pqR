@@ -300,40 +300,53 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP sb, int seq, SEXP call)
+static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
 {
-    int spi;
-    SEXP result, attrib, nattrib;
-    int start = 1, end = 0, n = 0;
     SEXP indx = R_NilValue;
+    SEXP result, dims, attrib, nattrib;
+    int start = 1, end = 0, n = 0;
+    int suppress_drop = 0;
+    int spi, ndim;
 
-    if (sb == R_MissingArg) 
-        return duplicate(x);
+    /* R_NilValue is handled specially, always returning R_NilValue. */
+
+    if (x == R_NilValue)
+        return R_NilValue;
 
     PROTECT_WITH_INDEX (sb, &spi);
-    attrib = getAttrib(x, R_DimSymbol);
+    dims = getAttrib(x, R_DimSymbol);
+    ndim = length(dims);
 
     /* Check for variant result, which will be a range rather than a vector, 
        and if we have a range, see whether it can be used directly, or must
        be converted to a vector to be handled as other vectors. */
 
     if (seq) {
+        suppress_drop = LEVELS(sb);  /* get flag for seq having a dim attr */
         REPROTECT(sb = Rf_DecideVectorOrRange(sb,&start,&end,call), spi);
         if (sb == NULL)
             n = end - start + 1;
     }
 
+    /* If subscript is missing, convert to range over entire vector. */
+
+    if (sb == R_MissingArg) {
+        start = 1;
+        end = length(x);
+        n = end;
+        sb = NULL;
+    }
+
     /* Check to see if we have special matrix subscripting. */
     /* If we do, make a real subscript vector and protect it. */
 
-    if (sb != NULL && isMatrix(sb) && isArray(x) 
-                   && ncols(sb) == length(attrib)) {
+    if (sb != NULL && isMatrix(sb) && isArray(x) && ncols(sb) == ndim) {
         if (isString(sb)) {
             sb = strmat2intmat(sb, GetArrayDimnames(x), call);
             REPROTECT(sb,spi);
         }
         if (isInteger(sb) || isReal(sb)) {
-            sb = mat2indsub(attrib, sb, call);
+            sb = mat2indsub(dims, sb, call);
             REPROTECT(sb,spi);
         }
     }
@@ -342,59 +355,88 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, SEXP call)
 
     if (sb != NULL) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
+        SEXP d;
         PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
         n = length(indx);
+        suppress_drop = ATTRIB(sb) != R_NilValue 
+                         && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
+                         && LENGTH(d) == 1;
     }
 
     /* Allocate and extract the result. */
 
-    if (x == R_NilValue) {
-        result = R_NilValue;
-        UNPROTECT(1 + (sb!=NULL));
-    }
-    else {
+    PROTECT (result = allocVector(TYPEOF(x),n));
+    if (sb==NULL)
+        ExtractRange(x, result, start, end, call);
+    else 
+        ExtractSubset(x, result, indx, call);
 
-        PROTECT (result = allocVector(TYPEOF(x),n));
+    if (((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
+        ( /* here we might have an array.  Use row names if 1D */
+            ndim == 1 &&
+            (attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue &&
+            (attrib = GetRowNames(attrib)) != R_NilValue
+            )
+        ) {
+        PROTECT(attrib);
+        PROTECT(nattrib = allocVector(TYPEOF(attrib), n));
         if (sb==NULL)
-            ExtractRange(x, result, start, end, call);
-        else 
-            ExtractSubset(x, result, indx, call);
+            ExtractRange(attrib, nattrib, start, end, call);
+        else
+            ExtractSubset(attrib, nattrib, indx, call);
+        setAttrib(result, R_NamesSymbol, nattrib);
+        UNPROTECT(2);
+    }
+    if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
+        TYPEOF(attrib) == VECSXP) {
+        PROTECT(attrib);
+        PROTECT(nattrib = allocVector(VECSXP, n));
+        if (sb==NULL)
+            ExtractRange(attrib, nattrib, start, end, call);
+        else
+            ExtractSubset(attrib, nattrib, indx, call);
+        setAttrib(result, R_SrcrefSymbol, nattrib);
+           UNPROTECT(2);
+    }
 
-	if (((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
-	    ( /* here we might have an array.  Use row names if 1D */
-		isArray(x) && LENGTH(getAttrib(x, R_DimNamesSymbol)) == 1 &&
-		(attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue &&
-		(attrib = GetRowNames(attrib)) != R_NilValue
-		)
-	    ) {
-            PROTECT(attrib);
-	    PROTECT(nattrib = allocVector(TYPEOF(attrib), n));
-	    if (sb==NULL)
-                ExtractRange(attrib, nattrib, start, end, call);
-            else
-                ExtractSubset(attrib, nattrib, indx, call);
-	    setAttrib(result, R_NamesSymbol, nattrib);
-	    UNPROTECT(2);
-	}
-	if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
-	    TYPEOF(attrib) == VECSXP) {
-            PROTECT(attrib);
-	    PROTECT(nattrib = allocVector(VECSXP, n));
-	    if (sb==NULL)
-                ExtractRange(attrib, nattrib, start, end, call);
-            else
-                ExtractSubset(attrib, nattrib, indx, call);
-	    setAttrib(result, R_SrcrefSymbol, nattrib);
-	    UNPROTECT(2);
-	}
-	/* FIXME:  this is wrong, because the slots are gone, so result is an invalid object of the S4 class! JMC 3/3/09 */
+    /* FIXME: this is wrong, because the slots are gone, so result is
+       an invalid object of the S4 class! JMC 3/3/09 */
 #ifdef _S4_subsettable
-	if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
-	    setAttrib(result, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
-	    SET_S4_OBJECT(result);
-	}
+    if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
+        setAttrib(result, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
+        SET_S4_OBJECT(result);
+    }
 #endif
-        UNPROTECT(2 + (sb!=NULL));
+
+    UNPROTECT(2 + (sb!=NULL));
+
+  done:
+    /* One-dimensional arrays should have their dimensions dropped only 
+       if the result has length one and drop is not FALSE. */
+
+    if (ndim == 1) {
+        int len = length(result);
+
+        if (!drop || len > 1) {
+            SEXP attr, nm;
+            PROTECT(result);
+            PROTECT(attr = allocVector1INT());
+            INTEGER(attr)[0] = len;
+            if((attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue) {
+                /* reinstate dimnames, include names of dimnames, which
+                   should be in the names attribute at this point. */
+                PROTECT(attrib = dup_top_level(attrib));
+                SET_VECTOR_ELT(attrib, 0,
+                               getAttrib(result, R_NamesSymbol));
+                setAttrib(result, R_DimSymbol, attr);
+                setAttrib(result, R_DimNamesSymbol, attrib);
+                setAttrib(result, R_NamesSymbol, R_NilValue);
+                UNPROTECT(1);
+            }
+            else 
+                setAttrib(result, R_DimSymbol, attr);
+            UNPROTECT(2);
+        }
     }
 
     return result;
@@ -990,13 +1032,16 @@ static SEXP ExtractArg(SEXP *args_ptr, SEXP arg_sym)
 /* Extracts the drop argument, if present, from the argument list.
    The argument list will be modified, and the pointer passed changed
    if the first argument is deleted.  The caller does not need to
-   protect *args_ptr before.*/
+   protect *args_ptr before.  The value is FALSE, TRUE, or NA_LOGICAL,
+   with NA_LOGICAL being the default when no drop argument is present.
+   When used as a C boolean, NA_LOGICAL will have the same effect as
+   TRUE, but NA_LOGICAL will sometimes allow dropping to be suppressed
+   when a vector index has a 1D dim attribute. */
 
 static int ExtractDropArg(SEXP *args_ptr)
 {
     SEXP drop_arg = ExtractArg(args_ptr, R_DropSymbol);
-    int drop = drop_arg ? asLogical(drop_arg) : NA_LOGICAL;
-    return drop == NA_LOGICAL ? 1 : drop;
+    return drop_arg ? asLogical(drop_arg) : NA_LOGICAL;
 }
 
 
@@ -1020,10 +1065,14 @@ static int ExtractExactArg(SEXP *args_ptr)
 }
 
 
-/* Returns simple (positive or negative) index, or zero if not so simple. */
+/* Returns simple (positive or negative) index, with no dim attribute, or 
+   zero if not so simple. */
 
 static R_INLINE R_len_t simple_index (SEXP s)
 {
+    if (ATTRIB(s) != R_NilValue && getAttrib(s,R_DimSymbol) != R_NilValue)
+        return 0;
+
     switch (TYPEOF(s)) {
     case REALSXP:
         if (LENGTH(s) != 1 || ISNAN(REAL(s)[0])
@@ -1042,10 +1091,10 @@ static R_INLINE R_len_t simple_index (SEXP s)
 
 /* Look for the simple case of subscripting an atomic vector with one 
    valid integer or real subscript that is positive or negative (not zero, 
-   NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
-   so simple.  The arguments x and s do not need to be protected before 
-   this function is called.  It's OK for x to still be being computed. 
-   The variant for the return result is the last argument. */
+   NA, or out of bounds), with no dim attribute.  Returns the result, or 
+   R_NilValue if it's not so simple.  The arguments x and s do not need to 
+   be protected before this function is called.  It's OK for x to still be 
+   being computed. The variant for the return result is the last argument. */
 
 static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
 {
@@ -1147,10 +1196,11 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
 
 /* Look for the simple case of subscripting an atomic matrix with two
    valid integer or real subscript that are positive (not negative, zero, 
-   NA, or out of bounds).  Returns the result, or R_NilValue if it's not 
-   so simple.  The arguments x, dim, s1, and s2 do not need to be 
-   protected before this function is called. It's OK for x to still be 
-   being computed. The variant for the return result is the last argument. */
+   NA, or out of bounds), with no dim attribute.  Returns the result, or 
+   R_NilValue if it's not so simple.  The arguments x, dim, s1, and s2 do 
+   not need to be protected before this function is called. It's OK for x to 
+   still be being computed. The variant for the return result is the last 
+   argument. */
 
 static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2, 
                                           int variant)
@@ -1388,34 +1438,8 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
     /* The separation of arrays and matrices is purely an optimization. */
 
     if(nsubs < 2) {
-	SEXP dim = getAttrib(x, R_DimSymbol);
-	int ndim = length(dim);
 	PROTECT(ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
-				   seq, call));
-	/* one-dimensional arrays went through here, and they should
-	   have their dimensions dropped only if the result has
-	   length one and drop == TRUE
-	*/
-	if(ndim == 1) {
-	    SEXP attr, attrib, nattrib;
-	    int len = length(ans);
-
-	    if(!drop || len > 1) {
-		PROTECT(attr = allocVector1INT());
-		INTEGER(attr)[0] = length(ans);
-		setAttrib(ans, R_DimSymbol, attr);
-		UNPROTECT(1);
-		if((attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue) {
-		    /* reinstate dimnames, include names of dimnames */
-		    PROTECT(nattrib = duplicate(attrib));
-		    SET_VECTOR_ELT(nattrib, 0,
-				   getAttrib(ans, R_NamesSymbol));
-		    setAttrib(ans, R_DimNamesSymbol, nattrib);
-		    setAttrib(ans, R_NamesSymbol, R_NilValue);
-		    UNPROTECT(1);
-		}
-	    }
-	}
+				   seq, drop, call));
     } else {
         SEXP xdims = getAttrib(x, R_DimSymbol);
 	if (nsubs != length(xdims))
