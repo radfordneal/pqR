@@ -298,6 +298,19 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 }
 
 
+/* Check whether subscript is such that we suppress dropping dimensions 
+   when the drop argument is NA (the default). */
+
+static inline int whether_suppress_drop (SEXP sb)
+{
+    SEXP d;
+    return TYPEOF(sb) != LGLSXP 
+             && ATTRIB(sb) != R_NilValue
+             && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
+             && LENGTH(d) == 1;
+}
+
+
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
 static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
@@ -351,16 +364,16 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
         }
     }
 
-    /* Convert sb to a vector of integer subscripts (unless we have a range) */
+    /* Convert sb to a vector of integer subscripts (unless we have a range).
+       We suppress dropping when drop is NA when the index is not logical
+       and is a 1D array. */
 
     if (sb != NULL) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
         SEXP d;
+        suppress_drop = whether_suppress_drop(sb);
         PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
         n = length(indx);
-        suppress_drop = ATTRIB(sb) != R_NilValue 
-                         && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
-                         && LENGTH(d) == 1;
     }
 
     /* Allocate and extract the result. */
@@ -412,12 +425,13 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
 
   done:
     /* One-dimensional arrays should have their dimensions dropped only 
-       if the result has length one and drop is not FALSE. */
+       if the result has length one and drop TRUE or is NA_INTEGER without
+       the drop being suppressed by the index being a 1D array. */
 
     if (ndim == 1) {
         int len = length(result);
 
-        if (!drop || len > 1) {
+        if (len > 1 || drop == FALSE || drop == NA_INTEGER && suppress_drop) {
             SEXP attr, nm;
             PROTECT(result);
             PROTECT(attr = allocVector1INT());
