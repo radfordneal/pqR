@@ -4338,7 +4338,10 @@ stopifnot(is.null(attr(x[,,], "comm")))
 x <- structure(1:8, names=letters[1:8], comm="a comment", dim = c(2L,4L))
 stopifnot(is.null(attr(x[,], "comm")))
 x <- structure(1:8, names=letters[1:8], comm="a comment")
-stopifnot(!is.null(attr(x[], "comm")))  # this does preserve
+
+# Sadly, completely brain-dead behaviour of x[] had been implemented.  
+# We can hopefully get beyond this, now or at least later...
+# stopifnot(!is.null(attr(x[], "comm")))  # this does preserve
 stopifnot(is.null(attr(x[1:8], "comm")))
 ##  2.3.1 preserved the first.
 

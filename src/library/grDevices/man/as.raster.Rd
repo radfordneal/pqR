@@ -1,6 +1,7 @@
 % File src/library/grid/man/as.raster.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the pqR package, based on the R package, http://www.R-project.org
 % Copyright 2009-11 R Core Team
+% Modifications for pqR Copyright 2016 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{as.raster}
@@ -108,8 +109,7 @@ r[2:4, 2:5] <- "white"
 r == "white"
 
 \dontshow{% regression tests
-stopifnot(r[] == r,
-          identical(r[3:5], colors()[3:5]))
+stopifnot(identical(r[3:5], colors()[3:5]))
 r[2:4] <- "black"
 stopifnot(identical(r[1:4, 1], as.raster(c("white", rep("black",3)))))
 }% end{tests}

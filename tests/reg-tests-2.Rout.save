@@ -9,7 +9,6 @@ Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
-No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -22,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > ## Regression tests for which the printed output is the issue
 > ### _and_ must work (no Recommended packages, please)
@@ -3229,7 +3231,9 @@ NULL
 [1] 1
 > dimnames(x) <- list(some=letters[1:5])
 > x[]
-[1] 1 2 3 4 5
+some
+a b c d e 
+1 2 3 4 5 
 > x[2:3]
 some
 b c 
@@ -6377,15 +6381,15 @@ function ()
 > print.function
 function (x, ...)  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 19 1 63 19 63 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3bf1328> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3b20518> 
 > f
 function ()  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 17 1 28 17 28 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3be4ba8> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3b14380> 
  - attr(*, "note")= chr "just a note"
  - attr(*, "yada")=function ()  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 2 24 2 48 24 48 2 2
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3be4ba8> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3b14380> 
 > rm(print.function)
 > ## auto-printing and printing differed up to R 2.9.x
 > 
