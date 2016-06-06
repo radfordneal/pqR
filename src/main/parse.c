@@ -269,7 +269,8 @@ cr	:
 
    The get_next_token function obtains the next token, calling xxgetc
    as required, and returning 1 if end of file is encountered immediately. 
-   It's argument is 1 if a symbol is not expected (allowing .. to be seen).
+   It's argument is 1 if a symbol is not expected (allowing .. to be seen),
+   though it will get a symbol anyway, as long as it doesn't start with ...
    The convention for get_next_token is that a "lookahead" token after
    what has been parsed so far is normally present (the opposite of the 
    convention for xxgetc). */
