@@ -1091,6 +1091,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             else if (nargs == 2 &&              /* space between op and args */
                     (isUserBinop(op) && TAG(s) == R_NilValue
                          && TAG(CDR(s)) == R_NilValue  /* no arg names */
+                      || op == R_DotDotSymbol && R_parse_dotdot
                       || op == R_AddSymbol
                       || op == R_SubSymbol
                       || op == R_MulSymbol

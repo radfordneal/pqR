@@ -1,6 +1,7 @@
 % File src/library/base/man/Colon.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Development Team
+% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Colon}
@@ -29,14 +30,21 @@ from:to
   or \code{-1}.  Value \code{to} will be included if it differs from
   \code{from} by an integer up to a numeric fuzz of about \code{1e-7}.
   Non-numeric arguments are coerced internally (hence without
-  dispatching methods) to numeric---complex values will have their
+  dispatching methods) to numeric; complex values will have their
   imaginary parts discarded with a warning.
+
+  The use of \code{:} to generate sequences is conducive to bugs, due
+  to its ill-chosen precedence, and to its tendency to sometimes generate
+  sequences in the reverse order intended (and to never generate zero-length
+  sequences).
+  The \code{..} operator should be used instead, unless compatibility
+  with R implementations without \code{..} is necessary.
 }
 \value{
   For numeric arguments, a numeric vector.  This will be of type
   \code{\link{integer}} if \code{from} is integer-valued and the result
   is representable in the \R integer type, otherwise of type
-  \code{"double"} (aka \code{\link{mode}} \code{"\link{numeric}"}).
+  \code{double} (aka \code{\link{mode}} \code{\link{numeric}}).
 
   For factors, an unordered factor with levels labelled as \code{la:lb}
   and ordered lexicographically (that is, \code{lb} varies fastest).
@@ -48,6 +56,8 @@ from:to
   (for numeric arguments: S does not have \code{:} for factors.)
 }
 \seealso{
+  \code{\link{..}}
+
   \code{\link{seq}} (a \emph{generalization} of \code{from:to}).
 
   As an alternative to using \code{:} for factors, \code{\link{interaction}}.

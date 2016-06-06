@@ -1126,8 +1126,8 @@ and assigned to variables in a straightforward manner
 > y <- 2 * (a + log(x))
 @end example
 
-@R{} contains a number of operators.  They are listed in the table
-below.
+A number of operators are defined in pqR.  They are listed in the table
+below:
 
 @quotation
 @multitable @columnfractions 0.1 0.7
@@ -1143,6 +1143,8 @@ below.
 @tab Help
 @item @code{:}
 @tab Sequence, binary (in model formulae: interaction)
+@item @code{..}
+@tab Increasing sequence, binary
 @item @code{*}
 @tab Multiplication, binary
 @item @code{/}
@@ -4342,9 +4344,12 @@ once.
 @end example
 
 Numeric constants can also be hexadecimal, starting with @samp{0x} or
-@samp{0x} followed by zero or more digits, @samp{a-f} or @samp{A-F}.
+@samp{0x} followed by zero or more digits, @samp{a-f}, or @samp{A-F},
+possibly with a decimal point.  This may be followed by @samp{P} or
+@samp{p}, and optional sign, and a string of decimal digits, giving
+a binary exponent.
 
-There is now a separate class of integer constants.  They are created
+There is a separate class of integer constants.  They are created
 by using the qualifier @code{L} at the end of the number.  For
 example, @code{123L} gives an integer value rather than a numeric
 value.  The suffix @code{L} can be used to qualify any non-complex
@@ -4436,7 +4441,9 @@ scanned but ignored.
 @cindex identifier
 Identifiers consist of a sequence of letters, digits, the period
 (@samp{.}) and the underscore.  They must not start with a digit nor
-underscore, nor with a period followed by a digit.
+underscore, nor with a period followed by a digit.  They must not
+contain a sequence of two or more consecutive periods unless this
+sequence is at the beginning of the identifier.
 
 The definition of a letter depends on the current locale: the precise
 set of characters allowed is given by the C expression @code{(isalnum(c)
@@ -4532,7 +4539,7 @@ indices.
 @node Operator tokens, Grouping, Separators, Tokens
 @subsection Operator tokens
 
-@R{} uses the following operator tokens
+The following operator tokens exist in pqR:
 
 @quotation
 @multitable @columnfractions 0.3 0.6
@@ -4542,7 +4549,7 @@ indices.
 @item @code{~} @tab model formulae
 @item @code{<- <<- = -> ->>} @tab assignment
 @item @code{$ @@} @tab list and slot indexing
-@item @code{:} @tab sequence
+@item @code{: ..} @tab sequence
 @end multitable
 @end quotation
 
@@ -4642,6 +4649,7 @@ $  @@
 %@var{xyz}%
 *  /
 +  -                  @r{(binary)}
+..
 >  >=  <  <=  ==  !=
 !
 &  &&
@@ -4671,7 +4679,9 @@ The exponentiation operator @samp{^} and the @cindex assignment left
 assignment operators @samp{<-}, @samp{<<-}, and @samp{=} group right
 to left, all other binary operators group left to right.  That is,
 @code{2^2^3} is @math{2^8}, not @math{4^3}, whereas @code{1-1-1} is
-@math{-1}, not 1.
+@math{-1}, not 1.  However, the relational operators and @samp{..}
+do not group at all, so, for example, @code{a<b<c} and @code{1..2..3}
+are illegal.
 
 Notice that the operators @code{%%} and @code{%/%} for integer
 remainder and divide have higher precedence than multiply and divide.

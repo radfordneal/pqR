@@ -1,6 +1,7 @@
 % File src/library/base/man/seq.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Development Team
+% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{seq}
@@ -103,6 +104,10 @@ seq(length.out= )
 
   \code{seq.int}, \code{seq_along} and \code{seq_len} are
   \link{primitive}.
+
+  The \code{..} operator is a better way to generate sequences
+  increasing by one, unless compatibility with versions of R
+  that lack it is necessary.
 }
 % We used to explain some of the circumstances when integer was
 % returned, but people read that carelessly, so no longer.
@@ -122,6 +127,7 @@ seq(length.out= )
 \seealso{
   The methods \code{\link{seq.Date}} and \code{\link{seq.POSIXt}}.
 
+  \code{\link{..}},
   \code{\link{:}},
   \code{\link{rep}},
   \code{\link{sequence}},

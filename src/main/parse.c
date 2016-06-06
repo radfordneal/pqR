@@ -269,6 +269,8 @@ cr	:
 
    The get_next_token function obtains the next token, calling xxgetc
    as required, and returning 1 if end of file is encountered immediately. 
+   It's argument is 1 if a symbol is not expected (allowing .. to be seen),
+   though it will get a symbol anyway, as long as it doesn't start with ...
    The convention for get_next_token is that a "lookahead" token after
    what has been parsed so far is normally present (the opposite of the 
    convention for xxgetc). */
@@ -277,7 +279,8 @@ cr	:
 static int xxgetc(void);       /* Return next input character, or EOF */
 static void xxungetc(int);     /* Put back a character */
 
-static int get_next_token(void);  /* Update ps->next_token to the next token */
+static int get_next_token(int); /* Update ps->next_token to the next token, and
+                                   ps->next_token_val to an associated value */
 
 
 /* Codes for token types.  ASCII codes for single characters also act as
@@ -295,7 +298,8 @@ enum token_type {
   ELSE,         WHILE,          NEXT,      BREAK,            REPEAT,
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
-  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN
+  NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN,
+  DOTDOT,
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -308,7 +312,8 @@ static const char *const token_name[] = {
   "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
-  "'::'",       "':::'",        "**",      "SPECIAL",        "':='"
+  "'::'",       "':::'",        "**",      "SPECIAL",        "':='",
+  ".."
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -333,7 +338,8 @@ static const char *const pdata_token_name[] = {
   "ELSE",       "WHILE",        "NEXT",    "BREAK",          "REPEAT",
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
-  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN"
+  "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN",
+  "DOTDOT"
 };
 
 
@@ -367,6 +373,8 @@ typedef struct
 static struct parse_state *ps; /* currently active parse */
 
 struct parse_state {
+
+    int parse_dotdot;          /* Recognize the .. operator? */
 
     /* The next token from the input, and asociated variables and functions. */
 
@@ -956,7 +964,17 @@ static void error_msg(const char *s)
     do { \
         if (NEXT_TOKEN != (tk)) \
             PARSE_UNEXPECTED(); \
-        get_next_token(); \
+        get_next_token(0); \
+    } while (0)
+
+
+/* Version of EXPECT that scans the next token with no_symbol set. */
+
+#define EXPECT_NO_SYMBOL_AFTER(tk) \
+    do { \
+        if (NEXT_TOKEN != (tk)) \
+            PARSE_UNEXPECTED(); \
+        get_next_token(1); \
     } while (0)
 
 
@@ -979,7 +997,7 @@ static void error_msg(const char *s)
 static int get_next_token_not_newline(void)
 {
     do { 
-        get_next_token(); 
+        get_next_token(0); 
     } while (ps->next_token == '\n');
 
     ps->newline_before_token = 1;
@@ -1025,7 +1043,7 @@ static void end_location (source_location *loc)
 
 /* Tables of operator precedence.  The lower two bits are 1 for binary
    operators that are left associative, 2 for binary operators that are
-   right associative, and 0 for relational operators, unary operators,
+   right associative, and 0 for relational .. operators, unary operators,
    and miscellaneous operators.  This is expressed in the NON_ASSOC, 
    LEFT_ASSOC, and RIGHT_ASSOC macros in Parse.h. */
 
@@ -1051,6 +1069,7 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
     { &R_DivSymbol,               /* /   */ 0xa1 },
     { &R_AddSymbol,               /* +   */ 0x91 },
     { &R_SubSymbol,               /* -   */ 0x91 },
+    { &R_DotDotSymbol,            /* ..  */ 0x84 },
     { &R_EqSymbol,                /* ==  */ 0x80 },
     { &R_NeSymbol,                /* !=  */ 0x80 },
     { &R_LtSymbol,                /* <   */ 0x80 },
@@ -1294,17 +1313,17 @@ static SEXP parse_formlist (int flags)
                 }
             }
             SET_TAG (last, tag);
-            get_next_token();
+            get_next_token(0);
             if (NEXT_TOKEN == EQ_ASSIGN) {
                 SEXP def;
                 set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
-                get_next_token();
+                get_next_token(0);
                 PARSE_SUB(def = parse_expr (EQASSIGN_PREC, subflags, NULL));
                 SETCAR (last, def);
             }
             if (NEXT_TOKEN != ',')
                 break;
-            get_next_token();
+            get_next_token(0);
             SETCDR (last, CONS(R_MissingArg,R_NilValue));
             last = CDR(last);
         }
@@ -1360,7 +1379,7 @@ static SEXP parse_sublist (int flags)
                     else
                         PARSE_UNEXPECTED();
                     delete_second_parseData_record();
-                    get_next_token();
+                    get_next_token(0);
                     if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' 
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
@@ -1408,7 +1427,7 @@ static SEXP parse_sublist (int flags)
             if (NEXT_TOKEN != ',')
                 break;
 
-            get_next_token();
+            get_next_token(0);
         }
     }
 
@@ -1434,6 +1453,10 @@ static SEXP parse_sublist (int flags)
    be parenthesized, but `(`(x) is not, even though they produce the same
    expression. If 'paren' is the C NULL pointer, this information isn't stored.
 
+   The token after the expression is scanned with no_symbol set to 1, so
+   since symbols are not allowed in that context, and we wish the .. operator
+   to be recognized.
+
    An attempt is made to make the last operand of an operator be a constant
    object. */
 
@@ -1458,7 +1481,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (op_prec = unary_op()) {
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         PARSE_SUB (res = parse_expr (op_prec, 
                            op == R_TildeSymbol ? flags|KEEP_PARENS : flags,
                            &ipar));
@@ -1473,16 +1496,16 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     else if (NEXT_TOKEN == SYMBOL || NEXT_TOKEN == STR_CONST) {
         SEXP op, sym;
         res = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(1);
         if (!NL_END && (NEXT_TOKEN == NS_GET || NEXT_TOKEN == NS_GET_INT)) {
             op = TOKEN_VALUE();
             set_token_in_rec (prev_token_rec(2), "SYMBOL_PACKAGE");
-            get_next_token();
+            get_next_token(0);
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
             res = PROTECT_N (LANG3 (op, res, sym));
-            get_next_token();
+            get_next_token(1);
         }
     }
 
@@ -1490,7 +1513,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     else if (NEXT_TOKEN == NUM_CONST || NEXT_TOKEN == NULL_CONST) {
         res = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(1);
     }
 
     /* Paren expressions.  Sets 'par' to 1 to indicate it's parenthesized. */
@@ -1498,10 +1521,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     else if (NEXT_TOKEN == '(') {
         SEXP op;
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         PARSE_SUB (res = parse_expr (0, subflags, NULL));
         res = PROTECT_N (LANG2 (op, res));
-        EXPECT(')');
+        EXPECT_NO_SYMBOL_AFTER(')');
         par = 1;
     }
 
@@ -1512,7 +1535,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS(op,R_NilValue));
         start_location(&loc);
-        get_next_token();
+        get_next_token(0);
         end_location(&loc);
         if (ps->keep_source) {
             PROTECT_N (refs = CONS (makeSrcref(&loc,ps->sr->SrcFile),
@@ -1522,7 +1545,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         last = res;
         for (;;) {
             while (NEXT_TOKEN == ';')
-                get_next_token();
+                get_next_token(0);
             if (NEXT_TOKEN == '}')
                 break;
             start_location(&loc);
@@ -1546,7 +1569,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         if (ps->keep_source) {
             attachSrcrefs(res,refs);
         }
-        get_next_token();
+        get_next_token(1);
     }
 
     /* Function closures. */
@@ -1555,7 +1578,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         SEXP op, args, body, srcref;
         start_location(&loc);
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         EXPECT('(');
         PARSE_SUB(args = parse_formlist (flags));
         EXPECT(')');
@@ -1575,7 +1598,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     else if (NEXT_TOKEN == REPEAT) {
         SEXP op, body;
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         PARSE_SUB(body = parse_expr (0, flags, NULL));
         res = PROTECT_N (lang2 (op, body));
     }
@@ -1585,7 +1608,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     else if (NEXT_TOKEN == WHILE) {
         SEXP op, cond, body;
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         EXPECT('(');
         PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, &ipar));
         if (!keep_parens && ipar && needsparens_arg(CADR(cond)))
@@ -1601,7 +1624,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
         SEXP op, cond, true_stmt, false_stmt;
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         EXPECT('(');
         PARSE_SUB(cond = parse_expr (EQASSIGN_PREC, subflags, &ipar));
         if (!keep_parens && ipar && needsparens_arg(CADR(cond)))
@@ -1615,7 +1638,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 if (TYPEOF(e)==LANGSXP && CAR(e)==R_IfSymbol && length(e)==3)
                     true_stmt = e;  /* get rid of parens */
             }
-            get_next_token();
+            get_next_token(0);
             PARSE_SUB(false_stmt = parse_expr (0, flags, NULL));
             res = PROTECT_N (LANG4 (op, cond, true_stmt, false_stmt));
         }
@@ -1630,7 +1653,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         int along = 0;
         source_location for_cond_loc;
         op = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         NEXT_TOKEN;  /* force update of location */
         start_location (&for_cond_loc);
         for_cond_rec = 
@@ -1640,10 +1663,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         if (NEXT_TOKEN != SYMBOL)
             PARSE_UNEXPECTED();
         sym = TOKEN_VALUE();
-        get_next_token();
+        get_next_token(0);
         more_syms = R_NilValue;
         while (NEXT_TOKEN == ',') {
-            get_next_token();
+            get_next_token(0);
             if (NEXT_TOKEN != SYMBOL)
                 PARSE_UNEXPECTED();
             if (ps->next_token_val == sym)
@@ -1652,11 +1675,11 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 if (ps->next_token_val == s)
                     PARSE_ERROR_MSG("repeated 'for' variable");
             PROTECT_N(more_syms = CONS(ps->next_token_val,more_syms));
-            get_next_token();
+            get_next_token(0);
         }
         if (NEXT_TOKEN == SYMBOL && ps->next_token_val == R_AlongSymbol) {
             along = 1;
-            get_next_token();
+            get_next_token(0);
         }
         else {
             if (more_syms != R_NilValue)
@@ -1687,7 +1710,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         SEXP op;
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS (op, R_NilValue));
-        get_next_token();
+        get_next_token(0);
     }
 
     else
@@ -1732,59 +1755,59 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                                            CAR(res) == R_TripleColonSymbol)) {
                 set_token_in_rec (prev_token_rec(2), "SYMBOL_FUNCTION_CALL");
             }
-            get_next_token();
+            get_next_token(0);
             PARSE_SUB(subs = parse_sublist(flags));
             if (isString(res))
                 res = installChar(STRING_ELT(res,0));
             res = PROTECT_N (LCONS(res,subs));
-            EXPECT(')');
+            EXPECT_NO_SYMBOL_AFTER(')');
         }
 
         /* Subscripting with [. */
 
         else if (NEXT_TOKEN == '[') {
             SEXP subs;
-            get_next_token();
+            get_next_token(0);
             PARSE_SUB(subs = parse_sublist (flags));
             res = PROTECT_N (LCONS (op, CONS (res, subs)));
-            EXPECT(']');
+            EXPECT_NO_SYMBOL_AFTER(']');
         }
 
         /* Subscripting with [[. */
 
         else if (NEXT_TOKEN == LBB) {
             SEXP subs;
-            get_next_token();
+            get_next_token(0);
             PARSE_SUB(subs = parse_sublist (flags));
             res = PROTECT_N (LCONS (op, CONS (res, subs)));
             EXPECT(']');
-            EXPECT(']');
+            EXPECT_NO_SYMBOL_AFTER(']');
         }
 
         /* Subsetting with $. */
 
         else if (NEXT_TOKEN == '$') {
             SEXP sym;
-            get_next_token();
+            get_next_token(0);
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             sym = TOKEN_VALUE();
             res = PROTECT_N (LANG3 (op, res, sym));
-            get_next_token();
+            get_next_token(1);
         }
 
         /* Slot access with @. */
 
         else if (NEXT_TOKEN == '@') {
             SEXP sym;
-            get_next_token();
+            get_next_token(0);
             if (NEXT_TOKEN != SYMBOL && NEXT_TOKEN != STR_CONST)
                 PARSE_UNEXPECTED();
             if (NEXT_TOKEN == SYMBOL)
                 set_token_in_rec (prev_token_rec(1), "SLOT");
             sym = TOKEN_VALUE();
             res = PROTECT_N (LANG3 (op, res, sym));
-            get_next_token();
+            get_next_token(1);
         }
 
         else
@@ -1820,7 +1843,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         set_parent_in_rec (inner_rec, rec);
         set_parent_in_rec (prev_token_rec(1), rec);
 
-        get_next_token();
+        get_next_token(0);
 
         if (LEFT_ASSOC(op_prec)) {
 
@@ -1845,7 +1868,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 rec = start_parseData_record(&begin_loc,"expr","",FALSE);
                 set_parent_in_rec (inner_rec, rec);
                 set_parent_in_rec (prev_token_rec(1), rec);
-                get_next_token();
+                get_next_token(0);
             }
         }
         else {
@@ -1921,7 +1944,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     if (TYPEOF(keepp) == LGLSXP && LOGICAL(keepp)[0] == 1)
         flags |= KEEP_PARENS;
 
-    if (!get_next_token()) {
+    if (!get_next_token(0)) {
         *status = PARSE_EOF;
         return R_NilValue;
     }
@@ -1954,6 +1977,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
 #define PARSE_INIT \
     struct parse_state new_parse_state; \
     ps = &new_parse_state; \
+    ps->parse_dotdot = R_parse_dotdot; \
     ps->token_loc.first_line = 0; \
     ps->token_loc.first_column = 0; \
     ps->token_loc.first_byte = 0; \
@@ -2141,6 +2165,8 @@ static char yytext[MAXELTSIZE];
     *(bp)++ = (c); \
 } while(0)
 
+#define YYTEXT_UNPUSH(bp) ((bp) -= 1)
+
 
 /* --------------------------------------------------------------------------
    ROUTINES FOR CREATING NUMERIC AND STRING VALUES
@@ -2185,19 +2211,31 @@ static int NumericValue(int c)
 
     DECLARE_YYTEXT_BUFP(yyp);
     YYTEXT_PUSH(c, yyp);
+
     /* We don't care about other than ASCII digits */
     while (isdigit(c = xxgetc()) || c == '.' || c == 'e' || c == 'E'
-	   || c == 'x' || c == 'X' || c == 'L')
+	   || c == 'x' || c == 'X')
     {
 	count++;
-	if (c == 'L') /* must be at the end.  Won't allow 1Le3 (at present). */
-	    break;
 
 	if (c == 'x' || c == 'X') {
 	    if (count > 2 || last != '0') break;  /* 0x must be first */
 	    YYTEXT_PUSH(c, yyp);
 	    while(isdigit(c = xxgetc()) || ('a' <= c && c <= 'f') ||
 		  ('A' <= c && c <= 'F') || c == '.') {
+                if (c == '.') {
+                    if (seendot) {
+                        if (*(yyp-1) == '.') {  /* we see ".."; stop before */
+                            YYTEXT_UNPUSH(yyp);
+                            xxungetc(c);
+                            seendot = 0;
+                            goto out;
+                        }
+                        else
+                            return ERROR;
+                    }
+                    seendot = 1;
+                }
 		YYTEXT_PUSH(c, yyp);
 		nd++;
 	    }
@@ -2216,6 +2254,7 @@ static int NumericValue(int c)
 	    }
 	    break;
 	}
+
 	if (c == 'E' || c == 'e') {
 	    if (seenexp)
 		break;
@@ -2230,23 +2269,33 @@ static int NumericValue(int c)
 		if (!isdigit(c)) return ERROR;
 	    }
 	}
+
 	if (c == '.') {
-	    if (seendot)
+	    if (seendot) {
+                if (*(yyp-1) == '.') { /* we see ".."; stop before */
+                    YYTEXT_UNPUSH(yyp);
+                    xxungetc(c);
+                    seendot = 0;
+                }
 		break;
+            }
 	    seendot = 1;
 	}
+
 	YYTEXT_PUSH(c, yyp);
 	last = c;
     }
+
+out:
     YYTEXT_PUSH('\0', yyp);
-    /* Make certain that things are okay. */
-    if(c == 'L') {
-	double a = R_atof(yytext);
-	int b = (int) a;
+
+    if (c == 'L') {
 	/* We are asked to create an integer via the L, so we check that the
 	   double and int values are the same. If not, this is a problem and we
 	   will not lose information and so use the numeric value.
 	*/
+	double a = R_atof(yytext);
+	int b = (int) a;
 	if(a != (double) b) {
             if(seendot == 1 && seenexp == 0)
 		warning(
@@ -2256,22 +2305,28 @@ static int NumericValue(int c)
 		warning(
                 _("non-integer value %s qualified with L; using numeric value"),
                 yytext);
-	    asNumeric = 1;
-	    seenexp = 1;
+            ps->next_token_val = mkReal(yytext);
 	}
+        else {
+            if (seendot == 1 && seenexp == 0)
+	        warning(
+                _("integer literal %sL contains unnecessary decimal point"),
+                yytext);
+            ps->next_token_val = mkInteger(yytext);
+        }
+    }
+    else if (c == 'i') {
+	ps->next_token_val = mkComplex(yytext);
+    }
+    else {
+        ps->next_token_val = mkReal(yytext);
+        xxungetc(c);
     }
 
-    if(c == 'i') {
-	ps->next_token_val = mkComplex(yytext);
-    } else if(c == 'L' && asNumeric == 0) {
-	if (seendot == 1 && seenexp == 0)
-	    warning(_("integer literal %sL contains unnecessary decimal point"),
-                    yytext);
-	ps->next_token_val = mkInteger(yytext);
-    } else {
-	if(c != 'L')
-	    xxungetc(c);
-	ps->next_token_val = mkReal(yytext);
+    if (c == 'i' || c == 'L') { /* include for getParseData */
+        YYTEXT_UNPUSH(yyp);
+        YYTEXT_PUSH(c, yyp);
+        YYTEXT_PUSH('\0', yyp);
     }
 
     return NUM_CONST;
@@ -2751,6 +2806,7 @@ static struct { char *name; int token; } keywords[] = {
     { "else",	    ELSE       },
     { "next",	    NEXT       },
     { "break",	    BREAK      },
+    { "..",         DOTDOT     },
     { "...",	    SYMBOL     },
     { 0,	    0	       }
 };
@@ -2873,31 +2929,69 @@ static int SpecialValue(int c)
 
 static int SymbolValue(int c)
 {
+    int prev_is_dot;
     int kw;
     DECLARE_YYTEXT_BUFP(yyp);
     if(mbcslocale) {
 	wchar_t wc; int i, clen;
 	clen = mbcs_get_next(c, &wc);
-	while(1) {
+        prev_is_dot = -1;
+	while (1) {
+            if (c != '.')
+                prev_is_dot = 0;
+            else if (prev_is_dot != -1) 
+                prev_is_dot = 1;
 	    /* at this point we have seen one char, so push its bytes
 	       and get one more */
-	    for(i = 0; i < clen; i++) {
+	    for (i = 0; i < clen; i++) {
 		YYTEXT_PUSH(c, yyp);
 		c = xxgetc();
 	    }
-	    if(c == R_EOF) break;
-	    if(c == '.' || c == '_') {
+	    if (c == R_EOF)
+                break;
+	    if (c == '.') {
+                if (prev_is_dot == 1 && ps->parse_dotdot) {
+                    xxungetc(c);
+                    YYTEXT_UNPUSH(yyp);
+                    break;
+                }
+		clen = 1;
+		continue;
+	    }
+	    if (c == '_') {
 		clen = 1;
 		continue;
 	    }
 	    clen = mbcs_get_next(c, &wc);
-	    if(!iswalnum(wc)) break;
+	    if (!iswalnum(wc))
+                break;
 	}
-    } else
-	do {
+    } 
+    else {
+        prev_is_dot = -1;
+	while (1) {
+            if (c != '.')
+                prev_is_dot = 0;
+            else if (prev_is_dot != -1) 
+                prev_is_dot = 1;
 	    YYTEXT_PUSH(c, yyp);
-	} while ((c = xxgetc()) != R_EOF &&
-		 (isalnum(c) || c == '.' || c == '_'));
+            c = xxgetc();
+	    if (c == R_EOF)
+                break;
+	    if (c == '.') {
+                if (prev_is_dot == 1 && ps->parse_dotdot) {
+                    xxungetc(c);
+                    YYTEXT_UNPUSH(yyp);
+                    break;
+                }
+		continue;
+	    }
+	    if (c == '_')
+		continue;
+	    if (!isalnum(c))
+                break;
+	}
+    }
     xxungetc(c);
     YYTEXT_PUSH('\0', yyp);
     if ((kw = KeywordLookup(yytext))) 
@@ -3143,10 +3237,14 @@ static int nextchar(int expect)
    the token code (or ERROR if the next token is malformed).  Will also
    set next_token_val to an associated SEXP (R_NilValue if none).
 
+   If no_symbol is non-zero, symbols are not expected, which therefore
+   allows the .. operator to be recognized.  (But no error is signaled
+   here if a symbol is seen.)
+
    The character after the token may have been looked at, but if so xxungetc
    will have been called to put it back. */
 
-static int token (int c)
+static int token (int c, int no_symbol)
 {
     wchar_t wc;
 
@@ -3154,7 +3252,7 @@ static int token (int c)
     yytext[0] = 0;
 
     /* Hard and soft end of file.  Soft end of file comes at the end of a
-       line of input, which may or may not be the actual end. */
+             line of input, which may or may not be the actual end. */
 
     if (c == R_EOF)
         return END_OF_INPUT;
@@ -3178,12 +3276,20 @@ static int token (int c)
     if (c == '%')
 	return SpecialValue(c);
 
-    /* Symbols (functions, constants and variables) */
+    /* The .. operator.  Only recognized if no_symbol is true (and if 
+       parse_dotdot is enabled). */
 
+    if (ps->parse_dotdot && no_symbol && c == '.' && nextchar('.')) {
+        ps->next_token_val = R_DotDotSymbol;
+        return DOTDOT;
+    }
+
+    /* Symbols (functions, constants and variables). */
+
+    if (c == '.')
+        return SymbolValue(c);
     if (c == '`')
 	return StringValue(c, TRUE);
-    if (c == '.') 
-        return SymbolValue(c);
     if(mbcslocale) {
 	mbcs_get_next(c, &wc);
 	if (iswalpha(wc)) return SymbolValue(c);
@@ -3342,6 +3448,10 @@ static int token (int c)
    to 1 when returning END_OF_INPUT or '\n', regardless of 
    whether a newline was actually present before. 
 
+   If no_symbol is non-zero, symbols are not expected, which therefore
+   allows the .. operator to be recognized.  (But no error is signaled
+   here if a symbol is seen.)
+
    Returns 0 if end of file was immediately encountered, with no
    whitespace before, and 1 if not (even when END_OF_INPUT is the 
    next token). 
@@ -3350,7 +3460,7 @@ static int token (int c)
    via the ps->sr->TokenValProt index, but must be protected by the
    caller if it will be used after the following token is obtained. */
 
-static int get_next_token(void)
+static int get_next_token(int no_symbol)
 {
     int c, val;
 
@@ -3372,7 +3482,7 @@ static int get_next_token(void)
     ps->token_loc.first_byte   = ps->sr->xxbyteno;
     ps->token_loc.first_parsed = ps->sr->xxparseno;
 
-    ps->next_token = token(c);
+    ps->next_token = token(c,no_symbol);
 
     REPROTECT (ps->next_token_val, ps->sr->TokenValProt);
 
@@ -3405,10 +3515,13 @@ static int get_next_token(void)
 int isValidName(const char *name)
 {
     const char *p = name;
+    int prev_is_dot;
     int i;
 
     if (strcmp(name, "...") == 0)
         return 1;
+    if (strcmp(name, "..") == 0)
+        return 0;
 
     if(mbcslocale) {
 	/* the only way to establish which chars are alpha etc is to
@@ -3426,9 +3539,19 @@ int isValidName(const char *name)
                 return 0;
 	    /* Mbrtowc(&wc, p, n, NULL); if(iswdigit(wc)) return 0; */
 	}
+        prev_is_dot = wc != L'.' ? 0 : -1;  /* initial dots don't count */
 	while ((used = Mbrtowc(&wc, p, n, NULL))) {
 	    if (!(iswalnum(wc) || wc == L'.' || wc == L'_'))
                 break;
+            if (wc == L'.') {
+                if (prev_is_dot != -1) {
+                    if (prev_is_dot == 1)
+                        return 0;  /* don't allow ".." after start */
+                    prev_is_dot = 1;
+                }
+            }
+            else
+                prev_is_dot = 0;
 	    p += used; n -= used;
 	}
 	if (*p != '\0')
@@ -3439,7 +3562,18 @@ int isValidName(const char *name)
             return 0;
 	if (c == '.' && isdigit(0xff & (int)*p))
             return 0;
-	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) ;
+        prev_is_dot = c != '.' ? 0 : -1;  /* initial dots don't count */
+	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) {
+            if (c == '.') {
+                if (prev_is_dot != -1) {
+                    if (prev_is_dot == 1)
+                        return 0;  /* don't allow ".." after start */
+                    prev_is_dot = 1;
+                }
+            }
+            else
+                prev_is_dot = 0;
+        }
 	if (c != '\0')
             return 0;
     }

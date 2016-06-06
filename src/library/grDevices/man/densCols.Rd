@@ -1,6 +1,7 @@
 % File src/library/grDevices/man/densCols.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright 2015 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
@@ -37,7 +38,7 @@ blues9
 \details{
   \code{densCols} computes and returns the set of colors that will be
   used in plotting, calling \code{\link[KernSmooth]{bkde2D}(*,
-  bandwidth, gridsize=nbin, ..)} from package \CRANpkg{KernSmooth}.
+  bandwidth, gridsize=nbin, ...)} from package \CRANpkg{KernSmooth}.
 
   \code{blues9} is a set of 9 color shades of blue used as the default in
   plotting.

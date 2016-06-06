@@ -257,6 +257,20 @@ getOption(x, default = NULL)
 #endif
     }
 
+    \item{\code{parse_dotdot}:}{Controls whether or not the pqR \code{..}
+      operator is accepted by the parser.  The default is
+      \code{FALSE}, for the moment, pending a better compatibility
+      scheme.
+
+      When \code{parse_dotdot} is \code{FALSE},
+      the parser will accept unquoted symbols with consecutive "."
+      characters that are not at the beginning, but such symbols are 
+      deparsed with backquotes regardless of the setting of 
+      \code{parse_dotdot}. Also, when \code{parse_dotdot} is \code{FALSE},
+      the \code{..} operator is deparsed as a function call
+      (with function name in backquotes).
+      }
+
     \item{\code{pdfviewer}:}{default PDF viewer.
       The default is set from the environment variable \env{R_PDFVIEWER},
 #ifdef unix

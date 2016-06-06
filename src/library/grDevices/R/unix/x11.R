@@ -45,10 +45,10 @@ X11.options <- function(..., reset = FALSE)
                get(".X11.Options.default", envir = .X11env),
                envir = .X11env)
     }
-    l... <- length(new <- list(...))
+    dots_len <- length(new <- list(...))
     check.options(new, name.opt = ".X11.Options", envir = .X11env,
-                  assign.opt = l... > 0)
-    if(reset || l... > 0) invisible(old) else old
+                  assign.opt = dots_len > 0)
+    if(reset || dots_len > 0) invisible(old) else old
 }
 
 X11 <- function(display = "", width, height, pointsize, gamma,

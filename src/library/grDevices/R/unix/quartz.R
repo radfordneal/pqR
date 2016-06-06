@@ -38,10 +38,10 @@ quartz.options <- function(..., reset = FALSE)
                get(".quartz.Options.default", envir = .Quartzenv),
                envir = .Quartzenv)
     }
-    l... <- length(new <- list(...))
+    dots_len <- length(new <- list(...))
     check.options(new, name.opt = ".quartz.Options", envir = .Quartzenv,
-                  assign.opt = l... > 0)
-    if(reset || l... > 0) invisible(old) else old
+                  assign.opt = dots_len > 0)
+    if(reset || dots_len > 0) invisible(old) else old
 }
 
 quartz <- function(title, width, height, pointsize, family,

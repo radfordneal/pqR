@@ -27,7 +27,7 @@ axisTicks(usr, log, axp = NULL, nint = 5)
     \code{nintLog} is used \bold{only} for the case \code{log = TRUE}.}
 }
 \details{
-  \code{axisTicks(usr, *)} calls \code{.axisPars(usr, ..)} when
+  \code{axisTicks(usr, *)} calls \code{.axisPars(usr, ...)} when
   \code{axp} is missing (or \code{NULL}).
 % FIXME: say more
 }

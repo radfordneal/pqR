@@ -22,18 +22,22 @@
     \code{\%any\%}\tab special operators (including \code{\%\%} and \code{\%/\%})\cr
     \code{* /}\tab multiply, divide\cr
     \code{+ -}\tab (binary) add, subtract\cr
-    \code{< > <= >= == !=}\tab ordering and comparison\cr
+    \code{..}\tab increasing sequence operator (no ordering)\cr
+    \code{< > <= >= == !=}\tab ordering and comparison (no ordering)\cr
     \code{!}\tab negation\cr
     \code{&  &&}\tab and\cr
     \code{| ||}\tab or\cr
-    \code{~}\tab as in formulae\cr
+    \code{~}\tab (unary and binary) as in formulae\cr
     \code{-> ->>}\tab rightwards assignment\cr
     \code{=}\tab assignment (right to left)\cr
     \code{<- <<-}\tab assignment (right to left)\cr
     \code{?}\tab help (unary and binary)\cr
   }
   Within an expression operators of equal precedence are evaluated
-  from left to right except where indicated.
+  from left to right (eg, \code{a/b/c} means \code{(a/b)/c}), except 
+  if right to left evaluation is specified above (eg, \code{a^b^c}
+  means \code{a^(b^c)}), or no ordering is specified above, so
+  combining them without parentheses is illegal (eg, \code{a<b<c}).
 
   The binary operators \code{::}, \code{:::}, \code{$} and \code{@} require
   names or string constants on the right hand side, and the first two

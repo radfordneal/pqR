@@ -39,56 +39,58 @@
 #define R_MAX_EXPRESSIONS_OPT	500000
 
 /* Interface to the (polymorphous!)  options(...)  command.
- *
- * We have two kind of options:
- *   1) those used exclusively from R code,
- *	typically initialized in Rprofile.
+  
+   We have two kind of options:
+     1) those used exclusively from R code,
+  	typically initialized in Rprofile.
 
- *	Their names need not appear here, but may, when we want
- *	to make sure that they are assigned `valid' values only.
- *
- *   2) Those used (and sometimes set) from C code;
- *	Either accessing and/or setting a global C variable,
- *	or just accessed by e.g.  GetOption1(install("pager"))
- *
- * A (complete?!) list of these (2):
- *
- *	"prompt"
- *	"continue"
- *	"expressions"
- *	"width"
- *	"digits"
- *	"echo"
- *	"verbose"
- *	"keep.parens"
- *	"keep.source"
- *	"keep.source.pkgs"
- *	"browserNLdisabled"
+  	Their names need not appear here, but may, when we want
+  	to make sure that they are assigned `valid' values only.
+  
+     2) Those used (and sometimes set) from C code;
+  	Either accessing and/or setting a global C variable,
+  	or just accessed by e.g.  GetOption1(install("pager"))
+  
+   A (complete?!) list of these (2):
 
- *	"de.cellwidth"		../unix/X11/ & ../gnuwin32/dataentry.c
- *	"device"
- *	"pager"
- *	"paper.size"		./devPS.c
+        "parse_dotdot"
+  
+  	"prompt"
+  	"continue"
+  	"expressions"
+  	"width"
+  	"digits"
+  	"echo"
+  	"verbose"
+  	"keep.parens"
+  	"keep.source"
+  	"keep.source.pkgs"
+  	"browserNLdisabled"
+  
+  	"de.cellwidth"		../unix/X11/ & ../gnuwin32/dataentry.c
+  	"device"
+  	"pager"
+  	"paper.size"		./devPS.c
 
- *	"timeout"		./connections.c
+  	"timeout"		./connections.c
 
- *	"check.bounds"
- *	"error"
- *	"error.messages"
- *	"show.error.messages"
- *	"warn"
- *	"warning.length"
- *	"warning.expression"
- *	"nwarnings"
+  	"check.bounds"
+  	"error"
+  	"error.messages"
+  	"show.error.messages"
+  	"warn"
+  	"warning.length"
+  	"warning.expression"
+  	"nwarnings"
 
- *
- * S additionally/instead has (and one might think about some)
- * "free",	"keep"
- * "length",	"memory"
- * "object.size"
- * "reference", "show"
- * "scrap"
- */
+  
+   S additionally/instead has (and one might think about some)
+   "free",	"keep"
+   "length",	"memory"
+   "object.size"
+   "reference", "show"
+   "scrap"
+*/
 
 static SEXP Options(void)
 {
@@ -238,6 +240,11 @@ void attribute_hidden InitOptions(void)
 
     PROTECT (val = CONS(R_NilValue,R_NilValue));
     v = val;
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("parse_dotdot"));
+    SETCAR(v, ScalarLogical(R_parse_dotdot));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
@@ -458,6 +465,13 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	if (*CHAR(namei)) { /* name = value  ---> assignment */
 	    tag = install(translateChar(namei));
+	    if (streql(CHAR(namei), "parse_dotdot")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+                R_parse_dotdot = k;
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
 	    if (streql(CHAR(namei), "width")) {
 		k = asInteger(argi);
 		if (k < R_MIN_WIDTH_OPT || k > R_MAX_WIDTH_OPT)
