@@ -998,7 +998,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
     if (TYPEOF(symbol) != SYMSXP) abort();
 
-    if (0 && rho == LASTSYMENV(symbol)) {
+    if (rho == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
         if ( ! BINDING_IS_LOCKED(binding)) {
             value = CAR(binding);
