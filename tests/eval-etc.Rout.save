@@ -329,3 +329,39 @@ NULL
 > print(c(a,b))
 [1] 2 2
 > 
+> 
+> ## Tests of 'missing'.
+> 
+> f <- function (x,y) c(missing(x),missing(y))
+> g <- function (a,b) f(a,b)
+> 
+> f(1,2)
+[1] FALSE FALSE
+> f(,2)
+[1]  TRUE FALSE
+> f(1,)
+[1] FALSE  TRUE
+> f(_,2)
+[1]  TRUE FALSE
+> f(1,_)
+[1] FALSE  TRUE
+> f()
+[1] TRUE TRUE
+> f(_,_)
+[1] TRUE TRUE
+> 
+> g(1,2)
+[1] FALSE FALSE
+> g(,2)
+[1]  TRUE FALSE
+> g(1,)
+[1] FALSE  TRUE
+> g(_,2)
+[1]  TRUE FALSE
+> g(1,_)
+[1] FALSE  TRUE
+> g()
+[1] TRUE TRUE
+> g(_,_)
+[1] TRUE TRUE
+> 

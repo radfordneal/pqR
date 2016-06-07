@@ -211,3 +211,25 @@ for (i, j along M) {
 
 print(c(i,j))
 print(c(a,b))
+
+
+## Tests of 'missing'.
+
+f <- function (x,y) c(missing(x),missing(y))
+g <- function (a,b) f(a,b)
+
+f(1,2)
+f(,2)
+f(1,)
+f(_,2)
+f(1,_)
+f()
+f(_,_)
+
+g(1,2)
+g(,2)
+g(1,)
+g(_,2)
+g(1,_)
+g()
+g(_,_)
