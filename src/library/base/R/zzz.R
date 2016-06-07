@@ -19,7 +19,7 @@
 as.numeric <- as.real <- as.double
 is.name <- is.symbol
 `**` <- `^`
-invisible(.Internal(create_missing_under()))
+
 
 ## extracted from existing NAMESPACE files in Dec 2003
 .knownS3Generics <- local({

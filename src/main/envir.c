@@ -1169,7 +1169,9 @@ static SEXP findGlobalVar(SEXP symbol)
 	}
 
     }
-    return R_UnboundValue;
+
+    return symbol == R_MissingArg || symbol == R_MissingUnder ? R_MissingArg
+             : R_UnboundValue;
 }
 
 
@@ -1208,7 +1210,8 @@ SEXP findVar(SEXP symbol, SEXP rho)
     }
     else {
         R_binding_cell = R_NilValue;
-	return R_UnboundValue;
+        return symbol == R_MissingArg || symbol == R_MissingUnder ? R_MissingArg
+                 : R_UnboundValue;
     }
 }
 
@@ -1233,7 +1236,8 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
     }
     else {
         R_binding_cell = R_NilValue;
-	return R_UnboundValue;
+        return symbol == R_MissingArg || symbol == R_MissingUnder ? R_MissingArg
+                 : R_UnboundValue;
     }
 }
 
@@ -1392,7 +1396,9 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 	}
 	cptr = cptr->nextcontext;
     }
-    return R_UnboundValue;
+
+    return symbol == R_MissingArg || symbol == R_MissingUnder ? R_MissingArg
+             : R_UnboundValue;
 }
 
 
@@ -2241,6 +2247,8 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
   evaluation argument.
 
   It is also called in arithmetic.c. for e.g. do_log
+
+  Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
 */
 
 int attribute_hidden
@@ -2249,8 +2257,10 @@ R_isMissing(SEXP symbol, SEXP rho)
     int ddv=0;
     SEXP vl, s;
 
-    if (symbol == R_MissingArg || symbol == R_MissingUnderSymbol)
+    if (symbol == R_MissingArg)
 	return 1;
+    if (symbol == R_MissingUnder)
+	return 2;
 
     /* check for infinite recursion */
     R_CHECKSTACK();
@@ -2342,7 +2352,7 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
             t = nthcdr(CAR(t), ddv-1);
     }
 
-    if (MISSING(t) || CAR(t) == R_MissingArg)
+    if (MISSING(t) || CAR(t) == R_MissingArg || CAR(t) == R_MissingUnder)
         goto true;
 
     t = CAR(t);
@@ -2695,8 +2705,7 @@ static int BuiltinSize(int all, int intern)
 	    }
 	    else {
 		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-			&& SYMVALUE(s) != R_MissingArg
-			&& SYMVALUE(s) != R_UnboundValue)
+		    && SYMVALUE(s) != R_UnboundValue)
 		    count++;
 	    }
 	}
@@ -2717,8 +2726,7 @@ BuiltinNames(int all, int intern, SEXP names, int *indx)
 	    }
 	    else {
 		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-			&& SYMVALUE(s) != R_MissingArg
-	    		&& SYMVALUE(s) != R_UnboundValue)
+		    && SYMVALUE(s) != R_UnboundValue)
 		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
 	    }
 	}

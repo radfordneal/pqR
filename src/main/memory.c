@@ -1987,6 +1987,11 @@ static void RunGenCollect(R_size_t size_needed)
         LASTSYMBINDING(R_MissingArg) = NULL;
         LASTSYMENVNOTFOUND(R_MissingArg) = NULL;
     }
+    if (R_MissingUnder) {
+        LASTSYMENV(R_MissingUnder) = NULL;
+        LASTSYMBINDING(R_MissingUnder) = NULL;
+        LASTSYMENVNOTFOUND(R_MissingUnder) = NULL;
+    }
     if (R_RestartToken) {
         LASTSYMENV(R_RestartToken) = NULL;
         LASTSYMBINDING(R_RestartToken) = NULL;
@@ -2017,6 +2022,7 @@ static void RunGenCollect(R_size_t size_needed)
 	&R_BlankScalarString,
         &R_RestartToken,
         &R_MissingArg,
+	&R_MissingUnder,
 
         &R_print.na_string,       /* Printing defaults - very kludgy! */
         &R_print.na_string_noquote,

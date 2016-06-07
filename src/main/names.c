@@ -287,13 +287,6 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
     NULL
 };
 
-static SEXP do_create_missing_under (SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    if (!set_var_in_frame(R_MissingUnderSymbol,R_MissingArg,R_BaseEnv,TRUE,0))
-        abort();
-    return R_NilValue;
-}
-
 
 /* FUNTAB entries defined in this source file; otherwise in non-standard way. */
 
@@ -303,7 +296,6 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 
 {".Internal",	do_internal,	0,	1200,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".Primitive",	do_primitive,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	  0}},
-{"create_missing_under", do_create_missing_under, 0, 10, 0, {PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Note that the number of arguments in this group only applies
@@ -536,7 +528,6 @@ static void SymbolShortcuts(void)
     R_AtSymbol = install("@");
     R_DotDotSymbol = install("..");
     R_ParenSymbol = install("(");
-    R_MissingUnderSymbol = install("_");
 
     R_CommentSymbol = install("comment");
     R_DotEnvSymbol = install(".Environment");
@@ -632,10 +623,16 @@ void InitNames()
 	R_Suicide("couldn't allocate memory for symbol table");
     for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
 
+    /* The SYMSXP objects below are not in the symbol table, and hence
+       must be roots for the garbage collector. */
     /* R_MissingArg */
     R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
     SET_PRINTNAME(R_MissingArg, mkChar(""));
+    /* R_MissingUnder */
+    R_MissingUnder = mkSYMSXP(R_NilValue,R_NilValue);
+    SET_SYMVALUE(R_MissingUnder, R_MissingArg);
+    SET_PRINTNAME(R_MissingUnder, mkChar("_"));
     /* R_RestartToken */
     R_RestartToken = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);

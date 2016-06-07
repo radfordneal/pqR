@@ -1359,7 +1359,7 @@ static SEXP parse_sublist (int flags)
             if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']') 
                 next = MaybeConstList1(R_MissingArg);
             else if (NEXT_TOKEN == '_') {
-                next = MaybeConstList1(R_MissingUnderSymbol);
+                next = MaybeConstList1(R_MissingUnder);
                 get_next_token(0);
                 if (NEXT_TOKEN != ',' && NEXT_TOKEN != ')' && NEXT_TOKEN != ']')
                     PARSE_UNEXPECTED();
@@ -1390,7 +1390,7 @@ static SEXP parse_sublist (int flags)
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
                     else if (NEXT_TOKEN == '_') {
-                        next = val = R_MissingUnderSymbol;
+                        next = val = R_MissingUnder;
                         get_next_token(0);
                         if (NEXT_TOKEN != ',' && NEXT_TOKEN != ')' 
                                               && NEXT_TOKEN != ']')
@@ -3450,7 +3450,7 @@ static int token (int c, int no_symbol)
         ps->next_token_val = R_AtSymbol;
         return c;
     case '_':
-        ps->next_token_val = R_MissingUnderSymbol;
+        ps->next_token_val = R_MissingUnder;
         return c;
     default:
 	return c;
