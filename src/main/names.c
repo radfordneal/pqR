@@ -287,6 +287,13 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
     NULL
 };
 
+static SEXP do_create_missing_under (SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    if (!set_var_in_frame(R_MissingUnderSymbol,R_MissingArg,R_BaseEnv,TRUE,0))
+        abort();
+    return R_NilValue;
+}
+
 
 /* FUNTAB entries defined in this source file; otherwise in non-standard way. */
 
@@ -296,6 +303,7 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 
 {".Internal",	do_internal,	0,	1200,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".Primitive",	do_primitive,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"create_missing_under", do_create_missing_under, 0, 10, 0, {PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Note that the number of arguments in this group only applies

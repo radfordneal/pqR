@@ -96,3 +96,4 @@
 as.numeric <- as.real <- as.double
 is.name <- is.symbol
 `**` <- `^`
+invisible(.Internal(create_missing_under()))

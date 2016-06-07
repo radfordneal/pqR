@@ -2249,7 +2249,7 @@ R_isMissing(SEXP symbol, SEXP rho)
     int ddv=0;
     SEXP vl, s;
 
-    if (symbol == R_MissingArg) /* Yes, this can happen */
+    if (symbol == R_MissingArg || symbol == R_MissingUnderSymbol)
 	return 1;
 
     /* check for infinite recursion */
@@ -2263,7 +2263,7 @@ R_isMissing(SEXP symbol, SEXP rho)
 	s = symbol;
 
     if (rho == R_BaseEnv || rho == R_BaseNamespace)
-	return 0;  /* is this really the right thing to do? LT */
+	return 0;
 
     vl = findVarLocInFrame(rho, s, NULL);
     if (vl != R_NilValue) {
@@ -2695,7 +2695,8 @@ static int BuiltinSize(int all, int intern)
 	    }
 	    else {
 		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-		    && SYMVALUE(s) != R_UnboundValue)
+			&& SYMVALUE(s) != R_MissingArg
+			&& SYMVALUE(s) != R_UnboundValue)
 		    count++;
 	    }
 	}
@@ -2716,7 +2717,8 @@ BuiltinNames(int all, int intern, SEXP names, int *indx)
 	    }
 	    else {
 		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-		    && SYMVALUE(s) != R_UnboundValue)
+			&& SYMVALUE(s) != R_MissingArg
+	    		&& SYMVALUE(s) != R_UnboundValue)
 		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
 	    }
 	}
