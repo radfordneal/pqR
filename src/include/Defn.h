@@ -577,7 +577,7 @@ typedef struct {
                                        also sets R_variant_result to 1 or 2 if
                                        the  result is an unshared subset of
                                        the first argument.  If set to 2, any
-                                       change still must be propaged upwards. */
+                                       change still must be propagated upwards*/
 
 /* Variant flags that are passed on. */
 
@@ -602,7 +602,9 @@ typedef struct {
 
 /* Variant flags that are not passed on. */
 
-   /* none so far */
+#define VARIANT_MISSING_OK 0x10000  /* A missing value will be returned as 
+                                       R_MissingArg, rather than producing an
+                                       error.  Does not set R_variant_result. */
 
 /* Flags in R_variant_result. */
 

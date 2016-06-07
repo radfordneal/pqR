@@ -1,3 +1,14 @@
 Implements '_' as an explicit missing value, and its
 use to signal that a diminsion should not be dropped
 with '[ ]'.
+
+Fixed following bug (also in R-3.3.0):
+
+  > f <- function (...) ..2
+  > f(1,,2)
+
+  > g <- function (a,b,c) b
+  > g(1,,2)
+  Error in g(1, , 2) : argument "b" is missing, with no default
+
+Call of f should also produce an error.

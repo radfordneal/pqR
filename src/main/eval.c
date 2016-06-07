@@ -530,17 +530,15 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	if (e == R_DotsSymbol)
 	    dotdotdot_error();
 
-	if (DDVAL(e))
-	    res = ddfindVar(e,rho);
-	else {
-	    res = FIND_VAR_PENDING_OK (e, rho);
-            if (res == R_MissingArg)
-                arg_missing_error(e);
-        }
+	res = DDVAL(e) ? ddfindVar(e,rho) : FIND_VAR_PENDING_OK (e, rho);
+
 	if (res == R_UnboundValue)
             unbound_var_error(e);
-
-        if (TYPEOF(res) == PROMSXP) {
+        else if (res == R_MissingArg) {
+            if ( ! (variant & VARIANT_MISSING_OK))
+                arg_missing_error(e);
+        }
+        else if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
                 res = forcePromiseUnbound(res);
             else 
