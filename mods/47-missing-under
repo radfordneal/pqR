@@ -1,0 +1,3 @@
+Implements '_' as an explicit missing value, and its
+use to signal that a diminsion should not be dropped
+with '[ ]'.

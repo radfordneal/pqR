@@ -528,6 +528,7 @@ static void SymbolShortcuts(void)
     R_AtSymbol = install("@");
     R_DotDotSymbol = install("..");
     R_ParenSymbol = install("(");
+    R_MissingUnderSymbol = install("_");
 
     R_CommentSymbol = install("comment");
     R_DotEnvSymbol = install(".Environment");

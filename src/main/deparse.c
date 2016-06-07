@@ -1510,13 +1510,17 @@ static void args2buff(SEXP arglist, int lineb, int formals, LocalParseData *d)
             if (a != R_MissingArg || !formals)
                 print2buff(" = ", d);
 
-            if (a != R_MissingArg) {
+            if (a == R_MissingUnderSymbol)
+                print2buff("_", d);
+            else if (a != R_MissingArg) {
                 int np = needsparens_arg(a);
                 if (np) print2buff("(", d);
                 deparse2buff(a, d);
                 if (np) print2buff(")", d);
             }
 	}
+        else if (a == R_MissingUnderSymbol)
+            print2buff("_", d);
 	else {
             /* If we get here with formals being TRUE, the expression
                is malformed.  Not clear what to do... */
