@@ -789,8 +789,8 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 
     args = CDR(s);
     if (TYPEOF(ifun) == BUILTINSXP) {
-	args = PRIMFUN_PENDING_OK(ifun) ? evalListPendingOK (args, env, call)
-                                        : evalList (args, env, call);
+	args = PRIMFUN_PENDING_OK(ifun) ? evalListPendingOK (args, env, 0)
+                                        : evalList (args, env);
     }
     PROTECT(args);
 

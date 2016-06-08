@@ -1317,19 +1317,14 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 UNPROTECT(nprotect);
                 argsevald = -1;
             }
-            else if (TYPEOF(CAR(ixlist)) != LANGSXP) {
-                /* ... in particular, it might be missing ... */
-                args = evalListKeepMissing(ixlist,rho);
-                UNPROTECT(nprotect);
-                return do_subset_dflt_seq (call, op, array, args, rho, 
-                                           variant, 0);
-            }
             else {
                 SEXP remargs = CDR(ixlist);
                 int seq = 0;
                 int avar = 
-                  remargs == R_NilValue ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK :
-                  CDR(remargs) == R_NilValue ? VARIANT_SEQ : 0;
+                  remargs == R_NilValue 
+                    ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK | VARIANT_MISSING_OK :
+                  CDR(remargs) == R_NilValue 
+                    ? VARIANT_SEQ | VARIANT_MISSING_OK : VARIANT_MISSING_OK;
                 SEXP idx = evalv (CAR(ixlist), rho, avar);
                 if (R_variant_result) {
                     seq = 1;
@@ -1338,7 +1333,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 if (remargs != R_NilValue) {
                     PROTECT(idx);
                     nprotect++;
-                    remargs = evalListPendingOK (remargs, rho, NULL);
+                    remargs = evalListPendingOK(remargs,rho,VARIANT_MISSING_OK);
                 }
                 args = CONS(idx,remargs);
                 UNPROTECT(nprotect);

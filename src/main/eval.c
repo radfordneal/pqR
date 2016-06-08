@@ -687,7 +687,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 
             goto done_builtin;
         }
-        args = evalListPendingOK (args, rho, e);
+        args = evalListPendingOK (args, rho, 0);
     }
 
     PROTECT(args);
@@ -2562,26 +2562,20 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 
-/* Evaluate each expression in "el" in the environment "rho", with the
-   result allowed to have arguments whose computation is pending (see
-   below for the version that waits for these computations).
+/* Evaluate each expression in "el" in the environment "rho".  
+   The evaluation is done by calling evalv with the given variant,
+   which is automaticaly OR'd with VARIANT_PENDING_OK, so the
+   caller should wait for computations to finish if this is necessary.
 
    Used in eval and applyMethod (object.c) for builtin primitives,
    do_internal (names.c) for builtin .Internals and in evalArgs.
-
-   The 'call' argument is used only for error reporting when an argument is
-   missing.  It is assumed that 'el' is a tail of the arguments in 'call', 
-   so the position of a missing argument can be found by searching 'call'.  
-   (Previously, an argument was passed saying how many arguments were dropped 
-   in 'el'.)
-
-   If the 'call' argument is NULL, missing arguments are retained.
  */
 
-SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
+SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 {
     SEXP head, tail, ev, h;
 
+    variant |= VARIANT_PENDING_OK;
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
@@ -2599,12 +2593,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 	    PROTECT(h = findVar(CAR(el), rho));
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-                    ev = call == NULL && CAR(h) == R_MissingArg ? 
-                         cons_with_tag (R_MissingArg, R_NilValue, TAG(h))
-                       : cons_with_tag (
-                           EVALV (CAR(h), rho, VARIANT_PENDING_OK),
-                           R_NilValue,
-                           TAG(h));
+                    ev = cons_with_tag (EVALV (CAR(h), rho, variant),
+                                        R_NilValue, TAG(h));
                     if (head==R_NilValue) {
                         UNPROTECT(1); /* h */
                         PROTECT(head = ev);
@@ -2620,25 +2610,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 		dotdotdot_error();
             UNPROTECT(1); /* h */
 
-	} else if (CAR(el) == R_MissingArg && call != NULL) {
-            /* Report the missing argument as an error. */
-            int n = 1;
-            SEXP a;
-            for (a = CDR(call); a!=R_NilValue && CAR(a)!=CAR(el); a = CDR(a))
-                n += 1;
-            /* If for some reason we never found the missing argument, n will
-               indicate an argument past the end, which is fairly harmless. */
-	    errorcall(call, _("argument %d is empty"), n);
-
 	} else {
-            if (call == NULL && (CAR(el) == R_MissingArg ||
-                                 isSymbol(CAR(el)) && R_isMissing(CAR(el),rho)))
-                ev = cons_with_tag (R_MissingArg, R_NilValue, TAG(el));
-            else
-                ev = cons_with_tag (
-                       EVALV (CAR(el), rho, VARIANT_PENDING_OK), 
-                       R_NilValue, 
-                       TAG(el));
+            ev = cons_with_tag(EVALV(CAR(el),rho,variant), R_NilValue, TAG(el));
             if (head==R_NilValue)
                 PROTECT(head = ev);
             else
@@ -2658,21 +2631,25 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, SEXP call)
 
 /* Evaluate argument list, waiting for any pending computations of arguments. */
 
-SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call)
+SEXP attribute_hidden evalList(SEXP el, SEXP rho)
 {
     SEXP args;
 
-    args = evalListPendingOK (el, rho, call);
+    args = evalListPendingOK (el, rho, 0);
     WAIT_UNTIL_ARGUMENTS_COMPUTED (args);
 
     return args;
 }
 
-/* Evaluate argument list, with no error for missing arguments. */
+/* Evaluate argument list, waiting for pending computations, and with no 
+   error for missing arguments. */
 
 SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 { 
-    return evalList (el, rho, NULL);
+    SEXP args;
+
+    args = evalListPendingOK (el, rho, VARIANT_MISSING_OK);
+    WAIT_UNTIL_ARGUMENTS_COMPUTED (args);
 }
 
 
@@ -3025,9 +3002,9 @@ static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing, SEXP call)
+static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing)
 {
-    return evalList (el, rho, dropmissing ? call : NULL);
+    return dropmissing ? evalList(el,rho) : evalListKeepMissing(el,rho);
 }
 
 
@@ -3046,7 +3023,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	/* Rboolean hasS4 = FALSE; */ 
 	int nprotect = 0, dispatch;
 	if(!argsevald) {
-            PROTECT(argValue = evalArgs(args, rho, dropmissing, call));
+            PROTECT(argValue = evalArgs(args, rho, dropmissing));
 	    nprotect++;
 	    argsevald = TRUE;
 	}
@@ -3163,11 +3140,10 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		   multiple evaluation after the call to possible_dispatch.
 		*/
 		if (dots)
-		    PROTECT(argValue = evalArgs(argValue, rho, dropmissing,
-						call));
+		    PROTECT(argValue = evalArgs(argValue, rho, dropmissing));
 		else {
 		    PROTECT(argValue = CONS(x, evalArgs(CDR(argValue), rho,
-							dropmissing, call)));
+							dropmissing)));
 		    SET_TAG(argValue, CreateTag(TAG(args)));
 		}
 		nprotect++;
@@ -3223,9 +3199,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    /* The first call argument was ... and may contain more than the
 	       object, so it needs to be evaluated here.  The object should be
 	       in a promise, so evaluating it again should be no problem. */
-	    *ans = evalArgs(args, rho, dropmissing, call);
+	    *ans = evalArgs(args, rho, dropmissing);
 	else {
-	    PROTECT(*ans = CONS(x, evalArgs(CDR(args), rho, dropmissing, call)));
+	    PROTECT(*ans = CONS(x, evalArgs(CDR(args), rho, dropmissing)));
 	    SET_TAG(*ans, CreateTag(TAG(args)));
 	    UNPROTECT(1);
 	}
