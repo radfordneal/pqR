@@ -536,7 +536,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             unbound_var_error(e);
         else if (res == R_MissingArg) {
             if ( ! (variant & VARIANT_MISSING_OK))
-                arg_missing_error(e);
+                if (!DDVAL(e))  /* revert bug fix for the moment */
+                    arg_missing_error(e);
         }
         else if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
