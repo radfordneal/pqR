@@ -14,3 +14,9 @@ Fixed following bug (also in R-3.3.0):
 Call of f should also produce an error.  But this bug fix has been
 reverted, because it leads to make check failing (problem with NextMethod).
 
+Fixed the following bug (also in R-3.3.0):
+
+  > f <- function (...) ..1; f()
+  Error in f() : 'nthcdr' needs a list to CDR down
+
+The error is now "Error in f() : The ... list does not contain 1 elements".

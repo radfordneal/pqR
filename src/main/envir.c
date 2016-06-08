@@ -1357,7 +1357,7 @@ SEXP ddfindVar(SEXP symbol, SEXP rho)
     vl = findVar(R_DotsSymbol, rho);
     i = ddVal(symbol);
     if (vl != R_UnboundValue) {
-	if (length(vl) >= i) {
+	if (vl != R_MissingArg && vl != R_MissingUnder && length(vl) >= i) {
 	    vl = nthcdr(vl, i - 1);
 	    return(CAR(vl));
 	}
@@ -2274,13 +2274,13 @@ R_isMissing(SEXP symbol, SEXP rho)
     vl = findVarLocInFrame(rho, s, NULL);
     if (vl != R_NilValue) {
 	if (DDVAL(symbol)) {
-	    if (length(CAR(vl)) < ddv || CAR(vl) == R_MissingArg)
+	    if (CAR(vl) == R_UnboundValue || CAR(vl) == R_MissingArg
+                 || CAR(vl) == R_MissingUnder || length(CAR(vl)) < ddv)
 		return 1;
-	    /* defineVar(symbol, value, R_GlobalEnv); */
 	    else
 		vl = nthcdr(CAR(vl), ddv-1);
 	}
-	if (MISSING(vl) == 1 || CAR(vl) == R_MissingArg)
+	if (MISSING(vl)==1 || CAR(vl)==R_MissingArg || CAR(vl)==R_MissingUnder)
 	    return 1;
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
@@ -2342,7 +2342,8 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("'missing' can only be used for arguments"));
 
     if (DDVAL(sym)) {
-        if (CAR(t) == R_MissingArg || length(CAR(t)) < ddv) 
+        if (CAR(t) == R_UnboundValue || CAR(t) == R_MissingArg
+             || CAR(t) == R_MissingUnder || length(CAR(t)) < ddv)
             goto true;
         else
             t = nthcdr(CAR(t), ddv-1);
