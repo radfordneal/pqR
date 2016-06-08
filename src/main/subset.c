@@ -1296,7 +1296,6 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
     int argsevald = 0;
-    int nprotect = 0;
 
     /* If we can easily determine that this will be handled by subset_dflt
        and has one or two index arguments in total, evaluate the first index
@@ -1309,38 +1308,44 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
         SEXP ixlist = CDR(args);
-        if (ixlist != R_NilValue && TAG(ixlist) == R_NilValue) {
-            PROTECT(array = evalv(array,rho,VARIANT_PENDING_OK));
-            nprotect++;
-            if (isObject(array)) {
-                args = CONS(array,ixlist);
-                UNPROTECT(nprotect);
-                argsevald = -1;
+        PROTECT(array = evalv(array,rho,VARIANT_PENDING_OK));
+        if (isObject(array)) {
+            args = CONS(array,ixlist);
+            argsevald = -1;
+            UNPROTECT(1);  /* array */
+        }
+        else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
+                                      || CAR(ixlist) == R_DotsSymbol) {
+            args = evalListKeepMissing(ixlist,rho);
+            UNPROTECT(1);  /* array */
+            return do_subset_dflt_seq (call, op, array, args, rho, 
+                                       variant, 0);
+        }
+        else {
+            SEXP remargs = CDR(ixlist);
+            int seq = 0;
+            int avar = 
+              remargs == R_NilValue 
+                ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK 
+                              | VARIANT_MISSING_OK 
+                              | VARIANT_PENDING_OK :
+              CDR(remargs) == R_NilValue 
+                ? VARIANT_SEQ | VARIANT_MISSING_OK
+                              | VARIANT_PENDING_OK
+                : VARIANT_MISSING_OK;
+            SEXP idx;
+            PROTECT (idx = evalv (CAR(ixlist), rho, avar));
+            if (R_variant_result) {
+                seq = 1;
+                R_variant_result = 0;
             }
-            else {
-                SEXP remargs = CDR(ixlist);
-                int seq = 0;
-                int avar = 
-                  remargs == R_NilValue 
-                    ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK | VARIANT_MISSING_OK :
-                  CDR(remargs) == R_NilValue 
-                    ? VARIANT_SEQ | VARIANT_MISSING_OK : VARIANT_MISSING_OK;
-                SEXP idx = evalv (CAR(ixlist), rho, avar);
-                if (R_variant_result) {
-                    seq = 1;
-                    R_variant_result = 0;
-                }
-                if (remargs != R_NilValue) {
-                    PROTECT(idx);
-                    nprotect++;
-                    remargs = evalListPendingOK(remargs,rho,VARIANT_MISSING_OK);
-                }
-                args = CONS(idx,remargs);
-                UNPROTECT(nprotect);
-                wait_until_arguments_computed(args);
-                return do_subset_dflt_seq (call, op, array, args, rho, 
-                                           variant, seq);
-            }
+            if (remargs != R_NilValue)
+                remargs = evalListPendingOK(remargs,rho,VARIANT_MISSING_OK);
+            args = CONS(idx,remargs);
+            wait_until_arguments_computed(args);
+            UNPROTECT(2);  /* array, idx */
+            return do_subset_dflt_seq (call, op, array, args, rho, 
+                                       variant, seq);
         }
     }
 
@@ -1374,7 +1379,9 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* The "seq" argument below is 1 if the first subscript is a sequence spec
    (a variant result).  The first argument (the array, x) is passed separately
-   rather than as part of an argument list, for efficiency. */
+   rather than as part of an argument list, for efficiency. 
+
+   Note:  x and subs may not be protected on entry. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
                                 SEXP rho, int variant, int seq)
