@@ -2651,6 +2651,8 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
     args = evalListPendingOK (el, rho, VARIANT_MISSING_OK);
     WAIT_UNTIL_ARGUMENTS_COMPUTED (args);
+
+    return args;
 }
 
 
