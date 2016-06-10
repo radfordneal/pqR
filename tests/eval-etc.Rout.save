@@ -365,3 +365,62 @@ NULL
 > g(_,_)
 [1] TRUE TRUE
 > 
+> f <- function (x) c(missing(x),missing_from_underline(x))
+> g <- function (y) f(y)
+> h <- function (z) g(z)
+> 
+> f(1)
+[1] FALSE FALSE
+> g(1)
+[1] FALSE FALSE
+> h(1)
+[1] FALSE FALSE
+> 
+> f()
+[1]  TRUE FALSE
+> g()
+[1]  TRUE FALSE
+> h()
+[1]  TRUE FALSE
+> 
+> f(x=)
+[1]  TRUE FALSE
+> g(y=)
+[1]  TRUE FALSE
+> h(z=)
+[1]  TRUE FALSE
+> 
+> f(_)
+[1] TRUE TRUE
+> g(_)
+[1] TRUE TRUE
+> h(_)
+[1] TRUE TRUE
+> 
+> f <- function (x) { try(x); c(missing(x),missing_from_underline(x)) }
+> g <- function (y) f(y)
+> h <- function (z) g(z)
+> 
+> f(pi[1,1])
+Error in pi[1, 1] : incorrect number of dimensions
+[1] FALSE FALSE
+> g(pi[1,1])
+Error in pi[1, 1] : incorrect number of dimensions
+[1] FALSE FALSE
+> h(pi[1,1])
+Error in pi[1, 1] : incorrect number of dimensions
+[1] FALSE FALSE
+> 
+> d <- function () { 
++     delayedAssign("A",B); delayedAssign("B",C); delayedAssign("C",A);
++     c(missing(A),missing_from_underline(A))
++ }
+> 
+> d()
+[1]  TRUE FALSE
+> 
+> e <- function (w=x,x=y,y=z,z=w) c(missing(w),missing_from_underline(w))
+> 
+> e()
+[1]  TRUE FALSE
+> 
