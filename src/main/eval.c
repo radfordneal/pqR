@@ -2583,16 +2583,16 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
     while (el != R_NilValue) {
 
 	if (CAR(el) == R_DotsSymbol) {
-	    /* If we have a ... symbol, we look to see what it is bound to.
-	     * If its binding is Null (i.e. zero length)
-	     *	we just ignore it and return the cdr with all its expressions evaluated;
-	     * if it is bound to a ... list of promises,
-	     *	we force all the promises and then splice
-	     *	the list of resulting values into the return value.
-	     * Anything else bound to a ... symbol is an error
-	     */
-	    PROTECT(h = findVar(CAR(el), rho));
-	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
+            /* If we have a ... symbol, we look to see what it is bound to.
+               If its binding is Null (i.e. zero length) or missing we just
+               ignore it and return the cdr with all its expressions evaluated.
+               If it is bound to a ... list of promises, we force all the 
+               promises and then splice the list of resulting values into
+               the return value. Anything else bound to a ... symbol is an 
+               error. */
+	    h = findVar(CAR(el), rho);
+	    if (TYPEOF(h) == DOTSXP) {
+                PROTECT(h);
 		while (h != R_NilValue) {
                     ev = cons_with_tag (EVALV (CAR(h), rho, variant),
                                         R_NilValue, TAG(h));
@@ -2606,10 +2606,10 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
                     tail = ev;
 		    h = CDR(h);
 		}
+                UNPROTECT(1); /* h */
 	    }
-	    else if (h != R_MissingArg)
+	    else if (h != R_NilValue && h != R_MissingArg)
 		dotdotdot_error();
-            UNPROTECT(1); /* h */
 
 	} else {
             ev = cons_with_tag(EVALV(CAR(el),rho,variant), R_NilValue, TAG(el));
