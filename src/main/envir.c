@@ -2274,34 +2274,35 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
 
     vl = findVarLocInFrame(rho, s, NULL);
     if (vl != R_NilValue) {
+        SEXP vlv = CAR(vl);
 	if (DDVAL(symbol)) {
-            if (CAR(vl) == R_MissingUnder)
+            if (vlv == R_MissingUnder)
                 return 2;
-	    if (CAR(vl) == R_UnboundValue || CAR(vl) == R_MissingArg
-                 || length(CAR(vl)) < ddv)
+	    if (vlv == R_UnboundValue || vlv == R_MissingArg || length(vlv)<ddv)
 		return 1;
-            vl = nthcdr(CAR(vl), ddv-1);
+            vl = nthcdr(vlv, ddv-1);
+            vlv = CAR(vl);
 	}
-	if (MISSING(vl)==1 || CAR(vl)==R_MissingArg)
+	if (MISSING(vl)==1 || vlv==R_MissingArg)
 	    return 1;
-        if (CAR(vl)==R_MissingUnder)
+        if (vlv==R_MissingUnder)
             return 2;
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
-	if (TYPEOF(CAR(vl)) == PROMSXP && PRVALUE(CAR(vl)) == R_UnboundValue
-                                       && TYPEOF(PREXPR(CAR(vl))) == SYMSXP) {
+	if (TYPEOF(vlv)==PROMSXP && TYPEOF(PREXPR(vlv))==SYMSXP
+             && (PRVALUE(vlv)==R_UnboundValue || PRVALUE(vlv)==R_MissingArg)) {
             for (struct detectcycle *p = dc; p != NULL; p = p->next) {
-                if (p->prom == CAR(vl)) {
+                if (p->prom == vlv) {
                     return 1;
                 }
             }
             struct detectcycle dc2;
             dc2.next = dc;
-            dc2.prom = CAR(vl);
+            dc2.prom = vlv;
             int val;
             PROTECT(vl);
             R_CHECKSTACK();
-            val = isMissing_recursive(PREXPR(CAR(vl)), PRENV(CAR(vl)), &dc2);
+            val = isMissing_recursive(PREXPR(vlv), PRENV(vlv), &dc2);
             UNPROTECT(1); /* vl */
             return val;
 	}
