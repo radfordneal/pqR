@@ -612,6 +612,7 @@ static R_INLINE int HashGet(SEXP item, SEXP ht)
 #define NAMESPACESXP      249
 #define PACKAGESXP        248
 #define PERSISTSXP        247
+
 /* the following are speculative--we may or may not need them soon */
 #define CLASSREFSXP       246
 #define GENERICREFSXP     245
@@ -632,6 +633,9 @@ static R_INLINE int HashGet(SEXP item, SEXP ht)
    don't need to be handled as a special case.  LT */
 #define ATTRLANGSXP       240
 #define ATTRLISTSXP       239
+
+/* the following added for pqR */
+#define MISSINGUNDER_SXP 229
 
 /*
  * Type/Flag Packing and Unpacking
@@ -768,6 +772,7 @@ static int SaveSpecialHook(SEXP item)
     if (item == R_GlobalEnv)     return GLOBALENV_SXP;
     if (item == R_UnboundValue)  return UNBOUNDVALUE_SXP;
     if (item == R_MissingArg)    return MISSINGARG_SXP;
+    if (item == R_MissingUnder)  return MISSINGUNDER_SXP;
     if (item == R_BaseNamespace) return BASENAMESPACE_SXP;
     return 0;
 }
@@ -1488,6 +1493,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     case GLOBALENV_SXP:     s = R_GlobalEnv;      goto ret;
     case UNBOUNDVALUE_SXP:  s = R_UnboundValue;   goto ret;
     case MISSINGARG_SXP:    s = R_MissingArg;     goto ret;
+    case MISSINGUNDER_SXP:  s = R_MissingUnder; goto ret;
     case BASENAMESPACE_SXP: s = R_BaseNamespace;  goto ret;
     case REFSXP:
 	s = GetReadRef(ref_table, InRefIndex(stream, flags));
