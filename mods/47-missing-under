@@ -2,6 +2,7 @@ Implements '_' as an explicit missing value, and its
 use to signal that a diminsion should not be dropped
 with '[ ]'.
 
+
 Fixed following bug (also in R-3.3.0):
 
   > f <- function (...) ..2
@@ -13,6 +14,7 @@ Fixed following bug (also in R-3.3.0):
 
 Call of f should also produce an error.  But this bug fix has been
 reverted, because it leads to make check failing (problem with NextMethod).
+
 
 Fixed the following bug (also in R-3.3.0):
 

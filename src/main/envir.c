@@ -2229,22 +2229,14 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 
-/*----------------------------------------------------------------------
+/* R_isMissing is called on the not-yet-evaluated value of an argument,
+   if this is a symbol, as it could be a missing argument that has been
+   passed down.  So 'symbol' is the promise value, and 'rho' its
+   evaluation argument.
 
-  do_missing
+   It is called in do_missing, and in arithmetic.c. for e.g. do_log
 
-  This function tests whether the symbol passed as its first argument
-  is a missing argument to the current closure.  rho is the
-  environment that missing was called from.
-
-  R_isMissing is called on the not-yet-evaluated value of an argument,
-  if this is a symbol, as it could be a missing argument that has been
-  passed down.  So 'symbol' is the promise value, and 'rho' its
-  evaluation argument.
-
-  It is also called in arithmetic.c. for e.g. do_log
-
-  Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
+   Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
 */
 
 int attribute_hidden
@@ -2274,14 +2266,17 @@ R_isMissing(SEXP symbol, SEXP rho)
     vl = findVarLocInFrame(rho, s, NULL);
     if (vl != R_NilValue) {
 	if (DDVAL(symbol)) {
+            if (CAR(vl) == R_MissingUnder)
+                return 2;
 	    if (CAR(vl) == R_UnboundValue || CAR(vl) == R_MissingArg
-                 || CAR(vl) == R_MissingUnder || length(CAR(vl)) < ddv)
+                 || length(CAR(vl)) < ddv)
 		return 1;
-	    else
-		vl = nthcdr(CAR(vl), ddv-1);
+            vl = nthcdr(CAR(vl), ddv-1);
 	}
-	if (MISSING(vl)==1 || CAR(vl)==R_MissingArg || CAR(vl)==R_MissingUnder)
+	if (MISSING(vl)==1 || CAR(vl)==R_MissingArg)
 	    return 1;
+        if (CAR(vl)==R_MissingUnder)
+            return 2;
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
 	if (TYPEOF(CAR(vl)) == PROMSXP &&
@@ -2314,10 +2309,21 @@ R_isMissing(SEXP symbol, SEXP rho)
     return 0;
 }
 
-/* this is primitive and a SPECIALSXP */
+
+/*----------------------------------------------------------------------
+
+  do_missing and do_missing_from_underline
+
+  This function tests whether the symbol passed as its first argument
+  is a missing argument to the current closure.  rho is the
+  environment that missing was called from.
+
+  These are primitive and SPECIALSXP */
+
 static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP t, sym, s;
+    int under = PRIMVAL(op);
     int ddv = 0;
 
     checkArity(op, args);
@@ -2342,24 +2348,24 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("'missing' can only be used for arguments"));
 
     if (DDVAL(sym)) {
-        if (CAR(t) == R_UnboundValue || CAR(t) == R_MissingArg
-             || CAR(t) == R_MissingUnder || length(CAR(t)) < ddv)
+        if (CAR(t) == R_MissingUnder
+             || !under && (CAR(t) == R_UnboundValue || CAR(t) == R_MissingArg
+                                                    || length(CAR(t)) < ddv))
             goto true;
-        else
-            t = nthcdr(CAR(t), ddv-1);
+        t = nthcdr(CAR(t), ddv-1);
     }
 
-    if (MISSING(t) || CAR(t) == R_MissingArg || CAR(t) == R_MissingUnder)
+    if (CAR(t) == R_MissingUnder
+         || !under && (MISSING(t) || CAR(t) == R_MissingArg))
         goto true;
 
     t = CAR(t);
     if (TYPEOF(t)==PROMSXP && isSymbol(PREXPR(t))) { 
         PROTECT(t);
-        if (R_isMissing(PREXPR(t),PRENV(t))) {
-            UNPROTECT(1);
-            goto true;
-        }
+        int m = R_isMissing(PREXPR(t),PRENV(t));
         UNPROTECT(1);
+        if (m == 2 || !under && m)
+            goto true;
     }
 
     return ScalarLogicalMaybeConst(FALSE);
@@ -2373,7 +2379,6 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
   do_globalenv
 
   Returns the current global environment.
-
 */
 
 
@@ -2780,8 +2785,7 @@ static SEXP do_ls(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_lsInternal(env, all);
 }
 
-/* takes a *list* of environments and a boolean indicating whether to get all
-   names */
+/* takes an environment and a boolean indicating whether to get all names */
 SEXP R_lsInternal(SEXP env, Rboolean all)
 {
     int  k;
@@ -3682,7 +3686,8 @@ attribute_hidden FUNTAB R_FunTab_envir[] =
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"exists",	do_get,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
-{"missing",	do_missing,	1,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"missing",	do_missing,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"missing_from_underline",do_missing,1,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"globalenv",	do_globalenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"baseenv",	do_baseenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"emptyenv",	do_emptyenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},

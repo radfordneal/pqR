@@ -399,8 +399,10 @@ static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
        fancy games with delayedAssign() */
     R_PendingPromises = prstack.next;
     SET_PRSEEN(e, 0);
-    SET_PRVALUE(e, val);
-    INC_NAMEDCNT(val);
+    if (val != R_MissingArg) {  /* Don't set to R_MissingArg, in order that   */
+        SET_PRVALUE(e, val);    /* R_isMissing will still be able to tell     */
+        INC_NAMEDCNT(val);      /* which missing args are ultimately from '_' */
+    }
     SET_PRENV(e, R_NilValue);
 
     UNPROTECT(1);
