@@ -2237,10 +2237,22 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
    It is called in do_missing, and in arithmetic.c. for e.g. do_log
 
    Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
+
+   Cycles in promises checked are detected by looking at each previous one.
+   This takes quadratic time, but the number of promises looked at should
+   normally be very small.
 */
 
-int attribute_hidden
-R_isMissing(SEXP symbol, SEXP rho)
+struct detectcycle { struct detectcycle *next; SEXP prom; };
+
+static int isMissing_recursive (SEXP, SEXP, struct detectcycle *);
+
+int attribute_hidden R_isMissing(SEXP symbol, SEXP rho)
+{
+    return isMissing_recursive (symbol, rho, NULL);
+}
+
+static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
 {
     int ddv=0;
     SEXP vl, s;
@@ -2249,9 +2261,6 @@ R_isMissing(SEXP symbol, SEXP rho)
 	return 1;
     if (symbol == R_MissingUnder)
 	return 2;
-
-    /* check for infinite recursion */
-    R_CHECKSTACK();
 
     if (DDVAL(symbol)) {
 	s = R_DotsSymbol;
@@ -2279,29 +2288,22 @@ R_isMissing(SEXP symbol, SEXP rho)
             return 2;
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
-	if (TYPEOF(CAR(vl)) == PROMSXP &&
-	    PRVALUE(CAR(vl)) == R_UnboundValue &&
-	    TYPEOF(PREXPR(CAR(vl))) == SYMSXP) {
-	    /* This code uses the PRSEEN bit to detect cycles.  If a
-	       cycle occurs then a missing argument was encountered,
-	       so the return value is TRUE.  It would be a little
-	       safer to use the promise stack to ensure unsetting of
-	       the bits in the event of a longjump, but doing so would
-	       require distinguishing between evaluating promises and
-	       checking for missingness.  Because of the test above
-	       for an active binding a longjmp should only happen if
-	       the stack check fails.  LT */
-	    if (PRSEEN(CAR(vl)))
-		return 1;
-	    else {
-		int val;
-		SET_PRSEEN(CAR(vl), 1);
-		PROTECT(vl);
-		val = R_isMissing(PREXPR(CAR(vl)), PRENV(CAR(vl)));
-		UNPROTECT(1); /* vl */
-		SET_PRSEEN(CAR(vl), 0);
-		return val;
-	    }
+	if (TYPEOF(CAR(vl)) == PROMSXP && PRVALUE(CAR(vl)) == R_UnboundValue
+                                       && TYPEOF(PREXPR(CAR(vl))) == SYMSXP) {
+            for (struct detectcycle *p = dc; p != NULL; p = p->next) {
+                if (p->prom == CAR(vl)) {
+                    return 1;
+                }
+            }
+            struct detectcycle dc2;
+            dc2.next = dc;
+            dc2.prom = CAR(vl);
+            int val;
+            PROTECT(vl);
+            R_CHECKSTACK();
+            val = isMissing_recursive(PREXPR(CAR(vl)), PRENV(CAR(vl)), &dc2);
+            UNPROTECT(1); /* vl */
+            return val;
 	}
 	else
 	    return 0;

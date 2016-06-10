@@ -3,7 +3,7 @@ use to signal that a diminsion should not be dropped
 with '[ ]'.
 
 
-Fixed following bug (also in R-3.3.0):
+Fixed the following bug (also in R-3.3.0):
 
   > f <- function (...) ..2
   > f(1,,2)
@@ -22,3 +22,21 @@ Fixed the following bug (also in R-3.3.0):
   Error in f() : 'nthcdr' needs a list to CDR down
 
 The error is now "Error in f() : The ... list does not contain 1 elements".
+
+
+Fixed the following bug (also in R-3.3.0):
+
+  f <- function (x) { try(x); missing(x) }
+  g <- function (y) f(y)
+  h <- function (z) g(z)
+
+  f(pi[1,1])  # FALSE
+  g(pi[1,1])  # FALSE
+  h(pi[1,1])  # TRUE - but shouldn't be!
+
+
+Now no longer use PRSEEN in R_isMissing (needed to fix bug above, and 
+to do missing_from_underline properly).
+
+
+Added tests of missing and missing_from_underline to eval-etc.R.

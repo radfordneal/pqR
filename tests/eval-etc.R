@@ -233,3 +233,42 @@ g(_,2)
 g(1,_)
 g()
 g(_,_)
+
+f <- function (x) c(missing(x),missing_from_underline(x))
+g <- function (y) f(y)
+h <- function (z) g(z)
+
+f(1)
+g(1)
+h(1)
+
+f()
+g()
+h()
+
+f(x=)
+g(y=)
+h(z=)
+
+f(_)
+g(_)
+h(_)
+
+f <- function (x) { try(x); c(missing(x),missing_from_underline(x)) }
+g <- function (y) f(y)
+h <- function (z) g(z)
+
+f(pi[1,1])
+g(pi[1,1])
+h(pi[1,1])
+
+d <- function () { 
+    delayedAssign("A",B); delayedAssign("B",C); delayedAssign("C",A);
+    c(missing(A),missing_from_underline(A))
+}
+
+d()
+
+e <- function (w=x,x=y,y=z,z=w) c(missing(w),missing_from_underline(w))
+
+e()
