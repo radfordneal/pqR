@@ -1741,7 +1741,8 @@ serialize(input, con <- file("serial", "wb")); close(con)
 res <- unserialize(con <- file("serial", "rb")); close(con)
 stopifnot(identical(input, res))
 unlink("serial")
-## Just a test for possible regressions.
+stopifnot(identical(quote(f(1,,abc,_,3)),
+                    unserialize(serialize(quote(f(1,,abc,_,3)),NULL))))
 
 
 ## mis-PROTECT()ion in printarray C code:

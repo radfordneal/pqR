@@ -1,13 +1,14 @@
 
-pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
 
-R is Copyright (C) 2012 The R Foundation for Statistical Computing
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
-No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -20,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > set.seed(2)  # seed 1 produces strange "Chernobyl" warning from loess
 > 
@@ -199,11 +203,11 @@ Error in cor(numeric(0), numeric(0), use = "pairwise.complete.obs", method = "ke
 > z <- rep(Sys.time(),5)
 > data.frame(I(z))
              z
-1 2014-08-....
-2 2014-08-....
-3 2014-08-....
-4 2014-08-....
-5 2014-08-....
+1 2016-06-....
+2 2016-06-....
+3 2016-06-....
+4 2016-06-....
+5 2016-06-....
 > ##
 > 
 > 
@@ -481,10 +485,10 @@ Error in `[.data.frame`(dd, , "C") : undefined columns selected
 > stopifnot(sapply(x, is.numeric) == FALSE)
 > # TRUE in 2.7.1, tried to dispatch on "FUN"
 > (ds <- seq(from=Sys.Date(), by=1, length=4))
-[1] "2014-08-27" "2014-08-28" "2014-08-29" "2014-08-30"
+[1] "2016-06-10" "2016-06-11" "2016-06-12" "2016-06-13"
 > lapply(list(d=ds), round)
 $d
-[1] "2014-08-27" "2014-08-28" "2014-08-29" "2014-08-30"
+[1] "2016-06-10" "2016-06-11" "2016-06-12" "2016-06-13"
 
 > # failed in 2.7.1 with 'dispatch error' since call had '...' arg
 > ## related to calls being passed unevaluated by lapply.
@@ -1126,7 +1130,7 @@ Error in file(tmp, open = "r", encoding = "unknown") :
 > 
 > ## median should work on POSIXt objects (it did in 2.8.0)
 > median(rep(Sys.time(), 2))
-[1] "2014-08-27 22:43:42 EDT"
+[1] "2016-06-10 14:32:19 EDT"
 > ## failed in 2.8.1, 2.9.0
 > 
 > 
@@ -2208,7 +2212,8 @@ NULL
 > res <- unserialize(con <- file("serial", "rb")); close(con)
 > stopifnot(identical(input, res))
 > unlink("serial")
-> ## Just a test for possible regressions.
+> stopifnot(identical(quote(f(1,,abc,_,3)),
++                     unserialize(serialize(quote(f(1,,abc,_,3)),NULL))))
 > 
 > 
 > ## mis-PROTECT()ion in printarray C code:
