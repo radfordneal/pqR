@@ -1262,7 +1262,6 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
     case INTSXP:  
         if (variant & VARIANT_STATIC_BOX_OK) {
             *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[e];
-if (installed_already("STATIC.BOX.DEBUG")) REprintf("2I: ");
             return R_ScalarIntegerBox;
         }
         else
@@ -1270,7 +1269,6 @@ if (installed_already("STATIC.BOX.DEBUG")) REprintf("2I: ");
     case REALSXP: 
         if (variant & VARIANT_STATIC_BOX_OK) {
             *REAL(R_ScalarRealBox) = REAL(x)[e];
-if (installed_already("STATIC.BOX.DEBUG")) REprintf("2R: ");
             return R_ScalarRealBox;
         }
         else
