@@ -1841,8 +1841,8 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
         /* we ignore arguments after the second - not sure why... */
         PROTECT(args);
 	SEXP digits = ScalarRealMaybeConst (PRIMVAL(op) == 10004 ? 6.0 : 0.0);
+        args = list2 (CAR(args), digits);
         UNPROTECT(1);
-        args = CONS (CAR(args), digits);
         n = 2;
     }
 
