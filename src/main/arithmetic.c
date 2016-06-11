@@ -1833,24 +1833,25 @@ SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP res, call2;
-    int n, nprotect = 2;
 
-    if (length(args) >= 2 &&
-	isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
-	double digits = 0;
-	if(PRIMVAL(op) == 10004) digits = 6.0;
-	PROTECT(args = list2(CAR(args), ScalarRealMaybeConst(digits))); nprotect++;
+    args = evalListKeepMissing(args, env);
+    int n = length(args);
+
+    if (n >= 2 && CADR(args) == R_MissingArg) {
+        /* we ignore arguments after the second - not sure why... */
+        PROTECT(args);
+	SEXP digits = ScalarRealMaybeConst (PRIMVAL(op) == 10004 ? 6.0 : 0.0);
+        UNPROTECT(1);
+        args = CONS (CAR(args), digits);
+        n = 2;
     }
-
-    PROTECT(args = evalListKeepMissing(args, env));
-    PROTECT(call2 = lang2(CAR(call), R_NilValue));
-    SETCDR(call2, args);
-
-    n = length(args);
 
     if (n != 1 && n != 2)
 	error(_("%d arguments passed to '%s' which requires 1 or 2"),
 	      n, PRIMNAME(op));
+
+    PROTECT(call2 = LCONS (CAR(call), args));
+    int nprotect = 1;
 
     if (! DispatchGroup("Math", call2, op, args, env, &res)) {
 	if(n == 1) {
@@ -1904,45 +1905,46 @@ SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 /* This is a primitive SPECIALSXP with internal argument matching */
 SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    int nprotect = 2;
-
     /* Do the common case of one un-tagged, non-object, argument quickly. */
+
     if (!isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) 
           && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg) {
+
         SEXP arg, ans;
-        PROTECT(arg = evalv (CAR(args), env, 
-                             VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK));
+        arg = evalv (CAR(args), env, 
+                     VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
         if (isObject(arg)) {
             WAIT_UNTIL_COMPUTED(arg);
-            UNPROTECT(1);
-            PROTECT(args = CONS(arg, R_NilValue));
+            args = CONS(arg, R_NilValue);
         }
         else {
+            PROTECT(arg);
             ans = do_fast_math1 (call, op, arg, env, variant);
             UNPROTECT(1);
             return ans;
         }
     }
     else {
-        int n = length(args);
+
+        args = evalListKeepMissing(args, env);
 
         /* This seems like some sort of horrible kludge that can't possibly
            be right in general (it ignores the argument names, and silently
            discards arguments after the first two). */
-        if (n >= 2 && isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
+        if (CDR(args) != R_NilValue && CADR(args) == R_MissingArg) {
 #ifdef M_E
 	    double e = M_E;
 #else
 	    double e = exp(1.);
 #endif
-	    PROTECT(args = list2(CAR(args), ScalarReal(e))); nprotect++;
+            PROTECT(args);
+	    args = list2(CAR(args), ScalarReal(e)); 
+            UNPROTECT(1);
         }
-        PROTECT(args = evalListKeepMissing(args, env));
     }
 
     SEXP res, call2;
-    PROTECT(call2 = lang2(CAR(call), R_NilValue));
-    SETCDR(call2, args);
+    PROTECT(call2 = LCONS (CAR(call), args));
 
     int n = length(args);
 
@@ -1960,20 +1962,20 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	    /* match argument names if supplied */
             static char *ap[2] = { "x", "base" };
 	    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
-	    nprotect += 1;
 	    if (length(CADR(args)) == 0)
 		errorcall(call, _("invalid argument 'base' of length 0"));
 	    if (isComplex(CAR(args)) || isComplex(CADR(args)))
 		res = complex_math2(call, op, args, env);
 	    else
 		res = math2(CAR(args), CADR(args), logbase, call);
+            UNPROTECT(1); /* args */
 	    break;
 	}
 	default:
 	    error(_("%d arguments passed to 'log' which requires 1 or 2"), n);
 	}
     }
-    UNPROTECT(nprotect);
+    UNPROTECT(1); /* call2 */
     return res;
 }
 

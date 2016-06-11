@@ -2234,8 +2234,7 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
    argument that has been passed down.  So 'symbol' is the promise value, 
    and 'rho' its evaluation argument.
 
-   It is called in do_missing, in evalListPendingOK, and in arithmetic.c
-   (for e.g. do_log).
+   It is called in do_missing and in evalListPendingOK.
 
    Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
 
