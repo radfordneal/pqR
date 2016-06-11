@@ -2568,6 +2568,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
    which is automaticaly OR'd with VARIANT_PENDING_OK, so the
    caller should wait for computations to finish if this is necessary.
 
+   The MISSING gp field in the CONS cell for a missing argument is 
+   set to the result of R_isMissing, which will allow identification 
+   of missing arguments resulting from '_'.
+
    Used in eval and applyMethod (object.c) for builtin primitives,
    do_internal (names.c) for builtin .Internals and in evalArgs.
  */
@@ -2604,6 +2608,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
                     else
                         SETCDR(tail, ev);
                     tail = ev;
+                    if (CAR(ev) == R_MissingArg && isSymbol(CAR(h)))
+                        SET_MISSING (ev, R_isMissing(CAR(h),rho));
 		    h = CDR(h);
 		}
                 UNPROTECT(1); /* h */
@@ -2618,6 +2624,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
             else
                 SETCDR(tail, ev);
             tail = ev;
+            if (CAR(ev) == R_MissingArg && isSymbol(CAR(el)))
+                SET_MISSING (ev, R_isMissing(CAR(el),rho));
 	}
 
 	el = CDR(el);

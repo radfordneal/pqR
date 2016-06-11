@@ -299,7 +299,8 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 
 
 /* Check whether subscript is such that we suppress dropping dimensions 
-   when the drop argument is NA (the default). */
+   when the drop argument is NA (the default).  Assumes that it's not a
+   missing argument (which needs to be checked separately). */
 
 static inline int whether_suppress_drop (SEXP sb)
 {
@@ -313,8 +314,9 @@ static inline int whether_suppress_drop (SEXP sb)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
+static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
 {
+    SEXP sb = subs == R_NilValue ? R_MissingArg : CAR(subs);
     SEXP indx = R_NilValue;
     SEXP result, dims, attrib, nattrib;
     int start = 1, end = 0, n = 0;
@@ -341,9 +343,11 @@ static SEXP VectorSubset(SEXP x, SEXP sb, int seq, int drop, SEXP call)
             n = end - start + 1;
     }
 
-    /* If subscript is missing, convert to range over entire vector. */
+    /* If subscript is missing, convert to range over entire vector. 
+       Also, suppress dropping if it was missing from '_'. */
 
     if (sb == R_MissingArg) {
+        suppress_drop = subs != R_NilValue && MISSING(subs) == 2;
         start = 1;
         end = length(x);
         n = end;
@@ -728,8 +732,9 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 /* Subset for a vector with dim attribute specifying two dimensions. */
 
-static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
+static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
 {
+    SEXP s0 = CAR(subs), s1 = CADR(subs);
     SEXP dims, result, sr, sc;
     int start = 1, end = 0;
     int nr, nc, nrs = 0, ncs = 0;
@@ -745,10 +750,11 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
     /* s0 is set to NULL when we have a range for the first subscript */
 
     if (s0 == R_MissingArg) {
-        s0 = NULL;
+        suppress_drop_row = MISSING(subs)==2;
         start = 1;
         end = nr;
         nrs = nr;
+        s0 = NULL;
     }
     else if (seq) {
         suppress_drop_row = LEVELS(s0);
@@ -759,19 +765,23 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
     }
 
     if (s0 != NULL) {
-        if (drop == NA_LOGICAL) suppress_drop_row = whether_suppress_drop(s0);
+        if (drop == NA_LOGICAL) 
+            suppress_drop_row = whether_suppress_drop(s0);
         PROTECT (sr = arraySubscript(0, s0, dim, getAttrib, (STRING_ELT), x));
         nprotect++;
         nrs = LENGTH(sr);
     }
 
-    if (drop == NA_LOGICAL) suppress_drop_col = whether_suppress_drop(s1);
+    if (drop == NA_LOGICAL) 
+        suppress_drop_col = s1 == R_MissingArg ? MISSING(CDR(subs)) == 2 
+                                               : whether_suppress_drop(s1);
+
     PROTECT (sc = arraySubscript(1, s1, dim, getAttrib, (STRING_ELT), x));
     nprotect++;
     ncs = LENGTH(sc);
 
     if (nrs < 0 || ncs < 0)
-        abort();  /* shouldn't happend, but code was conditional before... */
+        abort();  /* shouldn't happen, but code was conditional before... */
 
     /* Check this does not overflow */
     if ((double)nrs * (double)ncs > R_LEN_T_MAX)
@@ -851,8 +861,10 @@ static SEXP MatrixSubset(SEXP x, SEXP s0, SEXP s1, SEXP call, int drop, int seq)
 
     if (nrs == 1 || ncs == 1) {
         if (drop == TRUE || drop == NA_LOGICAL 
-          && (nrs == 1 && !suppress_drop_row || ncs == 1 && !suppress_drop_col))
+                             && (nrs == 1 && !suppress_drop_row
+                                  || ncs == 1 && !suppress_drop_col)) {
             DropDims(result);
+        }
     }
 
     UNPROTECT(nprotect);
@@ -871,7 +883,9 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     n = 1; r = s;
     for (i = 0; i < k; i++) {
-        if (drop==NA_LOGICAL) suppress_drop[i] = whether_suppress_drop(CAR(r));
+        if (drop==NA_LOGICAL) 
+            suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
+                                : whether_suppress_drop(CAR(r));
         PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
                                        (STRING_ELT), x));
         subs[i] = INTEGER(subv[i]);
@@ -1339,9 +1353,11 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
             if (remargs != R_NilValue)
                 remargs = evalListPendingOK(remargs,rho,VARIANT_MISSING_OK);
-            args = CONS(idx,remargs);
+            PROTECT(args = CONS(idx,remargs));
+            if (idx == R_MissingArg && isSymbol(CAR(ixlist)))
+                SET_MISSING (args, R_isMissing(CAR(ixlist),rho));
             wait_until_arguments_computed(args);
-            UNPROTECT(2);  /* array, idx */
+            UNPROTECT(3);  /* args, array, idx */
             return do_subset_dflt_seq (call, op, array, args, rho, 
                                        variant, seq);
         }
@@ -1467,21 +1483,19 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
     /* The separation of arrays and matrices is purely an optimization. */
 
     if(nsubs < 2) {
-	PROTECT(ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
-				   seq, drop, call));
+	PROTECT(ans = VectorSubset(ax, subs, seq, drop, call));
     } else {
         SEXP xdims = getAttrib(x, R_DimSymbol);
 	if (nsubs != length(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
-	    ans = MatrixSubset(ax, CAR(subs), CADR(subs), call, drop, seq);
+	    ans = MatrixSubset(ax, subs, call, drop, seq);
 	else
 	    ans = ArraySubset(ax, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);
     }
 
     /* Note: we do not coerce back to pair-based lists. */
-    /* They are "defunct" in this version of R. */
 
     if (type == LANGSXP) {
 	ax = ans;
