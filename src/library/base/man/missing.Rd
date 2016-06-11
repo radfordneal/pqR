@@ -5,13 +5,18 @@
 
 \name{missing}
 \alias{missing}
+\alias{missing_from_underline}
+\alias{_}
 \title{Does a Formal Argument have a Value?}
 \usage{
 missing(x)
+missing_from_underline(x)
 }
 \description{
-\code{missing} can be used to test whether a value was specified
-as an argument to a function.
+\code{missing} can be used to test whether an argument to a function
+is missing in the call, either because the actual argument is empty, or
+because it is \code{_} (distinguished in \code{missing_from_underline}),
+or because it is an argument that is itself missing.
 }
 \arguments{
   \item{x}{a formal argument.}
@@ -29,9 +34,14 @@ as an argument to a function.
   Currently \code{missing} can only be used in the immediate body of
   the function that defines the argument, not in the body of a nested
   function or a \code{local} call.  This may change in the future.
+
+  \code{missing_from_underline} is like \code{missing} except that
+  it returns \code{TRUE} only if the argument was an explicit missing
+  argument, indicated by \code{_}, rather than by the argument being
+  empty.  See the examples below.
   
-  This is a \sQuote{special} \link{primitive} function: it must not
-  evaluate its argument.
+  These are \sQuote{special} \link{primitive} functions, as they must not
+  evaluate their argument.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
@@ -53,6 +63,18 @@ myplot <- function(x,y) {
                         x <- 1:length(y)
                 }
                 plot(x,y)
-        }
+          }
+
+f <- function (x) c(missing(x),missing_from_underline(x))
+f(1)
+f()
+f(x=)
+f(_)
+f(x=_)
+
+g <- function (y) f(y)
+g()   # x in f will be missing in these examples, since 
+g(_)  # it links to y in g, which is missing in these calls
 }
+
 \keyword{programming}
