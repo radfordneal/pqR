@@ -424,3 +424,25 @@ Error in pi[1, 1] : incorrect number of dimensions
 > e()
 [1]  TRUE FALSE
 > 
+> f <- function (x=99) { print(missing(x)); x }
+> f(1)
+[1] FALSE
+[1] 1
+> f()
+[1] TRUE
+[1] 99
+> f(_)
+[1] TRUE
+[1] 99
+> 
+> h <- function (y=88) f(y)
+> h(1)
+[1] FALSE
+[1] 1
+> h()
+[1] FALSE
+[1] 88
+> h(_)
+[1] FALSE
+[1] 88
+>

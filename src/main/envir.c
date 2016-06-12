@@ -1171,7 +1171,7 @@ static SEXP findGlobalVar(SEXP symbol)
 
     }
 
-    return symbol == R_MissingUnder ? R_MissingArg : R_UnboundValue;
+    return R_UnboundValue;
 }
 
 
@@ -1210,7 +1210,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
     }
     else {
         R_binding_cell = R_NilValue;
-        return symbol == R_MissingUnder ? R_MissingArg : R_UnboundValue;
+        return R_UnboundValue;
     }
 }
 
@@ -1235,7 +1235,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
     }
     else {
         R_binding_cell = R_NilValue;
-        return symbol == R_MissingUnder ? R_MissingArg : R_UnboundValue;
+        return R_UnboundValue;
     }
 }
 
@@ -1395,7 +1395,7 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 	cptr = cptr->nextcontext;
     }
 
-    return symbol == R_MissingUnder ? R_MissingArg : R_UnboundValue;
+    return R_UnboundValue;
 }
 
 

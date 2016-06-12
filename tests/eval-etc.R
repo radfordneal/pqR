@@ -272,3 +272,13 @@ d()
 e <- function (w=x,x=y,y=z,z=w) c(missing(w),missing_from_underline(w))
 
 e()
+
+f <- function (x=99) { print(missing(x)); x }
+f(1)
+f()
+f(_)
+
+h <- function (y=88) f(y)
+h(1)
+h()
+h(_)

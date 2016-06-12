@@ -661,7 +661,8 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
     if (args!=R_NilValue) {
         if (PRIMFUN_FAST(op) 
               && TAG(args)==R_NilValue && CDR(args)==R_NilValue
-              && (arg1 = CAR(args))!=R_DotsSymbol && arg1!=R_MissingArg) {
+              && (arg1 = CAR(args))!=R_DotsSymbol 
+              && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
 
             PROTECT(arg1 = EVALV (arg1, rho, 
                                   PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
@@ -944,7 +945,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     f = formals;
     a = actuals;
     while (f != R_NilValue) {
-	if (CAR(a) == R_MissingArg && CAR(f) != R_MissingArg) {
+	if (MISSING(a) && CAR(f) != R_MissingArg) {
 	    SETCAR(a, mkPROMISE(CAR(f), newrho));
 	    SET_MISSING(a, 2);
 	}
