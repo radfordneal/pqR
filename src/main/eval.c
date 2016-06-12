@@ -391,7 +391,7 @@ static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
     prstack.next = R_PendingPromises;
     R_PendingPromises = &prstack;
 
-    val = EVALV (PRCODE(e), PRENV(e), VARIANT_PENDING_OK);
+    val = EVALV (PRCODE(e), PRENV(e), VARIANT_PENDING_OK | VARIANT_MISSING_OK);
 
     /* Pop the stack, unmark the promise and set its value field.
        Also set the environment to R_NilValue to allow GC to
