@@ -927,6 +927,7 @@ Rboolean R_GetVarLocMISSING(R_varloc_t vl)
 void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 {
     SET_BINDING_VALUE((SEXP) vl, value);
+    /* Should this also do a SET_MISSING((SEXP)vl,0)? */
 }
 
 
@@ -2237,6 +2238,8 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
    It is called in do_missing and in evalListPendingOK.
 
    Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
+   Note that R_isMissing pays no attention to the MISSING field, only to
+   whether things are R_MissingArg or R_MissingUnder.
 
    Cycles in promises checked are detected by looking at each previous one.
    This takes quadratic time, but the number of promises looked at should
@@ -2283,7 +2286,7 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
             vl = nthcdr(vlv, ddv-1);
             vlv = CAR(vl);
 	}
-	if (MISSING(vl)==1 || vlv==R_MissingArg)
+	if (vlv==R_MissingArg)
 	    return 1;
         if (vlv==R_MissingUnder)
             return 2;
@@ -2320,6 +2323,11 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
   This function tests whether the symbol passed as its first argument
   is a missing argument to the current closure.  rho is the
   environment that missing was called from.
+
+  Note that an argument with a default value is considered missing
+  if the default was used, but this is NOT applied recursively to 
+  arguments that are arguments in the calling function that were
+  filled in from the default value.
 
   These are primitive and SPECIALSXP */
 

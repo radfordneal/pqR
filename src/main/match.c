@@ -337,7 +337,7 @@ SEXP attribute_hidden matchArgs (
     SEXP b, last_positional, last_potential_match, actuals_list;
     int arg_i, dots, n_supplied, n_matched;
 
-#if 1  /* Enable for debugging output */
+#if 0  /* Enable for debugging output */
     if (installed_already("DEBUG.MATCHARGS")) {
         SEXP p; int c;
         if (formals!=R_NilValue) {
@@ -614,7 +614,7 @@ SEXP attribute_hidden matchArgs (
     if (dots!=-1 && actual[dots]!=R_MissingArg)
         UNPROTECT(1);
 
-#if 1  /* Enable for debugging output */
+#if 0  /* Enable for debugging output */
     if (installed_already("DEBUG.MATCHARGS")) {
         SEXP p;
         REprintf("    Leaving matchArgs.   Actuals: ");

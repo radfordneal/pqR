@@ -2079,7 +2079,7 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                         if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
                             INC_NAMEDCNT(p);
                     }
-                    else if (a != R_MissingArg) {
+                    else if (a != R_MissingArg && a != R_MissingUnder) {
                        a = mkPROMISE (a, rho);
                        INC_NAMEDCNT(a);
                     }
@@ -2109,7 +2109,7 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                 if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
                     INC_NAMEDCNT(p);
             }
-            else if (a != R_MissingArg) {
+            else if (a != R_MissingArg && a != R_MissingUnder) {
                a = mkPROMISE (a, rho);
                INC_NAMEDCNT(a);
             }
@@ -2700,7 +2700,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                         if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
                             INC_NAMEDCNT(p);
                     }
-                    else if (a != R_MissingArg)
+                    else if (a != R_MissingArg && a != R_MissingUnder)
                         a = mkPROMISE (a, rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
@@ -2721,7 +2721,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                 if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
                     INC_NAMEDCNT(p);
             }
-            else if (a != R_MissingArg)
+            else if (a != R_MissingArg && a != R_MissingUnder)
                a = mkPROMISE (a, rho);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head == R_NilValue)
