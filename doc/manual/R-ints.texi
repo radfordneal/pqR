@@ -25,7 +25,7 @@ modified to reflect changes in pqR.
 
 @Rcopyright{1999}
 
-Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2013 -- @value{pqRYEAR} Radford M. Neal
 
 @ignore
 Permission is granted to process this file through TeX and print the
@@ -51,7 +51,7 @@ notice identical to this one except for the removal of this paragraph
 
 @value{ISBN-ints}
 
-Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2013 -- @value{pqRYEAR} Radford M. Neal
 
 @end titlepage
 
@@ -63,7 +63,8 @@ Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. 
 @node Top, R Internal Structures, (dir), (dir)
 @top R Internals
 
-This is a guide to the internal structures of @R{} and coding standards for
+This is a guide to the internal structures of @R{}, with modifications for
+pqR, plus coding standards for
 the core team working on @R{} itself.
 
 This document is based on the version for R @value{VERSION}.
