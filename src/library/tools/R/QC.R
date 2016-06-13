@@ -1349,6 +1349,33 @@ function(package, dir, lib.loc = NULL)
         arg_names_in_usage <-
             unlist(sapply(exprs,
                           function(e) .arg_names_from_call(e[-1L])))
+	## Ignore 'along' argument names in the 'for' documentation, which are
+	## in the invisible representation of the 'along' form of 'for', while
+	## including the arguments of 'along' itself.
+	if ("for" %in% aliases) {
+#	    cat("Entry with 'for' in aliases\n")
+	    if ("along" %in% arg_names_in_usage)
+{}#		cat("Does have 'along' in arg_names_in_usage\n")
+	    else
+{}#		cat("Does not have 'along' in arg_names_in_usage\n")
+	    arg_names_in_usage <- arg_names_in_usage %w/o% "along"
+	    for (e in exprs) {
+#		cat("looking at expression",deparse(e),"\n")
+		if (identical(e[[1]],quote(`for`)) 
+                     && identical(names(e)[[length(e)-1]],"along")
+                     && is.symbol(e[[length(e)-1]]))
+		    arg_names_in_usage <- 
+                      union (arg_names_in_usage, as.character(e[[length(e)-1]]))
+	    }
+#	    cat("updated arg_names_in_usage:\n")
+#	    print(arg_names_in_usage)
+#	    cat("arg_names_in_arg_list:\n")
+#	    print(arg_names_in_arg_list)
+#	    cat("functions:\n")
+#	    print(functions)
+#           cat("aliases:\n")
+#           print(aliases)
+	} 
         ## Replacement functions.
         if(length(replace_exprs)) {
             replace_funs <-
