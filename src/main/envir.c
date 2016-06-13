@@ -927,6 +927,7 @@ Rboolean R_GetVarLocMISSING(R_varloc_t vl)
 void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 {
     SET_BINDING_VALUE((SEXP) vl, value);
+    /* Should this also do a SET_MISSING((SEXP)vl,0)? */
 }
 
 
@@ -1169,6 +1170,7 @@ static SEXP findGlobalVar(SEXP symbol)
 	}
 
     }
+
     return R_UnboundValue;
 }
 
@@ -1208,7 +1210,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
     }
     else {
         R_binding_cell = R_NilValue;
-	return R_UnboundValue;
+        return R_UnboundValue;
     }
 }
 
@@ -1233,7 +1235,7 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
     }
     else {
         R_binding_cell = R_NilValue;
-	return R_UnboundValue;
+        return R_UnboundValue;
     }
 }
 
@@ -1356,7 +1358,7 @@ SEXP ddfindVar(SEXP symbol, SEXP rho)
     vl = findVar(R_DotsSymbol, rho);
     i = ddVal(symbol);
     if (vl != R_UnboundValue) {
-	if (length(vl) >= i) {
+	if (vl != R_MissingArg && vl != R_MissingUnder && length(vl) >= i) {
 	    vl = nthcdr(vl, i - 1);
 	    return(CAR(vl));
 	}
@@ -1392,6 +1394,7 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 	}
 	cptr = cptr->nextcontext;
     }
+
     return R_UnboundValue;
 }
 
@@ -2227,33 +2230,40 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 
-/*----------------------------------------------------------------------
+/* R_isMissing is called on the not-yet-evaluated (or sometimes evaluated)
+   value of an argument, if this is a symbol, as it could be a missing 
+   argument that has been passed down.  So 'symbol' is the promise value, 
+   and 'rho' its evaluation argument.
 
-  do_missing
+   It is called in do_missing and in evalListPendingOK.
 
-  This function tests whether the symbol passed as its first argument
-  is a missing argument to the current closure.  rho is the
-  environment that missing was called from.
+   Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
+   Note that R_isMissing pays no attention to the MISSING field, only to
+   whether things are R_MissingArg or R_MissingUnder.
 
-  R_isMissing is called on the not-yet-evaluated value of an argument,
-  if this is a symbol, as it could be a missing argument that has been
-  passed down.  So 'symbol' is the promise value, and 'rho' its
-  evaluation argument.
-
-  It is also called in arithmetic.c. for e.g. do_log
+   Cycles in promises checked are detected by looking at each previous one.
+   This takes quadratic time, but the number of promises looked at should
+   normally be very small.
 */
 
-int attribute_hidden
-R_isMissing(SEXP symbol, SEXP rho)
+struct detectcycle { struct detectcycle *next; SEXP prom; };
+
+static int isMissing_recursive (SEXP, SEXP, struct detectcycle *);
+
+int attribute_hidden R_isMissing(SEXP symbol, SEXP rho)
+{
+    return isMissing_recursive (symbol, rho, NULL);
+}
+
+static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
 {
     int ddv=0;
     SEXP vl, s;
 
-    if (symbol == R_MissingArg) /* Yes, this can happen */
+    if (symbol == R_MissingArg)
 	return 1;
-
-    /* check for infinite recursion */
-    R_CHECKSTACK();
+    if (symbol == R_MissingUnder)
+	return 2;
 
     if (DDVAL(symbol)) {
 	s = R_DotsSymbol;
@@ -2263,44 +2273,41 @@ R_isMissing(SEXP symbol, SEXP rho)
 	s = symbol;
 
     if (rho == R_BaseEnv || rho == R_BaseNamespace)
-	return 0;  /* is this really the right thing to do? LT */
+	return 0;
 
     vl = findVarLocInFrame(rho, s, NULL);
     if (vl != R_NilValue) {
+        SEXP vlv = CAR(vl);
 	if (DDVAL(symbol)) {
-	    if (length(CAR(vl)) < ddv || CAR(vl) == R_MissingArg)
+            if (vlv == R_MissingUnder)
+                return 2;
+	    if (vlv == R_UnboundValue || vlv == R_MissingArg || length(vlv)<ddv)
 		return 1;
-	    /* defineVar(symbol, value, R_GlobalEnv); */
-	    else
-		vl = nthcdr(CAR(vl), ddv-1);
+            vl = nthcdr(vlv, ddv-1);
+            vlv = CAR(vl);
 	}
-	if (MISSING(vl) == 1 || CAR(vl) == R_MissingArg)
+	if (vlv==R_MissingArg)
 	    return 1;
+        if (vlv==R_MissingUnder)
+            return 2;
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
-	if (TYPEOF(CAR(vl)) == PROMSXP &&
-	    PRVALUE(CAR(vl)) == R_UnboundValue &&
-	    TYPEOF(PREXPR(CAR(vl))) == SYMSXP) {
-	    /* This code uses the PRSEEN bit to detect cycles.  If a
-	       cycle occurs then a missing argument was encountered,
-	       so the return value is TRUE.  It would be a little
-	       safer to use the promise stack to ensure unsetting of
-	       the bits in the event of a longjump, but doing so would
-	       require distinguishing between evaluating promises and
-	       checking for missingness.  Because of the test above
-	       for an active binding a longjmp should only happen if
-	       the stack check fails.  LT */
-	    if (PRSEEN(CAR(vl)))
-		return 1;
-	    else {
-		int val;
-		SET_PRSEEN(CAR(vl), 1);
-		PROTECT(vl);
-		val = R_isMissing(PREXPR(CAR(vl)), PRENV(CAR(vl)));
-		UNPROTECT(1); /* vl */
-		SET_PRSEEN(CAR(vl), 0);
-		return val;
-	    }
+	if (TYPEOF(vlv)==PROMSXP && TYPEOF(PREXPR(vlv))==SYMSXP
+             && (PRVALUE(vlv)==R_UnboundValue || PRVALUE(vlv)==R_MissingArg)) {
+            for (struct detectcycle *p = dc; p != NULL; p = p->next) {
+                if (p->prom == vlv) {
+                    return 1;
+                }
+            }
+            struct detectcycle dc2;
+            dc2.next = dc;
+            dc2.prom = vlv;
+            int val;
+            PROTECT(vl);
+            R_CHECKSTACK();
+            val = isMissing_recursive(PREXPR(vlv), PRENV(vlv), &dc2);
+            UNPROTECT(1); /* vl */
+            return val;
 	}
 	else
 	    return 0;
@@ -2308,10 +2315,26 @@ R_isMissing(SEXP symbol, SEXP rho)
     return 0;
 }
 
-/* this is primitive and a SPECIALSXP */
+
+/*----------------------------------------------------------------------
+
+  do_missing and do_missing_from_underline
+
+  This function tests whether the symbol passed as its first argument
+  is a missing argument to the current closure.  rho is the
+  environment that missing was called from.
+
+  Note that an argument with a default value is considered missing
+  if the default was used, but this is NOT applied recursively to 
+  arguments that are arguments in the calling function that were
+  filled in from the default value.
+
+  These are primitive and SPECIALSXP */
+
 static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP t, sym, s;
+    int under = PRIMVAL(op);
     int ddv = 0;
 
     checkArity(op, args);
@@ -2336,23 +2359,24 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("'missing' can only be used for arguments"));
 
     if (DDVAL(sym)) {
-        if (CAR(t) == R_MissingArg || length(CAR(t)) < ddv) 
+        if (CAR(t) == R_MissingUnder
+             || !under && (CAR(t) == R_UnboundValue || CAR(t) == R_MissingArg
+                                                    || length(CAR(t)) < ddv))
             goto true;
-        else
-            t = nthcdr(CAR(t), ddv-1);
+        t = nthcdr(CAR(t), ddv-1);
     }
 
-    if (MISSING(t) || CAR(t) == R_MissingArg)
+    if (CAR(t) == R_MissingUnder
+         || !under && (MISSING(t) || CAR(t) == R_MissingArg))
         goto true;
 
     t = CAR(t);
     if (TYPEOF(t)==PROMSXP && isSymbol(PREXPR(t))) { 
         PROTECT(t);
-        if (R_isMissing(PREXPR(t),PRENV(t))) {
-            UNPROTECT(1);
-            goto true;
-        }
+        int m = R_isMissing(PREXPR(t),PRENV(t));
         UNPROTECT(1);
+        if (m == 2 || !under && m)
+            goto true;
     }
 
     return ScalarLogicalMaybeConst(FALSE);
@@ -2366,7 +2390,6 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
   do_globalenv
 
   Returns the current global environment.
-
 */
 
 
@@ -2773,8 +2796,7 @@ static SEXP do_ls(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_lsInternal(env, all);
 }
 
-/* takes a *list* of environments and a boolean indicating whether to get all
-   names */
+/* takes an environment and a boolean indicating whether to get all names */
 SEXP R_lsInternal(SEXP env, Rboolean all)
 {
     int  k;
@@ -3675,7 +3697,8 @@ attribute_hidden FUNTAB R_FunTab_envir[] =
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"exists",	do_get,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
-{"missing",	do_missing,	1,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"missing",	do_missing,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"missing_from_underline",do_missing,1,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"globalenv",	do_globalenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"baseenv",	do_baseenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"emptyenv",	do_emptyenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},

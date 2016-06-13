@@ -1356,8 +1356,14 @@ static SEXP parse_sublist (int flags)
 
         for (;;) {
 
-            if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']')
+            if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' || NEXT_TOKEN == ']') 
                 next = MaybeConstList1(R_MissingArg);
+            else if (NEXT_TOKEN == '_') {
+                next = MaybeConstList1(R_MissingUnder);
+                get_next_token(0);
+                if (NEXT_TOKEN != ',' && NEXT_TOKEN != ')' && NEXT_TOKEN != ']')
+                    PARSE_UNEXPECTED();
+            }
             else {
                 SEXP arg;
                 /* Avoid protecting too many things... Could be many args. */
@@ -1383,6 +1389,13 @@ static SEXP parse_sublist (int flags)
                     if (NEXT_TOKEN == ',' || NEXT_TOKEN == ')' 
                                           || NEXT_TOKEN == ']')
                         val = R_MissingArg;
+                    else if (NEXT_TOKEN == '_') {
+                        next = val = R_MissingUnder;
+                        get_next_token(0);
+                        if (NEXT_TOKEN != ',' && NEXT_TOKEN != ')' 
+                                              && NEXT_TOKEN != ']')
+                            PARSE_UNEXPECTED();
+                    }
                     else {
                         /* Don't protect until end of parse_sublist, since 
                            that could lead to too many being protected. */
@@ -3435,6 +3448,9 @@ static int token (int c, int no_symbol)
         return c;
     case '@':
         ps->next_token_val = R_AtSymbol;
+        return c;
+    case '_':
+        ps->next_token_val = R_MissingUnder;
         return c;
     default:
 	return c;

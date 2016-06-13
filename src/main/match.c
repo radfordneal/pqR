@@ -338,28 +338,36 @@ SEXP attribute_hidden matchArgs (
     int arg_i, dots, n_supplied, n_matched;
 
 #if 0  /* Enable for debugging output */
-    { SEXP p; int c;
-      if (formals!=R_NilValue) 
-      { printf("--- Entering matchArgs.  Formals: ");
-        for (p = formals; p!=R_NilValue; p = CDR(p))
-        { printf ("%c", TAG(p)==R_NilValue ? '*' : CHAR(PRINTNAME(TAG(p)))[0]);
+    if (installed_already("DEBUG.MATCHARGS")) {
+        SEXP p; int c;
+        if (formals!=R_NilValue) {
+            printf("--- Entering matchArgs.  Formals: ");
+            for (p = formals; p!=R_NilValue; p = CDR(p)) {
+                REprintf("%c", TAG(p)==R_NilValue ? '*' 
+                                : CHAR(PRINTNAME(TAG(p)))[0]);
+                REprintf(" ");
+            }
         }
-      }
-      else
-      { printf("--- Entering matchArgs.  Fstrngs: ");
-        for (c = 0; c<arg_count; c++)
-        { printf ("%c", formal_names[c][0]);
+        else {
+            REprintf("--- Entering matchArgs.  Fstrngs: ");
+            for (c = 0; c<arg_count; c++) {
+                REprintf ("%c", formal_names[c][0]);
+                REprintf(" ");
+            }
         }
-      }
-      printf("  Supplied: ");
-      for (p = supplied; p!=R_NilValue; p = CDR(p))
-      { printf ("%c", TAG(p)==R_NilValue ? '*' : CHAR(PRINTNAME(TAG(p)))[0]);
-      }
-      printf(" ");
-      for (p = supplied; p!=R_NilValue; p = CDR(p))
-      { printf ("%c", CAR(p)==R_MissingArg ? '*' : 'x');
-      }
-      printf("\n");
+        REprintf("  Supplied: ");
+        for (p = supplied; p!=R_NilValue; p = CDR(p)) {
+            REprintf ("%c", TAG(p)==R_NilValue ? '*' 
+                             : CHAR(PRINTNAME(TAG(p)))[0]);
+            REprintf(" ");
+        }
+        REprintf("- ");
+        for (p = supplied; p!=R_NilValue; p = CDR(p)) {
+            REprintf ("%c", CAR(p)==R_MissingArg ? '*' : 
+                            CAR(p)==R_MissingUnder ? '_' : 'x');
+            REprintf(" ");
+        }
+        REprintf("\n");
     }
 #endif
 
@@ -590,14 +598,16 @@ SEXP attribute_hidden matchArgs (
     }
 
     /* Create the pairlist of actual arguments from the "actual" array, 
-       setting the MISSING flag as appropriate.  Also, set the tags in 
-       "actuals_list" from "formals", unless formal_names was used instead. */
+       setting the MISSING flag as appropriate - 1 for empty arg or '_'.
+       Also, set the tags in "actuals_list" from "formals", unless 
+       formal_names was used instead. */
 
     actuals_list = R_NilValue;
     for (arg_i = arg_count-1; arg_i >= 0; arg_i--) {
         actuals_list = formal_names != NULL ? CONS (actual[arg_i], actuals_list)
                : cons_with_tag (actual[arg_i], actuals_list, formal_tag[arg_i]);
-        if (actual[arg_i] == R_MissingArg && arg_i != dots)
+        if (arg_i != dots && (actual[arg_i] == R_MissingArg ||
+                              actual[arg_i] == R_MissingUnder))
             SET_MISSING (actuals_list, 1);
     }
 
@@ -605,20 +615,26 @@ SEXP attribute_hidden matchArgs (
         UNPROTECT(1);
 
 #if 0  /* Enable for debugging output */
-    { SEXP p;
-      printf("    Leaving matchArgs.   Actuals: ");
-      for (p = actuals_list; p!=R_NilValue; p = CDR(p))
-      { printf ("%c", TAG(p)==R_NilValue ? '*' : CHAR(PRINTNAME(TAG(p)))[0]);
-      }
-      printf(" ");
-      for (p = actuals_list; p!=R_NilValue; p = CDR(p))
-      { printf ("%c", CAR(p)==R_MissingArg ? '*' : 'x');
-      }
-      printf(" ");
-      for (p = actuals_list; p!=R_NilValue; p = CDR(p))
-      { printf ("%d", MISSING(p));
-      }
-      printf("\n");
+    if (installed_already("DEBUG.MATCHARGS")) {
+        SEXP p;
+        REprintf("    Leaving matchArgs.   Actuals: ");
+        for (p = actuals_list; p!=R_NilValue; p = CDR(p)) {
+            REprintf ("%c", TAG(p)==R_NilValue ? '*' 
+                              : CHAR(PRINTNAME(TAG(p)))[0]);
+            REprintf (" ");
+        }
+        REprintf("- ");
+        for (p = actuals_list; p!=R_NilValue; p = CDR(p)) {
+            REprintf ("%c", CAR(p)==R_MissingArg ? '*' : 
+                            CAR(p)==R_MissingUnder ? '_' : 'x');
+            REprintf (" ");
+        }
+        REprintf("- ");
+        for (p = actuals_list; p!=R_NilValue; p = CDR(p)) {
+            REprintf ("%d", MISSING(p));
+            REprintf (" ");
+        }
+        REprintf("\n");
     }
 #endif
 

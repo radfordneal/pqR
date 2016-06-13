@@ -623,10 +623,16 @@ void InitNames()
 	R_Suicide("couldn't allocate memory for symbol table");
     for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
 
+    /* The SYMSXP objects below are not in the symbol table, and hence
+       must be roots for the garbage collector. */
     /* R_MissingArg */
     R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
     SET_PRINTNAME(R_MissingArg, mkChar(""));
+    /* R_MissingUnder */
+    R_MissingUnder = mkSYMSXP(R_NilValue,R_NilValue);
+    SET_SYMVALUE(R_MissingUnder, R_MissingArg);
+    SET_PRINTNAME(R_MissingUnder, mkChar("_"));
     /* R_RestartToken */
     R_RestartToken = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
@@ -783,8 +789,8 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 
     args = CDR(s);
     if (TYPEOF(ifun) == BUILTINSXP) {
-	args = PRIMFUN_PENDING_OK(ifun) ? evalListPendingOK (args, env, call)
-                                        : evalList (args, env, call);
+	args = PRIMFUN_PENDING_OK(ifun) ? evalListPendingOK (args, env, 0)
+                                        : evalList (args, env);
     }
     PROTECT(args);
 

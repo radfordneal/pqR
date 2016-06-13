@@ -52,7 +52,7 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
     y = CADR(args);
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
-        args = evalList (args, env, call);
+        args = evalList (args, env);
         PROTECT(x = CAR(args)); 
         PROTECT(y = CADR(args));
         args_evald = 1;

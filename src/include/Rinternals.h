@@ -901,6 +901,7 @@ LibExtern R_CONST SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c*/
 #define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
 
 LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
+LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
 /* Logical Values.  Defined in const-objs.c */
 

@@ -58,7 +58,7 @@ static inline SEXP static_box_eval2
        two arguments, not trying to put args in static boxes. */
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
-        argsevald = evalList (args, env, call);
+        argsevald = evalList (args, env);
         x = CAR(argsevald);
         y = CADR(argsevald);
         goto rtrn;
@@ -72,7 +72,7 @@ static inline SEXP static_box_eval2
        normally. */
 
     if (isObject(x)) {
-        argsevald = evalList (CDR(args), env, call);
+        argsevald = evalList (CDR(args), env);
         y = CAR(argsevald);
         argsevald = cons_with_tag (x, argsevald, TAG(args));
         UNPROTECT(1); /* x */
@@ -119,7 +119,7 @@ static inline SEXP static_box_eval2
         if (IS_STATIC_BOX(x))
             x = duplicate(x);
         PROTECT(x);
-        argsevald = evalList (CDDR(args), env, call);
+        argsevald = evalList (CDDR(args), env);
         argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
         argsevald = cons_with_tag (x, argsevald, TAG(args));
         UNPROTECT(2); /* x & y */
