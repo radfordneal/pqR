@@ -333,7 +333,6 @@ void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
     helpers_size_t m = k_times_m / k;
     helpers_size_t done = 0;
     helpers_size_t a = 0;
-    int j;
 
     if (n_times_m == 0)  return;
 
@@ -373,7 +372,6 @@ void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
                 double b = *y++;
                 s1 = *r++ * b;
                 s2 = *r++ * b;
-                j -= 1;
             }
             else
                 s1 = s2 = 0.0;
@@ -489,8 +487,6 @@ void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
 
         double *r = x;    /* r set to x, then modified as columns of x summed */
         double *e = y+k;  /* where y should stop */
-
-        j = k;   /* j set to k, and then modified as values are read from y */
 
         /* Wait for the first column of y to become available. */
 

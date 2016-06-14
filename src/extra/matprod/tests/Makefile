@@ -20,16 +20,17 @@
 progs=matprod-test matprod-alt-test piped-matprod-test piped-matprod-d-test \
       blas-test blas2-test
 
-CFLAGS=-g -O2 -march=native -mtune=native -mfpmath=sse
+CC=gcc
+CFLAGS=-g -O3 -march=native -mtune=native -mfpmath=sse
 
 all:	$(progs)
 
 matprod-test:		test.h test.c matprod-test.c ../matprod.h ../matprod.c
-	gcc -I.. -I. $(CFLAGS) test.c matprod-test.c ../matprod.c \
+	$(CC) -I.. -I. $(CFLAGS) test.c matprod-test.c ../matprod.c \
 		-o matprod-test
 
 matprod-alt-test:	test.h test.c matprod-test.c ../matprod.h ../matprod.c
-	gcc -I.. -I. $(CFLAGS) \
+	$(CC) -I.. -I. $(CFLAGS) \
 		-DALT_MATPROD_VEC_VEC -DALT_MATPROD_MAT_VEC \
 		-DALT_MATPROD_VEC_MAT -DALT_MATPROD -DALT_MATPROD_TRANS2 \
 		test.c matprod-test.c ../matprod.c \
@@ -37,25 +38,34 @@ matprod-alt-test:	test.h test.c matprod-test.c ../matprod.h ../matprod.c
 
 piped-matprod-test:	test.h test.c piped-matprod-test.c ../piped-matprod.h \
 			../piped-matprod.c helpers-app.h helpers.h helpers.c
-	gcc -I.. -I. $(CFLAGS) -fopenmp \
+	$(CC) -I.. -I. $(CFLAGS) -fopenmp \
 		test.c piped-matprod-test.c ../piped-matprod.c helpers.c \
 		-o piped-matprod-test
 
 piped-matprod-d-test:	test.h test.c piped-matprod-test.c ../piped-matprod.h \
 			../piped-matprod.c helpers-app.h helpers.h helpers.c
-	gcc -I.. -I. $(CFLAGS) -fopenmp -DHELPERS_DISABLED \
+	$(CC) -I.. -I. $(CFLAGS) -fopenmp -DHELPERS_DISABLED \
 		test.c piped-matprod-test.c ../piped-matprod.c helpers.c \
 		-o piped-matprod-d-test
 
-blas-test:		test.h test.c blas-test.c \
+blas1-test:		test.h test.c blas-test.c \
 			ddot.f dgemm.f dgemv.f dsyrk.f lsame.f
-	gcc -I.. -I. $(CFLAGS) \
+	$(CC) -I.. -I. $(CFLAGS) \
 		test.c blas-test.c ddot.f dgemm.f dgemv.f dsyrk.f lsame.f \
-		-o blas-test
+		-o blas1-test
 
 blas2-test:		test.h test.c blas-test.c blas.f
-	gcc -I.. -I. $(CFLAGS) test.c blas-test.c blas.f \
+	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c blas.f \
 		-lm -o blas2-test
+
+blas3-test:		test.h test.c blas-test.c
+	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c -lblas \
+		-lm -o blas3-test
+
+blas4-test:		test.h test.c blas-test.c
+	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c \
+                /usr/lib/openblas-base/libopenblas.a -lpthread \
+		-lm -o blas4-test
 
 clean:
 	rm -f $(progs)
