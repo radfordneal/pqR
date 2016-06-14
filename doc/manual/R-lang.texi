@@ -1779,17 +1779,23 @@ The factor levels are never used.  If so desired, use
 @code{x[as.character(i)]} or a similar construction.
 
 @item
-@strong{Empty}.  The expression @code{x[]} returns @code{x}, but drops
-``irrelevant'' attributes from the result.  Only @code{names} and in
-multi-dimensional arrays @code{dim} and @code{dimnames} attributes are
-retained.
+@strong{Empty}.  The expression @code{x[]} returns a vector with the
+elements of @code{x}, but without any attributes (in particular, without
+a dimension attribute), except that if @code{x} is a one-dimensional
+array, its dimension and names are retained (unless dropped because
+it is of length one).
+
+@item
+@strong{@code{_}}. The expression @code{x[_]} is like @code{x[]} except
+that if @code{x} is a one-dimensional array, its dimension is not 
+dropped even if it is one length one.
 
 @item
 @strong{NULL}.  This is treated as if it were @code{integer(0)}.
 
 @end itemize
 
-Indexing with a missing (i.e.@: @code{NA}) value gives an @code{NA}
+Indexing with a @code{NA} value gives an @code{NA}
 result.  This rule applies also to the case of logical indexing,
 i.e.@: the elements of @code{x} that have an @code{NA} selector in
 @code{i} get included in the result, but their value will be @code{NA}.
@@ -1861,16 +1867,15 @@ dropped from the result.  If a single-dimensional structure results, a
 vector is obtained.  This dropping is always done when @samp{drop = TRUE} 
 is added to the indexing operation, and is never done if @samp{drop = FALSE}
 is added.  The default is @samp{drop = NA}, in which case dimensions
-of size one are dropped unless the indexing expression was a non-logical
-one-dimensional array.
+of size one are dropped unless the indexing expression for that 
+dimension was a non-logical one-dimensional array, or was missing
+from @code{_}.
 
 Hence two correct ways of selecting the first row of a matrix as a
 @math{1} by @math{n} matrix are @code{m[1, , drop = FALSE]} and
-@code{m[array(1), ]}.  Forgetting to disable the dropping feature is a
+@code{m[array(1),_]}.  Forgetting to disable the dropping feature is a
 common cause of failure in general subroutines where an index
-occasionally, but not usually has length one.  This rule still applies
-to a one-dimensional array, where any subsetting will give a vector
-result unless (for example) @samp{drop = FALSE} is used.
+occasionally, but not usually has length one. 
 
 Notice that @code{drop} is an additional argument to the @code{[} 
 function and doesn't add to the index count.  
@@ -1878,7 +1883,7 @@ function and doesn't add to the index count.
 Notice that vectors are distinct from one-dimensional arrays in that the
 latter have @code{dim} and @code{dimnames} attributes (both of length
 one).  One-dimensional arrays are not easily obtained from subsetting
-operations but they can be constructed explicitly and are returned by
+operations, but they can be constructed explicitly and are returned by
 @code{table}.  This is sometimes useful because the elements of the
 @code{dimnames} list may themselves be named, which is not the case for
 the @code{names} attribute.
@@ -2331,7 +2336,15 @@ value is needed the @var{expression} is
 evaluated in the evaluation
 frame of the function.
 
-Default behaviours can also be specified by using the function
+An argument to a function can be unspecified because it is not
+specified by keyword, and any non-keyword arguments do not
+reach to the position of the argument, or because the positional
+or keyword argument is empty (for example, @code{f(a,x=,b)} or
+@code{f(a,,b)}), or because the explicity missing argument
+indicator @code{_} is used (for example, @code{f(a,x=_,b)} or
+@code{f(a,_,b)}.
+
+Functions can also behave as if arguments have defaults by using the function
 @code{missing}.  When @code{missing} is called with the
 @cindex name
 name of a formal
@@ -2339,7 +2352,10 @@ argument it returns @code{TRUE} if the formal argument was not matched
 with any actual argument and has not been subsequently modified in the
 body of the function.  An argument that is @code{missing} will thus
 have its default value, if any. The @code{missing} function does not
-force evaluation of the argument.
+force evaluation of the argument.  The @code{missing_from_underline}
+function is like @code{missing} except that it returns @code{TRUE}
+only if the argument was missing from an explicit specification of
+@code{_}.
 
 The special type of argument @samp{...} can contain any number of
 supplied arguments.  It is used for a variety of purposes.  It allows
