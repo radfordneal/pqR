@@ -1,6 +1,7 @@
 % File src/library/base/man/Extract.data.frame.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Development Team
+% Modifications for pqR Copyright (c) 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Extract.data.frame}
@@ -35,7 +36,9 @@
 
   \item{drop}{logical.  If \code{TRUE} the result is coerced to the
     lowest possible dimension.  The default is to drop if only one
-    column is left, but \bold{not} to drop if only one row is left.}
+    column is left, and the \code{j} subscript was not a non-logical
+    one-dimensional array or \code{_}, but \bold{not} to drop if only 
+    one row is left.}
 
   \item{value}{A suitable replacement value: it will be repeated a whole
     number of times if necessary and it may be coerced: see the
@@ -67,7 +70,9 @@
   \code{\link{make.unique}}.  Similarly, if columns are selected column
   names will be transformed to be unique if necessary (e.g. if columns
   are selected more than once, or if more than one column of a given
-  name is selected if the data frame has duplicate column names).
+  name is selected if the data frame has duplicate column names), though
+  non-unique names are retained when all columns are selected when
+  \code{j} is missing.
 
   When \code{drop = TRUE}, this is applied to the subsetting of any
   matrices contained in the data frame as well as to the data frame itself.
@@ -100,7 +105,7 @@
   matching on row names use \code{\link{match}} as in the examples.
 }
 \section{Coercion}{
-  The story over when replacement values are coerced is a complicated
+  The story of when replacement values are coerced is a complicated
   one, and one that has changed during \R's development.  This section
   is a guide only.
 
@@ -157,11 +162,16 @@ sw[, 1:3]    # same
 sw[4:5, 1:3] # select rows and columns
 sw[1]        # a one-column data frame
 sw[, 1, drop = FALSE]  # the same
+sw[, array(1)]         # also the same
 sw[, 1]      # a (unnamed) vector
 sw[[1]]      # the same
 
 sw[1,]       # a one-row data frame
 sw[1,, drop=TRUE]  # a list
+
+sw1 <- sw[, array(1)]  # has one column
+sw1[1:3, ]   # reduces to a vector
+sw1[1:3, _]  # remains a one-column data frame
 
 sw["C", ] # partially matches
 sw[match("C", row.names(sw)), ] # no exact match

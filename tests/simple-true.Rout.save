@@ -1,10 +1,10 @@
 
-pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.0 (2016-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-5 helper threads, task merging enabled.
+No helper threads, task merging enabled.
 
 > ###---- ALL tests here should return  TRUE !
 > ###
@@ -89,15 +89,15 @@ Error in parse(text = "12iL") : <text>:1:4: unexpected symbol
 > all(cbind(a=1:2, b=1:3, c=1:6) == t(rbind(a=1:2, b=1:3, c=1:6)))
 [1] TRUE
 > ##P rbind(a=1:2, b=1:3, c=1:6)
-> all(dim(cbind(cbind(I=1,x=1:4), c(a=pi))) == 4:3)# fails in S+
+> identical(dim(cbind(cbind(I=1,x=1:4), c(a=pi))), 4:3)# fails in S+
 [1] TRUE
 > 
 > a <- b <- 1:3
-> all(dimnames(cbind(a, b))[[2]] == c("a","b"))
+> identical(dimnames(cbind(a, b))[[2]], c("a","b"))
 [1] TRUE
 > 
 > ## rbind PR#338
-> all(dim(m <- rbind(1:2, diag(2))) == 3:2)
+> identical(dim(m <- rbind(1:2, diag(2))), 3:2)
 [1] TRUE
 > all(m == c(1,1,0, 2,0,1))
 [1] TRUE
@@ -125,7 +125,7 @@ Error in parse(text = "12iL") : <text>:1:4: unexpected symbol
 > x <- NULL
 > x$x1 <- 1:10
 > x$x2 <- 0:9
-> all(dim(dx <- as.data.frame(x)) == c(10,2))
+> identical(dim(dx <- as.data.frame(x)), c(10L,2L))
 [1] TRUE
 > 
 > ## Logicals: (S is wrong)
@@ -141,35 +141,35 @@ Error in parse(text = "12iL") : <text>:1:4: unexpected symbol
 +     if(is.R()) x[, -1]# not even possible in S+
 +     else structure(list(), row.names = paste(1:3), class = "data.frame")
 + }
-> all(dim(x30) == c(3,0))
+> identical(dim(x30), c(3L,0L))
 [1] TRUE
 > x01 <- x[-(1:3), , drop = FALSE]
 > x00 <- x01[,-1]
-> all(dim(x01) == 0:1)
+> identical(dim(x01), 0:1)
 [1] TRUE
-> all(dim(x00) == 0)
+> identical(dim(x00), c(0L,0L))
 [1] TRUE
-> all(dim(x) == dim(rbind(x, x01)))
+> identical(dim(x), dim(rbind(x, x01)))
 [1] TRUE
 > ## bugs up to 1.2.3 :
-> all(dim(x30) == dim(m30 <- as.matrix(x30)))
+> identical(dim(x30), dim(m30 <- as.matrix(x30)))
 [1] TRUE
-> all(dim(x01) == dim(m01 <- as.matrix(x01)))
+> identical(dim(x01), dim(m01 <- as.matrix(x01)))
 [1] TRUE
-> all(dim(x30) == dim(as.data.frame(m30)))
+> identical(dim(x30), dim(as.data.frame(m30)))
 [1] TRUE
-> all(dim(x01) == dim(as.data.frame(m01)))
+> identical(dim(x01), dim(as.data.frame(m01)))
 [1] TRUE
-> all(dim(x01) == dim(   data.frame(m01)))
+> identical(dim(x01), dim(   data.frame(m01)))
 [1] TRUE
-> all(dim(x30) == dim(   data.frame(m30)))
+> identical(dim(x30), dim(   data.frame(m30)))
 [1] TRUE
-> all(dim(x)   == dim(cbind(x, x30)))
+> identical(dim(x),   dim(cbind(x, x30)))
 [1] TRUE
 > ## up to 1.4.0 :
-> all(dim(x30) == dim( data.matrix(x30)))
+> identical(dim(x30), dim( data.matrix(x30)))
 [1] TRUE
-> all(dim(x00) == dim( data.matrix(x00)))
+> identical(dim(x00), dim( data.matrix(x00)))
 [1] TRUE
 > 
 > m0 <- matrix(pi, 0,3)

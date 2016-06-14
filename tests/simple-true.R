@@ -38,13 +38,13 @@ ncb <- dimnames(cbind(a=1, yy=1:3))[[2]]
 
 all(cbind(a=1:2, b=1:3, c=1:6) == t(rbind(a=1:2, b=1:3, c=1:6)))
 ##P rbind(a=1:2, b=1:3, c=1:6)
-all(dim(cbind(cbind(I=1,x=1:4), c(a=pi))) == 4:3)# fails in S+
+identical(dim(cbind(cbind(I=1,x=1:4), c(a=pi))), 4:3)# fails in S+
 
 a <- b <- 1:3
-all(dimnames(cbind(a, b))[[2]] == c("a","b"))
+identical(dimnames(cbind(a, b))[[2]], c("a","b"))
 
 ## rbind PR#338
-all(dim(m <- rbind(1:2, diag(2))) == 3:2)
+identical(dim(m <- rbind(1:2, diag(2))), 3:2)
 all(m == c(1,1,0, 2,0,1))
 
 ## factor():
@@ -64,7 +64,7 @@ all(f0 == ff) && all(levels(ff) == ll) && is.factor(ff) && is.factor(f0)
 x <- NULL
 x$x1 <- 1:10
 x$x2 <- 0:9
-all(dim(dx <- as.data.frame(x)) == c(10,2))
+identical(dim(dx <- as.data.frame(x)), c(10L,2L))
 
 ## Logicals: (S is wrong)
 l1 <- c(TRUE,FALSE,TRUE)
@@ -77,23 +77,23 @@ x30 <- {
     if(is.R()) x[, -1]# not even possible in S+
     else structure(list(), row.names = paste(1:3), class = "data.frame")
 }
-all(dim(x30) == c(3,0))
+identical(dim(x30), c(3L,0L))
 x01 <- x[-(1:3), , drop = FALSE]
 x00 <- x01[,-1]
-all(dim(x01) == 0:1)
-all(dim(x00) == 0)
-all(dim(x) == dim(rbind(x, x01)))
+identical(dim(x01), 0:1)
+identical(dim(x00), c(0L,0L))
+identical(dim(x), dim(rbind(x, x01)))
 ## bugs up to 1.2.3 :
-all(dim(x30) == dim(m30 <- as.matrix(x30)))
-all(dim(x01) == dim(m01 <- as.matrix(x01)))
-all(dim(x30) == dim(as.data.frame(m30)))
-all(dim(x01) == dim(as.data.frame(m01)))
-all(dim(x01) == dim(   data.frame(m01)))
-all(dim(x30) == dim(   data.frame(m30)))
-all(dim(x)   == dim(cbind(x, x30)))
+identical(dim(x30), dim(m30 <- as.matrix(x30)))
+identical(dim(x01), dim(m01 <- as.matrix(x01)))
+identical(dim(x30), dim(as.data.frame(m30)))
+identical(dim(x01), dim(as.data.frame(m01)))
+identical(dim(x01), dim(   data.frame(m01)))
+identical(dim(x30), dim(   data.frame(m30)))
+identical(dim(x),   dim(cbind(x, x30)))
 ## up to 1.4.0 :
-all(dim(x30) == dim( data.matrix(x30)))
-all(dim(x00) == dim( data.matrix(x00)))
+identical(dim(x30), dim( data.matrix(x30)))
+identical(dim(x00), dim( data.matrix(x00)))
 
 m0 <- matrix(pi, 0,3)
 a302 <- array("", dim=c(3,0,2))
