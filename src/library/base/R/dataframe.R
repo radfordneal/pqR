@@ -512,11 +512,14 @@ data.frame <-
 ###  These are a little less general than S
 
 `[.data.frame` <-
-    function(x, i, j, drop = if(missing(i)) TRUE else length(cols) == 1)
+    function(x, i, j, drop = can_drop_j && length(cols) == 1)
 {
     mdrop <- missing(drop)
+    can_drop_j <- if (!mdrop) drop 
+                  else if (missing(j)) !missing_from_underline(j)
+                  else is.logical(j) || length(dim(j)) != 1
     Narg <- nargs() - !mdrop  # number of arg from x,i,j that were specified
-    has.j <- !missing(j)
+
     if(!all(names(sys.call()) %in% c("", "drop"))
        && !isS4(x)) # at least don't warn for callNextMethod!
         warning("named arguments other than 'drop' are discouraged")
@@ -549,11 +552,11 @@ data.frame <-
                          row.names = .row_names_info(x, 0L)))
     }
 
-    if(missing(i)) { # df[, j] or df[ , ]
-        ## not quite the same as the 1/2-arg case, as 'drop' is used.
-        if(drop && !has.j && length(x) == 1L) return(.subset2(x, 1L))
+    if (missing(i)) { # df[, j] or df[ , ]
+        if (length(x) == 1L && missing(j) && can_drop_j)
+            return(.subset2(x, 1L))
         nm <- names(x); if(is.null(nm)) nm <- character()
-        if(has.j && !is.character(j) && any(is.na(nm))) {
+        if (!missing(j) && !is.character(j) && any(is.na(nm))) {
             ## less efficient version
             names(nm) <- names(x) <- seq_along(x)
             y <- .subset(x, j)
@@ -561,14 +564,15 @@ data.frame <-
             if(any(is.na(cols))) stop("undefined columns selected")
             cols <- names(y) <- nm[cols]
         } else {
-            y <- if(has.j) .subset(x, j) else x
+            y <- if (missing(j)) x else .subset(x, j)
             cols <- names(y)
             if(any(is.na(cols))) stop("undefined columns selected")
         }
-        if(drop && length(y) == 1L) return(.subset2(y, 1L))
+        if (length(y) == 1L && can_drop_j)
+            return(.subset2(y, 1L))
         if(anyDuplicated(cols)) names(y) <- make.unique(cols)
         nrow <- .row_names_info(x, 2L)
-        if(drop && !mdrop && nrow == 1L)
+        if (nrow == 1L && !missing(drop) && drop)
             return(structure(y, class = NULL, row.names = NULL))
         else
             return(structure(y, class = oldClass(x),
@@ -585,7 +589,7 @@ data.frame <-
     x <- .Call("R_copyDFattr", xx, x, PACKAGE="base")
     oldClass(x) <- attr(x, "row.names") <- NULL
 
-    if(has.j) { # df[i, j]
+    if (!missing(j)) { # df[i, j]
         nm <- names(x); if(is.null(nm)) nm <- character()
         if(!is.character(j) && any(is.na(nm)))
             names(nm) <- names(x) <- seq_along(x)
@@ -617,10 +621,10 @@ data.frame <-
         rows <- attr(xx, "row.names")
         i <- pmatch(i, rows, duplicates.ok = TRUE)
     }
-    for(j along x) {
-        xj <- xx[[ sxx[j] ]]
+    for (jj along x) {
+        xj <- xx[[ sxx[jj] ]]
         ## had drop = drop prior to 1.8.0
-        x[[j]] <- if(length(dim(xj)) != 2L) xj[i] else xj[i, , drop = FALSE]
+        x[[jj]] <- if (length(dim(xj)) != 2L) xj[i] else xj[i, , drop = FALSE]
     }
 
     if(drop) {
@@ -648,7 +652,7 @@ data.frame <-
 		rows <- make.unique(as.character(rows))
 	}
         ## new in 1.8.0  -- might have duplicate columns
-	if(has.j && anyDuplicated(nm <- names(x)))
+	if (!missing(j) && anyDuplicated(nm <- names(x)))
             names(x) <- make.unique(nm)
         if(is.null(rows)) rows <- attr(xx, "row.names")[i]
 	attr(x, "row.names") <- rows
