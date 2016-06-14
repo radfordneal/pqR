@@ -23,7 +23,7 @@ This is a guide to installation and administration for R - modified for pqR
 
 @Rcopyright{2001}
 
-Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2013 -- @value{pqRYEAR} Radford M. Neal
 
 @ignore
 Permission is granted to process this file through TeX and print the
@@ -49,7 +49,7 @@ notice identical to this one except for the removal of this paragraph
 
 @value{ISBN-admin}
 
-Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2013 -- @value{pqRYEAR} Radford M. Neal
 
 @end titlepage
 
@@ -61,7 +61,7 @@ Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. 
 @node Top, Obtaining pqR and R, (dir), (dir)
 @top R Installation and Administration
 
-This is a guide to installation and administration for R.
+This is a guide to installation and administration for R - modified for pqR
 
 This document is based on the version for R @value{VERSION}.
 
