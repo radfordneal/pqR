@@ -41,7 +41,8 @@ x$i <- value
   }
   \item{i, j, \dots}{
     indices specifying elements to extract or replace.  Indices are
-    \code{numeric} or \code{character} vectors or empty (missing) or
+    \code{numeric} or \code{character} vectors, or are missing (either
+    from an empty argument or a \code{_} argument), or are
     \code{NULL}.  Numeric values are coerced to integer as by
     \code{\link{as.integer}} (and hence truncated towards zero).
     Character vectors will be matched to the \code{\link{names}} of the
@@ -71,9 +72,10 @@ x$i <- value
     coerced to the lowest possible dimension (see the examples).  If
     \code{FALSE}, all dimensions are kept.  If \code{NA} (the default),
     dimensions of one are dropped unless the index for that dimension
-    was a 1D non-logical array.  This argument is relevant only for
-    extracting elements, not for replacement.  See \code{\link{drop}} for 
-    further details.
+    was a 1D non-logical array, or is a missing argument specified
+    with \code{_} (rather than by an empty argument).  The \code{drop}
+    argument is relevant only for extracting elements, not for replacement.
+    See \code{\link{drop}} for further details.
   }
   \item{exact}{Controls possible partial matching of \code{[[} when
     extracting by a character vector (for most objects, but see under

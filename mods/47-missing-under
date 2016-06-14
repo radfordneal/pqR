@@ -40,3 +40,7 @@ to do missing_from_underline properly).
 
 
 Added tests of missing and missing_from_underline to eval-etc.R.
+
+
+Fixed description of x[] in R-lang.texi, which was correct for neither
+R Core nor the new pqR semantics.
