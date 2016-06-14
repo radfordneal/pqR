@@ -93,6 +93,12 @@ next
   of values for these variables, in sequence from 1 to the corresponding
   dimension, with the first variable varying the fastest.
 
+  The class of the \code{seq} iterated over by \code{for} with \code{in} is 
+  currently ignored, as if it were \code{unclass(seq)}, but this may
+  change in future.  Similarly, the class of the \code{vector}, \code{matrix}, 
+  or \code{array} in a \code{for} with \code{along} is currently ignored,
+  but in future it may be that \code{length} and \code{dim} methods for these
+  objects will be used, if they are defined.
 }
 \value{
   \code{if} returns the value of the expression evaluated, or
