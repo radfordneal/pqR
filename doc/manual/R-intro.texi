@@ -1989,13 +1989,6 @@ is available, so we could have used @code{B <- t(A)}.
 @node Matrix facilities, Forming partitioned matrices, Generalized transpose of an array, Arrays and matrices
 @section Matrix facilities
 
-@macro xTx{}
- @eqn{@strong{x}^T @strong{x}, x'x}
-@end macro
-@macro xxT{}
- @eqn{@strong{x}@strong{x}^T, x x'}
-@end macro
-
 As noted above, a matrix is just an array with two subscripts.  However
 it is such an important special case it needs a separate discussion.
 @R{} contains many operators and functions that are available only for
@@ -2047,15 +2040,17 @@ is the matrix product.  If @code{x} is a vector, then
 > x %*% A %*% x
 @end example
 
-@noindent
-is a quadratic form.@footnote{Note that @code{x %*% x} is ambiguous, as
-it could mean either @xTx{} or @xxT{}, where @eqn{@strong{x},x} is the
+@noindent is a quadratic form.@footnote{Note that @code{x %*% x} is
+ambiguous, as it could mean either @eqn{@strong{x}^T @strong{x}, x'x}
+or @eqn{@strong{x}@strong{x}^T, x x'}, where @eqn{@strong{x},x} is the
 column form.  In such cases the smaller matrix seems implicitly to be
-the interpretation adopted, so the scalar @xTx{} is in this case the
-result.  The matrix @xxT{} may be calculated either by @code{cbind(x)
-%*% x} or @code{x %*% rbind(x)} since the result of @code{rbind()} or
-@code{cbind()} is always a matrix.  However, the best way to compute
-@xTx{} or @xxT{} is @code{crossprod(x)} or @code{x %o% x}
+the interpretation adopted, so the scalar @eqn{@strong{x}^T
+@strong{x}, x'x} is in this case the result.  The matrix
+@eqn{@strong{x}@strong{x}^T, x x'} may be calculated either by
+@code{cbind(x) %*% x} or @code{x %*% rbind(x)} since the result of
+@code{rbind()} or @code{cbind()} is always a matrix.  However, the
+best way to compute @eqn{@strong{x}^T @strong{x}, x'x} or
+@eqn{@strong{x}@strong{x}^T, x x'} is @code{crossprod(x)} or @code{x %o% x}
 respectively.}
 
 @findex crossprod
@@ -6553,7 +6548,7 @@ disappear.
 @c need to adapt the discussion slightly.
 
 @table @code
-@item
+@item @ 
 Start @R{} appropriately for your platform (@pxref{Invoking R}).
 
 The @R{} program begins, with a banner.
@@ -6757,14 +6752,12 @@ parts @dots{}
 
 @item plot(w, xlim=c(-1,1), ylim=c(-1,1), pch="+",xlab="x", ylab="y")
 @itemx lines(z)
-@itemx
 All points are inside the unit circle, but the distribution is not
 uniform.
 
 @item w <- sqrt(runif(100))*exp(2*pi*runif(100)*1i)
 @itemx plot(w, xlim=c(-1,1), ylim=c(-1,1), pch="+", xlab="x", ylab="y")
 @itemx lines(z)
-@itemx
 The second method uses the uniform distribution.  The points should now
 look more evenly spaced over the disc.
 
@@ -7070,7 +7063,7 @@ Post-process @R{} profiling files.
 Convert Rd format to various other formats, including @HTML{}, @LaTeX{},
 plain text, and extracting the examples.  @code{Rd2txt} can be used as
 shorthand for @code{Rd2conv -t txt}.
-@itemx Rd2pdf
+@item Rd2pdf
 Convert Rd format to PDF.
 @item Stangle
 Extract S/R code from Sweave documentation
