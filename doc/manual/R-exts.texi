@@ -25,7 +25,7 @@ This is a guide to extending R - with modifications for pqR.
 
 @Rcopyright{1999}
 
-Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2013 -- @value{pqRYEAR} Radford M. Neal
 
 @ignore
 Permission is granted to process this file through TeX and print the
@@ -49,7 +49,7 @@ notice identical to this one except for the removal of this paragraph
 
 @Rcopyright{1999}
 
-Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2013 -- @value{pqRYEAR} Radford M. Neal
 
 @value{ISBN-exts}
 
@@ -63,7 +63,8 @@ Modifications for pqR copyright @copyright{} {2013--}@value{pqRYEAR} Radford M. 
 @node Top, Acknowledgements, (dir), (dir)
 @top Writing R Extensions
 
-This is a guide to extending @R{}, describing the process of creating
+This is a guide to extending @R{}, with modifications for pqR.
+It describes the process of creating
 @R{} add-on packages, writing @R{} documentation, @R{}'s system and
 foreign language interfaces, and the @R{} @acronym{API}.
 
