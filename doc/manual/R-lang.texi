@@ -26,7 +26,7 @@ This is the R language definition - with modifications for pqR
 
 @Rcopyright{2000}
 
-Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2015 -- @value{pqRYEAR} Radford M. Neal
 
 @ignore
 Permission is granted to process this file through TeX and print the
@@ -51,7 +51,7 @@ notice identical to this one except for the removal of this paragraph
 
 @value{ISBN-lang}
 
-Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
+Modifications for pqR copyright @copyright{} 2015 -- @value{pqRYEAR} Radford M. Neal
 
 @end titlepage
 
@@ -63,7 +63,8 @@ Modifications for pqR copyright @copyright{} @value{pqRYEAR} Radford M. Neal
 @node Top, Introduction, (dir), (dir)
 @top R Language Definition
 
-This is an introduction to the @R{} language, explaining evaluation,
+This is an introduction to the @R{} language, with modifications for pqR.
+It explains evaluation,
 parsing, object oriented programming, computing on the language, and so
 forth.
 
