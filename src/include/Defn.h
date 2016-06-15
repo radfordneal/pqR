@@ -869,9 +869,10 @@ LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
 
-/* Is parsing of the .. operator enabled?  Linked to option "parse_dotdot". */
+/* Is parsing of the .. operator enabled?  Linked to option "parse_dotdot". 
+   Default below may be changed from environment variable R_PARSE_DOTDOT. */
 
-extern0 int R_parse_dotdot INI_as(0); /* 1 = parsing .. enabled, 0 = not */
+extern0 int R_parse_dotdot INI_as(1); /* 1 = parsing .. enabled, 0 = not */
 
 /* R Home Directory */
 LibExtern char *R_Home;		    /* Root of the R tree */
