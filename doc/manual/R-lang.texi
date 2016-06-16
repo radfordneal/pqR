@@ -4408,7 +4408,7 @@ Identifiers consist of a sequence of letters, digits, the period
 (@samp{.}) and the underscore.  They must not start with a digit nor
 underscore, nor with a period followed by a digit.  They must not
 contain a sequence of two or more consecutive periods unless this
-sequence is at the beginning of the identifier.
+sequence is at the beginning or end of the identifier.
 
 The definition of a letter depends on the current locale: the precise
 set of characters allowed is given by the C expression @code{(isalnum(c)
