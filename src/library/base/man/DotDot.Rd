@@ -11,7 +11,7 @@
   Generate increasing sequences.
 }
 \usage{
-from..to
+from .. to
 }
 \arguments{
   \item{from}{starting value of sequence (numeric or integer).}
@@ -49,7 +49,18 @@ from..to
 }
   will call \code{X()} zero times, as is probably the intent.
 
-  Note: The parsing of \code{..} will be disabled if the
+  Since \code{..} is allowed at the beginning or end of an identifier,
+  uses of \code{..} as an operator will sometimes have to be surrounded 
+  by spaces.  For example,
+  \code{i..(i+n)} calls the function \code{i..} with argument \code{i+n};
+  to use the \code{..} operator, this must be writen as \code{i .. (i+n)},
+  or just as \code{i..i+n}.  However, since \code{..} is not allowed
+  in the middle of an identifier, and identifiers are not permitted in some
+  syntactic contexts, most uses of \code{..} do not require spaces.
+  For example, in both \code{i..j} and \code{f()..end} the \code{..}
+  is the \code{..} operator, not part of an identifier.
+
+  Note: The parsing of \code{..} operator will be disabled if the
   \code{parse_dotdot} option is \code{FALSE} (though the primitive will
   still exist, and be accessible by calling it as a function named
   \code{`..`}).  
