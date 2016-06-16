@@ -244,6 +244,8 @@ void attribute_hidden InitOptions(void)
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
     SET_TAG(v, install("parse_dotdot"));
+    p = getenv("R_PARSE_DOTDOT");
+    R_parse_dotdot = p == NULL || strcmp(p,"FALSE") != 0 && strcmp(p,"no") != 0;
     SETCAR(v, ScalarLogical(R_parse_dotdot));
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
