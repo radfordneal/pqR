@@ -259,8 +259,8 @@ getOption(x, default = NULL)
 
     \item{\code{parse_dotdot}:}{Controls whether or not the pqR \code{..}
       operator is accepted by the parser.  The default is
-      \code{FALSE}, for the moment, pending a better compatibility
-      scheme.
+      \code{TRUE}, unless the environment variable \code{R_PARSE_DOTDOT}
+      is set to \code{FALSE} or \code{no}.
 
       When \code{parse_dotdot} is \code{FALSE},
       the parser will accept unquoted symbols with consecutive "."
