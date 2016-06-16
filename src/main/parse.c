@@ -2303,7 +2303,10 @@ out:
 }
 
 
-/* Strings may contain the standard ANSI escapes and octal specifications of 
+/* Gets a possibly multi-byte character whose first character is passed as c,
+   with remaining ones gotten with xxgetc, but then backed out with xxungetc.
+   
+   Strings may contain the standard ANSI escapes and octal specifications of 
    the form \o, \oo or \ooo, where 'o' is an octal digit. 
 
    If a string contains \u escapes that are not valid in the current locale, 
@@ -2899,7 +2902,7 @@ static int SpecialValue(int c)
 static int SymbolValue(int c)
 {
     int previous_dots = -1;  /* # previous "." chars, but -1 for initial dots */
-    int alphu;  /* whether alphanumeric or underline */
+    int alphu;               /* whether it's either alphanumeric or underline */
     int kw;
 
     DECLARE_YYTEXT_BUFP(yyp);
@@ -2912,8 +2915,6 @@ static int SymbolValue(int c)
                 previous_dots = 0;
             else if (previous_dots != -1) 
                 previous_dots += 1;
-	    /* at this point we have seen one char, so push its bytes
-	       and get one more - but doesn't seem to make much sense... */
 	    for (i = 0; i < clen; i++) {
 		YYTEXT_PUSH(c, yyp);
 		c = xxgetc();
@@ -2932,7 +2933,7 @@ static int SymbolValue(int c)
             }
             else {
                 clen = mbcs_get_next(c, &wc);
-                if (iswalnum(c))
+                if (iswalnum(wc))
                     alphu = 1;
             }
             if (!alphu) {
@@ -3502,16 +3503,14 @@ static int get_next_token(int no_symbol)
 
 int isValidName(const char *name)
 {
+    int previous_dots = -1;  /* # previous "." chars, but -1 for initial dots */
     const char *p = name;
-    int prev_is_dot;
     int i;
 
-    if (strcmp(name, "...") == 0)
-        return 1;
-    if (strcmp(name, "..") == 0)
-        return 0;
+if (getenv("TRVN")!=0) REprintf("isValidName(%s) : %d\n",name,mbcslocale);
 
     if(mbcslocale) {
+
 	/* the only way to establish which chars are alpha etc is to
 	   use the wchar variants */
 	int n = strlen(name), used;
@@ -3527,43 +3526,46 @@ int isValidName(const char *name)
                 return 0;
 	    /* Mbrtowc(&wc, p, n, NULL); if(iswdigit(wc)) return 0; */
 	}
-        prev_is_dot = wc != L'.' ? 0 : -1;  /* initial dots don't count */
-	while ((used = Mbrtowc(&wc, p, n, NULL))) {
-	    if (!(iswalnum(wc) || wc == L'.' || wc == L'_'))
-                break;
+
+        for (;;) {
+            if (!iswalnum(wc) && wc != L'.' && wc != L'_')
+                return 0;
             if (wc == L'.') {
-                if (prev_is_dot != -1) {
-                    if (prev_is_dot == 1)
-                        return 0;  /* don't allow ".." after start */
-                    prev_is_dot = 1;
-                }
+                if (previous_dots != -1) previous_dots += 1;
             }
-            else
-                prev_is_dot = 0;
-	    p += used; n -= used;
-	}
-	if (*p != '\0')
-            return 0;
+            else {
+                if (previous_dots > 1)
+                    return 0;
+                previous_dots = 0;
+            }
+            if (*p == 0) 
+                break;
+            used = Mbrtowc(&wc, p, n, NULL); p += used; n -= used;
+        }
+
     } else {
-	int c = 0xff & *p++;
+
+	int c = 0xff & *p++;  /* char may be a signed type */
 	if (c != '.' && !isalpha(c) )
             return 0;
 	if (c == '.' && isdigit(0xff & (int)*p))
             return 0;
-        prev_is_dot = c != '.' ? 0 : -1;  /* initial dots don't count */
-	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) {
+
+        for (;;) {
+            if (!isalnum(c) && c != '.' && c != '_')
+                return 0;
             if (c == '.') {
-                if (prev_is_dot != -1) {
-                    if (prev_is_dot == 1)
-                        return 0;  /* don't allow ".." after start */
-                    prev_is_dot = 1;
-                }
+                if (previous_dots != -1) previous_dots += 1;
             }
-            else
-                prev_is_dot = 0;
+            else {
+                if (previous_dots > 1)
+                    return 0;
+                previous_dots = 0;
+            }
+            if (*p == 0) 
+                break;
+            c = 0xff & *p++;
         }
-	if (c != '\0')
-            return 0;
     }
 
     /* Check whether it's a reserved word. */
