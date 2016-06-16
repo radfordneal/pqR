@@ -269,8 +269,8 @@ cr	:
 
    The get_next_token function obtains the next token, calling xxgetc
    as required, and returning 1 if end of file is encountered immediately. 
-   It's argument is 1 if a symbol is not expected (allowing .. to be seen),
-   though it will get a symbol anyway, as long as it doesn't start with ...
+   It's argument is 1 if a symbol is not expected (allowing ".." to be seen),
+   though it will get a symbol anyway, as long as it doesn't start with "..".
    The convention for get_next_token is that a "lookahead" token after
    what has been parsed so far is normally present (the opposite of the 
    convention for xxgetc). */
@@ -2776,8 +2776,7 @@ static struct { char *name; int token; } keywords[] = {
     { "else",	    ELSE       },
     { "next",	    NEXT       },
     { "break",	    BREAK      },
-    { "..",         DOTDOT     },
-    { "...",	    SYMBOL     },
+    { "..",         DOTDOT     },  /* delete if don't want .. to be reserved */
     { 0,	    0	       }
 };
 
@@ -2899,20 +2898,22 @@ static int SpecialValue(int c)
 
 static int SymbolValue(int c)
 {
-    int prev_is_dot;
+    int previous_dots = -1;  /* # previous "." chars, but -1 for initial dots */
+    int alphu;  /* whether alphanumeric or underline */
     int kw;
+
     DECLARE_YYTEXT_BUFP(yyp);
+
     if(mbcslocale) {
 	wchar_t wc; int i, clen;
 	clen = mbcs_get_next(c, &wc);
-        prev_is_dot = -1;
 	while (1) {
             if (c != '.')
-                prev_is_dot = 0;
-            else if (prev_is_dot != -1) 
-                prev_is_dot = 1;
+                previous_dots = 0;
+            else if (previous_dots != -1) 
+                previous_dots += 1;
 	    /* at this point we have seen one char, so push its bytes
-	       and get one more */
+	       and get one more - but doesn't seem to make much sense... */
 	    for (i = 0; i < clen; i++) {
 		YYTEXT_PUSH(c, yyp);
 		c = xxgetc();
@@ -2920,49 +2921,65 @@ static int SymbolValue(int c)
 	    if (c == R_EOF)
                 break;
 	    if (c == '.') {
-                if (prev_is_dot == 1 && ps->parse_dotdot) {
-                    xxungetc(c);
-                    YYTEXT_UNPUSH(yyp);
-                    break;
-                }
 		clen = 1;
 		continue;
 	    }
-	    if (c == '_') {
-		clen = 1;
-		continue;
-	    }
-	    clen = mbcs_get_next(c, &wc);
-	    if (!iswalnum(wc))
+
+            alphu = 0;
+            if (c == '_') {
+                clen = 1;
+                alphu = 1;
+            }
+            else {
+                clen = mbcs_get_next(c, &wc);
+                if (iswalnum(c))
+                    alphu = 1;
+            }
+            if (!alphu) {
+                xxungetc(c);
                 break;
+            }
+
+            if (previous_dots > 1) {
+                xxungetc(c);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                break;
+            }
 	}
     } 
     else {
-        prev_is_dot = -1;
 	while (1) {
             if (c != '.')
-                prev_is_dot = 0;
-            else if (prev_is_dot != -1) 
-                prev_is_dot = 1;
+                previous_dots = 0;
+            else if (previous_dots != -1) 
+                previous_dots += 1;
 	    YYTEXT_PUSH(c, yyp);
             c = xxgetc();
 	    if (c == R_EOF)
                 break;
-	    if (c == '.') {
-                if (prev_is_dot == 1 && ps->parse_dotdot) {
-                    xxungetc(c);
-                    YYTEXT_UNPUSH(yyp);
-                    break;
-                }
+	    if (c == '.')
 		continue;
-	    }
-	    if (c == '_')
-		continue;
-	    if (!isalnum(c))
+
+            alphu = 0;
+            if (c == '_') 
+                alphu = 1;
+            else if (isalnum(c))
+                alphu = 1;
+            if (!alphu) {
+                xxungetc(c);
                 break;
+            }
+
+            if (previous_dots > 1) {
+                xxungetc(c);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                break;
+            }
 	}
     }
-    xxungetc(c);
+
     YYTEXT_PUSH('\0', yyp);
     if ((kw = KeywordLookup(yytext))) 
 	return kw;
@@ -3250,6 +3267,7 @@ static int token (int c, int no_symbol)
        parse_dotdot is enabled). */
 
     if (ps->parse_dotdot && no_symbol && c == '.' && nextchar('.')) {
+        strcpy(yytext,"..");
         ps->next_token_val = R_DotDotSymbol;
         return DOTDOT;
     }
