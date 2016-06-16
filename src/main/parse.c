@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -1453,8 +1453,8 @@ static SEXP parse_sublist (int flags)
    be parenthesized, but `(`(x) is not, even though they produce the same
    expression. If 'paren' is the C NULL pointer, this information isn't stored.
 
-   The token after the expression is scanned with no_symbol set to 1, so
-   since symbols are not allowed in that context, and we wish the .. operator
+   The token after the expression is scanned with no_symbol set to 1, since
+   symbols are not allowed in that context, and we wish the .. operator
    to be recognized.
 
    An attempt is made to make the last operand of an operator be a constant
@@ -2894,8 +2894,8 @@ static int SpecialValue(int c)
 
 /* Process a symbol value, putting the symbol in next_token_val (or
    the corresponding numeric or logical value, for constants).  The
-   return value is SYMBOL for regular symbols, NUM_CONST for constants,
-   and the appropriate token code for reserved words. */
+   return value is SYMBOL for regular symbols, or the appropriate token 
+   code for reserved words. */
 
 static int SymbolValue(int c)
 {
