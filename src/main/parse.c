@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -269,8 +269,8 @@ cr	:
 
    The get_next_token function obtains the next token, calling xxgetc
    as required, and returning 1 if end of file is encountered immediately. 
-   It's argument is 1 if a symbol is not expected (allowing .. to be seen),
-   though it will get a symbol anyway, as long as it doesn't start with ...
+   It's argument is 1 if a symbol is not expected (allowing ".." to be seen),
+   though it will get a symbol anyway, as long as it doesn't start with "..".
    The convention for get_next_token is that a "lookahead" token after
    what has been parsed so far is normally present (the opposite of the 
    convention for xxgetc). */
@@ -1453,8 +1453,8 @@ static SEXP parse_sublist (int flags)
    be parenthesized, but `(`(x) is not, even though they produce the same
    expression. If 'paren' is the C NULL pointer, this information isn't stored.
 
-   The token after the expression is scanned with no_symbol set to 1, so
-   since symbols are not allowed in that context, and we wish the .. operator
+   The token after the expression is scanned with no_symbol set to 1, since
+   symbols are not allowed in that context, and we wish the .. operator
    to be recognized.
 
    An attempt is made to make the last operand of an operator be a constant
@@ -2333,7 +2333,10 @@ out:
 }
 
 
-/* Strings may contain the standard ANSI escapes and octal specifications of 
+/* Gets a possibly multi-byte character whose first character is passed as c,
+   with remaining ones gotten with xxgetc, but then backed out with xxungetc.
+   
+   Strings may contain the standard ANSI escapes and octal specifications of 
    the form \o, \oo or \ooo, where 'o' is an octal digit. 
 
    If a string contains \u escapes that are not valid in the current locale, 
@@ -2806,8 +2809,7 @@ static struct { char *name; int token; } keywords[] = {
     { "else",	    ELSE       },
     { "next",	    NEXT       },
     { "break",	    BREAK      },
-    { "..",         DOTDOT     },
-    { "...",	    SYMBOL     },
+    { "..",         DOTDOT     },  /* delete if don't want .. to be reserved */
     { 0,	    0	       }
 };
 
@@ -2924,25 +2926,25 @@ static int SpecialValue(int c)
 
 /* Process a symbol value, putting the symbol in next_token_val (or
    the corresponding numeric or logical value, for constants).  The
-   return value is SYMBOL for regular symbols, NUM_CONST for constants,
-   and the appropriate token code for reserved words. */
+   return value is SYMBOL for regular symbols, or the appropriate token 
+   code for reserved words. */
 
 static int SymbolValue(int c)
 {
-    int prev_is_dot;
+    int previous_dots = -1;  /* # previous "." chars, but -1 for initial dots */
+    int alphu;               /* whether it's either alphanumeric or underline */
     int kw;
+
     DECLARE_YYTEXT_BUFP(yyp);
+
     if(mbcslocale) {
 	wchar_t wc; int i, clen;
 	clen = mbcs_get_next(c, &wc);
-        prev_is_dot = -1;
 	while (1) {
             if (c != '.')
-                prev_is_dot = 0;
-            else if (prev_is_dot != -1) 
-                prev_is_dot = 1;
-	    /* at this point we have seen one char, so push its bytes
-	       and get one more */
+                previous_dots = 0;
+            else if (previous_dots != -1) 
+                previous_dots += 1;
 	    for (i = 0; i < clen; i++) {
 		YYTEXT_PUSH(c, yyp);
 		c = xxgetc();
@@ -2950,49 +2952,65 @@ static int SymbolValue(int c)
 	    if (c == R_EOF)
                 break;
 	    if (c == '.') {
-                if (prev_is_dot == 1 && ps->parse_dotdot) {
-                    xxungetc(c);
-                    YYTEXT_UNPUSH(yyp);
-                    break;
-                }
 		clen = 1;
 		continue;
 	    }
-	    if (c == '_') {
-		clen = 1;
-		continue;
-	    }
-	    clen = mbcs_get_next(c, &wc);
-	    if (!iswalnum(wc))
+
+            alphu = 0;
+            if (c == '_') {
+                clen = 1;
+                alphu = 1;
+            }
+            else {
+                clen = mbcs_get_next(c, &wc);
+                if (iswalnum(wc))
+                    alphu = 1;
+            }
+            if (!alphu) {
+                xxungetc(c);
                 break;
+            }
+
+            if (previous_dots > 1) {
+                xxungetc(c);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                break;
+            }
 	}
     } 
     else {
-        prev_is_dot = -1;
 	while (1) {
             if (c != '.')
-                prev_is_dot = 0;
-            else if (prev_is_dot != -1) 
-                prev_is_dot = 1;
+                previous_dots = 0;
+            else if (previous_dots != -1) 
+                previous_dots += 1;
 	    YYTEXT_PUSH(c, yyp);
             c = xxgetc();
 	    if (c == R_EOF)
                 break;
-	    if (c == '.') {
-                if (prev_is_dot == 1 && ps->parse_dotdot) {
-                    xxungetc(c);
-                    YYTEXT_UNPUSH(yyp);
-                    break;
-                }
+	    if (c == '.')
 		continue;
-	    }
-	    if (c == '_')
-		continue;
-	    if (!isalnum(c))
+
+            alphu = 0;
+            if (c == '_') 
+                alphu = 1;
+            else if (isalnum(c))
+                alphu = 1;
+            if (!alphu) {
+                xxungetc(c);
                 break;
+            }
+
+            if (previous_dots > 1) {
+                xxungetc(c);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                xxungetc('.'); YYTEXT_UNPUSH(yyp);
+                break;
+            }
 	}
     }
-    xxungetc(c);
+
     YYTEXT_PUSH('\0', yyp);
     if ((kw = KeywordLookup(yytext))) 
 	return kw;
@@ -3280,6 +3298,7 @@ static int token (int c, int no_symbol)
        parse_dotdot is enabled). */
 
     if (ps->parse_dotdot && no_symbol && c == '.' && nextchar('.')) {
+        strcpy(yytext,"..");
         ps->next_token_val = R_DotDotSymbol;
         return DOTDOT;
     }
@@ -3514,16 +3533,14 @@ static int get_next_token(int no_symbol)
 
 int isValidName(const char *name)
 {
+    int previous_dots = -1;  /* # previous "." chars, but -1 for initial dots */
     const char *p = name;
-    int prev_is_dot;
     int i;
 
-    if (strcmp(name, "...") == 0)
-        return 1;
-    if (strcmp(name, "..") == 0)
-        return 0;
+if (getenv("TRVN")!=0) REprintf("isValidName(%s) : %d\n",name,mbcslocale);
 
     if(mbcslocale) {
+
 	/* the only way to establish which chars are alpha etc is to
 	   use the wchar variants */
 	int n = strlen(name), used;
@@ -3539,43 +3556,46 @@ int isValidName(const char *name)
                 return 0;
 	    /* Mbrtowc(&wc, p, n, NULL); if(iswdigit(wc)) return 0; */
 	}
-        prev_is_dot = wc != L'.' ? 0 : -1;  /* initial dots don't count */
-	while ((used = Mbrtowc(&wc, p, n, NULL))) {
-	    if (!(iswalnum(wc) || wc == L'.' || wc == L'_'))
-                break;
+
+        for (;;) {
+            if (!iswalnum(wc) && wc != L'.' && wc != L'_')
+                return 0;
             if (wc == L'.') {
-                if (prev_is_dot != -1) {
-                    if (prev_is_dot == 1)
-                        return 0;  /* don't allow ".." after start */
-                    prev_is_dot = 1;
-                }
+                if (previous_dots != -1) previous_dots += 1;
             }
-            else
-                prev_is_dot = 0;
-	    p += used; n -= used;
-	}
-	if (*p != '\0')
-            return 0;
+            else {
+                if (previous_dots > 1)
+                    return 0;
+                previous_dots = 0;
+            }
+            if (*p == 0) 
+                break;
+            used = Mbrtowc(&wc, p, n, NULL); p += used; n -= used;
+        }
+
     } else {
-	int c = 0xff & *p++;
+
+	int c = 0xff & *p++;  /* char may be a signed type */
 	if (c != '.' && !isalpha(c) )
             return 0;
 	if (c == '.' && isdigit(0xff & (int)*p))
             return 0;
-        prev_is_dot = c != '.' ? 0 : -1;  /* initial dots don't count */
-	while ( c = 0xff & *p++, (isalnum(c) || c == '.' || c == '_') ) {
+
+        for (;;) {
+            if (!isalnum(c) && c != '.' && c != '_')
+                return 0;
             if (c == '.') {
-                if (prev_is_dot != -1) {
-                    if (prev_is_dot == 1)
-                        return 0;  /* don't allow ".." after start */
-                    prev_is_dot = 1;
-                }
+                if (previous_dots != -1) previous_dots += 1;
             }
-            else
-                prev_is_dot = 0;
+            else {
+                if (previous_dots > 1)
+                    return 0;
+                previous_dots = 0;
+            }
+            if (*p == 0) 
+                break;
+            c = 0xff & *p++;
         }
-	if (c != '\0')
-            return 0;
     }
 
     /* Check whether it's a reserved word. */
