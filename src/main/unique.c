@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1533,9 +1533,8 @@ static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 	VMAXSET(vmax);
     }
     if(n > 1) {
-	/* +2 for terminator and rounding error */
-	char buf[maxlen + (R_len_t) strlen(csep)
-		 + (R_len_t) (log((double)n)/log(10.0)) + 2];
+	/* +20 for terminator and biggest number that could possibly be added */
+	char buf[maxlen + (R_len_t) strlen(csep) + 20];
 	if(n < 10000) {
 	    cnts = (int *) alloca(((size_t) n) * sizeof(int));
 	} else {
@@ -1549,23 +1548,28 @@ static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(newx = allocVector(STRSXP, 1));
 	PROTECT(dup = duplicated2(names, &data));
 	PROTECT(data.HashTable);
-	vmax = VMAXGET();
-	for(i = 1; i < n; i++) { /* first cannot be a duplicate */
-	    dp = INTEGER(dup)[i]; /* 1-based number of first occurrence */
-	    if(dp == 0) continue;
-	    ss = translateChar(STRING_ELT(names, i));
-	    /* Try appending 1,2,3, ..., n-1 until it is not already in use */
-	    for(cnt = cnts[dp-1]; cnt < n; cnt++) {
-		sprintf(buf, "%s%s%d", ss, csep, cnt);
-		SET_STRING_ELT(newx, 0, mkChar(buf));
-		if(Lookup(ans, newx, 0, &data) == data.nomatch) break;
-	    }
-	    SET_STRING_ELT(ans, i, STRING_ELT(newx, 0));
-	    /* insert it */ (void) isDuplicated(ans, i, &data);
-	    cnts[dp-1] = cnt+1; /* cache the first unused cnt value */
-	    VMAXSET(vmax);
-	}
-	UNPROTECT(3);
+        char csep_len = strlen(csep);
+        vmax = VMAXGET();
+        for(i = 1; i < n; i++) { /* first cannot be a duplicate */
+            dp = INTEGER(dup)[i]; /* 1-based number of first occurrence */
+            if(dp == 0) continue;
+            ss = translateChar(STRING_ELT(names, i));
+            strcpy(buf,ss);
+            if (strlen(ss)<csep_len || strcmp(csep,ss+strlen(ss)-csep_len)!=0)
+                strcat(buf,csep);
+            char *end = buf + strlen(buf);
+            /* Try appending 1,2,3, ..., n-1 until it is not already in use */
+            for(cnt = cnts[dp-1]; ; cnt++) {
+                sprintf(end, "%d", cnt);
+                SET_STRING_ELT(newx, 0, mkChar(buf));
+                if(Lookup(ans, newx, 0, &data) == data.nomatch) break;
+            }
+            SET_STRING_ELT(ans, i, STRING_ELT(newx, 0));
+            /* insert it */ (void) isDuplicated(ans, i, &data);
+            cnts[dp-1] = cnt+1; /* cache the first unused cnt value */
+            VMAXSET(vmax);
+        }
+        UNPROTECT(3);
     }
     UNPROTECT(1);
     return ans;
