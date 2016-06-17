@@ -581,7 +581,7 @@ static SEXP do_abbrev(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP arg, ans;
-    int i, l, n, allow_;
+    int i, l, n, allow_, nodotdot;
     char *p, *tmp = NULL, *cbuf;
     const char *This;
     Rboolean need_prefix;
@@ -595,6 +595,9 @@ static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
     allow_ = asLogical(CADR(args));
     if (allow_ == NA_LOGICAL)
 	error(_("invalid '%s' value"), "allow_");
+    nodotdot = asInteger(CADDR(args));
+    if (nodotdot == NA_INTEGER)
+	error(_("invalid '%s' value"), "no..");
     PROTECT(ans = allocVector(STRSXP, n));
     vmax = VMAXGET();
     for (i = 0 ; i < n ; i++) {
@@ -675,12 +678,6 @@ static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     UNPROTECT(1);
     return ans;
-}
-
-
-static SEXP do_make_no_dotdot(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    return CAR(args);
 }
 
 
@@ -1365,8 +1362,7 @@ attribute_hidden FUNTAB R_FunTab_character[] =
 {"substr",	do_substr,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"substr<-",	do_substrgets,	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"abbreviate",	do_abbrev,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"make.names",	do_makenames,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"make_no_dotdot", do_make_no_dotdot,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"make.names",	do_makenames,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"tolower",	do_tolower,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"toupper",	do_tolower,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"chartr",	do_chartr,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
