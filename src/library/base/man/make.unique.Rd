@@ -1,6 +1,7 @@
 % File src/library/base/man/make.unique.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Development Team
+% Modifications for pqR Copyright (c) 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{make.unique}
@@ -15,12 +16,13 @@ make.unique(names, sep = ".")
 }
 \arguments{
   \item{names}{a character vector}
-  \item{sep}{a character string used to separate a duplicate name from
-    its sequence number.}
+  \item{sep}{a character string used to separate the number appended
+    to duplicate names (unless the name already ends with \code{sep}).}
 }
 \value{
-  A character vector of same length as \code{names} with duplicates
-  changed, in the current locale's encoding.
+  A character vector (in the current locale's encoding), of same length 
+  as \code{names}, with duplicates changed to be unique by appending 
+  \code{sep} (unless it's already there) and a number.
 }
 \details{
   The algorithm used by \code{make.unique} has the property that
