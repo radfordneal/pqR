@@ -1,6 +1,7 @@
 % File src/library/base/man/make.names.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Development Team
+% Modifications for pqR Copyright (c) 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{make.names}
@@ -10,7 +11,8 @@
   Make syntactically valid names out of character vectors.
 }
 \usage{
-make.names(names, unique = FALSE, allow_ = TRUE)
+make.names(names, unique = FALSE, allow_ = TRUE, 
+    no.. = if (!getOption("parse_dotdot")) 0L else if (unique) 2L else 1L)
 }
 \arguments{
  \item{names}{character vector to be coerced to syntactically valid
@@ -18,24 +20,37 @@ make.names(names, unique = FALSE, allow_ = TRUE)
  \item{unique}{logical; if \code{TRUE}, the resulting elements are
      unique.  This may be desired for, e.g., column names.}
  \item{allow_}{logical.  For compatibility with \R prior to 1.9.0.}
+ \item{no..}{logical.  For compatibility with R Core versions that
+                       allow \code{..} not at beginning or end}
 }
 \value{
   A character vector of same length as \code{names} with each changed to
   a syntactically valid name, in the current locale's encoding.
 }
 \details{
-  A syntactically valid name consists of letters, numbers and the dot or
-  underline characters and starts with a letter or the dot not followed
-  by a number.  Names such as \code{".2way"} are not valid, and neither
-  are the \link{reserved} words.
+  A syntactically valid name contains only letters, numbers, and the dot or
+  underline characters, starts with a letter, or with the dot not followed
+  by a number, and does not contain a sequence of two or more consecutive dots 
+  except at the beginning or end (unless the \code{parse_dotdot} option
+  is \code{FALSE}).  Names such as \code{".2way"} are not valid
+  and those such as \code{x..y} are not valid unless the \code{parse_dotdot}
+  option is \code{FALSE}. The \link{reserved} words are also
+  not valid.
 
   The definition of a \emph{letter} depends on the current locale, but
   only ASCII digits are considered to be digits.
 
-  The character \code{"X"} is prepended if necessary.
-  All invalid characters are translated to \code{"."}.  A missing value
-  is translated to \code{"NA"}.  Names which match \R keywords have a dot
-  appended to them.  Duplicated values are altered by
+  \code{make.names} translates missing values in \code{names} to \code{"NA"}.
+
+  Otherwise, the process starts by prepending the character \code{X}
+  if necessary.  All invalid characters are then translated to
+  \code{.}.  Names which match \R keywords have a dot appended to
+  them.  Finally, if \code{no..} is not 0, all sequences of
+  consecutive dots that are not at the beginning are converted to a
+  single dot, except that if \code{no..} is 1, this is not done for a
+  sequence at the end.
+
+  Finally, if \code{unique} is \code{TRUE}, duplicated values are altered by 
   \code{\link{make.unique}}.
 }
 \note{
@@ -51,6 +66,7 @@ make.names(names, unique = FALSE, allow_ = TRUE)
   \code{\link{make.unique}},
   \code{\link{names}},
   \code{\link{character}},
+  \code{\link{option}},
   \code{\link{data.frame}}.
 }
 \examples{
