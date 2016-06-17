@@ -2941,7 +2941,7 @@ static int SymbolValue(int c)
                 break;
             }
 
-            if (previous_dots > 1) {
+            if (previous_dots > 1 && ps->parse_dotdot) {
                 xxungetc(c);
                 xxungetc('.'); YYTEXT_UNPUSH(yyp);
                 xxungetc('.'); YYTEXT_UNPUSH(yyp);
@@ -2972,7 +2972,7 @@ static int SymbolValue(int c)
                 break;
             }
 
-            if (previous_dots > 1) {
+            if (previous_dots > 1 && ps->parse_dotdot) {
                 xxungetc(c);
                 xxungetc('.'); YYTEXT_UNPUSH(yyp);
                 xxungetc('.'); YYTEXT_UNPUSH(yyp);
@@ -3506,8 +3506,6 @@ int isValidName(const char *name)
     int previous_dots = -1;  /* # previous "." chars, but -1 for initial dots */
     const char *p = name;
     int i;
-
-if (getenv("TRVN")!=0) REprintf("isValidName(%s) : %d\n",name,mbcslocale);
 
     if(mbcslocale) {
 
