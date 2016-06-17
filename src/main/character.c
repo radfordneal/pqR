@@ -678,6 +678,12 @@ static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
+static SEXP do_make_no_dotdot(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    return CAR(args);
+}
+
+
 static SEXP do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, y;
@@ -1360,6 +1366,7 @@ attribute_hidden FUNTAB R_FunTab_character[] =
 {"substr<-",	do_substrgets,	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"abbreviate",	do_abbrev,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"make.names",	do_makenames,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"make_no_dotdot", do_make_no_dotdot,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"tolower",	do_tolower,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"toupper",	do_tolower,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"chartr",	do_chartr,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},

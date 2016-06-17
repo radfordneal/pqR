@@ -10,7 +10,8 @@
   Make syntactically valid names out of character vectors.
 }
 \usage{
-make.names(names, unique = FALSE, allow_ = TRUE)
+make.names(names, unique = FALSE, allow_ = TRUE, 
+                  allow.. = !getOption("parse_dotdot"))
 }
 \arguments{
  \item{names}{character vector to be coerced to syntactically valid
@@ -18,25 +19,39 @@ make.names(names, unique = FALSE, allow_ = TRUE)
  \item{unique}{logical; if \code{TRUE}, the resulting elements are
      unique.  This may be desired for, e.g., column names.}
  \item{allow_}{logical.  For compatibility with \R prior to 1.9.0.}
+ \item{allow..}{logical.  For compatibility with R Core versions that
+                          allow \code{..} not at beginning or end}
 }
 \value{
   A character vector of same length as \code{names} with each changed to
   a syntactically valid name, in the current locale's encoding.
 }
 \details{
-  A syntactically valid name consists of letters, numbers and the dot or
-  underline characters and starts with a letter or the dot not followed
-  by a number.  Names such as \code{".2way"} are not valid, and neither
-  are the \link{reserved} words.
+  A syntactically valid name contains only letters, numbers, and the dot or
+  underline characters, starts with a letter, or with the dot not followed
+  by a number, and does not contain a sequence of two or more consecutive dots 
+  except at the beginning or end.  Names such as \code{".2way"} 
+  and \code{x..y} are not valid, and neither are the \link{reserved} words.
 
   The definition of a \emph{letter} depends on the current locale, but
   only ASCII digits are considered to be digits.
 
-  The character \code{"X"} is prepended if necessary.
-  All invalid characters are translated to \code{"."}.  A missing value
-  is translated to \code{"NA"}.  Names which match \R keywords have a dot
-  appended to them.  Duplicated values are altered by
+  A missing value is translated to \code{"NA"}.
+
+  Otherwise, the process starts by prepending the character \code{X}
+  if necessary.  All invalid characters are then translated to
+  \code{.}.  Names which match \R keywords have a dot appended to
+  them.
+
+  Then, if \code{unique} is \code{TRUE}, duplicated values are altered by 
   \code{\link{make.unique}}.
+
+  Finally, unless \code{allow..} is \code{TRUE}, every sequence of 
+  consecutive \code{.} characters not
+  at the beginning or end have all but the last \code{.} replaced 
+  by \code{_}.  Note that not doing this may produce names that are
+  not syntactically valid, unless the \code{parse_dotdot} option is 
+  \code{FALSE}.
 }
 \note{
   Prior to \R version 1.9.0, underscores were not valid in variable names,
@@ -51,6 +66,7 @@ make.names(names, unique = FALSE, allow_ = TRUE)
   \code{\link{make.unique}},
   \code{\link{names}},
   \code{\link{character}},
+  \code{\link{option}},
   \code{\link{data.frame}}.
 }
 \examples{

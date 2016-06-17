@@ -84,10 +84,12 @@ abbreviate <-
     x
 }
 
-make.names <- function(names, unique = FALSE, allow_ = TRUE)
+make.names <- function(names, unique = FALSE, allow_ = TRUE, 
+                              allow.. = !getOption("parse_dotdot"))
 {
     names <- .Internal(make.names(as.character(names), allow_))
-    if(unique) names <- make.unique(names)
+    if (unique) names <- make.unique(names)
+    if (!allow..) names <- .Internal(make_no_dotdot(names))
     names
 }
 
