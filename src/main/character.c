@@ -582,7 +582,7 @@ static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP arg, ans;
     int i, l, n, allow_, nodotdot;
-    char *p, *tmp = NULL, *cbuf;
+    char *tmp = NULL, *cbuf;
     const char *This;
     Rboolean need_prefix;
     const void *vmax;
@@ -633,36 +633,56 @@ static SEXP do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 	    tmp = Calloc(l+1, char);
 	    strcpy(tmp, translateChar(STRING_ELT(arg, i)));
 	}
-	if (mbcslocale) {
-	    /* This cannot lengthen the string, so safe to overwrite it.
-	       Would also be possible a char at a time.
-	     */
-	    int nc = mbstowcs(NULL, tmp, 0);
-	    wchar_t *wstr = Calloc(nc+1, wchar_t), *wc;
-	    if (nc >= 0) {
-		mbstowcs(wstr, tmp, nc+1);
-		for (wc = wstr; *wc; wc++) {
-		    if (*wc == L'.' || (allow_ && *wc == L'_'))
-			/* leave alone */;
-		    else if (!iswalnum((int)*wc)) *wc = L'.';
-		    /* If it changes into dot here,
-		     * length will become short on mbcs.
-		     * The name which became short will contain garbage.
-		     * cf.
-		     *   >  make.names(c("\u30fb"))
-		     *   [1] "X.\0"
-		     */
-		}
-		wcstombs(tmp, wstr, strlen(tmp)+1);
-		Free(wstr);
-	    } else error(_("invalid multibyte string %d"), i+1);
-	} else {
-	    for (p = tmp; *p; p++) {
-		if (*p == '.' || (allow_ && *p == '_')) /* leave alone */;
-		else if (!isalnum(0xff & (int)*p)) *p = '.';
-		/* else leave alone */
-	    }
-	}
+        int startd = -1;
+        if (mbcslocale) {
+            /* This cannot lengthen the string, so safe to overwrite it. */
+            int nc = mbstowcs(NULL, tmp, 0);
+            if (nc < 0) error(_("invalid multibyte string %d"), i+1);
+            wchar_t *wstr = Calloc(nc+1, wchar_t);
+            mbstowcs(wstr, tmp, nc+1);
+            wchar_t *p, *q, *r;
+            for (p = wstr; *p != L'\0'; p++) {
+                if (*p != L'.' && startd == -1) startd = p-wstr;
+                if (*p == L'.' || (allow_ && *p == L'_'))
+                    /* leave alone */;
+                else if (!iswalnum((int)*p))
+                    *p = L'.';
+            }
+            if (nodotdot != 0 && startd != -1) { /* convert multiple ... to . */
+                q = p;
+                if (nodotdot == 1) while (*(q-1) == '.') q -= 1;
+                p = r = wstr + startd + 1;
+                while (p < q) {
+                    if (*p != L'.' || *(r-1) != L'.') *r++ = *p;
+                    p += 1;
+                }
+                while (*p != L'\0') *r++ = *p++;
+                *r = L'\0';
+            }
+            wcstombs(tmp, wstr, strlen(tmp)+1);
+            Free(wstr);
+        } 
+        else {
+            char *p, *q, *r;
+            for (p = tmp; *p; p++) {
+                if (*p != '.' && startd == -1) startd = p-tmp;
+                if (*p == '.' || (allow_ && *p == '_')) 
+                    /* leave alone */;
+                else if (!isalnum(0xff & (int)*p))
+                    *p = '.';
+            }
+            if (nodotdot != 0 && startd != -1) { /* convert multiple ... to . */
+                q = p;
+                if (nodotdot == 1) while (*(q-1) == '.') q -= 1;
+                p = r = tmp + startd + 1;
+                while (p < q) {
+                    if (*p != '.' || *(r-1) != '.') *r++ = *p;
+                    p += 1;
+                }
+                while (*p != 0) *r++ = *p++;
+                *r = 0;
+            }
+        }
 	SET_STRING_ELT(ans, i, mkChar(tmp));
 	/* do we have a reserved word?  If so the name is invalid */
 	if (!isValidName(tmp)) {
