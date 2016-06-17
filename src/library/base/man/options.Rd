@@ -264,7 +264,7 @@ getOption(x, default = NULL)
 
       When \code{parse_dotdot} is \code{FALSE},
       the parser will accept unquoted symbols with consecutive "."
-      characters that are not at the beginning, but such symbols are 
+      characters that are not at the beginning or end, but such symbols are 
       deparsed with backquotes regardless of the setting of 
       \code{parse_dotdot}. Also, when \code{parse_dotdot} is \code{FALSE},
       the \code{..} operator is deparsed as a function call
