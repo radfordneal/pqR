@@ -17,3 +17,5 @@ Change how make.names works, so it meshes with not allowing .. in middle.
 
 Make "unique" not append a separator when the name already ends with it.
 This avoids creation of invalid names with parse_dotdot is TRUE.
+
+Now deparse according to parse_dotdot as well.
