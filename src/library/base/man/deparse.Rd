@@ -1,7 +1,7 @@
 % File src/library/base/man/deparse.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Development Team
-% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2015, 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{deparse}
@@ -56,6 +56,12 @@ deparse(expr, width.cutoff = 60L,
   line proceeds until at least \code{width.cutoff} \emph{bytes} have
   been output and e.g. \code{arg = value} expressions will not be split
   across lines.
+
+  Deparsing of symbols with \code{..} not at the beginning or end is
+  done with backtick (if that is enabled) when the \code{parse_dotdot}
+  option is \code{TRUE}.  Similarly, whether the \code{..} operator is
+  deparsed as an operator or as a call of function \code{`..`} depends
+  on this option (set with \code{\link{options}}).
 }
 \note{
   Parentheses are shown when they are either actually present in the
@@ -78,6 +84,7 @@ deparse(expr, width.cutoff = 60L,
 \seealso{
   \code{\link{substitute}},
   \code{\link{parse}},
+  \code{\link{options}},
   \code{\link{expression}}.
 
   \code{Quotes} for quoting conventions, including backticks.
