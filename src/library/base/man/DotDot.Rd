@@ -1,6 +1,6 @@
 % File src/library/base/man/DotDot.Rd
 % Part of pqR.
-% Copyright 2015 Radford M. Neal
+% Copyright 2016 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{DotDot}

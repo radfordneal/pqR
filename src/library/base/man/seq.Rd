@@ -1,7 +1,7 @@
 % File src/library/base/man/seq.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Development Team
-% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2015, 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{seq}
@@ -129,6 +129,7 @@ seq(length.out= )
 
   \code{\link{..}},
   \code{\link{:}},
+  \code{\link{..}},
   \code{\link{rep}},
   \code{\link{sequence}},
   \code{\link{row}},
