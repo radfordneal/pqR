@@ -88,6 +88,12 @@ parse(file = "", n = NULL, text = NULL, prompt = "?",
   include the name, but source reference information will not be added
   to the result.  When \code{srcfile} is a \code{\link{srcfile}}
   object, source reference information will be retained. 
+
+  Whether the parser accepts the \code{..} operator is controlled
+  by the \code{parse_dotdot} option (set with \code{\link{options}}).
+  If it is accepted, names
+  containing sequences of more than one dot that are not at the beginning
+  or end must be quoted with backticks.
 }
 \section{Partial parsing}{
   When a syntax error occurs during parsing, \code{parse} 
