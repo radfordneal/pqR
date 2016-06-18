@@ -3553,6 +3553,9 @@ int isValidName(const char *name)
     const char *p = name;
     int i;
 
+    if (!R_parse_dotdot && strcmp(name,"..") == 0)
+        return 1;  /* .. is OK when not being parsed as an operator */
+
     if(mbcslocale) {
 
 	/* the only way to establish which chars are alpha etc is to
@@ -3578,7 +3581,7 @@ int isValidName(const char *name)
                 if (previous_dots != -1) previous_dots += 1;
             }
             else {
-                if (previous_dots > 1)
+                if (previous_dots > 1 && R_parse_dotdot)
                     return 0;
                 previous_dots = 0;
             }
@@ -3602,7 +3605,7 @@ int isValidName(const char *name)
                 if (previous_dots != -1) previous_dots += 1;
             }
             else {
-                if (previous_dots > 1)
+                if (previous_dots > 1 && R_parse_dotdot)
                     return 0;
                 previous_dots = 0;
             }
