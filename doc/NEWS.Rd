@@ -6,6 +6,73 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2016-06-24}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item This release extends the R language in ways that address a
+        set of related design flaws in the design of R, and before it S.
+
+        These extensions make it easier to write reliable programs,
+        by making the easy way to do things also be the correct
+        way, unlike the previous situation with sequence generation using
+        the colon operator, and dimension dropping when subsetting arrays.
+  \item Several other changes in features are also implemented in this
+        version, some of which are related to the major language extensions.
+  \item There are also a few bug fixes, and some improvements in testing,
+        but no major performance improvements.
+}}
+
+  \subsection{MAJOR LANGUAGE EXTENSIONS}{
+  \itemize{
+  \item ..
+  \item drop
+  \item missing
+}}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a problem with identifying the version of the
+        makeinfo program that is installed that arises with recent versions.
+  \item Put in a check for non-existent primitives when unserializing
+        R objects, as was done in R-3.0.1.
+  \item Fixed a bug (also in R-2.15.0, but fixed in later R Core versions)
+        illustrated by the following code:
+\preformatted{    a <- array(c(3,4),dimnames=list(xyz=c("fred","bert")))
+    print(a[1:2])
+    print(a[])  # should print same thing, but didn't
+}
+  \item Fixed a bug illustrated by the following code:
+\preformatted{    f <- function (x) { try(x); missing(x) }
+    g <- function (y) f(y)
+    h <- function (z) g(z)
+
+    f(pi[1,1])  # FALSE
+    g(pi[1,1])  # FALSE
+    h(pi[1,1])  # Should also be FALSE, but isn't!
+}
+        This bug is in R Core versions to at least R-3.3.0.
+  \item Fixed a bug in which an internal error message is displayed
+        as shown below:
+\preformatted{    > f <- function (...) ..1; f()
+    Error in f() : 'nthcdr' needs a list to CDR down
+}
+        A sensible error message is now produced.  This bug is also
+        in R Core versions to at least R-3.3.0.
+  \item Fixed a bug in S4 method dispatch that caused failure
+        of the no-segfault test done by make check-all on Windows 10 
+        (pqR issue #29 + related fix).  (Also in R-2.15.0, and partially fixed
+        in R-3.3.0.)
+  \item Fixed a bug illustrated by
+\preformatted{   atan; show <- function (x) cat("HI\n"); atan
+}
+        Now, pqR no longer prints HI! for the second display of \code{atan}.
+  \item Fixed a pqR bug in which the result of \code{getParseData} omitted
+        the letter at the end of \code{1i} or \code{1L}.
+}}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2015-09-14}{
 
   \subsection{INTRODUCTION}{
