@@ -66,7 +66,7 @@ make.names(names, unique = FALSE, allow_ = TRUE,
   \code{\link{make.unique}},
   \code{\link{names}},
   \code{\link{character}},
-  \code{\link{option}},
+  \code{\link{options}},
   \code{\link{data.frame}}.
 }
 \examples{
