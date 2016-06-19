@@ -10,3 +10,6 @@ Fixed bug illustrated by
 Put in check for non-existent primitives when unserializing, from R-3.0.1.
 
 Fixed problem with identifying makeinfo version in later versions.
+
+Fixed problems in do_set that led to unnecessary waiting for computations 
+to finish.
