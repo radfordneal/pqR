@@ -2117,36 +2117,37 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Try to copy the value, not assign the object, if the rhs is scalar
            and doesn't have zero NAMEDCNT (for which assignment would be free). 
-           This will include static boxes, which must be replaced by regular
-           values if the copy can't be done.  If the copy can't be done, but 
+           This copy from a static box, which must be replaced by a regular
+           value if the copy can't be done.  If the copy can't be done, but 
            a binding cell was found here, the assignment is done directly into
-           the binding cell, avoiding overhead of calling set_var_in_frame. */
+           the binding cell, avoiding overhead of calling set_var_in_frame.
 
-        if (NAMEDCNT_GT_0(rhs) && isVectorNonpointer(rhs) && LENGTH(rhs) == 1) {
+           Avoid accessing NAMEDCNT in a way that will cause unnecessary waits
+           for task completion. */
+
+        if (isVectorNonpointer(rhs) && LENGTH(rhs) == 1 && NAMEDCNT_GT_0(rhs)) {
+            SEXPTYPE rhs_type = TYPEOF(rhs);
             SEXP v;
             if (rho != LASTSYMENV(lhs) 
                   || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
                   || (v = CAR(R_binding_cell)) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
-            if (v != R_UnboundValue) {
-                SEXPTYPE rhs_type = TYPEOF(rhs);
-                if (NAMEDCNT_EQ_0(v)) /* this will wait until v is not in use */
+            if (v != R_UnboundValue  && TYPEOF(v) == rhs_type && LENGTH(v) == 1
+                 && ATTRIB(v) == ATTRIB(rhs) && TRUELENGTH(v) == TRUELENGTH(rhs)
+                 && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
+                if (NAMEDCNT_EQ_0(v))
                     SET_NAMEDCNT_1(v);
-                if (TYPEOF(v)==rhs_type && !NAMEDCNT_GT_1(v)
-                      && LENGTH(v)==1 && ATTRIB(v)==ATTRIB(rhs)
-                      && TRUELENGTH(v) == TRUELENGTH(rhs)
-                      && LEVELS(v)==LEVELS(rhs)) {
-                    WAIT_UNTIL_COMPUTED(v);
-                    switch (rhs_type) {
-                    case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
-                    case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
-                    case REALSXP: *REAL(v)    = *REAL(rhs);    break;
-                    case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
-                    case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
-                    }
-                    rhs = v; /* for return value */
-                    break; /* out of main switch */
+                helpers_wait_until_not_in_use(v);
+                WAIT_UNTIL_COMPUTED(v);
+                switch (rhs_type) {
+                case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
+                case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
+                case REALSXP: *REAL(v)    = *REAL(rhs);    break;
+                case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
+                case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
                 }
+                rhs = v; /* for return value */
+                break; /* out of main switch */
             }
             if (IS_STATIC_BOX(rhs)) 
                 rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
