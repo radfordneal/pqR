@@ -121,9 +121,9 @@ extern void helpers_merge_proc ( /* helpers_var_ptr out, */
 
 /* TRACE AND STATISTICS OUTPUT */
 
-#define helpers_printf Rprintf
+#define helpers_printf REprintf
 
-#define ENABLE_TRACE 1
+#define ENABLE_TRACE 2
 #define ENABLE_STATS 0
 
 

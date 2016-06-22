@@ -506,6 +506,21 @@ static void trace_task_list (void)
       info->done ? "F" : info->helper>=0 ? "X" : runnable(used[i]) ? "R" : "");
   }
 
+  /* Print untaken queue. */
+
+# if 1
+  helpers_printf("\n  untaken:");
+  for (i = 0; i<=MAX_TASKS; i++) 
+  { if (i == untaken_out) 
+    { helpers_printf(" ^");
+    }
+    if (i == untaken_in) 
+    { helpers_printf(" v");
+    }
+    helpers_printf(" %d",untaken[i]);
+  }
+# endif
+
   /* Print lots of stuff about tasks if enabled. */
 
   if (ENABLE_TRACE>3)
