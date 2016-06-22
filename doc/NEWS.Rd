@@ -32,6 +32,21 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed bugs in the conversion of strings to numbers, so that the
+        behaviour now matches \code{help(NumericConstants)}, which
+        states that numeric constants are parsed very similarly to C99.
+        This was not true before (or in R-2.15.0) -- some erroneous
+        syntax was accepted without error, and some correct syntax was
+        rejected, or gave the wrong value.  
+
+        In particular, fractional
+        parts are now accepted for hexadecimal constants.  Later R Core
+        versions made some fixes, but up to at least R-3.3.1 there are
+        still problems.  For example, in R-3.3.1, 
+        \code{parse(text="0x1.8")[[1]]} gives an error, and 
+        \code{as.numeric("0x1.8")} produces 24 (as does \code{\link{scan}}
+        when given this input).  In this version of pqR, these return the
+        correct value of 1.5.
   \item Fixed a problem with identifying the version of the
         makeinfo program that is installed that arises with recent versions.
   \item Put in a check for non-existent primitives when unserializing
@@ -51,14 +66,14 @@
     g(pi[1,1])  # FALSE
     h(pi[1,1])  # Should also be FALSE, but isn't!
 }
-        This bug is in R Core versions to at least R-3.3.0.
+        This bug is in R Core versions to at least R-3.3.1.
   \item Fixed a bug in which an internal error message is displayed
         as shown below:
 \preformatted{    > f <- function (...) ..1; f()
     Error in f() : 'nthcdr' needs a list to CDR down
 }
         A sensible error message is now produced.  This bug is also
-        in R Core versions to at least R-3.3.0.
+        in R Core versions to at least R-3.3.1.
   \item Fixed a bug in S4 method dispatch that caused failure
         of the no-segfault test done by make check-all on Windows 10 
         (pqR issue #29 + related fix).  (Also in R-2.15.0, and partially fixed
@@ -69,6 +84,9 @@
         Now, pqR no longer prints HI! for the second display of \code{atan}.
   \item Fixed a pqR bug in which the result of \code{getParseData} omitted
         the letter at the end of \code{1i} or \code{1L}.
+  \item Fixed a pqR bug in which enabling trace output from the 
+        helpers module and then typing control/C while trace output is
+        being printed could lead to pqR hanging. 
 }}
 }
 
