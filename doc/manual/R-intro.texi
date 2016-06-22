@@ -6548,7 +6548,7 @@ disappear.
 @c need to adapt the discussion slightly.
 
 @table @code
-@item @ 
+@item @R{}
 Start @R{} appropriately for your platform (@pxref{Invoking R}).
 
 The @R{} program begins, with a banner.
