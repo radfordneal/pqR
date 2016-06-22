@@ -1040,7 +1040,9 @@ static mtix find_untaken_runnable (int only_needed)
   /* Remove the task taken from the untaken queue.  The index at untaken_out
      is copied to where the task being removed is located, at which point
      untaken_out can be moved forward. */
-
+if (trace) helpers_printf (
+  "NEWDEBUG: Removing task %d from untaken, at pos %d, with in %d / out %d\n",
+   (int)t, (int)f, untaken_in, untaken_out);
   untaken[f] = untaken[untaken_out];
   new_u_out = (untaken_out + 1) & QMask;
   ATOMIC_WRITE_CHAR (untaken_out = new_u_out);
@@ -1383,11 +1385,13 @@ static void do_task_in_master (int only_needed)
 
   /* Do the task in the master. */
 
+if (trace) helpers_printf("NEWDEBUG: Starting task %d in master\n",this_task); 
   this_task_info = &task[this_task].info;
   this_task_info->helper = 0;
   FLUSH;
 
   run_this_task();
+if (trace) helpers_printf("NEWDEBUG: Finished task %d in master\n",this_task); 
 
   /* Set this_task to indicate that nothing is being done in the master,
      so that directly-called task procedures will work correctly. */
