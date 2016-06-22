@@ -3012,7 +3012,9 @@ static int SymbolValue(int c)
     }
 
     YYTEXT_PUSH('\0', yyp);
-    if ((kw = KeywordLookup(yytext))) 
+
+    kw = KeywordLookup(yytext);
+    if (kw != 0 && (ps->parse_dotdot || kw != DOTDOT))
 	return kw;
     
     ps->next_token_val = install(yytext);
