@@ -5,7 +5,8 @@ didn't end up in parse data in "1i" and "1L".
 
 Allow real constants like 0x1.8 (equal to 1.5), which are inexplicably
 disallowed in R Core versions.  (Previously allowed but with . ignored
-in pqR.)  Also allow this for input from 'scan', etc.
+in pqR.)  Also allow this for input from 'scan', etc.  Updated 
+NumericConstants.Rd, incorporating mods from R-3.3.0 version.
 
 Updates R-lang.texi and several help files to document .. (and fix a
 few other things).
