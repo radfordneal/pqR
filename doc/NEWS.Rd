@@ -166,7 +166,10 @@ is equivalent to
         \code{.External}, but only if the programmer is not 
         abiding by the rules.  However, in pqR, the data part of a vector or
         matrix is still copied when \code{A[]} is evaluated, so such
-        rule-breaking should still largely be accommodated.
+        rule-breaking should still largely be accommodated.  A further
+        temporary kludge is implemented to make \code{x[,drop=FALSE]}
+        simply return a duplicate of \code{x}, since this (pointless)
+        operation is done by some packages.
   \item Fixed bugs in the conversion of strings to numbers, so that the
         behaviour now matches \code{help(NumericConstants)}, which
         states that numeric constants are parsed very similarly to C99.
