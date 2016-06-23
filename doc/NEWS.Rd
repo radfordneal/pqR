@@ -6,6 +6,225 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2016-06-24}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item This release extends the R language in ways that address a
+        set of related flaws in the design of R, and before it S.
+
+        These extensions make it easier to write reliable programs,
+        by making the easy way to do things also be the correct
+        way, unlike the previous situation with sequence generation using
+        the colon operator, and dimension dropping when subsetting arrays.
+  \item Several other changes in features are also implemented in this
+        version, some of which are related to the major language extensions.
+  \item There are also a few bug fixes, and some improvements in testing,
+        but no major performance improvements (though some tweaks).
+}}
+
+  \subsection{MAJOR LANGUAGE EXTENSIONS AND OTHER CHANGES}{
+  \itemize{
+  \item There is a new \code{..} operator for generating increasing integer
+        sequences, which is a less error-prone replacement for the \code{:}
+        operator (which remains for backwards compatibility).  Since \code{..}
+        generates only increasing sequences, it can generate an empty
+        sequence when the end value is less than the start value, thereby
+        avoiding some very common bugs that arise when \code{:} is used.
+
+        The \code{..} operator also has lower precedence than arithmetic
+        operators (unlike \code{:}), which avoids another common set of bugs.
+
+        For example, the following code sets all interior elements of the 
+        matrix \code{M} to zero, that is, all elements except those in the 
+        first or last row or column:
+\preformatted{    for (i in 2..nrow(M)-1)
+        for (j in 2..ncol(M)-1)
+            M[i,j] <- 0
+}
+        Without the new \code{..} operator, it is awkward to write code
+        for this task that works correctly when \code{M} has two or fewer 
+        rows, or two or fewer columns.
+  \item In order that the \code{..} operator can be conveniently used
+        in contexts such as \code{i..j}, consecutive dots are no longer
+        allowed in names (without using backticks), except at the
+        beginning or end.  So \code{i..j} is not a valid name, but
+        \code{..i..} is valid (though not recommended).  With this restriction
+        on names, most uses of the \code{..} operator are unambiguous even
+        if it is not surrounded by spaces.  The only exceptions are some uses in
+        which \code{..} is written with a space after it but not before it,
+        expressions such as \code{i..(a+b)}, which is a
+        call of a function named \code{i..}, and expressions such as 
+        \code{i..-j}, which returns the difference between \code{i..} and 
+        \code{j}.  Most such uses will be stylistically bad, redundant
+        (note that the parentheses around \code{a+b} above are unnecessary),
+        or probably unlikely (as is the case for \code{i..-j}).
+
+        To accomodate old R code that has consecutive dots within names,
+        parsing of the \code{..} operator can be disabled by setting the
+        \code{parse_dotdot} option to \code{FALSE} (with the \code{options}
+        function). The \code{parse_dotdot} option defaults to \code{TRUE} 
+        unless the environment variable
+        \code{R_PARSE_DOTDOT} is set to \code{FALSE}.  When \code{parse_dotdot}
+        is \code{FALSE}, consecutive dots are allowed in names, and \code{..}
+        is not a reserved word.
+  \item Another source of bugs is the automatic dropping
+        of dimensions of size one when subsetting matrices (or 
+        higher-dimensional arrays) using \code{[]},
+        unless the \code{drop=FALSE} argument is specified.  This frequently
+        results in code that mostly works, but not when, for example, a data set
+        has only one observation, or a model uses only one explanatory 
+        variable.
+
+        To make handling this problem easier, if no \code{drop} argument is
+        specified, pqR now does not drop a dimension of size one if the
+        subscript for that dimension is a one-dimensional non-logical array.  
+        For example,
+        if \code{A} is a matrix, \code{A[1..100,array(1)]} will produce a
+        matrix, whereas \code{A[1..100,1]} will produce a vector.
+
+        To make this feature more useful, the new \code{..} operator 
+        produces a one-dimensional array, not a bare vector.  So
+        \code{A[1..n,1..m]} will always produce a matrix result, even
+        when \code{n} or \code{m} are one.  (It will also correctly
+        produce an array with zero rows or zero columns when \code{n}
+        or \code{m} are zero.
+
+        This change also applies to subsetting of data frames.  For 
+        example, \code{df[1..10,1..n]} will return a data frame (not a
+        vector) even when \code{n} is one.
+  \item Problems with dimensions of size one being dropped also arise
+        when an entire row, or an entire column, is selected with an empty
+        (missing) subscript, and there happens to be only one row, or only one 
+        column.  For example, if \code{A} is a matrix with one column, 
+        \code{A[1:10,]} will be a vector, not a matrix.
+
+        To address this problem, pqR now allows a missing argument to
+        be specified by \code{_}, rather than by nothing at all, and
+        the \code{[]} operator (for matrices, arrays, and data frames)
+        will not drop a dimension if its subscript is \code{_}.  So
+        \code{A[1:10,_]} will be a matrix even when \code{A} has only
+        one column.
+
+        R functions that check for a missing argument with the \code{missing}
+        function will see both an empty argument and \code{_} as missing,
+        but can distinguish them using the \code{missing_from_underline}
+        function.
+  \item A common use of \code{for} statements is to iterate over indexes
+        of a vector, or row and column indexes of a matrix.  A new type 
+        of \code{for} statement with ``along'' rather than ``in'' now makes
+        this more convenient.
+  
+        For vectors, the form 
+\preformatted{    for (i along vec) ...
+}
+        is equivalent to
+\preformatted{    for (i in seq_along(vec)) ...
+}
+        For matrices, the form
+\preformatted{    for (i, j along M) ...
+}
+is equivalent to
+\preformatted{    for (j in 1..ncol(M))
+        for (i in 1..nrow(M))
+            ...
+}
+        However, if \code{M} is of a class with its own \code{dim} method,
+        this method is not used (effectively, \code{ncol(unclass(M))} and
+        \code{nrow(unclass(m))} are used).  This may well change in future, 
+        and similarly a \code{length} method may in future be used for vectors.
+  \item Because of the new restriction on names, the \code{make.names}
+        function will now (by default) convert a sequence of consecutive dots 
+        in the name it would otherwise have made to a single dot.  (See
+        \code{help(make.names)} for further details).  
+  \item For the same reason, \code{make.unique} has been changed so that
+        the separator string (which defaults to a dot) 
+        will not be appended to a name if the name already ends in that string.
+}}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug (or mis-feature) in subsetting with a single empty
+        subscript, as in \code{A[]}.  This now works the same as if
+        the empty subscript had been the sequence of all indexes (ie,
+        like \code{A[1..length(A)]}), which removes all attributes except
+        names.
+
+        R Core versions to at least R-3.3.1 instead return \code{A}
+        unchanged, preserving all attributes, though attributes are
+        not retained with other uses of the \code{[]} operator.  This
+        is contrary to the description in \code{help("[")}, and also
+        does not coincde with the (different) description in the R
+        language definition.  
+
+        Returning \code{A} unchanged is not only inconsistent, but also
+        useless, since there is then no reason to ever write \code{A[]}.
+        However, internally, R Core implementions duplicate \code{A},
+        which may be of significance when \code{A[]} is passed as
+        an argument of \code{.C}, \code{.Fortran}, \code{.Call}, or
+        \code{.External}, but only if the programmer is not 
+        abiding by the rules.  However, in pqR, the data part of a vector or
+        matrix is still copied when \code{A[]} is evaluated, so such
+        rule-breaking should still largely be accommodated.
+  \item Fixed bugs in the conversion of strings to numbers, so that the
+        behaviour now matches \code{help(NumericConstants)}, which
+        states that numeric constants are parsed very similarly to C99.
+        This was not true before (or in R-2.15.0) -- some erroneous
+        syntax was accepted without error, and some correct syntax was
+        rejected, or gave the wrong value.  
+
+        In particular, fractional
+        parts are now accepted for hexadecimal constants.  Later R Core
+        versions made some fixes, but up to at least R-3.3.1 there are
+        still problems.  For example, in R-3.3.1, 
+        \code{parse(text="0x1.8")[[1]]} gives an error, and 
+        \code{as.numeric("0x1.8")} produces 24 (as does \code{\link{scan}}
+        when given this input).  In this version of pqR, these return the
+        correct value of 1.5.
+  \item Fixed a problem with identifying the version of the
+        makeinfo program that is installed that arises with recent versions.
+  \item Put in a check for non-existent primitives when unserializing
+        R objects, as was done in R-3.0.1.
+  \item Fixed a bug (also in R-2.15.0, but fixed in later R Core versions)
+        illustrated by the following code:
+\preformatted{    a <- array(c(3,4),dimnames=list(xyz=c("fred","bert")))
+    print(a[1:2])
+    print(a[])  # should print same thing, but didn't
+}
+  \item Fixed a bug illustrated by the following code:
+\preformatted{    f <- function (x) { try(x); missing(x) }
+    g <- function (y) f(y)
+    h <- function (z) g(z)
+
+    f(pi[1,1])  # FALSE
+    g(pi[1,1])  # FALSE
+    h(pi[1,1])  # Should also be FALSE, but isn't!
+}
+        This bug is in R Core versions to at least R-3.3.1.
+  \item Fixed a bug in which an internal error message is displayed
+        as shown below:
+\preformatted{    > f <- function (...) ..1; f()
+    Error in f() : 'nthcdr' needs a list to CDR down
+}
+        A sensible error message is now produced.  This bug is also
+        in R Core versions to at least R-3.3.1.
+  \item Fixed a bug in S4 method dispatch that caused failure
+        of the no-segfault test done by make check-all on Windows 10 
+        (pqR issue #29 + related fix).  (Also in R-2.15.0, and partially fixed
+        in R-3.3.0.)
+  \item Fixed a bug illustrated by
+\preformatted{   atan; show <- function (x) cat("HI\n"); atan
+}
+        Now, pqR no longer prints HI! for the second display of \code{atan}.
+  \item Fixed a pqR bug in which the result of \code{getParseData} omitted
+        the letter at the end of \code{1i} or \code{1L}.
+  \item Fixed a pqR bug in which enabling trace output from the 
+        helpers module and then typing control/C while trace output is
+        being printed could lead to pqR hanging. 
+}}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2015-09-14}{
 
   \subsection{INTRODUCTION}{
