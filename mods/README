@@ -17,8 +17,13 @@ branches starting with DD+1.
 
 Release branches have names of the form Release-YYYY-MM-DD (and are
 also given tag pqR-YYYY-MM-DD).  They are based on some merged
-development branch (ie, with a name of the form DD), with only the
-following changes:
+development branch (ie, with a name of the form DD).  Note that it may
+be a good idea to have the development branch include the effects on
+the source directory of a run of "make update-po" in the "po"
+subdirectory of a build directory (which updates source references for
+translations).
+
+After the new release branch is created, the following should be done:
 
  1) Remove the file ".gitignore" using "git rm".
 
