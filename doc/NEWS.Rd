@@ -23,7 +23,7 @@
         but no major performance improvements (though some tweaks).
 }}
 
-  \subsection{MAJOR LANGUAGE EXTENSIONS}{
+  \subsection{MAJOR LANGUAGE EXTENSIONS AND OTHER CHANGES}{
   \itemize{
   \item There is a new \code{..} operator for generating increasing integer
         sequences, which is a less error-prone replacement for the \code{:}
@@ -45,9 +45,101 @@
         Without the new \code{..} operator, it is awkward to write code
         for this task that works correctly when \code{M} has two or fewer 
         rows, or two or fewer columns.
-  \item drop
-  \item missing
-  \item along
+  \item In order that the \code{..} operator can be conveniently used
+        in contexts such as \code{i..j}, consecutive dots are no longer
+        allowed in names (without using backticks), except at the
+        beginning or end.  So \code{i..j} is not a valid name, but
+        \code{..i..} is valid (though not recommended).  With this restriction
+        on names, most uses of the \code{..} operator are unambiguous even
+        if it is not surrounded by spaces.  The only exceptions are some uses in
+        which \code{..} is written with a space after it but not before it,
+        expressions such as \code{i..(a+b)}, which is a
+        call of a function named \code{i..}, and expressions such as 
+        \code{i..-j}, which returns the difference between \code{i..} and 
+        \code{j}.  Most such uses will be stylistically bad, redundant
+        (note that the parentheses around \code{a+b} above are unnecessary),
+        or probably unlikely (as is the case for \code{i..-j}).
+
+        To accomodate old R code that has consecutive dots within names,
+        parsing of the \code{..} operator can be disabled by setting the
+        \code{parse_dotdot} option to \code{FALSE} (with the \code{options}
+        function). The \code{parse_dotdot} option defaults to \code{TRUE} 
+        unless the environment variable
+        \code{R_PARSE_DOTDOT} is set to \code{FALSE}.  When \code{parse_dotdot}
+        is \code{FALSE}, consecutive dots are allowed in names, and \code{..}
+        is not a reserved word.
+  \item Another source of bugs is the automatic dropping
+        of dimensions of size one when subsetting matrices (or 
+        higher-dimensional arrays) using \code{[]},
+        unless the \code{drop=FALSE} argument is specified.  This frequently
+        results in code that mostly works, but not when, for example, a data set
+        has only one observation, or a model uses only one explanatory 
+        variable.
+
+        To make handling this problem easier, if no \code{drop} argument is
+        specified, pqR now does not drop a dimension of size one if the
+        subscript for that dimension is a one-dimensional non-logical array.  
+        For example,
+        if \code{A} is a matrix, \code{A[1..100,array(1)]} will produce a
+        matrix, whereas \code{A[1..100,1]} will produce a vector.
+
+        To make this feature more useful, the new \code{..} operator 
+        produces a one-dimensional array, not a bare vector.  So
+        \code{A[1..n,1..m]} will always produce a matrix result, even
+        when \code{n} or \code{m} are one.  (It will also correctly
+        produce an array with zero rows or zero columns when \code{n}
+        or \code{m} are zero.
+
+        This change also applies to subsetting of data frames.  For 
+        example, \code{df[1..10,1..n]} will return a data frame (not a
+        vector) even when \code{n} is one.
+  \item Problems with dimensions of size one being dropped also arise
+        when an entire row, or an entire column, is selected with an empty
+        (missing) subscript, and there happens to be only one row, or only one 
+        column.  For example, if \code{A} is a matrix with one column, 
+        \code{A[1:10,]} will be a vector, not a matrix.
+
+        To address this problem, pqR now allows a missing argument to
+        be specified by \code{_}, rather than by nothing at all, and
+        the \code{[]} operator (for matrices, arrays, and data frames)
+        will not drop a dimension if its subscript is \code{_}.  So
+        \code{A[1:10,_]} will be a matrix even when \code{A} has only
+        one column.
+
+        R functions that check for a missing argument with the \code{missing}
+        function will see both an empty argument and \code{_} as missing,
+        but can distinguish them using the \code{missing_from_underline}
+        function.
+  \item A common use of \code{for} statements is to iterate over indexes
+        of a vector, or row and column indexes of a matrix.  A new type 
+        of \code{for} statement with ``along'' rather than ``in'' now makes
+        this more convenient.
+  
+        For vectors, the form 
+\preformatted{    for (i along vec) ...
+}
+        is equivalent to
+\preformatted{    for (i in seq_along(vec)) ...
+}
+        For matrices, the form
+\preformatted{    for (i, j along M) ...
+}
+is equivalent to
+\preformatted{    for (j in 1..ncol(M))
+        for (i in 1..nrow(M))
+            ...
+}
+        However, if \code{M} is of a class with its own \code{dim} method,
+        this method is not used (effectively, \code{ncol(unclass(M))} and
+        \code{nrow(unclass(m))} are used).  This may well change in future, 
+        and similarly a \code{length} method may in future be used for vectors.
+  \item Because of the new restriction on names, the \code{make.names}
+        function will now (by default) convert a sequence of consecutive dots 
+        in the name it would otherwise have made to a single dot.  (See
+        \code{help(make.names)} for further details).  
+  \item For the same reason, \code{make.unique} has been changed so that
+        the separator string (which defaults to a dot) 
+        will not be appended to a name if the name already ends in that string.
 }}
 
   \subsection{BUG FIXES}{
