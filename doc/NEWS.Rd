@@ -144,6 +144,28 @@ is equivalent to
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a bug (or mis-feature) in subsetting with a single empty
+        subscript, as in \code{A[]}.  This now works the same as if
+        the empty subscript had been the sequence of all indexes (ie,
+        like \code{A[1..length(A)]}), which removes all attributes except
+        names.
+
+        R Core versions to at least R-3.3.1 instead return \code{A}
+        unchanged, preserving all attributes, though attributes are
+        not retained with other uses of the \code{[]} operator.  This
+        is contrary to the description in \code{help("[")}, and also
+        does not coincde with the (different) description in the R
+        language definition.  
+
+        Returning \code{A} unchanged is not only inconsistent, but also
+        useless, since there is then no reason to ever write \code{A[]}.
+        However, internally, R Core implementions duplicate \code{A},
+        which may be of significance when \code{A[]} is passed as
+        an argument of \code{.C}, \code{.Fortran}, \code{.Call}, or
+        \code{.External}, but only if the programmer is not 
+        abiding by the rules.  However, in pqR, the data part of a vector or
+        matrix is still copied when \code{A[]} is evaluated, so such
+        rule-breaking should still largely be accommodated.
   \item Fixed bugs in the conversion of strings to numbers, so that the
         behaviour now matches \code{help(NumericConstants)}, which
         states that numeric constants are parsed very similarly to C99.
