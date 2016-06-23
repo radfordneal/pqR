@@ -25,7 +25,7 @@ following changes:
  2) Update the release date, which is stored in the (now mis-named) 
     file "SVN-REVISION".  This should match the date in "NEWS.Rd", which
     would have been set in a development branch.  (The date in the
-    "SVN-REVISION" file a development branch should approximately the
+    "SVN-REVISION" file of a development branch should have approximately the
     correct year, but have month and day set to "00".)
 
  3) Create the file "configure" by running create-configure.  Add it
