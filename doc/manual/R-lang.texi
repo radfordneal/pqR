@@ -1779,8 +1779,10 @@ The factor levels are never used.  If so desired, use
 @code{x[as.character(i)]} or a similar construction.
 
 @item
-@strong{Empty}.  The expression @code{x[]} returns @code{x}, but without
-attributes other than @code{names}. 
+@strong{Empty}.  The expression @code{x[]} returns @code{x}, but drops
+``irrelevant'' attributes from the result.  Only @code{names} and in
+multi-dimensional arrays @code{dim} and @code{dimnames} attributes are
+retained.
 
 @item
 @strong{NULL}.  This is treated as if it were @code{integer(0)}.
