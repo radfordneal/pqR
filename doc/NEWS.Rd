@@ -88,7 +88,7 @@
         \code{A[1..n,1..m]} will always produce a matrix result, even
         when \code{n} or \code{m} are one.  (It will also correctly
         produce an array with zero rows or zero columns when \code{n}
-        or \code{m} are zero.
+        or \code{m} are zero.)
 
         This change also applies to subsetting of data frames.  For 
         example, \code{df[1..10,1..n]} will return a data frame (not a
@@ -132,7 +132,8 @@ is equivalent to
         However, if \code{M} is of a class with its own \code{dim} method,
         this method is not used (effectively, \code{ncol(unclass(M))} and
         \code{nrow(unclass(m))} are used).  This may well change in future, 
-        and similarly a \code{length} method may in future be used for vectors.
+        and similarly a \code{length} method may in future be used when 
+        ``along'' is used with a vector.
   \item Because of the new restriction on names, the \code{make.names}
         function will now (by default) convert a sequence of consecutive dots 
         in the name it would otherwise have made to a single dot.  (See
@@ -182,7 +183,8 @@ is equivalent to
         when given this input).  In this version of pqR, these return the
         correct value of 1.5.
   \item Fixed a problem with identifying the version of the
-        makeinfo program that is installed that arises with recent versions.
+        makeinfo program that is installed that arises with recent versions
+        of makeinfo.
   \item Put in a check for non-existent primitives when unserializing
         R objects, as was done in R-3.0.1.
   \item Fixed a bug (also in R-2.15.0, but fixed in later R Core versions)
