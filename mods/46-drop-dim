@@ -8,6 +8,10 @@ Fixed bug illustrated by
   print(b[1])
   print(b[])  # should print same thing
 
+Except as special kludge to keep packages working, have
+b[,drop=FALSE] return a duplicate of b, as before (keeping
+dimensions and attribues).
+
 Fixed bug (also fixed in R Core) illustrated by
 
   a <- array(c(3,4),dimnames=list(xyz=c("fred","bert")))

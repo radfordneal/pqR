@@ -142,7 +142,15 @@ x$i <- value
   Matrices and arrays are vectors with a dimension attribute and so all
   the vector forms of indexing can be used with a single index.  The
   result will be an unnamed vector unless \code{x} is one-dimensional
-  when it will be a one-dimensional array.
+  when it will be a one-dimensional array.  
+
+  Note: This implies that \code{x[]} should convert a matrix to a vector,
+  but this is not the case in R Core versions to at least R-3.3.1, in
+  which \code{x[]} is identical to \code{x}, as is also the case for
+  \code{x[,drop=FALSE]}.
+  To keep some packages with this pointless operation working, pqR implements 
+  a (hopefully temporary) kludge to make \code{x[,drop=FALSE]} return \code{x}
+  unchanged.
 
   The most common form of indexing a \eqn{k}-dimensional array is to
   specify \eqn{k} indices to \code{[}.  As for vector indexing, the

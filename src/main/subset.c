@@ -328,6 +328,13 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
     if (x == R_NilValue)
         return R_NilValue;
 
+    /* SPECIAL KLUDGE:  To avoid breaking inexplicable code in some 
+       packages, just return a duplicate of x if the subscripting has 
+       the form x[,drop=FALSE]. */
+
+    if (sb == R_MissingArg && drop == FALSE)
+        return duplicate(x);
+
     PROTECT_WITH_INDEX (sb, &spi);
     dims = getAttrib(x, R_DimSymbol);
     ndim = length(dims);
