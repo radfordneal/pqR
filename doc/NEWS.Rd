@@ -11,7 +11,7 @@
   \subsection{INTRODUCTION}{
   \itemize{ 
   \item This release extends the R language in ways that address a
-        set of related design flaws in the design of R, and before it S.
+        set of related flaws in the design of R, and before it S.
 
         These extensions make it easier to write reliable programs,
         by making the easy way to do things also be the correct
@@ -20,14 +20,34 @@
   \item Several other changes in features are also implemented in this
         version, some of which are related to the major language extensions.
   \item There are also a few bug fixes, and some improvements in testing,
-        but no major performance improvements.
+        but no major performance improvements (though some tweaks).
 }}
 
   \subsection{MAJOR LANGUAGE EXTENSIONS}{
   \itemize{
-  \item ..
+  \item There is a new \code{..} operator for generating increasing integer
+        sequences, which is a less error-prone replacement for the \code{:}
+        operator (which remains for backwards compatibility).  Since \code{..}
+        generates only increasing sequences, it can generate an empty
+        sequence when the end value is less than the start value, thereby
+        avoiding some very common bugs that arise when \code{:} is used.
+
+        The \code{..} operator also has lower precedence than arithmetic
+        operators (unlike \code{:}), which avoids another common set of bugs.
+
+        For example, the following code sets all interior elements of the 
+        matrix \code{M} to zero, that is, all elements except those in the 
+        first or last row or column:
+\preformatted{    for (i in 2..nrow(M)-1)
+        for (j in 2..ncol(M)-1)
+            M[i,j] <- 0
+}
+        Without the new \code{..} operator, it is awkward to write code
+        for this task that works correctly when \code{M} has two or fewer 
+        rows, or two or fewer columns.
   \item drop
   \item missing
+  \item along
 }}
 
   \subsection{BUG FIXES}{
