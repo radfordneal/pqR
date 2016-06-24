@@ -25,11 +25,11 @@ matrix <- function(data=NA, nrow=1, ncol=1, byrow=FALSE, dimnames=NULL)
                      missing(nrow), missing(ncol)))
 }
 
-nrow <- function(x) dim(get_rm(x))[1L]
-ncol <- function(x) dim(get_rm(x))[2L]
+nrow <- function(x) dim(x)[1L]
+ncol <- function(x) dim(x)[2L]
 
-NROW <- function(x) if(length(dim(x))) dim(get_rm(x))[1L] else length(get_rm(x))
-NCOL <- function(x) if(length(dim(x)) > 1L) dim(get_rm(x))[2L] else 1L
+NROW <- function(x) if(length(dim(x))) dim(x)[1L] else length(x)
+NCOL <- function(x) if(length(dim(x)) > 1L) dim(x)[2L] else 1L
 
 rownames <- function(x, do.NULL = TRUE, prefix = "row")
 {
