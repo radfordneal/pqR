@@ -23,6 +23,23 @@
         but no major performance improvements (though some tweaks).
 }}
 
+  \subsection{PACKAGE INSTALLATION}{
+  \itemize{
+  \item New packages (or other R code) that use the new ``along''
+        form of the ``for'' statement, or which rely on the new
+        facilities for not dropping dimensions (see below), should not be 
+        byte compiled, since these features are not supported in
+        byte-compiled code.  In pqR, using byte compilation is not always
+        advantageous in any case.
+  \item Installation and checking of existing packages may require
+        setting the environment variable \code{R_PARSE_DOTDOT} to
+        \code{FALSE}, so that names with interior sequences of dots
+        will be accepted (see below).
+  \item The base package is no longer byte-compiled, even if pqR is
+        configured with \code{--enable-byte-compiled-packages}, since
+        it now uses new features not supported by the bytecode compiler.
+}}
+
   \subsection{MAJOR LANGUAGE EXTENSIONS AND OTHER CHANGES}{
   \itemize{
   \item There is a new \code{..} operator for generating increasing integer
