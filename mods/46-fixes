@@ -20,3 +20,5 @@ than Rprintf, which seems to not check for user interrupts.
 
 Also changed R_CheckUserInterrupt to not do R_CHECKSTACK if interrupts
 are supposed to be suspended.
+
+Finally, got rid of get_rm in nrow, etc., since doesn't at present help.
