@@ -55,9 +55,13 @@ get.gpar(names = NULL)
     fontfamily \tab The font family \cr
     fontface \tab The font face (bold, italic, ...) \cr
     lineheight \tab The height of a line as a multiple of the size of text \cr
-    font \tab Font face (alias for fontface;  for
-    backward compatibility) \cr
+    font \tab Font face (alias for fontface;  for backward compatibility) \cr
   }
+  For more details of many of these, see the help for the corresponding
+  graphical parameter \code{\link{par}} in base graphics.  (This may
+  have a slightly different name, e.g. \code{lend}, \code{ljoin},
+  \code{lmitre}, \code{family}.)
+
   
   Colours can be specified in one of the forms returned by
   \code{\link{rgb}}, as a name (see \code{\link{colors}}) or as a
