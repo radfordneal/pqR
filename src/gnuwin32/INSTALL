@@ -16,15 +16,16 @@ always completely adequate, is as follows:
      the build process appearing to hang if the window that MiKTeX
      puts up asking about this is covered by another window.)
 
-  2) Obtain Rtools33.exe distributed at r-project.org (or get it from
-     http://pqR-project.org/Rtools33.exe).  Run this to install the
+  2) Obtain Rtools33.exe from http:/pqR-project.org/Rtools33.exe (do
+     not use the version obtainable via pqR-project.org, which is
+     different and not tested with pqR).  Run this to install the
      required build tools, but do not choose the options to install
      "extra" material for 32 or 64 bit builds of R itself (since this
      can cause problems with ownership or permissions for files).
      Enable the option to update your path to include Rtools programs.
 
-     If you have problems, you might try using Rtools215.exe,
-     available from the same places, or you might try some other
+     If you have problems, you might try using Rtools215.exe, also
+     available from pqR-project.org, or you might try some other
      version if you already have it, but Rtools33.exe is necessary for
      installing on Windows 10.
 
