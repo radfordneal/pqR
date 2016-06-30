@@ -1,0 +1,4 @@
+Miscellaneous fixes.
+
+Corrects incorrect information about <<- in help(assignOps).
+
