@@ -5,3 +5,5 @@ Corrects incorrect information about <<- in help(assignOps).
 Corrects incorrect link to blog posts.
 
 Change INSTALL for windows to reference only Rtools33 at pqR-project.
+
+Update index.html for html info, including windows version of it.
