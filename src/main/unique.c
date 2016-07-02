@@ -710,20 +710,24 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     SEXP ans, x, table;
     SEXPTYPE type;
     HashData data;
+    int i, n;
 
-    int i, n = length(ix), nprot = 0;
+    x = table = data.HashTable = NULL;
+    BGN_PROTECT4 (incomp, x, table, data.HashTable);
+
+    n = length(ix);
 
     /* handle zero length arguments */
-    if (n == 0) return allocVector(INTSXP, 0);
+    if (n == 0) 
+        RETURN_INSIDE_PROTECT (allocVector(INTSXP, 0));
     if (length(itable) == 0) {
 	ans = allocVector(INTSXP, n);
 	for (i = 0; i < n; i++) INTEGER(ans)[i] = nmatch;
-	return ans;
+	RETURN_INSIDE_PROTECT (ans);
     }
 
-    PROTECT(x     = match_transform(ix,     env)); nprot++;
-    PROTECT(table = match_transform(itable, env)); nprot++;
-    /* or should we use PROTECT_WITH_INDEX  and  REPROTECT below ? */
+    x = match_transform (ix, env);
+    table = match_transform (itable, env);
 
     /* Coerce to a common type; type == NILSXP is ok here.
      * Note that above we coerce factors and "POSIXlt", only to character.
@@ -732,13 +736,15 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     if(TYPEOF(x) >= STRSXP || TYPEOF(table) >= STRSXP)
 	type = STRSXP;
     else type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
-    PROTECT(x     = coerceVector(x,     type)); nprot++;
-    PROTECT(table = coerceVector(table, type)); nprot++;
-    if (incomp) { PROTECT(incomp = coerceVector(incomp, type)); nprot++; }
+    x = coerceVector (x, type); 
+    table = coerceVector (table, type);
+    if (incomp) incomp = coerceVector(incomp, type);
     data.nomatch = nmatch;
+
     HashTableSetup(table, &data);
+
     if(type == STRSXP) {
-	Rboolean useBytes = FALSE;  /* Now not used for anything...? */
+	Rboolean useBytes = FALSE;
 	Rboolean useUTF8 = FALSE;
         Rboolean useCache = TRUE;
         int len_x = length(x);
@@ -778,11 +784,12 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 	data.useUTF8 = useUTF8;
         data.useCache = useCache;
     }
-    PROTECT(data.HashTable); nprot++;
+
     DoHashing(table, &data);
     if (incomp) UndoHashing(incomp, table, &data);
     ans = HashLookup(table, x, &data);
-    UNPROTECT(nprot);
+
+    END_PROTECT;
     return ans;
 }
 

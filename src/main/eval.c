@@ -2585,6 +2585,9 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
     variant |= VARIANT_PENDING_OK;
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
+    ev = h = NULL;
+
+    BGN_PROTECT3 (head, ev, h);
 
     while (el != R_NilValue) {
 
@@ -2598,15 +2601,11 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
                error. */
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
-                PROTECT(h);
 		while (h != R_NilValue) {
                     ev = cons_with_tag (EVALV (CAR(h), rho, variant),
                                         R_NilValue, TAG(h));
-                    if (head==R_NilValue) {
-                        UNPROTECT(1); /* h */
-                        PROTECT(head = ev);
-                        PROTECT(h);
-                    }
+                    if (head==R_NilValue)
+                        head = ev;
                     else
                         SETCDR(tail, ev);
                     tail = ev;
@@ -2614,7 +2613,6 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
                         SET_MISSING (ev, R_isMissing(CAR(h),rho));
 		    h = CDR(h);
 		}
-                UNPROTECT(1); /* h */
 	    }
 	    else if (h != R_NilValue && h != R_MissingArg)
 		dotdotdot_error();
@@ -2622,7 +2620,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	} else {
             ev = cons_with_tag(EVALV(CAR(el),rho,variant), R_NilValue, TAG(el));
             if (head==R_NilValue)
-                PROTECT(head = ev);
+                head = ev;
             else
                 SETCDR(tail, ev);
             tail = ev;
@@ -2633,8 +2631,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	el = CDR(el);
     }
 
-    if (head!=R_NilValue)
-        UNPROTECT(1);
+    END_PROTECT;
 
     return head;
 

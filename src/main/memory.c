@@ -194,6 +194,11 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
 #endif
 
 
+/* Pointer to start of linked list with pointers to protected local SEXP vars */
+
+const struct R_local_protect *R_local_protect_start = NULL;
+
+
 static void GetNewPage(int node_class);
 
 #if defined(Win32) && defined(LEA_MALLOC)
@@ -2090,7 +2095,17 @@ static void RunGenCollect(R_size_t size_needed)
         }
     }
 
-    for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++) /* Byte code stack */
+    /* Pointers from protected local SEXP variables. */
+
+    for (const struct R_local_protect *p = R_local_protect_start;
+           p != NULL; p = p->next) {
+        for (i = 0; i < p->cnt; i++) 
+            if (*p->protected[i]) FORWARD_NODE(*p->protected[i]);
+    }
+
+    /* Byte code stack */
+
+    for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++)
         FORWARD_NODE(*sp);
 
 
