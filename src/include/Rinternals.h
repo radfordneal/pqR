@@ -880,12 +880,20 @@ typedef int PROTECT_INDEX;
 extern const struct R_local_protect {
     const struct R_local_protect *next;  /* next in list, or NULL */
     int cnt;                             /* number of pointers present below */
-    SEXP *protected[9];                  /* array of ptrs to protected vars */
-} *R_local_protect_start;
+    SEXP *protected[9];                  /* array of ptrs to protected vars  */
+} *R_local_protect_start;                /*    (may be a shorter array)      */
 
-#define BGN_PROTECT1(v1) \
+#define BEGIN_PROTECT0() \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        const struct { /* not actually put in local_protect list */ \
+            const struct R_local_protect *next; \
+        } R_local_protect = { R_local_protect_start };
+
+#define BEGIN_PROTECT1(v1) \
+    do { \
+        SEXP v1 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[1]; \
         } R_local_protect = { R_local_protect_start, \
@@ -893,9 +901,10 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT2(v1,v2) \
+#define BEGIN_PROTECT2(v1,v2) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[2]; \
         } R_local_protect = { R_local_protect_start, \
@@ -903,9 +912,10 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT3(v1,v2,v3) \
+#define BEGIN_PROTECT3(v1,v2,v3) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[3]; \
         } R_local_protect = { R_local_protect_start, \
@@ -913,9 +923,10 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT4(v1,v2,v3,v4) \
+#define BEGIN_PROTECT4(v1,v2,v3,v4) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL, v4 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[4]; \
         } R_local_protect = { R_local_protect_start, \
@@ -923,9 +934,10 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT5(v1,v2,v3,v4,v5) \
+#define BEGIN_PROTECT5(v1,v2,v3,v4,v5) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL, v4 = NULL, v5 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[5]; \
         } R_local_protect = { R_local_protect_start, \
@@ -933,9 +945,10 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT6(v1,v2,v3,v4,v5,v6) \
+#define BEGIN_PROTECT6(v1,v2,v3,v4,v5,v6) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL, v4 = NULL, v5 = NULL, v6 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[6]; \
         } R_local_protect = { R_local_protect_start, \
@@ -943,9 +956,11 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT7(v1,v2,v3,v4,v5,v6,v7) \
+#define BEGIN_PROTECT7(v1,v2,v3,v4,v5,v6,v7) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL, v4 = NULL, v5 = NULL, v6 = NULL; \
+        SEXP v7 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[7]; \
         } R_local_protect = { R_local_protect_start, \
@@ -953,9 +968,11 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT8(v1,v2,v3,v4,v5,v6,v7,v8) \
+#define BEGIN_PROTECT8(v1,v2,v3,v4,v5,v6,v7,v8) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL, v4 = NULL, v5 = NULL, v6 = NULL; \
+        SEXP v7 = NULL, v8 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[8]; \
         } R_local_protect = { R_local_protect_start, \
@@ -963,9 +980,11 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
-#define BGN_PROTECT9(v1,v2,v3,v4,v5,v6,v7,v8,v9) \
+#define BEGIN_PROTECT9(v1,v2,v3,v4,v5,v6,v7,v8,v9) \
     do { \
-        BGN_PROTECT_label: if (0) goto END_PROTECT_label; \
+        SEXP v1 = NULL, v2 = NULL, v3 = NULL, v4 = NULL, v5 = NULL, v6 = NULL; \
+        SEXP v7 = NULL, v8 = NULL, v9 = NULL; \
+        BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; \
         const struct { \
             const struct R_local_protect *next; int cnt; SEXP *protected[9]; \
         } R_local_protect = { R_local_protect_start, \
@@ -973,9 +992,97 @@ extern const struct R_local_protect {
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect;
 
+#define ALSO_PROTECT1(v1) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[1]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          1, { &v1 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT2(v1,v2) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[2]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          2, { &v1, &v2 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT3(v1,v2,v3) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[3]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          3, { &v1, &v2, &v3 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT4(v1,v2,v3,v4) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[4]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          4, { &v1, &v2, &v3, &v4 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT5(v1,v2,v3,v4,v5) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[5]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          5, { &v1, &v2, &v3, &v4, &v5 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT6(v1,v2,v3,v4,v5,v6) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[6]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          6, { &v1, &v2, &v3, &v4, &v5, &v6 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT7(v1,v2,v3,v4,v5,v6,v7) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[7]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          7, { &v1, &v2, &v3, &v4, &v5, &v6, &v7 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT8(v1,v2,v3,v4,v5,v6,v7,v8) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[8]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          8, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
+#define ALSO_PROTECT9(v1,v2,v3,v4,v5,v6,v7,v8,v9) \
+    ALSO_PROTECT_label: if (0) goto END_PROTECT_label; \
+    const struct { \
+        const struct R_local_protect *next; int cnt; SEXP *protected[9]; \
+    } R_local_protect_also = { R_local_protect_start, \
+          9, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8, &v9 } }; \
+    R_local_protect_start = (const struct R_local_protect *) \
+                              &R_local_protect_also;
+
 #define END_PROTECT \
-        R_local_protect_start = R_local_protect_start -> next; \
-        END_PROTECT_label: if (0) goto BGN_PROTECT_label; \
+        R_local_protect_start = R_local_protect . next; \
+        END_PROTECT_label: if (0) goto BEGIN_PROTECT_label; \
+    } while (0)
+
+#define END_PROTECT_AND_RETURN(e) \
+        SEXP R_value_about_to_be_returned = (e); \
+        R_local_protect_start = R_local_protect . next; \
+        END_PROTECT_label: if (0) goto BEGIN_PROTECT_label; \
+        return R_value_about_to_be_returned; \
     } while (0)
 
 #define RETURN_INSIDE_PROTECT(e) \

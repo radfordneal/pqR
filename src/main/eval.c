@@ -2580,14 +2580,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 {
-    SEXP head, tail, ev, h;
+    BEGIN_PROTECT4 (head, tail, ev, h);
 
     variant |= VARIANT_PENDING_OK;
     head = R_NilValue;
-    tail = R_NilValue; /* to prevent uninitialized variable warnings */
-    ev = h = NULL;
-
-    BGN_PROTECT3 (head, ev, h);
 
     while (el != R_NilValue) {
 
@@ -2631,9 +2627,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	el = CDR(el);
     }
 
-    END_PROTECT;
-
-    return head;
+    END_PROTECT_AND_RETURN (head);
 
 } /* evalList() */
 

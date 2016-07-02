@@ -712,8 +712,9 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     HashData data;
     int i, n;
 
-    x = table = data.HashTable = NULL;
-    BGN_PROTECT4 (incomp, x, table, data.HashTable);
+    data.HashTable = NULL;
+    BEGIN_PROTECT2 (x, table);
+    ALSO_PROTECT2 (incomp, data.HashTable);
 
     n = length(ix);
 
