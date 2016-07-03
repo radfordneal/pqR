@@ -3058,8 +3058,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
  * when argsevald is 1 (so args is the evaluated arguments).  If argsevald 
  * is -1, only the first argument will have been evaluated.
  *
- * The caller must ensure the argument list is protected if arsevald is 0,
- * but not if argsevald is 1 or -1.
+ * The arg list is protected by this function, and needn't be by the caller.
  */
 attribute_hidden
 int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
@@ -3074,17 +3073,18 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
    might come in with a "..." and that there might be other arguments
    in the "..." as well.  LT */
 
-    SEXP x = R_NilValue;
-    int dots = FALSE, nprotect = 0;;
+    BEGIN_PROTECT1 (x);
+    ALSO_PROTECT1 (args);
 
-    if (argsevald != 0) {
-        PROTECT(args); nprotect++;
+    int dots = FALSE;
+
+    if (argsevald != 0)
 	x = CAR(args);
-    }
     else {
 	/* Find the object to dispatch on, dropping any leading
 	   ... arguments with missing or empty values.  If there are no
 	   arguments, R_NilValue is used. */
+        x = R_NilValue;
 	for (; args != R_NilValue; args = CDR(args)) {
 	    if (CAR(args) == R_DotsSymbol) {
 		SEXP h = findVar(R_DotsSymbol, rho);
@@ -3109,14 +3109,15 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 break;
 	    }
 	}
-	PROTECT(x); nprotect++;
     }
-	/* try to dispatch on the object */
-    if( isObject(x) ) {
+
+    if (isObject(x)) { /* try to dispatch on the object */
 	char *pt;
 	/* Try for formal method. */
 	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
-	    SEXP value, argValue;
+
+	    BEGIN_INNER_PROTECT2 (value, argValue);
+
 	    /* create a promise to pass down to applyClosure  */
 	    if (argsevald < 0)
                 argValue = promiseArgsWith1Value(CDR(call), rho, x);
@@ -3124,13 +3125,11 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		argValue = promiseArgsWith1Value(args, rho, x);
 	    else 
                 argValue = args;
-	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
 	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
 	    if(value) {
 		*ans = value;
-		UNPROTECT(nprotect);
-		return 1;
+		RETURN_INSIDE_PROTECT (1);
 	    }
 	    else {
 		/* go on, with the evaluated args.  Not guaranteed to have
@@ -3141,16 +3140,16 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		   multiple evaluation after the call to possible_dispatch.
 		*/
 		if (dots)
-		    PROTECT(argValue = evalArgs(argValue, rho, dropmissing));
+		    argValue = evalArgs(argValue, rho, dropmissing);
 		else {
-		    PROTECT(argValue = CONS(x, evalArgs(CDR(argValue), rho,
-							dropmissing)));
+		    argValue = CONS(x, evalArgs(CDR(argValue),rho,dropmissing));
 		    SET_TAG(argValue, CreateTag(TAG(args)));
 		}
-		nprotect++;
 		args = argValue; 
 		argsevald = 1;
 	    }
+
+            END_INNER_PROTECT;
 	}
 	if (TYPEOF(CAR(call)) == SYMSXP)
 	    pt = Rf_strrchr(CHAR(PRINTNAME(CAR(call))), '.');
@@ -3158,16 +3157,15 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    pt = NULL;
 
 	if (pt == NULL || strcmp(pt,".default")) {
+
+	    BEGIN_INNER_PROTECT2 (pargs, rho1);
 	    RCNTXT cntxt;
-	    SEXP pargs, rho1;
 
             if (argsevald > 0) {  /* handle as in R_possible_dispatch */
-                PROTECT(args); nprotect++;
                 pargs = promiseArgsWithValues(CDR(call), rho, args);
             }
             else
                 pargs = promiseArgsWith1Value(args, rho, x); 
-            PROTECT(pargs); nprotect++;
 
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some
@@ -3184,31 +3182,32 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       triggered (by something very obscure, but still).
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
-	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
+	    rho1 = NewEnvironment(R_NilValue, R_NilValue, rho);
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
-	    {
-		endcontext(&cntxt);
-		UNPROTECT(nprotect);
-		return 1;
+	    {   endcontext(&cntxt);
+		RETURN_INSIDE_PROTECT (1);
 	    }
 	    endcontext(&cntxt);
+
+            END_INNER_PROTECT;
 	}
     }
+
     if (argsevald <= 0) {
 	if (dots)
 	    /* The first call argument was ... and may contain more than the
 	       object, so it needs to be evaluated here.  The object should be
 	       in a promise, so evaluating it again should be no problem. */
-	    *ans = evalArgs(args, rho, dropmissing);
+	    args = evalArgs(args, rho, dropmissing);
 	else {
-	    PROTECT(*ans = CONS(x, evalArgs(CDR(args), rho, dropmissing)));
-	    SET_TAG(*ans, CreateTag(TAG(args)));
-	    UNPROTECT(1);
+	    args = cons_with_tag (x, evalArgs(CDR(args), rho, dropmissing),
+                                  TAG(args));
 	}
     }
-    else *ans = args;
-    UNPROTECT(nprotect);
+
+    *ans = args;
+    END_PROTECT;
     return 0;
 }
 
