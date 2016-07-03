@@ -2051,7 +2051,7 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 
 static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 {
-    SEXP head1, tail1, head2, tail2, ev, h;
+    BEGIN_PROTECT6 (head1, tail1, head2, tail2, ev, h);
 
     head1 = head2 = R_NilValue;
 
@@ -2086,13 +2086,13 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                     }
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head1==R_NilValue)
-                        PROTECT(head1 = ev);
+                        head1 = ev;
                     else
                         SETCDR(tail1,ev);
                     tail1 = ev;
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head2==R_NilValue)
-                        PROTECT(head2 = ev);
+                        head2 = ev;
                     else
                         SETCDR(tail2,ev);
                     tail2 = ev;
@@ -2116,13 +2116,13 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
             }
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head1 == R_NilValue)
-                PROTECT(head1 = ev);
+                head1 = ev;
             else
                 SETCDR(tail1, ev);
             tail1 = ev;
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head2 == R_NilValue)
-                PROTECT(head2 = ev);
+                head2 = ev;
             else
                 SETCDR(tail2, ev);
             tail2 = ev;
@@ -2137,8 +2137,9 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
         if (*a2 != R_NilValue)
             SETCDR(tail2,*a2);
         *a2 = head2;
-        UNPROTECT(2);
     }
+
+    END_PROTECT;
 }
 
 /*  Assignment in its various forms  */
@@ -2664,12 +2665,11 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
-    SEXP head, tail, ev, h;
+    BEGIN_PROTECT4 (head, tail, ev, h);
 
     head = R_NilValue;
-    tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
-    while(el != R_NilValue) {
+    while (el != R_NilValue) {
 
         SEXP a = CAR(el);
 
@@ -2697,7 +2697,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                         a = mkPROMISE (a, rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
-                        PROTECT(head = ev);
+                        head = ev;
                     else
                         SETCDR(tail,ev);
                     tail = ev;
@@ -2718,7 +2718,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                a = mkPROMISE (a, rho);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head == R_NilValue)
-                PROTECT(head = ev);
+                head = ev;
             else
                 SETCDR(tail, ev);
             tail = ev;
@@ -2726,10 +2726,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
 
-    if (head!=R_NilValue)
-        UNPROTECT(1);
-
-    return head;
+    END_PROTECT_AND_RETURN (head);
 }
  
 /* Create promises for arguments, with values for promises filled in.  
