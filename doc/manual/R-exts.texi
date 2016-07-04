@@ -8180,7 +8180,8 @@ possible to either assign the objects as part of another object (which
 automatically protects them) or unprotect them immediately after use.
 
 Protection is not needed for objects which @R{} already knows are in
-use.  In particular, this applies to function arguments.
+use.  In particular, this applies to the arguments of @code{.Call} or
+@code{.External}.
 
 There is a less-used macro @code{UNPROTECT_PTR(@var{s})} that
 unprotects the object pointed to by the @code{SEXP} @var{s}, even if
@@ -8206,6 +8207,7 @@ For example (from the internal code for @code{optim})
     REPROTECT(s = coerceVector(s, REALSXP), ipx);
 @end example
 
+@noindent
 This must not be done in conjunction with use of @code{UNPROTECT_PTR},
 since it may change the location where a pointer resides on the
 protect stack.
@@ -8233,6 +8235,7 @@ start and end with macro calls such as shown below:
     @}
 @end example
 
+@noindent
 The @code{BEGIN_PROTECT3} macro will declare @code{var1}, @code{var2},
 and @code{var3} as local variables of type @code{SEXP} (in a block
 that starts with @code{BEGIN_PROTECT3}), initialize them to the C NULL
@@ -8257,7 +8260,7 @@ and return a value, again often a @code{SEXP}.  The following example
 illustrates how this can be handled:
 
 @example
-    SEXP func (SEXP arg1, SEXP arg2)
+    SEXP func (SEXP arg1, SEXP arg2, int flag)
     @{
         BEGIN_PROTECT3 (var1, var2, var3);
         ALSO_PROTECT2 (arg1, arg2);
@@ -8267,20 +8270,21 @@ illustrates how this can be handled:
     @}
 @end example
 
-Here, the arguments are protected at the start of the function.
-Sometimes functions are specified as not protecting their arguments,
-with that being the caller's responsibility, but unless the slight
-performance advantage of foregoing protection is paramount, protecting
-all @code{SEXP} arguments is recommended.  However, arguments cannot
-be protected by listing them as variables in a @code{BEGIN_PROTECT}
-call, since that would declare new variables of those names in the
-inner block (and initialize them to C NULL).  The @code{ALSO_PROTECT2}
-macro (which has forms protecting 1 to 9 arguments/variables) tells
-@R{} to not collect objects pointed to by the named @code{SEXP}
-arguments or variables, which must already exist and be initialized to
-valid @code{SEXP} values.  The protection of objects pointed to by
-these variables lasts until the @code{END_PROTECT} for the block the
-@code{ALSO_PROTECT} appears in.
+@noindent 
+This code protects all the @code{SEXP} arguments at the start of the
+function.  There are some function that are specified as not
+protecting their arguments, with that being the caller's
+responsibility, but unless the slight performance advantage of
+foregoing protection is paramount, protecting all @code{SEXP}
+arguments is recommended.  However, arguments cannot be protected by
+listing them as variables in a @code{BEGIN_PROTECT} call, since that
+would declare new variables of those names in the inner block (and
+initialize them to C NULL).  The @code{ALSO_PROTECT2} macro (which has
+forms protecting 1 to 9 arguments/variables) tells @R{} to not collect
+objects pointed to by the named @code{SEXP} arguments or variables,
+which must already exist and must be initialized to valid @code{SEXP}
+values.  The protection of objects pointed to by these variables lasts
+until the @code{END_PROTECT}.
 
 Variables mentioned in an @code{ALSO_PROTECT} call must exist at the
 outermost block level within the @code{BEGIN_PROTECT} /
@@ -8301,22 +8305,21 @@ generally a good idea for @code{END_PROTECT} to be the last statement
 in a function, so that variables are clearly always protected when
 necessary.
 
-Note that any return from a function from within a
-@code{BEGIN_PROTECT} / @code{END_PROTECT} block must be done with
+Note that any return from a function within a @code{BEGIN_PROTECT} /
+@code{END_PROTECT} block @emph{must} be done with
 @code{RETURN_INSIDE_PROTECT}.  Usings a simple @code{return} statement
-will result in @code{END_PROTECT} being bypassed, with disastrous
-consequences, since @R{} will then be looking at variables that no
-longer exist.  Similarly, a @code{BEGIN_PROTECT} / @code{END_PROTECT}
-block must not be exited via a C @code{break}, @code{continue}, or
-@code{goto} statement.  But exiting these blocks via @R{}'s error
-signaling mechanism is allowed.
+will result in @code{END_PROTECT} being bypassed, with possibly
+disastrous consequences, since @R{} will then be looking at variables
+that no longer exist.  Similarly, a @code{BEGIN_PROTECT} /
+@code{END_PROTECT} block must not be exited via a C @code{break},
+@code{continue}, or @code{goto} statement.  But exiting these blocks
+via @R{}'s error signaling mechanism is allowed.
 
 @code{BEGIN_INNER_PROTECT0} through @code{BEGIN_INNER_PROTECT9} may be
 used to create inner blocks with protected variables, which are ended
-with @code{END_INNER_PROTECT} or @code{END_INNER_PROTECT_AND_RETURN}.
-Here is an example using this, which also shows how
-@code{RETURN_INSIDE_PROTECT} can be used to exit in the middle of a
-function:
+with @code{END_INNER_PROTECT}.  Here is an example using this, which
+also shows how @code{RETURN_INSIDE_PROTECT} can be used to exit in the
+middle of a function:
 
 @example
     SEXP func (SEXP arg1, SEXP arg2)
@@ -8327,7 +8330,7 @@ function:
         while (var3 != R_NilValue)
             BEGIN_INNER_PROTECT1 (ivar);
             ...
-                RETURN_INSIDE_PROTECT (list3(arg1,var2,ivar));
+                RETURN_INSIDE_PROTECT (list2 (list1(var1), ivar));
             ...
             END_INNER_PROTECT;
         @}
@@ -8336,15 +8339,72 @@ function:
     @}
 @end example
 
+@noindent
 Note that @code{BEGIN_INNER_PROTECT} and @code{END_INNER_PROTECT}
 together form what is syntactically a C statement, which may be the direct
-object of a \code{while} statement.
+object of a @code{while} statement.
 
 If @code{ALSO_PROTECT} is used within a @code{BEGIN_INNER_PROTECT}
 block, it must protect variables that exist at the outermost block
 level within the @code{BEGIN_INNER_PROTECT} / @code{END_INNER_PROTECT}
-pair.  The variables will be protected only until after the
+pair.  The variables will be protected only until after the 
 @code{END_INNER_PROTECT}.
+
+As seen in the example above, the value returned by a function may be
+an object that has just been allocated (here, by @code{list2}), which
+will of course not be protected.  The caller must protect the value
+returned if necessary.  Also note that an argument passed to a
+function can be unprotected (as is the case for
+@code{list1(var1)} above) only if the function to which it is
+passed protects its arguments when necesary (as @code{list2} does),
+and @emph{only} if this is the sole argument of the function that may
+allocate memory.  So, for example, the following is @emph{not} allowed:
+
+@example
+    list2 (list2(var1,var2), list2(var3,ivar)) 
+@end example
+
+@noindent
+but the following is allowed (though may be ill-advised, due to the danger
+that future careless modifications might produce a form that is not allowed):
+
+@example
+    list2 (var1, list2 (var2, list2(var3,ivar))) 
+@end example
+
+@noindent
+In this respect, note that C does not specify the order in which
+arguments to a function are evaluated, so one cannot assume that
+leaving the last argument unprotected is OK when earlier arguments
+may allocate memory.
+
+Also note that the following is @emph{not} allowed:
+
+@example
+    BEGIN_PROTECT5 (u, v, w, x, y);
+    ...
+    y = list2 (u = list1(w), v = list1(x)); 
+    ...
+    END_PROTECT;
+@end example
+
+@noindent
+The arguments of @code{list2} are not properly protected above, because
+the C standard allows the assignments to @code{u} and @code{v}
+to be done only just before the call of @code{list2}, so the result
+of whichever @code{list1} call happens first may be unprotected when
+the second @code{list1} call occurs.  One should instead
+write this as below:
+
+@example
+    BEGIN_PROTECT5 (u, v, w, x, y);
+    ...
+    u = list1(w);
+    v = list1(x);
+    y = list2(u,v);
+    ...
+    END_PROTECT;
+@end example
 
 A third way of protecting an object is to call @code{R_PreserveObject}
 passing it a pointer to the object, which prevents it from being
