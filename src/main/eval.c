@@ -2628,7 +2628,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	el = CDR(el);
     }
 
-    END_PROTECT_AND_RETURN (head);
+    RETURN_INSIDE_PROTECT (head);
+    END_PROTECT;
 
 } /* evalList() */
 
@@ -2726,7 +2727,8 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
 
-    END_PROTECT_AND_RETURN (head);
+    RETURN_INSIDE_PROTECT (head);
+    END_PROTECT;
 }
  
 /* Create promises for arguments, with values for promises filled in.  

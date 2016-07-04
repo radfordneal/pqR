@@ -1217,22 +1217,6 @@ extern const struct R_local_protect {
         R_local_protect_start = R_local_protect_inner . next; \
     } while (0)
 
-#define END_PROTECT_AND_RETURN(e) \
-        } while (0); /* break/continue inside will go here */ \
-        SEXP R_value_about_to_be_returned = (e); \
-        R_local_protect_start = R_local_protect . next; \
-        END_PROTECT_label: if (0) goto BEGIN_PROTECT_label; /* error check */ \
-        return R_value_about_to_be_returned; \
-    } while (0)
-
-#define END_INNER_PROTECT_AND_RETURN(e) \
-        } while (0); /* break/continue inside will go here */ \
-        if (0) R_local_protect_inner . next; /* error check */ \
-        SEXP R_value_about_to_be_returned = (e); \
-        R_local_protect_start = R_local_protect . next; \
-        return R_value_about_to_be_returned; \
-    } while (0)
-
 #define RETURN_INSIDE_PROTECT(e) \
     do { \
         SEXP R_value_about_to_be_returned = (e); \

@@ -8160,14 +8160,15 @@ and then those in @file{Rdefines.h}:
 @end group
 @end example
 
-Now, the reader may ask how the @R{} object could possibly get removed
-during those manipulations, as it is just our C code that is running.
-As it happens, we can do without the protection in this example, but in
-general we do not know (nor want to know) what is hiding behind the @R{}
-macros and functions we use, and any of them might cause memory to be
-allocated, hence garbage collection and hence our object @code{ab} to be
-removed. It is usually wise to err on the side of caution and assume
-that any of the @R{} macros and functions might remove the object.
+Now, the reader may ask how the @code{ab} object could possibly be
+affected by these manipulations, since it is just our C code that is
+running.  As it happens, we can do without the protection in this
+example, but in general we do not know (nor want to know) what is
+hiding behind the @R{} macros and functions we use, and any of them
+might cause memory to be allocated, hence garbage collection and hence
+our object @code{ab} to be destroyed. It is usually wise to err on the
+side of caution and assume that any of the @R{} macros and functions
+might destroy an unprotected object.
 
 In some cases it is necessary to keep better track of whether
 protection is really needed.  Be particularly aware of situations
@@ -8261,23 +8262,24 @@ illustrates how this can be handled:
         BEGIN_PROTECT3 (var1, var2, var3);
         ALSO_PROTECT2 (arg1, arg2);
         ...
-        END_PROTECT_AND_RETURN (var2);
+        RETURN_INSIDE_PROTECT (var2);
+        END_PROTECT;
     @}
 @end example
 
-Here, the arguments are protected at the start of the function.  Some
-functions are specified as not protecting their arguments, with that
-being the caller's responsibility, but unless the slight performance
-advantage of foregoing protection is paramount, protecting all
-@code{SEXP} arguments is recommended.  However, arguments cannot be
-protected by listing them as variables in a @code{BEGIN_PROTECT} call,
-since that would declare new variables of those names in the inner
-block (and initialize them to C NULL).  The @code{ALSO_PROTECT2} macro
-(which has forms protecting 1 to 9 arguments/variables) tells @R{} to
-not collect objects pointed to by the named @code{SEXP} arguments or
-variables, which must already exist and be initialized to valid
-@code{SEXP} values.  The protection of objects pointed to by these
-variables lasts until the @code{END_PROTECT} for the block the
+Here, the arguments are protected at the start of the function.
+Sometimes functions are specified as not protecting their arguments,
+with that being the caller's responsibility, but unless the slight
+performance advantage of foregoing protection is paramount, protecting
+all @code{SEXP} arguments is recommended.  However, arguments cannot
+be protected by listing them as variables in a @code{BEGIN_PROTECT}
+call, since that would declare new variables of those names in the
+inner block (and initialize them to C NULL).  The @code{ALSO_PROTECT2}
+macro (which has forms protecting 1 to 9 arguments/variables) tells
+@R{} to not collect objects pointed to by the named @code{SEXP}
+arguments or variables, which must already exist and be initialized to
+valid @code{SEXP} values.  The protection of objects pointed to by
+these variables lasts until the @code{END_PROTECT} for the block the
 @code{ALSO_PROTECT} appears in.
 
 Variables mentioned in an @code{ALSO_PROTECT} call must exist at the
@@ -8288,18 +8290,33 @@ could cause arbitrarily bizarre behaviour.  This will be ensured if
 @code{ALSO_PROTECT} is used only immediately after
 @code{BEGIN_PROTECT}.
 
-In the example above, the @code{END_PROTECT} is replaced by
-@code{END_PROTECT_AND_RETURN}, which both ends the protection block
-and returns from the function with the specified value.  Note that
-using @code{END_PROTECT} followed by @code{return(var2)} would not
-work here, since @code{var2} will not exist after the
-@code{END_PROTECT}.  If the value returned was, say, @code{arg2}
-(whose value might have been changed), @code{END_PROTECT} followed
-immediately by @code{return(arg2)} would work, but
-@code{END_PROTECT_AND_RETURN(args)} works as well.
+In the example above, the function returns with @code{var2} as its
+value at the @code{RETURN_INSIDE_PROTECT} macro before
+@code{END_PROTECT}.  Using @code{END_PROTECT} followed by
+@code{return(var2)} would not work here, since @code{var2} will not
+exist after the @code{END_PROTECT}.  If the value returned was, say,
+@code{arg2} (whose value might have been changed), @code{END_PROTECT}
+followed immediately by @code{return(arg2)} would work, but it is
+generally a good idea for @code{END_PROTECT} to be the last statement
+in a function, so that variables are clearly always protected when
+necessary.
 
-Sometimes, it is convenient to return from the middle of the function.
-Here is an example of how to do that:
+Note that any return from a function from within a
+@code{BEGIN_PROTECT} / @code{END_PROTECT} block must be done with
+@code{RETURN_INSIDE_PROTECT}.  Usings a simple @code{return} statement
+will result in @code{END_PROTECT} being bypassed, with disastrous
+consequences, since @R{} will then be looking at variables that no
+longer exist.  Similarly, a @code{BEGIN_PROTECT} / @code{END_PROTECT}
+block must not be exited via a C @code{break}, @code{continue}, or
+@code{goto} statement.  But exiting these blocks via @R{}'s error
+signaling mechanism is allowed.
+
+@code{BEGIN_INNER_PROTECT0} through @code{BEGIN_INNER_PROTECT9} may be
+used to create inner blocks with protected variables, which are ended
+with @code{END_INNER_PROTECT} or @code{END_INNER_PROTECT_AND_RETURN}.
+Here is an example using this, which also shows how
+@code{RETURN_INSIDE_PROTECT} can be used to exit in the middle of a
+function:
 
 @example
     SEXP func (SEXP arg1, SEXP arg2)
@@ -8307,30 +8324,27 @@ Here is an example of how to do that:
         BEGIN_PROTECT3 (var1, var2, var3);
         ALSO_PROTECT2 (arg1, arg2);
         ...
-        while (1) @{
+        while (var3 != R_NilValue)
+            BEGIN_INNER_PROTECT1 (ivar);
             ...
-                RETURN_INSIDE_PROTECT (CAR(var2));
+                RETURN_INSIDE_PROTECT (list3(arg1,var2,ivar));
             ...
+            END_INNER_PROTECT;
         @}
+        RETURN_INSIDE_PROTECT (R_NilValue);
         END_PROTECT;
     @}
 @end example
 
-A simple @code{return (CAR(var2))} must not be done in this code,
-since it would bypass the @code{END_PROTECT}, which is essential in
-order for @R{} to know that it should no longer look at the protected
-variables (which will no longer exist).  Hence, the
-@code{RETURN_INSIDE_PROTECT} macro has been provided.  Similarly, a
-@code{BEGIN_PROTECT} / @code{END_PROTECT} block must not be exited via
-a C @code{break}, @code{continue}, or @code{goto} statement, since
-bypassing the @code{END_PROTECT} would have disastrous consequences.
-But exiting these blocks via @R{}'s error signalling mechanism is
-allowed.
+Note that @code{BEGIN_INNER_PROTECT} and @code{END_INNER_PROTECT}
+together form what is syntactically a C statement, which may be the direct
+object of a \code{while} statement.
 
-Finally, @code{BEGIN_INNER_PROTECT0} through
-@code{BEGIN_INNER_PROTECT9} may be used to create inner blocks with
-protected variables, which are ended with @code{END_INNER_PROTECT} or
-@code{END_INNER_PROTECT_AND_RETURN}.
+If @code{ALSO_PROTECT} is used within a @code{BEGIN_INNER_PROTECT}
+block, it must protect variables that exist at the outermost block
+level within the @code{BEGIN_INNER_PROTECT} / @code{END_INNER_PROTECT}
+pair.  The variables will be protected only until after the
+@code{END_INNER_PROTECT}.
 
 A third way of protecting an object is to call @code{R_PreserveObject}
 passing it a pointer to the object, which prevents it from being
