@@ -77,7 +77,7 @@ ConvInfoMsg(char* msg, int iter, int whystop, double fac,
     SET_VECTOR_ELT(ans, 3, ScalarInteger(whystop));      /* stopCode */
     SET_VECTOR_ELT(ans, 4, mkString(msg));               /* stopMessage */
 
-    RETURN_INSIDE_PROTECT (ans);
+    RETURN_SEXP_INSIDE_PROTECT (ans);
     END_PROTECT;
 }
 

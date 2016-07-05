@@ -720,11 +720,11 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 
     /* handle zero length arguments */
     if (n == 0) 
-        RETURN_INSIDE_PROTECT (allocVector(INTSXP, 0));
+        RETURN_SEXP_INSIDE_PROTECT (allocVector(INTSXP, 0));
     if (length(itable) == 0) {
 	ans = allocVector(INTSXP, n);
 	for (i = 0; i < n; i++) INTEGER(ans)[i] = nmatch;
-	RETURN_INSIDE_PROTECT (ans);
+	RETURN_SEXP_INSIDE_PROTECT (ans);
     }
 
     x = match_transform (ix, env);

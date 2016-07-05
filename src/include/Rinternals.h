@@ -1217,11 +1217,18 @@ extern const struct R_local_protect {
         R_local_protect_start = R_local_protect_inner . next; \
     } while (0)
 
-#define RETURN_INSIDE_PROTECT(e) \
+#define RETURN_SEXP_INSIDE_PROTECT(e) \
     do { \
+        if (0) (e) -> sxpinfo; /* error check */ \
         SEXP R_value_about_to_be_returned = (e); \
         R_local_protect_start = R_local_protect . next; \
         return R_value_about_to_be_returned; \
+    } while (0)
+
+#define RETURN_OUTSIDE_PROTECT(e) \
+    do { \
+        R_local_protect_start = R_local_protect . next; \
+        return (e); \
     } while (0)
 
 

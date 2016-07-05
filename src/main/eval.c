@@ -2628,7 +2628,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	el = CDR(el);
     }
 
-    RETURN_INSIDE_PROTECT (head);
+    RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 
 } /* evalList() */
@@ -2727,7 +2727,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
 
-    RETURN_INSIDE_PROTECT (head);
+    RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 }
  
@@ -3131,7 +3131,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
 	    if(value) {
 		*ans = value;
-		RETURN_INSIDE_PROTECT (1);
+		RETURN_OUTSIDE_PROTECT (1);
 	    }
 	    else {
 		/* go on, with the evaluated args.  Not guaranteed to have
@@ -3188,7 +3188,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
 	    {   endcontext(&cntxt);
-		RETURN_INSIDE_PROTECT (1);
+		RETURN_OUTSIDE_PROTECT (1);
 	    }
 	    endcontext(&cntxt);
 
