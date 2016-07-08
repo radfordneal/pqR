@@ -896,6 +896,7 @@ extern const struct R_local_protect {
         const struct { /* not actually put in local_protect list */ \
             const struct R_local_protect *next; \
         } R_local_protect = { R_local_protect_start }; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT1(v1) \
@@ -908,6 +909,7 @@ extern const struct R_local_protect {
               1, { &v1 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT2(v1,v2) \
@@ -920,6 +922,7 @@ extern const struct R_local_protect {
               2, { &v1, &v2 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT3(v1,v2,v3) \
@@ -932,6 +935,7 @@ extern const struct R_local_protect {
               3, { &v1, &v2, &v3 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT4(v1,v2,v3,v4) \
@@ -944,6 +948,7 @@ extern const struct R_local_protect {
               4, { &v1, &v2, &v3, &v4 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT5(v1,v2,v3,v4,v5) \
@@ -956,6 +961,7 @@ extern const struct R_local_protect {
               5, { &v1, &v2, &v3, &v4, &v5 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT6(v1,v2,v3,v4,v5,v6) \
@@ -968,6 +974,7 @@ extern const struct R_local_protect {
               6, { &v1, &v2, &v3, &v4, &v5, &v6 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT7(v1,v2,v3,v4,v5,v6,v7) \
@@ -981,6 +988,7 @@ extern const struct R_local_protect {
               7, { &v1, &v2, &v3, &v4, &v5, &v6, &v7 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT8(v1,v2,v3,v4,v5,v6,v7,v8) \
@@ -994,6 +1002,7 @@ extern const struct R_local_protect {
               8, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_PROTECT9(v1,v2,v3,v4,v5,v6,v7,v8,v9) \
@@ -1007,6 +1016,7 @@ extern const struct R_local_protect {
               9, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8, &v9 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect; \
+        struct { int outer; } R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT0() \
@@ -1015,6 +1025,7 @@ extern const struct R_local_protect {
         const struct { /* not actually put in local_protect list */ \
             const struct R_local_protect *next; \
         } R_local_protect_inner = { R_local_protect_start }; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT1(v1) \
@@ -1027,6 +1038,7 @@ extern const struct R_local_protect {
               1, { &v1 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT2(v1,v2) \
@@ -1039,6 +1051,7 @@ extern const struct R_local_protect {
               2, { &v1, &v2 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT3(v1,v2,v3) \
@@ -1051,6 +1064,7 @@ extern const struct R_local_protect {
               3, { &v1, &v2, &v3 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT4(v1,v2,v3,v4) \
@@ -1063,6 +1077,7 @@ extern const struct R_local_protect {
               4, { &v1, &v2, &v3, &v4 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT5(v1,v2,v3,v4,v5) \
@@ -1075,6 +1090,7 @@ extern const struct R_local_protect {
               5, { &v1, &v2, &v3, &v4, &v5 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT6(v1,v2,v3,v4,v5,v6) \
@@ -1087,6 +1103,7 @@ extern const struct R_local_protect {
               6, { &v1, &v2, &v3, &v4, &v5, &v6 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT7(v1,v2,v3,v4,v5,v6,v7) \
@@ -1100,6 +1117,7 @@ extern const struct R_local_protect {
               7, { &v1, &v2, &v3, &v4, &v5, &v6, &v7 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT8(v1,v2,v3,v4,v5,v6,v7,v8) \
@@ -1113,6 +1131,7 @@ extern const struct R_local_protect {
               8, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define BEGIN_INNER_PROTECT9(v1,v2,v3,v4,v5,v6,v7,v8,v9) \
@@ -1126,6 +1145,7 @@ extern const struct R_local_protect {
               9, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8, &v9 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
                                   &R_local_protect_inner; \
+        int R_protect_check; /* for error check */ \
         do {
 
 #define ALSO_PROTECT1(v1) \
@@ -1226,6 +1246,7 @@ extern const struct R_local_protect {
 
 #define END_PROTECT \
         } while (0); /* break/continue inside will go here */ \
+        if (0) R_protect_check . outer; /* error check */ \
         R_local_protect_start = R_local_protect . next; \
         END_PROTECT_label: if (0) goto BEGIN_PROTECT_label; /* error check */ \
     } while (0)
