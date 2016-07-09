@@ -9203,13 +9203,14 @@ current attribute.  There are three steps: the call is constructed as
 a pairlist of length 3, the list is filled in, and the expression
 represented by the pairlist is evaluated.
 
-A pairlist is quite distinct from a generic vector list, the only
-user-visible form of list in @R{}.  A pairlist is a linked list (with
-@code{CDR(t)} computing the next entry), with items (accessed by
-@code{CAR(t)}) and names or tags (set by @code{SET_TAG}).  In this call
-there are to be three items, a symbol (pointing to the function to be
-called) and two argument values, the first unnamed and the second named.
-Setting the type to @code{LANGSXP} makes this a call which can be evaluated.
+A pairlist is quite distinct from a vector list, which is the most
+commonly-seen type of list at the @R{} level.  A pairlist is a linked
+list (with @code{CDR(t)} computing the next entry), with items
+(accessed by @code{CAR(t)}) and names or tags (set by @code{SET_TAG}).
+In this call there are to be three items, a symbol (pointing to the
+function to be called) and two argument values, the first unnamed and
+the second named.  Setting the type to @code{LANGSXP} makes this a
+call which can be evaluated.
 
 @menu
 * Zero-finding::
