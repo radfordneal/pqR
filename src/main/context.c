@@ -57,6 +57,7 @@
  *	cenddata	a void pointer to data for cend to use
  *	vmax		the current setting of the R_alloc stack
  *	srcref		the srcref at the time of the call
+ *	local_pr        saved value of R_local_protect_start
  *
  *  Context types can be one of:
  *
@@ -189,6 +190,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 #ifdef BC_INT_STACK
     R_BCIntStackTop = cptr->intstack;
 #endif
+    R_local_protect_start = cptr->local_pr;
 }
 
 
@@ -255,6 +257,7 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->intstack = R_BCIntStackTop;
 #endif
     cptr->srcref = R_Srcref;
+    cptr->local_pr = R_local_protect_start;
     R_GlobalContext = cptr;
 }
 

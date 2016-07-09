@@ -770,6 +770,7 @@ typedef struct RCNTXT {
     IStackval *intstack;
 #endif
     SEXP srcref;	        /* The source line in effect */
+    const struct R_local_protect *local_pr;  /* linked list of protected vars */
 } RCNTXT, *context;
 
 /* The Various Context Types.
