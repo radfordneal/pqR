@@ -23,6 +23,9 @@ running these tests.  For example, some of the tests on 'nlme' depend
 on 'Hmisc', and there are a number of cross references from help page
 to CRAN packages.
 
+The directory API contains tests of the API for C functions called from
+R, which are not run automatically.
+
 
 		--- Historical Information ----
 
