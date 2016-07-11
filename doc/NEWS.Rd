@@ -18,19 +18,19 @@
         Note that there could still be incompatibilities with packages
         that work with R-2.15.1, either because of bugs in pqR, or because
         pqR implements some changes from later R Core releases that
-        produce different behaviour than R-2.15.1, or because some new
+        are not compatibile with R-2.15.1, or because some new
         pqR features are not totally compatible with R-2.15.1.
 
         Since many features from later R Core releases are also implemented
-        in pqR, some packages that state a dependence on a later
-        release might work with pqR, if the dependence declaration in
+        in pqR, some packages that state a dependence on a later release 
+        might nevertheless work with pqR, if the dependence declaration in
         the DESCRIPTION file is changed.
   \item The pqR repository has now been updated to include some packages
         (or new versions of packages) that depend on R-2.15.1, which 
         were previously omitted from the repository.
   }}
 
-  \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
+  \subsection{NEW FEATURES FROM R CORE VERSIONS}{
   \itemize{
   \item From R-2.15.1: source() now uses withVisible() rather than
         .Internal(eval.with.vis).  This sometimes alters tracebacks
@@ -50,10 +50,38 @@
 
   }}
 
-  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+  \subsection{PERFORMANCE IMPROVEMENTS FROM R CORE VERSIONS}{
+  \itemize{
+  \item From R-2.15.1:
+        In package parallel, makeForkCluster() and the multicore-based
+        functions use native byte-order for serialization.
+  \item From R-2.15.1:
+        tabulate() makes use of .C(DUP = FALSE) and hence does not copy
+        bin.  (Suggested by Tim Hesterberg.)  It also avoids making a
+        copy of a factor argument bin.
+  }}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE RELEASES}{
     \itemize{
-  \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
-        objects such as data frames.  (Reported by Matthew Dowle.)
+    \item From R-2.15.1:
+          In package parallel, clusterApply() and similar failed to handle
+          a (pretty pointless) length-1 argument. (PR#14898)
+    \item From R-2.15.1:
+          For tiff(type = "windows"), the numbering of per-page files
+          except the last was off by one.
+    \item From R-2.15.1:
+          In package parallel, clusterApply() and similar failed to handle
+          a (pretty pointless) length-1 argument. (PR#14898)
+    \item From R-2.15.1:
+          The plot() and Axis() methods for class "table" now respect
+          graphical parameters such as cex.axis.  (Reported by Martin
+          Becker.)
+    \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
+          objects such as data frames.  (Reported by Matthew Dowle.)
+    \item From R-2.15.1:
+          In legend(), setting some entries of lwd to NA was inconsistent
+          (depending on the graphics device) in whether it would suppress
+          those lines; now it consistently does so.  (PR#14926)
   }}
 }
 
