@@ -14,3 +14,10 @@ described in 2.15.1 NEWS as
       splineDesign() and spline.des() in package splines have a new
       option sparse which can be used for efficient construction of a
       sparse B-spline design matrix (_via_ Matrix).
+
+Made change from 2.15.1 described in NEWS as follows:
+
+      source() now uses withVisible() rather than
+      .Internal(eval.with.vis).  This sometimes alters tracebacks
+      slightly.
+
