@@ -6,6 +6,58 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2016-??-?? (not all actually done yet)}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item With this release, pqR is compatibile with R-2.15.1 (rather
+        than R-2.15.0, which it was originally based on), and hence
+        the version number is now 2.15.1.  (This version number is
+        checked when trying to install packages.)
+
+        Note that there could still be incompatibilities with packages
+        that work with R-2.15.1, either because of bugs in pqR, or because
+        pqR implements some changes from later R Core releases that
+        produce different behaviour than R-2.15.1, or because some new
+        pqR features are not totally compatible with R-2.15.1.
+
+        Since many features from later R Core releases are also implemented
+        in pqR, some packages that state a dependence on a later
+        release might work with pqR, if the dependence declaration in
+        the DESCRIPTION file is changed.
+  \item The pqR repository has now been updated to include some packages
+        (or new versions of packages) that depend on R-2.15.1, which 
+        were previously omitted from the repository.
+  }}
+
+  \subsection{NEW FEATURES FROM LATER R CORE VERSIONS}{
+  \itemize{
+  \item From R-2.15.1: source() now uses withVisible() rather than
+        .Internal(eval.with.vis).  This sometimes alters tracebacks
+        slightly.
+  \item From R-2.15.1: splineDesign() and spline.des() in package
+        splines have a new option sparse which can be used for efficient
+        construction of a sparse B-spline design matrix (_via_ Matrix).
+  \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
+        noted in NEWS then): 
+        colorRamp() (and hence colorRampPalette()) now also works for the
+        boundary case of just one color when the ramp is flat.
+  \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
+        noted in NEWS then): 
+        For tiff(type = "windows"), the numbering of per-page files
+        except the last was off by one.
+  \item From R-2.15.1: Added Polish translations by Łukasz Daniel.
+
+  }}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN LATER R CORE RELEASES}{
+    \itemize{
+  \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
+        objects such as data frames.  (Reported by Matthew Dowle.)
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2016-06-24}{
 
   \subsection{INTRODUCTION}{
