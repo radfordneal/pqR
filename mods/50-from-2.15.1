@@ -37,3 +37,14 @@ Performance improvement from R-2.15.1 with NEWS as follows:
       tabulate() makes use of .C(DUP = FALSE) and hence does not copy
       bin.  (Suggested by Tim Hesterberg.)  It also avoids making a
       copy of a factor argument bin.
+
+All of 'graphics' package taken from 2.15.1, which does the following
+from 2.15.1 NEWS file:
+
+      The plot() and Axis() methods for class "table" now respect
+      graphical parameters such as cex.axis.  (Reported by Martin
+      Becker.)
+
+      In legend(), setting some entries of lwd to NA was inconsistent
+      (depending on the graphics device) in whether it would suppress
+      those lines; now it consistently does so.  (PR#14926)
