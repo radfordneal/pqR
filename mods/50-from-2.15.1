@@ -22,3 +22,13 @@ Made change from 2.15.1 described in NEWS as follows:
       slightly.
 
 Small fix to tcltk/src/tcltk.c from 2.15.1.
+
+Changes to parallel to incorporate mods from 2.15.1, including those 
+corresponding to these NEWS entries:
+
+      In package parallel, makeForkCluster() and the multicore-based
+      functions use native byte-order for serialization 
+
+      In package parallel, clusterApply() and similar failed to handle
+      a (pretty pointless) length-1 argument. (PR#14898)
+

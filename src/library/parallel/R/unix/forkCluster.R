@@ -1,6 +1,8 @@
 #  File src/library/parallel/R/unix/forkCluster.R
 #  Part of the R package, http://www.R-project.org
 #
+#  Modifications for pqR Copyright (c) 2016 Radford M. Neal.
+#
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
@@ -35,7 +37,7 @@ newForkNode <- function(..., options = defaultClusterOptions, rank)
     f <- mcfork()
     if (inherits(f, "masterProcess")) { # the slave
         on.exit(mcexit(1L, structure("fatal error in wrapper code",
-                                     class = "try-error")))
+                                  class = "try-error")))
         # closeStdout()
         master <- "localhost"
         makeSOCKmaster <- function(master, port, timeout)
@@ -44,7 +46,7 @@ newForkNode <- function(..., options = defaultClusterOptions, rank)
             ## maybe use `try' and sleep/retry if first time fails?
             con <- socketConnection(master, port = port, blocking = TRUE,
                                     open = "a+b", timeout = timeout)
-            structure(list(con = con), class = "SOCKnode")
+            structure(list(con = con), class = "SOCK0node")
         }
         sinkWorkerOutput(outfile)
         msg <- sprintf("starting worker pid=%d on %s at %s\n",
@@ -62,5 +64,5 @@ newForkNode <- function(..., options = defaultClusterOptions, rank)
     con <- socketConnection("localhost", port = port, server = TRUE,
                             blocking = TRUE, open = "a+b", timeout = timeout)
     structure(list(con = con, host = "localhost", rank = rank),
-              class = c("forknode", "SOCKnode"))
+              class = c("forknode", "SOCK0node"))
 }
