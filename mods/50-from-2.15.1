@@ -32,3 +32,8 @@ corresponding to these NEWS entries:
       In package parallel, clusterApply() and similar failed to handle
       a (pretty pointless) length-1 argument. (PR#14898)
 
+Performance improvement from R-2.15.1 with NEWS as follows:
+
+      tabulate() makes use of .C(DUP = FALSE) and hence does not copy
+      bin.  (Suggested by Tim Hesterberg.)  It also avoids making a
+      copy of a factor argument bin.
