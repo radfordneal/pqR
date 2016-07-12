@@ -77,6 +77,13 @@
           The plot() and Axis() methods for class "table" now respect
           graphical parameters such as cex.axis.  (Reported by Martin
           Becker.)
+    \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
+          from NEWS):  
+          Under some circumstances package.skeleton() would give out
+          progress reports that could not be translated and so were
+          displayed by question marks.  Now they are always in English.
+          (This was seen for CJK locales on Windows, but may have occurred
+          elsewhere.)
     \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
           objects such as data frames.  (Reported by Matthew Dowle.)
     \item From R-2.15.1:
