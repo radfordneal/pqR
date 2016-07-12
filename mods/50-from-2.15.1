@@ -57,3 +57,9 @@ in 2.15.1 NEWS as
 
       Nonsense uses such as seq(1:50, by = 5) (from package plotrix)
       and seq.int(1:50, by = 5) are now errors.
+
+Fix of mkChar and mkCharCE from 2.15.1, described as
+
+      C entry points mkChar and mkCharCE now check that the length of
+      the string they are passed does not exceed 2^31-1 bytes: they
+      used to overflow with unpredictable consequences.
