@@ -47,8 +47,15 @@
         noted in NEWS then): 
         For tiff(type = "windows"), the numbering of per-page files
         except the last was off by one.
+  \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
+        noted in NEWS then):
+        For R CMD check, a few people have reported problems with
+        junctions on Windows (although they were tested on Windows 7, XP
+        and Server 2008 machines and it is unknown under what
+        circumstances the problems occur).  Setting the environment
+        variable R_WIN_NO_JUNCTIONS to a non-empty value (e.g. in
+        ~/.R/check.Renviron) will force copies to be used instead.
   \item From R-2.15.1: Added Polish translations by Łukasz Daniel.
-
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS FROM R CORE VERSIONS}{
