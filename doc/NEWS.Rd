@@ -10,20 +10,21 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item With this release, pqR is compatibile with R-2.15.1 (rather
-        than R-2.15.0, which it was originally based on), and hence
-        the version number is now 2.15.1.  (This version number is
+  \item With this release, pqR, which was based on R-2.15.0, now incorporates
+        the new features and bug fixes from R-2.15.1.  The pqR version number 
+        has been advanced to 2.15.1 to reflect this.  (This version number is
         checked when trying to install packages.)
 
         Note that there could still be incompatibilities with packages
         that work with R-2.15.1, either because of bugs in pqR, or because
-        pqR implements some changes from later R Core releases that
+        a package may rely on a bug that is fixed in pqR, or because
+        pqR implements some changes from R Core versions after R-2.15.1 that
         are not compatibile with R-2.15.1, or because some new
         pqR features are not totally compatible with R-2.15.1.
 
-        Since many features from later R Core releases are also implemented
-        in pqR, some packages that state a dependence on a later release 
-        might nevertheless work with pqR, if the dependence declaration in
+        Since many features from later R Core versions are also implemented
+        in pqR, some packages that state a dependence on a later version
+        of R might nevertheless work with pqR, if the dependence declaration in
         the DESCRIPTION file is changed.
   \item The pqR repository has now been updated to include some packages
         (or new versions of packages) that depend on R-2.15.1, which 
@@ -61,7 +62,7 @@
         copy of a factor argument bin.
   }}
 
-  \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE RELEASES}{
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE VERSIONS}{
     \itemize{
     \item From R-2.15.1:
           In package parallel, clusterApply() and similar failed to handle
