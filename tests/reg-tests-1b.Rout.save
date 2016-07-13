@@ -2277,14 +2277,6 @@ Error in merge.data.frame(d1, d2, by = "a") :
   (converted from warning) column name 'b.x' is duplicated in the result
 > stopifnot(inherits(z, "try-error"))
 > merge(d1, d2, by = 'a', suffixes = c("", ".y"))
-z <- try(merge(d1, d2, by = 'a', suffixes = c(".z", ".z")))
-stopifnot(inherits(z, "try-error"))
-options(op)
-# First 'worked' in R < 2.15.0, second was disallowed in early 2012,
-# third 'worked' in R < 2.15.1.
-# example based on package SDMTools::compare.matrix
-# where 'by' is ambiguous.
-x <- expand.grid(x = 1:2, y = 1:2)
     a  b b.x b.y
 1   1  1  10 101
 2   2  2   9 102
