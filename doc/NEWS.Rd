@@ -65,6 +65,12 @@
         circumstances the problems occur).  Setting the environment
         variable R_WIN_NO_JUNCTIONS to a non-empty value (e.g. in
         ~/.R/check.Renviron) will force copies to be used instead.
+  \item From R-2.15.1 and later R Core versions:
+        More cases in which merge() could create a data frame with
+        duplicate column names now give warnings.  Cases where names
+        specified in by match multiple columns are errors.  [ Plus
+        other tweaks from later versions. ]
+
   \item From R-2.15.1: Added Polish translations by Łukasz Daniel.
   }}
 
