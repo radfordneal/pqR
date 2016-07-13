@@ -26,9 +26,9 @@
         in pqR, some packages that state a dependence on a later version
         of R might nevertheless work with pqR, if the dependence declaration in
         the DESCRIPTION file is changed.
-  \item The pqR repository has now been updated to include some packages
-        (or new versions of packages) that depend on R-2.15.1, which 
-        were previously omitted from the repository.
+  \item The pqR package repository (see information at pqR-project.org) has
+        now been updated to include some packages (or new versions of packages)
+        that depend on R-2.15.1, which were previously not included.
   }}
 
   \subsection{NEW FEATURES}{
@@ -38,7 +38,8 @@
         (and still is in R-3.3.1), which made absolutely no sense, and
         is likely responsible for bugs in user code that assumes that,
         for example, \code{substring(s,2)} will always return a string like
-        \code{s} but without the first character.
+        \code{s} but without the first character, regardless of how many
+        characters are in \code{s}.  This assumption will now actually be true.
   }}
 
   \subsection{NEW FEATURES FROM R CORE VERSIONS}{
