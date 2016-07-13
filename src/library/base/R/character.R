@@ -20,7 +20,7 @@ substr <- function(x, start, stop)
     .Internal(substr(x, as.integer(start), as.integer(stop)))
 }
 
-substring <- function(text, first, last=1000000L)
+substring <- function(text, first, last=.Machine$integer.max)
 {
     if(!is.character(text)) text <- as.character(text)
     n <- max(lt <- length(text), length(first), length(last))
@@ -31,7 +31,7 @@ substring <- function(text, first, last=1000000L)
 `substr<-` <- function(x, start, stop, value)
     .Internal(`substr<-`(x, as.integer(start), as.integer(stop), value))
 
-`substring<-` <- function(text, first, last=1000000L, value)
+`substring<-` <- function(text, first, last=.Machine$integer.max, value)
     .Internal(`substr<-`(text, as.integer(first), as.integer(last), value))
 
 abbreviate <-
