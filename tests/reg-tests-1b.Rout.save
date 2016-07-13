@@ -2266,4 +2266,54 @@ Time difference of 8.333333 mins
 > xpred <- predict(object=est, n.ahead=100, se.fit=FALSE)
 > stopifnot(dim(xpred) == c(100,2), abs(range(xpred)) < 1)
 > ## values went to +- 1e23 in R <= 2.14.2
+>
 > 
+> ## regression tests for merge
+> d1 <- data.frame(a = 1:10, b = 1:10, b.x = 10:1)
+> d2 <- data.frame(a = 1:10, b = 101:110)
+> op <- options(warn = 2)
+> z <- try(merge(d1, d2, by = 'a'))
+Error in merge.data.frame(d1, d2, by = "a") : 
+  (converted from warning) column name 'b.x' is duplicated in the result
+> stopifnot(inherits(z, "try-error"))
+> merge(d1, d2, by = 'a', suffixes = c("", ".y"))
+z <- try(merge(d1, d2, by = 'a', suffixes = c(".z", ".z")))
+stopifnot(inherits(z, "try-error"))
+options(op)
+# First 'worked' in R < 2.15.0, second was disallowed in early 2012,
+# third 'worked' in R < 2.15.1.
+# example based on package SDMTools::compare.matrix
+# where 'by' is ambiguous.
+x <- expand.grid(x = 1:2, y = 1:2)
+    a  b b.x b.y
+1   1  1  10 101
+2   2  2   9 102
+3   3  3   8 103
+4   4  4   7 104
+5   5  5   6 105
+6   6  6   5 106
+7   7  7   4 107
+8   8  8   3 108
+9   9  9   2 109
+10 10 10   1 110
+> z <- try(merge(d1, d2, by = 'a', suffixes = c(".z", ".z")))
+Error in merge.data.frame(d1, d2, by = "a", suffixes = c(".z", ".z")) : 
+  (converted from warning) column name 'b.z' is duplicated in the result
+> stopifnot(inherits(z, "try-error"))
+> options(op)
+> # First 'worked' in R < 2.15.0, second was disallowed in early 2012,
+> # third 'worked' in R < 2.15.1.
+> # example based on package SDMTools::compare.matrix
+> # where 'by' is ambiguous.
+> x <- expand.grid(x = 1:2, y = 1:2)
+> y <- data.frame(x = c(1,2,1,2), y = c(1,1,2,2), z = c(5040,128,1123,3709))
+> merge(x, y, all = TRUE)
+  x y    z
+1 1 1 5040
+2 1 2 1123
+3 2 1  128
+4 2 2 3709
+> names(y)[3] <- "x"
+> stopifnot(inherits(try(merge(x, y, all = TRUE)), "try-error"))
+Error in fix.by(by.y, y) : 'by' must specify a uniquely valid column
+> ## 'worked' in R < 2.15.1.
