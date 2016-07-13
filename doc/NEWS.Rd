@@ -72,6 +72,9 @@
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE VERSIONS}{
     \itemize{
     \item From R-2.15.1:
+          Nonsense uses such as seq(1:50, by = 5) (from package plotrix)
+          and seq.int(1:50, by = 5) are now errors.
+    \item From R-2.15.1:
           In package parallel, clusterApply() and similar failed to handle
           a (pretty pointless) length-1 argument. (PR#14898)
     \item From R-2.15.1:
@@ -97,6 +100,10 @@
           In legend(), setting some entries of lwd to NA was inconsistent
           (depending on the graphics device) in whether it would suppress
           those lines; now it consistently does so.  (PR#14926)
+    \item From R-2.15.1:
+          C entry points mkChar and mkCharCE now check that the length of
+          the string they are passed does not exceed 2^31-1 bytes: they
+          used to overflow with unpredictable consequences.
   }}
 }
 
