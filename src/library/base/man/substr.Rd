@@ -11,9 +11,9 @@
 \title{Substrings of a Character Vector}
 \usage{
 substr(x, start, stop)
-substring(text, first, last = 1000000L)
+substring(text, first, last = .Machine$integer.max)
 substr(x, start, stop) <- value
-substring(text, first, last = 1000000L) <- value
+substring(text, first, last = .Machine$integer.max) <- value
 }
 \arguments{
   \item{x, text}{a character vector.}
