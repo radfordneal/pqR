@@ -31,6 +31,16 @@
         were previously omitted from the repository.
   }}
 
+  \subsection{NEW FEATURES}{
+  \itemize{
+  \item The default for the \code{last} argument of \code{substring} is
+        now \code{.Machine$integer.max}.  The previous default was 1000000
+        (and still is in R-3.3.1), which made absolutely no sense, and
+        is likely responsible for bugs in user code that assumes that,
+        for example, \code{substring(s,2)} will always return a string like
+        \code{s} but without the first character.
+  }}
+
   \subsection{NEW FEATURES FROM R CORE VERSIONS}{
   \itemize{
   \item From R-2.15.1: source() now uses withVisible() rather than
