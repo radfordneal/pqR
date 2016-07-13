@@ -63,3 +63,13 @@ Fix of mkChar and mkCharCE from 2.15.1, described as
       C entry points mkChar and mkCharCE now check that the length of
       the string they are passed does not exceed 2^31-1 bytes: they
       used to overflow with unpredictable consequences.
+
+Took base/R/merge.R and base/man/merge.Rd from R-3.1.1, except deleted
+large vector stuff.  Updated tests in reg-tests-1b.R and .save.
+Implements bug fix from 2.15.1:
+      More cases in which merge() could create a data frame with
+      duplicate column names now give warnings.  Cases where names
+      specified in by match multiple columns are errors.
+And new feature from 3.0.0:
+      merge() works in more cases where the data frames include
+      matrices.  (Wish of PR#14974.)
