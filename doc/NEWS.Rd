@@ -37,6 +37,10 @@
 
   \subsection{NEW FEATURES}{
   \itemize{
+  \item The \code{for} statement now has \code{down} and \code{across}
+        forms, which conveniently iterate over the rows 
+        (\code{down}) or columns (\code{across}) of a matrix.  See
+        \code{help("for")} for details.
   \item C functions called from R (by \code{.Call} or \code{.External}) 
         can now protect objects from garbage collection using a new, 
         less error-prone, method, rather than the old (and still present)
