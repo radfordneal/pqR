@@ -1340,14 +1340,14 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     RCNTXT cntxt;
     PROTECT_INDEX valpi, vpi, bix;
     int is_seq, seq_start;
-    int along;
+    int along = 0, across = 0, down = 0, in = 0;
     int nsyms;
 
     PROTECT(args);
 
-    /* Count how many variables there are before the argument after the "in" 
-       or "along" keyword.  Set 'a' to the cell for the argument after these
-       variables. */
+    /* Count how many variables there are before the argument after the "in",
+       "across", "down", or "along" keyword.  Set 'a' to the cell for the 
+       argument after these variables. */
 
     syms = args;
     nsyms = 0;
@@ -1358,16 +1358,23 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         nsyms += 1;
     } while (CDDR(a) != R_NilValue);
 
-    along = TAG(a) == R_AlongSymbol;
+    if (TAG(a) == R_AlongSymbol)
+        along = 1;
+    else if (TAG(a) == R_AcrossSymbol)
+        across = 1;
+    else if (TAG(a) == R_DownSymbol)
+        down = 1;
+    else
+        in = 1;  /* we treat any other tag as "in" */
 
     /* Sometimes handled by bytecode... */
 
-    if (!along && nsyms == 1 && R_jit_enabled > 2 && ! R_PendingPromises) {
+    if (in && nsyms == 1 && R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho); 
 	return R_NilValue;
     }
 
-    if (!along) nsyms = 1;  /* ignore extras for "in" */
+    if (in) nsyms = 1;  /* ignore extras for "in" */
 
     val = CAR(a);
     body = CADR(a);
@@ -1375,12 +1382,12 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(rho);
 
-    val = evalv (val, rho, along ? 0 : VARIANT_SEQ);
+    PROTECT (val = evalv (val, rho, in ? VARIANT_SEQ : 0));
     dims = R_NilValue;
 
     is_seq = 0;
 
-    if (along) { /* "along", and therefore not variant */
+    if (along) { /* "along" and therefore not variant */
 
         if (nsyms == 1) { /* go along vector/pairlist (may also be an array) */
             is_seq = 1;
@@ -1401,6 +1408,18 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             PROTECT(bcells = allocVector(VECSXP,nsyms));
         }
         n = length(val);
+    }
+    else if (across || down) { /* "across" or "down" and therefore not variant*/
+        is_seq = 1;
+        seq_start = 1;
+        val_type = INTSXP;
+        dims = getAttrib (val, R_DimSymbol);
+        if (TYPEOF(dims)!=INTSXP || LENGTH(dims)==0) /* no valid dim attribute*/
+            n = length(val);
+        else if (down)
+            n = INTEGER(dims)[0];
+        else /* across */
+            n = LENGTH(dims) > 1 ? INTEGER(dims)[1] : INTEGER(dims)[0];
     }
     else if (R_variant_result) {  /* variant "in" value */
 
@@ -1488,7 +1507,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             goto do_iter;
         }
 
-        /* Handle "in" and univariate "along". */
+        /* Handle "in", "across", "down", and univariate "along". */
 
 	switch (val_type) {
 
@@ -1555,7 +1574,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
  for_break:
     endcontext(&cntxt);
-    if (!along && !is_seq) {
+    if (in && !is_seq) {
         DEC_NAMEDCNT(val);
         UNPROTECT(1);  /* val */
     }
@@ -1563,7 +1582,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         UNPROTECT(2);  /* v, bcell */
     else 
         UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
-    UNPROTECT(2);      /* rho, args */
+    UNPROTECT(3);      /* val, rho, args */
     SET_RDEBUG(rho, dbg);
     return R_NilValue;
 }

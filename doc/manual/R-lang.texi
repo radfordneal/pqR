@@ -1434,7 +1434,7 @@ where @var{statement1} is evaluated and if its value is @code{TRUE} then
 @subsection for
 @findex for
 
-There are two forms of the @code{for} loop.  The first is
+There are several forms of the @code{for} loop.  The first is
 
 @example
 for ( @var{name} in @var{vector} )
@@ -1480,6 +1480,27 @@ to the indexes of the array.  They are each set to integer values from 1 to the
 corresponding array dimension, with the first variable changing most quickly,
 and the last most slowly.  The number of variables specified must match the
 number of dimensions in the array.
+
+Finally, the following forms (currently available only in pqR) go
+along rows or along columns of a matrix
+
+@example
+for ( @var{name} down @var{matrix} )
+   @var{statement}
+@end example
+
+@example
+for ( @var{name} across @var{matrix} )
+   @var{statement}
+@end example
+
+These loops evaluate @var{statement} once for each row index (for the
+@code{down} form) or once for each column index (for the @code{across}
+form) of @var{matrix}.  Higher dimensional arrays are also allowed
+for @var{matrix}, with @code{down} or @code{across} going through
+the first or second dimension.  If @code{matrix} is a one-dimensional
+array or is not an array, @code{down} and @code{across} act the same
+as @code{along}.
 
 The variable or variables controlled by a for loop will still exist
 after the loop has concluded, and will have the values they had at the

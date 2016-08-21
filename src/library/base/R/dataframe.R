@@ -245,11 +245,11 @@ as.data.frame.matrix <- function(x, row.names = NULL, optional = FALSE, ...,
 
     value <- vector("list", ncols)
     if (mode(x) == "character" && stringsAsFactors) {
-	for (i in seq_len(ncols))
+	for (i across x)
 	    value[[i]] <- as.factor(x[,i])
     } 
     else {
-	for (i in seq_len(ncols))
+	for (i across x)
 	    value[[i]] <- as.vector(x[,i])
     }
 
