@@ -1663,7 +1663,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     else if (NEXT_TOKEN == FOR) {
         SEXP op, sym, vec, body, for_cond_rec, more_syms;
-        int along = 0;
+        int along = 0, across = 0, down = 0;
         source_location for_cond_loc;
         op = TOKEN_VALUE();
         get_next_token(0);
@@ -1698,7 +1698,16 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             if (more_syms != R_NilValue)
                 PARSE_ERROR_MSG(
                   "multiple 'for' variables are only allowed with 'along'");
-            EXPECT(IN);
+            if (NEXT_TOKEN == SYMBOL && ps->next_token_val==R_AcrossSymbol) {
+                across = 1;
+                get_next_token(0);
+            }
+            else if (NEXT_TOKEN == SYMBOL && ps->next_token_val==R_DownSymbol) {
+                down = 1;
+                get_next_token(0);
+            }
+            else
+                EXPECT(IN);
         }
         PARSE_SUB(vec = parse_expr (EQASSIGN_PREC, subflags, &ipar));
         if (!keep_parens && ipar && needsparens_arg(CADR(vec)))
@@ -1710,6 +1719,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         res = CONS (vec, CONS(body,R_NilValue));
         if (along)
             SET_TAG (res, R_AlongSymbol);
+        else if (across)
+            SET_TAG (res, R_AcrossSymbol);
+        else if (down)
+            SET_TAG (res, R_DownSymbol);
         while (more_syms != R_NilValue) {
             res = CONS (CAR(more_syms), res);
             more_syms = CDR(more_syms);

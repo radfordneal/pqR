@@ -935,10 +935,17 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             }
             else if (nargs == 3 && op == R_ForSymbol 
                                 && isSymbol(CAR(s))
-                                && TAG(CDR(s))==R_NilValue) {
+                                && (TAG(CDR(s))==R_NilValue
+                                     || TAG(CDR(s))==R_AcrossSymbol
+                                     || TAG(CDR(s))==R_DownSymbol)) {
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
-                print2buff(" in ", d);
+                if (TAG(CDR(s)) == R_AcrossSymbol)
+                    print2buff(" across ", d);
+                else if (TAG(CDR(s)) == R_DownSymbol)
+                    print2buff(" down ", d);
+                else
+                    print2buff(" in ", d);
                 int np = needsparens_arg(CADR(s));
                 if (np) print2buff("(", d);
                 deparse2buff(CADR(s), d);
