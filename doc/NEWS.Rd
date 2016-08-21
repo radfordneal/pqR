@@ -50,6 +50,8 @@
   \item From R-2.15.1: splineDesign() and spline.des() in package
         splines have a new option sparse which can be used for efficient
         construction of a sparse B-spline design matrix (_via_ Matrix).
+  \item From R-2.15.1: norm() now allows type = "2" (the spectral or 2-norm)
+        as well, mainly for didactical completeness.
   \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
         noted in NEWS then): 
         colorRamp() (and hence colorRampPalette()) now also works for the
