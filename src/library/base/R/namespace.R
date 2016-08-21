@@ -1428,7 +1428,7 @@ registerS3methods <- function(info, package, env)
 
     ## now the rest
     fin <- Info[!l2, , drop = FALSE]
-    for(i in seq_len(nrow(fin)))
+    for (i down fin)
         .registerS3method(fin[i, 1], fin[i, 2], fin[i, 3], fin[i, 4], env)
 
     setNamespaceInfo(env, "S3methods",
