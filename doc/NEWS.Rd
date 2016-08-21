@@ -29,10 +29,21 @@
   \item The pqR package repository (see information at pqR-project.org) has
         now been updated to include some packages (or new versions of packages)
         that depend on R-2.15.1, which were previously not included.
+  \item There are also some new pqR features in this release, including
+        \code{across} and \code{down} options for \code{for} statements, and a
+        less error-prone scheme for protecting objects from garbage 
+        collection in C code.
   }}
 
   \subsection{NEW FEATURES}{
   \itemize{
+  \item C functions called from R (by \code{.Call} or \code{.External}) 
+        can now protect objects from garbage collection using a new, 
+        less error-prone, method, rather than the old (and still present)
+        \code{PROTECT} and \code{UNPROTECT} calls.  See the section titled
+        ``Handling the effects of garbage collection'' (5.9.1) in the ``Writing 
+        R Exensions'' manual for details on the new facility, as well as
+        improved documentation on the old facilities.
   \item The default for the \code{last} argument of \code{substring} is
         now \code{.Machine$integer.max}.  The previous default was 1000000
         (and still is in R-3.3.1), which made absolutely no sense, and
