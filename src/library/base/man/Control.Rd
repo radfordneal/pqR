@@ -11,6 +11,8 @@
 \alias{for}
 \alias{in}
 \alias{along}
+\alias{across}
+\alias{down}
 \alias{while}
 \alias{repeat}
 \alias{break}
@@ -29,6 +31,8 @@ for (var in seq) expr
 for (var along vector) expr
 for (var1, var2 along matrix) expr
 for (var1, var2, var3 along array) expr
+for (var down matrix) expr
+for (var across matrix) expr
 while (cond) expr
 repeat expr
 break
@@ -94,10 +98,20 @@ next
   of values for these variables, in sequence from 1 to the corresponding
   dimension, with the first variable varying the fastest.
 
+  For the \code{down} and \code{across} variants of \code{for}, the
+  loop is performed with the variable set from 1 to the number of rows
+  in the matrix (for \code{down}) or from 1 to the number of columns in
+  the matrix (for \code{across}).  Although the expression after \code{down}
+  or \code{across} is normally a matrix, any expression is actually 
+  allowed --- for higher dimensional arrays, the first or second dimension
+  is used, and for non-arrays, \code{down} and \code{across} act the
+  same as \code{along}.
+
   The class of the \code{seq} iterated over by \code{for} with \code{in} is 
   currently ignored, as if it were \code{unclass(seq)}, but this may
   change in future.  Similarly, the class of the \code{vector}, \code{matrix}, 
-  or \code{array} in a \code{for} with \code{along} is currently ignored,
+  or \code{array} in a \code{for} with \code{along}, \code{down}, and 
+  \code{across} is currently ignored,
   but in future it may be that \code{length} and \code{dim} methods for these
   objects will be used, if they are defined.
 }
@@ -148,6 +162,12 @@ M <- matrix(0,nrow=4,ncol=5)
 for (i, j along M) M[i,j] <- i*j
 
 identical(M,outer(1:4,1:5))  # These should be TRUE
+identical(c(i,j),c(4L,5L))
+
+N <- matrix(0,nrow=4,ncol=5)
+for (j across N) for (i down N) N[i,j] <- i*j
+
+identical(N,outer(1:4,1:5))  # These also should be TRUE
 identical(c(i,j),c(4L,5L))
 
 # Some senseless operations for demonstration purposes...
