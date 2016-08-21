@@ -113,6 +113,10 @@
           elsewhere.)
     \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
           objects such as data frames.  (Reported by Matthew Dowle.)
+    \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
+          from NEWS):
+          Using a string as a ?call? in an error condition with
+          options(showErrorCalls=TRUE) could cause a segfault.  (PR#14931)
     \item From R-2.15.1:
           In legend(), setting some entries of lwd to NA was inconsistent
           (depending on the graphics device) in whether it would suppress
@@ -121,6 +125,10 @@
           C entry points mkChar and mkCharCE now check that the length of
           the string they are passed does not exceed 2^31-1 bytes: they
           used to overflow with unpredictable consequences.
+    \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
+          from NEWS):
+          xgettext() and related functions sometimes returned items that
+          were not strings for translation. (PR#14935)
   }}
 }
 
