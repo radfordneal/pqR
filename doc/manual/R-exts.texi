@@ -8215,13 +8215,12 @@ protect stack.
 A newer alternative approach to protecting objects from garbage
 collection is to tell @R{} that certain variables contain pointers to
 objects that must not be garbage collected.  Note that these variables
-must always contain valid pointers to R objects (or contain the C NULL
-pointer), and hence must not be declared and then left uninitialized.
-@R{} must be told when these variables should no longer be looked at,
-and this must be done before the variables disappear (as local
-variables do when the block within which they are declared is exited).
-This will happen naturally if the @code{BEGIN}/@code{END} macros below
-are used properly.
+must always contain valid pointers to R objects, and hence must not be
+declared and then left uninitialized.  @R{} must be told when these
+variables should no longer be looked at, and this must be done before
+the variables disappear (as local variables do when the block within
+which they are declared is exited).  This will happen naturally if the
+@code{BEGIN}/@code{END} macros below are used properly.
 
 A C function that uses this method for protection should normally
 start and end with macro calls such as shown below:
@@ -8238,8 +8237,8 @@ start and end with macro calls such as shown below:
 @noindent
 The @code{BEGIN_PROTECT3} macro will declare @code{var1}, @code{var2},
 and @code{var3} as local variables of type @code{SEXP} (in a block
-that starts with @code{BEGIN_PROTECT3}), initialize them to the C NULL
-pointer, and tell @R{} that the objects they point to should not be
+that starts with @code{BEGIN_PROTECT3}), initialize them to
+R_NilValue, and tell @R{} that the objects they point to should not be
 garbage collected.  The @code{END_PROTECT} macro will close the block
 begun by @code{BEGIN_PROTECT3}, so the variables will not exist
 afterwards, and will tell @R{} that these (now non-existent) variables
