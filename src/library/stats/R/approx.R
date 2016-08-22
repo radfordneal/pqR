@@ -60,7 +60,8 @@ approx <- function(x, y = NULL, xout, method = "linear", n = 50,
     x <- regularize.values(x, y, ties) # -> (x,y) numeric of same length
     y <- x$y
     x <- x$x
-    nx <- length(x)
+    nx <- as.integer(length(x))
+    if (is.na(nx)) stop("invalid length(x)")
     if (nx <= 1) {
 	if(method == 1)# linear
 	    stop("need at least two non-NA values to interpolate")
@@ -77,7 +78,7 @@ approx <- function(x, y = NULL, xout, method = "linear", n = 50,
 	    stop("'approx' requires n >= 1")
 	xout <- seq.int(x[1L], x[nx], length.out = n)
     }
-    y <- .C(C_R_approx, as.double(x), as.double(y), as.integer(nx),
+    y <- .C(C_R_approx, as.double(x), as.double(y), nx,
 	    xout = as.double(xout), as.integer(length(xout)),
 	    as.integer(method), as.double(yleft), as.double(yright),
 	    as.double(f), NAOK = TRUE, PACKAGE = "stats")$xout
@@ -95,7 +96,8 @@ approxfun <- function(x, y = NULL, method = "linear",
     x <- regularize.values(x, y, ties) # -> (x,y) numeric of same length
     y <- x$y
     x <- x$x
-    n <- length(x)
+    n <- as.integer(length(x))
+    if (is.na(n)) stop("invalid length(x)")
 
     if (n <= 1) {
 	if(method == 1)# linear
