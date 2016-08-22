@@ -109,6 +109,17 @@
           Nonsense uses such as seq(1:50, by = 5) (from package plotrix)
           and seq.int(1:50, by = 5) are now errors.
     \item From R-2.15.1:
+          The residuals in the 5-number summary printed by summary() on an
+          "lm" object are now explicitly labelled as weighted residuals
+          when non-constant weights are present.  (Wish of PR#14840.)
+    \item From R-2.15.1:
+          The plot() method for class "stepfun" only used the optional xval
+          argument to compute xlim and not the points at which to plot (as
+          documented).  (PR#14864)
+    \item From R-2.15.1:
+          hclust() is now fast again (as up to end of 2003), with a
+          different fix for the "median"/"centroid" problem.  (PR#4195).
+    \item From R-2.15.1:
           In package parallel, clusterApply() and similar failed to handle
           a (pretty pointless) length-1 argument. (PR#14898)
     \item From R-2.15.1:
@@ -128,6 +139,9 @@
           displayed by question marks.  Now they are always in English.
           (This was seen for CJK locales on Windows, but may have occurred
           elsewhere.)
+    \item From R-2.15.1:
+          The replacement method for window() now works correctly for
+          multiple time series of class "mts".  (PR#14925)
     \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
           objects such as data frames.  (Reported by Matthew Dowle.)
     \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
@@ -142,10 +156,18 @@
           C entry points mkChar and mkCharCE now check that the length of
           the string they are passed does not exceed 2^31-1 bytes: they
           used to overflow with unpredictable consequences.
+    \item From R-2.15.1:
+          Yates correction in chisq.test() could be bigger than the terms
+          it corrected, previously leading to an infinite test statistic in
+          some corner cases which are now reported as NaN.
     \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
           from NEWS):
           xgettext() and related functions sometimes returned items that
           were not strings for translation. (PR#14935)
+    \item From R-2.15.1:
+          plot(<lm>, which=5) now correctly labels the factor level
+          combinations for the special case where all h[i,i] are the same.
+          (PR#14837)
   }}
 }
 
