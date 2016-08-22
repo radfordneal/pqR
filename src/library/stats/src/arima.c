@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2002-2011   The R Development Core Team.
+ *  Copyright (C) 2002-2011   The R Core Team.
  *
  *  Changes to KalmanLike, KalmanSmooth, and KalmanFore by Radford Neal, 2013.
  *
@@ -355,7 +355,7 @@ KalmanFore(SEXP nahead, SEXP sZ, SEXP sa0, SEXP sP0, SEXP sT, SEXP sV,
     int i, j, k, l;
     double fc, tmp, *mm, *anew, *Pnew;
 
-    int  n = asReal(nahead), p = LENGTH(sa0);
+    int  n = asInteger(nahead), p = LENGTH(sa0);
 
     anew = (double *) R_alloc(p, sizeof(double));
     Pnew = (double *) R_alloc(p * p, sizeof(double));

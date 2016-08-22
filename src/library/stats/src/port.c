@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2005-2007   The R Development Core Team.
+ *  Copyright (C) 2005-2007   The R Core Team.
  *
  *  Modifications for pqR Copyright (c) 2015 Radford Neal.
  *
