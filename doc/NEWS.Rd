@@ -160,6 +160,14 @@
           the string they are passed does not exceed 2^31-1 bytes: they
           used to overflow with unpredictable consequences.
     \item From R-2.15.1:
+          by() failed for a zero-row data frame.  (Reported by Weiqiang
+          Qian).
+
+          [ Note: When \code{simplify=TRUE} (the default), the results 
+            with zero-row data frames, and more generally when there are
+            empty subsets, are not particularly sensible, but this has
+            not been changed in pqR due to compatibility concerns. ]
+    \item From R-2.15.1:
           Yates correction in chisq.test() could be bigger than the terms
           it corrected, previously leading to an infinite test statistic in
           some corner cases which are now reported as NaN.
