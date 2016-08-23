@@ -98,6 +98,9 @@
         In package parallel, makeForkCluster() and the multicore-based
         functions use native byte-order for serialization.
   \item From R-2.15.1:
+        lm.fit(), lm.wfit(), glm.fit() and lsfit() do less copying of
+        objects, mainly by using .Call() rather than .Fortran().
+  \item From R-2.15.1:
         tabulate() makes use of .C(DUP = FALSE) and hence does not copy
         bin.  (Suggested by Tim Hesterberg.)  It also avoids making a
         copy of a factor argument bin.
