@@ -42,8 +42,8 @@ cmdscale <- function (d, k = 2, eig = FALSE, add = FALSE, x.ret = FALSE)
     if((k <- as.integer(k)) > n - 1 || k < 1)
         stop("'k' must be in {1, 2, ..  n - 1}")
     storage.mode(x) <- "double"
-    ## doubly center x in-place, ASSUMES x NOT SHARED!
-    x <- .C(C_dblcen, x = x, n, DUP = FALSE)$x
+    ## duplication of x below will probably be avoided
+    x <- .C(C_dblcen, x = get_rm(x), n)$x
 
     if(add) { ## solve the additive constant problem
         ## it is c* = largest eigenvalue of 2 x 2 (n x n) block matrix Z:
@@ -58,8 +58,8 @@ cmdscale <- function (d, k = 2, eig = FALSE, add = FALSE, x.ret = FALSE)
 	x <- matrix(double(n*n), n, n)  # pqR guarantees x unshared
         non.diag <- row(d) != col(d)
         x[non.diag] <- (d[non.diag] + add.c)^2
-        # ASSUMES x NOT SHARED!
-        x <- .C(C_dblcen, x = x, n, DUP=FALSE)$x
+        # duplication of x below will probably be avoided
+        x <- .C(C_dblcen, x = get_rm(x), n)$x
     }
     e <- eigen(-x/2, symmetric = TRUE)
     ev <- e$values[seq_len(k)]
