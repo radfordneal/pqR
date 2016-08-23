@@ -1,0 +1,11 @@
+Updates to use versions of recommended packages used in 2.15.1:
+
+Changes are to use the following:
+
+   MASS_7.3-18, mgcv_1.7-18, nlme_3.1.104, rpart_3.1-53, survival_2.36-14
+
+mgcv is again tweaked to not force byte compilation
+
+Did not update to new versions of Matrix and foreign, which were
+modified for pqR to fix bugs, and had no substantive updates in the
+versions for 2.15.1.
