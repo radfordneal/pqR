@@ -6,6 +6,183 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2016-??-?? (not all actually done yet)}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item With this release, pqR, which was based on R-2.15.0, now incorporates
+        the new features and bug fixes from R-2.15.1.  The pqR version number 
+        has been advanced to 2.15.1 to reflect this.  (This version number is
+        checked when trying to install packages.)
+
+        Note that there could still be incompatibilities with packages
+        that work with R-2.15.1, either because of bugs in pqR, or because
+        a package may rely on a bug that is fixed in pqR, or because
+        pqR implements some changes from R Core versions after R-2.15.1 that
+        are not compatibile with R-2.15.1, or because some new
+        pqR features are not totally compatible with R-2.15.1.
+
+        Since many features from later R Core versions are also implemented
+        in pqR, some packages that state a dependence on a later version
+        of R might nevertheless work with pqR, if the dependence declaration in
+        the DESCRIPTION file is changed.
+  \item The pqR package repository (see information at pqR-project.org) has
+        now been updated to include some packages (or new versions of packages)
+        that depend on R-2.15.1, which were previously not included.
+  \item There are also some new pqR features in this release, including
+        \code{across} and \code{down} options for \code{for} statements, and a
+        less error-prone scheme for protecting objects from garbage 
+        collection in C code.
+  }}
+
+  \subsection{NEW FEATURES}{
+  \itemize{
+  \item The \code{for} statement now has \code{down} and \code{across}
+        forms, which conveniently iterate over the rows 
+        (\code{down}) or columns (\code{across}) of a matrix.  See
+        \code{help("for")} for details.
+  \item C functions called from R (by \code{.Call} or \code{.External}) 
+        can now protect objects from garbage collection using a new, 
+        less error-prone, method, rather than the old (and still present)
+        \code{PROTECT} and \code{UNPROTECT} calls.  See the section titled
+        ``Handling the effects of garbage collection'' (5.9.1) in the ``Writing 
+        R Exensions'' manual for details on the new facility, as well as
+        improved documentation on the old facilities.
+  \item The default for the \code{last} argument of \code{substring} is
+        now \code{.Machine$integer.max}.  The previous default was 1000000
+        (and still is in R-3.3.1), which made absolutely no sense, and
+        is likely responsible for bugs in user code that assumes that,
+        for example, \code{substring(s,2)} will always return a string like
+        \code{s} but without the first character, regardless of how many
+        characters are in \code{s}.  This assumption will now actually be true.
+  }}
+
+  \subsection{NEW FEATURES FROM R CORE VERSIONS}{
+  \itemize{
+  \item From R-2.15.1: source() now uses withVisible() rather than
+        .Internal(eval.with.vis).  This sometimes alters tracebacks
+        slightly.
+  \item From R-2.15.1: splineDesign() and spline.des() in package
+        splines have a new option sparse which can be used for efficient
+        construction of a sparse B-spline design matrix (_via_ Matrix).
+  \item From R-2.15.1: norm() now allows type = "2" (the spectral or 2-norm)
+        as well, mainly for didactical completeness.
+  \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
+        noted in NEWS then): 
+        colorRamp() (and hence colorRampPalette()) now also works for the
+        boundary case of just one color when the ramp is flat.
+  \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
+        noted in NEWS then): 
+        For tiff(type = "windows"), the numbering of per-page files
+        except the last was off by one.
+  \item From R-2.15.1 (actually implemented in pqR-2014-09-30, but not
+        noted in NEWS then):
+        For R CMD check, a few people have reported problems with
+        junctions on Windows (although they were tested on Windows 7, XP
+        and Server 2008 machines and it is unknown under what
+        circumstances the problems occur).  Setting the environment
+        variable R_WIN_NO_JUNCTIONS to a non-empty value (e.g. in
+        ~/.R/check.Renviron) will force copies to be used instead.
+  \item From R-2.15.1 and later R Core versions:
+        More cases in which merge() could create a data frame with
+        duplicate column names now give warnings.  Cases where names
+        specified in by match multiple columns are errors.  [ Plus
+        other tweaks from later versions. ]
+
+  \item From R-2.15.1: Added Polish translations by Łukasz Daniel.
+  }}
+
+  \subsection{PERFORMANCE IMPROVEMENTS FROM R CORE VERSIONS}{
+  \itemize{
+  \item From R-2.15.1:
+        In package parallel, makeForkCluster() and the multicore-based
+        functions use native byte-order for serialization.
+  \item From R-2.15.1:
+        lm.fit(), lm.wfit(), glm.fit() and lsfit() do less copying of
+        objects, mainly by using .Call() rather than .Fortran().
+  \item From R-2.15.1:
+        tabulate() makes use of .C(DUP = FALSE) and hence does not copy
+        bin.  (Suggested by Tim Hesterberg.)  It also avoids making a
+        copy of a factor argument bin.
+  }}
+
+  \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE VERSIONS}{
+    \itemize{
+    \item From R-2.15.1:
+          Nonsense uses such as seq(1:50, by = 5) (from package plotrix)
+          and seq.int(1:50, by = 5) are now errors.
+    \item From R-2.15.1:
+          The residuals in the 5-number summary printed by summary() on an
+          "lm" object are now explicitly labelled as weighted residuals
+          when non-constant weights are present.  (Wish of PR#14840.)
+    \item From R-2.15.1:
+          The plot() method for class "stepfun" only used the optional xval
+          argument to compute xlim and not the points at which to plot (as
+          documented).  (PR#14864)
+    \item From R-2.15.1:
+          hclust() is now fast again (as up to end of 2003), with a
+          different fix for the "median"/"centroid" problem.  (PR#4195).
+    \item From R-2.15.1:
+          In package parallel, clusterApply() and similar failed to handle
+          a (pretty pointless) length-1 argument. (PR#14898)
+    \item From R-2.15.1:
+          For tiff(type = "windows"), the numbering of per-page files
+          except the last was off by one.
+    \item From R-2.15.1:
+          In package parallel, clusterApply() and similar failed to handle
+          a (pretty pointless) length-1 argument. (PR#14898)
+    \item From R-2.15.1:
+          The plot() and Axis() methods for class "table" now respect
+          graphical parameters such as cex.axis.  (Reported by Martin
+          Becker.)
+    \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
+          from NEWS):  
+          Under some circumstances package.skeleton() would give out
+          progress reports that could not be translated and so were
+          displayed by question marks.  Now they are always in English.
+          (This was seen for CJK locales on Windows, but may have occurred
+          elsewhere.)
+    \item From R-2.15.1:
+          The replacement method for window() now works correctly for
+          multiple time series of class "mts".  (PR#14925)
+    \item From R-2.15.1: is.unsorted() gave incorrect results on non-atomic 
+          objects such as data frames.  (Reported by Matthew Dowle.)
+    \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
+          from NEWS):
+          Using a string as a ?call? in an error condition with
+          options(showErrorCalls=TRUE) could cause a segfault.  (PR#14931)
+    \item From R-2.15.1:
+          In legend(), setting some entries of lwd to NA was inconsistent
+          (depending on the graphics device) in whether it would suppress
+          those lines; now it consistently does so.  (PR#14926)
+    \item From R-2.15.1:
+          C entry points mkChar and mkCharCE now check that the length of
+          the string they are passed does not exceed 2^31-1 bytes: they
+          used to overflow with unpredictable consequences.
+    \item From R-2.15.1:
+          by() failed for a zero-row data frame.  (Reported by Weiqiang
+          Qian).
+
+          [ Note: When \code{simplify=TRUE} (the default), the results 
+            with zero-row data frames, and more generally when there are
+            empty subsets, are not particularly sensible, but this has
+            not been changed in pqR due to compatibility concerns. ]
+    \item From R-2.15.1:
+          Yates correction in chisq.test() could be bigger than the terms
+          it corrected, previously leading to an infinite test statistic in
+          some corner cases which are now reported as NaN.
+    \item From R-2.15.1 (actually fixed in pqR-2014-09-30 but omitted
+          from NEWS):
+          xgettext() and related functions sometimes returned items that
+          were not strings for translation. (PR#14935)
+    \item From R-2.15.1:
+          plot(<lm>, which=5) now correctly labels the factor level
+          combinations for the special case where all h[i,i] are the same.
+          (PR#14837)
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2016-06-24}{
 
   \subsection{INTRODUCTION}{
