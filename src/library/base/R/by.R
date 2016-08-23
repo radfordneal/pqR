@@ -31,7 +31,7 @@ by.default <- function(data, INDICES, FUN, ..., simplify = TRUE)
         } else IND <- INDICES
         FUNx <- function(x) FUN(dd[x,], ...)
         nd <- nrow(dd)
-        ans <- eval(substitute(tapply(1L:nd, IND, FUNx, simplify = simplify)),
+        ans <- eval(substitute(tapply(1..nd, IND, FUNx, simplify = simplify)),
                     dd)
         attr(ans, "call") <- match.call()
         class(ans) <- "by"
@@ -48,7 +48,7 @@ by.data.frame <- function(data, INDICES, FUN, ..., simplify = TRUE)
     } else IND <- INDICES
     FUNx <- function(x) FUN(data[x,, drop=FALSE], ...) # (PR#10506)
     nd <- nrow(data)
-    ans <- eval(substitute(tapply(1L:nd, IND, FUNx, simplify = simplify)), data)
+    ans <- eval(substitute(tapply(1..nd, IND, FUNx, simplify = simplify)), data)
     attr(ans, "call") <- match.call()
     class(ans) <- "by"
     ans
