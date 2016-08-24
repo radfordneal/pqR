@@ -2296,7 +2296,7 @@ static void InitBConOutPStream(R_outpstream_t stream, bconbuf_t bb,
 /* only for use by serialize(), with binary write to a socket connection */
 SEXP attribute_hidden
 R_serializeb (SEXP object, SEXP icon, SEXP xdr, SEXP Sversion, SEXP fun,
-              SEXP nosharing)
+              SEXP nosharing_SEXP)
 {
     struct R_outpstream_st out;
     SEXP (*hook)(SEXP, SEXP);
@@ -2311,6 +2311,8 @@ R_serializeb (SEXP object, SEXP icon, SEXP xdr, SEXP Sversion, SEXP fun,
 	error(_("bad version value"));
 
     hook = fun != R_NilValue ? CallHook : NULL;
+
+    int nosharing = asLogical(nosharing_SEXP);
 
     InitBConOutPStream(&out, &bbs, con,
 		       asLogical(xdr) ? R_pstream_xdr_format : R_pstream_binary_format,
