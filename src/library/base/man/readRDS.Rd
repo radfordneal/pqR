@@ -12,7 +12,7 @@
 }
 \usage{
 saveRDS(object, file = "", ascii = FALSE, version = NULL,
-        compress = TRUE, refhook = NULL)
+        compress = TRUE, refhook = NULL, nosharing = FALSE)
 
 readRDS(file, refhook = NULL)
 }
@@ -31,6 +31,9 @@ readRDS(file, refhook = NULL)
     \code{"bzip2"} or \code{"xz"} to indicate the type of compression to
     be used.  Ignored if \code{file} is a connection.}
   \item{refhook}{a hook function for handling reference objects.}
+  \item{nosharing}{if \code{TRUE}, parts of non-reference objects that are
+    shared constants, or otherwise shared, will be serialized as if
+    they were unshared.}
 }
 \details{
   These functions provide the means to save a single \R object to a

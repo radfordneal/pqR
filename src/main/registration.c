@@ -222,8 +222,8 @@ static R_CallMethodDef callMethods [] = {
     /* compression and serialization routines */
     CALLDEF(R_compress1, 1),
     CALLDEF(R_decompress1, 1),
-    CALLDEF(R_serializeb, 5),
-    CALLDEF(R_serialize, 5),
+    CALLDEF(R_serializeb, 6),
+    CALLDEF(R_serialize, 6),
     CALLDEF(R_unserialize, 2),
     CALLDEF(R_setFileTime, 2),
 
