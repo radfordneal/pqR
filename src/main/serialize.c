@@ -2111,7 +2111,7 @@ SEXP attribute_hidden do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env
     /* serializeToConn(object, conn, ascii, version, hook) */
 
     SEXP object, fun;
-    Rboolean ascii, wasopen;
+    int ascii, wasopen, nosharing;
     int version;
     Rconnection con;
     struct R_outpstream_st out;
@@ -2126,7 +2126,7 @@ SEXP attribute_hidden do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env
 
     if (TYPEOF(CADDR(args)) != LGLSXP)
 	error(_("'ascii' must be logical"));
-    ascii = INTEGER(CADDR(args))[0];
+    ascii = LOGICAL(CADDR(args))[0];
     if (ascii) type = R_pstream_ascii_format;
     else type = R_pstream_xdr_format;
 
@@ -2141,6 +2141,10 @@ SEXP attribute_hidden do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env
 
     fun = CAR(nthcdr(args,4));
     hook = fun != R_NilValue ? CallHook : NULL;
+
+    if (TYPEOF(CAR(nthcdr(args,5))) != LGLSXP)
+	error(_("'nosharing' must be logical"));
+    nosharing = LOGICAL(CAR(nthcdr(args,5)))[0];
 
     /* Now we need to do some sanity checking of the arguments.
        A filename will already have been opened, so anything
@@ -2275,7 +2279,8 @@ static void InitBConOutPStream(R_outpstream_t stream, bconbuf_t bb,
 
 /* only for use by serialize(), with binary write to a socket connection */
 SEXP attribute_hidden
-R_serializeb(SEXP object, SEXP icon, SEXP xdr, SEXP Sversion, SEXP fun)
+R_serializeb (SEXP object, SEXP icon, SEXP xdr, SEXP Sversion, SEXP fun,
+              SEXP nosharing)
 {
     struct R_outpstream_st out;
     SEXP (*hook)(SEXP, SEXP);
@@ -2417,7 +2422,8 @@ static SEXP CloseMemOutPStream(R_outpstream_t stream)
 }
 
 SEXP attribute_hidden
-R_serialize(SEXP object, SEXP icon, SEXP ascii, SEXP Sversion, SEXP fun)
+R_serialize (SEXP object, SEXP icon, SEXP ascii, SEXP Sversion, SEXP fun,
+             SEXP nosharing)
 {
     struct R_outpstream_st out;
     R_pstream_format_t type;
@@ -2727,7 +2733,7 @@ R_lazyLoadDBinsertValue(SEXP value, SEXP file, SEXP ascii,
     int compress = asInteger(compsxp);
     SEXP key;
 
-    value = R_serialize(value, R_NilValue, ascii, R_NilValue, hook);
+    value = R_serialize(value, R_NilValue, ascii, R_NilValue, hook, FALSE);
     PROTECT_WITH_INDEX(value, &vpi);
     if (compress == 3)
 	REPROTECT(value = R_compress3(value), vpi);
@@ -2781,7 +2787,7 @@ attribute_hidden FUNTAB R_FunTab_serialize[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"serializeToConn",	do_serializeToConn,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"serializeToConn",	do_serializeToConn,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"unserializeFromConn",	do_unserializeFromConn,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"lazyLoadDBfetch",do_lazyLoadDBfetch,0,1,	4,	{PP_FUNCALL, PREC_FN,	0}},
