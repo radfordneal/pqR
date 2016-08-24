@@ -16,7 +16,7 @@
 
 saveRDS <-
     function(object, file = "", ascii = FALSE, version = NULL,
-             compress = TRUE, refhook = NULL)
+             compress = TRUE, refhook = NULL, nosharing = FALSE)
 {
     if(is.character(file)) {
         if(file == "") stop("'file' must be non-empty string")
@@ -33,7 +33,8 @@ saveRDS <-
     }
     else
         stop("bad 'file' argument")
-    invisible(.Internal(serializeToConn(object, con, ascii, version, refhook)))
+    invisible (.Internal (serializeToConn (object, con, ascii, version, refhook,
+                                           nosharing)))
 }
 
 readRDS <- function(file, refhook = NULL)
@@ -49,7 +50,7 @@ readRDS <- function(file, refhook = NULL)
 
 serialize <-
     function(object, connection, ascii = FALSE, xdr = TRUE,
-             version = NULL, refhook = NULL)
+             version = NULL, refhook = NULL, nosharing = FALSE)
 {
     if (!is.null(connection)) {
         if (!inherits(connection, "connection"))
@@ -57,11 +58,13 @@ serialize <-
         if (missing(ascii)) ascii <- summary(connection)$text == "text"
     }
     if (!ascii && inherits(connection, "sockconn"))
-        .Call("R_serializeb", object, connection, xdr, version, refhook,
+        .Call("R_serializeb", 
+              object, connection, xdr, version, refhook, nosharing,
               PACKAGE="base")
     else {
         if (!isTRUE(ascii) && !xdr) ascii <- NA
-        .Call("R_serialize", object, connection, ascii, version, refhook,
+        .Call("R_serialize",
+              object, connection, ascii, version, refhook, nosharing,
               PACKAGE="base")
     }
 }
