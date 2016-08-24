@@ -1,4 +1,5 @@
-Make "digest" a recommended package, and modify serialize as needed
-to make it work with pqR, adding the nosharing argument.  (Also added
-to saveRDS.)
+Make "digest" a recommended package, and modify it and 'serialize' as
+needed to make it work with pqR, adding the nosharing argument (also
+added to saveRDS).
+
 
