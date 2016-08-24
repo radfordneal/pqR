@@ -12,7 +12,7 @@
 }
 \usage{
 serialize(object, connection, ascii, xdr = TRUE,
-          version = NULL, refhook = NULL)
+          version = NULL, refhook = NULL, nosharing = FALSE)
 
 unserialize(connection, refhook = NULL)
 }
@@ -31,6 +31,9 @@ unserialize(connection, refhook = NULL)
     specifies the current default version (2).  Versions prior to 2 are not
     supported, so this will only be relevant when there are later versions.}
   \item{refhook}{a hook function for handling reference objects.}
+  \item{nosharing}{if \code{TRUE}, parts of non-reference objects that are
+    shared constants, or otherwise shared, will be serialized as if
+    they were unshared.}
 }
 \details{
   The function \code{serialize} serializes \code{object} to the specified
@@ -39,7 +42,10 @@ unserialize(connection, refhook = NULL)
   \code{serialize}.
   
   Sharing of reference objects is preserved within the object but not
-  across separate calls to \code{serialize}.
+  across separate calls to \code{serialize}.  Other parts of objects
+  that may be implemented with sharing may be serialized as being
+  shared, unless the \code{nosharing} argument is \code{TRUE} (see
+  examples below). 
 
   \code{unserialize} reads an object (as written by \code{serialize})
   from \code{connection} or a raw vector.
@@ -98,6 +104,12 @@ unserialize(connection, refhook = NULL)
 \examples{
 x <- serialize(list(1,2,3), NULL)
 unserialize(x)
+
+identical(1L+2L,3L)               # 3L is a shared constant in pqR
+identical(serialize(1L+2L,NULL),  # These serializations are not identical
+          serialize(3L,NULL))
+identical(serialize(1L+2L,NULL,nosharing=TRUE),   # ... but they are if
+          serialize(3L,NULL,nosharing=TRUE))      #     nosharing=TRUE
 
 ## see also the examples for saveRDS
 }
