@@ -7,7 +7,7 @@ R_PKGS_BASE1 = utils grDevices graphics stats datasets methods grid splines stat
 ## Those with standard R directories (not datasets, methods)
 R_PKGS_BASE2 = base tools utils grDevices graphics stats grid splines stats4 tcltk compiler parallel
 
-R_PKGS_RECOMMENDED =  MASS lattice Matrix nlme survival boot cluster codetools foreign KernSmooth rpart class nnet spatial mgcv
+R_PKGS_RECOMMENDED =  MASS lattice Matrix nlme survival boot cluster codetools foreign KernSmooth rpart class nnet spatial mgcv digest
 # there are dependencies in src/library/Recommended/Makefile*
 # which this order respects
 
