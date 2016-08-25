@@ -2838,6 +2838,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     RCNTXT cntxt;
 
     checkArity(op, args);
+
     expr = CAR(args);
     env = CADR(args);
     encl = CADDR(args);
@@ -5235,7 +5236,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	const void *vmax = VMAXGET();
 	if (TYPEOF(fun) != BUILTINSXP)
-	  error(_("not a BUILTIN function"));
+          error(_("there is no .Internal function '%s'"),
+                CHAR(PRINTNAME(symbol)));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
         value = CALL_PRIMFUN(call, fun, args, rho, 0);
