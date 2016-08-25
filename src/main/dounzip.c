@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  file dounzip.c
- *  first part Copyright (C) 2002-11  The R Development Core Team
+ *  first part Copyright (C) 2002-11  The R Core Team
  *  second part Copyright (C) 1998-2010 Gilles Vollant
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are

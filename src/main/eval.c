@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2011	The R Development Core Team.
+ *  Copyright (C) 1998--2011	The R Core Team.
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
  *  documented in the NEWS and MODS files in the top-level source directory.
@@ -2847,6 +2847,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     RCNTXT cntxt;
 
     checkArity(op, args);
+
     expr = CAR(args);
     env = CADR(args);
     encl = CADDR(args);
@@ -5243,7 +5244,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	const void *vmax = VMAXGET();
 	if (TYPEOF(fun) != BUILTINSXP)
-	  error(_("not a BUILTIN function"));
+          error(_("there is no .Internal function '%s'"),
+                CHAR(PRINTNAME(symbol)));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
         value = CALL_PRIMFUN(call, fun, args, rho, 0);

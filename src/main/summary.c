@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997-2011   The R Development Core Team
+ *  Copyright (C) 1997-2011   The R Core Team
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
  *  documented in the NEWS and MODS files in the top-level source directory.
@@ -1110,12 +1110,11 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	if(type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
 	n = length(x);
-        if ((len > 0) ^ (n > 0)) {
-           /* In 2.15.0:  error(_("cannot mix 0-length vectors with others"));
-              Change to instead return 0-length vector taken from 2.15.1. */
-           len = 0;
-           break;
-        }
+	if ((len > 0) ^ (n > 0)) {
+	    // till 2.15.0:  error(_("cannot mix 0-length vectors with others"));
+	    len = 0;
+	    break;
+	}
 	len = imax2(len, n);
     }
     if(anstype < INTSXP) anstype = INTSXP;

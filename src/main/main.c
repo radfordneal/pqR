@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2011   The R Development Core Team
+ *  Copyright (C) 1998-2011   The R Core Team
  *  Copyright (C) 2002-2005  The R Foundation
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
@@ -768,7 +768,7 @@ void setup_Rmainloop(void)
 #ifdef ENABLE_NLS
     char localedir[PATH_MAX+20];
 #endif
-    char deferred_warnings[8][250]; /* INCREASE AS NECESSARY! */
+    char deferred_warnings[11][250]; /* INCREASE AS NECESSARY! */
     volatile int ndeferred_warnings = 0;
 
     InitConnections(); /* needed to get any output at all */

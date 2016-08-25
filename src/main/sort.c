@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2009   The R Development Core Team
+ *  Copyright (C) 1998-2009   The R Core Team
  *  Copyright (C) 2004        The R Foundation
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
@@ -921,11 +921,9 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (args == R_NilValue)
 	return R_NilValue;
     x = CAR(args);
-//    if (!isVectorAtomic(x))
-//	error(_("argument is not an atomic vector"));
     if(TYPEOF(x) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
-    n = length(x);
+    n = length(x); // FIXME: mignt need to dispatch to length() method
     ties_str = CHAR(asChar(CADR(args)));
     if(!strcmp(ties_str, "average"))	ties_kind = AVERAGE;
     else if(!strcmp(ties_str, "max"))	ties_kind = MAX;
