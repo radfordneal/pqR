@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2011  The R Development Core Team
+ *  Copyright (C) 1997--2011  The R Core Team
  *  Copyright (C) 2002--2011  The R Foundation
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
@@ -3308,7 +3308,7 @@ void GMtext(const char *str, cetype_t enc, int side, double line, int outer,
 
  *  This source code module:
  *  Copyright (C) 1997, 1998 Paul Murrell and Ross Ihaka
- *  Copyright (C) 1998-2008  The R Development Core Team
+ *  Copyright (C) 1998-2008  The R Core Team
 
  */
 

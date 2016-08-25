@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2012  The R Development Core Team
+ *  Copyright (C) 1997--2012  The R Core Team
  *  Copyright (C) 2003, 2004  The R Foundation
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are

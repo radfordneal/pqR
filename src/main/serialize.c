@@ -3,7 +3,7 @@
  *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2012  The R Development Core Team
+ *  Copyright (C) 1995--2012  The R Core Team
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
  *  documented in the NEWS and MODS files in the top-level source directory.
