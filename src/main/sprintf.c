@@ -3,7 +3,7 @@
  *  Copyright (C) 2013 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2002--2009     The R Development Core Team
+ *  Copyright (C) 2002--2009     The R Core Team
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
  *  documented in the NEWS and MODS files in the top-level source directory.
@@ -259,7 +259,7 @@ static SEXP do_sprintf(SEXP call, SEXP op, SEXP args, SEXP env)
 			    *q = '\0';
 			    nf = strlen(fmt2);
 			    if (nf > MAXLINE)
-				error(_("the '%*' constructed 'fmt2' length exceeds maximum of %d"),
+				error(_("'fmt' length exceeds maximal format length %d"),
 				      MAXLINE);
 			    fmtp = fmt2;
 			} else fmtp = fmt;
