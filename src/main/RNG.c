@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2011  The R Development Core Team
+ *  Copyright (C) 1997--2011  The R Core Team
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
  *  documented in the NEWS and MODS files in the top-level source directory.
@@ -367,6 +367,14 @@ static void RNG_Init (RNGtype newkind, Int32 seed)
     }
 }
 
+static SEXP GetSeedsFromVar(void)
+{
+    SEXP seeds = findVarInFrame(R_GlobalEnv, R_SeedsSymbol);
+    if (TYPEOF(seeds) == PROMSXP)
+	seeds = eval(R_SeedsSymbol, R_GlobalEnv);
+    return seeds;
+}
+
 unsigned int TimeToSeed(void); /* datetime.c */
 
 static void Randomize(RNGtype newkind)
@@ -384,7 +392,7 @@ static void GetRNGkind(SEXP seeds)
     int tmp;
 
     if (isNull(seeds))
-	seeds = findVarInFrame(R_GlobalEnv, R_SeedsSymbol);
+	seeds = GetSeedsFromVar();
     if (seeds == R_UnboundValue) return;
     if (!isInteger(seeds)) {
 	if (seeds == R_MissingArg) /* How can this happen? */
@@ -433,7 +441,7 @@ void GetRNGstate()
     SEXP seeds;
 
     /* look only in the workspace */
-    seeds = findVarInFrame(R_GlobalEnv, R_SeedsSymbol);
+    seeds = GetSeedsFromVar();
 
     if (seeds == R_UnboundValue)
 	Randomize(RNG_kind);

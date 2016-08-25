@@ -4,7 +4,7 @@
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2012  The R Development Core Team
+ *  Copyright (C) 1997--2012  The R Core Team
  *  Copyright (C) 2003, 2004  The R Foundation
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
@@ -783,10 +783,10 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 	errorcall(call, _("invalid .Internal() argument"));
     fun = CAR(s);
     if (!isSymbol(fun))
-	errorcall(call, _("invalid internal function"));
+	errorcall(call, _("invalid .Internal() argument"));
     ifun = INTERNAL(fun);
     if (ifun == R_NilValue)
-	errorcall(call, _("no internal function \"%s\""),
+	errorcall(call, _("there is no internal function '%s'"),
 		  CHAR(PRINTNAME(fun)));
 
     args = CDR(s);
