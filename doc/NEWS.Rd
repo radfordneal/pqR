@@ -11,7 +11,8 @@
   \subsection{INTRODUCTION}{
   \itemize{ 
   \item With this release, pqR, which was based on R-2.15.0, now incorporates
-        the new features and bug fixes from R-2.15.1.  The pqR version number 
+        the new features, bug fixes, and some relevant performance improvements
+        from R-2.15.1.  The pqR version number 
         has been advanced to 2.15.1 to reflect this.  (This version number is
         checked when trying to install packages.)
 
@@ -26,6 +27,11 @@
         in pqR, some packages that state a dependence on a later version
         of R might nevertheless work with pqR, if the dependence declaration in
         the DESCRIPTION file is changed.
+  \item The 'digest' package (by Dirk Eddelbuettel and others) is now
+        included in the release as a recommended package (which will
+        therefore be available without having to install it).  The version 
+        used is based on digest_0.6.10, with a slight modification to
+        correctly handle pqR's constant objects (hence called digest_0.6.10.1).
   \item The pqR package repository (see information at pqR-project.org) has
         now been updated to include some packages (or new versions of packages)
         that depend on R-2.15.1, which were previously not included.
@@ -48,6 +54,13 @@
         ``Handling the effects of garbage collection'' (5.9.1) in the ``Writing 
         R Exensions'' manual for details on the new facility, as well as
         improved documentation on the old facilities.
+  \item The \code{serialize} and \code{saveRDS} functions now take a 
+        \code{nosharing} argument, which defaults to \code{FALSE}.  When
+        \code{nosharing} is \code{TRUE}, constant objects (and perhaps in 
+        future other shared objects) are serialized as if they were not
+        shared.  This is used in the modified 'digest' package included
+        with the release to ensure that objects that are the same according
+        to \code{identical} will have identical serializations.
   \item The default for the \code{last} argument of \code{substring} is
         now \code{.Machine$integer.max}.  The previous default was 1000000
         (and still is in R-3.3.1), which made absolutely no sense, and
