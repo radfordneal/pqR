@@ -5123,7 +5123,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = INTERNAL(symbol);
 	if (TYPEOF(value) != BUILTINSXP)
-            error(_("no internal function \"%s\""), CHAR(PRINTNAME(symbol)));
+	  error(_("there is no .Internal function '%s'"), 
+		CHAR(PRINTNAME(symbol)));
 
 	/* push the function and push space for creating the argument list. */
 	ftype = TYPEOF(value);
@@ -5244,8 +5245,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	const void *vmax = VMAXGET();
 	if (TYPEOF(fun) != BUILTINSXP)
-          error(_("there is no .Internal function '%s'"),
-                CHAR(PRINTNAME(symbol)));
+          error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
         value = CALL_PRIMFUN(call, fun, args, rho, 0);
