@@ -117,6 +117,10 @@
         tabulate() makes use of .C(DUP = FALSE) and hence does not copy
         bin.  (Suggested by Tim Hesterberg.)  It also avoids making a
         copy of a factor argument bin.
+  \item From R-2.15.1:
+        Other functions (often or always) doing less copying include
+        cut(), dist(), the complex case of eigen(), hclust(), image(),
+        kmeans(), loess(), stl() and svd(LINPACK = TRUE).
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE VERSIONS}{
