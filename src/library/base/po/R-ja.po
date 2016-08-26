@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.4.0 \n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2012-02-26 14:09+0200 \n"
 "Last-Translator: Shigeru Mase <maseshigeru@gmail.com> \n"
 "Language-Team: RjpWiki Message Translation Team <mokada@md.tsukuba.ac.jp> \n"
@@ -87,6 +87,10 @@ msgstr " 'x' は名前付きの次元名でなければなりません "
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr " `MARGIN` に次元名でない要素があります "
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr " 誤った 'file' 引数です "
 
 msgid "'dim' specifies too large an array"
 msgstr " 'dim' は余りに大きな配列を指定しています "
@@ -570,7 +574,8 @@ msgstr " 行列式は現在複素行列には定義されていません "
 msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr " 'x'が行列の時は'nrow'と'ncol'は指定できません "
 
-msgid "'x' is an array, but not 1D."
+#, fuzzy
+msgid "'x' is an array, but not one-dimensional."
 msgstr " 'x'は行列ですが、一次元ではありません "
 
 msgid "only matrix diagonals can be replaced"
@@ -781,6 +786,10 @@ msgstr " マッチに対する置換が必要です "
 
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr " norm '%s'は現在は常に exact = FALSE を使います "
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr " 不当な名前です "
 
 msgid "triangular matrix should be square"
 msgstr " 三角行列は正方行列であるべきです "
@@ -1073,14 +1082,15 @@ msgstr " 'by' は列数にマッチしなければなりません "
 msgid "'by' must match number of columns"
 msgstr " 'by' は列数にマッチしなければなりません "
 
-msgid "'by' must specify column(s) as numbers, names or logical"
+#, fuzzy
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr " 'by' は列を数値、名前ラベルもしくは論理値で特定しなければなりません "
-
-msgid "'by' must specify valid column(s)"
-msgstr " 'by' は有効な列を指定しなければなりません "
 
 msgid "'by.x' and 'by.y' specify different numbers of columns"
 msgstr " 'by.x' そして 'by.y' は異なった列数を指定しています "
+
+msgid "'incomparables' is supported only for merging on a single column"
+msgstr ""
 
 msgid "additional arguments ignored in message()"
 msgstr " message() で追加引数は無視されました "
@@ -1481,11 +1491,9 @@ msgstr " 'chdir = TRUE' はコネクションに対しては意味がありま�
 msgid "'%s' is not an existing file"
 msgstr " '%s' は既存のファイルではありません "
 
-msgid "Timestamp of '"
+#, fuzzy
+msgid "Timestamp of %s has changed"
 msgstr " タイムスタンプ ( ' "
-
-msgid "' has changed"
-msgstr " ' ) が変更されました "
 
 msgid "additional arguments ignored in stop()"
 msgstr " stop() により追加の引数は無視されました "
@@ -1552,6 +1560,14 @@ msgstr " 'x' は配列ではありません "
 
 msgid "'bin' must be numeric or a factor"
 msgstr " 'bin' は数値または因子でなければなりません "
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr " 無効な値です "
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr " 無効な値です "
 
 msgid "arguments must have same length"
 msgstr " 引数は同じ長さでなければなりません "
@@ -1718,6 +1734,11 @@ msgid "object %s not found"
 msgid_plural "objects %s not found"
 msgstr[0] " %s を見付けることができません "
 
+#, fuzzy
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] " 'by' は有効な列を指定しなければなりません "
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1747,6 +1768,36 @@ msgstr[0] ""
 msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] " 警告メッセージ： \n"
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr " 無効な値です "
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr " 無効な値です "
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr " 不当な名前です "
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr " 不当な名前です "
+
+#~ msgid "'by' must specify valid column(s)"
+#~ msgstr " 'by' は有効な列を指定しなければなりません "
+
+#, fuzzy
+#~ msgid "invalid ncol(x)"
+#~ msgstr " 不当な名前です "
+
+#, fuzzy
+#~ msgid "invalid ncol(y)"
+#~ msgstr " 不当な名前です "
+
+#~ msgid "' has changed"
+#~ msgstr " ' ) が変更されました "
 
 #~ msgid ""
 #~ "Functions for exporting methods must have been made generic, explicitly "
@@ -1872,9 +1923,6 @@ msgstr[0] " 警告メッセージ： \n"
 
 #~ msgid "S3 method '%s' was declared in NAMESPACE but not found"
 #~ msgstr " S3 メソッド '%s' が名前空間中で宣言されましたが、見付かりません "
-
-#~ msgid "invalid name"
-#~ msgstr " 不当な名前です "
 
 #~ msgid "is required by"
 #~ msgstr " が以下により要求されました： "

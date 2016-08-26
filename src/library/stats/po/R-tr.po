@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2011-04-02 \n"
 "Last-Translator: Murat Alkan <muratalk@gmail.com>\n"
 "Language-Team: Turkish <muratalk@gmail.com>\n"
@@ -269,16 +269,6 @@ msgstr "sıfır NA-olmayan nokta"
 
 msgid "'approx' requires n >= 1"
 msgstr "'approx' n >= 1 gerektirir"
-
-msgid "'vec' contains NAs"
-msgstr "'vec' NAs içeriyor"
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr "'vec' azalmayan şekilde sıralanmalı"
-
-#, fuzzy
-msgid "invalid length(vec)"
-msgstr "geçersiz argüman 'c'"
 
 msgid "'order.max' must be >= 1"
 msgstr "'order.max' >= 1 olmalı"
@@ -2441,6 +2431,16 @@ msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] ""
 msgstr[1] ""
+
+#~ msgid "'vec' contains NAs"
+#~ msgstr "'vec' NAs içeriyor"
+
+#~ msgid "'vec' must be sorted non-decreasingly"
+#~ msgstr "'vec' azalmayan şekilde sıralanmalı"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "geçersiz argüman 'c'"
 
 #~ msgid "extra arguments"
 #~ msgstr "ekstra argümanlar"

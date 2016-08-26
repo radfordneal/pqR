@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2011-03-26 08:54-0300\n"
 "Last-Translator: Fernando Henrique <pessoal@fernandohrosa.com.br>\n"
 "Language-Team: http://www.feferraz.net/br/P/Projeto_Traducao_R_Portugues\n"
@@ -92,6 +92,10 @@ msgstr "'X' deve ser dimnames nomeados"
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr "nem todos elementos de 'MARGIN'  são nomes de dimensões"
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr "argumento 'file' inválido"
 
 msgid "'dim' specifies too large an array"
 msgstr "'dim' especifica um array muito grande"
@@ -579,7 +583,8 @@ msgstr "determinante atualmente não definido para matrizes complexas"
 msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr "'nrow' ou 'ncol' não pode ser especificado quando 'x' é uma matriz"
 
-msgid "'x' is an array, but not 1D."
+#, fuzzy
+msgid "'x' is an array, but not one-dimensional."
 msgstr "'x' é um array, mas não unidimensional."
 
 msgid "only matrix diagonals can be replaced"
@@ -789,6 +794,9 @@ msgstr ""
 
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr "norma '%s' atualmente sempre usa exact = FALSE"
+
+msgid "invalid nrow(x)"
+msgstr ""
 
 msgid "triangular matrix should be square"
 msgstr "matriz triangular deve ser quadrada"
@@ -1110,14 +1118,15 @@ msgstr "'by' deve ser compatível com o número de colunas"
 msgid "'by' must match number of columns"
 msgstr "'by' deve ser compatível com o número de colunas"
 
-msgid "'by' must specify column(s) as numbers, names or logical"
+#, fuzzy
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr "'by' deve especificar coluna(s) como números, nomes ou lógico"
-
-msgid "'by' must specify valid column(s)"
-msgstr "'by' deve especificar coluna(s) válida(s)"
 
 msgid "'by.x' and 'by.y' specify different numbers of columns"
 msgstr "'by.x' e 'by.y' especificam números de colunas diferentes"
+
+msgid "'incomparables' is supported only for merging on a single column"
+msgstr ""
 
 msgid "additional arguments ignored in message()"
 msgstr "argumentos adicionais ignorados em message()"
@@ -1520,11 +1529,9 @@ msgstr "'chdir = TRUE' não faz sentido para uma conexão"
 msgid "'%s' is not an existing file"
 msgstr "'%s' não é um arquivo existente"
 
-msgid "Timestamp of '"
+#, fuzzy
+msgid "Timestamp of %s has changed"
 msgstr "Carimbo de hora '"
-
-msgid "' has changed"
-msgstr "' mudou"
 
 msgid "additional arguments ignored in stop()"
 msgstr "argumentos adicionais ignorados em stop()"
@@ -1591,6 +1598,14 @@ msgstr "'x' não é um array"
 
 msgid "'bin' must be numeric or a factor"
 msgstr "'bin' deve ser numérico ou um fator"
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr "valor inválido"
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr "valor inválido"
 
 msgid "arguments must have same length"
 msgstr "argumentos devem ter o mesmo comprimento"
@@ -1765,6 +1780,12 @@ msgid_plural "objects %s not found"
 msgstr[0] "objeto %s não encontrado"
 msgstr[1] "objetos %s não encontrado"
 
+#, fuzzy
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] "'by' deve especificar coluna(s) válida(s)"
+msgstr[1] "'by' deve especificar coluna(s) válida(s)"
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1798,6 +1819,36 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] "Mensagem de aviso:\n"
 msgstr[1] "Mensagens de aviso:\n"
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr "valor inválido"
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr "valor inválido"
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr "valor inválido"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "valor inválido"
+
+#~ msgid "'by' must specify valid column(s)"
+#~ msgstr "'by' deve especificar coluna(s) válida(s)"
+
+#, fuzzy
+#~ msgid "invalid ncol(x)"
+#~ msgstr "valor inválido"
+
+#, fuzzy
+#~ msgid "invalid ncol(y)"
+#~ msgstr "valor inválido"
+
+#~ msgid "' has changed"
+#~ msgstr "' mudou"
 
 #~ msgid "'symbol.C' is not needed: please remove it"
 #~ msgstr "'symbol.C' não é necesário: por favor remova"

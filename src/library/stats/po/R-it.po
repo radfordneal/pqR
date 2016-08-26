@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2005-04-14 18:07+0200\n"
 "Last-Translator: stefano iacus <>\n"
 "Language-Team: Italian <it@li.org>\n"
@@ -287,16 +287,6 @@ msgstr "zero non-NA punti"
 
 msgid "'approx' requires n >= 1"
 msgstr "'approx' richiede n >= 1"
-
-msgid "'vec' contains NAs"
-msgstr "'vec' contiene NA"
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr "'vec' deve essere ordinata in modo non-decrescente"
-
-#, fuzzy
-msgid "invalid length(vec)"
-msgstr "lunghezza dei membri non valida"
 
 msgid "'order.max' must be >= 1"
 msgstr "'order.max' deve essere >= 1"
@@ -2607,6 +2597,16 @@ msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] ""
 msgstr[1] ""
+
+#~ msgid "'vec' contains NAs"
+#~ msgstr "'vec' contiene NA"
+
+#~ msgid "'vec' must be sorted non-decreasingly"
+#~ msgstr "'vec' deve essere ordinata in modo non-decrescente"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "lunghezza dei membri non valida"
 
 #~ msgid "extra arguments"
 #~ msgstr "argomenti extra"

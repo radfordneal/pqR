@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2011-11-30 14:20+0200\n"
 "Last-Translator: Joe <joedalton2@yahoo.dk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -87,6 +87,10 @@ msgstr "'X' skal have navngivne dimnavne"
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr "ikke alle elementer for 'MARGIN' er navne på dimensioner"
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr "ugyldigt 'file'-argument"
 
 msgid "'dim' specifies too large an array"
 msgstr "'dim' angiver en for stor array"
@@ -561,7 +565,8 @@ msgstr "determinanten er aktuelt ikke defineret for komplekse matricer"
 msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr "'nrow' eller 'ncol' kan ikke angives når 'x' er en matrix"
 
-msgid "'x' is an array, but not 1D."
+#, fuzzy
+msgid "'x' is an array, but not one-dimensional."
 msgstr "'x' er en array, men ikke 1D."
 
 msgid "only matrix diagonals can be replaced"
@@ -762,6 +767,9 @@ msgid "must have replacements for matches"
 msgstr "skal have erstatninger for matchninger"
 
 msgid "norm '%s' currently always uses exact = FALSE"
+msgstr ""
+
+msgid "invalid nrow(x)"
 msgstr ""
 
 msgid "triangular matrix should be square"
@@ -1044,13 +1052,13 @@ msgstr ""
 msgid "'by' must match number of columns"
 msgstr ""
 
-msgid "'by' must specify column(s) as numbers, names or logical"
-msgstr ""
-
-msgid "'by' must specify valid column(s)"
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr ""
 
 msgid "'by.x' and 'by.y' specify different numbers of columns"
+msgstr ""
+
+msgid "'incomparables' is supported only for merging on a single column"
 msgstr ""
 
 msgid "additional arguments ignored in message()"
@@ -1424,10 +1432,7 @@ msgstr ""
 msgid "'%s' is not an existing file"
 msgstr ""
 
-msgid "Timestamp of '"
-msgstr ""
-
-msgid "' has changed"
+msgid "Timestamp of %s has changed"
 msgstr ""
 
 msgid "additional arguments ignored in stop()"
@@ -1495,6 +1500,14 @@ msgstr ""
 
 msgid "'bin' must be numeric or a factor"
 msgstr ""
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr "ugyldigt antal intervaller"
 
 msgid "arguments must have same length"
 msgstr ""
@@ -1666,6 +1679,11 @@ msgid_plural "objects %s not found"
 msgstr[0] "objekt %s blev ikke fundet"
 msgstr[1] "Objekterne %s blev ikke fundet"
 
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] ""
+msgstr[1] ""
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1699,6 +1717,22 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] ""
 msgstr[1] ""
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "ugyldig længde for 'row.names'"
 
 #~ msgid "'symbol.C' is not needed: please remove it"
 #~ msgstr "'symbol.C' er ikke krævet: fjern det venligst"
