@@ -231,7 +231,7 @@ getOption(x, default = NULL)
       \code{\link{file.show}}.
 #ifdef unix
       Defaults to \file{\var{\link{R_HOME}}/bin/pager},
-      which selects a pager via the \env{\link{PAGER}} environment variable
+      which selects a pager via the \env{PAGER} environment variable
       (and that usually defaults to \code{less}).
 #endif
 #ifdef windows
@@ -318,7 +318,7 @@ getOption(x, default = NULL)
       stack?  By default error calls are shown in non-interactive
       sessions.}
 
-    \item{\code{showNCalls}:}{a integer.  Controls how long the sequence
+    \item{\code{showNCalls}:}{integer.  Controls how long the sequence
       of calls must be (in bytes) before ellipses are used.  Defaults to
       40 and should be at least 30 and no more than 500.}
 
