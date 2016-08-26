@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.1.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2011-03-26 08:56-0300\n"
 "Last-Translator: Fernando Henrique <pessoal@fernandohrosa.com.br>\n"
 "Language-Team: http://www.feferraz.net/br/P/Projeto_Traducao_R_Portugues\n"
@@ -6468,7 +6468,7 @@ msgstr "nomes em strings persistentes não são suportados ainda"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "nenhuma função interna \"%s\""
+msgstr "função interna inválida"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8348,15 +8348,6 @@ msgstr "módulo X11 não pode ser carregado"
 msgid "X11 is not available"
 msgstr "X11 não está disponível"
 
-#~ msgid "invalid internal function"
-#~ msgstr "função interna inválida"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "o 'fmt2' construído '%*' excede o comprimento máximo de %d"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "argumento %d está vazio"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr ""
 #~ "nenhum conversor R-para-C encontrado correspondendo ao identificador"
@@ -8394,6 +8385,9 @@ msgstr "X11 não está disponível"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "R não foi compilado com suporte a perfilamento de memória"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "nome da DLL é muito longo"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8403,15 +8397,6 @@ msgstr "X11 não está disponível"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "modo inválido para passar para Fortran (argumento %d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr "listas devem ser duplicadas em .C"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "problema de conversão na recodificação a partir de '%s'"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "nome da DLL é muito longo"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "função inválida em call_R"
@@ -8430,6 +8415,9 @@ msgstr "X11 não está disponível"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "lado esquerdo da atribuição inválida (do_set)"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "argumento %d está vazio"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "'%s' faltante"
@@ -8480,6 +8468,15 @@ msgstr "X11 não está disponível"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "elemento do vetor de caracteres não tem tipo CHARSXP"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "o 'fmt2' construído '%*' excede o comprimento máximo de %d"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr "listas devem ser duplicadas em .C"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "problema de conversão na recodificação a partir de '%s'"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "não é possível misturar vetores de comprimento 0 com outros"

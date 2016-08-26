@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.4.0 \n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:43\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2012-02-26 14:09+0200 \n"
 "Last-Translator: Shigeru Mase <maseshigeru@gmail.com> \n"
 "Language-Team: RjpWiki Message Translation Team <mokada@md.tsukuba.ac.jp> \n"
@@ -1768,6 +1768,33 @@ msgstr[0] ""
 msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] " 警告メッセージ： \n"
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr " 無効な値です "
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr " 無効な値です "
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr " 不当な名前です "
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr " 不当な名前です "
+
+#~ msgid "'by' must specify valid column(s)"
+#~ msgstr " 'by' は有効な列を指定しなければなりません "
+
+#, fuzzy
+#~ msgid "invalid ncol(x)"
+#~ msgstr " 不当な名前です "
+
+#, fuzzy
+#~ msgid "invalid ncol(y)"
+#~ msgstr " 不当な名前です "
 
 #~ msgid "' has changed"
 #~ msgstr " ' ) が変更されました "

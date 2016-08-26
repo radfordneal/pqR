@@ -1,12 +1,12 @@
 # First pass at localization file for R
-# Copyright (C) 2005 The R Development Core Team
+# Copyright (C) 2005 The R Core Team
 # This file is distributed under the same license as the R package.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: R 2.5.0 \n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2012-02-26 14:21+0200 \n"
 "Last-Translator: Shigeru Mase <maseshigeru@gmail.com> \n"
 "Language-Team: R-core <R-core@R-project.org> \n"
@@ -547,7 +547,7 @@ msgstr " 警告: max-mem-size =%4.1fM は小さすぎるので無視されます
 #: src/gnuwin32/system.c:1021
 #, c-format
 msgid "WARNING: --max-mem-size=%4.0fM: too large and taken as %uM\n"
-msgstr " 警告: max-mem-size =%4.1fM は大きすぎるので %uM とされました \n"
+msgstr " 警告: max-mem-size =%4.0fM は大きすぎるので %uM とされました \n"
 
 #: src/gnuwin32/system.c:1064 src/unix/system.c:392
 #, c-format
@@ -6433,7 +6433,7 @@ msgstr " 名前に対する永続的な文字列は，まだサポートされ�
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr " 内部関数 \"%s\" がありません "
+msgstr " 内部関数が不正です "
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8297,15 +8297,6 @@ msgstr " X11 モジュールをロードできません "
 msgid "X11 is not available"
 msgstr " X11 が利用できません "
 
-#~ msgid "invalid internal function"
-#~ msgstr " 内部関数が不正です "
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr " ’%*' によって構築された 'fmt' の長さが最大長 %d を超えました "
-
-#~ msgid "argument %d is empty"
-#~ msgstr " 引数 %d が空です "
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr " 識別子に対応する R-to-C コンバータがありません "
 
@@ -8343,6 +8334,9 @@ msgstr " X11 が利用できません "
 #~ msgstr ""
 #~ " Rがメモリプロファイリングのサポートを有効にしてコンパイルされていません "
 
+#~ msgid "DLL name is too long"
+#~ msgstr " DLL の名前が長すぎます "
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8352,15 +8346,6 @@ msgstr " X11 が利用できません "
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr " Fortran に渡された引数 %d のモードが不正です "
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr " .C 中ではリストは重複していなければなりません "
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr " '%s' からの再エンコーディング中に変換問題が生じました "
-
-#~ msgid "DLL name is too long"
-#~ msgstr " DLL の名前が長すぎます "
 
 #~ msgid "invalid function in call_R"
 #~ msgstr " call_R 中の関数が不正です "
@@ -8379,6 +8364,9 @@ msgstr " X11 が利用できません "
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr " 代入の左辺が不正(do_set)です "
+
+#~ msgid "argument %d is empty"
+#~ msgstr " 引数 %d が空です "
 
 #~ msgid "'%s' is missing"
 #~ msgstr " '%s'が見つかりません "
@@ -8427,6 +8415,15 @@ msgstr " X11 が利用できません "
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr " 文字列ベクトル要素は型 CHARSXP を持ちません "
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr " ’%*' によって構築された 'fmt' の長さが最大長 %d を超えました "
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr " .C 中ではリストは重複していなければなりません "
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr " '%s' からの再エンコーディング中に変換問題が生じました "
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr " 他と0から始まるベクトルを混合できません "

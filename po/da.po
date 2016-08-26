@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2011-11-29 21:34+0200\n"
 "Last-Translator: Joe <joedalton2@yahoo.dk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -7148,9 +7148,8 @@ msgid "warning message truncated to 255 chars"
 msgstr ""
 
 #: src/main/util.c:2173
-#, fuzzy
 msgid "all arguments must be named"
-msgstr "'path' skal være en tegnvektor"
+msgstr ""
 
 #: src/main/util.c:2246
 msgid "ICU is not supported on this build"

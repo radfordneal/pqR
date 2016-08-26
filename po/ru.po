@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.11.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2012-03-15 11:17-0500\n"
 "Last-Translator: Alexey Shipunov <dactylorhiza@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -6415,7 +6415,7 @@ msgstr "имена в постоянных строках пока не подд
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "нет внутренней функции \"%s\""
+msgstr "неправильная внутренняя функция"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8276,15 +8276,6 @@ msgstr "модуль X11 нельзя загрузить"
 msgid "X11 is not available"
 msgstr "X11 недоступен"
 
-#~ msgid "invalid internal function"
-#~ msgstr "неправильная внутренняя функция"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "длина '%*', сделанной 'fmt2', превышает максимум %d"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "аргумент %d пуст"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "не найдено конвертера R-в-C, соответствующего идентификатору"
 
@@ -8320,6 +8311,9 @@ msgstr "X11 недоступен"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "R не был скомпилирован с поддержкой профилирования памяти"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "имя DLL слишком длинное"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8329,15 +8323,6 @@ msgstr "X11 недоступен"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "неправильный режим для передачи в Fortran (аргумент %d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr "списки должны быть дублированы в .C"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "проблема конвертации при перекодировке из '%s'"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "имя DLL слишком длинное"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "неправильная функция в call_R"
@@ -8356,6 +8341,9 @@ msgstr "X11 недоступен"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "неправильная (do_set) левая сторона в присвоении"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "аргумент %d пуст"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "'%s' отсутствует"
@@ -8406,6 +8394,15 @@ msgstr "X11 недоступен"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "элемент текстового вектора не имеет типа 'CHARSXP'"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "длина '%*', сделанной 'fmt2', превышает максимум %d"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr "списки должны быть дублированы в .C"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "проблема конвертации при перекодировке из '%s'"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "не могу смешивать векторы нулевой длины с другими"

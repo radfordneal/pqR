@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2012-03-16 15:59+0100\n"
 "Last-Translator: \n"
 "Language-Team: Spanish <pabloemilio.verde@uni-duesseldorf.de>\n"
@@ -593,7 +593,7 @@ msgstr "subíndice fuera de  los límites"
 #: src/include/Errormsg.h:27 src/main/util.c:427
 #, c-format
 msgid "object of type '%s' is not subsettable"
-msgstr "objeto de tipo '% s' no es subconjunto"
+msgstr "objeto de tipo '%s' no es subconjunto"
 
 #: src/main/CommandLineArgs.c:176
 #, fuzzy
@@ -879,7 +879,7 @@ msgid ""
 " but FUN(X[[%d]]) result is length %d"
 msgstr ""
 "Los valores deben ser de longitud %d, \n"
-"pero el resultado FUN(X [[% d]]) es la longitud %d "
+"pero el resultado FUN(X [[%d]]) es la longitud %d "
 
 #: src/main/apply.c:172
 #, c-format
@@ -1726,7 +1726,7 @@ msgid ""
 "Setting class(x) to multiple strings (\"%s\", \"%s\", ...); result will no "
 "longer be an S4 object"
 msgstr ""
-"Configuración de clase (x) a varias cadenas (\"% s \", \"% s \", ...); "
+"Configuración de clase (x) a varias cadenas (\"%s \", \"%s \", ...); "
 "resultado ya no será un objeto S4"
 
 #: src/main/coerce.c:2705
@@ -1735,7 +1735,7 @@ msgid ""
 "Setting class(x) to \"%s\" sets attribute to NULL; result will no longer be "
 "an S4 object"
 msgstr ""
-"Configuración de clase(x) a \"% s\" establece atribuibles a NULL; resultado "
+"Configuración de clase(x) a \"%s\" establece atribuibles a NULL; resultado "
 "ya no será un objeto S4"
 
 #: src/main/coerce.c:2735
@@ -2073,12 +2073,12 @@ msgstr "falla en la asignación de la conección bzfile"
 #: src/main/connections.c:1571 src/main/connections.c:5657
 #, c-format
 msgid "cannot initialize lzma decoder, error %d"
-msgstr "No se puede inicializar decodificador lzma, error% d"
+msgstr "No se puede inicializar decodificador lzma, error %d"
 
 #: src/main/connections.c:1587
 #, c-format
 msgid "cannot initialize lzma encoder, error %d"
-msgstr "No se puede inicializar el codificador lzma, error% d"
+msgstr "No se puede inicializar el codificador lzma, error %d"
 
 #: src/main/connections.c:1715 src/main/connections.c:1719
 #: src/main/connections.c:1725 src/main/connections.c:1743
@@ -2573,12 +2573,12 @@ msgstr "no se puede asignar memoria para 'read.dcf'"
 #: src/main/dcf.c:133
 #, c-format
 msgid "Found continuation line starting '%s ...' at begin of record."
-msgstr "Se encontró línea de inicio '% s ... \" al comenzo de un registro."
+msgstr "Se encontró línea de inicio '%s ... \" al comenzo de un registro."
 
 #: src/main/dcf.c:265
 #, c-format
 msgid "Line starting '%s ...' is malformed!"
-msgstr "Línea de inicio '% s ...esta mal formateada!"
+msgstr "Línea de inicio '%s ...esta mal formateada!"
 
 #: src/main/debug.c:51
 msgid "argument must be a closure"
@@ -4242,7 +4242,7 @@ msgstr "no se puede ubicar un vector de tamaño  %0.1f Mb"
 #: src/main/memory.c:3247
 #, c-format
 msgid "cannot allocate vector of size %0.f Kb"
-msgstr "no se puede ubicar un vector de tamaño  %0.1f Kb"
+msgstr "no se puede ubicar un vector de tamaño  %0.f Kb"
 
 #: src/main/memory.c:3592
 msgid "protect(): protection stack overflow"
@@ -4284,7 +4284,7 @@ msgstr "codificación '%s' no soportada"
 #: src/main/memory.c:4595
 #, c-format
 msgid "embedded nul in string: '%s'"
-msgstr "nul incrustado en la cadena: '% s' \""
+msgstr "nul incrustado en la cadena: '%s' \""
 
 #: src/main/model.c:147
 msgid "invalid term in model formula"
@@ -6548,7 +6548,7 @@ msgstr "nombres en strings persistentes no disponibles todavía"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "no hay ninguna función interna \"%s\""
+msgstr "la función interna no es válida"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -7971,7 +7971,7 @@ msgstr "Error de protocolo X11: %s"
 #: src/modules/X11/devX11.c:1242
 #, c-format
 msgid "X11 I/O error while opening X11 connection to '%s'"
-msgstr "X11 I/O error al abrir la conexión X11 a \"% s\""
+msgstr "X11 I/O error al abrir la conexión X11 a \"%s\""
 
 #: src/modules/X11/devX11.c:1260
 msgid "X11 fatal IO error: please save work and shut down R"
@@ -8419,7 +8419,7 @@ msgstr "error interno en el código unz"
 #: src/unix/sys-unix.c:296
 #, c-format
 msgid "running command '%s' had status %d and error message '%s'"
-msgstr "comando ejecuta '%s' tiene estatus %d y mensaje de error '% s' "
+msgstr "comando ejecuta '%s' tiene estatus %d y mensaje de error '%s' "
 
 #: src/unix/sys-unix.c:400
 msgid "Sys.info() is not implemented on this system"
@@ -8466,17 +8466,6 @@ msgstr "módulo X11 no puede ser cargado"
 msgid "X11 is not available"
 msgstr "X11 no está disponible"
 
-#~ msgid "invalid internal function"
-#~ msgstr "la función interna no es válida"
-
-#, fuzzy
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "longitud de 'fmt' excede la longitud máxima %d de buffer"
-
-#, fuzzy
-#~ msgid "argument %d is empty"
-#~ msgstr "elemento %d está vacío"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr ""
 #~ "no se ha encontrado ningún conversor de R a C correspondiente al "
@@ -8516,6 +8505,9 @@ msgstr "X11 no está disponible"
 #~ msgstr ""
 #~ "R no fue compilado con soporte para perfil de memoria 'R profiling' "
 
+#~ msgid "DLL name is too long"
+#~ msgstr "el nombre de la DLL es demasiado largo"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8525,16 +8517,6 @@ msgstr "X11 no está disponible"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "modo inválido para pasar a Fortran (arg %d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr ""
-#~ "las variables de tipo carácter deben estar duplicadas en .C/.Fortran"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "problema de conversión en la recodificación desde '%s'"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "el nombre de la DLL es demasiado largo"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "función inválida en call_R"
@@ -8553,6 +8535,10 @@ msgstr "X11 no está disponible"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "lado izquierdo de la asignación inválida (do_set)"
+
+#, fuzzy
+#~ msgid "argument %d is empty"
+#~ msgstr "elemento %d está vacío"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "%s' esta perdido"
@@ -8607,6 +8593,17 @@ msgstr "X11 no está disponible"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "elemento del vector de caracteres no tiene tipo CHARSXP"
+
+#, fuzzy
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "longitud de 'fmt' excede la longitud máxima %d de buffer"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr ""
+#~ "las variables de tipo carácter deben estar duplicadas en .C/.Fortran"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "problema de conversión en la recodificación desde '%s'"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "no mezclar vectores de longitud 0 con otros"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.1.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2005-05-20 18:26+0800\n"
 "Last-Translator: ronggui\n"
 "Language-Team: Chinese\n"
@@ -6321,7 +6321,7 @@ msgstr "目前不支持持续字符串里的名字"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "没有\"%s\"这个内部函数"
+msgstr "内部函数不对"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8143,15 +8143,6 @@ msgstr "无法载入X11模块"
 msgid "X11 is not available"
 msgstr "没有X11平台这一功能"
 
-#~ msgid "invalid internal function"
-#~ msgstr "内部函数不对"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "'%*'建立的'fmt2'长度超过了最大长度%d"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "%d元素是空的"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "找不到与标识符相应的R-to-C转换器"
 
@@ -8186,6 +8177,9 @@ msgstr "没有X11平台这一功能"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "在编译R程序时没有建立存储轮廓这一功能"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "DLL的名字值太长"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8193,15 +8187,6 @@ msgstr "没有X11平台这一功能"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "传给Fortran的状态出错(arg%d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr "在调用.C时串列必需被复制"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "转换编码成'%s'时出了问题"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "DLL的名字值太长"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "call_R中的函数不对"
@@ -8220,6 +8205,9 @@ msgstr "没有X11平台这一功能"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "(do_set)赋值公式左手不对"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "%d元素是空的"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "缺少'%s'"
@@ -8268,6 +8256,15 @@ msgstr "没有X11平台这一功能"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "字符矢量元素没有CHARSXP种类"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "'%*'建立的'fmt2'长度超过了最大长度%d"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr "在调用.C时串列必需被复制"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "转换编码成'%s'时出了问题"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "不能将零长度的矢量同其它长度的矢量混合在一起"

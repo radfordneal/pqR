@@ -1,14 +1,14 @@
 # # File R_HOME/po/ko.po
 # # Managed by Chel Hee Lee (Korean, R Development Translation Team)
 # # Email <gnustats@gmail.com> or <chl948@mail.usask.ca>
-# # Copyright 1995-2012 R Development Core Team & R Develoment Translation Team
+# # Copyright 1995-2012 R Core Team & R Develoment Translation Team
 # # Distributed under GPL 2 or later
 # #
 msgid ""
 msgstr ""
 "Project-Id-Version: R 2.11.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2012-03-07 02:34+0200\n"
 "Last-Translator: Chel Hee Lee <chl948@mail.usask.ca>\n"
 "Language-Team: The Korean R Translation Council <gnustats@gmail.com>\n"
@@ -638,12 +638,12 @@ msgstr "경고: '--max-ppsize' 값이 너무 커서 무시됩니다 "
 #: src/main/RNG.c:200
 #, c-format
 msgid "unif_rand: unimplemented RNG kind %d"
-msgstr "unif_rand :  RNG 종류 % d 는 구현되지 않았습니다"
+msgstr "unif_rand :  RNG 종류 %d 는 구현되지 않았습니다"
 
 #: src/main/RNG.c:276
 #, c-format
 msgid "FixupSeeds: unimplemented RNG kind %d"
-msgstr "FixupSeeds : RNG 종류 % d 는 구현되지 않았습니다"
+msgstr "FixupSeeds : RNG 종류 %d 는 구현되지 않았습니다"
 
 #: src/main/RNG.c:296
 msgid "'user_unif_rand' not in load table"
@@ -1062,7 +1062,7 @@ msgstr "'a'는 명명된 차원 이름이 없습니다"
 #: src/main/array.c:1537
 #, c-format
 msgid "perm[%d] does not match a dimension name"
-msgstr "perm [% d]는 차원 이름과 일치하지 않습니다"
+msgstr "perm [%d] 는 차원 이름과 일치하지 않습니다"
 
 #: src/main/array.c:1544
 msgid "'perm' is of wrong length"
@@ -1343,7 +1343,7 @@ msgstr "행렬의 행 개수와 일치해야합니다 (%d 번째 인수를 참�
 #: src/main/bind.c:1521
 #, c-format
 msgid "number of columns of matrices must match (see arg %d)"
-msgstr "행렬의 열 개수와 일치해야합니다 (% d 번째 인수를 참조)"
+msgstr "행렬의 열 개수와 일치해야합니다 (%d 번째 인수를 참조)"
 
 #: src/main/builtin.c:46
 msgid "vector size cannot be NA"
@@ -2362,7 +2362,7 @@ msgstr "'gzcon'연결의 종료중에 쓰기 오류가 발생했습니다"
 #: src/main/connections.c:5100
 #, c-format
 msgid "crc error %x %x\n"
-msgstr "crc 오류 % x % x \n"
+msgstr "crc 오류 %x %x \n"
 
 #: src/main/connections.c:5127
 msgid "write error on 'gzcon' connection"
@@ -3732,12 +3732,12 @@ msgstr "plot 영역이 너무 큽니다"
 #: src/main/graphics.c:1890
 #, c-format
 msgid "relative range of values =%4.0f * EPS, is small (axis %d)"
-msgstr "값의 상대 범위 = % 4.0f * EPS는 작습니다 (축 %d)"
+msgstr "값의 상대 범위 = %4.0f * EPS는 작습니다 (축 %d)"
 
 #: src/main/graphics.c:1941
 #, c-format
 msgid "nonfinite axis limits [GScale(%g,%g,%d, .); log=%d]"
-msgstr "축의 한계가 유한하지 않습니다 [GScale (% g,%g, %d,); log = %d]"
+msgstr "축의 한계가 유한하지 않습니다 [GScale (%g,%g, %d,); log = %d]"
 
 #: src/main/graphics.c:1971
 #, c-format
@@ -4114,7 +4114,7 @@ msgstr "세 번째 인수는 'TRUE'또는 'FALSE'여야 합니다"
 #: src/main/memory.c:2682 src/main/memory.c:2687
 #, c-format
 msgid "cannot allocate memory block of size %0.1f Gb"
-msgstr "크기 % 0.1f Gb의 메모리 블록을 할당할 수 없습니다"
+msgstr "크기 %0.1f Gb의 메모리 블록을 할당할 수 없습니다"
 
 #: src/main/memory.c:2917
 msgid "invalid formal arguments for 'function'"
@@ -4142,17 +4142,17 @@ msgstr "벡터 할당에서 형식 또는 길이 (%s 또는 %d)가 잘못되었�
 #: src/main/memory.c:3239
 #, c-format
 msgid "cannot allocate vector of size %0.1f Gb"
-msgstr "크기 % 0.1f Gb 벡터를 할당할 수 없습니다"
+msgstr "크기 %0.1f Gb 벡터를 할당할 수 없습니다"
 
 #: src/main/memory.c:3243
 #, c-format
 msgid "cannot allocate vector of size %0.1f Mb"
-msgstr "크기 % 0.1f Mb 벡터를 할당할 수 없습니다"
+msgstr "크기 %0.1f Mb 벡터를 할당할 수 없습니다"
 
 #: src/main/memory.c:3247
 #, c-format
 msgid "cannot allocate vector of size %0.f Kb"
-msgstr "크기 % 0.f Kb 벡터를 할당할 수 없습니다"
+msgstr "크기 %0.f Kb 벡터를 할당할 수 없습니다"
 
 #: src/main/memory.c:3592
 msgid "protect(): protection stack overflow"
@@ -5176,7 +5176,7 @@ msgstr "이 플랫폼에서는 심볼릭 링크는 지원되지 않습니다"
 #: src/main/platform.c:722
 #, c-format
 msgid "cannot link '%ls' to '%ls', reason '%s'"
-msgstr "'% ls'을 '% ls'에 연결할 수 없습니다, 이유는 '%s'입니다"
+msgstr "'%ls'을 '%ls'에 연결할 수 없습니다, 이유는 '%s'입니다"
 
 #: src/main/platform.c:742
 #, c-format
@@ -6387,7 +6387,7 @@ msgstr "영속적인 문자열에서 이름은 아직 지원되지 않습니다"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "내부 함수 \"%s \" 가 없습니다"
+msgstr "내부 함수가 잘못되었습니다"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -7991,7 +7991,7 @@ msgstr ""
 #: src/nmath/bessel_y.c:77 src/nmath/bessel_y.c:122
 #, c-format
 msgid "bessel_y(%g,nu=%g): precision lost in result\n"
-msgstr "bessel_y (% g, nu = % g) : 결과의 정밀도가 손실되었습니다\n"
+msgstr "bessel_y (%g, nu = %g) : 결과의 정밀도가 손실되었습니다\n"
 
 #: src/nmath/nmath.h:126
 #, c-format
@@ -8199,7 +8199,7 @@ msgstr "명령을 실행하는 동안 오류가 발생했습니다"
 #: src/unix/sys-unix.c:296
 #, c-format
 msgid "running command '%s' had status %d and error message '%s'"
-msgstr "명령 '%s'의 실행으로 % d 가 되고 오류 메시지 '%s'을 가졌습니다"
+msgstr "명령 '%s'의 실행으로 %d 가 되고 오류 메시지 '%s'을 가졌습니다"
 
 #: src/unix/sys-unix.c:400
 msgid "Sys.info() is not implemented on this system"
@@ -8246,15 +8246,6 @@ msgstr "X11 모듈을 로드될 수 없습니다"
 msgid "X11 is not available"
 msgstr "X11을 사용할 수 없습니다"
 
-#~ msgid "invalid internal function"
-#~ msgstr "내부 함수가 잘못되었습니다"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "'%*'에 의해 만들어진 'fmt'의 길이가 최대 길이 %d를 초과했습니다"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "인수 %d가 비어 있습니다"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "식별자에 대응하는 R- to-C 변환기가 없습니다"
 
@@ -8290,6 +8281,9 @@ msgstr "X11을 사용할 수 없습니다"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "R이 메모리 프로파일링에 대한 지원기능과 함께 컴파일되지 않았습니다"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "DLL 이름은 너무 깁니다"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8299,15 +8293,6 @@ msgstr "X11을 사용할 수 없습니다"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "Fortran에 건네진 인수 %d의 모드가 잘못되었습니다"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr ".C에서 리스트는 복제되어야 합니다"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "'%s'에서 다시 인코딩하는 동안 변환 문제가 발생했습니다"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "DLL 이름은 너무 깁니다"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "call_R의 함수가 잘못되었습니다"
@@ -8326,6 +8311,9 @@ msgstr "X11을 사용할 수 없습니다"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "대입의 좌변이 (do_set) 잘못되었습니다"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "인수 %d가 비어 있습니다"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "'%s'를 찾을 수 없습니다"
@@ -8374,6 +8362,15 @@ msgstr "X11을 사용할 수 없습니다"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "문자열 벡터 요소는 유형 CHARSXP이 없습니다"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "'%*'에 의해 만들어진 'fmt'의 길이가 최대 길이 %d를 초과했습니다"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr ".C에서 리스트는 복제되어야 합니다"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "'%s'에서 다시 인코딩하는 동안 변환 문제가 발생했습니다"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "다른 벡터와 길이 0인 벡터를 섞어 쓸 수 없습니다"

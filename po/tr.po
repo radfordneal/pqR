@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2011-04-02 18:24+0200\n"
 "Last-Translator: Murat Alkan <muratalk@gmail.com>\n"
 "Language-Team: Turkish <muratalk@gmail.com>\n"
@@ -6423,7 +6423,7 @@ msgstr "sürekli dizelerde isimler henüz desteklenmiyor"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "iç fonksiyonlarda \"%s\" yok"
+msgstr "geçersiz iç fonksiyon"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8293,15 +8293,6 @@ msgstr "X11 modülü yüklenemiyor"
 msgid "X11 is not available"
 msgstr "X11 mevcut değil"
 
-#~ msgid "invalid internal function"
-#~ msgstr "geçersiz iç fonksiyon"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "'%*' yapılı 'fmt2' uzunluğu maksimum %d'i geçiyor"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "argüman %d boş"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "tanımlayıcıya ilişkin R-den-C'ye çeviricisi bulunamadı"
 
@@ -8339,17 +8330,11 @@ msgstr "X11 mevcut değil"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "R bellek profilleme özelliğiyle derlenmedi"
 
-#~ msgid "invalid mode to pass to Fortran (arg %d)"
-#~ msgstr "Fortran'a geçirmek için geçersiz mod (argüman %d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr ".C'de listeler kopyalanmalıdır"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "'%s'de yeniden kodlarken dönüştürme sorunu"
-
 #~ msgid "DLL name is too long"
 #~ msgstr "DLL ismi çok uzun"
+
+#~ msgid "invalid mode to pass to Fortran (arg %d)"
+#~ msgstr "Fortran'a geçirmek için geçersiz mod (argüman %d)"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "call_R'de geçersiz fonksiyon"
@@ -8368,6 +8353,9 @@ msgstr "X11 mevcut değil"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "atamaya geçersiz (do_set) sol taraf"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "argüman %d boş"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "'%s' eksik"
@@ -8416,6 +8404,15 @@ msgstr "X11 mevcut değil"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "karakter vektör öğesi CHARSXP tipine sahip değil"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "'%*' yapılı 'fmt2' uzunluğu maksimum %d'i geçiyor"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr ".C'de listeler kopyalanmalıdır"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "'%s'de yeniden kodlarken dönüştürme sorunu"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "0-uzunluğunda vektörler diğerleriyle karıştırılamaz"

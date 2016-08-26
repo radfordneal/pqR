@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R-2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2012-03-05 15:33+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-core <R-core@r-project.org>\n"
@@ -542,7 +542,7 @@ msgstr "Warnung: --max-mem-size =%4.1fM: zu klein und wird ignoriert\n"
 #: src/gnuwin32/system.c:1021
 #, c-format
 msgid "WARNING: --max-mem-size=%4.0fM: too large and taken as %uM\n"
-msgstr "Warnung: --max-mem-size =%4.1fM: zu groß und wird als %uM angenommen\n"
+msgstr "Warnung: --max-mem-size =%4.0fM: zu groß und wird als %uM angenommen\n"
 
 #: src/gnuwin32/system.c:1064 src/unix/system.c:392
 #, c-format
@@ -3024,7 +3024,7 @@ msgstr "ungültiger Grafikzustand"
 
 #: src/main/engine.c:3035 src/main/engine.c:3043
 msgid "invalid multibyte char in pch=\"c\""
-msgstr "ungültiges multibyte zeichen in pch=\"%c\""
+msgstr "ungültiges multibyte zeichen in pch=\"c\""
 
 #: src/main/engine.c:3112
 msgid "invalid line type: must be length 2, 4, 6 or 8"
@@ -4176,7 +4176,7 @@ msgstr "kann Vektor der Größe %0.1f MB nicht allozieren"
 #: src/main/memory.c:3247
 #, c-format
 msgid "cannot allocate vector of size %0.f Kb"
-msgstr "kann Vektor der Größe %0.1f KB nicht allozieren"
+msgstr "kann Vektor der Größe %0.f KB nicht allozieren"
 
 #: src/main/memory.c:3592
 msgid "protect(): protection stack overflow"
@@ -6439,7 +6439,7 @@ msgstr "Namen in persistenten Zeichenketten werden noch nicht unterstützt"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "keine interne Funktion \"%s\""
+msgstr "ungültige interne Funktion"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8309,15 +8309,6 @@ msgstr "X11 Modul kann nicht geladen werden"
 msgid "X11 is not available"
 msgstr "X11 nicht verfügbar"
 
-#~ msgid "invalid internal function"
-#~ msgstr "ungültige interne Funktion"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "die mit '%*' konstruierte 'fmt2' Länge überschreitet das Maximum %d"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "Argument %d ist leer"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "kein R-to-C Konvertierer gefunden, der zum Bezeichner passt"
 
@@ -8353,6 +8344,9 @@ msgstr "X11 nicht verfügbar"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "R wurde ohne Unterstützung von Memoryprofiling kompiliert"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "DLL Name ist zu lang"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8362,15 +8356,6 @@ msgstr "X11 nicht verfügbar"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "ungültiger Modus zur Übergabe nach Fortran (Arg. %d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr "Listen müssen in .C dubliziert werden"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "Konvertierungsproblem bei der Rekodierung von '%s'"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "DLL Name ist zu lang"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "ungültiger Funktionsaufruf in call_R"
@@ -8389,6 +8374,9 @@ msgstr "X11 nicht verfügbar"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "ungültige (do_set) linke Seite in Zuweisung"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "Argument %d ist leer"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "'%s' fehlt"
@@ -8437,6 +8425,15 @@ msgstr "X11 nicht verfügbar"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "Element eines Charaktervektors ist nicht vom Typ CHARSXP"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "die mit '%*' konstruierte 'fmt2' Länge überschreitet das Maximum %d"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr "Listen müssen in .C dubliziert werden"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "Konvertierungsproblem bei der Rekodierung von '%s'"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr "kann keine Vektoren mit 0-Länge mit anderen mischen"

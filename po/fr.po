@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R-2.12.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2012-03-06 22:22+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -6027,8 +6027,9 @@ msgid "invalid second argument 'size'"
 msgstr "second argument 'size' incorrect"
 
 #: src/main/raw.c:41 src/main/raw.c:274
+#, fuzzy
 msgid "argument must be a character vector of length 1"
-msgstr "l'argument doit être un vecteur de caractères de longueur 1"
+msgstr "'hostname' doit être un vecteur de caractères de longueur 1"
 
 #: src/main/raw.c:43 src/main/raw.c:276
 #, fuzzy
@@ -6573,7 +6574,7 @@ msgstr "les noms dans les chaînes de caractères ne sont pas encore supportées"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "pas de fonction interne \"%s\""
+msgstr "fonction interne incorrecte"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -8462,16 +8463,6 @@ msgstr "impossible de charger le module X11"
 msgid "X11 is not available"
 msgstr "X11 indisponible"
 
-#~ msgid "invalid internal function"
-#~ msgstr "fonction interne incorrecte"
-
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr ""
-#~ "la longueur du '%*' construit 'fmt2' au-delà de la taille maximale %d"
-
-#~ msgid "argument %d is empty"
-#~ msgstr "l'argument %d est vide"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr ""
 #~ "aucun convertisseur R-vers-C disponible correspondant à cet identifiant"
@@ -8513,6 +8504,9 @@ msgstr "X11 indisponible"
 #~ msgid "R was not compiled with support for memory profiling"
 #~ msgstr "R n'a pas été compilé pour supporter le profilage de mémoire"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "nom de DLL trop long"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8522,15 +8516,6 @@ msgstr "X11 indisponible"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "mode incorrect à passer vers le Fortran (argument %d)"
-
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr "les listes doivent être dupliquées en .C"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "problème de conversion lors du réencodage depuis '%s'"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "nom de DLL trop long"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "fonction incorrecte dans call_R"
@@ -8551,6 +8536,9 @@ msgstr "X11 indisponible"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "membre gauche de l'assignation (do_set) incorrect"
+
+#~ msgid "argument %d is empty"
+#~ msgstr "l'argument %d est vide"
 
 #~ msgid "'%s' is missing"
 #~ msgstr "'%s' est manquant"
@@ -8603,6 +8591,16 @@ msgstr "X11 indisponible"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "un élément d'un vecteur de caractères n'a pas le type CHARSXP"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr ""
+#~ "la longueur du '%*' construit 'fmt2' au-delà de la taille maximale %d"
+
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr "les listes doivent être dupliquées en .C"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "problème de conversion lors du réencodage depuis '%s'"
 
 #~ msgid "cannot mix 0-length vectors with others"
 #~ msgstr ""

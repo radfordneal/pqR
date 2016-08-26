@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:40-0400\n"
+"POT-Creation-Date: 2016-08-25 21:06-0400\n"
 "PO-Revision-Date: 2006-01-16 09:11+0100\n"
 "Last-Translator: Daniele Medri <daniele.medri2@unibo.it>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
@@ -3837,7 +3837,7 @@ msgstr "unità mal specificata in %s, si prega segnalare!"
 
 #: src/main/graphics.c:1786 src/main/graphics.c:1808
 msgid "attempt to plot on null device"
-msgstr "tantaivo di disegnare sul dispositivo null"
+msgstr "tentaivo di disegnare sul dispositivo null"
 
 #: src/main/graphics.c:1838
 msgid "outer margins too large (fig.region too small)"
@@ -6582,7 +6582,7 @@ msgstr "i nomi delle stringhe persistenti non sono ancora supportati"
 #: src/main/serialize.c:1623
 #, fuzzy, c-format
 msgid "unrecognized internal function name \"%s\""
-msgstr "nessuna funzione interna \"%s\""
+msgstr "funzione interna non valida"
 
 #: src/main/serialize.c:1689
 msgid "this version of R cannot read class references"
@@ -6783,12 +6783,9 @@ msgid "%s"
 msgstr ""
 
 #: src/main/source.c:180
-#, fuzzy, c-format
+#, c-format
 msgid "%s in \"%s\""
 msgstr ""
-"errore di sintassi in:\n"
-"\"%s\n"
-"%s\""
 
 #: src/main/source.c:184
 #, fuzzy, c-format
@@ -8492,17 +8489,6 @@ msgstr "il modulo X11 non può essere caricato"
 msgid "X11 is not available"
 msgstr "X11 non disponibile"
 
-#~ msgid "invalid internal function"
-#~ msgstr "funzione interna non valida"
-
-#, fuzzy
-#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-#~ msgstr "lunghezza 'fmt' eccede la lunghezza massima del buffer %d"
-
-#, fuzzy
-#~ msgid "argument %d is empty"
-#~ msgstr "l'argomento %d non è di tipo vector"
-
 #~ msgid "no R-to-C converter found corresponding to identifier"
 #~ msgstr "nessun convertitore R-to-C associato a questo identificatore"
 
@@ -8526,6 +8512,9 @@ msgstr "X11 non disponibile"
 #~ msgid "invalid unary operator"
 #~ msgstr "operatore non valido"
 
+#~ msgid "DLL name is too long"
+#~ msgstr "nome DLL troppo lungo"
+
 #~ msgid ""
 #~ "explicit request not to duplicate arguments in call to '%s', but argument "
 #~ "%d is of the wrong type (%d != %d)"
@@ -8535,17 +8524,6 @@ msgstr "X11 non disponibile"
 
 #~ msgid "invalid mode to pass to Fortran (arg %d)"
 #~ msgstr "modalità non valida da passare al Fortran (arg %d)"
-
-#, fuzzy
-#~ msgid "lists must be duplicated in .C"
-#~ msgstr ""
-#~ "le variabili di tipo character devono essere duplicate in .C/.Fortran"
-
-#~ msgid "conversion problem in re-encoding from '%s'"
-#~ msgstr "problema di conversione nella ricodifica da '%s'"
-
-#~ msgid "DLL name is too long"
-#~ msgstr "nome DLL troppo lungo"
 
 #~ msgid "invalid function in call_R"
 #~ msgstr "funzione non valida in call_R"
@@ -8565,6 +8543,10 @@ msgstr "X11 non disponibile"
 
 #~ msgid "invalid (do_set) left-hand side to assignment"
 #~ msgstr "il membro di sinistra dell'assegnazione (do_set) non è valido"
+
+#, fuzzy
+#~ msgid "argument %d is empty"
+#~ msgstr "l'argomento %d non è di tipo vector"
 
 #~ msgid "generic name too long in '%s'"
 #~ msgstr "nome generico troppo lungo in '%s'"
@@ -8618,6 +8600,18 @@ msgstr "X11 non disponibile"
 
 #~ msgid "character vector element does not have type CHARSXP"
 #~ msgstr "il vettore carattere non ha un tipo CHARSXP"
+
+#, fuzzy
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "lunghezza 'fmt' eccede la lunghezza massima del buffer %d"
+
+#, fuzzy
+#~ msgid "lists must be duplicated in .C"
+#~ msgstr ""
+#~ "le variabili di tipo character devono essere duplicate in .C/.Fortran"
+
+#~ msgid "conversion problem in re-encoding from '%s'"
+#~ msgstr "problema di conversione nella ricodifica da '%s'"
 
 #~ msgid "this version of R cannot write byte code objects"
 #~ msgstr "questa versione di R non può scrivere oggetti byte code"

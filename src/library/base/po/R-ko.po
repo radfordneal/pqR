@@ -1,14 +1,14 @@
 # # File R_HOME/src/library/base/po/R-ko.po
 # # Managed by Chel Hee Lee (Korean, R Development Translation Team)
 # # Email <gnustats@gmail.com> or <chl948@mail.usask.ca>
-# # Copyright 1995-2012 R Development Core Team & R Develoment Translation Team
+# # Copyright 1995-2012 R Core Team & R Develoment Translation Team
 # # Distributed under GPL 2 or later
 # #
 msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:43\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2012-03-08 20:10+0200\n"
 "Last-Translator: Chel Hee Lee <chl948@mail.usask.ca>\n"
 "Language-Team: The Korean R Translation Council <gnustats@gmail.com>\n"
@@ -83,7 +83,7 @@ msgid "malformed version string"
 msgstr "잘못된 버전 문자열 "
 
 msgid "target is %s, current is %s"
-msgstr "목표는 % s입니다, 현재는 % s입니다"
+msgstr "목표는 %s 입니다, 현재는 %s 입니다"
 
 msgid "dim(X) must have a positive length"
 msgstr "dim(x)은 양의 값을 가져야 합니다 "
@@ -350,6 +350,7 @@ msgstr ""
 "치환 요소 %d 는 %d 의 행의 개수를 가진 행렬 혹은 데이터 프레임이므로 %d행이 "
 "필요합니다"
 
+#, fuzzy
 msgid "replacement element %d has %d rows, need %d"
 msgstr "치환은 %d의 항목을 가지므로 %d 가 필요합니다 "
 
@@ -952,7 +953,7 @@ msgid "package %s required by %s could not be found"
 msgstr "%s 에 필요한 패키지 %s 를 찾을 수 없습니다 "
 
 msgid "package %s %s was found, but %s %s is required by %s"
-msgstr "패키지 %s %s 가 검색되었지만, %s %s 는 % 를 필요로 합니다 "
+msgstr "패키지 %s %s 가 검색되었지만, %s %s 는 %s 를 필요로 합니다 "
 
 msgid "package %s could not be loaded"
 msgstr "패키지 %s 는 로드될 수 없습니다 "
@@ -1743,6 +1744,33 @@ msgstr[0] "S3 메소드 %s 는 NAMESPACE 안에 선언되었으나 찾을 수 �
 msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] "경고 매시지: \n"
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr "잘못된 값입니다 "
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr "잘못된 값입니다 "
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr "부적절한 이름입니다"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "부적절한 이름입니다"
+
+#~ msgid "'by' must specify valid column(s)"
+#~ msgstr "'by' 에 올바른 열이 지정되어야 합니다 "
+
+#, fuzzy
+#~ msgid "invalid ncol(x)"
+#~ msgstr "부적절한 이름입니다"
+
+#, fuzzy
+#~ msgid "invalid ncol(y)"
+#~ msgstr "부적절한 이름입니다"
 
 #~ msgid "' has changed"
 #~ msgstr "' has changed"

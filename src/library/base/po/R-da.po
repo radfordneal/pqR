@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:43\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2011-11-30 14:20+0200\n"
 "Last-Translator: Joe <joedalton2@yahoo.dk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1503,7 +1503,7 @@ msgstr ""
 
 #, fuzzy
 msgid "invalid value of length(bin)"
-msgstr "ugyldig længde for 'row.names'"
+msgstr "ugyldigt antal intervaller"
 
 #, fuzzy
 msgid "invalid value of nbins"
@@ -1717,6 +1717,22 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] ""
 msgstr[1] ""
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr "ugyldigt antal intervaller"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "ugyldig længde for 'row.names'"
 
 #~ msgid "'symbol.C' is not needed: please remove it"
 #~ msgstr "'symbol.C' er ikke krævet: fjern det venligst"

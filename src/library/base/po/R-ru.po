@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.11.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:43\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2012-03-15 11:24-0500\n"
 "Last-Translator: Alexey Shipunov <dactylorhiza@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -506,6 +506,7 @@ msgstr "унарный '-' не определен для объектов \"POSIXt\""
 msgid "can only subtract numbers from POSIXt objects"
 msgstr "могу вычитать лишь числа из объектов 'POSIXt'"
 
+#, fuzzy
 msgid "unary '%s' not defined for \"POSIXt\" objects"
 msgstr "унарный '-' не определен для объектов \"POSIXt\""
 
@@ -1762,6 +1763,33 @@ msgid_plural "Warning messages:\n"
 msgstr[0] "Предупреждение:\n"
 msgstr[1] "Предупреждения:\n"
 msgstr[2] "Предупреждения:\n"
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr "неправильное значение"
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr "неправильное значение"
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr "неправильное имя"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "неправильное имя"
+
+#~ msgid "'by' must specify valid column(s)"
+#~ msgstr "'by' должен определять правильные колонк(и)"
+
+#, fuzzy
+#~ msgid "invalid ncol(x)"
+#~ msgstr "неправильное имя"
+
+#, fuzzy
+#~ msgid "invalid ncol(y)"
+#~ msgstr "неправильное имя"
 
 #~ msgid "' has changed"
 #~ msgstr "' сменилась"
