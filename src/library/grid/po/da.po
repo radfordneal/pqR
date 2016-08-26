@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2012-01-13 11:24+0000\n"
+"POT-Creation-Date: 2016-08-25 20:53-0400\n"
 "PO-Revision-Date: 2011-11-28 23:18+0200\n"
 "Last-Translator: Joe <joedalton2@yahoo.dk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,47 +17,47 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Pootle 2.1.6\n"
 
-#: grid.c:214
+#: grid.c:216
 msgid "Cannot clip to rotated viewport"
 msgstr "Kan ikke klippe til roteret viewport"
 
-#: grid.c:673 grid.c:678 grid.c:767 grid.c:772
+#: grid.c:676 grid.c:681 grid.c:771 grid.c:776
 msgid "Cannot pop the top-level viewport (grid and graphics output mixed?)"
 msgstr "Kan ikke pop topniveau-viewporten (gitter og grafiks uddata blandet?)"
 
-#: grid.c:952
+#: grid.c:956
 msgid "attempt to plot on null device"
 msgstr "forsøg på at plotte på null-enhed"
 
-#: grid.c:1232
+#: grid.c:1236
 msgid "There is no layout defined"
 msgstr "Der er ingen layout defineret"
 
-#: grid.c:1452
+#: grid.c:1456
 msgid "Polygon edge not found (zero-width or zero-height?)"
 msgstr "Polygonkant ikke fundet (nulbredde eller nulhøjde?)"
 
-#: grid.c:1461
+#: grid.c:1465
 msgid "Polygon edge not found"
 msgstr "Polygonkant ikke fundet"
 
-#: grid.c:1615
+#: grid.c:1619
 msgid "Require at least two points to draw arrow"
 msgstr "Kræver mindst to punkter at tegne pil"
 
-#: grid.c:1931
+#: grid.c:1935
 msgid "Non-finite control point in Xspline"
 msgstr "Ikkebegrænsende kontrolpunkter i Xspline"
 
-#: grid.c:2796
+#: grid.c:2800
 msgid "non-finite x or y in graphics path"
 msgstr "ikkebegrænsende x eller y i grafiksti"
 
-#: grid.c:3286
+#: grid.c:3292
 msgid "invalid plotting symbol"
 msgstr "ugyldigt plotsymbol"
 
-#: grid.c:3372
+#: grid.c:3378
 msgid "Unable to clip to rotated rectangle"
 msgstr "Kan ikke klippe til roteret rektangel"
 
