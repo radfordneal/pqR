@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2011-03-26 08:57-0300\n"
 "Last-Translator: Fernando Henrique <pessoal@fernandohrosa.com.br>\n"
 "Language-Team: http://www.feferraz.net/br/P/Projeto_Traducao_R_Portugues\n"
@@ -276,16 +276,6 @@ msgstr "zero pontos não-NA"
 
 msgid "'approx' requires n >= 1"
 msgstr "'approx' necessita de n >= 1"
-
-msgid "'vec' contains NAs"
-msgstr "'vec' contém NAs"
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr "'vec' deve ser ordenado de forma crescente"
-
-#, fuzzy
-msgid "invalid length(vec)"
-msgstr "comprimento inválido dos membros"
 
 msgid "'order.max' must be >= 1"
 msgstr "'order.max' deve ser >= 1"
@@ -2512,6 +2502,16 @@ msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] ""
 msgstr[1] ""
+
+#~ msgid "'vec' contains NAs"
+#~ msgstr "'vec' contém NAs"
+
+#~ msgid "'vec' must be sorted non-decreasingly"
+#~ msgstr "'vec' deve ser ordenado de forma crescente"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "comprimento inválido dos membros"
 
 #~ msgid "extra arguments"
 #~ msgstr "argumentos adicionais"

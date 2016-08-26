@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: 2005-02-16 08:34\n"
 "Last-Translator: Stefano M. Iacus <Stefano.Iacus@R-project.org>\n"
 "Language-Team: Italian\n"
@@ -99,6 +99,10 @@ msgstr "'input' deve avere lunghezza 1"
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr ""
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr "argomento 'file' sbagliato"
 
 msgid "'dim' specifies too large an array"
 msgstr "'dim' specifica un array troppo esteso"
@@ -598,7 +602,7 @@ msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr ""
 
 #, fuzzy
-msgid "'x' is an array, but not 1D."
+msgid "'x' is an array, but not one-dimensional."
 msgstr "il primo argomento è un array, ma non una matrice"
 
 msgid "only matrix diagonals can be replaced"
@@ -817,6 +821,10 @@ msgstr ""
 
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr ""
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr "nome non valido"
 
 #, fuzzy
 msgid "triangular matrix should be square"
@@ -1138,14 +1146,14 @@ msgid "'by' must match number of columns"
 msgstr "'by' deve essere compatibile col numero di colonne"
 
 #, fuzzy
-msgid "'by' must specify column(s) as numbers, names or logical"
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr "'by' deve specificare la colonna(e)"
-
-msgid "'by' must specify valid column(s)"
-msgstr "'by' deve specificare colonne(a) valide"
 
 msgid "'by.x' and 'by.y' specify different numbers of columns"
 msgstr "'by.x' e 'by.y' specificano numeri di colonne differenti"
+
+msgid "'incomparables' is supported only for merging on a single column"
+msgstr ""
 
 msgid "additional arguments ignored in message()"
 msgstr ""
@@ -1555,10 +1563,7 @@ msgstr ""
 msgid "'%s' is not an existing file"
 msgstr "'%s' non è un file esistente"
 
-msgid "Timestamp of '"
-msgstr ""
-
-msgid "' has changed"
+msgid "Timestamp of %s has changed"
 msgstr ""
 
 msgid "additional arguments ignored in stop()"
@@ -1627,6 +1632,14 @@ msgstr "'x' non è un array"
 
 msgid "'bin' must be numeric or a factor"
 msgstr "'bin' deve essere numeric o factor"
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr "valore 'n' non valido"
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr "valore 'n' non valido"
 
 msgid "arguments must have same length"
 msgstr "gli argomenti devono avere la stessa lunghezza"
@@ -1811,6 +1824,12 @@ msgid_plural "objects %s not found"
 msgstr[0] "%s non trovato"
 msgstr[1] "%s non trovato"
 
+#, fuzzy
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] "'by' deve specificare colonne(a) valide"
+msgstr[1] "'by' deve specificare colonne(a) valide"
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1847,6 +1866,33 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] "Messaggio di avvertimento:\n"
 msgstr[1] "Messaggi di avvertimento:\n"
+
+#, fuzzy
+#~ msgid "invalid value of ncol(x)"
+#~ msgstr "valore 'n' non valido"
+
+#, fuzzy
+#~ msgid "invalid value of length(x)"
+#~ msgstr "valore 'n' non valido"
+
+#, fuzzy
+#~ msgid "invalid length(x)"
+#~ msgstr "nome non valido"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "nome non valido"
+
+#~ msgid "'by' must specify valid column(s)"
+#~ msgstr "'by' deve specificare colonne(a) valide"
+
+#, fuzzy
+#~ msgid "invalid ncol(x)"
+#~ msgstr "nome non valido"
+
+#, fuzzy
+#~ msgid "invalid ncol(y)"
+#~ msgstr "nome non valido"
 
 #~ msgid "'pattern' must be a non-empty character string"
 #~ msgstr "il 'pattern' deve essere una stringa di caratteri non vuota"
@@ -1933,9 +1979,6 @@ msgstr[1] "Messaggi di avvertimento:\n"
 
 #~ msgid "S3 method '%s' was declared in NAMESPACE but not found"
 #~ msgstr "dichiarato in NAMESPACE ma non trovato"
-
-#~ msgid "invalid name"
-#~ msgstr "nome non valido"
 
 #~ msgid "is required by"
 #~ msgstr "richiesto da"
