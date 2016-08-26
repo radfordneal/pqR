@@ -25,12 +25,13 @@ length(x) <- value
   length 1.  Since this may change in the future and may
   differ for other methods, programmers should not rely on it.
 
-  For vectors (including lists) and factors the length is the number of
-  elements.  For an environment it is the number of objects in the
-  environment, and \code{NULL} has length 0.  For expressions and
-  pairlists (including language objects and dotlists) it is the length
-  of the pairlist chain.  All other objects (including functions) have
-  length one: note that for functions this differs from S.
+  For vectors (including lists and expressions) and factors the length
+  is the number of elements.  For an environment it is the number of
+  objects in the environment, and \code{NULL} has length 0.  For
+  pairlists (including language objects and dotlists)
+  it is the length of the pairlist chain.  All other objects
+  (including functions) have length one: note that for functions this
+  differs from S.
 
   The replacement form removes all the attributes of \code{x} except its
   names.
@@ -65,17 +66,17 @@ length(x) <- value
   Wadsworth & Brooks/Cole.
 }
 \examples{
-length(diag(4))# = 16 (4 x 4)
-length(options())# 12 or more
-length(y ~ x1 + x2 + x3)# 3
-length(expression(x, {y <- x^2; y+2}, x^y)) # 3
+length(diag(4))                             # = 16 (4 x 4)
+length(formals(function (u,v,w,x,y,z) 0))   # = 6
+length(y ~ x1 + x2 + x3)                    # = 3
+length(expression(x, {y <- x^2; y+2}, x^y)) # = 3
 
 ## from example(warpbreaks)
 require(stats)
 
 fm1 <- lm(breaks ~ wool * tension, data = warpbreaks)
-length(fm1$call) # 3, lm() and two arguments.
-length(formula(fm1)) # 3, ~ lhs rhs
+length(fm1$call)     # = 3, lm and two arguments.
+length(formula(fm1)) # = 3, ~ lhs rhs
 }
 \keyword{attribute}
 

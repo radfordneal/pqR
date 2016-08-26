@@ -12,3 +12,5 @@ Corrected incorrect information in R-exts that said pairlists are not
 user visible in R.
 
 Changed default for last in substring to .Machine$integer.max
+
+Corrected wrong information about length of expressions in help(length).
