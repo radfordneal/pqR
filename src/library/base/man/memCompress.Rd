@@ -1,6 +1,6 @@
 % File src/library/base/man/memCompress.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 2009-11 R Core Development Team
+% Copyright 2009-11 R Core Team
 % Modifications for pqR Copyright (c) 2013 Radford M. Neal.
 % Distributed under GPL 2 or later
 
