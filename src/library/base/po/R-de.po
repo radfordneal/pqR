@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: 2012-03-05 16:41+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-core <r-core@r-project.org>\n"
@@ -92,6 +92,10 @@ msgstr "'X' muss benannte Dimensionen besitzten"
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr "nicht alle Elemente von 'MARGIN' sind Namen von Dimensionen"
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr "unbrauchbares 'file' Argument"
 
 msgid "'dim' specifies too large an array"
 msgstr "'dim' spezifiziert ein zu großes Array"
@@ -574,7 +578,8 @@ msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr ""
 "'nrow' oder 'ncol' können nicht angegeben werden, wenn 'x' eine Matrix ist"
 
-msgid "'x' is an array, but not 1D."
+#, fuzzy
+msgid "'x' is an array, but not one-dimensional."
 msgstr "'x' ist ein Array, aber nicht eindimensional"
 
 msgid "only matrix diagonals can be replaced"
@@ -780,6 +785,10 @@ msgstr "benötige Ersetzungswerte für Treffer"
 
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr "Norm '%s' nutzt aktuell immer exact = FALSE"
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr "ungültiger Name"
 
 msgid "triangular matrix should be square"
 msgstr "Dreiecks-Matrix sollte quadratisch sein"
@@ -1069,15 +1078,16 @@ msgstr "'by' muss zu den Anzahlen der Spalten passen"
 msgid "'by' must match number of columns"
 msgstr "'by' muss zur Anzahl der Spalten passen"
 
-msgid "'by' must specify column(s) as numbers, names or logical"
+#, fuzzy
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr ""
 "'by' muss Spalte(n) als Zahlen, Namen oder logische Werte spezifizieren"
 
-msgid "'by' must specify valid column(s)"
-msgstr "'by' muss gültige Spalte(n) spezifizieren"
-
 msgid "'by.x' and 'by.y' specify different numbers of columns"
 msgstr "'by.x' und 'by.y' geben unterschiedliche Zahlen von Spalten an"
+
+msgid "'incomparables' is supported only for merging on a single column"
+msgstr ""
 
 msgid "additional arguments ignored in message()"
 msgstr "zusätzliche Argumente ignoriert in message()"
@@ -1468,11 +1478,9 @@ msgstr "'chdir = TRUE' ist für eine Verbindung sinnlos"
 msgid "'%s' is not an existing file"
 msgstr "'%s' ist keine existierende Datei"
 
-msgid "Timestamp of '"
+#, fuzzy
+msgid "Timestamp of %s has changed"
 msgstr "Zeitstempel von '"
-
-msgid "' has changed"
-msgstr "' hat sich geändert"
 
 msgid "additional arguments ignored in stop()"
 msgstr "zusätzliche Argumente in stop() ignoriert"
@@ -1539,6 +1547,14 @@ msgstr "'x' ist kein Array"
 
 msgid "'bin' must be numeric or a factor"
 msgstr "'bin' muss numerisch oder Faktor sein"
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr "ungültiger Wert"
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr "ungültiger Wert"
 
 msgid "arguments must have same length"
 msgstr "Argumente müssen die selbe Länge haben"
@@ -1710,6 +1726,12 @@ msgid_plural "objects %s not found"
 msgstr[0] "Objekt %s nicht gefunden"
 msgstr[1] "Objekte %s nicht gefunden"
 
+#, fuzzy
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] "'by' muss gültige Spalte(n) spezifizieren"
+msgstr[1] "'by' muss gültige Spalte(n) spezifizieren"
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1743,6 +1765,9 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] "Warnmeldung:\n"
 msgstr[1] "Warnmeldungen:\n"
+
+#~ msgid "' has changed"
+#~ msgstr "' hat sich geändert"
 
 #~ msgid ""
 #~ "Functions for exporting methods must have been made generic, explicitly "
@@ -1864,9 +1889,6 @@ msgstr[1] "Warnmeldungen:\n"
 
 #~ msgid "S3 method '%s' was declared in NAMESPACE but not found"
 #~ msgstr "S3 Methode '%s' wurde in NAMESPACE deklariert, aber nicht gefunden"
-
-#~ msgid "invalid name"
-#~ msgstr "ungültiger Name"
 
 #~ msgid "is required by"
 #~ msgstr "wird benötigt von"

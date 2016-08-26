@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.11.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: 2012-03-15 11:59-0500\n"
 "Last-Translator: Alexey Shipunov <dactylorhiza@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -285,16 +285,6 @@ msgstr "нулевые не-NA точки"
 
 msgid "'approx' requires n >= 1"
 msgstr "'approx' требует n >= 1"
-
-msgid "'vec' contains NAs"
-msgstr "'vec' содержит NAs"
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr "'vec' должен быть сортирован не по уменьшению"
-
-#, fuzzy
-msgid "invalid length(vec)"
-msgstr "неправильная длина членов"
 
 msgid "'order.max' must be >= 1"
 msgstr "'order.max' должен быть >= 1"
@@ -2511,6 +2501,16 @@ msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] "параметр %s не встречается в формуле модели"
 msgstr[1] "параметры %s не встречаются в формуле модели"
 msgstr[2] "параметры %s не встречаются в формуле модели"
+
+#~ msgid "'vec' contains NAs"
+#~ msgstr "'vec' содержит NAs"
+
+#~ msgid "'vec' must be sorted non-decreasingly"
+#~ msgstr "'vec' должен быть сортирован не по уменьшению"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "неправильная длина членов"
 
 #~ msgid "extra arguments"
 #~ msgstr "дополнительные аргументы"

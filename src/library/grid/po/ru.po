@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.9.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2012-01-13 11:24+0000\n"
+"POT-Creation-Date: 2016-08-25 20:43-0400\n"
 "PO-Revision-Date: 2011-10-18 19:36-0600\n"
 "Last-Translator: Alexey Shipunov <dactylorhiza@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -21,48 +21,48 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: grid.c:214
+#: grid.c:216
 msgid "Cannot clip to rotated viewport"
 msgstr "Не могу обрезать для повернутой оконницы"
 
-#: grid.c:673 grid.c:678 grid.c:767 grid.c:772
+#: grid.c:676 grid.c:681 grid.c:771 grid.c:776
 msgid "Cannot pop the top-level viewport (grid and graphics output mixed?)"
 msgstr ""
 "Не могу извлечь оконницу верхнего уровня (выводы grid и graphics смешались?)"
 
-#: grid.c:952
+#: grid.c:956
 msgid "attempt to plot on null device"
 msgstr "попытка чертить на нулевом устройстве"
 
-#: grid.c:1232
+#: grid.c:1236
 msgid "There is no layout defined"
 msgstr "Нет заданного эскиза"
 
-#: grid.c:1452
+#: grid.c:1456
 msgid "Polygon edge not found (zero-width or zero-height?)"
 msgstr "Край многоугольника не найден (нулевая ширина или высота?)"
 
-#: grid.c:1461
+#: grid.c:1465
 msgid "Polygon edge not found"
 msgstr "Край многоугольника не найден"
 
-#: grid.c:1615
+#: grid.c:1619
 msgid "Require at least two points to draw arrow"
 msgstr "Надо как минимум две точки, чтобы нарисовать стрелку"
 
-#: grid.c:1931
+#: grid.c:1935
 msgid "Non-finite control point in Xspline"
 msgstr "Не-конечная контрольная точка в Xspline"
 
-#: grid.c:2796
+#: grid.c:2800
 msgid "non-finite x or y in graphics path"
 msgstr "бесконечный x или y в кривой крафика"
 
-#: grid.c:3286
+#: grid.c:3292
 msgid "invalid plotting symbol"
 msgstr "неправильный символ графика"
 
-#: grid.c:3372
+#: grid.c:3378
 msgid "Unable to clip to rotated rectangle"
 msgstr "Не могу обрезать повернутый четырехугольник"
 

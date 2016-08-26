@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2012-04-22 16:14+0100\n"
+"POT-Creation-Date: 2016-08-25 20:43-0400\n"
 "PO-Revision-Date: 2011-12-01 20:24+0200\n"
 "Last-Translator: Joe <joedalton2@yahoo.dk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -37,15 +37,15 @@ msgstr "approx(): ugyldig interpolationsmetode"
 msgid "approx(): attempted to interpolate NA values"
 msgstr "approx(): forsøgte at interpolere NA-værdier"
 
-#: arima.c:69 arima.c:183 arima.c:359
+#: arima.c:72 arima.c:175 arima.c:352
 msgid "invalid argument type"
 msgstr "ugyldig argumenttype"
 
-#: arima.c:418 arima.c:502 pacf.c:308 pacf.c:348
+#: arima.c:424 arima.c:508 pacf.c:308 pacf.c:348
 msgid "can only transform 100 pars in arima0"
 msgstr "kan kun transformere 100 par i arima0"
 
-#: arima.c:838
+#: arima.c:844
 msgid "maximum supported lag is 350"
 msgstr "maksimal understøttet forsinkelse er 350"
 
@@ -116,64 +116,64 @@ msgstr "length(m) skal være mindst to"
 msgid "Argument Sx must be numeric vector one shorter than m[]"
 msgstr "Argument Sx skal være en numerisk vektor en kortere end m[]"
 
-#: nls.c:97
+#: nls.c:99
 msgid "'control' must be a list"
 msgstr "'control' skal være en liste"
 
-#: nls.c:99
+#: nls.c:101
 msgid "'m' must be a list"
 msgstr "'m' skal være en liste"
 
-#: nls.c:105 nls.c:110 nls.c:115 nls.c:120 nls.c:125 nls.c:166 nls.c:171
-#: nls.c:176 nls.c:181 nls.c:186 nls.c:191
+#: nls.c:107 nls.c:112 nls.c:117 nls.c:122 nls.c:127 nls.c:168 nls.c:173
+#: nls.c:178 nls.c:183 nls.c:188 nls.c:193
 #, c-format
 msgid "'%s' absent"
 msgstr "'%s' mangler"
 
-#: nls.c:232
+#: nls.c:234
 msgid "singular gradient"
 msgstr "entalsgradient"
 
-#: nls.c:253
+#: nls.c:255
 #, c-format
 msgid "step factor %g reduced below 'minFactor' of %g"
 msgstr "trinfaktor %g reduceret under 'minFactor' af %g"
 
-#: nls.c:262
+#: nls.c:264
 #, c-format
 msgid "number of iterations exceeded maximum of %d"
 msgstr "antal iterationer overskred maksimum på %d"
 
-#: nls.c:267
+#: nls.c:269
 msgid "converged"
 msgstr "begrænset"
 
-#: nls.c:288
+#: nls.c:290
 msgid "'theta' should be of type character"
 msgstr "'theta' skal være type-tegn"
 
-#: nls.c:290 port.c:366
+#: nls.c:292 port.c:369
 msgid "use of NULL environment is defunct"
 msgstr "brug af NULL-miljø er ude af drift"
 
-#: nls.c:294
+#: nls.c:296
 msgid "'rho' should be an environment"
 msgstr "'rho' skal være et miljø"
 
-#: nls.c:297
+#: nls.c:299
 msgid "'dir' is not a numeric vector of the correct length"
 msgstr "'dir' er ikke en numerisk vektor med korrekt længde"
 
-#: nls.c:314 nls.c:342
+#: nls.c:316 nls.c:353
 msgid "Missing value or an infinity produced when evaluating the model"
 msgstr "Manglende værdi eller en uendelig lavet under evaluering af modellen"
 
-#: nls.c:320
+#: nls.c:324
 #, c-format
 msgid "variable '%s' is integer, not numeric"
 msgstr "variable '%s' er et heltal, ikke numerisk"
 
-#: nls.c:322
+#: nls.c:326
 #, c-format
 msgid "variable '%s' is not numeric"
 msgstr "variabel '%s' er ikke numerisk"
@@ -196,71 +196,71 @@ msgstr "fejlkode for forkal %d"
 msgid "invalid value of lag.max"
 msgstr "ugyldig værdi for lag.max"
 
-#: port.c:131
+#: port.c:133
 #, c-format
 msgid "Rf_divset: alg = %d must be 1, 2, 3, or 4"
 msgstr "Rf_divsæt: alg = %d skal være 1, 2, 3 eller 4 "
 
-#: port.c:310
+#: port.c:312
 #, c-format
 msgid "gradient function must return a numeric vector of length %d"
 msgstr "gradientfunktion skal returnere en numerisk vektor med længden %d"
 
-#: port.c:320
+#: port.c:322
 #, c-format
 msgid "Hessian function must return a square numeric matrix of order %d"
 msgstr ""
 "Hessianfunktion skal returnere en kvadratisk numerisk matrix i orden %d"
 
-#: port.c:370
+#: port.c:373
 msgid "'rho' must be an environment"
 msgstr "'rho' skal være et miljø"
 
-#: port.c:372 port.c:523
+#: port.c:375 port.c:526
 msgid "'d' must be a nonempty numeric vector"
 msgstr "'d' skal være en numerisk vektor som ikke er tom"
 
-#: port.c:374
+#: port.c:377
 msgid "When Hessian defined must also have gradient defined"
 msgstr "Når Hessian er defineret skal også en gradient være defineret"
 
-#: port.c:377
+#: port.c:380
 #, c-format
 msgid "environment 'rho' must contain a numeric vector '.par' of length %d"
 msgstr "miljø 'rho' skal indeholde en numerisk vektor '.par' med længden %d"
 
-#: port.c:391
+#: port.c:394
 msgid "'lower' and 'upper' must be numeric vectors"
 msgstr "'lower' og 'upper' skal være numeriske vektorer"
 
-#: port.c:437
+#: port.c:440
 msgid "'getElement' applies only to named lists"
 msgstr "'getElement' gælder kun for navngivne lister"
 
-#: port.c:458
+#: port.c:461
 #, c-format
 msgid "%s$%s() not found"
 msgstr "%s$%s() er ikke fundet"
 
-#: port.c:471
+#: port.c:474
 #, c-format
 msgid "'gradient' must be a numeric matrix of dimension (%d,%d)"
 msgstr "'gradient' skal være en numerisk matrix med dimension (%d, %d)"
 
-#: port.c:492
+#: port.c:495
 #, c-format
 msgid "fcn produced mode %d, length %d - wanted mode %d, length %d"
 msgstr "fcn lavede tilstand %d, længde %d - ønsket tilstand %d, længde %d"
 
-#: port.c:505
+#: port.c:508
 msgid "invalid type for eval_check_store"
 msgstr "ugyldig type for eval_check_store"
 
-#: port.c:524
+#: port.c:527
 msgid "m must be a list"
 msgstr "m skal være en liste"
 
-#: port.c:544
+#: port.c:548
 msgid "'lowerb' and 'upperb' must be numeric vectors"
 msgstr "'lowerb' og 'upperb' skal være numeriske vektorer"
 

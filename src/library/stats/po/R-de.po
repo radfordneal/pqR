@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: 2012-03-06 09:25+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R Core <r-core@r-project.org>\n"
@@ -278,16 +278,6 @@ msgstr "keine nicht-NA Punkte"
 
 msgid "'approx' requires n >= 1"
 msgstr "'approx' verlangt n >= 1"
-
-msgid "'vec' contains NAs"
-msgstr "'vec' enthält NAs"
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr "'vec' muss nicht-fallend sortiert sein"
-
-#, fuzzy
-msgid "invalid length(vec)"
-msgstr "unzulässige Anzahl von Teilnehmern"
 
 msgid "'order.max' must be >= 1"
 msgstr "'order.max' muss >= 1 sein"
@@ -2499,6 +2489,16 @@ msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] "Parameter %s kommt in der Modellgleichung nicht vor"
 msgstr[1] "Parameter %s kommen in der Modellgleichung nicht vor"
+
+#~ msgid "'vec' contains NAs"
+#~ msgstr "'vec' enthält NAs"
+
+#~ msgid "'vec' must be sorted non-decreasingly"
+#~ msgstr "'vec' muss nicht-fallend sortiert sein"
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr "unzulässige Anzahl von Teilnehmern"
 
 #~ msgid "extra arguments"
 #~ msgstr "zusätzliche Argumente"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2011-10-19 07:24+0100\n"
+"POT-Creation-Date: 2016-08-25 20:43-0400\n"
 "PO-Revision-Date: 2012-02-29 14:00+0000\n"
 "Last-Translator: Fei Chen <feic@normipaiva.com>\n"
 "Language-Team: Chinese\n"
@@ -16,61 +16,61 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: fork.c:135 fork.c:138
+#: fork.c:138 fork.c:141
 msgid "unable to create a pipe"
 msgstr "无法建立管道"
 
-#: fork.c:149
+#: fork.c:152
 #, c-format
 msgid "unable to fork, possible reason: %s"
 msgstr "无法分叉，可能的原因是：%s"
 
-#: fork.c:178
+#: fork.c:181
 msgid "memory allocation error"
 msgstr "内存分配错误"
 
-#: fork.c:216
+#: fork.c:219
 msgid "only children can send data to the master process"
 msgstr "只有子进程才能给主进程发送数据"
 
-#: fork.c:218
+#: fork.c:221
 msgid "there is no pipe to the master process"
 msgstr "有没可以接到主进程的管道"
 
-#: fork.c:220
+#: fork.c:223
 msgid "content to send must be RAW, use serialize() if needed"
 msgstr "发送的内容必须是原始的，如果需要的话请用serialize（）"
 
-#: fork.c:229 fork.c:236
+#: fork.c:232 fork.c:239
 msgid "write error, closing pipe to the master"
 msgstr "书写错误，请关闭通往主进程的管道"
 
-#: fork.c:249
+#: fork.c:252
 msgid "only the master process can send data to a child process"
 msgstr "只有主进程才能给子进程发送数据"
 
-#: fork.c:256
+#: fork.c:259
 #, c-format
 msgid "child %d does not exist"
 msgstr "不存在%d这个子进程"
 
-#: fork.c:262
+#: fork.c:265
 msgid "write error"
 msgstr "书写错误"
 
-#: fork.c:342 fork.c:464
+#: fork.c:345 fork.c:469
 #, c-format
 msgid "error '%s' in select"
 msgstr "选择时出了'%s'这样一个错"
 
-#: fork.c:548
+#: fork.c:553
 msgid "mckill failed"
 msgstr "mckill失败"
 
-#: fork.c:558
+#: fork.c:563
 msgid "mcexit can only be used in a child process"
 msgstr "mcexit只能用于子进程"
 
-#: fork.c:578
+#: fork.c:583
 msgid "mcexit failed"
 msgstr "mcexit失败"

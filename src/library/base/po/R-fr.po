@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.12.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: 2012-03-06 21:31+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -93,6 +93,10 @@ msgstr "'x' doit avoir des dimensions nommées"
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr "les éléments de 'MARGIN' ne sont pas tous les noms des dimensions"
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr "mauvais argument 'file'"
 
 msgid "'dim' specifies too large an array"
 msgstr "'dim' est trop large pour un tableau"
@@ -598,7 +602,8 @@ msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr ""
 "'nrow' et 'ncol' ne peuvent pas être spécifiés lorsque 'x' est une matrice"
 
-msgid "'x' is an array, but not 1D."
+#, fuzzy
+msgid "'x' is an array, but not one-dimensional."
 msgstr "'x' est un tableau, mais pas à une dimension."
 
 msgid "only matrix diagonals can be replaced"
@@ -810,6 +815,10 @@ msgstr "des remplacements doivent être fournis pour les correspondances"
 
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr "norm '%s' utilise systématiquement 'exact = FALSE' pour l'instant"
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr "nom incorrect"
 
 msgid "triangular matrix should be square"
 msgstr "la matrice triangulaire doit être carrée"
@@ -1103,16 +1112,17 @@ msgstr "'by' doit correspondre au nombre de colonnes"
 msgid "'by' must match number of columns"
 msgstr "'by' doit correspondre au nombre de colonnes"
 
-msgid "'by' must specify column(s) as numbers, names or logical"
+#, fuzzy
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr ""
 "'by' doit spécifier la / les colonne(s) comme des entiers (position), des "
 "noms our des valeurs logiques"
 
-msgid "'by' must specify valid column(s)"
-msgstr "'by' doit spécifier une / des colonne(s) correcte(s)"
-
 msgid "'by.x' and 'by.y' specify different numbers of columns"
 msgstr "'by.x' et 'by.y' spécifient des nombres différents de colonnes"
+
+msgid "'incomparables' is supported only for merging on a single column"
+msgstr ""
 
 msgid "additional arguments ignored in message()"
 msgstr "arguments supplémentaires ignorés dans message()"
@@ -1510,11 +1520,9 @@ msgstr "'chdir = TRUE' n'a pas de sens pour une connection"
 msgid "'%s' is not an existing file"
 msgstr "'%s' n'est pas un fichier existant"
 
-msgid "Timestamp of '"
+#, fuzzy
+msgid "Timestamp of %s has changed"
 msgstr "La date d'enregistrement de '"
-
-msgid "' has changed"
-msgstr "' a été modifiée"
 
 msgid "additional arguments ignored in stop()"
 msgstr "arguments supplémentaires ignorés dans stop()"
@@ -1581,6 +1589,14 @@ msgstr "'x' n'est pas un tableau"
 
 msgid "'bin' must be numeric or a factor"
 msgstr "'bin' doit être numérique ou un facteur"
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr "valeur incorrecte"
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr "valeur incorrecte"
 
 msgid "arguments must have same length"
 msgstr "les arguments doivent avoir même longueur"
@@ -1753,6 +1769,12 @@ msgid_plural "objects %s not found"
 msgstr[0] "objet %s introuvable"
 msgstr[1] "objets %s introuvables"
 
+#, fuzzy
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] "'by' doit spécifier une / des colonne(s) correcte(s)"
+msgstr[1] "'by' doit spécifier une / des colonne(s) correcte(s)"
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1787,6 +1809,9 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] "Message d'avis :\n"
 msgstr[1] "Messages d'avis :\n"
+
+#~ msgid "' has changed"
+#~ msgstr "' a été modifiée"
 
 #~ msgid ""
 #~ "Functions for exporting methods must have been made generic, explicitly "
@@ -1912,9 +1937,6 @@ msgstr[1] "Messages d'avis :\n"
 
 #~ msgid "S3 method '%s' was declared in NAMESPACE but not found"
 #~ msgstr "la méthode S3 '%s' est déclarée dans NAMESPACE mais est introuvable"
-
-#~ msgid "invalid name"
-#~ msgstr "nom incorrect"
 
 #~ msgid "is required by"
 #~ msgstr "est requis par"

@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.9.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2012-04-22 16:14+0100\n"
+"POT-Creation-Date: 2016-08-25 20:43-0400\n"
 "PO-Revision-Date: 2012-03-15 12:00-0500\n"
 "Last-Translator: Alexey Shipunov <dactylorhiza@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -42,15 +42,15 @@ msgstr "approx(): неправильный метод интерполяции"
 msgid "approx(): attempted to interpolate NA values"
 msgstr "approx(): попытка интерполировать пропущенные значения"
 
-#: arima.c:69 arima.c:183 arima.c:359
+#: arima.c:72 arima.c:175 arima.c:352
 msgid "invalid argument type"
 msgstr "неправильный тип аргумента"
 
-#: arima.c:418 arima.c:502 pacf.c:308 pacf.c:348
+#: arima.c:424 arima.c:508 pacf.c:308 pacf.c:348
 msgid "can only transform 100 pars in arima0"
 msgstr "могу трансформировать только 100 пар в arima0"
 
-#: arima.c:838
+#: arima.c:844
 msgid "maximum supported lag is 350"
 msgstr "максимальный поддерживаемый лаг -- 350"
 
@@ -121,65 +121,65 @@ msgstr "length(m) должна быть по меньшей мере 2"
 msgid "Argument Sx must be numeric vector one shorter than m[]"
 msgstr "Аргумент Sx должен быть числовым вектором короче m[]"
 
-#: nls.c:97
+#: nls.c:99
 msgid "'control' must be a list"
 msgstr "'control' должен быть списком"
 
-#: nls.c:99
+#: nls.c:101
 msgid "'m' must be a list"
 msgstr "'m' должен быть списком"
 
-#: nls.c:105 nls.c:110 nls.c:115 nls.c:120 nls.c:125 nls.c:166 nls.c:171
-#: nls.c:176 nls.c:181 nls.c:186 nls.c:191
+#: nls.c:107 nls.c:112 nls.c:117 nls.c:122 nls.c:127 nls.c:168 nls.c:173
+#: nls.c:178 nls.c:183 nls.c:188 nls.c:193
 #, c-format
 msgid "'%s' absent"
 msgstr "'%s' отсутствует"
 
-#: nls.c:232
+#: nls.c:234
 msgid "singular gradient"
 msgstr "сингулярный градиент"
 
-#: nls.c:253
+#: nls.c:255
 #, c-format
 msgid "step factor %g reduced below 'minFactor' of %g"
 msgstr "фактор шага %g стал меньше 'minFactor' %g"
 
-#: nls.c:262
+#: nls.c:264
 #, c-format
 msgid "number of iterations exceeded maximum of %d"
 msgstr "число итераций превысило максимум = %d"
 
-#: nls.c:267
+#: nls.c:269
 msgid "converged"
 msgstr "сошлось"
 
-#: nls.c:288
+#: nls.c:290
 msgid "'theta' should be of type character"
 msgstr "'theta' должна быть текстового типа"
 
-#: nls.c:290 port.c:366
+#: nls.c:292 port.c:369
 msgid "use of NULL environment is defunct"
 msgstr "использование окружения NULL больше не работает"
 
-#: nls.c:294
+#: nls.c:296
 msgid "'rho' should be an environment"
 msgstr "'rho' должно быть окружением"
 
-#: nls.c:297
+#: nls.c:299
 msgid "'dir' is not a numeric vector of the correct length"
 msgstr "'dir' не является числовым вектором вектор правильной длины длина"
 
-#: nls.c:314 nls.c:342
+#: nls.c:316 nls.c:353
 msgid "Missing value or an infinity produced when evaluating the model"
 msgstr ""
 "Пропущенное значение или неопределенность получено при вычислении модели"
 
-#: nls.c:320
+#: nls.c:324
 #, c-format
 msgid "variable '%s' is integer, not numeric"
 msgstr "переменная '%s' -- целое число, не 'numeric'"
 
-#: nls.c:322
+#: nls.c:326
 #, c-format
 msgid "variable '%s' is not numeric"
 msgstr "переменная '%s' не является числовой"
@@ -202,74 +202,74 @@ msgstr "ошибка 'forkal' с кодом %d"
 msgid "invalid value of lag.max"
 msgstr "неправильное значение 'lag.max'"
 
-#: port.c:131
+#: port.c:133
 #, c-format
 msgid "Rf_divset: alg = %d must be 1, 2, 3, or 4"
 msgstr "Rf_divset: alg = %d должен быть 1, 2, 3 или 4"
 
-#: port.c:310
+#: port.c:312
 #, c-format
 msgid "gradient function must return a numeric vector of length %d"
 msgstr "градиентная функция должна возвращать числовой вектор длины %d"
 
-#: port.c:320
+#: port.c:322
 #, c-format
 msgid "Hessian function must return a square numeric matrix of order %d"
 msgstr ""
 "функция гессиана должна возвращать квадратную числовую матрицу порядка %d"
 
-#: port.c:370
+#: port.c:373
 msgid "'rho' must be an environment"
 msgstr "'rho' должно быть окружением"
 
-#: port.c:372 port.c:523
+#: port.c:375 port.c:526
 msgid "'d' must be a nonempty numeric vector"
 msgstr "'d' должен быть непустым числовым вектором"
 
-#: port.c:374
+#: port.c:377
 msgid "When Hessian defined must also have gradient defined"
 msgstr ""
 "Когда определяется функция, вычисляющая гессиан, должен быть определен и "
 "градиент"
 
-#: port.c:377
+#: port.c:380
 #, c-format
 msgid "environment 'rho' must contain a numeric vector '.par' of length %d"
 msgstr "окружение 'rho' должно содержать числовой вектор '.par' длины %d"
 
-#: port.c:391
+#: port.c:394
 msgid "'lower' and 'upper' must be numeric vectors"
 msgstr "'lower' и 'upper' должны быть числовыми векторами"
 
-#: port.c:437
+#: port.c:440
 msgid "'getElement' applies only to named lists"
 msgstr "'getElement' применяется лишь к именованным спискам"
 
-#: port.c:458
+#: port.c:461
 #, c-format
 msgid "%s$%s() not found"
 msgstr "%s$%s() не найден"
 
-#: port.c:471
+#: port.c:474
 #, c-format
 msgid "'gradient' must be a numeric matrix of dimension (%d,%d)"
 msgstr ""
 "'gradient' должен быть числовой матрицей матрицей с измерениями (%d,%d)"
 
-#: port.c:492
+#: port.c:495
 #, c-format
 msgid "fcn produced mode %d, length %d - wanted mode %d, length %d"
 msgstr "fcn выдала тип %d, длину %d - нужен тип %d, длина %d"
 
-#: port.c:505
+#: port.c:508
 msgid "invalid type for eval_check_store"
 msgstr "неправильный тип 'eval_check_store'"
 
-#: port.c:524
+#: port.c:527
 msgid "m must be a list"
 msgstr "m должен быть списком"
 
-#: port.c:544
+#: port.c:548
 msgid "'lowerb' and 'upperb' must be numeric vectors"
 msgstr "'lowerb' и 'upperb' должны быть числовыми векторами"
 

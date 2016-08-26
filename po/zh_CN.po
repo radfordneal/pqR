@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.1.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-06-23 11:56-0400\n"
+"POT-Creation-Date: 2016-08-25 20:40-0400\n"
 "PO-Revision-Date: 2005-05-20 18:26+0800\n"
 "Last-Translator: ronggui\n"
 "Language-Team: Chinese\n"
@@ -171,12 +171,12 @@ msgstr "在显示'%ls'时出了问题"
 #: src/main/envir.c:2217 src/main/envir.c:2457 src/main/envir.c:2571
 #: src/main/envir.c:2818 src/main/envir.c:3031 src/main/envir.c:3043
 #: src/main/envir.c:3050 src/main/envir.c:3066 src/main/envir.c:3629
-#: src/main/errors.c:1015 src/main/eval.c:302 src/main/eval.c:2850
-#: src/main/eval.c:2876 src/main/eval.c:2880 src/main/grep.c:764
+#: src/main/errors.c:1015 src/main/eval.c:302 src/main/eval.c:2851
+#: src/main/eval.c:2877 src/main/eval.c:2881 src/main/grep.c:764
 #: src/main/grep.c:769 src/main/grep.c:1045 src/main/grep.c:1047
 #: src/main/grep.c:1049 src/main/grep.c:1493 src/main/grep.c:1497
 #: src/main/grep.c:1502 src/main/grep.c:2308 src/main/grep.c:2313
-#: src/main/grep.c:2601 src/main/grep.c:2606 src/main/memory.c:4413
+#: src/main/grep.c:2602 src/main/grep.c:2607 src/main/memory.c:4413
 #: src/main/memory.c:4421 src/main/memory.c:4426 src/main/model.c:1630
 #: src/main/model.c:1638 src/main/optim.c:233 src/main/paste.c:96
 #: src/main/paste.c:432 src/main/paste.c:439 src/main/paste.c:446
@@ -298,7 +298,7 @@ msgstr "时间标签不对"
 #: src/main/plot.c:3336 src/main/plot.c:3494 src/main/plot3d.c:1392
 #: src/main/plot3d.c:2533 src/main/plot3d.c:2537 src/main/plot3d.c:2539
 #: src/main/seq.c:567 src/main/seq.c:577 src/main/seq.c:579 src/main/seq.c:584
-#: src/main/sort.c:878 src/main/sort.c:978 src/main/source.c:255
+#: src/main/sort.c:878 src/main/sort.c:976 src/main/source.c:255
 #: src/main/summary.c:1078 src/main/sysutils.c:254 src/main/util.c:1364
 #: src/main/util.c:1369 src/main/util.c:1376 src/main/util.c:1379
 #: src/modules/X11/devX11.c:3123 src/modules/X11/devX11.c:3150
@@ -650,49 +650,49 @@ msgstr "只有在设定了'user_unif_nseed'以后才能读随机种"
 msgid "RNG_Init: unimplemented RNG kind %d"
 msgstr "RNG_Init: RNG种类%d目前没有实现"
 
-#: src/main/RNG.c:391
+#: src/main/RNG.c:399
 msgid ".Random.seed is a missing argument with no default"
 msgstr ".Random.seed这个参数没有设定，也没有缺省值"
 
-#: src/main/RNG.c:392
+#: src/main/RNG.c:400
 #, c-format
 msgid ".Random.seed is not an integer vector but of type '%s'"
 msgstr ".Random.seed不是整数矢量，类别为'%s'"
 
-#: src/main/RNG.c:397
+#: src/main/RNG.c:405
 msgid ".Random.seed[1] is not a valid integer"
 msgstr ".Random.seed[1]不是适当正数"
 
-#: src/main/RNG.c:401
+#: src/main/RNG.c:409
 msgid ".Random.seed[0] is not a valid Normal type"
 msgstr ".Random.seed[0]不是适当的Normal类"
 
-#: src/main/RNG.c:414
+#: src/main/RNG.c:422
 msgid ".Random.seed[1] = 5 but no user-supplied generator"
 msgstr ".Random.seed[1]=5但用户指定的发生器却不存在"
 
-#: src/main/RNG.c:417
+#: src/main/RNG.c:425
 msgid ".Random.seed[1] is not a valid RNG kind (code)"
 msgstr ".Random.seed[1]不是适当的RNG类(代码)"
 
-#: src/main/RNG.c:446
+#: src/main/RNG.c:454
 msgid ".Random.seed has wrong length"
 msgstr ".Random.seed的长度不对"
 
-#: src/main/RNG.c:503
+#: src/main/RNG.c:511
 #, c-format
 msgid "RNGkind: unimplemented RNG kind %d"
 msgstr "RNGkind: RNG种类%d目前没有实现"
 
-#: src/main/RNG.c:516
+#: src/main/RNG.c:524
 msgid "invalid Normal type in RNGkind"
 msgstr "RNGkind里的Normal类不对"
 
-#: src/main/RNG.c:519
+#: src/main/RNG.c:527
 msgid "'user_norm_rand' not in load table"
 msgstr "'user_norm_rand'不在载入表中"
 
-#: src/main/RNG.c:562
+#: src/main/RNG.c:570
 msgid "supplied seed is not a valid integer"
 msgstr "提供的随机种不是正确的正数"
 
@@ -788,7 +788,7 @@ msgstr "无法打开'%s'文件"
 
 #: src/main/agrep.c:134 src/main/agrep.c:764 src/main/character.c:1062
 #: src/main/character.c:1066 src/main/grep.c:766 src/main/grep.c:1495
-#: src/main/grep.c:1499 src/main/grep.c:2310 src/main/grep.c:2603
+#: src/main/grep.c:1499 src/main/grep.c:2310 src/main/grep.c:2604
 #, c-format
 msgid "argument '%s' has length > 1 and only the first element will be used"
 msgstr "变数'%s'的长度大于一，因此只能用其第一元素"
@@ -798,7 +798,7 @@ msgid "'pattern' must be a non-empty character string"
 msgstr "'pattern'必需为非空字符串"
 
 #: src/main/agrep.c:202 src/main/agrep.c:815 src/main/grep.c:835
-#: src/main/grep.c:2366 src/main/grep.c:2642
+#: src/main/grep.c:2366 src/main/grep.c:2643
 msgid "regular expression is invalid in this locale"
 msgstr "正规表现不适用于此语言环境"
 
@@ -809,8 +809,8 @@ msgstr "regcomp出错：'%s'"
 
 #: src/main/agrep.c:239 src/main/agrep.c:860 src/main/grep.c:227
 #: src/main/grep.c:314 src/main/grep.c:422 src/main/grep.c:577
-#: src/main/grep.c:885 src/main/grep.c:2461 src/main/grep.c:2529
-#: src/main/grep.c:2678
+#: src/main/grep.c:885 src/main/grep.c:2464 src/main/grep.c:2530
+#: src/main/grep.c:2679
 #, c-format
 msgid "input string %d is invalid in this locale"
 msgstr "输入的字符串%d不适用于此语言环境"
@@ -818,7 +818,7 @@ msgstr "输入的字符串%d不适用于此语言环境"
 #: src/main/agrep.c:513 src/main/agrep.c:752 src/main/grep.c:155
 #: src/main/grep.c:757 src/main/grep.c:759 src/main/grep.c:1031
 #: src/main/grep.c:1039 src/main/grep.c:1486 src/main/grep.c:1488
-#: src/main/grep.c:2300 src/main/grep.c:2302 src/main/grep.c:2591
+#: src/main/grep.c:2300 src/main/grep.c:2302 src/main/grep.c:2592
 #, c-format
 msgid "argument '%s' will be ignored"
 msgstr "略过'%s'参数值"
@@ -833,7 +833,7 @@ msgstr "输入的字符串x[%d]不适用于此语言环境"
 msgid "input string y[%d] is invalid in this locale"
 msgstr "输入的字符串y[%d]不适用于此语言环境"
 
-#: src/main/agrep.c:821 src/main/grep.c:2648
+#: src/main/agrep.c:821 src/main/grep.c:2649
 #, c-format
 msgid "regcomp error: '%s'"
 msgstr "regcomp出错：'%s'"
@@ -1234,7 +1234,7 @@ msgid "exactly one attribute 'which' must be given"
 msgstr "只能给一个'which'属性"
 
 #: src/main/attrib.c:1386 src/main/attrib.c:1409 src/main/subscript.c:144
-#: src/main/subscript.c:148 src/main/subset.c:1844 src/main/subset.c:1893
+#: src/main/subscript.c:148 src/main/subset.c:1851 src/main/subset.c:1900
 #, c-format
 msgid "partial match of '%s' to '%s'"
 msgstr "'%s'部分匹配到'%s'"
@@ -1306,7 +1306,7 @@ msgstr "不能有重复的正式参数'use.names' "
 msgid "argument not a list"
 msgstr "参数不是串列"
 
-#: src/main/bind.c:1117 src/main/eval.c:3245 src/main/eval.c:3253
+#: src/main/bind.c:1117 src/main/eval.c:3246 src/main/eval.c:3254
 #: src/main/objects.c:287 src/main/objects.c:308 src/main/objects.c:744
 #: src/main/objects.c:751 src/main/objects.c:761
 #, c-format
@@ -1354,7 +1354,7 @@ msgstr "矢量size设得太大了"
 #: src/main/envir.c:2172 src/main/envir.c:2847 src/main/envir.c:2907
 #: src/main/envir.c:3183 src/main/envir.c:3212 src/main/envir.c:3233
 #: src/main/envir.c:3256 src/main/envir.c:3291 src/main/envir.c:3312
-#: src/main/envir.c:3619 src/main/envir.c:3624 src/main/eval.c:5793
+#: src/main/envir.c:3619 src/main/envir.c:3624 src/main/eval.c:5795
 #: src/main/objects.c:211 src/main/objects.c:219 src/main/saveload.c:2064
 #: src/main/saveload.c:2355 src/main/serialize.c:2675
 msgid "use of NULL environment is defunct"
@@ -1440,7 +1440,7 @@ msgstr "重复开关默认值：'%s'和'%s'"
 msgid "'EXPR' is missing"
 msgstr "缺少'EXPR'"
 
-#: src/main/builtin.c:935 src/main/eval.c:5631
+#: src/main/builtin.c:935 src/main/eval.c:5633
 msgid "EXPR must be a length 1 vector"
 msgstr "EXPR必需是长度为一的矢量"
 
@@ -1604,7 +1604,7 @@ msgstr "不能强迫改变非因子"
 msgid "list argument expected"
 msgstr "需要串列参数"
 
-#: src/main/coerce.c:1480 src/main/eval.c:5797
+#: src/main/coerce.c:1480 src/main/eval.c:5799
 msgid "invalid environment"
 msgstr "环境不对"
 
@@ -3408,11 +3408,11 @@ msgstr "方法环境里没有\"%s\"这个符号"
 msgid "non-symbol loop variable"
 msgstr "非符号循环变数"
 
-#: src/main/eval.c:1393 src/main/subset.c:1490
+#: src/main/eval.c:1393 src/main/subset.c:1497
 msgid "incorrect number of dimensions"
 msgstr "量度数目不对"
 
-#: src/main/eval.c:1536 src/main/eval.c:4906
+#: src/main/eval.c:1536 src/main/eval.c:4907
 msgid "invalid for() loop sequence"
 msgstr "for()循环顺序不对"
 
@@ -3457,164 +3457,164 @@ msgstr "分派错误"
 msgid "invalid formal argument list for \"function\""
 msgstr "\"function\"正式参数串列不对"
 
-#: src/main/eval.c:2873
+#: src/main/eval.c:2874
 msgid "numeric 'envir' arg not of length one"
 msgstr "数值'envir'参数的长度不是一"
 
-#: src/main/eval.c:2895 src/main/eval.c:2922
+#: src/main/eval.c:2896 src/main/eval.c:2923
 msgid "restarts not supported in 'eval'"
 msgstr "'eval'不支持重新启动"
 
-#: src/main/eval.c:2998 src/main/eval.c:3011
+#: src/main/eval.c:2999 src/main/eval.c:3012
 msgid "'Recall' called from outside a closure"
 msgstr "'Recall'在封閉包外调用"
 
-#: src/main/eval.c:3109
+#: src/main/eval.c:3110
 msgid "value in '...' is not a promise"
 msgstr "'... '里的值不是允諾"
 
-#: src/main/eval.c:3388
+#: src/main/eval.c:3389
 #, c-format
 msgid "Incompatible methods (\"%s\", \"%s\") for \"%s\""
 msgstr "不可兼容的方法(\"%s\", \"%s\")和\"%s\""
 
-#: src/main/eval.c:3708
+#: src/main/eval.c:3709
 #, c-format
 msgid "\"%s\" is not a %s function"
 msgstr "\"%s\"不是%s函数"
 
-#: src/main/eval.c:3922
+#: src/main/eval.c:3923
 msgid "node stack overflow"
 msgstr "节点堆叠上溢"
 
-#: src/main/eval.c:3928
+#: src/main/eval.c:3929
 msgid "integer stack overflow"
 msgstr "整数堆叠上溢"
 
-#: src/main/eval.c:3982
+#: src/main/eval.c:3983
 msgid "Bad opcode"
 msgstr "op代码不对"
 
-#: src/main/eval.c:4720
+#: src/main/eval.c:4721
 #, c-format
 msgid "invalid %s type in 'x %s y'"
 msgstr "'x %2$s y'中%1$s种类不对"
 
-#: src/main/eval.c:4770
+#: src/main/eval.c:4771
 msgid "bad function"
 msgstr "函数不对"
 
-#: src/main/eval.c:4808
+#: src/main/eval.c:4809
 msgid "bytecode version mismatch; using eval"
 msgstr "位元組碼版本不配; 用eval"
 
-#: src/main/eval.c:4813
+#: src/main/eval.c:4814
 msgid "bytecode version is too old"
 msgstr "位元組碼版本太旧"
 
-#: src/main/eval.c:4814
+#: src/main/eval.c:4815
 msgid "bytecode version is too new"
 msgstr "位元組碼版本太新"
 
-#: src/main/eval.c:4848
+#: src/main/eval.c:4849
 msgid "byte code version mismatch"
 msgstr "位元組碼版本不配"
 
-#: src/main/eval.c:4974
+#: src/main/eval.c:4975
 msgid "invalid sequence argument in for loop"
 msgstr "循环里的顺序参数不对"
 
-#: src/main/eval.c:5117 src/main/names.c:787
-#, c-format
-msgid "no internal function \"%s\""
+#: src/main/eval.c:5118
+#, fuzzy, c-format
+msgid "there is no .Internal function '%s'"
 msgstr "没有\"%s\"这个内部函数"
 
-#: src/main/eval.c:5238
+#: src/main/eval.c:5240
 msgid "not a BUILTIN function"
 msgstr "非BUILTIN函数"
 
-#: src/main/eval.c:5635
+#: src/main/eval.c:5637
 msgid "numeric EXPR required for switch() without named alternatives"
 msgstr "没有名字替代的开关需要数值EXPR"
 
-#: src/main/eval.c:5638
+#: src/main/eval.c:5640
 msgid "bad character switch offsets"
 msgstr "字符开关偏移不对"
 
-#: src/main/eval.c:5640
+#: src/main/eval.c:5642
 msgid "bad switch names"
 msgstr "开关名字不对"
 
-#: src/main/eval.c:5654
+#: src/main/eval.c:5656
 msgid "bad numeric switch offsets"
 msgstr "数字开关偏移设定不对"
 
-#: src/main/eval.c:5731
+#: src/main/eval.c:5733
 msgid "cannot find index for threaded code address"
 msgstr "找不到线程代码地址的索引"
 
-#: src/main/eval.c:5790
+#: src/main/eval.c:5792
 msgid "invalid body"
 msgstr "函数体不对"
 
-#: src/main/eval.c:5810
+#: src/main/eval.c:5812
 msgid "invalid symbol"
 msgstr "符号不对"
 
-#: src/main/eval.c:5854
+#: src/main/eval.c:5856
 msgid "argument is not a byte code object"
 msgstr "参数不是位元组码对象"
 
-#: src/main/eval.c:5875
+#: src/main/eval.c:5877
 msgid "bad file name"
 msgstr "文件名字不对"
 
-#: src/main/eval.c:5879 src/main/eval.c:5900
+#: src/main/eval.c:5881 src/main/eval.c:5902
 msgid "unable to open 'file'"
 msgstr "无法打开'file'"
 
-#: src/main/eval.c:5894 src/main/saveload.c:1936
+#: src/main/eval.c:5896 src/main/saveload.c:1936
 msgid "'file' must be non-empty string"
 msgstr "'file'必需是非空字符串"
 
-#: src/main/eval.c:5896 src/main/saveload.c:1938 src/main/saveload.c:2238
+#: src/main/eval.c:5898 src/main/saveload.c:1938 src/main/saveload.c:2238
 #: src/main/serialize.c:2128
 msgid "'ascii' must be logical"
 msgstr "'ascii’必需是逻辑值"
 
-#: src/main/eval.c:5925 src/main/eval.c:5932
+#: src/main/eval.c:5927 src/main/eval.c:5934
 msgid "R_CompiledFileName: buffer too small"
 msgstr "R_CompiledFileName: 缓冲区太小"
 
-#: src/main/eval.c:5965 src/main/eval.c:6014
+#: src/main/eval.c:5967 src/main/eval.c:6016
 msgid "constant buffer must be a generic vector"
 msgstr "常量缓冲区必须是矢量类属"
 
-#: src/main/eval.c:5984
+#: src/main/eval.c:5986
 msgid "constBuf must be a generic vector"
 msgstr "constBuf必需是矢量类属"
 
-#: src/main/eval.c:5988
+#: src/main/eval.c:5990
 msgid "bad constCount value"
 msgstr "constCount值不对"
 
-#: src/main/eval.c:6016
+#: src/main/eval.c:6018
 msgid "bad constant count"
 msgstr "常量数目不对"
 
-#: src/main/eval.c:6052
+#: src/main/eval.c:6054
 msgid "profile timer in use"
 msgstr "程序概要分析计时器在运行中"
 
-#: src/main/eval.c:6054
+#: src/main/eval.c:6056
 msgid "already byte code profiling"
 msgstr "已经在进行位元组码程序概要分析"
 
-#: src/main/eval.c:6072
+#: src/main/eval.c:6074
 msgid "setting profile timer failed"
 msgstr "程序概要分析计时器设制失败"
 
-#: src/main/eval.c:6089
+#: src/main/eval.c:6091
 msgid "not byte code profiling"
 msgstr "非位元组码程序概要分析"
 
@@ -3743,7 +3743,7 @@ msgid "invalid regular expression, reason '%s'"
 msgstr "正规表现不对, 原因是'%s'"
 
 #: src/main/grep.c:220 src/main/grep.c:307 src/main/grep.c:415
-#: src/main/grep.c:879 src/main/grep.c:2454
+#: src/main/grep.c:879 src/main/grep.c:2457
 #, c-format
 msgid "input string %d is invalid UTF-8"
 msgstr "输入的字符串%d不是UTF-8"
@@ -3828,7 +3828,7 @@ msgstr "结果字符串太长"
 msgid "pcre_fullinfo returned '%d' "
 msgstr "pcre_fullinfo返回了'%d'"
 
-#: src/main/identical.c:118
+#: src/main/identical.c:119
 msgid "ignoring non-pairlist attributes"
 msgstr ""
 
@@ -3861,18 +3861,18 @@ msgstr "连结文件名字设定不对"
 msgid "socket routines cannot be loaded"
 msgstr "无法载入插坐例行程序"
 
-#: src/main/lapack.c:69
+#: src/main/lapack.c:65
 msgid "lapack routines cannot be accessed in module"
 msgstr "无法读写模块里的lapack 例行程序"
 
-#: src/main/lapack.c:86 src/main/lapack.c:98 src/main/lapack.c:110
-#: src/main/lapack.c:122 src/main/lapack.c:134 src/main/lapack.c:146
-#: src/main/lapack.c:158 src/main/lapack.c:170 src/main/lapack.c:182
-#: src/main/lapack.c:193 src/main/lapack.c:204 src/main/lapack.c:215
-#: src/main/lapack.c:227 src/main/lapack.c:239 src/main/lapack.c:251
-#: src/main/lapack.c:263 src/main/lapack.c:275 src/main/lapack.c:287
-#: src/main/lapack.c:299 src/main/lapack.c:311 src/main/lapack.c:323
-#: src/main/lapack.c:335
+#: src/main/lapack.c:77 src/main/lapack.c:89 src/main/lapack.c:101
+#: src/main/lapack.c:113 src/main/lapack.c:125 src/main/lapack.c:137
+#: src/main/lapack.c:149 src/main/lapack.c:161 src/main/lapack.c:173
+#: src/main/lapack.c:184 src/main/lapack.c:195 src/main/lapack.c:206
+#: src/main/lapack.c:218 src/main/lapack.c:230 src/main/lapack.c:242
+#: src/main/lapack.c:254 src/main/lapack.c:266 src/main/lapack.c:278
+#: src/main/lapack.c:290 src/main/lapack.c:302 src/main/lapack.c:314
+#: src/main/lapack.c:326
 msgid "lapack routines cannot be loaded"
 msgstr "无法载入lapack 例行程序s"
 
@@ -4144,12 +4144,12 @@ msgstr "回覆矢量指针不是安全的做法"
 msgid "Rprofmem: cannot open output file '%s'"
 msgstr "Rprofmem: 无法输出文件'%s'"
 
-#: src/main/memory.c:4569
+#: src/main/memory.c:4575
 #, c-format
 msgid "unknown encoding: %d"
 msgstr "不支持'%d'这个编码"
 
-#: src/main/memory.c:4589
+#: src/main/memory.c:4595
 #, c-format
 msgid "embedded nul in string: '%s'"
 msgstr "字符串里嵌入了nul：'%s'"
@@ -4306,13 +4306,14 @@ msgstr "变量名限制于%d字节"
 msgid "attempt to use zero-length variable name"
 msgstr "不能用零长度变数名"
 
-#: src/main/names.c:781
+#: src/main/names.c:781 src/main/names.c:784
 msgid "invalid .Internal() argument"
 msgstr ".Internal()参数不对"
 
-#: src/main/names.c:784
-msgid "invalid internal function"
-msgstr "内部函数不对"
+#: src/main/names.c:787
+#, fuzzy, c-format
+msgid "there is no internal function '%s'"
+msgstr "没有\"%s\"这个内部函数"
 
 #: src/main/objects.c:47
 msgid "generic 'function' is not a function"
@@ -4542,69 +4543,69 @@ msgstr "optim梯度长度被评估为%d，而不是%d"
 msgid "candidate point in optim evaluated to length %d not %d"
 msgstr "optim候选点长度被评估为%d，而不是%d"
 
-#: src/main/optim.c:229 src/main/optim.c:417
+#: src/main/optim.c:229 src/main/optim.c:433
 msgid "'fn' is not a function"
 msgstr "'fn'不是函数"
 
-#: src/main/optim.c:246 src/main/optim.c:423
+#: src/main/optim.c:246 src/main/optim.c:439
 msgid "'parscale' is of the wrong length"
 msgstr "'parscale'的长度不对"
 
-#: src/main/optim.c:260
+#: src/main/optim.c:275
 msgid "'maxit' is not an integer"
 msgstr "'maxit'不是整数"
 
-#: src/main/optim.c:279
+#: src/main/optim.c:294
 msgid "'tmax' is not an integer"
 msgstr "'tmax'不是整数"
 
-#: src/main/optim.c:281 src/main/optim.c:298 src/main/optim.c:323
-#: src/main/optim.c:353 src/main/optim.c:431
+#: src/main/optim.c:296 src/main/optim.c:313 src/main/optim.c:338
+#: src/main/optim.c:368 src/main/optim.c:447
 msgid "'gr' is not a function"
 msgstr "'gr'不是函数"
 
-#: src/main/optim.c:304 src/main/optim.c:329 src/main/optim.c:359
-#: src/main/optim.c:437
+#: src/main/optim.c:319 src/main/optim.c:344 src/main/optim.c:374
+#: src/main/optim.c:453
 msgid "'ndeps' is of the wrong length"
 msgstr "'ndeps'长度不对"
 
-#: src/main/optim.c:389
+#: src/main/optim.c:404
 msgid "unknown 'method'"
 msgstr "没有这样的'method'"
 
-#: src/main/optim.c:520
+#: src/main/optim.c:552
 msgid "REPORT must be > 0 (method = \"BFGS\")"
 msgstr "REPORT必需大于零 (method = \"BFGS\")"
 
-#: src/main/optim.c:531
+#: src/main/optim.c:563
 msgid "initial value in 'vmmin' is not finite"
 msgstr "'vmmin'的初始值不能为无穷大"
 
-#: src/main/optim.c:679
+#: src/main/optim.c:711
 msgid "function cannot be evaluated at initial parameters"
 msgstr "无法用初始参数来评估函数"
 
-#: src/main/optim.c:873
+#: src/main/optim.c:905
 msgid "unknown 'type' in CG method of optim"
 msgstr "optim的CG方法中没有这种'type'"
 
-#: src/main/optim.c:886
+#: src/main/optim.c:918
 msgid "Function cannot be evaluated at initial parameters"
 msgstr "无法用初始参数来评估函数"
 
-#: src/main/optim.c:941
+#: src/main/optim.c:973
 msgid "unknown type in CG method of optim"
 msgstr "optim的CG方法中没有这一种类"
 
-#: src/main/optim.c:1034
+#: src/main/optim.c:1066
 msgid "REPORT must be > 0 (method = \"L-BFGS-B\")"
 msgstr "REPORT必需大于零 (method = \"L-BFGS-B\")"
 
-#: src/main/optim.c:1058
+#: src/main/optim.c:1090
 msgid "L-BFGS-B needs finite values of 'fn'"
 msgstr "L-BFGS-B不能有'fn'的无限值"
 
-#: src/main/optim.c:1113
+#: src/main/optim.c:1145
 msgid "trace, REPORT must be >= 0 (method = \"SANN\")"
 msgstr "迹,REPORT必需大于零 (method = \"SANN\")"
 
@@ -6435,7 +6436,7 @@ msgstr "变数名字不对"
 msgid "only atomic vectors can be tested to be sorted"
 msgstr "只有基元矢量才能被检验排序"
 
-#: src/main/sort.c:316 src/main/sort.c:882 src/main/sort.c:981
+#: src/main/sort.c:316 src/main/sort.c:882 src/main/sort.c:979
 msgid "'decreasing' must be TRUE or FALSE"
 msgstr "'increasing'必需是TRUE或是FALSE"
 
@@ -6443,7 +6444,7 @@ msgstr "'increasing'必需是TRUE或是FALSE"
 msgid "only atomic vectors can be sorted"
 msgstr "只有基元矢量才能被排序"
 
-#: src/main/sort.c:321 src/main/sort.c:573 src/main/sort.c:927
+#: src/main/sort.c:321 src/main/sort.c:573 src/main/sort.c:925
 msgid "raw vectors cannot be sorted"
 msgstr "无法排序原始矢量"
 
@@ -6465,15 +6466,15 @@ msgstr "参数%d不是矢量"
 msgid "argument lengths differ"
 msgstr "参数长度不同"
 
-#: src/main/sort.c:933
+#: src/main/sort.c:931
 msgid "invalid ties.method for rank() [should never happen]"
 msgstr "rank()的ties.method不对[这是不应该发生的]"
 
-#: src/main/sort.c:988
+#: src/main/sort.c:986
 msgid "negative value in 'x'"
 msgstr "'x'里有负值"
 
-#: src/main/sort.c:999
+#: src/main/sort.c:997
 msgid "too large a range of values in 'x'"
 msgstr "'x'里的值的范围太大"
 
@@ -6579,7 +6580,7 @@ msgstr "参数[%d] 的种类不对：'%s'"
 msgid "arguments cannot be recycled to the same length"
 msgstr "不是所有的参数都一样长"
 
-#: src/main/sprintf.c:156
+#: src/main/sprintf.c:156 src/main/sprintf.c:262
 #, c-format
 msgid "'fmt' length exceeds maximal format length %d"
 msgstr "'fmt'长度超过了缓冲区最大长度%d"
@@ -6602,10 +6603,6 @@ msgstr "每个轉換規格里最多只支持一个'*'号"
 #: src/main/sprintf.c:233
 msgid "argument for '*' conversion specification must be a number"
 msgstr "轉換規格'*'的参数必需是数字"
-
-#: src/main/sprintf.c:262
-msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
-msgstr "'%*'建立的'fmt2'长度超过了最大长度%d"
 
 #: src/main/sprintf.c:271
 msgid "coercion has changed vector length to 0"
@@ -6681,7 +6678,7 @@ msgstr "被替换的项目不是替换值长度的倍数"
 msgid "incorrect number of subscripts on matrix"
 msgstr "矩阵里的下标数目不对"
 
-#: src/main/subassign.c:829 src/main/subset.c:1594
+#: src/main/subassign.c:829 src/main/subset.c:1601
 msgid "incorrect number of subscripts"
 msgstr "下标数目不对"
 
@@ -6702,12 +6699,12 @@ msgstr "给\"S4\"类型的对象所定义的[[<-只能在环境子类内有用"
 msgid "wrong args for environment subassignment"
 msgstr "环境下赋值的参数不对"
 
-#: src/main/subassign.c:1286 src/main/subset.c:1641
+#: src/main/subassign.c:1286 src/main/subset.c:1648
 #, c-format
 msgid "recursive indexing failed at level %d\n"
 msgstr "递回索引在%d层失败\n"
 
-#: src/main/subassign.c:1292 src/main/subset.c:1645
+#: src/main/subassign.c:1292 src/main/subset.c:1652
 #, c-format
 msgid "no such index at level %d\n"
 msgstr "在%d层没有这一索引\n"
@@ -6735,7 +6732,7 @@ msgstr " [[ 赋值里有不可兼容的种类(从%s到%s)"
 
 #: src/main/subassign.c:1477 src/main/subscript.c:179 src/main/subscript.c:181
 #: src/main/subscript.c:571 src/main/subscript.c:573 src/main/subscript.c:683
-#: src/main/subscript.c:685 src/main/subset.c:1740
+#: src/main/subscript.c:685 src/main/subset.c:1747
 #, c-format
 msgid "invalid subscript type '%s'"
 msgstr "类别为'%s'的下标不对"
@@ -6789,28 +6786,28 @@ msgstr "陈列中没有'dimnames'这一属性"
 msgid "subscripting on non-vector"
 msgstr "非矢量不能有下标"
 
-#: src/main/subset.c:502 src/main/subset.c:552 src/main/subset.c:630
-#: src/main/subset.c:727
+#: src/main/subset.c:509 src/main/subset.c:559 src/main/subset.c:637
+#: src/main/subset.c:734
 msgid "matrix subscripting not handled for this type"
 msgstr "这一种类不能有矩阵下标"
 
-#: src/main/subset.c:788
+#: src/main/subset.c:795
 msgid "dimensions would exceed maximum size of array"
 msgstr "尺寸会超过阵列最大大小"
 
-#: src/main/subset.c:963 src/main/subset.c:992
+#: src/main/subset.c:970 src/main/subset.c:999
 msgid "array subscripting not handled for this type"
 msgstr "这一种类不能有阵列下标"
 
-#: src/main/subset.c:1590
+#: src/main/subset.c:1597
 msgid "no index specified"
 msgstr "没有索引设定"
 
-#: src/main/subset.c:1600
+#: src/main/subset.c:1607
 msgid "this S4 class is not subsettable"
 msgstr "S4对象不可以取子集"
 
-#: src/main/subset.c:1608
+#: src/main/subset.c:1615
 msgid "wrong arguments for subsetting an environment"
 msgstr "取子集环境时的参数不对"
 
@@ -6860,7 +6857,7 @@ msgstr "没有参数"
 msgid "invalid input type"
 msgstr "输入种类不对"
 
-#: src/main/summary.c:1129
+#: src/main/summary.c:1128
 msgid "an argument will be fractionally recycled"
 msgstr "参数值将数据略微回收"
 
@@ -8145,6 +8142,12 @@ msgstr "无法载入X11模块"
 #: src/unix/X11.c:177 src/unix/X11.c:183 src/unix/X11.c:189
 msgid "X11 is not available"
 msgstr "没有X11平台这一功能"
+
+#~ msgid "invalid internal function"
+#~ msgstr "内部函数不对"
+
+#~ msgid "the '%*' constructed 'fmt2' length exceeds maximum of %d"
+#~ msgstr "'%*'建立的'fmt2'长度超过了最大长度%d"
 
 #~ msgid "argument %d is empty"
 #~ msgstr "%d元素是空的"

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: R 2.15.0\n"
+"Project-Id-Version: R 2.15.1\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -258,15 +258,6 @@ msgid "zero non-NA points"
 msgstr ""
 
 msgid "'approx' requires n >= 1"
-msgstr ""
-
-msgid "'vec' contains NAs"
-msgstr ""
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr ""
-
-msgid "invalid length(vec)"
 msgstr ""
 
 msgid "'order.max' must be >= 1"

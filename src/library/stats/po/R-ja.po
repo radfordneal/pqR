@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0 \n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: 2012-02-26 14:13+0200 \n"
 "Last-Translator: Shigeru Mase <maseshigeru@gmail.com> \n"
 "Language-Team: RjpWiki Message Translation Team <mokada@md.tsukuba.ac.jp> \n"
@@ -272,16 +272,6 @@ msgstr " 非 NA 値がありません "
 
 msgid "'approx' requires n >= 1"
 msgstr " 'approx' は n > = 1 であることを必要とします "
-
-msgid "'vec' contains NAs"
-msgstr " 'vec' が NA を含んでいます "
-
-msgid "'vec' must be sorted non-decreasingly"
-msgstr " 'vec' は非減少順にソートされていなければなりません "
-
-#, fuzzy
-msgid "invalid length(vec)"
-msgstr " メンバーの長さが無効です "
 
 msgid "'order.max' must be >= 1"
 msgstr " 'order.max' は 1 以上でなければなりません "
@@ -2469,6 +2459,16 @@ msgstr[0] " 欠損値のせいで %d 個の観測値が取り除かれました 
 msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] " モデル式中にパラメータ %s がありません "
+
+#~ msgid "'vec' contains NAs"
+#~ msgstr " 'vec' が NA を含んでいます "
+
+#~ msgid "'vec' must be sorted non-decreasingly"
+#~ msgstr " 'vec' は非減少順にソートされていなければなりません "
+
+#, fuzzy
+#~ msgid "invalid length(vec)"
+#~ msgstr " メンバーの長さが無効です "
 
 #~ msgid "extra arguments"
 #~ msgstr " 余分な引数 "

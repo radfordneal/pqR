@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:43\n"
 "PO-Revision-Date: 2012-03-08 20:10+0200\n"
 "Last-Translator: Chel Hee Lee <chl948@mail.usask.ca>\n"
 "Language-Team: The Korean R Translation Council <gnustats@gmail.com>\n"
@@ -93,6 +93,10 @@ msgstr "'X' 는 반드시 dimnames 를 가지고 있어야 합니다 "
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
 msgstr "not all elements of 'MARGIN' are names of dimensions"
+
+#, fuzzy
+msgid "Bad 'MARGIN' argument"
+msgstr "잘못한 'file' 인수입니다"
 
 msgid "'dim' specifies too large an array"
 msgstr "'dim' 은 너무 큰 배열을 지정합니다 "
@@ -573,7 +577,8 @@ msgstr "행렬식은 현재 복소행열에는 정의 되어있지 않습니다"
 msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr "행렬 'x' 에는  'nrow' 혹은 'ncol' 이 지정될 수 없습니다 "
 
-msgid "'x' is an array, but not 1D."
+#, fuzzy
+msgid "'x' is an array, but not one-dimensional."
 msgstr "'x' 는 1차원이 아닌 배열입니다 "
 
 msgid "only matrix diagonals can be replaced"
@@ -775,6 +780,10 @@ msgstr "must have replacements for matches"
 
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr "norm '%s' currently always uses exact = FALSE"
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr "부적절한 이름입니다"
 
 msgid "triangular matrix should be square"
 msgstr "triangular matrix should be square"
@@ -1060,14 +1069,15 @@ msgstr "'by' 는 열의 개수와 반드시 일치해야 합니다 "
 msgid "'by' must match number of columns"
 msgstr "'by' 는 열의 개수와 반드시 일치해야 합니다 "
 
-msgid "'by' must specify column(s) as numbers, names or logical"
+#, fuzzy
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr "'by' must specify column(s) as numbers, names or logical"
-
-msgid "'by' must specify valid column(s)"
-msgstr "'by' 에 올바른 열이 지정되어야 합니다 "
 
 msgid "'by.x' and 'by.y' specify different numbers of columns"
 msgstr "'by.x' 와 'by.y' 가 지정하는 열의 개수가 다릅니다 "
+
+msgid "'incomparables' is supported only for merging on a single column"
+msgstr ""
 
 msgid "additional arguments ignored in message()"
 msgstr "message() 안에 무시된 추가적인 인수가 있습니다 "
@@ -1458,11 +1468,9 @@ msgstr "'chdir = TRUE' 는 연결과 아무런 관계가 없습니다 "
 msgid "'%s' is not an existing file"
 msgstr "'%s' 는 존재하는 파일이 아닙니다 "
 
-msgid "Timestamp of '"
+#, fuzzy
+msgid "Timestamp of %s has changed"
 msgstr "Timestamp of '"
-
-msgid "' has changed"
-msgstr "' has changed"
 
 msgid "additional arguments ignored in stop()"
 msgstr "additional arguments ignored in stop()"
@@ -1529,6 +1537,14 @@ msgstr "'x' 는 배열이 아닙니다"
 
 msgid "'bin' must be numeric or a factor"
 msgstr "'bin' 는 수치 또는 요인이어야 합니다 "
+
+#, fuzzy
+msgid "invalid value of length(bin)"
+msgstr "잘못된 값입니다 "
+
+#, fuzzy
+msgid "invalid value of nbins"
+msgstr "잘못된 값입니다 "
 
 msgid "arguments must have same length"
 msgstr "인수들은 모두 동일한 길이를 가져야 합니다 "
@@ -1695,6 +1711,11 @@ msgid "object %s not found"
 msgid_plural "objects %s not found"
 msgstr[0] "객체 %s 는 찾을 수 없습니다 "
 
+#, fuzzy
+msgid "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
+msgstr[0] "'by' 에 올바른 열이 지정되어야 합니다 "
+
 msgid ""
 "Function found when exporting methods from the namespace %s which is not S4 "
 "generic: %s"
@@ -1722,6 +1743,9 @@ msgstr[0] "S3 메소드 %s 는 NAMESPACE 안에 선언되었으나 찾을 수 �
 msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] "경고 매시지: \n"
+
+#~ msgid "' has changed"
+#~ msgstr "' has changed"
 
 #~ msgid ""
 #~ "Functions for exporting methods must have been made generic, explicitly "
@@ -1818,9 +1842,6 @@ msgstr[0] "경고 매시지: \n"
 #~ msgid "S3 method '%s' was declared in NAMESPACE but not found"
 #~ msgstr ""
 #~ "S3 메소드 '%s'가 NAMESPACE안으로 정의되었습니다만, 검색되지 않습니다"
-
-#~ msgid "invalid name"
-#~ msgstr "부적절한 이름입니다"
 
 #~ msgid "is required by"
 #~ msgstr "이하에 의해 요구되었습니다 :"

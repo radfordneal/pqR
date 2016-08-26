@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2012-03-16 06:19+0000\n"
+"POT-Creation-Date: 2016-08-25 20:41-0400\n"
 "PO-Revision-Date: 2011-01-28 10:51+0100\n"
 "Last-Translator: Karl Ove Hufthammer <karl@huftis.org>\n"
 "Language-Team: Norwegian Nynorsk <i18n-nn@lister.ping.uio.no>\n"
@@ -207,71 +207,71 @@ msgid "graphics device (Ctrl+Tab or Ctrl+F6 in MDI, Alt+Tab in SDI)"
 msgstr ""
 "grafikkeininga («Ctrl + Tab» eller «Ctrl + F6» i MDI, og «Alt + Tab» i SDI)"
 
-#: dataentry.c:223 dataentry.c:1851 dataentry.c:1854 dataentry.c:1885
+#: dataentry.c:226 dataentry.c:1855 dataentry.c:1858 dataentry.c:1889
 msgid "invalid argument"
 msgstr "ugyldig argument"
 
-#: dataentry.c:270
+#: dataentry.c:273
 msgid "invalid type for value"
 msgstr "ugyldige type for verdien"
 
-#: dataentry.c:281
+#: dataentry.c:284
 msgid "Data Editor"
 msgstr "Dataredigering"
 
-#: dataentry.c:282 dataentry.c:1892
+#: dataentry.c:285 dataentry.c:1896
 msgid "invalid device"
 msgstr "ugyldig eining"
 
-#: dataentry.c:331
+#: dataentry.c:334
 msgid "dataentry: internal memory problem"
 msgstr "inndata: internt minneproblem"
 
-#: dataentry.c:634 dataentry.c:1221
+#: dataentry.c:637 dataentry.c:1225
 msgid "dataentry: internal memory error"
 msgstr "inndata: intern minnefeil"
 
-#: dataentry.c:757 dataentry.c:770
+#: dataentry.c:760 dataentry.c:773
 msgid "internal type error in dataentry"
 msgstr "intern typefeil i inndata"
 
-#: dataentry.c:852
+#: dataentry.c:856
 msgid "dataentry: parse error on string"
 msgstr "inndata: klarte ikkje tolka tekststrengen"
 
-#: dataentry.c:995
+#: dataentry.c:999
 msgid "dataentry: expression too long"
 msgstr "inndata: uttrykket er for langt"
 
-#: dataentry.c:1472
+#: dataentry.c:1476
 msgid "column names cannot be blank"
 msgstr "kolonnenamna kan ikkje vera tomme"
 
-#: dataentry.c:1518
+#: dataentry.c:1522
 msgid "Variable editor"
 msgstr "Variabelredigering"
 
-#: dataentry.c:1523
+#: dataentry.c:1527
 msgid "variable name"
 msgstr "variabelnamn"
 
-#: dataentry.c:1525
+#: dataentry.c:1529
 msgid "type"
 msgstr "type"
 
-#: dataentry.c:1639
+#: dataentry.c:1643
 msgid "Cell width(s)"
 msgstr "Cellebreidd(er)"
 
-#: dataentry.c:1645
+#: dataentry.c:1649
 msgid "Cell width"
 msgstr "Cellebreidd"
 
-#: dataentry.c:1648
+#: dataentry.c:1652
 msgid "variable"
 msgstr "variabel"
 
-#: dataentry.c:1691
+#: dataentry.c:1695
 msgid ""
 "Navigation.\n"
 "  Keyboard: cursor keys move selection\n"
@@ -314,57 +314,57 @@ msgstr ""
 "  Høgreklikk for å få ein meny for kopiering, innliming og kolonnebreidd\n"
 "\n"
 
-#: dataentry.c:1697 dataentry.c:1807 editor.c:781 rui.c:1184
+#: dataentry.c:1701 dataentry.c:1811 editor.c:781 rui.c:1184
 msgid "Help"
 msgstr "Hjelp"
 
-#: dataentry.c:1699
+#: dataentry.c:1703
 msgid "Copy selected cell"
 msgstr "Kopier merkt celle"
 
-#: dataentry.c:1700
+#: dataentry.c:1704
 msgid "Paste to selected cell"
 msgstr "Lim inn i den valde cella"
 
-#: dataentry.c:1701
+#: dataentry.c:1705
 msgid "Autosize column"
 msgstr "Automatisk kolonnebreidd"
 
-#: dataentry.c:1703 pager.c:310 rui.c:867
+#: dataentry.c:1707 pager.c:310 rui.c:867
 #: ../library/grDevices/src/devWindows.c:1684
 msgid "Stay on top"
 msgstr "Hald øvst"
 
-#: dataentry.c:1705 dataentry.c:1792 pager.c:312 pager.c:475
+#: dataentry.c:1709 dataentry.c:1796 pager.c:312 pager.c:475
 msgid "Close"
 msgstr "Lukk"
 
-#: dataentry.c:1790 editor.c:727 pager.c:467 rui.c:1120
+#: dataentry.c:1794 editor.c:727 pager.c:467 rui.c:1120
 #: ../library/grDevices/src/devWindows.c:1624
 msgid "File"
 msgstr "Fil"
 
-#: dataentry.c:1796 editor.c:745 pager.c:477 rui.c:1141
+#: dataentry.c:1800 editor.c:745 pager.c:477 rui.c:1141
 msgid "Edit"
 msgstr "Rediger"
 
-#: dataentry.c:1797
+#: dataentry.c:1801
 msgid "Copy  \tCTRL+C"
 msgstr "Kopier  \tCTRL+C"
 
-#: dataentry.c:1799
+#: dataentry.c:1803
 msgid "Paste \tCTRL+V"
 msgstr "Lim inn \tCTRL+V"
 
-#: dataentry.c:1801
+#: dataentry.c:1805
 msgid "Delete\tDEL"
 msgstr "Søett\tDEL"
 
-#: dataentry.c:1804
+#: dataentry.c:1808
 msgid "Cell widths ..."
 msgstr "Cellebreidder …"
 
-#: dataentry.c:1808
+#: dataentry.c:1812
 msgid "Data editor"
 msgstr "Dataredigering"
 
@@ -550,17 +550,17 @@ msgstr "Klarte ikkje laga nytt skrivevindauge"
 msgid "Untitled"
 msgstr "Namnlaus"
 
-#: extra.c:903 ../extra/graphapp/dialogs.c:622 ../extra/graphapp/dialogs.c:741
+#: extra.c:911 ../extra/graphapp/dialogs.c:623 ../extra/graphapp/dialogs.c:742
 msgid "OK"
 msgstr "OK"
 
-#: extra.c:904 ../extra/graphapp/dialogs.c:602 ../extra/graphapp/dialogs.c:620
-#: ../extra/graphapp/dialogs.c:626 ../extra/graphapp/dialogs.c:725
-#: ../extra/graphapp/dialogs.c:739 ../extra/graphapp/dialogs.c:745
+#: extra.c:912 ../extra/graphapp/dialogs.c:603 ../extra/graphapp/dialogs.c:621
+#: ../extra/graphapp/dialogs.c:627 ../extra/graphapp/dialogs.c:726
+#: ../extra/graphapp/dialogs.c:740 ../extra/graphapp/dialogs.c:746
 msgid "Cancel"
 msgstr "Avbryt"
 
-#: extra.c:2161 rui.c:1222
+#: extra.c:2169 rui.c:1222
 msgid "Select file"
 msgstr "Vel fil"
 
@@ -960,7 +960,7 @@ msgstr "fann ikkje menyen"
 msgid "menu or item does not exist"
 msgstr "menyen eller elementet finst ikkje"
 
-#: system.c:442
+#: system.c:445
 msgid "Save workspace image?"
 msgstr "Vil du lagra arbeidsområdet?"
 
@@ -968,29 +968,29 @@ msgstr "Vil du lagra arbeidsområdet?"
 msgid "Insufficient memory: cell not copied to the clipboard"
 msgstr "Ikkje nok minne: cella vart ikkje kopiert til utklippstavla"
 
-#: ../extra/graphapp/dialogs.c:147 ../extra/graphapp/dialogs.c:164
-#: ../extra/graphapp/dialogs.c:181
+#: ../extra/graphapp/dialogs.c:148 ../extra/graphapp/dialogs.c:165
+#: ../extra/graphapp/dialogs.c:182
 msgid "Question"
 msgstr "Spørsmål"
 
-#: ../extra/graphapp/dialogs.c:202
+#: ../extra/graphapp/dialogs.c:203
 msgid " Change working directory to:"
 msgstr " Byt arbeidsmappa til:"
 
-#: ../extra/graphapp/dialogs.c:205
+#: ../extra/graphapp/dialogs.c:206
 #, c-format
 msgid "Unable to set '%s' as working directory"
 msgstr "Klarte ikkje velja «%s» som arbeidsmappe"
 
-#: ../extra/graphapp/dialogs.c:733
+#: ../extra/graphapp/dialogs.c:734
 msgid "User"
 msgstr "Brukar"
 
-#: ../extra/graphapp/dialogs.c:734
+#: ../extra/graphapp/dialogs.c:735
 msgid "Password"
 msgstr "Passord"
 
-#: ../extra/graphapp/dialogs.c:900 ../extra/graphapp/dialogs.c:906
+#: ../extra/graphapp/dialogs.c:901 ../extra/graphapp/dialogs.c:907
 #, c-format
 msgid "\"%s\" not found"
 msgstr "Fann ikkje «%s»"
@@ -1028,7 +1028,7 @@ msgid "Enhanced metafiles"
 msgstr "Enhanced metafile"
 
 #: ../library/grDevices/src/devWindows.c:989
-#: ../library/grDevices/src/devWindows.c:3433
+#: ../library/grDevices/src/devWindows.c:3434
 msgid "file path selected is too long: only 512 bytes are allowed"
 msgstr "for lang filadresse: maksgrensa er på 512 byte"
 
@@ -1173,14 +1173,14 @@ msgstr "Lagra som metafil …"
 msgid "Save as postscript..."
 msgstr "Lagra som PostScript …"
 
-#: ../library/grDevices/src/devWindows.c:3133
+#: ../library/grDevices/src/devWindows.c:3134
 msgid "Locator is active"
 msgstr "Posisjonslesar køyrer"
 
-#: ../library/grDevices/src/devWindows.c:3756
+#: ../library/grDevices/src/devWindows.c:3757
 msgid "Waiting to confirm page change..."
 msgstr "Ventar på stadfesting av sideskifte …"
 
-#: ../library/grDevices/src/devWindows.c:3768
+#: ../library/grDevices/src/devWindows.c:3769
 msgid "Click or hit ENTER for next page"
 msgstr "Klikk eller trykk «Enter» for neste side"
