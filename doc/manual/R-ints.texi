@@ -1166,10 +1166,8 @@ determine whether the result should be visible from the arguments or
 user action.  Other functions themselves dispatch functions which may
 change the visibility flag: examples@footnote{the other current example
 is left brace, which is implemented as a primitive.} are
-@code{.Internal}, @code{do.call}, @code{eval},
-@code{eval.with.vis}@footnote{a @code{.Internal}-only function used in
-@code{source}, @code{withVisible} and a few other places.}, @code{if},
-@code{NextMethod}, @code{Recall}, @code{recordGraphics},
+@code{.Internal}, @code{do.call}, @code{eval}, @code{withVisible},
+@code{if}, @code{NextMethod}, @code{Recall}, @code{recordGraphics},
 @code{standardGeneric}, @code{switch} and @code{UseMethod}.
 
 `Special' primitive and internal functions evaluate their arguments
@@ -1531,14 +1529,13 @@ by the table entry.
 
 Version-2 serialization first writes a header indicating the format
 (normally @samp{X\n} for an XDR format binary save, but @samp{A\n},
-ASCII, and @samp{B\n}, native word-order binary@footnote{there is no
-@R{}-level interface to this format}, can also occur) and then three
-integers giving the version of the format and two @R{} versions (packed
-by the @code{R_Version} macro from @file{Rversion.h}).  (Unserialization
-interprets the two versions as the version of @R{} which wrote the file
-followed by the minimal version of @R{} needed to read the format.)
-Serialization then writes out the object recursively using function
-@code{WriteItem} in file @file{src/main/serialize.c}.
+ASCII, and @samp{B\n}, native word-order binary, can also occur) and
+then three integers giving the version of the format and two @R{}
+versions (packed by the @code{R_Version} macro from @file{Rversion.h}).
+(Unserialization interprets the two versions as the version of @R{}
+which wrote the file followed by the minimal version of @R{} needed to
+read the format.)  Serialization then writes out the object recursively
+using function @code{WriteItem} in file @file{src/main/serialize.c}.
 
 Some objects are written as if they were @code{SEXPTYPE}s: such
 pseudo-@code{SEXPTYPE}s cover @code{R_NilValue}, @code{R_EmptyEnv},
@@ -2052,7 +2049,10 @@ The memory used by @code{R_alloc} is allocated as @R{} vectors, of type
 @code{RAWSXP} for `small' allocations (less than 2^31 - 1 bytes) and of
 type @code{REALSXP} for allocations up to 2^34 - 1 bytes on 64-bit
 machines.  Thus the allocation is in units of 8 bytes, and is rounded
-up.
+up.  A request for zero bytes currently returns @code{NULL} (but
+this should not be relied on).  For historical reasons, in all other
+cases 1 byte is added before rounding up so the allocation is always
+1--8 bytes more than was asked for: again this should not be relied on.
 
 The vectors allocated are protected via the setting of @code{R_VStack},
 as the garbage collector marks everything that can be reached from that
@@ -4107,13 +4107,14 @@ is always required.
 Default: @code{""}. (@code{10} for CRAN checks.)
 
 @item _R_CHECK_INSTALL_DEPENDS_
-If set to a true value and a test installation is to
-be done, this is done with @code{.libPaths()} containing just a
-temporary library directory and @code{.Library}.  The temporary library
-is populated by symbolic links@footnote{under Windows, junction points.}
+If set to a true value and a test installation is to be done, this is
+done with @code{.libPaths()} containing just a temporary library
+directory and @code{.Library}.  The temporary library is populated by
+symbolic links@footnote{under Windows, junction points, or copies if
+environment variable @env{R_WIN_NO_JUNCTIONS} has a non-empty value.}
 to the installed copies of all the Depends/Imports/LinkingTo packages
-which are not in @code{.Library}.  
-Default: false (but true for CRAN submission checks).
+which are not in @code{.Library}.  Default: false (but true for CRAN
+submission checks).
 
 Note that this is actually implemented in @command{R CMD INSTALL}, so it
 is available to those who first install recording to a log, then call
@@ -4124,10 +4125,10 @@ is available to those who first install recording to a log, then call
 If set to a true value, running examples, tests and vignettes is done
 with @code{.libPaths()} containing just a temporary library directory
 and @code{.Library}.  The temporary library is populated by symbolic
-links@footnote{under Windows, junction points.} to the installed copies
-of all the Depends/Imports/LinkingTo and (for the second only) Suggests
-packages which are not in @code{.Library}.
-Default: false (but true for CRAN checks).
+links@footnote{see the previous footnote.} to the installed copies of
+all the Depends/Imports/LinkingTo and (for the second only) Suggests
+packages which are not in @code{.Library}.  Default: false (but true for
+CRAN checks).
 
 @item _R_CHECK_NO_RECOMMENDED_
 If set to a true value, augment the previous checks to make recommended
