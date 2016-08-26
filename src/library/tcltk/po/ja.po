@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.5.0 \n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2011-03-29 21:50+0100\n"
+"POT-Creation-Date: 2016-08-25 20:53-0400\n"
 "PO-Revision-Date: 2009-10-07 13:46+0900 \n"
 "Last-Translator: ei-ji nakama <nakama@ki.rim.or.jp> \n"
 "Language-Team: Japanese <translation-team-ja@lists.sourceforge.net> \n"
@@ -19,31 +19,31 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0; \n"
 "X-Generator: Pootle 1.1.0 \n"
 
-#: tcltk.c:63
+#: tcltk.c:65
 msgid "parse error in R expression"
 msgstr " R expression 内に構文エラー "
 
-#: tcltk.c:159 tcltk.c:233
+#: tcltk.c:172 tcltk.c:246
 msgid "tcl error.\n"
 msgstr " tcl エラー \n"
 
-#: tcltk.c:187 tcltk.c:700
+#: tcltk.c:200 tcltk.c:713
 msgid "invalid argument"
 msgstr " 不正な引数 "
 
-#: tcltk.c:282 tcltk.c:300 tcltk.c:370 tcltk.c:433 tcltk.c:485
+#: tcltk.c:295 tcltk.c:313 tcltk.c:383 tcltk.c:446 tcltk.c:498
 msgid "invalid tclObj -- perhaps saved from another session?"
 msgstr " 不正な tclObj - おそらく、別のセッションから保存された？ "
 
-#: tcltk.c:575
+#: tcltk.c:588
 msgid "argument list is too long in tcltk internal function 'callback_closure'"
 msgstr " 引数リストはtcltkの内部関数 `callback_closure' において長過ぎます "
 
-#: tcltk.c:608
+#: tcltk.c:621
 msgid "argument is not of correct type"
 msgstr " 引数は正しいタイプではありません "
 
-#: tcltk.c:659
+#: tcltk.c:672
 msgid "no DISPLAY variable so Tk is not available"
 msgstr " DISPLAY環境変数が無いのでTkは利用出来ません "
 

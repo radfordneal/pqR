@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: R 2.15.0\n"
+"Project-Id-Version: R 2.15.1\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-03-12 09:01\n"
+"POT-Creation-Date: 2016-08-25 20:53\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -84,6 +84,9 @@ msgid "'X' must have named dimnames"
 msgstr ""
 
 msgid "not all elements of 'MARGIN' are names of dimensions"
+msgstr ""
+
+msgid "Bad 'MARGIN' argument"
 msgstr ""
 
 msgid "'dim' specifies too large an array"
@@ -533,7 +536,7 @@ msgstr ""
 msgid "'nrow' or 'ncol' cannot be specified when 'x' is a matrix"
 msgstr ""
 
-msgid "'x' is an array, but not 1D."
+msgid "'x' is an array, but not one-dimensional."
 msgstr ""
 
 msgid "only matrix diagonals can be replaced"
@@ -726,6 +729,9 @@ msgid "must have replacements for matches"
 msgstr ""
 
 msgid "norm '%s' currently always uses exact = FALSE"
+msgstr ""
+
+msgid "invalid nrow(x)"
 msgstr ""
 
 msgid "triangular matrix should be square"
@@ -992,13 +998,13 @@ msgstr ""
 msgid "'by' must match number of columns"
 msgstr ""
 
-msgid "'by' must specify column(s) as numbers, names or logical"
-msgstr ""
-
-msgid "'by' must specify valid column(s)"
+msgid "'by' must specify one or more columns as numbers, names or logical"
 msgstr ""
 
 msgid "'by.x' and 'by.y' specify different numbers of columns"
+msgstr ""
+
+msgid "'incomparables' is supported only for merging on a single column"
 msgstr ""
 
 msgid "additional arguments ignored in message()"
@@ -1361,10 +1367,7 @@ msgstr ""
 msgid "'%s' is not an existing file"
 msgstr ""
 
-msgid "Timestamp of '"
-msgstr ""
-
-msgid "' has changed"
+msgid "Timestamp of %s has changed"
 msgstr ""
 
 msgid "additional arguments ignored in stop()"
@@ -1431,6 +1434,12 @@ msgid "'x' is not an array"
 msgstr ""
 
 msgid "'bin' must be numeric or a factor"
+msgstr ""
+
+msgid "invalid value of length(bin)"
+msgstr ""
+
+msgid "invalid value of nbins"
 msgstr ""
 
 msgid "arguments must have same length"
@@ -1596,6 +1605,11 @@ msgstr[1]    ""
 
 msgid        "object %s not found"
 msgid_plural "objects %s not found"
+msgstr[0]    ""
+msgstr[1]    ""
+
+msgid        "'by' must specify a uniquely valid column"
+msgid_plural "'by' must specify uniquely valid columns"
 msgstr[0]    ""
 msgstr[1]    ""
 
