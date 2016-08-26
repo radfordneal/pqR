@@ -1,6 +1,6 @@
 % File src/library/base/man/debug.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 1995-2009 R Core Development Team
+% Copyright 1995-2009 R Core Team
 % Modifications for pqR copyright (C) 2013, 2014 Radford M. Neal
 % Distributed under GPL 2 or later
 
