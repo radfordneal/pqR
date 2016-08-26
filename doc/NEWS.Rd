@@ -123,6 +123,13 @@
         kmeans(), loess(), stl() and svd(LINPACK = TRUE).
   }}
 
+  \subsection{BUG FIXES}{
+    \itemize{
+    \item Fixed misinformation in help(length) about the length of
+          expressions (which is also present in R Core versions to 
+          at least R-3.3.1).
+  }}
+
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE VERSIONS}{
     \itemize{
     \item From R-2.15.1:
