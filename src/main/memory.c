@@ -2100,7 +2100,7 @@ static void RunGenCollect(R_size_t size_needed)
     for (const struct R_local_protect *p = R_local_protect_start;
            p != NULL; p = p->next) {
         for (i = 0; i < p->cnt; i++) 
-            if (*p->protected[i]) FORWARD_NODE(*p->protected[i]);
+            if (*p->Protected[i]) FORWARD_NODE(*p->Protected[i]);
     }
 
     /* Byte code stack */
