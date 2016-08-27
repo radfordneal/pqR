@@ -2219,7 +2219,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Try to copy the value, not assign the object, if the rhs is scalar
            and doesn't have zero NAMEDCNT (for which assignment would be free). 
-           This copy from a static box, which must be replaced by a regular
+           This will copy from a static box, which must be replaced by a regular
            value if the copy can't be done.  If the copy can't be done, but 
            a binding cell was found here, the assignment is done directly into
            the binding cell, avoiding overhead of calling set_var_in_frame.
