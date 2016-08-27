@@ -1936,8 +1936,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
                      SET_NAMEDCNT_1(y);
                  if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET
                        && !NAMEDCNT_GT_1(y))
-                     R_variant_result = IS_USER_DATABASE(x) 
-                       || IS_ACTIVE_BINDING(R_binding_cell) ? 2 : 1;
+                     R_variant_result = R_binding_cell == R_NilValue ? 2 : 1;
              }
         }
         UNPROTECT(1);
