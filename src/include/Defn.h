@@ -1123,6 +1123,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalList		Rf_evalList
 # define evalListKeepMissing	Rf_evalListKeepMissing
 # define evalListPendingOK	Rf_evalListPendingOK
+# define evalListUnshared	Rf_evalListUnshared
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findFun_nospecsym	Rf_findFun_nospecsym
@@ -1330,6 +1331,7 @@ int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
 SEXP evalListPendingOK(SEXP, SEXP, int);
+SEXP evalListUnshared(SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);

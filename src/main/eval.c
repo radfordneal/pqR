@@ -2650,7 +2650,116 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 
-} /* evalList() */
+} /* evalListPendingOK() */
+
+
+/* Evaluate each expression in "el" in the environment "rho", ensuring
+   that the values of variables evaluated are unshared, if they are
+   atomic scalars without attributes, by assigning a duplicate to them 
+   if necessary.
+
+   Used in .External and .Call as a defensive measure against argument 
+   abuse. */
+
+static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
+{
+    SEXP res;
+
+    if (!isSymbol(e) || e == R_DotsSymbol || DDVAL(e)) {
+        res = evalv (e, rho, variant);
+    }
+    else {
+
+        res = findVarPendingOK (e, rho);
+
+        if (res == R_UnboundValue)
+            unbound_var_error(e);
+        else if (res == R_MissingArg) {
+            if ( ! (variant & VARIANT_MISSING_OK))
+                if (!DDVAL(e))  /* revert bug fix for the moment */
+                    arg_missing_error(e);
+        }
+        else if (TYPEOF(res) == PROMSXP) {
+            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+                res = forcePromiseUnbound(res);
+            else
+                res = PRVALUE_PENDING_OK(res);
+        }
+        else {
+            if (NAMEDCNT_GT_1(res) && R_binding_cell != R_NilValue
+                 && isVectorAtomic(res) && LENGTH(res) == 1
+                 && ATTRIB(res) == R_NilValue) {
+                if (1) { /* Enable for debugging */
+                    if (installed_already("UNSHARED.DEBUG"))
+                        Rprintf("Making %s unshared\n",CHAR(PRINTNAME(e)));
+                }
+                res = duplicate(res);
+                SETCAR (R_binding_cell, res);
+            }
+            else if (NAMEDCNT_EQ_0(res))
+                SET_NAMEDCNT_1(res);
+        }
+    }
+
+    return res;
+}
+
+SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
+{
+    BEGIN_PROTECT4 (head, tail, ev, h);
+
+    int variant = VARIANT_PENDING_OK;
+
+    head = R_NilValue;
+
+    while (el != R_NilValue) {
+
+	if (CAR(el) == R_DotsSymbol) {
+            /* If we have a ... symbol, we look to see what it is bound to.
+               If its binding is Null (i.e. zero length) or missing we just
+               ignore it and return the cdr with all its expressions evaluated.
+               If it is bound to a ... list of promises, we force all the 
+               promises and then splice the list of resulting values into
+               the return value. Anything else bound to a ... symbol is an 
+               error. */
+	    h = findVar(CAR(el), rho);
+	    if (TYPEOF(h) == DOTSXP) {
+		while (h != R_NilValue) {
+                    ev = cons_with_tag (eval_unshared (CAR(h), rho, variant),
+                                        R_NilValue, TAG(h));
+                    if (head==R_NilValue)
+                        head = ev;
+                    else
+                        SETCDR(tail, ev);
+                    tail = ev;
+                    if (CAR(ev) == R_MissingArg && isSymbol(CAR(h)))
+                        SET_MISSING (ev, R_isMissing(CAR(h),rho));
+		    h = CDR(h);
+		}
+	    }
+	    else if (h != R_NilValue && h != R_MissingArg)
+		dotdotdot_error();
+
+	} else {
+            ev = cons_with_tag (eval_unshared (CAR(el), rho, variant), 
+                                R_NilValue, TAG(el));
+            if (head==R_NilValue)
+                head = ev;
+            else
+                SETCDR(tail, ev);
+            tail = ev;
+            if (CAR(ev) == R_MissingArg && isSymbol(CAR(el)))
+                SET_MISSING (ev, R_isMissing(CAR(el),rho));
+	}
+
+	el = CDR(el);
+    }
+
+    WAIT_UNTIL_ARGUMENTS_COMPUTED (head);
+    RETURN_SEXP_INSIDE_PROTECT (head);
+    END_PROTECT;
+
+} /* evalListUnshared() */
 
 /* Evaluate argument list, waiting for any pending computations of arguments. */
 

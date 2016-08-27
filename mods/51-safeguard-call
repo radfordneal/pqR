@@ -1,0 +1,3 @@
+Adds defensive measures against argument abuse in .Call and .External,
+by automatically duplicating and re-assigning the values of variables
+that are atomic scalars with no attributes if they have NAMEDCNT > 1.

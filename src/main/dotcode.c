@@ -47,20 +47,26 @@
 #include <helpers/helpers-app.h>
 
 
-/* Trim special arguments from argument list for .Call, .External, .C or
-   .Fortran.  These arguments are removed (destructively) from the argument 
-   list.  The second argument is 1 for .C/.Fortran, 0 for .Call/.External, 
-   and controls whether NAOK, DUP, and ENCODING are allowed.  The results
-   are returned in the special_args structure passed.  The number or remaining
-   arguments, apart from the first, is returned as the value of trimargs.
+static SEXP evaluated_args; /* Evaluated argument list for .Call and .External*/
 
-   Note that no action regarding these arguments is taken here - they are 
-   just found, removed, and returned.  NAOK defaults to FALSE, DUP to TRUE, 
-   ENCODING to R_NilValue, PACKAGE to R_NilValue, and HELPER to FALSE.
 
-   Also checks that the first argument is present and unnamed.  Note 
-   that since this argument is always present, removal of later arguments
-   won't change the head of the argument list. */
+/* Trim special arguments from argument list for .Call, .External, .C
+   or .Fortran.  These arguments are removed (destructively) from the
+   argument list.  The second argument is 1 for .C/.Fortran, 0 for
+   .Call/.External, and controls whether NAOK, DUP, ENCODING, and
+   HELPER are allowed - so if it is 0, only PACKAGE is allowed.  The
+   results are returned in the special_args structure passed.  The
+   number or remaining arguments, apart from the first, is returned as
+   the value of trimargs.
+
+   Note that no action regarding these arguments is taken here - they
+   are just found, removed, and returned.  NAOK defaults to FALSE, DUP
+   to TRUE, ENCODING to R_NilValue, PACKAGE to R_NilValue, and HELPER
+   to FALSE.
+
+   Also checks that the first argument is present and unnamed.  Note
+   that since this argument is always present, removal of later
+   arguments won't change the head of the argument list. */
 
 struct special_args { int naok, dup, helper; SEXP encoding, pkg; };
 
@@ -411,6 +417,9 @@ typedef SEXP (*R_ExternalRoutine)(SEXP);
 
 SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 {
+    PROTECT (args = evalListUnshared (args, env)); 
+    evaluated_args = args;  /* used by do_Externalgr */
+
     DL_FUNC ofun = NULL;
     R_ExternalRoutine fun = NULL;
     SEXP retval;
@@ -444,6 +453,8 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Note that .NAME is passed as the first argument (and usually ignored). */
     retval = (SEXP)fun(args);
     VMAXSET(vmax);
+
+    UNPROTECT(1);
     return retval;
 }
 
@@ -456,6 +467,9 @@ typedef DL_FUNC VarFun;
 /* .Call(name, <args>) */
 SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 {
+    PROTECT (args = evalListUnshared (args, env)); 
+    evaluated_args = args;  /* used by do_dotcallgr */
+
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
     SEXP retval, pargs;
@@ -1142,6 +1156,8 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call, _("too many arguments, sorry"));
     }
     VMAXSET(vmax);
+
+    UNPROTECT(1);
     return retval;
 }
 
@@ -1168,13 +1184,14 @@ SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean record = dd->recordGraphics;
     dd->recordGraphics = FALSE;
     PROTECT(retval = do_External(call, op, args, env));
+    PROTECT(args = evaluated_args);  /* set by do_External */
     dd->recordGraphics = record;
     if (GErecording(call, dd)) { // which is record && call != R_NilValue
 	if (!GEcheckState(dd))
 	    errorcall(call, _("Invalid graphics state"));
 	GErecordGraphicOperation(op, args, dd);
     }
-    UNPROTECT(1);
+    UNPROTECT(2);
     return retval;
 }
 
@@ -1185,13 +1202,14 @@ SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean record = dd->recordGraphics;
     dd->recordGraphics = FALSE;
     PROTECT(retval = do_dotcall(call, op, args, env));
+    PROTECT(args = evaluated_args);  /* set by do_dotcall */
     dd->recordGraphics = record;
     if (GErecording(call, dd)) {
 	if (!GEcheckState(dd))
 	    errorcall(call, _("Invalid graphics state"));
 	GErecordGraphicOperation(op, args, dd);
     }
-    UNPROTECT(1);
+    UNPROTECT(2);
     return retval;
 }
 
@@ -2630,8 +2648,8 @@ attribute_hidden FUNTAB R_FunTab_dotcode[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"is.loaded",	do_isloaded,	0,	11,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".External",   do_External,    0,      1,      -1,     {PP_FOREIGN, PREC_FN,	0}},
-{".Call",       do_dotcall,     0,      1,      -1,     {PP_FOREIGN, PREC_FN,	0}},
+{".External",   do_External,    0,      0,      -1,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call",       do_dotcall,     0,      0,      -1,     {PP_FOREIGN, PREC_FN,	0}},
 {".External.graphics", do_Externalgr, 0, 1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".Call.graphics", do_dotcallgr, 0,	1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".C",		do_dotCode,	0,	1001,	-1,	{PP_FOREIGN, PREC_FN,	0}},
