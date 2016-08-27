@@ -884,7 +884,7 @@ typedef int PROTECT_INDEX;
 extern const struct R_local_protect {
     const struct R_local_protect *next;  /* next in list, or NULL */
     int cnt;                             /* number of pointers present below */
-    SEXP *protected[9];                  /* array of ptrs to protected vars  */
+    SEXP *Protected[9];                  /* array of ptrs to protected vars  */
 } *R_local_protect_start;                /*    (may be a shorter array)      */
 
 
@@ -904,7 +904,7 @@ extern const struct R_local_protect {
         SEXP v1 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[1]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[1]; \
         } R_local_protect = { R_local_protect_start, \
               1, { &v1 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -917,7 +917,7 @@ extern const struct R_local_protect {
         SEXP v1 = R_NilValue, v2 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[2]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[2]; \
         } R_local_protect = { R_local_protect_start, \
               2, { &v1, &v2 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -930,7 +930,7 @@ extern const struct R_local_protect {
         SEXP v1 = R_NilValue, v2 = R_NilValue, v3 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[3]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[3]; \
         } R_local_protect = { R_local_protect_start, \
               3, { &v1, &v2, &v3 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -944,7 +944,7 @@ extern const struct R_local_protect {
         SEXP v4 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[4]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[4]; \
         } R_local_protect = { R_local_protect_start, \
               4, { &v1, &v2, &v3, &v4 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -958,7 +958,7 @@ extern const struct R_local_protect {
         SEXP v4 = R_NilValue, v5 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[5]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[5]; \
         } R_local_protect = { R_local_protect_start, \
               5, { &v1, &v2, &v3, &v4, &v5 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -972,7 +972,7 @@ extern const struct R_local_protect {
         SEXP v4 = R_NilValue, v5 = R_NilValue, v6 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[6]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[6]; \
         } R_local_protect = { R_local_protect_start, \
               6, { &v1, &v2, &v3, &v4, &v5, &v6 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -987,7 +987,7 @@ extern const struct R_local_protect {
         SEXP v7 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[7]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[7]; \
         } R_local_protect = { R_local_protect_start, \
               7, { &v1, &v2, &v3, &v4, &v5, &v6, &v7 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1002,7 +1002,7 @@ extern const struct R_local_protect {
         SEXP v7 = R_NilValue, v8 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[8]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[8]; \
         } R_local_protect = { R_local_protect_start, \
               8, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1017,7 +1017,7 @@ extern const struct R_local_protect {
         SEXP v7 = R_NilValue, v8 = R_NilValue, v9 = R_NilValue; \
         BEGIN_PROTECT_label: if (0) goto END_PROTECT_label; /* error check */ \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[9]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[9]; \
         } R_local_protect = { R_local_protect_start, \
               9, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8, &v9 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1039,7 +1039,7 @@ extern const struct R_local_protect {
         SEXP v1 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[1]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[1]; \
         } R_local_protect_inner = { R_local_protect_start, \
               1, { &v1 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1052,7 +1052,7 @@ extern const struct R_local_protect {
         SEXP v1 = R_NilValue, v2 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[2]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[2]; \
         } R_local_protect_inner = { R_local_protect_start, \
               2, { &v1, &v2 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1065,7 +1065,7 @@ extern const struct R_local_protect {
         SEXP v1 = R_NilValue, v2 = R_NilValue, v3 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[3]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[3]; \
         } R_local_protect_inner = { R_local_protect_start, \
               3, { &v1, &v2, &v3 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1079,7 +1079,7 @@ extern const struct R_local_protect {
         SEXP v4 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[4]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[4]; \
         } R_local_protect_inner = { R_local_protect_start, \
               4, { &v1, &v2, &v3, &v4 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1093,7 +1093,7 @@ extern const struct R_local_protect {
         SEXP v4 = R_NilValue, v5 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[5]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[5]; \
         } R_local_protect_inner = { R_local_protect_start, \
               5, { &v1, &v2, &v3, &v4, &v5 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1107,7 +1107,7 @@ extern const struct R_local_protect {
         SEXP v4 = R_NilValue, v5 = R_NilValue, v6 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[6]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[6]; \
         } R_local_protect_inner = { R_local_protect_start, \
               6, { &v1, &v2, &v3, &v4, &v5, &v6 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1122,7 +1122,7 @@ extern const struct R_local_protect {
         SEXP v7 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[7]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[7]; \
         } R_local_protect_inner = { R_local_protect_start, \
               7, { &v1, &v2, &v3, &v4, &v5, &v6, &v7 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1137,7 +1137,7 @@ extern const struct R_local_protect {
         SEXP v7 = R_NilValue, v8 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[8]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[8]; \
         } R_local_protect_inner = { R_local_protect_start, \
               8, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1152,7 +1152,7 @@ extern const struct R_local_protect {
         SEXP v7 = R_NilValue, v8 = R_NilValue, v9 = R_NilValue; \
         if (0) R_local_protect . next /* error check */; \
         const struct { \
-            const struct R_local_protect *next; int cnt; SEXP *protected[9]; \
+            const struct R_local_protect *next; int cnt; SEXP *Protected[9]; \
         } R_local_protect_inner = { R_local_protect_start, \
               9, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8, &v9 } }; \
         R_local_protect_start = (const struct R_local_protect *) \
@@ -1164,7 +1164,7 @@ extern const struct R_local_protect {
     if (0) R_local_protect . next /* error check */; \
     CHK_IS_SEXP(v1); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[1]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[1]; \
     } R_local_protect_also = { R_local_protect_start, \
           1, { &v1 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1174,7 +1174,7 @@ extern const struct R_local_protect {
     if (0) R_local_protect . next /* error check */; \
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[2]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[2]; \
     } R_local_protect_also = { R_local_protect_start, \
           2, { &v1, &v2 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1184,7 +1184,7 @@ extern const struct R_local_protect {
     if (0) R_local_protect . next /* error check */; \
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); CHK_IS_SEXP(v3); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[3]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[3]; \
     } R_local_protect_also = { R_local_protect_start, \
           3, { &v1, &v2, &v3 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1194,7 +1194,7 @@ extern const struct R_local_protect {
     if (0) R_local_protect . next /* error check */; \
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); CHK_IS_SEXP(v3); CHK_IS_SEXP(v4); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[4]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[4]; \
     } R_local_protect_also = { R_local_protect_start, \
           4, { &v1, &v2, &v3, &v4 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1205,7 +1205,7 @@ extern const struct R_local_protect {
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); CHK_IS_SEXP(v3); CHK_IS_SEXP(v4); \
     CHK_IS_SEXP(v5); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[5]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[5]; \
     } R_local_protect_also = { R_local_protect_start, \
           5, { &v1, &v2, &v3, &v4, &v5 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1216,7 +1216,7 @@ extern const struct R_local_protect {
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); CHK_IS_SEXP(v3); CHK_IS_SEXP(v4); \
     CHK_IS_SEXP(v5); CHK_IS_SEXP(v6); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[6]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[6]; \
     } R_local_protect_also = { R_local_protect_start, \
           6, { &v1, &v2, &v3, &v4, &v5, &v6 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1227,7 +1227,7 @@ extern const struct R_local_protect {
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); CHK_IS_SEXP(v3); CHK_IS_SEXP(v4); \
     CHK_IS_SEXP(v5); CHK_IS_SEXP(v6); CHK_IS_SEXP(v7); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[7]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[7]; \
     } R_local_protect_also = { R_local_protect_start, \
           7, { &v1, &v2, &v3, &v4, &v5, &v6, &v7 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1238,7 +1238,7 @@ extern const struct R_local_protect {
     CHK_IS_SEXP(v1); CHK_IS_SEXP(v2); CHK_IS_SEXP(v3); CHK_IS_SEXP(v4); \
     CHK_IS_SEXP(v5); CHK_IS_SEXP(v6); CHK_IS_SEXP(v7); CHK_IS_SEXP(v8); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[8]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[8]; \
     } R_local_protect_also = { R_local_protect_start, \
           8, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
@@ -1250,7 +1250,7 @@ extern const struct R_local_protect {
     CHK_IS_SEXP(v5); CHK_IS_SEXP(v6); CHK_IS_SEXP(v7); CHK_IS_SEXP(v8); \
     CHK_IS_SEXP(v9); \
     const struct { \
-        const struct R_local_protect *next; int cnt; SEXP *protected[9]; \
+        const struct R_local_protect *next; int cnt; SEXP *Protected[9]; \
     } R_local_protect_also = { R_local_protect_start, \
           9, { &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8, &v9 } }; \
     R_local_protect_start = (const struct R_local_protect *) \
