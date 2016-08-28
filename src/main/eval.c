@@ -2653,13 +2653,13 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 } /* evalListPendingOK() */
 
 
-/* Evaluate each expression in "el" in the environment "rho", ensuring
-   that the values of variables evaluated are unshared, if they are
-   atomic scalars without attributes, by assigning a duplicate to them 
-   if necessary.
+/* evalListUnshared evaluates each expression in "el" in the
+   environment "rho", ensuring that the values of variables evaluated
+   are unshared, if they are atomic scalars without attributes, by
+   assigning a duplicate to them if necessary.
 
    Used in .External and .Call as a defensive measure against argument 
-   abuse. */
+   abuse.  Waits for arguments to be computed. */
 
 static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
 {
@@ -2689,7 +2689,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
             if (NAMEDCNT_GT_1(res) && R_binding_cell != R_NilValue
                  && isVectorAtomic(res) && LENGTH(res) == 1
                  && ATTRIB(res) == R_NilValue) {
-                if (1) { /* Enable for debugging */
+                if (0) { /* Enable for debugging */
                     if (installed_already("UNSHARED.DEBUG"))
                         Rprintf("Making %s unshared\n",CHAR(PRINTNAME(e)));
                 }
@@ -2713,6 +2713,9 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
     head = R_NilValue;
 
     while (el != R_NilValue) {
+
+        if (CDR(el) == R_NilValue)
+            variant = 0;  /* would need to wait for last immediately anyway */
 
 	if (CAR(el) == R_DotsSymbol) {
             /* If we have a ... symbol, we look to see what it is bound to.
