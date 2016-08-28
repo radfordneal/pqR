@@ -357,7 +357,7 @@ typedef struct {
 #define CAR(e)     NOT_LVALUE((e)->u.listsxp.carval)  /*  so that we will get */
 #define CDR(e)     NOT_LVALUE((e)->u.listsxp.cdrval)  /*  an error if it's not*/
 
-#define TYPEOF(x)  NOT_LVALUE((x)->sxpinfo.type)
+#define TYPEOF(x)  /*NOT_LVALUE*/((x)->sxpinfo.type)
 #define LENGTH(x)  NOT_LVALUE(((VECSEXP) (x))->vecsxp.length)
 
 #define LOGICAL(x) ((int *) DATAPTR(x))
@@ -644,14 +644,14 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define S4_OBJECT_BIT_POS 4
 #define S4_OBJECT_MASK (1<<S4_OBJECT_BIT_POS)
 #define IS_S4_OBJECT(x) (((x)->sxpinfo.gp & S4_OBJECT_MASK) != 0)
-#define SET_S4_OBJECT(x) do { \
-    SEXP _x_ = (x); \
-    if (!IS_S4_OBJECT(_x_)) _x_->sxpinfo.gp |= S4_OBJECT_MASK; \
-  } while (0)
-#define UNSET_S4_OBJECT(x) do { \
-    SEXP _x_ = (x); \
-    if (IS_S4_OBJECT(_x_)) _x_->sxpinfo.gp &= ~S4_OBJECT_MASK; \
-  } while (0)
+#define SET_S4_OBJECT(x) SET_S4_OBJECT_inline(x)
+static inline void SET_S4_OBJECT_inline (SEXP x) {
+    if (!IS_S4_OBJECT(x)) x->sxpinfo.gp |= S4_OBJECT_MASK;
+}
+#define UNSET_S4_OBJECT(x) UNSET_S4_OBJECT_inline(x)
+static inline void UNSET_S4_OBJECT_inline (SEXP x) {
+    if (IS_S4_OBJECT(x)) x->sxpinfo.gp &= ~S4_OBJECT_MASK;
+}
 
 /* Vector Access Macros */
 #define SETLENGTH(x,v)	((((VECSEXP) (x))->vecsxp.length)=(v)) /* DEPRECATED */
