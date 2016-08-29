@@ -941,7 +941,7 @@ enum @{
     CTXT_BROWSER  = 16, /* @r{return target on exit from browser} */
     CTXT_GENERIC  = 20, /* @r{rather, running an S3 method} */
     CTXT_RESTART  = 32, /* @r{a call to @code{restart} was made from a closure} */
-    CTXT_BUILTIN  = 64  /* @r{builtin internal function} */
+    CTXT_BUILTIN  = 64  /* @r{builtin internal function - or .C, etc.} */
 @};
 @end example
 
@@ -956,8 +956,10 @@ jump to a specific context via @code{R_JumpToContext}.
 @code{R_ToplevelContext} is the `idle' state (normally the command
 prompt), and @code{R_GlobalContext} is the top of the stack.
 
-Note that whilst calls to closures and (some) builtins set a context, 
-those to special internal functions never do.
+Calls to closures set a context, as do calls of builtins when profiling
+is being done.  Calls of the foreign functions (@code{.C}, @code{.Fortran},
+@code{.External}, and @code{.Call}) also set a context, with type
+@code{CTXT_BUILTIN} (even though in pqR these are now special primitives).
 
 @findex UseMethod
 @cindex method dispatch

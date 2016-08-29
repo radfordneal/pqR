@@ -1,3 +1,7 @@
 Adds defensive measures against argument abuse in .Call and .External,
 by automatically duplicating and re-assigning the values of variables
 that are atomic scalars with no attributes if they have NAMEDCNT > 1.
+
+Also re-organizes stuff in dotcode.c, and handling of builtins in
+eval.  .C, .Fortran, .Call, and .External are now "specials", and
+evaluate their own arguments, and create their own contexts.
