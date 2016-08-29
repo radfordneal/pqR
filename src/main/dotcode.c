@@ -420,6 +420,9 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT (args = evalListUnshared (args, env)); 
     evaluated_args = args;  /* used by do_Externalgr */
 
+    RCNTXT cntxt;
+    beginbuiltincontext (&cntxt, call);
+
     DL_FUNC ofun = NULL;
     R_ExternalRoutine fun = NULL;
     SEXP retval;
@@ -435,26 +438,12 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     fun = (R_ExternalRoutine) ofun;
     UNPROTECT(1);
 
-    /* Some external symbols that are registered may have 0 as the
-       expected number of arguments.  We may want a warning
-       here. However, the number of values may vary across calls and
-       that is why people use the .External() mechanism.  So perhaps
-       we should just kill this check.
-    */
-#ifdef CHECK_EXTERNAL_ARG_COUNT         /* Off by default. */
-    if(symbol.symbol.external && symbol.symbol.external->numArgs > -1) {
-	if(symbol.symbol.external->numArgs != length(args))
-	    errorcall(call,
-		      _("Incorrect number of arguments (%d), expecting %d for '%s'"),
-		      length(args), symbol.symbol.external->numArgs, buf);
-    }
-#endif
-
     /* Note that .NAME is passed as the first argument (and usually ignored). */
     retval = (SEXP)fun(args);
     VMAXSET(vmax);
 
-    UNPROTECT(1);
+    endcontext (&cntxt);
+    UNPROTECT(1);  /* args - must be after endcontext */
     return retval;
 }
 
@@ -469,6 +458,9 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     PROTECT (args = evalListUnshared (args, env)); 
     evaluated_args = args;  /* used by do_dotcallgr */
+
+    RCNTXT cntxt;
+    beginbuiltincontext (&cntxt, call);
 
     DL_FUNC ofun = NULL;
     VarFun fun = NULL;
@@ -1157,7 +1149,8 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     VMAXSET(vmax);
 
-    UNPROTECT(1);
+    endcontext (&cntxt);
+    UNPROTECT(1);  /* args - must be after endcontext */
     return retval;
 }
 
@@ -1359,13 +1352,13 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    treated as out-of-the-box scalars.  If ans1 is not NULL, it must not
    be marked as an out-of-the-box scalar (even if it is of length one).
 
-   The variable dotCode_spa is consulted for the value of DUP (but only 
+   The variable dotCode_spa_dup is consulted for the value of DUP (but only 
    when the task is not deferred).
 */
 
 static const char zeros[20]; /* Block of zeros to pass for 0-length args */
-static VarFun dotCode_fun;  /* Function to call for .C or .Fortran */
-static struct special_args dotCode_spa;  /* Special arguments provided */
+static VarFun dotCode_fun;   /* Function to call for .C or .Fortran */
+static int dotCode_spa_dup;  /* Dup argument provided */
 static R_NativeArgStyle *argStyles;  /* May hold types and usages of args */
 
 void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
@@ -2037,7 +2030,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 
         /* Replace input-only arguments by R_NilValue, to release space. */
 
-        if (dotCode_spa.dup && arg_styles && arg_styles[na] == R_ARG_IN) {
+        if (dotCode_spa_dup && arg_styles && arg_styles[na] == R_ARG_IN) {
             SET_VECTOR_ELT(args, na, R_NilValue);
             continue;
         }
@@ -2123,8 +2116,16 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
 SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                                   int variant)
 {
-    int na, nargs, Fort;
-    int name_count, last_pos, i;
+    PROTECT (args = evalList(args,env));
+
+    RCNTXT cntxt;
+    beginbuiltincontext (&cntxt, call);
+
+    struct special_args spa;
+    int nargs = trimargs (args, 1, &spa, call);
+    PROTECT2 (spa.pkg, spa.encoding);
+
+    int name_count, last_pos, i, na, Fort;
     DL_FUNC ofun = NULL;
     SEXP ans, pa, s, last_tag, last_arg;
     R_RegisteredNativeSymbol symbol = {R_C_SYM, {NULL}, NULL};
@@ -2137,35 +2138,27 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     argStyles = NULL;
     if(Fort) symbol.type = R_FORTRAN_SYM;
 
-    nargs = trimargs (args, 1, &dotCode_spa, call);
-
-    if (dotCode_spa.naok == NA_LOGICAL)
+    if (spa.naok == NA_LOGICAL)
         errorcall(call, _("invalid '%s' value"), "NAOK");
-    if (dotCode_spa.helper == NA_LOGICAL)
+    if (spa.helper == NA_LOGICAL)
         errorcall(call, _("invalid '%s' value"), "HELPER");
     /* Should check for DUP being NA_LOGICAL too?  But not done in R-2.15.3...*/
 
     if (nargs > MAX_ARGS)
         errorcall(call, _("too many arguments in foreign function call"));
 
-    PROTECT2(dotCode_spa.pkg,dotCode_spa.encoding);
-
     encname[0] = 0;
-    if (dotCode_spa.encoding != R_NilValue) {
-        if (TYPEOF(dotCode_spa.encoding) != STRSXP 
-             || LENGTH(dotCode_spa.encoding) != 1)
+    if (spa.encoding != R_NilValue) {
+        if (TYPEOF(spa.encoding) != STRSXP || LENGTH(spa.encoding) != 1)
             error(_("ENCODING argument must be a single character string"));
-        strncpy(encname, translateChar(STRING_ELT(dotCode_spa.encoding,0)),100);
+        strncpy(encname, translateChar(STRING_ELT(spa.encoding,0)),100);
         encname[100] = 0;
         warning("ENCODING is deprecated");
     }
 
-    resolveNativeRoutine (args, &ofun, &symbol, dotCode_spa.pkg, symName, 
-                          call, env);
+    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, symName, call, env);
     dotCode_fun = (VarFun) ofun;
     args = CDR(args);
-
-    UNPROTECT(2);
 
     /* Count named arguments and note index (from 0) of last one in last_pos. */
 
@@ -2235,7 +2228,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	switch(t) {
 	case RAWSXP:
 	    n = LENGTH(s);
-	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
                 if (n == 1 && na < 64 && !(return_one_named && na == last_pos))
                     scalars |= (helpers_op_t) 1 << na;
                 else {
@@ -2249,11 +2242,11 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case INTSXP:
 	    n = LENGTH(s);
 	    int *iptr = INTEGER(s);
-	    if (!dotCode_spa.naok)
+	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if (iptr[i] == NA_INTEGER)
 			error(_("NAs in foreign function call (arg %d)"), na+1);
-	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (spa.dup || n == 1)) {
                 if (n == 1 && na < 64 && !(return_one_named && na == last_pos))
                     scalars |= (helpers_op_t) 1 << na;
                 else {
@@ -2266,7 +2259,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case REALSXP:
 	    n = LENGTH(s);
 	    double *rptr = REAL(s);
-	    if (!dotCode_spa.naok)
+	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(rptr[i]))
 			error(_("NA/NaN/Inf in foreign function call (arg %d)"),
@@ -2283,7 +2276,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                 SET_ATTRIB_TO_ANYTHING(ss,R_CSingSymbol);
                 SET_VECTOR_ELT(ans, na, ss);
 	    } 
-            else if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
+            else if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
                 if (n == 1 && na < 64 && !(return_one_named && na == last_pos))
                     scalars |= (helpers_op_t) 1 << na;
                 else {
@@ -2296,18 +2289,18 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case CPLXSXP:
 	    n = LENGTH(s);
 	    Rcomplex *zptr = COMPLEX(s);
-	    if (!dotCode_spa.naok)
+	    if (!spa.naok)
 		for (int i = 0 ; i < n ; i++)
 		    if(!R_FINITE(zptr[i].r) || !R_FINITE(zptr[i].i))
 			error (_("complex NA/NaN/Inf in foreign function call (arg %d)"), na+1);
-	    if (NAMEDCNT_GT_0(s) && (dotCode_spa.dup || n==1)) {
+	    if (NAMEDCNT_GT_0(s) && (spa.dup || n==1)) {
 		SEXP ss = allocVector(t, n);
 		memcpy(COMPLEX(ss), COMPLEX(s), n * sizeof(Rcomplex));
 		SET_VECTOR_ELT(ans, na, ss);
 	    }
 	    break;
 	case STRSXP:
-	    if (!dotCode_spa.dup && 0)  /* this is no longer an error in pqR */
+	    if (0 && !spa.dup)  /* this is no longer an error in pqR */
 		error(_("character variables must be duplicated in .C/.Fortran"));
             if (return_one_named && na == last_pos) return_one_named = 0;
 	    n = LENGTH(s);
@@ -2388,7 +2381,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case VECSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"),
 			    type2char(t), na + 1);
-            dotCode_spa.helper = 0;
+            spa.helper = 0;
 	    break;
 	case CLOSXP:
 	case BUILTINSXP:
@@ -2396,7 +2389,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 	case ENVSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"), 
 			    type2char(TYPEOF(s)), na + 1);
-            dotCode_spa.helper = 0;
+            spa.helper = 0;
 	    break;
 	default:
 	    /* Includes pairlists from R 2.15.0 */
@@ -2406,17 +2399,17 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
 		    type2char(t), na + 1);
 	    if (t == LISTSXP)
 		warning(_("pairlists are passed as SEXP as from R 2.15.0"));
-            dotCode_spa.helper = 0;
+            spa.helper = 0;
 	    break;
 	}
     }
 
     if (!return_one_named || helpers_not_multithreading_now)
-        dotCode_spa.helper = 0;
+        spa.helper = 0;
 
     SEXP ans1 = return_one_named ? VECTOR_ELT(ans,last_pos) : NULL;
 
-    if (dotCode_spa.helper) {
+    if (spa.helper) {
         /* Ensure arguments won't change while task is not complete (the
            "in use" mechanism won't work on these inner objects). */
         for (na = 0; na < nargs; na++) {
@@ -2428,8 +2421,10 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         memcpy (RAW(rawfun), &dotCode_fun, sizeof dotCode_fun);
         helpers_do_task (0, task_dotCode, scalars, ans1, rawfun, ans);
     }
-    else
+    else {
+        dotCode_spa_dup = spa.dup;
         task_dotCode (scalars, ans1, NULL, ans);
+    }
 
     /* Either return just the one named element, ans1, as a pairlist,
        or the whole vector list of updated arguments.  We handle attaching
@@ -2468,8 +2463,10 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         }
     }
 
-    UNPROTECT(1);
+    UNPROTECT(3);  /* ans spa.pkg, spa.encoding */
     VMAXSET(vmax);
+    endcontext(&cntxt);
+    UNPROTECT(1);  /* args - must be after endcontext */
     return ans;
 }
 
@@ -2650,10 +2647,10 @@ attribute_hidden FUNTAB R_FunTab_dotcode[] =
 {"is.loaded",	do_isloaded,	0,	11,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".External",   do_External,    0,      0,      -1,     {PP_FOREIGN, PREC_FN,	0}},
 {".Call",       do_dotcall,     0,      0,      -1,     {PP_FOREIGN, PREC_FN,	0}},
-{".External.graphics", do_Externalgr, 0, 1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".Call.graphics", do_dotcallgr, 0,	1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".C",		do_dotCode,	0,	1001,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".Fortran",	do_dotCode,	1,	1001,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".External.graphics", do_Externalgr, 0, 0,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".Call.graphics", do_dotcallgr, 0,	0,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".C",		do_dotCode,	0,	1000,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".Fortran",	do_dotCode,	1,	1000,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

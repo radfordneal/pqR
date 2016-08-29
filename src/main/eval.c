@@ -68,6 +68,7 @@ static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 
 #define ARGUSED(x) LEVELS(x)
 
+static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant);
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
 /*#define BC_PROFILING*/
@@ -582,7 +583,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             if (TYPEOF(op) == SPECIALSXP)
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
             else if (TYPEOF(op) == BUILTINSXP)
-                res = Rf_builtin_op (op, e, rho, variant);
+                res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
+                                  : Rf_builtin_op_no_cntxt(op, e, rho, variant);
             else
                 apply_non_function_error();
 
@@ -634,24 +636,18 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     return res;
 }
 
+
+/* Rf_builtin_op is a separate function (not declared static, even though 
+   used only in this this module, to try to prevent inlining by the compiler)
+   so that the local 'cntxt' variable will occupy space on the stack only 
+   if it is really needed. */
+
 SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 {
+    RCNTXT cntxt;
     SEXP args = CDR(e);
     SEXP res;
-
-    int use_cntxt = R_Profiling;
     SEXP arg1;
-
-    /* If we have an "alloca" function available, we use it to
-       allocate space for a context only when one is needed, which
-       saves stack space.  Otherwise, we just use a local variable
-       declared here. */
-
-    RCNTXT *cntxt;
-#   ifndef HAVE_ALLOCA_H
-        RCNTXT lcntxt;
-        cntxt = &lcntxt;
-#   endif
 
     /* See if this may be a fast primitive.  All fast primitives
        should be BUILTIN.  We do a fast call only if there is exactly
@@ -673,12 +669,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
                 goto not_fast;
             }
     
-            if (use_cntxt) { /* assume fast ops are not foreign */
-#               ifdef HAVE_ALLOCA_H
-                    cntxt = alloca (sizeof *cntxt);
-#               endif
-                beginbuiltincontext (cntxt, e);
-            }
+            beginbuiltincontext (&cntxt, e);
 
             if (!PRIMFUN_PENDING_OK(op)) {
                 WAIT_UNTIL_COMPUTED(arg1);
@@ -687,7 +678,9 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
             res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                      (e, op, arg1, rho, variant);
 
-            goto done_builtin;
+            UNPROTECT(1); /* arg1 */
+            endcontext(&cntxt);
+            return res;
         }
         args = evalListPendingOK (args, rho, 0);
     }
@@ -698,24 +691,70 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
        fast op, but if so, args has been set to the evaluated argument list. */
 
   not_fast: 
-    if (use_cntxt || PRIMFOREIGN(op)) {
-#       ifdef HAVE_ALLOCA_H
-            cntxt = alloca (sizeof *cntxt);
-#       endif
-        beginbuiltincontext (cntxt, e);
-        use_cntxt = TRUE;
-    }
+    beginbuiltincontext (&cntxt, e);
     if (!PRIMFUN_PENDING_OK(op)) {
         WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
     }
     res = CALL_PRIMFUN(e, op, args, rho, variant);
 
-  done_builtin:
-    UNPROTECT(1); /* either args or arg1 */
-    if (use_cntxt) endcontext(cntxt);
-
+    UNPROTECT(1); /* args */
+    endcontext(&cntxt);
     return res;
 }
+
+/* Like Rf_builtin_op except that no context is created.  Making this
+   separate from Rf_builtin_op saves on stack space for the local context 
+   variable.  Since the somewhat time-consuming context creation is not done,
+   there is no advantage to evaluating a single argument with pending OK. */
+
+static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
+{
+    SEXP args = CDR(e);
+    SEXP arg1;
+    SEXP res;
+
+    /* See if this may be a fast primitive.  All fast primitives
+       should be BUILTIN.  We do a fast call only if there is exactly
+       one argument, with no tag, not missing or a ... argument.  
+       The argument is stored in arg1. */
+
+    if (args!=R_NilValue) {
+        if (PRIMFUN_FAST(op) 
+              && TAG(args)==R_NilValue && CDR(args)==R_NilValue
+              && (arg1 = CAR(args))!=R_DotsSymbol 
+              && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
+
+            PROTECT(arg1 = EVALV (arg1, rho, PRIMFUN_ARG1VAR(op)));
+
+            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                UNPROTECT(1);
+                PROTECT(args = CONS(arg1,R_NilValue));
+                goto not_fast;
+            }
+
+            res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
+                     (e, op, arg1, rho, variant);
+
+            UNPROTECT(1);  /* arg1 */
+            return res;
+        }
+
+        args = evalList (args, rho);
+    }
+
+    PROTECT(args);
+
+    /* Handle a non-fast op.  We may get here after starting to handle a
+       fast op, but if so, args has been set to the evaluated argument list. */
+
+  not_fast: 
+
+    res = CALL_PRIMFUN(e, op, args, rho, variant);
+
+    UNPROTECT(1); /* args */
+    return res;
+}
+
 
 attribute_hidden
 void SrcrefPrompt(const char * prefix, SEXP srcref)

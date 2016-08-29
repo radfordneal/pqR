@@ -798,7 +798,7 @@ enum {
     CTXT_BROWSER  = 16,
     CTXT_GENERIC  = 20,
     CTXT_RESTART  = 32,
-    CTXT_BUILTIN  = 64  /* used in profiling */
+    CTXT_BUILTIN  = 64  /* used when profiling, and for .C, etc. */
 };
 
 /*
