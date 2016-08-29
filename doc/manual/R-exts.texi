@@ -8279,7 +8279,7 @@ foregoing protection is paramount, protecting all @code{SEXP}
 arguments is recommended.  However, arguments cannot be protected by
 listing them as variables in a @code{BEGIN_PROTECT} call, since that
 would declare new variables of those names in the inner block (and
-initialize them to C NULL).  The @code{ALSO_PROTECT2} macro (which has
+initialize them to R_NilValue).  The @code{ALSO_PROTECT2} macro (which has
 forms protecting 1 to 9 arguments/variables) tells @R{} to not collect
 objects pointed to by the named @code{SEXP} arguments or variables,
 which must already exist and must be initialized to valid @code{SEXP}
