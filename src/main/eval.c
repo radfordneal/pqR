@@ -2109,7 +2109,7 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 
 static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 {
-    BEGIN_PROTECT6 (head1, tail1, head2, tail2, ev, h);
+    SEXP head1, tail1, head2, tail2, ev, h;
 
     head1 = head2 = R_NilValue;
 
@@ -2144,13 +2144,13 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                     }
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head1==R_NilValue)
-                        head1 = ev;
+                        PROTECT(head1 = ev);
                     else
                         SETCDR(tail1,ev);
                     tail1 = ev;
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head2==R_NilValue)
-                        head2 = ev;
+                        PROTECT(head2 = ev);
                     else
                         SETCDR(tail2,ev);
                     tail2 = ev;
@@ -2174,13 +2174,13 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
             }
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head1 == R_NilValue)
-                head1 = ev;
+                PROTECT(head1 = ev);
             else
                 SETCDR(tail1, ev);
             tail1 = ev;
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head2 == R_NilValue)
-                head2 = ev;
+                PROTECT(head2 = ev);
             else
                 SETCDR(tail2, ev);
             tail2 = ev;
@@ -2195,9 +2195,8 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
         if (*a2 != R_NilValue)
             SETCDR(tail2,*a2);
         *a2 = head2;
+        UNPROTECT(2);
     }
-
-    END_PROTECT;
 }
 
 /*  Assignment in its various forms  */
@@ -2639,10 +2638,11 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 {
-    BEGIN_PROTECT4 (head, tail, ev, h);
+    SEXP head, tail, ev, h;
 
     variant |= VARIANT_PENDING_OK;
     head = R_NilValue;
+    tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
     while (el != R_NilValue) {
 
@@ -2656,11 +2656,15 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
                error. */
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
+                PROTECT(h);
 		while (h != R_NilValue) {
                     ev = cons_with_tag (EVALV (CAR(h), rho, variant),
                                         R_NilValue, TAG(h));
-                    if (head==R_NilValue)
-                        head = ev;
+                    if (head==R_NilValue) {
+                        UNPROTECT(1); /* h */
+                        PROTECT(head = ev);
+                        PROTECT(h);
+                    }
                     else
                         SETCDR(tail, ev);
                     tail = ev;
@@ -2668,6 +2672,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
                         SET_MISSING (ev, R_isMissing(CAR(h),rho));
 		    h = CDR(h);
 		}
+                UNPROTECT(1); /* h */
 	    }
 	    else if (h != R_NilValue && h != R_MissingArg)
 		dotdotdot_error();
@@ -2675,7 +2680,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	} else {
             ev = cons_with_tag(EVALV(CAR(el),rho,variant), R_NilValue, TAG(el));
             if (head==R_NilValue)
-                head = ev;
+                PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
             tail = ev;
@@ -2686,8 +2691,10 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
 	el = CDR(el);
     }
 
-    RETURN_SEXP_INSIDE_PROTECT (head);
-    END_PROTECT;
+    if (head!=R_NilValue)
+        UNPROTECT(1);
+
+    return head;
 
 } /* evalListPendingOK() */
 
@@ -2836,11 +2843,12 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
-    BEGIN_PROTECT4 (head, tail, ev, h);
+    SEXP head, tail, ev, h;
 
     head = R_NilValue;
+    tail = R_NilValue; /* to prevent uninitialized variable warnings */
 
-    while (el != R_NilValue) {
+    while(el != R_NilValue) {
 
         SEXP a = CAR(el);
 
@@ -2868,7 +2876,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                         a = mkPROMISE (a, rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
-                        head = ev;
+                        PROTECT(head = ev);
                     else
                         SETCDR(tail,ev);
                     tail = ev;
@@ -2889,7 +2897,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
                a = mkPROMISE (a, rho);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head == R_NilValue)
-                head = ev;
+                PROTECT(head = ev);
             else
                 SETCDR(tail, ev);
             tail = ev;
@@ -2897,8 +2905,10 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
 
-    RETURN_SEXP_INSIDE_PROTECT (head);
-    END_PROTECT;
+    if (head!=R_NilValue)
+        UNPROTECT(1);
+
+    return head;
 }
  
 /* Create promises for arguments, with values for promises filled in.  
@@ -3246,18 +3256,17 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
    might come in with a "..." and that there might be other arguments
    in the "..." as well.  LT */
 
-    BEGIN_PROTECT1 (x);
-    ALSO_PROTECT1 (args);
+    SEXP x = R_NilValue;
+    int dots = FALSE, nprotect = 0;;
 
-    int dots = FALSE;
-
-    if (argsevald != 0)
+    if (argsevald != 0) {
+        PROTECT(args); nprotect++;
 	x = CAR(args);
+    }
     else {
 	/* Find the object to dispatch on, dropping any leading
 	   ... arguments with missing or empty values.  If there are no
 	   arguments, R_NilValue is used. */
-        x = R_NilValue;
 	for (; args != R_NilValue; args = CDR(args)) {
 	    if (CAR(args) == R_DotsSymbol) {
 		SEXP h = findVar(R_DotsSymbol, rho);
@@ -3282,15 +3291,14 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 break;
 	    }
 	}
+	PROTECT(x); nprotect++;
     }
-
-    if (isObject(x)) { /* try to dispatch on the object */
+	/* try to dispatch on the object */
+    if( isObject(x) ) {
 	char *pt;
 	/* Try for formal method. */
 	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
-
-	    BEGIN_INNER_PROTECT2 (value, argValue);
-
+	    SEXP value, argValue;
 	    /* create a promise to pass down to applyClosure  */
 	    if (argsevald < 0)
                 argValue = promiseArgsWith1Value(CDR(call), rho, x);
@@ -3298,11 +3306,13 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		argValue = promiseArgsWith1Value(args, rho, x);
 	    else 
                 argValue = args;
+	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
 	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
 	    if(value) {
 		*ans = value;
-		RETURN_OUTSIDE_PROTECT (1);
+		UNPROTECT(nprotect);
+		return 1;
 	    }
 	    else {
 		/* go on, with the evaluated args.  Not guaranteed to have
@@ -3313,16 +3323,16 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		   multiple evaluation after the call to possible_dispatch.
 		*/
 		if (dots)
-		    argValue = evalArgs(argValue, rho, dropmissing);
+		    PROTECT(argValue = evalArgs(argValue, rho, dropmissing));
 		else {
-		    argValue = CONS(x, evalArgs(CDR(argValue),rho,dropmissing));
+		    PROTECT(argValue = CONS(x, evalArgs(CDR(argValue), rho,
+							dropmissing)));
 		    SET_TAG(argValue, CreateTag(TAG(args)));
 		}
+		nprotect++;
 		args = argValue; 
 		argsevald = 1;
 	    }
-
-            END_INNER_PROTECT;
 	}
 	if (TYPEOF(CAR(call)) == SYMSXP)
 	    pt = Rf_strrchr(CHAR(PRINTNAME(CAR(call))), '.');
@@ -3330,15 +3340,16 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    pt = NULL;
 
 	if (pt == NULL || strcmp(pt,".default")) {
-
-	    BEGIN_INNER_PROTECT2 (pargs, rho1);
 	    RCNTXT cntxt;
+	    SEXP pargs, rho1;
 
             if (argsevald > 0) {  /* handle as in R_possible_dispatch */
+                PROTECT(args); nprotect++;
                 pargs = promiseArgsWithValues(CDR(call), rho, args);
             }
             else
                 pargs = promiseArgsWith1Value(args, rho, x); 
+            PROTECT(pargs); nprotect++;
 
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some
@@ -3355,32 +3366,31 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       triggered (by something very obscure, but still).
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
-	    rho1 = NewEnvironment(R_NilValue, R_NilValue, rho);
+	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
-	    {   endcontext(&cntxt);
-		RETURN_OUTSIDE_PROTECT (1);
+	    {
+		endcontext(&cntxt);
+		UNPROTECT(nprotect);
+		return 1;
 	    }
 	    endcontext(&cntxt);
-
-            END_INNER_PROTECT;
 	}
     }
-
     if (argsevald <= 0) {
 	if (dots)
 	    /* The first call argument was ... and may contain more than the
 	       object, so it needs to be evaluated here.  The object should be
 	       in a promise, so evaluating it again should be no problem. */
-	    args = evalArgs(args, rho, dropmissing);
+	    *ans = evalArgs(args, rho, dropmissing);
 	else {
-	    args = cons_with_tag (x, evalArgs(CDR(args), rho, dropmissing),
-                                  TAG(args));
+	    PROTECT(*ans = CONS(x, evalArgs(CDR(args), rho, dropmissing)));
+	    SET_TAG(*ans, CreateTag(TAG(args)));
+	    UNPROTECT(1);
 	}
     }
-
-    *ans = args;
-    END_PROTECT;
+    else *ans = args;
+    UNPROTECT(nprotect);
     return 0;
 }
 
