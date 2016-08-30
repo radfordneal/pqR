@@ -462,8 +462,7 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 
 SEXP eval(SEXP e, SEXP rho)
 {
-    EVAL_PRELUDE;
-    return Rf_evalv2(e,rho,0);
+    return Rf_evalv(e,rho,0);
 }
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
