@@ -2,5 +2,5 @@ Performance optimization / tuning.
 
 Changed how eval relates to evalv (with tuning #if).
 
-
-
+Got rid of saving of R_EvalDepth in eval, in favour of increment/decrement.
+It's saved and restored in/from contexts anyway.
