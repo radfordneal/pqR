@@ -1644,32 +1644,7 @@ extern SEXP Rf_evalv2 (SEXP, SEXP, int);
 
 static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 {
-    R_variant_result = 0;
-    R_Visible = TRUE;
-
-    if (SELF_EVAL(TYPEOF(e))) {
-        /* Make sure constants in expressions have maximum NAMEDCNT when
-           used as values, so they won't be modified. */
-        SET_NAMEDCNT_MAX(e);
-        return e;
-    }
-
-    if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
-        if (LASTSYMENV(e) == rho) {
-            SEXP res = CAR(LASTSYMBINDING(e));
-            if (TYPEOF(res) == PROMSXP) 
-                res = PRVALUE_PENDING_OK(res);
-            if (res != R_MissingArg && res != R_UnboundValue) {
-                if (NAMEDCNT_EQ_0(res))
-                    SET_NAMEDCNT_1(res);
-                if ( ! (variant & VARIANT_PENDING_OK))
-                    WAIT_UNTIL_COMPUTED(res);
-                return res;
-            }
-        }
-    }
-
-    return Rf_evalv2 (e, rho, variant);
+    return Rf_evalv (e, rho, variant);
 }
 
 
