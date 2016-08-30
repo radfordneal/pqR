@@ -508,14 +508,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     
     SEXP srcrefsave = R_Srcref;
 
-    /* The use of depthsave below is necessary because of the
-       possibility of non-local returns from evaluation.  Without this
-       an "expression too complex error" is quite likely.
-
-       BUT IT'S SAVED AND RESTORED IN CONTEXTS!  UNNECESSARY? */
-
-    /* int depthsave = R_EvalDepth++; */
-
     R_EvalDepth += 1;
 
     /* We need to explicit set a NULL call here to circumvent attempts
@@ -628,8 +620,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else
         UNIMPLEMENTED_TYPE("eval", e);
-
-    /* R_EvalDepth = depthsave; */
 
     R_EvalDepth -= 1;
     R_Srcref = srcrefsave;
