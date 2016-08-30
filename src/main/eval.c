@@ -434,8 +434,8 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
    constants may be evaluated with less overhead within "eval" or "evalv".
    This split may not be necessary with a sufficiently clever compiler,
    but seems to help with gcc 4.6.3.  Similarly for the separation of
-   Rf_builtin_op.  These functions are global but un-used elsewhere to 
-   discourage inlining by the compiler. */
+   Rf_builtin_op.  These functions are global even though un-used elsewhere
+   in order to discourage inlining by the compiler. */
 
 static int evalcount = 0; /* counts down to when to check for user interrupt */
 SEXP Rf_evalv2(SEXP,SEXP,int);
@@ -462,8 +462,12 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 
 SEXP eval(SEXP e, SEXP rho)
 {
+#if 1     /* Enable one or the other section according to which seems fastest */
+    return Rf_evalv(e,rho,0);
+#else
     EVAL_PRELUDE;
     return Rf_evalv2(e,rho,0);
+#endif
 }
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
