@@ -4,3 +4,19 @@ Changed how eval relates to evalv (with tuning #if).
 
 Got rid of saving of R_EvalDepth in eval, in favour of increment/decrement.
 It's saved and restored in/from contexts anyway.
+
+Put the following global variables that are frequently used into a
+structure to ensure reference locality (and possibly allow the
+compiler to address faster):
+
+   R_variant_result
+   R_Visible
+   R_EvalDepth
+   R_Expressions
+   evalcount (was local to eval.c)
+   R_PPStackSize
+   R_PPStack
+   R_PPStackTop
+   R_CStackDir
+   R_CStackLimit
+   R_CStackThreshold

@@ -1596,6 +1596,37 @@ const char *Rf_reEnc(const char *x, cetype_t ce_in, cetype_t ce_out, int subst);
 #define error_return(msg)	{ Rf_error(msg);	   return R_NilValue; }
 #define errorcall_return(cl,msg){ Rf_errorcall(cl, msg);   return R_NilValue; }
 
+
+/* Structure containing frequently-used globals, to ensure locality of
+   reference, and perhaps allow the compiler to generate faster code
+   for addressing these variables (from knowing they are adjacent). */
+
+LibExtern struct {
+    unsigned variant_result;      /* 0 or kind of variant result */
+    Rboolean Visible;             /* Value visibility flag */
+    int EvalDepth;                /* Evaluation recursion depth */
+    int Expressions;              /* options(expressions) */
+    int evalcount;                /* counts down to check user interrupt */
+    int PPStackSize;              /* Size of pointer protect stack (elements) */
+    SEXP *PPStack;                /* Pointer to area for pointer protect stack*/
+    int PPStackTop;               /* Top of the pointer protection stack */
+    int CStackDir;                /* C stack direction */
+    uintptr_t CStackLimit;        /* C stack limit */
+    uintptr_t CStackThreshold;    /* Threshold for overflow detection */
+} R_high_frequency_globals;
+
+#define InitHighFrequencyGlobals() \
+do \
+{ \
+    R_high_frequency_globals.EvalDepth   = 0; \
+    R_high_frequency_globals.Expressions = 5000; \
+    R_high_frequency_globals.evalcount   = 0; \
+    R_high_frequency_globals.PPStackSize = R_PPSSIZE; \
+    R_high_frequency_globals.CStackDir   = 1; \
+    R_high_frequency_globals.CStackLimit = (uintptr_t)-1; \
+} while (0)
+
+
 #ifdef __MAIN__
 #undef extern
 #undef LibExtern
@@ -2144,5 +2175,5 @@ void Rf_R_from_C99_complex(Rcomplex *, double complex);
 #ifdef __cplusplus
 }
 #endif
-
+ 
 #endif /* R_INTERNALS_H_ */

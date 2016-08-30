@@ -437,9 +437,10 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
    Rf_builtin_op.  These functions are global even though un-used elsewhere
    in order to discourage inlining by the compiler. */
 
-static int evalcount = 0; /* counts down to when to check for user interrupt */
 SEXP Rf_evalv2(SEXP,SEXP,int);
 SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
+
+#define evalcount R_high_frequency_globals.evalcount
 
 #define EVAL_PRELUDE do { \
 \
@@ -4617,9 +4618,9 @@ static int opcode_counts[OPCOUNT];
 #define BC_COUNT_DELTA 1000
 
 #define BC_CHECK_SIGINT() do { \
-  if (++evalcount > BC_COUNT_DELTA) { \
+  if (++eval_count > BC_COUNT_DELTA) { \
       R_CheckUserInterrupt(); \
-      evalcount = 0; \
+      eval_count = 0; \
   } \
 } while (0)
 
@@ -4946,7 +4947,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   BCODE *pc, *codebase;
   int ftype = 0;
   R_bcstack_t *oldntop = R_BCNodeStackTop;
-  static int evalcount = 0;
+  static int eval_count = 0;
 #ifdef BC_INT_STACK
   IStackval *olditop = R_BCIntStackTop;
 #endif

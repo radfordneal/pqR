@@ -771,6 +771,8 @@ void setup_Rmainloop(void)
     char deferred_warnings[11][250]; /* INCREASE AS NECESSARY! */
     volatile int ndeferred_warnings = 0;
 
+    InitHighFrequencyGlobals();
+
     InitConnections(); /* needed to get any output at all */
 
     /* Initialize the interpreter's internal structures. */

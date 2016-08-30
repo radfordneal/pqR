@@ -874,7 +874,8 @@ LibExtern SEXP R_binding_cell; /* NULL, or the binding cell for the variable
                                   just found or created (if the binding uses
                                   a CONS cell that is suitable for update */
 
-LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
+#define R_variant_result R_high_frequency_globals.variant_result
+
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
 
@@ -895,9 +896,9 @@ extern0 R_size_t R_Collected;	    /* Number of free cons cells (after gc) */
 LibExtern int	R_Is_Running;	    /* for Windows memory manager */
 
 /* The Pointer Protection Stack */
-extern0 int	R_PPStackSize	INI_as(R_PPSSIZE); /* The stack size (elements) */
-extern0 int	R_PPStackTop;	    /* The top of the stack */
-extern0 SEXP*	R_PPStack;	    /* The pointer protection stack */
+#define R_PPStackSize R_high_frequency_globals.PPStackSize
+#define R_PPStackTop R_high_frequency_globals.PPStackTop
+#define R_PPStack R_high_frequency_globals.PPStack
 
 /* Evaluation Environment */
 LibExtern SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
@@ -908,21 +909,21 @@ LibExtern RCNTXT R_Toplevel;	    /* Storage for the toplevel environment */
 LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */
 LibExtern RCNTXT* R_GlobalContext;    /* The global environment */
 #endif
-extern0 Rboolean R_Visible;	    /* Value visibility flag */
-LibExtern int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
+#define R_Visible R_high_frequency_globals.Visible
+#define R_EvalDepth R_high_frequency_globals.EvalDepth
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 
 extern0 SEXP    R_VStack        INI_as(NULL);   /* R_alloc stack pointer */
 
-extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
+#define R_Expressions R_high_frequency_globals.Expressions
 extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
-extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
 extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
-extern0 int	R_CStackDir	INI_as(1);	/* C stack direction */
-extern0 uintptr_t R_CStackThreshold;	/* Threshold for overflow detection */
+#define R_CStackDir R_high_frequency_globals.CStackDir
+#define R_CStackLimit R_high_frequency_globals.CStackLimit
+#define R_CStackThreshold R_high_frequency_globals.CStackThreshold
 
 #ifdef R_USE_SIGNALS
 extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */
