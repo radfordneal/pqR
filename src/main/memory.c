@@ -2038,6 +2038,7 @@ static void RunGenCollect(R_size_t size_needed)
 
         &R_HandlerStack,          /* Condition handler stack */
         &R_RestartStack,          /* Available restarts stack */
+        &R_Srcref,                /* Current source reference */
 
         &R_PreciousList,
         0

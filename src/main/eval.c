@@ -503,10 +503,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             return e;
         }
     }
-    
-    /* Save the current srcref context. */
-    
-    SEXP srcrefsave = R_Srcref;
 
     R_EvalDepth += 1;
 
@@ -622,7 +618,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         UNIMPLEMENTED_TYPE("eval", e);
 
     R_EvalDepth -= 1;
-    R_Srcref = srcrefsave;
 
 #   if 0  /* Enable for debug output after typing STATIC.BOX.DEBUG */
 
@@ -939,7 +934,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN 
                  | VARIANT_PASS_ON(variant);
 
-    SEXP formals, actuals, savedrho;
+    SEXP formals, actuals, savedrho, savedsrcref;
     volatile SEXP body, newrho;
     SEXP f, a, res;
     RCNTXT cntxt;
@@ -964,6 +959,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         in matchArgs or from running out of memory (eg, in NewEnvironment). */
 
     begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
+    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
 
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
@@ -1082,6 +1078,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     R_variant_result &= ~VARIANT_RTN_FLAG;
 
+    R_Srcref = savedsrcref;
     endcontext(&cntxt);
 
     if ( ! (variant & VARIANT_PENDING_OK))
@@ -1109,7 +1106,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho)
 {
     volatile SEXP body;
-    SEXP res;
+    SEXP res, savedsrcref;
     RCNTXT cntxt;
 
     PROTECT2(op,arglist);
@@ -1127,11 +1124,12 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     }
 
     begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
 
     /* Get the srcref record from the closure object.  Disable for now
        at least, since it's not clear that it's needed. */
     
-    /* R_Srcref = getAttrib(op, R_SrcrefSymbol); */
+    R_Srcref = R_NilValue;  /* was: getAttrib(op, R_SrcrefSymbol); */
 
     /* Debugging */
 
@@ -1187,6 +1185,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	PROTECT(res = eval(body, newrho));
     }
 
+    R_Srcref = savedsrcref;
     endcontext(&cntxt);
 
     if (RDEBUG(op)) {
@@ -1733,7 +1732,9 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue)
         return R_NilValue;
 
-    SEXP arg, s, srcrefs = getBlockSrcrefs(call);
+    SEXP arg, s;
+    SEXP savedsrcref = R_Srcref;
+    SEXP srcrefs = getBlockSrcrefs(call);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
     variant = VARIANT_PASS_ON(variant);
@@ -1743,7 +1744,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     for (int i = 1; ; i++) {
         arg = CAR(args);
         args = CDR(args);
-        PROTECT(R_Srcref = getSrcref(srcrefs, i));
+        R_Srcref = getSrcref(srcrefs, i);
         if (RDEBUG(rho)) {
             SrcrefPrompt("debug", R_Srcref);
             PrintValue(arg);
@@ -1752,15 +1753,13 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (args == R_NilValue)
             break;
         s = evalv (arg, rho, vrnt);
-        R_Srcref = R_NilValue;
-        UNPROTECT(1);
+        R_Srcref = savedsrcref;
         if (R_variant_result & VARIANT_RTN_FLAG)
             return s;
     }
 
     s = EVALV (arg, rho, variant);
-    R_Srcref = R_NilValue;
-    UNPROTECT(1);
+    R_Srcref = savedsrcref;
     return s;
 }
 
@@ -3069,6 +3068,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
+        SEXP savedsrcref = R_Srcref;
 	if (!SETJMP(cntxt.cjmpbuf)) {
 	    for (i = 0 ; i < n ; i++) {
                 R_Srcref = getSrcref(srcrefs, i); 
@@ -3088,6 +3088,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	}
 	UNPROTECT(1);
 	PROTECT(tmp);
+        R_Srcref = savedsrcref;
 	endcontext(&cntxt);
 	expr = tmp;
     }

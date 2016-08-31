@@ -20,3 +20,6 @@ compiler to address faster):
    R_CStackDir
    R_CStackLimit
    R_CStackThreshold
+
+Eliminate save/restore of R_Srcref in eval, do when modified elsewhere instead.
+It's already saved in contexts for restoration on longjump.
