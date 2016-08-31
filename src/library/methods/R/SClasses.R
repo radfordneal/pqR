@@ -268,15 +268,14 @@ slot <-
 
 "slot<-" <-
   ## Set the value of the named slot.  Must be one of the slots in the class's 
-  ## definition.  The R_set_slot procedure currently (and improperly!) modifies
-  ## the object without regard to whether it is shared, so this works only
-  ## because "applydefine" in eval.c always ensures that the object in a
-  ## slot(object,a)<-v call is unshared, which it ought not to have to do.
+  ## definition.  The set_slot.internal procedure currently (and improperly!) 
+  ## modifies the object without regard to whether it is shared, so this works
+  ## only because subset assignment in eval.c always ensures that the object in
+  ## a slot(object,a)<-v call is unshared, which it ought not to have to do.
   function(object, name, check = TRUE, value) {
       if(check)
           value <- checkSlotAssignment(object, name, value)
-      .Call("R_set_slot", object, name, value, PACKAGE="methods")
-      ## currently --> R_do_slot_assign() in ../../../main/attrib.c
+      .Internal (set_slot.internal(object, name, value))
   }
 
 ## ". - hidden" since one should typically rather use is(), extends() etc:
@@ -676,7 +675,7 @@ initialize <- function(.Object, ...) {
                 }
                 if (firstTime) {
                     ## Force a copy of .Object.  The copy is forced at 
-                    ## present in "applydefine" in eval.c, but it ought
+                    ## present in subset assign code in eval.c, but it ought
                     ## instead to be forced by R_set_slot called from slot<-.
                     slot(.Object, slotName, check = FALSE) <- slotVal
                     firstTime <- FALSE
@@ -685,8 +684,8 @@ initialize <- function(.Object, ...) {
                     ## now, which is good, since R_set_slot modifies it
                     ## regardless.  The assignment of the result of .Call to
                     ## .Object is therefore redundant, but is done so that this
-                    ## code will work even if the applydefine setup is someday
-                    ## fixed to work as it should.
+                    ## code will work even if the setup is someday fixed to 
+                    ## work as it should.
                     .Object <- .Call ("R_set_slot", .Object, slotName, slotVal)
                 }
             }

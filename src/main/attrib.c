@@ -1613,17 +1613,37 @@ SEXP R_do_slot(SEXP obj, SEXP name) {
 }
 #undef R_SLOT_INIT
 
-/* currently, R_set_slot() ["methods"] is a trivial wrapper for this: */
-SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
-#ifndef _R_ver_le_2_11_x_
-    if (isNull(obj))/* cannot use !IS_S4_OBJECT(obj), because
-		     *  slot(obj, name, check=FALSE) <- value  must work on
-		     * "pre-objects", currently only in makePrototypeFromClassDef() */
+
+/* Slot setting for the 'methods' package.  In pqR, the 'method'
+   package has been changed to call do_set_slot via .Internal, in
+   order to bypass the safeguarding of .Call argument modification
+   that is now done (to avoid this overhead), and because it also
+   makes more sense given the dependence of 'methods' on the interpreter.
+
+   R_do_slot_assign can be called with .Call, which is done by the
+   'Matrix' package (often via SET_SLOT, defined in Rdefines.h, but
+   not mentioned in the manuals). */
+
+static SEXP do_set_slot (SEXP call, SEXP op, SEXP args, SEXP env)
+{
+   checkArity (op, args);
+
+   return R_do_slot_assign (CAR(args), CADR(args), CADDR(args));
+}
+
+SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value)
+{
+    if (isNull(obj)) /* cannot use !IS_S4_OBJECT(obj), because
+                           slot(obj, name, check=FALSE) <- value  
+                       must work on "pre-objects", currently only in 
+                       makePrototypeFromClassDef() */
+
 	error(_("attempt to set slot on NULL object"));
-#endif
+
     PROTECT(value);
     PROTECT(obj);
-				/* Ensure that name is a symbol */
+
+    /* Ensure that name is a symbol */
     if(isString(name) && LENGTH(name) == 1)
 	name = install(translateChar(STRING_ELT(name, 0)));
     if(TYPEOF(name) == CHARSXP)
@@ -1649,12 +1669,10 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
     if(name == s_dot_Data) {	/* special handling */
 	obj = set_data_part(obj, value);
     } else {
-	if(isNull(value))		/* Slots, but not attributes, can be NULL.*/
-	    value = pseudo_NULL;	/* Store a special symbol instead. */
 
-#ifdef _R_ver_le_2_11_x_
-	setAttrib(obj, name, value);
-#else
+	if (isNull(value))	  /* Slots, but not attributes, can be NULL.*/
+	    value = pseudo_NULL;  /* Store a special symbol instead. */
+
 	/* simplified version of setAttrib(obj, name, value);
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
 	PROTECT(name);
@@ -1667,8 +1685,8 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
         }
 	UNPROTECT(1);
 	installAttrib(obj, name, value);
-#endif
     }
+
     UNPROTECT(2);
     return obj;
 }
@@ -1787,6 +1805,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
 {"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
+{"set_slot.internal", do_set_slot, 0,	11,	3,	{PP_FUNCALL, PREC_FN,	}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
