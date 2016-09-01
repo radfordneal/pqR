@@ -1308,10 +1308,14 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 /* For statement.  Unevaluated arguments for different formats are as follows:
 
-       for (i in v) body          i, v, body    (extra vars before "in" ignored)
+       for (i in v) body          i, v, body
+       for (i down v) body        i, down=v, body
+       for (i across v) body      i, across=v, body
        for (i along v) body       i, along=v, body     (ok for vec or for array)
        for (i, j along M) body    i, j, along=M, body     (requires correct dim)
        etc.
+
+   Extra variables after i are ignored for 'in', 'down', and 'across'.
 
    Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK.
  */
@@ -1374,7 +1378,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return R_NilValue;
     }
 
-    if (in) nsyms = 1;  /* ignore extras for "in" */
+    if (!along) nsyms = 1;  /* ignore extras when not 'along' */
 
     val = CAR(a);
     body = CADR(a);
