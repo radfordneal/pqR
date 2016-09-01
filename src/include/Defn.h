@@ -870,7 +870,8 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 #define extern0 extern
 #endif
 
-LibExtern SEXP R_binding_cell; /* NULL, or the binding cell for the variable
+#define R_binding_cell R_high_frequency_globals.binding_cell
+                               /* NULL, or the binding cell for the variable
                                   just found or created (if the binding uses
                                   a CONS cell that is suitable for update */
 
@@ -913,7 +914,7 @@ LibExtern RCNTXT* R_GlobalContext;    /* The global environment */
 #define R_EvalDepth R_high_frequency_globals.EvalDepth
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 
-extern0 SEXP    R_VStack        INI_as(NULL);   /* R_alloc stack pointer */
+#define R_VStack R_high_frequency_globals.VStack
 
 #define R_Expressions R_high_frequency_globals.Expressions
 extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
