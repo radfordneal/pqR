@@ -2735,7 +2735,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
                 res = duplicate(res);
                 SETCAR (R_binding_cell, res);
             }
-            else if (NAMEDCNT_EQ_0(res))
+            if (NAMEDCNT_EQ_0(res))
                 SET_NAMEDCNT_1(res);
         }
     }
