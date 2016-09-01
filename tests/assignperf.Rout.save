@@ -1,13 +1,14 @@
 
-pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
 
-R is Copyright (C) 2012 The R Foundation for Statistical Computing
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
-No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -20,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > # Test performance of complex assignments, by seeing what storage
 > # allocation is done.
@@ -443,7 +447,7 @@ RPROFMEM: 440 (logical 100):
 > x <- new ("george", a=ia+1, b=ib)
 RPROFMEM: 840 (double 100):"initialize" "initialize" "new" 
 RPROFMEM: 552 (integer 128):"match" "initialize" "initialize" "new" 
-RPROFMEM: 840 (double 100):".Call" "slot<-" "initialize" "initialize" "new" 
+RPROFMEM: 840 (double 100):"slot<-" "initialize" "initialize" "new" 
 RPROFMEM: 440 (logical 100):".Call" "initialize" "initialize" "new" 
 > 
 > v <- seq.int(1/vsize,1,length=vsize)
@@ -451,17 +455,17 @@ RPROFMEM: 840 (double 100):
 > x@a <- v      # shouldn't duplicate, but currently dups three things
 RPROFMEM: 840 (double 100):
 RPROFMEM: 440 (logical 100):
-RPROFMEM: 840 (double 100):".Call" "slot<-" "@<-" 
+RPROFMEM: 840 (double 100):"slot<-" "@<-" 
 > x@a[2] <- 9   # shouldn't duplicate, but currently dups four things
 RPROFMEM: 840 (double 100):
 RPROFMEM: 440 (logical 100):
 RPROFMEM: 840 (double 100):
-RPROFMEM: 840 (double 100):".Call" "slot<-" "@<-" 
+RPROFMEM: 840 (double 100):"slot<-" "@<-" 
 > x@b[3] <- NA  # should duplicate at most one, but currently dups four things
 RPROFMEM: 840 (double 100):
 RPROFMEM: 440 (logical 100):
 RPROFMEM: 440 (logical 100):
-RPROFMEM: 440 (logical 100):".Call" "slot<-" "@<-" 
+RPROFMEM: 440 (logical 100):"slot<-" "@<-" 
 > 
 > Rprofmemt(NULL)
 > print(x)
