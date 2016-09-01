@@ -79,32 +79,33 @@ static void reset_stack_limit(void *data)
 {
     uintptr_t *limit = (uintptr_t *) data;
     R_CStackLimit = limit[0];
-    R_CStackThreshold = limit[1];
+    R_CStackThreshold = (char *) limit[1];
 }
 
 void R_CheckStack(void)
 {
-    if (R_CStackLimit == -1)
+    if (R_CStackThreshold == 0)
         return;
 
-    int dummy;
+    char dummy;
 
-    if (R_CStackDir > 0 ? (uintptr_t)&dummy < R_CStackThreshold
-                        : (uintptr_t)&dummy > R_CStackThreshold) {
+    if (((ptrdiff_t)R_CStackDir ^ (R_CStackThreshold - &dummy)) > 0) {
 
-#if 0 /* enable for debugging */
-        printf(
-          "stack limit reached: dir %d, dummy %lu, start %lu, threshold %lu\n",
-           R_CStackDir, (unsigned long) &dummy, (unsigned long) R_CStackStart,
-                        (unsigned long) R_CStackThreshold);
-#endif
+        if (0) { /* Enable for debugging */
+            Rprintf(
+            "stack limit reached: dir %d, dummy %llu, start %llu, threshold %llu\n",
+             R_CStackDir, (unsigned long long) &dummy, 
+                          (unsigned long long) R_CStackStart,
+                          (unsigned long long) R_CStackThreshold);
+        }
+
 	/* We do need some stack space to process error recovery,
 	   so temporarily raise the limit.
 	 */
 	RCNTXT cntxt;
 	uintptr_t stacklimit[2];
         stacklimit[0] = R_CStackLimit;
-        stacklimit[1] = R_CStackThreshold;
+        stacklimit[1] = (uintptr_t) R_CStackThreshold;
 	R_CStackLimit += 0.04*R_CStackLimit;
         if (R_CStackDir < 0)
             R_CStackThreshold += (uintptr_t) (0.04*R_CStackLimit);

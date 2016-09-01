@@ -695,9 +695,11 @@ void R_SetWin32(Rstart Rp)
 	/* printf("stackbase %lx, size %lx\n", top, top-bottom); */
 	R_CStackStart = top;
 	R_CStackLimit = top - bottom;
+        R_CStackThreshold = 
+          (char *) R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit)
+        R_CStackDir = 1;
     }
 
-    R_CStackDir = 1;
     R_Home = Rp->rhome;
     if(strlen(R_Home) >= MAX_PATH) R_Suicide("Invalid R_HOME");
     sprintf(RHome, "R_HOME=%s", R_Home);

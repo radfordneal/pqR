@@ -921,9 +921,9 @@ extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
-extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
+extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
+extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #define R_CStackDir R_high_frequency_globals.CStackDir
-#define R_CStackLimit R_high_frequency_globals.CStackLimit
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
 
 #ifdef R_USE_SIGNALS
@@ -1686,13 +1686,13 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
   ((x)->gengc_prev_node==0 ? (x)->u.listsxp.carval = (y) : (SETCAR)((x),(y)))
 
 
-/* Macro for fast stack checking */
+/* Macro for fast stack checking.  Calls R_CheckStack to do the actual
+   work if there is stack overflow. */
 
 #define R_CHECKSTACK() do { \
-    if (R_CStackLimit != (uintptr_t) -1) { \
-        int dummy; \
-        if (R_CStackDir > 0 ? (uintptr_t) &dummy < R_CStackThreshold \
-                            : (uintptr_t) &dummy > R_CStackThreshold) \
+    if (R_CStackThreshold != 0) { \
+        char dummy; \
+        if (((ptrdiff_t)R_CStackDir ^ (R_CStackThreshold - &dummy)) > 0) \
             R_CheckStack(); \
     } \
 } while (0)

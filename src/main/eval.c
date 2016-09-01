@@ -76,7 +76,7 @@ static SEXP bcEval(SEXP, SEXP, Rboolean);
 static Rboolean bc_profiling = FALSE;
 #endif
 
-static int R_Profiling = 0;
+#define R_Profiling R_high_frequency_globals.Profiling
 
 #ifdef R_PROFILING
 

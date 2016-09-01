@@ -1611,19 +1611,20 @@ LibExtern struct {
     unsigned variant_result;      /* 0 or kind of variant result */
     int EvalDepth;                /* Evaluation recursion depth */
     int Expressions;              /* options(expressions) */
-    int evalcount;                /* counts down to check user interrupt */
+    short evalcount;              /* counts down to check user interrupt */
+    short Visible;                /* Value visibility flag */
     SEXP DotsSymbol;              /* Symbol ... */
     SEXP GlobalEnv;               /* The "global" environment */
     SEXP binding_cell;            /* Binding cell for variable found, or NULL */
     SEXP MissingArg;              /* Missing argument marker */
     SEXP VStack;                  /* R_alloc stack pointer */
-    Rboolean Visible;             /* Value visibility flag */
+    short Profiling;              /* Whether performance profiling enabled */
+    short unused;
     int CStackDir;                /* C stack direction */
-    uintptr_t CStackLimit;        /* C stack limit */
-    uintptr_t CStackThreshold;    /* Threshold for overflow detection */
-    SEXP BraceSymbol;             /* Symbol { */
+    char *CStackThreshold;        /* Threshold for overflow detection */
     const struct R_local_protect *local_protect_start;/*Start of protect chain*/
     SEXP Srcref;                  /* Current srcref, for debuggers */
+    SEXP BraceSymbol;             /* Symbol { */
     SEXP BaseEnv;                 /* The base environment */
 } R_high_frequency_globals;
 
@@ -1635,9 +1636,8 @@ do \
     R_high_frequency_globals.evalcount   = 0; \
     R_high_frequency_globals.VStack      = NULL; \
     R_high_frequency_globals.PPStackSize = R_PPSSIZE; \
-    R_high_frequency_globals.CStackDir   = 1; \
-    R_high_frequency_globals.CStackLimit = (uintptr_t)-1; \
     R_high_frequency_globals.local_protect_start = NULL; \
+    R_high_frequency_globals.Profiling = 0; \
 } while (0)
 
 
