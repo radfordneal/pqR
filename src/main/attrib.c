@@ -1569,10 +1569,28 @@ int R_has_slot(SEXP obj, SEXP name) {
     return(getAttrib(obj, name) != R_NilValue);
 }
 
-/* the @ operator, and its assignment form.  Processed much like $
+
+/* The @ operator, and its assignment form.  Processed much like $
    (see do_subset3) but without S3-style methods.
 */
-/* currently, R_get_slot() ["methods"] is a trivial wrapper for this: */
+
+/* Slot getting for the 'methods' package.  In pqR, the 'method'
+   package has been changed to call R_do_slot via .Internal, in order
+   to bypass the safeguarding of .Call argument modification that is
+   now done (to avoid this overhead), and because it also makes more
+   sense given the dependence of 'methods' on the interpreter.
+
+   R_do_slot can be called with .Call, which is done by the 'Matrix'
+   package via GET_SLOT (defined in Rdefines.h, but not mentioned in
+   the manuals). */
+
+static SEXP do_get_slot (SEXP call, SEXP op, SEXP args, SEXP env)
+{
+   checkArity (op, args);
+
+   return R_do_slot (CAR(args), CADR(args));
+}
+
 SEXP R_do_slot(SEXP obj, SEXP name) {
     R_SLOT_INIT;
     if(name == s_dot_Data)
@@ -1621,7 +1639,7 @@ SEXP R_do_slot(SEXP obj, SEXP name) {
    makes more sense given the dependence of 'methods' on the interpreter.
 
    R_do_slot_assign can be called with .Call, which is done by the
-   'Matrix' package (often via SET_SLOT, defined in Rdefines.h, but
+   'Matrix' package, often via SET_SLOT (defined in Rdefines.h, but
    not mentioned in the manuals). */
 
 static SEXP do_set_slot (SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1806,6 +1824,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 
 {"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 {"set_slot.internal", do_set_slot, 0,	11,	3,	{PP_FUNCALL, PREC_FN,	}},
+{"get_slot.internal", do_get_slot, 0,	11,	2,	{PP_FUNCALL, PREC_FN,	}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
