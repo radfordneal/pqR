@@ -1349,14 +1349,18 @@ function(package, dir, lib.loc = NULL)
         arg_names_in_usage <-
             unlist(sapply(exprs,
                           function(e) .arg_names_from_call(e[-1L])))
-	## Ignore 'along' argument names in the 'for' documentation, which are
-	## in the invisible representation of the 'along' form of 'for', while
-	## including the arguments of 'along' itself.
+	## Ignore 'along', 'down', and 'across' argument names in the
+	## 'for' documentation, which are in the invisible representation
+	## of the corresponding forms of 'for', while including the arguments
+	## with names of 'along', 'down', and 'across'.
 	if ("for" %in% aliases) {
-	    arg_names_in_usage <- arg_names_in_usage %w/o% "along"
+	    arg_names_in_usage <- 
+              arg_names_in_usage %w/o% c("along","down","across")
 	    for (e in exprs) {
 		if (identical(e[[1]],quote(`for`)) 
-                     && identical(names(e)[[length(e)-1]],"along")
+                     && (identical(names(e)[[length(e)-1]],"along")
+                          || identical(names(e)[[length(e)-1]],"down")
+                          || identical(names(e)[[length(e)-1]],"across"))
                      && is.symbol(e[[length(e)-1]]))
 		    arg_names_in_usage <- 
                       union (arg_names_in_usage, as.character(e[[length(e)-1]]))
