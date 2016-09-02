@@ -5,3 +5,6 @@ that are atomic scalars with no attributes if they have NAMEDCNT > 1.
 Also re-organizes stuff in dotcode.c, and handling of builtins in
 eval.  .C, .Fortran, .Call, and .External are now "specials", and
 evaluate their own arguments, and create their own contexts.
+
+Somewhat motivated by the above changes, the 'methods' package now
+uses new .Internals called get_slot.internal and set_slot.internal.

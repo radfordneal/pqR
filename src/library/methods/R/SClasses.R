@@ -264,7 +264,7 @@ slot <-
   ## Because slots are stored as attributes, the validity check is not 100% guaranteed,
   ## but should be OK if nobody has "cheated" (e.g., by setting other attributes directly).
   function(object, name)
-    .Call("R_get_slot", object, name, PACKAGE = "methods")
+      .Internal (get_slot.internal (object, name))
 
 "slot<-" <-
   ## Set the value of the named slot.  Must be one of the slots in the class's 
@@ -681,12 +681,13 @@ initialize <- function(.Object, ...) {
                     firstTime <- FALSE
                 } else {
                     ## Do the assignment in-place.  .Object should be unshared
-                    ## now, which is good, since R_set_slot modifies it
-                    ## regardless.  The assignment of the result of .Call to
+                    ## now, which is good, since set_slot.internal modifies it
+                    ## regardless.  The assignment of the result to
                     ## .Object is therefore redundant, but is done so that this
                     ## code will work even if the setup is someday fixed to 
                     ## work as it should.
-                    .Object <- .Call ("R_set_slot", .Object, slotName, slotVal)
+                    .Object <- 
+                      .Internal (set_slot.internal (.Object, slotName, slotVal))
                 }
             }
         }
