@@ -427,15 +427,28 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
         return PRVALUE_PENDING_OK(e);
 }
 
-/* The "eval" function returns the value of "e" evaluated in "rho".  The
-   caller must ensure that both the arguments are protected.  The "eval" 
-   function is just like "evalv" with 0 for the variant return argument.
-   The "Rf_evalv2" function is the main part of "evalv", split off so that
-   constants may be evaluated with less overhead within "eval" or "evalv".
-   This split may not be necessary with a sufficiently clever compiler,
-   but seems to help with gcc 4.6.3.  Similarly for the separation of
-   Rf_builtin_op.  These functions are global even though un-used elsewhere
-   in order to discourage inlining by the compiler. */
+
+/* The "evalv" function returns the value of "e" evaluated in "rho",
+   with given variant.  The caller must ensure that both SEXP
+   arguments are protected.  The "eval" function is just like "evalv"
+   with 0 for the variant return argument.
+
+   The "Rf_evalv2" function, if it exists, is the main part of
+   "evalv", split off so that constants may be evaluated with less
+   overhead within "eval" or "evalv".  It may also be used in the
+   EVALV macro in Defn.h. 
+
+   Some optional tweaks can be done here, controlled by R_EVAL_TWEAKS,
+   set to decimal integer XYZ.  If XYZ is zero, no tweaks are done.
+   Otherwise, the meanings are
+
+       X = 1      Enable and use Rf_evalv2 (also done if Y or Z is non-zero)
+       Y = 1      Have eval do its own prelude, rather than just calling evalv
+       Z = 0      Have EVALV in Defn.h just call evalv here
+           1      Have EVALV do its own prelude, then call evalv2
+           2      Have EVALV do its own prelude and easy symbol stuff, then
+                  call evalv2
+ */
 
 SEXP Rf_evalv2(SEXP,SEXP,int);
 SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
@@ -463,12 +476,12 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 
 SEXP eval(SEXP e, SEXP rho)
 {
-#if 1     /* Enable one or the other section according to which seems fastest */
-    return Rf_evalv(e,rho,0);
-#else
-    EVAL_PRELUDE;
-    return Rf_evalv2(e,rho,0);
-#endif
+#   if (R_EVAL_TWEAKS/10)%10 == 0
+        return Rf_evalv(e,rho,0);
+#   else
+        EVAL_PRELUDE;
+        return Rf_evalv2(e,rho,0);
+#   endif
 }
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
@@ -481,16 +494,20 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     }
 
     EVAL_PRELUDE;
+
+#if R_EVAL_TWEAKS > 0
+
     return Rf_evalv2(e,rho,variant);
 }
 
 SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 {
-    SEXP op, res;
+
+#endif
 
     /* Handle check for user interrupt.  When negative, repeats check for 
-       SELF_EVAL which would have already been done in eval or evalv, but
-       not acted on since evalcount went negative. */
+       SELF_EVAL which may have already been done, but not acted on since
+       evalcount went negative. */
 
     if (--evalcount < 0) {
         R_CheckUserInterrupt();
@@ -504,14 +521,14 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         }
     }
 
+    SEXP op, res;
+
     R_EvalDepth += 1;
 
-    /* We need to explicit set a NULL call here to circumvent attempts
-       to deparse the call in the error-handler */
     if (R_EvalDepth > R_Expressions) {
 	R_Expressions = R_Expressions_keep + 500;
-	errorcall(R_NilValue,
-		  _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
+	errorcall (R_NilValue /* avoids deparsing call in the error handler */,
+         _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
     R_CHECKSTACK();

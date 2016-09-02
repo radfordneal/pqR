@@ -1638,40 +1638,61 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 }
 
 
-/* Inline version of evalv, which checks for SELF_EVAL inline.
-   Also does not decrement evalcount, and so must not be used in a 
-   context where this might result in an uninterruptable loop. */
+/* Eval tweaks, using R_EVAL_TWEAKS, and inline version of evalv,
+   called EVALV, which may do inline check for SELF_EVAL and/or for
+   cached symbol binding.  EVALV also does not decrement evalcount,
+   and so must not be used in a context where this might result in an
+   uninterruptable loop. */
+
+#ifndef R_EVAL_TWEAKS
+#define R_EVAL_TWEAKS 211  /* Tunable - see comments before eval in eval.c */
+#endif
 
 extern SEXP Rf_evalv2 (SEXP, SEXP, int);
 
 static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 {
-    R_variant_result = 0;
-    R_Visible = TRUE;
+#   if (R_EVAL_TWEAKS/100)%10 == 0
 
-    if (SELF_EVAL(TYPEOF(e))) {
-        /* Make sure constants in expressions have maximum NAMEDCNT when
-           used as values, so they won't be modified. */
-        SET_NAMEDCNT_MAX(e);
-        return e;
-    }
+        return Rf_evalv (e, rho, variant);
 
-    if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
-        if (LASTSYMENV(e) == rho) {
-            SEXP res = CAR(LASTSYMBINDING(e));
-            if (TYPEOF(res) == PROMSXP) 
-                res = PRVALUE_PENDING_OK(res);
-            if (res != R_MissingArg && res != R_UnboundValue) {
-                if (NAMEDCNT_EQ_0(res))
-                    SET_NAMEDCNT_1(res);
-                if ( ! (variant & VARIANT_PENDING_OK))
-                    WAIT_UNTIL_COMPUTED(res);
-                return res;
-            }
+#   else
+
+        /* The following is like EVAL_PRELUDE except for no evalcount */
+
+        R_variant_result = 0;
+        R_Visible = TRUE;
+   
+        if (SELF_EVAL(TYPEOF(e))) {
+            /* Make sure constants in expressions have maximum NAMEDCNT when
+               used as values, so they won't be modified. */
+            SET_NAMEDCNT_MAX(e);
+            return e;
         }
-    }
 
-    return Rf_evalv2 (e, rho, variant);
+#       if (R_EVAL_TWEAKS/100)%10 > 1
+
+            if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
+                if (LASTSYMENV(e) == rho) {
+                    SEXP res = CAR(LASTSYMBINDING(e));
+                    if (TYPEOF(res) == PROMSXP) 
+                        res = PRVALUE_PENDING_OK(res);
+                    if (res != R_MissingArg && res != R_UnboundValue) {
+                        if (NAMEDCNT_EQ_0(res))
+                            SET_NAMEDCNT_1(res);
+                        if ( ! (variant & VARIANT_PENDING_OK))
+                            WAIT_UNTIL_COMPUTED(res);
+                        return res;
+                    }
+                }
+            }
+
+#       endif
+
+        return Rf_evalv2 (e, rho, variant);
+
+#   endif
+
 }
 
 
