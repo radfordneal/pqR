@@ -442,9 +442,9 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
    set to decimal integer XYZ.  If XYZ is zero, no tweaks are done.
    Otherwise, the meanings are
 
-       X = 1      Enable and use Rf_evalv2 (also done if Y or Z is non-zero)
+       Z = 1      Enable and use Rf_evalv2 (also done if X or Y is non-zero)
        Y = 1      Have eval do its own prelude, rather than just calling evalv
-       Z = 0      Have EVALV in Defn.h just call evalv here
+       X = 0      Have EVALV in Defn.h just call evalv here
            1      Have EVALV do its own prelude, then call evalv2
            2      Have EVALV do its own prelude and easy symbol stuff, then
                   call evalv2

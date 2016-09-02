@@ -1642,10 +1642,10 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
    called EVALV, which may do inline check for SELF_EVAL and/or for
    cached symbol binding.  EVALV also does not decrement evalcount,
    and so must not be used in a context where this might result in an
-   uninterruptable loop. */
+   uninterruptable loop.  See comments before eval in eval.c. */
 
 #ifndef R_EVAL_TWEAKS
-#define R_EVAL_TWEAKS 211  /* Tunable - see comments before eval in eval.c */
+#define R_EVAL_TWEAKS 201  /* Default to current idea of what might be best */
 #endif
 
 extern SEXP Rf_evalv2 (SEXP, SEXP, int);
