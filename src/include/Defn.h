@@ -1715,7 +1715,8 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 #define R_CHECKSTACK() do { \
     if (R_CStackThreshold != 0) { \
         char dummy; \
-        if (((ptrdiff_t)R_CStackDir ^ (R_CStackThreshold - &dummy)) > 0) \
+        if (R_CStackDir < 0 ? (&dummy > R_CStackThreshold) \
+                            : (&dummy < R_CStackThreshold)) \
             R_CheckStack(); \
     } \
 } while (0)
