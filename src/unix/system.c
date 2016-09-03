@@ -212,12 +212,12 @@ int Rf_initialize_R1(int ac, char **av, void *stackstart)
 #endif
 
     R_CStackThreshold = 
-       R_CStackDir>0 
-         ? (char *) R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit)
-         : (char *) R_CStackStart - 1000 + (uintptr_t) (0.95*R_CStackLimit);
+       R_CStackDir<0 
+         ? (char *) R_CStackStart - 1000 + (uintptr_t) (0.95*R_CStackLimit)
+         : (char *) R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit);
 
     if (0) { /* enable for debugging */
-        Rprintf ("dir %d, stack limit %llu, start %llu, threshold %llu\n", 
+        printf ("dir %d, stack limit %llu, start %llu, threshold %llu\n", 
                 R_CStackDir, 
                 (unsigned long long) R_CStackLimit, 
                 (unsigned long long) R_CStackStart, 

@@ -26,4 +26,5 @@ Introduced R_EVAL_TWEAKS, which may be defined by a compiler argument,
 to control which tweaks concerning eval are enabled.
 
 Now allow R_CStackDir to be a constant, defined by a compiler
-argument, rather than determined at run-time initialization.
+argument, rather than determined at run-time initialization.  It can
+be 0 instead of 1 for downward stack, perhaps allowing faster check.

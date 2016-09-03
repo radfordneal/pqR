@@ -536,8 +536,8 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
     if(signum == SIGSEGV && (ip != (siginfo_t *)0) &&
        (intptr_t) R_CStackStart != -1) {
 	uintptr_t addr = (uintptr_t) ip->si_addr;
-	intptr_t diff = (R_CStackDir > 0) ? R_CStackStart - addr:
-	    addr - R_CStackStart;
+	intptr_t diff = R_CStackDir < 0 ? addr - R_CStackStart 
+                                        : R_CStackStart - addr;
 	uintptr_t upper = 0x1000000;  /* 16Mb */
 	if((intptr_t) R_CStackLimit != -1) upper += R_CStackLimit;
 	if(diff > 0 && diff < upper) {
