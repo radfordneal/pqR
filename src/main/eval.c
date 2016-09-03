@@ -458,7 +458,6 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 #define EVAL_PRELUDE do { \
 \
     R_variant_result = 0; \
-    R_Visible = TRUE; \
 \
     /* Evaluate constants quickly, without the overhead that's necessary when \
        the computation might be complex.  This code is repeated in evalv2 \
@@ -470,6 +469,7 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 	/* Make sure constants in expressions have maximum NAMEDCNT when \
 	   used as values, so they won't be modified. */ \
         SET_NAMEDCNT_MAX(e); \
+        R_Visible = TRUE; \
         return e; \
     } \
 } while (0)
@@ -517,6 +517,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             /* Make sure constants in expressions have maximum NAMEDCNT when
 	       used as values, so they won't be modified. */
             SET_NAMEDCNT_MAX(e);
+            R_Visible = TRUE;
             return e;
         }
     }
@@ -570,6 +571,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
+
+        R_Visible = TRUE;
     }
 
     else if (typeof_e == LANGSXP) {
@@ -602,9 +605,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             else
                 apply_non_function_error();
 
-            int flag = PRIMPRINT(op);
-            if (flag == 0) R_Visible = TRUE;
-            else if (flag == 1) R_Visible = FALSE;
+            if (!R_Visible && PRIMPRINT(op) == 0)
+                R_Visible = TRUE;
 
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
@@ -621,6 +623,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
 
+        R_Visible = TRUE;
     }
 
     else if (typeof_e == BCODESXP) {
@@ -1403,6 +1406,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     int along = 0, across = 0, down = 0, in = 0;
     int nsyms;
 
+    R_Visible = FALSE;
+
     PROTECT(args);
 
     /* Count how many variables there are before the argument after the "in",
@@ -1644,6 +1649,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
     UNPROTECT(3);      /* val, rho, args */
     SET_RDEBUG(rho, dbg);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -1656,6 +1663,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int bgn;
     volatile SEXP body;
     RCNTXT cntxt;
+
+    R_Visible = FALSE;
 
     if (R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho);
@@ -1679,6 +1688,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -1691,6 +1702,8 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int bgn;
     volatile SEXP body;
     RCNTXT cntxt;
+
+    R_Visible = FALSE;
 
     if (R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho);
@@ -1713,6 +1726,8 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -2227,6 +2242,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a;
 
+    R_Visible = FALSE;
+
     if (args==R_NilValue || (a = CDR(args)) == R_NilValue || CDR(a)!=R_NilValue)
         checkArity(op,args);
 
@@ -2634,6 +2651,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     default:
         errorcall (call, _("invalid assignment left-hand side"));
     }
+
+    R_Visible = FALSE;
 
     if (variant & VARIANT_NULL)
         return R_NilValue;

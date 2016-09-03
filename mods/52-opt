@@ -28,3 +28,6 @@ to control which tweaks concerning eval are enabled.
 Now allow R_CStackDir to be a constant, defined by a compiler
 argument, rather than determined at run-time initialization.  It can
 be 0 instead of 1 for downward stack, perhaps allowing faster check.
+
+Changed how R_Visible is handled, updating R-ints.texi to explain new
+scheme.  This change reduces overhead in eval.

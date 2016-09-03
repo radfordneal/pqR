@@ -552,10 +552,11 @@ static void SymbolShortcuts(void)
     R_previousSymbol = install("previous");
 }
 
-/* Set up built-in functions from R_FunTab and the FastFunTab_srcfile tables.
-   The R_FunTab tables is created from smaller tables in the various source 
-   files.  Also sets the SPEC_SYM flag for those functions that are unlikely 
-   to be redefined outside "base". */
+/* Set up built-in/special/internal functions from R_FunTab and the
+   FastFunTab_srcfile tables.  The R_FunTab tables is created from
+   smaller tables in the various source files.  Also sets the SPEC_SYM
+   flag for those functions that are unlikely to be redefined outside
+   "base". */
 
 static void SetupBuiltins(void)
 {
@@ -588,6 +589,10 @@ static void SetupBuiltins(void)
         /* prim needs protect since install can (and does here) allocate.
            Except... mkPRIMSXP now caches them all, so maybe not. */
         PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+        if (0) { /* enable to display info */
+            Rprintf ("SETUP: %s, internal %d, visible %d\n",
+                     PRIMNAME(prim), PRIMINTERNAL(prim), PRIMPRINT(prim));
+        }
         if ((R_FunTab[i].eval % 100 )/10)
             SET_INTERNAL(install(R_FunTab[i].name), prim);
         else {

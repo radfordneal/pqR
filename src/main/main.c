@@ -1208,6 +1208,8 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP topExp, argList;
     static char *ap[4] = { "text", "condition", "expr", "skipCalls" };
 
+    R_Visible = FALSE;
+
     /* argument matching */
     argList = matchArgs(R_NilValue, ap, 4, args, call);
     PROTECT(argList);
@@ -1290,6 +1292,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_ToplevelContext = saveToplevelContext;
     R_GlobalContext = saveGlobalContext;
 
+    R_Visible = FALSE;
     return R_ReturnedValue;
 }
 

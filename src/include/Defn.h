@@ -1663,12 +1663,12 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
         /* The following is like EVAL_PRELUDE except for no evalcount */
 
         R_variant_result = 0;
-        R_Visible = TRUE;
    
         if (SELF_EVAL(TYPEOF(e))) {
             /* Make sure constants in expressions have maximum NAMEDCNT when
                used as values, so they won't be modified. */
             SET_NAMEDCNT_MAX(e);
+            R_Visible = TRUE;
             return e;
         }
 
@@ -1684,6 +1684,7 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
                             SET_NAMEDCNT_1(res);
                         if ( ! (variant & VARIANT_PENDING_OK))
                             WAIT_UNTIL_COMPUTED(res);
+                        R_Visible = TRUE;
                         return res;
                     }
                 }
