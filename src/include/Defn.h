@@ -924,8 +924,13 @@ extern0 int	R_nwarnings	INI_as(50);
 extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
 extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
+
 #ifndef R_CStackDir
+#ifdef Win32
+#define R_CStackDir 1
+#else
 #define R_CStackDir R_high_frequency_globals.CStackDir
+#endif
 #endif
 
 #ifdef R_USE_SIGNALS
