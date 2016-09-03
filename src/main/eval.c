@@ -579,6 +579,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         SEXP fn = CAR(e), args = CDR(e);
 
+        R_Visible = TRUE;
+
         if (TYPEOF(fn) == SYMSXP)
             op = FINDFUN(fn,rho);
         else
@@ -605,8 +607,13 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             else
                 apply_non_function_error();
 
-            if (!R_Visible && PRIMPRINT(op) == 0)
-                R_Visible = TRUE;
+#           if 0  /* Can choose whichever seems fastest... */
+                if (!R_Visible && PRIMPRINT(op) == 0)
+                    R_Visible = TRUE;
+#           else
+                if (R_Visible + PRIMPRINT(op) == 0)
+                    R_Visible = TRUE;
+#           endif
 
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
