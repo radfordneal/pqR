@@ -923,8 +923,10 @@ extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
 extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
 extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
-#define R_CStackDir R_high_frequency_globals.CStackDir
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
+#ifndef R_CStackDir
+#define R_CStackDir R_high_frequency_globals.CStackDir
+#endif
 
 #ifdef R_USE_SIGNALS
 extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */

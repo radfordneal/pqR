@@ -176,7 +176,10 @@ int Rf_initialize_R1(int ac, char **av, void *stackstart)
 
     extern int R_stack_growth_direction (uintptr_t);
     int tmp;
-    R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
+
+#   ifndef R_CStackDir
+      R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
+#   endif
 
     struct rlimit rlim;
     if(getrlimit(RLIMIT_STACK, &rlim) == 0) {

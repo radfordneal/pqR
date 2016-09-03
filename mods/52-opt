@@ -1,7 +1,5 @@
 Performance optimization / tuning.
 
-Changed how eval relates to evalv (with tuning #if).
-
 Got rid of saving of R_EvalDepth in eval, in favour of increment/decrement.
 It's saved and restored in/from contexts anyway.
 
@@ -21,5 +19,11 @@ compiler to address faster):
    R_CStackLimit
    R_CStackThreshold
 
-Eliminate save/restore of R_Srcref in eval, do when modified elsewhere instead.
-It's already saved in contexts for restoration on longjump.
+Eliminate save/restore of R_Srcref in eval, do when modified elsewhere
+instead.  It's already saved in contexts for restoration on longjump.
+
+Introduced R_EVAL_TWEAKS, which may be defined by a compiler argument,
+to control which tweaks concerning eval are enabled.
+
+Now allow R_CStackDir to be a constant, defined by a compiler
+argument, rather than determined at run-time initialization.
