@@ -1617,13 +1617,12 @@ LibExtern struct {
     SEXP GlobalEnv;               /* The "global" environment */
     SEXP binding_cell;            /* Binding cell for variable found, or NULL */
     SEXP MissingArg;              /* Missing argument marker */
+    char *CStackThreshold;        /* Threshold for overflow detection */
     SEXP VStack;                  /* R_alloc stack pointer */
     const struct R_local_protect *local_protect_start;/*Start of protect chain*/
     SEXP Srcref;                  /* Current srcref, for debuggers */
     SEXP BraceSymbol;             /* Symbol { */
     SEXP BaseEnv;                 /* The base environment */
-    char *CStackThreshold;        /* Threshold for overflow detection */
-    int CStackDir;                /* C stack direction, unused if def'd const */
     short Profiling;              /* Whether performance profiling enabled */
 } R_high_frequency_globals;
 

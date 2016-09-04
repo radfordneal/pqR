@@ -925,11 +925,17 @@ extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
 extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
 
+/* What to do for R_CStackDir if not a defined constant from compiler option. */
+
 #ifndef R_CStackDir
 #ifdef Win32
-#define R_CStackDir 1
+#define R_CStackDir 1        /* Known to be down on x86 Windows systems */
 #else
-#define R_CStackDir R_high_frequency_globals.CStackDir
+#if 1                        /* Enable or disable assumption below */
+#define R_CStackDir 1          /* Assume down, which is almost always true */
+#else
+extern int CStackDir;          /* Determine at run time initialization */
+#endif
 #endif
 #endif
 
