@@ -579,8 +579,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         SEXP fn = CAR(e), args = CDR(e);
 
-        R_Visible = TRUE;
-
         if (TYPEOF(fn) == SYMSXP)
             op = FINDFUN(fn,rho);
         else
@@ -597,6 +595,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	else {
             int save = R_PPStackTop;
             const void *vmax = VMAXGET();
+
+            R_Visible = TRUE;
 
             /* op is protected by PrimCache (see mkPRIMSXP). */
             if (TYPEOF(op) == SPECIALSXP)

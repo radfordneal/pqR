@@ -72,10 +72,10 @@
  *              V=0 says must not be passed operands still being computed
  *              W=1 says pass a "variant" argument to the c-entry procedure
  *              W=0 says don't pass a "variant" argument
- *		X=1 says that we should force R_Visible off
- *		X=0 says that we should force R_Visible on
+ *		X=1 says that we should force R_Visible off (for internals)
+ *		X=0 says that we should force R_Visible on (for any)
  *		X=2 says that we should switch R_Visible on but let the C
- *                  code update this.
+ *                  code update this (for any)
  *		Y=1 says that this is an internal function which must
  *		    be accessed with a	.Internal(.) call, any other value is
  *		    accessible directly and printed in R as ".Primitive(..)".
