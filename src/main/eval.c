@@ -2249,8 +2249,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a;
 
-    R_Visible = FALSE;
-
     if (args==R_NilValue || (a = CDR(args)) == R_NilValue || CDR(a)!=R_NilValue)
         checkArity(op,args);
 
@@ -2265,27 +2263,22 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         opval -= 10;
     }
 
-    SEXPTYPE lhs_type = TYPEOF(lhs);
-
     /* Convert lhs string to a symbol. */
 
-    if (lhs_type == STRSXP) {
+    if (TYPEOF(lhs) == STRSXP) {
         lhs = install(translateChar(STRING_ELT(lhs, 0)));
-        lhs_type = TYPEOF(lhs);
     }
 
-    switch (lhs_type) {
+    if (TYPEOF(lhs) == SYMSXP) {
 
-    /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
-
-    case SYMSXP: {
+        /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
 
         /* Handle <<- without trying the optimizations done below. */
 
         if (opval == 2) {
             rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
-            break;  /* out of main switch */
+            goto done;
         }
 
         /* Handle assignment into base and user database environments without
@@ -2294,7 +2287,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-            break;  /* out of main switch */
+            goto done;
         }
 
         /* We decide whether we'll ask the right hand side evalutation to do
@@ -2318,7 +2311,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (R_variant_result) {
             R_variant_result = 0;
-            break;
+            goto done;
         }
 
         /* Try to copy the value, not assign the object, if the rhs is scalar
@@ -2353,7 +2346,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
                 }
                 rhs = v; /* for return value */
-                break; /* out of main switch */
+                goto done;
             }
             if (IS_STATIC_BOX(rhs)) 
                 rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
@@ -2365,19 +2358,18 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 INC_NAMEDCNT(rhs);
                 if (rho == R_GlobalEnv) 
                     R_DirtyImage = 1;
-                break; /* out of main switch */
+                goto done;
             }
         }
 
         /* Assign rhs object to lhs symbol the usual way. */
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-        break;  /* out of main switch */
     }
 
-    /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
+    else if (TYPEOF(lhs) == LANGSXP) {
 
-    case LANGSXP: {
+        /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
 
         SEXP var, varval, newval, rhsprom, lhsprom, e;
         int depth;
@@ -2403,7 +2395,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     DEC_NAMEDCNT(rhs);
       
                 UNPROTECT(1);
-                break;
+                goto done;
             }
 #       endif
 
@@ -2649,15 +2641,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if ( ! (variant & VARIANT_NULL))
             DEC_NAMEDCNT(rhs);
-  
-        break;  /* out of main switch */
     }
 
-    /* -- ASSIGNMENT TO AN INVALID TARGET -- */
-
-    default:
+    else {
         errorcall (call, _("invalid assignment left-hand side"));
     }
+
+  done:
 
     R_Visible = FALSE;
 
