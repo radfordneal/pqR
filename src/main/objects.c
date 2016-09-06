@@ -815,12 +815,14 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 }
 
 /* primitive */
-static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     checkArity(op, args);
     check1arg_x (args, call);
 
-    switch(TYPEOF(CAR(args))) {
+    SEXP a = CAR(args);
+
+    switch(TYPEOF(a)) {
     case ENVSXP:
 	errorcall(call, _("cannot unclass an environment"));
 	break;
@@ -830,11 +832,18 @@ static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	break;
     }
-    if (isObject(CAR(args))) {
-	SETCAR(args, duplicate(CAR(args)));
-	setAttrib(CAR(args), R_ClassSymbol, R_NilValue);
+    if (isObject(a)) {
+        if (VARIANT_KIND(variant) == VARIANT_UNCLASS)
+            R_variant_result = 1;
+        else {
+            PROTECT(a = duplicate(a));
+            setAttrib(a, R_ClassSymbol, R_NilValue);
+            UNPROTECT(1);
+        }
     }
-    return CAR(args);
+    if (! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(a);
+    return a;
 }
 
 
@@ -1616,9 +1625,9 @@ attribute_hidden FUNTAB R_FunTab_objects[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"UseMethod",	do_usemethod,	0,     1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"NextMethod",	do_nextmethod,	0,     1210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"unclass",	do_unclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"UseMethod",	do_usemethod,	0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"NextMethod",	do_nextmethod,	0,	1210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"unclass",	do_unclass,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"inherits",	do_inherits,	0,	10011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"standardGeneric",do_standardGeneric,0, 201,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 

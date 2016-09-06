@@ -1416,7 +1416,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
         }
         else {
             PROTECT(sy = ScalarReal(res));
-            DUPLICATE_ATTRIB(sy, sa);
+            if (sa!=sy && (isObject(sa) || !(variant & VARIANT_ANY_ATTR)))
+                DUPLICATE_ATTRIB(sy, sa);
             UNPROTECT(1);
         }
 
@@ -1448,7 +1449,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                         HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
                         task_math1, opcode, sy, sa);
 
-            if (sa!=sy) 
+            if (sa!=sy && (isObject(sa) || !(variant & VARIANT_ANY_ATTR)))
                 DUPLICATE_ATTRIB(sy, sa);
         }
 
