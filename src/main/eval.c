@@ -546,6 +546,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	if (e == R_DotsSymbol)
 	    dotdotdot_error();
 
+        R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
+
 	res = DDVAL(e) ? ddfindVar(e,rho) : FIND_VAR_PENDING_OK (e, rho);
 
 	if (res == R_UnboundValue)
@@ -571,8 +573,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
-
-        R_Visible = TRUE;
     }
 
     else if (typeof_e == LANGSXP) {
