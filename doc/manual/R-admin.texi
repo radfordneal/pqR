@@ -283,6 +283,7 @@ the rest of this chapter we consider only building from the sources.
 * Uninstallation::              
 * Sub-architectures::           
 * Other Options::               
+* Stack growth direction::             
 * Testing a Unix-alike Installation::  
 @end menu
 
@@ -895,7 +896,7 @@ e.g.@: @file{/usr/lib64/R/bin}.  Normally all installed architectures
 will run on the platform so the architecture of @command{Rscript} does
 not matter.
 
-@node Other Options, Testing a Unix-alike Installation, Sub-architectures, Installing R under Unix-alikes
+@node Other Options, Stack growth direction, Sub-architectures, Installing R under Unix-alikes
 @section Other Options
 
 There are many other installation options, most of which are listed by
@@ -910,9 +911,17 @@ and recommended packages are lazyloaded but not byte-compiled.
 @env{R_NO_BASE_COMPILE} can be set to a non-empty value other than
 FALSE for the duration of the build.)
 
+@node Stack growth direction, Testing a Unix-alike Installation, Other Options, Installing R under Unix-alikes
+@section Stack growth direction
 
-@node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
-@section Testing an Installation
+The direction of growth for the C stack is assumed by default to be downwards,
+as is the case for almost all current platforms.  To override this, the
+C pre-processor symbol @code{R_CStackDir} can be defined to be @code{-1},
+which can usually be done by including an argument of @code{R_CStackDir=-1}
+in the @code{CFLAGS} variable.
+
+@node Testing a Unix-alike Installation,  , Stack growth direction, Installing R under Unix-alikes
+@section Testing a Unik-alike Installation
 
 Full testing is possible only if the test files have been installed with
 
@@ -988,10 +997,10 @@ LANGUAGE=en LC_TIME=C
 @chapter Installing R under Windows
 @cindex Installing under Windows
 
-Recent versions of pqR have been successfully installed under Windows,
-sometimes with small tweaks required, but they have not been tested
-extensively , and some problems are likely.  This section describes
-R-2.15.0, but may also be relevant to pqR.
+Recent versions of pqR have been sucessfully installed under Windows
+7, 8, 8.1, and 10.  The src/gnuwin32/INSTALL file contains
+instructions for how to do this.  This section describes installation
+of R-2.15.0, but may also be relevant to pqR.
 
 The @file{bin/windows} directory of a @acronym{CRAN} site contains
 binaries for a base distribution and a large number of add-on packages

@@ -76,7 +76,7 @@ static SEXP bcEval(SEXP, SEXP, Rboolean);
 static Rboolean bc_profiling = FALSE;
 #endif
 
-static int R_Profiling = 0;
+#define R_Profiling R_high_frequency_globals.Profiling
 
 #ifdef R_PROFILING
 
@@ -427,24 +427,37 @@ SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
         return PRVALUE_PENDING_OK(e);
 }
 
-/* The "eval" function returns the value of "e" evaluated in "rho".  The
-   caller must ensure that both the arguments are protected.  The "eval" 
-   function is just like "evalv" with 0 for the variant return argument.
-   The "Rf_evalv2" function is the main part of "evalv", split off so that
-   constants may be evaluated with less overhead within "eval" or "evalv".
-   This split may not be necessary with a sufficiently clever compiler,
-   but seems to help with gcc 4.6.3.  Similarly for the separation of
-   Rf_builtin_op.  These functions are global but un-used elsewhere to 
-   discourage inlining by the compiler. */
 
-static int evalcount = 0; /* counts down to when to check for user interrupt */
+/* The "evalv" function returns the value of "e" evaluated in "rho",
+   with given variant.  The caller must ensure that both SEXP
+   arguments are protected.  The "eval" function is just like "evalv"
+   with 0 for the variant return argument.
+
+   The "Rf_evalv2" function, if it exists, is the main part of
+   "evalv", split off so that constants may be evaluated with less
+   overhead within "eval" or "evalv".  It may also be used in the
+   EVALV macro in Defn.h. 
+
+   Some optional tweaks can be done here, controlled by R_EVAL_TWEAKS,
+   set to decimal integer XYZ.  If XYZ is zero, no tweaks are done.
+   Otherwise, the meanings are
+
+       Z = 1      Enable and use Rf_evalv2 (also done if X or Y is non-zero)
+       Y = 1      Have eval do its own prelude, rather than just calling evalv
+       X = 0      Have EVALV in Defn.h just call evalv here
+           1      Have EVALV do its own prelude, then call evalv2
+           2      Have EVALV do its own prelude and easy symbol stuff, then
+                  call evalv2
+ */
+
 SEXP Rf_evalv2(SEXP,SEXP,int);
 SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
+
+#define evalcount R_high_frequency_globals.evalcount
 
 #define EVAL_PRELUDE do { \
 \
     R_variant_result = 0; \
-    R_Visible = TRUE; \
 \
     /* Evaluate constants quickly, without the overhead that's necessary when \
        the computation might be complex.  This code is repeated in evalv2 \
@@ -456,14 +469,19 @@ SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 	/* Make sure constants in expressions have maximum NAMEDCNT when \
 	   used as values, so they won't be modified. */ \
         SET_NAMEDCNT_MAX(e); \
+        R_Visible = TRUE; \
         return e; \
     } \
 } while (0)
 
 SEXP eval(SEXP e, SEXP rho)
 {
-    EVAL_PRELUDE;
-    return Rf_evalv2(e,rho,0);
+#   if (R_EVAL_TWEAKS/10)%10 == 0
+        return Rf_evalv(e,rho,0);
+#   else
+        EVAL_PRELUDE;
+        return Rf_evalv2(e,rho,0);
+#   endif
 }
 
 SEXP evalv(SEXP e, SEXP rho, int variant)
@@ -476,16 +494,20 @@ SEXP evalv(SEXP e, SEXP rho, int variant)
     }
 
     EVAL_PRELUDE;
+
+#if R_EVAL_TWEAKS > 0
+
     return Rf_evalv2(e,rho,variant);
 }
 
 SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 {
-    SEXP op, res;
+
+#endif
 
     /* Handle check for user interrupt.  When negative, repeats check for 
-       SELF_EVAL which would have already been done in eval or evalv, but
-       not acted on since evalcount went negative. */
+       SELF_EVAL which may have already been done, but not acted on since
+       evalcount went negative. */
 
     if (--evalcount < 0) {
         R_CheckUserInterrupt();
@@ -495,26 +517,19 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             /* Make sure constants in expressions have maximum NAMEDCNT when
 	       used as values, so they won't be modified. */
             SET_NAMEDCNT_MAX(e);
+            R_Visible = TRUE;
             return e;
         }
     }
-    
-    /* Save the current srcref context. */
-    
-    SEXP srcrefsave = R_Srcref;
 
-    /* The use of depthsave below is necessary because of the
-       possibility of non-local returns from evaluation.  Without this
-       an "expression too complex error" is quite likely. */
+    SEXP op, res;
 
-    int depthsave = R_EvalDepth++;
+    R_EvalDepth += 1;
 
-    /* We need to explicit set a NULL call here to circumvent attempts
-       to deparse the call in the error-handler */
     if (R_EvalDepth > R_Expressions) {
 	R_Expressions = R_Expressions_keep + 500;
-	errorcall(R_NilValue,
-		  _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
+	errorcall (R_NilValue /* avoids deparsing call in the error handler */,
+         _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
     R_CHECKSTACK();
@@ -556,6 +571,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
+
+        R_Visible = TRUE;
     }
 
     else if (typeof_e == LANGSXP) {
@@ -579,6 +596,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             int save = R_PPStackTop;
             const void *vmax = VMAXGET();
 
+            R_Visible = TRUE;
+
             /* op is protected by PrimCache (see mkPRIMSXP). */
             if (TYPEOF(op) == SPECIALSXP)
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
@@ -588,9 +607,13 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             else
                 apply_non_function_error();
 
-            int flag = PRIMPRINT(op);
-            if (flag == 0) R_Visible = TRUE;
-            else if (flag == 1) R_Visible = FALSE;
+#           if 0  /* Can choose whichever seems fastest... */
+                if (!R_Visible && PRIMPRINT(op) == 0)
+                    R_Visible = TRUE;
+#           else
+                if (R_Visible + PRIMPRINT(op) == 0)
+                    R_Visible = TRUE;
+#           endif
 
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
@@ -607,6 +630,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
 
+        R_Visible = TRUE;
     }
 
     else if (typeof_e == BCODESXP) {
@@ -620,8 +644,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     else
         UNIMPLEMENTED_TYPE("eval", e);
 
-    R_EvalDepth = depthsave;
-    R_Srcref = srcrefsave;
+    R_EvalDepth -= 1;
 
 #   if 0  /* Enable for debug output after typing STATIC.BOX.DEBUG */
 
@@ -938,7 +961,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN 
                  | VARIANT_PASS_ON(variant);
 
-    SEXP formals, actuals, savedrho;
+    SEXP formals, actuals, savedrho, savedsrcref;
     volatile SEXP body, newrho;
     SEXP f, a, res;
     RCNTXT cntxt;
@@ -963,6 +986,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         in matchArgs or from running out of memory (eg, in NewEnvironment). */
 
     begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
+    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
 
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
@@ -1081,6 +1105,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     R_variant_result &= ~VARIANT_RTN_FLAG;
 
+    R_Srcref = savedsrcref;
     endcontext(&cntxt);
 
     if ( ! (variant & VARIANT_PENDING_OK))
@@ -1108,7 +1133,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho)
 {
     volatile SEXP body;
-    SEXP res;
+    SEXP res, savedsrcref;
     RCNTXT cntxt;
 
     PROTECT2(op,arglist);
@@ -1126,11 +1151,12 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     }
 
     begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
 
     /* Get the srcref record from the closure object.  Disable for now
        at least, since it's not clear that it's needed. */
     
-    /* R_Srcref = getAttrib(op, R_SrcrefSymbol); */
+    R_Srcref = R_NilValue;  /* was: getAttrib(op, R_SrcrefSymbol); */
 
     /* Debugging */
 
@@ -1186,6 +1212,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	PROTECT(res = eval(body, newrho));
     }
 
+    R_Srcref = savedsrcref;
     endcontext(&cntxt);
 
     if (RDEBUG(op)) {
@@ -1385,6 +1412,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     int is_seq, seq_start;
     int along = 0, across = 0, down = 0, in = 0;
     int nsyms;
+
+    R_Visible = FALSE;
 
     PROTECT(args);
 
@@ -1627,6 +1656,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
     UNPROTECT(3);      /* val, rho, args */
     SET_RDEBUG(rho, dbg);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -1639,6 +1670,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int bgn;
     volatile SEXP body;
     RCNTXT cntxt;
+
+    R_Visible = FALSE;
 
     if (R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho);
@@ -1662,6 +1695,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -1674,6 +1709,8 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int bgn;
     volatile SEXP body;
     RCNTXT cntxt;
+
+    R_Visible = FALSE;
 
     if (R_jit_enabled > 2 && ! R_PendingPromises) {
 	R_compileAndExecute(call, rho);
@@ -1696,6 +1733,8 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     endcontext(&cntxt);
     SET_RDEBUG(rho, dbg);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -1736,7 +1775,9 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue)
         return R_NilValue;
 
-    SEXP arg, s, srcrefs = getBlockSrcrefs(call);
+    SEXP arg, s;
+    SEXP savedsrcref = R_Srcref;
+    SEXP srcrefs = getBlockSrcrefs(call);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
     variant = VARIANT_PASS_ON(variant);
@@ -1746,7 +1787,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     for (int i = 1; ; i++) {
         arg = CAR(args);
         args = CDR(args);
-        PROTECT(R_Srcref = getSrcref(srcrefs, i));
+        R_Srcref = getSrcref(srcrefs, i);
         if (RDEBUG(rho)) {
             SrcrefPrompt("debug", R_Srcref);
             PrintValue(arg);
@@ -1755,15 +1796,13 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (args == R_NilValue)
             break;
         s = evalv (arg, rho, vrnt);
-        R_Srcref = R_NilValue;
-        UNPROTECT(1);
+        R_Srcref = savedsrcref;
         if (R_variant_result & VARIANT_RTN_FLAG)
             return s;
     }
 
     s = EVALV (arg, rho, variant);
-    R_Srcref = R_NilValue;
-    UNPROTECT(1);
+    R_Srcref = savedsrcref;
     return s;
 }
 
@@ -2206,6 +2245,9 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 
 /*  Assignment in its various forms  */
 
+SEXP Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, 
+                       int variant, int opval);
+
 static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a;
@@ -2224,27 +2266,22 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         opval -= 10;
     }
 
-    SEXPTYPE lhs_type = TYPEOF(lhs);
-
     /* Convert lhs string to a symbol. */
 
-    if (lhs_type == STRSXP) {
+    if (TYPEOF(lhs) == STRSXP) {
         lhs = install(translateChar(STRING_ELT(lhs, 0)));
-        lhs_type = TYPEOF(lhs);
     }
 
-    switch (lhs_type) {
+    if (TYPEOF(lhs) == SYMSXP) {
 
-    /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
-
-    case SYMSXP: {
+        /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
 
         /* Handle <<- without trying the optimizations done below. */
 
         if (opval == 2) {
             rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
-            break;  /* out of main switch */
+            goto done;
         }
 
         /* Handle assignment into base and user database environments without
@@ -2253,7 +2290,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-            break;  /* out of main switch */
+            goto done;
         }
 
         /* We decide whether we'll ask the right hand side evalutation to do
@@ -2277,7 +2314,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (R_variant_result) {
             R_variant_result = 0;
-            break;
+            goto done;
         }
 
         /* Try to copy the value, not assign the object, if the rhs is scalar
@@ -2312,7 +2349,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
                 }
                 rhs = v; /* for return value */
-                break; /* out of main switch */
+                goto done;
             }
             if (IS_STATIC_BOX(rhs)) 
                 rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
@@ -2324,299 +2361,29 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 INC_NAMEDCNT(rhs);
                 if (rho == R_GlobalEnv) 
                     R_DirtyImage = 1;
-                break; /* out of main switch */
+                goto done;
             }
         }
 
         /* Assign rhs object to lhs symbol the usual way. */
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-        break;  /* out of main switch */
     }
 
-    /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
+    else if (TYPEOF(lhs) == LANGSXP) {
 
-    case LANGSXP: {
+        /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
 
-        SEXP var, varval, newval, rhsprom, lhsprom, e;
-        int depth;
-
-        /* We evaluate the right hand side now. */
-
-        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
-
-        /* Debugging/comparison aid:  Can be enabled one way or the other below,
-           then activated by typing `switch to old` or `switch to new` at the
-           prompt. */
-
-#       if 0
-            if (1 && !installed_already("switch to new")
-             || 0 && installed_already("switch to old")) {
-
-                if ( ! (variant & VARIANT_NULL))
-                    INC_NAMEDCNT(rhs);
-    
-                applydefine (call, op, lhs, rhs, rho);
-    
-                if ( ! (variant & VARIANT_NULL))
-                    DEC_NAMEDCNT(rhs);
-      
-                UNPROTECT(1);
-                break;
-            }
-#       endif
-
-        /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
-           to protect it from being modified by the assignment, or otherwise. */
-
-        if ( ! (variant & VARIANT_NULL))
-            INC_NAMEDCNT(rhs);
-
-        /* Find the variable ultimately assigned to, and its depth.
-           The depth is 1 for a variable within one replacement function
-           (eg, in names(a) <- ...). */
-
-        depth = 1;
-        for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
-            if (TYPEOF(var) != LANGSXP)
-                errorcall (call, _("invalid assignment left-hand side"));
-            depth += 1;
-        }
-
-        /* Get the value of the variable assigned to, and ensure it is local
-           (unless this is the <<- operator).  Save and protect the binding 
-           cell used. */
-
-        if (opval == 2) /* <<- */
-            varval = findVar (var, ENCLOS(rho));
-        else {
-            varval = findVarInFramePendingOK (rho, var);
-            if (varval == R_UnboundValue && rho != R_EmptyEnv) {
-                varval = findVar (var, ENCLOS(rho));
-                if (varval != R_UnboundValue) {
-                    if (TYPEOF(varval) == PROMSXP)
-                        varval = forcePromisePendingOK(varval);
-                    set_var_in_frame (var, varval, rho, TRUE, 3);
-                }
-            }
-        }
-        if (NAMEDCNT_EQ_0(varval)) /* may sometime happen - should mean 1 */
-            SET_NAMEDCNT_1(varval);
-
-        SEXP bcell = R_binding_cell;
-        PROTECT(bcell);
-
-        if (TYPEOF(varval) == PROMSXP)
-            varval = forcePromisePendingOK(varval);
-        if (varval == R_UnboundValue)
-            unbound_var_error(var);
-
-        /* We might be able to avoid this duplication sometimes (eg, in
-           a <- b <- integer(10); a[1] <- 0.5), except that some packages 
-           (eg, Matrix 1.0-6) assume (in C code) that the object in a 
-           replacement function is not shared. */
-
-        if (NAMEDCNT_GT_1(varval))
-            varval = dup_top_level(varval);
-
-        PROTECT(varval);
-
-        /* Special code for depth of 1.  This is purely an optimization - the
-           general code below should also work when depth is 1. */
-
-        if (depth == 1) {
-
-            PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
-            SET_PRVALUE(rhsprom, rhs);
-            SEXP assgnfcn = installAssignFcnName(CAR(lhs));
-            PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
-            SET_PRVALUE (lhsprom, varval);
-            PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
-            newval = eval(e,rho);
-            UNPROTECT(6);
-        }
-
-        else {  /* the general case, for any depth */
-
-            /* Structure recording information on expressions at all levels of 
-               the lhs.  Level 0 is the ultimate variable, level depth is the
-               whole lhs expression. */
-
-            struct { 
-                SEXP fetch_args;      /* Arguments lists, sharing promises */
-                SEXP store_args;
-                SEXP value_arg;       /* Last cell in store_args, for value */
-                SEXP expr;            /* Expression at this level */
-                SEXP value;           /* Value of expr, may later change */
-                int in_next;          /* 1 or 2 if value is unshared part */
-            } s[depth+1];             /*   of value at next level, else 0 */
-
-            SEXP v;
-            int d;
-
-            /* For each level from 1 to depth, store the lhs expression at that
-               level.  For each level except the final variable and outermost 
-               level, which only does a store, save argument lists for the 
-               fetch/store functions that share promises, so that they are
-               evaluated only once.  The store argument list has a "value"
-               cell at the end to fill in the stored value. */
-
-            s[0].expr = lhs;
-            s[0].store_args = CDDR(lhs);  /* original args, no value cell */
-            for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
-                s[d].fetch_args = R_NilValue;
-                PROTECT (s[d].value_arg = s[d].store_args =
-                    cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
-                promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
-                                              &s[d].store_args);
-                UNPROTECT(1);
-                PROTECT2 (s[d].fetch_args, s[d].store_args);
-                s[d].expr = v;
-            }
-            s[depth].expr = var;
-
-            /* Note: In code below, promises with the value already filled in
-                     are used to 'quote' values passsed as arguments, so they 
-                     will not be changed when the arguments are evaluated, and 
-                     so deparsed error messages will have the source expression.
-                     These promises should not be recycled, since they may be 
-                     saved in warning messages stored for later display.  */
-
-            /* For each level except the outermost, evaluate and save the value
-               of the expression as it is before the assignment.  Also, ask if
-               it is an unshared subset of the next larger expression.  If it
-               is not known to be part of the next larger expression, we do a
-               top-level duplicate of it, unless it has NAMEDCNT of 0. */
-
-            s[depth].value = varval;
-
-            for (d = depth-1; d > 0; d--) {
-
-                SEXP prom = mkPROMISE(s[d+1].expr,rho);
-                SET_PRVALUE(prom,s[d+1].value);
-
-                /* We'll need this value for the subsequent replacement
-                   operation, so make sure it doesn't change.  Incrementing
-                   NAMEDCNT would be the obvious way, but if NAMEDCNT 
-                   was already non-zero, that leads to undesirable duplication
-                   later (even if the increment is later undone).  Making sure
-                   that NAMEDCNT isn't zero seems to be sufficient. */
-
-                if (NAMEDCNT_EQ_0(s[d+1].value)) 
-                    SET_NAMEDCNT_1(s[d+1].value);
-
-                e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
-                PROTECT(e);
-                e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
-                UNPROTECT(1);
-                s[d].in_next = R_variant_result;  /* 0, 1, or 2 */
-
-                if (R_variant_result == 0 && NAMEDCNT_GT_0(e)) 
-                    e = dup_top_level(e);
-                R_variant_result = 0;
-
-                s[d].value = e;
-                PROTECT(e);
-            }
-
-            /* Call the replacement functions at levels 1 to depth, changing the
-               values at each level, using the fetched value at that level 
-               (was perhaps duplicated), and the new value after replacement at 
-               the lower level.  Except we don't do that if it's not necessary
-               because the new value is already part of the larger object.
-               The new value at the outermost level is the rhs value. */
-            
-            PROTECT(rhsprom = mkPROMISE(CAR(a), rho));
-            SET_PRVALUE(rhsprom, rhs);
-            s[0].in_next = 0;
-
-            for (d = 1; ; d++) {
-
-                if (s[d-1].in_next == 1) { /* don't need to do replacement */
-                    newval = s[d].value;
-                    UNPROTECT(1);  /* s[d].value protected in previous loop */
-                }
-
-                else {
-
-                    /* Assume symbol below is protected by the symbol table. */
-
-                    SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
-
-                    PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
-                    SET_PRVALUE (lhsprom, s[d].value);
-                    if (d == 1) /* original args, no value cell at end */
-                        PROTECT(e = replaceCall (assgnfcn, lhsprom, 
-                                                 s[d-1].store_args, rhsprom));
-                    else { 
-                        SETCAR (s[d-1].value_arg, rhsprom);
-                        PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
-                                                       s[d-1].store_args)));
-                    }
-
-                    newval = eval(e,rho);
-
-                    /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
-                       previous loop, which went from depth-1 to 1 in the 
-                       opposite order as this one (plus unprotect one more from
-                       before that).  Note: e used below; no alloc before. */
-
-                    UNPROTECT(4);
-                }
-
-                /* See if we're done, with the final value in newval. */
-
-                if (d == depth) break;
-
-                /* If the replacement function returned a different object, 
-                   that new object won't be part of the object at the next
-                   level, even if the old one was. */
-
-                if (s[d].value != newval)
-                    s[d].in_next = 0;
-
-                /* Create a rhs promise if this value needs to be put into
-                   the next-higher object. */
-
-                if (s[d].in_next != 1) {
-                    PROTECT(newval);
-                    rhsprom = mkPROMISE (e, rho);
-                    SET_PRVALUE (rhsprom, newval);
-                    UNPROTECT(1);
-                    PROTECT(rhsprom);
-                }
-            }
-
-            UNPROTECT(2*(depth-1)+2);  /* fetch_args, store_args + two more */
-        }
-
-        /* Assign the final result after the top level replacement.  We
-           can sometimes avoid the cost of this by looking at the saved
-           binding cell, if we have one. */
-
-        if (bcell != R_NilValue && CAR(bcell) == newval) {
-            /* The replacement function might have changed NAMEDCNT to 0. */
-            if (NAMEDCNT_EQ_0(varval))
-                SET_NAMEDCNT_1(varval);
-        }
-        else {
-            if (opval == 2) /* <<- */
-                set_var_nonlocal (var, newval, ENCLOS(rho), 3);
-            else
-                set_var_in_frame (var, newval, rho, TRUE, 3);
-        }
-
-        if ( ! (variant & VARIANT_NULL))
-            DEC_NAMEDCNT(rhs);
-  
-        break;  /* out of main switch */
+        rhs = Rf_set_subassign (call, lhs, rhs, rho, variant, opval);
     }
 
-    /* -- ASSIGNMENT TO AN INVALID TARGET -- */
-
-    default:
+    else {
         errorcall (call, _("invalid assignment left-hand side"));
     }
+
+  done:
+
+    R_Visible = FALSE;
 
     if (variant & VARIANT_NULL)
         return R_NilValue;
@@ -2624,6 +2391,284 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if ( ! (variant & VARIANT_PENDING_OK)) 
         WAIT_UNTIL_COMPUTED(rhs);
     
+    return rhs;
+}
+
+SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
+                                        int variant, int opval)
+{
+    SEXP var, varval, newval, rhsprom, lhsprom, e;
+    int depth;
+
+    /* We evaluate the right hand side now. */
+
+    SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
+    PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
+
+    /* Debugging/comparison aid:  Can be enabled one way or the other below,
+       then activated by typing `switch to old` or `switch to new` at the
+       prompt. */
+
+#   if 0
+        if (1 && !installed_already("switch to new")
+         || 0 && installed_already("switch to old")) {
+
+            if ( ! (variant & VARIANT_NULL))
+                INC_NAMEDCNT(rhs);
+
+            applydefine (call, op, lhs, rhs, rho);
+
+            if ( ! (variant & VARIANT_NULL))
+                DEC_NAMEDCNT(rhs);
+  
+            UNPROTECT(1);
+            goto done;
+        }
+#   endif
+
+    /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
+       to protect it from being modified by the assignment, or otherwise. */
+
+    if ( ! (variant & VARIANT_NULL))
+        INC_NAMEDCNT(rhs);
+
+    /* Find the variable ultimately assigned to, and its depth.
+       The depth is 1 for a variable within one replacement function
+       (eg, in names(a) <- ...). */
+
+    depth = 1;
+    for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
+        if (TYPEOF(var) != LANGSXP)
+            errorcall (call, _("invalid assignment left-hand side"));
+        depth += 1;
+    }
+
+    /* Get the value of the variable assigned to, and ensure it is local
+       (unless this is the <<- operator).  Save and protect the binding 
+       cell used. */
+
+    if (opval == 2) /* <<- */
+        varval = findVar (var, ENCLOS(rho));
+    else {
+        varval = findVarInFramePendingOK (rho, var);
+        if (varval == R_UnboundValue && rho != R_EmptyEnv) {
+            varval = findVar (var, ENCLOS(rho));
+            if (varval != R_UnboundValue) {
+                if (TYPEOF(varval) == PROMSXP)
+                    varval = forcePromisePendingOK(varval);
+                set_var_in_frame (var, varval, rho, TRUE, 3);
+            }
+        }
+    }
+    if (NAMEDCNT_EQ_0(varval)) /* may sometime happen - should mean 1 */
+        SET_NAMEDCNT_1(varval);
+
+    SEXP bcell = R_binding_cell;
+    PROTECT(bcell);
+
+    if (TYPEOF(varval) == PROMSXP)
+        varval = forcePromisePendingOK(varval);
+    if (varval == R_UnboundValue)
+        unbound_var_error(var);
+
+    /* We might be able to avoid this duplication sometimes (eg, in
+       a <- b <- integer(10); a[1] <- 0.5), except that some packages 
+       (eg, Matrix 1.0-6) assume (in C code) that the object in a 
+       replacement function is not shared. */
+
+    if (NAMEDCNT_GT_1(varval))
+        varval = dup_top_level(varval);
+
+    PROTECT(varval);
+
+    /* Special code for depth of 1.  This is purely an optimization - the
+       general code below should also work when depth is 1. */
+
+    if (depth == 1) {
+
+        PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+        SET_PRVALUE(rhsprom, rhs);
+        SEXP assgnfcn = installAssignFcnName(CAR(lhs));
+        PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
+        SET_PRVALUE (lhsprom, varval);
+        PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
+        newval = eval(e,rho);
+        UNPROTECT(6);
+    }
+
+    else {  /* the general case, for any depth */
+
+        /* Structure recording information on expressions at all levels of 
+           the lhs.  Level 0 is the ultimate variable, level depth is the
+           whole lhs expression. */
+
+        struct { 
+            SEXP fetch_args;      /* Arguments lists, sharing promises */
+            SEXP store_args;
+            SEXP value_arg;       /* Last cell in store_args, for value */
+            SEXP expr;            /* Expression at this level */
+            SEXP value;           /* Value of expr, may later change */
+            int in_next;          /* 1 or 2 if value is unshared part */
+        } s[depth+1];             /*   of value at next level, else 0 */
+
+        SEXP v;
+        int d;
+
+        /* For each level from 1 to depth, store the lhs expression at that
+           level.  For each level except the final variable and outermost 
+           level, which only does a store, save argument lists for the 
+           fetch/store functions that share promises, so that they are
+           evaluated only once.  The store argument list has a "value"
+           cell at the end to fill in the stored value. */
+
+        s[0].expr = lhs;
+        s[0].store_args = CDDR(lhs);  /* original args, no value cell */
+        for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
+            s[d].fetch_args = R_NilValue;
+            PROTECT (s[d].value_arg = s[d].store_args =
+                cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
+            promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
+                                          &s[d].store_args);
+            UNPROTECT(1);
+            PROTECT2 (s[d].fetch_args, s[d].store_args);
+            s[d].expr = v;
+        }
+        s[depth].expr = var;
+
+        /* Note: In code below, promises with the value already filled in
+                 are used to 'quote' values passsed as arguments, so they 
+                 will not be changed when the arguments are evaluated, and 
+                 so deparsed error messages will have the source expression.
+                 These promises should not be recycled, since they may be 
+                 saved in warning messages stored for later display.  */
+
+        /* For each level except the outermost, evaluate and save the value
+           of the expression as it is before the assignment.  Also, ask if
+           it is an unshared subset of the next larger expression.  If it
+           is not known to be part of the next larger expression, we do a
+           top-level duplicate of it, unless it has NAMEDCNT of 0. */
+
+        s[depth].value = varval;
+
+        for (d = depth-1; d > 0; d--) {
+
+            SEXP prom = mkPROMISE(s[d+1].expr,rho);
+            SET_PRVALUE(prom,s[d+1].value);
+
+            /* We'll need this value for the subsequent replacement
+               operation, so make sure it doesn't change.  Incrementing
+               NAMEDCNT would be the obvious way, but if NAMEDCNT 
+               was already non-zero, that leads to undesirable duplication
+               later (even if the increment is later undone).  Making sure
+               that NAMEDCNT isn't zero seems to be sufficient. */
+
+            if (NAMEDCNT_EQ_0(s[d+1].value)) 
+                SET_NAMEDCNT_1(s[d+1].value);
+
+            e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
+            PROTECT(e);
+            e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+            UNPROTECT(1);
+            s[d].in_next = R_variant_result;  /* 0, 1, or 2 */
+
+            if (R_variant_result == 0 && NAMEDCNT_GT_0(e)) 
+                e = dup_top_level(e);
+            R_variant_result = 0;
+
+            s[d].value = e;
+            PROTECT(e);
+        }
+
+        /* Call the replacement functions at levels 1 to depth, changing the
+           values at each level, using the fetched value at that level 
+           (was perhaps duplicated), and the new value after replacement at 
+           the lower level.  Except we don't do that if it's not necessary
+           because the new value is already part of the larger object.
+           The new value at the outermost level is the rhs value. */
+        
+        PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+        SET_PRVALUE(rhsprom, rhs);
+        s[0].in_next = 0;
+
+        for (d = 1; ; d++) {
+
+            if (s[d-1].in_next == 1) { /* don't need to do replacement */
+                newval = s[d].value;
+                UNPROTECT(1);  /* s[d].value protected in previous loop */
+            }
+
+            else {
+
+                /* Assume symbol below is protected by the symbol table. */
+
+                SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
+
+                PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
+                SET_PRVALUE (lhsprom, s[d].value);
+                if (d == 1) /* original args, no value cell at end */
+                    PROTECT(e = replaceCall (assgnfcn, lhsprom, 
+                                             s[d-1].store_args, rhsprom));
+                else { 
+                    SETCAR (s[d-1].value_arg, rhsprom);
+                    PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
+                                                   s[d-1].store_args)));
+                }
+
+                newval = eval(e,rho);
+
+                /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
+                   previous loop, which went from depth-1 to 1 in the 
+                   opposite order as this one (plus unprotect one more from
+                   before that).  Note: e used below; no alloc before. */
+
+                UNPROTECT(4);
+            }
+
+            /* See if we're done, with the final value in newval. */
+
+            if (d == depth) break;
+
+            /* If the replacement function returned a different object, 
+               that new object won't be part of the object at the next
+               level, even if the old one was. */
+
+            if (s[d].value != newval)
+                s[d].in_next = 0;
+
+            /* Create a rhs promise if this value needs to be put into
+               the next-higher object. */
+
+            if (s[d].in_next != 1) {
+                PROTECT(newval);
+                rhsprom = mkPROMISE (e, rho);
+                SET_PRVALUE (rhsprom, newval);
+                UNPROTECT(1);
+                PROTECT(rhsprom);
+            }
+        }
+
+        UNPROTECT(2*(depth-1)+2);  /* fetch_args, store_args + two more */
+    }
+
+    /* Assign the final result after the top level replacement.  We
+       can sometimes avoid the cost of this by looking at the saved
+       binding cell, if we have one. */
+
+    if (bcell != R_NilValue && CAR(bcell) == newval) {
+        /* The replacement function might have changed NAMEDCNT to 0. */
+        if (NAMEDCNT_EQ_0(varval))
+            SET_NAMEDCNT_1(varval);
+    }
+    else {
+        if (opval == 2) /* <<- */
+            set_var_nonlocal (var, newval, ENCLOS(rho), 3);
+        else
+            set_var_in_frame (var, newval, rho, TRUE, 3);
+    }
+
+    if ( ! (variant & VARIANT_NULL))
+        DEC_NAMEDCNT(rhs);
+
     return rhs;
 }
 
@@ -3072,6 +3117,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
+        SEXP savedsrcref = R_Srcref;
 	if (!SETJMP(cntxt.cjmpbuf)) {
 	    for (i = 0 ; i < n ; i++) {
                 R_Srcref = getSrcref(srcrefs, i); 
@@ -3091,6 +3137,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	}
 	UNPROTECT(1);
 	PROTECT(tmp);
+        R_Srcref = savedsrcref;
 	endcontext(&cntxt);
 	expr = tmp;
     }
@@ -4611,9 +4658,9 @@ static int opcode_counts[OPCOUNT];
 #define BC_COUNT_DELTA 1000
 
 #define BC_CHECK_SIGINT() do { \
-  if (++evalcount > BC_COUNT_DELTA) { \
+  if (++eval_count > BC_COUNT_DELTA) { \
       R_CheckUserInterrupt(); \
-      evalcount = 0; \
+      eval_count = 0; \
   } \
 } while (0)
 
@@ -4940,7 +4987,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   BCODE *pc, *codebase;
   int ftype = 0;
   R_bcstack_t *oldntop = R_BCNodeStackTop;
-  static int evalcount = 0;
+  static int eval_count = 0;
 #ifdef BC_INT_STACK
   IStackval *olditop = R_BCIntStackTop;
 #endif

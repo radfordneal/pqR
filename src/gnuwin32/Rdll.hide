@@ -83,7 +83,6 @@
  R_BCNodeStackTop
  R_BrowseLevel
  R_BrowseLines
- R_CStackDir
  R_ChooseFile
  R_ClearerrConsole
  R_CollectWarnings
@@ -99,7 +98,6 @@
  R_EditFiles
  R_ErrorCon
  R_ExactSymbol
- R_Expressions
  R_Expressions_keep
  R_ExternalPtrAddrFn
  R_FileExists
@@ -141,9 +139,6 @@
  R_OpenSiteFile
  R_OpenSysInitFile
  R_OutputCon
- R_PPStack
- R_PPStackSize
- R_PPStackTop
  R_Parse1Stream
  R_ParseContext
  R_ParseContextLast
@@ -188,7 +183,6 @@
  R_UseNamesSymbol
  R_VSize
  R_Verbose
- R_Visible
  R_WarnEscapes
  R_WarnLength
  R_Warnings

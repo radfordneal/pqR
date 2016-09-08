@@ -194,11 +194,6 @@ static int NodeClassBytes64[MAX_NODE_CLASSES-1] /* Sizes for 64-bit platforms */
 #endif
 
 
-/* Pointer to start of linked list with pointers to protected local SEXP vars */
-
-const struct R_local_protect *R_local_protect_start = NULL;
-
-
 static void GetNewPage(int node_class);
 
 #if defined(Win32) && defined(LEA_MALLOC)
@@ -2038,6 +2033,7 @@ static void RunGenCollect(R_size_t size_needed)
 
         &R_HandlerStack,          /* Condition handler stack */
         &R_RestartStack,          /* Available restarts stack */
+        &R_Srcref,                /* Current source reference */
 
         &R_PreciousList,
         0

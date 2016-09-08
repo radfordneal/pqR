@@ -2697,10 +2697,11 @@ static SEXP do_Cstack_info(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     PROTECT(ans = allocVector(INTSXP, 4));
     PROTECT(nms = allocVector(STRSXP, 4));
-    INTEGER(ans)[0] = (R_CStackLimit == -1) ? NA_INTEGER : R_CStackLimit;
-    INTEGER(ans)[1] = (R_CStackLimit == -1) ? NA_INTEGER :
-	R_CStackDir * (R_CStackStart - (uintptr_t) &ans);
-    INTEGER(ans)[2] = R_CStackDir;
+    INTEGER(ans)[0] = R_CStackLimit == -1 ? NA_INTEGER : R_CStackLimit;
+    INTEGER(ans)[1] = R_CStackLimit == -1 ? NA_INTEGER :
+                      R_CStackDir < 0     ? (uintptr_t) &ans - R_CStackStart
+                                          : R_CStackStart - (uintptr_t) &ans;
+    INTEGER(ans)[2] = R_CStackDir < 0 ? -1 : 1;
     INTEGER(ans)[3] = R_EvalDepth;
     SET_STRING_ELT(nms, 0, mkChar("size"));
     SET_STRING_ELT(nms, 1, mkChar("current"));

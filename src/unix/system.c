@@ -170,12 +170,16 @@ int Rf_initialize_R1(int ac, char **av, void *stackstart)
 #endif
 
     R_CStackLimit = (uintptr_t) -1;  /* no check made if it stays this way */
+    R_CStackThreshold = 0;           /* 0 for threshold also says no check */
 
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
 
     extern int R_stack_growth_direction (uintptr_t);
     int tmp;
-    R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
+
+#   ifndef R_CStackDir
+      R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
+#   endif
 
     struct rlimit rlim;
     if(getrlimit(RLIMIT_STACK, &rlim) == 0) {
@@ -208,14 +212,17 @@ int Rf_initialize_R1(int ac, char **av, void *stackstart)
 #endif
 
     R_CStackThreshold = 
-       R_CStackDir>0 ? R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit)
-                     : R_CStackStart - 1000 + (uintptr_t) (0.95*R_CStackLimit);
+       R_CStackDir<0 
+         ? (char *) R_CStackStart - 1000 + (uintptr_t) (0.95*R_CStackLimit)
+         : (char *) R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit);
 
-#if 0 /* enable for debugging */
-    printf ("stack limit %lu, start %lu, dir %d, threshold %lu\n", 
-            (unsigned long) R_CStackLimit, (unsigned long) R_CStackStart, 
-            R_CStackDir, (unsigned long) R_CStackThreshold); 
-#endif
+    if (0) { /* enable for debugging */
+        printf ("dir %d, stack limit %llu, start %llu, threshold %llu\n", 
+                R_CStackDir, 
+                (unsigned long long) R_CStackLimit, 
+                (unsigned long long) R_CStackStart, 
+                (unsigned long long) R_CStackThreshold); 
+    }
 
 #endif
 

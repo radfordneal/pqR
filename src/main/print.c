@@ -109,6 +109,8 @@ void PrintDefaults(void)
 
 static SEXP do_invisible(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    R_Visible = FALSE;
+
     switch (length(args)) {
     case 0:
 	return R_NilValue;

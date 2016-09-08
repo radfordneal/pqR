@@ -89,6 +89,8 @@ static SEXP do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SET_RTRACE(CAR(args), 0);
 	break;
     }
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 
@@ -138,6 +140,8 @@ static SEXP do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Do nothing - this function is no longer implemented (but is kept
        for compatibility. */
+
+    R_Visible = FALSE;
 
     return R_NilValue;
 }

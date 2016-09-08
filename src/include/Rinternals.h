@@ -881,11 +881,13 @@ typedef int PROTECT_INDEX;
    produce compile errors, or at least unwanted behaviour, when the rules
    for using these macros are violated.  (But not all violations are caught.) */
 
-extern const struct R_local_protect {
+struct R_local_protect {
     const struct R_local_protect *next;  /* next in list, or NULL */
     int cnt;                             /* number of pointers present below */
     SEXP *Protected[9];                  /* array of ptrs to protected vars  */
-} *R_local_protect_start;                /*    (may be a shorter array)      */
+};                                       /*    (may be a shorter array)      */
+
+#define R_local_protect_start R_high_frequency_globals.local_protect_start
 
 
 #define CHK_IS_SEXP(v) if (0) ((v)->sxpinfo)  /* cause error if v not a SEXP */
@@ -1290,13 +1292,13 @@ LibExtern R_CONST SEXPREC R_EmptyEnv_const;   /* Defined in const-objs.c */
 #define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
 				    	         root of the environment tree */
 
-LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
+#define R_BaseEnv R_high_frequency_globals.BaseEnv
+#define R_GlobalEnv R_high_frequency_globals.GlobalEnv
 
-LibExtern SEXP  R_BaseEnv;	    /* The base environment (formerly R_NilValue) */
 LibExtern SEXP	R_BaseNamespace;    /* The (fake) namespace for base */
 LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 
-LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
+#define R_Srcref R_high_frequency_globals.Srcref
 
 /* R_NilValue is the R NULL object */
 
@@ -1310,7 +1312,7 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 LibExtern R_CONST SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c*/
 #define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
 
-LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
+#define R_MissingArg R_high_frequency_globals.MissingArg
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
 /* Logical Values.  Defined in const-objs.c */
@@ -1364,14 +1366,15 @@ SEXP	R_RestartToken;     /* Marker for restarted function calls */
 
 /* Symbol Table Shortcuts */
 
-LibExtern SEXP	R_BraceSymbol;      /* "{" */
+#define R_DotsSymbol R_high_frequency_globals.DotsSymbol
+#define R_BraceSymbol R_high_frequency_globals.BraceSymbol
+
 LibExtern SEXP	R_BracketSymbol;    /* "[" */
 LibExtern SEXP	R_Bracket2Symbol;   /* "[[" */
 LibExtern SEXP	R_DollarSymbol;	    /* "$" */
 LibExtern SEXP	R_SubAssignSymbol;  /* "[<-" */
 LibExtern SEXP	R_SubSubAssignSymbol; /* "[[<-" */
 LibExtern SEXP	R_DollarAssignSymbol; /* "$<-" */
-LibExtern SEXP	R_DotsSymbol;	    /* "..." */
 LibExtern SEXP	R_AssignSymbols[4]; /* 0, "<-", "<<-", "=" */
 LibExtern SEXP	R_LocalAssignSymbol;   /* same as R_AssignSymbols[1] */
 LibExtern SEXP	R_GlobalAssignSymbol;  /* same as R_AssignSymbols[2] */
@@ -1595,6 +1598,46 @@ const char *Rf_reEnc(const char *x, cetype_t ce_in, cetype_t ce_out, int subst);
 				/* return(.) NOT reached : for -Wall */
 #define error_return(msg)	{ Rf_error(msg);	   return R_NilValue; }
 #define errorcall_return(cl,msg){ Rf_errorcall(cl, msg);   return R_NilValue; }
+
+
+/* Structure containing frequently-used globals, to ensure locality of
+   reference, and perhaps allow the compiler to generate faster code
+   for addressing these variables (from knowing they are adjacent). */
+
+LibExtern struct {
+    SEXP *PPStack;                /* Pointer to area for pointer protect stack*/
+    int PPStackTop;               /* Top of the pointer protection stack */
+    int PPStackSize;              /* Size of pointer protect stack (elements) */
+    unsigned variant_result;      /* 0 or kind of variant result */
+    int EvalDepth;                /* Evaluation recursion depth */
+    int Expressions;              /* options(expressions) */
+    short evalcount;              /* counts down to check user interrupt */
+    short Visible;                /* Value visibility flag */
+    SEXP DotsSymbol;              /* Symbol ... */
+    SEXP GlobalEnv;               /* The "global" environment */
+    SEXP binding_cell;            /* Binding cell for variable found, or NULL */
+    SEXP MissingArg;              /* Missing argument marker */
+    char *CStackThreshold;        /* Threshold for overflow detection */
+    SEXP VStack;                  /* R_alloc stack pointer */
+    const struct R_local_protect *local_protect_start;/*Start of protect chain*/
+    SEXP Srcref;                  /* Current srcref, for debuggers */
+    SEXP BraceSymbol;             /* Symbol { */
+    SEXP BaseEnv;                 /* The base environment */
+    short Profiling;              /* Whether performance profiling enabled */
+} R_high_frequency_globals;
+
+#define InitHighFrequencyGlobals() \
+do \
+{ \
+    R_high_frequency_globals.EvalDepth   = 0; \
+    R_high_frequency_globals.Expressions = 5000; \
+    R_high_frequency_globals.evalcount   = 0; \
+    R_high_frequency_globals.VStack      = NULL; \
+    R_high_frequency_globals.PPStackSize = R_PPSSIZE; \
+    R_high_frequency_globals.local_protect_start = NULL; \
+    R_high_frequency_globals.Profiling = 0; \
+} while (0)
+
 
 #ifdef __MAIN__
 #undef extern
@@ -2144,5 +2187,5 @@ void Rf_R_from_C99_complex(Rcomplex *, double complex);
 #ifdef __cplusplus
 }
 #endif
-
+ 
 #endif /* R_INTERNALS_H_ */

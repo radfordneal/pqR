@@ -870,11 +870,13 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 #define extern0 extern
 #endif
 
-LibExtern SEXP R_binding_cell; /* NULL, or the binding cell for the variable
+#define R_binding_cell R_high_frequency_globals.binding_cell
+                               /* NULL, or the binding cell for the variable
                                   just found or created (if the binding uses
                                   a CONS cell that is suitable for update */
 
-LibExtern unsigned R_variant_result; /* 0 or kind of variant result */
+#define R_variant_result R_high_frequency_globals.variant_result
+
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
 
@@ -895,9 +897,9 @@ extern0 R_size_t R_Collected;	    /* Number of free cons cells (after gc) */
 LibExtern int	R_Is_Running;	    /* for Windows memory manager */
 
 /* The Pointer Protection Stack */
-extern0 int	R_PPStackSize	INI_as(R_PPSSIZE); /* The stack size (elements) */
-extern0 int	R_PPStackTop;	    /* The top of the stack */
-extern0 SEXP*	R_PPStack;	    /* The pointer protection stack */
+#define R_PPStackSize R_high_frequency_globals.PPStackSize
+#define R_PPStackTop R_high_frequency_globals.PPStackTop
+#define R_PPStack R_high_frequency_globals.PPStack
 
 /* Evaluation Environment */
 LibExtern SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
@@ -908,21 +910,34 @@ LibExtern RCNTXT R_Toplevel;	    /* Storage for the toplevel environment */
 LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */
 LibExtern RCNTXT* R_GlobalContext;    /* The global environment */
 #endif
-extern0 Rboolean R_Visible;	    /* Value visibility flag */
-LibExtern int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
+#define R_Visible R_high_frequency_globals.Visible
+#define R_EvalDepth R_high_frequency_globals.EvalDepth
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 
-extern0 SEXP    R_VStack        INI_as(NULL);   /* R_alloc stack pointer */
+#define R_VStack R_high_frequency_globals.VStack
 
-extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
+#define R_Expressions R_high_frequency_globals.Expressions
 extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
-extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
-extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
-extern0 int	R_CStackDir	INI_as(1);	/* C stack direction */
-extern0 uintptr_t R_CStackThreshold;	/* Threshold for overflow detection */
+extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
+extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
+#define R_CStackThreshold R_high_frequency_globals.CStackThreshold
+
+/* What to do for R_CStackDir if not a defined constant from compiler option. */
+
+#ifndef R_CStackDir
+#ifdef Win32
+#define R_CStackDir 1        /* Known to be down on x86 Windows systems */
+#else
+#if 1                        /* Enable or disable assumption below */
+#define R_CStackDir 1          /* Assume down, which is almost always true */
+#else
+extern int CStackDir;          /* Determine at run time initialization */
+#endif
+#endif
+#endif
 
 #ifdef R_USE_SIGNALS
 extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */
@@ -1636,40 +1651,62 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 }
 
 
-/* Inline version of evalv, which checks for SELF_EVAL inline.
-   Also does not decrement evalcount, and so must not be used in a 
-   context where this might result in an uninterruptable loop. */
+/* Eval tweaks, using R_EVAL_TWEAKS, and inline version of evalv,
+   called EVALV, which may do inline check for SELF_EVAL and/or for
+   cached symbol binding.  EVALV also does not decrement evalcount,
+   and so must not be used in a context where this might result in an
+   uninterruptable loop.  See comments before eval in eval.c. */
+
+#ifndef R_EVAL_TWEAKS
+#define R_EVAL_TWEAKS 201  /* Default to current idea of what might be best */
+#endif
 
 extern SEXP Rf_evalv2 (SEXP, SEXP, int);
 
 static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 {
-    R_variant_result = 0;
-    R_Visible = TRUE;
+#   if (R_EVAL_TWEAKS/100)%10 == 0
 
-    if (SELF_EVAL(TYPEOF(e))) {
-        /* Make sure constants in expressions have maximum NAMEDCNT when
-           used as values, so they won't be modified. */
-        SET_NAMEDCNT_MAX(e);
-        return e;
-    }
+        return Rf_evalv (e, rho, variant);
 
-    if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
-        if (LASTSYMENV(e) == rho) {
-            SEXP res = CAR(LASTSYMBINDING(e));
-            if (TYPEOF(res) == PROMSXP) 
-                res = PRVALUE_PENDING_OK(res);
-            if (res != R_MissingArg && res != R_UnboundValue) {
-                if (NAMEDCNT_EQ_0(res))
-                    SET_NAMEDCNT_1(res);
-                if ( ! (variant & VARIANT_PENDING_OK))
-                    WAIT_UNTIL_COMPUTED(res);
-                return res;
-            }
+#   else
+
+        /* The following is like EVAL_PRELUDE except for no evalcount */
+
+        R_variant_result = 0;
+   
+        if (SELF_EVAL(TYPEOF(e))) {
+            /* Make sure constants in expressions have maximum NAMEDCNT when
+               used as values, so they won't be modified. */
+            SET_NAMEDCNT_MAX(e);
+            R_Visible = TRUE;
+            return e;
         }
-    }
 
-    return Rf_evalv2 (e, rho, variant);
+#       if (R_EVAL_TWEAKS/100)%10 > 1
+
+            if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
+                if (LASTSYMENV(e) == rho) {
+                    SEXP res = CAR(LASTSYMBINDING(e));
+                    if (TYPEOF(res) == PROMSXP) 
+                        res = PRVALUE_PENDING_OK(res);
+                    if (res != R_MissingArg && res != R_UnboundValue) {
+                        if (NAMEDCNT_EQ_0(res))
+                            SET_NAMEDCNT_1(res);
+                        if ( ! (variant & VARIANT_PENDING_OK))
+                            WAIT_UNTIL_COMPUTED(res);
+                        R_Visible = TRUE;
+                        return res;
+                    }
+                }
+            }
+
+#       endif
+
+        return Rf_evalv2 (e, rho, variant);
+
+#   endif
+
 }
 
 
@@ -1684,13 +1721,14 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
   ((x)->gengc_prev_node==0 ? (x)->u.listsxp.carval = (y) : (SETCAR)((x),(y)))
 
 
-/* Macro for fast stack checking */
+/* Macro for fast stack checking.  Calls R_CheckStack to do the actual
+   work if there is stack overflow. */
 
 #define R_CHECKSTACK() do { \
-    if (R_CStackLimit != (uintptr_t) -1) { \
-        int dummy; \
-        if (R_CStackDir > 0 ? (uintptr_t) &dummy < R_CStackThreshold \
-                            : (uintptr_t) &dummy > R_CStackThreshold) \
+    if (R_CStackThreshold != 0) { \
+        char dummy; \
+        if (R_CStackDir < 0 ? (&dummy > R_CStackThreshold) \
+                            : (&dummy < R_CStackThreshold)) \
             R_CheckStack(); \
     } \
 } while (0)

@@ -130,6 +130,8 @@ static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
     static char *ap[2] = { "expr", "add" };
     int addit = 0;
 
+    R_Visible = FALSE;
+
     PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
     if (CAR(argList) == R_MissingArg) code = R_NilValue;
     else code = CAR(argList);
@@ -172,6 +174,8 @@ static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    ctxt->conexit = code;
     }
     UNPROTECT(1);
+
+    R_Visible = FALSE;
     return R_NilValue;
 }
 

@@ -5,7 +5,9 @@ also applicable to pqR).
 Details on building pqR are given in the `R Installation and
 Administration Manual' in the doc/manual directory.  An HTML version
 is at doc/html/R-admin.html, unless you're using a development version
-of pqR (from github).
+of pqR (from github).  Information about success or lack thereof in
+installing pqR on various systems can also be found via the
+pqR-project.org site.
 
 The short version of these instructions, easier to read but maybe not
 always completely adequate, is as follows:
