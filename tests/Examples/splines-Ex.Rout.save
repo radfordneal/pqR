@@ -1,7 +1,13 @@
 
-R version 2.15.0 Patched (2012-04-09 r58947) -- "Easter Beagle"
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -15,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > pkgname <- "splines"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -598,7 +607,7 @@ attr(,"class")
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.66 0.076 3.365 0 0 
+Time elapsed:  1.084 0.016 1.101 0 0 
 > grDevices::dev.off()
 null device 
           1 
