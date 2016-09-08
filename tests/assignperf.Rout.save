@@ -618,3 +618,4 @@ RPROFMEM: 128 (double 11):"print"
 [1] 123
 > print(length(unclass(o)))
 [1] 11
+> 
