@@ -25,8 +25,10 @@ Type 'q()' to quit R.
 
 No helper threads, task merging enabled.
 
-> # Test performance of complex assignments, by seeing what storage
-> # allocation is done.
+> # Test performance of complex assignments, and other stuff, by seeing
+> # what storage allocation is done.
+> 
+> options(keep.source=FALSE)  # avoid allocations for source references
 > 
 > print(1)  # get some stuff allocated before Rprofmemt activatived.
 [1] 1
@@ -448,7 +450,7 @@ RPROFMEM: 440 (logical 100):
 RPROFMEM: 840 (double 100):"initialize" "initialize" "new" 
 RPROFMEM: 552 (integer 128):"match" "initialize" "initialize" "new" 
 RPROFMEM: 840 (double 100):"slot<-" "initialize" "initialize" "new" 
-RPROFMEM: 440 (logical 100):".Call" "initialize" "initialize" "new" 
+RPROFMEM: 440 (logical 100):"initialize" "initialize" "new" 
 > 
 > v <- seq.int(1/vsize,1,length=vsize)
 RPROFMEM: 840 (double 100):
@@ -491,4 +493,111 @@ Slot "b":
  [97]  TRUE FALSE  TRUE FALSE
 
 > Rprofmemt(nelem=vsize)
+> 
+> 
+> # Things that should use VARIANT_UNCLASS, VARIANT_ANY_ATTR, or
+> # VARIANT_ANY_ATTR_EX_DIM, and hence avoid some unnecessary copying.
+> 
+> vsize <- 11
+> 
+> Rprofmemt(NULL)
+> 
+> a <- numeric(vsize)
+> names(a) <- rep("a",vsize)
+> 
+> B <- matrix(1.1,vsize,vsize)
+> attr(B,"fred") <- rep("a",vsize)
+> 
+> o <- (1:vsize) + 0.5
+> class(o) <- "abc"
+> 
+> Rprofmemt(nelem=vsize)
+> 
+> for (i in a) print (i)
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+[1] 0
+> for (i in exp(a)) print (i)
+RPROFMEM: 128 (double 11):
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+[1] 1
+> 
+> for (i along a) print (i)
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 11
+> for (i along exp(a)) print(i)
+RPROFMEM: 128 (double 11):
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 11
+> 
+> for (i across B) print (i)
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 11
+> for (i across exp(B)) print (i)
+RPROFMEM: 1008 (double 121):
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 11
+> 
+> print(sum(a))
+[1] 0
+> print(sum(exp(a)))
+[1] 11
+> print(prod(a))
+[1] 0
+> print(prod(exp(a)))
+RPROFMEM: 128 (double 11):"print" 
+[1] 1
 > 
