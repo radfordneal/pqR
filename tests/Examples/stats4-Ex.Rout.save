@@ -1,14 +1,18 @@
 
-R version 2.15.0 alpha (2012-03-02 r58556) modified
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
-
-  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and
@@ -17,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > pkgname <- "stats4"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -184,7 +191,7 @@ Coefficients:
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  0.758 0.009 0.771 0 0 
+Time elapsed:  0.408 0.004 0.41 0 0 
 > grDevices::dev.off()
 null device 
           1 

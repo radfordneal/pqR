@@ -1,13 +1,14 @@
 
-pqR version 2.15.0 (2014-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
 
-R is Copyright (C) 2012 The R Foundation for Statistical Computing
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2014 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
-No helper threads, task merging enabled.
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -20,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > pkgname <- "tools"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -104,7 +108,7 @@ $itemBullet
 $enumFormat
 function (n) 
 sprintf("%d. ", n)
-<environment: 0x365d900>
+<environment: 0x1fe1d90>
 
 $showURLs
 [1] FALSE
@@ -138,7 +142,7 @@ $itemBullet
 $enumFormat
 function (n) 
 sprintf("%d. ", n)
-<environment: 0x365d900>
+<environment: 0x1fe1d90>
 
 $showURLs
 [1] FALSE
@@ -172,7 +176,7 @@ $itemBullet
 $enumFormat
 function (n) 
 sprintf("%d. ", n)
-<environment: 0x365d900>
+<environment: 0x1fe1d90>
 
 $showURLs
 [1] FALSE
@@ -235,7 +239,7 @@ $underline_titles
 +     pages = "211-252"))
 > bibstyle("unsorted", sortKeys = function(refs) seq_along(refs),
 +        .init = TRUE)
-<environment: 0x3c73418>
+<environment: 0x29a97a0>
 > print(refs, .bibstyle = "unsorted")    
 R Core Team (2010). _R: A Language and Environment for Statistical
 Computing_. R Foundation for Statistical Computing, Vienna, Austria.
@@ -878,7 +882,7 @@ An illustration of lexical scoping.
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  0.152 0.008 0.157 0 0 
+Time elapsed:  0.136 0.008 0.147 0 0 
 > grDevices::dev.off()
 null device 
           1 
