@@ -2054,6 +2054,6 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_array[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
-{ do_length,	do_fast_length,	-1,		1,  0 },	
+{ do_length,	do_fast_length,	-1,		1,  VARIANT_UNCLASS|VARIANT_ANY_ATTR },	
 { 0,		0,		0,		0,  0 }
 };

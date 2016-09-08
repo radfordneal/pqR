@@ -674,8 +674,10 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 
     /* See if this may be a fast primitive.  All fast primitives
        should be BUILTIN.  We do a fast call only if there is exactly
-       one argument, with no tag, not missing or a ... argument.  
-       The argument is stored in arg1. */
+       one argument, with no tag, not missing or a ... argument; also
+       must not be an object if the fast primitive dispatches, unless
+       the argument was evaluated with VARIANT_UNCLASS and we got this
+       variant result.  The argument is stored in arg1. */
 
     if (args!=R_NilValue) {
         if (PRIMFUN_FAST(op) 
@@ -686,7 +688,8 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
             PROTECT(arg1 = EVALV (arg1, rho, 
                                   PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
 
-            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) &&
+                ! ((PRIMFUN_ARG1VAR(op)&VARIANT_UNCLASS) && R_variant_result)) {
                 UNPROTECT(1);
                 PROTECT(args = CONS(arg1,R_NilValue));
                 goto not_fast;
