@@ -688,12 +688,16 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
             PROTECT(arg1 = EVALV (arg1, rho, 
                                   PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
 
-            if (isObject(arg1) && PRIMFUN_DSPTCH1(op) &&
-                 ! (VARIANT_KIND(PRIMFUN_ARG1VAR(op)) == VARIANT_UNCLASS
-                     && R_variant_result)) {
-                UNPROTECT(1);
-                PROTECT(args = CONS(arg1,R_NilValue));
-                goto not_fast;
+            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                if (VARIANT_KIND (PRIMFUN_ARG1VAR (op)) == VARIANT_UNCLASS
+                       && R_variant_result) {
+                    R_variant_result = 0;
+                }
+                else {
+                    UNPROTECT(1);
+                    PROTECT(args = CONS(arg1,R_NilValue));
+                    goto not_fast;
+                }
             }
     
             beginbuiltincontext (&cntxt, e);
@@ -753,12 +757,16 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
 
             PROTECT(arg1 = EVALV (arg1, rho, PRIMFUN_ARG1VAR(op)));
 
-            if (isObject(arg1) && PRIMFUN_DSPTCH1(op) &&
-                 ! (VARIANT_KIND(PRIMFUN_ARG1VAR(op)) == VARIANT_UNCLASS
-                     && R_variant_result)) {
-                UNPROTECT(1);
-                PROTECT(args = CONS(arg1,R_NilValue));
-                goto not_fast;
+            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                if (VARIANT_KIND (PRIMFUN_ARG1VAR (op)) == VARIANT_UNCLASS
+                       && R_variant_result) {
+                    R_variant_result = 0;
+                }
+                else {
+                    UNPROTECT(1);
+                    PROTECT(args = CONS(arg1,R_NilValue));
+                    goto not_fast;
+                }
             }
 
             res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
