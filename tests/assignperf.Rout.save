@@ -601,3 +601,20 @@ RPROFMEM: 1008 (double 121):
 RPROFMEM: 128 (double 11):"print" 
 [1] 1
 > 
+> print(length(a))
+[1] 11
+> print(length(exp(a)))
+RPROFMEM: 128 (double 11):"print" 
+[1] 11
+> 
+> print(length(o))
+[1] 11
+> print(length(unclass(o)))
+[1] 11
+> 
+> length.abc <- function (x) 123
+> 
+> print(length(o))
+[1] 123
+> print(length(unclass(o)))
+[1] 11

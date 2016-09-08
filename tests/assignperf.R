@@ -186,3 +186,14 @@ print(sum(a))
 print(sum(exp(a)))
 print(prod(a))
 print(prod(exp(a)))
+
+print(length(a))
+print(length(exp(a)))
+
+print(length(o))
+print(length(unclass(o)))
+
+length.abc <- function (x) 123
+
+print(length(o))
+print(length(unclass(o)))
