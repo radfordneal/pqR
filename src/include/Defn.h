@@ -512,7 +512,7 @@ typedef struct {
 
 /* Symbols for eval variants.  Variant 0 indicates the standard result.  
    Variants with numbers from 0x01, 0x02, 0x03, ..., 0x0f are passed on for
-   the evaluaton of arguments of "{", "(", "if" (except conditon), etc.  
+   the evaluation of arguments of "{", "(", "if" (except conditon), etc.  
    Variants with numbers 0x10, 0x20, 0x30, ..., 0xf0 are not passed on.  
    There are no variants of the form 0xNM with N!=0 and M!=0.  These 
    variant numbers may be OR'd with flags 0x100, 0x200, 0x400, 0x800, ... 
@@ -567,6 +567,10 @@ typedef struct {
                                    pairlist with this element (used for $).
                                    Does not set R_variant_result. */
 
+#define VARIANT_UNCLASS 0x08    /* May return an object with a class attribute
+                                   that should not be present (eg, from unclass)
+                                   Sets R_variant_result to 1 if so. */
+
 /* Variant kinds that are not passed on. */
 
 #define VARIANT_LOCAL_ASSIGN1 0x10  /* May assign result to the first operand.
@@ -583,24 +587,37 @@ typedef struct {
 
 /* Variant flags that are passed on. */
 
-#define VARIANT_PENDING_OK 0x100  /* Computation may be deferred pending
-                                     completion of a task (in a helper or the 
-                                     master). Does not set R_variant_result. */
+#define VARIANT_PENDING_OK 0x0100  /* Computation may be deferred pending
+                                      completion of a task (in a helper or the 
+                                      master). Does not set R_variant_result. */
 
-#define VARIANT_NULL 0x200  /* May just return R_NilValue, while doing side
+#define VARIANT_NULL 0x0200 /* May just return R_NilValue, while doing side
                                effects, unless the value is for a direct return.
                                Should usually be OR'd with VARIANT_PENDING_OK.
                                Does not set R_variant_result. */
 
-#define VARIANT_DIRECT_RETURN 0x400 /* A "return" statement may simply return
-                                    the return value, without a non-local jump.
-                                    Usually OR with VARIANT_PENDING_OK. Will OR
-                                    R_variant_result with VARIANT_RTN_FLAG. */
+#define VARIANT_DIRECT_RETURN 0x0400 /* A "return" statement may simply return
+                                     the return value, without a non-local jump.
+                                     Usually OR with VARIANT_PENDING_OK. Will OR
+                                     R_variant_result with VARIANT_RTN_FLAG. */
 
-#define VARIANT_STATIC_BOX_OK 0x800 /* May return the result in a statically
-                                       allocated SEXPREC that is used for all
-                                       returns of values of its type.  Value
-                                       in box never has computation pending. */
+#define VARIANT_STATIC_BOX_OK 0x0800 /* May return the result in a statically
+                                        allocated SEXPREC that is used for all
+                                        returns of values of its type.  Value
+                                        in box never has computation pending. */
+
+#define VARIANT_ANY_ATTR 0x1000  /* May return any (or no) attributes, since the
+                                    attributes will be ignored by the caller,
+                                    except that if there is a class attribute,
+                                    all attributes must be returned correctly.
+                                    Does not set R_variant_result. */
+
+#define VARIANT_ANY_ATTR_EX_DIM 0x2000 /* May return any (or no) attributes,
+                                          except the dim attribute (or its 
+                                          absense) must be preserved, and also
+                                          if there is a class attribute, all 
+                                          attributes must be returned correctly.
+                                          Does not set R_variant_result. */
 
 /* Variant flags that are not passed on. */
 

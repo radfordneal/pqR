@@ -44,6 +44,27 @@
 #include "static-boxes.h"  /* for inline static_box_eval2 function */
 
 
+static inline void maybe_dup_attributes (SEXP to, SEXP from, int variant)
+{
+    if (to == from) {
+        /* nothing to do */
+    }
+    else if (isObject(from)) {
+        DUPLICATE_ATTRIB (to, from);
+    }
+    else if (variant & VARIANT_ANY_ATTR) {
+        /* needn't do anything */
+    }
+    else if (variant & VARIANT_ANY_ATTR_EX_DIM) {
+        SEXP dim = getAttrib (from, R_DimSymbol);
+        if (dim != R_NilValue) 
+            setAttrib (to, R_DimSymbol, dim);
+    }
+    else {
+        DUPLICATE_ATTRIB(to,from);
+    }
+}
+
 static R_NORETURN void non_numeric_errorcall (SEXP call)
 {
     errorcall (call, _("Non-numeric argument to mathematical function"));
@@ -1410,13 +1431,14 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             sy = sa;
             *REAL(sy) = res;
         }
-        else if ((variant&VARIANT_STATIC_BOX_OK)!=0 && ATTRIB(sa)==R_NilValue) {
+        else if ((variant & VARIANT_STATIC_BOX_OK) && (ATTRIB(sa)==R_NilValue
+                   || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
             sy = R_ScalarRealBox;
             *REAL(sy) = res;
         }
         else {
             PROTECT(sy = ScalarReal(res));
-            DUPLICATE_ATTRIB(sy, sa);
+            maybe_dup_attributes (sy, sa, variant);
             UNPROTECT(1);
         }
 
@@ -1448,8 +1470,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                         HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
                         task_math1, opcode, sy, sa);
 
-            if (sa!=sy) 
-                DUPLICATE_ATTRIB(sy, sa);
+            maybe_dup_attributes (sy, sa, variant);
         }
 
         if (R_naflag)

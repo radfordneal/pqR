@@ -1,0 +1,16 @@
+Implements a variant result (from VARIANT_UNCLASS) in which a class
+attribute can still be present even though not supposed to be there
+(eg, from unclass).  
+
+Also a variant result (VARIANT_ANY_ATTR) in which any attributes may
+(or may not) be returned, because their presence or absence will be
+ignored by the caller anyway.  And a variant result (VARIANT_ANY_ATTR_EX_DIM)
+like this excep that the dim attriute must be correct.
+
+Use these in do_for, do_sum, and do_prod.
+
+Pay attention to VARIANT_UNCLASS in unclass.
+
+Pay attention to VARIANT_ANY_ATTR and VARIANT_ANY_ATTR_EX_DIM in math1.
+
+Added tests for this to assignperf.R

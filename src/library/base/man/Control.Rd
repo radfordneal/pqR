@@ -33,6 +33,7 @@ for (var1, var2 along matrix) expr
 for (var1, var2, var3 along array) expr
 for (var down matrix) expr
 for (var across matrix) expr
+
 while (cond) expr
 repeat expr
 break
@@ -108,12 +109,15 @@ next
   same as \code{along}.
 
   The class of the \code{seq} iterated over by \code{for} with \code{in} is 
-  currently ignored, as if it were \code{unclass(seq)}, but this may
-  change in future.  Similarly, the class of the \code{vector}, \code{matrix}, 
-  or \code{array} in a \code{for} with \code{along}, \code{down}, and 
-  \code{across} is currently ignored,
-  but in future it may be that \code{length} and \code{dim} methods for these
-  objects will be used, if they are defined.
+  ignored, as if it were \code{unclass(seq)}.  This is also true
+  for the class of the \code{vector}, \code{matrix}, 
+  or \code{array} in a \code{for} with \code{along}, \code{down}, or
+  \code{across}, but in future it may be that \code{length} and \code{dim} 
+  methods for these objects will be used, if they are defined.  Accordingly,
+  if the intent is that \code{along}, \code{down}, or \code{across} be
+  applied to an unclassed object, expliclit use of \code{\link{unclass}}
+  is recommended.  The performance cost of using \code{unclass} in this 
+  context is negligible.
 }
 \value{
   \code{if} returns the value of the expression evaluated, or
@@ -184,6 +188,14 @@ for (i along v) {
 
 identical(v,c(8,2,1,5,2,2,1,-3,9))  # These should be TRUE
 identical(i,7L)
+
+# Recommended use of unclass.
+a <- c(3,1)
+class(a) <- "fred"
+length.fred <- function (x) 4
+for (i along unclass(a)) print(i) # Will print just 1 and 2
+for (i along a) print(i)          # Does the same thing now, but perhaps
+                                  #  in future it will print 1, 2, 3, and 4
 }
 \keyword{programming}
 \keyword{iteration}

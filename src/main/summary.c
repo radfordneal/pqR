@@ -1268,8 +1268,8 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 /* Fast built-in functions in this file. See names.c for documentation */
 
 attribute_hidden FASTFUNTAB R_FastFunTab_summary[] = {
-/*slow func	fast func,     code or -1   dsptch  variant */
-{ do_summary,	do_fast_sum,	0,		1,  VARIANT_SUM },
-{ do_summary,	do_fast_prod,	4,		1,  0 },
-{ 0,		0,		0,		0,  0 }
+/*slow func	fast func,   code or -1  dsptch variant */
+{ do_summary,	do_fast_sum,	0,	    1,  VARIANT_ANY_ATTR|VARIANT_SUM },
+{ do_summary,	do_fast_prod,	4,	    1,  VARIANT_ANY_ATTR },
+{ 0,		0,		0,	    0,  0 }
 };

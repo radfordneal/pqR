@@ -1,5 +1,7 @@
-# Test performance of complex assignments, by seeing what storage
-# allocation is done.
+# Test performance of complex assignments, and other stuff, by seeing
+# what storage allocation is done.
+
+options(keep.source=FALSE)  # avoid allocations for source references
 
 print(1)  # get some stuff allocated before Rprofmemt activatived.
 
@@ -151,3 +153,36 @@ x@b[3] <- NA  # should duplicate at most one, but currently dups four things
 Rprofmemt(NULL)
 print(x)
 Rprofmemt(nelem=vsize)
+
+
+# Things that should use VARIANT_UNCLASS, VARIANT_ANY_ATTR, or
+# VARIANT_ANY_ATTR_EX_DIM, and hence avoid some unnecessary copying.
+
+vsize <- 11
+
+Rprofmemt(NULL)
+
+a <- numeric(vsize)
+names(a) <- rep("a",vsize)
+
+B <- matrix(1.1,vsize,vsize)
+attr(B,"fred") <- rep("a",vsize)
+
+o <- (1:vsize) + 0.5
+class(o) <- "abc"
+
+Rprofmemt(nelem=vsize)
+
+for (i in a) print (i)
+for (i in exp(a)) print (i)
+
+for (i along a) print (i)
+for (i along exp(a)) print(i)
+
+for (i across B) print (i)
+for (i across exp(B)) print (i)
+
+print(sum(a))
+print(sum(exp(a)))
+print(prod(a))
+print(prod(exp(a)))

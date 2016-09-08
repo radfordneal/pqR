@@ -1437,7 +1437,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (TAG(a) == R_DownSymbol)
         down = 1;
     else
-        in = 1;  /* we treat any other tag as "in" */
+        in = 1;  /* we treat any other (or no) tag as "in" */
 
     /* Sometimes handled by bytecode... */
 
@@ -1454,13 +1454,15 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(rho);
 
-    PROTECT (val = evalv (val, rho, in ? VARIANT_SEQ : 0));
+    PROTECT(val = evalv(val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
+                                  along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
+                                    VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM));
     dims = R_NilValue;
 
     is_seq = 0;
 
-    if (along) { /* "along" and therefore not variant */
-
+    if (along) { /* "along" and therefore not seq variant */
+        R_variant_result = 0;
         if (nsyms == 1) { /* go along vector/pairlist (may also be an array) */
             is_seq = 1;
             seq_start = 1;
@@ -1481,7 +1483,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
         n = length(val);
     }
-    else if (across || down) { /* "across" or "down" and therefore not variant*/
+    else if (across || down) { /* "across" or "down", hence not seq variant*/
+        R_variant_result = 0;
         is_seq = 1;
         seq_start = 1;
         val_type = INTSXP;
@@ -1494,9 +1497,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
             n = LENGTH(dims) > 1 ? INTEGER(dims)[1] : INTEGER(dims)[0];
     }
     else if (R_variant_result) {  /* variant "in" value */
-
-        is_seq = 1;
         R_variant_result = 0;
+        is_seq = 1;
         if (TYPEOF(val)!=INTSXP || LENGTH(val)!=2) /* shouldn't happen*/
             errorcall(call, "internal inconsistency with variant op in for!");
         seq_start = INTEGER(val)[0];
