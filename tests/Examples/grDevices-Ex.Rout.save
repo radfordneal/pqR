@@ -1,10 +1,10 @@
 
-pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -13,8 +13,6 @@ Platform: x86_64-unknown-linux-gnu (64-bit)
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
-
-  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and
@@ -1625,7 +1623,7 @@ Loading required package: grid
 > graphics::par(get("par.postscript", pos = 'CheckExEnv'))
 > cleanEx()
 
-detaching ‘package:grid’
+detaching 'package:grid'
 
 > nameEx("contourLines")
 > ### * contourLines
@@ -3087,15 +3085,15 @@ List of 18
 > 
 > ### ---- error checking of arguments: ----
 > ps.options(width=0:12, onefile=0, bg=pi)
-Warning: ‘mode(onefile)’ and ‘mode(bg)’ differ between new and previous
-	 ==> NOT changing ‘onefile’ & ‘bg’
-Warning: ‘length(width)’ differs between new and previous
-	 ==> NOT changing ‘width’
+Warning: 'mode(onefile)' and 'mode(bg)' differ between new and previous
+	 ==> NOT changing 'onefile' & 'bg'
+Warning: 'length(width)' differs between new and previous
+	 ==> NOT changing 'width'
 > # override the check for 'width', but not 'bg':
 > ps.options(width=0:12, bg=pi, override.check = c(TRUE,FALSE))
-Warning: ‘mode(bg)’ differs between new and previous
-	 ==> NOT changing ‘bg’
-Warning: ‘length(width)’ differs between new and previous
+Warning: 'mode(bg)' differs between new and previous
+	 ==> NOT changing 'bg'
+Warning: 'length(width)' differs between new and previous
 > utils::str(ps.options())
 List of 18
  $ onefile    : logi TRUE
@@ -3526,7 +3524,7 @@ $zlab
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.248 0.024 1.273 0 0 
+Time elapsed:  1.208 0.02 1.231 0 0 
 > grDevices::dev.off()
 null device 
           1 
