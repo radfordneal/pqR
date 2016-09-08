@@ -1105,12 +1105,11 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             warningcall(call, _("NAs produced by integer overflow"));
     }
 
-    /* quick return if there are no attributes */
+    /* Quick return if there are no attributes, or the caller doesn't care
+       about them. */
 
-    if (! xattr && ! yattr) {
-        UNPROTECT(nprotect);
-        return ans;
-    }
+    if ( (! xattr && ! yattr) || (variant & VARIANT_ANY_ATTR))
+        goto ret;
 
     /* Copy attributes from arguments as needed. */
 
@@ -1148,6 +1147,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         ans = asS4(ans, TRUE, TRUE);
     }
 
+  ret:
     R_variant_result = local_assign1 | local_assign2;
     UNPROTECT(nprotect);
     return ans;
@@ -1254,7 +1254,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1,
     else
         errorcall(call, _("invalid argument to unary operator"));
 
-    if (ans != s1) {
+    if (ans != s1 && ! (variant & VARIANT_ANY_ATTR)) {
         PROTECT(ans);
         DUPLICATE_ATTRIB(ans,s1);
         UNPROTECT(1);
