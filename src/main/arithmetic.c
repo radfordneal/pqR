@@ -351,7 +351,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int type = TYPEOF(arg1);
 
     if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 
-                                        && ATTRIB(arg1)==R_NilValue) {
+          && (ATTRIB(arg1)==R_NilValue || 
+               !isObject(arg1) && (variant&VARIANT_ANY_ATTR))) {
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             switch (opcode) {
@@ -379,7 +380,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             }
         }
         else if (TYPEOF(arg2)==type && LENGTH(arg2)==1 
-                                    && ATTRIB(arg2)==R_NilValue) {
+                   && (ATTRIB(arg2)==R_NilValue || 
+                        !isObject(arg2) && (variant&VARIANT_ANY_ATTR))) {
 
             if (type==REALSXP) {
 
@@ -1105,49 +1107,46 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             warningcall(call, _("NAs produced by integer overflow"));
     }
 
-    /* Quick return if there are no attributes, or the caller doesn't care
-       about them. */
-
-    if ( (! xattr && ! yattr) || (variant & VARIANT_ANY_ATTR))
-        goto ret;
-
     /* Copy attributes from arguments as needed. */
 
-    if (yattr && ny==n && ans!=y)
-        copyMostAttrib(y, ans);
-    if (xattr && nx==n && ans!=x)
-        copyMostAttrib(x, ans); /* Done 2nd so x's attrs overwrite y's */
+    if ((xattr || yattr) 
+          && (isObject(x) || isObject(y) || !(variant & VARIANT_ANY_ATTR))) {
 
-    /* Don't set the dims if one argument is an array of size 0 and the
-       other isn't of size zero, cos they're wrong */
-    /* Not if the other argument is a scalar (PR#1979) */
-    if (dims != R_NilValue) {
-        if (!((xarray && (nx == 0) && (ny > 1)) ||
-              (yarray && (ny == 0) && (nx > 1)))){
-            setAttrib(ans, R_DimSymbol, dims);
-            if (xnames != R_NilValue)
-                setAttrib(ans, R_DimNamesSymbol, xnames);
-            else if (ynames != R_NilValue)
-                setAttrib(ans, R_DimNamesSymbol, ynames);
+        if (yattr && ny==n && ans!=y)
+            copyMostAttrib(y, ans);
+        if (xattr && nx==n && ans!=x)
+            copyMostAttrib(x, ans); /* Done 2nd so x's attrs overwrite y's */
+    
+        /* Don't set the dims if one argument is an array of size 0 and the
+           other isn't of size zero, cos they're wrong */
+        /* Not if the other argument is a scalar (PR#1979) */
+        if (dims != R_NilValue) {
+            if (!((xarray && (nx == 0) && (ny > 1)) ||
+                  (yarray && (ny == 0) && (nx > 1)))){
+                setAttrib(ans, R_DimSymbol, dims);
+                if (xnames != R_NilValue)
+                    setAttrib(ans, R_DimNamesSymbol, xnames);
+                else if (ynames != R_NilValue)
+                    setAttrib(ans, R_DimNamesSymbol, ynames);
+            }
+        }
+        else {
+            if (LENGTH(ans) == length(xnames))
+                setAttrib(ans, R_NamesSymbol, xnames);
+            else if (LENGTH(ans) == length(ynames))
+                setAttrib(ans, R_NamesSymbol, ynames);
+        }
+    
+        if (xts || yts) {                /* must set *after* dims! */
+            setAttrib(ans, R_TspSymbol, tsp);
+            setAttrib(ans, R_ClassSymbol, klass);
+        }
+    
+        if(xS4 || yS4) {   /* Only set the bit:  no method defined! */
+            ans = asS4(ans, TRUE, TRUE);
         }
     }
-    else {
-        if (LENGTH(ans) == length(xnames))
-            setAttrib(ans, R_NamesSymbol, xnames);
-        else if (LENGTH(ans) == length(ynames))
-            setAttrib(ans, R_NamesSymbol, ynames);
-    }
 
-    if (xts || yts) {                /* must set *after* dims! */
-        setAttrib(ans, R_TspSymbol, tsp);
-        setAttrib(ans, R_ClassSymbol, klass);
-    }
-
-    if(xS4 || yS4) {   /* Only set the bit:  no method defined! */
-        ans = asS4(ans, TRUE, TRUE);
-    }
-
-  ret:
     R_variant_result = local_assign1 | local_assign2;
     UNPROTECT(nprotect);
     return ans;
@@ -1254,7 +1253,8 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1,
     else
         errorcall(call, _("invalid argument to unary operator"));
 
-    if (ans != s1 && ! (variant & VARIANT_ANY_ATTR)) {
+    if (ans != s1 && ATTRIB(s1) != R_NilValue 
+         && (isObject(s1) || !(variant & VARIANT_ANY_ATTR))) {
         PROTECT(ans);
         DUPLICATE_ATTRIB(ans,s1);
         UNPROTECT(1);
