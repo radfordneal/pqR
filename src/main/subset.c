@@ -1751,12 +1751,14 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        overhead of allocation and calling of DispatchOrEval. */
 
     if (from != R_DotsSymbol) {
-        from = evalv (from, env, VARIANT_ONE_NAMED);
-        if (isObject(from)) {
+        from = evalv (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
+        if (isObject(from) && ! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
             PROTECT(from);
             argsevald = 1;
-        } else 
+        } else {
+            R_variant_result = 0;
             return R_subset3_dflt (from, string, name, call, variant);
+        }
     }
 
     /* first translate CADR of args into a string so that we can
