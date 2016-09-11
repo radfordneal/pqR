@@ -379,11 +379,14 @@ lookup} for further details.
 @findex MISSING
 @findex SET_MISSING
 The macros @code{MISSING} and @code{SET_MISSING} are used for pairlists
-of arguments.  Four bits are reserved, but only two are used (and
-exactly what for is not explained).  It seems that bit 0 is used by
+of arguments.  Four bits are reserved, but only two are used.
+Bit 0 is used by
 @code{matchArgs} to mark missingness on the returned argument list, and
 bit 1 is used to mark the use of a default value for an argument copied
-to the evaluation frame of a closure.
+to the evaluation frame of a closure.  Note that this information is
+not captured by the use of @code{R_MissingArg} for the bound value in
+completely missing (no default) arguments, so this use is not redundant 
+(though it could be reduced to one bit).
 
 @findex DDVAL
 @findex SET_DDVAL
