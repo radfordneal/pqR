@@ -1,4 +1,6 @@
-Performance optimization / tuning.
+Performance optimization / tuning.  (Also, a bit of general cleanup of
+comments, etc.)
+
 
 Got rid of saving of R_EvalDepth in eval, in favour of increment/decrement.
 It's saved and restored in/from contexts anyway.

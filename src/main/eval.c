@@ -1896,10 +1896,8 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
 {
     SEXP c;
 
-    c = CONS (op, CONS (symbol, 
+    c = LCONS (op, CONS (symbol, 
           CONS (replaceCall(fun, varval, args, rhs), R_NilValue)));
-
-    SET_TYPEOF (c, LANGSXP);
 
     return c;
 }
@@ -2243,7 +2241,7 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
     END_PROTECT;
 }
 
-/*  Assignment in its various forms  */
+/*  Assignment in its various forms. */
 
 SEXP Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, 
                        int variant, int opval);
@@ -2394,6 +2392,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return rhs;
 }
 
+/* Complex assignment.  Made a separate, non-static, function in order
+   to avoid possible overhead of a large function (eg, stack frame size)
+   for the simple case. */
+
 SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                         int variant, int opval)
 {
@@ -2499,7 +2501,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     else {  /* the general case, for any depth */
 
         /* Structure recording information on expressions at all levels of 
-           the lhs.  Level 0 is the ultimate variable, level depth is the
+           the lhs.  Level 'depth' is the ultimate variable; level 0 is the
            whole lhs expression. */
 
         struct { 
