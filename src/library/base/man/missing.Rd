@@ -40,6 +40,11 @@ or because it is an argument that is itself missing.
   it returns \code{TRUE} only if the argument was an explicit missing
   argument, indicated by \code{_}, rather than by the argument being
   empty.  See the examples below.
+
+  An argument is considered to be missing if its value was not
+  specified by the caller, even if it has a default value.  (But
+  unlike full missingness, this sort-of missingness is not passed on
+  when such an argument is used as an argument of another function.)
   
   These are \sQuote{special} \link{primitive} functions, as they must not
   evaluate their argument.
