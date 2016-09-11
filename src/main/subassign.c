@@ -24,19 +24,6 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/*
- *  Regarding logical objects, note that we want to allow any assignment
- *  of the form "x[s] <- NA" (here NA is logical), and the interpreted
- *  "ifelse" requires assignment into a logical object.
- */
-
-/*
- *  2000/02/17  Altered to allow closures/primitives in lists (VECSXPs) BDR
- */
-
-/*
- *  2000/08/01  Also promises, expressions, environments when using [[ PD
- */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
