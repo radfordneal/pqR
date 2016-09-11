@@ -833,8 +833,8 @@ static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	break;
     }
     if (isObject(a)) {
-        if (VARIANT_KIND(variant) == VARIANT_UNCLASS)
-            R_variant_result = 1;
+        if (variant & VARIANT_UNCLASS)
+            R_variant_result = VARIANT_UNCLASS_FLAG;
         else {
             PROTECT(a = duplicate(a));
             setAttrib(a, R_ClassSymbol, R_NilValue);

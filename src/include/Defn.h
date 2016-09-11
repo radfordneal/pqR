@@ -515,19 +515,18 @@ typedef struct {
    the evaluation of arguments of "{", "(", "if" (except conditon), etc.  
    Variants with numbers 0x10, 0x20, 0x30, ..., 0xf0 are not passed on.  
    There are no variants of the form 0xNM with N!=0 and M!=0.  These 
-   variant numbers may be OR'd with flags 0x100, 0x200, 0x400, 0x800, ... 
+   variant numbers may be OR'd with flags 0x0100, 0x0200, 0x0400, ... 
    in order to indicate additional aspects of variation.  Such additional 
    flags up to 0x8000 are passed on, but flags from 0x10000 up are not.
 
-   Return of a variant result is indicated either by the nature of the 
-   returned value, or by R_variant_result being set to a non-zero value
-   (to 1 unless something else is used to provide further details, but
-   the top bit, 0x80000000, is reserved for use by VARIANT_DIRECT_RETURN,
-   perhaps in combination with lower bits specifying the type of result).
-   If a call of evalv leads to R_variant_result being non-zero, the caller 
-   must set R_variant_result to zero after noting its value, so an outer 
-   return will not appear to have a variant result (unless that is what
-   should happen).  
+   Return of a variant result is indicated either by the nature of the
+   returned value, or by R_variant_result being set to a non-zero
+   value (to 1 unless something else is used to provide further
+   details, but the upper bits are flags that may be combined with
+   separate info in lower bits).  If a call of evalv makes
+   R_variant_result be non-zero, the caller must set R_variant_result
+   to zero after noting its value, so an outer return will not appear
+   to have a variant result (unless that is what should happen).
 
    A caller of evalv need not set R_variant_result to zero before a call,
    since that is done inside evalv. 
@@ -567,10 +566,6 @@ typedef struct {
                                    pairlist with this element (used for $).
                                    Does not set R_variant_result. */
 
-#define VARIANT_UNCLASS 0x08    /* May return an object with a class attribute
-                                   that should not be present (eg, from unclass)
-                                   Sets R_variant_result to 1 if so. */
-
 /* Variant kinds that are not passed on. */
 
 #define VARIANT_LOCAL_ASSIGN1 0x10  /* May assign result to the first operand.
@@ -604,7 +599,8 @@ typedef struct {
 #define VARIANT_STATIC_BOX_OK 0x0800 /* May return the result in a statically
                                         allocated SEXPREC that is used for all
                                         returns of values of its type.  Value
-                                        in box never has computation pending. */
+                                        in box never has computation pending.
+                                        Does not set R_variant_result. */
 
 #define VARIANT_ANY_ATTR 0x1000  /* May return any (or no) attributes, since the
                                     attributes will be ignored by the caller,
@@ -619,6 +615,12 @@ typedef struct {
                                           attributes must be returned correctly.
                                           Does not set R_variant_result. */
 
+#define VARIANT_UNCLASS 0x4000  /* May return an object with a class attribute
+                                   that should not be present (eg, unclass).
+                                   VARIANT_UNCLASS_FLAG set in R_variant_result
+                                   if so (but if in PRIMFUN_ARG1VAR, eval will
+                                   clear to 0). */
+
 /* Variant flags that are not passed on. */
 
 #define VARIANT_MISSING_OK 0x10000  /* A missing value will be returned as 
@@ -627,7 +629,9 @@ typedef struct {
 
 /* Flags in R_variant_result. */
 
-#define VARIANT_RTN_FLAG 0x80000000  /* Bit flagging a direct return */
+#define VARIANT_RTN_FLAG 0x80000000     /* Bit flagging a direct return */
+
+#define VARIANT_UNCLASS_FLAG 0x40000000 /* Result has class but shouldn't */
 
 
 #ifdef R_DEFERRED_EVAL

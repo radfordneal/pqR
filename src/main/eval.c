@@ -666,9 +666,9 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
                                   PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
 
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
-                if (VARIANT_KIND (PRIMFUN_ARG1VAR (op)) == VARIANT_UNCLASS
-                       && R_variant_result) {
-                    R_variant_result = 0;
+                if ((PRIMFUN_ARG1VAR (op) & VARIANT_UNCLASS)
+                       && (R_variant_result & VARIANT_UNCLASS_FLAG)) {
+                    R_variant_result &= ~VARIANT_UNCLASS_FLAG;
                 }
                 else {
                     UNPROTECT(1);
@@ -735,9 +735,9 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
             PROTECT(arg1 = EVALV (arg1, rho, PRIMFUN_ARG1VAR(op)));
 
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
-                if (VARIANT_KIND (PRIMFUN_ARG1VAR (op)) == VARIANT_UNCLASS
-                       && R_variant_result) {
-                    R_variant_result = 0;
+                if ((PRIMFUN_ARG1VAR (op) & VARIANT_UNCLASS)
+                       && (R_variant_result & VARIANT_UNCLASS_FLAG)) {
+                    R_variant_result &= ~VARIANT_UNCLASS_FLAG;
                 }
                 else {
                     UNPROTECT(1);
