@@ -2671,6 +2671,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        binding cell, if we have one. */
 
     if (bcell != R_NilValue && CAR(bcell) == newval) {
+        SET_MISSING(bcell,0);
         /* The replacement function might have changed NAMEDCNT to 0. */
         if (NAMEDCNT_EQ_0(varval))
             SET_NAMEDCNT_1(varval);
@@ -2799,6 +2800,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
                 }
                 res = duplicate(res);
                 SETCAR (R_binding_cell, res);
+                /* DON'T clear MISSING, though may not get here if it matters */
             }
             if (NAMEDCNT_EQ_0(res))
                 SET_NAMEDCNT_1(res);
