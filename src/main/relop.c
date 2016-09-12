@@ -46,10 +46,11 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP raw_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 
 SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
-                               SEXP env, int variant)
+                               int objx, int objy, SEXP env, int variant)
 {
-    SEXP klass = R_NilValue, dims, tsp=R_NilValue;
-    SEXP xnames, ynames, tmp, ans;
+    SEXP klass = R_NilValue;
+    SEXP tsp = R_NilValue;
+    SEXP xnames, ynames, tmp, ans, dims;
     int nx, ny, xarray, yarray, xts, yts;
     Rboolean mismatch = FALSE, iS;
     PROTECT_INDEX xpi, ypi;
@@ -220,19 +221,19 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 	    if (!tsConform(x, y))
 		errorcall(call, _("non-conformable time series"));
 	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    PROTECT(klass = !objx ? R_NilValue : getAttrib(x, R_ClassSymbol));
 	}
 	else if (xts) {
 	    if (length(x) < length(y))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
 	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    PROTECT(klass = !objx ? R_NilValue : getAttrib(x, R_ClassSymbol));
 	}
 	else /*(yts)*/ {
 	    if (length(y) < length(x))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
 	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    PROTECT(klass = !objy ? R_NilValue : getAttrib(y, R_ClassSymbol));
 	}
     }
     if (mismatch)
@@ -269,7 +270,9 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             break;
         }
     }
-    else if (isInteger(x) || isInteger(y)) {
+    else if (TYPEOF(x) == INTSXP || TYPEOF(y) == INTSXP) {
+                                /* NOT isInteger, since it needs to be true for
+                                   factors with VARIANT_UNCLASS_FLAG */
 	REPROTECT(x = coerceVector(x, INTSXP), xpi);
 	REPROTECT(y = coerceVector(y, INTSXP), ypi);
 	ans = integer_relop (code, negate, x, y);
@@ -314,15 +317,17 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP argsevald, ans, x, y;
+    int objx, objy;
 
     /* Evaluate arguments, maybe putting them in static boxes. */
 
-    PROTECT(argsevald = static_box_eval2 (args, &x, &y, env, call));
+    PROTECT(argsevald = 
+      static_box_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
     PROTECT2(x,y);
 
     /* Check for dispatch on S3 or S4 objects. */
 
-    if (isObject(x) || isObject(y)) {
+    if (objx || objy) {
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
             return ans;
@@ -337,7 +342,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Arguments are now in x and y, and are protected.  They may be static
        boxes. */
 
-    ans = R_relop (call, op, x, y, env, variant);
+    ans = R_relop (call, op, x, y, objx, objy, env, variant);
 
     UNPROTECT(3);
     return ans;

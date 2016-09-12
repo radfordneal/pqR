@@ -814,6 +814,17 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     return(ans);
 }
 
+SEXP attribute_hidden Rf_makeUnclassed (SEXP a)
+{
+    if (isObject(a)) {
+        PROTECT(a = duplicate(a));
+        setAttrib(a, R_ClassSymbol, R_NilValue);
+        UNPROTECT(1);
+    }
+
+    return a;
+}
+
 /* primitive */
 static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
@@ -835,11 +846,8 @@ static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (isObject(a)) {
         if (variant & VARIANT_UNCLASS)
             R_variant_result = VARIANT_UNCLASS_FLAG;
-        else {
-            PROTECT(a = duplicate(a));
-            setAttrib(a, R_ClassSymbol, R_NilValue);
-            UNPROTECT(1);
-        }
+        else
+            a = Rf_makeUnclassed (a);
     }
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(a);

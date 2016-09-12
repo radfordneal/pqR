@@ -1,5 +1,5 @@
 
-pqR version 2.15.0 (2016-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
@@ -270,5 +270,27 @@ Error in parse(text = "12iL") : <text>:1:4: unexpected symbol
 > ## as.list.function() instead of *.default():
 > identical(as.list(as.list),
 + 	  alist(x = , ... = , UseMethod("as.list")))
+[1] TRUE
+> 
+> ## Correctness of optimizing away unclass.
+> a <- c(3,1,2)
+> b <- c(6,1,9)
+> x <- structure (c(10,40,20), class="fred")
+> y <- structure (c(30,20,40), class="fred")
+> exp.fred <- function (x) structure (10*x, class="fred")
+> `+.fred` <- function (e1,e2) 
++               structure ((unclass(e1)+unclass(e2)) * 1000, class="fred")
+> `<.fred` <- function (e1,e2) unclass(e1)*2 < unclass(e2)
+> identical(exp(x),structure(c(100,400,200),class="fred"))
+[1] TRUE
+> identical(x+y,structure(c(40000,60000,60000),class="fred"))
+[1] TRUE
+> identical(x+b,structure(c(16000,41000,29000),class="fred"))
+[1] TRUE
+> identical(a+y,structure(c(33000,21000,42000),class="fred"))
+[1] TRUE
+> identical(x<y,c(TRUE,FALSE,FALSE))
+[1] TRUE
+> identical(b<x,c(FALSE,TRUE,TRUE))
 [1] TRUE
 > 

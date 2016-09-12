@@ -7,7 +7,8 @@ Also a variant result (VARIANT_ANY_ATTR) in which any attributes may
 ignored by the caller anyway.  And a variant result (VARIANT_ANY_ATTR_EX_DIM)
 like this excep that the dim attriute must be correct.
 
-Use these in do_for, do_sum, do_prod, and do_length, do_subset3.
+Use these in do_for, do_sum, do_prod, and do_length, do_subset3, do_arith,
+and do_relop.
 
 Pay attention to VARIANT_UNCLASS in unclass.
 

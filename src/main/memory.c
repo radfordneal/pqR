@@ -4813,9 +4813,6 @@ R_FreeStringBufferL(R_StringBuffer *buf)
 SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n,
                                       int local_assign1, int local_assign2)
 {
-/*  if (n == 0) 
-        return allocVector (typ, 0); */
-
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
 

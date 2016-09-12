@@ -1122,6 +1122,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define ComplexFromReal	Rf_ComplexFromReal
 # define ComplexFromString	Rf_ComplexFromString
 # define copyListMatrix		Rf_copyListMatrix
+# define copyMostAttribNoClass	Rf_copyMostAttribNoClass
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
@@ -1332,6 +1333,7 @@ void R_check_locale(void);
 void check_stack_balance(SEXP op, int save);
 void CleanEd(void);
 void copyListMatrix(SEXP, SEXP, Rboolean);
+void copyMostAttribNoClass(SEXP, SEXP);
 void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);
@@ -1390,6 +1392,7 @@ void KillAllDevices(void);
 SEXP levelsgets(SEXP, SEXP);
 void mainloop(void);
 SEXP makeSubscript(SEXP, SEXP, int *, SEXP, int);
+SEXP Rf_makeUnclassed(SEXP);
 SEXP markKnown(const char *, SEXP);
 SEXP mat2indsub(SEXP, SEXP, SEXP);
 SEXP matchArg(SEXP, SEXP*);

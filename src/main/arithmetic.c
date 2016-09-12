@@ -313,17 +313,18 @@ static double logbase(double x, double base)
 
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    int opcode = PRIMVAL(op);
+    int opcode = PRIMVAL(op), obj1, obj2;
     SEXP argsevald, ans, arg1, arg2;
 
     /* Evaluate arguments, maybe putting them in static boxes. */
 
-    PROTECT(argsevald = static_box_eval2 (args, &arg1, &arg2, env, call));
+    PROTECT(argsevald = 
+      static_box_eval2 (args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
     PROTECT2(arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
 
-    if (isObject(arg1) || isObject(arg2)) {
+    if (obj1 || obj2) {
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
             return ans;
@@ -464,8 +465,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Otherwise, handle the general case (but won't be a static box). */
 
     ans = CDR(argsevald)==R_NilValue 
-           ? R_unary (call, op, arg1, env, variant) 
-           : R_binary (call, op, arg1, arg2, env, variant);
+           ? R_unary (call, op, arg1, obj1, env, variant) 
+           : R_binary (call, op, arg1, arg2, obj1, obj2, env, variant);
 
   ret:
     UNPROTECT(3);
@@ -909,7 +910,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 #define T_arithmetic THRESHOLD_ADJUST(24)  /* >= 8, further adjusted below */
 
 SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, 
-                                SEXP env, int variant)
+                                int objx, int objy, SEXP env, int variant)
 {
     helpers_task_proc *task;
     SEXP klass, dims, tsp, xnames, ynames, ans;
@@ -931,7 +932,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         xattr = TRUE;
         xarray = isArray(x);
         xts = isTs(x);
-        xS4 = isS4(x);
+        xS4 = objx && isS4(x);
     }
     else xarray = xts = xattr = FALSE;
     ny = LENGTH(y);
@@ -939,7 +940,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         yattr = TRUE;
         yarray = isArray(y);
         yts = isTs(y);
-        yS4 = isS4(y);
+        yS4 = objy && isS4(y);
     }
     else yarray = yts = yattr = FALSE;
 
@@ -997,19 +998,19 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             if (!tsConform(x, y))
                 errorcall(call, _("non-conformable time-series"));
             PROTECT(tsp = getAttrib(x, R_TspSymbol));
-            PROTECT(klass = getAttrib(x, R_ClassSymbol));
+            PROTECT(klass = !objx ? R_NilValue : getAttrib(x, R_ClassSymbol));
         }
         else if (xts) {
             if (nx < ny)
                 ErrorMessage(call, ERROR_TSVEC_MISMATCH);
             PROTECT(tsp = getAttrib(x, R_TspSymbol));
-            PROTECT(klass = getAttrib(x, R_ClassSymbol));
+            PROTECT(klass = !objx ? R_NilValue : getAttrib(x, R_ClassSymbol));
         }
         else {                        /* (yts) */
             if (ny < nx)
                 ErrorMessage(call, ERROR_TSVEC_MISMATCH);
             PROTECT(tsp = getAttrib(y, R_TspSymbol));
-            PROTECT(klass = getAttrib(y, R_ClassSymbol));
+            PROTECT(klass = !objy ? R_NilValue : getAttrib(y, R_ClassSymbol));
         }
         nprotect += 2;
     }
@@ -1042,6 +1043,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         COERCE_IF_NEEDED(x, CPLXSXP, xpi);
         COERCE_IF_NEEDED(y, CPLXSXP, ypi);
         ans = alloc_or_reuse (x, y, CPLXSXP, n, local_assign1, local_assign2);
+        if (isObject(ans) && !objx && !objy)
+            ans = allocVector (CPLXSXP, n);
         task = task_complex_arithmetic;
         flags = 0;  /* Not bothering with pipelining yet. */
     }
@@ -1049,6 +1052,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
          /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
             and assumes INT and LOGICAL are really the same. */
         ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
+        if (isObject(ans) && !objx && !objy)
+            ans = allocVector (REALSXP, n);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
         if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
@@ -1070,8 +1075,11 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
            this won't be true if they aren't really the same */
         if (oper == DIVOP || oper == POWOP)
             ans = allocVector(REALSXP, n);
-        else
+        else {
             ans = alloc_or_reuse(x, y, INTSXP, n, local_assign1, local_assign2);
+            if (isObject(ans) && !objx && !objy)
+                ans = allocVector (INTSXP, n);
+        }
         task = task_integer_arithmetic;
 
        /* Only ^, /, and %/% can be done in helpers at present - others must be
@@ -1109,13 +1117,12 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
     /* Copy attributes from arguments as needed. */
 
-    if ((xattr || yattr) 
-          && (isObject(x) || isObject(y) || !(variant & VARIANT_ANY_ATTR))) {
+    if ((xattr || yattr) && (objx || objy || !(variant & VARIANT_ANY_ATTR))) {
 
         if (yattr && ny==n && ans!=y)
-            copyMostAttrib(y, ans);
-        if (xattr && nx==n && ans!=x)
-            copyMostAttrib(x, ans); /* Done 2nd so x's attrs overwrite y's */
+            objy ? copyMostAttrib(y, ans) : copyMostAttribNoClass(y, ans);
+        if (xattr && nx==n && ans!=x) /* Done 2nd so x's attrs overwrite y's */
+            objx ? copyMostAttrib(x, ans) : copyMostAttribNoClass(x, ans);
     
         /* Don't set the dims if one argument is an array of size 0 and the
            other isn't of size zero, cos they're wrong */
@@ -1212,7 +1219,7 @@ void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
 
 #define T_unary_minus THRESHOLD_ADJUST(20)
 
-SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, 
+SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
                                SEXP env, int variant)
 {
     ARITHOP_TYPE operation = (ARITHOP_TYPE) PRIMVAL(op);
@@ -1228,7 +1235,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1,
 
     if (operation==PLUSOP) {
         if (type != LGLSXP)
-            ans = s1;
+            ans = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
         else {
             ans = allocVector (INTSXP, n);
             WAIT_UNTIL_COMPUTED(s1);
@@ -1238,6 +1245,8 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1,
     else if (operation==MINUSOP) {
         if (type == LGLSXP) 
             ans = allocVector (INTSXP, n);
+        else if (isObject(s1) && !obj1)
+            ans = allocVector(type,n);
         else {
             if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1
               && !NAMEDCNT_GT_1(s1) && s1 == findVarInFrame3(env,CADR(call),7))
@@ -1254,9 +1263,11 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1,
         errorcall(call, _("invalid argument to unary operator"));
 
     if (ans != s1 && ATTRIB(s1) != R_NilValue 
-         && (isObject(s1) || !(variant & VARIANT_ANY_ATTR))) {
+         && (obj1 || !(variant & VARIANT_ANY_ATTR))) {
         PROTECT(ans);
         DUPLICATE_ATTRIB(ans,s1);
+        if (isObject(ans) && !obj1) 
+            ans = Rf_makeUnclassed(ans);
         UNPROTECT(1);
     }
 
@@ -1575,7 +1586,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
 
-    if (isInteger(x) || isLogical(x)) {
+    if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);

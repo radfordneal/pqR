@@ -957,7 +957,7 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
                   to finish.
 
     7             Like 3, except that it returns R_UnboundValue if the 
-                  binding found is active or locked.
+                  binding found is active, or locked, or from a user database.
 
   Note that (option&1)!=0 if a get should aways be done on a user database,
   and (option&2)!=0 if we don't need to wait.
@@ -1049,6 +1049,8 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
     }
 
     else if (IS_USER_DATABASE(rho)) {
+        if (option==7)
+            return R_UnboundValue;
 	/* Use the objects function pointer for this symbol. */
 	R_ObjectTable *table = (R_ObjectTable *)R_ExternalPtrAddr(HASHTAB(rho));
 	value = R_UnboundValue;

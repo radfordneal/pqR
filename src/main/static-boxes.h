@@ -26,15 +26,18 @@
  */
 
 
-/* Inline function used by operators that can take operands in static boxes.
+/* Inline function used by operators that can take operands in static boxes,
+   and that can handle unclassed objects (VARIANT_UNCLASS_FLAG).
 
    Evaluates two arguments that may be put in static boxes.  The two
-   arguments are returned in arg1 and arg2.  A list of the evaluated
-   arguments is returned as the value of the function, if one of the
-   first two is an object, so that dispatch must be attempted (note
-   that the argument count in this case may not be two).  If neither
-   is an object, a list with the correct number of arguments is 
-   returned, but they may (or may not) be the unevaluated arguments. 
+   arguments are returned in arg1 and arg2, and whether they are
+   objects (accounting for VARIANT_UNCLASS_FLAG) in obj1 and obj2. 
+   A list of the evaluated arguments is returned as the value of the
+   function, if one of the first two is an object, so that dispatch
+   must be attempted (note that the argument count in this case may
+   not be two).  If neither is an object, a list with the correct
+   number of arguments is returned, but they may (or may not) be the
+   unevaluated arguments.
 
    If an argument is an object, all arguments will have been computed
    before return from this function, but evaluation of arguments may 
@@ -45,14 +48,16 @@
 
    The args and env arguments must be protected by the caller. */
 
-static inline SEXP static_box_eval2 
-                     (SEXP args, SEXP *arg1, SEXP *arg2, SEXP env, SEXP call)
+static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
+                     int *obj1, int *obj2, SEXP env, SEXP call, int variant)
 {
     SEXP argsevald;
     SEXP x, y;
 
     x = CAR(args); 
     y = CADR(args);
+
+    *obj1 = *obj2 = 0;
 
     /* We evaluate by the general procedure if ... present or more than
        two arguments, not trying to put args in static boxes. */
@@ -61,17 +66,28 @@ static inline SEXP static_box_eval2
         argsevald = evalList (args, env);
         x = CAR(argsevald);
         y = CADR(argsevald);
+        *obj1 = isObject(x);
+        *obj2 = isObject(y);
         goto rtrn;
     }
 
-    /* Otherwise, we try to put the first arg in a static box. */
+    /* Otherwise, we try to put the first arg in a static box, and evaluate
+       with VARIANT_UNCLASS. */
 
-    PROTECT(x = EVALV (x, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK));
+    PROTECT(x = EVALV (x, env, 
+                 VARIANT_STATIC_BOX_OK | VARIANT_UNCLASS | VARIANT_PENDING_OK));
+
+    if (isObject(x)) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG)
+            R_variant_result = 0;
+        else
+            *obj1 = 1;
+    }
 
     /* If first arg is an object, we evaluate the rest of the arguments
        normally. */
 
-    if (isObject(x)) {
+    if (*obj1) {
         argsevald = evalList (CDR(args), env);
         y = CAR(argsevald);
         argsevald = cons_with_tag (x, argsevald, TAG(args));
@@ -102,7 +118,18 @@ static inline SEXP static_box_eval2
         x = R_ScalarIntegerBox0;
     }
 
-    y = EVALV (y, env, VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK);
+    /* Now we evaluate the second argument, also allowing it to be in
+       a static box, or with VARIANT_UNCLASS_FLAG. */
+
+    y = EVALV (y, env, 
+               VARIANT_UNCLASS | VARIANT_STATIC_BOX_OK | VARIANT_PENDING_OK);
+
+    if (isObject(y)) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG)
+            R_variant_result = 0;
+        else
+            *obj2 = 1;
+    }
 
     if (x == R_ScalarRealBox0)
         *REAL(x) = realv;
@@ -110,15 +137,22 @@ static inline SEXP static_box_eval2
         *INTEGER(x) = intv;
 
     /* If the second arg is an object, we have to duplicate the first
-       arg if it is in a static box, and create the list of evaluated
-       arguments. */
+       arg if it is in a static box, or an unclassed object, and create 
+       the list of evaluated arguments. */
 
-    if (isObject(y)) {
-        UNPROTECT(1); /* x */
-        PROTECT(y);
-        if (IS_STATIC_BOX(x))
-            x = duplicate(x);
-        PROTECT(x);
+    if (*obj2) {
+        if (IS_STATIC_BOX(x) || isObject(x)) /* can't be both */ {
+            UNPROTECT(1); /* x */
+            PROTECT(y);
+            if (IS_STATIC_BOX(x))
+                PROTECT(x = duplicate(x));
+            else { /* isObject(x) */
+                PROTECT(x = Rf_makeUnclassed(x));
+                *obj1 = 0;
+            }
+        }
+        else
+            PROTECT(y);
         argsevald = evalList (CDDR(args), env);
         argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
         argsevald = cons_with_tag (x, argsevald, TAG(args));

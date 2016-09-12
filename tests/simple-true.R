@@ -166,3 +166,19 @@ all(rank(x, na.last = NA) == na.omit(rxK))
 ## as.list.function() instead of *.default():
 identical(as.list(as.list),
 	  alist(x = , ... = , UseMethod("as.list")))
+
+## Correctness of optimizing away unclass.
+a <- c(3,1,2)
+b <- c(6,1,9)
+x <- structure (c(10,40,20), class="fred")
+y <- structure (c(30,20,40), class="fred")
+exp.fred <- function (x) structure (10*x, class="fred")
+`+.fred` <- function (e1,e2) 
+              structure ((unclass(e1)+unclass(e2)) * 1000, class="fred")
+`<.fred` <- function (e1,e2) unclass(e1)*2 < unclass(e2)
+identical(exp(x),structure(c(100,400,200),class="fred"))
+identical(x+y,structure(c(40000,60000,60000),class="fred"))
+identical(x+b,structure(c(16000,41000,29000),class="fred"))
+identical(a+y,structure(c(33000,21000,42000),class="fred"))
+identical(x<y,c(TRUE,FALSE,FALSE))
+identical(b<x,c(FALSE,TRUE,TRUE))
