@@ -144,8 +144,8 @@ SEXP do_readlines(SEXP, SEXP, SEXP, SEXP);
 
 
 
-SEXP R_relop(SEXP, SEXP, SEXP, SEXP, SEXP, int);
-SEXP R_unary(SEXP, SEXP, SEXP, SEXP, int);
-SEXP R_binary(SEXP, SEXP, SEXP, SEXP, SEXP, int);
+SEXP R_relop(SEXP, SEXP, SEXP, SEXP, int, int, SEXP, int);
+SEXP R_unary(SEXP, SEXP, SEXP, int, SEXP, int);
+SEXP R_binary(SEXP, SEXP, SEXP, SEXP, int, int, SEXP, int);
 
 #endif /* not R_INTERNAL_H */

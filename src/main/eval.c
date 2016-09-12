@@ -3968,7 +3968,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	}
 	UNPROTECT(1);
     }
-    return R_relop (call, op, x, y, rho, 0);
+    return R_relop (call, op, x, y, isObject(x), isObject(y), rho, 0);
 }
 
 static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
@@ -3984,7 +3984,7 @@ static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 	}
 	UNPROTECT(1);
     }
-    return R_unary(call, op, x, rho, 0);
+    return R_unary(call, op, x, isObject(x), rho, 0);
 }
 
 static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
@@ -4005,7 +4005,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	}
 	UNPROTECT(1);
     }
-    return R_binary(call, op, x, y, rho, 0);
+    return R_binary(call, op, x, y, isObject(x), isObject(y), rho, 0);
 }
 
 #define Builtin1(do_fun,which,rho) do { \

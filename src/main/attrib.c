@@ -327,6 +327,27 @@ void copyMostAttrib(SEXP inp, SEXP ans)
     UNPROTECT(2);
 }
 
+/* Version that doesn't copy class, for VARIANT_UNCLASS. */
+
+void attribute_hidden copyMostAttribNoClass(SEXP inp, SEXP ans)
+{
+    SEXP s;
+
+    if (ans == R_NilValue)
+	error(_("attempt to set an attribute on NULL"));
+
+    PROTECT2(ans,inp);
+    for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
+	if ((TAG(s) != R_NamesSymbol) &&
+	    (TAG(s) != R_ClassSymbol) &&
+	    (TAG(s) != R_DimSymbol) &&
+	    (TAG(s) != R_DimNamesSymbol)) {
+	    installAttrib(ans, TAG(s), CAR(s));
+	}
+    }
+    UNPROTECT(2);
+}
+
 /* version that does not preserve ts information, for subsetting */
 void attribute_hidden copyMostAttribNoTs(SEXP inp, SEXP ans)
 {
