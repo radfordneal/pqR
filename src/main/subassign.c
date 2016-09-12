@@ -991,18 +991,24 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     return x;
 }
 
-static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y, SEXP call)
+/* "x" is the vector that is to be assigned into, y is the vector that
+    is going to provide the new values and subs is the vector of
+    subscripts that are going to be replaced.  
+
+    Destructively modifies args. */
+
+static void SubAssignArgs(SEXP args, SEXP *x, SEXP *subs, SEXP *y, SEXP call)
 {
     *x = CAR(args); /* OK even if args is R_NilValue */
     if (args == R_NilValue || (args = CDR(args)) == R_NilValue)
 	errorcall(call,_("SubAssignArgs: invalid number of arguments"));
 
     if (CDR(args) == R_NilValue) {
-	*s = R_NilValue;
+	*subs = R_NilValue;
 	*y = CAR(args);
     }
     else {
-        *s = args;
+        *subs = args;
 	while (CDDR(args) != R_NilValue)
 	    args = CDR(args);
 	*y = CADR(args);
@@ -1010,9 +1016,7 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y, SEXP call)
     }
 }
 
-/* The [<- operator.  "x" is the vector that is to be assigned into, 
-   y is the vector that is going to provide the new values and subs is
-   the vector of subscripts that are going to be replaced. */
+/* The [<- operator. */
 
 static SEXP do_subassign_dflt_seq 
               (SEXP call, SEXP op, SEXP args, SEXP rho, int seq);
@@ -1078,7 +1082,6 @@ static SEXP do_subassign_dflt_seq
     SEXP subs, x, y;
 
     PROTECT(args);
-
     SubAssignArgs(args, &x, &subs, &y, call);
 
     Rboolean S4 = IS_S4_OBJECT(x);
@@ -1131,8 +1134,46 @@ static SEXP do_subassign_dflt_seq
                     x = VectorAssignSeq (call, x, start, end, y);
             }
         }
-        if (sub1 != NULL)
+        if (sub1 != NULL) {
+            /* do simple scalar cases quickly */
+            if ((TYPEOF(sub1) == INTSXP || TYPEOF(sub1) == REALSXP)
+                  && LENGTH(sub1) == 1 && TYPEOF(x) == TYPEOF(y) 
+                  && isVector(x)) {
+                double sub;
+                if (TYPEOF(sub1) == INTSXP)
+                    sub = *INTEGER(sub1) == NA_INTEGER ? 0 : *INTEGER(sub1);
+                else
+                    sub = ISNAN(*REAL(sub1)) ? 0 : *REAL(sub1);
+                if (sub >= 1 && sub <= LENGTH(x)) {
+                    int isub = (int) sub - 1;
+                    switch (TYPEOF(x)) {
+                        case RAWSXP: 
+                            RAW(x)[isub] = *RAW(y);
+                            break;
+                        case LGLSXP: 
+                            LOGICAL(x)[isub] = *LOGICAL(y);
+                            break;
+                        case INTSXP: 
+                            INTEGER(x)[isub] = *INTEGER(y);
+                            break;
+                        case REALSXP: 
+                            REAL(x)[isub] = *REAL(y);
+                            break;
+                        case CPLXSXP: 
+                            COMPLEX(x)[isub] = *COMPLEX(y);
+                            break;
+                        case VECSXP: case EXPRSXP:
+                            SET_VECTOR_ELT (x, isub, VECTOR_ELT(y,0));
+                            break;
+                        case STRSXP:
+                            SET_STRING_ELT (x, isub, STRING_ELT(y,0));
+                            break;
+                    }
+                    goto out;
+                }
+            }
             x = VectorAssign (call, x, sub1, y);
+        }
     }
     else if (CDDR(subs) == R_NilValue) {
         /* 2 subscript arguments */
@@ -1143,6 +1184,7 @@ static SEXP do_subassign_dflt_seq
         x = ArrayAssign(call, x, subs, y);
     }
 
+  out:
     if (oldtype == LANGSXP) {
 	if (LENGTH(x)==0)
 	    errorcall(call,
