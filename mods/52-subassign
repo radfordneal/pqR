@@ -1,0 +1,2 @@
+Speed up simple scalar assignments with [<- when index is a positive
+number, replacement is a scalar, and types match.
