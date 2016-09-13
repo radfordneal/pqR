@@ -38,13 +38,14 @@
   functions, \code{if} or \code{while} conditions, or the object
   iterated over for \code{for}.
 
-  The \code{<<-} and \code{->>} operators cause a search to made
-  through succesive enclosing environments for an existing definition
-  of the variable being assigned.  If such a variable is found (and
-  its binding is not locked) then its value is redefined, otherwise
-  assignment takes place in the immediate enclosing environment
-  (which will be the global environment if the function was defined
-  in the global environment).
+  The \code{<<-} and \code{->>} operators cause a search to made through
+  the environment for an existing definition of the variable being
+  assigned.  If such a variable is found (and its binding is not locked)
+  then its value is redefined, otherwise assignment takes place in the
+  global environment.  Note that their semantics differ from that in the
+  S language, but are useful in conjunction with the scoping rules of
+  \R.  See \sQuote{The R Language Definition} manual for further details
+  and examples.
 
   In all the assignment operator expressions, \code{x} can be a name
   or an expression defining a part of an object to be replaced (e.g.,
