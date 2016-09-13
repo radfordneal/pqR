@@ -115,7 +115,7 @@ stopifnot(inherits(z, "try-error"))
 
 ## infinite loop in format.AsIs reported on R-help by Bert Gunter
 ## https://stat.ethz.ch/pipermail/r-help/2008-January/149504.html
-z <- rep(Sys.time(),5)
+z <- rep(as.POSIXct("2016-09-13 11:53:19 EDT"),5)
 data.frame(I(z))
 ##
 
@@ -365,10 +365,10 @@ stopifnot(rcond(cbind(1, c(3,3))) == 0)
 
 
 ## dispatch when primitives are called from lapply.
-x <- data.frame(d=Sys.Date())
+x <- data.frame(d=as.Date("2016-09-13"))
 stopifnot(sapply(x, is.numeric) == FALSE)
 # TRUE in 2.7.1, tried to dispatch on "FUN"
-(ds <- seq(from=Sys.Date(), by=1, length=4))
+(ds <- seq(from=as.Date("2016-09-13"), by=1, length=4))
 lapply(list(d=ds), round)
 # failed in 2.7.1 with 'dispatch error' since call had '...' arg
 ## related to calls being passed unevaluated by lapply.
@@ -810,7 +810,7 @@ stopifnot(all.equal(cor.test(x, y, method="spearman", alternative="greater")$p.v
 
 
 ## median should work on POSIXt objects (it did in 2.8.0)
-median(rep(Sys.time(), 2))
+median(rep(as.POSIXct("2016-09-13 11:53:19 EDT"), 2))
 ## failed in 2.8.1, 2.9.0
 
 
@@ -1487,7 +1487,8 @@ identical(colnames(X), colnames(X2))
 
 
 ## improvements to aggregate.data.frame in 2.13.0
-a <- data.frame(nm = c("a", "b", "a", "b"), time = rep(Sys.time(), 4))
+a <- data.frame(nm = c("a", "b", "a", "b"), 
+                time = rep(as.POSIXct("2016-09-13 11:53:19 EDT"), 4))
 b <- with(a, aggregate(time, list(nm=nm), max))
 stopifnot(inherits(b$x, "POSIXt"))
 ##
@@ -1860,5 +1861,3 @@ by(a, a["ppg.id"], function(x){
     data.frame(ppg.id=id, predVolSum=vol.sum)
 })
 ## failed in 2.15.0
-
-proc.time()
