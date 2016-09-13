@@ -2440,8 +2440,13 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     depth = 1;
     for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
-        if (TYPEOF(var) != LANGSXP)
+        if (TYPEOF(var) != LANGSXP) {
+            if (TYPEOF(var) == STRSXP && LENGTH(var) == 1) {
+                var = install (CHAR (STRING_ELT(var,0)));
+                break;
+            }
             errorcall (call, _("invalid assignment left-hand side"));
+        }
         depth += 1;
     }
 
