@@ -1020,7 +1020,10 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (args != R_NilValue && CAR(args) != R_DotsSymbol 
          && (a2 = CDR(args)) != R_NilValue && CAR(a2) != R_DotsSymbol
          && (a3 = CDR(a2)) != R_NilValue && CDR(a3) == R_NilValue) {
-        PROTECT(a1 = eval(CAR(args),rho));
+        /* Note: mostly called from do_set, w first arg an evaluated promise */
+        a1 = CAR(args);
+        PROTECT(a1 = TYPEOF(a1) == PROMSXP && PRVALUE(a1) != R_UnboundValue
+                       ? PRVALUE(a1) : eval(a1,rho));
 	if (isObject(a1)) {
             args = CONS(a1,a2);
             UNPROTECT(1);
@@ -1511,7 +1514,9 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 
     into = CAR(args);
     if (into != R_DotsSymbol) {
-        into = eval (into, env);
+        /* Note: mostly called from do_set, w first arg an evaluated promise */
+        into = TYPEOF(into) == PROMSXP && PRVALUE(into) != R_UnboundValue
+                 ? PRVALUE(into) : eval (into, env);
         if (isObject(into)) {
             argsevald = -1;
         } 
