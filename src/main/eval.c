@@ -2037,8 +2037,7 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
         }
     }
 
-    first = CONS (fun, CONS(varval, first));
-    SET_TYPEOF (first, LANGSXP);
+    first = LCONS (fun, CONS(varval, first));
 
     return first;
 }
