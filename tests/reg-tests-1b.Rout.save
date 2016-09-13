@@ -200,14 +200,14 @@ Error in cor(numeric(0), numeric(0), use = "pairwise.complete.obs", method = "ke
 > 
 > ## infinite loop in format.AsIs reported on R-help by Bert Gunter
 > ## https://stat.ethz.ch/pipermail/r-help/2008-January/149504.html
-> z <- rep(Sys.time(),5)
+> z <- rep(as.POSIXct("2016-09-13 11:53:19 EDT"),5)
 > data.frame(I(z))
              z
-1 2016-08-....
-2 2016-08-....
-3 2016-08-....
-4 2016-08-....
-5 2016-08-....
+1 2016-09-....
+2 2016-09-....
+3 2016-09-....
+4 2016-09-....
+5 2016-09-....
 > ##
 > 
 > 
@@ -481,14 +481,14 @@ Error in `[.data.frame`(dd, , "C") : undefined columns selected
 > 
 > 
 > ## dispatch when primitives are called from lapply.
-> x <- data.frame(d=Sys.Date())
+> x <- data.frame(d=as.Date("2016-09-13"))
 > stopifnot(sapply(x, is.numeric) == FALSE)
 > # TRUE in 2.7.1, tried to dispatch on "FUN"
-> (ds <- seq(from=Sys.Date(), by=1, length=4))
-[1] "2016-08-24" "2016-08-25" "2016-08-26" "2016-08-27"
+> (ds <- seq(from=as.Date("2016-09-13"), by=1, length=4))
+[1] "2016-09-13" "2016-09-14" "2016-09-15" "2016-09-16"
 > lapply(list(d=ds), round)
 $d
-[1] "2016-08-24" "2016-08-25" "2016-08-26" "2016-08-27"
+[1] "2016-09-13" "2016-09-14" "2016-09-15" "2016-09-16"
 
 > # failed in 2.7.1 with 'dispatch error' since call had '...' arg
 > ## related to calls being passed unevaluated by lapply.
@@ -1129,8 +1129,8 @@ Error in file(tmp, open = "r", encoding = "unknown") :
 > 
 > 
 > ## median should work on POSIXt objects (it did in 2.8.0)
-> median(rep(Sys.time(), 2))
-[1] "2016-08-24 22:09:09 EDT"
+> median(rep(as.POSIXct("2016-09-13 11:53:19 EDT"), 2))
+[1] "2016-09-13 11:53:19 EDT"
 > ## failed in 2.8.1, 2.9.0
 > 
 > 
@@ -1889,7 +1889,8 @@ In cmdscale(eurodist, eig = TRUE, k = 14) :
 > 
 > 
 > ## improvements to aggregate.data.frame in 2.13.0
-> a <- data.frame(nm = c("a", "b", "a", "b"), time = rep(Sys.time(), 4))
+> a <- data.frame(nm = c("a", "b", "a", "b"), 
++                 time = rep(as.POSIXct("2016-09-13 11:53:19 EDT"), 4))
 > b <- with(a, aggregate(time, list(nm=nm), max))
 > stopifnot(inherits(b$x, "POSIXt"))
 > ##
@@ -2361,8 +2362,4 @@ expression(function(x) switch(x, `\\dbc` = 2, 3))
 +     data.frame(ppg.id=id, predVolSum=vol.sum)
 + })
 > ## failed in 2.15.0
-> 
-> proc.time()
-   user  system elapsed 
-  0.728   0.128   0.856 
 > 
