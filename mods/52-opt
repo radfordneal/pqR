@@ -1,5 +1,5 @@
 Performance optimization / tuning.  (Also, a bit of general cleanup of
-comments, etc.)
+comments, etc., and one extension.)
 
 
 Got rid of saving of R_EvalDepth in eval, in favour of increment/decrement.
@@ -22,3 +22,7 @@ run-time check has been kept, but is currently never used.
 
 Changed how R_Visible is handled, updating R-ints.texi to explain new
 scheme.  This change reduces overhead in eval.
+
+
+For merge reasons, this branch also implements a change to allow things
+like "a"[3] <- 2, for consistency with "a" <- 2 being allowed.
