@@ -1485,7 +1485,7 @@ SEXP attribute_hidden do_subassign2_dflt
    to get DispatchOrEval to work we need to first translate it
    to a string. */
 
-static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP into, what, value, ans, string, ncall;
 
@@ -1495,7 +1495,17 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
 
-    what = CADR(args);
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+        value = CAR(args);
+        into = CADR(args);
+        what = CADDR(args);
+    }
+    else {
+        into = CAR(args);
+        what = CADR(args);
+        value = CADDR(args);
+    }
+
     if (TYPEOF(what) == PROMSXP)
         what = PRCODE(what);
 
@@ -1509,10 +1519,17 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call, _("invalid subscript type '%s'"), 
                         type2char(TYPEOF(what)));
 
+    /* Handle the fast case, for which 'into' and 'value' have been evaluated,
+       and 'into' is not an object. */
+
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+        if (name == R_NilValue) name = install(translateChar(schar));
+        return R_subassign3_dflt (call, into, name, value);
+    }
+
     /* Handle usual case with no "..." and not into an object quickly, without
        overhead of allocation and calling of DispatchOrEval. */
 
-    into = CAR(args);
     if (into != R_DotsSymbol) {
         /* Note: mostly called from do_set, w first arg an evaluated promise */
         into = TYPEOF(into) == PROMSXP && PRVALUE(into) != R_UnboundValue
@@ -1523,7 +1540,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
         else {
             PROTECT(into);
             if (name == R_NilValue) name = install(translateChar(schar));
-            value = eval (CADDR(args), env);
+            value = eval (value, env);
             UNPROTECT(1);
             return R_subassign3_dflt (call, into, name, value);
         }
@@ -1553,7 +1570,8 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
 }
 
-/* Also called directly from elsewhere. */
+/* Also called directly from elsewhere.  Protects x and val; name should be
+   a symbol and hence not needing protection. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
@@ -1717,7 +1735,7 @@ attribute_hidden FUNTAB R_FunTab_subassign[] =
 
 {"[<-",		do_subassign,	0,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"[[<-",	do_subassign2,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"$<-",		do_subassign3,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"$<-",		do_subassign3,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

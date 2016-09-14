@@ -469,16 +469,16 @@ typedef struct {
     setprim_ptr->u.primsxp.primsxp_fast_cfun = 0; \
     setprim_ptr->u.primsxp.primsxp_code   = R_FunTab[setprim_value].code; \
     setprim_ptr->u.primsxp.primsxp_arity  = R_FunTab[setprim_value].arity; \
-    setprim_ptr->u.primsxp.primsxp_foreign \
-        = R_FunTab[setprim_value].gram.kind==PP_FOREIGN; \
+    setprim_ptr->u.primsxp.primsxp_internal \
+        = (R_FunTab[setprim_value].eval/10)&1; \
     setprim_ptr->u.primsxp.primsxp_print \
         = (R_FunTab[setprim_value].eval/100)%10; \
     setprim_ptr->u.primsxp.primsxp_variant \
         = (R_FunTab[setprim_value].eval/1000)&1; \
-    setprim_ptr->u.primsxp.primsxp_internal \
-        = (R_FunTab[setprim_value].eval/10)&1; \
     NONVEC_SXPINFO(setprim_ptr).pending_ok \
-        = R_FunTab[setprim_value].eval/10000; \
+        = (R_FunTab[setprim_value].eval/10000)&1; \
+    setprim_ptr->u.primsxp.primsxp_fast_sub \
+        = (R_FunTab[setprim_value].eval/100000)&1; \
 } while (0)
 
 #define PRIMOFFSET(x)	((x)->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
@@ -494,7 +494,8 @@ typedef struct {
 #define PRIMPRINT(x)	((x)->u.primsxp.primsxp_print)
 #define PRIMINTERNAL(x)	((x)->u.primsxp.primsxp_internal)
 #define PRIMVARIANT(x)	((x)->u.primsxp.primsxp_variant)
-#define PRIMFOREIGN(x)	((x)->u.primsxp.primsxp_foreign)
+#define PRIMFASTSUB(x)	((x)->u.primsxp.primsxp_fast_sub)
+#define PRIMFOREIGN(x)	(R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
 #define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
 
@@ -579,6 +580,10 @@ typedef struct {
                                        the  result is an unshared subset of
                                        the first argument.  If set to 2, any
                                        change still must be propagated upwards*/
+
+#define VARIANT_FAST_SUBASSIGN 0x40 /* Call of a subassign primitive using the
+                                       fast interface (value, into, indexes...),
+                                       'value' and 'into' already evaluated */
 
 /* Variant flags that are passed on. */
 
