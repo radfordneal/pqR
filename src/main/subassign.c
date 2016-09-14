@@ -984,7 +984,26 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     Destructively modifies args. */
 
-static void SubAssignArgs(SEXP args, SEXP *x, SEXP *subs, SEXP *y, SEXP call)
+static void SubAssignArgs1(SEXP *subs, SEXP *y, SEXP call)
+{
+    SEXP args = *subs;
+
+    if (args == R_NilValue)
+	errorcall(call,_("SubAssignArgs: invalid number of arguments"));
+
+    if (CDR(args) == R_NilValue) {
+	*subs = R_NilValue;
+	*y = CAR(args);
+    }
+    else {
+	while (CDDR(args) != R_NilValue)
+	    args = CDR(args);
+	*y = CADR(args);
+	SETCDR(args, R_NilValue);
+    }
+}
+
+static void SubAssignArgs2(SEXP args, SEXP *x, SEXP *subs, SEXP *y, SEXP call)
 {
     *x = CAR(args); /* OK even if args is R_NilValue */
     if (args == R_NilValue || (args = CDR(args)) == R_NilValue)
@@ -1006,58 +1025,72 @@ static void SubAssignArgs(SEXP args, SEXP *x, SEXP *subs, SEXP *y, SEXP call)
 /* The [<- operator. */
 
 static SEXP do_subassign_dflt_seq 
-              (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP y, int seq);
+             (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y, int seq);
 
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP ans, a1, a2, a3, value;
+    SEXP ans, x, a2, a3, y;
     int argsevald = 0;
 
     /* See if we are using the fast interface or not. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        value = CAR(args);
-        a1 = CADR(args);
+        y = CAR(args);   /* args are (y, x, indexes...) */
+        x = CADR(args);
         a2 = CDDR(args);
         a3 = CDR(a2);
     }
     else {
-        value = R_NoObject;  /* will be after other arguments */
-        a1 = CAR(args);
+        y = R_NoObject;  /* found later after other arguments */
+        x = CAR(args);   /* args are (x, indexes..., y) */
         a2 = CDR(args);
         a3 = CDR(a2);
     }
 
     /* If we can easily determine that this will be handled by subassign_dflt
-       and has at least one index argument, evaluate that index with 
+       and has exactly one index argument, evaluate that index with 
        VARIANT_SEQ so it may come as a range rather than a vector. */
 
-    if (value != R_NoObject || 
-          (a1 != R_DotsSymbol && a3 != R_NilValue && CDR(a3) == R_NilValue)) {
-        /* Note: for fast interface, the object assigned into comes evaluated,
-           else mostly called from do_set, with first arg an evaluated promise*/
-        PROTECT (a1 = value != R_NoObject ? a1
-          : TYPEOF(a1) == PROMSXP && PRVALUE(a1) != R_UnboundValue ? PRVALUE(a1)
-          : eval(a1,rho));
-	if (isObject(a1)) {
-            args = CONS(a1,a2);
-            UNPROTECT(1);
-            argsevald = -1;
-        }
-        else if (TYPEOF(CAR(a2)) != LANGSXP) {
-            /* in particular, it might be missing or ... */
-            args = CONS (a1, evalListKeepMissing(a2,rho));
-            UNPROTECT(1);
-            return do_subassign_dflt_seq (call, op, args, rho, value, 0);
-        }
-        else {
+    if (y != R_NoObject) {
+        /* Fast interface: object assigned into (x) comes already evaluated */
+        if (a2 != R_NilValue && a3 == R_NilValue && TYPEOF(CAR(a2))==LANGSXP) {
             int seq;
-            PROTECT(a2 = evalv (CAR(a2), rho, VARIANT_SEQ));
+            a2 = evalv (CAR(a2), rho, VARIANT_SEQ);
             seq = R_variant_result;
             R_variant_result = 0;
-            args = CONS (a1, CONS (a2, evalListKeepMissing (a3, rho)));
-            UNPROTECT(2);
-            return do_subassign_dflt_seq (call, op, args, rho, value, seq); 
+            args = CONS (a2, R_NilValue);
+            return do_subassign_dflt_seq (call, op, x, args, rho, y, seq); 
+        }
+        else {
+            args = evalListKeepMissing(a2,rho);
+            return do_subassign_dflt_seq (call, op, x, args, rho, y, 0);
+        }
+    }
+    else {
+        if (x != R_DotsSymbol && a3 != R_NilValue && CDR(a3) == R_NilValue) {
+            /* Mostly called from do_set, with first arg an evaluated promise */
+            PROTECT (x = TYPEOF(x) == PROMSXP && PRVALUE(x) != R_UnboundValue
+                            ? PRVALUE(x) : eval(x,rho));
+            if (isObject(x)) {
+                args = CONS(x,a2);
+                UNPROTECT(1);
+                argsevald = -1;
+            }
+            else if (TYPEOF(CAR(a2)) != LANGSXP) {
+                /* in particular, it might be missing or ... */
+                args = evalListKeepMissing(a2,rho);
+                UNPROTECT(1);
+                return do_subassign_dflt_seq (call, op, x, args, rho, y, 0);
+            }
+            else {
+                int seq;
+                PROTECT(a2 = evalv (CAR(a2), rho, VARIANT_SEQ));
+                seq = R_variant_result;
+                R_variant_result = 0;
+                args = CONS (a2, evalListKeepMissing (a3, rho));
+                UNPROTECT(2);
+                return do_subassign_dflt_seq (call, op, x, args, rho, y, seq); 
+            }
         }
     }
 
@@ -1075,28 +1108,20 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign_dflt_seq (call, op, args, rho, R_NoObject, 0);
+    return do_subassign_dflt_seq 
+             (call, op, CAR(args), CDR(args), rho, R_NoObject, 0);
 }
 
 /* The last "seq" argument below is 1 if the first subscript is a sequence spec
    (a variant result). */
 
 static SEXP do_subassign_dflt_seq
-               (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP y, int seq)
+              (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y, int seq)
 {
-    SEXP subs, x;
-
-extern SEXP R_inspect(SEXP);
-if (installed_already("axx8q")) { Rprintf(" -- args: "); R_inspect(args); }
-if (y && installed_already("axx8q")) { Rprintf(" -- y: "); R_inspect(y); }
-
-    PROTECT(args);
+    PROTECT(subs);
+    PROTECT(x);
     if (y == R_NoObject)
-        SubAssignArgs(args, &x, &subs, &y, call);
-    else {
-        x = CAR(args);
-        subs = CDR(args);
-    }
+        SubAssignArgs1(&subs, &y, call);
 
     Rboolean S4 = IS_S4_OBJECT(x);
     int oldtype = NILSXP;
@@ -1107,27 +1132,30 @@ if (y && installed_already("axx8q")) { Rprintf(" -- y: "); R_inspect(y); }
 	PROTECT(x = PairToVectorList(x));
         setAttrib (x, R_DimSymbol, getAttrib (ox, R_DimSymbol));
         setAttrib (x, R_DimNamesSymbol, getAttrib (ox, R_DimNamesSymbol));
+        UNPROTECT(1);
     }
     else if (x == R_NilValue) {
 	if (length(y) == 0) {
-	    UNPROTECT(1);
+	    UNPROTECT(2);
 	    return x;
 	}
-        PROTECT(x = coerceVector(x, TYPEOF(y)));
+        x = coerceVector(x, TYPEOF(y));
     }
     else if (isVector(x)) {
         if (LENGTH(x) == 0) {
             if (length(y) == 0) {
-                UNPROTECT(1);
+                UNPROTECT(2);
                 return x;
             }
 	}
         else if (NAMEDCNT_GT_1(x))
             x = dup_top_level(x);
-        PROTECT(x);
     }
     else
         nonsubsettable_error(call,x);
+
+    UNPROTECT(1); /* old x */
+    PROTECT(x);
 
     if (subs == R_NilValue) {
         /* 0 subscript arguments */
@@ -1278,7 +1306,7 @@ SEXP attribute_hidden do_subassign2_dflt
 
     PROTECT(args);
 
-    SubAssignArgs(args, &x, &subs, &y, call);
+    SubAssignArgs2(args, &x, &subs, &y, call);
     S4 = IS_S4_OBJECT(x);
 
     dims = getAttrib(x, R_DimSymbol);

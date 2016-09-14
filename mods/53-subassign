@@ -1,0 +1,3 @@
+Implement fast interface for primitive subassign functions.
+
+Also introduces R_NoObject.
