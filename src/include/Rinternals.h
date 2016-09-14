@@ -1364,6 +1364,8 @@ extern
 #endif
 SEXP	R_RestartToken;     /* Marker for restarted function calls */
 
+SEXP	R_NoObject;         /* Can't be any real object - left set to NULL */
+
 /* Symbol Table Shortcuts */
 
 #define R_DotsSymbol R_high_frequency_globals.DotsSymbol

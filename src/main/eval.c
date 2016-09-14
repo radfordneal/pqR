@@ -2512,13 +2512,14 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         SEXP assgnfcn = installAssignFcnName(CAR(lhs));
         SEXP fn, args;
 
-        if ((assgnfcn == R_SubAssignSymbol || assgnfcn == R_SubSubAssignSymbol 
-                                           || assgnfcn == R_DollarAssignSymbol)
-              && !isObject(varval)
+        if ((assgnfcn == R_SubAssignSymbol || assgnfcn == R_DollarAssignSymbol
+                            /* not yet: || assgnfcn == R_SubSubAssignSymbol */ )
+              && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
             PROTECT (args = CONS (rhs, CONS (varval, CDDR(lhs))));
-            newval = CALL_PRIMFUN (R_NilValue, fn, args, rho, 
+            WAIT_UNTIL_COMPUTED_2(rhs,varval);
+            newval = CALL_PRIMFUN (call, fn, args, rho, 
                                    VARIANT_FAST_SUBASSIGN);
             UNPROTECT(4);
         }
