@@ -1049,13 +1049,15 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* If we can easily determine that this will be handled by subassign_dflt
        and has exactly one index argument, evaluate that index with 
-       VARIANT_SEQ so it may come as a range rather than a vector. */
+       VARIANT_SEQ so it may come as a range rather than a vector, and include
+       VARIANT_STATIC_BOX_OK as well if using the fast interface, as there
+       will be not other evaluation before the index is used. */
 
     if (y != R_NoObject) {
         /* Fast interface: object assigned into (x) comes already evaluated */
         if (a2 != R_NilValue && a3 == R_NilValue && TYPEOF(CAR(a2))==LANGSXP) {
             int seq;
-            a2 = evalv (CAR(a2), rho, VARIANT_SEQ);
+            a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_STATIC_BOX_OK);
             seq = R_variant_result;
             R_variant_result = 0;
             args = CONS (a2, R_NilValue);
@@ -1273,19 +1275,16 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
     return x;
 }
 
-/* The [[<- operator; should be fast.
-       ====
-   args[1] = object being subscripted
-   args[2] = list of subscripts
-   args[3] = replacement values 
-*/
+/* The [[<- operator; should be fast. */
+
+SEXP attribute_hidden do_subassign2_dflt_int
+                               (SEXP call, SEXP op, SEXP args, SEXP rho);
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
 
     if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
-/*     if(DispatchAnyOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) */
       return(ans);
 
     return do_subassign2_dflt(call, op, ans, rho);
@@ -1294,6 +1293,12 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* Also called directly from elsewhere. */
 
 SEXP attribute_hidden do_subassign2_dflt
+                               (SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    return do_subassign2_dflt_int (call, op, args, rho);
+}
+
+SEXP attribute_hidden do_subassign2_dflt_int
                                (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP dims, names, newname, subs, x, xtop, xup, y;
