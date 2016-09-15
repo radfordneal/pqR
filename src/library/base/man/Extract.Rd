@@ -33,6 +33,7 @@ getElement(object, name)
 x[i] <- value
 x[i, j, \dots] <- value
 x[[i]] <- value
+x[[i , j, \dots]] <- value
 x$i <- value
 }
 \arguments{
