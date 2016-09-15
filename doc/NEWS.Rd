@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2016-??-?? (not all actually done yet)}{
+\section{CHANGES IN VERSION RELEASED 2016-09-16}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -35,10 +35,12 @@
   \item The pqR package repository (see information at pqR-project.org) has
         now been updated to include some packages (or new versions of packages)
         that depend on R-2.15.1, which were previously not included.
-  \item There are also some new pqR features in this release, including
-        \code{across} and \code{down} options for \code{for} statements, and a
+  \item There are also some new pqR features and performance improvements
+        in this release, including
+        \code{across} and \code{down} options for \code{for} statements, a
         less error-prone scheme for protecting objects from garbage 
-        collection in C code.
+        collection in C code, and faster implementations of subset 
+        replacement with @code{[ ]}, @code{[[ ]]}, and @code{$}.
   }}
 
   \subsection{NEW FEATURES}{
@@ -68,6 +70,34 @@
         for example, \code{substring(s,2)} will always return a string like
         \code{s} but without the first character, regardless of how many
         characters are in \code{s}.  This assumption will now actually be true.
+  }}
+
+  \subsection{PERFORMANCE IMPROVEMENTS}
+  \itemize{
+  \item Replacing part of a vector or list with @code{[ ]}, @code{[[ ]]},
+        and @code{$} is now faster, by up to a factor two, when the
+        index and replacement value are scalars.
+  \item In some contexts, the @code{unclass} function now takes 
+        negligible time, with no copying of the object that is unclassed.
+        In particular this is the case when @code{unclass(x)} is the object
+        of a @code{for} statement, the operand of an arithmetic operator,
+        the argument of a univariate mathematical function, or the 
+        argument of @code{length}.  For example, in
+\preformatted{    `+.myclass` <- function (e1, e2)
+        (unclass(e1) + unclass(e2)) %% 100
+}  
+        the two calls of @code{unclass} do not require duplicating
+        @code{e1} or @code{e2}.
+  }}
+
+  \subsection{DOCUMENTATION FIXES}{
+    \itemize{
+    \item Fixed misinformation in help(length) about the length of
+          expressions (which is also present in R Core versions to 
+          at least R-3.3.1).
+    \item The usage in @code{help("[[")} now shows that the replacement
+          form of @code{[[ ]]} can take more than one index (for arrays). 
+          (This is also missing in R Core versions to at least R-3.3.1.)
   }}
 
   \subsection{NEW FEATURES FROM R CORE VERSIONS}{
@@ -121,13 +151,6 @@
         Other functions (often or always) doing less copying include
         cut(), dist(), the complex case of eigen(), hclust(), image(),
         kmeans(), loess(), stl() and svd(LINPACK = TRUE).
-  }}
-
-  \subsection{BUG FIXES}{
-    \itemize{
-    \item Fixed misinformation in help(length) about the length of
-          expressions (which is also present in R Core versions to 
-          at least R-3.3.1).
   }}
 
   \subsection{BUG FIXES CORRESPONDING TO THOSE IN R CORE VERSIONS}{
