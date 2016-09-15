@@ -67,7 +67,7 @@ file.access(names, mode = 0)
   \code{\link{file_test}} for shell-style file tests.
 }
 
-\examples{
+\examples{\dontrun
 fa <- file.access(dir("."))
 table(fa) # count successes & failures
 #ifdef windows
@@ -78,5 +78,5 @@ d[file.access(df, 1) == 0] # some are executable, some are not
 d[file.access(df, 4) == 0] # hopefully all are readable
 d[file.access(df, 2) == 0] # they may or may not be writable
 #endif
-}
+}}
 \keyword{file}
