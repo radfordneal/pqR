@@ -82,7 +82,7 @@ list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
 
   \code{\link{Sys.glob}} for wildcard expansion on file paths.
 }
-\examples{
+\examples{\dontrun{
 list.files(R.home())
 ## Only files starting with a-l or r
 ## Note that a-l is locale-dependent, but using case-insensitive
@@ -90,5 +90,5 @@ list.files(R.home())
 dir("../..", pattern = "^[a-lr]", full.names=TRUE, ignore.case = TRUE)
 
 list.dirs(R.home("doc"))
-}
+}}
 \keyword{file}
