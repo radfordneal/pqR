@@ -896,6 +896,15 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 #define extern0 extern
 #endif
 
+
+/* Fast interface for subassign primitives.  These variables are set in
+   do_set as a fast way of passing information to the fast versions of
+   the subassign primitives (eg, [<-).  They are NOT automatically protected. */
+
+LibExtern SEXP R_fast_sub_into;   /* Object that assignment is into */
+LibExtern SEXP R_fast_sub_value;  /* Value assigned */
+
+
 #define R_binding_cell R_high_frequency_globals.binding_cell
                                /* NULL, or the binding cell for the variable
                                   just found or created (if the binding uses
