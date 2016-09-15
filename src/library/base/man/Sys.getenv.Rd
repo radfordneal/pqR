@@ -1,6 +1,7 @@
 % File src/library/base/man/Sys.getenv.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Sys.getenv}
@@ -55,7 +56,7 @@ Sys.getenv(x = NULL, unset = "", names = NA)
 ## whether HOST is set will be shell-dependent e.g. Solaris' csh does not.
 Sys.getenv(c("R_HOME", "R_PAPERSIZE", "R_PRINTCMD", "HOST"))
 
-names(s <- Sys.getenv()) # all settings (the values could be very long)
+\dontrun{names(s <- Sys.getenv()) # all settings (the values could be very long)}
 
 ## Language and Locale settings -- but rather use Sys.getlocale()
 s[grep("^L(C|ANG)", names(s))]
