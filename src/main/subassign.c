@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -978,13 +978,10 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     return x;
 }
 
-/* "x" is the vector that is to be assigned into, y is the vector that
-    is going to provide the new values and subs is the vector of
-    subscripts that are going to be replaced.  
+/* Returns 'subs' as the index list, and 'y' as the value to assign.
+   May modify 'subs'. */
 
-    Destructively modifies args. */
-
-static void SubAssignArgs1(SEXP *subs, SEXP *y, SEXP call)
+static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
 {
     SEXP args = *subs;
 
@@ -996,25 +993,6 @@ static void SubAssignArgs1(SEXP *subs, SEXP *y, SEXP call)
 	*y = CAR(args);
     }
     else {
-	while (CDDR(args) != R_NilValue)
-	    args = CDR(args);
-	*y = CADR(args);
-	SETCDR(args, R_NilValue);
-    }
-}
-
-static void SubAssignArgs2(SEXP args, SEXP *x, SEXP *subs, SEXP *y, SEXP call)
-{
-    *x = CAR(args); /* OK even if args is R_NilValue */
-    if (args == R_NilValue || (args = CDR(args)) == R_NilValue)
-	errorcall(call,_("SubAssignArgs: invalid number of arguments"));
-
-    if (CDR(args) == R_NilValue) {
-	*subs = R_NilValue;
-	*y = CAR(args);
-    }
-    else {
-        *subs = args;
 	while (CDDR(args) != R_NilValue)
 	    args = CDR(args);
 	*y = CADR(args);
@@ -1123,7 +1101,7 @@ static SEXP do_subassign_dflt_seq
     PROTECT(subs);
     PROTECT(x);
     if (y == R_NoObject)
-        SubAssignArgs1(&subs, &y, call);
+        SubAssignArgs (&subs, &y, call);
 
     Rboolean S4 = IS_S4_OBJECT(x);
     int oldtype = NILSXP;
@@ -1277,12 +1255,17 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
 
 /* The [[<- operator; should be fast. */
 
-SEXP attribute_hidden do_subassign2_dflt_int
-                               (SEXP call, SEXP op, SEXP args, SEXP rho);
+static SEXP do_subassign2_dflt_int
+                      (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y);
 
-static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
+
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+        return do_subassign2_dflt_int 
+               (call, op, CADR(args), evalList(CDDR(args),rho), rho, CAR(args));
+    }
 
     if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
       return(ans);
@@ -1295,13 +1278,14 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_subassign2_dflt
                                (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign2_dflt_int (call, op, args, rho);
+    return do_subassign2_dflt_int 
+             (call, op, CAR(args), CDR(args), rho, R_NoObject);
 }
 
-SEXP attribute_hidden do_subassign2_dflt_int
-                               (SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_subassign2_dflt_int
+                      (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y)
 {
-    SEXP dims, names, newname, subs, x, xtop, xup, y;
+    SEXP dims, names, newname, xtop, xup;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
     Rboolean S4, recursed;
     R_len_t length_x;
@@ -1309,9 +1293,11 @@ SEXP attribute_hidden do_subassign2_dflt_int
 
     SEXP thesub = R_NilValue, xOrig = R_NilValue;
 
-    PROTECT(args);
+    PROTECT(subs);
+    PROTECT(x);
+    if (y == R_NoObject)
+        SubAssignArgs (&subs, &y, call);
 
-    SubAssignArgs2(args, &x, &subs, &y, call);
     S4 = IS_S4_OBJECT(x);
 
     dims = getAttrib(x, R_DimSymbol);
@@ -1333,7 +1319,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
 	if( nsubs!=1 || !isString(CAR(subs)) || length(CAR(subs)) != 1 )
 	    errorcall(call,_("wrong args for environment subassignment"));
 	defineVar(install(translateChar(STRING_ELT(CAR(subs), 0))), y, x);
-	UNPROTECT(1);
+	UNPROTECT(2);
 	return(S4 ? xOrig : x);
     }
 
@@ -1343,7 +1329,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
            (VECSXP) or vector of type of y (if y of length one).  (This
            dependence on the length of y is of dubious wisdom!) */
 	if (y == R_NilValue) {
-	    UNPROTECT(1);
+	    UNPROTECT(2);
 	    return R_NilValue;
 	}
 	if (length(y) == 1)
@@ -1534,7 +1520,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
     if (!isList(xtop)) SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     return xtop;
 }
 
@@ -1791,7 +1777,7 @@ attribute_hidden FUNTAB R_FunTab_subassign[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"[<-",		do_subassign,	0,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"[[<-",	do_subassign2,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"[[<-",	do_subassign2,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"$<-",		do_subassign3,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}

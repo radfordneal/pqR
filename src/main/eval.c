@@ -2513,7 +2513,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         SEXP fn, args;
 
         if ((assgnfcn == R_SubAssignSymbol || assgnfcn == R_DollarAssignSymbol
-                            /* not yet: || assgnfcn == R_SubSubAssignSymbol */ )
+                                           || assgnfcn == R_SubSubAssignSymbol)
               && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
