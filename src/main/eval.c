@@ -2509,14 +2509,29 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     if (depth == 1) {
 
-        PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-        SET_PRVALUE(rhsprom, rhs);
         SEXP assgnfcn = installAssignFcnName(CAR(lhs));
-        PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
-        SET_PRVALUE (lhsprom, varval);
-        PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
-        newval = eval(e,rho);
-        UNPROTECT(6);
+        SEXP fn, args;
+
+        if ((assgnfcn == R_SubAssignSymbol || assgnfcn == R_DollarAssignSymbol
+                                           || assgnfcn == R_SubSubAssignSymbol)
+              && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
+              && (fn = FINDFUN(assgnfcn,rho), 
+                  TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
+            PROTECT (args = CONS (rhs, CONS (varval, CDDR(lhs))));
+            WAIT_UNTIL_COMPUTED_2(rhs,varval);
+            newval = CALL_PRIMFUN (call, fn, args, rho, 
+                                   VARIANT_FAST_SUBASSIGN);
+            UNPROTECT(4);
+        }
+        else {
+            PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+            SET_PRVALUE(rhsprom, rhs);
+            PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
+            SET_PRVALUE (lhsprom, varval);
+            PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
+            newval = eval(e,rho);
+            UNPROTECT(6);
+        }
     }
 
     else {  /* the general case, for any depth */

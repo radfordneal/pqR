@@ -66,7 +66,10 @@
  * offset:	the 'op' (offset pointer) above; used for C functions
  *		which deal with more than one R function...
  *
- * eval:	= VWXYZ (five digits) --- where e.g. '1' means '00001'
+ * eval:	= UVWXYZ (six digits) --- where e.g. '1' means '000001'
+ *              U=1 says that this is a subassign primitive that is written to
+ *                  be able to use the fast interface with 'value' arg first
+ *              U=0 not what it says above
  *              V=1 says that the (builtin) primitive can handle operands
  *                  whose computation by a task may be pending
  *              V=0 says must not be passed operands still being computed

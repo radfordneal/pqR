@@ -223,7 +223,7 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
     unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
     unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
-    unsigned int primsxp_foreign:1; /* primitive to call C/Fortran function */
+    unsigned int primsxp_fast_sub:1;/* subassign fn that can use fast method*/
     unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument (only
                                        for when fast_cfun != NULL */
 };
@@ -1363,6 +1363,8 @@ attribute_hidden
 extern
 #endif
 SEXP	R_RestartToken;     /* Marker for restarted function calls */
+
+SEXP	R_NoObject;         /* Can't be any real object - left set to NULL */
 
 /* Symbol Table Shortcuts */
 
