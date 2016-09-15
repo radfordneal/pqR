@@ -1013,9 +1013,9 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* See if we are using the fast interface or not. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        y = CAR(args);   /* args are (y, x, indexes...) */
-        x = CADR(args);
-        a2 = CDDR(args);
+        y = R_fast_sub_value;
+        x = R_fast_sub_into;
+        a2 = args;
         a3 = CDR(a2);
     }
     else {
@@ -1264,7 +1264,7 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
         return do_subassign2_dflt_int 
-               (call, op, CADR(args), evalList(CDDR(args),rho), rho, CAR(args));
+         (call, op, R_fast_sub_into, evalList(args,rho), rho, R_fast_sub_value);
     }
 
     if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
@@ -1536,17 +1536,21 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP name = R_NilValue;
     int argsevald = 0;
 
-    checkArity(op, args);
-
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        value = CAR(args);
-        into = CADR(args);
-        what = CADDR(args);
+        value = R_fast_sub_value;
+        into = R_fast_sub_into;
+        what = CAR(args);
+        if (args == R_NilValue || CDR(args) != R_NilValue)
+            errorcall (call, _("%d arguments passed to '%s' which requires %d"),
+                             length(args)+2, PRIMNAME(op), 3);
     }
     else {
         into = CAR(args);
         what = CADR(args);
         value = CADDR(args);
+        if (CDDR(args) == R_NilValue || CDR(CDDR(args)) != R_NilValue)
+            errorcall (call, _("%d arguments passed to '%s' which requires %d"),
+                             length(args), PRIMNAME(op), 3);
     }
 
     if (TYPEOF(what) == PROMSXP)
