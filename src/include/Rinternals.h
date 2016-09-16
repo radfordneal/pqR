@@ -1364,7 +1364,7 @@ extern
 #endif
 SEXP	R_RestartToken;     /* Marker for restarted function calls */
 
-SEXP	R_NoObject;         /* Can't be any real object - left set to NULL */
+LibExtern SEXP	R_NoObject; /* Can't be any real object - left set to NULL */
 
 /* Symbol Table Shortcuts */
 
