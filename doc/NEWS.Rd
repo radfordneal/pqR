@@ -43,6 +43,15 @@
         replacement with \code{[ ]}, \code{[[ ]]}, and \code{$}.
   }}
 
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item The direction of growth of the C stack is no longer determined
+        at runtime.  Instead, it is assumed by default to grow downwards,
+        as is the case for virtually all current platforms.  This can
+        be overridden when building pqR by including \code{-DR_CStackDir=-1}
+        in \code{CFLAGS}.  See the R-admin manual for more details.
+  }}
+
   \subsection{NEW FEATURES}{
   \itemize{
   \item The \code{for} statement now has \code{down} and \code{across}
