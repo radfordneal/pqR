@@ -70,6 +70,22 @@
         for example, \code{substring(s,2)} will always return a string like
         \code{s} but without the first character, regardless of how many
         characters are in \code{s}.  This assumption will now actually be true.
+  \item Since assignments like \code{"1A"<-c(3,4)} are allowed, for consistency,
+        pqR now also allows assignments like \code{"1A"[2]<-10}.  However,
+        it is recommended that if a symbol that is not syntactically valid
+        must be used, it should be written with backquotes, as in
+        \code{`1A`[2]<-10}.  This will work on the right-hand side too,
+        and is also a bit faster.
+  \item \code{.Call} and \code{.External} now take a defensive measure
+        against C code that incorrectly assumes that the value stored
+        in a variable will not be shared with other variables.  If
+        \code{.Call} or \code{.External} is passed a simple variable as
+        an argument, and the value of that variable is a scalar without
+        attributes that is shared with another variable
+        (ie, \code{NAMED} is greater than 1), this value is duplicated and
+        reassigned before the C function is called.  This is a defense against
+        incorrect usage, and should not be relied on --- instead, the
+        incorrect usage should be fixed.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
