@@ -51,7 +51,7 @@ Sys.getenv(x = NULL, unset = "", names = NA)
   The help for \sQuote{\link{environment variables}} lists many of the
   environment variables used by \R.
 }
-\examples{
+\examples{\dontrun{
 ## whether HOST is set will be shell-dependent e.g. Solaris' csh does not.
 Sys.getenv(c("R_HOME", "R_PAPERSIZE", "R_PRINTCMD", "HOST"))
 
@@ -59,6 +59,6 @@ names(s <- Sys.getenv()) # all settings (the values could be very long)
 
 ## Language and Locale settings -- but rather use Sys.getlocale()
 s[grep("^L(C|ANG)", names(s))]
-}
+}}
 \keyword{environment}
 \keyword{utilities}
