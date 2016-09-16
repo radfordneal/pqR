@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -78,7 +78,8 @@ void attribute_hidden nl_Rdummy(void)
    address of a local variable in the caller's stack frame.
 
    This is put here, though called only from system.c, so that the compiler
-   will not be able to inline it. */
+   will not be able to inline it.  NOT CURRENTLY USED - stack direction
+   is now a constant. */
 
 int R_stack_growth_direction (uintptr_t cvaraddr)
 { 
