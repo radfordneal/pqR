@@ -1,6 +1,7 @@
 % File src/library/base/man/file.access.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{file.access}
