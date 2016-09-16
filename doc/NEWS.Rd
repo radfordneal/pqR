@@ -40,7 +40,7 @@
         \code{across} and \code{down} options for \code{for} statements, a
         less error-prone scheme for protecting objects from garbage 
         collection in C code, and faster implementations of subset 
-        replacement with @code{[ ]}, @code{[[ ]]}, and @code{$}.
+        replacement with \code{[ ]}, \code{[[ ]]}, and \code{$}.
   }}
 
   \subsection{NEW FEATURES}{
@@ -72,22 +72,22 @@
         characters are in \code{s}.  This assumption will now actually be true.
   }}
 
-  \subsection{PERFORMANCE IMPROVEMENTS}
+  \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
-  \item Replacing part of a vector or list with @code{[ ]}, @code{[[ ]]},
-        and @code{$} is now faster, by up to a factor two, when the
+  \item Replacing part of a vector or list with \code{[ ]}, \code{[[ ]]},
+        and \code{$} is now faster, by up to a factor two, when the
         index and replacement value are scalars.
-  \item In some contexts, the @code{unclass} function now takes 
+  \item In some contexts, the \code{unclass} function now takes 
         negligible time, with no copying of the object that is unclassed.
-        In particular this is the case when @code{unclass(x)} is the object
-        of a @code{for} statement, the operand of an arithmetic operator,
+        In particular this is the case when \code{unclass(x)} is the object
+        of a \code{for} statement, the operand of an arithmetic operator,
         the argument of a univariate mathematical function, or the 
-        argument of @code{length}.  For example, in
+        argument of \code{length}.  For example, in
 \preformatted{    `+.myclass` <- function (e1, e2)
-        (unclass(e1) + unclass(e2)) %% 100
+        (unclass(e1) + unclass(e2)) \%\% 100
 }  
-        the two calls of @code{unclass} do not require duplicating
-        @code{e1} or @code{e2}.
+        the two calls of \code{unclass} do not require duplicating
+        \code{e1} or \code{e2}.
   }}
 
   \subsection{DOCUMENTATION FIXES}{
@@ -95,8 +95,8 @@
     \item Fixed misinformation in help(length) about the length of
           expressions (which is also present in R Core versions to 
           at least R-3.3.1).
-    \item The usage in @code{help("[[")} now shows that the replacement
-          form of @code{[[ ]]} can take more than one index (for arrays). 
+    \item The usage in \code{help("[[")} now shows that the replacement
+          form can take more than one index (for arrays). 
           (This is also missing in R Core versions to at least R-3.3.1.)
   }}
 
