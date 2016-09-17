@@ -696,7 +696,7 @@ void R_SetWin32(Rstart Rp)
 	R_CStackStart = top;
 	R_CStackLimit = top - bottom;
         R_CStackThreshold = 
-          (char *) R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit)
+          (char *) R_CStackStart + 1000 - (uintptr_t) (0.95*R_CStackLimit);
 #ifndef R_CStackDir
         R_CStackDir = 1;
 #endif
