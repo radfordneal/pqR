@@ -1,2 +1,0 @@
-Cleans up the code for mathematical functions in arith.c, speeding
-some things up in the process, and preparing for later mods.
