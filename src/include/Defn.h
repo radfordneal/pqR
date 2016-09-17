@@ -910,7 +910,7 @@ LibExtern RCNTXT R_Toplevel;	    /* Storage for the toplevel environment */
 LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */
 LibExtern RCNTXT* R_GlobalContext;    /* The global environment */
 #endif
-#define R_Visible R_high_frequency_globals.Visible
+#define R_Visible R_high_frequency_globals.Q_Visible
 #define R_EvalDepth R_high_frequency_globals.EvalDepth
 extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
 

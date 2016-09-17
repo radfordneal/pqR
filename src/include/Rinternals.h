@@ -1612,7 +1612,8 @@ LibExtern struct {
     int EvalDepth;                /* Evaluation recursion depth */
     int Expressions;              /* options(expressions) */
     short evalcount;              /* counts down to check user interrupt */
-    short Visible;                /* Value visibility flag */
+    short Q_Visible;              /* Value visibility flag.  Note: The symbol
+                                          "Visible" is used in Windows Rtools */
     SEXP DotsSymbol;              /* Symbol ... */
     SEXP binding_cell;            /* Binding cell for variable found, or NULL */
     char *CStackThreshold;        /* Threshold for overflow detection */
