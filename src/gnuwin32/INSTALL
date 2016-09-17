@@ -19,7 +19,7 @@ always completely adequate, is as follows:
      puts up asking about this is covered by another window.)
 
   2) Obtain Rtools33.exe from http:/pqR-project.org/Rtools33.exe (do
-     not use the version obtainable via pqR-project.org, which is
+     not use the version obtainable via r-project.org, which is
      different and not tested with pqR).  Run this to install the
      required build tools, but do not choose the options to install
      "extra" material for 32 or 64 bit builds of R itself (since this
@@ -50,7 +50,7 @@ always completely adequate, is as follows:
          set CYGWIN=nodosfilewarning
          set TAR_OPTIONS=--no-same-owner
 
-     You can replace c:\tmp some other directory if you wish.
+     You can replace c:\tmp with some other directory if you wish.
 
   6) Change to a directory in which you wish the pqR source/build
      directory to be created, and untar the file you downloaded
@@ -73,6 +73,8 @@ always completely adequate, is as follows:
 
   9) Copy one of MkRules.dist32, MkRules.dist32-sse2, or MkRules.dist64
      to MkRules.local and possibly edit MkRules.local as appropriate.
+     (Note that these names are case-sensitive!)
+
      MkRules.dist32 should work for any Windows XP, Vista, 7, 8, or 10
      system (in conjunction with pqR-win-extras-32), but will not produce
      as fast a version of pqR on recent processors as the other options.
