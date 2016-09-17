@@ -1292,8 +1292,8 @@ LibExtern R_CONST SEXPREC R_EmptyEnv_const;   /* Defined in const-objs.c */
 #define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
 				    	         root of the environment tree */
 
-#define R_BaseEnv R_high_frequency_globals.BaseEnv
-#define R_GlobalEnv R_high_frequency_globals.GlobalEnv
+LibExtern SEXP	R_GlobalEnv;        /* The "global" environment */
+LibExtern SEXP	R_BaseEnv;          /* The base environment (formerly R_NilValue) */
 
 LibExtern SEXP	R_BaseNamespace;    /* The (fake) namespace for base */
 LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
@@ -1312,7 +1312,7 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 LibExtern R_CONST SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c*/
 #define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
 
-#define R_MissingArg R_high_frequency_globals.MissingArg
+LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
 /* Logical Values.  Defined in const-objs.c */
@@ -1614,15 +1614,12 @@ LibExtern struct {
     short evalcount;              /* counts down to check user interrupt */
     short Visible;                /* Value visibility flag */
     SEXP DotsSymbol;              /* Symbol ... */
-    SEXP GlobalEnv;               /* The "global" environment */
     SEXP binding_cell;            /* Binding cell for variable found, or NULL */
-    SEXP MissingArg;              /* Missing argument marker */
     char *CStackThreshold;        /* Threshold for overflow detection */
     SEXP VStack;                  /* R_alloc stack pointer */
     const struct R_local_protect *local_protect_start;/*Start of protect chain*/
     SEXP Srcref;                  /* Current srcref, for debuggers */
     SEXP BraceSymbol;             /* Symbol { */
-    SEXP BaseEnv;                 /* The base environment */
     short Profiling;              /* Whether performance profiling enabled */
 } R_high_frequency_globals;
 
