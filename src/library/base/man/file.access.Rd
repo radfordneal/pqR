@@ -68,7 +68,7 @@ file.access(names, mode = 0)
   \code{\link{file_test}} for shell-style file tests.
 }
 
-\examples{\dontrun
+\examples{\dontrun{
 fa <- file.access(dir("."))
 table(fa) # count successes & failures
 #ifdef windows
