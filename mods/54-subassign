@@ -1,0 +1,2 @@
+Change fast interface to subassignment to allow rhs to be 
+evaluated in a static box.

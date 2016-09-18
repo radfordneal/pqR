@@ -2415,12 +2415,39 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                         int variant, int opval)
 {
     SEXP var, varval, newval, rhsprom, lhsprom, e;
-    int depth;
 
-    /* We evaluate the right hand side now. */
+    /* Find the variable ultimately assigned to, and its depth.
+       The depth is 1 for a variable within one replacement function
+       (eg, in names(a) <- ...). */
+
+    int depth = 1;
+    for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
+        if (TYPEOF(var) != LANGSXP) {
+            if (TYPEOF(var) == STRSXP && LENGTH(var) == 1) {
+                var = install (CHAR (STRING_ELT(var,0)));
+                break;
+            }
+            errorcall (call, _("invalid assignment left-hand side"));
+        }
+        depth += 1;
+    }
+
+    /* Find the assignment function symbol for the depth 1 assignment, and
+       see if we maybe (tentatively) will be using the fast interface. */
+
+    SEXP assgnfcn = installAssignFcnName(CAR(lhs));
+
+    int maybe_fast = depth == 1 && (assgnfcn == R_SubAssignSymbol ||
+                                    assgnfcn == R_DollarAssignSymbol ||
+                                    assgnfcn == R_SubSubAssignSymbol);
+
+    /* We evaluate the right hand side now, asking for it in a static 
+       box if we (tentatively) will be using the fast interface (unless
+       value needed for return), and otherwise for pending computation. */
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
-    PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
+    PROTECT(rhs = EVALV (rhs, rho, !maybe_fast ? VARIANT_PENDING_OK
+                   : (variant & VARIANT_NULL) ? VARIANT_STATIC_BOX_OK : 0));
 
     /* Debugging/comparison aid:  Can be enabled one way or the other below,
        then activated by typing `switch to old` or `switch to new` at the
@@ -2448,22 +2475,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     if ( ! (variant & VARIANT_NULL))
         INC_NAMEDCNT(rhs);
-
-    /* Find the variable ultimately assigned to, and its depth.
-       The depth is 1 for a variable within one replacement function
-       (eg, in names(a) <- ...). */
-
-    depth = 1;
-    for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
-        if (TYPEOF(var) != LANGSXP) {
-            if (TYPEOF(var) == STRSXP && LENGTH(var) == 1) {
-                var = install (CHAR (STRING_ELT(var,0)));
-                break;
-            }
-            errorcall (call, _("invalid assignment left-hand side"));
-        }
-        depth += 1;
-    }
 
     /* Get the value of the variable assigned to, and ensure it is local
        (unless this is the <<- operator).  Save and protect the binding 
@@ -2508,25 +2519,22 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     if (depth == 1) {
 
-        SEXP assgnfcn = installAssignFcnName(CAR(lhs));
         SEXP fn;
 
-        if ((assgnfcn == R_SubAssignSymbol || assgnfcn == R_DollarAssignSymbol
-                                           || assgnfcn == R_SubSubAssignSymbol)
-              && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
+        if (maybe_fast && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
-            /* Use the fast interface. */
+            /* Use the fast interface.  No need to wait for rhs, since
+               not evaluated with PENDING_OK */
             R_fast_sub_into = varval;
             R_fast_sub_value = rhs;
-            WAIT_UNTIL_COMPUTED_2(rhs,varval);
             newval = CALL_PRIMFUN (call, fn, CDDR(lhs), rho, 
                                    VARIANT_FAST_SUBASSIGN);
             UNPROTECT(3);
         }
         else {
             PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-            SET_PRVALUE(rhsprom, rhs);
+            SET_PRVALUE(rhsprom, IS_STATIC_BOX(rhs) ? duplicate(rhs) : rhs);
             PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
             SET_PRVALUE (lhsprom, varval);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
@@ -2638,16 +2646,15 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
             else {
 
-                /* Assume symbol below is protected by the symbol table. */
-
-                SEXP assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
-
                 PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
                 SET_PRVALUE (lhsprom, s[d].value);
-                if (d == 1) /* original args, no value cell at end */
+                if (d == 1) {
+                    /* original args, no value cell at end, assgnfcn set above*/
                     PROTECT(e = replaceCall (assgnfcn, lhsprom, 
                                              s[d-1].store_args, rhsprom));
+                }
                 else { 
+                    assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
                     SETCAR (s[d-1].value_arg, rhsprom);
                     PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
                                                    s[d-1].store_args)));

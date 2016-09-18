@@ -1008,13 +1008,26 @@ static SEXP do_subassign_dflt_seq
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans, x, a2, a3, y;
-    int argsevald = 0;
+    int int_sv; double dbl_sv;
+    int argsevald = 0, seq = 0;
 
     /* See if we are using the fast interface or not. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        y = R_fast_sub_value;  /* save now, could change with later evals */
+        y = R_fast_sub_value;  /* may be a static box */
         x = R_fast_sub_into;
+        if (IS_STATIC_BOX(y)) {
+            /* Switch to other box, since original may be used for index, and
+               save value here on stack, since may be used in later evals. */
+            if (TYPEOF(y) == INTSXP) {
+                int_sv = *INTEGER(y);
+                y = R_ScalarIntegerBox0;
+            }
+            else {
+                dbl_sv = *REAL(y);
+                y = R_ScalarRealBox0;
+            }
+        }
         a2 = args;
         a3 = CDR(a2);
     }
@@ -1034,16 +1047,15 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (y != R_NoObject) {
         /* Fast interface: object assigned into (x) comes already evaluated */
         if (a2 != R_NilValue && a3 == R_NilValue && TYPEOF(CAR(a2))==LANGSXP) {
-            int seq;
             a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_STATIC_BOX_OK);
             seq = R_variant_result;
             R_variant_result = 0;
             args = CONS (a2, R_NilValue);
-            return do_subassign_dflt_seq (call, x, args, rho, y, seq); 
+            goto dflt_seq;
         }
         else {
             args = evalListKeepMissing(a2,rho);
-            return do_subassign_dflt_seq (call, x, args, rho, y, 0);
+            goto dflt_seq;
         }
     }
     else {
@@ -1060,16 +1072,15 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 /* in particular, it might be missing or ... */
                 args = evalListKeepMissing(a2,rho);
                 UNPROTECT(1);
-                return do_subassign_dflt_seq (call, x, args, rho, y, 0);
+                goto dflt_seq;
             }
             else {
-                int seq;
                 PROTECT(a2 = evalv (CAR(a2), rho, VARIANT_SEQ));
                 seq = R_variant_result;
                 R_variant_result = 0;
                 args = CONS (a2, evalListKeepMissing (a3, rho));
                 UNPROTECT(2);
-                return do_subassign_dflt_seq (call, x, args, rho, y, seq); 
+                goto dflt_seq;
             }
         }
     }
@@ -1082,6 +1093,19 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         return(ans);
 
     return do_subassign_dflt(call, op, ans, rho);
+
+    /* Call the internal function directly, since known not to be an object. */
+
+dflt_seq:
+
+    /* Restore saved value to static box, if using one. */
+
+    if (y == R_ScalarIntegerBox0)
+        *INTEGER(y) = int_sv;
+    else if (y == R_ScalarRealBox0)
+        *REAL(y) = dbl_sv;
+
+    return do_subassign_dflt_seq (call, x, args, rho, y, seq);
 }
 
 /* N.B.  do_subassign_dflt is called directly from elsewhere. */
@@ -1263,14 +1287,27 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP ans;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        SEXP y = R_fast_sub_value; /* save now, could change with later evals */
+        SEXP y = R_fast_sub_value; /* may be a static box */
         SEXP x = R_fast_sub_into;
+        int int_sv; double dbl_sv;
+        if (IS_STATIC_BOX(y)) {
+            if (TYPEOF(y) == INTSXP) 
+                int_sv = *INTEGER(y);
+            else
+                dbl_sv = *REAL(y);
+        }
         args = evalList(args,rho);
+        if (IS_STATIC_BOX(y)) {
+            if (TYPEOF(y) == INTSXP) 
+                *INTEGER(y) = int_sv;
+            else
+                *REAL(y) = dbl_sv;
+        }
         return do_subassign2_dflt_int (call, x, args, rho, y);
     }
 
     if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
-        return(ans);
+      return(ans);
 
     return do_subassign2_dflt(call, op, ans, rho);
 }
@@ -1539,7 +1576,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int argsevald = 0;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        value = R_fast_sub_value;
+        value = R_fast_sub_value; /* may be a static box */
         into = R_fast_sub_into;
         what = CAR(args);
         if (args == R_NilValue || CDR(args) != R_NilValue)
