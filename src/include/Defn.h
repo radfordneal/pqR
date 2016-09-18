@@ -188,6 +188,16 @@ extern R_CONST SEXPREC R_unserialize_as_constant;
 extern R_CONST SEXPREC R_static_box;
 #define IS_STATIC_BOX(x) ((x)->gengc_next_node == &R_static_box)
 
+/* Stuff for saving static boxes, if doing another eval */
+typedef union { int i; double r; } R_static_box_contents;
+#define SAVE_STATIC_BOX_CONTENTS(x,c) \
+  (TYPEOF(x) == INTSXP ? ((c)->i = *INTEGER(x)) : ((c)->r = *REAL(x)))
+#define RESTORE_STATIC_BOX_CONTENTS(x,c) \
+  (TYPEOF(x) == INTSXP ? (*INTEGER(x) = (c)->i) : (*REAL(x) = (c)->r))
+#define SWITCH_TO_BOX0(x) \
+  (*(x) == R_ScalarIntegerBox ? (*(x) = R_ScalarIntegerBox0) : \
+   *(x) == R_ScalarRealBox ? (*(x) = R_ScalarRealBox0) : NULL)
+
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) (((x)->sxpinfo.gp) |= BYTES_MASK)
