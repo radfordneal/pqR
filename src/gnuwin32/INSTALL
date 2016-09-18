@@ -84,19 +84,14 @@ always completely adequate, is as follows:
      enabled) at the start of fixed\h\config.h (in src\gnuwin32).
 
  11) Issue the following commands in a Windows console (command
-     prompt) window in order to build pqR in-place in the source
-     directory:
+     prompt) window (after issuing the commands in step (5)), in order
+     to build pqR in-place in the source directory:
 
           make all recommended >make.out 2>&1
           cd bitmap
           make >make.out 2>&1
           cd ..
           make cairodevices >make-cairo.out 2>&1
-
-     This assumes you issued the commands in step (5) already.
-
-     You can monitor the make.out files from another console window to
-     see how things are progressing during the build.
 
      Including the command 
 
@@ -106,6 +101,9 @@ always completely adequate, is as follows:
      compilation of the base and recommended packages.  (If you want
      byte compilation, do not set R_NO_BASE_COMPILE at all, or set it
      to FALSE.)
+
+     You can monitor the make.out files from another console window to
+     see how things are progressing during the build.
 
  12) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
@@ -122,7 +120,7 @@ always completely adequate, is as follows:
 
          make check-all >check-all.out 2>&1
 
-     in src/gnuwin32.  You can monitorthe results by looking at
+     in src/gnuwin32.  You can monitor the results by looking at
      check-all.out in another console window.  You can run this check
      with varying numbers of helper threads, set as above.
 
