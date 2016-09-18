@@ -1003,7 +1003,7 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
 /* The [<- operator. */
 
 static SEXP do_subassign_dflt_seq 
-             (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y, int seq);
+             (SEXP call, SEXP x, SEXP subs, SEXP rho, SEXP y, int seq);
 
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1013,7 +1013,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* See if we are using the fast interface or not. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        y = R_fast_sub_value;
+        y = R_fast_sub_value;  /* save now, could change with later evals */
         x = R_fast_sub_into;
         a2 = args;
         a3 = CDR(a2);
@@ -1039,11 +1039,11 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             seq = R_variant_result;
             R_variant_result = 0;
             args = CONS (a2, R_NilValue);
-            return do_subassign_dflt_seq (call, op, x, args, rho, y, seq); 
+            return do_subassign_dflt_seq (call, x, args, rho, y, seq); 
         }
         else {
             args = evalListKeepMissing(a2,rho);
-            return do_subassign_dflt_seq (call, op, x, args, rho, y, 0);
+            return do_subassign_dflt_seq (call, x, args, rho, y, 0);
         }
     }
     else {
@@ -1060,7 +1060,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 /* in particular, it might be missing or ... */
                 args = evalListKeepMissing(a2,rho);
                 UNPROTECT(1);
-                return do_subassign_dflt_seq (call, op, x, args, rho, y, 0);
+                return do_subassign_dflt_seq (call, x, args, rho, y, 0);
             }
             else {
                 int seq;
@@ -1069,7 +1069,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 R_variant_result = 0;
                 args = CONS (a2, evalListKeepMissing (a3, rho));
                 UNPROTECT(2);
-                return do_subassign_dflt_seq (call, op, x, args, rho, y, seq); 
+                return do_subassign_dflt_seq (call, x, args, rho, y, seq); 
             }
         }
     }
@@ -1089,14 +1089,14 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     return do_subassign_dflt_seq 
-             (call, op, CAR(args), CDR(args), rho, R_NoObject, 0);
+             (call, CAR(args), CDR(args), rho, R_NoObject, 0);
 }
 
 /* The last "seq" argument below is 1 if the first subscript is a sequence spec
    (a variant result). */
 
 static SEXP do_subassign_dflt_seq
-              (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y, int seq)
+              (SEXP call, SEXP x, SEXP subs, SEXP rho, SEXP y, int seq)
 {
     PROTECT(subs);
     PROTECT(x);
@@ -1256,19 +1256,21 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
 /* The [[<- operator; should be fast. */
 
 static SEXP do_subassign2_dflt_int
-                      (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y);
+                      (SEXP call, SEXP x, SEXP subs, SEXP rho, SEXP y);
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        return do_subassign2_dflt_int 
-         (call, op, R_fast_sub_into, evalList(args,rho), rho, R_fast_sub_value);
+        SEXP y = R_fast_sub_value; /* save now, could change with later evals */
+        SEXP x = R_fast_sub_into;
+        args = evalList(args,rho);
+        return do_subassign2_dflt_int (call, x, args, rho, y);
     }
 
     if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
-      return(ans);
+        return(ans);
 
     return do_subassign2_dflt(call, op, ans, rho);
 }
@@ -1279,11 +1281,11 @@ SEXP attribute_hidden do_subassign2_dflt
                                (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     return do_subassign2_dflt_int 
-             (call, op, CAR(args), CDR(args), rho, R_NoObject);
+             (call, CAR(args), CDR(args), rho, R_NoObject);
 }
 
 static SEXP do_subassign2_dflt_int
-                      (SEXP call, SEXP op, SEXP x, SEXP subs, SEXP rho, SEXP y)
+                      (SEXP call, SEXP x, SEXP subs, SEXP rho, SEXP y)
 {
     SEXP dims, names, newname, xtop, xup;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, len = 0 /* -Wall */;
