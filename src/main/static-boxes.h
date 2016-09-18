@@ -108,14 +108,10 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
        value in a local variable, and switch to the other box,
        since the second argument might use a static box too. */
 
-    int intv; double realv;  /* for saving a boxed x value */
-    if (x == R_ScalarRealBox) {
-        realv = *REAL(x);
-        x = R_ScalarRealBox0;
-    }
-    else if (x == R_ScalarIntegerBox) {
-        intv = *INTEGER(x);
-        x = R_ScalarIntegerBox0;
+    R_static_box_contents contents;
+    if (IS_STATIC_BOX(x)) {
+        SAVE_STATIC_BOX_CONTENTS(x,&contents);
+        SWITCH_TO_BOX0(&x);
     }
 
     /* Now we evaluate the second argument, also allowing it to be in
@@ -131,10 +127,8 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
             *obj2 = 1;
     }
 
-    if (x == R_ScalarRealBox0)
-        *REAL(x) = realv;
-    else if (x == R_ScalarIntegerBox0)
-        *INTEGER(x) = intv;
+    if (IS_STATIC_BOX(x))
+        RESTORE_STATIC_BOX_CONTENTS(x,&contents);
 
     /* If the second arg is an object, we have to duplicate the first
        arg if it is in a static box, or an unclassed object, and create 
