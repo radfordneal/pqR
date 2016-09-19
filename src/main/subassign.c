@@ -1017,7 +1017,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         y = R_fast_sub_value;  /* may be a static box */
         x = R_fast_sub_into;
         if (IS_STATIC_BOX(y)) {
-            if (!isVectorAtomic(y)) {
+            if (!isVectorAtomic(x)) {
                 /* don't want a static box to end up in a list */
                 y = duplicate(y);
             }
