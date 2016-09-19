@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2016-09-18}{
+\section{CHANGES IN VERSION RELEASED 2016-09-19}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -100,8 +100,8 @@
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item Replacing part of a vector or list with \code{[ ]}, \code{[[ ]]},
-        and \code{$} is now faster, by up to a factor two, when the
-        index and replacement value are scalars.
+        and \code{$} is now oftne faster.  The improvement can be by up to 
+        a factor two or more when the index and replacement value are scalars.
   \item In some contexts, the \code{unclass} function now takes 
         negligible time, with no copying of the object that is unclassed.
         In particular this is the case when \code{unclass(x)} is the object
