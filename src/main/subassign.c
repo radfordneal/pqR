@@ -1130,6 +1130,8 @@ static SEXP do_subassign_dflt_seq
     Rboolean S4 = IS_S4_OBJECT(x);
     int oldtype = NILSXP;
 
+    WAIT_UNTIL_COMPUTED(x);
+
     if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
 	oldtype = TYPEOF(x);
         SEXP ox = x;
@@ -1334,6 +1336,8 @@ static SEXP do_subassign2_dflt_int
     else if (IS_STATIC_BOX(y) && TYPEOF(y) != TYPEOF(x))
         y = duplicate(y);
     PROTECT(y);
+
+    WAIT_UNTIL_COMPUTED(x);
 
     S4 = IS_S4_OBJECT(x);
 
@@ -1666,6 +1670,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
     if (IS_STATIC_BOX(val))   /* currently, never puts value in atomic vector */
         val = duplicate(val);
+
+    WAIT_UNTIL_COMPUTED(x);
 
     PROTECT_WITH_INDEX(x, &pxidx);
     PROTECT_WITH_INDEX(val, &pvalidx);
