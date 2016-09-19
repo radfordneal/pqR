@@ -1,2 +1,3 @@
-Change fast interface to subassignment to allow rhs to be 
-evaluated in a static box.
+Change fast interface to subassignment to allow rhs to be evaluated in
+a static box.  (Note that it must not be kept in a static box if the
+assignment ends up putting it in a list.)

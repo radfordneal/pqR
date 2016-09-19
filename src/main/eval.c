@@ -2446,8 +2446,18 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        value needed for return), and otherwise for pending computation. */
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
-    PROTECT(rhs = EVALV (rhs, rho, !maybe_fast ? VARIANT_PENDING_OK
-                   : (variant & VARIANT_NULL) ? VARIANT_STATIC_BOX_OK : 0));
+    R_static_box_contents rhs_contents;
+
+    if (maybe_fast) {
+        PROTECT(rhs = EVALV (rhs, rho, 
+                        (variant & VARIANT_NULL) ? VARIANT_STATIC_BOX_OK : 0));
+        if (IS_STATIC_BOX(rhs)) {
+            /* save in case evaluation of varval uses the same static box */
+            SAVE_STATIC_BOX_CONTENTS(rhs,&rhs_contents); 
+        }
+    }
+    else
+        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
 
     /* Debugging/comparison aid:  Can be enabled one way or the other below,
        then activated by typing `switch to old` or `switch to new` at the
@@ -2520,6 +2530,9 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     if (depth == 1) {
 
         SEXP fn;
+
+        if (IS_STATIC_BOX(rhs))
+            RESTORE_STATIC_BOX_CONTENTS(rhs,&rhs_contents); 
 
         if (maybe_fast && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
