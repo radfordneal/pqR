@@ -1,0 +1,7 @@
+Some final fixes for release compatible with 2.15.1.
+
+Fixed bug introduced in 2.15.1 with utf8toucs returning size_t but
+indicating error by negative value.  Fixed some similar problems with
+mbcstowc, but the problem is pervasive in the character coding
+routines, and partly originates in external libraries.
+

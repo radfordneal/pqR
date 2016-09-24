@@ -1487,9 +1487,10 @@ int attribute_hidden utf8clen(char c)
     return 1 + utf8_table4[c & 0x3f];
 }
 
-/* These return the result in wchar_t, but does assume
-   wchar_t is UCS-2/4 and so are for internal use only */
-size_t attribute_hidden
+/* utf8toucs and utf8towcs return the result in wchar_t, but
+   assume wchar_t is UCS-2/4 and so are for internal use only. */
+
+int attribute_hidden /* Returns number of bytes used, or -1 or -2 on error */
 utf8toucs(wchar_t *wc, const char *s)
 {
     unsigned int byte;
@@ -1504,35 +1505,35 @@ utf8toucs(wchar_t *wc, const char *s)
 	*w = (wchar_t) byte;
 	return 1;
     } else if (byte < 0xE0) {
-	if(strlen(s) < 2) return (size_t)-2;
+	if(strlen(s) < 2) return -2;
 	if ((s[1] & 0xC0) == 0x80) {
 	    *w = (wchar_t) (((byte & 0x1F) << 6) | (s[1] & 0x3F));
 	    return 2;
-	} else return (size_t)-1;
+	} else return -1;
     } else if (byte < 0xF0) {
-	if(strlen(s) < 3) return (size_t)-2;
+	if(strlen(s) < 3) return -2;
 	if (((s[1] & 0xC0) == 0x80) && ((s[2] & 0xC0) == 0x80)) {
 	    *w = (wchar_t) (((byte & 0x0F) << 12)
 			    | (unsigned int) ((s[1] & 0x3F) << 6)
 			    | (s[2] & 0x3F));
 	    byte = (unsigned int) *w;
 	    /* Surrogates range */
-	    if(byte >= 0xD800 && byte <= 0xDFFF) return (size_t)-1;
-	    if(byte == 0xFFFE || byte == 0xFFFF) return (size_t)-1;
+	    if(byte >= 0xD800 && byte <= 0xDFFF) return -1;
+	    if(byte == 0xFFFE || byte == 0xFFFF) return -1;
 	    return 3;
-	} else return (size_t)-1;
+	} else return -1;
     }
-    if(sizeof(wchar_t) < 4) return (size_t)-2;
+    if(sizeof(wchar_t) < 4) return -2;
     /* So now handle 4,5.6 byte sequences with no testing */
     if (byte < 0xf8) {
-	if(strlen(s) < 4) return (size_t)-2;
+	if(strlen(s) < 4) return -2;
 	*w = (wchar_t) (((byte & 0x0F) << 18)
 			| (unsigned int) ((s[1] & 0x3F) << 12)
 			| (unsigned int) ((s[2] & 0x3F) << 6)
 			| (s[3] & 0x3F));
 	return 4;
     } else if (byte < 0xFC) {
-	if(strlen(s) < 5) return (size_t)-2;
+	if(strlen(s) < 5) return -2;
 	*w = (wchar_t) (((byte & 0x0F) << 24)
 			| (unsigned int) ((s[1] & 0x3F) << 12)
 			| (unsigned int) ((s[2] & 0x3F) << 12)
@@ -1540,7 +1541,7 @@ utf8toucs(wchar_t *wc, const char *s)
 			| (s[4] & 0x3F));
 	return 5;
     } else {
-	if(strlen(s) < 6) return (size_t)-2;
+	if(strlen(s) < 6) return -2;
 	*w = (wchar_t) (((byte & 0x0F) << 30)
 			| (unsigned int) ((s[1] & 0x3F) << 24)
 			| (unsigned int) ((s[2] & 0x3F) << 18)
@@ -1554,14 +1555,15 @@ utf8toucs(wchar_t *wc, const char *s)
 size_t
 utf8towcs(wchar_t *wc, const char *s, size_t n)
 {
-    ssize_t m, res = 0;
+    int m;
+    size_t res = 0;
     const char *t;
     wchar_t *p;
     wchar_t local;
 
     if(wc)
 	for(p = wc, t = s; ; p++, t += m) {
-	    m  = (ssize_t) utf8toucs(p, t);
+	    m  = utf8toucs(p, t);
 	    if (m < 0) error(_("invalid input '%s' in 'utf8towcs'"), s);
 	    if (m == 0) break;
 	    res ++;
@@ -1569,11 +1571,11 @@ utf8towcs(wchar_t *wc, const char *s, size_t n)
 	}
     else
 	for(t = s; ; res++, t += m) {
-	    m  = (ssize_t) utf8toucs(&local, t);
+	    m  = utf8toucs(&local, t);
 	    if (m < 0) error(_("invalid input '%s' in 'utf8towcs'"), s);
 	    if (m == 0) break;
 	}
-    return (size_t) res;
+    return res;
 }
 
 /* based on pcre.c */

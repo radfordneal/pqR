@@ -1583,17 +1583,20 @@ void PRSEEN_error_or_warning(SEXP e);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 
+/* NOTE:  Some below should not really be returning size_t, which
+   is unsigned, since they indicate errors by returning -1 or -2. */
+
 typedef unsigned short ucs2_t;
 size_t mbcsToUcs2(const char *in, ucs2_t *out, int nout, int enc);
 /* size_t mbcsMblen(char *in);
 size_t ucs2ToMbcs(ucs2_t *in, char *out);
 size_t ucs2Mblen(ucs2_t *in); */
-size_t utf8toucs(wchar_t *wc, const char *s);
 size_t utf8towcs(wchar_t *wc, const char *s, size_t n);
 size_t ucstomb(char *s, const unsigned int wc);
 size_t ucstoutf8(char *s, const unsigned int wc);
 size_t mbtoucs(unsigned int *wc, const char *s, size_t n);
 size_t wcstoutf8(char *s, const wchar_t *wc, size_t n);
+int utf8toucs(wchar_t *wc, const char *s);
 
 const wchar_t *wtransChar(SEXP x); /* from sysutils.c */
 

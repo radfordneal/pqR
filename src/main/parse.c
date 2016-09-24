@@ -2391,7 +2391,7 @@ static int mbcs_get_next(int c, wchar_t *wc)
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbrtowc(wc, s, clen, NULL);
-	if(res == -1) 
+	if(res < 0) 
             error(_("invalid multibyte character in parser at line %d"), 
                     ps->sr->xxlineno);
     } else {
