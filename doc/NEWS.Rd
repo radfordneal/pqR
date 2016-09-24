@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2016-09-19}{
+\section{CHANGES IN VERSION RELEASED 2016-09-24}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -100,7 +100,7 @@
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item Replacing part of a vector or list with \code{[ ]}, \code{[[ ]]},
-        and \code{$} is now oftne faster.  The improvement can be by up to 
+        and \code{$} is now often faster.  The improvement can be by up to 
         a factor two or more when the index and replacement value are scalars.
   \item In some contexts, the \code{unclass} function now takes 
         negligible time, with no copying of the object that is unclassed.
@@ -115,8 +115,19 @@
         \code{e1} or \code{e2}.
   }}
 
-  \subsection{DOCUMENTATION FIXES}{
+  \subsection{BUG FIXES}{
     \itemize{
+    \item Fixed a bug involving invalid UTF-8 byte sequences,
+          which was introduced in R-2.15.1, and is present in later
+          R Core releases to at least R-3.3.1.  The bug is illustrated by
+          the following code, which results in an infinite loop in the
+          interpreter, when run on a Linux system in a UTF-8 locale:
+\preformatted{    plot(0); text(1,0,"ab\xc3")
+}
+          The code from R-2.15.1 causing the bug was incorporated into
+          this release of pqR, but the problem was fixed after the
+          fBasics package was seen to fail with a test release of pqR,
+          so the bug does not appear in any stable release of pqR.
     \item Fixed misinformation in help(length) about the length of
           expressions (which is also present in R Core versions to 
           at least R-3.3.1).

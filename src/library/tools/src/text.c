@@ -1,6 +1,12 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2016 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2003-11   The R Core Team.
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -92,7 +98,7 @@ delim_match(SEXP x, SEXP delims)
 		while((c != '\0') && (c != '\n')) {
 		    if(mbcslocale) {
 			used = Rf_mbrtowc(NULL, s, MB_CUR_MAX, &mb_st);
-			if(used == 0) break;
+			if(used <= 0) break;
 			s += used; c = *s;
 		    } else
 			c = *++s;
@@ -116,7 +122,7 @@ delim_match(SEXP x, SEXP delims)
 	    }
 	    if(mbcslocale) {
 		used = Rf_mbrtowc(NULL, s, MB_CUR_MAX, &mb_st);
-		if(used == 0) break;
+		if(used <= 0) break;
 		s += used;
 	    } else
 		s++; pos++;

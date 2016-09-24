@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2016 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-12   The R Core Team.
@@ -1785,7 +1785,10 @@ void GEText(double x, double y, const char * const str, cetype_t enc,
 					wchar_t wc;
 					mbstate_t mb_st;
 					mbs_init(&mb_st);
-					while ((used = mbrtowc(&wc, ss, n, &mb_st)) > 0) {
+					for (;;) {
+					    used = mbrtowc(&wc, ss, n, &mb_st);
+					    if (used == (size_t)-1 || used == (size_t)-2)
+						break;
 #ifdef DEBUG_MI
 					    printf(" centring %s aka %d in MBCS\n", ss, wc);
 #endif
@@ -1803,7 +1806,7 @@ void GEText(double x, double y, const char * const str, cetype_t enc,
 					}
 					done = TRUE;
 				    } else if (enc2 == CE_UTF8) {
-					size_t used;
+					int used;
 					wchar_t wc;
 					while ((used = utf8toucs(&wc, ss)) > 0) {
 					    GEMetricInfo(-(int) wc, gc, &h, &d, &w, dd);
@@ -3031,7 +3034,7 @@ int GEstring_to_pch(SEXP pch)
     } else if (IS_UTF8(pch) || utf8locale) {
 	wchar_t wc = 0;
 	if (ipch > 127) {
-	    if ( (int) utf8toucs(&wc, CHAR(pch)) > 0) ipch = -wc;
+	    if (utf8toucs(&wc, CHAR(pch)) > 0) ipch = -wc;
 	    else error(_("invalid multibyte char in pch=\"c\""));
 	}
     } else if(mbcslocale) {
