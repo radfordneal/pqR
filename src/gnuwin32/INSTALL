@@ -19,17 +19,12 @@ always completely adequate, is as follows:
      puts up asking about this is covered by another window.)
 
   2) Obtain Rtools33.exe from http:/pqR-project.org/Rtools33.exe (do
-     not use the version obtainable via r-project.org, which is
-     different and not tested with pqR).  Run this to install the
+     not use the version obtainable via r-project.org, which is a
+     later version not tested with pqR).  Run this to install the
      required build tools, but do not choose the options to install
      "extra" material for 32 or 64 bit builds of R itself (since this
      can cause problems with ownership or permissions for files).
      Enable the option to update your path to include Rtools programs.
-
-     If you have problems, you might try using Rtools215.exe, also
-     available from pqR-project.org, or you might try some other
-     version if you already have it, but Rtools33.exe is necessary for
-     installing on Windows 10.
 
   3) Download the pqR source from pqR-project.org, as a file with a
      name of the form pqR-YYYY-MM-DD.tar.gz.
@@ -53,8 +48,8 @@ always completely adequate, is as follows:
      You can replace c:\tmp with some other directory if you wish.
 
   6) Change to a directory in which you wish the pqR source/build
-     directory to be created, and untar the file you downloaded
-     in step (2) with the following command:
+     directory to be created, using the "cd" command.  Then untar the
+     file you downloaded in step (2) with the following command:
 
          tar -xvf <path-to-where-you-put>\pqR-YYYY-MM-DD.tar.gz
 
@@ -73,12 +68,16 @@ always completely adequate, is as follows:
 
   9) Copy one of MkRules.dist32, MkRules.dist32-sse2, or MkRules.dist64
      to MkRules.local and possibly edit MkRules.local as appropriate.
-     (Note that these names are case-sensitive!)
+     For example, if runing 64-bit Windows, you might use the command
+
+         cp MkRules.dist64 MkRules.local
+
+     Note that the names are case-sensitive!
 
      MkRules.dist32 should work for any Windows XP, Vista, 7, 8, or 10
      system (in conjunction with pqR-win-extras-32), but will not produce
      as fast a version of pqR on recent processors as the other options.
-     See the comments in these file for more details.
+     See the comments in the MkRules files for more details.
 
  10) Possibly edit the options (eg, whether helper threads are
      enabled) at the start of fixed\h\config.h (in src\gnuwin32).
