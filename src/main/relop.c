@@ -61,10 +61,27 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     int negate = 0;
 
     switch (code) {
-    case NEOP: code = EQOP; negate = 1; break; 
-    case GTOP: code = LTOP; tmp = x; x = y; y = tmp; break;
-    case LEOP: code = LTOP; negate = 1; tmp = x; x = y; y = tmp; break;
-    case GEOP: code = LTOP; negate = 1; break;
+    case NEOP: 
+        code = EQOP; 
+        negate = 1; 
+        break; 
+    case GTOP: 
+        code = LTOP; 
+        tmp = x; x = y; y = tmp; 
+        tmp = objx; objx = objy; objy = tmp; 
+        break;
+    case LEOP:
+        code = LTOP;
+        negate = 1;
+        tmp = x; x = y; y = tmp;
+        tmp = objx; objx = objy; objy = tmp; 
+        break;
+    case GEOP:
+        code = LTOP;
+        negate = 1;
+        break;
+    default:
+        break;
     }
 
     WAIT_UNTIL_COMPUTED_2(x,y);
