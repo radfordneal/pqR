@@ -410,10 +410,10 @@ R_NORETURN void attribute_hidden dotdotdot_error(void)
 
 R_NORETURN void attribute_hidden arg_missing_error(SEXP sym)
 {
-    if (*CHAR(PRINTNAME(sym)))
+    if (TYPEOF(sym) == SYMSXP && *CHAR(PRINTNAME(sym)))
         error(_("argument \"%s\" is missing, with no default"),
               CHAR(PRINTNAME(sym)));
-    else 
+    else
         error(_("argument is missing, with no default"));
 }
 

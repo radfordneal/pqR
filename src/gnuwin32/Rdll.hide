@@ -345,12 +345,12 @@
  Rf_dpptr
  Rf_evalList
  Rf_evalListKeepMissing
- Rf_evalListPendingOK
+ Rf_evalList_v
  Rf_evalv2
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
- Rf_forcePromisePendingOK
+ Rf_forcePromiseUnbound
  Rf_framedepth
  Rf_gamma_cody
  Rf_gammalims
