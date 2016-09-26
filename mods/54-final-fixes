@@ -5,3 +5,10 @@ indicating error by negative value.  Fixed some similar problems with
 mbcstowc, but the problem is pervasive in the character coding
 routines, and partly originates in external libraries.
 
+Fixed problems with missing argument introduced in pqR-2016-06-24.
+For instance 
+
+   f <- function (x) x;  g <- function (y) f(y);  g()
+
+failed to give an error.  Added more tests.
+
