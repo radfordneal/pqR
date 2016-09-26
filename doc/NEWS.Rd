@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2016-09-24}{
+\section{CHANGES IN VERSION RELEASED 2016-09-26}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -117,6 +117,11 @@
 
   \subsection{BUG FIXES}{
     \itemize{
+    \item Fixed some problems with reporting of missing arguments to functions,
+          which were introduced in pqR-2016-06-24.  For example, 
+\preformatted{    f <- function(x) x; g <- function(y) f(y); g()
+}
+          would not display an error message, when it should.
     \item Fixed a bug involving invalid UTF-8 byte sequences,
           which was introduced in R-2.15.1, and is present in later
           R Core releases to at least R-3.3.1.  The bug is illustrated by
