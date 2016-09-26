@@ -71,7 +71,8 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
    pok : is "partial ok" ?
 	 if pok is -1, warn if partial matching occurs
 */
-    int indx, i, warn_pok, len_names;
+    int indx, i, warn_pok;
+    R_len_t length_s = length(s);
     double dblind;
     SEXP se;
 
@@ -81,14 +82,14 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	warn_pok = 1;
     }
 
-    if (pos < 0 && length(s) != 1) {
-	if (length(s) > 1)
+    if (pos < 0 && length_s != 1) {
+	if (length_s > 1)
 	    ECALL(call, _("attempt to select more than one element"));
 	else
 	    ECALL(call, _("attempt to select less than one element"));
     } 
     else {
-	if(pos >= length(s))
+	if(pos >= length_s)
 	    ECALL(call, _("internal error in use of recursive indexing"));
     }
 
@@ -112,13 +113,16 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	break;
 
     case STRSXP:
-
+    {
 	se = STRING_ELT(s,pos);
 	/* NA matches nothing */
-	if (se == NA_STRING) break;
+	if (se == NA_STRING)
+            break;
 	/* "" matches nothing: see names.Rd */
-	if (CHAR(se)[0] == 0) break;
-        len_names = TYPEOF(names) != STRSXP ? 0 : LENGTH(names);
+	if (CHAR(se)[0] == 0)
+            break;
+
+        int len_names = TYPEOF(names) != STRSXP ? 0 : LENGTH(names);
 
 	/* Try for exact match */
 	for (i = 0; i < len_names; i++) {
@@ -162,9 +166,10 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	    }
 	}
 	break;
-
+    }
     case SYMSXP:
-        len_names = TYPEOF(names) != STRSXP ? 0 : LENGTH(names);
+    {
+        int len_names = TYPEOF(names) != STRSXP ? 0 : LENGTH(names);
 	for (i = 0; i < len_names; i++) {
 	    if (STRING_ELT(names,i) != NA_STRING
                   && SEQL (STRING_ELT(names,i), PRINTNAME(s))) {
@@ -173,7 +178,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	    }
         }
         break;
-
+    }
     default:
 	if (call == R_NilValue)
 	    error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
