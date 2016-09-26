@@ -1,10 +1,10 @@
 
-pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -445,4 +445,44 @@ Error in pi[1, 1] : incorrect number of dimensions
 > h(_)
 [1] FALSE
 [1] 88
->
+> 
+> # make sure we get errors when we should, and not when we shouldn't.
+> 
+> f <- function (x) x
+> try(f())
+Error in f() : argument "x" is missing, with no default
+> 
+> f <- function (x,y) mget("x",sys.frame(sys.nframe()))[[1]]
+> xx <- f(,1)
+> g <- function (a) length(a)
+> try(g(xx))
+Error in g(xx) : argument "xx" is missing, with no default
+> 
+> h <- function (x) length(x)
+> j <- function (x) h(x)
+> try(j())
+Error in h(x) : argument "x" is missing, with no default
+> 
+> lapply(function(x)0,all.names)
+$x
+character(0)
+
+[[2]]
+character(0)
+
+> 
+> M <- quote(function (x) 0)[[2]]
+> all.names(M[[1]])
+character(0)
+> 
+> F <- function (e) typeof(e)
+> lapply(M,F)
+$x
+[1] "symbol"
+
+> G <- function (e) invisible(e)
+> lapply(M,G)
+$x
+
+
+> 

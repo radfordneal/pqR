@@ -255,8 +255,8 @@ findLocals1 <- function(e, shadowed = character(0)) {
     else character(0)
 }
 
-findLocalsList1 <- function(elist, shadowed)
-    unique(unlist(lapply(elist, findLocals1, shadowed)))
+findLocalsList1 <- function(elist, shadowed) { print(elist);
+    unique(unlist(lapply(elist, findLocals1, shadowed))) }
 
 findLocals <- function(e, cntxt)
     findLocalsList(list(e), cntxt)

@@ -282,3 +282,27 @@ h <- function (y=88) f(y)
 h(1)
 h()
 h(_)
+
+# make sure we get errors when we should, and not when we shouldn't.
+
+f <- function (x) x
+try(f())
+
+f <- function (x,y) mget("x",sys.frame(sys.nframe()))[[1]]
+xx <- f(,1)
+g <- function (a) length(a)
+try(g(xx))
+
+h <- function (x) length(x)
+j <- function (x) h(x)
+try(j())
+
+lapply(function(x)0,all.names)
+
+M <- quote(function (x) 0)[[2]]
+all.names(M[[1]])
+
+F <- function (e) typeof(e)
+lapply(M,F)
+G <- function (e) invisible(e)
+lapply(M,G)

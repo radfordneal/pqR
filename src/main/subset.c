@@ -1359,7 +1359,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 R_variant_result = 0;
             }
             if (remargs != R_NilValue)
-                remargs = evalListPendingOK(remargs,rho,VARIANT_MISSING_OK);
+                remargs = evalList_v (remargs, rho,
+                                      VARIANT_PENDING_OK | VARIANT_MISSING_OK);
             PROTECT(args = CONS(idx,remargs));
             if (idx == R_MissingArg && isSymbol(CAR(ixlist)))
                 SET_MISSING (args, R_isMissing(CAR(ixlist),rho));

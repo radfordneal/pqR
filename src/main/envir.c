@@ -2009,7 +2009,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         unbound_var_error(name);
 
     if (TYPEOF(value) == PROMSXP) {
-        SEXP prvalue = forcePromisePendingOK(value);
+        SEXP prvalue = forcePromise(value);
         DEC_NAMEDCNT_AND_PRVALUE(value);
         value = prvalue;
     }
@@ -2237,7 +2237,7 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
    argument that has been passed down.  So 'symbol' is the promise value, 
    and 'rho' its evaluation argument.
 
-   It is called in do_missing and in evalListPendingOK.
+   It is called in do_missing and in evalList_v.
 
    Return 0 if not missing, 1 if missing from empty arg, 2 if missing from "_".
    Note that R_isMissing pays no attention to the MISSING field, only to

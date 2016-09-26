@@ -823,7 +823,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             /* Not a simple use like A %*% B, but something like `%*%`(...).
                Don't try to evaluate arguments with VARIANT_TRANS. */
 
-            PROTECT(args = evalListPendingOK (args, rho, 0));
+            PROTECT(args = evalList_v (args, rho, VARIANT_PENDING_OK));
             nprotect += 1;
             x = CAR(args);
             y = CADR(args);

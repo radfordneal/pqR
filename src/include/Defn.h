@@ -1183,14 +1183,14 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define ErrorMessage		Rf_ErrorMessage
 # define evalList		Rf_evalList
 # define evalListKeepMissing	Rf_evalListKeepMissing
-# define evalListPendingOK	Rf_evalListPendingOK
 # define evalListUnshared	Rf_evalListUnshared
+# define evalList_v		Rf_evalList_v
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findFun_nospecsym	Rf_findFun_nospecsym
 # define findVar1		Rf_findVar1
 # define forcePromise		Rf_forcePromise
-# define forcePromisePendingOK	Rf_forcePromisePendingOK
+# define forcePromiseUnbound	Rf_forcePromiseUnbound
 # define FrameClassFix		Rf_FrameClassFix
 # define framedepth		Rf_framedepth
 # define frameSubscript		Rf_frameSubscript
@@ -1392,14 +1392,14 @@ int any_duplicated3(SEXP, SEXP, Rboolean);
 int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
-SEXP evalListPendingOK(SEXP, SEXP, int);
 SEXP evalListUnshared(SEXP, SEXP);
+SEXP evalList_v(SEXP, SEXP, int);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
 SEXP forcePromise(SEXP);
-SEXP forcePromisePendingOK(SEXP);
+SEXP forcePromiseUnbound(SEXP,int);
 void FrameClassFix(SEXP);
 SEXP frameSubscript(int, SEXP, SEXP);
 int get1index(SEXP, SEXP, int, int, int, SEXP);

@@ -374,7 +374,8 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
         helpers_wait_until_not_being_computed (wait_for);
 }
 
-static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
+/* e is protected here */
+SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
 {
     RPRSTACK prstack;
     SEXP val;
@@ -392,39 +393,41 @@ static SEXP forcePromiseUnbound(SEXP e) /* e is protected here */
     prstack.next = R_PendingPromises;
     R_PendingPromises = &prstack;
 
-    val = EVALV (PRCODE(e), PRENV(e), VARIANT_PENDING_OK | VARIANT_MISSING_OK);
+    val = EVALV (PRCODE(e), PRENV(e), 
+                 (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
 
-    /* Pop the stack, unmark the promise and set its value field.
-       Also set the environment to R_NilValue to allow GC to
-       reclaim the promise environment; this is also useful for
-       fancy games with delayedAssign() */
+    /* Pop the stack, unmark the promise and set its value field. */
+
     R_PendingPromises = prstack.next;
     SET_PRSEEN(e, 0);
     SET_PRVALUE(e, val);
     INC_NAMEDCNT(val);
-    SET_PRENV(e, R_NilValue);
+
+    /* Attempt to mimic past behaviour... */
+    if (val == R_MissingArg) {
+        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP 
+                  && R_isMissing (PRCODE(e), PRENV(e)))
+            arg_missing_error(PRCODE(e));
+    }
+    else {
+        /* Set the environment to R_NilValue to allow GC to
+           reclaim the promise environment (unless value is R_MissingArg);
+           this is also useful for fancy games with delayedAssign() */
+        SET_PRENV(e, R_NilValue);
+    }
 
     UNPROTECT(1);
+
     return val;
 }
 
 SEXP forcePromise (SEXP e) /* e protected here if necessary */
 {
     if (PRVALUE(e) == R_UnboundValue) {
-        SEXP val = forcePromiseUnbound(e);
-        WAIT_UNTIL_COMPUTED(val);
-        return val;
+        return forcePromiseUnbound(e,0);
     }
     else
         return PRVALUE(e);
-}
-
-SEXP attribute_hidden forcePromisePendingOK(SEXP e)/* e protected here if rqd */
-{
-    if (PRVALUE(e) == R_UnboundValue)
-        return forcePromiseUnbound(e);
-    else
-        return PRVALUE_PENDING_OK(e);
 }
 
 
@@ -552,15 +555,16 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
 	if (res == R_UnboundValue)
             unbound_var_error(e);
-        else if (res == R_MissingArg) {
+
+        if (res == R_MissingArg) {
             if ( ! (variant & VARIANT_MISSING_OK))
                 if (!DDVAL(e))  /* revert bug fix for the moment */
                     arg_missing_error(e);
         }
         else if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-                res = forcePromiseUnbound(res);
-            else 
+                res = forcePromiseUnbound(res,variant);
+            else
                 res = PRVALUE_PENDING_OK(res);
         }
 
@@ -623,7 +627,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     else if (typeof_e == PROMSXP) {
 
 	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            res = forcePromiseUnbound(e);
+            res = forcePromiseUnbound(e,variant);
         else
             res = PRVALUE_PENDING_OK(e);
 
@@ -713,7 +717,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
             endcontext(&cntxt);
             return res;
         }
-        args = evalListPendingOK (args, rho, 0);
+        args = evalList_v (args, rho, VARIANT_PENDING_OK);
     }
 
     PROTECT(args);
@@ -2498,7 +2502,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             varval = findVar (var, ENCLOS(rho));
             if (varval != R_UnboundValue) {
                 if (TYPEOF(varval) == PROMSXP)
-                    varval = forcePromisePendingOK(varval);
+                    varval = forcePromise(varval);
                 set_var_in_frame (var, varval, rho, TRUE, 3);
             }
         }
@@ -2510,7 +2514,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     PROTECT(bcell);
 
     if (TYPEOF(varval) == PROMSXP)
-        varval = forcePromisePendingOK(varval);
+        varval = forcePromise(varval);
     if (varval == R_UnboundValue)
         unbound_var_error(var);
 
@@ -2734,9 +2738,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
 
 /* Evaluate each expression in "el" in the environment "rho".  
-   The evaluation is done by calling evalv with the given variant,
-   which is automaticaly OR'd with VARIANT_PENDING_OK, so the
-   caller should wait for computations to finish if this is necessary.
+   The evaluation is done by calling evalv with the given variant.
 
    The MISSING gp field in the CONS cell for a missing argument is 
    set to the result of R_isMissing, which will allow identification 
@@ -2746,11 +2748,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
    do_internal (names.c) for builtin .Internals and in evalArgs.
  */
 
-SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
+SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 {
     BEGIN_PROTECT4 (head, tail, ev, h);
 
-    variant |= VARIANT_PENDING_OK;
     head = R_NilValue;
 
     while (el != R_NilValue) {
@@ -2798,7 +2799,7 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 
-} /* evalListPendingOK() */
+} /* evalList_v */
 
 
 /* evalListUnshared evaluates each expression in "el" in the
@@ -2807,7 +2808,8 @@ SEXP attribute_hidden evalListPendingOK(SEXP el, SEXP rho, int variant)
    assigning a duplicate to them if necessary.
 
    Used in .External and .Call as a defensive measure against argument 
-   abuse.  Waits for arguments to be computed. */
+   abuse.  Waits for arguments to be computed.  Does not allow missing 
+   arguments. */
 
 static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
 {
@@ -2829,7 +2831,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
         }
         else if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-                res = forcePromiseUnbound(res);
+                res = forcePromiseUnbound(res,VARIANT_PENDING_OK);
             else
                 res = PRVALUE_PENDING_OK(res);
         }
@@ -2917,12 +2919,7 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
 
 SEXP attribute_hidden evalList(SEXP el, SEXP rho)
 {
-    SEXP args;
-
-    args = evalListPendingOK (el, rho, 0);
-    WAIT_UNTIL_ARGUMENTS_COMPUTED (args);
-
-    return args;
+    return evalList_v (el, rho, 0);
 }
 
 /* Evaluate argument list, waiting for pending computations, and with no 
@@ -2930,12 +2927,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho)
 
 SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 { 
-    SEXP args;
-
-    args = evalListPendingOK (el, rho, VARIANT_MISSING_OK);
-    WAIT_UNTIL_ARGUMENTS_COMPUTED (args);
-
-    return args;
+    return evalList_v (el, rho, VARIANT_MISSING_OK);
 }
 
 
