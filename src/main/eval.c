@@ -396,20 +396,25 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
     val = EVALV (PRCODE(e), PRENV(e), 
                  (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
 
-    /* Pop the stack, unmark the promise and set its value field.
-       Also set the environment to R_NilValue to allow GC to
-       reclaim the promise environment; this is also useful for
-       fancy games with delayedAssign() */
+    /* Pop the stack, unmark the promise and set its value field. */
+
     R_PendingPromises = prstack.next;
     SET_PRSEEN(e, 0);
     SET_PRVALUE(e, val);
     INC_NAMEDCNT(val);
-    SET_PRENV(e, R_NilValue);
 
     /* Attempt to mimic past behaviour... */
-    if (val == R_MissingArg && ! (variant & VARIANT_MISSING_OK)
-                            && TYPEOF(PRCODE(e)) == SYMSXP)
-        arg_missing_error(PRCODE(e));
+    if (val == R_MissingArg) {
+        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP 
+                  && R_isMissing (PRCODE(e), PRENV(e)))
+            arg_missing_error(PRCODE(e));
+    }
+    else {
+        /* Set the environment to R_NilValue to allow GC to
+           reclaim the promise environment (unless value is R_MissingArg);
+           this is also useful for fancy games with delayedAssign() */
+        SET_PRENV(e, R_NilValue);
+    }
 
     UNPROTECT(1);
 
