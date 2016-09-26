@@ -1641,15 +1641,18 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
     if(nsubs == 1) { /* vector indexing */
 
 	SEXP thesub = CAR(subs);
+        int str_sym_sub = isString(thesub) || isSymbol(thesub);
 	int len = length(thesub);
-        int i;
+        int i, lenx;
 
         for (i = 1; i < len; i++) {
             if (!isVectorList(x) && !isPairList(x))
                 errorcall(call,_("recursive indexing failed at level %d\n"),i);
-            offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
-                               length(x), pok, i-1, call);
-            if (offset < 0 || offset >= length(x))
+            lenx = length(x);
+            offset = get1index(thesub, 
+                       str_sym_sub ? getAttrib(x, R_NamesSymbol) : R_NilValue,
+                       lenx, pok, i-1, call);
+            if (offset < 0 || offset >= lenx)
                 errorcall(call, _("no such index at level %d\n"), i);
             if (isPairList(x)) {
                 x = CAR(nthcdr(x, offset));
@@ -1662,10 +1665,12 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
                     max_named = nm;
             }
         }
-	    
-	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
-			   length(x), pok, len > 1 ? len-1 : -1, call);
-	if (offset < 0 || offset >= length(x)) {
+
+        lenx = length(x);
+	offset = get1index(thesub, 
+                   str_sym_sub ? getAttrib(x, R_NamesSymbol) : R_NilValue,
+                   lenx, pok, len > 1 ? len-1 : -1, call);
+	if (offset < 0 || offset >= lenx) {
 	    /* a bold attempt to get the same behaviour for $ and [[ */
 	    if (offset < 0 && (isNewList(x) ||
 			       isExpression(x) ||
@@ -1689,8 +1694,8 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
 	ndn = length(dimnames);
 	for (i = 0; i < nsubs; i++) {
 	    INTEGER(indx)[i] =
-		get1index(CAR(subs), (i < ndn) ? VECTOR_ELT(dimnames, i) :
-			  R_NilValue,
+		get1index(CAR(subs),
+                          (i < ndn) ? VECTOR_ELT(dimnames, i) : R_NilValue,
 			  INTEGER(indx)[i], pok, -1, call);
 	    subs = CDR(subs);
 	    if (INTEGER(indx)[i] < 0 ||
