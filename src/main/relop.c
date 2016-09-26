@@ -51,7 +51,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     SEXP klass = R_NilValue;
     SEXP tsp = R_NilValue;
     SEXP xnames, ynames, tmp, ans, dims;
-    int nx, ny, xarray, yarray, xts, yts;
+    int nx, ny, xarray, yarray, xts, yts, itmp;
     Rboolean mismatch = FALSE, iS;
     PROTECT_INDEX xpi, ypi;
 
@@ -68,13 +68,13 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     case GTOP: 
         code = LTOP; 
         tmp = x; x = y; y = tmp; 
-        tmp = objx; objx = objy; objy = tmp; 
+        itmp = objx; objx = objy; objy = itmp; 
         break;
     case LEOP:
         code = LTOP;
         negate = 1;
         tmp = x; x = y; y = tmp;
-        tmp = objx; objx = objy; objy = tmp; 
+        itmp = objx; objx = objy; objy = itmp; 
         break;
     case GEOP:
         code = LTOP;
