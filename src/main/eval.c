@@ -2496,6 +2496,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         varval = forcePromise(varval);
     if (varval == R_UnboundValue)
         unbound_var_error(var);
+    if (varval == R_MissingArg)
+        arg_missing_error(var);
 
     /* We might be able to avoid this duplication sometimes (eg, in
        a <- b <- integer(10); a[1] <- 0.5), except that some packages 

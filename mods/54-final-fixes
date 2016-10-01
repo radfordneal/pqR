@@ -12,3 +12,6 @@ For instance
 
 failed to give an error.  Added more tests.
 
+Also, fixed lack of error from
+
+   f <- function (x) { names(x) <- c("a","b"); x }; f()
