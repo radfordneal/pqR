@@ -845,59 +845,282 @@ extern double complex R_cpow (double complex, double complex);
 
 void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    int i,i1, i2, n, n1, n2;
+    int i, i1, i2, n, n1, n2;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
     n = n1>n2 ? n1 : n2;
 
-    switch (code) {
-    case PLUSOP:
-        mod_iterate(n1, n2, i1, i2) {
-            Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
-            COMPLEX(ans)[i].r = x1.r + x2.r;
-            COMPLEX(ans)[i].i = x1.i + x2.i;
+    if (TYPEOF(s1) == REALSXP) { /* s2 must be complex */
+        switch (code) {
+        case PLUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                COMPLEX(ans)[i].r = REAL(s1)[i1] + x2.r;
+                COMPLEX(ans)[i].i = x2.i;
+            }
+            break;
+        case MINUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                COMPLEX(ans)[i].r = REAL(s1)[i1] - x2.r;
+                COMPLEX(ans)[i].i = -x2.i;
+            }
+            break;
+        case TIMESOP:
+            mod_iterate(n1, n2, i1, i2) {
+                double x1 = REAL(s1)[i1];
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                COMPLEX(ans)[i].r = x1 * x2.r;
+                COMPLEX(ans)[i].i = x1 * x2.i;
+            }
+            break;
+        case DIVOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1;
+                x1.r = REAL(s1)[i1];
+                x1.i = 0;
+                R_from_C99_complex (COMPLEX(ans)+i,
+                                    C99_from_R_complex(&x1) 
+                                     / C99_from_R_complex(COMPLEX(s2)+i2));
+            }
+            break;
+        case POWOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1;
+                x1.r = REAL(s1)[i1];
+                x1.i = 0;
+                R_from_C99_complex (COMPLEX(ans)+i,
+                                    R_cpow(C99_from_R_complex(&x1),
+                                           C99_from_R_complex(COMPLEX(s2)+i2)));
+            }
+            break;
         }
-        break;
-    case MINUSOP:
-        mod_iterate(n1, n2, i1, i2) {
-            Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
-            COMPLEX(ans)[i].r = x1.r - x2.r;
-            COMPLEX(ans)[i].i = x1.i - x2.i;
+    }
+    else if (TYPEOF(s2) == REALSXP) { /* s1 must be complex */
+        switch (code) {
+        case PLUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                COMPLEX(ans)[i].r = x1.r + REAL(s2)[i2];
+                COMPLEX(ans)[i].i = x1.i;
+            }
+            break;
+        case MINUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                COMPLEX(ans)[i].r = x1.r - REAL(s2)[i2];
+                COMPLEX(ans)[i].i = x1.i;
+            }
+            break;
+        case TIMESOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                double x2 = REAL(s2)[i2];
+                COMPLEX(ans)[i].r = x1.r * x2;
+                COMPLEX(ans)[i].i = x1.i * x2;
+            }
+            break;
+        case DIVOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                double x2 = REAL(s2)[i2];
+                COMPLEX(ans)[i].r = x1.r / x2;
+                COMPLEX(ans)[i].i = x1.i / x2;
+            }
+            break;
+        case POWOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x2;
+                x2.r = REAL(s2)[i2];
+                x2.i = 0;
+                R_from_C99_complex (COMPLEX(ans)+i,
+                                    R_cpow(C99_from_R_complex(COMPLEX(s1)+i1),
+                                           C99_from_R_complex(&x2)));
+            }
+            break;
         }
-        break;
-    case TIMESOP:
-        mod_iterate(n1, n2, i1, i2) {
-            R_from_C99_complex (COMPLEX(ans)+i,
-                                C99_from_R_complex(COMPLEX(s1)+i1) 
-                                 * C99_from_R_complex(COMPLEX(s2)+i2));
+    }
+    else if (TYPEOF(s1) == INTSXP || TYPEOF(s1) == LGLSXP) { /* s2 complex */
+        switch (code) {
+        case PLUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                int x1 = INTEGER(s1)[i1];
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                if (x1 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1 + x2.r;
+                    COMPLEX(ans)[i].i = x2.i;
+                }
+            }
+            break;
+        case MINUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                int x1 = INTEGER(s1)[i1];
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                if (x1 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1 - x2.r;
+                    COMPLEX(ans)[i].i = -x2.i;
+                }
+            }
+            break;
+        case TIMESOP:
+            mod_iterate(n1, n2, i1, i2) {
+                int x1 = INTEGER(s1)[i1];
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                if (x1 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1 * x2.r;
+                    COMPLEX(ans)[i].i = x1 * x2.i;
+                }
+            }
+            break;
+        case DIVOP:
+            mod_iterate(n1, n2, i1, i2) {
+                int x1 = INTEGER(s1)[i1];
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                if (x1 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    Rcomplex x1c;
+                    x1c.r = x1;
+                    x1c.i = 0;
+                    R_from_C99_complex (COMPLEX(ans)+i,
+                                        C99_from_R_complex(&x1c) 
+                                          / C99_from_R_complex(&x2));
+                }
+            }
+            break;
+        case POWOP:
+            mod_iterate(n1, n2, i1, i2) {
+                int x1 = INTEGER(s1)[i1];
+                Rcomplex x2 = COMPLEX(s2)[i2];
+                if (x1 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    Rcomplex x1c;
+                    x1c.r = x1;
+                    x1c.i = 0;
+                    R_from_C99_complex (COMPLEX(ans)+i,
+                                        R_cpow(C99_from_R_complex(&x1c),
+                                               C99_from_R_complex(&x2)));
+                }
+            }
+            break;
         }
-        break;
-    case DIVOP:
-        mod_iterate(n1, n2, i1, i2) {
-            R_from_C99_complex (COMPLEX(ans)+i,
-                                C99_from_R_complex(COMPLEX(s1)+i1) 
-                                 / C99_from_R_complex(COMPLEX(s2)+i2));
+    }
+    else if (TYPEOF(s2) == INTSXP || TYPEOF(s2) == LGLSXP) { /* s1 complex */
+        switch (code) {
+        case PLUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                int x2 = INTEGER(s2)[i2];
+                if (x2 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1.r + x2;
+                    COMPLEX(ans)[i].i = x1.i;
+                }
+            }
+            break;
+        case MINUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                int x2 = INTEGER(s2)[i2];
+                if (x2 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1.r - x2;
+                    COMPLEX(ans)[i].i = x1.i;
+                }
+            }
+            break;
+        case TIMESOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                int x2 = INTEGER(s2)[i2];
+                if (x2 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1.r * x2;
+                    COMPLEX(ans)[i].i = x1.i * x2;
+                }
+            }
+            break;
+        case DIVOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                int x2 = INTEGER(s2)[i2];
+                if (x2 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    COMPLEX(ans)[i].r = x1.r / x2;
+                    COMPLEX(ans)[i].i = x1.i / x2;
+                }
+            }
+            break;
+        case POWOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1];
+                int x2 = INTEGER(s2)[i2];
+                if (x2 == NA_INTEGER)
+                    COMPLEX(ans)[i].r = COMPLEX(ans)[i].i = NA_REAL;
+                else {
+                    Rcomplex x2c;
+                    x2c.r = x2;
+                    x2c.i = 0;
+                    R_from_C99_complex (COMPLEX(ans)+i,
+                                        R_cpow(C99_from_R_complex(&x1),
+                                               C99_from_R_complex(&x2c)));
+                }
+            }
+            break;
         }
-        break;
-    case POWOP:
-        mod_iterate(n1, n2, i1, i2) {
-            R_from_C99_complex (COMPLEX(ans)+i,
-                                R_cpow (C99_from_R_complex(COMPLEX(s1)+i1),
-                                        C99_from_R_complex(COMPLEX(s2)+i2)));
+    }
+    else { /* both complex */
+        switch (code) {
+        case PLUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
+                COMPLEX(ans)[i].r = x1.r + x2.r;
+                COMPLEX(ans)[i].i = x1.i + x2.i;
+            }
+            break;
+        case MINUSOP:
+            mod_iterate(n1, n2, i1, i2) {
+                Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
+                COMPLEX(ans)[i].r = x1.r - x2.r;
+                COMPLEX(ans)[i].i = x1.i - x2.i;
+            }
+            break;
+        case TIMESOP:
+            mod_iterate(n1, n2, i1, i2) {
+                R_from_C99_complex (COMPLEX(ans)+i,
+                                    C99_from_R_complex(COMPLEX(s1)+i1) 
+                                     * C99_from_R_complex(COMPLEX(s2)+i2));
+            }
+            break;
+        case DIVOP:
+            mod_iterate(n1, n2, i1, i2) {
+                R_from_C99_complex (COMPLEX(ans)+i,
+                                    C99_from_R_complex(COMPLEX(s1)+i1) 
+                                     / C99_from_R_complex(COMPLEX(s2)+i2));
+            }
+            break;
+        case POWOP:
+            mod_iterate(n1, n2, i1, i2) {
+                R_from_C99_complex (COMPLEX(ans)+i,
+                                    R_cpow(C99_from_R_complex(COMPLEX(s1)+i1),
+                                           C99_from_R_complex(COMPLEX(s2)+i2)));
+            }
+            break;
         }
-        break;
     }
 }
-
-#define COERCE_IF_NEEDED(v, tp, vpi) do { \
-    if (TYPEOF(v) != (tp)) { \
-        int __vo__ = OBJECT(v); \
-        WAIT_UNTIL_COMPUTED(v); \
-        REPROTECT(v = coerceVector(v, (tp)), vpi); \
-        if (__vo__) SET_OBJECT(v, 1); \
-    } \
-} while (0)
 
 #define FIXUP_NULL_AND_CHECK_TYPES(v, vpi) do { \
     switch (TYPEOF(v)) { \
@@ -1040,11 +1263,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
         if (oper==IDIVOP || oper==MODOP)
             errorcall(call,_("unimplemented complex operation"));
-        COERCE_IF_NEEDED(x, CPLXSXP, xpi);
-        COERCE_IF_NEEDED(y, CPLXSXP, ypi);
         ans = alloc_or_reuse (x, y, CPLXSXP, n, local_assign1, local_assign2);
-        if (isObject(ans) && !objx && !objy)
-            ans = allocVector (CPLXSXP, n);
         task = task_complex_arithmetic;
         flags = 0;  /* Not bothering with pipelining yet. */
     }
@@ -1052,8 +1271,6 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
          /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
             and assumes INT and LOGICAL are really the same. */
         ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
-        if (isObject(ans) && !objx && !objy)
-            ans = allocVector (REALSXP, n);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
         if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
@@ -1075,11 +1292,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
            this won't be true if they aren't really the same */
         if (oper == DIVOP || oper == POWOP)
             ans = allocVector(REALSXP, n);
-        else {
+        else
             ans = alloc_or_reuse(x, y, INTSXP, n, local_assign1, local_assign2);
-            if (isObject(ans) && !objx && !objy)
-                ans = allocVector (INTSXP, n);
-        }
         task = task_integer_arithmetic;
 
        /* Only ^, /, and %/% can be done in helpers at present - others must be
@@ -1090,8 +1304,11 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
               : HELPERS_MASTER_NOW;
     }
 
+    if (isObject(ans) && !objx && !objy) ans = allocVector (TYPEOF(ans), n);
+
     if (ans != x) local_assign1 = 0;
     if (ans != y) local_assign2 = 0;
+
     PROTECT(ans);
     nprotect++;
 
@@ -1105,9 +1322,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (oper>TIMESOP) threshold >>= 1;
 
         if (n >= threshold) {
-            /* Note: can't both be in static boxes, since one has length > 1 */
             if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            if (IS_STATIC_BOX(y)) y = duplicate(y);
         }
         DO_NOW_OR_LATER2 (variant, n>=threshold, flags, task, oper, ans, x, y);
 
