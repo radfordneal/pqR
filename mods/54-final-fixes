@@ -15,3 +15,10 @@ failed to give an error.  Added more tests.
 Also, fixed lack of error from
 
    f <- function (x) { names(x) <- c("a","b"); x }; f()
+
+Fixed problem with complex arithmetic, illustrated by
+
+   a <- 1:10; b <- (1:10)+0i; a-b
+
+The fix also speeds up arithmetic with mixed complex and real/integer
+operands.
