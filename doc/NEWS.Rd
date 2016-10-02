@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2016-09-26}{
+\section{CHANGES IN VERSION RELEASED 2016-10-02}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -179,7 +179,6 @@
         duplicate column names now give warnings.  Cases where names
         specified in by match multiple columns are errors.  [ Plus
         other tweaks from later versions. ]
-
   \item From R-2.15.1: Added Polish translations by Łukasz Daniel.
   }}
 
