@@ -113,6 +113,8 @@
 }  
         the two calls of \code{unclass} do not require duplicating
         \code{e1} or \code{e2}.
+  \item Arithmetic with a mixture of complex and real/integer operands
+        is now faster.
   }}
 
   \subsection{BUG FIXES}{
@@ -122,6 +124,11 @@
 \preformatted{    f <- function(x) x; g <- function(y) f(y); g()
 }
           would not display an error message, when it should.
+    \item Fixed a problem affecting mixed complex and real/integer arithmetic
+          when the result is directly assigned to one of the operands,
+          illustrated by
+\preformatted{    a <- 101:110; b <- (1:10)+0i; a <- a-b; a
+}
     \item Fixed a bug involving invalid UTF-8 byte sequences,
           which was introduced in R-2.15.1, and is present in later
           R Core releases to at least R-3.3.1.  The bug is illustrated by

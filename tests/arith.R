@@ -24,3 +24,25 @@ lowess(x,y, f = .25, iter = 0, delta = 0)$y
 lowess(x,y, f = .25, iter = 0, delta = 3)$y
 lowess(x,y, f = .25, iter = 2, delta = 0)$y
 
+## Complex arithmetic:
+
+options(digits=7)
+
+i <- c(4L,-2L,3L,NA)
+a <- c(1.1,5.5,3.3,0/0)
+b <- c(10,60,20,NA)
+y <- c(2000+2i,3000+6i,5000+3i,1+1i)
+z <- c(1+4i,2+3i,4-7i,1+2i)
+
+y+z; a+z; z+b; i+z; z+i
+y-z; a-z; z-b; i-z; z-i
+y*z; a*z; z*b; i*z; z*i
+y/z; a/z; z/b; i/z; z/i
+y^z; a^z; z^b; i^z; z^i
+
+# check forms with direct assignment of result
+x <- a+0.1; x <- x+z; print(x); x <- a+0.1; x <- z+x; print(x)
+x <- a+0.1; x <- x-z; print(x); x <- a+0.1; x <- z-x; print(x)
+x <- a+0.1; x <- x*z; print(x); x <- a+0.1; x <- z*x; print(x)
+x <- a+0.1; x <- x/z; print(x); x <- a+0.1; x <- z/x; print(x)
+x <- a+0.1; x <- x^z; print(x); x <- a+0.1; x <- z^x; print(x)
