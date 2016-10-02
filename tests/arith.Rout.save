@@ -1,7 +1,13 @@
 
-R version 2.15.0 alpha (2012-03-02 r58556)
-Copyright (C) 2012 The R Foundation for Statistical Computing
+pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -15,6 +21,9 @@ Type 'contributors()' for more information and
 Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled.
 
 > options(digits=7)
 > 
@@ -86,4 +95,73 @@ complex(0)
 [10] 11.3460 11.3460 11.3460 11.3460 11.3460 11.3460 13.0000  6.7345  5.7437
 [19]  5.4147 18.9981
 > 
+> ## Complex arithmetic:
+> 
+> options(digits=7)
+> 
+> i <- c(4L,-2L,3L,NA)
+> a <- c(1.1,5.5,3.3,0/0)
+> b <- c(10,60,20,NA)
+> y <- c(2000+2i,3000+6i,5000+3i,1+1i)
+> z <- c(1+4i,2+3i,4-7i,1+2i)
+> 
+> y+z; a+z; z+b; i+z; z+i
+[1] 2001+6i 3002+9i 5004-4i    2+3i
+[1] 2.1+4i 7.5+3i 7.3-7i NaN+2i
+[1] 11+4i 62+3i 24-7i    NA
+[1] 5+4i 0+3i 7-7i   NA
+[1] 5+4i 0+3i 7-7i   NA
+> y-z; a-z; z-b; i-z; z-i
+[1] 1999- 2i 2998+ 3i 4996+10i    0- 1i
+[1]  0.1-4i  3.5-3i -0.7+7i  NaN-2i
+[1]  -9+4i -58+3i -16-7i     NA
+[1]  3-4i -4-3i -1+7i    NA
+[1] -3+4i  4+3i  1-7i    NA
+> y*z; a*z; z*b; i*z; z*i
+[1]  1992+ 8002i  5982+ 9012i 20021-34988i    -1+    3i
+[1]  1.1+ 4.4i 11.0+16.5i 13.2-23.1i  NaN+ NaNi
+[1]  10+ 40i 120+180i  80-140i       NA
+[1]  4+16i -4- 6i 12-21i     NA
+[1]  4+16i -4- 6i 12-21i     NA
+> y/z; a/z; z/b; i/z; z/i
+[1] 118.1176-470.4706i 462.9231-691.3846i 307.3692+538.6462i   0.6000-  0.2000i
+[1] 0.0647059-0.2588235i 0.8461538-1.2692308i 0.2030769+0.3553846i
+[4]       NaN+      NaNi
+[1] 0.10000000+0.40i 0.03333333+0.05i 0.20000000-0.35i               NA
+[1]  0.2352941-0.9411765i -0.3076923+0.4615385i  0.1846154+0.3230769i
+[4]                    NA
+[1]  0.250000+1.000000i -1.000000-1.500000i  1.333333-2.333333i
+[4]                  NA
+> y^z; a^z; z^b; i^z; z^i
+[1]  1.057257e+03-1.688295e+03i  3.980974e+06-8.011635e+06i
+[3] -6.259910e+14-4.534246e+13i  2.708206e-02+2.927361e-01i
+[1]   1.021024+  0.40928i  11.831577- 27.84019i -57.217463-103.87612i
+[4]        NaN+      NaNi
+[1]  1.093425e+06+9.057680e+05i -1.965165e+33+1.732773e+33i
+[3] -7.741605e+17-1.101422e+18i           NaN+         NaNi
+[1]  2.959241e+00-2.691262e+00i -1.572009e-04+2.819335e-04i
+[3]  1.320021e+01-7.991717e+01i                          NA
+[1]  1.61000e+02-2.400000e+02i -2.95858e-02-7.100592e-02i
+[3] -5.24000e+02+7.000000e+00i                         NA
+> 
+> # check forms with direct assignment of result
+> x <- a+0.1; x <- x+z; print(x); x <- a+0.1; x <- z+x; print(x)
+[1] 2.2+4i 7.6+3i 7.4-7i NaN+2i
+[1] 2.2+4i 7.6+3i 7.4-7i NaN+2i
+> x <- a+0.1; x <- x-z; print(x); x <- a+0.1; x <- z-x; print(x)
+[1]  0.2-4i  3.6-3i -0.6+7i  NaN-2i
+[1] -0.2+4i -3.6+3i  0.6-7i  NaN+2i
+> x <- a+0.1; x <- x*z; print(x); x <- a+0.1; x <- z*x; print(x)
+[1]  1.2+ 4.8i 11.2+16.8i 13.6-23.8i  NaN+ NaNi
+[1]  1.2+ 4.8i 11.2+16.8i 13.6-23.8i  NaN+ NaNi
+> x <- a+0.1; x <- x/z; print(x); x <- a+0.1; x <- z/x; print(x)
+[1] 0.0705882-0.2823529i 0.8615385-1.2923077i 0.2092308+0.3661538i
+[4]       NaN+      NaNi
+[1] 0.8333333+3.3333333i 0.3571429+0.5357143i 1.1764706-2.0588235i
+[4]       NaN+      NaNi
+> x <- a+0.1; x <- x^z; print(x); x <- a+0.1; x <- z^x; print(x)
+[1]   0.8947802+  0.7996051i  13.8071896- 28.1569018i -87.3545558-101.1292273i
+[4]         NaN+        NaNi
+[1]    -0.110475+  5.472438i   935.525251-924.628890i -1095.710117+507.854222i
+[4]          NaN+       NaNi
 > 
