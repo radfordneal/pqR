@@ -1,5 +1,0 @@
-Mods to data frame code to take advantage of .. and _.
-
-Also improves tests in simple-true.R.  (Many tests would often appear
-to be OK even though the result was wrong.)
-
