@@ -22,3 +22,5 @@ Fixed problem with complex arithmetic, illustrated by
 
 The fix also speeds up arithmetic with mixed complex and real/integer
 operands.
+
+Fixed help on ** operator.

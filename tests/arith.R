@@ -38,7 +38,8 @@ y+z; a+z; z+b; i+z; z+i
 y-z; a-z; z-b; i-z; z-i
 y*z; a*z; z*b; i*z; z*i
 y/z; a/z; z/b; i/z; z/i
-y^z; a^z; z^b; i^z; z^i
+# suppress some output below for now; varies with compiler used
+y^z; a^z; invisible(z^b); i^z; invisible(z^i)
 
 # check forms with direct assignment of result
 x <- a+0.1; x <- x+z; print(x); x <- a+0.1; x <- z+x; print(x)

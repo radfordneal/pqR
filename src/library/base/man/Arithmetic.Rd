@@ -1,7 +1,7 @@
 % File src/library/base/man/Arithmetic.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2014, 2016 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Arithmetic}
@@ -152,11 +152,11 @@ x \%/\% y
   is likely to reduce the speed of some arithmetic operations.)
 }
 \note{
-  \code{**} is translated in the parser to \code{^}, but this was
-  undocumented for many years.  It appears as an index entry in Becker
+  \code{**} is accepted as a synonym for \code{^}, referring to the
+  same primitive operator.  This was undocumented for many years, 
+  in both S and R.  It appears as an index entry in Becker
   \emph{et al} (1988), pointing to the help for \code{Deprecated} but
-  is not actually mentioned on that page.  Even though it had been
-  deprecated in S for 20 years, it was still accepted in \R in 2008.
+  is not actually mentioned on that page.  
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
