@@ -1,0 +1,8 @@
+The stable versions of SGGC below are tagged in the source code repository.
+
+Version-2016-08-18
+
+  First apparently stable and reasonably complete version.  Not
+  intended for real use, as it may still be buggy, and it is missing
+  some important efficiency improvements, but is tagged as a reference
+  point.

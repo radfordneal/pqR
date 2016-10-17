@@ -1,0 +1,484 @@
+SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION
+       Documentation on design and internal implementation details
+
+Copyright (c) 2016 Radford M. Neal.
+
+   The SGGC library is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INTRODUCTION
+
+SGGC manages "objects", containing data and other information, using a
+"mark and sweep" garbage collector, modified to use several
+"generations", so that a complete mark and sweep is done only
+occasionally.  The design of SGGC is meant to allow an application to
+use a memory-efficient storage scheme, while also providing fast
+access to data.
+
+Internally, SGGC uses "compressed pointers" to refer to objects,
+consisting of a segment index and offset within segment.  The set
+facility described in set-doc is used to manage sets of objects in
+terms of such compressed pointers.  The application may also use
+compressed pointers exclusively, or may use regular pointers except
+when communicating with the SGGC functions.
+
+See sggc-doc for details on the application interface for SGGC,
+knowledge of which is assumed in this document.
+
+
+INITIALIZATION
+
+Currently, the maximum number of segments that may be used is fixed at
+initialization time, when several arrays of that size are allocated.
+This maximum is limited to 2^26-1, but always allocating space for
+this maximum would occupy an excessive amount of virtual memory on
+some systems.
+
+More options for initialization may be provided in future.  Static
+allocation may be an option, with the maximum number of segments fixed
+at compile time, as this may slightly improve speed.  Alternatively,
+there may be an option to allow dynamic increases in the number of
+segments, by copying the arrays subscripted by segment indexes to
+larger arrays.
+
+
+REPRESENTATION OF DATA AND OTHER INFORMATION FOR AN OBJECT
+
+The data and other information for an object consist of a single-byte
+"type" for the object, a main data part, and optionally up to two
+pieces of auxiliary information.
+
+The type is the same for all objects in a segment, and therefore does
+not need to be stored for each object.  (This is one reason that types
+are handled separately from other information about an object.)  Types
+for segments are stored in an array of unsigned characters, which is
+subscripted by the segment index part of a compressed pointer to
+obtain the type for an object.
+
+The main data part of an object can vary in size, according to the
+object's type and "length", in a manner defined by the application,
+using the concept of a segment "kind" (which includes both the object
+type and something about size).  The number of bytes of data
+associated with an object is always a multiple of SGGC_CHUNK_SIZE,
+which is defined by the application, and which for efficiency should
+be a power of two (allowing multiplication by shifting).  The
+application specifies the number of chunks for each kind of object.
+The number of chunks of data associated with an object might sometimes
+be more than required, in order to limit the number of "kinds", which
+may allow better reuse of data space, or because the application
+wishes to allow for the possibility that the amount of data needed for
+an object could increase during its lifetime.
+
+Objects with data of indefinite size are put in "big" segments, which
+are of a kind for which the number of chunks is specified as zero
+(meaning anything).  Big segments contain only one object, with
+"offset" zero.  The number of big segments is therefore limited to at
+most 2^26-1, which is about 64 million (less if there are also some
+small segments), but if these big segments are indeed big, exceeding
+this limit is likely to require more memory than would typically be
+available.
+
+Small segments may contain more than one object, and are of a kind
+with a specified number of chunks of data for an object, which will be
+between 1 and SGGC_CHUNKS_IN_SMALL_SEGMENT, currently 64.  The data
+for all objects in the segment is allocated as a contiguous block of
+SGGC_CHUNK_SIZE times SGGC_CHUNKS_IN_SMALL_SEGMENT bytes.  If the
+number of chunks of data for the kind is 1, a segment of this kind can
+contain up to 64 objects, which will have offsets from 0 to 63.  The
+number of possible objects in a segment is reduced if they require
+more than one chunk for their data - eg, a segment of a kind for which
+the number of chunks of data is 5 will be able to store only 12
+objects, which are given offsets of 0, 5, 10, 15, ..., 55.  Currently,
+there will be 4 chunks of unused space at the end of the data space
+for such a segment.  This is done in order to keep the data for all
+small segments the same size, which aids reuse.
+
+With this scheme, the maximum amount of memory that can be occupied by
+the data for small segments is 2^26-1 times 64 times SGGC_CHUNK_SIZE
+(less if there are also some big segments).  A typical value for
+SGGC_CHUNK_SIZE might be 16, which would give a limit of about 32
+Gigabytes of data in small segments.
+
+With this scheme for assigning offsets to objects, finding the address
+of the data for an object from a compressed pointer to it can be done
+as follows:
+
+  1) Find the address of the data block for the segment by indexing
+     an array of pointers by the index part of the compressed pointer.
+
+  2) Add SGGC_CHUNK_SIZE times the offset part of the compressed
+     pointer to the address of the data block found in (1).  The
+     required multiply will reduce to a shift if SGGC_CHUNK_SIZE is a
+     power of two.
+
+Step (1) will involve fetching the pointer to the array of data block
+pointers (which may often have previously been fetched into a
+register, since it will be needed for many accesses), shifting the
+compressed pointer right to obtain the index part, and then doing an
+indexed fetch of the data block address.  Step (2) will involve
+masking out the offset part of the compressed pointer, shifting it to
+perform the multiplication by SGGC_CHUNK_SIZE, and then adding it to
+the data block address.  The last addition (and perhaps the
+multiplication) may in some cases be merged with further address
+arithmetic that is needed to obtain a particular item from the
+object's data.
+
+If used by the application, auxiliary information 1 is the same size
+(SGGC_AUX1_SIZE) for all objects, and is allocated in blocks
+containing sufficient space for some multiple (SGGC_AUX1_BLOCK_SIZE)
+of the amount needed for SGGC_CHUNKS_IN_SMALL_SEGMENT objects (which
+is the maximum number of objects that might be in a segment, currently
+64).  An application might arrange that the size of these allocation
+blocks is the same as the size of a data block for a small segment,
+since this might help with allocation and reuse by malloc.
+
+The address of the auxiliary information for an object is found from a
+compressed pointer in the same way as data is found, described by
+steps (1) and (2) above, except that SGGC_CHUNK_SIZE is replaced by
+SGGC_AUX1_SIZE, and of course a different array of pointers is used.
+Auxiliary information may often consist of a single small data item,
+in which case the processor may have indexing instructions that will
+allow these steps to be performed especially quickly.
+
+Small segments for which an object's data occupies more than one chunk
+cannot contain objects with all possible offsets.  Accordingly, the
+auxiliary information found in this way is distributed with unused
+gaps between the parts that are (or may be) used by objects in one
+segment.  To avoid wasting this space, multiple segments of the same
+kind share the same space for auxiliary information, in an interleaved
+fashion.  Similarly, many big segments, containing only one object,
+will be allocated auxiliary information from one allocation block.
+
+If the application also uses auxiliary information 2, it is handled in
+the same way as auxiliary information 1.
+
+An application may arrange that auxiliary information 1 and/or 2 for
+some kinds of segments is read-only, and perhaps shared between
+segments.  In particular, if the auxiliary information is irrelevant
+for some type of object, it can be set to shared dummy data, avoiding
+wasting space for this information when it is not used.  However,
+auxiliary information cannot be read-only for "big" segments, since
+this would make re-using auxiliary information more difficult.
+
+In addition to possible quicker access and perhaps sharing, another
+reason for use of auxiliary information may be that it could let other
+data fit neatly (considering alignment requirements) in some multiple
+of SGGC_CHUNK_SIZE bytes, without wasteful padding.
+
+
+GENERATIONAL GARBAGE COLLECTION
+
+The design of SGGC assumes that it is typical for many objects to be
+allocated, used briefly, and then no longer referenced, while some
+other objects are allocated and then used (or at least are still
+referenced) for a long time.
+
+Accordingly, SGGC uses a "generational" garbage collector in which
+objects that have survived one or two garbage collections are regarded
+as being in "old generation 1" or "old generation 2", and are not
+garbage collected unless a "level 1" or "level 2" garbage collection
+is done.  Collection at "level 0" looks (mostly) at only those objects
+that were allocated since the last garbage collection, and will not
+recover unused objects in old generations 1 or 2.  Similarly,
+collection at level 1 looks only at newly-allocated objects and
+objects in old generation 1, and will not recover unused objects in
+old generation 2.  Collection at level 2 looks at all objects (except
+constant objects), and will recover all unused objects, but of course
+takes longer than a level 0 or level 1 collection.
+
+Constant objects may reference only other constant objects, but may be
+referenced from any object.  Constant objects may also be stored in
+read-only memory.  Constant objects are never looked at or collected
+by the garbage collector.
+
+When collecting at level 0 or level 1, it is necessary to handle the
+possibility that some objects in the generations being collected are
+referred to by an object that is not being collected, and hence is not
+looked at by the usual marking procedure.  It is assumed that such
+references are fairly uncommon, as otherwise the generational scheme
+will not be advantageous.  The exceptions where old-to-new references
+do exist are handled by keeping track of which objects in old
+generation 1 or old generation 2 may contain such references, assisted
+by the application calling the sggc_old_to_new_check procedure when
+necessary, as documented in sggc-doc.
+
+
+SETS OF OBJECTS AND THEIR USE
+
+SGGC maintains several sets of objects, using the set facilities
+documented in set-doc.  Some of these sets share the same 'chain'.
+There are five chains, identified by symbols defined in set-app.h (the
+application specific header file for use of the set facility by SGGC),
+as follows:
+
+  SET_UNUSED_FREE_NEW   Used for sets of free or newly-allocated objects
+                        of different kinds, called 'free_or_new[k]' for
+                        each kind k, and a set of unused big segments,
+                        called 'unused'.
+
+  SET_OLD_GEN1          Used for the set of objects in old generation 1,
+                        called 'old_gen1'.
+
+  SET_OLD_GEN2_CONST    Used for the set of objects in old generation 2,
+                        called 'old_gen2', and for the set of constant 
+                        objects, called 'constants'.
+
+  SET_OLD_TO_NEW        Used for the set of objects possibly having 
+                        old-to-new references, called 'old_to_new'.
+
+  SET_TO_LOOK_AT        Used for the set of objects that need to be
+                        looked at to follow pointers they contain,
+                        called 'to_look_at'.
+
+Note that with five chains, plus four bytes of extra information used
+by SGGC, the size of a set_segment structure is 64 bytes, which may be
+a good size for cache performance.  It would also allow efficient
+indexing of arrays of segments, though this is not relevant with the
+current implementation.
+
+Between calls of sggc_collect, for kinds, k, that use small segments,
+'free_or_new[[k]' contains objects in segments that have data and
+auxiliary information allocated.  Some of these objects are
+newly-allocated (since the last call of sggc_collect), and may still
+be in use, and others are free.  The free objects form a sequential
+subset delimited by the compressed pointers in 'next_free[k]', which
+is the next free object of kind k, and 'end_free[k]', which is the
+first object after the free sequence (or SGGC_NO_OBJECT if the free
+sequence goes to the end of the set).  A call of sggc_alloc for an
+object of a small-segment kind, k, will use the object from
+'free_or_new[k]' identified by 'next_free[k]', unless this is equal to
+'end_free[k]', indicating that no free objects are available for reuse
+(in which case sggc_malloc is called to obtain new space).
+
+If k uses big segments, 'free_or_new[[k]' contains only newly
+allocated objects between calls of sggc_collect.  Allocation for
+objects that are stored in big segments is done by looking for an
+existing segment in the 'unused' set, which is shared by all the kinds
+that use big segments.  These objects have auxiliary information
+already allocated (which is the same for all kinds, and cannot be
+read-only), but do not have a data area allocated - one is allocated
+using sggc_malloc when the segment becomes used.  If 'unused' is
+empty, a new segment, data, and auxiliary information are allocated
+using sggc_malloc.
+
+At the start of garbage collection at level 1, objects in 'old_gen1'
+of kind k (with k being determinable from the compressed pointer for
+an object) are added to the 'free_or_new[k]' set.  For collection at
+level 2, this is done for both 'old_gen1' and 'old_gen2'.
+
+When during the marking stage of garbage collection, an object in a
+generation being collected is found to still be in use, it is removed
+from its 'free_or_new' set (in sggc_look_at), and later (when looked
+at) added to 'old_gen1' if newly-allocated, or to 'old_gen2' if
+currently in 'old_gen1', or left in 'old_gen2' if it was already
+there.
+
+The 'constants' set is added to only when the application registers a
+new constant object, and never has elements removed.  Constants can be
+distinguished from objects in the 'old_gen2' set (which shares the
+same chain) by the fact that big segments are never constants and by
+the 'constant' flag stored in small segments.  The fact that these two
+sets share a chain is convenient when checking whether an object can
+be referenced from an object in old generation 2 without using
+old-to-new.
+
+When a garbage collection is not in progress, the 'to_look_at' set is
+empty.  During a garbage collection, as objects are marked as in use,
+from sggc_find_root_ptrs or sggc_find_object_ptrs calling
+sggc_look_at, they are added to the 'to_look_at' set, from which
+objects are repeatedly removed, and passed to sggc_find_object_ptrs,
+until the 'to_look_at' set becomes empty.  This avoids use of
+recursion to following references to objects from other objects.
+
+Once the marking process has finished, the objects in all the
+'free_or_new[k]' sets are known to be unused.  However, some of them
+may still be in 'old_gen2' or 'old_gen1', so these sets are scanned to
+remove elements that are in a set in the SET_UNUSED_FREE_NEW chain.
+Such objects are also removed from the 'old_to_new' set (see below).
+
+
+HANDLING OLD-TO-NEW REFERENCES
+
+When garbage collection is done level 0, only newly-allocated objects
+(generation 0) are potentially collected, so objects in old
+generations 1 and 2 do not need to be examined - except that if an
+object in one of these older generations may refer to a
+newly-allocated object, this must be visible to the garbage collector,
+so that it will not erroneously reuse this referenced object.
+Similarly, in a garbage collection at level 1, objects in old
+generation 2 need not be examined - except for those that may refer to
+newly-allocated objects or objects in old generation 1.
+
+To achieve this, the 'old_to_new' set contains objects in old
+generation 1 that may refer to a newly-allocated (generation 0)
+object, and objects in old generation 2 that may refer to an object in
+either generation 1 or generation 0.  Whan a garbage collection is
+done, the objects in the 'old_to_new' set are scanned, and any
+references to an object in a generation being collected from an object
+in a generation that is not being collection that is in the
+'old_to_new' set is noted as being referenced.  Also during this scan,
+objects in the 'old_to_new" set that will no longer contain a
+reference to a younger object after this collection are removed from
+'old_to_new'.
+
+During a level 0 garbage collection, old-to-new entries for objects in
+old generation 1 can be removed (after being used), since after
+collection any referenced objects in generation 0 will also be in old
+generation 1, and hence there will no longer be any old-to-new
+references.  In a level 0 collection, old-to-new entries for objects
+in old generation 2 must be retained if they have any references to
+objects in generation 0 or 1, which will both be in generation 1 after
+the level 0 collection.
+
+In a level 1 or level 2 garbage collection, objects in 'old_to_new'
+that are currently in old generation 1 (and hence will be in old
+generation 2 after the collection, if they survive) are examined, but
+only to determine whether or not they should remain in the
+'old_to_new' set.  References to newly-allocated objects from these
+objects are not marked as in use, since it is unknown whether or not
+the object referring to them is still in use.  (They will be marked by
+the usual process if the referring object is in use.)  However, if a
+reference to a newly-allocated object is found, the generation 1
+object referring to it is not removed from 'old_to_new', since if this
+object survives collection, becoming generation 2, it will contain a
+reference to a generation 1 object.  Once such a reference is found,
+no further references need be examined, which is indicated to the
+application by having sggc_look_at return zero.
+
+The actions to do for old-to-new references when collecting at each
+level are summarized below:
+
+  level 0:
+  
+      gen    gen    keep in       stop       mark
+     from     to   old-to-new?  looking?  the to ptr?
+  
+        2      0       yes         no        yes
+        2      1       yes         no         no (won't anyway)
+        2      2        no         no         no (won't anyway)
+  
+        1      0        no         no        yes
+        1      1        no         no         no (won't anyway)
+        1      2        no         no         no (won't anyway)
+  
+  level 1:
+  
+      gen    gen    keep in       stop       mark
+     from     to   old-to-new?  looking?  the to ptr?
+  
+        2      0       yes         no        yes
+        2      1        no         no        yes
+        2      2        no         no         no (won't anyway)
+  
+        1      0       yes        yes         no
+        1      1        no         no         no
+        1      2        no         no         no (won't anyway)
+  
+  level 2:
+  
+      gen    gen    keep in       stop       mark
+     from     to   old-to-new?  looking?  the to ptr?
+  
+        2      0       yes        yes         no
+        2      1        no         no         no
+        2      2        no         no         no
+  
+        1      0       yes        yes         no
+        1      1        no         no         no
+        1      2        no         no         no
+
+
+FUTURE IMPROVEMENTS
+
+Possible (or likely) extensions and efficiency improvements for SGGC
+include the following:
+
+  o The procedures used by the set facility for finding the
+    lowest-order 1 bit and counting the number of 1 bits in a 64-bit
+    word could be sped up, including arranging somehow for special
+    processor instructions to be used if available.
+
+  o Additional procedures could be included in the set facility to
+    allow operations such as putting all objects in an old generation
+    into a free_or_new set to be done an entire segment at a time,
+    giving a large speed improvement for small segments that contain
+    many objects.
+
+  o The need to mask out just the offset part of a compressed pointer
+    when computing the address of its data or auxiliary information
+    may be eliminated by adjusting the pointers to data or auxiliary
+    information for a segment so that the correct result is obtained
+    when the unmasked index is present along with the offset.
+
+  o Currently, small segments of a given kind are never freed, nor
+    reused for a different kind, which could cause problems if many
+    objects of one kind are allocated, and then most of them become
+    unused.  It would be possible to have a 'small_unused' set that
+    contains objects in small segments that have only unused objects.
+    Segments that are entirely free could be identified when
+    allocating an object (moving them to 'small_unused' at that time,
+    preferring to allocate from a partially-used segment), or in a
+    separate pass over the 'free_or_new' sets at the end of a level 2
+    garbage collection.  The currently unused set_move_first and
+    set_move_next procedures provided by the set facility are intended
+    to facilitate this.  The segments in 'small_unused' could then be
+    reused for any small kind.  Their data areas might or might not be
+    freed when they are put in 'small_unused' (perhaps only if a call
+    of sggc_malloc fails).
+
+  o Currently, SGGC never frees memory used for auxiliary information,
+    though it may be reused for other objects of the same kind.  If
+    many objects of some kind are allocated, and then most of them
+    become unused, this could lead to a large amount of memory being
+    allocated but unused.  A block of memory used for auxiliary
+    information could be freed once all objects using that block are
+    no longer in use.  There is currently no data structure support
+    for identifying such blocks, and adding such support would
+    probably increase the amount of memory used per object, but these
+    blocks could be identified by scanning the 'free_or_new' and
+    'unused' sets while maintaining a hash table of auxiliary data
+    block addresses.  There is current support for finding the start
+    of the auxiliary information block used by an object, via the
+    aux1_off and aux2_off fields in a segment.
+
+  o Currently, SGGC immediately frees the data area for a big segment
+    once it is known to be unused.  This may be inefficient,
+    especially if malloc uses high-overhead memory-mapping system
+    calls to allocate and release data areas.  Some way of often
+    reusing the data area for a future object that needs a data area
+    with the same or slightly smaller size might be beneficial.
+
+  o The space required to store types for segments could be eliminated
+    by encoding the type in the segment index.  This would also speed
+    up access to type information.  For example, if there are 32
+    possible types, they could be identified by the low-order 5 bits
+    of a segment index.  This would of course require that segments of
+    different types be allocated indexes with the right low-order
+    bits.  There would (for this example) be a limit of 2^21 (which is
+    about 2 million) segments of any particular type.  If each segment
+    had a data area of 1024 bytes, this would give a limit of 2 GBytes
+    of data for one type, which might sometimes be a problem, though
+    likely not on a system with a 32-bit address space.
+
+  o More information could be maintained in sggc_info to help the
+    application decide when to call sggc_collect.
+
+  o A function could be provided that determines whether or not a
+    32-bit word is a valid compressed pointer, to an object that is
+    not currently free.  This could be done fairly efficiency (ie,
+    with a fairly small number of fetches and tests, without any
+    searching), by adding a flag in small segments that is set if any
+    object in the segment is in the free portion of a free_or_new set.
+

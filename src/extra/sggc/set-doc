@@ -1,0 +1,301 @@
+SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION
+       Application interface of the facility for maintaining sets of objects
+
+Copyright (c) 2016 Radford M. Neal.
+
+   This is part of the SGGC library, which is free software.  You can
+   redistribute it and/or modify it under the terms of the GNU General
+   Public License as published by the Free Software Foundation; either
+   version 2 of the License, or (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INTRODUCTION
+
+This set facility is designed to support the SGGC functions, but could
+be used for other purposes, and hence is documented separately here.
+
+The set facility manages sets of "values", each of which is in a
+"segment".  The number of possible values in a segment is fixed and in
+the present implementation is limited to a power of two between 8 and
+64 (larger values would require new coding and have a performance
+cost).  Not all the values allowed in a segment need exist.  Segments
+have integer indexes from 0 up, and values within a segment have
+offsets that are integers from 0 to the number of possible values in a
+segment minus one.  A value within a segment is identified by the pair
+of segment index and offset within segment, which must fit in 32 bits
+(though expanding this to 64 bits, allowing bigger indexes, would be
+possible).
+
+Each set is associated with a "chain", with the restriction that two
+sets sharing the same chain must not both contain values that are in
+the same segment (see more on this below).  For some purposes, a chain
+can be regarded as a set that is the union of all sets sharing that
+chain.  The number of chains is intended to be small, and this number
+must be fixed at compile time.  The number of sets using these chains
+is not restricted, and sets could be dynamically created if desired.
+
+For some operations, the values in a set are ordered.  This ordering
+always groups values within one segment together, and the ordering
+within a segment is always by numeric offset within the segment.
+
+Each segment is associated with a data structure that contains, for
+every chain, a bit vector indicating which values within the segment
+are members of some set using that chain, along with the index of a
+following segment containing further members of this set (or an end
+flag).  The structure describing a set contains the identifier of the
+chain it uses, the index of the first segment containing members of
+the set (or an end flag, if there are none), and a count of how many
+elements are in the set.
+
+Functions are provided for testing for membership in some set that
+uses a chain, adding a value to a set, removing a value from a set,
+scanning the elements of a set in order, finding the number of
+elements in a set, and some other operations.
+
+
+USING THE SET FACILITY
+
+To use the set facility, an application should create a set-app.h
+file, which must start by defining some constants (see below), then
+include the set.h file, and conclude with some additional declarations
+(see below).
+
+The following constants should be declared with #define at the start
+of set-app.h:
+
+  SET_OFFSET_BITS  Number of bits in the "offset" of a value.  Must be
+                   3, 4, 5, or 6, corresponding to 8, 16, 32, or 64
+                   possible values in a segment.
+
+  SET_CHAINS       Number of chains that may be used for sets.  Must
+                   be at least 1.  Larger values will result in 
+                   more memory being used for every segment.
+
+  SET_EXTRA_INFO   (optional) If desired, a declaration for additional
+                   information that is stored in the structure for a
+                   segment.  This might allow space to be used that 
+                   would otherwise be wasted as padding for alignment.
+                   Should have the form of a structure field, including
+                   the terminating semicolon.
+
+For convenience, the application might also at this point define
+symbols for the chains, which are identified by integers from 0 to
+SET_CHAINS-1, though these symbols would be used only by the
+application itself.  Also, the definition of SET_EXTRA_INFO might
+involve various other declarations.
+
+The set.h file should then be included in set-app.h.  It will define
+the following types:
+
+  set_offset_t     The type of the offset of a value within a segment.
+                   Currently a generic int.  Not used in structures.
+
+  set_index_t      The type of the index used to identify a segment.
+                   Currently int32_t.
+
+  set_value_t      The type holding a value - an (index,offset) pair.
+                   Currently uint32_t.
+
+  struct set_segment  Structure holding information on a segment.
+                      Fields of this should not be accessed directly.
+
+  struct set          Structure holding information on a set.
+                      Fields of this should not be accessed directly.
+
+The following constant is also defined in set.h:
+
+  SET_NO_VALUE     A constant of type set_value_t that cannot be an
+                   actual value, and hence can be used to indicate
+                   the absence of a value.
+
+Finally, the set.h file will declare prototypes (or macros, or static
+inline definitions) for the functions documented below.
+
+After including set.h, the application should declare a function (or
+macro), which (if a function) should have the following prototype:
+
+  struct set_segment *SET_SEGMENT (set_index_t index);
+
+This function (or macro) should return the pointer to the segment
+information for the segment with the given index.  It is up to the
+application to decide how memory for segment structures is allocated
+(eg, a static array, or using an array of pointers to structures
+allocated with malloc), and hence how a pointer is found from an
+index.
+
+The set-app.h file should be included in application modules that use
+the set facility.  It will also be included in the set.c file that
+defines the functions implementing the set operations.
+
+
+SETS SHARING THE SAME CHAIN
+
+To keep the size of a segment structure small, it is desirable for the
+number of chains that are used for sets to be small.  Many sets can
+share the same chain provided certain restrictions and assumptions are
+satisfied.
+
+First, two sets sharing the same chain must not, at the same time,
+contain elements that are values in the same segment.  (This is
+because membership of values within one segment is represented by a
+single bit vector for each chain, which cannot represent the
+memberships of two different sets.)
+
+Furthermore, a set must not even contain an element that is in a
+segment if a value in that segment was _previously_ an element of
+another set using the same chain, _unless_ that element was removed
+from the other chain using the 'remove' option of the set_first
+function (and not subsequently added again).
+
+Tests for membership in a set are always actually tests for membership
+in any set that uses a given chain - ie, for membership in the union
+of all sets sharing the chain.  This may sometimes be what is desired.
+Membership in a single set can be determined using set_contains only
+if it is guaranteed (by the structure of the application) that the
+value cannot be a member of any other set using the same chain.
+
+
+FUNCTIONS IMPLEMENTING SET OPERATIONS
+
+The following functions (or macros) are provided by the set facility
+for use in an application, with prototypes (if functions) as shown:
+
+  set_value_t SET_VAL (set_index_t index, set_offset_t offset)
+
+    Creates a value that may be an element of a set, from a segment
+    index and an offset within this segment.  Before this value can
+    be used, the segment with the given index must be initialized 
+    with set_segment_init.
+
+  set_index_t SET_VAL_INDEX (set_value_t val)
+
+    Returns the segment index of a value, as was passed to SET_VAL.
+
+  set_offset_t SET_VAL_OFFSET (set_value_t val)
+
+    Returns the offset within its segment of a value, as was passed to
+    SET_VAL.
+
+  void set_init (struct set *set, int chain)
+
+    Initializes a set structure, as an empty set that uses the
+    indicated chain (which must be between 0 and SET_CHAINS-1).  
+    Note that the set must never contain elements with the same
+    segment index as elements of any other set using the same chain.
+
+  void set_segment_init (struct set_segment *seg)
+
+    Initializes a segment structure, after which values within this
+    segment may be put in sets.  The application is responsible for
+    associating segment structures with segment indexes (as is done
+    with the SET_SEGMENT function it defines).
+
+  int set_chain (struct set *set);
+
+    Returns the chain used by a set, as was passed to set_init when
+    the set was initialized.
+
+  int set_add (struct set *set, set_value_t val)
+
+    Changes 'set' so that it contains 'val' as an element.  Returns 1
+    if 'set' had already contained 'val', 0 if not.  Note that 'val'
+    must not be added to a set if that set shares its chain with
+    another set that contains elements in the same segment as 'val',
+    or that previously contained such elements unless they were 
+    removed using the 'remove' option of set_first.
+
+  int set_remove (struct set *set, set_value_t val)
+
+    Removes 'val' from 'set', and returns 1 if 'val' was previously in
+    'set', and 0 if not.  The caller of remove must ensure that 'val'
+    is not a member of any other set using the same chain as 'set'.
+    Note that removing all elements in a segment from a set with
+    set_remove is not sufficient to permit this segment to be used in
+    another set using the same chain.
+
+  int set_contains (struct set *set, set_value_t val)
+
+    Returns 1 if 'val' is an element of any set using the same chain
+    as 'set', and 0 otherwise.  Note that a returned value of 1 is
+    indicative of membership in 'set' only if it is guaranteed that
+    'val' is not a member of any other set using the same chain.
+
+  int set_chain_contains (int chain, set_value_t val)
+
+    Returns 1 if 'val' is an element of any set using 'chain' (ie, is
+    a member of the union of all sets using 'chain'), and 0 otherwise.
+
+  set_value_t set_first (struct set *set, int remove)
+
+    Finds the first element in 'set', returning SET_NO_VALUE if the
+    set is empty.  If the 'remove' argument is non-zero, the value
+    found is also removed from 'set'.  If the value is removed, and no
+    other values from the same segment are elements of 'set, the
+    values in this segment may afterward be added to another set that
+    uses the same chain as 'set'.
+
+  set_value_t set_next (struct set *set, set_value_t val, int remove)
+
+    Returns the next element of 'set' after 'val', which must be an
+    element of 'set.  Returns SET_NO_VALUE if there are no elements
+    past 'val'.  If the 'remove' argument is non-zero, 'val' is also
+    removed from 'set' (but the element returned is not removed).
+
+    If 'val' is not removed, the value returned (if not SET_NO_VALUE)
+    will either be in the same segment as 'val' or in the next
+    segment.  This is of relevance if set_move_next will be used.
+
+  set_bits_t set_first_bits (struct set *set)
+
+    Returns the bit vector indicating membership of all values in the
+    segment of the first element in 'set', with the low-order bit
+    being for the value with offset zero.  If 'set' is empty, the
+    value returned is zero, which will not be returned otherwise.
+
+  set_bits_t set_segment_bits (struct set *set, set_value_t val)
+
+    Returns the bit vector indicating membership in 'set' for all
+    values in the segment containing 'val' (which must be an element
+    of 'set').
+
+  void set_assign_segment_bits (struct set *set, set_value_t val, set_bits_t b)
+
+    Sets the bit vector indicating membership in 'set' for the segment
+    containing 'val' to the bit vector 'b'.  When set_assign_segment_bits
+    is called, 'val' must already be an element of 'set'.  This
+    operation has the effect of adding or removing values for which
+    the bit at their offset position differs between 'b' and the
+    previous vector of bits.  Removing all elements in the segment by
+    using 0 for 'b' is allowed.
+
+  void set_move_first (struct set *src, struct set *dst)
+
+    Moves elements in the first segment of one set to another set that
+    uses the same chain.  All elements of 'src' that are in the
+    segment containing the first element of 'src' are moved to 'dst'
+    (becoming its first elements).  It is an error for 'src' to be
+    empty, or for 'src' and 'dst' to use different chains.
+
+  void set_move_next (struct set *src, set_value_t val, struct set *dst)
+
+    Moves elements of 'src' in the segment after the segment
+    containing 'val' to the front of 'dst'.  It is an error for there
+    to be no elements of 'src' after 'val' that are in a different
+    segment from 'val', or for 'src' and 'dst' to use different chains.
+
+  set_value_t set_n_elements (struct set *set)
+
+    Returns the number of elements in 'set', zero if the set is empty.
+    The return type is set_value_t because this is guaranteed to be a
+    large enough integer type (unsigned).
+
+All the functions above take O(1) amortized time.

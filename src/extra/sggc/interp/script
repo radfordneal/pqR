@@ -1,0 +1,10 @@
+(I ('(I I I O O O I O I)))
+
+(+ ('(I O I I)) ())
+(+ () ('(I O I I)))
+
+(+ ('(O I O I I)) ('(O O I I)))
+
+(s ('(O I)) ('(O O O I)))
+
+(d ('q) ('(O O O I)))

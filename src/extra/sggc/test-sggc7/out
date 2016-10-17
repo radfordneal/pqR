@@ -1,0 +1,5405 @@
+STARTING TEST: segs = 100, iters = 50
+
+ABOUT TO CALL sggc_init
+test_malloc: 1 in use after:: 0x7fd3e0403390
+test_malloc: 2 in use after:: 0x7fd3e04036b0
+test_malloc: 3 in use after:: 0x7fd3e04039d0
+test_malloc: 4 in use after:: 0x7fd3e0403cf0
+test_malloc: 5 in use after:: 0x7fd3e0403290
+DONE sggc_init
+
+CREATING CONSTANT SEGMENT FOR nil
+test_malloc: 6 in use after:: 0x7fd3e0403300
+sggc_constant: first object in segment is 0
+CONSTANT OBJECT RETURNED: 0
+
+ITERATION 1
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+test_malloc: 7 in use after:: 0x7fd3e0403340
+sggc_alloc: created 40 in new segment
+sggc_alloc: new segment has bits ffffffffffffffff
+sggc_alloc: used read-only aux1 for 40
+test_malloc: 8 in use after:: 0x7fd3e0800600
+sggc_alloc: called malloc for aux2 block (kind 1):: 0x7fd3e0800600
+sggc_alloc: aux2 block for 40 has pos 0 in block for kind 1
+test_malloc: 9 in use after:: 0x7fd3e0800a00
+sggc_alloc: called malloc for 40 (small 1, 64 chunks):: 0x7fd3e0800a00
+ALLOC RETURNING 40
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+test_malloc: 10 in use after:: 0x7fd3e0404010
+sggc_alloc: created 80 in new segment
+sggc_alloc: new segment has bits 1249249249249249
+test_malloc: 11 in use after:: 0x7fd3e0803600
+sggc_alloc: called malloc for aux1 block (kind 5):: 0x7fd3e0803600
+sggc_alloc: aux1 block for 80 has pos 0 in block for kind 5
+test_malloc: 12 in use after:: 0x7fd3e0803a00
+sggc_alloc: called malloc for aux2 block (kind 5):: 0x7fd3e0803a00
+sggc_alloc: aux2 block for 80 has pos 0 in block for kind 5
+test_malloc: 13 in use after:: 0x7fd3e0803e00
+sggc_alloc: called malloc for 80 (small 5, 64 chunks):: 0x7fd3e0803e00
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 41 in next_free
+ALLOC RETURNING 41
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+test_malloc: 14 in use after:: 0x7fd3e0404050
+sggc_alloc: created c0 in new segment
+sggc_alloc: new segment has bits ffffffffffffffff
+test_malloc: 15 in use after:: 0x7fd3e0804200
+sggc_alloc: called malloc for aux1 block (kind 3):: 0x7fd3e0804200
+sggc_alloc: aux1 block for c0 has pos 0 in block for kind 3
+test_malloc: 16 in use after:: 0x7fd3e0804600
+sggc_alloc: called malloc for aux2 block (kind 3):: 0x7fd3e0804600
+sggc_alloc: aux2 block for c0 has pos 0 in block for kind 3
+test_malloc: 17 in use after:: 0x7fd3e0804a00
+sggc_alloc: called malloc for c0 (small 3, 64 chunks):: 0x7fd3e0804a00
+ALLOC RETURNING c0
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 42 in next_free
+ALLOC RETURNING 42
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 43 in next_free
+ALLOC RETURNING 43
+CHECKING CONTENTS
+
+ITERATION 2
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 44 in next_free
+ALLOC RETURNING 44
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 8 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
+    next_free [0]: ---  [1]:  45  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at 41
+sggc_collect: 41 now old_gen1
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 80 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 43
+sggc_collect: 43 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_collect: looking at 44
+sggc_collect: 44 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  20 
+    next_free [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 83 in next_free
+ALLOC RETURNING 83
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 42 in next_free
+ALLOC RETURNING 42
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c1 in next_free
+ALLOC RETURNING c1
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 45 in next_free
+ALLOC RETURNING 45
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 46 in next_free
+ALLOC RETURNING 46
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 18 in use after:: 0x7fd3e0404090
+sggc_alloc: created 100 in new segment
+test_malloc: 19 in use after:: 0x7fd3e0804e00
+sggc_alloc: called malloc for aux1 block (kind 2):: 0x7fd3e0804e00
+sggc_alloc: aux1 block for 100 has pos 0 in block for kind 2
+test_malloc: 20 in use after:: 0x7fd3e0805200
+sggc_alloc: called malloc for aux2 block (kind 2):: 0x7fd3e0805200
+sggc_alloc: aux2 block for 100 has pos 0 in block for kind 2
+test_malloc: 21 in use after:: 0x7fd3e04040d0
+sggc_alloc: called malloc for 100 (big 2, 5 chunks):: 0x7fd3e04040d0
+ALLOC RETURNING 100
+CHECKING CONTENTS
+
+ITERATION 3
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 47 in next_free
+ALLOC RETURNING 47
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 86 in next_free
+ALLOC RETURNING 86
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 16 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  60  [2]:   1  [3]:  63  [4]:   0  [5]:  20 
+    next_free [0]: ---  [1]:  48  [2]: ---  [3]:  c2  [4]: ---  [5]:  89 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_collect: looking at c1
+sggc_collect: c1 now old_gen1
+sggc_collect: looking at 86
+sggc_collect: 86 now old_gen1
+sggc_collect: looking at 42
+sggc_collect: 42 now old_gen1
+sggc_look_at: 44 0
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: 83 now old_gen1
+sggc_collect: looking at 46
+sggc_collect: 46 now old_gen1
+sggc_look_at: 43 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_collect: looking at 47
+sggc_collect: 47 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 13, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
+    next_free [0]: ---  [1]:  45  [2]: ---  [3]:  c2  [4]: ---  [5]:  89 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 45 in next_free
+ALLOC RETURNING 45
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c2 in next_free
+ALLOC RETURNING c2
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 48 in next_free
+ALLOC RETURNING 48
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 49 in next_free
+ALLOC RETURNING 49
+CHECKING CONTENTS
+
+ITERATION 4
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4a in next_free
+ALLOC RETURNING 4a
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 89 in next_free
+ALLOC RETURNING 89
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c3 in next_free
+ALLOC RETURNING c3
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 24 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 13, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
+    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c4  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 100 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put 41 from old_gen1 in free
+sggc_collect: put 42 from old_gen1 in free
+sggc_collect: put 43 from old_gen1 in free
+sggc_collect: put 44 from old_gen1 in free
+sggc_collect: put 46 from old_gen1 in free
+sggc_collect: put 47 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 83 from old_gen1 in free
+sggc_collect: put 86 from old_gen1 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: put c1 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_collect: looking at c3
+sggc_collect: c3 now old_gen1
+sggc_collect: looking at 89
+sggc_collect: 89 now old_gen1
+sggc_collect: looking at 49
+sggc_collect: 49 now old_gen1
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: 86 now old_gen2
+sggc_collect: looking at 46
+sggc_collect: 46 now old_gen2
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_collect: looking at 43
+sggc_collect: 43 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen2
+sggc_collect: looking at 4a
+sggc_collect: 4a now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen1
+sggc_look_at: 4a 0
+sggc_look_at: 89 0
+sggc_collect: 40 in old_gen1 now free
+sggc_collect: 41 in old_gen1 now free
+sggc_collect: 42 in old_gen1 now free
+sggc_collect: 44 in old_gen1 now free
+sggc_collect: 47 in old_gen1 now free
+sggc_collect: 80 in old_gen1 now free
+sggc_collect: 83 in old_gen1 now free
+sggc_collect: c1 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 5, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c1  [4]: ---  [5]:  80 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 41 in next_free
+ALLOC RETURNING 41
+CHECKING CONTENTS
+
+ITERATION 5
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 42 in next_free
+ALLOC RETURNING 42
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 80 in next_free
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 44 in next_free
+ALLOC RETURNING 44
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c1 in next_free
+ALLOC RETURNING c1
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 45 in next_free
+ALLOC RETURNING 45
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 47 in next_free
+ALLOC RETURNING 47
+ALLOCATING VECTOR OF LENGTH 20
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 32 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 5, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
+    next_free [0]: ---  [1]:  48  [2]: ---  [3]:  c2  [4]: ---  [5]:  83 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_collect: looking at c1
+sggc_collect: c1 now old_gen1
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at 44
+sggc_collect: 44 now old_gen1
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_collect: looking at 42
+sggc_collect: 42 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 45
+sggc_collect: 45 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 47
+sggc_collect: 47 now old_gen1
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 0 0
+sggc_collect: looking at 41
+sggc_collect: 41 now old_gen1
+sggc_look_at: 49 0
+sggc_look_at: c3 0
+sggc_collect: done
+  unused: 0, old_gen1: 12, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  18 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c2  [4]: ---  [5]:  83 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 20
+test_malloc: 22 in use after:: 0x7fd3e0404120
+sggc_alloc: created 140 in new segment
+sggc_alloc: aux1 block for 140 has pos 1 in block for kind 2
+sggc_alloc: aux2 block for 140 has pos 1 in block for kind 2
+test_malloc: 23 in use after:: 0x7fd3e0404160
+sggc_alloc: called malloc for 140 (big 2, 5 chunks):: 0x7fd3e0404160
+ALLOC RETURNING 140
+CHECKING CONTENTS
+
+ITERATION 6
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 83 in next_free
+ALLOC RETURNING 83
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 48 in next_free
+ALLOC RETURNING 48
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c2 in next_free
+ALLOC RETURNING c2
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4d in next_free
+ALLOC RETURNING 4d
+CHECKING CONTENTS
+
+ITERATION 7
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4e in next_free
+ALLOC RETURNING 4e
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 40 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 12, old_gen2: 5, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  54  [2]:   1  [3]:  61  [4]:   0  [5]:  18 
+    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c4  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: old->new for 47 (gen1)
+sggc_look_at: 41 0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: old->new for 47 no longer needed
+sggc_look_at: 0 0
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_collect: looking at c2
+sggc_collect: c2 now old_gen1
+sggc_collect: looking at 83
+sggc_collect: 83 now old_gen1
+sggc_collect: looking at 48
+sggc_collect: 48 now old_gen1
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 83 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 4d
+sggc_collect: 4d now old_gen1
+sggc_look_at: 47 0
+sggc_look_at: 83 0
+sggc_collect: looking at 4e
+sggc_collect: 4e now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_collect: done
+  unused: 0, old_gen1: 19, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
+    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c4  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8c in next_free
+ALLOC RETURNING 8c
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c4 in next_free
+ALLOC RETURNING c4
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4f in next_free
+ALLOC RETURNING 4f
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 50 in next_free
+ALLOC RETURNING 50
+CHECKING CONTENTS
+
+ITERATION 8
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8f in next_free
+ALLOC RETURNING 8f
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 52 in next_free
+ALLOC RETURNING 52
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 48 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 19, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
+    next_free [0]: ---  [1]:  53  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put 41 from old_gen1 in free
+sggc_collect: put 42 from old_gen1 in free
+sggc_collect: put 44 from old_gen1 in free
+sggc_collect: put 45 from old_gen1 in free
+sggc_collect: put 47 from old_gen1 in free
+sggc_collect: put 48 from old_gen1 in free
+sggc_collect: put 49 from old_gen1 in free
+sggc_collect: put 4a from old_gen1 in free
+sggc_collect: put 4b from old_gen1 in free
+sggc_collect: put 4d from old_gen1 in free
+sggc_collect: put 4e from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 83 from old_gen1 in free
+sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put c1 from old_gen1 in free
+sggc_collect: put c2 from old_gen1 in free
+sggc_collect: put c3 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_collect: looking at c4
+sggc_collect: c4 now old_gen1
+sggc_collect: looking at 8f
+sggc_collect: 8f now old_gen1
+sggc_collect: looking at 50
+sggc_collect: 50 now old_gen1
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_look_at: c4 0
+sggc_collect: looking at 4d
+sggc_collect: 4d now old_gen2
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: 83 now old_gen2
+sggc_collect: looking at 47
+sggc_collect: 47 now old_gen2
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen2
+sggc_collect: looking at 41
+sggc_collect: 41 now old_gen2
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_collect: looking at c3
+sggc_collect: c3 now old_gen2
+sggc_collect: looking at 49
+sggc_collect: 49 now old_gen2
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: looking at 46
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: looking at 43
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 52
+sggc_collect: 52 now old_gen1
+sggc_look_at: 51 0
+sggc_look_at: 8f 0
+sggc_collect: 40 in old_gen1 now free
+sggc_collect: 42 in old_gen1 now free
+sggc_collect: 44 in old_gen1 now free
+sggc_collect: 45 in old_gen1 now free
+sggc_collect: 48 in old_gen1 now free
+sggc_collect: 4a in old_gen1 now free
+sggc_collect: 4b in old_gen1 now free
+sggc_collect: 4e in old_gen1 now free
+sggc_collect: 80 in old_gen1 now free
+sggc_collect: 89 in old_gen1 now free
+sggc_collect: c1 in old_gen1 now free
+sggc_collect: c2 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 5, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  18 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c1  [4]: ---  [5]:  80 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found c1 in next_free
+ALLOC RETURNING c1
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 42 in next_free
+ALLOC RETURNING 42
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 24 in use after:: 0x7fd3e04041b0
+sggc_alloc: created 180 in new segment
+sggc_alloc: aux1 block for 180 has pos 2 in block for kind 2
+sggc_alloc: aux2 block for 180 has pos 2 in block for kind 2
+test_malloc: 25 in use after:: 0x7fd3e04041f0
+sggc_alloc: called malloc for 180 (big 2, 5 chunks):: 0x7fd3e04041f0
+ALLOC RETURNING 180
+CHECKING CONTENTS
+
+ITERATION 9
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 44 in next_free
+ALLOC RETURNING 44
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 80 in next_free
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 45 in next_free
+ALLOC RETURNING 45
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c2 in next_free
+ALLOC RETURNING c2
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 56 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 5, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  55  [2]:   1  [3]:  61  [4]:   0  [5]:  18 
+    next_free [0]: ---  [1]:  48  [2]: ---  [3]:  c5  [4]: ---  [5]:  89 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_collect: looking at c2
+sggc_collect: c2 now old_gen1
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at 42
+sggc_collect: 42 now old_gen1
+sggc_look_at: 50 0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: 180 now old_gen1
+sggc_collect: looking at 44
+sggc_collect: 44 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 45
+sggc_collect: 45 now old_gen1
+sggc_look_at: 44 0
+sggc_look_at: 80 0
+sggc_collect: done
+  unused: 0, old_gen1: 11, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  52  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 48 in next_free
+ALLOC RETURNING 48
+CHECKING CONTENTS
+
+ITERATION 10
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4a in next_free
+ALLOC RETURNING 4a
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 89 in next_free
+ALLOC RETURNING 89
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c1 in next_free
+ALLOC RETURNING c1
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4e in next_free
+ALLOC RETURNING 4e
+CHECKING CONTENTS
+
+ITERATION 11
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 64 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 11, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  52  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
+    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_collect: looking at c1
+sggc_collect: c1 now old_gen1
+sggc_collect: looking at 89
+sggc_collect: 89 now old_gen1
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen1
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: 89 0
+sggc_collect: looking at 4a
+sggc_collect: 4a now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 4c
+sggc_collect: 4c now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 4e
+sggc_collect: 4e now old_gen1
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_collect: looking at 48
+sggc_collect: 48 now old_gen1
+sggc_look_at: 42 0
+sggc_look_at: 80 0
+sggc_collect: done
+  unused: 0, old_gen1: 18, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  47  [2]:   0  [3]:  59  [4]:   0  [5]:  16 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c5  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8c in next_free
+ALLOC RETURNING 8c
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4f in next_free
+ALLOC RETURNING 4f
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 53 in next_free
+ALLOC RETURNING 53
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 54 in next_free
+ALLOC RETURNING 54
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 26 in use after:: 0x7fd3e0404240
+sggc_alloc: created 1c0 in new segment
+sggc_alloc: aux1 block for 1c0 has pos 3 in block for kind 2
+sggc_alloc: aux2 block for 1c0 has pos 3 in block for kind 2
+test_malloc: 27 in use after:: 0x7fd3e0404280
+sggc_alloc: called malloc for 1c0 (big 2, 5 chunks):: 0x7fd3e0404280
+ALLOC RETURNING 1c0
+CHECKING CONTENTS
+
+ITERATION 12
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 55 in next_free
+ALLOC RETURNING 55
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 72 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 18, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  47  [2]:   1  [3]:  59  [4]:   0  [5]:  16 
+    next_free [0]: ---  [1]:  56  [2]: ---  [3]:  c6  [4]: ---  [5]:  92 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 180 from old_gen1 in free
+sggc_collect: put 42 from old_gen1 in free
+sggc_collect: put 44 from old_gen1 in free
+sggc_collect: put 45 from old_gen1 in free
+sggc_collect: put 48 from old_gen1 in free
+sggc_collect: put 4a from old_gen1 in free
+sggc_collect: put 4b from old_gen1 in free
+sggc_collect: put 4c from old_gen1 in free
+sggc_collect: put 4e from old_gen1 in free
+sggc_collect: put 50 from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 52 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put 8f from old_gen1 in free
+sggc_collect: put c1 from old_gen1 in free
+sggc_collect: put c2 from old_gen1 in free
+sggc_collect: put c4 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_look_at: 54 0
+sggc_look_at: will look at 54
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen1
+sggc_collect: looking at 8c
+sggc_collect: 8c now old_gen1
+sggc_collect: looking at 4f
+sggc_collect: 4f now old_gen1
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 8c 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 54
+sggc_collect: 54 now old_gen1
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at 4e
+sggc_collect: 4e now old_gen2
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_collect: looking at c1
+sggc_collect: c1 now old_gen2
+sggc_collect: looking at 48
+sggc_collect: 48 now old_gen2
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 42
+sggc_collect: 42 now old_gen2
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: 180 now old_gen2
+sggc_collect: looking at 50
+sggc_collect: 50 now old_gen2
+sggc_look_at: 4d 0
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_collect: looking at c4
+sggc_collect: c4 now old_gen2
+sggc_collect: looking at 55
+sggc_collect: 55 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 44 in old_gen1 now free
+sggc_collect: 45 in old_gen1 now free
+sggc_collect: 4a in old_gen1 now free
+sggc_collect: 4b in old_gen1 now free
+sggc_collect: 4c in old_gen1 now free
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 52 in old_gen1 now free
+sggc_collect: 89 in old_gen1 now free
+sggc_collect: 8f in old_gen1 now free
+sggc_collect: c2 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  59  [4]:   0  [5]:  17 
+    next_free [0]: ---  [1]:  44  [2]: ---  [3]:  c2  [4]: ---  [5]:  89 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 89 in next_free
+ALLOC RETURNING 89
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 44 in next_free
+ALLOC RETURNING 44
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c2 in next_free
+ALLOC RETURNING c2
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 45 in next_free
+ALLOC RETURNING 45
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4a in next_free
+ALLOC RETURNING 4a
+CHECKING CONTENTS
+
+ITERATION 13
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8f in next_free
+ALLOC RETURNING 8f
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 80 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 7, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  59  [4]:   0  [5]:  17 
+    next_free [0]: ---  [1]:  51  [2]: ---  [3]:  c6  [4]: ---  [5]:  92 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_collect: looking at c2
+sggc_collect: c2 now old_gen1
+sggc_collect: looking at 8f
+sggc_collect: 8f now old_gen1
+sggc_collect: looking at 4a
+sggc_collect: 4a now old_gen1
+sggc_look_at: 54 0
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_collect: looking at 89
+sggc_collect: 89 now old_gen1
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 4c
+sggc_collect: 4c now old_gen1
+sggc_look_at: 4b 0
+sggc_look_at: 8f 0
+sggc_collect: done
+  unused: 0, old_gen1: 13, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  47  [2]:   0  [3]:  58  [4]:   0  [5]:  15 
+    next_free [0]: ---  [1]:  44  [2]: ---  [3]:  c6  [4]: ---  [5]:  92 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found c6 in next_free
+ALLOC RETURNING c6
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 44 in next_free
+ALLOC RETURNING 44
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 45 in next_free
+ALLOC RETURNING 45
+CHECKING CONTENTS
+
+ITERATION 14
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 92 in next_free
+ALLOC RETURNING 92
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 52 in next_free
+ALLOC RETURNING 52
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c7 in next_free
+ALLOC RETURNING c7
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 53 in next_free
+ALLOC RETURNING 53
+ALLOCATING e, setting its contents to old e and vec length 20
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 88 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 13, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  47  [2]:   0  [3]:  58  [4]:   0  [5]:  15 
+    next_free [0]: ---  [1]:  56  [2]: ---  [3]:  c8  [4]: ---  [5]:  95 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_collect: looking at c7
+sggc_collect: c7 now old_gen1
+sggc_collect: looking at 92
+sggc_collect: 92 now old_gen1
+sggc_collect: looking at 45
+sggc_collect: 45 now old_gen1
+sggc_look_at: 4a 0
+sggc_look_at: c6 0
+sggc_look_at: will look at c6
+sggc_collect: looking at c6
+sggc_collect: c6 now old_gen1
+sggc_collect: looking at 52
+sggc_collect: 52 now old_gen1
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 92 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 53
+sggc_collect: 53 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 20, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  43  [2]:   0  [3]:  56  [4]:   0  [5]:  14 
+    next_free [0]: ---  [1]:  44  [2]: ---  [3]:  c8  [4]: ---  [5]:  95 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 44 in next_free
+ALLOC RETURNING 44
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 28 in use after:: 0x7fd3e04042d0
+sggc_alloc: created 200 in new segment
+sggc_alloc: aux1 block for 200 has pos 4 in block for kind 2
+sggc_alloc: aux2 block for 200 has pos 4 in block for kind 2
+test_malloc: 29 in use after:: 0x7fd3e0404310
+sggc_alloc: called malloc for 200 (big 2, 5 chunks):: 0x7fd3e0404310
+ALLOC RETURNING 200
+CHECKING CONTENTS
+
+ITERATION 15
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 56 in next_free
+ALLOC RETURNING 56
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 95 in next_free
+ALLOC RETURNING 95
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 57 in next_free
+ALLOC RETURNING 57
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c8 in next_free
+ALLOC RETURNING c8
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 59 in next_free
+ALLOC RETURNING 59
+CHECKING CONTENTS
+
+ITERATION 16
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 96 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 20, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  43  [2]:   1  [3]:  56  [4]:   0  [5]:  14 
+    next_free [0]: ---  [1]:  5a  [2]: ---  [3]:  c9  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 41 from old_gen2 in free
+sggc_collect: put 42 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 47 from old_gen2 in free
+sggc_collect: put 48 from old_gen2 in free
+sggc_collect: put 49 from old_gen2 in free
+sggc_collect: put 4d from old_gen2 in free
+sggc_collect: put 4e from old_gen2 in free
+sggc_collect: put 50 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put 45 from old_gen1 in free
+sggc_collect: put 4a from old_gen1 in free
+sggc_collect: put 4b from old_gen1 in free
+sggc_collect: put 4c from old_gen1 in free
+sggc_collect: put 4f from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 52 from old_gen1 in free
+sggc_collect: put 53 from old_gen1 in free
+sggc_collect: put 54 from old_gen1 in free
+sggc_collect: put 55 from old_gen1 in free
+sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put 8c from old_gen1 in free
+sggc_collect: put 8f from old_gen1 in free
+sggc_collect: put 92 from old_gen1 in free
+sggc_collect: put c2 from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put c6 from old_gen1 in free
+sggc_collect: put c7 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: 95 0
+sggc_look_at: will look at 95
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_look_at: c8 0
+sggc_look_at: will look at c8
+sggc_look_at: 59 0
+sggc_look_at: will look at 59
+sggc_collect: looking at c8
+sggc_collect: c8 now old_gen1
+sggc_collect: looking at 95
+sggc_collect: 95 now old_gen1
+sggc_collect: looking at 57
+sggc_collect: 57 now old_gen1
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: 95 0
+sggc_collect: looking at 56
+sggc_collect: 56 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 59
+sggc_collect: 59 now old_gen1
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 95 0
+sggc_collect: looking at 44
+sggc_collect: 44 now old_gen1
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at 45
+sggc_collect: 45 now old_gen2
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: c6 0
+sggc_look_at: will look at c6
+sggc_collect: looking at c6
+sggc_collect: c6 now old_gen2
+sggc_collect: looking at 4a
+sggc_collect: 4a now old_gen2
+sggc_look_at: 54 0
+sggc_look_at: will look at 54
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_collect: looking at 89
+sggc_collect: 89 now old_gen2
+sggc_collect: looking at 54
+sggc_collect: 54 now old_gen2
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen2
+sggc_collect: looking at 4e
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_collect: looking at c1
+sggc_collect: looking at 48
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: looking at 42
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: looking at 50
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_collect: looking at c4
+sggc_collect: looking at 4d
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: looking at 47
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: looking at 41
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_collect: looking at c3
+sggc_collect: looking at 49
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: looking at 46
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: looking at 43
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: 40 in old_gen1 now free
+sggc_collect: 4b in old_gen1 now free
+sggc_collect: 4c in old_gen1 now free
+sggc_collect: 4f in old_gen1 now free
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 52 in old_gen1 now free
+sggc_collect: 53 in old_gen1 now free
+sggc_collect: 55 in old_gen1 now free
+sggc_collect: 8c in old_gen1 now free
+sggc_collect: 8f in old_gen1 now free
+sggc_collect: 92 in old_gen1 now free
+sggc_collect: c2 in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: c7 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 8, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  46  [2]:   0  [3]:  58  [4]:   0  [5]:  16 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8c in next_free
+ALLOC RETURNING 8c
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c2 in next_free
+ALLOC RETURNING c2
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4f in next_free
+ALLOC RETURNING 4f
+CHECKING CONTENTS
+
+ITERATION 17
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8f in next_free
+ALLOC RETURNING 8f
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 104 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 8, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  46  [2]:   0  [3]:  58  [4]:   0  [5]:  16 
+    next_free [0]: ---  [1]:  52  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_collect: looking at c2
+sggc_collect: c2 now old_gen1
+sggc_collect: looking at 8f
+sggc_collect: 8f now old_gen1
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen1
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_collect: looking at 8c
+sggc_collect: 8c now old_gen1
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 4f
+sggc_collect: 4f now old_gen1
+sggc_look_at: 59 0
+sggc_look_at: c2 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 15, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  42  [2]:   0  [3]:  57  [4]:   0  [5]:  14 
+    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 52 in next_free
+ALLOC RETURNING 52
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 53 in next_free
+ALLOC RETURNING 53
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 30 in use after:: 0x7fd3e0404360
+sggc_alloc: created 240 in new segment
+sggc_alloc: aux1 block for 240 has pos 5 in block for kind 2
+sggc_alloc: aux2 block for 240 has pos 5 in block for kind 2
+test_malloc: 31 in use after:: 0x7fd3e04043a0
+sggc_alloc: called malloc for 240 (big 2, 5 chunks):: 0x7fd3e04043a0
+ALLOC RETURNING 240
+CHECKING CONTENTS
+
+ITERATION 18
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 55 in next_free
+ALLOC RETURNING 55
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 92 in next_free
+ALLOC RETURNING 92
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5a in next_free
+ALLOC RETURNING 5a
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 112 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 15, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  42  [2]:   1  [3]:  57  [4]:   0  [5]:  14 
+    next_free [0]: ---  [1]:  5b  [2]: ---  [3]:  c7  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_look_at: 5a 0
+sggc_look_at: will look at 5a
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen1
+sggc_collect: looking at 92
+sggc_collect: 92 now old_gen1
+sggc_collect: looking at 53
+sggc_collect: 53 now old_gen1
+sggc_look_at: 4f 0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_collect: looking at 55
+sggc_collect: 55 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5a
+sggc_collect: 5a now old_gen1
+sggc_look_at: 55 0
+sggc_look_at: 92 0
+sggc_collect: done
+  unused: 0, old_gen1: 21, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  39  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
+    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c7  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found c7 in next_free
+ALLOC RETURNING c7
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 52 in next_free
+ALLOC RETURNING 52
+CHECKING CONTENTS
+
+ITERATION 19
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5b in next_free
+ALLOC RETURNING 5b
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 98 in next_free
+ALLOC RETURNING 98
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5c in next_free
+ALLOC RETURNING 5c
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c9 in next_free
+ALLOC RETURNING c9
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5d in next_free
+ALLOC RETURNING 5d
+ALLOCATING e, setting its contents to old e and d
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 120 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 21, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  39  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
+    next_free [0]: ---  [1]:  5e  [2]: ---  [3]:  ca  [4]: ---  [5]:  9b 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 240 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put 44 from old_gen1 in free
+sggc_collect: put 4b from old_gen1 in free
+sggc_collect: put 4f from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 53 from old_gen1 in free
+sggc_collect: put 55 from old_gen1 in free
+sggc_collect: put 56 from old_gen1 in free
+sggc_collect: put 57 from old_gen1 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 59 from old_gen1 in free
+sggc_collect: put 5a from old_gen1 in free
+sggc_collect: put 8c from old_gen1 in free
+sggc_collect: put 8f from old_gen1 in free
+sggc_collect: put 92 from old_gen1 in free
+sggc_collect: put 95 from old_gen1 in free
+sggc_collect: put c2 from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put c8 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 5d 0
+sggc_look_at: will look at 5d
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_look_at: 5c 0
+sggc_look_at: will look at 5c
+sggc_look_at: c9 0
+sggc_look_at: will look at c9
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_collect: looking at c9
+sggc_collect: c9 now old_gen1
+sggc_collect: looking at 98
+sggc_collect: 98 now old_gen1
+sggc_collect: looking at 52
+sggc_collect: 52 now old_gen1
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_collect: looking at 92
+sggc_collect: 92 now old_gen2
+sggc_collect: looking at 53
+sggc_collect: 53 now old_gen2
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_collect: looking at 4f
+sggc_collect: 4f now old_gen2
+sggc_look_at: 59 0
+sggc_look_at: will look at 59
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_collect: looking at c2
+sggc_collect: c2 now old_gen2
+sggc_collect: looking at 59
+sggc_collect: 59 now old_gen2
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 95 0
+sggc_look_at: will look at 95
+sggc_collect: looking at 95
+sggc_collect: 95 now old_gen2
+sggc_collect: looking at 44
+sggc_collect: 44 now old_gen2
+sggc_look_at: 45 0
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_collect: looking at 5c
+sggc_collect: 5c now old_gen1
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_look_at: 98 0
+sggc_collect: looking at 5b
+sggc_collect: 5b now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5d
+sggc_collect: 5d now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 40 in old_gen1 now free
+sggc_collect: 4b in old_gen1 now free
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 55 in old_gen1 now free
+sggc_collect: 56 in old_gen1 now free
+sggc_collect: 57 in old_gen1 now free
+sggc_collect: 58 in old_gen1 now free
+sggc_collect: 5a in old_gen1 now free
+sggc_collect: 8c in old_gen1 now free
+sggc_collect: 8f in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: c8 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 6, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  43  [2]:   0  [3]:  57  [4]:   0  [5]:  14 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c5  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in next_free
+ALLOC RETURNING 40
+CHECKING CONTENTS
+
+ITERATION 20
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8c in next_free
+ALLOC RETURNING 8c
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 55 in next_free
+ALLOC RETURNING 55
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 32 in use after:: 0x7fd3e04043f0
+sggc_alloc: created 280 in new segment
+sggc_alloc: aux1 block for 280 has pos 6 in block for kind 2
+sggc_alloc: aux2 block for 280 has pos 6 in block for kind 2
+test_malloc: 33 in use after:: 0x7fd3e0404430
+sggc_alloc: called malloc for 280 (big 2, 5 chunks):: 0x7fd3e0404430
+ALLOC RETURNING 280
+CHECKING CONTENTS
+
+ITERATION 21
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 128 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 6, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  43  [2]:   1  [3]:  57  [4]:   0  [5]:  14 
+    next_free [0]: ---  [1]:  56  [2]: ---  [3]:  c7  [4]: ---  [5]:  8f 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen1
+sggc_collect: looking at 8c
+sggc_collect: 8c now old_gen1
+sggc_collect: looking at 4c
+sggc_collect: 4c now old_gen1
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: 8c 0
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 55
+sggc_collect: 55 now old_gen1
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen1
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_look_at: 52 0
+sggc_look_at: c9 0
+sggc_collect: done
+  unused: 0, old_gen1: 14, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  38  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
+    next_free [0]: ---  [1]:  56  [2]: ---  [3]:  c7  [4]: ---  [5]:  8f 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 56 in next_free
+ALLOC RETURNING 56
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8f in next_free
+ALLOC RETURNING 8f
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 57 in next_free
+ALLOC RETURNING 57
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c7 in next_free
+ALLOC RETURNING c7
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5a in next_free
+ALLOC RETURNING 5a
+CHECKING CONTENTS
+
+ITERATION 22
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9b in next_free
+ALLOC RETURNING 9b
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 136 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 14, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  38  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
+    next_free [0]: ---  [1]:  5f  [2]: ---  [3]:  c8  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_look_at: 5a 0
+sggc_look_at: will look at 5a
+sggc_collect: looking at c7
+sggc_collect: c7 now old_gen1
+sggc_collect: looking at 9b
+sggc_collect: 9b now old_gen1
+sggc_collect: looking at 57
+sggc_collect: 57 now old_gen1
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_collect: looking at 8f
+sggc_collect: 8f now old_gen1
+sggc_collect: looking at 56
+sggc_collect: 56 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5a
+sggc_collect: 5a now old_gen1
+sggc_look_at: 55 0
+sggc_look_at: 8f 0
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 21, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  34  [2]:   0  [3]:  55  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  c8  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c8 in next_free
+ALLOC RETURNING c8
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5f in next_free
+ALLOC RETURNING 5f
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 60 in next_free
+ALLOC RETURNING 60
+CHECKING CONTENTS
+
+ITERATION 23
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 62 in next_free
+ALLOC RETURNING 62
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found ca in next_free
+ALLOC RETURNING ca
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 144 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 21, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  34  [2]:   0  [3]:  55  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  63  [2]: ---  [3]:  cb  [4]: ---  [5]:  a1 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 41 from old_gen2 in free
+sggc_collect: put 42 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 44 from old_gen2 in free
+sggc_collect: put 45 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 47 from old_gen2 in free
+sggc_collect: put 48 from old_gen2 in free
+sggc_collect: put 49 from old_gen2 in free
+sggc_collect: put 4a from old_gen2 in free
+sggc_collect: put 4d from old_gen2 in free
+sggc_collect: put 4e from old_gen2 in free
+sggc_collect: put 4f from old_gen2 in free
+sggc_collect: put 50 from old_gen2 in free
+sggc_collect: put 53 from old_gen2 in free
+sggc_collect: put 54 from old_gen2 in free
+sggc_collect: put 59 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
+sggc_collect: put 280 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put 4b from old_gen1 in free
+sggc_collect: put 4c from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 52 from old_gen1 in free
+sggc_collect: put 55 from old_gen1 in free
+sggc_collect: put 56 from old_gen1 in free
+sggc_collect: put 57 from old_gen1 in free
+sggc_collect: put 5a from old_gen1 in free
+sggc_collect: put 5b from old_gen1 in free
+sggc_collect: put 5c from old_gen1 in free
+sggc_collect: put 5d from old_gen1 in free
+sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put 8c from old_gen1 in free
+sggc_collect: put 8f from old_gen1 in free
+sggc_collect: put 98 from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put c7 from old_gen1 in free
+sggc_collect: put c9 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: 9e 0
+sggc_look_at: will look at 9e
+sggc_look_at: 62 0
+sggc_look_at: will look at 62
+sggc_look_at: ca 0
+sggc_look_at: will look at ca
+sggc_look_at: 60 0
+sggc_look_at: will look at 60
+sggc_collect: looking at ca
+sggc_collect: ca now old_gen1
+sggc_collect: looking at 9e
+sggc_collect: 9e now old_gen1
+sggc_collect: looking at 60
+sggc_collect: 60 now old_gen1
+sggc_look_at: 5a 0
+sggc_look_at: will look at 5a
+sggc_look_at: c8 0
+sggc_look_at: will look at c8
+sggc_collect: looking at c8
+sggc_collect: c8 now old_gen1
+sggc_collect: looking at 5a
+sggc_collect: 5a now old_gen2
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_collect: looking at 8f
+sggc_collect: 8f now old_gen2
+sggc_collect: looking at 55
+sggc_collect: 55 now old_gen2
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen2
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen2
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_look_at: c9 0
+sggc_look_at: will look at c9
+sggc_collect: looking at c9
+sggc_collect: c9 now old_gen2
+sggc_collect: looking at 52
+sggc_collect: 52 now old_gen2
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_collect: looking at 92
+sggc_collect: looking at 53
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_collect: looking at 240
+sggc_collect: looking at 4f
+sggc_look_at: 59 0
+sggc_look_at: will look at 59
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_collect: looking at c2
+sggc_collect: looking at 59
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 95 0
+sggc_look_at: will look at 95
+sggc_collect: looking at 95
+sggc_collect: looking at 44
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_collect: looking at 200
+sggc_collect: looking at 45
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: c6 0
+sggc_look_at: will look at c6
+sggc_collect: looking at c6
+sggc_collect: looking at 4a
+sggc_look_at: 54 0
+sggc_look_at: will look at 54
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_collect: looking at 89
+sggc_collect: looking at 54
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_collect: looking at 1c0
+sggc_collect: looking at 4e
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_collect: looking at c1
+sggc_collect: looking at 48
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: looking at 42
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: looking at 50
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_collect: looking at c4
+sggc_collect: looking at 4d
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: looking at 47
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: looking at 41
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_collect: looking at c3
+sggc_collect: looking at 49
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: looking at 46
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: looking at 43
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 62
+sggc_collect: 62 now old_gen1
+sggc_look_at: 61 0
+sggc_look_at: 9e 0
+sggc_collect: 4b in old_gen1 now free
+sggc_collect: 4c in old_gen1 now free
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 56 in old_gen1 now free
+sggc_collect: 57 in old_gen1 now free
+sggc_collect: 5b in old_gen1 now free
+sggc_collect: 5c in old_gen1 now free
+sggc_collect: 5d in old_gen1 now free
+sggc_collect: 5e in old_gen1 now free
+sggc_collect: 8c in old_gen1 now free
+sggc_collect: 98 in old_gen1 now free
+sggc_collect: 9b in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: c7 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 6, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  40  [2]:   0  [3]:  55  [4]:   0  [5]:  13 
+    next_free [0]: ---  [1]:  4b  [2]: ---  [3]:  c5  [4]: ---  [5]:  8c 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4c in next_free
+ALLOC RETURNING 4c
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 34 in use after:: 0x7fd3e0404480
+sggc_alloc: created 2c0 in new segment
+sggc_alloc: aux1 block for 2c0 has pos 7 in block for kind 2
+sggc_alloc: aux2 block for 2c0 has pos 7 in block for kind 2
+test_malloc: 35 in use after:: 0x7fd3e04044c0
+sggc_alloc: called malloc for 2c0 (big 2, 5 chunks):: 0x7fd3e04044c0
+ALLOC RETURNING 2c0
+CHECKING CONTENTS
+
+ITERATION 24
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 8c in next_free
+ALLOC RETURNING 8c
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 56 in next_free
+ALLOC RETURNING 56
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 57 in next_free
+ALLOC RETURNING 57
+ALLOCATING e, setting its contents to old e and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 152 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 6, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  40  [2]:   1  [3]:  55  [4]:   0  [5]:  13 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  c7  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen1
+sggc_collect: looking at 8c
+sggc_collect: 8c now old_gen1
+sggc_collect: looking at 4c
+sggc_collect: 4c now old_gen1
+sggc_look_at: 60 0
+sggc_look_at: 2c0 0
+sggc_look_at: will look at 2c0
+sggc_collect: looking at 2c0
+sggc_collect: 2c0 now old_gen1
+sggc_collect: looking at 56
+sggc_collect: 56 now old_gen1
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 8c 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 57
+sggc_collect: 57 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 13, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  36  [2]:   0  [3]:  54  [4]:   0  [5]:  12 
+    next_free [0]: ---  [1]:  4b  [2]: ---  [3]:  c7  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 4b in next_free
+ALLOC RETURNING 4b
+CHECKING CONTENTS
+
+ITERATION 25
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 98 in next_free
+ALLOC RETURNING 98
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5b in next_free
+ALLOC RETURNING 5b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c7 in next_free
+ALLOC RETURNING c7
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5c in next_free
+ALLOC RETURNING 5c
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5d in next_free
+ALLOC RETURNING 5d
+CHECKING CONTENTS
+
+ITERATION 26
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 160 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 13, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  36  [2]:   0  [3]:  54  [4]:   0  [5]:  12 
+    next_free [0]: ---  [1]:  5f  [2]: ---  [3]:  cb  [4]: ---  [5]:  9b 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_look_at: 5d 0
+sggc_look_at: will look at 5d
+sggc_collect: looking at c7
+sggc_collect: c7 now old_gen1
+sggc_collect: looking at 98
+sggc_collect: 98 now old_gen1
+sggc_collect: looking at 5b
+sggc_collect: 5b now old_gen1
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: 98 0
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5d
+sggc_collect: 5d now old_gen1
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c7 0
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen1
+sggc_look_at: 4c 0
+sggc_look_at: 8c 0
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 20, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  31  [2]:   0  [3]:  53  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  5c  [2]: ---  [3]:  cb  [4]: ---  [5]:  9b 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9b in next_free
+ALLOC RETURNING 9b
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5c in next_free
+ALLOC RETURNING 5c
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cb in next_free
+ALLOC RETURNING cb
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5f in next_free
+ALLOC RETURNING 5f
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 63 in next_free
+ALLOC RETURNING 63
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 36 in use after:: 0x7fd3e0404510
+sggc_alloc: created 300 in new segment
+sggc_alloc: aux1 block for 300 has pos 8 in block for kind 2
+sggc_alloc: aux2 block for 300 has pos 8 in block for kind 2
+test_malloc: 37 in use after:: 0x7fd3e0404550
+sggc_alloc: called malloc for 300 (big 2, 5 chunks):: 0x7fd3e0404550
+ALLOC RETURNING 300
+CHECKING CONTENTS
+
+ITERATION 27
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 64 in next_free
+ALLOC RETURNING 64
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found a1 in next_free
+ALLOC RETURNING a1
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 168 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 20, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  31  [2]:   1  [3]:  53  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  65  [2]: ---  [3]:  cc  [4]: ---  [5]:  a4 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 2c0 from old_gen1 in free
+sggc_collect: put 4b from old_gen1 in free
+sggc_collect: put 4c from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 56 from old_gen1 in free
+sggc_collect: put 57 from old_gen1 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 5b from old_gen1 in free
+sggc_collect: put 5d from old_gen1 in free
+sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put 60 from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 62 from old_gen1 in free
+sggc_collect: put 8c from old_gen1 in free
+sggc_collect: put 98 from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put c7 from old_gen1 in free
+sggc_collect: put c8 from old_gen1 in free
+sggc_collect: put ca from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 64 0
+sggc_look_at: will look at 64
+sggc_look_at: a1 0
+sggc_look_at: will look at a1
+sggc_look_at: 5c 0
+sggc_look_at: will look at 5c
+sggc_look_at: cb 0
+sggc_look_at: will look at cb
+sggc_look_at: 63 0
+sggc_look_at: will look at 63
+sggc_collect: looking at cb
+sggc_collect: cb now old_gen1
+sggc_collect: looking at a1
+sggc_collect: a1 now old_gen1
+sggc_collect: looking at 5c
+sggc_collect: 5c now old_gen1
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_collect: looking at 9b
+sggc_collect: 9b now old_gen1
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 63
+sggc_collect: 63 now old_gen1
+sggc_look_at: 5d 0
+sggc_look_at: will look at 5d
+sggc_look_at: 300 0
+sggc_look_at: will look at 300
+sggc_collect: looking at 300
+sggc_collect: 300 now old_gen1
+sggc_collect: looking at 5d
+sggc_collect: 5d now old_gen2
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_collect: looking at c7
+sggc_collect: c7 now old_gen2
+sggc_collect: looking at 4b
+sggc_collect: 4b now old_gen2
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_collect: looking at 8c
+sggc_collect: 8c now old_gen2
+sggc_collect: looking at 4c
+sggc_collect: 4c now old_gen2
+sggc_look_at: 60 0
+sggc_look_at: will look at 60
+sggc_look_at: 2c0 0
+sggc_look_at: will look at 2c0
+sggc_collect: looking at 2c0
+sggc_collect: 2c0 now old_gen2
+sggc_collect: looking at 60
+sggc_collect: 60 now old_gen2
+sggc_look_at: 5a 0
+sggc_look_at: c8 0
+sggc_look_at: will look at c8
+sggc_collect: looking at c8
+sggc_collect: c8 now old_gen2
+sggc_collect: looking at 64
+sggc_collect: 64 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 56 in old_gen1 now free
+sggc_collect: 57 in old_gen1 now free
+sggc_collect: 58 in old_gen1 now free
+sggc_collect: 5b in old_gen1 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 62 in old_gen1 now free
+sggc_collect: 98 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: ca in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  35  [2]:   0  [3]:  54  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  51  [2]: ---  [3]:  c5  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 56 in next_free
+ALLOC RETURNING 56
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 57 in next_free
+ALLOC RETURNING 57
+CHECKING CONTENTS
+
+ITERATION 28
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 98 in next_free
+ALLOC RETURNING 98
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5b in next_free
+ALLOC RETURNING 5b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found ca in next_free
+ALLOC RETURNING ca
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 176 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 7, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  35  [2]:   0  [3]:  54  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  5f  [2]: ---  [3]:  cc  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_look_at: ca 0
+sggc_look_at: will look at ca
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_collect: looking at ca
+sggc_collect: ca now old_gen1
+sggc_collect: looking at 98
+sggc_collect: 98 now old_gen1
+sggc_collect: looking at 57
+sggc_collect: 57 now old_gen1
+sggc_look_at: 63 0
+sggc_look_at: a1 0
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5b
+sggc_collect: 5b now old_gen1
+sggc_look_at: 58 0
+sggc_look_at: 98 0
+sggc_collect: done
+  unused: 0, old_gen1: 12, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  32  [2]:   0  [3]:  53  [4]:   0  [5]:  10 
+    next_free [0]: ---  [1]:  51  [2]: ---  [3]:  c5  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 56 in next_free
+ALLOC RETURNING 56
+CHECKING CONTENTS
+
+ITERATION 29
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5f in next_free
+ALLOC RETURNING 5f
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 62 in next_free
+ALLOC RETURNING 62
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 65 in next_free
+ALLOC RETURNING 65
+ALLOCATING VECTOR OF LENGTH 20
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 184 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 12, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  32  [2]:   0  [3]:  53  [4]:   0  [5]:  10 
+    next_free [0]: ---  [1]:  66  [2]: ---  [3]:  cc  [4]: ---  [5]:  a4 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 62 0
+sggc_look_at: will look at 62
+sggc_look_at: 9e 0
+sggc_look_at: will look at 9e
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_look_at: 65 0
+sggc_look_at: will look at 65
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen1
+sggc_collect: looking at 9e
+sggc_collect: 9e now old_gen1
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 5f 0
+sggc_look_at: will look at 5f
+sggc_look_at: 9e 0
+sggc_collect: looking at 5f
+sggc_collect: 5f now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 62
+sggc_collect: 62 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 65
+sggc_collect: 65 now old_gen1
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: 0 0
+sggc_collect: looking at 56
+sggc_collect: 56 now old_gen1
+sggc_look_at: 57 0
+sggc_look_at: ca 0
+sggc_collect: done
+  unused: 0, old_gen1: 19, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  27  [2]:   0  [3]:  52  [4]:   0  [5]:   9 
+    next_free [0]: ---  [1]:  51  [2]: ---  [3]:  cc  [4]: ---  [5]:  a4 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 20
+test_malloc: 38 in use after:: 0x7fd3e04045a0
+sggc_alloc: created 340 in new segment
+sggc_alloc: aux1 block for 340 has pos 9 in block for kind 2
+sggc_alloc: aux2 block for 340 has pos 9 in block for kind 2
+test_malloc: 39 in use after:: 0x7fd3e04045e0
+sggc_alloc: called malloc for 340 (big 2, 5 chunks):: 0x7fd3e04045e0
+ALLOC RETURNING 340
+CHECKING CONTENTS
+
+ITERATION 30
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found a4 in next_free
+ALLOC RETURNING a4
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 66 in next_free
+ALLOC RETURNING 66
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cc in next_free
+ALLOC RETURNING cc
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 67 in next_free
+ALLOC RETURNING 67
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 68 in next_free
+ALLOC RETURNING 68
+CHECKING CONTENTS
+
+ITERATION 31
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 69 in next_free
+ALLOC RETURNING 69
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 192 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 19, old_gen2: 51, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  27  [2]:   1  [3]:  52  [4]:   0  [5]:   9 
+    next_free [0]: ---  [1]:  6a  [2]: ---  [3]:  cd  [4]: ---  [5]:  a7 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 41 from old_gen2 in free
+sggc_collect: put 42 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 44 from old_gen2 in free
+sggc_collect: put 45 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 47 from old_gen2 in free
+sggc_collect: put 48 from old_gen2 in free
+sggc_collect: put 49 from old_gen2 in free
+sggc_collect: put 4a from old_gen2 in free
+sggc_collect: put 4b from old_gen2 in free
+sggc_collect: put 4c from old_gen2 in free
+sggc_collect: put 4d from old_gen2 in free
+sggc_collect: put 4e from old_gen2 in free
+sggc_collect: put 4f from old_gen2 in free
+sggc_collect: put 50 from old_gen2 in free
+sggc_collect: put 52 from old_gen2 in free
+sggc_collect: put 53 from old_gen2 in free
+sggc_collect: put 54 from old_gen2 in free
+sggc_collect: put 55 from old_gen2 in free
+sggc_collect: put 59 from old_gen2 in free
+sggc_collect: put 5a from old_gen2 in free
+sggc_collect: put 5d from old_gen2 in free
+sggc_collect: put 5e from old_gen2 in free
+sggc_collect: put 60 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 8c from old_gen2 in free
+sggc_collect: put 8f from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
+sggc_collect: put 300 from old_gen1 in free
+sggc_collect: put 56 from old_gen1 in free
+sggc_collect: put 57 from old_gen1 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 5b from old_gen1 in free
+sggc_collect: put 5c from old_gen1 in free
+sggc_collect: put 5f from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 62 from old_gen1 in free
+sggc_collect: put 63 from old_gen1 in free
+sggc_collect: put 64 from old_gen1 in free
+sggc_collect: put 65 from old_gen1 in free
+sggc_collect: put 98 from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put a1 from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put ca from old_gen1 in free
+sggc_collect: put cb from old_gen1 in free
+sggc_collect: old->new for 65 (gen1)
+sggc_look_at: 56 1
+sggc_look_at: 340 1
+sggc_collect: old->new for 65 still needed
+sggc_look_at: 0 0
+sggc_look_at: 69 0
+sggc_look_at: will look at 69
+sggc_look_at: a4 0
+sggc_look_at: will look at a4
+sggc_look_at: 66 0
+sggc_look_at: will look at 66
+sggc_look_at: cc 0
+sggc_look_at: will look at cc
+sggc_look_at: 68 0
+sggc_look_at: will look at 68
+sggc_collect: looking at cc
+sggc_collect: cc now old_gen1
+sggc_collect: looking at a4
+sggc_collect: a4 now old_gen1
+sggc_collect: looking at 66
+sggc_collect: 66 now old_gen1
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: a4 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 68
+sggc_collect: 68 now old_gen1
+sggc_look_at: 65 0
+sggc_look_at: will look at 65
+sggc_look_at: a4 0
+sggc_collect: looking at 65
+sggc_collect: 65 now old_gen2
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: 340 0
+sggc_look_at: will look at 340
+sggc_collect: looking at 340
+sggc_collect: 340 now old_gen1
+sggc_collect: looking at 56
+sggc_collect: 56 now old_gen2
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_look_at: ca 0
+sggc_look_at: will look at ca
+sggc_collect: looking at ca
+sggc_collect: ca now old_gen2
+sggc_collect: looking at 57
+sggc_collect: 57 now old_gen2
+sggc_look_at: 63 0
+sggc_look_at: will look at 63
+sggc_look_at: a1 0
+sggc_look_at: will look at a1
+sggc_collect: looking at a1
+sggc_collect: a1 now old_gen2
+sggc_collect: looking at 63
+sggc_collect: 63 now old_gen2
+sggc_look_at: 5d 0
+sggc_look_at: will look at 5d
+sggc_look_at: 300 0
+sggc_look_at: will look at 300
+sggc_collect: looking at 300
+sggc_collect: 300 now old_gen2
+sggc_collect: looking at 5d
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_collect: looking at c7
+sggc_collect: looking at 4b
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_collect: looking at 8c
+sggc_collect: looking at 4c
+sggc_look_at: 60 0
+sggc_look_at: will look at 60
+sggc_look_at: 2c0 0
+sggc_look_at: will look at 2c0
+sggc_collect: looking at 2c0
+sggc_collect: looking at 60
+sggc_look_at: 5a 0
+sggc_look_at: will look at 5a
+sggc_look_at: c8 0
+sggc_look_at: will look at c8
+sggc_collect: looking at c8
+sggc_collect: looking at 5a
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_collect: looking at 8f
+sggc_collect: looking at 55
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_collect: looking at 280
+sggc_collect: looking at 40
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_look_at: c9 0
+sggc_look_at: will look at c9
+sggc_collect: looking at c9
+sggc_collect: looking at 52
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_collect: looking at 92
+sggc_collect: looking at 53
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_collect: looking at 240
+sggc_collect: looking at 4f
+sggc_look_at: 59 0
+sggc_look_at: will look at 59
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_collect: looking at c2
+sggc_collect: looking at 59
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 95 0
+sggc_look_at: will look at 95
+sggc_collect: looking at 95
+sggc_collect: looking at 44
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_collect: looking at 200
+sggc_collect: looking at 45
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: c6 0
+sggc_look_at: will look at c6
+sggc_collect: looking at c6
+sggc_collect: looking at 4a
+sggc_look_at: 54 0
+sggc_look_at: will look at 54
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_collect: looking at 89
+sggc_collect: looking at 54
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_collect: looking at 1c0
+sggc_collect: looking at 4e
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_collect: looking at c1
+sggc_collect: looking at 48
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: looking at 42
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: looking at 50
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_collect: looking at c4
+sggc_collect: looking at 4d
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: looking at 47
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: looking at 41
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_collect: looking at c3
+sggc_collect: looking at 49
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: looking at 46
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: looking at 43
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: looking at 69
+sggc_collect: 69 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 5e in old_gen2 now free
+sggc_collect: 58 in old_gen1 now free
+sggc_collect: 5b in old_gen1 now free
+sggc_collect: 5c in old_gen1 now free
+sggc_collect: 5f in old_gen1 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 62 in old_gen1 now free
+sggc_collect: 64 in old_gen1 now free
+sggc_collect: 98 in old_gen1 now free
+sggc_collect: 9b in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: cb in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  31  [2]:   0  [3]:  53  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  c5  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 98 in next_free
+ALLOC RETURNING 98
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c5 in next_free
+ALLOC RETURNING c5
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5b in next_free
+ALLOC RETURNING 5b
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5c in next_free
+ALLOC RETURNING 5c
+CHECKING CONTENTS
+
+ITERATION 32
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9b in next_free
+ALLOC RETURNING 9b
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5f in next_free
+ALLOC RETURNING 5f
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 200 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 7, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  31  [2]:   0  [3]:  53  [4]:   0  [5]:  11 
+    next_free [0]: ---  [1]:  61  [2]: ---  [3]:  cb  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: old->new for 65 (gen2)
+sggc_look_at: 56 2
+sggc_look_at: 340 2
+sggc_collect: old->new for 65 still needed
+sggc_look_at: 0 0
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_look_at: 5f 0
+sggc_look_at: will look at 5f
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_look_at: 5c 0
+sggc_look_at: will look at 5c
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen1
+sggc_collect: looking at 9b
+sggc_collect: 9b now old_gen1
+sggc_collect: looking at 5c
+sggc_collect: 5c now old_gen1
+sggc_look_at: 68 0
+sggc_look_at: c5 0
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5f
+sggc_collect: 5f now old_gen1
+sggc_look_at: 5e 0
+sggc_look_at: 9b 0
+sggc_collect: done
+  unused: 0, old_gen1: 12, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  28  [2]:   0  [3]:  52  [4]:   0  [5]:  10 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  cb  [4]: ---  [5]:  98 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found cb in next_free
+ALLOC RETURNING cb
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5b in next_free
+ALLOC RETURNING 5b
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 40 in use after:: 0x7fd3e0404630
+sggc_alloc: created 380 in new segment
+sggc_alloc: aux1 block for 380 has pos 10 in block for kind 2
+sggc_alloc: aux2 block for 380 has pos 10 in block for kind 2
+test_malloc: 41 in use after:: 0x7fd3e0404670
+sggc_alloc: called malloc for 380 (big 2, 5 chunks):: 0x7fd3e0404670
+ALLOC RETURNING 380
+CHECKING CONTENTS
+
+ITERATION 33
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 98 in next_free
+ALLOC RETURNING 98
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 62 in next_free
+ALLOC RETURNING 62
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cd in next_free
+ALLOC RETURNING cd
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 208 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 12, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  28  [2]:   1  [3]:  52  [4]:   0  [5]:  10 
+    next_free [0]: ---  [1]:  64  [2]: ---  [3]:  ce  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: old->new for 65 (gen2)
+sggc_look_at: 56 2
+sggc_look_at: 340 2
+sggc_collect: old->new for 65 still needed
+sggc_look_at: 0 0
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_look_at: 62 0
+sggc_look_at: will look at 62
+sggc_look_at: cd 0
+sggc_look_at: will look at cd
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_collect: looking at cd
+sggc_collect: cd now old_gen1
+sggc_collect: looking at 98
+sggc_collect: 98 now old_gen1
+sggc_collect: looking at 5b
+sggc_collect: 5b now old_gen1
+sggc_look_at: 5c 0
+sggc_look_at: 380 0
+sggc_look_at: will look at 380
+sggc_collect: looking at 380
+sggc_collect: 380 now old_gen1
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 62
+sggc_collect: 62 now old_gen1
+sggc_look_at: 61 0
+sggc_look_at: 98 0
+sggc_collect: done
+  unused: 0, old_gen1: 18, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  25  [2]:   0  [3]:  51  [4]:   0  [5]:   9 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  cb  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 64 in next_free
+ALLOC RETURNING 64
+CHECKING CONTENTS
+
+ITERATION 34
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 67 in next_free
+ALLOC RETURNING 67
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6a in next_free
+ALLOC RETURNING 6a
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cb in next_free
+ALLOC RETURNING cb
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6b in next_free
+ALLOC RETURNING 6b
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6c in next_free
+ALLOC RETURNING 6c
+CHECKING CONTENTS
+
+ITERATION 35
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 216 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 18, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  25  [2]:   0  [3]:  51  [4]:   0  [5]:   9 
+    next_free [0]: ---  [1]:  6d  [2]: ---  [3]:  ce  [4]: ---  [5]:  a7 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 380 from old_gen1 in free
+sggc_collect: put 340 from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 5b from old_gen1 in free
+sggc_collect: put 5c from old_gen1 in free
+sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put 5f from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 62 from old_gen1 in free
+sggc_collect: put 66 from old_gen1 in free
+sggc_collect: put 68 from old_gen1 in free
+sggc_collect: put 69 from old_gen1 in free
+sggc_collect: put 98 from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put a4 from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put cd from old_gen1 in free
+sggc_collect: old->new for 65 (gen2)
+sggc_look_at: 56 2
+sggc_look_at: 340 2
+sggc_look_at: will look at 340
+sggc_collect: old->new for 65 no longer needed
+sggc_look_at: 0 0
+sggc_look_at: 6b 0
+sggc_look_at: will look at 6b
+sggc_look_at: 9e 0
+sggc_look_at: will look at 9e
+sggc_look_at: 6a 0
+sggc_look_at: will look at 6a
+sggc_look_at: cb 0
+sggc_look_at: will look at cb
+sggc_look_at: 6c 0
+sggc_look_at: will look at 6c
+sggc_collect: looking at cb
+sggc_collect: cb now old_gen1
+sggc_collect: looking at 9e
+sggc_collect: 9e now old_gen1
+sggc_collect: looking at 6a
+sggc_collect: 6a now old_gen1
+sggc_look_at: 67 0
+sggc_look_at: will look at 67
+sggc_look_at: 9e 0
+sggc_collect: looking at 67
+sggc_collect: 67 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6b
+sggc_collect: 6b now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6c
+sggc_collect: 6c now old_gen1
+sggc_look_at: 64 0
+sggc_look_at: will look at 64
+sggc_look_at: cb 0
+sggc_collect: looking at 64
+sggc_collect: 64 now old_gen1
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_collect: looking at 98
+sggc_collect: 98 now old_gen2
+sggc_collect: looking at 5b
+sggc_collect: 5b now old_gen2
+sggc_look_at: 5c 0
+sggc_look_at: will look at 5c
+sggc_look_at: 380 0
+sggc_look_at: will look at 380
+sggc_collect: looking at 380
+sggc_collect: 380 now old_gen2
+sggc_collect: looking at 5c
+sggc_collect: 5c now old_gen2
+sggc_look_at: 68 0
+sggc_look_at: will look at 68
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_collect: looking at c5
+sggc_collect: c5 now old_gen2
+sggc_collect: looking at 68
+sggc_collect: 68 now old_gen2
+sggc_look_at: 65 0
+sggc_look_at: a4 0
+sggc_look_at: will look at a4
+sggc_collect: looking at a4
+sggc_collect: a4 now old_gen2
+sggc_collect: looking at 340
+sggc_collect: 340 now old_gen2
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 5e in old_gen1 now free
+sggc_collect: 5f in old_gen1 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 62 in old_gen1 now free
+sggc_collect: 66 in old_gen1 now free
+sggc_collect: 69 in old_gen1 now free
+sggc_collect: 9b in old_gen1 now free
+sggc_collect: cc in old_gen1 now free
+sggc_collect: cd in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  27  [2]:   0  [3]:  52  [4]:   0  [5]:   9 
+    next_free [0]: ---  [1]:  51  [2]: ---  [3]:  cc  [4]: ---  [5]:  9b 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9b in next_free
+ALLOC RETURNING 9b
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cc in next_free
+ALLOC RETURNING cc
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5f in next_free
+ALLOC RETURNING 5f
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 42 in use after:: 0x7fd3e04046c0
+sggc_alloc: created 3c0 in new segment
+sggc_alloc: aux1 block for 3c0 has pos 11 in block for kind 2
+sggc_alloc: aux2 block for 3c0 has pos 11 in block for kind 2
+test_malloc: 43 in use after:: 0x7fd3e0404700
+sggc_alloc: called malloc for 3c0 (big 2, 5 chunks):: 0x7fd3e0404700
+ALLOC RETURNING 3c0
+CHECKING CONTENTS
+
+ITERATION 36
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 224 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 7, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  27  [2]:   1  [3]:  52  [4]:   0  [5]:   9 
+    next_free [0]: ---  [1]:  62  [2]: ---  [3]:  cd  [4]: ---  [5]:  a7 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: cc 0
+sggc_look_at: will look at cc
+sggc_look_at: 5f 0
+sggc_look_at: will look at 5f
+sggc_collect: looking at cc
+sggc_collect: cc now old_gen1
+sggc_collect: looking at 9b
+sggc_collect: 9b now old_gen1
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen1
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 9b 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 5f
+sggc_collect: 5f now old_gen1
+sggc_look_at: 6c 0
+sggc_look_at: 3c0 0
+sggc_look_at: will look at 3c0
+sggc_collect: looking at 3c0
+sggc_collect: 3c0 now old_gen1
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 14, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  23  [2]:   0  [3]:  51  [4]:   0  [5]:   8 
+    next_free [0]: ---  [1]:  5e  [2]: ---  [3]:  cd  [4]: ---  [5]:  a7 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found a7 in next_free
+ALLOC RETURNING a7
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cd in next_free
+ALLOC RETURNING cd
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 62 in next_free
+ALLOC RETURNING 62
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 66 in next_free
+ALLOC RETURNING 66
+CHECKING CONTENTS
+
+ITERATION 37
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 69 in next_free
+ALLOC RETURNING 69
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found aa in next_free
+ALLOC RETURNING aa
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6d in next_free
+ALLOC RETURNING 6d
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 232 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 14, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  23  [2]:   0  [3]:  51  [4]:   0  [5]:   8 
+    next_free [0]: ---  [1]:  6e  [2]: ---  [3]:  ce  [4]: ---  [5]:  ad 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 69 0
+sggc_look_at: will look at 69
+sggc_look_at: aa 0
+sggc_look_at: will look at aa
+sggc_look_at: 6d 0
+sggc_look_at: will look at 6d
+sggc_look_at: cd 0
+sggc_look_at: will look at cd
+sggc_look_at: 66 0
+sggc_look_at: will look at 66
+sggc_collect: looking at cd
+sggc_collect: cd now old_gen1
+sggc_collect: looking at aa
+sggc_collect: aa now old_gen1
+sggc_collect: looking at 66
+sggc_collect: 66 now old_gen1
+sggc_look_at: 5f 0
+sggc_look_at: a7 0
+sggc_look_at: will look at a7
+sggc_collect: looking at a7
+sggc_collect: a7 now old_gen1
+sggc_collect: looking at 69
+sggc_collect: 69 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6d
+sggc_collect: 6d now old_gen1
+sggc_look_at: 69 0
+sggc_look_at: aa 0
+sggc_collect: done
+  unused: 0, old_gen1: 20, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  20  [2]:   0  [3]:  50  [4]:   0  [5]:   6 
+    next_free [0]: ---  [1]:  5e  [2]: ---  [3]:  ce  [4]: ---  [5]:  ad 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found ce in next_free
+ALLOC RETURNING ce
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 62 in next_free
+ALLOC RETURNING 62
+CHECKING CONTENTS
+
+ITERATION 38
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6e in next_free
+ALLOC RETURNING 6e
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found ad in next_free
+ALLOC RETURNING ad
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6f in next_free
+ALLOC RETURNING 6f
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cf in next_free
+ALLOC RETURNING cf
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 70 in next_free
+ALLOC RETURNING 70
+ALLOCATING e, setting its contents to old e and vec length 20
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 240 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 20, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  20  [2]:   0  [3]:  50  [4]:   0  [5]:   6 
+    next_free [0]: ---  [1]:  71  [2]: ---  [3]:  d0  [4]: ---  [5]:  b0 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 340 from old_gen2 in free
+sggc_collect: put 380 from old_gen2 in free
+sggc_collect: put 300 from old_gen2 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c5 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put ca from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 41 from old_gen2 in free
+sggc_collect: put 42 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 44 from old_gen2 in free
+sggc_collect: put 45 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 47 from old_gen2 in free
+sggc_collect: put 48 from old_gen2 in free
+sggc_collect: put 49 from old_gen2 in free
+sggc_collect: put 4a from old_gen2 in free
+sggc_collect: put 4b from old_gen2 in free
+sggc_collect: put 4c from old_gen2 in free
+sggc_collect: put 4d from old_gen2 in free
+sggc_collect: put 4e from old_gen2 in free
+sggc_collect: put 4f from old_gen2 in free
+sggc_collect: put 50 from old_gen2 in free
+sggc_collect: put 52 from old_gen2 in free
+sggc_collect: put 53 from old_gen2 in free
+sggc_collect: put 54 from old_gen2 in free
+sggc_collect: put 55 from old_gen2 in free
+sggc_collect: put 56 from old_gen2 in free
+sggc_collect: put 57 from old_gen2 in free
+sggc_collect: put 59 from old_gen2 in free
+sggc_collect: put 5a from old_gen2 in free
+sggc_collect: put 5b from old_gen2 in free
+sggc_collect: put 5c from old_gen2 in free
+sggc_collect: put 5d from old_gen2 in free
+sggc_collect: put 60 from old_gen2 in free
+sggc_collect: put 63 from old_gen2 in free
+sggc_collect: put 65 from old_gen2 in free
+sggc_collect: put 68 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 8c from old_gen2 in free
+sggc_collect: put 8f from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
+sggc_collect: put 98 from old_gen2 in free
+sggc_collect: put a1 from old_gen2 in free
+sggc_collect: put a4 from old_gen2 in free
+sggc_collect: put 3c0 from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 5f from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 64 from old_gen1 in free
+sggc_collect: put 66 from old_gen1 in free
+sggc_collect: put 67 from old_gen1 in free
+sggc_collect: put 69 from old_gen1 in free
+sggc_collect: put 6a from old_gen1 in free
+sggc_collect: put 6b from old_gen1 in free
+sggc_collect: put 6c from old_gen1 in free
+sggc_collect: put 6d from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put a7 from old_gen1 in free
+sggc_collect: put aa from old_gen1 in free
+sggc_collect: put cb from old_gen1 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put cd from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 70 0
+sggc_look_at: will look at 70
+sggc_look_at: ad 0
+sggc_look_at: will look at ad
+sggc_look_at: 6f 0
+sggc_look_at: will look at 6f
+sggc_look_at: cf 0
+sggc_look_at: will look at cf
+sggc_look_at: 62 0
+sggc_look_at: will look at 62
+sggc_collect: looking at cf
+sggc_collect: cf now old_gen1
+sggc_collect: looking at ad
+sggc_collect: ad now old_gen1
+sggc_collect: looking at 62
+sggc_collect: 62 now old_gen1
+sggc_look_at: 66 0
+sggc_look_at: will look at 66
+sggc_look_at: ce 0
+sggc_look_at: will look at ce
+sggc_collect: looking at ce
+sggc_collect: ce now old_gen1
+sggc_collect: looking at 66
+sggc_collect: 66 now old_gen2
+sggc_look_at: 5f 0
+sggc_look_at: will look at 5f
+sggc_look_at: a7 0
+sggc_look_at: will look at a7
+sggc_collect: looking at a7
+sggc_collect: a7 now old_gen2
+sggc_collect: looking at 5f
+sggc_collect: 5f now old_gen2
+sggc_look_at: 6c 0
+sggc_look_at: will look at 6c
+sggc_look_at: 3c0 0
+sggc_look_at: will look at 3c0
+sggc_collect: looking at 3c0
+sggc_collect: 3c0 now old_gen2
+sggc_collect: looking at 6c
+sggc_collect: 6c now old_gen2
+sggc_look_at: 64 0
+sggc_look_at: will look at 64
+sggc_look_at: cb 0
+sggc_look_at: will look at cb
+sggc_collect: looking at cb
+sggc_collect: cb now old_gen2
+sggc_collect: looking at 64
+sggc_collect: 64 now old_gen2
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_collect: looking at 98
+sggc_collect: looking at 5b
+sggc_look_at: 5c 0
+sggc_look_at: will look at 5c
+sggc_look_at: 380 0
+sggc_look_at: will look at 380
+sggc_collect: looking at 380
+sggc_collect: looking at 5c
+sggc_look_at: 68 0
+sggc_look_at: will look at 68
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_collect: looking at c5
+sggc_collect: looking at 68
+sggc_look_at: 65 0
+sggc_look_at: will look at 65
+sggc_look_at: a4 0
+sggc_look_at: will look at a4
+sggc_collect: looking at a4
+sggc_collect: looking at 65
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: 340 0
+sggc_look_at: will look at 340
+sggc_collect: looking at 340
+sggc_collect: looking at 56
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_look_at: ca 0
+sggc_look_at: will look at ca
+sggc_collect: looking at ca
+sggc_collect: looking at 57
+sggc_look_at: 63 0
+sggc_look_at: will look at 63
+sggc_look_at: a1 0
+sggc_look_at: will look at a1
+sggc_collect: looking at a1
+sggc_collect: looking at 63
+sggc_look_at: 5d 0
+sggc_look_at: will look at 5d
+sggc_look_at: 300 0
+sggc_look_at: will look at 300
+sggc_collect: looking at 300
+sggc_collect: looking at 5d
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_collect: looking at c7
+sggc_collect: looking at 4b
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_collect: looking at 8c
+sggc_collect: looking at 4c
+sggc_look_at: 60 0
+sggc_look_at: will look at 60
+sggc_look_at: 2c0 0
+sggc_look_at: will look at 2c0
+sggc_collect: looking at 2c0
+sggc_collect: looking at 60
+sggc_look_at: 5a 0
+sggc_look_at: will look at 5a
+sggc_look_at: c8 0
+sggc_look_at: will look at c8
+sggc_collect: looking at c8
+sggc_collect: looking at 5a
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_collect: looking at 8f
+sggc_collect: looking at 55
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_collect: looking at 280
+sggc_collect: looking at 40
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_look_at: c9 0
+sggc_look_at: will look at c9
+sggc_collect: looking at c9
+sggc_collect: looking at 52
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_collect: looking at 92
+sggc_collect: looking at 53
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_collect: looking at 240
+sggc_collect: looking at 4f
+sggc_look_at: 59 0
+sggc_look_at: will look at 59
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_collect: looking at c2
+sggc_collect: looking at 59
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 95 0
+sggc_look_at: will look at 95
+sggc_collect: looking at 95
+sggc_collect: looking at 44
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_collect: looking at 200
+sggc_collect: looking at 45
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: c6 0
+sggc_look_at: will look at c6
+sggc_collect: looking at c6
+sggc_collect: looking at 4a
+sggc_look_at: 54 0
+sggc_look_at: will look at 54
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_collect: looking at 89
+sggc_collect: looking at 54
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_collect: looking at 1c0
+sggc_collect: looking at 4e
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_collect: looking at c1
+sggc_collect: looking at 48
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: looking at 42
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: looking at 50
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_collect: looking at c4
+sggc_collect: looking at 4d
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: looking at 47
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: looking at 41
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_collect: looking at c3
+sggc_collect: looking at 49
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: looking at 46
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: looking at 43
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: looking at 6f
+sggc_collect: 6f now old_gen1
+sggc_look_at: 6e 0
+sggc_look_at: will look at 6e
+sggc_look_at: ad 0
+sggc_collect: looking at 6e
+sggc_collect: 6e now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 70
+sggc_collect: 70 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 51 in old_gen1 now free
+sggc_collect: 58 in old_gen1 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 67 in old_gen1 now free
+sggc_collect: 69 in old_gen1 now free
+sggc_collect: 6a in old_gen1 now free
+sggc_collect: 6b in old_gen1 now free
+sggc_collect: 6d in old_gen1 now free
+sggc_collect: 9b in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: aa in old_gen1 now free
+sggc_collect: cc in old_gen1 now free
+sggc_collect: cd in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  24  [2]:   0  [3]:  50  [4]:   0  [5]:   8 
+    next_free [0]: ---  [1]:  51  [2]: ---  [3]:  cc  [4]: ---  [5]:  9b 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 51 in next_free
+ALLOC RETURNING 51
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 44 in use after:: 0x7fd3e0404750
+sggc_alloc: created 400 in new segment
+sggc_alloc: aux1 block for 400 has pos 12 in block for kind 2
+sggc_alloc: aux2 block for 400 has pos 12 in block for kind 2
+test_malloc: 45 in use after:: 0x7fd3e0404790
+sggc_alloc: called malloc for 400 (big 2, 5 chunks):: 0x7fd3e0404790
+ALLOC RETURNING 400
+CHECKING CONTENTS
+
+ITERATION 39
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9b in next_free
+ALLOC RETURNING 9b
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cc in next_free
+ALLOC RETURNING cc
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 67 in next_free
+ALLOC RETURNING 67
+CHECKING CONTENTS
+
+ITERATION 40
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 248 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 7, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  24  [2]:   1  [3]:  50  [4]:   0  [5]:   8 
+    next_free [0]: ---  [1]:  69  [2]: ---  [3]:  cd  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_look_at: cc 0
+sggc_look_at: will look at cc
+sggc_look_at: 67 0
+sggc_look_at: will look at 67
+sggc_collect: looking at cc
+sggc_collect: cc now old_gen1
+sggc_collect: looking at 9b
+sggc_collect: 9b now old_gen1
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen1
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: 9b 0
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 67
+sggc_collect: 67 now old_gen1
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 9b 0
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen1
+sggc_look_at: 62 0
+sggc_look_at: 400 0
+sggc_look_at: will look at 400
+sggc_collect: looking at 400
+sggc_collect: 400 now old_gen1
+sggc_collect: done
+  unused: 0, old_gen1: 15, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  19  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
+    next_free [0]: ---  [1]:  69  [2]: ---  [3]:  cd  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 69 in next_free
+ALLOC RETURNING 69
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6a in next_free
+ALLOC RETURNING 6a
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cd in next_free
+ALLOC RETURNING cd
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6b in next_free
+ALLOC RETURNING 6b
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6d in next_free
+ALLOC RETURNING 6d
+CHECKING CONTENTS
+
+ITERATION 41
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 71 in next_free
+ALLOC RETURNING 71
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found aa in next_free
+ALLOC RETURNING aa
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 256 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 15, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  19  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
+    next_free [0]: ---  [1]:  72  [2]: ---  [3]:  d0  [4]: ---  [5]:  b0 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 71 0
+sggc_look_at: will look at 71
+sggc_look_at: aa 0
+sggc_look_at: will look at aa
+sggc_look_at: 6a 0
+sggc_look_at: will look at 6a
+sggc_look_at: cd 0
+sggc_look_at: will look at cd
+sggc_look_at: 6d 0
+sggc_look_at: will look at 6d
+sggc_collect: looking at cd
+sggc_collect: cd now old_gen1
+sggc_collect: looking at aa
+sggc_collect: aa now old_gen1
+sggc_collect: looking at 6a
+sggc_collect: 6a now old_gen1
+sggc_look_at: 69 0
+sggc_look_at: will look at 69
+sggc_look_at: 9e 0
+sggc_look_at: will look at 9e
+sggc_collect: looking at 9e
+sggc_collect: 9e now old_gen1
+sggc_collect: looking at 69
+sggc_collect: 69 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6d
+sggc_collect: 6d now old_gen1
+sggc_look_at: 67 0
+sggc_look_at: cd 0
+sggc_collect: looking at 71
+sggc_collect: 71 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 22, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  15  [2]:   0  [3]:  48  [4]:   0  [5]:   5 
+    next_free [0]: ---  [1]:  6b  [2]: ---  [3]:  d0  [4]: ---  [5]:  b0 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6b in next_free
+ALLOC RETURNING 6b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found d0 in next_free
+ALLOC RETURNING d0
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 72 in next_free
+ALLOC RETURNING 72
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 73 in next_free
+ALLOC RETURNING 73
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 46 in use after:: 0x7fd3e04047e0
+sggc_alloc: created 440 in new segment
+sggc_alloc: aux1 block for 440 has pos 13 in block for kind 2
+sggc_alloc: aux2 block for 440 has pos 13 in block for kind 2
+test_malloc: 47 in use after:: 0x7fd3e0404820
+sggc_alloc: called malloc for 440 (big 2, 5 chunks):: 0x7fd3e0404820
+ALLOC RETURNING 440
+CHECKING CONTENTS
+
+ITERATION 42
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 74 in next_free
+ALLOC RETURNING 74
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found b0 in next_free
+ALLOC RETURNING b0
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 75 in next_free
+ALLOC RETURNING 75
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 264 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 22, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  15  [2]:   1  [3]:  48  [4]:   0  [5]:   5 
+    next_free [0]: ---  [1]:  76  [2]: ---  [3]:  d1  [4]: ---  [5]:  b3 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 400 from old_gen1 in free
+sggc_collect: put 51 from old_gen1 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 62 from old_gen1 in free
+sggc_collect: put 67 from old_gen1 in free
+sggc_collect: put 69 from old_gen1 in free
+sggc_collect: put 6a from old_gen1 in free
+sggc_collect: put 6d from old_gen1 in free
+sggc_collect: put 6e from old_gen1 in free
+sggc_collect: put 6f from old_gen1 in free
+sggc_collect: put 70 from old_gen1 in free
+sggc_collect: put 71 from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put aa from old_gen1 in free
+sggc_collect: put ad from old_gen1 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put cd from old_gen1 in free
+sggc_collect: put ce from old_gen1 in free
+sggc_collect: put cf from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 74 0
+sggc_look_at: will look at 74
+sggc_look_at: b0 0
+sggc_look_at: will look at b0
+sggc_look_at: 75 0
+sggc_look_at: will look at 75
+sggc_look_at: d0 0
+sggc_look_at: will look at d0
+sggc_look_at: 73 0
+sggc_look_at: will look at 73
+sggc_collect: looking at d0
+sggc_collect: d0 now old_gen1
+sggc_collect: looking at b0
+sggc_collect: b0 now old_gen1
+sggc_collect: looking at 73
+sggc_collect: 73 now old_gen1
+sggc_look_at: 6d 0
+sggc_look_at: will look at 6d
+sggc_look_at: 440 0
+sggc_look_at: will look at 440
+sggc_collect: looking at 440
+sggc_collect: 440 now old_gen1
+sggc_collect: looking at 6d
+sggc_collect: 6d now old_gen2
+sggc_look_at: 67 0
+sggc_look_at: will look at 67
+sggc_look_at: cd 0
+sggc_look_at: will look at cd
+sggc_collect: looking at cd
+sggc_collect: cd now old_gen2
+sggc_collect: looking at 67
+sggc_collect: 67 now old_gen2
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_collect: looking at 9b
+sggc_collect: 9b now old_gen2
+sggc_collect: looking at 51
+sggc_collect: 51 now old_gen2
+sggc_look_at: 62 0
+sggc_look_at: will look at 62
+sggc_look_at: 400 0
+sggc_look_at: will look at 400
+sggc_collect: looking at 400
+sggc_collect: 400 now old_gen2
+sggc_collect: looking at 62
+sggc_collect: 62 now old_gen2
+sggc_look_at: 66 0
+sggc_look_at: ce 0
+sggc_look_at: will look at ce
+sggc_collect: looking at ce
+sggc_collect: ce now old_gen2
+sggc_collect: looking at 74
+sggc_collect: 74 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 75
+sggc_collect: 75 now old_gen1
+sggc_look_at: 74 0
+sggc_look_at: b0 0
+sggc_collect: 58 in old_gen1 now free
+sggc_collect: 5e in old_gen1 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 69 in old_gen1 now free
+sggc_collect: 6a in old_gen1 now free
+sggc_collect: 6e in old_gen1 now free
+sggc_collect: 6f in old_gen1 now free
+sggc_collect: 70 in old_gen1 now free
+sggc_collect: 71 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: aa in old_gen1 now free
+sggc_collect: ad in old_gen1 now free
+sggc_collect: cc in old_gen1 now free
+sggc_collect: cf in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 6, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  21  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  cc  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found cc in next_free
+ALLOC RETURNING cc
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 5e in next_free
+ALLOC RETURNING 5e
+CHECKING CONTENTS
+
+ITERATION 43
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 69 in next_free
+ALLOC RETURNING 69
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cf in next_free
+ALLOC RETURNING cf
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6a in next_free
+ALLOC RETURNING 6a
+ALLOCATING e, setting its contents to old e and d
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 272 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 6, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  21  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
+    next_free [0]: ---  [1]:  6b  [2]: ---  [3]:  d1  [4]: ---  [5]:  aa 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 6a 0
+sggc_look_at: will look at 6a
+sggc_look_at: 9e 0
+sggc_look_at: will look at 9e
+sggc_look_at: 69 0
+sggc_look_at: will look at 69
+sggc_look_at: cf 0
+sggc_look_at: will look at cf
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_collect: looking at cf
+sggc_collect: cf now old_gen1
+sggc_collect: looking at 9e
+sggc_collect: 9e now old_gen1
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen1
+sggc_look_at: 73 0
+sggc_look_at: b0 0
+sggc_collect: looking at 69
+sggc_collect: 69 now old_gen1
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: 9e 0
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6a
+sggc_collect: 6a now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 12, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  17  [2]:   0  [3]:  48  [4]:   0  [5]:   6 
+    next_free [0]: ---  [1]:  58  [2]: ---  [3]:  cc  [4]: ---  [5]:  aa 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 58 in next_free
+ALLOC RETURNING 58
+CHECKING CONTENTS
+
+ITERATION 44
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6b in next_free
+ALLOC RETURNING 6b
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found aa in next_free
+ALLOC RETURNING aa
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6e in next_free
+ALLOC RETURNING 6e
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cc in next_free
+ALLOC RETURNING cc
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6f in next_free
+ALLOC RETURNING 6f
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 70 in next_free
+ALLOC RETURNING 70
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 48 in use after:: 0x7fd3e0404870
+sggc_alloc: created 480 in new segment
+sggc_alloc: aux1 block for 480 has pos 14 in block for kind 2
+sggc_alloc: aux2 block for 480 has pos 14 in block for kind 2
+test_malloc: 49 in use after:: 0x7fd3e04048b0
+sggc_alloc: called malloc for 480 (big 2, 5 chunks):: 0x7fd3e04048b0
+ALLOC RETURNING 480
+CHECKING CONTENTS
+
+ITERATION 45
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 280 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 12, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  17  [2]:   1  [3]:  48  [4]:   0  [5]:   6 
+    next_free [0]: ---  [1]:  71  [2]: ---  [3]:  d1  [4]: ---  [5]:  ad 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 6f 0
+sggc_look_at: will look at 6f
+sggc_look_at: aa 0
+sggc_look_at: will look at aa
+sggc_look_at: 6e 0
+sggc_look_at: will look at 6e
+sggc_look_at: cc 0
+sggc_look_at: will look at cc
+sggc_look_at: 70 0
+sggc_look_at: will look at 70
+sggc_collect: looking at cc
+sggc_collect: cc now old_gen1
+sggc_collect: looking at aa
+sggc_collect: aa now old_gen1
+sggc_collect: looking at 6e
+sggc_collect: 6e now old_gen1
+sggc_look_at: 6b 0
+sggc_look_at: will look at 6b
+sggc_look_at: aa 0
+sggc_collect: looking at 6b
+sggc_collect: 6b now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6f
+sggc_collect: 6f now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 70
+sggc_collect: 70 now old_gen1
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: 480 0
+sggc_look_at: will look at 480
+sggc_collect: looking at 480
+sggc_collect: 480 now old_gen1
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen1
+sggc_look_at: 5e 0
+sggc_look_at: cf 0
+sggc_collect: done
+  unused: 0, old_gen1: 20, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  12  [2]:   0  [3]:  47  [4]:   0  [5]:   5 
+    next_free [0]: ---  [1]:  71  [2]: ---  [3]:  d1  [4]: ---  [5]:  ad 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 71 in next_free
+ALLOC RETURNING 71
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found ad in next_free
+ALLOC RETURNING ad
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 72 in next_free
+ALLOC RETURNING 72
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found d1 in next_free
+ALLOC RETURNING d1
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 76 in next_free
+ALLOC RETURNING 76
+ALLOCATING e, setting its contents to old e and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 77 in next_free
+ALLOC RETURNING 77
+CHECKING CONTENTS
+
+ITERATION 46
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 78 in next_free
+ALLOC RETURNING 78
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found b3 in next_free
+ALLOC RETURNING b3
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 288 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 20, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  12  [2]:   0  [3]:  47  [4]:   0  [5]:   5 
+    next_free [0]: ---  [1]:  79  [2]: ---  [3]:  d2  [4]: ---  [5]:  b6 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 400 from old_gen2 in free
+sggc_collect: put 3c0 from old_gen2 in free
+sggc_collect: put 340 from old_gen2 in free
+sggc_collect: put 380 from old_gen2 in free
+sggc_collect: put 300 from old_gen2 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c5 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put ca from old_gen2 in free
+sggc_collect: put cb from old_gen2 in free
+sggc_collect: put cd from old_gen2 in free
+sggc_collect: put ce from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 41 from old_gen2 in free
+sggc_collect: put 42 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 44 from old_gen2 in free
+sggc_collect: put 45 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 47 from old_gen2 in free
+sggc_collect: put 48 from old_gen2 in free
+sggc_collect: put 49 from old_gen2 in free
+sggc_collect: put 4a from old_gen2 in free
+sggc_collect: put 4b from old_gen2 in free
+sggc_collect: put 4c from old_gen2 in free
+sggc_collect: put 4d from old_gen2 in free
+sggc_collect: put 4e from old_gen2 in free
+sggc_collect: put 4f from old_gen2 in free
+sggc_collect: put 50 from old_gen2 in free
+sggc_collect: put 51 from old_gen2 in free
+sggc_collect: put 52 from old_gen2 in free
+sggc_collect: put 53 from old_gen2 in free
+sggc_collect: put 54 from old_gen2 in free
+sggc_collect: put 55 from old_gen2 in free
+sggc_collect: put 56 from old_gen2 in free
+sggc_collect: put 57 from old_gen2 in free
+sggc_collect: put 59 from old_gen2 in free
+sggc_collect: put 5a from old_gen2 in free
+sggc_collect: put 5b from old_gen2 in free
+sggc_collect: put 5c from old_gen2 in free
+sggc_collect: put 5d from old_gen2 in free
+sggc_collect: put 5f from old_gen2 in free
+sggc_collect: put 60 from old_gen2 in free
+sggc_collect: put 62 from old_gen2 in free
+sggc_collect: put 63 from old_gen2 in free
+sggc_collect: put 64 from old_gen2 in free
+sggc_collect: put 65 from old_gen2 in free
+sggc_collect: put 66 from old_gen2 in free
+sggc_collect: put 67 from old_gen2 in free
+sggc_collect: put 68 from old_gen2 in free
+sggc_collect: put 6c from old_gen2 in free
+sggc_collect: put 6d from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 8c from old_gen2 in free
+sggc_collect: put 8f from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
+sggc_collect: put 98 from old_gen2 in free
+sggc_collect: put 9b from old_gen2 in free
+sggc_collect: put a1 from old_gen2 in free
+sggc_collect: put a4 from old_gen2 in free
+sggc_collect: put a7 from old_gen2 in free
+sggc_collect: put 480 from old_gen1 in free
+sggc_collect: put 440 from old_gen1 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 69 from old_gen1 in free
+sggc_collect: put 6a from old_gen1 in free
+sggc_collect: put 6b from old_gen1 in free
+sggc_collect: put 6e from old_gen1 in free
+sggc_collect: put 6f from old_gen1 in free
+sggc_collect: put 70 from old_gen1 in free
+sggc_collect: put 73 from old_gen1 in free
+sggc_collect: put 74 from old_gen1 in free
+sggc_collect: put 75 from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put aa from old_gen1 in free
+sggc_collect: put b0 from old_gen1 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put cf from old_gen1 in free
+sggc_collect: put d0 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 78 0
+sggc_look_at: will look at 78
+sggc_look_at: b3 0
+sggc_look_at: will look at b3
+sggc_look_at: 72 0
+sggc_look_at: will look at 72
+sggc_look_at: d1 0
+sggc_look_at: will look at d1
+sggc_look_at: 77 0
+sggc_look_at: will look at 77
+sggc_collect: looking at d1
+sggc_collect: d1 now old_gen1
+sggc_collect: looking at b3
+sggc_collect: b3 now old_gen1
+sggc_collect: looking at 72
+sggc_collect: 72 now old_gen1
+sggc_look_at: 71 0
+sggc_look_at: will look at 71
+sggc_look_at: ad 0
+sggc_look_at: will look at ad
+sggc_collect: looking at ad
+sggc_collect: ad now old_gen1
+sggc_collect: looking at 71
+sggc_collect: 71 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 77
+sggc_collect: 77 now old_gen1
+sggc_look_at: 70 0
+sggc_look_at: will look at 70
+sggc_look_at: ad 0
+sggc_collect: looking at 70
+sggc_collect: 70 now old_gen2
+sggc_look_at: 58 0
+sggc_look_at: will look at 58
+sggc_look_at: 480 0
+sggc_look_at: will look at 480
+sggc_collect: looking at 480
+sggc_collect: 480 now old_gen2
+sggc_collect: looking at 58
+sggc_collect: 58 now old_gen2
+sggc_look_at: 5e 0
+sggc_look_at: will look at 5e
+sggc_look_at: cf 0
+sggc_look_at: will look at cf
+sggc_collect: looking at cf
+sggc_collect: cf now old_gen2
+sggc_collect: looking at 5e
+sggc_collect: 5e now old_gen2
+sggc_look_at: 73 0
+sggc_look_at: will look at 73
+sggc_look_at: b0 0
+sggc_look_at: will look at b0
+sggc_collect: looking at b0
+sggc_collect: b0 now old_gen2
+sggc_collect: looking at 73
+sggc_collect: 73 now old_gen2
+sggc_look_at: 6d 0
+sggc_look_at: will look at 6d
+sggc_look_at: 440 0
+sggc_look_at: will look at 440
+sggc_collect: looking at 440
+sggc_collect: 440 now old_gen2
+sggc_collect: looking at 6d
+sggc_look_at: 67 0
+sggc_look_at: will look at 67
+sggc_look_at: cd 0
+sggc_look_at: will look at cd
+sggc_collect: looking at cd
+sggc_collect: looking at 67
+sggc_look_at: 51 0
+sggc_look_at: will look at 51
+sggc_look_at: 9b 0
+sggc_look_at: will look at 9b
+sggc_collect: looking at 9b
+sggc_collect: looking at 51
+sggc_look_at: 62 0
+sggc_look_at: will look at 62
+sggc_look_at: 400 0
+sggc_look_at: will look at 400
+sggc_collect: looking at 400
+sggc_collect: looking at 62
+sggc_look_at: 66 0
+sggc_look_at: will look at 66
+sggc_look_at: ce 0
+sggc_look_at: will look at ce
+sggc_collect: looking at ce
+sggc_collect: looking at 66
+sggc_look_at: 5f 0
+sggc_look_at: will look at 5f
+sggc_look_at: a7 0
+sggc_look_at: will look at a7
+sggc_collect: looking at a7
+sggc_collect: looking at 5f
+sggc_look_at: 6c 0
+sggc_look_at: will look at 6c
+sggc_look_at: 3c0 0
+sggc_look_at: will look at 3c0
+sggc_collect: looking at 3c0
+sggc_collect: looking at 6c
+sggc_look_at: 64 0
+sggc_look_at: will look at 64
+sggc_look_at: cb 0
+sggc_look_at: will look at cb
+sggc_collect: looking at cb
+sggc_collect: looking at 64
+sggc_look_at: 5b 0
+sggc_look_at: will look at 5b
+sggc_look_at: 98 0
+sggc_look_at: will look at 98
+sggc_collect: looking at 98
+sggc_collect: looking at 5b
+sggc_look_at: 5c 0
+sggc_look_at: will look at 5c
+sggc_look_at: 380 0
+sggc_look_at: will look at 380
+sggc_collect: looking at 380
+sggc_collect: looking at 5c
+sggc_look_at: 68 0
+sggc_look_at: will look at 68
+sggc_look_at: c5 0
+sggc_look_at: will look at c5
+sggc_collect: looking at c5
+sggc_collect: looking at 68
+sggc_look_at: 65 0
+sggc_look_at: will look at 65
+sggc_look_at: a4 0
+sggc_look_at: will look at a4
+sggc_collect: looking at a4
+sggc_collect: looking at 65
+sggc_look_at: 56 0
+sggc_look_at: will look at 56
+sggc_look_at: 340 0
+sggc_look_at: will look at 340
+sggc_collect: looking at 340
+sggc_collect: looking at 56
+sggc_look_at: 57 0
+sggc_look_at: will look at 57
+sggc_look_at: ca 0
+sggc_look_at: will look at ca
+sggc_collect: looking at ca
+sggc_collect: looking at 57
+sggc_look_at: 63 0
+sggc_look_at: will look at 63
+sggc_look_at: a1 0
+sggc_look_at: will look at a1
+sggc_collect: looking at a1
+sggc_collect: looking at 63
+sggc_look_at: 5d 0
+sggc_look_at: will look at 5d
+sggc_look_at: 300 0
+sggc_look_at: will look at 300
+sggc_collect: looking at 300
+sggc_collect: looking at 5d
+sggc_look_at: 4b 0
+sggc_look_at: will look at 4b
+sggc_look_at: c7 0
+sggc_look_at: will look at c7
+sggc_collect: looking at c7
+sggc_collect: looking at 4b
+sggc_look_at: 4c 0
+sggc_look_at: will look at 4c
+sggc_look_at: 8c 0
+sggc_look_at: will look at 8c
+sggc_collect: looking at 8c
+sggc_collect: looking at 4c
+sggc_look_at: 60 0
+sggc_look_at: will look at 60
+sggc_look_at: 2c0 0
+sggc_look_at: will look at 2c0
+sggc_collect: looking at 2c0
+sggc_collect: looking at 60
+sggc_look_at: 5a 0
+sggc_look_at: will look at 5a
+sggc_look_at: c8 0
+sggc_look_at: will look at c8
+sggc_collect: looking at c8
+sggc_collect: looking at 5a
+sggc_look_at: 55 0
+sggc_look_at: will look at 55
+sggc_look_at: 8f 0
+sggc_look_at: will look at 8f
+sggc_collect: looking at 8f
+sggc_collect: looking at 55
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_collect: looking at 280
+sggc_collect: looking at 40
+sggc_look_at: 52 0
+sggc_look_at: will look at 52
+sggc_look_at: c9 0
+sggc_look_at: will look at c9
+sggc_collect: looking at c9
+sggc_collect: looking at 52
+sggc_look_at: 53 0
+sggc_look_at: will look at 53
+sggc_look_at: 92 0
+sggc_look_at: will look at 92
+sggc_collect: looking at 92
+sggc_collect: looking at 53
+sggc_look_at: 4f 0
+sggc_look_at: will look at 4f
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_collect: looking at 240
+sggc_collect: looking at 4f
+sggc_look_at: 59 0
+sggc_look_at: will look at 59
+sggc_look_at: c2 0
+sggc_look_at: will look at c2
+sggc_collect: looking at c2
+sggc_collect: looking at 59
+sggc_look_at: 44 0
+sggc_look_at: will look at 44
+sggc_look_at: 95 0
+sggc_look_at: will look at 95
+sggc_collect: looking at 95
+sggc_collect: looking at 44
+sggc_look_at: 45 0
+sggc_look_at: will look at 45
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_collect: looking at 200
+sggc_collect: looking at 45
+sggc_look_at: 4a 0
+sggc_look_at: will look at 4a
+sggc_look_at: c6 0
+sggc_look_at: will look at c6
+sggc_collect: looking at c6
+sggc_collect: looking at 4a
+sggc_look_at: 54 0
+sggc_look_at: will look at 54
+sggc_look_at: 89 0
+sggc_look_at: will look at 89
+sggc_collect: looking at 89
+sggc_collect: looking at 54
+sggc_look_at: 4e 0
+sggc_look_at: will look at 4e
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_collect: looking at 1c0
+sggc_collect: looking at 4e
+sggc_look_at: 48 0
+sggc_look_at: will look at 48
+sggc_look_at: c1 0
+sggc_look_at: will look at c1
+sggc_collect: looking at c1
+sggc_collect: looking at 48
+sggc_look_at: 42 0
+sggc_look_at: will look at 42
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: looking at 42
+sggc_look_at: 50 0
+sggc_look_at: will look at 50
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: looking at 50
+sggc_look_at: 4d 0
+sggc_look_at: will look at 4d
+sggc_look_at: c4 0
+sggc_look_at: will look at c4
+sggc_collect: looking at c4
+sggc_collect: looking at 4d
+sggc_look_at: 47 0
+sggc_look_at: will look at 47
+sggc_look_at: 83 0
+sggc_look_at: will look at 83
+sggc_collect: looking at 83
+sggc_collect: looking at 47
+sggc_look_at: 41 0
+sggc_look_at: will look at 41
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: looking at 41
+sggc_look_at: 49 0
+sggc_look_at: will look at 49
+sggc_look_at: c3 0
+sggc_look_at: will look at c3
+sggc_collect: looking at c3
+sggc_collect: looking at 49
+sggc_look_at: 46 0
+sggc_look_at: will look at 46
+sggc_look_at: 86 0
+sggc_look_at: will look at 86
+sggc_collect: looking at 86
+sggc_collect: looking at 46
+sggc_look_at: 43 0
+sggc_look_at: will look at 43
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_collect: looking at 100
+sggc_collect: looking at 43
+sggc_look_at: 0 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_collect: looking at c0
+sggc_collect: looking at 78
+sggc_collect: 78 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 69 in old_gen1 now free
+sggc_collect: 6a in old_gen1 now free
+sggc_collect: 6b in old_gen1 now free
+sggc_collect: 6e in old_gen1 now free
+sggc_collect: 6f in old_gen1 now free
+sggc_collect: 74 in old_gen1 now free
+sggc_collect: 75 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: aa in old_gen1 now free
+sggc_collect: cc in old_gen1 now free
+sggc_collect: d0 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  16  [2]:   0  [3]:  48  [4]:   0  [5]:   5 
+    next_free [0]: ---  [1]:  61  [2]: ---  [3]:  cc  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found cc in next_free
+ALLOC RETURNING cc
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 69 in next_free
+ALLOC RETURNING 69
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6a in next_free
+ALLOC RETURNING 6a
+CHECKING CONTENTS
+
+ITERATION 47
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6b in next_free
+ALLOC RETURNING 6b
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6e in next_free
+ALLOC RETURNING 6e
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found d0 in next_free
+ALLOC RETURNING d0
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 296 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 7, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  16  [2]:   0  [3]:  48  [4]:   0  [5]:   5 
+    next_free [0]: ---  [1]:  6f  [2]: ---  [3]:  d2  [4]: ---  [5]:  aa 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 6b 0
+sggc_look_at: will look at 6b
+sggc_look_at: 9e 0
+sggc_look_at: will look at 9e
+sggc_look_at: 6e 0
+sggc_look_at: will look at 6e
+sggc_look_at: d0 0
+sggc_look_at: will look at d0
+sggc_look_at: 6a 0
+sggc_look_at: will look at 6a
+sggc_collect: looking at d0
+sggc_collect: d0 now old_gen1
+sggc_collect: looking at 9e
+sggc_collect: 9e now old_gen1
+sggc_collect: looking at 6a
+sggc_collect: 6a now old_gen1
+sggc_look_at: 77 0
+sggc_look_at: cc 0
+sggc_look_at: will look at cc
+sggc_collect: looking at cc
+sggc_collect: cc now old_gen1
+sggc_collect: looking at 6b
+sggc_collect: 6b now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 6e
+sggc_collect: 6e now old_gen1
+sggc_look_at: 6b 0
+sggc_look_at: 9e 0
+sggc_collect: done
+  unused: 0, old_gen1: 13, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  13  [2]:   0  [3]:  46  [4]:   0  [5]:   4 
+    next_free [0]: ---  [1]:  61  [2]: ---  [3]:  d2  [4]: ---  [5]:  aa 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 69 in next_free
+ALLOC RETURNING 69
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 50 in use after:: 0x7fd3e0404900
+sggc_alloc: created 4c0 in new segment
+sggc_alloc: aux1 block for 4c0 has pos 15 in block for kind 2
+sggc_alloc: aux2 block for 4c0 has pos 15 in block for kind 2
+test_malloc: 51 in use after:: 0x7fd3e0404940
+sggc_alloc: called malloc for 4c0 (big 2, 5 chunks):: 0x7fd3e0404940
+ALLOC RETURNING 4c0
+CHECKING CONTENTS
+
+ITERATION 48
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6f in next_free
+ALLOC RETURNING 6f
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found aa in next_free
+ALLOC RETURNING aa
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 74 in next_free
+ALLOC RETURNING 74
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found d2 in next_free
+ALLOC RETURNING d2
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 75 in next_free
+ALLOC RETURNING 75
+ALLOCATING e, setting its contents to old e and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 304 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 13, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  13  [2]:   1  [3]:  46  [4]:   0  [5]:   4 
+    next_free [0]: ---  [1]:  76  [2]: ---  [3]:  d3  [4]: ---  [5]:  b6 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 75 0
+sggc_look_at: will look at 75
+sggc_look_at: aa 0
+sggc_look_at: will look at aa
+sggc_look_at: 74 0
+sggc_look_at: will look at 74
+sggc_look_at: d2 0
+sggc_look_at: will look at d2
+sggc_look_at: 69 0
+sggc_look_at: will look at 69
+sggc_collect: looking at d2
+sggc_collect: d2 now old_gen1
+sggc_collect: looking at aa
+sggc_collect: aa now old_gen1
+sggc_collect: looking at 69
+sggc_collect: 69 now old_gen1
+sggc_look_at: 6a 0
+sggc_look_at: 4c0 0
+sggc_look_at: will look at 4c0
+sggc_collect: looking at 4c0
+sggc_collect: 4c0 now old_gen1
+sggc_collect: looking at 74
+sggc_collect: 74 now old_gen1
+sggc_look_at: 6f 0
+sggc_look_at: will look at 6f
+sggc_look_at: aa 0
+sggc_collect: looking at 6f
+sggc_collect: 6f now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 75
+sggc_collect: 75 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 0, old_gen1: 20, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:   9  [2]:   0  [3]:  45  [4]:   0  [5]:   3 
+    next_free [0]: ---  [1]:  61  [2]: ---  [3]:  d3  [4]: ---  [5]:  b6 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 61 in next_free
+ALLOC RETURNING 61
+CHECKING CONTENTS
+
+ITERATION 49
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 76 in next_free
+ALLOC RETURNING 76
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found b6 in next_free
+ALLOC RETURNING b6
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 79 in next_free
+ALLOC RETURNING 79
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found d3 in next_free
+ALLOC RETURNING d3
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 7a in next_free
+ALLOC RETURNING 7a
+ALLOCATING e, setting its contents to old e and d
+sggc_alloc: type 1, length 2
+sggc_alloc: found 7b in next_free
+ALLOC RETURNING 7b
+CHECKING CONTENTS
+
+ITERATION 50
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 7c in next_free
+ALLOC RETURNING 7c
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 312 ALLOCATIONS
+sggc_collect: level 1
+  unused: 0, old_gen1: 20, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:   9  [2]:   0  [3]:  45  [4]:   0  [5]:   3 
+    next_free [0]: ---  [1]:  7d  [2]: ---  [3]:  d4  [4]: ---  [5]:  b9 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 4c0 from old_gen1 in free
+sggc_collect: put 69 from old_gen1 in free
+sggc_collect: put 6a from old_gen1 in free
+sggc_collect: put 6b from old_gen1 in free
+sggc_collect: put 6e from old_gen1 in free
+sggc_collect: put 6f from old_gen1 in free
+sggc_collect: put 71 from old_gen1 in free
+sggc_collect: put 72 from old_gen1 in free
+sggc_collect: put 74 from old_gen1 in free
+sggc_collect: put 75 from old_gen1 in free
+sggc_collect: put 77 from old_gen1 in free
+sggc_collect: put 78 from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put aa from old_gen1 in free
+sggc_collect: put ad from old_gen1 in free
+sggc_collect: put b3 from old_gen1 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put d0 from old_gen1 in free
+sggc_collect: put d1 from old_gen1 in free
+sggc_collect: put d2 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 7c 0
+sggc_look_at: will look at 7c
+sggc_look_at: b6 0
+sggc_look_at: will look at b6
+sggc_look_at: 79 0
+sggc_look_at: will look at 79
+sggc_look_at: d3 0
+sggc_look_at: will look at d3
+sggc_look_at: 7b 0
+sggc_look_at: will look at 7b
+sggc_collect: looking at d3
+sggc_collect: d3 now old_gen1
+sggc_collect: looking at b6
+sggc_collect: b6 now old_gen1
+sggc_collect: looking at 79
+sggc_collect: 79 now old_gen1
+sggc_look_at: 76 0
+sggc_look_at: will look at 76
+sggc_look_at: b6 0
+sggc_collect: looking at 76
+sggc_collect: 76 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 7b
+sggc_collect: 7b now old_gen1
+sggc_look_at: 61 0
+sggc_look_at: will look at 61
+sggc_look_at: d3 0
+sggc_collect: looking at 61
+sggc_collect: 61 now old_gen1
+sggc_look_at: 69 0
+sggc_look_at: will look at 69
+sggc_look_at: aa 0
+sggc_look_at: will look at aa
+sggc_collect: looking at aa
+sggc_collect: aa now old_gen2
+sggc_collect: looking at 69
+sggc_collect: 69 now old_gen2
+sggc_look_at: 6a 0
+sggc_look_at: will look at 6a
+sggc_look_at: 4c0 0
+sggc_look_at: will look at 4c0
+sggc_collect: looking at 4c0
+sggc_collect: 4c0 now old_gen2
+sggc_collect: looking at 6a
+sggc_collect: 6a now old_gen2
+sggc_look_at: 77 0
+sggc_look_at: will look at 77
+sggc_look_at: cc 0
+sggc_look_at: will look at cc
+sggc_collect: looking at cc
+sggc_collect: cc now old_gen2
+sggc_collect: looking at 77
+sggc_collect: 77 now old_gen2
+sggc_look_at: 70 0
+sggc_look_at: ad 0
+sggc_look_at: will look at ad
+sggc_collect: looking at ad
+sggc_collect: ad now old_gen2
+sggc_collect: looking at 7c
+sggc_collect: 7c now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 6b in old_gen1 now free
+sggc_collect: 6e in old_gen1 now free
+sggc_collect: 6f in old_gen1 now free
+sggc_collect: 71 in old_gen1 now free
+sggc_collect: 72 in old_gen1 now free
+sggc_collect: 74 in old_gen1 now free
+sggc_collect: 75 in old_gen1 now free
+sggc_collect: 78 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: b3 in old_gen1 now free
+sggc_collect: d0 in old_gen1 now free
+sggc_collect: d1 in old_gen1 now free
+sggc_collect: d2 in old_gen1 now free
+sggc_collect: done
+  unused: 0, old_gen1: 7, old_gen2: 95, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  12  [2]:   0  [3]:  47  [4]:   0  [5]:   4 
+    next_free [0]: ---  [1]:  6b  [2]: ---  [3]:  d0  [4]: ---  [5]:  9e 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 9e in next_free
+ALLOC RETURNING 9e
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6b in next_free
+ALLOC RETURNING 6b
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found d0 in next_free
+ALLOC RETURNING d0
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6e in next_free
+ALLOC RETURNING 6e
+ALLOCATING e, setting its contents to old e and vec length 20
+sggc_alloc: type 1, length 2
+sggc_alloc: found 6f in next_free
+ALLOC RETURNING 6f
+ALLOCATING VECTOR OF LENGTH 20
+sggc_alloc: type 2, length 20
+test_malloc: 52 in use after:: 0x7fd3e0404990
+sggc_alloc: created 500 in new segment
+sggc_alloc: aux1 block for 500 has pos 16 in block for kind 2
+sggc_alloc: aux2 block for 500 has pos 16 in block for kind 2
+test_malloc: 53 in use after:: 0x7fd3e04049d0
+sggc_alloc: called malloc for 500 (big 2, 5 chunks):: 0x7fd3e04049d0
+ALLOC RETURNING 500
+CHECKING CONTENTS
+DONE MAIN PART OF TEST
+
+SGGC_INFO:  gen0: 6, gen1: 7, gen2: 95, big chunks: 5
+
+FINAL YOUNGEST:  nil 0, a 1, b 1, c 1, d 1, e 1
+
+FINAL OLDEST:  nil 1, a 0, b 0, c 0, d 0, e 0
+
+FINAL LENGTHS:  nil   0, a   2, b  10, c   2, d   1, e   2
+FINAL SEQNUMS:  nil   0, a 314, b 311, c 312, d 313, e 315
+
+COLLECTING EVERYTHING EXCEPT nil
+
+sggc_collect: level 2
+  unused: 0, old_gen1: 7, old_gen2: 95, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  12  [2]:   1  [3]:  47  [4]:   0  [5]:   4 
+    next_free [0]: ---  [1]:  71  [2]: ---  [3]:  d1  [4]: ---  [5]:  b3 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+sggc_collect: put 4c0 from old_gen2 in free
+sggc_collect: put 440 from old_gen2 in free
+sggc_collect: put 480 from old_gen2 in free
+sggc_collect: put 400 from old_gen2 in free
+sggc_collect: put 3c0 from old_gen2 in free
+sggc_collect: put 340 from old_gen2 in free
+sggc_collect: put 380 from old_gen2 in free
+sggc_collect: put 300 from old_gen2 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c5 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put ca from old_gen2 in free
+sggc_collect: put cb from old_gen2 in free
+sggc_collect: put cc from old_gen2 in free
+sggc_collect: put cd from old_gen2 in free
+sggc_collect: put ce from old_gen2 in free
+sggc_collect: put cf from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 41 from old_gen2 in free
+sggc_collect: put 42 from old_gen2 in free
+sggc_collect: put 43 from old_gen2 in free
+sggc_collect: put 44 from old_gen2 in free
+sggc_collect: put 45 from old_gen2 in free
+sggc_collect: put 46 from old_gen2 in free
+sggc_collect: put 47 from old_gen2 in free
+sggc_collect: put 48 from old_gen2 in free
+sggc_collect: put 49 from old_gen2 in free
+sggc_collect: put 4a from old_gen2 in free
+sggc_collect: put 4b from old_gen2 in free
+sggc_collect: put 4c from old_gen2 in free
+sggc_collect: put 4d from old_gen2 in free
+sggc_collect: put 4e from old_gen2 in free
+sggc_collect: put 4f from old_gen2 in free
+sggc_collect: put 50 from old_gen2 in free
+sggc_collect: put 51 from old_gen2 in free
+sggc_collect: put 52 from old_gen2 in free
+sggc_collect: put 53 from old_gen2 in free
+sggc_collect: put 54 from old_gen2 in free
+sggc_collect: put 55 from old_gen2 in free
+sggc_collect: put 56 from old_gen2 in free
+sggc_collect: put 57 from old_gen2 in free
+sggc_collect: put 58 from old_gen2 in free
+sggc_collect: put 59 from old_gen2 in free
+sggc_collect: put 5a from old_gen2 in free
+sggc_collect: put 5b from old_gen2 in free
+sggc_collect: put 5c from old_gen2 in free
+sggc_collect: put 5d from old_gen2 in free
+sggc_collect: put 5e from old_gen2 in free
+sggc_collect: put 5f from old_gen2 in free
+sggc_collect: put 60 from old_gen2 in free
+sggc_collect: put 62 from old_gen2 in free
+sggc_collect: put 63 from old_gen2 in free
+sggc_collect: put 64 from old_gen2 in free
+sggc_collect: put 65 from old_gen2 in free
+sggc_collect: put 66 from old_gen2 in free
+sggc_collect: put 67 from old_gen2 in free
+sggc_collect: put 68 from old_gen2 in free
+sggc_collect: put 69 from old_gen2 in free
+sggc_collect: put 6a from old_gen2 in free
+sggc_collect: put 6c from old_gen2 in free
+sggc_collect: put 6d from old_gen2 in free
+sggc_collect: put 70 from old_gen2 in free
+sggc_collect: put 73 from old_gen2 in free
+sggc_collect: put 77 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 8c from old_gen2 in free
+sggc_collect: put 8f from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
+sggc_collect: put 98 from old_gen2 in free
+sggc_collect: put 9b from old_gen2 in free
+sggc_collect: put a1 from old_gen2 in free
+sggc_collect: put a4 from old_gen2 in free
+sggc_collect: put a7 from old_gen2 in free
+sggc_collect: put aa from old_gen2 in free
+sggc_collect: put ad from old_gen2 in free
+sggc_collect: put b0 from old_gen2 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 76 from old_gen1 in free
+sggc_collect: put 79 from old_gen1 in free
+sggc_collect: put 7b from old_gen1 in free
+sggc_collect: put 7c from old_gen1 in free
+sggc_collect: put b6 from old_gen1 in free
+sggc_collect: put d3 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 4c0 in old_gen2 now free
+sggc_collect: 440 in old_gen2 now free
+sggc_collect: 480 in old_gen2 now free
+sggc_collect: 400 in old_gen2 now free
+sggc_collect: 3c0 in old_gen2 now free
+sggc_collect: 340 in old_gen2 now free
+sggc_collect: 380 in old_gen2 now free
+sggc_collect: 300 in old_gen2 now free
+sggc_collect: 2c0 in old_gen2 now free
+sggc_collect: 280 in old_gen2 now free
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: 180 in old_gen2 now free
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: c1 in old_gen2 now free
+sggc_collect: c2 in old_gen2 now free
+sggc_collect: c3 in old_gen2 now free
+sggc_collect: c4 in old_gen2 now free
+sggc_collect: c5 in old_gen2 now free
+sggc_collect: c6 in old_gen2 now free
+sggc_collect: c7 in old_gen2 now free
+sggc_collect: c8 in old_gen2 now free
+sggc_collect: c9 in old_gen2 now free
+sggc_collect: ca in old_gen2 now free
+sggc_collect: cb in old_gen2 now free
+sggc_collect: cc in old_gen2 now free
+sggc_collect: cd in old_gen2 now free
+sggc_collect: ce in old_gen2 now free
+sggc_collect: cf in old_gen2 now free
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: 40 in old_gen2 now free
+sggc_collect: 41 in old_gen2 now free
+sggc_collect: 42 in old_gen2 now free
+sggc_collect: 43 in old_gen2 now free
+sggc_collect: 44 in old_gen2 now free
+sggc_collect: 45 in old_gen2 now free
+sggc_collect: 46 in old_gen2 now free
+sggc_collect: 47 in old_gen2 now free
+sggc_collect: 48 in old_gen2 now free
+sggc_collect: 49 in old_gen2 now free
+sggc_collect: 4a in old_gen2 now free
+sggc_collect: 4b in old_gen2 now free
+sggc_collect: 4c in old_gen2 now free
+sggc_collect: 4d in old_gen2 now free
+sggc_collect: 4e in old_gen2 now free
+sggc_collect: 4f in old_gen2 now free
+sggc_collect: 50 in old_gen2 now free
+sggc_collect: 51 in old_gen2 now free
+sggc_collect: 52 in old_gen2 now free
+sggc_collect: 53 in old_gen2 now free
+sggc_collect: 54 in old_gen2 now free
+sggc_collect: 55 in old_gen2 now free
+sggc_collect: 56 in old_gen2 now free
+sggc_collect: 57 in old_gen2 now free
+sggc_collect: 58 in old_gen2 now free
+sggc_collect: 59 in old_gen2 now free
+sggc_collect: 5a in old_gen2 now free
+sggc_collect: 5b in old_gen2 now free
+sggc_collect: 5c in old_gen2 now free
+sggc_collect: 5d in old_gen2 now free
+sggc_collect: 5e in old_gen2 now free
+sggc_collect: 5f in old_gen2 now free
+sggc_collect: 60 in old_gen2 now free
+sggc_collect: 62 in old_gen2 now free
+sggc_collect: 63 in old_gen2 now free
+sggc_collect: 64 in old_gen2 now free
+sggc_collect: 65 in old_gen2 now free
+sggc_collect: 66 in old_gen2 now free
+sggc_collect: 67 in old_gen2 now free
+sggc_collect: 68 in old_gen2 now free
+sggc_collect: 69 in old_gen2 now free
+sggc_collect: 6a in old_gen2 now free
+sggc_collect: 6c in old_gen2 now free
+sggc_collect: 6d in old_gen2 now free
+sggc_collect: 70 in old_gen2 now free
+sggc_collect: 73 in old_gen2 now free
+sggc_collect: 77 in old_gen2 now free
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: 83 in old_gen2 now free
+sggc_collect: 86 in old_gen2 now free
+sggc_collect: 89 in old_gen2 now free
+sggc_collect: 8c in old_gen2 now free
+sggc_collect: 8f in old_gen2 now free
+sggc_collect: 92 in old_gen2 now free
+sggc_collect: 95 in old_gen2 now free
+sggc_collect: 98 in old_gen2 now free
+sggc_collect: 9b in old_gen2 now free
+sggc_collect: a1 in old_gen2 now free
+sggc_collect: a4 in old_gen2 now free
+sggc_collect: a7 in old_gen2 now free
+sggc_collect: aa in old_gen2 now free
+sggc_collect: ad in old_gen2 now free
+sggc_collect: b0 in old_gen2 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 76 in old_gen1 now free
+sggc_collect: 79 in old_gen1 now free
+sggc_collect: 7b in old_gen1 now free
+sggc_collect: 7c in old_gen1 now free
+sggc_collect: b6 in old_gen1 now free
+sggc_collect: d3 in old_gen1 now free
+sggc_collect: calling free for data for 100:: 0x7fd3e04040d0
+test_free: 52 in use after:: 0x7fd3e04040d0
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 140:: 0x7fd3e0404160
+test_free: 51 in use after:: 0x7fd3e0404160
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 180:: 0x7fd3e04041f0
+test_free: 50 in use after:: 0x7fd3e04041f0
+sggc_collect: putting 180 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fd3e0404280
+test_free: 49 in use after:: 0x7fd3e0404280
+sggc_collect: putting 1c0 in unused
+sggc_collect: calling free for data for 240:: 0x7fd3e04043a0
+test_free: 48 in use after:: 0x7fd3e04043a0
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 200:: 0x7fd3e0404310
+test_free: 47 in use after:: 0x7fd3e0404310
+sggc_collect: putting 200 in unused
+sggc_collect: calling free for data for 280:: 0x7fd3e0404430
+test_free: 46 in use after:: 0x7fd3e0404430
+sggc_collect: putting 280 in unused
+sggc_collect: calling free for data for 2c0:: 0x7fd3e04044c0
+test_free: 45 in use after:: 0x7fd3e04044c0
+sggc_collect: putting 2c0 in unused
+sggc_collect: calling free for data for 300:: 0x7fd3e0404550
+test_free: 44 in use after:: 0x7fd3e0404550
+sggc_collect: putting 300 in unused
+sggc_collect: calling free for data for 380:: 0x7fd3e0404670
+test_free: 43 in use after:: 0x7fd3e0404670
+sggc_collect: putting 380 in unused
+sggc_collect: calling free for data for 340:: 0x7fd3e04045e0
+test_free: 42 in use after:: 0x7fd3e04045e0
+sggc_collect: putting 340 in unused
+sggc_collect: calling free for data for 3c0:: 0x7fd3e0404700
+test_free: 41 in use after:: 0x7fd3e0404700
+sggc_collect: putting 3c0 in unused
+sggc_collect: calling free for data for 400:: 0x7fd3e0404790
+test_free: 40 in use after:: 0x7fd3e0404790
+sggc_collect: putting 400 in unused
+sggc_collect: calling free for data for 480:: 0x7fd3e04048b0
+test_free: 39 in use after:: 0x7fd3e04048b0
+sggc_collect: putting 480 in unused
+sggc_collect: calling free for data for 440:: 0x7fd3e0404820
+test_free: 38 in use after:: 0x7fd3e0404820
+sggc_collect: putting 440 in unused
+sggc_collect: calling free for data for 4c0:: 0x7fd3e0404940
+test_free: 37 in use after:: 0x7fd3e0404940
+sggc_collect: putting 4c0 in unused
+sggc_collect: calling free for data for 500:: 0x7fd3e04049d0
+test_free: 36 in use after:: 0x7fd3e04049d0
+sggc_collect: putting 500 in unused
+sggc_collect: done
+  unused: 17, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  free_or_new [0]:   0  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
+    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
+     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+
+END TESTING

@@ -1,0 +1,24 @@
+SEGMENTED GENERATIONAL GARBAGE COLLECTOR
+
+Copyright 2016 Radford M. Neal.  Distributed under the GPL version 2
+or later.  See COPYING for licence details.
+
+The SGGC library provides a facility for allocating and automatically
+freeing objects, such as is needed in interpreters for languages such
+as R.  The interface to this facility is documented in sggc-doc.
+Documentation on its design and internals is in sggc-imp.
+
+Some tests of SGGC are in test-sggc1, test-sggc2, etc.
+
+As a higher-level test, also useful for performance assessment, an
+interpreter for a toy Lisp-like language is in interp, along with
+example programs in this language.
+
+A facility used by SGGC for managing sets of values is documented in
+set-doc, and tested in test-set.
+
+See VERSIONS for information on current and past stable versions.
+
+The source code repository for this software is at
+
+   https://gitlab.com/radfordneal/sggc

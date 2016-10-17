@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Compare two output files from a test program, disregarding numerical
+# addresses printed after "::".
+
+if [ -z "$1" -o -z "$2" -o -n "$3" ]; then
+  echo "Usage: diff-out file1 file2"
+  exit 1
+fi
+
+sed "s/::.*/:: address/" <$1 >/tmp/a$$
+sed "s/::.*/:: address/" <$2 >/tmp/b$$
+
+diff -u /tmp/a$$ /tmp/b$$
+
+#rm /tmp/a$$ /tmp/b$$

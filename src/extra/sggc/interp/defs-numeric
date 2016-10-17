@@ -1,0 +1,60 @@
+# (I n) increments the number n, represented in binary as a list of O and I
+# symbols, with low-order bit first.
+
+(@I ($ (n)
+  (? n (? (= (.n) ('O)) (& ('I) (:n))
+                        (& ('O) (I (:n)))
+       )
+       ('(I))
+  )
+))
+
+
+# (+ n m) adds the numbers n and m, both represented in binary as lists of 
+# O and I symbols, with low-order bit first.  Uses the I function for 
+# incrementing a number.
+
+(@+ ($ (n m)
+  (? n 
+     (? m (% (f s) 
+            (@f (& (.n) (& (.m) ())))
+            (@s (+ (:n) (:m)))
+            (? (= f ('(O O))) 
+               (& ('O) s)
+               (? (= f ('(I I))) (& ('O) (I s)) (& ('I) s))
+            )
+          )
+          n
+     )
+     m
+  )
+))
+
+
+# (n x y) returns '(T) if x is not equal to y, () if x equals y.
+
+(@n ($ (x y) (? (= x y) () ('(T)))))
+
+
+# (s x y) produces a list of numbers (in binary) increasing from x to y.
+# x must be less than or equal to y.  Uses the r function to reverse a list,
+# and the I function to increment a number.
+
+(@s ($ (x y)
+  (% (s) 
+    (@s (& x s))
+    (! (n x y) (@x (I x)) (@s (& x s)))
+    (r s)
+  )
+))
+
+
+# (d x k) produces a list of k duplicates of x.  Uses I to increment a 
+# number, and n for not-equal comparison.
+
+(@d ($ (x k)
+  (% (i r)
+    (! (n i k) (@r (& x r)) (@i (I i)))
+    r
+  )
+))

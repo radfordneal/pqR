@@ -1,0 +1,2331 @@
+STARTING TEST: segs = 11, iters = 15
+
+ABOUT TO CALL sggc_init
+test_malloc: 1 in use after:: 0x7fb489403290
+test_malloc: 2 in use after:: 0x7fb4894032f0
+test_malloc: 3 in use after:: 0x7fb489403390
+test_malloc: 4 in use after:: 0x7fb4894000a0
+DONE sggc_init
+ALLOCATING nil
+sggc_alloc: type 0, length 0
+test_malloc: 5 in use after:: 0x7fb489403350
+sggc_alloc: created 0 in new segment
+test_malloc: 6 in use after:: 0x7fb489800600
+sggc_alloc: called malloc for aux1 block (kind 0):: 0x7fb489800600
+sggc_alloc: aux1 block for 0 has pos 0 in block for kind 0
+test_malloc: 7 in use after:: 0x7fb4894033f0
+sggc_alloc: called malloc for 0 (big 0, 1 chunks):: 0x7fb4894033f0
+ALLOC RETURNING 0
+
+ITERATION 1
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+test_malloc: 8 in use after:: 0x7fb489403400
+sggc_alloc: created 40 in new segment
+test_malloc: 9 in use after:: 0x7fb489800a00
+sggc_alloc: called malloc for aux1 block (kind 1):: 0x7fb489800a00
+sggc_alloc: aux1 block for 40 has pos 0 in block for kind 1
+test_malloc: 10 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 40 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 40
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+test_malloc: 11 in use after:: 0x7fb489403450
+sggc_alloc: created 80 in new segment
+test_malloc: 12 in use after:: 0x7fb489803600
+sggc_alloc: called malloc for aux1 block (kind 2):: 0x7fb489803600
+sggc_alloc: aux1 block for 80 has pos 0 in block for kind 2
+test_malloc: 13 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 80 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+test_malloc: 14 in use after:: 0x7fb4894034c0
+sggc_alloc: created c0 in new segment
+sggc_alloc: aux1 block for c0 has pos 1 in block for kind 1
+test_malloc: 15 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING c0
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+test_malloc: 16 in use after:: 0x7fb489403510
+sggc_alloc: created 100 in new segment
+sggc_alloc: aux1 block for 100 has pos 1 in block for kind 2
+test_malloc: 17 in use after:: 0x7fb489403550
+sggc_alloc: called malloc for 100 (big 2, 1 chunks):: 0x7fb489403550
+ALLOC RETURNING 100
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+test_malloc: 18 in use after:: 0x7fb489403560
+sggc_alloc: created 140 in new segment
+sggc_alloc: aux1 block for 140 has pos 2 in block for kind 1
+test_malloc: 19 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 140
+CHECKING CONTENTS
+
+ITERATION 2
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+test_malloc: 20 in use after:: 0x7fb4894035b0
+sggc_alloc: created 180 in new segment
+sggc_alloc: aux1 block for 180 has pos 3 in block for kind 1
+test_malloc: 21 in use after:: 0x7fb4894035f0
+sggc_alloc: called malloc for 180 (big 1, 1 chunks):: 0x7fb4894035f0
+ALLOC RETURNING 180
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 8 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   1  [1]:   4  [2]:   2 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 0 0
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 80 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at 180
+sggc_collect: 180 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 0 now old_gen1
+sggc_collect: calling free for data for 140:: 0x7fb4894035a0
+test_free: 20 in use after:: 0x7fb4894035a0
+sggc_collect: putting 140 in unused
+sggc_collect: done
+  unused: 1, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 140 in unused
+test_malloc: 21 in use after:: 0x7fb489403600
+sggc_alloc: called malloc for 140 (big 2, 3 chunks):: 0x7fb489403600
+ALLOC RETURNING 140
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+test_malloc: 22 in use after:: 0x7fb489403630
+sggc_alloc: created 1c0 in new segment
+sggc_alloc: aux1 block for 1c0 has pos 4 in block for kind 1
+test_malloc: 23 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 1c0 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 1c0
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+test_malloc: 24 in use after:: 0x7fb489403670
+sggc_alloc: created 200 in new segment
+sggc_alloc: aux1 block for 200 has pos 2 in block for kind 2
+test_malloc: 25 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 200 (big 2, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 200
+ALLOCATING a AGAIN, leaving contents as nil
+BUT KEEPING REFERENCE TO OLD a IN e
+sggc_alloc: type 1, length 2
+test_malloc: 26 in use after:: 0x7fb4894036c0
+sggc_alloc: created 240 in new segment
+sggc_alloc: aux1 block for 240 has pos 5 in block for kind 1
+test_malloc: 27 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 240
+CHECKING CONTENTS
+
+ITERATION 3
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+test_malloc: 28 in use after:: 0x7fb489403710
+sggc_alloc: created 280 in new segment
+sggc_alloc: aux1 block for 280 has pos 6 in block for kind 1
+test_malloc: 29 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 280 (big 1, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 280
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   3  [2]:   2 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 0 from old_gen1 in free
+sggc_collect: put 180 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_collect: 180 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_look_at: 180 0
+sggc_look_at: 140 0
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 0 now old_gen2
+sggc_collect: 80 in old_gen1 now free
+sggc_collect: 40 in old_gen1 now free
+sggc_collect: c0 in old_gen1 now free
+sggc_collect: 100 in old_gen1 now free
+sggc_collect: calling free for data for c0:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting c0 in unused
+sggc_collect: calling free for data for 40:: 0x7fb489403440
+test_free: 27 in use after:: 0x7fb489403440
+sggc_collect: putting 40 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403700
+test_free: 26 in use after:: 0x7fb489403700
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 100:: 0x7fb489403550
+test_free: 25 in use after:: 0x7fb489403550
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403490
+test_free: 24 in use after:: 0x7fb489403490
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 5, old_gen1: 4, old_gen2: 2, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 80 in unused
+test_malloc: 25 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 80 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 26 in use after:: 0x7fb489403550
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb489403550
+ALLOC RETURNING 100
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found 240 in unused
+test_malloc: 27 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 240 (big 2, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 240
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 16 ALLOCATIONS
+sggc_collect: level 0
+  unused: 2, old_gen1: 4, old_gen2: 2, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   2 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 280 0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 180 0
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 280 0
+sggc_look_at: 80 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: done
+  unused: 2, old_gen1: 7, old_gen2: 2, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 40 in unused
+test_malloc: 28 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 40 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 40
+CHECKING CONTENTS
+
+ITERATION 4
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found c0 in unused
+test_malloc: 29 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING c0
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 7, old_gen2: 2, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_collect: put 280 from old_gen1 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 80 0
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 140 in old_gen1 now free
+sggc_collect: 1c0 in old_gen1 now free
+sggc_collect: 200 in old_gen1 now free
+sggc_collect: calling free for data for 1c0:: 0x7fb4894035a0
+test_free: 28 in use after:: 0x7fb4894035a0
+sggc_collect: putting 1c0 in unused
+sggc_collect: calling free for data for 40:: 0x7fb489403440
+test_free: 27 in use after:: 0x7fb489403440
+sggc_collect: putting 40 in unused
+sggc_collect: calling free for data for 200:: 0x7fb4894036b0
+test_free: 26 in use after:: 0x7fb4894036b0
+sggc_collect: putting 200 in unused
+sggc_collect: calling free for data for 140:: 0x7fb489403600
+test_free: 25 in use after:: 0x7fb489403600
+sggc_collect: putting 140 in unused
+sggc_collect: done
+  unused: 4, old_gen1: 1, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 140 in unused
+test_malloc: 26 in use after:: 0x7fb489403600
+sggc_alloc: called malloc for 140 (big 2, 3 chunks):: 0x7fb489403600
+ALLOC RETURNING 140
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 200 in unused
+test_malloc: 27 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 200 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 200
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found 40 in unused
+test_malloc: 28 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 40 (big 2, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 40
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 1c0 in unused
+test_malloc: 29 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 1c0 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 1c0
+CHECKING CONTENTS
+
+ITERATION 5
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 1, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   2 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 140 0
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: 280 in old_gen2 now free
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: calling free for data for 100:: 0x7fb489403550
+test_free: 28 in use after:: 0x7fb489403550
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 280:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 280 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403700
+test_free: 26 in use after:: 0x7fb489403700
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403490
+test_free: 25 in use after:: 0x7fb489403490
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 4, old_gen1: 4, old_gen2: 3, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 80 in unused
+test_malloc: 26 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 80 (big 1, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 80
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 240 in unused
+test_malloc: 27 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 240 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 240
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 24 ALLOCATIONS
+sggc_collect: level 1
+  unused: 2, old_gen1: 4, old_gen2: 3, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 180 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen2
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_look_at: c0 0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen2
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: 1c0 in old_gen1 now free
+sggc_collect: calling free for data for 1c0:: 0x7fb4894035a0
+test_free: 26 in use after:: 0x7fb4894035a0
+sggc_collect: putting 1c0 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 1c0 in unused
+test_malloc: 27 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 1c0 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 1c0
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found 280 in unused
+test_malloc: 28 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 280 (big 2, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 280
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 29 in use after:: 0x7fb489403550
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb489403550
+ALLOC RETURNING 100
+CHECKING CONTENTS
+
+ITERATION 6
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen1
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 240 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: 40 in old_gen2 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: calling free for data for c0:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting c0 in unused
+sggc_collect: calling free for data for 200:: 0x7fb4894036b0
+test_free: 27 in use after:: 0x7fb4894036b0
+sggc_collect: putting 200 in unused
+sggc_collect: calling free for data for 40:: 0x7fb489403440
+test_free: 26 in use after:: 0x7fb489403440
+sggc_collect: putting 40 in unused
+sggc_collect: calling free for data for 140:: 0x7fb489403600
+test_free: 25 in use after:: 0x7fb489403600
+sggc_collect: putting 140 in unused
+sggc_collect: done
+  unused: 4, old_gen1: 3, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 26 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 140
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 40 in unused
+test_malloc: 27 in use after:: 0x7fb489403600
+sggc_alloc: called malloc for 40 (big 2, 3 chunks):: 0x7fb489403600
+ALLOC RETURNING 40
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 200 in unused
+test_malloc: 28 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 200 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 200
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found c0 in unused
+test_malloc: 29 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for c0 (big 2, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING c0
+ALLOCATING a AGAIN, leaving contents as nil
+BUT KEEPING REFERENCES TO OLD a IN e->x AND TO b IN e->y
+sggc_alloc: type 1, length 2
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 3, old_gen2: 4, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   2 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 280 from old_gen1 in free
+sggc_collect: old->new for 180 (gen2)
+sggc_look_at: 140 2
+sggc_collect: old->new for 180 still needed
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 140 0
+sggc_look_at: 40 0
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_look_at: 140 0
+sggc_look_at: 40 0
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen1
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: 100 in old_gen1 now free
+sggc_collect: 1c0 in old_gen1 now free
+sggc_collect: 280 in old_gen1 now free
+sggc_collect: calling free for data for 1c0:: 0x7fb4894035a0
+test_free: 28 in use after:: 0x7fb4894035a0
+sggc_collect: putting 1c0 in unused
+sggc_collect: calling free for data for 100:: 0x7fb489403550
+test_free: 27 in use after:: 0x7fb489403550
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403700
+test_free: 26 in use after:: 0x7fb489403700
+sggc_collect: putting 80 in unused
+sggc_collect: calling free for data for 280:: 0x7fb489403750
+test_free: 25 in use after:: 0x7fb489403750
+sggc_collect: putting 280 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403490
+test_free: 24 in use after:: 0x7fb489403490
+sggc_collect: putting 240 in unused
+sggc_collect: done
+  unused: 5, old_gen1: 4, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 25 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 240
+CHECKING CONTENTS
+
+ITERATION 7
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 32 ALLOCATIONS
+sggc_collect: level 0
+  unused: 4, old_gen1: 4, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: old->new for 180 (gen2)
+sggc_look_at: 140 2
+sggc_look_at: 40 0
+sggc_collect: old->new for 180 still needed
+sggc_look_at: 0 0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 40 0
+sggc_look_at: 200 0
+sggc_look_at: c0 0
+sggc_look_at: 180 0
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 4, old_gen1: 5, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 280 in unused
+test_malloc: 26 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 280 (big 1, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 280
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 80 in unused
+test_malloc: 27 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 80 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 28 in use after:: 0x7fb489403550
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb489403550
+ALLOC RETURNING 100
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+sggc_alloc: found 1c0 in unused
+test_malloc: 29 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 1c0 (big 2, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 1c0
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 5, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   2 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_collect: put 40 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: old->new for 180 (gen2)
+sggc_look_at: 140 2
+sggc_look_at: 40 2
+sggc_collect: old->new for 180 no longer needed
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: 40 now old_gen2
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 280 0
+sggc_look_at: 80 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 240 in old_gen1 now free
+sggc_collect: 200 in old_gen1 now free
+sggc_collect: c0 in old_gen1 now free
+sggc_collect: calling free for data for 200:: 0x7fb4894036b0
+test_free: 28 in use after:: 0x7fb4894036b0
+sggc_collect: putting 200 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for c0:: 0x7fb489403500
+test_free: 26 in use after:: 0x7fb489403500
+sggc_collect: putting c0 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found c0 in unused
+test_malloc: 27 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING c0
+CHECKING CONTENTS
+
+ITERATION 8
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 28 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 240
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+sggc_alloc: found 200 in unused
+test_malloc: 29 in use after:: 0x7fb489403760
+sggc_alloc: called malloc for 200 (big 2, 3 chunks):: 0x7fb489403760
+ALLOC RETURNING 200
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 280 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 140
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen2
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: calling free for data for c0:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting c0 in unused
+sggc_collect: done
+  unused: 1, old_gen1: 2, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found c0 in unused
+test_malloc: 29 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING c0
+ALLOCATING d, setting contents to 7777
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 40 ALLOCATIONS
+sggc_collect: level 0
+  unused: 0, old_gen1: 2, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 240 0
+sggc_look_at: 200 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 1c0 0
+sggc_look_at: 180 0
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_look_at: 240 0
+sggc_look_at: 200 0
+sggc_collect: done
+  unused: 0, old_gen1: 3, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 3, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 140
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen2
+sggc_look_at: 240 0
+sggc_look_at: 200 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 280 in old_gen2 now free
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: calling free for data for 100:: 0x7fb489403550
+test_free: 28 in use after:: 0x7fb489403550
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 280:: 0x7fb489403700
+test_free: 27 in use after:: 0x7fb489403700
+sggc_collect: putting 280 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403490
+test_free: 26 in use after:: 0x7fb489403490
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 0, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 80 in unused
+test_malloc: 27 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 80 (big 2, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 80
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 280 in unused
+test_malloc: 28 in use after:: 0x7fb489403550
+sggc_alloc: called malloc for 280 (big 1, 1 chunks):: 0x7fb489403550
+ALLOC RETURNING 280
+AND KEEP REFERENCE TO NEW a IN e->x
+CHECKING CONTENTS
+
+ITERATION 9
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 29 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 100
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 0, old_gen2: 8, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: old->new for 180 (gen2)
+sggc_look_at: 280 2
+sggc_collect: old->new for 180 still needed
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at c0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 200 0
+sggc_collect: looking at 240
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: calling free for data for 140:: 0x7fb489403440
+test_free: 28 in use after:: 0x7fb489403440
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fb4894035a0
+test_free: 27 in use after:: 0x7fb4894035a0
+sggc_collect: putting 1c0 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 3, old_gen2: 6, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 1c0 in unused
+test_malloc: 28 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 1c0 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 1c0
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 29 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 140
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 3, old_gen2: 6, old_to_new: 1, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 280 from old_gen1 in free
+sggc_collect: old->new for 180 (gen2)
+sggc_look_at: 280 2
+sggc_look_at: 40 2
+sggc_collect: old->new for 180 no longer needed
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_collect: 280 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_look_at: 100 0
+sggc_look_at: 1c0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: calling free for data for c0:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting c0 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 200:: 0x7fb489403760
+test_free: 26 in use after:: 0x7fb489403760
+sggc_collect: putting 200 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 200 in unused
+test_malloc: 27 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 200 (big 2, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 200
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 28 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING 240
+CHECKING CONTENTS
+
+ITERATION 10
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found c0 in unused
+test_malloc: 29 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING c0
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 48 ALLOCATIONS
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen2
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 1c0 0
+sggc_collect: looking at 100
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen2
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: calling free for data for 240:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403700
+test_free: 27 in use after:: 0x7fb489403700
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 80 in unused
+test_malloc: 28 in use after:: 0x7fb489403760
+sggc_alloc: called malloc for 80 (big 2, 3 chunks):: 0x7fb489403760
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 29 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 240
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_look_at: c0 0
+sggc_look_at: 80 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: calling free for data for 100:: 0x7fb4894036b0
+test_free: 28 in use after:: 0x7fb4894036b0
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 140:: 0x7fb4894035a0
+test_free: 27 in use after:: 0x7fb4894035a0
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fb489403490
+test_free: 26 in use after:: 0x7fb489403490
+sggc_collect: putting 1c0 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 1c0 in unused
+test_malloc: 27 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 1c0 (big 2, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 1c0
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 28 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 140
+CHECKING CONTENTS
+
+ITERATION 11
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 29 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING 100
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 80 0
+sggc_collect: looking at c0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: calling free for data for 140:: 0x7fb4894036b0
+test_free: 28 in use after:: 0x7fb4894036b0
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 200:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 200 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 200 in unused
+test_malloc: 28 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 200 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 200
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 29 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 140
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen2
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_look_at: 100 0
+sggc_look_at: 200 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: calling free for data for c0:: 0x7fb489403440
+test_free: 28 in use after:: 0x7fb489403440
+sggc_collect: putting c0 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403700
+test_free: 27 in use after:: 0x7fb489403700
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403760
+test_free: 26 in use after:: 0x7fb489403760
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 80 in unused
+test_malloc: 27 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 80 (big 2, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 80
+ALLOCATING a AGAIN, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 56 ALLOCATIONS
+sggc_collect: level 0
+  unused: 2, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 100 0
+sggc_look_at: 200 0
+sggc_look_at: 140 0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: done
+  unused: 2, old_gen1: 3, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 28 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 240
+CHECKING CONTENTS
+
+ITERATION 12
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found c0 in unused
+test_malloc: 29 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING c0
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 3, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen2
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 200 0
+sggc_collect: looking at 100
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: calling free for data for 240:: 0x7fb489403440
+test_free: 28 in use after:: 0x7fb489403440
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fb4894035a0
+test_free: 27 in use after:: 0x7fb4894035a0
+sggc_collect: putting 1c0 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 1, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 1c0 in unused
+test_malloc: 28 in use after:: 0x7fb489403760
+sggc_alloc: called malloc for 1c0 (big 2, 3 chunks):: 0x7fb489403760
+ALLOC RETURNING 1c0
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 29 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 240
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 1, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_look_at: c0 0
+sggc_look_at: 1c0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: calling free for data for 100:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 140:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 200:: 0x7fb489403490
+test_free: 26 in use after:: 0x7fb489403490
+sggc_collect: putting 200 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 200 in unused
+test_malloc: 27 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 200 (big 2, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 200
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 28 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING 140
+CHECKING CONTENTS
+
+ITERATION 13
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 29 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 100
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 1c0 0
+sggc_collect: looking at c0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen2
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: calling free for data for 140:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403700
+test_free: 27 in use after:: 0x7fb489403700
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 80 in unused
+test_malloc: 28 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 80 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 80
+ALLOCATING c, setting its contents to a and b
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 64 ALLOCATIONS
+sggc_collect: level 0
+  unused: 1, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_look_at: 0 0
+sggc_look_at: 100 0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 240 0
+sggc_look_at: 200 0
+sggc_look_at: 180 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: done
+  unused: 1, old_gen1: 3, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 29 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 140
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 3, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_look_at: 100 0
+sggc_look_at: 80 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: calling free for data for c0:: 0x7fb4894036b0
+test_free: 28 in use after:: 0x7fb4894036b0
+sggc_collect: putting c0 in unused
+sggc_collect: calling free for data for 240:: 0x7fb4894035a0
+test_free: 27 in use after:: 0x7fb4894035a0
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fb489403760
+test_free: 26 in use after:: 0x7fb489403760
+sggc_collect: putting 1c0 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 1, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 1c0 in unused
+test_malloc: 27 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 1c0 (big 2, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 1c0
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 28 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 240
+CHECKING CONTENTS
+
+ITERATION 14
+ALLOCATING a, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found c0 in unused
+test_malloc: 29 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for c0 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING c0
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 1, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   2  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen2
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 80 0
+sggc_collect: looking at 100
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: calling free for data for 240:: 0x7fb4894036b0
+test_free: 28 in use after:: 0x7fb4894036b0
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 200:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 200 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 200 in unused
+test_malloc: 28 in use after:: 0x7fb489403760
+sggc_alloc: called malloc for 200 (big 2, 3 chunks):: 0x7fb489403760
+ALLOC RETURNING 200
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 29 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 240
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 7, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen2
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen1
+sggc_look_at: c0 0
+sggc_look_at: 200 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen1
+sggc_collect: looking at c0
+sggc_collect: c0 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: calling free for data for 100:: 0x7fb489403440
+test_free: 28 in use after:: 0x7fb489403440
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 140:: 0x7fb489403700
+test_free: 27 in use after:: 0x7fb489403700
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403490
+test_free: 26 in use after:: 0x7fb489403490
+sggc_collect: putting 80 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 80 in unused
+test_malloc: 27 in use after:: 0x7fb489403700
+sggc_alloc: called malloc for 80 (big 2, 1 chunks):: 0x7fb489403700
+ALLOC RETURNING 80
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 28 in use after:: 0x7fb489403440
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb489403440
+ALLOC RETURNING 140
+CHECKING CONTENTS
+
+ITERATION 15
+ALLOCATING a, leaving contents as nil
+ABOUT TO CALL sggc_collect IN ALLOC DUE TO 72 ALLOCATIONS
+sggc_collect: level 1
+  unused: 1, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 200 from old_gen1 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen1
+sggc_collect: looking at 240
+sggc_collect: 240 now old_gen2
+sggc_look_at: c0 0
+sggc_look_at: 200 0
+sggc_collect: looking at 200
+sggc_collect: 200 now old_gen2
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: done
+  unused: 1, old_gen1: 2, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 1, length 2
+sggc_alloc: found 100 in unused
+test_malloc: 29 in use after:: 0x7fb4894036b0
+sggc_alloc: called malloc for 100 (big 1, 1 chunks):: 0x7fb4894036b0
+ALLOC RETURNING 100
+ALLOCATING b, setting contents to 100*i .. 100*i+9
+sggc_alloc: type 2, length 10
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 2, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 200 0
+sggc_look_at: will look at 200
+sggc_look_at: 240 0
+sggc_look_at: will look at 240
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: 80 now old_gen2
+sggc_collect: looking at 240
+sggc_look_at: c0 0
+sggc_look_at: will look at c0
+sggc_look_at: 200 0
+sggc_collect: looking at c0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 200
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen1
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: 140 in old_gen1 now free
+sggc_collect: calling free for data for 140:: 0x7fb489403440
+test_free: 28 in use after:: 0x7fb489403440
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fb4894035a0
+test_free: 27 in use after:: 0x7fb4894035a0
+sggc_collect: putting 1c0 in unused
+sggc_collect: done
+  unused: 2, old_gen1: 1, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 10
+sggc_alloc: found 1c0 in unused
+test_malloc: 28 in use after:: 0x7fb489403490
+sggc_alloc: called malloc for 1c0 (big 2, 3 chunks):: 0x7fb489403490
+ALLOC RETURNING 1c0
+ALLOCATING c, setting its contents to a and b
+sggc_alloc: type 1, length 2
+sggc_alloc: found 140 in unused
+test_malloc: 29 in use after:: 0x7fb4894035a0
+sggc_alloc: called malloc for 140 (big 1, 1 chunks):: 0x7fb4894035a0
+ALLOC RETURNING 140
+ALLOCATING d, setting contents to 7777
+sggc_alloc: type 2, length 1
+ABOUT TO CALL sggc_collect IN ALLOC BECAUSE ALLOC FAILED
+sggc_collect: level 2
+  unused: 0, old_gen1: 1, old_gen2: 8, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 100 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 100 0
+sggc_look_at: will look at 100
+sggc_look_at: 1c0 0
+sggc_look_at: will look at 1c0
+sggc_look_at: 140 0
+sggc_look_at: will look at 140
+sggc_look_at: 80 0
+sggc_look_at: will look at 80
+sggc_look_at: 180 0
+sggc_look_at: will look at 180
+sggc_collect: looking at 180
+sggc_look_at: 280 0
+sggc_look_at: will look at 280
+sggc_look_at: 40 0
+sggc_look_at: will look at 40
+sggc_collect: looking at 40
+sggc_collect: looking at 280
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 80
+sggc_collect: looking at 140
+sggc_collect: 140 now old_gen1
+sggc_look_at: 100 0
+sggc_look_at: 1c0 0
+sggc_collect: looking at 1c0
+sggc_collect: 1c0 now old_gen1
+sggc_collect: looking at 100
+sggc_collect: 100 now old_gen2
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: calling free for data for c0:: 0x7fb489403500
+test_free: 28 in use after:: 0x7fb489403500
+sggc_collect: putting c0 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403750
+test_free: 27 in use after:: 0x7fb489403750
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 200:: 0x7fb489403760
+test_free: 26 in use after:: 0x7fb489403760
+sggc_collect: putting 200 in unused
+sggc_collect: done
+  unused: 3, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_alloc: type 2, length 1
+sggc_alloc: found 200 in unused
+test_malloc: 27 in use after:: 0x7fb489403750
+sggc_alloc: called malloc for 200 (big 2, 1 chunks):: 0x7fb489403750
+ALLOC RETURNING 200
+ALLOCATING a AGAIN, leaving contents as nil
+sggc_alloc: type 1, length 2
+sggc_alloc: found 240 in unused
+test_malloc: 28 in use after:: 0x7fb489403500
+sggc_alloc: called malloc for 240 (big 1, 1 chunks):: 0x7fb489403500
+ALLOC RETURNING 240
+CHECKING CONTENTS
+DONE MAIN PART OF TEST
+
+SGGC_INFO:  gen0: 2, gen1: 2, gen2: 6, big chunks: 2
+
+FINAL YOUNGEST:  nil 0, a 1, b 0, c 0, d 1, e 0
+
+FINAL OLDEST:  nil 1, a 0, b 0, c 0, d 0, e 1
+
+FINAL LENGTHS:  nil 0, a 2, b 10, c 2, d 1, e 2
+
+COLLECTING EVERYTHING
+
+sggc_collect: level 2
+  unused: 1, old_gen1: 2, old_gen2: 6, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   1  [2]:   1 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 40 from old_gen2 in free
+sggc_collect: put 0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen1 in free
+sggc_collect: put 140 from old_gen1 in free
+sggc_look_at: 0 0
+sggc_look_at: will look at 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_look_at: 0 0
+sggc_collect: looking at 0
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: 80 in old_gen2 now free
+sggc_collect: 280 in old_gen2 now free
+sggc_collect: 40 in old_gen2 now free
+sggc_collect: 180 in old_gen2 now free
+sggc_collect: 1c0 in old_gen1 now free
+sggc_collect: 140 in old_gen1 now free
+sggc_collect: calling free for data for 140:: 0x7fb4894035a0
+test_free: 27 in use after:: 0x7fb4894035a0
+sggc_collect: putting 140 in unused
+sggc_collect: calling free for data for 180:: 0x7fb4894035f0
+test_free: 26 in use after:: 0x7fb4894035f0
+sggc_collect: putting 180 in unused
+sggc_collect: calling free for data for 280:: 0x7fb489403550
+test_free: 25 in use after:: 0x7fb489403550
+sggc_collect: putting 280 in unused
+sggc_collect: calling free for data for 100:: 0x7fb4894036b0
+test_free: 24 in use after:: 0x7fb4894036b0
+sggc_collect: putting 100 in unused
+sggc_collect: calling free for data for 240:: 0x7fb489403500
+test_free: 23 in use after:: 0x7fb489403500
+sggc_collect: putting 240 in unused
+sggc_collect: calling free for data for 1c0:: 0x7fb489403490
+test_free: 22 in use after:: 0x7fb489403490
+sggc_collect: putting 1c0 in unused
+sggc_collect: calling free for data for 40:: 0x7fb489403600
+test_free: 21 in use after:: 0x7fb489403600
+sggc_collect: putting 40 in unused
+sggc_collect: calling free for data for 80:: 0x7fb489403700
+test_free: 20 in use after:: 0x7fb489403700
+sggc_collect: putting 80 in unused
+sggc_collect: calling free for data for 200:: 0x7fb489403750
+test_free: 19 in use after:: 0x7fb489403750
+sggc_collect: putting 200 in unused
+sggc_collect: done
+  unused: 10, old_gen1: 0, old_gen2: 1, old_to_new: 0, to_look_at: 0, const: 0
+  free_or_new [0]:   0  [1]:   0  [2]:   0 
+    next_free [0]: ---  [1]: ---  [2]: --- 
+     end_free [0]: ---  [1]: ---  [2]: --- 
+
+END TESTING

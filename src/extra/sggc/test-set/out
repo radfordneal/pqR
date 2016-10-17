@@ -1,0 +1,152 @@
+> c 1 2 3      check not there when everything is empty
+result: 0
+Set 0 (chain 0), 0 elements: empty
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 0 elements: empty
+> a 0 0 0      add to set 0
+result: 0
+Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 0 elements: empty
+> a 2 0 0      add same value to set 1
+result: 0
+Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 1 elements: 0000000000000001 : 0.0
+> c 0 0 0      check that both are there
+result: 1
+Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 1 elements: 0000000000000001 : 0.0
+> c 2 0 0  
+result: 1
+Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 1 elements: 0000000000000001 : 0.0
+> c 0 1 1      but something else is not
+result: 0
+Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 1 elements: 0000000000000001 : 0.0
+> a 0 4 20     add more for set 0
+result: 0
+Set 0 (chain 0), 2 elements: 0000000000100000 : 4.20 0.0
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 1 elements: 0000000000000001 : 0.0
+> a 0 0 20  
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 1 elements: 0000000000000001 : 0.0
+> a 2 2 58     add more things to sets 1 and 2, which must use different segments
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 2 elements: 0400000000000000 : 2.58 0.0
+> a 2 2 63   
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 3 elements: 8400000000000000 : 2.58 2.63 0.0
+> a 2 2 57   
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 4 elements: 8600000000000000 : 2.57 2.58 2.63 0.0
+> a 2 5 0   
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> a 1 3 1   
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> a 1 3 1      add it again to check that nothing changes
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 1 2 3      check that this is still not there
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 2 2 58     check that things added are now there
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 2 2 63   
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 2 2 57   
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 2 5 0   
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 1 3 1   
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> c 1 3 0      check that this isn't there, even though it's close to something
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 5 elements: 0000000000000001 : 5.0 2.57 2.58 2.63 0.0
+> r 2 2 58     remove something
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 4 elements: 0000000000000001 : 5.0 2.57 2.63 0.0
+> r 2 2 13     remove something that is not there already
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 4 elements: 0000000000000001 : 5.0 2.57 2.63 0.0
+> r 2 5 0      remove something, which will result in zero bits at front
+result: 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 3 elements: 8200000000000000 : 2.57 2.63 0.0
+> c 2 2 58     check that things removed are no longer there
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 3 elements: 8200000000000000 : 2.57 2.63 0.0
+> c 2 5 0   
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 3 elements: 8200000000000000 : 2.57 2.63 0.0
+> a 1 7 7      add another element, which will create new first segment
+result: 0
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 2 elements: 0000000000000080 : 7.7 3.1
+Set 2 (chain 1), 3 elements: 8200000000000000 : 2.57 2.63 0.0
+> m 1   move first segment of set 1 to set 2
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 1 elements: 0000000000000002 : 3.1
+Set 2 (chain 1), 4 elements: 0000000000000080 : 7.7 2.57 2.63 0.0
+> m 1   and move first segment of set 1 to set 2 again
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 0 elements: empty
+Set 2 (chain 1), 5 elements: 0000000000000002 : 3.1 7.7 2.57 2.63 0.0
+> n 2 7 7      move segment after 7.7 from set 2 to set 1
+Set 0 (chain 0), 3 elements: 0000000000100000 : 4.20 0.0 0.20
+Set 1 (chain 1), 2 elements: 8200000000000000 : 2.57 2.63
+Set 2 (chain 1), 3 elements: 0000000000000002 : 3.1 7.7 0.0
+> b 0 0 0      try changing bits of a segment in set 0
+Set 0 (chain 0), 4 elements: 0000000000100000 : 4.20 0.0 0.1 0.2
+Set 1 (chain 1), 2 elements: 8200000000000000 : 2.57 2.63
+Set 2 (chain 1), 3 elements: 0000000000000002 : 3.1 7.7 0.0
+> 

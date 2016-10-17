@@ -1,0 +1,45 @@
+# (E K) returns a list of primes no bigger than K (in binary) using the 
+# Sieve of Eratosthenes.  Uses n for not equal comparison, d for duplication,
+# r for reversal, I for incrementing, and + for addition.
+
+(@E ($ (K)
+  (% (p q f h i j m)
+
+    (@p (s ('(O I)) K))  # Sequence from 2 to K
+    (@f (: (d ('x) K)))  # Corresponding flags, all 'x to start
+    (@m ())              # Sequence of number found to be prime
+
+    # Loop with i going from 2 to K, putting i in m if its flag is still 'x,
+    # setting flags for multiples of i to o.
+
+    (@i ('(I)))
+    (! (n i K)
+
+       (@ i (I i))                        # Go on to next value of i
+       (? (= (.f) ('x)) (@m (& (.p) m)))  # Add i to output list if prime
+       (@p (:p))                          # Get rid of i from p,
+       (@f (:f))                          #   and get rid of its flag from f
+
+       # Copy flags from f to h, setting flags for multiples of i to 'o.
+
+       (@h ())
+       (@j (+ i i))  # j is next multiple of i
+       (@q p)        # q is used to scan sequence from p
+       (! f
+         (? (= (.q) j) (% () (@h (& ('o) h)) (@j (+ j i)))  # multiple of i
+                       (@h (& (.f) h))                      # not multiple of i
+         )
+         (@q (:q))
+         (@f (:f))
+       )
+
+       # Update f to the new list of flags, reversing to get it back in order.
+  
+       (@f (r h))
+    )
+
+    # Return the final list of primes, reversing it to be in increasing order.
+
+    (r m)
+  )
+))

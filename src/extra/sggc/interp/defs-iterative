@@ -1,0 +1,21 @@
+# (r x) reverses the list x.
+
+(@r ($ (x) (% (r) # test to see if it can keep the two bindings of r straight...
+  (! x 
+    (@r (& (.x) r))
+    (@x (:x))
+  )
+  r
+)))
+
+
+# (a x y) appends the list x to the front of the list y.  Uses r to reverse x.
+
+(@a ($ (x y) 
+  (@x (r x))
+  (! x 
+    (@y (& (.x) y))
+    (@x (:x))
+  )
+  y
+))

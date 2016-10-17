@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Move "o" files in test directories given to "out" (used for future diffs).
+
+for t in $@; do
+  echo Updating out for $t
+  (cd $t; mv o out)
+done

@@ -1,0 +1,32 @@
+c 1 2 3    check not there when everything is empty
+a 0 0 0    add to set 0
+a 2 0 0    add same value to set 1
+c 0 0 0    check that both are there
+c 2 0 0
+c 0 1 1    but something else is not
+a 0 4 20   add more for set 0
+a 0 0 20
+a 2 2 58   add more things to sets 1 and 2, which must use different segments
+a 2 2 63 
+a 2 2 57 
+a 2 5 0 
+a 1 3 1 
+a 1 3 1    add it again to check that nothing changes
+c 1 2 3    check that this is still not there
+c 2 2 58   check that things added are now there
+c 2 2 63 
+c 2 2 57 
+c 2 5 0 
+c 1 3 1 
+c 1 3 0    check that this isn't there, even though it's close to something
+r 2 2 58   remove something
+r 2 2 13   remove something that is not there already
+r 2 5 0    remove something, which will result in zero bits at front
+c 2 2 58   check that things removed are no longer there
+c 2 5 0 
+a 1 7 7    add another element, which will create new first segment
+m 1        move first segment of set 1 to set 2
+m 1        and move first segment of set 1 to set 2 again
+n 2 7 7    move segment after 7.7 from set 2 to set 1
+b 0 0 0    try changing bits of a segment in set 0
+

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Run tests in directories given as arguments.
+
+for t in $@; do
+  echo " "
+  echo RUNNING TEST IN $t
+  echo " "
+  (cd $t; make; $t >o; ../diff-out out o)
+  echo " "
+done
+
+echo " "
+echo FINISHED RUNNING ALL TESTS

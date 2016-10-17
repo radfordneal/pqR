@@ -1,0 +1,557 @@
+SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION
+       Application interface documentation
+
+Copyright (c) 2016 Radford M. Neal.
+
+   The SGGC library is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INTRODUCTION
+
+This library manages memory for "objects" that contain data, which may
+include references to other objects.  It is designed for use by an
+interpreter for a language such as R, though use in other applications
+would also be possible.
+
+The SGGC library provides the application with a function for
+allocating a new object.  Memory for objects that are no longer in use
+is automatically freed or reused, when the application initiates a
+garbage collection.  To allow identification and recovery of unused
+objects, the application must provide procedures for finding all
+"root" pointers to objects, and for finding all pointers to other
+objects that are contained in an object.  The application also
+provides information regarding "types" of objects, and how much
+storage they require, which for the main data storage may vary by type
+(according to more detailed "kind" information).
+
+Objects are allocated in "segments", and can be referenced by a pair
+consisting of a segment index and an offset within a segment.  Such
+"compressed pointers" will fit in a 32-bit word (with the current
+configuration of SGGC), even when regular pointers are 64 bits in
+size.  SGGC is designed to allow fast translation of a compressed
+pointer to a regular pointer to data (which for "small" segments is
+allocated as a block for all objects in the segment).  An application
+may optionally choose for objects to be associated with one or two
+pieces of auxiliary information, also quickly accessible using a
+compressed pointer.  Unlike the main data, auxiliary information has
+the same size for all objects.  An application can make auxiliary
+information for some objects be read-only, and shared with other
+objects.
+
+An application can choose whether to use compressed pointers for all
+object references, or (for the application's purposes) to sometimes or
+always use regular pointers.  If regular pointers are used, however,
+each object will need to store a compressed pointer to itself in its
+data space, to allow translation from regular to compressed pointers,
+as the application must sometimes pass compressed pointers to SGGC.
+
+Memory is freed using a "mark and sweep" garbage collector, with three
+"generations" of objects, often allowing quick recovery of recently
+allocated objects without the cost of a full sweep (depending on the
+"level" of collection).  The SGGC library does not decide when a
+garbage collection will be done, or at what level, but instead
+provides information allowing the application to implement a policy in
+this regard.
+
+
+USING SGGC IN AN APPLICATION
+
+To use SGGC, an application should create an sggc-app.h file, which
+must define some constants and declare some types (see below) and then
+include the sggc.h file.  The sggc-app.h file should be included in
+application modules that use the SGGC library, and is also included in
+the source file for the SGGC library routines.
+
+The following constants must be declared with #define in sggc-app.h,
+before it includes sggc.h:
+
+  SGGC_CHUNK_SIZE       Number of bytes in a data chunk.  Should be a 
+                        power of two for efficiency.
+
+  SGGC_N_TYPES          Number of types of objects.
+
+  SGGC_N_KINDS          Number of kinds of objects (at least SGGC_N_TYPES).
+
+  SGGC_KIND_CHUNKS      An array initializer giving the number of data 
+                        chunks for each kind of object, 0 if the kind uses
+                        "big" segments (with variable numbers of chunks).
+
+The following may optionally be defined, if auxiliary information 1 or
+auxiliary information 2 is to be used:
+
+  SGGC_AUX1_SIZE        Number of bytes in auxiliary information 1 
+                        (same for all kinds of objects).  Should be
+                        a power of two for efficiency.
+
+  SGGC_AUX2_SIZE        As above, but for auxiliary information 2.
+
+  SGGC_AUX1_BLOCK_SIZE  Number of blocks of auxiliary information 1
+                        allocated at once.  (Each block has space for
+                        auxiliary information for as many objects 
+                        as there are data chunks for a small segment.)
+
+  SGGC_AUX2_BLOCK_SIZE  As above, but for auxiliary information 2.
+
+  SGGC_AUX1_READ_ONLY   If defined (as anything), the application may
+                        sometimes use read-only auxiliary information 1.
+
+  SGGC_AUX2_READ_ONLY   As above, but for auxiliary information 2.
+
+The following symbol may be defined to indicate that the application
+needs to perform operations after preliminary marking of objects in
+use during a garbage collection:
+
+  SGGC_AFTER_MARKING    If defined (as anything), the application will
+                        provide an sggc_after_marking procedure to call
+                        after preliminary marking of objects (see below).
+                        This procedure may call sggc_not_marked to see
+                        which objects are known to be in use, and may
+                        call sggc_look_at to mark additional objects as
+                        in use.
+
+The following types must be defined in sggc-app.h:
+
+  sggc_length_t         Type for the "length" of an object.  The
+                        meaning of "length" is up to the application, 
+                        but it is used in the SGGC interface.
+
+  sggc_nchunks_t        Type for holding the number of chunks (with
+                        SGGC_CHUNK_SIZE bytes) in the data for an
+                        object.
+
+An application may optionally define the following in sggc-app.h:
+
+  sggc_malloc           May be defined as a simple symbol or as a 
+                        one-argument macro (not a function), which
+                        is used by SGGC to allocate memory blocks.
+                        Defaults to the symbol 'malloc'.
+
+  sggc_free             May be defined as a simple symbol or as a 
+                        one-argument macro (not a function), which is
+                        used by SGGC to free blocks of memory that
+                        were allocated by sggc_malloc.  Defaults to
+                        the symbol 'free'.
+
+The sggc.h file should be included after the above have been defined,
+at the end of sggc-app.h.  It will define the following types:
+
+  sggc_index_t          Type for holding the index of a segment.
+                        Currently int32_t.
+
+  sggc_cptr_t           Type for holding a compressed pointer.
+                        Currently uint32_t.
+
+  sggc_type_t           Type for holding an object type.
+                        Currently unsigned char.
+
+  sggc_kind_t           Type for holding an object kind (type & storage).
+                        Currently unsigned char.
+
+The following constants are also defined in sggc.h:
+
+  SGGC_NO_OBJECT        A constant of type sggc_cptr_t that cannot be a
+                        reference to an actual object, and hence can be
+                        used to indicate "no object".
+
+  SGGC_CHUNKS_IN_SMALL_SEGMENT  The number of chunks (each of size
+                                SGGC_CHUNK_SIZE) for the data associated
+                                with all objects in a "small" segment.
+
+The sggc.h file will declare the following global structure variable,
+which SGGC will continually update with information that the
+application may use when deciding whether to call sggc_collect to do a
+garbage collection:
+
+  extern struct sggc_info
+  {
+    unsigned gen0_count;       /* Number of newly-allocated objects */
+    unsigned gen1_count;       /* Number of objects in old generation 1 */
+    unsigned gen2_count;       /* Number of objects in old generation 2.
+                                  Does not include constants */
+
+    sggc_nchunks_t big_chunks; /* # of chunks in newly-allocated big objects */
+
+} sggc_info;
+
+Finally, the sggc.h file will declare prototypes (or macros, or static
+inline definitions) for the functions documented below, some of which
+may be used by the application, others of which must be defined by the
+application for use by SGGC.
+
+
+TYPES, LENGTHS, AND KINDS
+
+SGGC supports objects that are of different "types", identified by
+integers from 0 to SGGC_N_TYPES-1, where SGGC_N_TYPES is defined by
+the application (limited to being no bigger than 256).  Types of
+objects are recorded by SGGC, but otherwise the meaning of a type is
+up to the application.  Note that all objects in a segment will have
+the same type.
+
+The application also determines the meaning (if any) of the "length"
+of an object - SGGC simply passes length values provided by the
+application to functions the application defines.  It would be
+possible for the application to completely ignore "length", just
+passing some dummy value where a length is required.  More commonly,
+however, the length will be used by the application when determining
+the "kind" of an object.
+
+All objects in a segment will be of the same kind, identified by a
+number from 0 to SGGC_N_KINDS-1, where SGGC_N_KINDS is defined by the
+application (limited to being no bigger than 256).  Some kinds are for
+"big" segments, which can have data of any size.  Other kinds are for
+"small" segments, in which the data associated with an object consists
+of a fixed number of chunks (though objects need not use the entirety
+of the data space allocated to them).  Whether a kind is for big or
+small segments, and the number of chunks allocated for objects if they
+are of a small kind, are determined by the value for SGGC_KIND_CHUNKS
+that the application provides, which gives the numbers of chunks for
+each kind, with zero indicating that the kind uses big segments.
+
+The application provides a function (or macro) sggc_kind that
+determines the kind of an object from its type and length.  The kind
+returned by sggc_kind must not the same for different types (ie, the
+type must be determinable from the kind).  There is also a restriction
+that if the kind is for a big segment, it must be numerically equal to
+the type.  Accordingly, for each type, there can be at most one kind
+using big segments, though there could be several kinds for that type
+that use small segments, perhaps with different numbers of data
+chunks, depending on length.
+
+The application also provides an sggc_nchunk function (or macro) that
+returns the number of data chunks needed for an object of given type
+and length.  This is called when SGGC needs to allocate space for a
+big segment.
+
+For example, the application might have the following definitions in
+its sggc-app.h file:
+
+  #define SGGC_CHUNK_SIZE 16 /* Number of bytes in a data chunk */
+  #define SGGC_N_TYPES 3     /* Three types of objects: 0, 1, 2 */
+  #define SGGC_N_KINDS 5     /* Five kinds of objects 0, 1, 2, 3, 4 */
+
+  #define SGGC_KIND_CHUNKS \
+                  { 1,       /* Kind 0 uses 1 data chunk, for type 0 */ \
+                    2,       /* Kind 1 uses 2 data chunks, for type 1 */ \
+                    0,       /* Kind 2 uses big segments, for type 2 */ \
+                    2,       /* Kind 3 uses 2 data chunks, for type 2 */ \
+                    6        /* Kind 4 uses 6 data chunks, for type 2 */ \
+  }
+
+  #define sggc_kind(type,length) \
+    ((type) < 2 ? (type)     /* Types 0 and 1 use kinds 0 and 1 */ \
+    : (length) <= 1 ? 3      /* Type 2 with length 1 or less can use kind 3 */ \
+    : (length) <= 3 ? 4      /* Type 2 with length 3 or less can use kind 4 */ \
+    : 2)                     /* Type 2 with length >6 must use a big segment */
+
+  #define sggc_nchunks(type,length) \
+    ((sggc_nchunks_t)(length) * 2) /* Number of chunks needed is twice length */
+
+If an application defines the symbols SGGC_AUX1_READ_ONLY, it must
+also provide a function called sggc_aux1_read_only that returns a
+pointer to read-only auxiliary information 1 for a segment of a given
+kind, or NULL if this information is not read-only for segments of
+this kind.  Read-only auxiliary information is not allowed for kinds
+that use big segments.
+
+If SGGC_AUX2_READ_ONLY is defined, the application must similarly
+provide an sggc_aux2_read_only function.
+
+
+INFORMING SGGC ABOUT OBJECT REFERENCES
+
+The application is responsible for ensuring that the SGGC routines
+will be informed of all references to objects at any time when
+sggc_collect is called.  This is done in three ways.
+
+First, the application must provided an sggc_find_root_ptrs procedure.
+This procedure must call the sggc_look_at function for every "root"
+compressed pointer, which the application might use to directly refer
+to an object.  In this context, the value returned by sggc_look_at may
+be ignored.
+
+Root pointers would, for example, include compressed pointers stored
+in global variables used by the application.  If the application also
+uses regular pointers (to data areas) as roots, sggc_find_root_ptrs
+must be called with the corresponding compressed pointer, which the
+application must somehow be able to find (eg, by storing a compressed
+pointer to itself at the start of the data area for every object).
+
+An application may also store root pointers in the local variables of
+functions.  The application will need to implement some scheme for
+finding all such local variables, and calling sggc_find_root_ptrs for
+each of them, passing the compressed pointer for the reference.
+
+Secondly, the application must provide an sggc_find_object_ptrs
+procedure, which is passed a compressed pointer to an object, and
+which must call sggc_look_at for every object that is referenced from
+that object - except that if a call of sggc_look_at returns zero,
+sggc_find_object_ptrs should return immediately without looking for
+any more pointers.
+
+Finally, the application must call the sggc_old_to_new_check procedure
+whenever it may have modified an object in an older generation so that
+it now refers to an object in a younger generation.  The arguments of
+sggc_old_to_new_check are a compressed pointer to an object that has
+just been modified and a compressed pointer to the object that it now
+references.  If sggc_old_to_new_check sees that the first object is in
+an older generation than the second, an appropriate record of this
+will be kept, so that the newer object will be recognized as being
+referenced even if the older object would not normally be looked at in
+a partial garbage collection.
+
+The sggc_old_to_new_check procedure does not have to be called if the
+object being modified has just been allocated by sggc_alloc (with no
+other calls of sggc_alloc since then).  An application can also
+enquire with the sggc_youngest_generation function whether an object
+is of the youngest generation, in which case modifications to it do
+not have to be signaled with sggc_check_old_to_new (as long as
+sggc_alloc is not called).  Similarly, an application can enquire with
+the sggc_oldest_generation function whether an object is of the oldest
+generation (or a constant), in which case modifications of any object
+to refer to it do not have to be signaled with sggc_check_old_to_new.
+The sggc_youngest_generation and sggc_oldest_generation functions are
+useful only if more than one modification is to be made, since
+sggc_old_to_new_check is a faster way of handling a single
+modification.
+
+
+FUNCTIONS PROVIDED BY SGGC TO THE APPLICATION
+
+The SGGC library provides an application with the functions (or
+macros) below, which have (if functions) prototypes as shown:
+
+  sggc_type_t SGGC_TYPE (sggc_cptr_t cptr)
+
+    Returns the type of the object whose compressed pointer is passed,
+    an integer from 0 to SGGC_N_TYPES-1.
+
+  sggc_type_t SGGC_KIND (sggc_cptr_t cptr)
+
+    Returns the kind of the object whose compressed pointer is passed,
+    an integer from 0 to SGGC_N_KIND-1.
+
+  char *SGGC_DATA (sggc_cptr_t cptr)
+
+    Returns a regular pointer to the data associated with the object
+    whose compressed pointer is passed.
+
+  char *SGGC_AUX1 (sggc_cptr_t cptr)
+
+    Exists only if the application defines SGGC_AUX1_SIZE in set-app.h.  
+
+    Returns a regular pointer to the auxiliary information 1 for the
+    object whose compressed pointer is passed.
+
+  char *SGGC_AUX2 (sggc_cptr_t cptr)   (only if SGGC_AUX2_SIZE defined)
+
+    Exists only if the application defines SGGC_AUX2_SIZE in set-app.h.  
+
+    Returns a regular pointer to the auxiliary information 2 for the
+    object whose compressed pointer is passed.
+
+  int sggc_init (int max_segments)
+
+    Initializes the SGGC facility, with the maximum number of segments
+    being as specified.
+
+  sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
+
+    Allocates space for an object of the specified type and length,
+    returning a compressed pointer to the object, or SGGC_NO_OBJECT if
+    space could not be allocated.  If SGGC_NO_OBJECT is returned, it
+    is possible that if a garbage collection is then performed using
+    sggc_collect, a subsequent call of sggc_alloc for the same type
+    and length will succeed (though this will not always be the case).
+
+    Note that the significance of type and length for the storage that
+    is needed is determined by the application, via the sggc_kind
+    function and the SGGC_KIND_CHUNKS initializer.
+
+  void sggc_collect (int level)
+
+    Performs a garbage collection operation, at the specified level.
+    Level 0 attempts to recover only unused object that were allocated
+    since the last garbage collection.  Level 1 also attempts to
+    recover unused objects that have survived one garbage collection
+    (only).  Level 2 attempts to recover all unused objects (except
+    constants).
+
+    Note that this function is never called automatically by SGGC.  
+    It is up to the application to implement a policy for when to call
+    the garbage collector, and at what level.
+
+  int sggc_look_at (sggc_cptr_t cptr)
+
+    This function must be called from the sggc_find_root_ptrs and
+    sggc_find_object_ptrs procedures that the application provides for
+    SGGC (and must only be called from these procedures).  It signals
+    to SGGC that the object referenced by the compressed pointer
+    passed is accessible, via a root pointer or via a reference in
+    another object, and hence should not be collected.  
+
+    The return value of sggc_look_at should be ignored if it is called
+    from sggc_find_root_ptrs.  If sggc_look_at is called from
+    sggc_find_object_ptrs, a return value of zero indicates that the
+    sggc_find_object_ptrs procedure should return immediately without
+    looking for further references.
+
+  void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr)
+
+    This procedure informs SGGC that the application has stored a
+    reference to the object pointed to by to_ptr in the object pointed
+    to by from_ptr (perhaps in the data area associated with from_ptr,
+    or perhaps in the auxiliary information for from_ptr, as either a
+    compressed pointer or regular pointer).
+  
+    The application must call this procedure whenever (ie, just after)
+    a reference to another object is stored in an object, unless
+    from_ptr can be guaranteed to be in the youngest generation of
+    objects or to_ptr can be guaranteed to be in the oldest
+    generation, or is a constant.  It is guaranteed that from_ptr is
+    in the youngest generation if it has just been allocated, or if
+    sggc_youngest_generation says it is in the youngest generation, as
+    long as there has been no subsequent call of sggc_collect.  An
+    object is guaranteed to be in the oldest generation (or constant)
+    if sggc_oldest_generation (or sggc_is_constant) indicates that it
+    is, and if so, it will remain so thereafter.
+
+  int sggc_youngest_generation (sggc_cptr_t from_ptr)
+
+    Returns 1 if the object pointed to by from_ptr is in the youngest
+    generation - ie, was allocated since the last call of sggc_collect
+    - and 0 otherwise.  Note that the object may cease to be in the
+    youngest generation after the next call of sggc_collect.
+
+  int sggc_oldest_generation (sggc_cptr_t to_ptr)
+
+    Returns 1 if the object pointed to by from_ptr is in the oldest
+    generation, or is a constant object, and 0 otherwise.  If an
+    object is in the oldest generation (or a constant) it will remain
+    so thereafter.
+
+  int sggc_not_marked (sggc_cptr_t cptr)
+
+    Returns 1 if the object with compressed pointer cptr has not been
+    marked as in use during the garbage collection currently under
+    way, and 0 otherwise.  This function may be called only from the
+    sggc_after_marking procedure, which an application may supply, to
+    be called after preliminary marking of objects in use.
+
+  int sggc_is_constant (sggc_cptr_t cptr)
+
+    Returns 1 if the object is in a constant, 0 otherwise. The data
+    and auxiliary information in a constant object must not be
+    modified.
+
+  sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, 
+                             set_bits_t bits, char *data, 
+                             char *aux1, char *aux2)
+
+    Creates a segment containing constant objects, and returns the
+    compressed pointer to the first object in this segment (compressed
+    pointers to the other objects will have the same segment index but
+    different offsets).
+
+    The type and kind of the segment are specified by the first two
+    arguments.  The kind must not specify a big segment.
+
+    The 'bits' argument indicates which offsets within this segment
+    correspond to objects.  The first (low-order) bit must be a 1.
+
+    The 'data' argument is a pointer to the data block for objects in
+    this segment.  The 'aux1' and 'aux2' arguments are pointers to the
+    auxiliary information for the segment; they exist only if
+    SGGC_AUX1_SIZE or SGGC_AUX2_SIZE are defined.
+
+    If called several times before any calls of sggc_alloc, the
+    segments will have indexes 0, 1, 2, etc., which fact may be used
+    when setting up their contents if they reference each other.
+
+
+FUNCTIONS THE APPLICATION MUST PROVIDE TO SGGC
+
+The application defines the following functions called from the SGGC
+library functions (which can instead be macros defined in sggc-app.h
+before sggc.h is included):
+
+  sggc_kind_t sggc_kind (sggc_type_t type, sggc_length_t length)
+
+    Returns the "kind" of a segment to be used for objects of the
+    given type and length, identified by an integer from 0 to
+    SGGC_N_KINDS-1.  Must return the same kind on all calls with the
+    same type and length, and must return different kinds for
+    different types.
+
+  sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
+
+    Returns the number of data chunks required for an object of the
+    given type and length.  Called only when allocating space for big
+    segments, so need handle only type and length combinations for
+    which sggc_kind returns the kind of a big segment.
+
+  void sggc_find_root_ptrs (void)
+
+    This procedure must call sggc_look_at for every "root" pointer via
+    which an object might be referenced, passing sggc_look_at the
+    compressed pointer for that object.  See the discussion above
+    for more context.
+
+  void sggc_find_object_ptrs (sggc_cptr_t cptr)
+
+    This procedure must call sggc_look_at for every object that is
+    referenced via 'cptr' (in any order), passing it the compressed
+    pointer to the object that is referenced, except that if such a
+    call of sggc_look_at returns 0, sggc_find_object_ptrs should
+    immediately return, rather than calling sggc_look_at for the
+    remaining objects referenced via 'cptr'.  See the discussion above
+    for more context.
+
+  char *sggc_aux1_read_only (sggc_kind_t kind)
+
+    Only provided if the application defines SGGC_AUX1_READ_ONLY.
+    
+    Returns a pointer to the shared, read-only auxiliary information 1
+    for a segment of the given kind, or NULL if this kind does not use
+    read-only auxiliary information 1.  Will not be called with a
+    'kind' that uses big segments.
+
+  char *sggc_aux2_read_only (sggc_kind_t kind)
+
+    Only provided if the application defines SGGC_AUX2_READ_ONLY.
+
+    Returns a pointer to the shared, read-only auxiliary information 2
+    for a segment of the given kind, or NULL if this kind does not use
+    read-only auxiliary information 2.  Will not be called with a
+    'kind' that uses big segments.
+
+  void sggc_after_marking (int level, int rep)
+
+    Only provided if the application defines SGGC_AFTER_MARKING.
+
+    Performs whatever operations an application needs to do after the
+    preliminary marking stage of a garbage collection.  This may
+    involve enquiring about which objects have not already been marked
+    as in use, using sggc_not_marked, and perhaps indicating that
+    further objects are in use by calling sggc_look_at.  
+
+    If any new objects are looked at, sggc_find_object_ptrs will
+    be called to trace further references from these objects, and
+    sggc_after_marking will then be called again.  
+
+    The arguments to sggc_after_marking give the level of garbage
+    collection (0, 1, or 2) and the number of previous times that
+    sggc_after_marking was called for this collection (zero the first
+    time).
