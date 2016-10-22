@@ -1,0 +1,2 @@
+Fixes involving interaction of active bindings and finalizers with pqR
+optimizations.
