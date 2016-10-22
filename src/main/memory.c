@@ -3411,6 +3411,18 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
+    /* Save state of global variables used for communicating results
+       from some function calls, so storage allocation won't have the
+       possibility of changing them when finalizers are run. */
+
+    struct {
+        SEXP binding_cell;
+        unsigned variant_result;
+    } saved_globals;
+
+    saved_globals.binding_cell = R_binding_cell;
+    saved_globals.variant_result = R_variant_result;
+
     R_size_t onsize = R_NSize /* can change during collection */;
     double ncells, vcells, vfrac, nfrac;
     Rboolean first = TRUE;
@@ -3496,6 +3508,11 @@ static void R_gc_internal(R_size_t size_needed)
 	      first_bad_sexp_type_line);
 #endif
     }
+
+    /* Restore state of global variables used for communicating results. */
+
+    R_binding_cell = saved_globals.binding_cell;
+    R_variant_result = saved_globals.variant_result;
 }
 
 static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
