@@ -1695,7 +1695,7 @@ void R_RunWeakRefFinalizer(SEXP w)
     }
     else if (fun != R_NilValue) {
 	/* An R finalizer. */
-	PROTECT(e = LCONS(fun, LCONS(key, R_NilValue)));
+	PROTECT(e = LCONS(fun, CONS(key, R_NilValue)));
 	eval(e, R_GlobalEnv);
 	UNPROTECT(1);
     }

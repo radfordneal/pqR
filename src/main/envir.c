@@ -144,8 +144,8 @@
 
 static void setActiveValue(SEXP fun, SEXP val)
 {
-    SEXP arg = LCONS(R_QuoteSymbol, LCONS(val, R_NilValue));
-    SEXP expr = LCONS(fun, LCONS(arg, R_NilValue));
+    SEXP arg = LCONS(R_QuoteSymbol, CONS(val, R_NilValue));
+    SEXP expr = LCONS(fun, CONS(arg, R_NilValue));
     WAIT_UNTIL_COMPUTED(val); \
     PROTECT(expr);
     eval(expr, R_GlobalEnv);
@@ -2126,7 +2126,7 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
     if (rval == R_UnboundValue) {
 	if( isFunction(ifnotfound) ) {
 	    PROTECT(var = mkString(name));
-	    PROTECT(R_fcall = LCONS(ifnotfound, LCONS(var, R_NilValue)));
+	    PROTECT(R_fcall = LCONS(ifnotfound, CONS(var, R_NilValue)));
 	    rval = eval(R_fcall, enclos);
 	    UNPROTECT(2);
 	} else
@@ -3474,7 +3474,7 @@ SEXP R_FindPackageEnv(SEXP info)
     SEXP expr, val;
     SEXP findPackageEnv_install = install("findPackageEnv");
     PROTECT(info);
-    PROTECT(expr = LCONS(findPackageEnv_install, LCONS(info, R_NilValue)));
+    PROTECT(expr = LCONS(findPackageEnv_install, CONS(info, R_NilValue)));
     val = eval(expr, R_GlobalEnv);
     UNPROTECT(2);
     return val;
@@ -3537,7 +3537,7 @@ SEXP R_FindNamespace(SEXP info)
     SEXP expr, val;
     SEXP getNamespace_install = install("getNamespace");
     PROTECT(info);
-    PROTECT(expr = LCONS(getNamespace_install, LCONS(info, R_NilValue)));
+    PROTECT(expr = LCONS(getNamespace_install, CONS(info, R_NilValue)));
     val = eval(expr, R_GlobalEnv);
     UNPROTECT(2);
     return val;

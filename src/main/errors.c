@@ -1501,16 +1501,15 @@ static SEXP findSimpleErrorHandler(void)
 static void vsignalWarning(SEXP call, const char *format, va_list ap)
 {
     char buf[BUFSIZE];
-    SEXP hooksym, hcall, qcall;
+    SEXP hooksym, hcall, qcall, str;
 
     hooksym = install(".signalSimpleWarning");
     if (SYMVALUE(hooksym) != R_UnboundValue &&
 	SYMVALUE(R_QuoteSymbol) != R_UnboundValue) {
-	PROTECT(qcall = LCONS(R_QuoteSymbol, LCONS(call, R_NilValue)));
-	PROTECT(hcall = LCONS(qcall, R_NilValue));
+	PROTECT(qcall = LCONS(R_QuoteSymbol, CONS(call, R_NilValue)));
 	Rvsnprintf(buf, BUFSIZE - 1, format, ap);
-	hcall = LCONS(mkString(buf), hcall);
-	PROTECT(hcall = LCONS(hooksym, hcall));
+        PROTECT(str = mkString(buf));
+	PROTECT(hcall = LCONS(hooksym, CONS(str, CONS(qcall, R_NilValue))));
 	eval(hcall, R_GlobalEnv);
 	UNPROTECT(3);
     }
@@ -1545,18 +1544,16 @@ static void vsignalError(SEXP call, const char *format, va_list ap)
 	    if (ENTRY_HANDLER(entry) == R_RestartToken)
 		return; /* go to default error handling; do not reset stack */
 	    else {
-		SEXP hooksym, hcall, qcall;
+		SEXP hooksym, hcall, qcall, str;
 		/* protect oldstack here, not outside loop, so handler
 		   stack gets unwound in case error is protect stack
 		   overflow */
 		PROTECT(oldstack);
 		hooksym = install(".handleSimpleError");
-		PROTECT(qcall = LCONS(R_QuoteSymbol,
-				      LCONS(call, R_NilValue)));
-		PROTECT(hcall = LCONS(qcall, R_NilValue));
-		hcall = LCONS(mkString(buf), hcall);
-		hcall = LCONS(ENTRY_HANDLER(entry), hcall);
-		PROTECT(hcall = LCONS(hooksym, hcall));
+		PROTECT(qcall = LCONS(R_QuoteSymbol, CONS(call, R_NilValue)));
+                PROTECT(str = mkString(buf));
+		PROTECT(hcall = LCONS(hooksym, CONS(ENTRY_HANDLER(entry), 
+                                  CONS(str, CONS(qcall, R_NilValue)))));
 		eval(hcall, R_GlobalEnv);
 		UNPROTECT(4);
 	    }
@@ -1610,7 +1607,7 @@ static SEXP do_signalCondition(SEXP call, SEXP op, SEXP args, SEXP rho)
 		errorcall_dflt(ecall, "%s", msgstr);
 	    }
 	    else {
-		SEXP hcall = LCONS(h, LCONS(cond, R_NilValue));
+		SEXP hcall = LCONS(h, CONS(cond, R_NilValue));
 		PROTECT(hcall);
 		eval(hcall, R_GlobalEnv);
 		UNPROTECT(1);
@@ -1658,8 +1655,7 @@ static void signalInterrupt(void)
 	R_HandlerStack = CDR(list);
 	PROTECT(cond = getInterruptCondition());
 	if (IS_CALLING_ENTRY(entry)) {
-	    SEXP h = ENTRY_HANDLER(entry);
-	    SEXP hcall = LCONS(h, LCONS(cond, R_NilValue));
+	    SEXP hcall = LCONS(ENTRY_HANDLER(entry), CONS(cond, R_NilValue));
 	    PROTECT(hcall);
 	    eval(hcall, R_GlobalEnv);
 	    UNPROTECT(1);
