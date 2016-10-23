@@ -1036,41 +1036,44 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
 SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
-    SEXP loc, value;
+    SEXP loc, value, bcell;
 
-    R_binding_cell = R_NilValue;
+    bcell = R_NilValue;
+    value = R_UnboundValue;
 
     if (IS_BASE(rho)) {
         if (option==2) 
-            return SYMBOL_HAS_BINDING(symbol) ? R_NilValue : R_UnboundValue;
-        if (option==7 && IS_ACTIVE_BINDING(symbol))
-            return R_UnboundValue;
-        value = SYMBOL_BINDING_VALUE(symbol);
+            value = SYMBOL_HAS_BINDING(symbol) ? R_NilValue : R_UnboundValue;
+        else if (option==7 && IS_ACTIVE_BINDING(symbol))
+            value = R_UnboundValue;
+        else 
+            value = SYMBOL_BINDING_VALUE(symbol);
     }
 
     else if (IS_USER_DATABASE(rho)) {
         if (option==7)
-            return R_UnboundValue;
-	/* Use the objects function pointer for this symbol. */
-	R_ObjectTable *table = (R_ObjectTable *)R_ExternalPtrAddr(HASHTAB(rho));
-	value = R_UnboundValue;
-	if (table->active) {
-	    if (option&1)
-		value = table->get (CHAR(PRINTNAME(symbol)), NULL, table);
-	    else {
-		if (table->exists (CHAR(PRINTNAME(symbol)), NULL, table)) {
-                    if (option==2) 
-                        return R_NilValue;
-		    value = table->get (CHAR(PRINTNAME(symbol)), NULL, table);
+            value = R_UnboundValue;
+        else {
+            /* Use the objects function pointer for this symbol. */
+            R_ObjectTable *table = 
+              (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
+            value = R_UnboundValue;
+            if (table->active) {
+                if (option&1)
+                    value = table->get (CHAR(PRINTNAME(symbol)), NULL, table);
+                else {
+                    if (table->exists (CHAR(PRINTNAME(symbol)), NULL, table))
+                        value = option==2 ? R_NilValue
+                          : table->get (CHAR(PRINTNAME(symbol)), NULL, table);
+                    else
+                        value = R_UnboundValue;
                 }
-		else
-		    value = R_UnboundValue;
-	    }
-	}
+            }
+        }
     }
 
     else if (!isEnvironment(rho))
-	error(_("argument to '%s' is not an environment"), "findVarInFrame3");
+        error(_("argument to '%s' is not an environment"), "findVarInFrame3");
 
     else if (HASHTAB(rho) == R_NilValue) {
 
@@ -1080,12 +1083,12 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
             LASTSYMENVNOTFOUND(symbol) = rho;
         }
 
-        return R_UnboundValue;
+        goto ret;
 
       found: 
         if (IS_ACTIVE_BINDING(loc)) {
             if (option==7) 
-                return R_UnboundValue;
+                goto ret;
         }
         else {
             if (!DDVAL(symbol)) {
@@ -1096,36 +1099,36 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
             }
             if (BINDING_IS_LOCKED(loc)) {
                 if (option==7)
-                    return R_UnboundValue;
+                    goto ret;
             }
             else
-                R_binding_cell = loc;
+                bcell = loc;
         }
-        if (option==2)
-            return R_NilValue;
-        else
-            value = BINDING_VALUE(loc);
+        value = option==2 ? R_NilValue : BINDING_VALUE(loc);
     }
 
     else {
         SEXP c = PRINTNAME(symbol);
         int hashcode;
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+        if( !HASHASH(c) ) {
+            SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
+            SET_HASHASH(c, 1);
+        }
+        hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
         if (loc == R_NilValue)
-            return R_UnboundValue;
-        if (!IS_ACTIVE_BINDING(loc) && !BINDING_IS_LOCKED(loc)) 
-            R_binding_cell = loc;
-        else if (option==7)
-            return R_UnboundValue;
-        if (option==2)
-            return R_NilValue;
-        value = BINDING_VALUE(loc);
+            goto ret;
+        if (IS_ACTIVE_BINDING(loc) || BINDING_IS_LOCKED(loc)) {
+            if (option==7)
+                goto ret;
+        }
+        else
+            bcell = loc;
+        value = option == 2 ? R_NilValue : BINDING_VALUE(loc);
     }
+
+  ret:
+    R_binding_cell = bcell;
 
     if ((option&2) == 0)
         WAIT_UNTIL_COMPUTED(value);
