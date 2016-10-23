@@ -1,0 +1,3 @@
+Mods to fix mac build problems on El Capitan and Sierra.
+
+Revises Rscript makefile entry.
