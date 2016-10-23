@@ -1,3 +1,5 @@
 Mods to fix mac build problems on El Capitan and Sierra.
 
 Revises Rscript makefile entry.
+
+Compiles aqua on mac with default mac gcc.
