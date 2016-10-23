@@ -26,11 +26,6 @@ DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)
 HEADERS = Runix.h hpdlfcn.h
 
-# Special compilation of aqua.c using the mac default gcc.
-
-aqua.o:	aqua.c
-	gcc $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c $(srcdir)/aqua.c -o aqua.o
-
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 DISTFILES = \
   Makefile.in $(SOURCES_C_BASE) Rscript.c \
@@ -63,6 +58,11 @@ libunix.a: $(OBJECTS)
 	rm -rf $@
 	$(AR) cr $@ $(OBJECTS)
 	$(RANLIB) $@
+
+# Special compilation of aqua.c using the mac default gcc, no OpenMP.
+
+aqua.o:	aqua.c
+	gcc $(ALL_CPPFLAGS) $(ALL_CFLAGS0) -c $(srcdir)/aqua.c -o aqua.o
 
 mostlyclean: clean
 clean:
