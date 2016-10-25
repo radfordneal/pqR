@@ -1,4 +1,0 @@
-Eliminate the option of byte compiling the base package, since the
-compiler won't work with some new features such as "along" and "_",
-which are used in the base package.
-
