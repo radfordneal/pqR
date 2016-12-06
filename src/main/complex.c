@@ -23,9 +23,11 @@
 #include <config.h>
 #endif
 
-/* Note: gcc may warn in several places about C99 features as extensions.
-   This is a very-long-standing GCC bug, http://gcc.gnu.org/PR7263
+/* Note: gcc -peantic may warn in several places about C99 features 
+   as extensions.
+   This was a very-long-standing GCC bug, http://gcc.gnu.org/PR7263
    The system <complex.h> header can work around it: some do.
+   It should have been resolved (after a decade) in 2012.
 */
 
 #if 0
@@ -69,7 +71,7 @@
    That OS defines the imaginary type, but GCC does not.
    Probably needed elsewhere, e.g. AIX, HP-UX (PR#15083)
    And use on Win32/64 suppresses warnings.
-   The warning is also seen on Mac OS 10.5, but not later.
+   The warning is also seen on macOS 10.5, but not later.
 */
 #if defined(__GNUC__) && (defined(__sun__) || defined(__hpux__) || defined(Win32))
 # undef  I
@@ -152,7 +154,7 @@ static R_INLINE double complex R_cpow_n(double complex X, int k)
   2) On Mingw (but not Mingw-w64) the system cpow is explicitly linked
      against the (slow) MSVCRT pow, and gets (0+0i)^Y as 0+0i for all Y.
 
-  3) PPC Mac OS X crashes on powers of 0+0i (at least under Rosetta).
+  3) PPC macOS crashed on powers of 0+0i (at least under Rosetta).
   Really 0i^-1 should by Inf+NaNi, but getting that portably seems too hard.
   (C1x's CMPLX will eventually be possible.)
 */

@@ -1,6 +1,6 @@
 % File src/library/base/man/Extract.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2016 R Core Team
 % Copyright 2002-2012 The R Foundation
 % Distributed under GPL 2 or later
 
@@ -36,7 +36,7 @@ getElement(object, name)
 x[i] <- value
 x[i, j, \dots] <- value
 x[[i]] <- value
-x$i <- value
+x$name <- value
 }
 
 \arguments{
@@ -310,7 +310,7 @@ x$i <- value
   \code{\link{NULL}} for details of indexing null objects.
 }
 %% Fixme: Link (to html in 'help.start()', pdf from 'ref manual',
-%% 'info' from ESS, see \url{http://cran.R-project.org/manuals.html}.
+%% 'info' from ESS, see \url{https://CRAN.R-project.org/manuals.html}.
 
 \examples{
 x <- 1:12

@@ -7,6 +7,245 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.3.2</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li> <p><code>extSoftVersion()</code> now reports the version (if any) of
+the <code>readline</code> library in use.
+</p>
+</li>
+<li><p> The version of LAPACK included in the sources has been
+updated to 3.6.1, a bug-fix release including a speedup for the
+non-symmetric case of <code>eigen()</code>.
+</p>
+</li>
+<li><p> Use <code>options(deparse.max.lines=)</code> to limit the number
+of lines recorded in <code>.Traceback</code> and other deparsing
+activities.
+</p>
+</li>
+<li> <p><code>format(&lt;AsIs&gt;)</code> looks more regular, also for
+non-character atomic matrices.
+</p>
+</li>
+<li> <p><code>abbreviate()</code> gains an option <code>named = TRUE</code>.
+</p>
+</li>
+<li><p> The online documentation for package <span class="pkg">methods</span> is
+extensively rewritten.  The goals are to simplify
+documentation for basic use, to note old features not
+recommended and to correct out-of-date information.
+</p>
+</li>
+<li><p> Calls to <code>setMethod()</code> no longer print a message when
+creating a generic function in those cases where that is
+natural: S3 generics and primitives.
+</p>
+</li></ul>
+
+
+
+
+<h4>INSTALLATION and INCLUDED SOFTWARE</h4>
+
+
+<ul>
+<li><p> Versions of the <code>readline</code> library &gt;= 6.3 had been
+changed so that terminal window resizes were not signalled to
+<code>readline</code>: code has been added using a explicit signal
+handler to work around that (when <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> is compiled against readline
+&gt;= 6.3).  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16604">PR#16604</a>)
+</p>
+</li>
+<li> <p><code>configure</code> works better with Oracle Developer
+Studio 12.5.
+</p>
+</li></ul>
+
+
+
+
+<h4>UTILITIES</h4>
+
+
+<ul>
+<li> <p><code>R CMD check</code> reports more dubious flags in files
+&lsquo;<span class="file">src/Makevars[.in]</span>&rsquo;, including <span class="option">-w</span> and <span class="option">-g</span>.
+</p>
+</li>
+<li> <p><code>R CMD check</code> has been set up to filter important
+warnings from recent versions of <code>gfortran</code> with
+<span class="option">-Wall -pedantic</span>: this now reports non-portable GNU
+extensions such as out-of-order declarations.
+</p>
+</li>
+<li> <p><code>R CMD config</code> works better with paths containing
+spaces, even those of home directories (as reported by Ken Beath).
+</p>
+</li></ul>
+
+
+
+
+<h4>DEPRECATED AND DEFUNCT</h4>
+
+
+<ul>
+<li><p> Use of the C/C++ macro <span class="samp">NO_C_HEADERS</span> is deprecated
+(no C headers are included by <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> headers from C++ as from <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span>
+3.3.0, so it should no longer be needed).
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li><p> The check for non-portable flags in <code>R CMD check</code>
+could be stymied by &lsquo;<span class="file">src/Makevars</span>&rsquo; files which contained
+targets.
+</p>
+</li>
+<li><p> (Windows only) When using certain desktop themes in Windows
+7 or higher, <kbd>Alt-Tab</kbd> could cause <code>Rterm</code> to stop
+accepting input.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=14406">PR#14406</a>; patch submitted by Jan Gleixner.)
+</p>
+</li>
+<li> <p><code>pretty(d, ..)</code> behaves better for date-time <code>d</code>
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16923">PR#16923</a>).
+</p>
+</li>
+<li><p> When an S4 class name matches multiple classes in the S4
+cache, perform a dynamic search in order to obey namespace
+imports.  This should eliminate annoying messages about multiple
+hits in the class cache.  Also, pass along the package from the
+<code>ClassExtends</code> object when looking up superclasses in the
+cache.
+</p>
+</li>
+<li> <p><code>sample(NA_real_)</code> now works.
+</p>
+</li>
+<li><p> Packages using non-ASCII encodings in their code did not
+install data properly on systems using different encodings.
+</p>
+</li>
+<li> <p><code>merge(df1, df2)</code> now also works for data frames with
+column names <code>"na.last"</code>, <code>"decreasing"</code>, or
+<code>"method"</code>.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17119">PR#17119</a>)
+</p>
+</li>
+<li> <p><code>contour()</code> caused a segfault if the <code>labels</code>
+argument had length zero.  (Reported by Bill Dunlap.)
+</p>
+</li>
+<li> <p><code>unique(warnings())</code> works more correctly, thanks to a
+new <code>duplicated.warnings()</code> method.
+</p>
+</li>
+<li> <p><code>findInterval(x, vec = numeric(), all.inside = TRUE)</code>
+now returns <code>0</code>s as documented.  (Reported by Bill Dunlap.)
+</p>
+</li>
+<li><p> (Windows only) <code>R CMD SHLIB</code> failed when a symbol
+in the resulting library had the same name as a keyword in
+the &lsquo;<span class="file">.def</span>&rsquo; file.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17130">PR#17130</a>)
+</p>
+</li>
+<li> <p><code>pmax()</code> and <code>pmin()</code> now work with (more ?)
+classed objects, such as <code>"Matrix"</code> from the <a href="https://CRAN.R-project.org/package=Matrix"><span class="pkg">Matrix</span></a>
+package, as documented for a long time.
+</p>
+</li>
+<li> <p><code>axis(side, x = D)</code> and hence <code>Axis()</code> and
+<code>plot()</code> now work correctly for <code>"Date"</code> and time
+objects <code>D</code>, even when &ldquo;time goes backward&rdquo;, e.g.,
+with decreasing <code>xlim</code>.  (Reported by William May.)
+</p>
+</li>
+<li> <p><code>str(I(matrix(..)))</code> now looks as always intended.
+</p>
+</li>
+<li> <p><code>plot.ts()</code>, the <code>plot()</code> method for time series,
+now respects <code>cex</code>, <code>lwd</code> and <code>lty</code>.  (Reported by
+Greg Werbin.)
+</p>
+</li>
+<li> <p><code>parallel::mccollect()</code> now returns a named list (as
+documented) when called with <code>wait = FALSE</code>.  (Reported by
+Michel Lang.)
+</p>
+</li>
+<li><p> If a package added a class to a class union in another
+package, loading the first package gave erroneous warnings
+about &ldquo;undefined subclass&rdquo;.
+</p>
+</li>
+<li> <p><code>c()</code>'s argument <code>use.names</code> is documented now, as
+belonging to the (C internal) default method.   In
+&ldquo;parallel&rdquo;, argument <code>recursive</code> is also moved from
+the generic to the default method, such that the formal argument list
+of <span class="pkg">base</span> generic <code>c()</code> is just <code>(...)</code>.
+</p>
+</li>
+<li> <p><code>rbeta(4, NA)</code> and similarly <code>rgamma()</code> and
+<code>rnbinom()</code> now return <code>NaN</code>'s with a warning, as other
+r&lt;dist&gt;(), and as documented.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17155">PR#17155</a>)
+</p>
+</li>
+<li><p> Using <code>options(checkPackageLicense = TRUE)</code> no longer
+requires acceptance of the licence for non-default standard
+packages such as <span class="pkg">compiler</span>.  (Reported by Mikko Korpela.)
+</p>
+</li>
+<li> <p><code>split(&lt;very_long&gt;, *)</code> now works even when the split
+off parts are long. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17139">PR#17139</a>)
+</p>
+</li>
+<li> <p><code>min()</code> and <code>max()</code> now also work correctly when
+the argument list starts with <code>character(0)</code>.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17160">PR#17160</a>)
+</p>
+</li>
+<li><p> Subsetting very large matrices (<code>prod(dim(.)) &gt;= 2^31</code>)
+now works thanks to Michael Schubmehl's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17158">PR#17158</a>.
+</p>
+</li>
+<li> <p><code>bartlett.test()</code> used residual sums of squares
+instead of variances, when the argument was a list of <code>lm</code> objects.
+(Reported by Jens Ledet Jensen).
+</p>
+</li>
+<li> <p><code>plot(&lt;lm&gt;, which = *)</code> now correctly labels the
+contour lines for the standardized residuals for <code>which = 6</code>.
+It also takes the correct <i>p</i> in case of singularities (also
+for <code>which = 5</code>).  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17161">PR#17161</a>)
+</p>
+</li>
+<li> <p><code>xtabs(~ exclude)</code> no longer fails from wrong scope,
+thanks to Suharto Anggono's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17147">PR#17147</a>.
+</p>
+</li>
+<li><p> Reference class calls to <code>methods()</code> did not
+re-analyse previously defined methods, meaning that calls to
+methods defined later would fail. (Reported by Charles Tilford).
+</p>
+</li>
+<li> <p><code>findInterval(x, vec, left.open = TRUE)</code> misbehaved in some
+cases. (Reported by Dmitriy Chernykh.)
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.3.1</h3>
 
 
@@ -31,7 +270,7 @@ and <code>t</code> only differed in their <code>Encoding</code> or when
 &lsquo;namespace&rsquo;, as from <code>getNamespace()</code>.
 </p>
 </li>
-<li> <p><code>rgamma(1,Inf)</code> or <code>rgamma(1, 0,0)</code> no longer give
+<li> <p><code>rgamma(1, Inf)</code> or <code>rgamma(1, 0, 0)</code> no longer give
 <code>NaN</code> but the correct limit.
 </p>
 </li>
@@ -40,7 +279,7 @@ and <code>t</code> only differed in their <code>Encoding</code> or when
 </li>
 <li> <p><code>pretty(d, ..)</code> for date-time <code>d</code> rarely failed
 when <code>"halfmonth"</code> time steps were tried (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16923">PR#16923</a>) and
-on &lsquo;inaccurate&rsquo; platforms such as 32-bit windows or
+on &lsquo;inaccurate&rsquo; platforms such as 32-bit Windows or
 a configuration with <code>--disable-long-double</code>; see comment
 #15 of <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16761">PR#16761</a>.
 </p>
@@ -59,8 +298,9 @@ as in <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b><
 </li>
 <li><p> Use of <code>Ctrl-C</code> to terminate a reverse incremental
 search started by <code>Ctrl-R</code> in the <code>readline</code>-based Unix
-terminal interface is now supported for <code>readline</code> &gt;= 6.3
-(<code>Ctrl-G</code> always worked).  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16603">PR#16603</a>)
+terminal interface is now supported when <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> was compiled against
+<code>readline</code> &gt;= 6.0 (<code>Ctrl-G</code> always worked).
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16603">PR#16603</a>)
 </p>
 </li>
 <li> <p><code>diff(&lt;difftime&gt;)</code> now keeps the <code>"units"</code>
@@ -811,7 +1051,7 @@ checking.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16853"
 
 
 
-<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.2.4 patched</h3>
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.2.5</h3>
 
 
 

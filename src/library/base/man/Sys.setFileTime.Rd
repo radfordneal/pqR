@@ -21,14 +21,14 @@ Sys.setFileTime(path, time)
   }
   \item{time}{
     A date-time of class \code{"\link{POSIXct}"} or an object which can
-    be coerced to one.  Fractions of a second are ignored.
+    be coerced to one.  Fractions of a second are ignored (prior to \R 3.4.0).
   }
 }
 \details{
   This attempts sets the file time to the value specified.
 
   On a Unix-alike it uses the system call \code{utimes} if that is
-  available, otherwise \code{utimes}.  On a POSIX file system it sets
+  available, otherwise \code{utime}.  On a POSIX file system it sets
   both the last-access and modification times.
 
   On Windows it uses the system call \code{SetFileTime} to set the

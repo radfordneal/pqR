@@ -1,6 +1,6 @@
 % File src/library/methods/man/slot.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2015 R Core Team
+% Copyright 1995-2016 R Core Team
 % Copyright 2005-2010 The R Foundation
 % Distributed under GPL 2 or later
 
@@ -122,15 +122,15 @@ getSlots(x)
 }
 \seealso{
   \code{\link{@}},
-  \code{\link{Classes}},
-  \code{\link{Methods}},
+  \code{\link{Classes_Details}},
+  \code{\link{Methods_Details}},
   \code{\link{getClass}},
   \code{\link{names}}.
 }
 \examples{
 \dontshow{if(isClass("track")) removeClass("track")}
 
-setClass("track", representation(x="numeric", y="numeric"))
+setClass("track", slots = c(x="numeric", y="numeric"))
 myTrack <- new("track", x = -4:4, y = exp(-4:4))
 slot(myTrack, "x")
 slot(myTrack, "y") <- log(slot(myTrack, "y"))

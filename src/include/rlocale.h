@@ -25,7 +25,7 @@
  *  It does 2 things:
  * (a) supplies wrapper/substitute wc[s]width functions for use in 
  *    character.c, errors.c, printutils.c, devPS.c, RGui console.
- * (b) Defines a replacment for iswctype to be used on Windows, OS X and AIX.
+ * (b) Defines a replacment for iswctype to be used on Windows, maxOS and AIX.
  * in gram.c 
  *
  * It is not an installed header.
@@ -69,8 +69,8 @@
 extern int Ri18n_wcwidth(wchar_t);
 extern int Ri18n_wcswidth (const wchar_t *, size_t);
 
-/* Mac OSX CJK and WindowXP(Japanese)
- * iswctypes of MacOSX calls isctypes. no i18n.
+/* macOS CJK and WindowXP(Japanese)
+ * iswctypes of macOS calls isctypes. no i18n.
  * For example, iswprint of Windows does not accept a macron of
  * Japanese "a-ru" of R as a letter. 
  * Therefore Japanese "Buraian.Ripuri-" of "Brian Ripley" is

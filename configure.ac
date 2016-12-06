@@ -56,10 +56,13 @@ AH_TOP([#ifndef R_CONFIG_H
 AH_BOTTOM([
 #endif /* not R_CONFIG_H */])
 
-## The gettext macros call AC_GNU_SOURCE early, so all the
-## C compiling makes use of that.  If it is ever removed, we
-## would need it or something similar here.
-
+## We call AC_GNU_SOURCE early (it is a prerequisite for the gettext
+## macros), so all the C compiling makes use of that.  Nowadays it calls
+## AC_USE_SYSTEM_EXTENSIONS ....
+## This sets _GNU_SOURCE, so glibc defines all its extensions
+## (_POSIX_C_SOURCE, _XOPEN_SOURCE, _BSD_SOURCE, __USE_MISC) and these
+## unlock declarations of non-C99 functions and constants.  
+## Ditto for __EXTENSIONS__ on Solaris and _ALL_SOURCE on AIX.
 
 ### ** Platform.
 
@@ -75,14 +78,14 @@ AC_DEFINE_UNQUOTED(R_OS, "${host_os}",
 
 ## exclude some unsupported OSes
 case "${host_os}" in
-   ## Darwin 1.3.1 was OS X 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
+   ## Darwin 1.3.1 was macOS 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
    ## with 13 being 10.9.  We no longer support < 10.6 (Snow Leopard)
    ## https://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
-     AC_MSG_ERROR([The earliest supported OS X is 10.6.]
+     AC_MSG_ERROR([The earliest supported macOS is 10.6.]
      ;; 
   darwin[[56789]]*)
-     AC_MSG_ERROR([The earliest supported OS X is 10.6.]
+     AC_MSG_ERROR([The earliest supported macOS is 10.6.]
      ;; 
   aix[123]*|aix4.[01]*)
     ## These need a form of linking we no longer support
@@ -221,8 +224,8 @@ fi],
 
 ## Allow the user to specify building an R framework (Darwin).
 AC_ARG_ENABLE([R-framework],
-[AS_HELP_STRING([--enable-R-framework@<:@=DIR@:>@],[OS X only: build R framework (if possible), and specify
-                 its installation prefix @<:@yes, /Library/Frameworks@:>@])],
+[AS_HELP_STRING([--enable-R-framework@<:@=DIR@:>@],[macOS only: build R framework (if possible), and specify
+                 its installation prefix @<:@no, /Library/Frameworks@:>@])],
 [want_R_framework="${enableval}"],
 [want_R_framework=no])
 ## Can only build frameworks on Darwin.
@@ -254,7 +257,7 @@ fi
 AM_CONDITIONAL(WANT_R_FRAMEWORK, [test "x${want_R_framework}" = xyes])
 
 ## Allow the user to specify building R as a shared library.
-## (but a 'dynamic library' in the terminology of OS X).
+## (but a 'dynamic library' in the terminology of macOS).
 ## <NOTE>
 ## Building a framework implies building R shared libraries, hence the
 ## strange default.
@@ -347,14 +350,14 @@ AC_ARG_WITH([blas],
 [AS_HELP_STRING([--with-blas],[use system BLAS library (if available), or specify it @<:@no@:>@])],
 [R_ARG_USE(blas)],
 [use_blas=unset])
-# default is "no" except on OS X
+# default is "no" except on macOS
 
 ## LAPACK.
 AC_ARG_WITH([lapack],
 [AS_HELP_STRING([--with-lapack],[use system LAPACK library (if available), or specify it @<:@no@:>@])],
 [R_ARG_USE(lapack)],
 [use_lapack=unset])
-# default is "no" except on OS X
+# default is "no" except on macOS
 
 ## Readline.
 AC_ARG_WITH([readline],
@@ -364,7 +367,7 @@ AC_ARG_WITH([readline],
 
 ## Aqua.
 AC_ARG_WITH([aqua],
-[AS_HELP_STRING([--with-aqua],[OS X only: use Aqua (if available) @<:@yes@:>@])],
+[AS_HELP_STRING([--with-aqua],[macOS only: use Aqua (if available) @<:@yes@:>@])],
 [if test "${withval}" = no; then
   want_aqua=no
 else
@@ -594,7 +597,7 @@ R_PROG_PAGER
 AC_PATH_PROGS(TAR, [${TAR} gtar gnutar tar], "")
 ## TeXMF stuff
 R_PROG_TEXMF
-## Unzip && zip && gzip && bip2
+## Unzip & zip & gzip & bip2
 AC_PATH_PROGS(R_UNZIPCMD, [${UNZIP} unzip], "")
 AC_PATH_PROGS(R_ZIPCMD, [${ZIP} zip], "")
 AC_PATH_PROGS(R_GZIPCMD, [${GZIP} gzip], true)
@@ -603,7 +606,7 @@ AC_PATH_PROGS(R_BZIPCMD, [${BZIP} bzip2], "")
 R_PROG_BROWSER
 ## PDF viewer
 R_PROG_PDFVIEWER
-## Noweb
+## Noweb - used for maintainer mode only
 AC_PATH_PROG(NOTANGLE, notangle, false)
 ## javareconf needs this
 AC_PATH_PROG(REALPATH, realpath, false)
@@ -617,11 +620,13 @@ AC_ARG_VAR([PKG_CONFIG_PATH], [directories to add to pkg-config's search path])
 AC_ARG_VAR([PKG_CONFIG_LIBDIR], [path overriding pkg-config's default search path])
 
 AC_PROG_CC
-
 AC_PROG_GCC_TRADITIONAL
+AC_GNU_SOURCE ## see note above
+
 AC_PROG_CPP
 R_PROG_CPP_CPPFLAGS
-## see if the user set FFLAGS: used for Intel compilers
+
+## see if the user set FFLAGS: used for Intel compilers below
 userFFLAGS=${FFLAGS}
 R_PROG_F77
 AC_PROG_CXX
@@ -632,8 +637,8 @@ else
   CXXCPP0=${CXXCPP}
 fi
 AC_SUBST(CXXCPP0)
+
 R_GCC4_VISIBILITY
-AC_GNU_SOURCE ## needed for libintl
 
 AC_PROG_OBJC
 ## unfortunately autoconf sets OBJC to gcc even if there is no working compiler
@@ -698,7 +703,7 @@ esac
 
 ## Record name of environment variable which tells the dynamic linker
 ## where to find shlibs (typically, 'LD_LIBRARY_PATH').
-## Used in etc/ldpaths: As from R 3.0.0 override what libtool thinks on OS X
+## Used in etc/ldpaths: As from R 3.0.0 override what libtool thinks on macOS
 ## http://hublog.hubmed.org/archives/001192.html suggests this was in 10.4
 ## However, as from 10.11 this variable is not passed down to shells.
 case "${host_os}" in
@@ -734,7 +739,7 @@ AC_SUBST(LIBM)
 AC_CHECK_LIB(m, sin)
 case "${host_os}" in
   darwin*)
-    ## OS X >= 10.3 include dlcompat in libSystem
+    ## macOS >= 10.3 include dlcompat in libSystem
     ## This is ancient history
     ## SI says we want '-lcc_dynamic' on Darwin, although currently
     ## https://developer.apple.com/documentation/MacOSX/ has nothing
@@ -830,7 +835,7 @@ R_HEADER_GLIBC2
 ### * Checks for types.
 
 AC_TYPE_SIGNAL
-## xz needs uint64_t
+## liblzma uses uint64_t: used unconditionally in src/main/util.c
 AC_TYPE_UINT64_T
 AC_CHECK_TYPES([int64_t, int_fast64_t])
 AC_TYPE_PID_T
@@ -1004,6 +1009,7 @@ case "${host_os}" in
     fi
     ;;
   darwin*)
+    ## which these days mean macOS
     AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
     ;;
   hpux*)
@@ -1020,6 +1026,7 @@ case "${host_os}" in
     AC_CHECK_LIB(dld, shl_load, [R_XTRA_LIBS="-ldld ${R_XTRA_LIBS}"])
     ;;
   irix*)
+    ## final release in 2006
     R_C_OPTIEEE
     ## <NOTE>
     ## We really should test explictly whether the Fortran and C++
@@ -1128,6 +1135,7 @@ case "${host_os}" in
     fi
     ;;
   osf*)
+    ## does that really still exist?
     AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
     ;;  
 esac
@@ -1364,7 +1372,7 @@ rm -f libconftest${DYLIB_EXT} conftest.c
     ## * libRblas must be 2-level, dyn lookup because of xerbla which is undefined
     cpicflags="${darwin_pic}"
     cxxpicflags="${darwin_pic}"
-    ## OS X does not have a Fortran compiler, so this is speculative
+    ## macOS does not have a Fortran compiler, so this is speculative
     fpicflags="${darwin_pic}"
     shlib_cxxldflags="${shlib_ldflags}"
     ;;
@@ -1850,7 +1858,7 @@ AC_CHECK_LIB(sunmath, cospi)
 ## Functions from ISO/IEC TS 18661-4:2015 C11 extensions.
 ## For now, do not define _GNU_SOURCE here.
 ## All but pown have long been in Solaris' libsunmath
-## OS X has __cospi __sinpi __tanpi
+## macOS has __cospi __sinpi __tanpi
 AC_CHECK_FUNCS([atanpi atan2pi cospi exp10 pown sinpi tanpi __cospi __sinpi __tanpi], 
 [#define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
 #include <math.h>
@@ -1891,7 +1899,7 @@ R_CHECK_FUNCS([access chdir execv ftruncate getcwd geteuid getuid link readlink 
 R_CHECK_FUNCS([sched_setaffinity sched_getaffinity], [#include <sched.h>])
 ## utime was declared obsolescent in POSIX 2008 (use utimes instead)
 R_CHECK_FUNCS([utime], [#include <utime.h>])
-## clock_gettime is POSIX 1993, but not on OS X
+## clock_gettime is POSIX 1993, but not on macOS prior to 10.12 (Sierra)
 ## Some OSes need -lrt: Linux (for glibc versions before 2.17), Solaris,
 ## not FreeBSD. 
 ## Unsurprising, as POSIX 2008 moved it from its timers section to base.
@@ -1903,10 +1911,10 @@ R_CHECK_FUNCS([clock_gettime timespec_get], [#include <time.h>])
 ## It is not always declared, so we do not require a declaration.
 AC_CHECK_FUNCS(putenv)
 AC_CHECK_DECLS([putenv], , , [#include <stdlib.h>])
-## this is a GNU extension so usually hidden.  Not on Solaris
+## this is a GNU extension so usually hidden.  Not in Solaris 10
 AC_CHECK_FUNCS(vasprintf)
 AC_CHECK_DECLS([vasprintf], , , [#include <stdio.h>])
-## mempcpy is a GNU extension used by the included gettext.  Not on Solaris
+## mempcpy is a GNU extension used by the included gettext.  Not in Solaris 10
 AC_CHECK_FUNCS(mempcpy)
 ## realpath is POSIX 2001 (and BSD)
 ## Some early GNU libc systems had it in unistd.h.
@@ -1995,14 +2003,14 @@ fi
 AC_SUBST(RMATH_HAVE_LOG1P)
 
 ## Do we need substitutes?
-## mkdtemp is not on Solaris, added in POSIX 2008
-## strdup strncasecmp were first required in POSIX 2008.
+## mkdtemp is not on Solaris 10, added in POSIX 2008
+## strdup strncasecmp were first required in POSIX 2001.
 AC_REPLACE_FUNCS([mkdtemp strdup strncasecmp])
 ## Enable declarations in Defn.h?
 AC_CHECK_DECLS([mkdtemp, strdup, strncasecmp])
 
 AC_SEARCH_LIBS(connect, [socket])
-# gethostbyname was removed in POSIX 2008 (in favour of getaddrinfo, POSIX 2004)
+# gethostbyname was removed in POSIX 2008 (in favour of getaddrinfo, POSIX 2001)
 AC_SEARCH_LIBS(gethostbyname, [nsl socket])
 AC_SEARCH_LIBS(xdr_string, [nsl tirpc])
 R_FUNC___SETFPUCW
@@ -2200,7 +2208,7 @@ AM_CONDITIONAL(USE_VECLIB_G95FIX, [test "x${use_veclib_g95fix}" = xyes])
 AM_CONDITIONAL(USE_EXTERNAL_BLAS, [test "${acx_blas_ok}" = "yes"])
 
 ## LAPACK.
-## The default has already been set on OS X: otherwise it is "no"
+## The default has already been set on macOS: otherwise it is "no"
 ## and so this test fails.
 if test "${use_lapack}" = "yes"; then
   R_LAPACK_LIBS
@@ -2504,7 +2512,7 @@ if test "${ac_cv_fc_compiler_gnu}" = yes; then
 fi
 case "${host_os}" in
   darwin*)
-     ## OS X does not have a Fortran compiler, so this is speculative
+     ## macOS does not have a Fortran compiler, so this is speculative
     fcpicflags="${darwin_pic}"
     ;;
   hpux*)
@@ -2567,8 +2575,8 @@ LIBS="${LIBS1} ${LIBS2}"
 ## '/usr/lib', so that the entries from '/etc/ld.so.conf' are not
 ## shadowed (otherwise, e.g. optimized ATLAS libs would not be used).
 
-## On OS X (Darwin) this used to have /usr/X11R6/lib
-## which shadows the OpenGL framework but we add nothing on OS X ....
+## On macOS (Darwin) this used to have /usr/X11R6/lib
+## which shadows the OpenGL framework but we add nothing on macOS ....
 case "${host_os}" in
   linux*)
     r_ld_library_defaults="/usr/lib64:/lib64:/usr/lib:/lib"

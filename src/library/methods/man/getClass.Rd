@@ -11,10 +11,8 @@
   Get the definition of a class.
 }
 \usage{
-getClass   (Class, .Force = FALSE, where,
-            resolve.msg = getOption("getClass.msg", default=TRUE))
-getClassDef(Class, where, package, inherits = TRUE,
-            resolve.msg = getOption("getClass.msg", default=TRUE))
+getClass   (Class, .Force = FALSE, where)
+getClassDef(Class, where, package, inherits = TRUE)
 }
 \arguments{
   \item{Class}{ the character-string name of the class, often with a
@@ -35,9 +33,6 @@ getClassDef(Class, where, package, inherits = TRUE,
   \item{inherits}{logical; should the class definition be retrieved from
     any enclosing environment and also from the cache?  If \code{FALSE}
     only a definition in the environment \code{where} will be returned.}
-  \item{resolve.msg}{\code{\link{logical}} indicating if \R should
-    \code{\link{message}()} its decision if \code{Class} is found in
-    multiple namespaces and one is chosen.}
 }
 \details{
   Class definitions are stored in metadata objects in a package
@@ -63,22 +58,20 @@ getClassDef(Class, where, package, inherits = TRUE,
   sensible in user code.
 
   The non-null returned value is an object of class
-  \code{\linkS4class{classRepresentation}}.  For all reasonable
-  purposes, use this object only to extract information, rather than trying
-  to modify it: Use functions such as \code{\link{setClass}} and
-  \code{\link{setIs}} to create or modify class definitions.
+  \code{\linkS4class{classRepresentation}}.
+
+  Use functions such as \code{\link{setClass}} and
+  \code{\link{setClassUnion}} to create class definitions.
 }
 \references{
- Chambers, John M. (2008)
- \emph{Software for Data Analysis: Programming with R}
-  Springer.  (For the R version.)
-
- Chambers, John M. (1998)
- \emph{Programming with Data}
- Springer (For the original S4 version.)
+ Chambers, John M. (2016)
+ \emph{Extending R},
+  Chapman & Hall.
+(Chapters 9 and 10.)
 }
+
 \seealso{
-  \link{Classes},
+  \linkS4class{classRepresentation},
   \code{\link{setClass}},
   \code{\link{isClass}}.
 }

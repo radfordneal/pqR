@@ -1,14 +1,17 @@
 % File src/library/base/man/c.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2013 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
-
 \name{c}
 \title{Combine Values into a Vector or List}
-\usage{
-c(\dots, recursive = FALSE)
-}
 \alias{c}
+\alias{c.default}% existing "conceptually", see ../../tools/R/QC.R
+\usage{
+## S3 Generic function
+c(\dots)
+
+\S3method{c}{default}(\dots, recursive = FALSE, use.names = TRUE)
+}
 \description{
   This is a generic function which combines its arguments.
 
@@ -21,6 +24,8 @@ c(\dots, recursive = FALSE)
   \item{recursive}{logical.  If \code{recursive = TRUE}, the function
     recursively descends through lists (and pairlists) combining all
     their elements into a vector.}
+  \item{use.names}{logical indicating if \code{\link{names}} should be
+    preserved.}
 }
 \details{
   The output type is determined from the highest type of the components
@@ -28,6 +33,12 @@ c(\dots, recursive = FALSE)
   < list < expression.  Pairlists are treated as lists, but non-vector
   components (such names and calls) are treated as one-element lists
   which cannot be unlisted even if \code{recursive = TRUE}.
+
+  %% Should we say "(currently)" ?
+  Note that \code{\link{factor}}s are treated only via their
+  internal \code{\link{integer}} codes; one proposal has been to use
+\preformatted{   c.factor <- function(..., recursive=TRUE) unlist(list(...), recursive=recursive)}
+  if factor concatenation by \code{c()} should give a \code{\link{factor}}.
 
   \code{c} is sometimes used for its side effect of removing attributes
   except names, for example to turn an array into a vector.

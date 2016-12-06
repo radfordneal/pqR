@@ -306,7 +306,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
         ## That has [A-Za-z], earlier versions [A-z], both of which may be
         ## invalid in some locales.
         env0 <- "LC_COLLATE=C"
-        ## texi2dvi, at least on OS X (4.8) does not accept TMPDIR with spaces.
+        ## texi2dvi, at least on macOS (4.8) does not accept TMPDIR with spaces.
         if (grepl(" ", Sys.getenv("TMPDIR")))
             env0 <- paste(env0,  "TMPDIR=/tmp")
         out <- .system_with_capture(texi2dvi,
@@ -495,7 +495,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.3"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.4"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 ## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
@@ -587,7 +587,7 @@ function(val) {
 ### ** .canonicalize_doi
 
 .canonicalize_doi <-
-function(x)    
+function(x)
 {
     x <- sub("^((doi|DOI):)?[[:space:]]*http://(dx[.])?doi[.]org/", "",
              x)
@@ -2071,7 +2071,7 @@ toTitleCase <- function(text)
                        tolower(substring(x, 3L)))
             else paste0(toupper(x1), tolower(substring(x, 2L)))
         }
-        xx <- .Call(splitString, x, ' -/"()\n')
+        xx <- .Call(C_splitString, x, ' -/"()\n')
         ## for 'alone' we could insist on that exact capitalization
         alone <- xx %in% c(alone, either)
         alone <- alone | grepl("^'.*'$", xx)

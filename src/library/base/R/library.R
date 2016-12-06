@@ -23,7 +23,7 @@ function(built, run)
     ## remove vendor field
     built <- gsub("([^-]*)-([^-]*)-(.*)", "\\1-\\3", built)
     run <- gsub("([^-]*)-([^-]*)-(.*)", "\\1-\\3", run)
-    ## Mac OS X supports multiple CPUs by using 'universal' binaries
+    ## macOS supports multiple CPUs by using 'universal' binaries
     if (startsWith(built, "universal-darwin") && nzchar(.Platform$r_arch))
         built <- sub("^universal", R.version$arch, built)
     ## allow for small mismatches, e.g. OS version number and i686 vs i586.
@@ -276,8 +276,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             testRversion(pkgInfo, package, pkgpath)
             ## avoid any bootstrapping issues by these exemptions
             if(!package %in% c("datasets", "grDevices", "graphics", "methods",
-                               "splines", "stats", "stats4", "tcltk", "tools",
-                               "utils") &&
+                               "stats", "tools", "utils") &&
                isTRUE(getOption("checkPackageLicense", FALSE)))
                 checkLicense(package, pkgInfo, pkgpath)
 

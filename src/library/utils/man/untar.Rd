@@ -1,6 +1,6 @@
 % File src/library/utils/man/untar.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2009-2015 R Core Team
+% Copyright 2009-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{untar}
@@ -49,7 +49,12 @@ untar(tarfile, files = NULL, list = FALSE, exdir = ".",
     modification times.  If false, the equivalent of the \option{-m}
     flag.  Times in tarballs are supposed to be in UTC, but tarballs
     have been submitted to CRAN with times in the future or far past:
-    this argument allows such times to be discarded.}
+    this argument allows such times to be discarded.
+
+    Note that file times in a tarball are stored with a resolution of 1
+    second, and can only be restored to the resolution supported by the
+    file system (which on a FAT system is 2 seconds).
+  }
 
   \item{tar}{character string: the path to the command to be used.  If
     the command itself contains spaces it needs to be quoted -- but
@@ -67,7 +72,7 @@ untar(tarfile, files = NULL, list = FALSE, exdir = ".",
   Modern GNU flavours of \command{tar} will support compressed archives,
   and since 1.15 are able to detect the type of compression
   automatically: version 1.20 added support for \command{lzma} and
-  version 1.22 for \command{xz} compression using LZMA2.  OS X 10.6 and
+  version 1.22 for \command{xz} compression using LZMA2.  macOS 10.6 and
   later (and FreeBSD and some other OSes) have a \command{tar} (also
   known as \command{bsdtar}) from the \samp{libarchive} project which
   can also detect \command{gzip} and \command{bzip2} compression

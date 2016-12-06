@@ -112,12 +112,13 @@ Sys.junction(from, to)
   applies only to files.) Other security attributes such as ACLs are not
   copied.  On a POSIX filesystem the targets of symbolic links will be
   copied rather than the links themselves, and hard links are copied
-  separately.
+  separately.  Using \code{copy.date = TRUE} may or may not copy the
+  timestamp exactly: for example, fractional seconds may be omitted.
 
   \code{file.symlink} and \code{file.link} make symbolic and hard links
   on those file systems which support them.  For \code{file.symlink} the
   \code{to} argument can specify a single existing directory.  (Unix and
-  OS X native filesystems support both.  Windows has hard links to
+  macOS native filesystems support both.  Windows has hard links to
   files on NTFS file systems and concepts related to symbolic links on
   recent versions: see the section below on the Windows version of this
   help page.  What happens on a FAT or SMB-mounted file system is OS-specific.)
@@ -133,7 +134,7 @@ Sys.junction(from, to)
 }
 
 \section{Case-insensitive file systems}{
-  Case-insensitive file systems are the norm on Windows and OS X,
+  Case-insensitive file systems are the norm on Windows and macOS,
   but can be found on all OSes (for example a FAT-formatted USB drive is
   probably case-insensitive).
 
@@ -211,7 +212,7 @@ Sys.junction(from, to)
 
   \code{\link{Sys.glob}} to expand wildcards in file specifications.
 
-  \code{\link{file_test}}, \code{\link{Sys.readlink}}.
+  \code{\link{file_test}}, \code{\link{Sys.readlink}} (for \sQuote{symlink}s).
 
   \url{https://en.wikipedia.org/wiki/Hard_link} and
   \url{https://en.wikipedia.org/wiki/Symbolic_link} for the concepts of

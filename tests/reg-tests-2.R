@@ -2339,7 +2339,7 @@ rbind(mapply(sprintf, forms,               nums),
 sink(con <- textConnection("of", "w")) ; c ; sink(NULL); close(con)
 of2 <- capture.output(print(c))
 stopifnot(identical(of2, of),
-          identical(of2, "function (..., recursive = FALSE)  .Primitive(\"c\")"))
+          identical(of2, "function (...)  .Primitive(\"c\")"))
 ## ^^ would have failed up to R 2.9.x
 foo
 print(foo, useSource = FALSE)
@@ -3014,3 +3014,8 @@ DF.Dates$x2 <- c(1:6, NA)
 ## now, NA's show fine:
 summary(DF.Dates)
 ## 2 of 4  summary(.) above did not show NA's  in R <= 3.2.3
+
+
+## str.default() for "AsIs" arrays
+str(I(m <- matrix(pi*1:4, 2)))
+## did look ugly (because of toString() for numbers) in R <= 3.3.1

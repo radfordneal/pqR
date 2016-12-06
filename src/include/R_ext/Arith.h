@@ -35,6 +35,8 @@ extern "C" {
 #elif !defined(NO_C_HEADERS)
 /* needed for isnan and isfinite, neither of which are used under C++ */
 # include <math.h>
+#else
+#warning "use of NO_C_HEADERS is deprecated"
 #endif
 
 /* implementation of these : ../../main/arithmetic.c */
@@ -62,7 +64,7 @@ int R_finite(double);		/* True if none of NA, NaN, +/-Inf */
 /* ISNAN(): True for *both* NA and NaN.
    NOTE: some systems do not return 1 for TRUE.
    Also note that C++ math headers specifically undefine
-   isnan if it is a macro (it is on OS X and in C99),
+   isnan if it is a macro (it is on macOS and in C99),
    hence the workaround.  This code also appears in Rmath.h
 */
 #ifdef __cplusplus

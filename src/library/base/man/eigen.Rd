@@ -47,8 +47,8 @@ eigen(x, symmetric, only.values = FALSE, EISPACK = FALSE)
   only be interpreted by detailed study of the FORTRAN code.
 }
 \value{
-  The spectral decomposition of \code{x} is returned as components of a
-  list with components
+  The spectral decomposition of \code{x} is returned as a list with
+  components
 
   \item{values}{a vector containing the \eqn{p} eigenvalues of \code{x},
     sorted in \emph{decreasing} order, according to \code{Mod(values)}
@@ -86,7 +86,6 @@ eigen(x, symmetric, only.values = FALSE, EISPACK = FALSE)
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
   \emph{The New S Language}.
   Wadsworth & Brooks/Cole.
-  Springer-Verlag Lecture Notes in Computer Science \bold{6}.
 
   Wilkinson, J. H. (1965) \emph{The Algebraic Eigenvalue Problem.}
   Clarendon Press, Oxford.

@@ -1,5 +1,160 @@
 R News
 
+CHANGES IN R 3.3.2:
+
+  NEW FEATURES:
+
+    * extSoftVersion() now reports the version (if any) of the readline
+      library in use.
+
+    * The version of LAPACK included in the sources has been updated to
+      3.6.1, a bug-fix release including a speedup for the
+      non-symmetric case of eigen().
+
+    * Use options(deparse.max.lines=) to limit the number of lines
+      recorded in .Traceback and other deparsing activities.
+
+    * format(<AsIs>) looks more regular, also for non-character atomic
+      matrices.
+
+    * abbreviate() gains an option named = TRUE.
+
+    * The online documentation for package methods is extensively
+      rewritten.  The goals are to simplify documentation for basic
+      use, to note old features not recommended and to correct
+      out-of-date information.
+
+    * Calls to setMethod() no longer print a message when creating a
+      generic function in those cases where that is natural: S3
+      generics and primitives.
+
+  INSTALLATION and INCLUDED SOFTWARE:
+
+    * Versions of the readline library >= 6.3 had been changed so that
+      terminal window resizes were not signalled to readline: code has
+      been added using a explicit signal handler to work around that
+      (when R is compiled against readline >= 6.3).  (PR#16604)
+
+    * configure works better with Oracle Developer Studio 12.5.
+
+  UTILITIES:
+
+    * R CMD check reports more dubious flags in files
+      src/Makevars[.in], including -w and -g.
+
+    * R CMD check has been set up to filter important warnings from
+      recent versions of gfortran with -Wall -pedantic: this now
+      reports non-portable GNU extensions such as out-of-order
+      declarations.
+
+    * R CMD config works better with paths containing spaces, even
+      those of home directories (as reported by Ken Beath).
+
+  DEPRECATED AND DEFUNCT:
+
+    * Use of the C/C++ macro NO_C_HEADERS is deprecated (no C headers
+      are included by R headers from C++ as from R 3.3.0, so it should
+      no longer be needed).
+
+  BUG FIXES:
+
+    * The check for non-portable flags in R CMD check could be stymied
+      by src/Makevars files which contained targets.
+
+    * (Windows only) When using certain desktop themes in Windows 7 or
+      higher, Alt-Tab could cause Rterm to stop accepting input.
+      (PR#14406; patch submitted by Jan Gleixner.)
+
+    * pretty(d, ..) behaves better for date-time d (PR#16923).
+
+    * When an S4 class name matches multiple classes in the S4 cache,
+      perform a dynamic search in order to obey namespace imports.
+      This should eliminate annoying messages about multiple hits in
+      the class cache.  Also, pass along the package from the
+      ClassExtends object when looking up superclasses in the cache.
+
+    * sample(NA_real_) now works.
+
+    * Packages using non-ASCII encodings in their code did not install
+      data properly on systems using different encodings.
+
+    * merge(df1, df2) now also works for data frames with column names
+      "na.last", "decreasing", or "method".  (PR#17119)
+
+    * contour() caused a segfault if the labels argument had length
+      zero.  (Reported by Bill Dunlap.)
+
+    * unique(warnings()) works more correctly, thanks to a new
+      duplicated.warnings() method.
+
+    * findInterval(x, vec = numeric(), all.inside = TRUE) now returns
+      0s as documented.  (Reported by Bill Dunlap.)
+
+    * (Windows only) R CMD SHLIB failed when a symbol in the resulting
+      library had the same name as a keyword in the .def file.
+      (PR#17130)
+
+    * pmax() and pmin() now work with (more ?)  classed objects, such
+      as "Matrix" from the Matrix package, as documented for a long
+      time.
+
+    * axis(side, x = D) and hence Axis() and plot() now work correctly
+      for "Date" and time objects D, even when "time goes backward",
+      e.g., with decreasing xlim.  (Reported by William May.)
+
+    * str(I(matrix(..))) now looks as always intended.
+
+    * plot.ts(), the plot() method for time series, now respects cex,
+      lwd and lty.  (Reported by Greg Werbin.)
+
+    * parallel::mccollect() now returns a named list (as documented)
+      when called with wait = FALSE.  (Reported by Michel Lang.)
+
+    * If a package added a class to a class union in another package,
+      loading the first package gave erroneous warnings about
+      "undefined subclass".
+
+    * c()'s argument use.names is documented now, as belonging to the
+      (C internal) default method.  In "parallel", argument recursive
+      is also moved from the generic to the default method, such that
+      the formal argument list of base generic c() is just (...).
+
+    * rbeta(4, NA) and similarly rgamma() and rnbinom() now return
+      NaN's with a warning, as other r<dist>(), and as documented.
+      (PR#17155)
+
+    * Using options(checkPackageLicense = TRUE) no longer requires
+      acceptance of the licence for non-default standard packages such
+      as compiler.  (Reported by Mikko Korpela.)
+
+    * split(<very_long>, *) now works even when the split off parts are
+      long. (PR#17139)
+
+    * min() and max() now also work correctly when the argument list
+      starts with character(0).  (PR#17160)
+
+    * Subsetting very large matrices (prod(dim(.)) >= 2^31) now works
+      thanks to Michael Schubmehl's PR#17158.
+
+    * bartlett.test() used residual sums of squares instead of
+      variances, when the argument was a list of lm objects.  (Reported
+      by Jens Ledet Jensen).
+
+    * plot(<lm>, which = *) now correctly labels the contour lines for
+      the standardized residuals for which = 6.  It also takes the
+      correct p in case of singularities (also for which = 5).
+      (PR#17161)
+
+    * xtabs(~ exclude) no longer fails from wrong scope, thanks to
+      Suharto Anggono's PR#17147.
+
+    * Reference class calls to methods() did not re-analyse previously
+      defined methods, meaning that calls to methods defined later
+      would fail. (Reported by Charles Tilford).
+
+    * findInterval(x, vec, left.open = TRUE) misbehaved in some cases.
+      (Reported by Dmitriy Chernykh.)
+
 CHANGES IN R 3.3.1:
 
   BUG FIXES:
@@ -15,14 +170,14 @@ CHANGES IN R 3.3.1:
     * unloadNamespace(ns) also works again when ns is a 'namespace', as
       from getNamespace().
 
-    * rgamma(1,Inf) or rgamma(1, 0,0) no longer give NaN but the
+    * rgamma(1, Inf) or rgamma(1, 0, 0) no longer give NaN but the
       correct limit.
 
     * length(baseenv()) is correct now.
 
     * pretty(d, ..) for date-time d rarely failed when "halfmonth" time
       steps were tried (PR#16923) and on 'inaccurate' platforms such as
-      32-bit windows or a configuration with --disable-long-double; see
+      32-bit Windows or a configuration with --disable-long-double; see
       comment #15 of PR#16761.
 
     * In text.default(x, y, labels), the rarely(?) used default for
@@ -35,7 +190,8 @@ CHANGES IN R 3.3.1:
 
     * Use of Ctrl-C to terminate a reverse incremental search started
       by Ctrl-R in the readline-based Unix terminal interface is now
-      supported for readline >= 6.3 (Ctrl-G always worked).  (PR#16603)
+      supported when R was compiled against readline >= 6.0 (Ctrl-G
+      always worked).  (PR#16603)
 
     * diff(<difftime>) now keeps the "units" attribute, as subtraction
       already did, PR#16940.
@@ -567,7 +723,7 @@ CHANGES IN R 3.3.0:
     * diag(NULL, 1) crashed because of missed type checking.
       (PR#16853)
 
-CHANGES IN R 3.2.4 patched:
+CHANGES IN R 3.2.5:
 
   BUG FIXES:
 

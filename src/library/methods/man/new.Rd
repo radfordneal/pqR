@@ -1,6 +1,6 @@
 % File src/library/methods/man/new.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2010 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{new}
@@ -89,17 +89,16 @@ initialize(.Object, ...)
  \emph{Programming with Data}
  Springer (For the original S4 version.)
 }
-\seealso{ \link{Classes} for an overview of defining class, and
+\seealso{ \link{Classes_Details} for details of class definitions, and
   \code{\link{setOldClass}} for the relation to S3 classes. }
 
 \examples{
 ## using the definition of class "track" from \link{setClass}
 
 \dontshow{
-setClass("track",
-         representation(x="numeric", y="numeric"))
-setClass("trackCurve",
-         representation("track", smooth = "numeric"))
+setClass("track", slots = c(x="numeric", y="numeric"))
+setClass("trackCurve", contains = "track",
+          slots = c(smooth = "numeric"))
 
 ydata <- stats::rnorm(10); ysmooth <- 1:10
 }

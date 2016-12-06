@@ -1,6 +1,6 @@
 % File src/library/methods/man/S4groupGeneric.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2013 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{S4groupGeneric}
@@ -59,7 +59,7 @@ Complex(z)
   specified directly for the member function for the same signature.
   The effect is that group generic definitions are selected before
   inherited methods but after directly specified methods.  For more on
-  method selection, see \code{\link{Methods}}.
+  method selection, see \code{\link{Methods_Details}}.
 
 There are also
   S3 groups \code{Math}, \code{Ops}, \code{Summary} and
@@ -105,7 +105,7 @@ There are also
   functions, and many of them are defined as primitives.  However, you can still define
   formal methods for them, both individually and via the group generics.  It all works more or less as you
   might expect, admittedly via a bit of trickery in the background.
-  See \link{Methods} for details.
+  See \link{Methods_Details} for details.
 
   Note that two members of the \code{Math} group, \code{\link{log}} and
   \code{\link{trunc}}, have \dots as an extra formal argument.
@@ -114,17 +114,20 @@ There are also
   them with the extra argument(s).
 
   For further details about group generic functions see section 10.5 of
-  \emph{Software for Data Analysis}.
+  the second reference.
 
 }
 \references{
+ Chambers, John M. (2016)
+ \emph{Extending R},
+  Chapman & Hall.
+(Chapters 9 and 10.)
+
+
  Chambers, John M. (2008)
  \emph{Software for Data Analysis: Programming with R}
-  Springer.  (For the R version.)
+  Springer. (Section 10.5)
 
- Chambers, John M. (1998)
- \emph{Programming with Data}
- Springer (For the original S4 version).
 }
 \seealso{ The function \code{\link{callGeneric}} is nearly always
   relevant when writing a method for a group generic.  See the
@@ -133,7 +136,7 @@ There are also
   See \link{S3groupGeneric} for S3 group generics.
 }
 \examples{
-setClass("testComplex", representation(zz = "complex"))
+setClass("testComplex", slots = c(zz = "complex"))
 ## method for whole group "Complex"
 setMethod("Complex", "testComplex",
           function(z) c("groupMethod", callGeneric(z@zz)))

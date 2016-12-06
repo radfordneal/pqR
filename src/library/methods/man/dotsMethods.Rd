@@ -1,6 +1,6 @@
 % File src/library/methods/man/dotsMethods.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2007 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{dotsMethods}
@@ -41,7 +41,7 @@
 
 }
 \section{Method Selection and Dispatch for "..."}{
-  See \link{Methods} for a general discussion.  The following assumes
+  See \link{Methods_Details} for a general discussion.  The following assumes
   you have read the \dQuote{Method Selection and Dispatch} section of
   that documentation.
 
@@ -134,9 +134,9 @@ setClassUnion("Number", c("numeric", "complex"))
 
 setMethod("cc", "Number", function(...) sum(...))
 
-setClass("cdate", contains = "character", representation(date = "Date"))
+setClass("cdate", contains = "character", slots = c(date = "Date"))
 
-setClass("vdate", contains = "vector", representation(date = "Date"))
+setClass("vdate", contains = "vector", slots = c(date = "Date"))
 
 cd1 <- new("cdate", "abcdef", date = Sys.Date())
 
@@ -190,7 +190,7 @@ for(cl in c("Number", "vdate", "cdate")) removeClass(cl)
  Springer (For the original S4 version.)
 }
 \seealso{
-For the general discussion of methods, see  \link{Methods} and links
+For the general discussion of methods, see  \link{Methods_Details} and links
 from there.
 }
 \keyword{programming}

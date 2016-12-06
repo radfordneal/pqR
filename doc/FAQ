@@ -1,6 +1,6 @@
 R FAQ
 Frequently Asked Questions on R
-Version 2016-04-24
+Version 2016-06-06
 Kurt Hornik
 
 
@@ -179,7 +179,7 @@ Feedback via email to <Kurt.Hornik@R-project.org> is of course most
 welcome.
 
    In particular, note that I do not have access to Windows or Mac
-systems.  Features specific to the Windows and OS X ports of R are
+systems.  Features specific to the Windows and macOS ports of R are
 described in the "R for Windows FAQ"
 (https://CRAN.R-project.org/bin/windows/base/rw-FAQ.html) and the "R for
 Mac OS X FAQ" (https://CRAN.R-project.org/bin/macosx/RMacOSX-FAQ.html).
@@ -246,11 +246,12 @@ operating systems.  Support for Mac OS Classic ended with R 1.7.1.
 
    The current version of R will configure and build under a number of
 common Unix-like (e.g., <https://en.wikipedia.org/wiki/Unix-like>)
-platforms including CPU-linux-gnu for the i386, amd64, alpha, arm/armel,
-hppa, ia64, m68k, mips/mipsel, powerpc, s390 and sparc CPUs (e.g.,
+platforms including CPU-linux-gnu for the i386, amd64/x86_64, alpha,
+arm, arm64, hppa, mips/mipsel, powerpc, s390x and sparc CPUs (e.g.,
 <https://buildd.debian.org/build.php?&pkg=r-base>), i386-hurd-gnu,
-CPU-kfreebsd-gnu for i386 and amd64, powerpc-apple-darwin,
-mips-sgi-irix, i386-freebsd, rs6000-ibm-aix, and sparc-sun-solaris.
+CPU-kfreebsd-gnu for i386 and amd64, i386-pc-solaris, rs6000-ibm-aix,
+sparc-sun-solaris, x86_64-apple-darwin, x86_64-unknown-freebsd and
+x86_64-unknown-openbsd.
 
    If you know about other platforms, please drop us a note.
 
@@ -373,11 +374,11 @@ details.
 ----------------------------------
 
 The 'bin/macosx' directory of a CRAN site contains a standard Apple
-installer package to run on OS X 10.9 ('Mavericks') and later.  Once
+installer package to run on macOS 10.9 ('Mavericks') and later.  Once
 downloaded and executed, the installer will install the current release
-of R and R.app, the OS X GUI.  This port of R for OS X is maintained by
-Simon Urbanek <Simon.Urbanek@R-project.org> (and previously by Stefano
-Iacus).  The "R for Mac OS X FAQ
+of R and R.app, the macOS GUI.  This port of R for macOS is maintained
+by Simon Urbanek <Simon.Urbanek@R-project.org> (and previously by
+Stefano Iacus).  The "R for Mac macOS FAQ
 (https://CRAN.R-project.org/bin/macosx/RMacOSX-FAQ.html) has more
 details.
 
@@ -631,8 +632,8 @@ load.
 snapshots of R (copies of the current source trees), as gzipped and
 bzipped tar files, a wealth of additional contributed code, as well as
 prebuilt binaries for various operating systems (Linux, Mac OS Classic,
-OS X, and MS Windows).  CRAN also provides access to documentation on R,
-existing mailing lists and the R Bug Tracking system.
+macOS, and MS Windows).  CRAN also provides access to documentation on
+R, existing mailing lists and the R Bug Tracking system.
 
    Since March 2016, "old" material is made available from a central
 CRAN archive server (<https://CRAN-archive.R-project.org/>).
@@ -759,9 +760,6 @@ S.
 
    See <http://statweb.stanford.edu/~jmc4/papers/96.7.ps> for further
 information on the "Evolution of the S Language".
-
-   There is a huge amount of user-contributed code for S, available at
-the S Repository (http://lib.stat.cmu.edu/S/) at CMU.
 
 3.2 What is S-PLUS?
 ===================
@@ -1629,15 +1627,14 @@ manipulating and editing saved transcripts, and re-evaluating commands
 from transcript files).
 
    The latest stable version of ESS is available via CRAN or the ESS web
-page (http://ESS.R-project.org/).  The HTML version of the documentation
-can be found at <https://stat.ethz.ch/ESS/>.
+page (https://ESS.R-project.org/).
 
    ESS comes with detailed installation instructions.
 
-   For help with ESS, send email to <ESS-help@stat.math.ethz.ch>.
+   For help with ESS, send email to <ESS-help@r-project.org>.
 
    Please send bug reports and suggestions on ESS to
-<ESS-bugs@stat.math.ethz.ch>.  The easiest way to do this from is within
+<ESS-bugs@r-project.org>.  The easiest way to do this from is within
 Emacs by typing 'M-x ess-submit-bug-report' or using the [ESS] or [iESS]
 pulldown menus.
 
@@ -2128,7 +2125,7 @@ Under a Unix-like, if your installation supports the 'type="cairo"'
 option to the 'png()' device there should be no problems, and the
 default settings should just work.  This option is not available for
 versions of R prior to 2.7.0, or without support for cairo.  From R
-2.7.0 'png()' by default uses the Quartz device on OS X, and that too
+2.7.0 'png()' by default uses the Quartz device on macOS, and that too
 works in batch mode.
 
    Earlier versions of the 'png()' device used the X11 driver, which is
@@ -2327,32 +2324,49 @@ between package and library?:: for more information.
 =================================================
 
 The only numbers that can be represented exactly in R's numeric type are
-integers and fractions whose denominator is a power of 2.  Other numbers
-have to be rounded to (typically) 53 binary digits accuracy.  As a
-result, two floating point numbers will not reliably be equal unless
-they have been computed by the same algorithm, and not always even then.
-For example
+integers and fractions whose denominator is a power of 2.  All other
+numbers are internally rounded to (typically) 53 binary digits accuracy.
+As a result, two floating point numbers will not reliably be equal
+unless they have been computed by the same algorithm, and not always
+even then.  For example
 
      R> a <- sqrt(2)
      R> a * a == 2
      [1] FALSE
      R> a * a - 2
      [1] 4.440892e-16
+     R> print(a * a, digits = 18)
+     [1] 2.00000000000000044
 
    The function 'all.equal()' compares two objects using a numeric
 tolerance of '.Machine$double.eps ^ 0.5'.  If you want much greater
 accuracy than this you will need to consider error propagation
 carefully.
 
+   A discussion with many easily followed examples is in Appendix G
+"Computational Precision and Floating Point Arithmetic", pages 753-771
+of _Statistical Analysis and Data Display: An Intermediate Course with
+Examples in R_, Richard M. Heiberger and Burt Holland (Springer 2015,
+second edition).  This appendix is a free download from
+<http://link.springer.com/content/pdf/bbm%3A978-1-4939-2122-5%2F1.pdf>.
+
    For more information, see e.g. David Goldberg (1991), "What Every
 Computer Scientist Should Know About Floating-Point Arithmetic", _ACM
 Computing Surveys_, *23/1*, 5-48, also available via
 <http://www.validlab.com/goldberg/paper.pdf>.
 
-   To quote from "The Elements of Programming Style" by Kernighan and
-Plauger:
+   Here is another example, this time using addition:
 
-     _10.0 times 0.1 is hardly ever 1.0_.
+     R> .3 + .6 == .9
+     [1] FALSE
+     R> .3 + .6 - .9
+     [1] -1.110223e-16
+     R> print(matrix(c(.3,  .6,  .9, .3 + .6)), digits = 18)
+                          [,1]
+     [1,] 0.299999999999999989
+     [2,] 0.599999999999999978
+     [3,] 0.900000000000000022
+     [4,] 0.899999999999999911
 
 7.32 How can I capture or ignore errors in a long simulation?
 =============================================================
@@ -2433,7 +2447,7 @@ Acrobat Reader (cross platform)
      There are options in Preferences to enable/disable text smoothing,
      image smoothing and line art smoothing.  Disable line art
      smoothing.
-Preview (OS X)
+Preview (macOS)
      There is an option in Preferences to enable/disable anti-aliasing
      of text and line art.  Disable this option.
 GSview (cross platform)
@@ -2650,13 +2664,13 @@ recommend that you use these methods.  The requisite code to add to
      options(download.file.method = "wininet", url.method = "wininet")
      (Windows)
      options(download.file.method = "libcurl", url.method = "libcurl")
-     (Linux and OS X)
+     (Linux and macOS)
 
 (Method '"wininet"' is the default on Windows as from R 3.2.2.)
 
    Note that the '"libcurl"' method may or may not have been compiled
 in.  In the case that it was not, i.e..  'capabilities("libcurl") ==
-FALSE', we recommend method '"wget"' on Linux and '"curl"' on OS X. It
+FALSE', we recommend method '"wget"' on Linux and '"curl"' on macOS. It
 is possible that system versions of '"libcurl"', 'wget' or 'curl' may
 have been compiled without HTTPS support, but this is unlikely.  As from
 R 3.3.0 '"libcurl"' with HTTPS support is required except on Windows.
@@ -2664,7 +2678,7 @@ R 3.3.0 '"libcurl"' with HTTPS support is required except on Windows.
 7.44 How can I get CRAN package binaries for outdated versions of R?
 ====================================================================
 
-Since March 2016, Windows and OS X binaries of CRAN packages for old
+Since March 2016, Windows and macOS binaries of CRAN packages for old
 versions of R (released more than 5 years ago) are made available from a
 central CRAN archive server instead of the CRAN mirrors.  To get these,
 one should set the CRAN "mirror" element of the 'repos' option
