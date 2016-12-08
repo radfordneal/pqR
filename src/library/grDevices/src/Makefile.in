@@ -54,6 +54,18 @@ include $(R_HOME)/etc${R_ARCH}/Makeconf
 include $(top_srcdir)/share/make/shlib.mk
 LTO = @LTO@
 
+# Special compilation on mac of devQuartz.c, qdBitmap.c, qdPDF.c 
+# using the mac default gcc, no OpenMP.
+
+@BUILD_AQUA_TRUE@devQuartz.o:	devQuartz.c
+@BUILD_AQUA_TRUE@	gcc $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c $(srcdir)/devQuartz.c -o devQuartz.o
+
+qdBitmap.o:	qdBitmap.c
+	gcc $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c $(srcdir)/qdBitmap.c -o qdBitmap.o
+
+qdPDF.o:	qdPDF.c
+	gcc $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c $(srcdir)/qdPDF.c -o qdPDF.o
+
 mostlyclean: clean
 clean:
 	@-rm -rf .libs _libs

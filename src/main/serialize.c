@@ -2107,7 +2107,7 @@ void R_InitConnInPStream(R_inpstream_t stream,  Rconnection con,
 static SEXP CallHook(SEXP x, SEXP fun)
 {
     SEXP val, call;
-    PROTECT(call = LCONS(fun, LCONS(x, R_NilValue)));
+    PROTECT(call = LCONS(fun, CONS(x, R_NilValue)));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(1);
     return val;

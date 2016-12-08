@@ -6,6 +6,33 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2016-10-24}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item This is a small maintenance release, fixing a few bugs and installation
+        problems.
+  }}
+
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item When building pqR on a Mac, some Mac-specific source files
+        are now compiled with the default 'gcc' (really clang on
+        recent Macs), regardless of what C compiler has been specified
+        for other uses.  This is necessary to bypass problems with
+        Apple-supplied header files on El Capitan and Sierra. There are
+        also a few other tweaks to building on a Mac.
+  }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Some bugs have been fixed involving the interaction of finalizers
+        and active bindings with some pqR optimizations, one of which
+        showed up when building with clang on a Mac.
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2016-10-05}{
 
   \subsection{INTRODUCTION}{

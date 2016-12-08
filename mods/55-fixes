@@ -1,0 +1,5 @@
+Fixes involving interaction of active bindings and finalizers with pqR
+optimizations.
+
+Also fixes instances of LCONS(fn,LCONS(arg...)), in which second LCONS
+should be CONS.
