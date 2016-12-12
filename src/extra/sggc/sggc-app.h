@@ -54,8 +54,8 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 /* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. 
 
       Cons-type:          Vector:             
-        info, cptr          info, cptr
-        length, truelength  length, truelength
+        info(64bits)        info(64bits)
+        cptr, length        cptr, length
         attrib              attrib
         car                 data...
         cdr
@@ -64,8 +64,8 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
           (3 chunks)          (2 chunks)
 
       Symbol:             Primitive:
-        info, cptr          info, cptr
-        length, truelength  length, truelength
+        info(64bits)        info(64bits)
+        cptr, length        cptr, length
         attrib              attrib
         pname               C-function
         value               fast-C-function
@@ -85,10 +85,9 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 /* LAYOUT WITH UNCOMPRESSED 32-BIT POINTERS.
 
       Cons-type:          Vector:             
-        info                info
+        info(64bits)        info(64bits)
         cptr                cptr
         length              length
-        truelength          truelength
         attrib              attrib
         car                 padding
         cdr                 data...
@@ -97,7 +96,7 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
           (2 chunks)
 
       Symbol:             Primitive:
-        info                info
+        info(64bits)        info(64bits)
         cptr                cptr
         length              length
         truelength          truelength
@@ -120,3 +119,5 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 /* Include the generic SGGC header file. */
 
 #include "sggc.h"
+
+#define CPTR(x) (x)->cptr)

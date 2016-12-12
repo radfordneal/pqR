@@ -50,22 +50,12 @@
 #include "Defn.h"    /* Includes Rinternals.h, which defines R_CONST */
 
 
-/* Object to link to in gengc_next_node of a constant object in order to 
-   identify it as a constant that should be re-created as the same constant 
-   when unserializing. */
-
-R_CONST SEXPREC R_unserialize_as_constant;
-
-
-/* Header for a constant.
-
-   Constants must be marked, and be of the oldest generation, so the garbage 
-   collector won't fiddle with them. */
+/* Header for a constant. */
 
 #define CONST_HEADER(typ) \
-    .sxpinfo = { .nmcnt = 7, .type = typ, .gcgen = 1, .mark = 1 }, \
-    .attrib = R_NilValue, \
-    .gengc_next_node = (SEXP) &R_unserialize_as_constant,
+    .sxpinfo = { .nmcnt = 7, .type = typ, }, \
+    .cptr = 0, /* MUST FIX */ \
+    .attrib = R_NilValue,
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
@@ -107,7 +97,7 @@ R_CONST SYM_SEXPREC R_UnboundValue_const = { \
 
 #define LOGICAL_CONST(v) { \
     CONST_HEADER(LGLSXP) \
-    .vecsxp = { .length = 1 }, \
+    .length = 1, \
     .data = { .i = v } \
 }
 
@@ -120,7 +110,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarLogicalTRUE_const  = LOGICAL_CONST(TRUE);
 
 #define INTEGER_CONST(v) { \
     CONST_HEADER(INTSXP) \
-    .vecsxp = { .length = 1 }, \
+    .length = 1, \
     .data = { .i = v } \
 }
 
@@ -137,7 +127,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarInteger0To10_const[11] = {
 
 #define REAL_CONST(v) { \
     CONST_HEADER(REALSXP) \
-    .vecsxp = { .length = 1 }, \
+    .length = 1, \
     .data = { .d = v } \
 }
 
@@ -146,7 +136,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarRealOne_const = REAL_CONST(1.0);
 
 R_CONST VECTOR_SEXPREC_C R_ScalarRealNA_const = {
     CONST_HEADER(REALSXP)
-    .vecsxp = { .length = 1 },
+    .length = 1,
 #ifdef WORDS_BIGENDIAN
     .data = { .w = { 0x7ff00000, 1954 } }
 #else
@@ -205,17 +195,14 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 
 /* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
    These are not actually constant, since the data they contain is changed,
-   but are allocated similarly.  These boxes must be marked, and be of the 
-   oldest generation, so the garbage collector won't fiddle with them.  They
-   are marked as shared boxes with a special value for genc_next_node. */
-
-R_CONST SEXPREC R_static_box;
+   but are allocated similarly.  They are marked as static boxes by a flag
+   in sxpinfo. */
 
 #define SCALAR_BOX(typ) { \
-    .sxpinfo = { .nmcnt = 7, .type = typ, .gcgen = 1, .mark = 1 }, \
+    .sxpinfo = { .nmcnt = 7, .type = typ, .static_box = 1 }, \
+    .cptr = 0, /* MUST FIX */ \
     .attrib = R_NilValue, \
-    .gengc_next_node = (SEXP) &R_static_box, \
-    .vecsxp = { .length = 1 } }
+    .length = 1 }
 
 VECTOR_SEXPREC_C R_ScalarIntegerBox_space = SCALAR_BOX(INTSXP);
 VECTOR_SEXPREC_C R_ScalarRealBox_space = SCALAR_BOX(REALSXP);

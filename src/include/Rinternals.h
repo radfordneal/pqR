@@ -83,7 +83,7 @@ pid_t Rf_fork(void);
 /* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
  * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
  * for GC old-to-new to work properly).  It can be redefined as the identity
- * function in those modules that actually need to assing (eg, memory.c).
+ * function in those modules that actually need to assign (eg, memory.c).
  */
 
 #define NOT_LVALUE(x) (0,(x)) /* Makes using x on left of assignment an error */
@@ -164,13 +164,11 @@ struct sxpinfo_struct {
     /* Type and namedcnt in first byte */
     unsigned int nmcnt : 3;   /* count of "names" referring to object */
     unsigned int type : 5;    /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
-                               * -> warning: `type' is narrower than values
-                               *              of its type
-                               * when SEXPTYPE was an enum */
-    /* Garbage collector stuff - keep in one byte to maybe speed up access */
-    unsigned int gccls : 3;   /* node class for garbage collector */
-    unsigned int gcgen : 1;   /* old generation number - may be best first */
-    unsigned int mark : 1;    /* marks object as in use in garbage collector */
+                                 -> warning: `type' is narrower than values
+                                              of its type
+                                 when SEXPTYPE was an enum */
+    unsigned int static_box : 1; /* set if this is a static box */
+    unsigned int unused : 4;
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
     /* Flags to synchronize with helper threads */
@@ -253,33 +251,16 @@ struct promsxp_struct {
 };
 
 /* Every node must have a set of sxpinfo flags and an attribute field,
-   plus gengc_next_node and gengc_prev_node fields, used to maintain the 
-   collector's linked list structures. 
-
-   The gengc_next_node field is also used to mark constants defined
-   in const-objs.c, and the gengc_prev_node field is set to zero to
-   mark nodes already put into the old-to-new list in the garbage 
-   collector.
-*/
+   plus a cptr field giving the compressed pointer to the node. */
 
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
-    struct SEXPREC *attrib; \
-    struct SEXPREC *gengc_next_node, *gengc_prev_node
+    sggc_cptr_t cptr; \
+    R_len_t length; \
+    struct SEXPREC *attrib;
 
 /* The standard node structure consists of a header followed by the
-   node data.  The size varies with the size of a pointer, as follows
-   (assuming R_len_t is no bigger than a pointer):
-   
-       4-byte pointers:  32 bytes
-       8-byte pointers:  56 bytes
-
-   Note, however, that the actual amount allocated could be greater, as
-   determined by the definitions of the node class sizes in memory.c.
-
-   Standard nodes may be used to hold small vectors as well as cons cells
-   and other fixed-size objects.
-*/
+   node data. */
 
 typedef struct SEXPREC {
     SEXPREC_HEADER;
@@ -310,26 +291,16 @@ typedef struct SYM_SEXPREC {
     struct symsxp_struct symsxp;
 } SYM_SEXPREC, *SYMSEXP;
 
-/* Reduced version of SEXPREC used as a header in vector nodes.  The 
-   layout MUST be kept consistent with the SEXPREC definition.  The size
-   varies with the size of a pointer, the size of R_len_t, and whether
-   alignment to a multiple of 8 bytes is done, as follows:
-   
-       4-byte pointers, 4-byte R_len_t:  24 bytes
-       8-byte pointers, 4-byte R_len_t:  36 bytes (40 bytes if aligned)
-       8-byte pointers, 8-byte R_len_t:  40 bytes
-*/
-
-struct vecsxp_struct {
-    R_len_t length;
-};
+/* Version of SEXPREC used as a header in vector nodes.  MUST be kept 
+   consistent with the SEXPREC definition. */
 
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
-    struct vecsxp_struct vecsxp;
 } VECTOR_SEXPREC, *VECSEXP;
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
+
+#define DATAPTR(x)	(((SEXPREC_ALIGN *) (x)) + 1)
 
 /* Version of VECTOR_SEXPREC used for defining constants in const-objs.c. */
 
@@ -337,11 +308,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
                           or nothing if you don't want them to be read-only */
 typedef struct {
     SEXPREC_HEADER;
-    struct vecsxp_struct vecsxp;
-    union { double d; int w[2]; int i; char c; } data;
+    union { double d; int w[2]; int i; char c; char s[8]; } data;
 } VECTOR_SEXPREC_C;
-
-#define DATAPTR(x)	(((SEXPREC_ALIGN *) (x)) + 1)
 
 
 /* Pairlist and data access macros / static inline functions that are now 
@@ -358,7 +326,7 @@ typedef struct {
 #define CDR(e)     NOT_LVALUE((e)->u.listsxp.cdrval)  /*  an error if it's not*/
 
 #define TYPEOF(x)  /*NOT_LVALUE*/((x)->sxpinfo.type)
-#define LENGTH(x)  NOT_LVALUE(((VECSEXP) (x))->vecsxp.length)
+#define LENGTH(x)  NOT_LVALUE(((VECSEXP) (x))->length)
 
 #define LOGICAL(x) ((int *) DATAPTR(x))
 #define INTEGER(x) ((int *) DATAPTR(x))
@@ -373,7 +341,7 @@ static inline SEXP CAR (SEXP e) { return e->u.listsxp.carval; }
 static inline SEXP CDR (SEXP e) { return e->u.listsxp.cdrval; }
 
 static inline SEXPTYPE TYPEOF (SEXP x) { return x->sxpinfo.type; }
-static inline int LENGTH (SEXP x) { return ((VECSEXP)(x))->vecsxp.length; }
+static inline int LENGTH (SEXP x) { return ((VECSEXP)(x))->length; }
 
 extern R_NORETURN void Rf_LOGICAL_error(SEXP);
 static inline int *LOGICAL(SEXP x) 
@@ -618,7 +586,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	NOT_LVALUE((x)->attrib)
 #define OBJECT(x)	NOT_LVALUE((x)->sxpinfo.obj)
-#define MARK(x)		NOT_LVALUE((x)->sxpinfo.mark)
 #define RTRACE(x)	NOT_LVALUE(NONVEC_SXPINFO(x).trace)
 #define LEVELS(x)	NOT_LVALUE((x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
@@ -654,7 +621,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 }
 
 /* Vector Access Macros */
-#define SETLENGTH(x,v)	((((VECSEXP) (x))->vecsxp.length)=(v)) /* DEPRECATED */
+#define SETLENGTH(x,v)	((((VECSEXP) (x))->length)=(v)) /* DEPRECATED */
 
 /* Under the generational allocator the data for vector nodes comes
    immediately after the node structure, so the data address is a

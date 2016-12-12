@@ -181,12 +181,10 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
-extern R_CONST SEXPREC R_unserialize_as_constant;
-#define IS_CONSTANT(x) ((x)->gengc_next_node == &R_unserialize_as_constant)
+#define IS_CONSTANT(x) (sggc_is_constant(x))
 
 /* Test whether this is a static box object (defined in const-objs.c). */
-extern R_CONST SEXPREC R_static_box;
-#define IS_STATIC_BOX(x) ((x)->gengc_next_node == &R_static_box)
+#define IS_STATIC_BOX(x) ((x)->sxpinfo.static_box)
 
 /* Stuff for saving static boxes, if doing another eval */
 typedef union { int i; double r; } R_static_box_contents;
