@@ -181,7 +181,7 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
-#define IS_CONSTANT(x) (sggc_is_constant(x))
+#define IS_CONSTANT(x) (sggc_is_constant(CPTR(x)))
 
 /* Test whether this is a static box object (defined in const-objs.c). */
 #define IS_STATIC_BOX(x) ((x)->sxpinfo.static_box)
@@ -1759,15 +1759,10 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 }
 
 
-/* Macro version of SETCAR.  Assumes FLAG_OLD_TO_NEW is set to 1 in
-   memory.c, though it will give correct results either way.  Avoids
-   a function call when the node is already in the old-to-new list.
-   Similar macros could be defined for SETCDR, SET_TAG, etc., but it
-   is less likely that they will be called repeatedly for the same
-   object. */
+/* Macro version of SETCAR.  Currently just calls function. */
 
 #define SETCAR(x,y) \
-  ((x)->gengc_prev_node==0 ? (x)->u.listsxp.carval = (y) : (SETCAR)((x),(y)))
+  ((SETCAR)((x),(y)))
 
 
 /* Macro for fast stack checking.  Calls R_CheckStack to do the actual

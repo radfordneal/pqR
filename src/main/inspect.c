@@ -38,7 +38,7 @@
 #include <Defn.h>
 
 #define GCGEN(x) (1 + sggc_oldest_generation(CPTR(x)) \
-                    - sggs_youngest_generation(CPTR(x)))
+                    - sggc_youngest_generation(CPTR(x)))
 #define GCKIND(x) SGGC_KIND(CPTR(x))
 
 #define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in

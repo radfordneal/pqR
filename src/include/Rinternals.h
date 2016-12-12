@@ -79,6 +79,8 @@ pid_t Rf_fork(void);
 
 #include <R_ext/libextern.h>
 
+#include <../extra/sggc/sggc-app.h>
+
 
 /* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
  * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
@@ -257,7 +259,7 @@ struct promsxp_struct {
     struct sxpinfo_struct sxpinfo; \
     sggc_cptr_t cptr; \
     R_len_t length; \
-    struct SEXPREC *attrib;
+    struct SEXPREC *attrib
 
 /* The standard node structure consists of a header followed by the
    node data. */
@@ -320,6 +322,8 @@ typedef struct {
    NOTE:  Need to see how this all affects PROTECTCHECK... */
 
 #ifdef USE_RINTERNALS
+
+#define CPTR(x)    ((x)->cptr)
 
 #define TAG(e)     NOT_LVALUE((e)->u.listsxp.tagval)  /* Don't cast e to SEXP */
 #define CAR(e)     NOT_LVALUE((e)->u.listsxp.carval)  /*  so that we will get */

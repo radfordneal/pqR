@@ -21,12 +21,12 @@
 # include <config.h>
 #endif
 
-#include <Defn.h>
-
 
 /* LENGTH TYPES. */
 
-typedef R_len_t sggc_length_t;  /* Type for holding an object length */
+typedef int sggc_length_t;      /* Type for holding an object length - must 
+                                   match R_len_t. */
+
 typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 
@@ -42,14 +42,14 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 #define SGGC_N_KINDS SGGC_N_TYPES
 
 #define SGGC_KIND_CHUNKS \
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 \
 }
 
 #define sggc_kind(type,length) (type)
 
 
-#if sizeof (void *) == 8
+#if IS64
 
 /* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. 
 
@@ -119,5 +119,3 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 /* Include the generic SGGC header file. */
 
 #include "sggc.h"
-
-#define CPTR(x) (x)->cptr)
