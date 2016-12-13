@@ -84,7 +84,9 @@ MAINLIBS = ../main/libmain.a ../appl/libappl.a ../nmath/libnmath.a
 EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
    ../extra/pcre/libpcre.a ../extra/bzip2/libbz2.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
-   ../extra/tre/libtre.a ../extra/xz/liblzma.a ../extra/helpers/libhelpers.a ../extra/matprod/libmatprod.a
+   ../extra/tre/libtre.a ../extra/xz/liblzma.a \
+   ../extra/helpers/libhelpers.a ../extra/matprod/libmatprod.a \
+   ../extra/libsggc.a
 
 # flags to ensure that Doug Lea's malloc is used:
 ifdef LEA_MALLOC
@@ -123,7 +125,7 @@ rlibs:
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
 	@for ex in graphapp pcre bzip2 zlib xdr tre trio \
-                   helpers matprod tzone win_iconv xz; do \
+                   helpers matprod sggc tzone win_iconv xz; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
 
@@ -217,6 +219,9 @@ front-ends:
 
 ../extra/matprod/libmatprod.a:
 	$(MK) -C ../extra/matprod -f Makefile.win
+
+../extra/matprod/libsggc.a:
+	$(MK) -C ../extra/sggc -f Makefile.win
 
 NEWSdocs:
 	@$(MK) -C ../../doc -f Makefile.win

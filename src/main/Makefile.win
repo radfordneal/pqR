@@ -48,7 +48,8 @@ gramLatex.c: gramLatex.y
 	$(RM) gramLatex.tab.c
 endif
 
-platform-CPPFLAGS=-I../gnuwin32 -I../extra -I../extra/helpers -DPLATFORM_PKGTYPE='"source"'
+platform-CPPFLAGS=-I../gnuwin32 -I../extra -I../extra/helpers -I../extra/sggc \
+                  -DPLATFORM_PKGTYPE='"source"'
 
 agrep-CPPFLAGS=-I../extra
 # array-CPPFLAGS=$(OPENMP) # too slow to be useful.

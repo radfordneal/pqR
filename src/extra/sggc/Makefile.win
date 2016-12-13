@@ -1,0 +1,31 @@
+#-*- Makefile -*-
+include ../../gnuwin32/MkRules
+
+DEFS=-DHAVE_CONFIG_H
+
+CPPFLAGS=-I../../include -I. $(DEFS) $(OPENMP)
+
+## done this way for parallel make
+all:
+	$(MAKE) -f Makefile.win makeMakedeps
+	$(MAKE) -f Makefile.win libsggc.a
+
+CSOURCES = sggc.c set.c
+
+OBJS = $(CSOURCES:.c=.o)
+libsggc.a: $(OBJS)
+
+clean:
+	@$(RM) *.o *~ *.d Makedeps
+
+distclean: clean
+	@$(RM) libsggc.a
+
+# Dependencies
+DEPS=$(CSOURCES:.c=.d)
+
+makeMakedeps: $(DEPS)
+	@$(RM) Makedeps
+	@cat $(DEPS) >> Makedeps
+
+-include Makedeps
