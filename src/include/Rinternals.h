@@ -721,7 +721,6 @@ Rboolean (Rf_isObject)(SEXP s);
 /* General Cons Cell Attributes */
 SEXP (ATTRIB)(SEXP x);
 int  (OBJECT)(SEXP x);
-int  (MARK)(SEXP x);
 int  (NAMED)(SEXP x);
 void (SET_OBJECT)(SEXP x, int v);
 void (SET_TYPEOF)(SEXP x, int v);

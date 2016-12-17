@@ -15,7 +15,7 @@ include $(top_builddir)/Makeconf
 SOURCES_C = \
 	CommandLineArgs.c \
 	Rdynload.c Renviron.c RNG.c \
-	agrep.c apply.c arithmetic.c array.c attrib.c \
+	access.c agrep.c apply.c arithmetic.c array.c attrib.c \
 	base.c bind.c builtin.c \
 	character.c coerce.c colors.c complex.c connections.c const-objs.c \
 	context.c cov.c cum.c \
