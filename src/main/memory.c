@@ -56,6 +56,9 @@
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */
 
+#define FORWARD_NODE(x) abort()
+#define process_nodes(a,b) abort()
+
 
 /* CONFIGURATION OPTIONS.  
 
@@ -1327,9 +1330,6 @@ static void RunGenCollect(R_size_t size_needed)
     }
 #endif
 
-    /* release large vector allocations */
-    ReleaseLargeFreeVectors();
-
     /* update heap statistics */
     R_Collected = R_NSize;
     R_SmallNallocSize = 0;
@@ -1724,8 +1724,8 @@ SEXP cons(SEXP car, SEXP cdr)
     else
         s = get_free_node(1);
     TYPEOF(s) = LISTSXP;
-    CAR(s) = CHK(car);
-    CDR(s) = CHK(cdr);
+    CAR(s) = Rf_chk_valid_SEXP(car);
+    CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = R_NilValue;
     return s;
 }
@@ -1739,9 +1739,9 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
     else
         s = get_free_node(1);
     SET_TYPEOF(s,LISTSXP);
-    CAR(s) = CHK(car);
-    CDR(s) = CHK(cdr);
-    TAG(s) = CHK(tag);
+    CAR(s) = Rf_chk_valid_SEXP(car);
+    CDR(s) = Rf_chk_valid_SEXP(cdr);
+    TAG(s) = Rf_chk_valid_SEXP(tag);
     return s;
 }
 
@@ -1777,11 +1777,11 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 
     TYPEOF(newrho) = ENVSXP;
     FRAME(newrho) = valuelist;
-    ENCLOS(newrho) = CHK(rho);
+    ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
     HASHTAB(newrho) = R_NilValue;
 
-    v = CHK(valuelist);
-    n = CHK(namelist);
+    v = Rf_chk_valid_SEXP(valuelist);
+    n = Rf_chk_valid_SEXP(namelist);
     while (v != R_NilValue && n != R_NilValue) {
 	SET_TAG(v, TAG(n));
 	v = CDR(v);
@@ -1809,8 +1809,8 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 
     TYPEOF(s) = PROMSXP;
     s->u.promsxp.value = R_UnboundValue;
-    PRCODE(s) = CHK(expr);
-    PRENV(s) = CHK(rho);
+    PRCODE(s) = Rf_chk_valid_SEXP(expr);
+    PRENV(s) = Rf_chk_valid_SEXP(rho);
     PRSEEN(s) = 0;
     return s;
 }
@@ -2502,7 +2502,7 @@ R_NORETURN void attribute_hidden Rf_protect_error (void)
 SEXP protect(SEXP s)
 {
     if (s != NULL && TYPEOF(s) == NILSXP && s != R_NilValue) abort();
-    return PROTECT (CHK(s));
+    return PROTECT (Rf_chk_valid_SEXP(s));
 }
 
 
@@ -2514,7 +2514,7 @@ void Rf_protect2 (SEXP s1, SEXP s2)
     if (s1 != NULL && TYPEOF(s1) == NILSXP && s1 != R_NilValue
      || s2 != NULL && TYPEOF(s2) == NILSXP && s2 != R_NilValue) abort();
 
-    PROTECT2 (CHK(s1), CHK(s2));
+    PROTECT2 (Rf_chk_valid_SEXP(s1), Rf_chk_valid_SEXP(s2));
 }
 
 void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
@@ -2523,7 +2523,7 @@ void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
      || s2 != NULL && TYPEOF(s2) == NILSXP && s2 != R_NilValue
      || s3 != NULL && TYPEOF(s3) == NILSXP && s3 != R_NilValue) abort();
 
-    PROTECT3 (CHK(s1), CHK(s2), CHK(s3));
+    PROTECT3 (Rf_chk_valid_SEXP(s1), Rf_chk_valid_SEXP(s2), Rf_chk_valid_SEXP(s3));
 }
 
 
@@ -2564,12 +2564,12 @@ void unprotect_ptr(SEXP s)
 
 SEXP R_ProtectWithIndex(SEXP s, PROTECT_INDEX *pi)
 {
-    return PROTECT_WITH_INDEX(CHK(s),pi);
+    return PROTECT_WITH_INDEX(Rf_chk_valid_SEXP(s),pi);
 }
 
 void R_Reprotect(SEXP s, PROTECT_INDEX i)
 {
-    REPROTECT(CHK(s),i);
+    REPROTECT(Rf_chk_valid_SEXP(s),i);
 }
 
 /* remove all objects from the protection stack from index i upwards
@@ -2664,8 +2664,8 @@ SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
     SEXP s = allocSExp(EXTPTRSXP);
     EXTPTR_PTR(s) = p;
-    EXTPTR_PROT(s) = CHK(prot);
-    EXTPTR_TAG(s) = CHK(tag);
+    EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
+    EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
     return s;
 }
 
@@ -2679,8 +2679,8 @@ SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
     SEXP s = allocSExp(EXTPTRSXP);
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
-    EXTPTR_PROT(s) = CHK(prot);
-    EXTPTR_TAG(s) = CHK(tag);
+    EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
+    EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
     return s;
 }
 

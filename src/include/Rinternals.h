@@ -718,6 +718,18 @@ Rboolean (Rf_isObject)(SEXP s);
    if the macro version is in use.
 */
 
+#ifdef TESTING_WRITE_BARRIER
+#ifndef PROTECTCHECK
+# define PROTECTCHECK
+#endif
+#endif
+
+#ifdef PROTECTCHECK
+SEXP Rf_chk_valid_SEXP (SEXP x);
+#else
+#define Rf_chk_valid_SEXP(x) (x)
+#endif
+
 /* General Cons Cell Attributes */
 SEXP (ATTRIB)(SEXP x);
 int  (OBJECT)(SEXP x);

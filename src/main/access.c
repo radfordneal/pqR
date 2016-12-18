@@ -44,7 +44,9 @@
 
 
 #ifdef TESTING_WRITE_BARRIER
+#ifndef PROTECTCHECK
 # define PROTECTCHECK
+#endif
 #endif
 
 #ifdef PROTECTCHECK
@@ -59,8 +61,8 @@
        After a GC all free nodes that are not of type NEWSXP are
        marked as type FREESXP
 
-       Most calls to accessor functions check their SEXP inputs and
-       SEXP outputs with CHK() to see if a reachable node is a
+       Most calls to accessor functions check their SEXP inputs and SEXP
+       outputs with Rf_chk_valid_SEXP() to see if a reachable node is a
        FREESXP and signal an error if a FREESXP is found.
 
    Combined with GC torture this can help locate where an unprotected
@@ -113,7 +115,7 @@ static const char *sexptype2char(SEXPTYPE type) {
     }
 }
 
-static R_INLINE SEXP CHK(SEXP x)
+SEXP Rf_chk_valid_SEXP(SEXP x)
 {
     /* **** NULL check because of R_CurrentExpr */
     if (x != NULL && TYPEOF(x) == FREESXP)
@@ -122,26 +124,22 @@ static R_INLINE SEXP CHK(SEXP x)
     return x;
 }
 
-#else /* PROTECTCHECK not defined */
-
-#define CHK(x) (x)
-
 #endif
 
 
 void *R_ExternalPtrAddr(SEXP s)
 {
-    return EXTPTR_PTR(CHK(s));
+    return EXTPTR_PTR(Rf_chk_valid_SEXP(s));
 }
 
 SEXP R_ExternalPtrTag(SEXP s)
 {
-    return CHK(EXTPTR_TAG(CHK(s)));
+    return Rf_chk_valid_SEXP(EXTPTR_TAG(Rf_chk_valid_SEXP(s)));
 }
 
 SEXP R_ExternalPtrProtected(SEXP s)
 {
-    return CHK(EXTPTR_PROT(CHK(s)));
+    return Rf_chk_valid_SEXP(EXTPTR_PROT(Rf_chk_valid_SEXP(s)));
 }
 
 void R_ClearExternalPtr(SEXP s)
@@ -173,7 +171,7 @@ attribute_hidden
 DL_FUNC R_ExternalPtrAddrFn(SEXP s)
 {
     fn_ptr tmp;
-    tmp.p =  EXTPTR_PTR(CHK(s));
+    tmp.p =  EXTPTR_PTR(Rf_chk_valid_SEXP(s));
     return tmp.fn;
 }
 
@@ -184,12 +182,12 @@ DL_FUNC R_ExternalPtrAddrFn(SEXP s)
    implement the write barrier. */
 
 /* General Cons Cell Attributes */
-SEXP (ATTRIB)(SEXP x) { return CHK(ATTRIB(CHK(x))); }
-int (OBJECT)(SEXP x) { return OBJECT(CHK(x)); }
-int (TYPEOF)(SEXP x) { return TYPEOF(CHK(x)); }
-int (NAMED)(SEXP x) { return NAMED(CHK(x)); }
-int (RTRACE)(SEXP x) { return RTRACE(CHK(x)); }
-int (LEVELS)(SEXP x) { return LEVELS(CHK(x)); }
+SEXP (ATTRIB)(SEXP x) { return Rf_chk_valid_SEXP(ATTRIB(Rf_chk_valid_SEXP(x))); }
+int (OBJECT)(SEXP x) { return OBJECT(Rf_chk_valid_SEXP(x)); }
+int (TYPEOF)(SEXP x) { return TYPEOF(Rf_chk_valid_SEXP(x)); }
+int (NAMED)(SEXP x) { return NAMED(Rf_chk_valid_SEXP(x)); }
+int (RTRACE)(SEXP x) { return RTRACE(Rf_chk_valid_SEXP(x)); }
+int (LEVELS)(SEXP x) { return LEVELS(Rf_chk_valid_SEXP(x)); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
     if (v == NULL || TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
@@ -213,27 +211,28 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
     }
 }
 
-void (SET_OBJECT)(SEXP x, int v) { SET_OBJECT(CHK(x), v); }
-void (SET_TYPEOF)(SEXP x, int v) { SET_TYPEOF(CHK(x), v); }
-void (SET_NAMED)(SEXP x, int v) { SET_NAMED(CHK(x), v); }
-void (SET_RTRACE)(SEXP x, int v) { SET_RTRACE(CHK(x), v); }
-int (SETLEVELS)(SEXP x, int v) { return SETLEVELS(CHK(x), v); }
+void (SET_OBJECT)(SEXP x, int v) { SET_OBJECT(Rf_chk_valid_SEXP(x), v); }
+void (SET_TYPEOF)(SEXP x, int v) { SET_TYPEOF(Rf_chk_valid_SEXP(x), v); }
+void (SET_NAMED)(SEXP x, int v) { SET_NAMED(Rf_chk_valid_SEXP(x), v); }
+void (SET_RTRACE)(SEXP x, int v) { SET_RTRACE(Rf_chk_valid_SEXP(x), v); }
+int (SETLEVELS)(SEXP x, int v) { return SETLEVELS(Rf_chk_valid_SEXP(x), v); }
 void DUPLICATE_ATTRIB(SEXP to, SEXP from) {
-    SET_ATTRIB(CHK(to), duplicate(CHK(ATTRIB(CHK(from)))));
-    SET_OBJECT(CHK(to), OBJECT(from));
+    SET_ATTRIB (Rf_chk_valid_SEXP(to), 
+                duplicate(Rf_chk_valid_SEXP(ATTRIB(Rf_chk_valid_SEXP(from)))));
+    SET_OBJECT(Rf_chk_valid_SEXP(to), OBJECT(from));
     if (IS_S4_OBJECT(from)) SET_S4_OBJECT(to); else UNSET_S4_OBJECT(to);
 }
 
 /* S4 object testing */
-int (IS_S4_OBJECT)(SEXP x){ return IS_S4_OBJECT(CHK(x)); }
-void (SET_S4_OBJECT)(SEXP x){ SET_S4_OBJECT(CHK(x)); }
-void (UNSET_S4_OBJECT)(SEXP x){ UNSET_S4_OBJECT(CHK(x)); }
+int (IS_S4_OBJECT)(SEXP x){ return IS_S4_OBJECT(Rf_chk_valid_SEXP(x)); }
+void (SET_S4_OBJECT)(SEXP x){ SET_S4_OBJECT(Rf_chk_valid_SEXP(x)); }
+void (UNSET_S4_OBJECT)(SEXP x){ UNSET_S4_OBJECT(Rf_chk_valid_SEXP(x)); }
 
 /* Vector Accessors */
-int (LENGTH)(SEXP x) { return LENGTH(CHK(x)); }
-int (TRUELENGTH)(SEXP x) { return TRUELENGTH(CHK(x)); }
-void (SETLENGTH)(SEXP x, int v) { SETLENGTH(CHK(x), v); }
-void (SET_TRUELENGTH)(SEXP x, int v) { SET_TRUELENGTH(CHK(x), v); }
+int (LENGTH)(SEXP x) { return LENGTH(Rf_chk_valid_SEXP(x)); }
+int (TRUELENGTH)(SEXP x) { return TRUELENGTH(Rf_chk_valid_SEXP(x)); }
+void (SETLENGTH)(SEXP x, int v) { SETLENGTH(Rf_chk_valid_SEXP(x), v); }
+void (SET_TRUELENGTH)(SEXP x, int v) { SET_TRUELENGTH(Rf_chk_valid_SEXP(x), v); }
 
 const char *(R_CHAR)(SEXP x) {
     if(TYPEOF(x) != CHARSXP)
@@ -246,7 +245,7 @@ SEXP (STRING_ELT)(SEXP x, int i) {
     if(TYPEOF(x) != STRSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "STRING_ELT", "character vector", type2char(TYPEOF(x)));
-    return CHK(STRING_ELT(x, i));
+    return Rf_chk_valid_SEXP(STRING_ELT(x, i));
 }
 
 SEXP (VECTOR_ELT)(SEXP x, int i) {
@@ -256,10 +255,10 @@ SEXP (VECTOR_ELT)(SEXP x, int i) {
        TYPEOF(x) != WEAKREFSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "VECTOR_ELT", "list", type2char(TYPEOF(x)));
-    return CHK(VECTOR_ELT(x, i));
+    return Rf_chk_valid_SEXP(VECTOR_ELT(x, i));
 }
 
-SEXP *(STRING_PTR)(SEXP x) { return STRING_PTR(CHK(x)); }
+SEXP *(STRING_PTR)(SEXP x) { return STRING_PTR(Rf_chk_valid_SEXP(x)); }
 
 SEXP *(VECTOR_PTR)(SEXP x) { error(_("not safe to return vector pointer")); }
 
@@ -397,17 +396,17 @@ void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n)
 
 
 /* List Accessors */
-SEXP (TAG)(SEXP e) { return CHK(TAG(CHK(e))); }
-SEXP (CAR)(SEXP e) { return CHK(CAR(CHK(e))); }
-SEXP (CDR)(SEXP e) { return CHK(CDR(CHK(e))); }
-SEXP (CAAR)(SEXP e) { return CHK(CAAR(CHK(e))); }
-SEXP (CDAR)(SEXP e) { return CHK(CDAR(CHK(e))); }
-SEXP (CADR)(SEXP e) { return CHK(CADR(CHK(e))); }
-SEXP (CDDR)(SEXP e) { return CHK(CDDR(CHK(e))); }
-SEXP (CADDR)(SEXP e) { return CHK(CADDR(CHK(e))); }
-SEXP (CADDDR)(SEXP e) { return CHK(CADDDR(CHK(e))); }
-SEXP (CAD4R)(SEXP e) { return CHK(CAD4R(CHK(e))); }
-int (MISSING)(SEXP x) { return MISSING(CHK(x)); }
+SEXP (TAG)(SEXP e) { return Rf_chk_valid_SEXP(TAG(Rf_chk_valid_SEXP(e))); }
+SEXP (CAR)(SEXP e) { return Rf_chk_valid_SEXP(CAR(Rf_chk_valid_SEXP(e))); }
+SEXP (CDR)(SEXP e) { return Rf_chk_valid_SEXP(CDR(Rf_chk_valid_SEXP(e))); }
+SEXP (CAAR)(SEXP e) { return Rf_chk_valid_SEXP(CAAR(Rf_chk_valid_SEXP(e))); }
+SEXP (CDAR)(SEXP e) { return Rf_chk_valid_SEXP(CDAR(Rf_chk_valid_SEXP(e))); }
+SEXP (CADR)(SEXP e) { return Rf_chk_valid_SEXP(CADR(Rf_chk_valid_SEXP(e))); }
+SEXP (CDDR)(SEXP e) { return Rf_chk_valid_SEXP(CDDR(Rf_chk_valid_SEXP(e))); }
+SEXP (CADDR)(SEXP e) { return Rf_chk_valid_SEXP(CADDR(Rf_chk_valid_SEXP(e))); }
+SEXP (CADDDR)(SEXP e) { return Rf_chk_valid_SEXP(CADDDR(Rf_chk_valid_SEXP(e))); }
+SEXP (CAD4R)(SEXP e) { return Rf_chk_valid_SEXP(CAD4R(Rf_chk_valid_SEXP(e))); }
+int (MISSING)(SEXP x) { return MISSING(Rf_chk_valid_SEXP(x)); }
 
 void (SET_TAG)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); TAG(x) = v; }
 
@@ -465,41 +464,41 @@ SEXP (SETCAD4R)(SEXP x, SEXP y)
     return y;
 }
 
-void (SET_MISSING)(SEXP x, int v) { SET_MISSING(CHK(x), v); }
+void (SET_MISSING)(SEXP x, int v) { SET_MISSING(Rf_chk_valid_SEXP(x), v); }
 
 /* Closure Accessors */
-SEXP (FORMALS)(SEXP x) { return CHK(FORMALS(CHK(x))); }
-SEXP (BODY)(SEXP x) { return CHK(BODY(CHK(x))); }
-SEXP (CLOENV)(SEXP x) { return CHK(CLOENV(CHK(x))); }
-int (RDEBUG)(SEXP x) { return RDEBUG(CHK(x)); }
-int (RSTEP)(SEXP x) { return RSTEP(CHK(x)); }
+SEXP (FORMALS)(SEXP x) { return Rf_chk_valid_SEXP(FORMALS(Rf_chk_valid_SEXP(x))); }
+SEXP (BODY)(SEXP x) { return Rf_chk_valid_SEXP(BODY(Rf_chk_valid_SEXP(x))); }
+SEXP (CLOENV)(SEXP x) { return Rf_chk_valid_SEXP(CLOENV(Rf_chk_valid_SEXP(x))); }
+int (RDEBUG)(SEXP x) { return RDEBUG(Rf_chk_valid_SEXP(x)); }
+int (RSTEP)(SEXP x) { return RSTEP(Rf_chk_valid_SEXP(x)); }
 
 void (SET_FORMALS)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); FORMALS(x) = v; }
 void (SET_BODY)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); BODY(x) = v; }
 void (SET_CLOENV)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); CLOENV(x) = v; }
-void (SET_RDEBUG)(SEXP x, int v) { SET_RDEBUG(CHK(x), v); }
-void (SET_RSTEP)(SEXP x, int v) { SET_RSTEP(CHK(x), v); }
+void (SET_RDEBUG)(SEXP x, int v) { SET_RDEBUG(Rf_chk_valid_SEXP(x), v); }
+void (SET_RSTEP)(SEXP x, int v) { SET_RSTEP(Rf_chk_valid_SEXP(x), v); }
 
 /* Primitive Accessors */
 attribute_hidden int (PRIMOFFSET)(SEXP x) { return PRIMOFFSET(x); }
 attribute_hidden void (SET_PRIMOFFSET)(SEXP x, int v) { SET_PRIMOFFSET(x, v); }
 
 /* Symbol Accessors */
-SEXP (PRINTNAME)(SEXP x) { return CHK(PRINTNAME(CHK(x))); }
-SEXP (SYMVALUE)(SEXP x) { return CHK(SYMVALUE(CHK(x))); }
-SEXP (INTERNAL)(SEXP x) { return CHK(INTERNAL(CHK(x))); }
-int (DDVAL)(SEXP x) { return DDVAL(CHK(x)); }
+SEXP (PRINTNAME)(SEXP x) { return Rf_chk_valid_SEXP(PRINTNAME(Rf_chk_valid_SEXP(x))); }
+SEXP (SYMVALUE)(SEXP x) { return Rf_chk_valid_SEXP(SYMVALUE(Rf_chk_valid_SEXP(x))); }
+SEXP (INTERNAL)(SEXP x) { return Rf_chk_valid_SEXP(INTERNAL(Rf_chk_valid_SEXP(x))); }
+int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
 
 void (SET_PRINTNAME)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRINTNAME(x) = v; }
 void (SET_SYMVALUE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); SYMVALUE(x) = v; }
 void (SET_INTERNAL)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); INTERNAL(x) = v; }
-void (SET_DDVAL)(SEXP x, int v) { SET_DDVAL(CHK(x), v); }
+void (SET_DDVAL)(SEXP x, int v) { SET_DDVAL(Rf_chk_valid_SEXP(x), v); }
 
 /* Environment Accessors */
-SEXP (FRAME)(SEXP x) { return CHK(FRAME(CHK(x))); }
-SEXP (ENCLOS)(SEXP x) { return CHK(ENCLOS(CHK(x))); }
-SEXP (HASHTAB)(SEXP x) { return CHK(HASHTAB(CHK(x))); }
-int (ENVFLAGS)(SEXP x) { return ENVFLAGS(CHK(x)); }
+SEXP (FRAME)(SEXP x) { return Rf_chk_valid_SEXP(FRAME(Rf_chk_valid_SEXP(x))); }
+SEXP (ENCLOS)(SEXP x) { return Rf_chk_valid_SEXP(ENCLOS(Rf_chk_valid_SEXP(x))); }
+SEXP (HASHTAB)(SEXP x) { return Rf_chk_valid_SEXP(HASHTAB(Rf_chk_valid_SEXP(x))); }
+int (ENVFLAGS)(SEXP x) { return ENVFLAGS(Rf_chk_valid_SEXP(x)); }
 
 void (SET_FRAME)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); FRAME(x) = v; }
 void (SET_ENCLOS)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); ENCLOS(x) = v; }
@@ -507,23 +506,23 @@ void (SET_HASHTAB)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); HASHTAB(x) = v; }
 void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 
 /* Promise Accessors */
-SEXP (PRCODE)(SEXP x) { return CHK(PRCODE(CHK(x))); }
-SEXP (PRENV)(SEXP x) { return CHK(PRENV(CHK(x))); }
-SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
-int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
+SEXP (PRCODE)(SEXP x) { return Rf_chk_valid_SEXP(PRCODE(Rf_chk_valid_SEXP(x))); }
+SEXP (PRENV)(SEXP x) { return Rf_chk_valid_SEXP(PRENV(Rf_chk_valid_SEXP(x))); }
+SEXP (PRVALUE)(SEXP x) { return Rf_chk_valid_SEXP(PRVALUE(Rf_chk_valid_SEXP(x))); }
+int (PRSEEN)(SEXP x) { return PRSEEN(Rf_chk_valid_SEXP(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
 void (SET_PRVALUE)(SEXP x, SEXP v) 
   { CHECK_OLD_TO_NEW(x, v); x->u.promsxp.value = v; }
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
-void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
+void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(Rf_chk_valid_SEXP(x), v); }
 
 /* Hashing Accessors */
-int (HASHASH)(SEXP x) { return HASHASH(CHK(x)); }
-int (HASHVALUE)(SEXP x) { return HASHVALUE(CHK(x)); }
+int (HASHASH)(SEXP x) { return HASHASH(Rf_chk_valid_SEXP(x)); }
+int (HASHVALUE)(SEXP x) { return HASHVALUE(Rf_chk_valid_SEXP(x)); }
 
-void (SET_HASHASH)(SEXP x, int v) { SET_HASHASH(CHK(x), v); }
-void (SET_HASHVALUE)(SEXP x, int v) { SET_HASHVALUE(CHK(x), v); }
+void (SET_HASHASH)(SEXP x, int v) { SET_HASHASH(Rf_chk_valid_SEXP(x), v); }
+void (SET_HASHVALUE)(SEXP x, int v) { SET_HASHVALUE(Rf_chk_valid_SEXP(x), v); }
 
 /* Test functions */
 Rboolean Rf_isNull(SEXP s) { return isNull(s); }
