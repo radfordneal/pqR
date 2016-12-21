@@ -36,6 +36,7 @@
 
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
+#include <sggc/sggc-app.h>
 
 #define GCGEN(x) (1 + sggc_oldest_generation(CPTR(x)) \
                     - sggc_youngest_generation(CPTR(x)))

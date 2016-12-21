@@ -79,8 +79,6 @@ pid_t Rf_fork(void);
 
 #include <R_ext/libextern.h>
 
-#include <../extra/sggc/sggc-app.h>
-
 
 /* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
  * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
@@ -257,7 +255,7 @@ struct promsxp_struct {
 
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
-    sggc_cptr_t cptr; \
+    uint32_t cptr; \
     R_len_t length; \
     struct SEXPREC *attrib
 
