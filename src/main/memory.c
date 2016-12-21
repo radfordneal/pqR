@@ -51,6 +51,7 @@
 #include <R_ext/Rdynload.h>
 
 #include <helpers/helpers-app.h>
+#include <sggc/sggc-app.h>
 
 
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
@@ -992,6 +993,9 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /* THE GENERATIONAL GARBAGE COLLECTOR. */
+
+void sggc_find_root_ptrs (void) { abort(); }
+void sggc_find_object_ptrs (sggc_cptr_t cptr) { abort(); }
 
 
 static void RunGenCollect(R_size_t size_needed)

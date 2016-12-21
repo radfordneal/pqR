@@ -21,6 +21,8 @@
 # include <config.h>
 #endif
 
+#include <Defn.h>
+
 
 /* LENGTH TYPES. */
 
@@ -37,30 +39,18 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 #define SGGC_N_TYPES 32
 
 
-/* USE ONLY BIG SEGMENTS FOR NOW. */
+/* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. */
 
-#define SGGC_N_KINDS SGGC_N_TYPES
+#if SIZEOF_SIZE_T == 8
 
-#define SGGC_KIND_CHUNKS \
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 \
-}
-
-#define sggc_kind(type,length) (type)
-
-
-#if IS64
-
-/* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. 
-
-      Cons-type:          Vector:             
+/*    Cons-type:          Vector:             
         info(64bits)        info(64bits)
         cptr, length        cptr, length
         attrib              attrib
         car                 data...
         cdr
         tag
-        = 48 bytes          = 32 bytes if length==1
+        = 48 bytes          = 32 bytes if length==1 (except for CPLXSXP)
           (3 chunks)          (2 chunks)
 
       Symbol:             Primitive:
@@ -80,18 +70,47 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#else 
+#define SGGC_N_KINDS (2*SGGC_N_TYPES)  /* For now, one small size plus big */
 
-/* LAYOUT WITH UNCOMPRESSED 32-BIT POINTERS.
+#define SGGC_KIND_CHUNKS \
+{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
+  3, 5, 3, 3, 3, 3, 3, 4, 4, 2, 2, 3, 3, 2, 2, 3, \
+  2, 3, 3, 2, 2, 3, 3, 3, 2, 3, 3, 3, 3, 3, 3, 3  \
+}
 
-      Cons-type:          Vector:             
+#define sggc_kind(type,length) \
+  ((length) > 1 ? (type) : SGGC_N_TYPES+(type))
+
+#define sggc_nchunks(type,length) \
+( (type)==RAWSXP  ? (24 + SGGC_CHUNK_SIZE-1 + (length))    / SGGC_CHUNK_SIZE : \
+  (type)==CHARSXP ? (24 + SGGC_CHUNK_SIZE-1 + (length)+1)  / SGGC_CHUNK_SIZE : \
+  (type)==INTSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==REALSXP ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==VECSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==STRSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==CPLXSXP ? (24 + SGGC_CHUNK_SIZE-1 + 16*(length)) / SGGC_CHUNK_SIZE : \
+  (type)==SYMSXP     ? 5 : \
+  (type)==SPECIALSXP ? 4 : \
+  (type)==BUILTINSXP ? 4 : \
+      /* other */      3   \
+)
+
+#endif
+
+
+/* LAYOUT WITH UNCOMPRESSED 32-BIT POINTERS. */
+
+#if SIZEOF_SIZE_T == 4
+
+/*    Cons-type:          Vector:             
         info(64bits)        info(64bits)
         cptr                cptr
         length              length
         attrib              attrib
         car                 padding
         cdr                 data...
-        tag                 = 32 bytes if length==1
+        tag                 = 32 bytes if length==1 (except for CPLXSXP)
         = 32 bytes          (2 chunks)
           (2 chunks)
 
@@ -113,6 +132,32 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
+
+#define SGGC_N_KINDS (2*SGGC_N_TYPES)  /* For now, one small size plus big */
+
+#define SGGC_KIND_CHUNKS \
+{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
+  2, 5, 2, 2, 2, 2, 2, 4, 4, 2, 2, 2, 2, 2, 2, 3, \
+  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2  \
+}
+
+#define sggc_kind(type,length) \
+  ((length) > 1 ? (type) : SGGC_N_TYPES+(type))
+
+#define sggc_nchunks(type,length) \
+( (type)==RAWSXP  ? (24 + SGGC_CHUNK_SIZE-1 + (length))    / SGGC_CHUNK_SIZE : \
+  (type)==CHARSXP ? (24 + SGGC_CHUNK_SIZE-1 + (length)+1)  / SGGC_CHUNK_SIZE : \
+  (type)==INTSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==REALSXP ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==VECSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==STRSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
+  (type)==CPLXSXP ? (24 + SGGC_CHUNK_SIZE-1 + 16*(length)) / SGGC_CHUNK_SIZE : \
+  (type)==SYMSXP     ? 3 : \
+  (type)==SPECIALSXP ? 3 : \
+  (type)==BUILTINSXP ? 3 : \
+      /* other */      2   \
+)
 
 #endif
 

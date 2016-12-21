@@ -27,6 +27,19 @@
 #ifndef DEFN_H_
 #define DEFN_H_
 
+/* These are all required by C99 */
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+/* According to POSIX inttypes.h should include stdint.h,
+   but let's be sure. */
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
+#endif
+
 /* seems unused */
 #define COUNTING
 
@@ -61,6 +74,11 @@
 #else
 # define extern0 extern
 #endif
+
+/* Avoid including all of sggc-app.h by declaring a few functions. */
+
+int sggc_is_constant (uint32_t cptr);
+
 
 /* Define HELPERS_DISABLED if no helper support.  This has the effect of 
    making helpers.h define stubs for the helpers routines.  Also define
@@ -257,19 +275,6 @@ extern void R_ProcessEvents(void);
 #endif
 
 /*  Heap and Pointer Protection Stack Sizes.  */
-
-/* These are all required by C99 */
-#ifdef HAVE_INTTYPES_H
-# include <inttypes.h>
-#endif
-/* According to POSIX inttypes.h should include stdint.h,
-   but let's be sure. */
-#ifdef HAVE_STDINT_H
-# include <stdint.h>
-#endif
-#ifdef HAVE_LIMITS_H
-# include <limits.h>
-#endif
 
 #if defined HAVE_DECL_SIZE_MAX && HAVE_DECL_SIZE_MAX
   typedef size_t R_size_t;
