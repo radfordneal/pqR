@@ -79,23 +79,6 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
   2, 3, 3, 2, 2, 3, 3, 3, 2, 3, 3, 3, 3, 3, 3, 3  \
 }
 
-#define sggc_kind(type,length) \
-  ((length) > 1 ? (type) : SGGC_N_TYPES+(type))
-
-#define sggc_nchunks(type,length) \
-( (type)==RAWSXP  ? (24 + SGGC_CHUNK_SIZE-1 + (length))    / SGGC_CHUNK_SIZE : \
-  (type)==CHARSXP ? (24 + SGGC_CHUNK_SIZE-1 + (length)+1)  / SGGC_CHUNK_SIZE : \
-  (type)==INTSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==REALSXP ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==VECSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==STRSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==CPLXSXP ? (24 + SGGC_CHUNK_SIZE-1 + 16*(length)) / SGGC_CHUNK_SIZE : \
-  (type)==SYMSXP     ? 5 : \
-  (type)==SPECIALSXP ? 4 : \
-  (type)==BUILTINSXP ? 4 : \
-      /* other */      3   \
-)
-
 #endif
 
 
@@ -141,23 +124,6 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
   2, 5, 2, 2, 2, 2, 2, 4, 4, 2, 2, 2, 2, 2, 2, 3, \
   2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2  \
 }
-
-#define sggc_kind(type,length) \
-  ((length) > 1 ? (type) : SGGC_N_TYPES+(type))
-
-#define sggc_nchunks(type,length) \
-( (type)==RAWSXP  ? (24 + SGGC_CHUNK_SIZE-1 + (length))    / SGGC_CHUNK_SIZE : \
-  (type)==CHARSXP ? (24 + SGGC_CHUNK_SIZE-1 + (length)+1)  / SGGC_CHUNK_SIZE : \
-  (type)==INTSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==REALSXP ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==VECSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==STRSXP  ? (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE : \
-  (type)==CPLXSXP ? (24 + SGGC_CHUNK_SIZE-1 + 16*(length)) / SGGC_CHUNK_SIZE : \
-  (type)==SYMSXP     ? 3 : \
-  (type)==SPECIALSXP ? 3 : \
-  (type)==BUILTINSXP ? 3 : \
-      /* other */      2   \
-)
 
 #endif
 
