@@ -398,7 +398,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
       sggc_aux2[index] = NULL;
 #   endif
     
-    v = SET_VAL(index,0);
+    v = SGGC_CPTR_VAL(index,0);
     if (SGGC_DEBUG) 
     { printf("sggc_alloc: created %x in new segment\n", (unsigned)v);
     }
@@ -598,7 +598,7 @@ fail:
    will have indexes 0, 1, 2, etc., which fact may be used when setting
    up their contents if they reference each other. */
 
-sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, set_bits_t bits,
+sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
 #ifdef SGGC_AUX1_SIZE
                          , char *aux1
@@ -608,8 +608,17 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, set_bits_t bits,
 #endif
 )
 {
+  set_bits_t bits;
+  int i;
+
   if (kind_chunks[kind] == 0) abort(); /* big segments are not allowed */
-  if ((bits & 1) == 0) abort();  /* first object in segment must exist */
+  if (n_objects < 1) abort();          /* must be at least one object */
+  if (n_objects > kind_objects[kind]) abort(); /* too many objects */
+
+  bits = 0;
+  for (i = 0; i < n_objects; i++)
+  { bits |= 1 << (i*kind_chunks[kind]);
+  }
 
   if (next_segment == maximum_segments)
   { return SGGC_NO_OBJECT;
@@ -622,7 +631,7 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, set_bits_t bits,
 
   set_index_t index = next_segment; 
   struct set_segment *seg = SET_SEGMENT(index);
-  sggc_cptr_t v = SET_VAL(index,0);
+  sggc_cptr_t v = SGGC_CPTR_VAL(index,0);
 
   next_segment += 1;
 

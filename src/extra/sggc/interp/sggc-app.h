@@ -1,5 +1,5 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
-          Test program #6 - sggc application header file
+          Simple interpreter - sggc application header file
 
    Copyright (c) 2016 Radford M. Neal.
 

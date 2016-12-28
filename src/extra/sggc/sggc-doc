@@ -362,6 +362,12 @@ macros) below, which have (if functions) prototypes as shown:
     Returns a regular pointer to the auxiliary information 2 for the
     object whose compressed pointer is passed.
 
+  sggc_cptr_t SGGC_CPTR_VAL (unsigned index, unsigned offset)
+
+    Returns a compressed pointer constructed from the given segment
+    index and offset.  This is needed only in a few specialized
+    contexts.
+
   int sggc_init (int max_segments)
 
     Initializes the SGGC facility, with the maximum number of segments
@@ -457,7 +463,7 @@ macros) below, which have (if functions) prototypes as shown:
     modified.
 
   sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, 
-                             set_bits_t bits, char *data, 
+                             int n_objects, char *data, 
                              char *aux1, char *aux2)
 
     Creates a segment containing constant objects, and returns the
@@ -468,8 +474,9 @@ macros) below, which have (if functions) prototypes as shown:
     The type and kind of the segment are specified by the first two
     arguments.  The kind must not specify a big segment.
 
-    The 'bits' argument indicates which offsets within this segment
-    correspond to objects.  The first (low-order) bit must be a 1.
+    The 'n_objects' argument indicates how many objects are in the
+    segment.  It must be at least 1, and no more than will fit in a
+    segment.
 
     The 'data' argument is a pointer to the data block for objects in
     this segment.  The 'aux1' and 'aux2' arguments are pointers to the

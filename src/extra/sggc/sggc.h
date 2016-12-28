@@ -31,6 +31,8 @@
 typedef set_index_t sggc_index_t; /* Type of segment index */
 typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
 
+#define SGGC_CPTR_VAL(i,o) SET_VAL((i),(o))
+
 #define SGGC_NO_OBJECT SET_NO_VALUE   /* Special "no object" pointer */
 
 
@@ -164,7 +166,7 @@ int sggc_oldest_generation (sggc_cptr_t from_ptr);
 int sggc_not_marked (sggc_cptr_t cptr);
 
 int sggc_is_constant (sggc_cptr_t cptr);
-sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, set_bits_t bits,
+sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
 #ifdef SGGC_AUX1_SIZE
                          , char *aux1
