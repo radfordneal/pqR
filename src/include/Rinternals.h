@@ -327,13 +327,13 @@ typedef struct {
 
 #define COMPRESSED_PTR(x) ((x)->cptr)
 #define UNCOMPRESSED_PTR(x) (x)
-#define SEXP_PTR(i,o) SGGC_DATA(SGGC_CPTR_VAL((i),(o)))
+#define SEXP_PTR(x) ((SEXP) SGGC_DATA(x))
 
 #else /* R uses compressed pointers */
 
 #define COMPRESSED_PTR(x) (x)
 #define UNCOMPRESSED_PTR(x) SGGC_DATA(x)
-#define SEXP_PTR(i,o) SGGC_CPTR_VAL((i),(o))
+#define SEXP_PTR(x) (x)
 
 #endif
 

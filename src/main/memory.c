@@ -515,68 +515,7 @@ static void mem_err_malloc(R_size_t size)
     errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
 }
 
-
-/* Node Allocation - get_free_node.  Initializes sxpinfo to zeros (except 
-   node class is set as passed), and ATTRIB to R_NilValue.  Other fields
-   are not initialized. 
-
-   The _gc version does a garbage collection first, and reports an error
-   if it fails to recover enough for a free node. The _gc1, _gc2, and _gc3
-   versions protect 1, 2, or 3 SEXP arguments before the garbage collection. */
-
-static R_INLINE SEXP get_free_node (int c)
-{
-    SEXP n;
-
-    R_NodesInUse++;
-
-#if VALGRIND_LEVEL>0
-    VALGRIND_MAKE_MEM_UNDEFINED (n, NODE_SIZE(c));
-    VALGRIND_MAKE_MEM_DEFINED (&n->gengc_next_node, sizeof(SEXP));
-    VALGRIND_MAKE_MEM_DEFINED (&n->gengc_prev_node, sizeof(SEXP));
-#endif
-
-    n->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-    ATTRIB(n) = R_NilValue;
-    R_SmallNallocSize += 0;  /* FIX */
-    return n;
-}
-
-#define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
-
-static SEXP get_free_node_gc (int c)
-{ 
-    R_gc_internal(0);
-    if (NO_FREE_NODES()) mem_err_cons(); 
-    return get_free_node(c);
-}
-
-static SEXP get_free_node_gc1 (int c, SEXP p1)
-{ 
-    PROTECT(p1);
-    R_gc_internal(0);
-    if (NO_FREE_NODES()) mem_err_cons(); 
-    UNPROTECT(1);
-    return get_free_node(c);
-}
-
-static SEXP get_free_node_gc2 (int c, SEXP p1, SEXP p2)
-{ 
-    PROTECT2(p1,p2);
-    R_gc_internal(0);
-    if (NO_FREE_NODES()) mem_err_cons(); 
-    UNPROTECT(2);
-    return get_free_node(c);
-}
-
-static SEXP get_free_node_gc3 (int c, SEXP p1, SEXP p2, SEXP p3)
-{ 
-    PROTECT3(p1,p2,p3);
-    R_gc_internal(0);
-    if (NO_FREE_NODES()) mem_err_cons(); 
-    UNPROTECT(3);
-    return get_free_node(c);
-}
+#define NO_FREE_NODES() 0
 
 
 /* Debugging Routines. */
@@ -1654,6 +1593,31 @@ void attribute_hidden InitMemory()
 }
 
 
+/* Allocate a non-vector object. */
+
+static SEXP alloc_nonvec (SEXPTYPE type)
+{
+    SEXP r = SEXP_PTR (sggc_alloc (type, 1));
+    r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    TYPEOF(r) = type;
+    ATTRIB(r) = R_NilValue;
+    return r;
+}
+
+
+/* Allocate a vector object. */
+
+static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
+{
+    SEXP r = SEXP_PTR (sggc_alloc (type, length));
+    r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    TYPEOF(r) = type;
+    ATTRIB(r) = R_NilValue;
+    LENGTH(r) = length;
+    return r;
+}
+
+
 /* Since memory allocated from the heap is non-moving, R_alloc just
    allocates off the heap as RAWSXP/REALSXP and maintains the stack of
    allocations through the ATTRIB pointer.  The stack pointer R_VStack
@@ -1730,54 +1694,35 @@ char *S_realloc(char *p, long new, long old, int size)
 
 SEXP allocSExp(SEXPTYPE t)
 {
-    SEXP s;
-    if (FORCE_GC || NO_FREE_NODES())
-	s = get_free_node_gc(1);
-    else
-        s = get_free_node(1);
-    TYPEOF(s) = t;
+    SEXP s = alloc_nonvec(t);
     CAR(s) = R_NilValue;
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
     return s;
 }
 
-static SEXP allocSExpNonCons(SEXPTYPE t)
-{
-    SEXP s;
-    if (FORCE_GC || NO_FREE_NODES())
-	s = get_free_node_gc(1);
-    else
-        s = get_free_node(1);
-    TYPEOF(s) = t;
-    return s;
-}
+/* Caller needn't protect arguments of cons. */
 
-/* cons is defined directly to avoid the need to protect its arguments
-   unless a GC will actually occur. */
 SEXP cons(SEXP car, SEXP cdr)
 {
-    SEXP s;
-    if (FORCE_GC || NO_FREE_NODES())
-	s = get_free_node_gc2(1,car,cdr);
-    else
-        s = get_free_node(1);
-    TYPEOF(s) = LISTSXP;
+    PROTECT2(car,cdr);
+    SEXP s = alloc_nonvec(LISTSXP);
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = R_NilValue;
+REprintf("Did cons:\n");
+extern SEXP R_inspect(SEXP);
+R_inspect(s);
+REprintf("-----\n");
     return s;
 }
 
-/* version of cons that sets TAG too.  Caller needn't protect arguments. */
+/* Version of cons that sets TAG too.  Caller needn't protect arguments. */
+
 SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
-    SEXP s;
-    if (FORCE_GC || NO_FREE_NODES())
-	s = get_free_node_gc3(1,car,cdr,tag);
-    else
-        s = get_free_node(1);
-    SET_TYPEOF(s,LISTSXP);
+    PROTECT3(car,cdr,tag);
+    SEXP s = alloc_nonvec(LISTSXP);
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -1803,18 +1748,14 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
   then be R_NilValue.)
 
   The valuelist is destructively modified and used as the
-  environment's frame.
-*/
+  environment's frame. */
+
 SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
-    SEXP v, n, newrho;
+    PROTECT3(namelist,valuelist,rho);
+    SEXP newrho = alloc_nonvec(ENVSXP);
+    SEXP v, n;
 
-    if (FORCE_GC || NO_FREE_NODES())
-	newrho = get_free_node_gc3(1,namelist,valuelist,rho);
-    else
-        newrho = get_free_node(1);
-
-    TYPEOF(newrho) = ENVSXP;
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
     HASHTAB(newrho) = R_NilValue;
@@ -1829,24 +1770,20 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     return (newrho);
 }
 
-/* mkPROMISE is defined directly do avoid the need to protect its arguments
-   unless a GC will actually occur. 
+/* mkPROMISE protects its arguments.
 
    NAMEDCNT for the new promise is set to 1, and 'expr' has its NAMEDCNT
    set to the maximum. */
 
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
-    SEXP s;
-    if (FORCE_GC || NO_FREE_NODES())
-	s = get_free_node_gc2(1,expr,rho);
-    else
-        s = get_free_node(1);
+    PROTECT2(expr,rho);
+    SEXP s = alloc_nonvec(PROMSXP);
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
 
-    TYPEOF(s) = PROMSXP;
+
     s->u.promsxp.value = R_UnboundValue;
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = Rf_chk_valid_SEXP(rho);
@@ -1886,7 +1823,7 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
     result = VECTOR_ELT(PrimCache, offset);
 
     if (result == R_NilValue) {
-	result = allocSExp(type);
+	result = alloc_nonvec(type);
 	SET_PRIMOFFSET(result, offset);
         SET_VECTOR_ELT (PrimCache, offset, result);
     }
@@ -1907,11 +1844,8 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 
 SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 {
-    SEXP c;
-    PROTECT(formals);
-    PROTECT(body);
-    PROTECT(rho);
-    c = allocSExp(CLOSXP);
+    PROTECT3(formals,body,rho);
+    SEXP c = alloc_nonvec(CLOSXP);
 
 #ifdef not_used_CheckFormals
     if(isList(formals))
@@ -1962,13 +1896,8 @@ static int isDDName(SEXP name)
 SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
 {
-    SEXP c;
     PROTECT2(name,value);
-    if (FORCE_GC || NO_FREE_NODES())
-	c = get_free_node_gc(2);
-    else
-        c = get_free_node(2);
-    TYPEOF(c) = SYMSXP;
+    SEXP c = alloc_nonvec(SYMSXP);
     PRINTNAME(c) = name;
     SYMVALUE(c) = value;
     INTERNAL(c) = R_NilValue;
@@ -1983,9 +1912,8 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
 
 /* Fast, specialize allocVector for vectors of length 1.  The type 
-   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so a that a vector
-   of length 1 is guaranteed to fit in the first node class, and
-   so that there's no need to initialize a pointer in the data part. 
+   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so a that
+   there's no need to initialize a pointer in the data part. 
 
    The version with an argument is static.  Versions for each allowed
    type are defined below for use elsewhere in the interpreter, in which
@@ -1996,13 +1924,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 static SEXP allocVector1 (SEXPTYPE type)
 {
 #if VALGRIND_LEVEL==0
-    SEXP s;
-    if (FORCE_GC || NO_FREE_NODES())
-	s = get_free_node_gc(0);
-    else
-        s = get_free_node(0);
-    TYPEOF(s) = type;
-    LENGTH(s) = 1;
+    SEXP s = alloc_vec(type,1);
     if (R_IsMemReporting && !R_MemPagesReporting)
         R_ReportAllocation (
           sizeof(SEXPREC_ALIGN) + sizeof(VECREC), type, 1);
@@ -2093,161 +2015,38 @@ SEXP ScalarRawMaybeConst(Rbyte x)
    and must be initialized upstream, e.g., in do_makevector().
 */
 
-#define FAST_ALLOC_TYPES ( \
-    (1<<LGLSXP) + (1<<INTSXP) + (1<<REALSXP) + (1<<RAWSXP) )
-
 SEXP allocVector(SEXPTYPE type, R_len_t length)
 {
     SEXP s;
+    int i;
 
     if (length < 0 )
         errorcall(R_GlobalContext->call,
                   _("negative length vectors are not allowed"));
 
-    /* Do numeric (not complex) vectors of length 1 and 0 specially, for speed.
-       These are guaranteed to fit in the first node class.  Don't do this with
-       VALGRIND_LEVEL>0, since that needs actual_size, etc. */
-
-#if VALGRIND_LEVEL==0
-    if (length <= 1 && ((FAST_ALLOC_TYPES>>type) & 1)) {
-        if (FORCE_GC || NO_FREE_NODES())
-            s = get_free_node_gc(0);
-        else
-            s = get_free_node(0);
-        TYPEOF(s) = type;
-        LENGTH(s) = length;
-        if (R_IsMemReporting && !R_MemPagesReporting)
-            R_ReportAllocation (
-                sizeof(SEXPREC_ALIGN) + sizeof(VECREC),
-                type, length);
-        return s;
-    }
-#endif
-
-    /* Find the number of bytes in the data part of the vector that are
-       actually used.  Also, create and return lists, which aren't actually
-       vectors, but are nevertheless allowed types for allocVector. */
-
-    R_size_t actual_size = 0;
+    /* Handle pairlists, which aren't actually vectors, but are nevertheless
+       allowed types for allocVector. */
 
     switch (type) {
-    case RAWSXP:
-        actual_size = length;
-        break;
-    case CHARSXP:
-        actual_size = length + 1;
-        break;
-    case LGLSXP:
-    case INTSXP:
-        if (length > R_SIZE_T_MAX / sizeof(int))
-            errorcall (R_GlobalContext->call,
-                       _("cannot allocate vector of length %d"), length);
-        actual_size = length * sizeof(int);
-        break;
-    case REALSXP:
-        if (length > R_SIZE_T_MAX / sizeof(double))
-            errorcall (R_GlobalContext->call,
-                       _("cannot allocate vector of length %d"), length);
-        actual_size = length * sizeof(double);
-        break;
-    case CPLXSXP:
-        if (length > R_SIZE_T_MAX / sizeof(Rcomplex))
-            errorcall (R_GlobalContext->call,
-                       _("cannot allocate vector of length %d"), length);
-        actual_size = length * sizeof(Rcomplex);
-        break;
-    case STRSXP:
-    case EXPRSXP:
-    case VECSXP:
-        if (length > R_SIZE_T_MAX / sizeof(SEXP))
-            errorcall (R_GlobalContext->call,
-                      _("cannot allocate vector of length %d"), length);
-        actual_size = length * sizeof(SEXP);
-        break;
-
     case NILSXP:
         return R_NilValue;
     case LANGSXP:
-        if(length == 0) return R_NilValue;
+        if (length == 0) return R_NilValue;
         s = allocList(length);
         TYPEOF(s) = LANGSXP;
         return s;
     case LISTSXP:
         return allocList(length);
-
-    default:
-        error(_("invalid type/length (%s/%d) in vector allocation"),
-              type2char(type), length);
     }
 
-    /* Compute number of notional "vector cells" to allocate. */
-
-    R_size_t size = actual_size == 0 ? 0 : (actual_size-1) / sizeof(VECREC) + 1;
-    R_size_t alloc_size = size;
-    R_len_t i;
-
-    if (1) {
-        /* save current R_VSize to roll back adjustment if malloc fails */
-        R_size_t old_R_VSize = R_VSize;
-        R_size_t size_to_malloc;
-        if (FORCE_GC || NO_FREE_NODES() || VHEAP_FREE() < alloc_size) {
-            R_gc_internal(alloc_size);
-	    if (NO_FREE_NODES())
-	        mem_err_cons();
-	    if (VHEAP_FREE() < alloc_size)
-	        mem_err_heap(size);
-        }
-        s = NULL; 
-        if (size < (R_SIZE_T_MAX / sizeof(VECREC)) - sizeof(SEXPREC_ALIGN)) {
-            size_to_malloc = sizeof(SEXPREC_ALIGN) + size * sizeof(VECREC)
-                              + LARGE_VEC_PAD;
-            s = malloc(size_to_malloc);
-            if (s == NULL) {
-                /* If we are near the address space limit, we
-                   might be short of address space.  So return
-                   all unused objects to malloc and try again. */
-                R_gc_full(alloc_size);
-                s = malloc(size_to_malloc);
-            }
-        }
-        if (s == NULL) {
-            double dsize = (double)size * sizeof(VECREC)/1024.0;
-            /* reset the vector heap limit */
-            R_VSize = old_R_VSize;
-            if(dsize > 1024.0*1024.0)
-                errorcall(R_NilValue,
-                          _("cannot allocate vector of size %0.1f Gb"),
-                          dsize/1024.0/1024.0);
-            else if(dsize > 1024.0)
-                errorcall(R_NilValue,
-                          _("cannot allocate vector of size %0.1f Mb"),
-                          dsize/1024.0);
-            else
-                errorcall(R_NilValue,
-                          _("cannot allocate vector of size %0.f Kb"),
-                          dsize);
-        }
-        if (size > MaxAlloc[MaxAlloc_index])
-            MaxAlloc[MaxAlloc_index] = size;
-
-        s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-        ATTRIB(s) = R_NilValue;
-        R_LargeVallocSize += size;
-        R_NodesInUse++;
-#if VALGRIND_LEVEL>0
-        VALGRIND_MAKE_MEM_NOACCESS (DATAPTR(s), size_to_malloc
-                                                 - sizeof(SEXPREC_ALIGN));
-#endif
-    }
-
-    TYPEOF(s) = type;
-    LENGTH(s) = length;
+    s = alloc_vec(type,length);
 
     if (R_IsMemReporting) {
-        if (!R_MemPagesReporting)
+        if (!R_MemPagesReporting) {
             R_ReportAllocation (
-                sizeof(SEXPREC_ALIGN) + alloc_size * sizeof(VECREC),
+                sggc_nchunks(type,length) * SGGC_CHUNK_SIZE,
                 type, length);
+        }
     }
 
 #if VALGRIND_LEVEL>0
@@ -2296,8 +2095,7 @@ SEXP allocList(int n)
 
 SEXP allocS4Object(void)
 {
-   SEXP s;
-   GC_PROT(s = allocSExpNonCons(S4SXP));
+   SEXP s = alloc_nonvec(S4SXP);
    SET_S4_OBJECT(s);
    TAG(s) = R_NilValue;
    return s;
@@ -2701,7 +2499,7 @@ void R_ReleaseObject(SEXP object)
 /* External Pointer Objects */
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
-    SEXP s = allocSExp(EXTPTRSXP);
+    SEXP s = alloc_nonvec(EXTPTRSXP);
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -2715,7 +2513,7 @@ typedef union {void *p; DL_FUNC fn;} fn_ptr;
 SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
     fn_ptr tmp;
-    SEXP s = allocSExp(EXTPTRSXP);
+    SEXP s = alloc_nonvec(EXTPTRSXP);
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);

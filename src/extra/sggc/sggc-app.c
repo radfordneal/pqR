@@ -26,26 +26,26 @@
 
 sggc_kind_t sggc_kind (sggc_type_t type, sggc_length_t length)
 { 
-    return length > 1 ? type: SGGC_N_TYPES + type;
+    return length > 1 ? type : SGGC_N_TYPES + type;
 }
 
 sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
 {
     switch (type) {
     case RAWSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + (length))    / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
     case CHARSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + (length)+1)  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
     case INTSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case REALSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 16*(length)) / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
         return 5;
     case SPECIALSXP:
@@ -66,26 +66,26 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
 
 sggc_kind_t sggc_kind (sggc_type_t type, sggc_length_t length)
 { 
-    return length > 1 ? type: SGGC_N_TYPES + type;
+    return length > 1 ? type : SGGC_N_TYPES + type;
 }
 
 sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
 {
     switch (type) {
     case RAWSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + (length))    / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
     case CHARSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + (length)+1)  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
     case INTSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case REALSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*(length))  / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP
-        return (24 + SGGC_CHUNK_SIZE-1 + 16*(length)) / SGGC_CHUNK_SIZE;
+        return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
         return 3;
     case SPECIALSXP:
