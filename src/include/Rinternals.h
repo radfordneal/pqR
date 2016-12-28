@@ -79,6 +79,8 @@ pid_t Rf_fork(void);
 
 #include <R_ext/libextern.h>
 
+#define ConstExtern extern  /* redefined as nothing in const-objs.c */
+
 
 /* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
  * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
@@ -321,7 +323,19 @@ typedef struct {
 
 #ifdef USE_RINTERNALS
 
-#define CPTR(x)    ((x)->cptr)
+#if 1 /* R uses uncompressed pointers */
+
+#define COMPRESSED_PTR(x) ((x)->cptr)
+#define UNCOMPRESSED_PTR(x) (x)
+#define SEXP_PTR(i,o) SGGC_DATA(SGGC_CPTR_VAL((i),(o)))
+
+#else /* R uses compressed pointers */
+
+#define COMPRESSED_PTR(x) (x)
+#define UNCOMPRESSED_PTR(x) SGGC_DATA(x)
+#define SEXP_PTR(i,o) SGGC_CPTR_VAL((i),(o))
+
+#endif
 
 #define TAG(e)     NOT_LVALUE((e)->u.listsxp.tagval)  /* Don't cast e to SEXP */
 #define CAR(e)     NOT_LVALUE((e)->u.listsxp.carval)  /*  so that we will get */
@@ -1268,9 +1282,9 @@ struct R_local_protect {
 /* Evaluation Environment */
 
 LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
-LibExtern R_CONST SEXPREC R_EmptyEnv_const;   /* Defined in const-objs.c */
-#define R_EmptyEnv ((SEXP) &R_EmptyEnv_const) /* An empty environment at the
-				    	         root of the environment tree */
+ConstExtern R_CONST SEXPREC R_env_consts[];  /* Defined in const-objs.c */
+#define R_EmptyEnv ((SEXP) &R_env_consts[0]) /* An empty environment at the
+				    	        root of the environment tree */
 
 LibExtern SEXP	R_GlobalEnv;        /* The "global" environment */
 LibExtern SEXP	R_BaseEnv;          /* The base environment (formerly R_NilValue) */
@@ -1288,54 +1302,44 @@ LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 
 /* Special Values */
 
+ConstExtern R_CONST SYM_SEXPREC R_sym_consts[]; /* defined in const-objs.c*/
 LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
-LibExtern R_CONST SYM_SEXPREC R_UnboundValue_const; /* defined in const-objs.c*/
-#define R_UnboundValue ((SEXP) &R_UnboundValue_const) /* for sym with no value*/
+#define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value*/
 
 LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
 /* Logical Values.  Defined in const-objs.c */
 
-#define R_ScalarLogicalNA ((SEXP) &R_ScalarLogicalNA_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogicalNA_const;
-
-#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogicalFALSE_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogicalFALSE_const;
-
-#define R_ScalarLogicalTRUE ((SEXP) &R_ScalarLogicalTRUE_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogicalTRUE_const;
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogical_consts[];
+#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogical_consts[0])
+#define R_ScalarLogicalTRUE  ((SEXP) &R_ScalarLogical_consts[1])
+#define R_ScalarLogicalNA    ((SEXP) &R_ScalarLogical_consts[2])
 
 /* Integer Values.  Defined in const-objs.c */
 
-#define R_ScalarIntegerNA ((SEXP) &R_ScalarIntegerNA_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarIntegerNA_const;
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[];
+#define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger_consts[v])
+#define R_ScalarIntegerNA ((SEXP) &R_ScalarInteger_consts[11])
 
-#define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger0To10_const[v])
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger0To10_const[11];
+/* Integer static boxes.  Defined in const-objs.c */
 
-#define R_ScalarIntegerBox ((SEXP) &R_ScalarIntegerBox_space)
-LibExtern VECTOR_SEXPREC_C R_ScalarIntegerBox_space;
-
-#define R_ScalarIntegerBox0 ((SEXP) &R_ScalarIntegerBox0_space)
-LibExtern VECTOR_SEXPREC_C R_ScalarIntegerBox0_space;
+ConstExtern VECTOR_SEXPREC_C R_ScalarIntegerBox_space[];
+#define R_ScalarIntegerBox0 ((SEXP) &R_ScalarIntegerBox_space[0])
+#define R_ScalarIntegerBox  ((SEXP) &R_ScalarIntegerBox_space[1])
 
 /* Real Values.  Defined in const-objs.c */
 
-#define R_ScalarRealNA ((SEXP) &R_ScalarRealNA_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealNA_const;
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarReal_consts[];
+#define R_ScalarRealZero ((SEXP) &R_ScalarReal_consts[0])
+#define R_ScalarRealOne ((SEXP) &R_ScalarReal_consts[1])
+#define R_ScalarRealNA ((SEXP) &R_ScalarReal_consts[2])
 
-#define R_ScalarRealZero ((SEXP) &R_ScalarRealZero_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealZero_const;
+/* Real static boxes.  Defined in const-objs.c */
 
-#define R_ScalarRealOne ((SEXP) &R_ScalarRealOne_const)
-LibExtern R_CONST VECTOR_SEXPREC_C R_ScalarRealOne_const;
-
-#define R_ScalarRealBox ((SEXP) &R_ScalarRealBox_space)
-LibExtern VECTOR_SEXPREC_C R_ScalarRealBox_space;
-
-#define R_ScalarRealBox0 ((SEXP) &R_ScalarRealBox0_space)
-LibExtern VECTOR_SEXPREC_C R_ScalarRealBox0_space;
+ConstExtern VECTOR_SEXPREC_C R_ScalarRealBox_space[];
+#define R_ScalarRealBox0 ((SEXP) &R_ScalarRealBox_space[0])
+#define R_ScalarRealBox  ((SEXP) &R_ScalarRealBox_space[1])
 
 #ifdef __MAIN__
 attribute_hidden

@@ -40,7 +40,8 @@
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */
 
 
-#define CHECK_OLD_TO_NEW(x,y) sggc_old_to_new_check(CPTR(x),CPTR(y))
+#define CHECK_OLD_TO_NEW(x,y) \
+    sggc_old_to_new_check(COMPRESSED_PTR(x),COMPRESSED_PTR(y))
 
 
 #ifdef TESTING_WRITE_BARRIER
@@ -334,7 +335,7 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
 	error("%s() can only be applied to a '%s', not a '%s'",
          "copy_string_elements", "character vector", type2char(TYPEOF(x)));
 
-    if (sggc_youngest_generation(CPTR(x))) {
+    if (sggc_youngest_generation(COMPRESSED_PTR(x))) {
         /* x can't be older than anything */
         for (k = 0; k<n; k++) {
             e = STRING_ELT(v,j+k);
@@ -377,7 +378,7 @@ void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n)
 	      "copy_vector_elements", "list", type2char(TYPEOF(x)));
     }
 
-    if (sggc_youngest_generation(CPTR(x))) {
+    if (sggc_youngest_generation(COMPRESSED_PTR(x))) {
         /* x can't be older than anything */
         for (k = 0; k<n; k++) {
             e = VECTOR_ELT(v,j+k);

@@ -716,7 +716,8 @@ static void AdjustHeapSize(R_size_t size_needed)
 }
 
 
-#define CHECK_OLD_TO_NEW(x,y) sggc_old_to_new_check(CPTR(x),CPTR(y))
+#define CHECK_OLD_TO_NEW(x,y) \
+    sggc_old_to_new_check(COMPRESSED_PTR(x),COMPRESSED_PTR(y))
 
 
 /* Finalization and Weak References */
@@ -813,7 +814,8 @@ static void CheckFinalizers(void)
 {
     SEXP s;
     for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s))
-	if (sggc_not_marked(CPTR(WEAKREF_KEY(s))) && ! IS_READY_TO_FINALIZE(s))
+	if (sggc_not_marked(COMPRESSED_PTR(WEAKREF_KEY(s))) 
+             && ! IS_READY_TO_FINALIZE(s))
 	    SET_READY_TO_FINALIZE(s);
 }
 
@@ -1194,7 +1196,7 @@ static void RunGenCollect(R_size_t size_needed)
 
     for (SEXP *var_list = helpers_var_list(1); *var_list; var_list++) {
         SEXP v = *var_list;
-        if (sggc_not_marked(CPTR(v)) && !helpers_is_in_use(v))
+        if (sggc_not_marked(COMPRESSED_PTR(v)) && !helpers_is_in_use(v))
             helpers_wait_until_not_being_computed(v);
     }
 
@@ -1205,7 +1207,7 @@ static void RunGenCollect(R_size_t size_needed)
     if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
         for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
             SEXP v = *var_list;
-            if (sggc_not_marked(CPTR(v))) {
+            if (sggc_not_marked(COMPRESSED_PTR(v))) {
                 if (helpers_is_being_computed(v))
                     helpers_wait_until_not_being_computed(v);
                 if (helpers_is_in_use(v))
@@ -1228,12 +1230,12 @@ static void RunGenCollect(R_size_t size_needed)
 	do {
 	    recheck_weak_refs = FALSE;
 	    for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s)) {
-		if (!sggc_not_marked(CPTR(WEAKREF_KEY(s)))) {
-		    if (sggc_not_marked(CPTR(WEAKREF_VALUE(s)))) {
+		if (!sggc_not_marked(COMPRESSED_PTR(WEAKREF_KEY(s)))) {
+		    if (sggc_not_marked(COMPRESSED_PTR(WEAKREF_VALUE(s)))) {
 			recheck_weak_refs = TRUE;
 			FORWARD_NODE(WEAKREF_VALUE(s));
 		    }
-		    if (sggc_not_marked(CPTR(WEAKREF_FINALIZER(s)))) {
+		    if (sggc_not_marked(COMPRESSED_PTR(WEAKREF_FINALIZER(s)))) {
 			recheck_weak_refs = TRUE;
 			FORWARD_NODE(WEAKREF_FINALIZER(s));
 		    }
@@ -1276,7 +1278,8 @@ static void RunGenCollect(R_size_t size_needed)
                      "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
                       TYPEOF(s));
 #endif
-		if (sggc_not_marked(CPTR(s))) { /* remove unused CHARSXP */
+		if (sggc_not_marked(COMPRESSED_PTR(s))) { 
+                    /* remove unused CHARSXP */
 		    if (t == R_NilValue) /* head of list */
                         /* Do NOT use SET_VECTOR_ELT - no old-to-new tracking */
 			VECTOR_ELT(R_StringHash, i) = ATTRIB(s);
@@ -1571,6 +1574,38 @@ void attribute_hidden InitMemory()
 #if VALGRIND_TEST
     valgrind_test();
 #endif
+
+    sggc_init(100000);
+
+    extern void Rf_constant_init(void);
+    Rf_constant_init();
+
+#   if 1
+        extern SEXP R_inspect(SEXP);
+        close(1); dup(2);
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("R_NilValue:\n");
+        R_inspect(R_NilValue);
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("EmptyEnv:\n");
+        R_inspect(R_EmptyEnv);
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("UnboundValue:\n");
+        R_inspect(R_UnboundValue);
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("TRUE:\n");
+        R_inspect(R_ScalarLogicalTRUE);
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("3L:\n");
+        R_inspect(R_ScalarInteger0To10(3));
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("1.0:\n");
+        R_inspect(R_ScalarRealOne);
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+        REprintf("pairlist(NA):\n");
+        R_inspect(MaybeConstList1(R_ScalarLogicalNA));
+        REprintf("-----\n"); fflush(stdout); fflush(stderr);
+#   endif
 
     init_gctorture();
 

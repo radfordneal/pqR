@@ -199,7 +199,7 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
-#define IS_CONSTANT(x) (sggc_is_constant(CPTR(x)))
+#define IS_CONSTANT(x) (sggc_is_constant(COMPRESSED_PTR(x)))
 
 /* Test whether this is a static box object (defined in const-objs.c). */
 #define IS_STATIC_BOX(x) ((x)->sxpinfo.static_box)

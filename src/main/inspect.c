@@ -38,10 +38,9 @@
 #include <Defn.h>
 #include <sggc/sggc-app.h>
 
-#define GCGEN(x) (1 + sggc_oldest_generation(CPTR(x)) \
-                    - sggc_youngest_generation(CPTR(x)))
-#define GCKIND(x) SGGC_KIND(CPTR(x))
-#define MARK(x) (!sggc_not_marked(CPTR(x)))
+#define GCGEN(x) (1 + sggc_oldest_generation(COMPRESSED_PTR(x)) \
+                    - sggc_youngest_generation(COMPRESSED_PTR(x)))
+#define GCKIND(x) SGGC_KIND(COMPRESSED_PTR(x))
 
 #define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in
                                      a LISTSXP or LANGSXP be shown? */
@@ -121,14 +120,13 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
        It is invalid on 64-bit Windows.
     */
 #ifdef _WIN64
-    Rprintf("@%p %02d %s g%dc%d [", v, TYPEOF(v), typename(v), 
+    Rprintf("@%p %02d %s g%d k%d [", v, TYPEOF(v), typename(v), 
 	    GCGEN(v), GCKIND(v));
 #else
-    Rprintf("@%lx %02d %s g%dc%d [", (long) v, TYPEOF(v), typename(v), 
+    Rprintf("@%lx %02d %s g%d k%d [", (long) v, TYPEOF(v), typename(v), 
 	    GCGEN(v), GCKIND(v));
 #endif
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
-    if (MARK(v)) { if (a) Rprintf(","); Rprintf("MARK"); a = 1; }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
         if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
@@ -168,7 +166,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     }
     if (TYPEOF(v) == SYMSXP) {
         if (v == R_UnboundValue)
-            Rprintf("UnboundValue");
+            Rprintf("<UnboundValue>");
         else {
 	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
                     SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
