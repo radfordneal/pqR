@@ -1514,7 +1514,7 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
-    sggc_init(100000);
+    sggc_init(15000000);
 
     extern void Rf_constant_init(void);
     Rf_constant_init();
@@ -1598,6 +1598,7 @@ void attribute_hidden InitMemory()
 static SEXP alloc_nonvec (SEXPTYPE type)
 {
     sggc_cptr_t cp = sggc_alloc (type, 1);
+    if (cp == SGGC_NO_OBJECT) { R_Suicide("out of memory"); }
     SEXP r = SEXP_PTR (cp);
     r->cptr = cp;
     r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
@@ -1612,6 +1613,7 @@ static SEXP alloc_nonvec (SEXPTYPE type)
 static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 {
     sggc_cptr_t cp = sggc_alloc (type, length);
+    if (cp == SGGC_NO_OBJECT) { R_Suicide("out of memory"); }
     SEXP r = SEXP_PTR (cp);
     r->cptr = cp;
     r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
