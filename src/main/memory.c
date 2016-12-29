@@ -559,34 +559,8 @@ static void DEBUG_ADJUST_HEAP_PRINT(double node_occup, double vect_occup,
 /* compute size in VEC units so result will fit in LENGTH field for FREESXPs */
 static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
 {
-    R_size_t size;
-    switch (TYPEOF(s)) {	/* get size in bytes */
-    case CHARSXP:
-	size = LENGTH(s) + 1;
-	break;
-    case RAWSXP:
-	size = LENGTH(s);
-	break;
-    case LGLSXP:
-    case INTSXP:
-	size = LENGTH(s) * sizeof(int);
-	break;
-    case REALSXP:
-	size = LENGTH(s) * sizeof(double);
-	break;
-    case CPLXSXP:
-	size = LENGTH(s) * sizeof(Rcomplex);
-	break;
-    case STRSXP:
-    case EXPRSXP:
-    case VECSXP:
-	size = LENGTH(s) * sizeof(SEXP);
-	break;
-    default:
-	bad_sexp_type(s, __LINE__);
-	size = 0;
-    }
-    return BYTE2VEC(size);
+    return ((int64_t) sggc_nchunks(TYPEOF(s),LENGTH(s)) * SGGC_CHUNK_SIZE
+             - sizeof(SEXPREC_ALIGN)) / sizeof(VECREC);
 }
 
 
@@ -1519,7 +1493,7 @@ void attribute_hidden InitMemory()
     extern void Rf_constant_init(void);
     Rf_constant_init();
 
-#   if 1
+#   if 0
         extern SEXP R_inspect(SEXP);
         close(1); dup(2);
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
@@ -2210,7 +2184,7 @@ static void R_gc_internal(R_size_t size_needed)
 
     BEGIN_SUSPEND_INTERRUPTS {
 	gc_start_timing();
-	RunGenCollect(size_needed);
+	/* RunGenCollect(size_needed); */
 	gc_end_timing();
     } END_SUSPEND_INTERRUPTS;
 
