@@ -37,23 +37,19 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
     case CHARSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
     case INTSXP:
+    case LGLSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case REALSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
+    case EXPRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
-    case SYMSXP:
-        return 5;
-    case SPECIALSXP:
-        return 4;
-    case BUILTINSXP:
-        return 4;
     default:
-        return 3;
+        abort();
     }
 }
 
@@ -77,23 +73,19 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
     case CHARSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
     case INTSXP:
+    case LGLSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case REALSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
+    case EXPESXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
-    case SYMSXP:
-        return 3;
-    case SPECIALSXP:
-        return 3;
-    case BUILTINSXP:
-        return 3;
     default:
-        return 2;
+        abort();
     }
 }
 
