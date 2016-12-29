@@ -61,7 +61,7 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
         value               fast-C-function
         internal            64 bits of info
         nextsym             = 48 bytes
-        lastenv             (4 chunks)
+        lastenv             (3 chunks)
         lastbinding
         lastenvnotfound
         = 80 bytes
@@ -73,10 +73,40 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 #define SGGC_N_KINDS (2*SGGC_N_TYPES)  /* For now, one small size plus big */
 
 #define SGGC_KIND_CHUNKS \
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
-  3, 5, 3, 3, 3, 3, 3, 4, 4, 2, 2, 3, 3, 2, 2, 3, \
-  2, 3, 3, 2, 2, 3, 3, 3, 2, 3, 3, 3, 3, 3, 3, 3  \
+{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* Kinds for big segments */ \
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*  - not all used        */ \
+  3, /* NILSXP */                                 /* Kinds for non-vector   */ \
+  5, /* SYMSXP */                                 /*   objects and vectors  */ \
+  3, /* LISTSXP */                                /*   of length 1          */ \
+  3, /* CLOSXP */ \
+  3, /* ENVSXP */ \
+  3, /* PROMSXP */ \
+  3, /* LANGSXP */ \
+  3, /* SPECIALSXP */ \
+  3, /* BUILTINSXP */ \
+  2, /* CHARSXP */ \
+  2, /* LGLSXP */ \
+  3, /* unused */ \
+  3, /* unused */ \
+  2, /* INTSXP */ \
+  2, /* REALSXP */ \
+  3, /* CPLXSXP */ \
+  2, /* STRSXP */ \
+  3, /* DOTSXP */ \
+  3, /* unused */ \
+  2, /* VECSXP */ \
+  2, /* EXPRSXP */ \
+  3, /* BCODESXP */ \
+  3, /* EXTPTRSXP */ \
+  3, /* WEAKREFSXP */ \
+  2, /* RAWSXP */ \
+  3, /* S4SXP */ \
+  3, /* unused */ \
+  3, /* unused */ \
+  3, /* unused */ \
+  3, /* unused */ \
+  3, /* unused */ \
+  3  /* unused */ \
 }
 
 #endif
@@ -88,41 +118,63 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 /*    Cons-type:          Vector:             
         info(64bits)        info(64bits)
-        cptr                cptr
-        length              length
-        attrib              attrib
-        car                 padding
-        cdr                 data...
-        tag                 = 32 bytes if length==1 (except for CPLXSXP)
-        = 32 bytes          (2 chunks)
-          (2 chunks)
+        cptr, length        cptr, length
+        attrib, car         attrib, padding
+        cdr, tag            data...
+        = 32 bytes          = 32 bytes if length==1 (except for CPLXSXP)
+        (2 chunks)          (2 chunks)
 
       Symbol:             Primitive:
         info(64bits)        info(64bits)
-        cptr                cptr
-        length              length
-        truelength          truelength
-        attrib              attrib
-        pname               C-function
-        value               fast-C-function
-        internal            32 bits of info
-        nextsym             32 bits of info
-        lastenv             padding x 3
-        lastbinding         = 48 bytes
-        lastenvnotfound       (3 chunks)
-        = 48 bytes
-          (3 chunks)
+        cptr, length        cptr, length
+        attrib, pname       attrib, C-function
+        value, internal     fast-C-function, 32 bits of info
+        nextsym, lastenv    32 bits of info, padding
+        lastbinding, lastenvnotfound         padding, padding
+        = 48 bytes                             = 48 bytes
+          (3 chunks)                             (3 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_N_KINDS (2*SGGC_N_TYPES)  /* For now, one small size plus big */
+#define SGGC_N_KINDS (2*SGGC_N_TYPES)  /* For now,
+  one small size plus big */
 
 #define SGGC_KIND_CHUNKS \
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
-  2, 5, 2, 2, 2, 2, 2, 4, 4, 2, 2, 2, 2, 2, 2, 3, \
-  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2  \
+{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* Kinds for big segments */ \
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*  - not all used        */ \
+  2, /* NILSXP */                                 /* Kinds for non-vector   */ \
+  3, /* SYMSXP */                                 /*   objects and vectors  */ \
+  2, /* LISTSXP */                                /*   of length 1          */ \
+  2, /* CLOSXP */ \
+  2, /* ENVSXP */ \
+  2, /* PROMSXP */ \
+  2, /* LANGSXP */ \
+  3, /* SPECIALSXP */ \
+  3, /* BUILTINSXP */ \
+  2, /* CHARSXP */ \
+  2, /* LGLSXP */ \
+  2, /* unused */ \
+  2, /* unused */ \
+  2, /* INTSXP */ \
+  2, /* REALSXP */ \
+  3, /* CPLXSXP */ \
+  2, /* STRSXP */ \
+  2, /* DOTSXP */ \
+  2, /* unused */ \
+  2, /* VECSXP */ \
+  2, /* EXPRSXP */ \
+  2, /* BCODESXP */ \
+  2, /* EXTPTRSXP */ \
+  2, /* WEAKREFSXP */ \
+  2, /* RAWSXP */ \
+  2, /* S4SXP */ \
+  2, /* unused */ \
+  2, /* unused */ \
+  2, /* unused */ \
+  2, /* unused */ \
+  2, /* unused */ \
+  2  /* unused */ \
 }
 
 #endif
