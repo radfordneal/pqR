@@ -1597,7 +1597,9 @@ void attribute_hidden InitMemory()
 
 static SEXP alloc_nonvec (SEXPTYPE type)
 {
-    SEXP r = SEXP_PTR (sggc_alloc (type, 1));
+    sggc_cptr_t cp = sggc_alloc (type, 1);
+    SEXP r = SEXP_PTR (cp);
+    r->cptr = cp;
     r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
@@ -1609,7 +1611,9 @@ static SEXP alloc_nonvec (SEXPTYPE type)
 
 static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 {
-    SEXP r = SEXP_PTR (sggc_alloc (type, length));
+    sggc_cptr_t cp = sggc_alloc (type, length);
+    SEXP r = SEXP_PTR (cp);
+    r->cptr = cp;
     r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
@@ -1710,10 +1714,11 @@ SEXP cons(SEXP car, SEXP cdr)
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = R_NilValue;
-REprintf("Did cons:\n");
+/* REprintf("Did cons:\n");
 extern SEXP R_inspect(SEXP);
 R_inspect(s);
-REprintf("-----\n");
+REprintf("-----\n"); */
+    UNPROTECT(2);
     return s;
 }
 
@@ -1726,6 +1731,7 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = Rf_chk_valid_SEXP(tag);
+    UNPROTECT(3);
     return s;
 }
 
@@ -1767,6 +1773,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	v = CDR(v);
 	n = CDR(n);
     }
+    UNPROTECT(3);
     return (newrho);
 }
 
@@ -1783,11 +1790,11 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
 
-
     s->u.promsxp.value = R_UnboundValue;
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = Rf_chk_valid_SEXP(rho);
     PRSEEN(s) = 0;
+    UNPROTECT(2);
     return s;
 }
 
@@ -1894,7 +1901,6 @@ static int isDDName(SEXP name)
 }
 
 SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
-
 {
     PROTECT2(name,value);
     SEXP c = alloc_nonvec(SYMSXP);
