@@ -148,6 +148,11 @@ extern void *Rm_realloc(void * p, size_t n);
 #define free Rm_free
 #endif
 
+
+#define GC_INTERVAL 1000000000
+static int gc_countdown = GC_INTERVAL;
+
+
 static void bad_sexp_type (SEXP s, int line) 
 {
     abort();
@@ -353,7 +358,7 @@ static int MaxAlloc_index = 0;          /* Index for storing into MaxAlloc */
 
 #define NUM_OLD_GENERATIONS 2  /* Fixed - not changeable with sggc */
 
-static int num_old_gens_to_collect = 0;
+static int num_old_gens_to_collect = NUM_OLD_GENERATIONS;
 static int gen_gc_counts[NUM_OLD_GENERATIONS + 1];
 static int collect_counts[NUM_OLD_GENERATIONS];
 
@@ -1571,6 +1576,8 @@ void attribute_hidden InitMemory()
 
 static SEXP alloc_nonvec (SEXPTYPE type)
 {
+    if (gc_countdown-- == 0) { R_gc_internal(0); gc_countdown = GC_INTERVAL; }
+
     sggc_cptr_t cp = sggc_alloc (type, 1);
     if (cp == SGGC_NO_OBJECT) { R_Suicide("out of memory"); }
     SEXP r = SEXP_PTR (cp);
@@ -1586,6 +1593,8 @@ static SEXP alloc_nonvec (SEXPTYPE type)
 
 static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 {
+    if (gc_countdown-- == 0) { R_gc_internal(0); gc_countdown = GC_INTERVAL; }
+
     sggc_cptr_t cp = sggc_alloc (type, length);
     if (cp == SGGC_NO_OBJECT) { R_Suicide("out of memory"); }
     SEXP r = SEXP_PTR (cp);
@@ -2157,70 +2166,17 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
-    /* Save state of global variables used for communicating results
-       from some function calls, so storage allocation won't have the
-       possibility of changing them when finalizers are run. */
-
-    struct {
-        SEXP binding_cell;
-        unsigned variant_result;
-    } saved_globals;
-
-    saved_globals.binding_cell = R_binding_cell;
-    saved_globals.variant_result = R_variant_result;
-
-    R_size_t onsize = R_NSize /* can change during collection */;
-    double ncells, vcells, vfrac, nfrac;
-    Rboolean first = TRUE;
-
- again:
-
     gc_count++;
-
-    R_N_maxused = R_MAX(R_N_maxused, R_NodesInUse);
-    R_NMega_max = R_MAX(R_NMega_max, R_NodesInUse/Mega * sizeof(SEXPREC_ALIGN)
-                                      + R_SmallNallocSize/Mega * vsfac);
-    R_V_maxused = R_MAX(R_V_maxused, R_VSize - VHEAP_FREE());
 
     BEGIN_SUSPEND_INTERRUPTS {
 	gc_start_timing();
-	/* RunGenCollect(size_needed); */
+	sggc_collect(num_old_gens_to_collect);
 	gc_end_timing();
     } END_SUSPEND_INTERRUPTS;
 
     if (gc_reporting) {
-	ncells = onsize - R_Collected;
-	nfrac = (100.0 * ncells) / R_NSize;
-	/* We try to make this consistent with the results returned by gc */
-	ncells = 0.1*ceil(10.0 * (ncells * sizeof(SEXPREC)/Mega
-                                   + R_SmallNallocSize/Mega * vsfac));
-	REprintf("\n%.1f Mbytes of cons cells used (%d%%)\n",
-		 ncells, (int) (nfrac + 0.5));
-	vcells = R_VSize - VHEAP_FREE();
-	vfrac = (100.0 * vcells) / R_VSize;
-	vcells = 0.1*ceil(10.0*vcells/Mega * vsfac);
-	REprintf("%.1f Mbytes of vectors used (%d%%)\n",
-		 vcells, (int) (vfrac + 0.5));
+
     }
-
-    if (first) {
-	first = FALSE;
-	/* Run any eligible finalizers.  The return result of
-	   RunFinalizers is TRUE if any finalizers are actually run.
-	   There is a small chance that running finalizers here may
-	   chew up enough memory to make another immediate collection
-	   necessary.  If so, we jump back to the beginning and run
-	   the collection, but on this second pass we do not run
-	   finalizers. */
-	if (RunFinalizers() &&
-	    (NO_FREE_NODES() || size_needed > VHEAP_FREE()))
-	    goto again;
-    }
-
-    /* Restore state of global variables used for communicating results. */
-
-    R_binding_cell = saved_globals.binding_cell;
-    R_variant_result = saved_globals.variant_result;
 }
 
 static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
