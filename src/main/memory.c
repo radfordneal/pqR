@@ -914,76 +914,26 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* THE GENERATIONAL GARBAGE COLLECTOR. */
 
-void sggc_find_root_ptrs (void) { abort(); }
-void sggc_find_object_ptrs (sggc_cptr_t cptr) { abort(); }
 
+#define LOOK_AT(x) sggc_look_at(COMPRESSED_PTR(x))
+#define NOT_MARKED(x) sggc_not_marked(COMPRESSED_PTR(x))
 
-static void RunGenCollect(R_size_t size_needed)
+void sggc_find_root_ptrs (void)
 {
-    int i, gen, gens_collected;
-    RCNTXT *ctxt;
-    SEXP s;
-    SEXP forwarded_nodes;
-
-    /* determine number of generations to collect */
-    while (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
-	if (collect_counts[num_old_gens_to_collect]-- <= 0) {
-	    collect_counts[num_old_gens_to_collect] =
-		collect_counts_max[num_old_gens_to_collect];
-	    num_old_gens_to_collect++;
-	}
-	else break;
-    }
-
-    if (gc_force_gap > 0)
-        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-#   ifdef PROTECTCHECK
-        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-#   endif
-
- again:
-    gens_collected = num_old_gens_to_collect;
-
-#if DEBUG_GC>1
-    char mess[20];
-    sprintf(mess,"START OF GC (%d)",num_old_gens_to_collect);
-#endif
-
-    forwarded_nodes = NULL;
+    int i;
 
     /* Start by scanning the symbol table.  We have to scan the symbol
        table specially, because it's linked by NEXTSYM_PTR, which
        DO_CHILDREN doesn't know about, and because we need to clear
-       LASTSYMENV and LASTSYMENVNOTFOUND.  So we might as well also
-       forward things pointed to by symbol table entries, to avoid the
-       need to forward the symbol itself, taking advantage of knowing
-       that the type will be SYMSXP.  The code for this below is a
-       combination of code from FORWARD_NODE and process_nodes.
-
-       We do this scan first, since otherwise many symbols will have
-       already been marked and forwarded, undoing the time savings. */
+       LASTSYMENV and LASTSYMENVNOTFOUND. */
  
-    if (R_SymbolTable != NULL) { /* Symbol table could be NULL during startup */
+    if (R_SymbolTable != NULL) { /* Symbol table nonexistent at startup */
         for (i = 0; i < HSIZE; i++) {
             for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
-                LASTSYMENV(s) = NULL;
-                LASTSYMBINDING(s) = NULL; /* not required, but just in case...*/
-                LASTSYMENVNOTFOUND(s) = NULL;
-#if 0
-                struct gen_heap *h = &R_GenHeap[SYM_SEXPREC_class];
-                if (!NODE_IS_MARKED(s)) {
-                    int gn = NODE_GENERATION(s);
-                    MARK_NODE(s);
-                    UNSNAP_NODE(s);
-                    h->OldCount[gn] += 1;
-                    if (!no_snap) 
-                        SNAP_NODE(s, h->Old[gn]);
-                    FORWARD_NODE(ATTRIB(s));
-                    FORWARD_NODE(PRINTNAME(s));
-                    FORWARD_NODE(SYMVALUE(s));
-                    FORWARD_NODE(INTERNAL(s));
-                }
-#endif
+                LASTSYMENV(s) = R_NoObject;
+                LASTSYMBINDING(s) = R_NoObject; /* not needed; just in case...*/
+                LASTSYMENVNOTFOUND(s) = R_NoObject;
+                LOOK_AT(s);
             }
         }
     }
@@ -994,19 +944,19 @@ static void RunGenCollect(R_size_t size_needed)
        kept in read-only memory). */
 
     if (R_MissingArg) {
-        LASTSYMENV(R_MissingArg) = NULL;
-        LASTSYMBINDING(R_MissingArg) = NULL;
-        LASTSYMENVNOTFOUND(R_MissingArg) = NULL;
+        LASTSYMENV(R_MissingArg) = R_NoObject;
+        LASTSYMBINDING(R_MissingArg) = R_NoObject;
+        LASTSYMENVNOTFOUND(R_MissingArg) = R_NoObject;
     }
     if (R_MissingUnder) {
-        LASTSYMENV(R_MissingUnder) = NULL;
-        LASTSYMBINDING(R_MissingUnder) = NULL;
-        LASTSYMENVNOTFOUND(R_MissingUnder) = NULL;
+        LASTSYMENV(R_MissingUnder) = R_NoObject;
+        LASTSYMBINDING(R_MissingUnder) = R_NoObject;
+        LASTSYMENVNOTFOUND(R_MissingUnder) = R_NoObject;
     }
     if (R_RestartToken) {
-        LASTSYMENV(R_RestartToken) = NULL;
-        LASTSYMBINDING(R_RestartToken) = NULL;
-        LASTSYMENVNOTFOUND(R_RestartToken) = NULL;
+        LASTSYMENV(R_RestartToken) = R_NoObject;
+        LASTSYMBINDING(R_RestartToken) = R_NoObject;
+        LASTSYMENVNOTFOUND(R_RestartToken) = R_NoObject;
     }
 
     /* Forward other roots. */
@@ -1035,28 +985,29 @@ static void RunGenCollect(R_size_t size_needed)
     };
 
     for (i = 0; root_vars[i] != 0; i++)
-        FORWARD_NODE(*root_vars[i]);
+        LOOK_AT(*root_vars[i]);
 
-    if (R_VStack != NULL)
-        FORWARD_NODE(R_VStack);
+    if (R_VStack != R_NoObject)
+        LOOK_AT(R_VStack);
 
-    if (R_CurrentExpr != NULL)	           /* Current expression */
-	FORWARD_NODE(R_CurrentExpr);
+    if (R_CurrentExpr != R_NoObject)	           /* Current expression */
+	LOOK_AT(R_CurrentExpr);
 
     for (i = 0; i < R_MaxDevices; i++) {   /* Device display lists */
 	pGEDevDesc gdd = GEgetDevice(i);
 	if (gdd) {
-	    if (gdd->displayList != NULL)
-                FORWARD_NODE(gdd->displayList);
-	    if (gdd->savedSnapshot != NULL)
-                FORWARD_NODE(gdd->savedSnapshot);
-	    if (gdd->dev != NULL && gdd->dev->eventEnv != NULL)
-	    	FORWARD_NODE(gdd->dev->eventEnv);
+	    if (gdd->displayList != R_NoObject)
+                LOOK_AT(gdd->displayList);
+	    if (gdd->savedSnapshot != R_NoObject)
+                LOOK_AT(gdd->savedSnapshot);
+	    if (gdd->dev != NULL && gdd->dev->eventEnv != R_NoObject)
+	    	LOOK_AT(gdd->dev->eventEnv);
 	}
     }
 
-    for (ctxt = R_GlobalContext ; ctxt != NULL ; ctxt = ctxt->nextcontext) {
-        SEXP *cntxt_ptrs[] = { /* using a run-time initialized table might be
+    RCNTXT *ctxt;
+    for (ctxt = R_GlobalContext; ctxt != NULL; ctxt = ctxt->nextcontext) {
+        SEXP *cntxt_ptrs[] = { /* using this run-time initialized table may be
                                   slower, but is certainly more compact */
 	    &ctxt->conexit,       /* on.exit expressions */
 	    &ctxt->promargs,	  /* promises supplied to closure */
@@ -1070,20 +1021,15 @@ static void RunGenCollect(R_size_t size_needed)
             0
         };
         for (i = 0; cntxt_ptrs[i] != 0; i++)
-            FORWARD_NODE(*cntxt_ptrs[i]);
+            LOOK_AT(*cntxt_ptrs[i]);
     }
 
-    if (framenames != NULL)		   /* used for interprocedure    */
-        FORWARD_NODE(framenames);	   /*   communication in model.c */
+    if (framenames != R_NoObject)	   /* used for interprocedure    */
+        LOOK_AT(framenames);	   /*   communication in model.c */
 
     for (i = 0; i < R_PPStackTop; i++) {   /* Protected pointers */
-        if (R_PPStack[i] != NULL) 
-            FORWARD_NODE(R_PPStack[i]);
-        if ((i&0xff) == 0) {
-            /* Doing this occassionaly may improve cache performance. */
-            process_nodes (forwarded_nodes, 0); 
-            forwarded_nodes = NULL;
-        }
+        if (R_PPStack[i] != R_NoObject) 
+            LOOK_AT(R_PPStack[i]);
     }
 
     /* Pointers from protected local SEXP variables. */
@@ -1091,94 +1037,114 @@ static void RunGenCollect(R_size_t size_needed)
     for (const struct R_local_protect *p = R_local_protect_start;
            p != NULL; p = p->next) {
         for (i = 0; i < p->cnt; i++) 
-            if (*p->Protected[i]) FORWARD_NODE(*p->Protected[i]);
+            if (*p->Protected[i]) LOOK_AT(*p->Protected[i]);
     }
 
     /* Byte code stack */
 
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++)
-        FORWARD_NODE(*sp);
+        LOOK_AT(*sp);
+}
 
+void sggc_after_marking (int level, int rep)
+{
+    int any;
+    SEXP s; 
+    int i;
 
-    /* MAIN PROCESSING STEP.  Marks most nodes that are in use. */
+    /* LOOK AT TASKS THE FIRST TIME. */
 
-    process_nodes (forwarded_nodes, 0); 
-    forwarded_nodes = NULL;
+    if (rep == 0) {
 
-    /* HANDLE INPUTS AND OUTPUTS OF TASKS. */
-
-    /* Wait for all tasks whose output variable is no longer referenced
-       (ie, not marked above) and is not in use by another task, to ensure
-       they don't stay around for a long time.  (Such unreferenced outputs
-       should rarely arise in real programs.) */
-
-    for (SEXP *var_list = helpers_var_list(1); *var_list; var_list++) {
-        SEXP v = *var_list;
-        if (sggc_not_marked(COMPRESSED_PTR(v)) && !helpers_is_in_use(v))
-            helpers_wait_until_not_being_computed(v);
+        /* Wait for all tasks whose output variable is no longer referenced
+           (ie, not marked above) and is not in use by another task, to ensure
+           they don't stay around for a long time.  (Such unreferenced outputs
+           should rarely arise in real programs.) */
+    
+        for (SEXP *var_list = helpers_var_list(1); *var_list; var_list++) {
+            SEXP v = *var_list;
+            if (NOT_MARKED(v) && !helpers_is_in_use(v))
+                helpers_wait_until_not_being_computed(v);
+        }
+    
+        /* For a full collection, wait for tasks that have large variables
+           as inputs or outputs that haven't already been marked above, so
+           that we can then collect these variables. */
+    
+        if (level == NUM_OLD_GENERATIONS) {
+            for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
+                SEXP v = *var_list;
+                if (NOT_MARKED(v)) {
+                    if (helpers_is_being_computed(v))
+                        helpers_wait_until_not_being_computed(v);
+                    if (helpers_is_in_use(v))
+                        helpers_wait_until_not_in_use(v);
+                }
+            }
+        }
+    
+        /* Look at all inputs and outputs of scheduled tasks. */
+    
+        any = 0;
+        for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
+            if (NOT_MARKED(*var_list)) {
+                LOOK_AT(*var_list);
+                any = 1;
+            }
+        }
+     
+        if (any) return;
     }
 
-    /* For a full collection, wait for tasks that have large variables
-       as inputs or outputs that haven't already been marked above, so
-       that we can then collect these variables. */
+    /* IDENTIFY WEAKLY REACHABLE NODES */
 
-    if (num_old_gens_to_collect == NUM_OLD_GENERATIONS) {
-        for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
-            SEXP v = *var_list;
-            if (sggc_not_marked(COMPRESSED_PTR(v))) {
-                if (helpers_is_being_computed(v))
-                    helpers_wait_until_not_being_computed(v);
-                if (helpers_is_in_use(v))
-                    helpers_wait_until_not_in_use(v);
+    any = 0;
+    for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s)) {
+        if (!NOT_MARKED(WEAKREF_KEY(s))) {
+            if (NOT_MARKED(WEAKREF_VALUE(s))) {
+                LOOK_AT(WEAKREF_VALUE(s));
+                any = 1;
+            }
+            if (NOT_MARKED(WEAKREF_FINALIZER(s))) {
+                LOOK_AT(WEAKREF_FINALIZER(s));
+                any = 1;
             }
         }
     }
 
-    /* Forward and then process all inputs and outputs of scheduled tasks. */
-
-    for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++)
-        FORWARD_NODE(*var_list);
-
-    process_nodes (forwarded_nodes, 0); 
-    forwarded_nodes = NULL;
-
-    /* IDENTIFY WEAKLY REACHABLE NODES */
-    {
-	Rboolean recheck_weak_refs;
-	do {
-	    recheck_weak_refs = FALSE;
-	    for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s)) {
-		if (!sggc_not_marked(COMPRESSED_PTR(WEAKREF_KEY(s)))) {
-		    if (sggc_not_marked(COMPRESSED_PTR(WEAKREF_VALUE(s)))) {
-			recheck_weak_refs = TRUE;
-			FORWARD_NODE(WEAKREF_VALUE(s));
-		    }
-		    if (sggc_not_marked(COMPRESSED_PTR(WEAKREF_FINALIZER(s)))) {
-			recheck_weak_refs = TRUE;
-			FORWARD_NODE(WEAKREF_FINALIZER(s));
-		    }
-		}
-	    }
-	    process_nodes (forwarded_nodes, 0); 
-            forwarded_nodes = NULL;
-	} while (recheck_weak_refs);
-    }
+    if (any) return;
 
     /* mark nodes ready for finalizing */
+
     CheckFinalizers();
 
     /* process the weak reference chain */
-    for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s)) {
-	FORWARD_NODE(s);
-	FORWARD_NODE(WEAKREF_KEY(s));
-	FORWARD_NODE(WEAKREF_VALUE(s));
-	FORWARD_NODE(WEAKREF_FINALIZER(s));
-    }
-    process_nodes (forwarded_nodes, 0); 
-    forwarded_nodes = NULL;
 
-    /* process CHARSXP cache */
-    if (R_StringHash != NULL) /* in case of GC during initialization */
+    any = 0;
+    for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s)) {
+        if (NOT_MARKED(s)) {
+            LOOK_AT(s);
+            any = 1;
+        }
+        if (NOT_MARKED(WEAKREF_KEY(s))) {
+            LOOK_AT(WEAKREF_KEY(s));
+            any = 1;
+        }
+        if (NOT_MARKED(WEAKREF_VALUE(s))) {
+            LOOK_AT(WEAKREF_VALUE(s));
+            any = 1;
+        }
+        if (NOT_MARKED(WEAKREF_FINALIZER(s))) {
+            LOOK_AT(WEAKREF_FINALIZER(s));
+            any = 1;
+        }
+    }
+
+    if (any) return;
+
+    /* PROCESS CHARSXP CACHE */
+
+    if (R_StringHash != R_NoObject) /* in case of GC during initialization */
     {
         /* At this point, the hash table itself will not have been scanned.
            Some of the CHARSXP entries will be marked, either from being in 
@@ -1190,13 +1156,11 @@ static void RunGenCollect(R_size_t size_needed)
 	for (i = 0; i < LENGTH(R_StringHash); i++) {
 	    t = R_NilValue;
 	    for (s = VECTOR_ELT(R_StringHash,i); s!=R_NilValue; s = ATTRIB(s)) {
-#if DEBUG_GLOBAL_STRING_HASH
-                if (TYPEOF(s)!=CHARSXP)
+                if (DEBUG_GLOBAL_STRING_HASH && TYPEOF(s)!=CHARSXP)
                    REprintf(
                      "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
                       TYPEOF(s));
-#endif
-		if (sggc_not_marked(COMPRESSED_PTR(s))) { 
+		if (NOT_MARKED(s)) { 
                     /* remove unused CHARSXP */
 		    if (t == R_NilValue) /* head of list */
                         /* Do NOT use SET_VECTOR_ELT - no old-to-new tracking */
@@ -1210,10 +1174,8 @@ static void RunGenCollect(R_size_t size_needed)
 	    if(VECTOR_ELT(R_StringHash, i) != R_NilValue) nc++;
 	}
 	SET_HASHSLOTSUSED (R_StringHash, nc);
-        FORWARD_NODE(R_StringHash);
+        LOOK_AT(R_StringHash);
     }
-    process_nodes (forwarded_nodes, 0); 
-    forwarded_nodes = NULL;
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
@@ -1226,7 +1188,7 @@ static void RunGenCollect(R_size_t size_needed)
 		    TYPEOF(s) = FREESXP;
 		}
 		if (gc_inhibit_release)
-		    FORWARD_NODE(s);
+		    LOOK_AT(s);
 	    }
 	    s = next;
 	}
@@ -1245,14 +1207,45 @@ static void RunGenCollect(R_size_t size_needed)
 		TYPEOF(s) = FREESXP;
 	    }
 	    if (gc_inhibit_release)
-		FORWARD_NODE(s);
+		LOOK_AT(s);
 	}
 	s = next;
     }
-    if (gc_inhibit_release) {
-	process_nodes (forwarded_nodes, 0); 
-        forwarded_nodes = NULL;
+#endif
+}
+
+
+void sggc_find_object_ptrs (sggc_cptr_t cptr) { abort(); }
+
+
+static void RunGenCollect(R_size_t size_needed)
+{
+    int i, gen, gens_collected;
+    RCNTXT *ctxt;
+    SEXP s;
+
+    /* determine number of generations to collect */
+    while (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
+	if (collect_counts[num_old_gens_to_collect]-- <= 0) {
+	    collect_counts[num_old_gens_to_collect] =
+		collect_counts_max[num_old_gens_to_collect];
+	    num_old_gens_to_collect++;
+	}
+	else break;
     }
+
+    if (gc_force_gap > 0)
+        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
+#   ifdef PROTECTCHECK
+        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
+#   endif
+
+ again:
+    gens_collected = num_old_gens_to_collect;
+
+#if DEBUG_GC>1
+    char mess[20];
+    sprintf(mess,"START OF GC (%d)",num_old_gens_to_collect);
 #endif
 
     /* update heap statistics */
