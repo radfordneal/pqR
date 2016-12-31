@@ -1263,61 +1263,10 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     R_gc();
 
-#   if PRINT_TYPE_STATS
-        int count[32], count0[32], count00[32], count01[32];
-        for (int i = 0; i<32; i++) 
-            count[i] = count0[i] = count00[i] = count01[i] = 0;
-        REprintf (
-         "\n# OF OBJECTS OF EACH TYPE (PLUS COUNT IN CLASS 0, LENGTH 0/1)\n");
-        REprintf ("\n%11s%10s %10s %10s %10s\n", 
-                  "Type", "Total", "Class 0", "Length 0", "Length 1");
-        for (int i = 0; i < NUM_NODE_CLASSES; i++) {
-            for (int g = 0; g < NUM_OLD_GENERATIONS; g++) {
-                for (SEXP s = NEXT_NODE(R_GenHeap[i].Old[g]);
-                     s != R_GenHeap[i].Old[g]; 
-                     s = NEXT_NODE(s)) {
-                    count[TYPEOF(s)] += 1;
-                    if (i == 0) {
-                        count0[TYPEOF(s)] += 1;
-                        if (LENGTH(s) == 0) count00[TYPEOF(s)] += 1;
-                        if (LENGTH(s) == 1) count01[TYPEOF(s)] += 1;
-                    }
-                }
-            }
-        }
-        for (int i = 0; i<32; i++)
-            printf ("%11s%10d %10d %10d %10d\n", sexptype2char(i),
-                    count[i], count0[i], count00[i], count01[i]);
-        REprintf("\n");
-#   endif
-
     gc_reporting = ogc;
     /*- now return the [used , gc trigger size] for cells and heap */
     PROTECT(value = allocVector(REALSXP, 14));
-    REAL(value)[0] = onsize - R_Collected;
-    REAL(value)[1] = R_VSize - VHEAP_FREE();
-    REAL(value)[4] = R_NSize;
-    REAL(value)[5] = R_VSize;
-    /* next four are in 0.1Mb, rounded up */
-    R_NMega = (onsize-R_Collected)/Mega * sizeof(SEXPREC_ALIGN) 
-               + R_SmallNallocSize/Mega * vsfac;
-    REAL(value)[2] = 0.1*ceil(10. * R_NMega);
-    REAL(value)[3] = 0.1*ceil(10. * (R_VSize - VHEAP_FREE())/Mega * vsfac);
-    REAL(value)[6] = 0.1*ceil(10. * R_NSize/Mega * sizeof (SEXPREC));
-    REAL(value)[7] = 0.1*ceil(10. * R_VSize/Mega * vsfac);
-    REAL(value)[8] = (R_MaxNSize < R_SIZE_T_MAX) ?
-	0.1*ceil(10. * R_MaxNSize/Mega * sizeof(SEXPREC)) : NA_REAL;
-    REAL(value)[9] = (R_MaxVSize < R_SIZE_T_MAX) ?
-	0.1*ceil(10. * R_MaxVSize/Mega * vsfac) : NA_REAL;
-    if (reset_max){
-	    R_N_maxused = onsize - R_Collected;
-	    R_NMega_max = R_NMega;
-	    R_V_maxused = R_VSize - VHEAP_FREE();
-    }
-    REAL(value)[10] = R_N_maxused;
-    REAL(value)[11] = R_V_maxused;
-    REAL(value)[12] = 0.1*ceil(10. * R_NMega_max);
-    REAL(value)[13] = 0.1*ceil(10. * R_V_maxused/Mega*vsfac);
+    for (int i = 0; i < 14; i++) REAL(value)[i] = NA_REAL;
     UNPROTECT(1);
     return value;
 }
@@ -1380,12 +1329,6 @@ void attribute_hidden InitMemory()
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_NOACCESS(R_PPStack+R_PPStackSize, PP_REDZONE_SIZE);
 #endif
-    vsfac = sizeof(VECREC);
-    R_VSize = (R_VSize + 1)/vsfac;
-    if (R_MaxVSize < R_SIZE_T_MAX) R_MaxVSize = (R_MaxVSize + 1)/vsfac;
-
-    orig_R_NSize = R_NSize;
-    orig_R_VSize = R_VSize;
 
     R_BCNodeStackBase = (SEXP *) malloc(R_BCNODESTACKSIZE * sizeof(SEXP));
     if (R_BCNodeStackBase == NULL)
@@ -2024,19 +1967,9 @@ static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
     nsize = asReal(CAR(args));
     vsize = asReal(CADR(args));
 
-    if (ISNAN(nsize) || nsize <= 0) ;
-    else if (nsize >= R_SIZE_T_MAX) R_MaxNSize = R_SIZE_T_MAX;
-    else if (R_FINITE(nsize)) R_SetMaxNSize((R_size_t) nsize);
-
-    if (ISNAN(vsize) || vsize <= 0) ;
-    else if (vsize >= R_SIZE_T_MAX) R_MaxVSize = R_SIZE_T_MAX;
-    else if (R_FINITE(vsize)) R_SetMaxVSize((R_size_t) vsize);
-
     PROTECT(ans = allocVector(REALSXP, 2));
-    tmp = R_GetMaxNSize();
-    REAL(ans)[0] = (tmp < R_SIZE_T_MAX) ? tmp : NA_REAL;
-    tmp = R_GetMaxVSize();
-    REAL(ans)[1] = (tmp < R_SIZE_T_MAX) ? tmp : NA_REAL;
+    REAL(ans)[0] = NA_REAL;
+    REAL(ans)[1] = NA_REAL;
     UNPROTECT(1);
     return ans;
 }
@@ -2053,16 +1986,6 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_STRING_ELT(nms, i, type2str(i > LGLSXP? i+2 : i));
     }
     setAttrib(ans, R_NamesSymbol, nms);
-
-    BEGIN_SUSPEND_INTERRUPTS {
-      int gen;
-
-      /* run a full GC to make sure that all stuff in use is in Old space */
-      num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-      R_gc();
-      for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++) {
-      }
-    } END_SUSPEND_INTERRUPTS;
     UNPROTECT(2);
     return ans;
 }
