@@ -918,6 +918,65 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 #define LOOK_AT(x) sggc_look_at(COMPRESSED_PTR(x))
 #define NOT_MARKED(x) sggc_not_marked(COMPRESSED_PTR(x))
 
+#define no_action_types \
+( (1 << NILSXP) + \
+  (1 << BUILTINSXP) + \
+  (1 << SPECIALSXP) + \
+  (1 << CHARSXP) + \
+  (1 << LGLSXP) + \
+  (1 << INTSXP) + \
+  (1 << REALSXP) + \
+  (1 << CPLXSXP) + \
+  (1 << WEAKREFSXP) + \
+  (1 << RAWSXP) + \
+  (1 << S4SXP) )
+
+#define three_pointer_types \
+( (1 << ENVSXP) + \
+  (1 << CLOSXP) + \
+  (1 << PROMSXP) + \
+  (1 << LISTSXP) + \
+  (1 << LANGSXP) + \
+  (1 << DOTSXP) + \
+  (1 << SYMSXP) + \
+  (1 << BCODESXP) )
+
+#define vector_of_pointers_types \
+( (1 << VECSXP) + \
+  (1 << EXPRSXP) + \
+  (1 << STRSXP) )
+
+
+void sggc_find_object_ptrs (sggc_cptr_t cptr)
+{
+    SEXP n = SEXP_PTR(cptr);
+    SEXPTYPE typ = TYPEOF(n);
+
+    if (ATTRIB(n) != R_NilValue && typ != CHARSXP) {
+        if (!LOOK_AT(ATTRIB(n))) return;
+    }
+
+    if (! ((no_action_types >> typ) & 1)) {
+        SEXP *strt; R_len_t cnt;
+        if ((three_pointer_types >> typ) & 1) {
+            strt = &CAR(n); cnt = 3;
+        }
+        else if ((vector_of_pointers_types >> typ) & 1) {
+            cnt = LENGTH(n);
+            if (cnt == 0) return;
+            strt = &STRING_ELT(n,0);
+        }
+        else if (typ == EXTPTRSXP) {
+            strt = &CDR(n); cnt = 2;
+        }
+        do {
+            if (!LOOK_AT(*strt++)) return;
+            cnt -= 1;
+        } while (cnt > 0);
+    }
+}
+
+
 void sggc_find_root_ptrs (void)
 {
     int i;
@@ -1213,9 +1272,6 @@ void sggc_after_marking (int level, int rep)
     }
 #endif
 }
-
-
-void sggc_find_object_ptrs (sggc_cptr_t cptr) { abort(); }
 
 
 static void RunGenCollect(R_size_t size_needed)
