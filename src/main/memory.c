@@ -363,135 +363,6 @@ static int gen_gc_counts[NUM_OLD_GENERATIONS + 1];
 static int collect_counts[NUM_OLD_GENERATIONS];
 
 
-/* This macro calls dc_action_ for each child of n_, passing
-   dc_extra_ as a second argument for each call.
-
-   It combines handling of all "no action" types, and of all 
-   "three-pointer" types, and of all "vector of pointers" types,
-   relying on the layouts of these being parallel. */
-
-#define no_action_types \
-( (1 << NILSXP) + \
-  (1 << BUILTINSXP) + \
-  (1 << SPECIALSXP) + \
-  (1 << CHARSXP) + \
-  (1 << LGLSXP) + \
-  (1 << INTSXP) + \
-  (1 << REALSXP) + \
-  (1 << CPLXSXP) + \
-  (1 << WEAKREFSXP) + \
-  (1 << RAWSXP) + \
-  (1 << S4SXP) )
-
-#define three_pointer_types \
-( (1 << ENVSXP) + \
-  (1 << CLOSXP) + \
-  (1 << PROMSXP) + \
-  (1 << LISTSXP) + \
-  (1 << LANGSXP) + \
-  (1 << DOTSXP) + \
-  (1 << SYMSXP) + \
-  (1 << BCODESXP) )
-
-#define vector_of_pointers_types \
-( (1 << VECSXP) + \
-  (1 << EXPRSXP) + \
-  (1 << STRSXP) )
-
-#define DO_CHILDREN(n_,dc_action_,dc_extra_) do { \
-    int typ_ = TYPEOF(n_); \
-    if (ATTRIB(n_) != R_NilValue && typ_ != CHARSXP) { \
-        dc_action_ (ATTRIB(n_), dc_extra_); \
-    } \
-    if (! ((no_action_types >> typ_) & 1)) { \
-        SEXP *strt_; R_len_t cnt_; \
-        if ((three_pointer_types >> typ_) & 1) { \
-            strt_ = &CAR(n_); cnt_ = 3; \
-        } \
-        else if ((vector_of_pointers_types >> typ_) & 1) { \
-            cnt_ = LENGTH(n_); \
-            if (cnt_ == 0) break; \
-            strt_ = &STRING_ELT(n_,0); \
-        } \
-        else if (typ_ == EXTPTRSXP) { \
-            strt_ = &CDR(n_); cnt_ = 2; \
-        } \
-        FREE_FORWARD_ELSE_IF \
-        else \
-            bad_sexp_type(n_, __LINE__); \
-        do { \
-            dc_action_ (*strt_++, dc_extra_); \
-            cnt_ -= 1; \
-        } while (cnt_ > 0); \
-    } \
-} while(0)
-
-#define DO_CHILDREN_DEBUG(__n__,dc__action__,extra1,extra2) do { \
-  int _r_, _c_ = 0; \
-  if (ATTRIB(n_) != R_NilValue && TYPEOF(__n__) != CHARSXP) { \
-    _c_ += _r_ = dc__action__(ATTRIB(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf("  -- %s attrib\n",type2char(TYPEOF(__n__))); \
-  } \
-  switch (TYPEOF(__n__)) { \
-  case NILSXP: \
-  case BUILTINSXP: \
-  case SPECIALSXP: \
-  case CHARSXP: \
-  case LGLSXP: \
-  case INTSXP: \
-  case REALSXP: \
-  case CPLXSXP: \
-  case WEAKREFSXP: \
-  case RAWSXP: \
-  case S4SXP: \
-    break; \
-  case STRSXP: \
-  case EXPRSXP: \
-  case VECSXP: \
-    { \
-      int i; \
-      for (i = 0; i < LENGTH(__n__); i++) { \
-	_c_ += _r_ = dc__action__(STRING_ELT(__n__, i), __n__,extra1,extra2); \
-        if (_r_) REprintf(" -- %s %d\n",type2char(TYPEOF(__n__)),i); \
-      } \
-    } \
-    break; \
-  case ENVSXP: \
-    _c_ += _r_ = dc__action__(FRAME(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s frame\n",type2char(TYPEOF(__n__))); \
-    _c_ += _r_ = dc__action__(ENCLOS(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s enclos\n",type2char(TYPEOF(__n__))); \
-    _c_ += _r_ = dc__action__(HASHTAB(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s hashtab\n",type2char(TYPEOF(__n__))); \
-    break; \
-  case CLOSXP: \
-  case PROMSXP: \
-  case LISTSXP: \
-  case LANGSXP: \
-  case DOTSXP: \
-  case SYMSXP: \
-  case BCODESXP: \
-    _c_ += _r_ = dc__action__(TAG(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s tag\n",type2char(TYPEOF(__n__))); \
-    _c_ += _r_ = dc__action__(CAR(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s car\n",type2char(TYPEOF(__n__))); \
-    _c_ += _r_ = dc__action__(CDR(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s cdr\n",type2char(TYPEOF(__n__))); \
-    break; \
-  case EXTPTRSXP: \
-    _c_ += _r_ = dc__action__(EXTPTR_PROT(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s prot\n",type2char(TYPEOF(__n__))); \
-    _c_ += _r_ = dc__action__(EXTPTR_TAG(__n__), __n__,extra1,extra2); \
-    if (_r_) REprintf(" -- %s tag\n",type2char(TYPEOF(__n__))); \
-    break; \
-  FREE_FORWARD_CASE \
-  default: \
-    bad_sexp_type(__n__, __LINE__);		\
-  } \
-  if (_c_ && getenv("ABORT")) abort(); \
-} while(0)
-
-
 /* This macro should help localize where a FREESXP node is encountered
    in the GC */
 #ifdef PROTECTCHECK
@@ -983,8 +854,8 @@ void sggc_find_root_ptrs (void)
 
     /* Start by scanning the symbol table.  We have to scan the symbol
        table specially, because it's linked by NEXTSYM_PTR, which
-       DO_CHILDREN doesn't know about, and because we need to clear
-       LASTSYMENV and LASTSYMENVNOTFOUND. */
+       sggc_find_object_ptrs doesn't know about, and because we need to 
+       clear LASTSYMENV and LASTSYMENVNOTFOUND. */
  
     if (R_SymbolTable != NULL) { /* Symbol table nonexistent at startup */
         for (i = 0; i < HSIZE; i++) {
@@ -1273,82 +1144,6 @@ void sggc_after_marking (int level, int rep)
 #endif
 }
 
-
-static void RunGenCollect(R_size_t size_needed)
-{
-    int i, gen, gens_collected;
-    RCNTXT *ctxt;
-    SEXP s;
-
-    /* determine number of generations to collect */
-    while (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
-	if (collect_counts[num_old_gens_to_collect]-- <= 0) {
-	    collect_counts[num_old_gens_to_collect] =
-		collect_counts_max[num_old_gens_to_collect];
-	    num_old_gens_to_collect++;
-	}
-	else break;
-    }
-
-    if (gc_force_gap > 0)
-        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-#   ifdef PROTECTCHECK
-        num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-#   endif
-
- again:
-    gens_collected = num_old_gens_to_collect;
-
-#if DEBUG_GC>1
-    char mess[20];
-    sprintf(mess,"START OF GC (%d)",num_old_gens_to_collect);
-#endif
-
-    /* update heap statistics */
-    R_Collected = R_NSize;
-    R_SmallNallocSize = 0;
-    for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++) {
-    }
-    R_NodesInUse = R_NSize - R_Collected;
-
-    if (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
-	if (R_Collected < R_MinFreeFrac * R_NSize || NO_FREE_NODES() 
-             || VHEAP_FREE() < size_needed + R_MinFreeFrac * R_VSize) {
-	    num_old_gens_to_collect++;
-	    if (R_Collected<=0 || VHEAP_FREE()<size_needed || NO_FREE_NODES())
-		goto again;
-	}
-	else num_old_gens_to_collect = 0;
-    }
-    else num_old_gens_to_collect = 0;
-
-    if (gens_collected == NUM_OLD_GENERATIONS) {
-	/**** do some adjustment for intermediate collections? */
-	AdjustHeapSize(size_needed);
-    }
-
-#if VALGRIND_LEVEL>0
-    /* Tell Valgrind that free nodes are not accessible */
-    for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
-	for (s = R_GenHeap[i].Free; s != R_GenHeap[i].New; s = NEXT_NODE(s)) {
-            VALGRIND_MAKE_MEM_NOACCESS(s, NODE_SIZE(i));
-            VALGRIND_MAKE_MEM_DEFINED (&s->gengc_next_node, sizeof(SEXP));
-            VALGRIND_MAKE_MEM_DEFINED (&s->gengc_prev_node, sizeof(SEXP));
-            VALGRIND_MAKE_MEM_DEFINED (&s->sxpinfo, sizeof s->sxpinfo);
-	}
-    }
-#endif
-
-    gen_gc_counts[gens_collected]++;
-
-    if (gc_reporting) {
-	REprintf("Garbage collection %d = %d", gc_count, gen_gc_counts[0]);
-	for (i = 0; i < NUM_OLD_GENERATIONS; i++)
-	    REprintf("+%d", gen_gc_counts[i + 1]);
-	REprintf(" (level %d) ... ", gens_collected);
-	DEBUG_GC_SUMMARY(gens_collected);
-    }
-}
 
 /* public interface for controlling GC torture settings */
 void R_gc_torture(int gap, int wait, Rboolean inhibit)
@@ -2193,18 +1988,8 @@ static void gc_end_timing(void)
 	double times[5];
 	R_getProcTime(times);
 
-#if 0   /* DISABLED:  Seems to make no sense (regardless of real resolution) */
-	double delta = R_getClockIncrement();
-	/* add delta to compensate for timer resolution:
-	   NB: as all current Unix-alike systems use getrusage, 
-	   this may over-compensate.
-	 */
-	gctimes[0] += times[0] - gcstarttimes[0] + delta;
-	gctimes[1] += times[1] - gcstarttimes[1] + delta;
-#else
 	gctimes[0] += times[0] - gcstarttimes[0];
 	gctimes[1] += times[1] - gcstarttimes[1];
-#endif
 	gctimes[2] += times[2] - gcstarttimes[2];
 	gctimes[3] += times[3] - gcstarttimes[3];
 	gctimes[4] += times[4] - gcstarttimes[4];
@@ -2224,7 +2009,8 @@ static void R_gc_internal(R_size_t size_needed)
     } END_SUSPEND_INTERRUPTS;
 
     if (gc_reporting) {
-
+        REprintf("Did a garbage collection at level %d\n",
+                  num_old_gens_to_collect);
     }
 }
 
