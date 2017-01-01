@@ -179,6 +179,8 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 #endif
 
+#define SGGC_AFTER_MARKING
+
 /* Include the generic SGGC header file. */
 
 #include "sggc.h"
