@@ -1,4 +1,4 @@
-/*
+	/*
  *  pqR : A pretty quick version of R
  *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
  *
@@ -149,27 +149,12 @@ extern void *Rm_realloc(void * p, size_t n);
 #endif
 
 
-#define GC_INTERVAL 1000000000
+#define GC_INTERVAL 200000
 static int gc_countdown = GC_INTERVAL;
-
-
-static void bad_sexp_type (SEXP s, int line) 
-{
-    abort();
-}
-
-/* malloc uses size_t.  We are assuming here that size_t is at least
-   as large as unsigned long.  Changed from int at 1.6.0 to (i) allow
-   2-4Gb objects on 32-bit system and (ii) objects limited only by
-   length on a 64-bit system.
-*/
-
+static int gc_last_level = 0;
+static int gc_next_level = 0;
 static int gc_reporting = 0;
-static int gc_count = 0;
-
-static R_size_t R_NodesInUse = 0;
-
-#define VHEAP_FREE() (1<<30)
+static long long int gc_count = 0;
 
 
 /* Declarations relating to GC torture
@@ -210,10 +195,8 @@ static void R_ReportNewPage();
 
 extern SEXP framenames;  /* in model.c */
 
-static void R_gc_internal(R_size_t size_needed);
+static void R_gc_internal(void);
 static void R_gc_full(R_size_t size_needed);
-
-static SEXPREC UnmarkedNodeTemplate; /* initialized to zeros, since static */
 
 static SEXP R_StringHash;   /* Global hash of CHARSXPs */
 
@@ -251,23 +234,6 @@ static SEXP R_PreciousList;             /* List of Persistent Objects */
 
 #define NUM_OLD_GENERATIONS 2  /* Fixed - not changeable with sggc */
 
-static int num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-static int gen_gc_counts[NUM_OLD_GENERATIONS + 1];
-static int collect_counts[NUM_OLD_GENERATIONS];
-
-
-/* This macro should help localize where a FREESXP node is encountered
-   in the GC */
-#ifdef PROTECTCHECK
-#define CHECK_FOR_FREE_NODE(s) { \
-    SEXP cf__n__ = (s); \
-    if (TYPEOF(cf__n__) == FREESXP && ! gc_inhibit_release) \
-	bad_sexp_type(cf__n__, __LINE__); \
-}
-#else
-#define CHECK_FOR_FREE_NODE(s)
-#endif
-
 
 static void mem_err_heap(R_size_t size)
 {
@@ -285,30 +251,6 @@ static void mem_err_malloc(R_size_t size)
 }
 
 #define NO_FREE_NODES() 0
-
-
-/* Debugging Routines. */
-
-#if DEBUG_GC>0
-
-#define DEBUG_TABLE 1  /* 1 to get a full table of counts in gc info printed */
-
-static unsigned int old_to_new_count = 0;
-
-static void DEBUG_GC_SUMMARY(int gclev)
-{
-    int i, gen, OldCount, total;
-    REprintf("\nGC at level %d, VSize = %lu + %lu = %lu\nClass counts -", 
-             gclev, 0 /* R_SmallVallocSize */, R_LargeVallocSize,
-	     /* R_SmallVallocSize + */ R_LargeVallocSize);
-    total = 0;
-    for (SEXP s = R_PreciousList; s != R_NilValue; s = CDR(s))
-        total += 1;
-    REprintf("Number of objects on precious list: %d\n",total);
-}
-#else
-#define DEBUG_GC_SUMMARY(x)
-#endif /* DEBUG_GC>0 */
 
 
 /* compute size in VEC units so result will fit in LENGTH field for FREESXPs */
@@ -600,7 +542,7 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* THE GENERATIONAL GARBAGE COLLECTOR. */
 
 
-#define LOOK_AT(x) sggc_look_at(COMPRESSED_PTR(x))
+#define LOOK_AT(x) ((x) ? sggc_look_at(COMPRESSED_PTR(x)) : 1)
 #define NOT_MARKED(x) sggc_not_marked(COMPRESSED_PTR(x))
 
 #define no_action_types \
@@ -655,7 +597,8 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
             strt = &CDR(n); cnt = 2;
         }
         do {
-            if (!LOOK_AT(*strt++)) return;
+            if (!LOOK_AT(*strt)) return;
+            strt += 1;
             cnt -= 1;
         } while (cnt > 0);
     }
@@ -1072,7 +1015,7 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
     ogc = gc_reporting;
     gc_reporting = asLogical(CAR(args));
     reset_max = asLogical(CADR(args));
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
+    gc_next_level = NUM_OLD_GENERATIONS;
 
     R_gc();
 
@@ -1099,7 +1042,7 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
-    sggc_init(15000000);
+    sggc_init(1000000);
 
     extern void Rf_constant_init(void);
     Rf_constant_init();
@@ -1172,38 +1115,47 @@ void attribute_hidden InitMemory()
 }
 
 
-/* Allocate a non-vector object. */
-
-static SEXP alloc_nonvec (SEXPTYPE type)
-{
-    if (gc_countdown-- == 0) { R_gc_internal(0); gc_countdown = GC_INTERVAL; }
-
-    sggc_cptr_t cp = sggc_alloc (type, 1);
-    if (cp == SGGC_NO_OBJECT) { R_Suicide("out of memory"); }
-    SEXP r = SEXP_PTR (cp);
-    r->cptr = cp;
-    r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-    TYPEOF(r) = type;
-    ATTRIB(r) = R_NilValue;
-    return r;
-}
-
-
 /* Allocate a vector object. */
 
 static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 {
-    if (gc_countdown-- == 0) { R_gc_internal(0); gc_countdown = GC_INTERVAL; }
+    if (gc_countdown-- == 0) {
+        R_gc_internal(); 
+        gc_countdown = GC_INTERVAL;
+    }
 
     sggc_cptr_t cp = sggc_alloc (type, length);
-    if (cp == SGGC_NO_OBJECT) { R_Suicide("out of memory"); }
+
+    while (cp == SGGC_NO_OBJECT) {
+        if (gc_countdown == GC_INTERVAL
+             && gc_last_level < 2
+             && gc_next_level < gc_last_level + 1) {
+            gc_next_level = gc_last_level + 1;
+        }
+        R_gc_internal();
+        gc_countdown = GC_INTERVAL;
+        cp = sggc_alloc (type, length);
+        if (cp == SGGC_NO_OBJECT && gc_last_level == 2)
+            R_Suicide("out of memory");
+    }
+
     SEXP r = SEXP_PTR (cp);
     r->cptr = cp;
-    r->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    static struct sxpinfo_struct zero_sxpinfo;
+    r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
     LENGTH(r) = length;
+
     return r;
+}
+
+
+/* Allocate a non-vector object. */
+
+static SEXP alloc_nonvec (SEXPTYPE type)
+{
+    return alloc_vec (type, 1);
 }
 
 
@@ -1697,13 +1649,13 @@ SEXP allocS4Object(void)
 
 void R_gc(void)
 {
-    R_gc_internal(0);
+    R_gc_internal();
 }
 
 static void R_gc_full(R_size_t size_needed)
 {
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-    R_gc_internal(size_needed);
+    gc_next_level = NUM_OLD_GENERATIONS;
+    R_gc_internal();
 }
 
 extern double R_getClockIncrement(void);
@@ -1754,19 +1706,22 @@ static void gc_end_timing(void)
 
 #define R_MAX(a,b) ( (a) < (b) ? (b) : (a) )
 
-static void R_gc_internal(R_size_t size_needed)
+static void R_gc_internal(void)
 {
     gc_count++;
 
     BEGIN_SUSPEND_INTERRUPTS {
 	gc_start_timing();
-	sggc_collect(num_old_gens_to_collect);
+	sggc_collect(gc_next_level);
+        gc_last_level = gc_next_level;
 	gc_end_timing();
     } END_SUSPEND_INTERRUPTS;
 
+    gc_next_level = ((gc_count&0x3)==0) + ((gc_count&0x7)==0);
+
     if (gc_reporting) {
-        REprintf("Did a garbage collection at level %d\n",
-                  num_old_gens_to_collect);
+        REprintf("Did garbage collection #%lld at level %d\n",
+                  gc_count, gc_last_level);
     }
 }
 
