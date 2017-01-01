@@ -149,10 +149,11 @@ extern void *Rm_realloc(void * p, size_t n);
 #endif
 
 
-#define GC_INTERVAL 200000
+#define GC_INTERVAL 1000000
 static int gc_countdown = GC_INTERVAL;
 static int gc_last_level = 0;
 static int gc_next_level = 0;
+static int gc_ran_finalizers;
 static int gc_reporting = 0;
 static long long int gc_count = 0;
 
@@ -1042,7 +1043,7 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
-    sggc_init(1000000);
+    sggc_init(2000000);
 
     extern void Rf_constant_init(void);
     Rf_constant_init();
@@ -1135,7 +1136,7 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
         R_gc_internal();
         gc_countdown = GC_INTERVAL;
         cp = sggc_alloc (type, length);
-        if (cp == SGGC_NO_OBJECT && gc_last_level == 2)
+        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
             R_Suicide("out of memory");
     }
 
@@ -1717,7 +1718,9 @@ static void R_gc_internal(void)
 	gc_end_timing();
     } END_SUSPEND_INTERRUPTS;
 
-    gc_next_level = ((gc_count&0x3)==0) + ((gc_count&0x7)==0);
+    gc_next_level = ((gc_count&0x7)==0) + ((gc_count&0x1f)==0);
+
+    gc_ran_finalizers = RunFinalizers();
 
     if (gc_reporting) {
         REprintf("Did garbage collection #%lld at level %d\n",
