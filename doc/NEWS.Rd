@@ -6,6 +6,16 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2017-??-??}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item pqR now uses a new garbage collector.
+  }}
+
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2016-10-24}{
 
   \subsection{INTRODUCTION}{

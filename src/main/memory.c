@@ -1,6 +1,6 @@
-	/*
+/*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -24,14 +24,11 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/*
- *	This code implements a non-moving generational collector
- *      with two or three generations.
- *
- *	Memory allocated by R_alloc is maintained in a stack.  Code
- *	that R_allocs memory must use vmaxget/VMAXGET and vmaxset/VMAXSET 
- *	to obtain and reset the stack pointer.
- */
+
+/* Memory management for pqR, using the SGGC (Segmented Generational
+   Garbage Collector) module written by Radford M. Neal, found in 
+   src/extra/sggc. */
+
 
 #define USE_RINTERNALS
 
@@ -56,9 +53,6 @@
 
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */
-
-#define FORWARD_NODE(x) abort()
-#define process_nodes(a,b) abort()
 
 
 /* CONFIGURATION OPTIONS.  
@@ -101,21 +95,9 @@
 
    Other debug options are set by the definitions below. */
 
-#define TOLERATE_NULL 1 /* If non-zero, node forwarding & aging ignores zero
-                           pointers (which shouldn't exist), to avoid crashing.
-                           Some packages incorrectly create objects with zero
-                           pointers, so this option should probably be set to 1,
-                           but it could be set to 0 for debugging purposes. */
-
-#define LARGE_VEC_PAD 0 /* Number of extra bytes to allocate at the end of each
-                           large vector as padding, for overrun detection... */
-
 #define DEBUG_GLOBAL_STRING_HASH 0
 
 #define DEBUG_SHOW_CHARSXP_CACHE 0
-
-#define PRINT_TYPE_STATS 0 /* Set to 1 to print stats on # of objects of each 
-                              type after garbage collection initiated by gc() */
 
 
 /* VALGRIND declarations.
@@ -149,13 +131,27 @@ extern void *Rm_realloc(void * p, size_t n);
 #endif
 
 
+
+/* Miscellaneous declarations for garbage collector. */
+
+static void R_gc_internal(void);       /* The main GC procedure */
+
+static SEXP R_PreciousList;            /* List of Persistent Objects */
+static SEXP R_StringHash;              /* Global hash of CHARSXPs */
+
+extern SEXP framenames;                /* in model.c */
+
+
+/* Variables controlling when garbage collections are done. */
+
 #define GC_INTERVAL 1000000
-static int gc_countdown = GC_INTERVAL;
-static int gc_last_level = 0;
-static int gc_next_level = 0;
-static int gc_ran_finalizers;
-static int gc_reporting = 0;
-static long long int gc_count = 0;
+
+static int gc_countdown = GC_INTERVAL; /* Countdown to when to do next GC */
+static long long int gc_count = 0;     /* Number of garbage collections done */
+static int gc_last_level = 0;          /* Level of most recently done GC */
+static int gc_next_level = 0;          /* Level currently planned for next GC */
+static int gc_ran_finalizers;          /* Whether finalizers ran in last GC */
+static int gc_reporting = 0;           /* Should message be printed on GC? */
 
 
 /* Declarations relating to GC torture
@@ -194,14 +190,6 @@ static R_len_t R_MemReportingNElem;
 static void R_ReportAllocation (R_size_t, SEXPTYPE, R_len_t);
 static void R_ReportNewPage();
 
-extern SEXP framenames;  /* in model.c */
-
-static void R_gc_internal(void);
-static void R_gc_full(R_size_t size_needed);
-
-static SEXP R_StringHash;   /* Global hash of CHARSXPs */
-
-static int vsfac = 1; /* current units for vsize: changes at initialization */
 
 R_size_t attribute_hidden R_GetMaxVSize(void)
 {
@@ -226,16 +214,6 @@ void R_SetPPSize(R_size_t size)
     R_PPStackSize = size;
 }
 
-/* Miscellaneous Globals. */
-
-static SEXP R_PreciousList;             /* List of Persistent Objects */
-
-
-/* Node Generations. */
-
-#define NUM_OLD_GENERATIONS 2  /* Fixed - not changeable with sggc */
-
-
 static void mem_err_heap(R_size_t size)
 {
     errorcall(R_NilValue, _("vector memory exhausted (limit reached?)"));
@@ -250,8 +228,6 @@ static void mem_err_malloc(R_size_t size)
 {
     errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
 }
-
-#define NO_FREE_NODES() 0
 
 
 /* compute size in VEC units so result will fit in LENGTH field for FREESXPs */
@@ -740,7 +716,7 @@ void sggc_after_marking (int level, int rep)
     SEXP s; 
     int i;
 
-    /* LOOK AT TASKS THE FIRST TIME. */
+    /* LOOK AT TASKS, THE FIRST TIME. */
 
     if (rep == 0) {
 
@@ -759,7 +735,7 @@ void sggc_after_marking (int level, int rep)
            as inputs or outputs that haven't already been marked above, so
            that we can then collect these variables. */
     
-        if (level == NUM_OLD_GENERATIONS) {
+        if (level == 2) {
             for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
                 SEXP v = *var_list;
                 if (NOT_MARKED(v)) {
@@ -1016,7 +992,7 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
     ogc = gc_reporting;
     gc_reporting = asLogical(CAR(args));
     reset_max = asLogical(CADR(args));
-    gc_next_level = NUM_OLD_GENERATIONS;
+    gc_next_level = 2;
 
     R_gc();
 
@@ -1203,7 +1179,6 @@ char *R_alloc(size_t nelem, int eltsize)
     }
     else return NULL;
 }
-
 
 
 /* S COMPATIBILITY */
@@ -1650,12 +1625,6 @@ SEXP allocS4Object(void)
 
 void R_gc(void)
 {
-    R_gc_internal();
-}
-
-static void R_gc_full(R_size_t size_needed)
-{
-    gc_next_level = NUM_OLD_GENERATIONS;
     R_gc_internal();
 }
 
@@ -2544,7 +2513,7 @@ int Seql(SEXP a, SEXP b)
    of its node class), but not for the space for its name, nor for
    .Internals it references, nor for unused padding in pages of nodes. 
 
-   Sharing of CHARSXPs withing a string (eg, in c("abc","abc")) is accounted
+   Sharing of CHARSXPs within a string (eg, in c("abc","abc")) is accounted
    for, but not other types of sharing (eg, in list("abc","abc")).
 
    Constant objects (in const-objs.c) are counted as being of zero size.
