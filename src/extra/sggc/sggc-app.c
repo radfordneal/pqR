@@ -68,11 +68,11 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
     case REALSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
-    case EXPESXP:
+    case EXPRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
-    case CPLXSXP
+    case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
     default:
         abort();

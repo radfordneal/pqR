@@ -169,8 +169,7 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_N_KINDS (2*SGGC_N_TYPES)  /* For now,
-  one small size plus big */
+#define SGGC_N_KINDS (3*SGGC_N_TYPES)  /* A big kind, plus two small */
 
 #define SGGC_KIND_CHUNKS \
 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* Kinds for big segments */ \
