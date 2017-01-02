@@ -131,7 +131,6 @@ extern void *Rm_realloc(void * p, size_t n);
 #endif
 
 
-
 /* Miscellaneous declarations for garbage collector. */
 
 static void R_gc_internal(void);       /* The main GC procedure */
@@ -1019,6 +1018,7 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
+    sggc_app_init();
     sggc_init(2000000);
 
     extern void Rf_constant_init(void);
