@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
-          Wrapper for malloc/free for use in test programs
+          Wrapper for calloc/free for use in test programs
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,17 +27,17 @@
 static int in_use = 0;
 
 
-/* WRAPPER FOR MALLOC FOR USE IN TESTING.  Displays the address allocated,
+/* WRAPPER FOR CALLOC FOR USE IN TESTING.  Displays the address allocated,
    and the number of storage blocks in use after this allocation. */
 
-void *test_malloc (size_t size)
+void *test_calloc (size_t size)
 { 
   char *res;
   size_t i;
 
-  res = malloc (size);
+  res = calloc (size,1);
   if (res == NULL)
-  { printf ("test_malloc: %d in use, malloc failed\n", in_use);
+  { printf ("test_calloc: %d in use, calloc failed\n", in_use);
     return res;
   }
 
@@ -47,7 +47,7 @@ void *test_malloc (size_t size)
 
   in_use += 1;
 
-  printf ("test_malloc: %d in use after:: %p\n", in_use, res);
+  printf ("test_calloc: %d in use after:: %p\n", in_use, res);
   return res;
 }
 

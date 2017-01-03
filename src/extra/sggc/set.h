@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Facility for maintaining sets of objects - header file
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -47,7 +47,8 @@ typedef uint32_t set_value_t;
   ((val) & (((set_value_t)1 << SET_OFFSET_BITS) - 1))
 
 
-/* TYPE OF THE BIT VECTOR RECORDING SET MEMBERSHIP IN A SEGMENT. */
+/* TYPE OF THE BIT VECTOR RECORDING SET MEMBERSHIP IN A SEGMENT.  Must
+   be unsigned. */
 
 #if SET_OFFSET_BITS == 3
   typedef uint8_t set_bits_t;

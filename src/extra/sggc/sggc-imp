@@ -1,7 +1,7 @@
 SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION
        Documentation on design and internal implementation details
 
-Copyright (c) 2016 Radford M. Neal.
+Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -260,7 +260,7 @@ sequence goes to the end of the set).  A call of sggc_alloc for an
 object of a small-segment kind, k, will use the object from
 'free_or_new[k]' identified by 'next_free[k]', unless this is equal to
 'end_free[k]', indicating that no free objects are available for reuse
-(in which case sggc_malloc is called to obtain new space).
+(in which case sggc_alloc_zeroed is called to obtain new space).
 
 If k uses big segments, 'free_or_new[[k]' contains only newly
 allocated objects between calls of sggc_collect.  Allocation for
@@ -269,9 +269,9 @@ existing segment in the 'unused' set, which is shared by all the kinds
 that use big segments.  These objects have auxiliary information
 already allocated (which is the same for all kinds, and cannot be
 read-only), but do not have a data area allocated - one is allocated
-using sggc_malloc when the segment becomes used.  If 'unused' is
+using sggc_alloc_zeroed when the segment becomes used.  If 'unused' is
 empty, a new segment, data, and auxiliary information are allocated
-using sggc_malloc.
+using sggc_alloc_zeroed.
 
 At the start of garbage collection at level 1, objects in 'old_gen1'
 of kind k (with k being determinable from the compressed pointer for
@@ -436,7 +436,7 @@ include the following:
     to facilitate this.  The segments in 'small_unused' could then be
     reused for any small kind.  Their data areas might or might not be
     freed when they are put in 'small_unused' (perhaps only if a call
-    of sggc_malloc fails).
+    of sggc_alloc_zeroed fails).
 
   o Currently, SGGC never frees memory used for auxiliary information,
     though it may be reused for other objects of the same kind.  If

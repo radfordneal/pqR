@@ -1,34 +1,34 @@
 STARTING TEST: segs = 5, iters = 50
 
 ABOUT TO CALL sggc_init
-test_malloc: 1 in use after:: 0x7f984b403290
-test_malloc: 2 in use after:: 0x7f984b4032c0
-test_malloc: 3 in use after:: 0x7f984b4000a0
+test_calloc: 1 in use after:: 0x7f984b403290
+test_calloc: 2 in use after:: 0x7f984b4032c0
+test_calloc: 3 in use after:: 0x7f984b4000a0
 DONE sggc_init
 ALLOCATING nil
 sggc_alloc: type 0, length 0
-test_malloc: 4 in use after:: 0x7f984b4032f0
+test_calloc: 4 in use after:: 0x7f984b4032f0
 sggc_alloc: created 0 in new segment
-test_malloc: 5 in use after:: 0x7f984b403330
-sggc_alloc: called malloc for 0 (big 0, 1 chunks):: 0x7f984b403330
+test_calloc: 5 in use after:: 0x7f984b403330
+sggc_alloc: called alloc_zeroed for 0 (big 0, 1 chunks):: 0x7f984b403330
 ALLOC RETURNING 0
 
 ITERATION 1
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
-test_malloc: 6 in use after:: 0x7f984b403340
+test_calloc: 6 in use after:: 0x7f984b403340
 sggc_alloc: created 40 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff
-test_malloc: 7 in use after:: 0x7f984b800600
-sggc_alloc: called malloc for 40 (small 1, 64 chunks):: 0x7f984b800600
+test_calloc: 7 in use after:: 0x7f984b800600
+sggc_alloc: called alloc_zeroed for 40 (small 1, 64 chunks):: 0x7f984b800600
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
-test_malloc: 8 in use after:: 0x7f984b403390
+test_calloc: 8 in use after:: 0x7f984b403390
 sggc_alloc: created 80 in new segment
 sggc_alloc: new segment has bits 1249249249249249
-test_malloc: 9 in use after:: 0x7f984b800a00
-sggc_alloc: called malloc for 80 (small 5, 64 chunks):: 0x7f984b800a00
+test_calloc: 9 in use after:: 0x7f984b800a00
+sggc_alloc: called alloc_zeroed for 80 (small 5, 64 chunks):: 0x7f984b800a00
 ALLOC RETURNING 80
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
@@ -36,11 +36,11 @@ sggc_alloc: found 41 in next_free
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
-test_malloc: 10 in use after:: 0x7f984b4033d0
+test_calloc: 10 in use after:: 0x7f984b4033d0
 sggc_alloc: created c0 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff
-test_malloc: 11 in use after:: 0x7f984b803600
-sggc_alloc: called malloc for c0 (small 3, 64 chunks):: 0x7f984b803600
+test_calloc: 11 in use after:: 0x7f984b803600
+sggc_alloc: called alloc_zeroed for c0 (small 3, 64 chunks):: 0x7f984b803600
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2

@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Facility for maintaining sets of objects - function definitions
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -75,32 +75,48 @@ static int check_n_elements (struct set *set);
 /* FIND POSITION OF LOWEST-ORDER BIT.  The position returned is from 0 up.
    The argument must not be zero.
 
-   Could be sped up, but not yet. */
+   Fast for gcc, using its builtin. */
 
 static inline int first_bit_pos (set_bits_t b)
-{ int pos;
+{ 
   if (SET_DEBUG && b == 0) abort();
-  pos = 0;
-  while ((b & 1) == 0)
-  { pos += 1;
-    b >>= 1;
-  }
-  return pos;
+# if __GNUC__
+    return sizeof b <= sizeof (unsigned) ? __builtin_ctz(b) 
+         : sizeof b <= sizeof (unsigned long) ? __builtin_ctzl(b) 
+         : sizeof b <= sizeof (unsigned long long) ? __builtin_ctzll(b)
+         : (abort(), 0);
+# else
+    int pos;
+    pos = 0;
+    while ((b & 1) == 0)
+    { pos += 1;
+      b >>= 1;
+    }
+    return pos;
+# endif
 }
 
 
 /* FIND THE NUMBER OF BITS IN A SET OF BITS.  
 
-   Could be sped up, but not yet. */
+   Fast for gcc, using its builtin. */
 
 static inline int bit_count (set_bits_t b)
-{ int cnt;
-  cnt = 0;
-  while (b != 0)
-  { cnt += (b & 1);
-    b >>= 1;
-  }
-  return cnt;
+{ 
+# if __GNUC__
+    return sizeof b <= sizeof (unsigned) ? __builtin_popcount(b) 
+         : sizeof b <= sizeof (unsigned long) ? __builtin_popcountl(b) 
+         : sizeof b <= sizeof (unsigned long long) ? __builtin_popcountll(b)
+         : (abort(), 0);
+# else
+    int cnt;
+    cnt = 0;
+    while (b != 0)
+    { cnt += (b & 1);
+      b >>= 1;
+    }
+    return cnt;
+# endif
 }
 
 

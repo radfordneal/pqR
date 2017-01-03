@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
-          Segmented garbage collection - header file
+          Segmented generational garbage collection - header file
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -96,6 +96,10 @@ sggc_type_t *sggc_type;            /* Types of objects in each segment */
 #define SGGC_KIND(cptr) \
   (SET_SEGMENT(SET_VAL_INDEX(cptr))->x.big.big ? SGGC_TYPE(cptr) \
     : SET_SEGMENT(SET_VAL_INDEX(cptr))->x.small.kind)
+
+/* Numbers of chunks for the various kinds (zero for kinds for big segments). */
+
+const int sggc_kind_chunks[SGGC_N_KINDS];
 
 
 /* STRUCTURE HOLDING INFORMATION ON CURRENT SPACE USAGE.  This structure

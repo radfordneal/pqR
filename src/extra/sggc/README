@@ -1,7 +1,7 @@
 SEGMENTED GENERATIONAL GARBAGE COLLECTOR
 
-Copyright 2016 Radford M. Neal.  Distributed under the GPL version 2
-or later.  See COPYING for licence details.
+Copyright 2016, 2017 Radford M. Neal.  Distributed under the GPL
+version 2 or later.  See COPYING for licence details.
 
 The SGGC library provides a facility for allocating and automatically
 freeing objects, such as is needed in interpreters for languages such

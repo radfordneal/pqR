@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Header for sggc's use of the facility for maintaining sets of objects
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
 /* NUMBER OF OFFSET BITS IN A (SEGMENT INDEX, OFFSET) PAIR. */
 
-#define SET_OFFSET_BITS 6  /* Maximum for using 64-bit shift/mask operations */
+#define SET_OFFSET_BITS 6  /* Max is 6 for using 64-bit shift/mask operations */
 
 
 /* CHAINS FOR LINKING SEGMENTS IN SETS.  All sets used have their own

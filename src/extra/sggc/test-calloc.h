@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Header to use wrapper for malloc/free for use in test programs
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 
-#define sggc_malloc test_malloc
-void *test_malloc (size_t size);
+#define sggc_alloc_zeroed test_calloc
+void *test_calloc (size_t size);
 
 #define sggc_free test_free
 void test_free (void *ptr);

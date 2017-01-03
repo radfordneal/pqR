@@ -1,5 +1,10 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-01-03
+
+  Small changes to the API.  Now uses fast builtins for bit_count and
+  first_bit_pos when compiled with gcc (or a gcc look-alike).
+
 Version-2016-08-18
 
   First apparently stable and reasonably complete version.  Not

@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
-          Segmented garbage collection - function definitions
+          Segmented generational garbage collection - function definitions
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define SGGC_INTERNAL  /* So sggc_info will be declared here without 'extern' */
 #include "sggc-app.h"
@@ -44,11 +45,11 @@
 #define EXTRA_CHECKS 1
 
 
-/* MALLOC/FREE TO USE.  Defaults to the system malloc/free if not something
+/* ALLOCATE / FREE MACROS.  Defaults to the system calloc/free if something
    else is not defined in sggc-app.h. */
 
-#ifndef sggc_malloc
-#define sggc_malloc malloc
+#ifndef sggc_alloc_zeroed
+#define sggc_alloc_zeroed(n) calloc(n,1)
 #endif
 
 #ifndef sggc_free
@@ -62,12 +63,12 @@
    initialization as SGGC_KIND_CHUNKS.  Entries must not be greater
    than SGGC_CHUNKS_IN_SMALL_SEGMENT. */
 
-static int kind_chunks[SGGC_N_KINDS] = SGGC_KIND_CHUNKS;
+const int sggc_kind_chunks[SGGC_N_KINDS] = SGGC_KIND_CHUNKS;
 
 
 /* NUMBERS OF OBJECTS IN SEGMENTS OF EACH KIND, AND END OF ITS CHUNKS.  
    Computed at initialization from SGGC_CHUNKS_IN_SMALL_SEGMENT and 
-   kind_chunks. */
+   sggc_kind_chunks. */
 
 static int kind_objects[SGGC_N_KINDS];
 static int kind_chunk_end[SGGC_N_KINDS];
@@ -98,8 +99,8 @@ static char *kind_aux2_read_only[SGGC_N_KINDS];
 #endif
 
 
-/* BIT VECTORS FOR FULL SEGMENTS.  Computed at initialization from kind_chunks
-   and SET_OFFSET_BITS. */
+/* BIT VECTORS FOR FULL SEGMENTS.  Computed at initialization from 
+   sggc_kind_chunks and SET_OFFSET_BITS. */
 
 static set_bits_t kind_full[SGGC_N_KINDS];
 
@@ -151,25 +152,25 @@ int sggc_init (int max_segments)
      segments these point to is allocated later, when the segment is
      actually needed. */
 
-  sggc_segment = sggc_malloc (max_segments * sizeof *sggc_segment);
+  sggc_segment = sggc_alloc_zeroed (max_segments * sizeof *sggc_segment);
   if (sggc_segment == NULL)
   { return 1;
   }
 
-  sggc_data = sggc_malloc (max_segments * sizeof *sggc_data);
+  sggc_data = sggc_alloc_zeroed (max_segments * sizeof *sggc_data);
   if (sggc_data == NULL)
   { return 2;
   }
 
 # ifdef SGGC_AUX1_SIZE
-    sggc_aux1 = sggc_malloc (max_segments * sizeof *sggc_aux1);
+    sggc_aux1 = sggc_alloc_zeroed (max_segments * sizeof *sggc_aux1);
     if (sggc_aux1 == NULL)
     { return 3;
     }
 # endif
 
 # ifdef SGGC_AUX2_SIZE
-    sggc_aux2 = sggc_malloc (max_segments * sizeof *sggc_aux2);
+    sggc_aux2 = sggc_alloc_zeroed (max_segments * sizeof *sggc_aux2);
     if (sggc_aux2 == NULL)
     { return 4;
     }
@@ -177,7 +178,7 @@ int sggc_init (int max_segments)
 
   /* Allocate space for holding the types of segments. */
 
-  sggc_type = sggc_malloc (max_segments * sizeof *sggc_type);
+  sggc_type = sggc_alloc_zeroed (max_segments * sizeof *sggc_type);
   if (sggc_type == NULL)
   { return 5;
   }
@@ -189,22 +190,22 @@ int sggc_init (int max_segments)
      that small segments aren't too big. */
 
   for (k = 0; k < SGGC_N_KINDS; k++)
-  { if (kind_chunks[k] == 0) /* big segment */
+  { if (sggc_kind_chunks[k] == 0) /* big segment */
     { if (k >= SGGC_N_TYPES) abort();
       kind_full[k] = 1;
       kind_objects[k] = 1;
       kind_chunk_end[k] = 0;  /* ends when only object ends */
     }
     else /* small segment */
-    { if (kind_chunks[k] > SGGC_CHUNKS_IN_SMALL_SEGMENT) abort();
+    { if (sggc_kind_chunks[k] > SGGC_CHUNKS_IN_SMALL_SEGMENT) abort();
       kind_full[k] = 0;
       for (j = 0;
-           j + kind_chunks[k] <= SGGC_CHUNKS_IN_SMALL_SEGMENT; 
-           j += kind_chunks[k])
+           j + sggc_kind_chunks[k] <= SGGC_CHUNKS_IN_SMALL_SEGMENT; 
+           j += sggc_kind_chunks[k])
       { kind_full[k] |= (set_bits_t)1 << j;
       }
-      kind_objects[k] = SGGC_CHUNKS_IN_SMALL_SEGMENT / kind_chunks[k];
-      kind_chunk_end[k] = kind_objects[k] * kind_chunks[k];
+      kind_objects[k] = SGGC_CHUNKS_IN_SMALL_SEGMENT / sggc_kind_chunks[k];
+      kind_chunk_end[k] = kind_objects[k] * sggc_kind_chunks[k];
     }
   }
 
@@ -215,8 +216,8 @@ int sggc_init (int max_segments)
     for (k = 0; k < SGGC_N_KINDS; k++)
     { 
 #     ifdef SGGC_AUX1_READ_ONLY
-      if (kind_aux1_read_only[k] != NULL) /* read-only aux1 info is not */
-      { if (kind_chunks[k] == 0) abort(); /*   allowed for big segments */
+      if (kind_aux1_read_only[k] != NULL)      /* read-only aux1 info is not */
+      { if (sggc_kind_chunks[k] == 0) abort(); /*   allowed for big segments */
       }
       else
 #     endif
@@ -231,8 +232,8 @@ int sggc_init (int max_segments)
     for (k = 0; k < SGGC_N_KINDS; k++)
     { 
 #     ifdef SGGC_AUX2_READ_ONLY
-      if (kind_aux2_read_only[k] != NULL) /* read-only aux2 info is not */
-      { if (kind_chunks[k] == 0) abort(); /*   allowed for big segments */
+      if (kind_aux2_read_only[k] != NULL)      /* read-only aux2 info is not */
+      { if (sggc_kind_chunks[k] == 0) abort(); /*   allowed for big segments */
       }
       else
 #     endif
@@ -299,7 +300,7 @@ int sggc_init (int max_segments)
 
 static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos)
 {
-  sggc_nchunks_t nch = kind_chunks[kind];
+  sggc_nchunks_t nch = sggc_kind_chunks[kind];
   if (nch == 0) 
   { nch = SGGC_CHUNKS_IN_SMALL_SEGMENT;
   }
@@ -350,7 +351,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
      one is there, and will be added to free_or_new for this kind. */
 
   from_free = 0;
-  if (kind_chunks[kind] == 0) /* uses big segments */
+  if (sggc_kind_chunks[kind] == 0) /* uses big segments */
   { v = set_first (&unused, 1);
     if (v != SGGC_NO_OBJECT)
     { if (SGGC_DEBUG) printf("sggc_alloc: found %x in unused\n",(unsigned)v);
@@ -370,7 +371,8 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
   }
 
   /* Create a new segment for this object, if none found above.  Also set
-     'index' to the new or old segment being used. */
+     'index' to the new or old segment being used.  May return SGGC_NO_OBJECT
+     if a new segment can't be created. */
 
   if (v != SGGC_NO_OBJECT)
   { index = SET_VAL_INDEX(v);
@@ -381,7 +383,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
     { return SGGC_NO_OBJECT;
     }
 
-    sggc_segment[next_segment] = sggc_malloc (sizeof **sggc_segment);
+    sggc_segment[next_segment] = sggc_alloc_zeroed (sizeof **sggc_segment);
     if (sggc_segment[next_segment] == NULL)
     { return SGGC_NO_OBJECT;
     }
@@ -419,7 +421,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
   }
   else
   { sggc_type[index] = type;
-    if (kind_chunks[kind] == 0) /* big segment */
+    if (sggc_kind_chunks[kind] == 0) /* big segment */
     { seg->x.big.big = 1;
     }
     else /* small segment */
@@ -434,7 +436,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
      objects in the segment into free_or_new, and use them as the
      current set of free objects if there were none before. */
 
-  if (kind_chunks[kind] == 0) /* big segment, can't be from free_or_new */
+  if (sggc_kind_chunks[kind] == 0) /* big segment, can't be from free_or_new */
   {
     set_add (&free_or_new[kind], v);
   }
@@ -477,11 +479,13 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 #     endif
       if (sggc_aux1[index] == NULL)
       { if (kind_aux1_block[kind] == NULL)
-        { kind_aux1_block[kind] = sggc_malloc (SGGC_CHUNKS_IN_SMALL_SEGMENT
-                                    * SGGC_AUX1_BLOCK_SIZE * SGGC_AUX1_SIZE);
+        { kind_aux1_block[kind] = sggc_alloc_zeroed
+                                   (SGGC_CHUNKS_IN_SMALL_SEGMENT
+                                     * SGGC_AUX1_BLOCK_SIZE * SGGC_AUX1_SIZE);
           if (SGGC_DEBUG)
-          { printf("sggc_alloc: called malloc for aux1 block (kind %d):: %p\n", 
-                    kind, kind_aux1_block[kind]);
+          { printf(
+             "sggc_alloc: called alloc_zeroed for aux1 block (kind %d):: %p\n", 
+              kind, kind_aux1_block[kind]);
           }
           kind_aux1_block_pos[kind] = 0;
           if (kind_aux1_block[kind] == NULL) 
@@ -516,11 +520,13 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 #     endif
       if (sggc_aux2[index] == NULL)
       { if (kind_aux2_block[kind] == NULL)
-        { kind_aux2_block[kind] = sggc_malloc (SGGC_CHUNKS_IN_SMALL_SEGMENT
-                                    * SGGC_AUX2_BLOCK_SIZE * SGGC_AUX2_SIZE);
+        { kind_aux2_block[kind] = sggc_alloc_zeroed
+                                    (SGGC_CHUNKS_IN_SMALL_SEGMENT
+                                      * SGGC_AUX2_BLOCK_SIZE * SGGC_AUX2_SIZE);
           if (SGGC_DEBUG)
-          { printf("sggc_alloc: called malloc for aux2 block (kind %d):: %p\n", 
-                    kind, kind_aux2_block[kind]);
+          { printf(
+             "sggc_alloc: called alloc_zeroed for aux2 block (kind %d):: %p\n", 
+              kind, kind_aux2_block[kind]);
           }
           kind_aux2_block_pos[kind] = 0;
           if (kind_aux2_block[kind] == NULL) 
@@ -551,21 +557,23 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
       sggc_nchunks_t nch = sggc_nchunks (type, length);
       seg->x.big.max_chunks = (nch >> SGGC_CHUNK_BITS) == 0 ? nch : 0;
 
-      sggc_data[index] = sggc_malloc ((size_t) SGGC_CHUNK_SIZE * nch);
+      sggc_data[index] = sggc_alloc_zeroed ((size_t) SGGC_CHUNK_SIZE * nch);
       if (SGGC_DEBUG) 
-      { printf ("sggc_alloc: called malloc for %x (big %d, %d chunks):: %p\n", 
-                 v, kind, (int)nch, sggc_data[index]);
+      { printf (
+         "sggc_alloc: called alloc_zeroed for %x (big %d, %d chunks):: %p\n", 
+          v, kind, (int)nch, sggc_data[index]);
       }
 
       sggc_info.big_chunks += nch;
     }
     else /* small segment */
     { 
-      sggc_data[index] = sggc_malloc ((size_t) SGGC_CHUNK_SIZE 
-                                  * SGGC_CHUNKS_IN_SMALL_SEGMENT);
+      sggc_data[index] = sggc_alloc_zeroed ((size_t) SGGC_CHUNK_SIZE 
+                                             * SGGC_CHUNKS_IN_SMALL_SEGMENT);
       if (SGGC_DEBUG) 
-      { printf ("sggc_alloc: called malloc for %x (small %d, %d chunks):: %p\n",
-                 v, kind, (int)SGGC_CHUNKS_IN_SMALL_SEGMENT, sggc_data[index]);
+      { printf (
+         "sggc_alloc: called alloc_zeroed for %x (small %d, %d chunks):: %p\n",
+          v, kind, (int)SGGC_CHUNKS_IN_SMALL_SEGMENT, sggc_data[index]);
       }
     }
 
@@ -574,13 +582,19 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
     }
   }
 
+  else /* Using existing data area in small segment, so just set to zeros. */
+  {
+    if (sggc_kind_chunks[kind] == 0) abort();
+    memset (SGGC_DATA(v), 0, (size_t) sggc_kind_chunks[kind] * SGGC_CHUNK_SIZE);
+  }
+
   sggc_info.gen0_count += 1;
 
   return v;
 
 fail: 
 
-  /* Segment obtained, but couldn't allocate aux info or data for segment */
+  /* Segment obtained, but couldn't allocate aux info or data for segment. */
 
   return SGGC_NO_OBJECT;
 }
@@ -611,20 +625,20 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
   set_bits_t bits;
   int i;
 
-  if (kind_chunks[kind] == 0) abort(); /* big segments are not allowed */
+  if (sggc_kind_chunks[kind] == 0) abort(); /* big segments are not allowed */
   if (n_objects < 1) abort();          /* must be at least one object */
   if (n_objects > kind_objects[kind]) abort(); /* too many objects */
 
   bits = 0;
   for (i = 0; i < n_objects; i++)
-  { bits |= 1 << (i*kind_chunks[kind]);
+  { bits |= 1 << (i*sggc_kind_chunks[kind]);
   }
 
   if (next_segment == maximum_segments)
   { return SGGC_NO_OBJECT;
   }
 
-  sggc_segment[next_segment] = sggc_malloc (sizeof **sggc_segment);
+  sggc_segment[next_segment] = sggc_alloc_zeroed (sizeof **sggc_segment);
   if (sggc_segment[next_segment] == NULL)
   { return SGGC_NO_OBJECT;
   }
@@ -902,7 +916,7 @@ void sggc_collect (int level)
      loop at SGGC_N_TYPES. */
 
   for (k = 0; k < SGGC_N_TYPES; k++)
-  { if (kind_chunks[k] == 0)
+  { if (sggc_kind_chunks[k] == 0)
     { while ((v = set_first (&free_or_new[k], 1)) != SGGC_NO_OBJECT)
       { set_index_t index = SET_VAL_INDEX(v);
         if (SGGC_DEBUG) 
@@ -922,7 +936,7 @@ void sggc_collect (int level)
   /* Set up new next_free and end_free pointers, to use all of free_or_new. */
 
   for (k = 0; k < SGGC_N_KINDS; k++)
-  { if (kind_chunks[k] != 0)
+  { if (sggc_kind_chunks[k] != 0)
     { next_free[k] = set_first (&free_or_new[k], 0);
       end_free[k] = SGGC_NO_OBJECT;
     }
@@ -933,7 +947,7 @@ void sggc_collect (int level)
 
   if (EXTRA_CHECKS)
   { for (k = 0; k < SGGC_N_KINDS; k++)
-    { if (kind_chunks[k] != 0)
+    { if (sggc_kind_chunks[k] != 0)
       { sggc_cptr_t p;
         for (p = set_first (&free_or_new[k], 0); 
              p != SGGC_NO_OBJECT;

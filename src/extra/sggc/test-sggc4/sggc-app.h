@@ -34,7 +34,7 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 /* Use special malloc/free for testing, defining sggc_malloc and sggc_free. */
 
-#include "test-malloc.h"
+#include "test-calloc.h"
 
 /* Include the generic SGGC header file. */
 
