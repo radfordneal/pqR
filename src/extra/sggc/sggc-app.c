@@ -82,9 +82,7 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
 #endif
 
 
-/* Tables of kinds and allowed lengths for vector kinds. */
-
-static int kind_chunks [SGGC_N_KINDS] = SGGC_KIND_CHUNKS;
+/* Table of allowed lengths for vector kinds. */
 
 static int kind_length [SGGC_N_KINDS-SGGC_N_TYPES];
 
@@ -104,7 +102,7 @@ void sggc_app_init (void)
     for (i = 0; vectypes[i] != NILSXP; i++) {
         typ = vectypes[i];
         for (k = SGGC_N_TYPES + typ; k < SGGC_N_KINDS; k += SGGC_N_TYPES) {
-            for (len = 1; sggc_nchunks(typ,len) <= kind_chunks[k]; len++)
+            for (len = 1; sggc_nchunks(typ,len) <= sggc_kind_chunks[k]; len++)
                 kind_length [k - SGGC_N_TYPES] = len;
         }
     }
