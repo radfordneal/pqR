@@ -1118,8 +1118,6 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 
     SEXP r = SEXP_PTR (cp);
     r->cptr = cp;
-    static struct sxpinfo_struct zero_sxpinfo;
-    r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
     LENGTH(r) = length;
@@ -1572,24 +1570,17 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
 #endif
 
-    /* For EXPRSXP, VECSXP, and STRSXP, prevent disaster in the case
-       that an uninitialised list vector or string vector is marked
-       Direct assignment is OK since the node was just allocated and
-       so is at least as new as R_NilValue and R_BlankString.  Strings
-       are initialized to R_BlankString. */
+    /* Allocated space has been zeroed, which ensures CHARSXP has terminating
+       null.  But still need to set STRSXPs to R_BlankString and VECSXP/EXPRSXPs
+       to R_NilValue. */
 
-    if (type == EXPRSXP || type == VECSXP) {
-	SEXP *data = STRING_PTR(s);
+    if (type == VECSXP || type == EXPRSXP) {
 	for (i = 0; i < length; i++)
-	    data[i] = R_NilValue;
+	    VECTOR_ELT(s,i) = R_NilValue;  /* no old-to-new check needed */
     }
-    else if(type == STRSXP) {
-	SEXP *data = STRING_PTR(s);
+    else if (type == STRSXP) {
 	for (i = 0; i < length; i++)
-	    data[i] = R_BlankString;
-    }
-    else if (type == CHARSXP) {
-	CHAR_RW(s)[length] = 0;
+	    STRING_ELT(s,i) = R_BlankString;  /* no old-to-new check needed */
     }
 
     return s;
