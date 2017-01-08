@@ -14,9 +14,9 @@ include $(top_builddir)/Makeconf
 SGGC_CPPFLAGS = -I$(srcdir)
 ALL_CPPFLAGS = $(SGGC_CPPFLAGS) $(R_XTRA_CPPFLAGS) $(CPPFLAGS) $(DEFS)
 
-SOURCES = sggc.c set.c sggc-app.c
+SOURCES = sggc.c sggc-app.c
 
-HEADERS = sggc.h sggc-app.h set.h set-app.h
+HEADERS = sggc.h sggc-app.h set.h set-app.h set.c
 
 DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)

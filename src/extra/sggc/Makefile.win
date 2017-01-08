@@ -10,7 +10,7 @@ all:
 	$(MAKE) -f Makefile.win makeMakedeps
 	$(MAKE) -f Makefile.win libsggc.a
 
-CSOURCES = sggc.c set.c
+CSOURCES = sggc.c sggc-app.c
 
 OBJS = $(CSOURCES:.c=.o)
 libsggc.a: $(OBJS)

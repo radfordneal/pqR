@@ -30,6 +30,10 @@
 #define SGGC_INTERNAL  /* So sggc_info will be declared here without 'extern' */
 #include "sggc-app.h"
 
+#if SET_STATIC
+#  include "set.c"     /* Define set procedures here as static, not linked */
+#endif
+
 
 /* DEBUGGING FLAG.  Set to 1 to enable debug output.  May be set by a compiler
    flag, in which case it isn't overridden here. */
@@ -42,7 +46,7 @@
 /* ENABLE/DISABLE EXTRA CHECKS.  These are consistency checks that take
    non-negligible time. */
 
-#define EXTRA_CHECKS 1
+#define EXTRA_CHECKS 0
 
 
 /* ALLOCATE / FREE MACROS.  Defaults to the system calloc/free if something
@@ -774,33 +778,31 @@ void sggc_collect (int level)
      of collection being done) and old_to_new_check (which contains
      the generation of the referring object, always 1 or 2, except it
      is cleared to 0 to indicate that further special processing is
-     unnecessary, and that the old-to-new entry is still needed). */
+     unnecessary.  (That may also mean that the old-to-new entry is 
+     still needed). */
 
   v = set_first(&old_to_new, 0);
 
   while (v != SET_NO_VALUE)
-  { int remove;
+  { int remove = 0;
     if (SGGC_DEBUG) 
     { printf ("sggc_collect: old->new for %x (gen%d)\n", (unsigned)v,
         set_contains(&old_gen2,v) ? 2 : set_contains(&old_gen1,v) ? 1 : 0);
     }
     if (set_contains (&old_gen2, v)) /* v is in old generation 2 */
     { old_to_new_check = 2;
-      sggc_find_object_ptrs (v);
-      remove = old_to_new_check;
     }
     else /* v is in old generation 1 */
     { if (level == 0)
       { old_to_new_check = 0;
-        sggc_find_object_ptrs (v);
         remove = 1;
       }
       else
       { old_to_new_check = 1;
-        sggc_find_object_ptrs (v);
-        remove = old_to_new_check;
       }
     }
+    sggc_find_object_ptrs (v);
+    remove |= old_to_new_check;
     if (SGGC_DEBUG) 
     { if (remove) 
       { printf("sggc_collect: old->new for %x no longer needed\n",(unsigned)v);

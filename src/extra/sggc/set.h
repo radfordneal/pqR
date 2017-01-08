@@ -100,20 +100,34 @@ struct set
 };
 
 
-/* FUNCTIONS USED BY THE APPLICATION. */
+/* FUNCTIONS USED BY THE APPLICATION.
 
-void set_init (struct set *set, int chain);
-void set_segment_init (struct set_segment *seg);
-int set_chain (struct set *set);
-int set_contains (struct set *set, set_value_t val);
-int set_chain_contains (int chain, set_value_t val);
-int set_add (struct set *set, set_value_t val);
-int set_remove (struct set *set, set_value_t val);
-set_value_t set_first (struct set *set, int remove);
-set_value_t set_next (struct set *set, set_value_t val, int remove);
-set_bits_t set_first_bits (struct set *set);
-set_bits_t set_segment_bits (struct set *set, set_value_t val);
-void set_assign_segment_bits (struct set *set, set_value_t val, set_bits_t b);
-void set_move_first (struct set *src, struct set *dst);
-void set_move_next (struct set *src, set_value_t val, struct set *dst);
-set_value_t set_n_elements (struct set *set);
+   If SET_STATIC is defined as non-zero, all API procedures are
+   static.  This makes sense only if this .c file is included at
+   compile time in any module using it, rather than being compiled
+   compiled separately and then linked. */
+
+#if SET_STATIC
+#  define SET_PROC_CLASS static
+#else
+#  define SET_PROC_CLASS
+#endif
+
+SET_PROC_CLASS void set_init (struct set *set, int chain);
+SET_PROC_CLASS void set_segment_init (struct set_segment *seg);
+SET_PROC_CLASS int set_chain (struct set *set);
+SET_PROC_CLASS int set_contains (struct set *set, set_value_t val);
+SET_PROC_CLASS int set_chain_contains (int chain, set_value_t val);
+SET_PROC_CLASS int set_add (struct set *set, set_value_t val);
+SET_PROC_CLASS int set_remove (struct set *set, set_value_t val);
+SET_PROC_CLASS set_value_t set_first (struct set *set, int remove);
+SET_PROC_CLASS set_value_t set_next (struct set *set, set_value_t val, 
+                                     int remove);
+SET_PROC_CLASS set_bits_t set_first_bits (struct set *set);
+SET_PROC_CLASS set_bits_t set_segment_bits (struct set *set, set_value_t val);
+SET_PROC_CLASS void set_assign_segment_bits (struct set *set, set_value_t val,
+                                             set_bits_t b);
+SET_PROC_CLASS void set_move_first (struct set *src, struct set *dst);
+SET_PROC_CLASS void set_move_next (struct set *src, set_value_t val,
+                                   struct set *dst);
+SET_PROC_CLASS set_value_t set_n_elements (struct set *set);

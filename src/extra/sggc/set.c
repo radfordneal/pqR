@@ -19,7 +19,10 @@
 
 
 #include <stdlib.h>
-#include "set-app.h"
+
+#if !SET_STATIC
+#  include "set-app.h"
+#endif
 
 
 /*   See set-doc for general documentation on this facility, and for the
@@ -186,7 +189,7 @@ static int check_has_seg (struct set *set, set_index_t index)
 
 /* INITIALIZE A SET, AS EMPTY. */
 
-void set_init (struct set *set, int chain)
+SET_PROC_CLASS void set_init (struct set *set, int chain)
 {
   CHK_CHAIN(chain);
 
@@ -198,7 +201,7 @@ void set_init (struct set *set, int chain)
 
 /* INITIALIZE A SEGMENT STRUCTURE. */
 
-void set_segment_init (struct set_segment *seg)
+SET_PROC_CLASS void set_segment_init (struct set_segment *seg)
 {
   int j;
   for (j = 0; j < SET_CHAINS; j++)
@@ -210,7 +213,7 @@ void set_segment_init (struct set_segment *seg)
 
 /* RETURN THE CHAIN USED BY A SET. */
 
-int set_chain (struct set *set)
+SET_PROC_CLASS int set_chain (struct set *set)
 { 
   return set->chain;
 }
@@ -225,7 +228,7 @@ int set_chain (struct set *set)
    This segment is then added to the linked list of segments for this
    set if it is not there already, and the element count is updated. */
 
-int set_add (struct set *set, set_value_t val)
+SET_PROC_CLASS int set_add (struct set *set, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -264,7 +267,7 @@ int set_add (struct set *set, set_value_t val)
    chain, within the segment structure for this value's index, and updating
    the count of elements in the set. */
 
-int set_remove (struct set *set, set_value_t val)
+SET_PROC_CLASS int set_remove (struct set *set, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -291,7 +294,7 @@ int set_remove (struct set *set, set_value_t val)
 
 /* CHECK WHETHER A SET, OR ANY SET USING THE SAME CHAIN, CONTAINS A VALUE. */
 
-int set_contains (struct set *set, set_value_t val)
+SET_PROC_CLASS int set_contains (struct set *set, set_value_t val)
 {
   CHK_SET(set);
 
@@ -304,7 +307,7 @@ int set_contains (struct set *set, set_value_t val)
    This is implemented by just looking at the right bit in the bits for
    the chain. */
 
-int set_chain_contains (int chain, set_value_t val)
+SET_PROC_CLASS int set_chain_contains (int chain, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -326,7 +329,7 @@ int set_chain_contains (int chain, set_value_t val)
    ensure that if the segment no longer contains elements of this set
    it can be used in another set using the same chain.  */
 
-set_value_t set_first (struct set *set, int remove)
+SET_PROC_CLASS set_value_t set_first (struct set *set, int remove)
 { 
   struct set_segment *seg;
   set_value_t first;
@@ -370,7 +373,8 @@ set_value_t set_first (struct set *set, int remove)
    if 'val' is removed, the segment containing it is not removed from
    the list even if it no longer has any elements.) */
 
-set_value_t set_next (struct set *set, set_value_t val, int remove)
+SET_PROC_CLASS set_value_t set_next (struct set *set, set_value_t val, 
+                                     int remove)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -434,7 +438,7 @@ set_value_t set_next (struct set *set, set_value_t val, int remove)
 /* RETURN THE BITS INDICATING MEMBERSHIP FOR THE FIRST SEGMENT OF A SET. 
    First removes empty segments at the front. */
 
-set_bits_t set_first_bits (struct set *set)
+SET_PROC_CLASS set_bits_t set_first_bits (struct set *set)
 {
   struct set_segment *seg;
 
@@ -451,7 +455,7 @@ set_bits_t set_first_bits (struct set *set)
 
 /* RETURN BITS INDICATING MEMBERSHIP FOR THE SEGMENT CONTAINING AN ELEMENT. */
 
-set_bits_t set_segment_bits (struct set *set, set_value_t val)
+SET_PROC_CLASS set_bits_t set_segment_bits (struct set *set, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -467,7 +471,8 @@ set_bits_t set_segment_bits (struct set *set, set_value_t val)
 
 /* ASSIGN BITS INDICATING MEMBERSHIP FOR THE SEGMENT CONTAINING AN ELEMENT. */
 
-void set_assign_segment_bits (struct set *set, set_value_t val, set_bits_t b)
+SET_PROC_CLASS void set_assign_segment_bits (struct set *set, set_value_t val,
+                                             set_bits_t b)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -487,7 +492,7 @@ void set_assign_segment_bits (struct set *set, set_value_t val, set_bits_t b)
 
 /* MOVE THE FIRST SEGMENT OF A SET TO ANOTHER SET USING THE SAME CHAIN. */
 
-void set_move_first (struct set *src, struct set *dst)
+SET_PROC_CLASS void set_move_first (struct set *src, struct set *dst)
 {
   struct set_segment *seg;
   set_index_t index;
@@ -523,7 +528,8 @@ void set_move_first (struct set *src, struct set *dst)
 
 /* MOVE SEGMENT AFTER THAT CONTAINING AN ELEMENT TO ANOTHER SET IN THE CHAIN. */
 
-void set_move_next (struct set *src, set_value_t val, struct set *dst)
+SET_PROC_CLASS void set_move_next (struct set *src, set_value_t val, 
+                                   struct set *dst)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
@@ -560,7 +566,7 @@ void set_move_next (struct set *src, set_value_t val, struct set *dst)
 
 /* RETURN THE NUMBER OF ELEMENTS IN A SET. */
 
-set_value_t set_n_elements (struct set *set)
+SET_PROC_CLASS set_value_t set_n_elements (struct set *set)
 {
   CHK_SET(set);
 

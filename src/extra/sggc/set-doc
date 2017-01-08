@@ -120,8 +120,9 @@ The following constant is also defined in set.h:
 Finally, the set.h file will declare prototypes (or macros, or static
 inline definitions) for the functions documented below.
 
-After including set.h, the application should declare a function (or
-macro), which (if a function) should have the following prototype:
+After including set.h in set-app.h, the application should declare a
+function (or macro), which (if a function) should have the following
+prototype:
 
   struct set_segment *SET_SEGMENT (set_index_t index);
 
@@ -133,8 +134,32 @@ allocated with malloc), and hence how a pointer is found from an
 index.
 
 The set-app.h file should be included in application modules that use
-the set facility.  It will also be included in the set.c file that
-defines the functions implementing the set operations.
+the set facility.  There are two options for how an application
+accesses the procedures in set.c.
+
+One method is to separately compile set.c into an object file, and
+then link this with modules that use the set facility (or put it in a
+library that will be used by such modules).
+
+The other method is to instead include set.c in every source file that
+uses the set facility, after including set-app.h, in which case set.c
+does not need to be compiled into an object file itself.  (It would
+also be possible to include set.c in some modules, while linking
+others to the result of compiling set.c.)  The preprocessor symbol
+SET_STATIC must be defined as something other than 0 before including
+set.c, either by a #define in the source or by a compiler option.
+SET_STATIC must be undefined, or defining as 0, when set.c is compiled
+separately.
+
+Note that the set facility does not use any persistent variables, so
+there is no duplicatation of state from including set.c in more than
+one module.  However, memory may be wasted by duplication of code if
+set.c is included in many modules.  The advantages of including set.c
+rather than linking to it are that the names of the set facility
+procedures will be declared "static", avoiding potential name
+conflicts, and that an optimizing compiler may be able to produce
+faster code when it can see the definitions of the set facility's
+procedures (eg, sometimes inlining code).
 
 
 SETS SHARING THE SAME CHAIN
@@ -239,7 +264,7 @@ for use in an application, with prototypes (if functions) as shown:
     Finds the first element in 'set', returning SET_NO_VALUE if the
     set is empty.  If the 'remove' argument is non-zero, the value
     found is also removed from 'set'.  If the value is removed, and no
-    other values from the same segment are elements of 'set, the
+    other values from the same segment are elements of 'set', the
     values in this segment may afterward be added to another set that
     uses the same chain as 'set'.
 

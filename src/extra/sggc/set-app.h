@@ -69,6 +69,8 @@
 
 /* INCLUDE THE NON-APPLICATION-SPECIFIC HEADER FOR THE SET MODULE. */
 
+#define SET_STATIC 1       /* Static set procedrues in source, not linked */
+
 #include "set.h"
 
 

@@ -1,13 +1,13 @@
 # (E K) returns a list of primes no bigger than K (in binary) using the 
 # Sieve of Eratosthenes.  Uses n for not equal comparison, d for duplication,
-# r for reversal, I for incrementing, and + for addition.
+# r for reversal, I for incrementing, s for sequence, and + for addition.
 
 (@E ($ (K)
   (% (p q f h i j m)
 
     (@p (s ('(O I)) K))  # Sequence from 2 to K
     (@f (: (d ('x) K)))  # Corresponding flags, all 'x to start
-    (@m ())              # Sequence of number found to be prime
+    (@m ())              # Sequence of numbers found to be prime
 
     # Loop with i going from 2 to K, putting i in m if its flag is still 'x,
     # setting flags for multiples of i to o.
