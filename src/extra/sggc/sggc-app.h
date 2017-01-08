@@ -1,6 +1,6 @@
 /*
  *  pqR : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2016 Radford M. Neal
+ *  Copyright (C) 2016, 2017 Radford M. Neal
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -246,6 +246,15 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 void sggc_app_init (void);
 
-/* Include the generic SGGC header file. */
+/* The sggc_find_object_ptrs procedure may be included after sggc.h,
+   as a "static inline" procedure, or defined as an external procedure
+   in memory.c, according to whether sggc_find_object_ptrs is defined
+   as sggc_find_object_ptrs_inline here, or left undefined. */
 
-#include "sggc.h"
+#define sggc_find_object_ptrs sggc_find_object_ptrs_inline
+
+#include "sggc.h"  /* Include the generic SGGC header file */
+
+#ifdef sggc_find_object_ptrs
+#include "sggc-find-ptrs.c"
+#endif
