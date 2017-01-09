@@ -263,24 +263,40 @@ VECTOR_SEXPREC_C R_ScalarRealBox_space[2] = {
 
 void Rf_constant_init(void)
 {
-    sggc_constant (NILSXP, NILSXP+SGGC_N_TYPES, 
+    sggc_constant (R_type_to_sggc_type[NILSXP],
+                   R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
                    1, (char *) &R_NilValue_const);
-    sggc_constant (ENVSXP, ENVSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[ENVSXP],
+                   R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
                    N_ENV_CONSTS, (char *) R_env_consts);
-    sggc_constant (SYMSXP, SYMSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[SYMSXP],
+                   R_type_to_sggc_type[SYMSXP]+SGGC_N_TYPES,
                    N_SYM_CONSTS, (char *) R_sym_consts);
-    sggc_constant (LGLSXP, LGLSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[LGLSXP],
+                   R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
                    N_LGL_CONSTS, (char *) R_ScalarLogical_consts);
-    sggc_constant (INTSXP, INTSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[INTSXP],
+                   R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
                    N_INT_CONSTS, (char *) R_ScalarInteger_consts);
-    sggc_constant (REALSXP, REALSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[REALSXP],
+                   R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
                    N_REAL_CONSTS, (char *) R_ScalarReal_consts);
-    sggc_constant (LISTSXP, LISTSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[LISTSXP],
+                   R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
                    N_LIST1_CONSTS, (char *) R_List1_consts);
 
-    sggc_constant (INTSXP, INTSXP+SGGC_N_TYPES,
+    sggc_constant (R_type_to_sggc_type[INTSXP],
+                   R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
                    2, (char *) R_ScalarIntegerBox_space);
-    sggc_constant (REALSXP, REALSXP+SGGC_N_TYPES,
+
+    sggc_constant (R_type_to_sggc_type[REALSXP],
+                   R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
                    2, (char *) R_ScalarRealBox_space);
 }
 

@@ -20,11 +20,48 @@
 #include "sggc-app.h"
 
 
+char R_type_to_sggc_type[32] = 
+{
+  0, /* NILSXP */
+  2, /* SYMSXP */
+  2, /* LISTSXP */
+  2, /* CLOSXP */
+  2, /* ENVSXP */
+  2, /* PROMSXP */
+  2, /* LANGSXP */
+  1, /* SPECIALSXP */
+  1, /* BUILTINSXP */
+  0, /* CHARSXP */
+  1, /* LGLSXP */
+  0, /* unused */
+  0, /* unused */
+  1, /* INTSXP */
+  1, /* REALSXP */
+  1, /* CPLXSXP */
+  3, /* STRSXP */
+  2, /* DOTSXP */
+  0, /* unused */
+  3, /* VECSXP */
+  3, /* EXPRSXP */
+  2, /* BCODESXP */
+  4, /* EXTPTRSXP */
+  2, /* WEAKREFSXP */
+  1, /* RAWSXP */
+  2, /* S4SXP */
+  0, /* unused */
+  0, /* unused */
+  0, /* unused */
+  0, /* unused */
+  0, /* unused */
+  0  /* unused */
+};
+
+
 /* UNCOMPRESSED, 64-BIT POINTERS. */
 
 #if SIZEOF_SIZE_T == 8
 
-sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
+sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
 {
     switch (type) {
     case RAWSXP:
@@ -43,8 +80,10 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+    case SYMSXP:
+        return sggc_kind_chunks[2*SGGC_N_TYPES+2];
     default:
-        abort();
+        return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
     }
 }
 
@@ -55,7 +94,7 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
 
 #if SIZEOF_SIZE_T == 4
 
-sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
+sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
 {
     switch (type) {
     case RAWSXP:
@@ -74,47 +113,19 @@ sggc_nchunks_t sggc_nchunks (sggc_type_t type, sggc_length_t length)
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+    case SYMSXP:
+        return sggc_kind_chunks[2*SGGC_N_TYPES+2];
     default:
-        abort();
+        return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
     }
 }
 
 #endif
 
-
-/* Table of allowed lengths for vector kinds. */
-
-static int kind_length [SGGC_N_KINDS-SGGC_N_TYPES];
-
-static SEXPTYPE vectypes[] = {
-    RAWSXP, CHARSXP, INTSXP, LGLSXP, VECSXP, EXPRSXP, STRSXP, CPLXSXP, NILSXP
-};
-
-void sggc_app_init (void)
-{
-    sggc_type_t typ;
-    sggc_length_t len;
-    int i, k;
-
-    for (typ = 0; typ < SGGC_N_TYPES; typ++)
-        kind_length[typ] = 1;
-
-    for (i = 0; vectypes[i] != NILSXP; i++) {
-        typ = vectypes[i];
-        for (k = SGGC_N_TYPES + typ; k < SGGC_N_KINDS; k += SGGC_N_TYPES) {
-            for (len = 1; sggc_nchunks(typ,len) <= sggc_kind_chunks[k]; len++)
-                kind_length [k - SGGC_N_TYPES] = len;
-        }
-    }
-}
-
 sggc_kind_t sggc_kind (sggc_type_t type, sggc_length_t length)
 { 
-    if (length == 1) /* handle non-vectors and vectors of length 1 quickly */
-        return SGGC_N_TYPES + type;
-
     for (int k = SGGC_N_TYPES + type; k < SGGC_N_KINDS; k += SGGC_N_TYPES) {
-        if (kind_length [k - SGGC_N_TYPES] >= length)
+        if (sggc_kind_chunks [k] >= length)
             return k;
     }
 

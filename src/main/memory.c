@@ -952,7 +952,6 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /* InitMemory : Initialise the memory to be used in R. */
-/* This includes: stack space, node space and vector space */
 
 #define PP_REDZONE_SIZE 1000L
 static R_size_t R_StandardPPStackSize, R_RealPPStackSize;
@@ -965,13 +964,12 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
-    sggc_app_init();
     sggc_init(2000000);
 
     extern void Rf_constant_init(void);
     Rf_constant_init();
 
-#   if 0
+#   if 1
         extern SEXP R_inspect(SEXP);
         close(1); dup(2);
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
@@ -1043,12 +1041,15 @@ void attribute_hidden InitMemory()
 
 static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 {
+    sggc_type_t sggctype = R_type_to_sggc_type[type];
+    sggc_length_t sggclength = R_nchunks(type,length);
+
     if (gc_countdown-- == 0) {
         R_gc_internal(); 
         gc_countdown = GC_INTERVAL;
     }
 
-    sggc_cptr_t cp = sggc_alloc (type, length);
+    sggc_cptr_t cp = sggc_alloc (sggctype, sggclength);
 
     while (cp == SGGC_NO_OBJECT) {
         if (gc_countdown == GC_INTERVAL
@@ -1058,7 +1059,7 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
         }
         R_gc_internal();
         gc_countdown = GC_INTERVAL;
-        cp = sggc_alloc (type, length);
+        cp = sggc_alloc (sggctype, sggclength);
         if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
             R_Suicide("out of memory");
     }

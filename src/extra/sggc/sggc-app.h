@@ -26,17 +26,33 @@
 
 /* LENGTH TYPES. */
 
-typedef int sggc_length_t;      /* Type for holding an object length - must 
-                                   match R_len_t. */
-
 typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
+typedef int sggc_length_t;      /* Type for holding an object length, which
+                                   is the number of chunks, not the R length */
 
-/* NUMBER OF OBJECT TYPES.  Allows for 5-bit type field.  This will be
-   the "base" type for an object, not the full type, so that SET_TYPE
-   can work. */
+#define sggc_nchunks(type,length) (length)  /* lenght is already nchunks */
 
-#define SGGC_N_TYPES 32
+
+/* NUMBER OF OBJECT TYPES.  The SGGC types are not the same as the R
+   types, partly because of the possible use of SET_TYPE.  Instead,
+   there are only 5 SGGC types, whose distinctions are useful for
+   determining what pointers exist in an object in find_object_ptrs.
+
+   These SGGC types are as follows:
+
+       0  No pointers to follow (NILSXP, CHARSXP)
+       1  Only attribute pointer to follow (eg, INTSXP, BUILTINSXP)
+       2  Attribute pointer plus three others (eg, LISTSXP, SYMSXP)
+       3  Vector of pointers (VECSXP, EXPRSXP, STRSXP)
+       4  Attribute pointer plus two others (EXTPTRSXP)
+*/
+
+#define SGGC_N_TYPES 5
+
+char R_type_to_sggc_type[32];
+
+sggc_nchunks_t R_nchunks (SEXPTYPE, R_len_t);
 
 
 /* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. */
@@ -70,75 +86,20 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_N_KINDS (3*SGGC_N_TYPES)  /* A big kind, plus two small */
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus two small */
+
+/* Note: chunks in non-vector types are given by second row below, except
+   for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* Kinds for big segments */ \
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*  - not all used        */ \
-  3, /* NILSXP */                                 /* Kinds for non-vector   */ \
-  5, /* SYMSXP */                                 /*   objects and shortest */ \
-  3, /* LISTSXP */                                /*   vectors              */ \
-  3, /* CLOSXP */ \
-  3, /* ENVSXP */ \
-  3, /* PROMSXP */ \
-  3, /* LANGSXP */ \
-  3, /* SPECIALSXP */ \
-  3, /* BUILTINSXP */ \
-  2, /* CHARSXP */ \
-  2, /* LGLSXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  2, /* INTSXP */ \
-  2, /* REALSXP */ \
-  3, /* CPLXSXP */ \
-  2, /* STRSXP */ \
-  3, /* DOTSXP */ \
-  3, /* unused */ \
-  2, /* VECSXP */ \
-  2, /* EXPRSXP */ \
-  3, /* BCODESXP */ \
-  3, /* EXTPTRSXP */ \
-  3, /* WEAKREFSXP */ \
-  2, /* RAWSXP */ \
-  3, /* S4SXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* NILSXP */                                 /* Kinds for 2nd-smallest */ \
-  1, /* SYMSXP */                                 /*   sizes of vectors     */ \
-  1, /* LISTSXP */ \
-  1, /* CLOSXP */ \
-  1, /* ENVSXP */ \
-  1, /* PROMSXP */ \
-  1, /* LANGSXP */ \
-  1, /* SPECIALSXP */ \
-  1, /* BUILTINSXP */ \
-  3, /* CHARSXP */ \
-  3, /* LGLSXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  3, /* INTSXP */ \
-  3, /* REALSXP */ \
-  4, /* CPLXSXP */ \
-  3, /* STRSXP */ \
-  1, /* DOTSXP */ \
-  1, /* unused */ \
-  3, /* VECSXP */ \
-  3, /* EXPRSXP */ \
-  1, /* BCODESXP */ \
-  1, /* EXTPTRSXP */ \
-  1, /* WEAKREFSXP */ \
-  3, /* RAWSXP */ \
-  1, /* S4SXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1  /* unused */ \
+{ 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   3,   2,   3,        /* Smallest sizes for the SGGC types */ \
+  3,   3,   5,   3,   3,        /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   5,   5,   3,        /* 3rd smallest sizes, unused for types 2&4 */ \
+  5,   8,   5,   8,   3,        /* 4th smallest sizes, unused for types 2&4 */ \
+  8,  16,   5,  16,   3,        /* 5th smallest sizes, unused for types 2&4 */ \
+ 16,  32,   5,  32,   3,        /* 6th smallest sizes, unused for types 2&4 */ \
+ 32,  32,   5,  32,   3         /* 7th smallest sizes, only for type 0 */ \
 }
 
 #endif
@@ -169,82 +130,29 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_N_KINDS (3*SGGC_N_TYPES)  /* A big kind, plus two small */
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus two small */
+
+/* Note: chunks in non-vector types are given by second row below, except
+   for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* Kinds for big segments */ \
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*  - not all used        */ \
-  2, /* NILSXP */                                 /* Kinds for non-vector   */ \
-  3, /* SYMSXP */                                 /*   objects shortest     */ \
-  2, /* LISTSXP */                                /*   vectors              */ \
-  2, /* CLOSXP */ \
-  2, /* ENVSXP */ \
-  2, /* PROMSXP */ \
-  2, /* LANGSXP */ \
-  3, /* SPECIALSXP */ \
-  3, /* BUILTINSXP */ \
-  2, /* CHARSXP */ \
-  2, /* LGLSXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  2, /* INTSXP */ \
-  2, /* REALSXP */ \
-  3, /* CPLXSXP */ \
-  2, /* STRSXP */ \
-  2, /* DOTSXP */ \
-  1, /* unused */ \
-  2, /* VECSXP */ \
-  2, /* EXPRSXP */ \
-  2, /* BCODESXP */ \
-  2, /* EXTPTRSXP */ \
-  2, /* WEAKREFSXP */ \
-  2, /* RAWSXP */ \
-  2, /* S4SXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* NILSXP */                                 /* Kinds for 2nd-smallest */ \
-  1, /* SYMSXP */                                 /*   sizes of vectors     */ \
-  1, /* LISTSXP */ \
-  1, /* CLOSXP */ \
-  1, /* ENVSXP */ \
-  1, /* PROMSXP */ \
-  1, /* LANGSXP */ \
-  1, /* SPECIALSXP */ \
-  1, /* BUILTINSXP */ \
-  3, /* CHARSXP */ \
-  3, /* LGLSXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  3, /* INTSXP */ \
-  3, /* REALSXP */ \
-  4, /* CPLXSXP */ \
-  3, /* STRSXP */ \
-  1, /* DOTSXP */ \
-  1, /* unused */ \
-  3, /* VECSXP */ \
-  3, /* EXPRSXP */ \
-  1, /* BCODESXP */ \
-  1, /* EXTPTRSXP */ \
-  1, /* WEAKREFSXP */ \
-  3, /* RAWSXP */ \
-  1, /* S4SXP */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1, /* unused */ \
-  1  /* unused */ \
+{ 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   2,   2,   2,        /* Smallest sizes for the SGGC types */ \
+  3,   3,   3,   3,   2,        /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   3,   5,   2,        /* 3rd smallest sizes, unused for types 2&4 */ \
+  5,   8,   3,   8,   2,        /* 4th smallest sizes, unused for types 2&4 */ \
+  8,  16,   3,  16,   2,        /* 5th smallest sizes, unused for types 2&4 */ \
+ 16,  32,   3,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
+ 32,  32,   3,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
 
 #endif
 
+
 #define SGGC_AFTER_MARKING
 
 void sggc_app_init (void);
+
 
 /* The sggc_find_object_ptrs procedure may be included after sggc.h,
    as a "static inline" procedure, or defined as an external procedure
