@@ -26,33 +26,33 @@
 
 /* LENGTH TYPES. */
 
-typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
+typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in an object */
 
 typedef int sggc_length_t;      /* Type for holding an object length, which
                                    is the number of chunks, not the R length */
 
-#define sggc_nchunks(type,length) (length)  /* lenght is already nchunks */
+#define sggc_nchunks(type,length) (length)  /* Length is already nchunks */
 
 
 /* NUMBER OF OBJECT TYPES.  The SGGC types are not the same as the R
    types, partly because of the possible use of SET_TYPE.  Instead,
    there are only 5 SGGC types, whose distinctions are useful for
-   determining what pointers exist in an object in find_object_ptrs.
+   determining what pointers to follow in an object in find_object_ptrs.
 
    These SGGC types are as follows:
 
        0  No pointers to follow (NILSXP, CHARSXP)
        1  Only attribute pointer to follow (eg, INTSXP, BUILTINSXP)
        2  Attribute pointer plus three others (eg, LISTSXP, SYMSXP)
-       3  Vector of pointers (VECSXP, EXPRSXP, STRSXP)
+       3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
        4  Attribute pointer plus two others (EXTPTRSXP)
 */
 
 #define SGGC_N_TYPES 5
 
-char R_type_to_sggc_type[32];
+const char R_type_to_sggc_type[32];
 
-sggc_nchunks_t R_nchunks (SEXPTYPE, R_len_t);
+sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 
 
 /* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. */
@@ -86,10 +86,10 @@ sggc_nchunks_t R_nchunks (SEXPTYPE, R_len_t);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus two small */
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for SYMSXP, given by third row. */
+   for BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
@@ -130,10 +130,11 @@ sggc_nchunks_t R_nchunks (SEXPTYPE, R_len_t);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus two small */
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
+
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for SYMSXP, given by third row. */
+   for BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
@@ -150,8 +151,6 @@ sggc_nchunks_t R_nchunks (SEXPTYPE, R_len_t);
 
 
 #define SGGC_AFTER_MARKING
-
-void sggc_app_init (void);
 
 
 /* The sggc_find_object_ptrs procedure may be included after sggc.h,

@@ -20,7 +20,7 @@
 #include "sggc-app.h"
 
 
-char R_type_to_sggc_type[32] = 
+const char R_type_to_sggc_type[32] = 
 {
   0, /* NILSXP */
   2, /* SYMSXP */
@@ -61,7 +61,7 @@ char R_type_to_sggc_type[32] =
 
 #if SIZEOF_SIZE_T == 8
 
-sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
+sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 {
     switch (type) {
     case RAWSXP:
@@ -80,8 +80,10 @@ sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+    case BUILTINSXP:
+    case SPECIALSXP:
     case SYMSXP:
-        return sggc_kind_chunks[2*SGGC_N_TYPES+2];
+        return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
         return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
     }
@@ -94,7 +96,7 @@ sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
 
 #if SIZEOF_SIZE_T == 4
 
-sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
+sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 {
     switch (type) {
     case RAWSXP:
@@ -113,8 +115,10 @@ sggc_nchunks_t R_nchunks (SEXPTYPE type, R_len_t length)
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+    case BUILTINSXP:
+    case SPECIALSXP:
     case SYMSXP:
-        return sggc_kind_chunks[2*SGGC_N_TYPES+2];
+        return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
         return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
     }

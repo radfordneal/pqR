@@ -969,7 +969,7 @@ void attribute_hidden InitMemory()
     extern void Rf_constant_init(void);
     Rf_constant_init();
 
-#   if 1
+#   if 0
         extern SEXP R_inspect(SEXP);
         close(1); dup(2);
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
@@ -1042,7 +1042,7 @@ void attribute_hidden InitMemory()
 static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 {
     sggc_type_t sggctype = R_type_to_sggc_type[type];
-    sggc_length_t sggclength = R_nchunks(type,length);
+    sggc_length_t sggclength = Rf_nchunks(type,length);
 
     if (gc_countdown-- == 0) {
         R_gc_internal(); 

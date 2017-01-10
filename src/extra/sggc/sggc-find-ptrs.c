@@ -24,34 +24,6 @@
 
 #define LOOK_AT(x) ((x) ? sggc_look_at(COMPRESSED_PTR(x)) : 1)
 
-#define no_action_types \
-( (1 << NILSXP) + \
-  (1 << BUILTINSXP) + \
-  (1 << SPECIALSXP) + \
-  (1 << CHARSXP) + \
-  (1 << LGLSXP) + \
-  (1 << INTSXP) + \
-  (1 << REALSXP) + \
-  (1 << CPLXSXP) + \
-  (1 << WEAKREFSXP) + \
-  (1 << RAWSXP) + \
-  (1 << S4SXP) )
-
-#define three_pointer_types \
-( (1 << ENVSXP) + \
-  (1 << CLOSXP) + \
-  (1 << PROMSXP) + \
-  (1 << LISTSXP) + \
-  (1 << LANGSXP) + \
-  (1 << DOTSXP) + \
-  (1 << SYMSXP) + \
-  (1 << BCODESXP) )
-
-#define vector_of_pointers_types \
-( (1 << VECSXP) + \
-  (1 << EXPRSXP) + \
-  (1 << STRSXP) )
-
 #undef NOT_LVALUE          /* Allow CAR, etc. as lvalue below */
 #define NOT_LVALUE(x) (x)
 
