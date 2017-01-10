@@ -272,7 +272,7 @@ void Rf_constant_init(void)
                    N_ENV_CONSTS, (char *) R_env_consts);
 
     sggc_constant (R_type_to_sggc_type[SYMSXP],
-                   R_type_to_sggc_type[SYMSXP]+SGGC_N_TYPES,
+                   R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
                    N_SYM_CONSTS, (char *) R_sym_consts);
 
     sggc_constant (R_type_to_sggc_type[LGLSXP],
