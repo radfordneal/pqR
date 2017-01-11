@@ -65,14 +65,12 @@
 
 /* Segment indexes for constant segments. */
 
-#define NIL_INDEX 0
-#define ENV_INDEX 1
-#define SYM_INDEX 2
-#define LGL_INDEX 3
-#define INT_INDEX 4
-#define REAL_INDEX 5
-#define LIST1_INDEX 6
-#define STATIC_BOXES_INDEX 7
+#define NIL_INDEX 0             /* must be 0 */
+#define STATIC_BOXES_INDEX 1    /* must be 1 */
+#define ENV_INDEX 2
+#define SYM_INDEX 3
+#define NUM_INDEX 4
+#define LIST1_INDEX 5
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
@@ -83,6 +81,22 @@ R_CONST SEXPREC R_NilValue_const = { \
     .u = { .listsxp = 
             { .carval = R_NilValue, .cdrval = R_NilValue, .tagval = R_NilValue }
          }
+};
+
+
+/* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
+   These are not actually constant, since the data they contain is changed,
+   but are allocated similarly. */
+
+#define SCALAR_BOX(typ,offset) { \
+    CONST_HEADER(typ,STATIC_BOXES_INDEX,offset) \
+    .length = 1 }
+
+VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
+    SCALAR_BOX(INTSXP,0),
+    SCALAR_BOX(INTSXP,1),
+    SCALAR_BOX(REALSXP,2),
+    SCALAR_BOX(REALSXP,3)
 };
 
 
@@ -118,70 +132,57 @@ R_CONST SYM_SEXPREC R_sym_consts[N_SYM_CONSTS] = {
 };
 
 
-/* Logical constants. */
+/* Logical, integer, and real constants. */
 
-#define N_LGL_CONSTS 3
+#define N_NUM_CONSTS (3+12+3)
 
 #define LOGICAL_CONST(v,offset) { \
-    CONST_HEADER(LGLSXP,LGL_INDEX,offset) \
+    CONST_HEADER(LGLSXP,NUM_INDEX,offset) \
     .length = 1, \
     .data = { .i = v } \
 }
-
-R_CONST VECTOR_SEXPREC_C R_ScalarLogical_consts[N_LGL_CONSTS] = {
-    LOGICAL_CONST(FALSE,0),
-    LOGICAL_CONST(TRUE,1),
-    LOGICAL_CONST(NA_LOGICAL,2)
-};
-
-
-/* Integer constants. */
-
-#define N_INT_CONSTS 12
 
 #define INTEGER_CONST(v,offset) { \
-    CONST_HEADER(INTSXP,INT_INDEX,offset) \
+    CONST_HEADER(INTSXP,NUM_INDEX,offset) \
     .length = 1, \
     .data = { .i = v } \
 }
 
-R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[N_INT_CONSTS] = {
-    INTEGER_CONST(0,0), INTEGER_CONST(1,1), INTEGER_CONST(2,2),
-    INTEGER_CONST(3,3), INTEGER_CONST(4,4), INTEGER_CONST(5,5),
-    INTEGER_CONST(6,6), INTEGER_CONST(7,7), INTEGER_CONST(8,8), 
-    INTEGER_CONST(9,9), INTEGER_CONST(10,10),
-    INTEGER_CONST(NA_INTEGER,11)
-};
-
-
-/* Real constants. */
-
-#define N_REAL_CONSTS 3
-
 #define REAL_CONST(v,offset) { \
-    CONST_HEADER(REALSXP,REAL_INDEX,offset) \
+    CONST_HEADER(REALSXP,NUM_INDEX,offset) \
     .length = 1, \
     .data = { .d = v } \
 }
 
 #ifdef WORDS_BIGENDIAN
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,REAL_INDEX,offset) \
+    CONST_HEADER(REALSXP,NUM_INDEX,offset) \
     .length = 1, \
     .data = { .w = { 0x7ff00000, 1954 } } \
 }
 #else
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,REAL_INDEX,offset) \
+    CONST_HEADER(REALSXP,NUM_INDEX,offset) \
     .length = 1, \
     .data = { .w = { 1954, 0x7ff00000 } } \
 }
 #endif
 
-R_CONST VECTOR_SEXPREC_C R_ScalarReal_consts[N_REAL_CONSTS] = {
-    REAL_CONST(0.0,0),
-    REAL_CONST(1.0,1),
-    REAL_NA_CONST(2)
+R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[N_NUM_CONSTS] = {
+
+    LOGICAL_CONST(FALSE,0),
+    LOGICAL_CONST(TRUE,1),
+    LOGICAL_CONST(NA_LOGICAL,2),
+
+    INTEGER_CONST(0,3), INTEGER_CONST(1,4), INTEGER_CONST(2,5),
+    INTEGER_CONST(3,6), INTEGER_CONST(4,7), INTEGER_CONST(5,8),
+    INTEGER_CONST(6,9), INTEGER_CONST(7,10), INTEGER_CONST(8,11), 
+    INTEGER_CONST(9,12), INTEGER_CONST(10,13),
+    INTEGER_CONST(NA_INTEGER,14),
+
+    REAL_CONST(0.0,15),
+    REAL_CONST(1.0,16),
+    REAL_NA_CONST(17)
 };
 
 
@@ -236,53 +237,15 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 }
 
 
-/* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
-   These are not actually constant, since the data they contain is changed,
-   but are allocated similarly. */
-
-#define SCALAR_BOX(typ,offset) { \
-    CONST_HEADER(typ,STATIC_BOXES_INDEX,offset) \
-    .length = 1 }
-
-VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
-    SCALAR_BOX(INTSXP,0),
-    SCALAR_BOX(INTSXP,1),
-    SCALAR_BOX(REALSXP,2),
-    SCALAR_BOX(REALSXP,3)
-};
-
-
 /* Initialize constants (and static boxes). */
 
 void Rf_constant_init(void)
 {
+    /* R_NilValue (= R NULL). */
+
     sggc_constant (R_type_to_sggc_type[NILSXP],
                    R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
                    1, (char *) &R_NilValue_const);
-
-    sggc_constant (R_type_to_sggc_type[ENVSXP],
-                   R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
-                   N_ENV_CONSTS, (char *) R_env_consts);
-
-    sggc_constant (R_type_to_sggc_type[SYMSXP],
-                   R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
-                   N_SYM_CONSTS, (char *) R_sym_consts);
-
-    sggc_constant (R_type_to_sggc_type[LGLSXP],
-                   R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
-                   N_LGL_CONSTS, (char *) R_ScalarLogical_consts);
-
-    sggc_constant (R_type_to_sggc_type[INTSXP],
-                   R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
-                   N_INT_CONSTS, (char *) R_ScalarInteger_consts);
-
-    sggc_constant (R_type_to_sggc_type[REALSXP],
-                   R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
-                   N_REAL_CONSTS, (char *) R_ScalarReal_consts);
-
-    sggc_constant (R_type_to_sggc_type[LISTSXP],
-                   R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
-                   N_LIST1_CONSTS, (char *) R_List1_consts);
 
     /* Static boxes.  Uses same segment for integers and reals. */
 
@@ -294,6 +257,33 @@ void Rf_constant_init(void)
                      4, (char *) R_ScalarBox_space) );
 
     if (R_static_box_segment != STATIC_BOXES_INDEX) abort();
+
+    /* Environment constant. */
+
+    sggc_constant (R_type_to_sggc_type[ENVSXP],
+                   R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
+                   N_ENV_CONSTS, (char *) R_env_consts);
+
+    /* Symbol constant. */
+
+    sggc_constant (R_type_to_sggc_type[SYMSXP],
+                   R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
+                   N_SYM_CONSTS, (char *) R_sym_consts);
+
+    /* Numerical/logical constants.  All use same segment. */
+
+    if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[LGLSXP]) abort();
+    if (R_type_to_sggc_type[REALSXP] != R_type_to_sggc_type[LGLSXP]) abort();
+
+    sggc_constant (R_type_to_sggc_type[LGLSXP],
+                   R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
+                   N_NUM_CONSTS, (char *) R_ScalarNumerical_consts);
+
+    /* Pairlists of length 1. */
+
+    sggc_constant (R_type_to_sggc_type[LISTSXP],
+                   R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
+                   N_LIST1_CONSTS, (char *) R_List1_consts);
 }
 
 

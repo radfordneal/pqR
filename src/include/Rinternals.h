@@ -1301,32 +1301,25 @@ LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 
 /* Special Values */
 
-ConstExtern R_CONST SYM_SEXPREC R_sym_consts[]; /* defined in const-objs.c*/
+ConstExtern R_CONST SYM_SEXPREC R_sym_consts[1]; /* defined in const-objs.c*/
 LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 #define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value*/
 
 LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
-/* Logical Values.  Defined in const-objs.c */
+/* Logical / Intteger / Real Values.  Defined in const-objs.c, must keep
+   in sync. */
 
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarLogical_consts[];
-#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarLogical_consts[0])
-#define R_ScalarLogicalTRUE  ((SEXP) &R_ScalarLogical_consts[1])
-#define R_ScalarLogicalNA    ((SEXP) &R_ScalarLogical_consts[2])
-
-/* Integer Values.  Defined in const-objs.c */
-
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[];
-#define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger_consts[v])
-#define R_ScalarIntegerNA ((SEXP) &R_ScalarInteger_consts[11])
-
-/* Real Values.  Defined in const-objs.c */
-
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarReal_consts[];
-#define R_ScalarRealZero ((SEXP) &R_ScalarReal_consts[0])
-#define R_ScalarRealOne ((SEXP) &R_ScalarReal_consts[1])
-#define R_ScalarRealNA ((SEXP) &R_ScalarReal_consts[2])
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[18];
+#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarNumerical_consts[0])
+#define R_ScalarLogicalTRUE  ((SEXP) &R_ScalarNumerical_consts[1])
+#define R_ScalarLogicalNA    ((SEXP) &R_ScalarNumerical_consts[2])
+#define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarNumerical_consts[3+v])
+#define R_ScalarIntegerNA ((SEXP) &R_ScalarNumerical_consts[14])
+#define R_ScalarRealZero ((SEXP) &R_ScalarNumerical_consts[15])
+#define R_ScalarRealOne ((SEXP) &R_ScalarNumerical_consts[16])
+#define R_ScalarRealNA ((SEXP) &R_ScalarNumerical_consts[17])
 
 /* Integer and real static boxes.  Defined in const-objs.c */
 
