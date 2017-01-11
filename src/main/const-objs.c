@@ -34,8 +34,8 @@
 # define __LIBM_PRIVATE
 #endif
 
-#include <complex.h>
 #include <sggc/sggc-app.h>
+#include <complex.h>
 
 
 /* This module defines some commonly-used objects as shared constants.
@@ -72,8 +72,7 @@
 #define INT_INDEX 4
 #define REAL_INDEX 5
 #define LIST1_INDEX 6
-#define INT_BOXES_INDEX 7
-#define REAL_BOXES_INDEX 8
+#define STATIC_BOXES_INDEX 7
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
@@ -239,23 +238,17 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 
 /* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
    These are not actually constant, since the data they contain is changed,
-   but are allocated similarly.  They are marked as static boxes by a flag
-   in sxpinfo. */
+   but are allocated similarly. */
 
-#define SCALAR_BOX(typ,index,offset) { \
-    CPTR_FIELD(index,offset) \
-    .sxpinfo = { .nmcnt = 7, .type = typ, .static_box = 1 }, \
-    .attrib = R_NilValue, \
+#define SCALAR_BOX(typ,offset) { \
+    CONST_HEADER(typ,STATIC_BOXES_INDEX,offset) \
     .length = 1 }
 
-VECTOR_SEXPREC_C R_ScalarIntegerBox_space[2] = {
-    SCALAR_BOX(INTSXP,INT_BOXES_INDEX,0),
-    SCALAR_BOX(INTSXP,INT_BOXES_INDEX,1)
-};
-
-VECTOR_SEXPREC_C R_ScalarRealBox_space[2] = {
-    SCALAR_BOX(REALSXP,REAL_BOXES_INDEX,0),
-    SCALAR_BOX(REALSXP,REAL_BOXES_INDEX,1)
+VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
+    SCALAR_BOX(INTSXP,0),
+    SCALAR_BOX(INTSXP,1),
+    SCALAR_BOX(REALSXP,2),
+    SCALAR_BOX(REALSXP,3)
 };
 
 
@@ -291,13 +284,16 @@ void Rf_constant_init(void)
                    R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
                    N_LIST1_CONSTS, (char *) R_List1_consts);
 
-    sggc_constant (R_type_to_sggc_type[INTSXP],
-                   R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
-                   2, (char *) R_ScalarIntegerBox_space);
+    /* Static boxes.  Uses same segment for integers and reals. */
 
-    sggc_constant (R_type_to_sggc_type[REALSXP],
-                   R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
-                   2, (char *) R_ScalarRealBox_space);
+    if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
+
+    R_static_box_segment = SGGC_SEGMENT_INDEX (
+      sggc_constant (R_type_to_sggc_type[INTSXP],
+                     R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
+                     4, (char *) R_ScalarBox_space) );
+
+    if (R_static_box_segment != STATIC_BOXES_INDEX) abort();
 }
 
 

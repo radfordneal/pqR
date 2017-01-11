@@ -32,6 +32,8 @@ typedef set_index_t sggc_index_t; /* Type of segment index */
 typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
 
 #define SGGC_CPTR_VAL(i,o) SET_VAL((i),(o))
+#define SGGC_SEGMENT_INDEX(p) SET_VAL_INDEX(p)
+#define SGGC_SEGMENT_OFFSET(p) SET_VAL_OFFSET(p)
 
 #define SGGC_NO_OBJECT SET_NO_VALUE   /* Special "no object" pointer */
 

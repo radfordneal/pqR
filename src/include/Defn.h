@@ -75,9 +75,13 @@
 # define extern0 extern
 #endif
 
-/* Avoid including all of sggc-app.h by declaring a few functions. */
+/* Avoid including all of sggc-app.h by declaring a few things here - need
+   to keep in sync. */
 
 int sggc_is_constant (uint32_t cptr);
+
+#undef SGGC_SEGMENT_INDEX
+#define SGGC_SEGMENT_INDEX(p) (((uint32_t) p) >> 6)
 
 
 /* Define HELPERS_DISABLED if no helper support.  This has the effect of 
@@ -202,7 +206,11 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define IS_CONSTANT(x) (sggc_is_constant(COMPRESSED_PTR(x)))
 
 /* Test whether this is a static box object (defined in const-objs.c). */
-#define IS_STATIC_BOX(x) ((x)->sxpinfo.static_box)
+
+unsigned R_static_box_segment;
+
+#define IS_STATIC_BOX(x) \
+  (SGGC_SEGMENT_INDEX(COMPRESSED_PTR(x)) == R_static_box_segment)
 
 /* Stuff for saving static boxes, if doing another eval */
 typedef union { int i; double r; } R_static_box_contents;

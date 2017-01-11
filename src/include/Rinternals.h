@@ -169,8 +169,7 @@ struct sxpinfo_struct {
                                  -> warning: `type' is narrower than values
                                               of its type
                                  when SEXPTYPE was an enum */
-    unsigned int static_box : 1; /* set if this is a static box */
-    unsigned int unused : 4;
+    unsigned int unused : 5;
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
     /* Flags to synchronize with helper threads */
@@ -1322,12 +1321,6 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[];
 #define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarInteger_consts[v])
 #define R_ScalarIntegerNA ((SEXP) &R_ScalarInteger_consts[11])
 
-/* Integer static boxes.  Defined in const-objs.c */
-
-ConstExtern VECTOR_SEXPREC_C R_ScalarIntegerBox_space[];
-#define R_ScalarIntegerBox0 ((SEXP) &R_ScalarIntegerBox_space[0])
-#define R_ScalarIntegerBox  ((SEXP) &R_ScalarIntegerBox_space[1])
-
 /* Real Values.  Defined in const-objs.c */
 
 ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarReal_consts[];
@@ -1335,11 +1328,13 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarReal_consts[];
 #define R_ScalarRealOne ((SEXP) &R_ScalarReal_consts[1])
 #define R_ScalarRealNA ((SEXP) &R_ScalarReal_consts[2])
 
-/* Real static boxes.  Defined in const-objs.c */
+/* Integer and real static boxes.  Defined in const-objs.c */
 
-ConstExtern VECTOR_SEXPREC_C R_ScalarRealBox_space[];
-#define R_ScalarRealBox0 ((SEXP) &R_ScalarRealBox_space[0])
-#define R_ScalarRealBox  ((SEXP) &R_ScalarRealBox_space[1])
+ConstExtern VECTOR_SEXPREC_C R_ScalarBox_space[];
+#define R_ScalarIntegerBox0 ((SEXP) &R_ScalarBox_space[0])
+#define R_ScalarIntegerBox  ((SEXP) &R_ScalarBox_space[1])
+#define R_ScalarRealBox0    ((SEXP) &R_ScalarBox_space[2])
+#define R_ScalarRealBox     ((SEXP) &R_ScalarBox_space[3])
 
 #ifdef __MAIN__
 attribute_hidden

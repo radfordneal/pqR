@@ -377,6 +377,16 @@ macros) below, which have (if functions) prototypes as shown:
     index and offset.  This is needed only in a few specialized
     contexts.
 
+  unsigned SGGC_SEGMENT_INDEX (sggc_cptr_t cptr)
+
+    Returns the segment index of a compressed pointer.  This is needed
+    only in a few specialized contexts.
+
+  unsigned SGGC_SEGMENT_OFFSET (sggc_cptr_t cptr)
+
+    Returns the offset within a segment of a compressed pointer.  This
+    is needed only in a few specialized contexts.
+
   int sggc_init (int max_segments)
 
     Initializes the SGGC facility, with the maximum number of segments

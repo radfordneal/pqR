@@ -22,6 +22,7 @@
 #endif
 
 #include <Defn.h>
+#undef SGGC_SEGMENT_INDEX
 
 
 /* LENGTH TYPES. */
