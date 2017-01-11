@@ -42,33 +42,42 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
     SEXP n = SEXP_PTR(cptr);
 
     if (ATTRIB(n) != R_NilValue) {
-        if (!LOOK_AT(ATTRIB(n))) return;
+        sggc_cptr_t p = COMPRESSED_PTR(ATTRIB(n));
+        if (p) if (!sggc_look_at(p)) return;
     }
 
     if (sggctype == 1)
         return;
 
     if (sggctype == 2) {
-        if (!LOOK_AT(CAR(n))) return;
-        if (!LOOK_AT(CDR(n))) return;
-        LOOK_AT(TAG(n));
+        sggc_cptr_t p1 = COMPRESSED_PTR(CAR(n));
+        sggc_cptr_t p2 = COMPRESSED_PTR(CDR(n));
+        sggc_cptr_t p3 = COMPRESSED_PTR(TAG(n));
+        if (p1) if (!sggc_look_at(p1)) return;
+        if (p2) if (!sggc_look_at(p2)) return;
+        if (p3) (void) sggc_look_at(p3);
         return;
     }
 
-    SEXP *strt; R_len_t cnt;
     if (sggctype == 3) {
-        cnt = LENGTH(n);
-        if (cnt == 0) return;
-        strt = &STRING_ELT(n,0);
-    }
-    else {
-        cnt = 2;
-        strt = &CDR(n);
+        SEXP *ptr = &STRING_ELT(n,0);
+        R_len_t cnt = LENGTH(n);
+        while (cnt > 0) {
+            sggc_cptr_t p = COMPRESSED_PTR(*ptr);
+            if (!sggc_look_at(p)) return;
+            ptr += 1;
+            cnt -= 1;
+        }
+        return;
     }
 
-    do {
-        if (!LOOK_AT(*strt)) return;
-        strt += 1;
-        cnt -= 1;
-    } while (cnt > 0);
+    if (sggctype == 4) {
+        if (CDR(n))
+            if (!sggc_look_at(COMPRESSED_PTR(CDR(n)))) return;
+        if (TAG(n))
+            (void) sggc_look_at(COMPRESSED_PTR(TAG(n)));
+        return;
+    }
+
+    abort();
 }

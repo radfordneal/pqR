@@ -47,7 +47,7 @@ const char R_type_to_sggc_type[32] =
   4, /* EXTPTRSXP */
   2, /* WEAKREFSXP */
   1, /* RAWSXP */
-  2, /* S4SXP */
+  4, /* S4SXP */
   0, /* unused */
   0, /* unused */
   0, /* unused */

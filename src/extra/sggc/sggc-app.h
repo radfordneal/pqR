@@ -37,7 +37,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
 
 /* NUMBER OF OBJECT TYPES.  The SGGC types are not the same as the R
    types, partly because of the possible use of SET_TYPE.  Instead,
-   there are only 5 SGGC types, whose distinctions are useful for
+   there are only five SGGC types, whose distinctions are useful for
    determining what pointers to follow in an object in find_object_ptrs.
 
    These SGGC types are as follows:
@@ -46,7 +46,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
        1  Only attribute pointer to follow (eg, INTSXP, BUILTINSXP)
        2  Attribute pointer plus three others (eg, LISTSXP, SYMSXP)
        3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
-       4  Attribute pointer plus two others (EXTPTRSXP)
+       4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
 */
 
 #define SGGC_N_TYPES 5
