@@ -103,6 +103,8 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
  32,  32,   5,  32,   3         /* 7th smallest sizes, only for type 0 */ \
 }
 
+#define SGGC_MIN_CHUNKS 2       /* Smallest size for any small kind */
+
 #endif
 
 
@@ -148,11 +150,15 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
  32,  32,   3,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
 
+#define SGGC_MIN_CHUNKS 2       /* Smallest size for any small kind */
+
 #endif
 
 
 #define SGGC_AFTER_MARKING
 
+
+#define sggc_kind sggc_kind_inline
 
 /* The sggc_find_object_ptrs procedure may be included after sggc.h,
    as a "static inline" procedure, or defined as an external procedure
@@ -166,3 +172,17 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 #ifdef sggc_find_object_ptrs
 #include "sggc-find-ptrs.c"
 #endif
+
+static inline sggc_kind_t sggc_kind_inline (sggc_type_t type, 
+                                            sggc_length_t length)
+{ 
+    int k = SGGC_N_TYPES + type;
+
+    do {
+        if (length <= sggc_kind_chunks[k])
+            return k;
+        k += SGGC_N_TYPES;
+    } while (k < SGGC_N_KINDS);        
+
+    return type;  /* kind for a big segment */
+}

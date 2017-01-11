@@ -125,13 +125,3 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 }
 
 #endif
-
-sggc_kind_t sggc_kind (sggc_type_t type, sggc_length_t length)
-{ 
-    for (int k = SGGC_N_TYPES + type; k < SGGC_N_KINDS; k += SGGC_N_TYPES) {
-        if (sggc_kind_chunks [k] >= length)
-            return k;
-    }
-
-    return type;  /* kind for a big segment */
-}
