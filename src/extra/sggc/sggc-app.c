@@ -57,9 +57,45 @@ const char R_type_to_sggc_type[32] =
 };
 
 
+/* COMPRESSED POINTERS. */
+
+#if USE_COMPRESSED_POINTERS
+
+sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
+{
+    switch (type) {
+    case RAWSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
+    case CHARSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
+    case INTSXP:
+    case LGLSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+    case REALSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
+    case VECSXP:
+    case EXPRSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+    case STRSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+    case CPLXSXP:
+        return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+    case EXTPTRSXP:
+    case BUILTINSXP:
+    case SPECIALSXP:
+    case SYMSXP:
+        return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
+    default:
+        return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
+    }
+}
+
+#endif
+
+
 /* UNCOMPRESSED, 64-BIT POINTERS. */
 
-#if SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
 
 sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 {
@@ -94,7 +130,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 
 /* UNCOMPRESSED, 32-BIT POINTERS. */
 
-#if SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
 
 sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 {
@@ -115,8 +151,6 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
-    case BUILTINSXP:
-    case SPECIALSXP:
     case SYMSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:

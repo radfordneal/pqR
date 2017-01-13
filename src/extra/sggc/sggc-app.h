@@ -56,9 +56,56 @@ const char R_type_to_sggc_type[32];
 sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 
 
+/* LAYOUT WITH COMPRESSED POINTERS. */
+
+#if USE_COMPRESSED_POINTERS
+
+/*    All:
+        attrib in auxiliary information 1
+        length in auxiliary information 2 (may be shared read-only constant)
+
+      Cons-type:          Vector:             
+        info, car           info, truelength
+        cdr, tag            data...
+        = 16 bytes          = 16 bytes if length==1 (except for CPLXSXP)
+          (1 chunk)           (1 chunk)
+
+      Symbol:             Primitive:
+        info, pname         info, padding
+        value, internal     C-function
+        nextsym, lastenv    fast-C-function
+        lastbinding, lastenvnotfound     64 bits of info
+        = 32 bytes                       = 32 bytes
+          (2 chunks)                       (2 chunks)
+*/
+
+#define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
+
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
+
+
+/* Note: chunks in non-vector types are given by second row below, except
+   for EXTPTRSXP, BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
+
+#define SGGC_KIND_CHUNKS \
+{ 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
+  1,   1,   1,   1,   1,        /* Smallest sizes for the SGGC types */ \
+  2,   2,   2,   2,   2,        /* 2nd smallest sizes, unused for type 4 */ \
+  3,   4,   2,   4,   2,        /* 3rd smallest sizes, unused for types 2&4 */ \
+  5,   8,   2,   8,   2,        /* 4th smallest sizes, unused for types 2&4 */ \
+  8,  16,   2,  16,   2,        /* 5th smallest sizes, unused for types 2&4 */ \
+ 16,  32,   2,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
+ 32,  32,   2,  32,   2         /* 7th smallest sizes, only for type 0 */ \
+}
+
+#define SGGC_MIN_CHUNKS 1       /* Smallest size for any small kind */
+
+#endif
+
+
 /* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. */
 
-#if SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
 
 /*    Cons-type:          Vector:             
         info, cptr          info, cptr  
@@ -110,7 +157,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 
 /* LAYOUT WITH UNCOMPRESSED 32-BIT POINTERS. */
 
-#if SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
 
 /*    Cons-type:          Vector:             
         info, cptr          info, cptr  
@@ -125,10 +172,10 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
         attrib, length      attrib, length
         pname, value        C-function, fast-C-function
         internal, nextsym   64 bits of info
-        lastenv, lastbinding      64 bits of padding /* keep so size will be */
-        lastenvnotfound, padding  64 bits of padding /* in third row below */
-        = 48 bytes          = 48 bytes 
-          (3 chunks)          (3 chunks)
+        lastenv, lastbinding      = 32 bytes 
+        lastenvnotfound, padding    (2 chunks)
+        = 48 bytes          
+          (3 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -137,7 +184,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
+   for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \

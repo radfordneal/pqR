@@ -231,6 +231,17 @@ struct promsxp_struct {
     struct SEXPREC *env;
 };
 
+#if USE_COMPRESSED_POINTERS
+
+/* Every node must have a set of sxpinfo flags in the header.  They also
+   all have an attribute field and a length (possibly a shared constant),
+   but these are in auxiliary information 1 and auxiliary information 2. */
+
+#define SEXPREC_HEADER \
+    struct sxpinfo_struct sxpinfo \
+
+#else /* !USE_COMPRESSED_POINTERS */
+
 /* Every node must have a set of sxpinfo flags and an attribute field,
    plus a cptr field giving the compressed pointer to the node.  They
    also all have length fields at present, though this is supposed to
@@ -241,6 +252,8 @@ struct promsxp_struct {
     uint32_t cptr; \
     struct SEXPREC *attrib; \
     R_len_t length
+
+#endif /* USE_COMPRESSED_POINTERS */
 
 /* The standard node structure consists of a header followed by the
    node data. */
