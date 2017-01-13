@@ -61,7 +61,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 #if SIZEOF_SIZE_T == 8
 
 /*    Cons-type:          Vector:             
-        info(64bits)        info(64bits)
+        info, trulen        info, trulen
         cptr, length        cptr, length
         attrib              attrib
         car                 data...
@@ -71,7 +71,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
           (3 chunks)          (2 chunks)
 
       Symbol:             Primitive:
-        info(64bits)        info(64bits)
+        info, trulen        info, trulen
         cptr, length        cptr, length
         attrib              attrib
         pname               C-function
@@ -113,7 +113,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 #if SIZEOF_SIZE_T == 4
 
 /*    Cons-type:          Vector:             
-        info(64bits)        info(64bits)
+        info, trulen        info, trulen
         cptr, length        cptr, length
         attrib, car         attrib, padding
         cdr, tag            data...
@@ -121,7 +121,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
         (2 chunks)          (2 chunks)
 
       Symbol:             Primitive:
-        info(64bits)        info(64bits)
+        info, trulen        info, trulen
         cptr, length        cptr, length
         attrib, pname       attrib, C-function
         value, internal     fast-C-function, 32 bits of info

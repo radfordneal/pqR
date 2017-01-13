@@ -496,7 +496,7 @@ typedef struct {
         = (R_FunTab[setprim_value].eval/100)%10; \
     setprim_ptr->u.primsxp.primsxp_variant \
         = (R_FunTab[setprim_value].eval/1000)&1; \
-    NONVEC_SXPINFO(setprim_ptr).pending_ok \
+    setprim_ptr->u.primsxp.pending_ok \
         = (R_FunTab[setprim_value].eval/10000)&1; \
     setprim_ptr->u.primsxp.primsxp_fast_sub \
         = (R_FunTab[setprim_value].eval/100000)&1; \
@@ -520,16 +520,16 @@ typedef struct {
 #define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
 
-#define PRIMFUN_PENDING_OK(x) (NONVEC_SXPINFO(x).pending_ok)
+#define PRIMFUN_PENDING_OK(x) ((x)->u.primsxp.pending_ok)
 
 #define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
 #define PRIMFUN_DSPTCH1(x) ((x)->u.primsxp.primsxp_dsptch1)
-#define PRIMFUN_ARG1VAR(x) (NONVEC_SXPINFO(x).var1)
+#define PRIMFUN_ARG1VAR(x) ((x)->u.primsxp.var1)
 
 #define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
     (x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
     (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
-    NONVEC_SXPINFO(x).var1 = (v1); \
+    (x)->u.primsxp.var1 = (v1); \
 } while (0)
 
 /* Symbols for eval variants.  Variant 0 indicates the standard result.  

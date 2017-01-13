@@ -163,62 +163,45 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
    size is 64 bits = 8 bytes. */
 
 struct sxpinfo_struct {
+
     /* Type and namedcnt in first byte */
     unsigned int nmcnt : 3;   /* count of "names" referring to object */
     unsigned int type : 5;    /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
                                  -> warning: `type' is narrower than values
                                               of its type
                                  when SEXPTYPE was an enum */
-    unsigned int unused : 5;
+
+    /* Miscellaneous flags, some with multiple meanings depending on type */
+    unsigned int spec_sym : 1;    /* Symbol: this is a "special" symbol,
+                                     Environment: has no special symbols */
+    unsigned int base_env : 1;    /* Environment: R_BaseEnv or R_BaseNamespace*/
+    unsigned int debug : 1;       /* Function/Environment: is being debugged */
+    unsigned int rstep : 1;       /* Function: is to be debugged just once */
+    unsigned int trace_basec : 1; /* Function: is being traced,
+                                     Symbol: has base binding in global cache */
+
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
+
     /* Flags to synchronize with helper threads */
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
     unsigned int being_computed : 1;  /* whether helper may be computing this */
-    /* "general purpose" field, used for miscellaneous purposes */
+
+    /* The "general purpose" field, used for miscellaneous purposes */
     unsigned int gp : 16;     /* The "general purpose" field */
-    union {
-      struct {                /* field below is for vectors only */
-        R_len_t truelength;      /* for old stuff - may someday be defunct... */
-      } vec;
-      struct {                /* fields below are for non-vectors only */
-        /* Debugging */
-        unsigned int debug : 1;  /* function/environment is being debugged */
-        unsigned int rstep : 1;  /* function is to be debugged, but only once */
-        unsigned int trace : 1;  /* function is being traced */
-        /* Symbol binding */
-        unsigned int unused : 1;      /* not yet used */
-        unsigned int spec_sym : 1;    /* this is a "special" symbol */
-        unsigned int no_spec_sym : 1; /* environment has no special symbols */
-        unsigned int base_env : 1;    /* this is R_BaseEnv or R_BaseNamespace */
-        unsigned int basec : 1;       /* sym has base binding in global cache */
-        /* Primitive operations */
-        unsigned char pending_ok;/* whether args can have computation pending */
-        unsigned short var1;     /* variant for eval of unary primitive arg */
-      } nonvec;
-    } u;
+
+    /* The mis-named "truelength" field, used only for vector types */
+    R_len_t truelength;       /* for old stuff - may someday be defunct... */
 };
-
-/* Macros to access the vector or non-vector part of the sxpinfo structure,
-   checking validity if CHECK_VEC_NONVEC is defined (it should not normally
-   be defined because it significantly degrades performance). */
-
-#ifdef CHECK_VEC_NONVEC
-extern struct sxpinfo_struct *Rf_verify_vec (void *);
-extern struct sxpinfo_struct *Rf_verify_nonvec (void *);
-#define VEC_SXPINFO(x)    (Rf_verify_vec((void*)x)->u.vec)
-#define NONVEC_SXPINFO(x) (Rf_verify_nonvec((void*)x)->u.nonvec)
-#else
-#define VEC_SXPINFO(x)    ((x)->sxpinfo.u.vec)
-#define NONVEC_SXPINFO(x) ((x)->sxpinfo.u.nonvec)
-#endif
 
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
     /* The two function pointers below can't use SEXP, since not defined yet*/
     void *(*primsxp_cfun)();   /* c-code address for prim fun, from table   */
     void *(*primsxp_fast_cfun)(); /* c-code addr for fast interface, or NULL*/
+    unsigned short var1;       /* variant for eval of unary primitive arg */
     short primsxp_code;        /* operation code, from table                */
     signed char primsxp_arity; /* function arity (-1 for any), from table   */
+    unsigned char pending_ok;  /* whether args can have computation pending */
     unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
     unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
     unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
@@ -601,7 +584,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	NOT_LVALUE((x)->attrib)
 #define OBJECT(x)	NOT_LVALUE((x)->sxpinfo.obj)
-#define RTRACE(x)	NOT_LVALUE(NONVEC_SXPINFO(x).trace)
+#define RTRACE(x)	NOT_LVALUE((x)->sxpinfo.trace_basec)
 #define LEVELS(x)	NOT_LVALUE((x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
@@ -614,12 +597,12 @@ extern void helpers_wait_until_not_in_use(SEXP);
     SEXP _x_ = (x); int _v_ = (v); \
     if (_x_->sxpinfo.type!=_v_) _x_->sxpinfo.type = _v_; \
   } while (0)
-#define SET_RTRACE(x,v)	(NONVEC_SXPINFO(x).trace=(v))
+#define SET_RTRACE(x,v)	((x)->sxpinfo.trace_basec=(v))
 #define SETLEVELS(x,v)	((x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
-#define TRUELENGTH(x)	(VEC_SXPINFO(x).truelength)
-#define SET_TRUELENGTH(x,v)  (VEC_SXPINFO(x).truelength = (v))
+#define TRUELENGTH(x)	NOT_LVALUE((x)->sxpinfo.truelength)
+#define SET_TRUELENGTH(x,v)  ((x)->sxpinfo.truelength = (v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls.  Avoid writes
    of what's already there, in case object is a constant in read-only memory. */
@@ -663,10 +646,10 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define FORMALS(x)	NOT_LVALUE((x)->u.closxp.formals)
 #define BODY(x)		NOT_LVALUE((x)->u.closxp.body)
 #define CLOENV(x)	NOT_LVALUE((x)->u.closxp.env)
-#define RDEBUG(x)	NOT_LVALUE(NONVEC_SXPINFO(x).debug)
-#define SET_RDEBUG(x,v)	(NONVEC_SXPINFO(x).debug=(v))
-#define RSTEP(x)	NOT_LVALUE(NONVEC_SXPINFO(x).rstep)
-#define SET_RSTEP(x,v)	(NONVEC_SXPINFO(x).rstep=(v))
+#define RDEBUG(x)	NOT_LVALUE((x)->sxpinfo.debug)
+#define SET_RDEBUG(x,v)	((x)->sxpinfo.debug=(v))
+#define RSTEP(x)	NOT_LVALUE((x)->sxpinfo.rstep)
+#define SET_RSTEP(x,v)	((x)->sxpinfo.rstep=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) (x))->symsxp.pname)
@@ -681,12 +664,13 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_DDVAL_BIT(x) (((x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) (((x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  (NONVEC_SXPINFO(x).basec) /* 1 = base binding in global cache*/
-#define SET_BASE_CACHE(x,v) (NONVEC_SXPINFO(x).basec = (v))
+#define BASE_CACHE(x)  NOT_LVALUE((x)->sxpinfo.trace_basec) /* 1 = base binding
+                                                               in global cache*/
+#define SET_BASE_CACHE(x,v) ((x)->sxpinfo.trace_basec = (v))
 
 /* Flag indicating whether a symbol is special. */
-#define SPEC_SYM(x)	(NONVEC_SXPINFO(x).spec_sym)
-#define SET_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).spec_sym = (v)) 
+#define SPEC_SYM(x)	NOT_LVALUE((x)->sxpinfo.spec_sym)
+#define SET_SPEC_SYM(x,v) ((x)->sxpinfo.spec_sym = (v)) 
 
 /* Environment Access Macros */
 #define FRAME(x)	NOT_LVALUE((x)->u.envsxp.frame)
@@ -694,11 +678,11 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define HASHTAB(x)	NOT_LVALUE((x)->u.envsxp.hashtab)
 #define ENVFLAGS(x)	NOT_LVALUE((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  NOT_LVALUE(NONVEC_SXPINFO(x).no_spec_sym) 
+#define NO_SPEC_SYM(x)  NOT_LVALUE((x)->sxpinfo.spec_sym) 
                                            /* 1 = env has no special symbol */
-#define SET_NO_SPEC_SYM(x,v) (NONVEC_SXPINFO(x).no_spec_sym = (v))
-#define IS_BASE(x)	(NONVEC_SXPINFO(x).base_env) /* 1 = R_BaseEnv or
-                                                            R_BaseNamespace */
+#define SET_NO_SPEC_SYM(x,v) ((x)->sxpinfo.spec_sym = (v))
+#define IS_BASE(x)	NOT_LVALUE((x)->sxpinfo.base_env) /* 1 = R_BaseEnv or
+                                                             R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
 
