@@ -160,7 +160,7 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
 
 
 /* Flags.  Order may be fiddled to try to improve performance.  Total
-   size is 64 bits = 8 bytes. */
+   size is 32 bits = 4 bytes. */
 
 struct sxpinfo_struct {
 
@@ -189,9 +189,6 @@ struct sxpinfo_struct {
 
     /* The "general purpose" field, used for miscellaneous purposes */
     unsigned int gp : 16;     /* The "general purpose" field */
-
-    /* The mis-named "truelength" field, used only for vector types */
-    R_len_t truelength;       /* for old stuff - may someday be defunct... */
 };
 
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
@@ -235,13 +232,15 @@ struct promsxp_struct {
 };
 
 /* Every node must have a set of sxpinfo flags and an attribute field,
-   plus a cptr field giving the compressed pointer to the node. */
+   plus a cptr field giving the compressed pointer to the node.  They
+   also all have length fields at present, though this is supposed to
+   be used only for vectors (but having always suppresses some bugs). */
 
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
     uint32_t cptr; \
-    R_len_t length; \
-    struct SEXPREC *attrib
+    struct SEXPREC *attrib; \
+    R_len_t length
 
 /* The standard node structure consists of a header followed by the
    node data. */
@@ -280,6 +279,7 @@ typedef struct SYM_SEXPREC {
 
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
+    R_len_t truelength;   /* The mis-named "truelength" field */
 } VECTOR_SEXPREC, *VECSEXP;
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
@@ -601,8 +601,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SETLEVELS(x,v)	((x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
-#define TRUELENGTH(x)	NOT_LVALUE((x)->sxpinfo.truelength)
-#define SET_TRUELENGTH(x,v)  ((x)->sxpinfo.truelength = (v))
+#define TRUELENGTH(x)	NOT_LVALUE(((VECSEXP) (x))->truelength)
+#define SET_TRUELENGTH(x,v)  (((VECSEXP) (x))->truelength = (v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls.  Avoid writes
    of what's already there, in case object is a constant in read-only memory. */

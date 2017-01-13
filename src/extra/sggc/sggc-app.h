@@ -61,9 +61,9 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 #if SIZEOF_SIZE_T == 8
 
 /*    Cons-type:          Vector:             
-        info, trulen        info, trulen
-        cptr, length        cptr, length
+        info, cptr          info, cptr  
         attrib              attrib
+        length, padding     length, truelength
         car                 data...
         cdr
         tag
@@ -71,9 +71,9 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
           (3 chunks)          (2 chunks)
 
       Symbol:             Primitive:
-        info, trulen        info, trulen
-        cptr, length        cptr, length
+        info, cptr          info, cptr  
         attrib              attrib
+        length, padding     length, padding
         pname               C-function
         value               fast-C-function
         internal            64 bits of info
@@ -113,22 +113,22 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 #if SIZEOF_SIZE_T == 4
 
 /*    Cons-type:          Vector:             
-        info, trulen        info, trulen
-        cptr, length        cptr, length
-        attrib, car         attrib, padding
-        cdr, tag            data...
+        info, cptr          info, cptr  
+        attrib, length      attrib, length
+        car, cdr            truelength, padding
+        tag, padding        data...
         = 32 bytes          = 32 bytes if length==1 (except for CPLXSXP)
         (2 chunks)          (2 chunks)
 
       Symbol:             Primitive:
-        info, trulen        info, trulen
-        cptr, length        cptr, length
-        attrib, pname       attrib, C-function
-        value, internal     fast-C-function, 32 bits of info
-        nextsym, lastenv    32 bits of info, padding
-        lastbinding, lastenvnotfound         padding, padding
-        = 48 bytes                             = 48 bytes
-          (3 chunks)                             (3 chunks)
+        info, cptr          info, cptr  
+        attrib, length      attrib, length
+        pname, value        C-function, fast-C-function
+        internal, nextsym   64 bits of info
+        lastenv, lastbinding      64 bits of padding /* keep so size will be */
+        lastenvnotfound, padding  64 bits of padding /* in third row below */
+        = 48 bytes          = 48 bytes 
+          (3 chunks)          (3 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
