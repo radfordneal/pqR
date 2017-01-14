@@ -287,6 +287,22 @@ typedef struct SYM_SEXPREC {
     struct symsxp_struct symsxp;
 } SYM_SEXPREC, *SYMSEXP;
 
+/* Version of SEXPREC used for external pointers. */
+
+typedef struct EXTPTR_SEXPREC {
+    SEXPREC_HEADER;
+#if USE_COMPRESSED_POINTERS
+    struct SEXPREC *unused;  /* Include 'unused' to match the offsets with    */
+    struct SEXPREC *prot;    /*   uncompressed pointers, in case of wrong use */
+    struct SEXPREC *tag;     /*   of CDR and TAG to get prot and tag fields   */
+    void *ptr;               /* The actual exernal pointer */
+#else
+    void *ptr;               /* The actual exernal pointer */
+    struct SEXPREC *prot;
+    struct SEXPREC *tag;
+#endif
+} EXTPTR_SEXPREC, *EXTPTRSEXP;
+
 /* Version of SEXPREC used as a header in vector nodes.  MUST be kept 
    consistent with the SEXPREC definition. */
 
@@ -869,9 +885,9 @@ void (SET_HASHVALUE)(SEXP x, int v);
 
 
 /* External pointer access macros */
-#define EXTPTR_PTR(x)	CAR(x)
-#define EXTPTR_PROT(x)	CDR(x)
-#define EXTPTR_TAG(x)	TAG(x)
+#define EXTPTR_PTR(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->ptr)
+#define EXTPTR_PROT(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->prot)
+#define EXTPTR_TAG(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->tag)
 
 /* Bytecode access macros */
 #define BCODE_CODE(x)	CAR(x)

@@ -70,13 +70,13 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
         = 16 bytes          = 16 bytes if length==1 (except for CPLXSXP)
           (1 chunk)           (1 chunk)
 
-      Symbol:             Primitive:
-        info, pname         info, padding
-        value, internal     C-function
-        nextsym, lastenv    fast-C-function
-        lastbinding, lastenvnotfound     64 bits of info
-        = 32 bytes                       = 32 bytes
-          (2 chunks)                       (2 chunks)
+      Symbol:             Primitive:                        External pointer:
+        info, pname         info, padding                     info, unused
+        value, internal     C-function                        prot, tag
+        nextsym, lastenv    fast-C-function                   external ptr
+        lastbinding, lastenvnotfound     64 bits of info      padding, padding
+        = 32 bytes                       = 32 bytes           = 32 bytes
+          (2 chunks)                       (2 chunks)           (2 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -117,15 +117,15 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
         = 48 bytes          = 32 bytes if length==1 (except for CPLXSXP)
           (3 chunks)          (2 chunks)
 
-      Symbol:             Primitive:
-        info, cptr          info, cptr  
-        attrib              attrib
-        length, padding     length, padding
-        pname               C-function
-        value               fast-C-function
-        internal            64 bits of info
-        nextsym             = 48 bytes
-        lastenv             (3 chunks)
+      Symbol:             Primitive:                        External pointer:
+        info, cptr          info, cptr                        info, cptr
+        attrib              attrib                            attrib
+        length, padding     length, padding                   length, padding
+        pname               C-function                         external ptr
+        value               fast-C-function                    prot
+        internal            64 bits of info                    tag
+        nextsym             = 48 bytes                         = 48 bytes
+        lastenv             (3 chunks)                           (3 chunks)
         lastbinding
         lastenvnotfound
         = 80 bytes
@@ -167,13 +167,13 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
         = 32 bytes          = 32 bytes if length==1 (except for CPLXSXP)
         (2 chunks)          (2 chunks)
 
-      Symbol:             Primitive:
-        info, cptr          info, cptr  
-        attrib, length      attrib, length
-        pname, value        C-function, fast-C-function
-        internal, nextsym   64 bits of info
-        lastenv, lastbinding      = 32 bytes 
-        lastenvnotfound, padding    (2 chunks)
+      Symbol:             Primitive:                        External pointer:
+        info, cptr          info, cptr                        info, cptr
+        attrib, length      attrib, length                    attrib, length
+        pname, value        C-function, fast-C-function       prot, tag
+        internal, nextsym   64 bits of info                   external ptr
+        lastenv, lastbinding      = 32 bytes                  = 32 bytes
+        lastenvnotfound, padding    (2 chunks)                  (2 chunks)
         = 48 bytes          
           (3 chunks)
 */
