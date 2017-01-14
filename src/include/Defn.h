@@ -223,17 +223,17 @@ typedef union { int i; double r; } R_static_box_contents;
    *(x) == R_ScalarRealBox ? (*(x) = R_ScalarRealBox0) : NULL)
 
 #ifdef USE_RINTERNALS
-# define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
-# define SET_BYTES(x) (((x)->sxpinfo.gp) |= BYTES_MASK)
-# define IS_LATIN1(x) ((x)->sxpinfo.gp & LATIN1_MASK)
-# define SET_LATIN1(x) (((x)->sxpinfo.gp) |= LATIN1_MASK)
-# define IS_ASCII(x) ((x)->sxpinfo.gp & ASCII_MASK)
-# define SET_ASCII(x) (((x)->sxpinfo.gp) |= ASCII_MASK)
-# define IS_UTF8(x) ((x)->sxpinfo.gp & UTF8_MASK)
-# define SET_UTF8(x) (((x)->sxpinfo.gp) |= UTF8_MASK)
-# define ENC_KNOWN(x) ((x)->sxpinfo.gp & (LATIN1_MASK | UTF8_MASK))
-# define SET_CACHED(x) (((x)->sxpinfo.gp) |= CACHED_MASK)
-# define IS_CACHED(x) (((x)->sxpinfo.gp) & CACHED_MASK)
+# define IS_BYTES(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & BYTES_MASK)
+# define SET_BYTES(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= BYTES_MASK)
+# define IS_LATIN1(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & LATIN1_MASK)
+# define SET_LATIN1(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= LATIN1_MASK)
+# define IS_ASCII(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & ASCII_MASK)
+# define SET_ASCII(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= ASCII_MASK)
+# define IS_UTF8(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & UTF8_MASK)
+# define SET_UTF8(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= UTF8_MASK)
+# define ENC_KNOWN(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & (LATIN1_MASK|UTF8_MASK))
+# define SET_CACHED(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= CACHED_MASK)
+# define IS_CACHED(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) & CACHED_MASK)
 #else /* USE_RINTERNALS */
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
@@ -475,12 +475,12 @@ typedef struct {
 
 /* Primitive Access Macros */
 
-/* Set offset of primitive in table, and copy some of the information from
-   the table into the primsxp structure (and misc) for fast access.  Note that 
+/* Set offset of primitive in table, and copy some of the information
+   from the table into the primsxp structure for fast access.  Note that 
    primsxp_fast_cfun will (possibly) be set in SetupBuiltins in names.c. */
 
 #define SET_PRIMOFFSET(x,v) do { \
-    SEXP setprim_ptr = (x); \
+    SEXPREC *setprim_ptr = UNCOMPRESSED_PTR(x); \
     int setprim_value = (v); \
     /* special fudge because the S4 bit is actually looked at some places */ \
     setprim_ptr->sxpinfo.gp = (setprim_ptr->sxpinfo.gp & (2*S4_OBJECT_MASK-1)) \
@@ -502,34 +502,34 @@ typedef struct {
         = (R_FunTab[setprim_value].eval/100000)&1; \
 } while (0)
 
-#define PRIMOFFSET(x)	((x)->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
+#define PRIMOFFSET(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
 
-#define PRIMFUN(x)	((CCODE)((x)->u.primsxp.primsxp_cfun))
-#define PRIMFUNV(x)	((CCODEV)((x)->u.primsxp.primsxp_cfun))
+#define PRIMFUN(x)	((CCODE)(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_cfun))
+#define PRIMFUNV(x)	((CCODEV)(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_cfun))
 #define SET_PRIMFUN(x,f) \
-    ( (x)->u.primsxp.primsxp_cfun = \
+    ( UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_cfun = \
         (void *(*)()) (R_FunTab[PRIMOFFSET(x)].cfun = (SEXP (*)()) (f)), \
-      (x)->u.primsxp.primsxp_fast_cfun = 0 )
-#define PRIMVAL(x)	((x)->u.primsxp.primsxp_code)
-#define PRIMARITY(x)	((x)->u.primsxp.primsxp_arity)
-#define PRIMPRINT(x)	((x)->u.primsxp.primsxp_print)
-#define PRIMINTERNAL(x)	((x)->u.primsxp.primsxp_internal)
-#define PRIMVARIANT(x)	((x)->u.primsxp.primsxp_variant)
-#define PRIMFASTSUB(x)	((x)->u.primsxp.primsxp_fast_sub)
+      UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_cfun = 0 )
+#define PRIMVAL(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_code)
+#define PRIMARITY(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_arity)
+#define PRIMPRINT(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_print)
+#define PRIMINTERNAL(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_internal)
+#define PRIMVARIANT(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_variant)
+#define PRIMFASTSUB(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_sub)
 #define PRIMFOREIGN(x)	(R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
 #define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
 
-#define PRIMFUN_PENDING_OK(x) ((x)->u.primsxp.pending_ok)
+#define PRIMFUN_PENDING_OK(x) (UNCOMPRESSED_PTR(x)->u.primsxp.pending_ok)
 
-#define PRIMFUN_FAST(x)	((x)->u.primsxp.primsxp_fast_cfun)
-#define PRIMFUN_DSPTCH1(x) ((x)->u.primsxp.primsxp_dsptch1)
-#define PRIMFUN_ARG1VAR(x) ((x)->u.primsxp.var1)
+#define PRIMFUN_FAST(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_cfun)
+#define PRIMFUN_DSPTCH1(x) (UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_dsptch1)
+#define PRIMFUN_ARG1VAR(x) (UNCOMPRESSED_PTR(x)->u.primsxp.var1)
 
 #define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
-    (x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
-    (x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
-    (x)->u.primsxp.var1 = (v1); \
+    UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
+    UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
+    UNCOMPRESSED_PTR(x)->u.primsxp.var1 = (v1); \
 } while (0)
 
 /* Symbols for eval variants.  Variant 0 indicates the standard result.  
@@ -666,19 +666,25 @@ typedef struct {
    avoid writing to constant objects, which will have max NAMEDCNT (and hence
    don't need "in use" anyway, since they'll never have lower NAMEDCNT). */
 
-#define helpers_is_being_computed(x)       ((x)->sxpinfo.being_computed)
+#define helpers_is_being_computed(x) \
+  (UNCOMPRESSED_PTR(x)->sxpinfo.being_computed)
 
 #ifndef helpers_is_in_use
-#define helpers_is_in_use(x)               ((x)->sxpinfo.in_use)
+#define helpers_is_in_use(x) \
+  (UNCOMPRESSED_PTR(x)->sxpinfo.in_use)
 #endif
 
 #define helpers_mark_in_use(v) \
-    ((v)->sxpinfo.nmcnt < MAX_NAMEDCNT ? (v)->sxpinfo.in_use = 1 : 1)
+    (UNCOMPRESSED_PTR(v)->sxpinfo.nmcnt < MAX_NAMEDCNT \
+       ? UNCOMPRESSED_PTR(v)->sxpinfo.in_use = 1 : 1)
 #define helpers_mark_not_in_use(v) \
-    ((v)->sxpinfo.in_use ? (v)->sxpinfo.in_use = 0 : 0)
+    (UNCOMPRESSED_PTR(v)->sxpinfo.in_use \
+       ? UNCOMPRESSED_PTR(v)->sxpinfo.in_use = 0 : 0)
 
-#define helpers_mark_being_computed(v)     ((v)->sxpinfo.being_computed = 1)
-#define helpers_mark_not_being_computed(v) ((v)->sxpinfo.being_computed = 0)
+#define helpers_mark_being_computed(v) \
+    (UNCOMPRESSED_PTR(v)->sxpinfo.being_computed = 1)
+#define helpers_mark_not_being_computed(v) \
+    (UNCOMPRESSED_PTR(v)->sxpinfo.being_computed = 0)
 
 /* Macros to wait until variables(s) computed. */
 
@@ -710,19 +716,20 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 
 /* Promise Access Macros */
 #define PRVALUE(x) \
-  (WAIT_UNTIL_COMPUTED((x)->u.promsxp.value), ((x)->u.promsxp.value))
-#define PRVALUE_PENDING_OK(x) \
-  ((x)->u.promsxp.value)
-#define PRCODE(x)	((x)->u.promsxp.expr)
-#define PRENV(x)	((x)->u.promsxp.env)
-#define PRSEEN(x)	((x)->sxpinfo.gp)
-#define SET_PRSEEN(x,v)	(((x)->sxpinfo.gp)=(v))
+  (WAIT_UNTIL_COMPUTED(UNCOMPRESSED_PTR(x)->u.promsxp.value), \
+   (UNCOMPRESSED_PTR(x)->u.promsxp.value))
+#define PRVALUE_PENDING_OK(x) (UNCOMPRESSED_PTR(x)->u.promsxp.value)
+#define PRCODE(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.expr)
+#define PRENV(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.env)
+#define PRSEEN(x)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp)
+#define SET_PRSEEN(x,v)	(UNCOMPRESSED_PTR((x)->sxpinfo.gp)=(v))
 
 /* Hashing Macros */
-#define HASHASH(x)      ((x)->sxpinfo.gp & HASHASH_MASK)
+#define HASHASH(x)      (UNCOMPRESSED_PTR(x)->sxpinfo.gp & HASHASH_MASK)
 #define HASHVALUE(x)    TRUELENGTH(x)
-#define SET_HASHASH(x,v) ((v) ? (((x)->sxpinfo.gp) |= HASHASH_MASK) : \
-			  (((x)->sxpinfo.gp) &= (~HASHASH_MASK)))
+#define SET_HASHASH(x,v) \
+  ((v) ? ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= HASHASH_MASK) : \
+         ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) &= (~HASHASH_MASK)))
 #define SET_HASHVALUE(x,v) SET_TRUELENGTH(x, v)
 
 /* Vector Heap Structure */
@@ -746,11 +753,16 @@ typedef struct {
 #define ACTIVE_BINDING_MASK (1<<15)
 #define BINDING_LOCK_MASK (1<<14)
 #define SPECIAL_BINDING_MASK (ACTIVE_BINDING_MASK | BINDING_LOCK_MASK)
-#define IS_ACTIVE_BINDING(b) ((b)->sxpinfo.gp & ACTIVE_BINDING_MASK)
-#define BINDING_IS_LOCKED(b) ((b)->sxpinfo.gp & BINDING_LOCK_MASK)
-#define SET_ACTIVE_BINDING_BIT(b) ((b)->sxpinfo.gp |= ACTIVE_BINDING_MASK)
-#define LOCK_BINDING(b) ((b)->sxpinfo.gp |= BINDING_LOCK_MASK)
-#define UNLOCK_BINDING(b) ((b)->sxpinfo.gp &= (~BINDING_LOCK_MASK))
+#define IS_ACTIVE_BINDING(b) \
+  (UNCOMPRESSED_PTR(b)->sxpinfo.gp & ACTIVE_BINDING_MASK)
+#define BINDING_IS_LOCKED(b) \
+  (UNCOMPRESSED_PTR(b)->sxpinfo.gp & BINDING_LOCK_MASK)
+#define SET_ACTIVE_BINDING_BIT(b) \
+  (UNCOMPRESSED_PTR(b)->sxpinfo.gp |= ACTIVE_BINDING_MASK)
+#define LOCK_BINDING(b) \
+  (UNCOMPRESSED_PTR(b)->sxpinfo.gp |= BINDING_LOCK_MASK)
+#define UNLOCK_BINDING(b) \
+  (UNCOMPRESSED_PTR(b)->sxpinfo.gp &= (~BINDING_LOCK_MASK))
 
 #define check1arg_x(args,call) \
     do { \
