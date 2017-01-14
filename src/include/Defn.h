@@ -667,7 +667,10 @@ typedef struct {
    don't need "in use" anyway, since they'll never have lower NAMEDCNT). */
 
 #define helpers_is_being_computed(x)       ((x)->sxpinfo.being_computed)
+
+#ifndef helpers_is_in_use
 #define helpers_is_in_use(x)               ((x)->sxpinfo.in_use)
+#endif
 
 #define helpers_mark_in_use(v) \
     ((v)->sxpinfo.nmcnt < MAX_NAMEDCNT ? (v)->sxpinfo.in_use = 1 : 1)
