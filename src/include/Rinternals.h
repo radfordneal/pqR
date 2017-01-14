@@ -159,6 +159,28 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
 #define FUNSXP      99    /* Closure or Builtin or Special */
 
 
+
+#if USE_COMPRESSED_POINTERS
+
+typedef sggc_cptr_t SEXP;
+typedef sggc_cptr_t VECSEXP;
+
+#define COMPRESSED_PTR(x) (x)                        /* sggc_cptr_t from SEXP */
+#define UNCOMPRESSED_PTR(x) ((SEXPREC *) SGGC_DATA(x)) /* SEXPREC * from SEXP */
+#define SEXP_PTR(x) (x)                              /* SEXP from sggc_cptr_t */
+
+#else /* !USE_COMPRESSED_POINTERS */
+
+typedef struct SEXPREC *SEXP;
+typedef struct VECTOR_SEXPREC *VECSEXP;
+
+#define COMPRESSED_PTR(x) ((x)->cptr)                /* sggc_cptr_t from SEXP */
+#define UNCOMPRESSED_PTR(x) (x)                      /* SEXPREC * from SEXP */
+#define SEXP_PTR(x) ((SEXP) SGGC_DATA(x))            /* SEXP from sggc_cptr_t */
+
+#endif
+
+
 /* Flags.  Order may be fiddled to try to improve performance.  Total
    size is 32 bits = 4 bytes. */
 
@@ -208,27 +230,27 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
 };
 
 struct listsxp_struct {
-    struct SEXPREC *carval;
-    struct SEXPREC *cdrval;
-    struct SEXPREC *tagval;
+    SEXP carval;
+    SEXP cdrval;
+    SEXP tagval;
 };
 
 struct envsxp_struct {
-    struct SEXPREC *frame;
-    struct SEXPREC *enclos;
-    struct SEXPREC *hashtab;
+    SEXP frame;
+    SEXP enclos;
+    SEXP hashtab;
 };
 
 struct closxp_struct {
-    struct SEXPREC *formals;
-    struct SEXPREC *body;
-    struct SEXPREC *env;
+    SEXP formals;
+    SEXP body;
+    SEXP env;
 };
 
 struct promsxp_struct {
-    struct SEXPREC *value;
-    struct SEXPREC *expr;
-    struct SEXPREC *env;
+    SEXP value;
+    SEXP expr;
+    SEXP env;
 };
 
 #if USE_COMPRESSED_POINTERS
@@ -250,7 +272,7 @@ struct promsxp_struct {
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
     uint32_t cptr; \
-    struct SEXPREC *attrib; \
+    SEXP attrib; \
     R_len_t length
 
 #endif /* USE_COMPRESSED_POINTERS */
@@ -273,13 +295,13 @@ typedef struct SEXPREC {
 /* Version of SEXPREC used for symbols. */
 
 struct symsxp_struct {
-    struct SEXPREC *pname;
-    struct SEXPREC *value;
-    struct SEXPREC *internal;
-    struct SEXPREC *nextsym;
-    struct SEXPREC *lastenv;
-    struct SEXPREC *lastbinding;
-    struct SEXPREC *lastenvnotfound;
+    SEXP pname;
+    SEXP value;
+    SEXP internal;
+    SEXP nextsym;
+    SEXP lastenv;
+    SEXP lastbinding;
+    SEXP lastenvnotfound;
 };
 
 typedef struct SYM_SEXPREC {
@@ -292,14 +314,14 @@ typedef struct SYM_SEXPREC {
 typedef struct EXTPTR_SEXPREC {
     SEXPREC_HEADER;
 #if USE_COMPRESSED_POINTERS
-    struct SEXPREC *unused;  /* Include 'unused' to match the offsets with    */
-    struct SEXPREC *prot;    /*   uncompressed pointers, in case of wrong use */
-    struct SEXPREC *tag;     /*   of CDR and TAG to get prot and tag fields   */
+    SEXP unused;             /* Include 'unused' to match the offsets with    */
+    SEXP prot;               /*   uncompressed pointers, in case of wrong use */
+    SEXP tag;                /*   of CDR and TAG to get prot and tag fields   */
     void *ptr;               /* The actual exernal pointer */
 #else
     void *ptr;               /* The actual exernal pointer */
-    struct SEXPREC *prot;
-    struct SEXPREC *tag;
+    SEXP prot;
+    SEXP tag;
 #endif
 } EXTPTR_SEXPREC, *EXTPTRSEXP;
 
@@ -317,33 +339,12 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 #define R_CONST const  /* Define as 'const' to get actual read-only constants,
                           or nothing if you don't want them to be read-only */
-typedef struct {
+typedef struct VECTOR_SEXPREC_C {
     SEXPREC_HEADER;
     union { double d; int w[2]; int i; char c; char s[8]; } data;
 } VECTOR_SEXPREC_C;
 
 #define DATAPTR(x)	(((SEXPREC_ALIGN *) UNCOMPRESSED_PTR(x)) + 1)
-
-
-#if USE_COMPRESSED_POINTERS
-
-typedef sggc_cptr_t SEXP;
-typedef sggc_cptr_t VECSEXP;
-
-#define COMPRESSED_PTR(x) (x)                        /* sggc_cptr_t from SEXP */
-#define UNCOMPRESSED_PTR(x) ((SEXPREC *) SGGC_DATA(x)) /* SEXPREC * from SEXP */
-#define SEXP_PTR(x) (x)                              /* SEXP from sggc_cptr_t */
-
-#else /* !USE_COMPRESSED_POINTERS */
-
-typedef SEXPREC *SEXP;
-typedef VECTOR_SEXPREC *VECSEXP;
-
-#define COMPRESSED_PTR(x) ((x)->cptr)                /* sggc_cptr_t from SEXP */
-#define UNCOMPRESSED_PTR(x) (x)                      /* SEXPREC * from SEXP */
-#define SEXP_PTR(x) ((SEXP) SGGC_DATA(x))            /* SEXP from sggc_cptr_t */
-
-#endif
 
 
 /* Pairlist and data access macros / static inline functions that are now 
