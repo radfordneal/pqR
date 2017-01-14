@@ -205,12 +205,10 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 /* Test whether this is a constant object (defined in const-objs.c). */
 #define IS_CONSTANT(x) (sggc_is_constant(COMPRESSED_PTR(x)))
 
-/* Test whether this is a static box object (defined in const-objs.c). */
-
-unsigned R_static_box_segment;
+/* Test if this is a static box object (which are defined in const-objs.c). */
 
 #define IS_STATIC_BOX(x) \
-  (SGGC_SEGMENT_INDEX(COMPRESSED_PTR(x)) == R_static_box_segment)
+  (SGGC_SEGMENT_INDEX(COMPRESSED_PTR(x)) == R_SGGC_STATIC_BOXES_INDEX)
 
 /* Stuff for saving static boxes, if doing another eval */
 typedef union { int i; double r; } R_static_box_contents;

@@ -1323,12 +1323,29 @@ struct R_local_protect {
     } while (0)
 
 
-/* Evaluation Environment */
+/* Segment indexes for constant segments. */
+
+#define R_SGGC_NIL_INDEX 0          /* must be 0 */
+#define R_SGGC_STATIC_BOXES_INDEX 1
+#define R_SGGC_ENV_INDEX 2
+#define R_SGGC_SYM_INDEX 3
+#define R_SGGC_NUM_INDEX 4
+#define R_SGGC_LIST1_INDEX 5
+
+#define R_N_NUM_CONSTS (3+12+3)     /* # of numerical constants in const-objs */
+
+
+/* R_EmptyEnv - a n empty environment at the root of the environment tree */
 
 LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
-ConstExtern R_CONST SEXPREC R_env_consts[];  /* Defined in const-objs.c */
-#define R_EmptyEnv ((SEXP) &R_env_consts[0]) /* An empty environment at the
-				    	        root of the environment tree */
+                                    /* Set in const-objs.c, as done below */
+
+#if USE_COMPRESSED_POINTERS
+#define R_EmptyEnv SGGC_CPTR_VAL(R_SGGC_ENV_INDEX,0)
+#else
+ConstExtern R_CONST SEXPREC R_env_consts[1]; /* Defined in const-objs.c */
+#define R_EmptyEnv ((SEXP) &R_env_consts[0])
+#endif
 
 LibExtern SEXP	R_GlobalEnv;        /* The "global" environment */
 LibExtern SEXP	R_BaseEnv;          /* The base environment (formerly R_NilValue) */
@@ -1338,17 +1355,28 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 
 #define R_Srcref R_high_frequency_globals.Srcref
 
-/* R_NilValue is the R NULL object */
+/* R_NilValue - the R NULL object */
 
 LibExtern SEXP R_NilValue;          /* Variable form, for those that need it */
+                                    /* Set in const-objs.c, as done below */
+#if USE_COMPRESSED_POINTERS
+#define R_NilValue SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0)  /* Should be zero */
+#else
 LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 #define R_NilValue ((SEXP) &R_NilValue_const)
+#endif
 
-/* Special Values */
+/* R_UnboundValue - for symbol with no value. */
 
-ConstExtern R_CONST SYM_SEXPREC R_sym_consts[1]; /* defined in const-objs.c*/
 LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
+                                    /* Set in const-objs.c, as done below */
+
+#if USE_COMPRESSED_POINTERS
+#define R_UnboundValue SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0)
+#else
+ConstExtern R_CONST SYM_SEXPREC R_sym_consts[1]; /* defined in const-objs.c*/
 #define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value*/
+#endif
 
 LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
@@ -1356,23 +1384,47 @@ LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 /* Logical / Intteger / Real Values.  Defined in const-objs.c, must keep
    in sync. */
 
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[18];
-#define R_ScalarLogicalFALSE ((SEXP) &R_ScalarNumerical_consts[0])
-#define R_ScalarLogicalTRUE  ((SEXP) &R_ScalarNumerical_consts[1])
-#define R_ScalarLogicalNA    ((SEXP) &R_ScalarNumerical_consts[2])
+#if USE_UNCOMPRESSED_POINTERS
+#define R_ScalarLogicalFALSE      SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,0)
+#define R_ScalarLogicalTRUE       SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,1)
+#define R_ScalarLogicalNA         SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,2)
+#define R_ScalarInteger0To10(v)   SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,3+v)
+#define R_ScalarIntegerNA ((SEXP) SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,14)
+#define R_ScalarRealZero ((SEXP)  SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,15)
+#define R_ScalarRealOne ((SEXP)   SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,16)
+#define R_ScalarRealNA ((SEXP)    SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,17)
+#else
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
+#define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarNumerical_consts[0])
+#define R_ScalarLogicalTRUE     ((SEXP) &R_ScalarNumerical_consts[1])
+#define R_ScalarLogicalNA       ((SEXP) &R_ScalarNumerical_consts[2])
 #define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarNumerical_consts[3+v])
-#define R_ScalarIntegerNA ((SEXP) &R_ScalarNumerical_consts[14])
-#define R_ScalarRealZero ((SEXP) &R_ScalarNumerical_consts[15])
-#define R_ScalarRealOne ((SEXP) &R_ScalarNumerical_consts[16])
-#define R_ScalarRealNA ((SEXP) &R_ScalarNumerical_consts[17])
+#define R_ScalarIntegerNA       ((SEXP) &R_ScalarNumerical_consts[14])
+#define R_ScalarRealZero        ((SEXP) &R_ScalarNumerical_consts[15])
+#define R_ScalarRealOne         ((SEXP) &R_ScalarNumerical_consts[16])
+#define R_ScalarRealNA          ((SEXP) &R_ScalarNumerical_consts[17])
+#endif
 
-/* Integer and real static boxes.  Defined in const-objs.c */
+/* Integer and real static boxes.  Defined in const-objs.c. */
 
-ConstExtern VECTOR_SEXPREC_C R_ScalarBox_space[];
+#if USE_UNCOMPRESSED_POINTERS
+#define R_ScalarIntegerBox0 SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,0)
+#define R_ScalarIntegerBox  SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,1)
+#define R_ScalarRealBox0    SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,2)
+#define R_ScalarRealBox     SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,3)
+#else
+ConstExtern VECTOR_SEXPREC_C R_ScalarBox_space[4];
 #define R_ScalarIntegerBox0 ((SEXP) &R_ScalarBox_space[0])
 #define R_ScalarIntegerBox  ((SEXP) &R_ScalarBox_space[1])
 #define R_ScalarRealBox0    ((SEXP) &R_ScalarBox_space[2])
 #define R_ScalarRealBox     ((SEXP) &R_ScalarBox_space[3])
+#endif
+
+#if USE_UNCOMPRESSED_POINTERS
+#define R_NoObject SGGC_NO_OBJECT
+#else
+#define R_NoObject NULL
+#endif
 
 #ifdef __MAIN__
 attribute_hidden
@@ -1380,8 +1432,6 @@ attribute_hidden
 extern
 #endif
 SEXP	R_RestartToken;     /* Marker for restarted function calls */
-
-LibExtern SEXP	R_NoObject; /* Can't be any real object - left set to NULL */
 
 /* Symbol Table Shortcuts */
 
