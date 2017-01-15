@@ -17,8 +17,7 @@
  *  http://www.r-project.org/Licenses/
  */
 
-#include "sggc-app.h"
-
+#include <Defn.h>
 
 const char R_type_to_sggc_type[32] = 
 {
@@ -61,7 +60,7 @@ const char R_type_to_sggc_type[32] =
 
 #if USE_COMPRESSED_POINTERS
 
-sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
+sggc_nchunks_t Rf_nchunks (int type, int length)
 {
     switch (type) {
     case RAWSXP:
@@ -97,7 +96,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
 
-sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
+sggc_nchunks_t Rf_nchunks (int type, int length)
 {
     switch (type) {
     case RAWSXP:
@@ -132,7 +131,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
 
-sggc_nchunks_t Rf_nchunks (SEXPTYPE type, R_len_t length)
+sggc_nchunks_t Rf_nchunks (int type, int length)
 {
     switch (type) {
     case RAWSXP:

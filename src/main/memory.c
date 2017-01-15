@@ -48,7 +48,6 @@
 #include <R_ext/Rdynload.h>
 
 #include <helpers/helpers-app.h>
-#include <sggc/sggc-app.h>
 
 
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */

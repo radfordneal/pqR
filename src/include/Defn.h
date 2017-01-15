@@ -75,14 +75,6 @@
 # define extern0 extern
 #endif
 
-/* Avoid including all of sggc-app.h by declaring a few things here - need
-   to keep in sync. */
-
-int sggc_is_constant (uint32_t cptr);
-
-#undef SGGC_SEGMENT_INDEX
-#define SGGC_SEGMENT_INDEX(p) (((uint32_t) p) >> 6)
-
 
 /* Define HELPERS_DISABLED if no helper support.  This has the effect of 
    making helpers.h define stubs for the helpers routines.  Also define

@@ -34,7 +34,6 @@
 #include <Defn.h>
 #include <Print.h>
 #include <R_ext/Rdynload.h>
-#include <sggc/sggc-app.h>
 
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */

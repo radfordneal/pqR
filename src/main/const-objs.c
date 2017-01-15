@@ -34,9 +34,6 @@
 # define __LIBM_PRIVATE
 #endif
 
-#include <sggc/sggc-app.h>
-#include <complex.h>
-
 
 /* This module defines some commonly-used objects as shared constants.
    They may be declared as "const" so that many compilers will put them in
@@ -52,6 +49,7 @@
 
 
 #include "Defn.h"    /* Includes Rinternals.h, which defines R_CONST */
+#include <complex.h>
 
 
 /* Header for a constant. */

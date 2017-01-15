@@ -21,9 +21,6 @@
 # include <config.h>
 #endif
 
-#include <Defn.h>
-#undef SGGC_SEGMENT_INDEX
-
 
 /* LENGTH TYPES. */
 
@@ -51,9 +48,9 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
 
 #define SGGC_N_TYPES 5
 
-const char R_type_to_sggc_type[32];
+const char R_type_to_sggc_type[32];  /* Initialized in sggc-app.c */
 
-sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
+sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 
 /* LAYOUT WITH COMPRESSED POINTERS. */
@@ -82,7 +79,6 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
-
 
 /* Note: chunks in non-vector types are given by second row below, except
    for EXTPTRSXP, BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
@@ -182,7 +178,6 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
 
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
-
 /* Note: chunks in non-vector types are given by second row below, except
    for SYMSXP, given by third row. */
 
@@ -212,7 +207,7 @@ sggc_nchunks_t Rf_nchunks (SEXPTYPE, R_len_t);
    in memory.c, according to whether sggc_find_object_ptrs is defined
    as sggc_find_object_ptrs_inline here, or left undefined. */
 
-#define sggc_find_object_ptrs sggc_find_object_ptrs_inline
+/* #define sggc_find_object_ptrs sggc_find_object_ptrs_inline */
 
 #include "sggc.h"  /* Include the generic SGGC header file */
 
