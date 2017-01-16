@@ -373,7 +373,7 @@ typedef struct VECTOR_SEXPREC_C {
 #if USE_COMPRESSED_POINTERS
 #define LENGTH(x) (* (R_len_t *) SGGC_AUX1(x))
 #else
-#define LENGTH(x)  NOT_LVALUE(((VECSEXP) UNCOMPRESSED_PTR(x))->length)
+#define LENGTH(x)  NOT_LVALUE(((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->length)
 #endif
 
 #else /* USE_RINTERNALS not defined */
@@ -416,10 +416,10 @@ static inline double *REAL(SEXP x)
 
 #if USE_COMPRESSED_POINTERS
 static inline int LENGTH (SEXP x) 
-  { return * (R_len_t *) SGGC_AUX1(x);
+  { return * (R_len_t *) SGGC_AUX1(x); }
 #else
 static inline int LENGTH (SEXP x) 
-  { return ((VECSEXP)(UNCOMPRESSED_PTR(x)))->length; }
+  { return ((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->length; }
 #endif
 
 #endif /* USE_RINTERNALS */
@@ -579,7 +579,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define NAMED(x) \
   ( UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt > 1 \
      && UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt < MAX_NAMEDCNT \
-      ? (UNCOMPRESSED_PTR((x)->sxpinfo.nmcnt = MAX_NAMEDCNT), 2) \
+      ? ((UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt = MAX_NAMEDCNT), 2) \
       : NAMEDCNT((x)) )
 
 #define SET_NAMED(x,v) do { \
@@ -641,7 +641,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 /* General Cons Cell Attributes */
 
 #if USE_COMPRESSED_POINTERS
-#define ATTRIB(x)       SGGC_AUX2(x)
+#define ATTRIB(x)       (* (SEXP *) SGGC_AUX2(x))
 #else
 #define ATTRIB(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->attrib)
 #endif
@@ -664,8 +664,10 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SETLEVELS(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
-#define TRUELENGTH(x)	NOT_LVALUE(((VECSEXP) UNCOMPRESSED_PTR(x))->truelength)
-#define SET_TRUELENGTH(x,v)  (((VECSEXP) UNCOMPRESSED_PTR(x))->truelength = (v))
+#define TRUELENGTH(x)	\
+  NOT_LVALUE(((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->truelength)
+#define SET_TRUELENGTH(x,v) \
+  (((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->truelength = (v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls.  Avoid writes
    of what's already there, in case object is a constant in read-only memory. */
@@ -682,9 +684,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 }
 
 /* Vector Access Macros */
-
-#define SETLENGTH(x,v)  /**** DEPRECATED ****/ \
-  ((((VECSEXP) UNCOMPRESSED_PTR(x))->length)=(v))
 
 /* Under the generational allocator the data for vector nodes comes
    immediately after the node structure, so the data address is a

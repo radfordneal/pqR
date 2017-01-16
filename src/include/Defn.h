@@ -210,7 +210,7 @@ typedef union { int i; double r; } R_static_box_contents;
   (TYPEOF(x) == INTSXP ? (*INTEGER(x) = (c)->i) : (*REAL(x) = (c)->r))
 #define SWITCH_TO_BOX0(x) \
   (*(x) == R_ScalarIntegerBox ? (*(x) = R_ScalarIntegerBox0) : \
-   *(x) == R_ScalarRealBox ? (*(x) = R_ScalarRealBox0) : NULL)
+   *(x) == R_ScalarRealBox ? (*(x) = R_ScalarRealBox0) : R_NoObject)
 
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & BYTES_MASK)
@@ -712,7 +712,7 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 #define PRCODE(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.expr)
 #define PRENV(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.env)
 #define PRSEEN(x)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp)
-#define SET_PRSEEN(x,v)	(UNCOMPRESSED_PTR((x)->sxpinfo.gp)=(v))
+#define SET_PRSEEN(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp = (v))
 
 /* Hashing Macros */
 #define HASHASH(x)      (UNCOMPRESSED_PTR(x)->sxpinfo.gp & HASHASH_MASK)
@@ -1683,10 +1683,12 @@ extern char *locale2charset(const char *);
 } while(0)
 
 
-/* Macros for fast vmaxget and vmaxset */
+/* Macros for fast vmaxget and vmaxset.  Fiddled to avoid warnings 
+   for both compressed and uncompressed pointer use, given that 
+   the users may store the setting as either a void * or a SEXP. */
 
-#define VMAXGET() ((void *) R_VStack)
-#define VMAXSET(ovmax) (R_VStack = (SEXP) (ovmax))
+#define VMAXGET() ((void *) (uintptr_t) R_VStack)
+#define VMAXSET(ovmax) (R_VStack = (SEXP) (uintptr_t) (ovmax))
 
 
 #ifdef __GNUC__

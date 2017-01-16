@@ -82,7 +82,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 #define SGGC_AUX1_SIZE 4        /* Lengths of objects */
 #define SGGC_AUX1_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
-#define SGGC_AUX1_READ_ONLY     /* Lengths for non-vectors are constant 1 */
+/* #define SGGC_AUX1_READ_ONLY */  /* Lengths for non-vectors are constant 1 */
 
 #define SGGC_AUX2_SIZE 4        /* Attribute, as compressed pointer */
 #define SGGC_AUX2_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */

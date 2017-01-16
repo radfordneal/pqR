@@ -79,6 +79,7 @@
 /* Before a node is marked as a FREESXP by the collector the previous
    type is recorded.  For now using the LEVELS field seems
    reasonable.  */
+
 #define OLDTYPE(s) LEVELS(s)
 #define SETOLDTYPE(s, t) SETLEVELS(s, t)
 
@@ -117,10 +118,7 @@ static const char *sexptype2char(SEXPTYPE type) {
 
 SEXP Rf_chk_valid_SEXP(SEXP x)
 {
-    /* **** NULL check because of R_CurrentExpr */
-    if (x != NULL && TYPEOF(x) == FREESXP)
-	error("unprotected object (%p) encountered (was %s)",
-	      x, sexptype2char(OLDTYPE(x)));
+    if (x != R_NoObject && TYPEOF(x) == FREESXP) abort();
     return x;
 }
 
@@ -190,9 +188,10 @@ int (RTRACE)(SEXP x) { return RTRACE(Rf_chk_valid_SEXP(x)); }
 int (LEVELS)(SEXP x) { return LEVELS(Rf_chk_valid_SEXP(x)); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
-    if (v == NULL || TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
-	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
-	      v == NULL ? "C null pointer" : type2char(TYPEOF(x)));
+    if (v == R_NoObject || TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
+	error(
+          "value for 'SET_ATTRIB' must be a pairlist or R_NoObject, not a '%s'",
+	   v == R_NoObject ? "R_NoObject" : type2char(TYPEOF(x)));
     if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
     if (ATTRIB(x) != v) {
         CHECK_OLD_TO_NEW(x, v);
@@ -201,9 +200,7 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
 }
 
 void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
-    if (v == NULL)
-	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
-	      "C null pointer");
+    if (v == R_NoObject) abort();
     if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
     if (ATTRIB(x) != v) {
         CHECK_OLD_TO_NEW(x, v);
@@ -513,7 +510,7 @@ int (PRSEEN)(SEXP x) { return PRSEEN(Rf_chk_valid_SEXP(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
 void (SET_PRVALUE)(SEXP x, SEXP v) 
-  { CHECK_OLD_TO_NEW(x, v); x->u.promsxp.value = v; }
+  { CHECK_OLD_TO_NEW(x, v); UNCOMPRESSED_PTR(x)->u.promsxp.value = v; }
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(Rf_chk_valid_SEXP(x), v); }
 

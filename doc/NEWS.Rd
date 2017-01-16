@@ -10,7 +10,8 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item pqR now uses a new garbage collector.
+  \item pqR now uses a new garbage collector.  Previously deprecated 
+        SETLENGTH is now eliminated.
   }}
 
 }
