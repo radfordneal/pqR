@@ -1390,10 +1390,10 @@ LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 #define R_ScalarLogicalTRUE       SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,1)
 #define R_ScalarLogicalNA         SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,2)
 #define R_ScalarInteger0To10(v)   SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,3+v)
-#define R_ScalarIntegerNA ((SEXP) SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,14)
-#define R_ScalarRealZero ((SEXP)  SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,15)
-#define R_ScalarRealOne ((SEXP)   SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,16)
-#define R_ScalarRealNA ((SEXP)    SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,17)
+#define R_ScalarIntegerNA         SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,14)
+#define R_ScalarRealZero          SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,15)
+#define R_ScalarRealOne           SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,16)
+#define R_ScalarRealNA            SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,17)
 #else
 ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 #define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarNumerical_consts[0])

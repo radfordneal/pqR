@@ -701,7 +701,7 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
                             int *anytags, int *allsametype)
 {
-    SEXP a, n, last = NULL, next = NULL;
+    SEXP a, n, last = R_NoObject, next = R_NoObject;
     int v, n_recurse = 0, n_usenames = 0;
 
     *anytags = 0;
@@ -716,7 +716,7 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
 	    if ((v = asLogical(CAR(a))) != NA_INTEGER) {
 		*recurse = v;
 	    }
-	    if (last == NULL)
+	    if (last == R_NoObject)
 		ans = next;
 	    else
 		SETCDR(last, next);
@@ -727,13 +727,13 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
 	    if ((v = asLogical(CAR(a))) != NA_INTEGER) {
 		*usenames = v;
 	    }
-	    if (last == NULL)
+	    if (last == R_NoObject)
 		ans = next;
 	    else
 		SETCDR(last, next);
 	}
         else if (CAR(a) == R_NilValue) {
-	    if (last == NULL)
+	    if (last == R_NoObject)
 		ans = next;
 	    else
 		SETCDR(last, next);
@@ -1143,7 +1143,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if (method != R_NilValue) {
 	PROTECT(method);
-	args = applyClosure(call, method, args, env, NULL);
+	args = applyClosure(call, method, args, env, R_NoObject);
 	UNPROTECT(2);
 	return args;
     }

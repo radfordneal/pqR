@@ -1713,7 +1713,7 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
         SEXP b = CAR(LASTSYMBINDING(sym));
         if (b != R_UnboundValue)
             return b;
-        LASTSYMENV(sym) = NULL;
+        LASTSYMENV(sym) = R_NoObject;
     }
 
     return findVarPendingOK(sym,rho);

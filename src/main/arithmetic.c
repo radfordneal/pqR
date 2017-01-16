@@ -1237,7 +1237,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         }
         nprotect += 2;
     }
-    else klass = tsp = NULL; /* -Wall */
+    else klass = tsp = R_NoObject; /* -Wall */
 
     if (mismatch)
         warningcall (call,

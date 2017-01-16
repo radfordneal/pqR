@@ -1317,7 +1317,8 @@ R_getRoutineSymbols(NativeSymbolType type, DllInfo *info)
 	default:
 	    continue;
 	}
-	SET_VECTOR_ELT(ans, i, createRSymbolObject(NULL,  address, &sym, TRUE));/* XXX */
+	SET_VECTOR_ELT(ans, i, 
+         createRSymbolObject (R_NoObject,  address, &sym, TRUE));/* XXX */
     }
 
     setAttrib(ans, R_ClassSymbol, mkString("NativeRoutineList"));
@@ -1411,13 +1412,13 @@ R_getRegisteredRoutines(SEXP dll)
    registrations.  The naming of these routines may be less than
    ideal. */
 
-static SEXP CEntryTable = NULL;
+static SEXP CEntryTable = R_NoObject;
 
 static SEXP get_package_CEntry_table(const char *package)
 {
     SEXP penv, pname;
 
-    if (CEntryTable == NULL) {
+    if (CEntryTable == R_NoObject) {
 	CEntryTable = R_NewHashedEnv(R_NilValue, ScalarInteger(0));
 	R_PreserveObject(CEntryTable);
     }

@@ -104,7 +104,7 @@ char *Rf_var_name (helpers_var_ptr var)
 {
     char h[100], s[100];
     char *p;
-    sprintf (h, "%p", (void*) var);
+    sprintf (h, "%llx", (long long int) var);
     sprintf (s, "%c%d:%s", TYPEOF(var)==INTSXP ? 'I'
                             : TYPEOF(var)==REALSXP ? 'R'
                             : TYPEOF(var)==CPLXSXP ? 'C' : 'X',

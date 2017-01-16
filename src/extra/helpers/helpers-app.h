@@ -167,7 +167,7 @@ extern char *Rf_var_name (helpers_var_ptr);
                           || !helpers_not_multithreading_now) \
                         && (_variant_ & VARIANT_PENDING_OK) && (_c_), \
                        helpers_is_being_computed(_in_), \
-                       _flags_, _proc_, _op_, _out_, _in_, NULL)
+                       _flags_, _proc_, _op_, _out_, _in_, R_NoObject)
 
 
 /* ADJUSTMENT OF THRESHOLDS FOR SCHEDULING COMPUTATIONS AS TASKS.  The 
