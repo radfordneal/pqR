@@ -79,7 +79,7 @@ pid_t Rf_fork(void);
 
 #include <R_ext/libextern.h>
 
-#include <../extra/sggc/sggc-app.h>
+#include <R_ext/sggc-app.h>
 
 #define ConstExtern extern  /* redefined as nothing in const-objs.c */
 

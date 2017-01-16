@@ -12,9 +12,11 @@ include $(top_builddir)/Makeconf
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
+SGGC_HEADERS = sggc-app.h sggc.h set-app.h set.h
+
 ## Partially included by the API (1) headers in .., but not part of the
 ## API per se. 
-R_EXT_HEADERS = \
+R_EXT_HEADERS = $(SGGC_HEADERS) \
   Applic.h Arith.h BLAS.h Boolean.h Callbacks.h Complex.h Constants.h \
   Error.h GetX11Image.h \
   GraphicsDevice.h GraphicsEngine.h \
@@ -36,7 +38,19 @@ DISTCLEANFILES = Makefile
 	@$(INSTALL_DATA) $< $(top_builddir)/include/R_ext/`basename $<`
 	@touch $@
 
-all: Makefile R
+all: Makefile R $(SGGC_HEADERS)
+
+sggc-app.h:	$(srcdir)/../../extra/sggc/sggc-app.h
+	cp $(srcdir)/../../extra/sggc/sggc-app.h .
+
+sggc.h:		$(srcdir)/../../extra/sggc/sggc.h
+	cp $(srcdir)/../../extra/sggc/sggc.h .
+
+set-app.h:	$(srcdir)/../../extra/sggc/set-app.h
+	cp $(srcdir)/../../extra/sggc/set-app.h .
+
+set.h:		$(srcdir)/../../extra/sggc/set.h
+	cp $(srcdir)/../../extra/sggc/set.h .
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
