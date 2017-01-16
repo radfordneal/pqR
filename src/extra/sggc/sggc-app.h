@@ -80,6 +80,13 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
+#define SGGC_AUX1_SIZE 4        /* Lengths of objects */
+#define SGGC_AUX1_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
+#define SGGC_AUX1_READ_ONLY     /* Lengths for non-vectors are constant 1 */
+
+#define SGGC_AUX2_SIZE 4        /* Attribute, as compressed pointer */
+#define SGGC_AUX2_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
+
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
@@ -95,8 +102,6 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  16,  32,   2,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
  32,  32,   2,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
-
-#define SGGC_MIN_CHUNKS 1       /* Smallest size for any small kind */
 
 #endif
 
@@ -148,8 +153,6 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  32,  32,   5,  32,   3         /* 7th smallest sizes, only for type 0 */ \
 }
 
-#define SGGC_MIN_CHUNKS 2       /* Smallest size for any small kind */
-
 #endif
 
 
@@ -193,8 +196,6 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  16,  32,   3,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
  32,  32,   3,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
-
-#define SGGC_MIN_CHUNKS 2       /* Smallest size for any small kind */
 
 #endif
 

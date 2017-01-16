@@ -1386,7 +1386,7 @@ LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 /* Logical / Intteger / Real Values.  Defined in const-objs.c, must keep
    in sync. */
 
-#if USE_UNCOMPRESSED_POINTERS
+#if USE_COMPRESSED_POINTERS
 #define R_ScalarLogicalFALSE      SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,0)
 #define R_ScalarLogicalTRUE       SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,1)
 #define R_ScalarLogicalNA         SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,2)
@@ -1409,7 +1409,7 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 
 /* Integer and real static boxes.  Defined in const-objs.c. */
 
-#if USE_UNCOMPRESSED_POINTERS
+#if USE_COMPRESSED_POINTERS
 #define R_ScalarIntegerBox0 SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,0)
 #define R_ScalarIntegerBox  SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,1)
 #define R_ScalarRealBox0    SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,2)
@@ -1422,7 +1422,7 @@ ConstExtern VECTOR_SEXPREC_C R_ScalarBox_space[4];
 #define R_ScalarRealBox     ((SEXP) &R_ScalarBox_space[3])
 #endif
 
-#if USE_UNCOMPRESSED_POINTERS
+#if USE_COMPRESSED_POINTERS
 #define R_NoObject SGGC_NO_OBJECT
 #else
 #define R_NoObject NULL
