@@ -1701,7 +1701,7 @@ do \
     R_high_frequency_globals.EvalDepth   = 0; \
     R_high_frequency_globals.Expressions = 5000; \
     R_high_frequency_globals.evalcount   = 0; \
-    R_high_frequency_globals.VStack      = NULL; \
+    R_high_frequency_globals.VStack      = R_NoObject; \
     R_high_frequency_globals.PPStackSize = R_PPSSIZE; \
     R_high_frequency_globals.local_protect_start = NULL; \
     R_high_frequency_globals.Profiling = 0; \

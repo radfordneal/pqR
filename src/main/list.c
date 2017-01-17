@@ -101,7 +101,7 @@ static SEXP do_allnames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP expr;
     int i, savecount;
-    NameWalkData data = {NULL, 0, 0, 0, 0, 0};
+    NameWalkData data = {R_NoObject, 0, 0, 0, 0, 0};
 
     checkArity(op, args);
 

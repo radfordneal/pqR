@@ -785,7 +785,7 @@ static SEXP R_GetGlobalCache(SEXP symbol)
 
 
 /* Remove variable from a list, return the new list, and return its old value 
-   (NULL if not there) in 'value'. */
+   (R_NoObject if not there) in 'value'. */
 
 static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
 {
@@ -809,7 +809,7 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
         curr = CDR(curr);
     }
 
-    *value = NULL;
+    *value = R_NoObject;
     return list;
 }
 
@@ -833,7 +833,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     if (rho == LASTSYMENV(symbol)) {
          loc = LASTSYMBINDING(symbol);
          if (BINDING_VALUE(loc) == R_UnboundValue)
-             LASTSYMENV(symbol) = NULL;
+             LASTSYMENV(symbol) = R_NoObject;
          else
              return loc;
     }
@@ -982,7 +982,7 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
         if ( ! BINDING_IS_LOCKED(binding)) {
             value = CAR(binding);
             if (value == R_UnboundValue)
-                LASTSYMENV(symbol) = NULL;
+                LASTSYMENV(symbol) = R_NoObject;
             else {
                 R_binding_cell = binding;
                 return value;
@@ -1004,7 +1004,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
         if ( ! BINDING_IS_LOCKED(binding)) {
             value = CAR(binding);
             if (value == R_UnboundValue)
-                LASTSYMENV(symbol) = NULL;
+                LASTSYMENV(symbol) = R_NoObject;
             else {
                 switch (option) {
                 case 0:
@@ -1450,7 +1450,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 {
     SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
-    SEXP last_unhashed_env_nf = NULL;
+    SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
 
     if (TYPEOF(symbol) != SYMSXP) abort();
@@ -1506,7 +1506,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
         }
 
         if (isFunction (vl)) {
-            if (last_unhashed_env_nf != NULL)
+            if (last_unhashed_env_nf != R_NoObject)
                 LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
             return vl;
         }
@@ -1530,7 +1530,7 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
     if (TYPEOF(symbol) != SYMSXP) abort();
 
     SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
-    SEXP last_unhashed_env_nf = NULL;
+    SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
@@ -1547,13 +1547,13 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
         if (isFunction(vl)) {
-            if (last_unhashed_env_nf != NULL)
+            if (last_unhashed_env_nf != R_NoObject)
                 LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
             return vl;
         }
     }
 
-    if (last_unhashed_env_nf != NULL && !IS_BASE(last_unhashed_env_nf))
+    if (last_unhashed_env_nf != R_NoObject && !IS_BASE(last_unhashed_env_nf))
         LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
     return R_UnboundValue;
 }
@@ -1677,7 +1677,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         }
 
         if (LASTSYMENVNOTFOUND(symbol) == rho)
-            LASTSYMENVNOTFOUND(symbol) = NULL;
+            LASTSYMENVNOTFOUND(symbol) = R_NoObject;
 
         if (incdec&2)
             INC_NAMEDCNT(value);
@@ -1874,9 +1874,9 @@ static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
     return envir;
 }
 
-/* Remove variable and return its previous value, or NULL if it didn't exist. 
-   For a user database, R_NilValue is returned when the variable exists, 
-   rather than the value. */
+/* Remove variable and return its previous value, or R_NoObject if it
+   didn't exist.  For a user database, R_NilValue is returned when the
+   variable exists, rather than the value. */
 
 SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 {
@@ -1898,7 +1898,8 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(env));
 	if(table->remove == NULL)
 	    error(_("cannot remove variables from this database"));
-	return table->remove(CHAR(PRINTNAME(name)), table) ? R_NilValue : NULL;
+	return table->remove(CHAR(PRINTNAME(name)), table) 
+                 ? R_NilValue : R_NoObject;
     }
 
     if (IS_HASHED(env)) {
@@ -1907,7 +1908,7 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
                         : R_Newhashpjw(CHAR(PRINTNAME(name)));
 	int idx = hashcode % HASHSIZE(hashtab);
 	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
-	if (value != NULL) {
+	if (value != R_NoObject) {
 	    SET_VECTOR_ELT(hashtab, idx, list);
             if (list == R_NilValue)
                 SET_HASHSLOTSUSED(hashtab,HASHSLOTSUSED(hashtab)-1);
@@ -1915,11 +1916,11 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
     }
     else {
 	list = RemoveFromList(name, FRAME(env), &value);
-	if (value != NULL)
+	if (value != R_NoObject)
 	    SET_FRAME(env, list);
     }
 
-    if (value != NULL) {
+    if (value != R_NoObject) {
         if(env == R_GlobalEnv) R_DirtyImage = 1;
 	if (IS_GLOBAL_FRAME(env)) {
             PROTECT(value);
@@ -1971,16 +1972,16 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("invalid '%s' argument"), "inherits");
 
     for (i = 0; i < LENGTH(name); i++) {
-	value = NULL;
+	value = R_NoObject;
 	tsym = install(translateChar(STRING_ELT(name, i)));
 	tenv = envarg;
 	while (tenv != R_EmptyEnv) {
 	    value = RemoveVariable(tsym, tenv);
-	    if (value != NULL || !ginherits)
+	    if (value != R_NoObject || !ginherits)
 		break;
 	    tenv = CDR(tenv);
 	}
-	if (value == NULL)
+	if (value == R_NoObject)
 	    warning (_("object '%s' not found"), CHAR(PRINTNAME(tsym)));
         else
             DEC_NAMEDCNT_AND_PRVALUE(value);
@@ -2008,7 +2009,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     value = RemoveVariable (name, rho);
 
-    if (value == NULL)
+    if (value == R_NoObject)
         unbound_var_error(name);
 
     if (TYPEOF(value) == PROMSXP) {

@@ -59,15 +59,13 @@ static void PrintEnvironment(SEXP x)
 	Rprintf("<base>");
     else if (x == R_EmptyEnv)
 	Rprintf("<R_EmptyEnv>");
-#if 0
     else if (R_IsPackageEnv(x))
 	Rprintf("<%s>",
 		translateChar(STRING_ELT(R_PackageEnvName(x), 0)));
     else if (R_IsNamespaceEnv(x))
 	Rprintf("<namespace:%s>",
 		translateChar(STRING_ELT(R_NamespaceEnvSpec(x), 0)));
-#endif
-    else Rprintf("<%p>", (void *)x);
+    else Rprintf("<%llx>", (long long int)(uintptr_t)x);
 }
 
 /* print prefix */

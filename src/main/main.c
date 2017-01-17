@@ -1602,7 +1602,7 @@ Rboolean
 R_taskCallbackRoutine(SEXP expr, SEXP value, Rboolean succeeded,
 		      Rboolean visible, void *userData)
 {
-    SEXP f = (SEXP) userData;
+    SEXP f = (SEXP) (uintptr_t) userData;
     SEXP e, tmp, val, cur;
     int errorOccurred;
     Rboolean again, useData = LOGICAL(VECTOR_ELT(f, 2))[0];
@@ -1624,7 +1624,7 @@ R_taskCallbackRoutine(SEXP expr, SEXP value, Rboolean succeeded,
 	SETCAR(cur, VECTOR_ELT(f, 1));
     }
 
-    val = R_tryEval(e, NULL, &errorOccurred);
+    val = R_tryEval(e, R_NoObject, &errorOccurred);
     if(!errorOccurred) {
 	PROTECT(val);
 	if(TYPEOF(val) != LGLSXP) {
@@ -1658,9 +1658,10 @@ R_addTaskCallback(SEXP f, SEXP data, SEXP useData, SEXP name)
 	tmpName = CHAR(STRING_ELT(name, 0));
 
     PROTECT(index = allocVector1INT());
-    el = Rf_addTaskCallback(R_taskCallbackRoutine,  internalData,
+    el = Rf_addTaskCallback(R_taskCallbackRoutine,  
+                            (void *) (uintptr_t) internalData,
 			    (void (*)(void*)) R_ReleaseObject, tmpName,
-			    INTEGER(index));
+			    (void *) INTEGER(index));
 
     if(length(name) == 0) {
 	PROTECT(name = mkString(el->name));

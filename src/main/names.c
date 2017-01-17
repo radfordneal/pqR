@@ -753,14 +753,14 @@ SEXP installChar(SEXP charSXP)
 }
 
 /* Lookup up a symbol, returning it if it exists already, but not creating
-   it if it doesn't already exist, returning C NULL instead. */
+   it if it doesn't already exist, returning R_NoObject instead. */
 
 SEXP installed_already(const char *name)
 {
     SEXP sym;
     int i, hashcode;
 
-    if (*name == 0) return NULL;
+    if (*name == 0) return R_NoObject;
 
     hashcode = R_Newhashpjw(name);
     i = hashcode % HSIZE;
@@ -772,7 +772,7 @@ SEXP installed_already(const char *name)
             return sym;
     }
 
-    return NULL;
+    return R_NoObject;
 }
 
 

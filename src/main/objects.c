@@ -55,20 +55,20 @@ static SEXP GetObject(RCNTXT *cptr)
     else {
 
         SEXP exact, partial, partial2;
-        exact = partial = partial2 = NULL;  /* Not R_NilValue! */
+        exact = partial = partial2 = R_NoObject;  /* Not R_NilValue! */
 
 	for (b = a; b != R_NilValue ; b = CDR(b)) {
 	    if (TAG(b) != R_NilValue) {
                 int m = ep_match_exprs(tag,TAG(b));
                 if (m != 0) {
                     if (m > 0) { 
-                        if (exact != NULL)
+                        if (exact != R_NoObject)
                             error (_("formal argument \"%s\" matched by multiple actual arguments"), 
                                    tag);
                         exact = CAR(b);
                     }
                     else {
-                        if (partial == NULL)
+                        if (partial == R_NoObject)
                             partial = CAR(b);
                         else
                             partial2 = CAR(b);
@@ -77,10 +77,10 @@ static SEXP GetObject(RCNTXT *cptr)
             }
         }
 
-        if (exact != NULL)
+        if (exact != R_NoObject)
             s = exact;
-        else if (partial != NULL) {
-            if (partial2 != NULL)
+        else if (partial != R_NoObject) {
+            if (partial2 != R_NoObject)
                 error (_("formal argument \"%s\" matched by multiple actual arguments"), 
                        tag);
             s = partial;
@@ -285,7 +285,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         const char *ss = translateChar(STRING_ELT(klass, i));
         if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
 	    error(_("class name too long in '%s'"), generic);
-	if ((method = installed_already(buf)) != NULL) {
+	if ((method = installed_already(buf)) != R_NoObject) {
             sxp = R_LookupMethod(method, rho, callrho, defrho);
             if (sxp != R_UnboundValue) {
                 if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
@@ -306,7 +306,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
     if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
 	error(_("class name too long in '%s'"), generic);
-    if ((method = installed_already(buf)) != NULL) {
+    if ((method = installed_already(buf)) != R_NoObject) {
         sxp = R_LookupMethod(method, rho, callrho, defrho);
         if (sxp != R_UnboundValue) {
             setcl = R_NilValue;
@@ -960,9 +960,9 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	/* now try the superclasses, i.e.,  try   is(x, "....");  superCl :=
 	   .selectSuperClasses(getClass("....")@contains, dropVirtual=TRUE)  */
 	SEXP classExts, superCl, _call;
-	static SEXP s_contains = NULL, s_selectSuperCl = NULL;
+	static SEXP s_contains = R_NoObject, s_selectSuperCl = R_NoObject;
 	int i;
-	if(!s_contains) {
+	if (s_contains == R_NoObject) {
 	    s_contains      = install("contains");
 	    s_selectSuperCl = install(".selectSuperClasses");
 	}
