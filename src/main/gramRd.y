@@ -62,6 +62,10 @@ typedef struct yyltype
   int last_byte;
 } yyltype;
 
+#ifndef YYID
+#define YYID(x) (x)  /* some silly thing about suppressing lint warnings... */
+#endif
+
 # define YYLTYPE yyltype
 # define YYLLOC_DEFAULT(Current, Rhs, N)				\
     do									\
@@ -261,7 +265,7 @@ Markup:		LATEXMACRO  LatexArg 		{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	VERBLATEX   VerbatimArg1 LatexArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
 	
 UserMacro:	NEWCOMMAND  VerbatimArg1 VerbatimArg { $$ = xxnewcommand($1, $2, $3, &@$); }
-	|	USERMACRO			{ $$ = xxusermacro($1, xxnewlist(NULL), &@$); }
+	|	USERMACRO			{ $$ = xxusermacro($1, xxnewlist(R_NoObject), &@$); }
 	|	USERMACRO1  VerbatimArg		{ $$ = xxusermacro($1, xxnewlist($2), &@$); }
 	|	USERMACRO2  VerbatimArg VerbatimArg
 						{ $$ = xxusermacro($1, xxnewlist2($2, $3), &@$); }
@@ -305,7 +309,7 @@ RLikeArg:	goRLike Arg			{ xxpopMode($1); $$ = $2; }
 /* This one is like VerbatimArg2 below:  it does the push after seeing the brace */
 
 RLikeArg2:	'{' goRLike2 ArgItems '}'	{ xxpopMode($2); $$ = $3; }
-	|	'{' goRLike2 '}'		{ xxpopMode($2); $$ = xxnewlist(NULL); }
+	|	'{' goRLike2 '}'		{ xxpopMode($2); $$ = xxnewlist(R_NoObject); }
 
 VerbatimArg:	goVerbatim Arg		 	{ xxpopMode($1); $$ = $2; }
 
@@ -314,7 +318,7 @@ VerbatimArg1:	goVerbatim1 Arg			{ xxpopMode($1); $$ = $2; }
 /* This one executes the push after seeing the brace starting the optional second arg */
 
 VerbatimArg2:   '{' goVerbatim2 ArgItems '}'    { xxpopMode($2); $$ = $3; }
-	|	'{' goVerbatim2 '}'		{ xxpopMode($2); $$ = xxnewlist(NULL); }
+	|	'{' goVerbatim2 '}'		{ xxpopMode($2); $$ = xxnewlist(R_NoObject); }
 
 IfDefTarget:	goLatexLike TEXT	{ xxpopMode($1); $$ = xxnewlist(xxtag($2, TEXT, &@$)); }
 
@@ -338,9 +342,9 @@ goItem0:	/* empty */			{ $$ = xxpushMode(LATEXLIKE, ESCAPE, FALSE); }
 goItem2:	/* empty */			{ $$ = xxpushMode(LATEXLIKE, LATEXMACRO2, FALSE); }
 
 Arg:		'{' ArgItems  '}'		{ $$ = $2; }
-	|	'{' '}'				{ $$ = xxnewlist(NULL); }
+	|	'{' '}'				{ $$ = xxnewlist(R_NoObject); }
 	|	'{' ArgItems error '}'		{ $$ = $2; }
-	|	'{' error '}'			{ $$ = xxnewlist(NULL); }
+	|	'{' error '}'			{ $$ = xxnewlist(R_NoObject); }
 	|	'{' ArgItems error END_OF_INPUT { $$ = $2; }
 
 Option:		'[' Item ']'			{ $$ = $2; }	

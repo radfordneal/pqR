@@ -58,6 +58,10 @@ typedef struct yyltype
   int last_byte;
 } yyltype;
 
+#ifndef YYID
+#define YYID(x) (x)  /* some silly thing about suppressing lint warnings... */
+#endif
+
 # define YYLTYPE yyltype
 # define YYLLOC_DEFAULT(Current, Rhs, N)				\
     do									\
@@ -102,9 +106,9 @@ static int	xxDebugTokens;  /* non-zero causes debug output to R console */
 static SEXP	Value;
 static int	xxinitvalue;
 static char const yyunknown[] = "unknown macro"; /* our message, not bison's */
-static SEXP	xxInVerbEnv;    /* Are we currently in a verbatim environment? If
-				   so, this is the string to end it. If not, 
-				   this is NULL */
+static SEXP	xxInVerbEnv;    /* Are we currently in a verbatim environment? 
+				   If so, this is the string to end it. If not, 
+				   this is R_NoObject */
 static SEXP	xxVerbatimList;/* A STRSXP containing all the verbatim environment names */
 
 static SEXP     SrcFile;  /* parseLatex will *always* supply a srcfile */
@@ -148,7 +152,7 @@ static int      mkVerbEnv();
 %%
 
 Init:		Items END_OF_INPUT		{ xxsavevalue($1, &@$); return 0; }
-	|	END_OF_INPUT			{ xxsavevalue(NULL, &@$); return 0; }
+	|	END_OF_INPUT			{ xxsavevalue(R_NoObject, &@$); return 0; }
 	|	error				{ PROTECT(Value = R_NilValue);  YYABORT; }
 	;
 
@@ -174,7 +178,7 @@ environment:	BEGIN '{' TEXT '}' { xxSetInVerbEnv($3); }
 math:		'$' nonMath '$'			{ $$ = xxmath($2, &@$); }
 
 block:		'{' Items  '}'			{ $$ = xxblock($2, &@$); }
-	|	'{' '}'				{ $$ = xxblock(NULL, &@$); }
+	|	'{' '}'				{ $$ = xxblock(R_NoObject, &@$); }
 
 %%
 
@@ -291,7 +295,7 @@ static void xxSetInVerbEnv(SEXP envname)
     if (VerbatimLookup(CHAR(STRING_ELT(envname, 0)))) {
     	snprintf(buffer, sizeof(buffer), "\\end{%s}", CHAR(STRING_ELT(envname, 0)));
     	PROTECT(xxInVerbEnv = ScalarString(mkChar(buffer)));
-    } else xxInVerbEnv = NULL;
+    } else xxInVerbEnv = R_NoObject;
 }
 
 static void xxsavevalue(SEXP items, YYLTYPE *lloc)
@@ -467,7 +471,7 @@ static SEXP ParseLatex(ParseStatus *status, SEXP srcfile)
 {
     R_ParseContextLast = 0;
     R_ParseContext[0] = '\0';
-    xxInVerbEnv = NULL;
+    xxInVerbEnv = R_NoObject;
     
     xxlineno = 1;
     xxcolno = 1; 
@@ -823,7 +827,7 @@ static int mkVerbEnv()
     	for (i = matched-1; i >= 0; i--) 
     	    xxungetc(*(--bp));    	    
     	UNPROTECT_PTR(xxInVerbEnv);
-    	xxInVerbEnv = NULL;
+    	xxInVerbEnv = R_NoObject;
     }
     	    
     PROTECT(yylval = mkString2(stext, bp - stext));
