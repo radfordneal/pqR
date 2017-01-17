@@ -929,7 +929,8 @@ struct R_local_protect {
 #define R_local_protect_start R_high_frequency_globals.local_protect_start
 
 
-#define CHK_IS_SEXP(v) if (0) ((v)->sxpinfo)  /* cause error if v not a SEXP */
+#define CHK_IS_SEXP(v) \
+    if (0) (UNCOMPRESSED_PTR(v)->sxpinfo) /* try to get error if v not a SEXP */
 
 #define BEGIN_PROTECT0() \
     do { \

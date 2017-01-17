@@ -251,15 +251,21 @@ static SEXP R_weak_refs = R_NilValue;
 
 #define READY_TO_FINALIZE_MASK 1
 
-#define SET_READY_TO_FINALIZE(s) ((s)->sxpinfo.gp |= READY_TO_FINALIZE_MASK)
-#define CLEAR_READY_TO_FINALIZE(s) ((s)->sxpinfo.gp &= ~READY_TO_FINALIZE_MASK)
-#define IS_READY_TO_FINALIZE(s) ((s)->sxpinfo.gp & READY_TO_FINALIZE_MASK)
+#define SET_READY_TO_FINALIZE(s) \
+  (UNCOMPRESSED_PTR(s)->sxpinfo.gp |= READY_TO_FINALIZE_MASK)
+#define CLEAR_READY_TO_FINALIZE(s) \
+  (UNCOMPRESSED_PTR(s)->sxpinfo.gp &= ~READY_TO_FINALIZE_MASK)
+#define IS_READY_TO_FINALIZE(s) \
+  (UNCOMPRESSED_PTR(s)->sxpinfo.gp & READY_TO_FINALIZE_MASK)
 
 #define FINALIZE_ON_EXIT_MASK 2
 
-#define SET_FINALIZE_ON_EXIT(s) ((s)->sxpinfo.gp |= FINALIZE_ON_EXIT_MASK)
-#define CLEAR_FINALIZE_ON_EXIT(s) ((s)->sxpinfo.gp &= ~FINALIZE_ON_EXIT_MASK)
-#define FINALIZE_ON_EXIT(s) ((s)->sxpinfo.gp & FINALIZE_ON_EXIT_MASK)
+#define SET_FINALIZE_ON_EXIT(s) \
+  (UNCOMPRESSED_PTR(s)->sxpinfo.gp |= FINALIZE_ON_EXIT_MASK)
+#define CLEAR_FINALIZE_ON_EXIT(s) \
+  (UNCOMPRESSED_PTR(s)->sxpinfo.gp &= ~FINALIZE_ON_EXIT_MASK)
+#define FINALIZE_ON_EXIT(s) \
+  (UNCOMPRESSED_PTR(s)->sxpinfo.gp & FINALIZE_ON_EXIT_MASK)
 
 #define WEAKREF_SIZE 4
 #define WEAKREF_KEY(w) VECTOR_ELT(w, 0)
@@ -1064,7 +1070,10 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
     }
 
     SEXP r = SEXP_PTR (cp);
+#if !USE_COMPRESSED_POINTERS
     r->cptr = cp;
+#endif
+
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
     LENGTH(r) = length;
@@ -1118,7 +1127,7 @@ char *R_alloc(size_t nelem, int eltsize)
 		  dsize/1024.0/1024.0/1024.0);
 	s = allocVector(RAWSXP, size + 1);
 #endif
-	ATTRIB(s) = R_VStack == NULL ? R_NilValue : R_VStack;
+	ATTRIB(s) = R_VStack == R_NoObject ? R_NilValue : R_VStack;
 	R_VStack = s;
 	return (char *)DATAPTR(s);
     }
@@ -1248,7 +1257,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
 
-    s->u.promsxp.value = R_UnboundValue;
+    UNCOMPRESSED_PTR(s)->u.promsxp.value = R_UnboundValue;
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = Rf_chk_valid_SEXP(rho);
     PRSEEN(s) = 0;
@@ -1269,10 +1278,10 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 {
     SEXP result;
     SEXPTYPE type = eval ? BUILTINSXP : SPECIALSXP;
-    static SEXP PrimCache = NULL;
+    static SEXP PrimCache = R_NoObject;
     static int FunTabSize = 0;
     
-    if (PrimCache == NULL) {
+    if (PrimCache == R_NoObject) {
 	/* compute the number of entires in R_FunTab */
 	while (R_FunTab[FunTabSize].name)
 	    FunTabSize++;
@@ -1366,9 +1375,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SYMVALUE(c) = value;
     INTERNAL(c) = R_NilValue;
     NEXTSYM_PTR(c) = R_NilValue;
-    LASTSYMENV(c) = NULL;
-    LASTSYMBINDING(c) = NULL;
-    LASTSYMENVNOTFOUND(c) = NULL;
+    LASTSYMENV(c) = R_NoObject;
+    LASTSYMBINDING(c) = R_NoObject;
+    LASTSYMENVNOTFOUND(c) = R_NoObject;
     SET_DDVAL(c, isDDName(name));
     UNPROTECT(2);
     return c;
@@ -1712,7 +1721,7 @@ R_NORETURN void attribute_hidden Rf_protect_error (void)
 
 SEXP protect(SEXP s)
 {
-    if (s != NULL && TYPEOF(s) == NILSXP && s != R_NilValue) abort();
+    if (s != R_NoObject && TYPEOF(s) == NILSXP && s != R_NilValue) abort();
     return PROTECT (Rf_chk_valid_SEXP(s));
 }
 
@@ -1722,17 +1731,17 @@ SEXP protect(SEXP s)
 
 void Rf_protect2 (SEXP s1, SEXP s2)
 {
-    if (s1 != NULL && TYPEOF(s1) == NILSXP && s1 != R_NilValue
-     || s2 != NULL && TYPEOF(s2) == NILSXP && s2 != R_NilValue) abort();
+    if (s1 != R_NoObject && TYPEOF(s1) == NILSXP && s1 != R_NilValue
+     || s2 != R_NoObject && TYPEOF(s2) == NILSXP && s2 != R_NilValue) abort();
 
     PROTECT2 (Rf_chk_valid_SEXP(s1), Rf_chk_valid_SEXP(s2));
 }
 
 void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
 {
-    if (s1 != NULL && TYPEOF(s1) == NILSXP && s1 != R_NilValue
-     || s2 != NULL && TYPEOF(s2) == NILSXP && s2 != R_NilValue
-     || s3 != NULL && TYPEOF(s3) == NILSXP && s3 != R_NilValue) abort();
+    if (s1 != R_NoObject && TYPEOF(s1) == NILSXP && s1 != R_NilValue
+     || s2 != R_NoObject && TYPEOF(s2) == NILSXP && s2 != R_NilValue
+     || s3 != R_NoObject && TYPEOF(s3) == NILSXP && s3 != R_NilValue) abort();
 
     PROTECT3 (Rf_chk_valid_SEXP(s1), Rf_chk_valid_SEXP(s2), Rf_chk_valid_SEXP(s3));
 }
@@ -1844,11 +1853,11 @@ void R_chk_free(void *ptr)
 /* This code keeps a list of objects which are not assigned to variables
    but which are required to persist across garbage collections.  The
    objects are registered with R_PreserveObject and deregistered with
-   R_ReleaseObject. Preserving/Releasing NULL is ignored. */
+   R_ReleaseObject. Preserving/Releasing R_NoObject is ignored. */
 
 void R_PreserveObject(SEXP object)
 {
-    if (object != NULL)
+    if (object != R_NoObject)
         R_PreciousList = CONS(object, R_PreciousList);
 }
 
@@ -1865,7 +1874,7 @@ static SEXP RecursiveRelease(SEXP object, SEXP list)
 
 void R_ReleaseObject(SEXP object)
 {
-    if (object != NULL)
+    if (object != R_NoObject)
         R_PreciousList = RecursiveRelease(object, R_PreciousList);
 }
 
@@ -1912,8 +1921,10 @@ static SEXP do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
             error(_("invalid argument"));
 
     /* access nmcnt directly, so won't delay for possible task syncronization */
-    Rprintf ("PNAMEDCNT:  %d  %x  %s", CAR(args)->sxpinfo.nmcnt, CAR(args),
-                                       type2char(TYPEOF(CAR(args))));
+    Rprintf ("PNAMEDCNT:  %d  %x  %s", 
+      UNCOMPRESSED_PTR(CAR(args))->sxpinfo.nmcnt,
+      CAR(args),
+      type2char(TYPEOF(CAR(args))));
 
     for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
         Rprintf(" :");
@@ -2604,7 +2615,7 @@ static SEXP do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         SEXP vec = allocVector(INTSXP,sizel);
 
         REprintf("Invalid read before start of object\n");
-        R_valgrind_test_int = ((int*)vec)[-1];
+        R_valgrind_test_int = ((int*)UNCOMPRESSED_PTR(vec))[-1];
         REprintf("Invalid read after end of object\n");
         R_valgrind_test_int = INTEGER(vec)[sizel];
 
@@ -2643,7 +2654,7 @@ static SEXP do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         SEXP vec = allocVector(REALSXP,sizel);
 
         REprintf("Invalid read before start of object\n");
-        R_valgrind_test_real = ((double*)vec)[-1];
+        R_valgrind_test_real = ((double*)UNCOMPRESSED_PTR(vec))[-1];
         REprintf("Invalid read after end of object\n");
         R_valgrind_test_real = REAL(vec)[sizel];
 

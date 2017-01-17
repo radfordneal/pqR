@@ -52,21 +52,30 @@
 #include <complex.h>
 
 
-/* Header for a constant. */
-
+#if USE_COMPRESSED_POINTERS
+#define CPTR_FIELD(index,offset) /* nothing */
+#define LENGTH1 /* nothing */
+#define NILATTRIB /* nothing */
+#else
 #define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
+#define LENGTH1 .length = 1,
+#define NILATTRIB .attrib = R_NilValue,
+#endif
+
+
+/* Header for a constant. */
 
 #define CONST_HEADER(typ,index,offset) \
     CPTR_FIELD(index,offset) \
-    .sxpinfo = { .nmcnt = 7, .type = typ, }, \
-    .attrib = R_NilValue,
+    NILATTRIB \
+    .sxpinfo = { .nmcnt = 7, .type = typ, } \
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
    R_NilValue.  */
 
 R_CONST SEXPREC R_NilValue_const = { \
-    CONST_HEADER(NILSXP,R_SGGC_NIL_INDEX,0)
+    CONST_HEADER(NILSXP,R_SGGC_NIL_INDEX,0),
     .u = { .listsxp = 
             { .carval = R_NilValue, .cdrval = R_NilValue, .tagval = R_NilValue }
          }
@@ -77,9 +86,14 @@ R_CONST SEXPREC R_NilValue_const = { \
    These are not actually constant, since the data they contain is changed,
    but are allocated similarly. */
 
+#if USE_COMPRESSED_POINTERS
 #define SCALAR_BOX(typ,offset) { \
-    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,offset) \
-    .length = 1 }
+    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,offset) }
+#else
+#define SCALAR_BOX(typ,offset) { \
+    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,offset), \
+    LENGTH1 }
+#endif
 
 VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
     SCALAR_BOX(INTSXP,0),
@@ -94,7 +108,7 @@ VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
 
 R_CONST SEXPREC R_env_consts[1] = {
 {
-    CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0)
+    CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0),
     .u = { .envsxp = 
             { .frame = R_NilValue, .enclos = R_NilValue, .hashtab = R_NilValue }
          }
@@ -107,7 +121,7 @@ R_CONST SEXPREC R_env_consts[1] = {
 
 R_CONST SYM_SEXPREC R_sym_consts[1] = { 
 {
-    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0)
+    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
     .symsxp = { .pname = R_NilValue, 
                 .value = R_UnboundValue, 
                 .internal = R_NilValue,
@@ -120,33 +134,33 @@ R_CONST SYM_SEXPREC R_sym_consts[1] = {
 /* Logical, integer, and real constants. */
 
 #define LOGICAL_CONST(v,offset) { \
-    CONST_HEADER(LGLSXP,R_SGGC_NUM_INDEX,offset) \
-    .length = 1, \
+    CONST_HEADER(LGLSXP,R_SGGC_NUM_INDEX,offset), \
+    LENGTH1 \
     .data = { .i = v } \
 }
 
 #define INTEGER_CONST(v,offset) { \
-    CONST_HEADER(INTSXP,R_SGGC_NUM_INDEX,offset) \
-    .length = 1, \
+    CONST_HEADER(INTSXP,R_SGGC_NUM_INDEX,offset), \
+    LENGTH1 \
     .data = { .i = v } \
 }
 
 #define REAL_CONST(v,offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset) \
-    .length = 1, \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset), \
+    LENGTH1 \
     .data = { .d = v } \
 }
 
 #ifdef WORDS_BIGENDIAN
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset) \
-    .length = 1, \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset), \
+    LENGTH1 \
     .data = { .w = { 0x7ff00000, 1954 } } \
 }
 #else
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset) \
-    .length = 1, \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset), \
+    LENGTH1 \
     .data = { .w = { 1954, 0x7ff00000 } } \
 }
 #endif
@@ -172,7 +186,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
 /* 1-element pairlist constants. */
 
 #define LIST1_CONST(car,offset) { \
-  CONST_HEADER(LISTSXP,R_SGGC_LIST1_INDEX,offset) \
+  CONST_HEADER(LISTSXP,R_SGGC_LIST1_INDEX,offset), \
   .u = { .listsxp = \
           { .carval = car, .cdrval = R_NilValue, .tagval = R_NilValue } \
        } \
@@ -220,13 +234,56 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 
 /* Initialize constants (and static boxes). */
 
+#if USE_COMPRESSED_POINTERS
+
+static const SEXP nilattrib[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue,
+    R_NilValue, R_NilValue, R_NilValue, R_NilValue
+};
+
+static const R_len_t length0[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+static const R_len_t length1[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
+#endif
+
 void Rf_constant_init(void)
 {
     /* R_NilValue (= R NULL). */
 
     sggc_constant (R_type_to_sggc_type[NILSXP],
                    R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
-                   1, (char *) &R_NilValue_const);
+                   1, (char *) &R_NilValue_const
+#if USE_COMPRESSED_POINTERS
+                   , (char *) length0, (char *) nilattrib
+#endif
+                  );
 
     /* Static boxes.  Uses same segment for integers and reals. */
 
@@ -234,19 +291,31 @@ void Rf_constant_init(void)
 
     sggc_constant (R_type_to_sggc_type[INTSXP],
                    R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
-                   4, (char *) R_ScalarBox_space);
+                   4, (char *) R_ScalarBox_space
+#if USE_COMPRESSED_POINTERS
+                   , (char *) length1, (char *) nilattrib
+#endif
+                  );
 
     /* Environment constant. */
 
     sggc_constant (R_type_to_sggc_type[ENVSXP],
                    R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
-                   1, (char *) R_env_consts);
+                   1, (char *) R_env_consts
+#if USE_COMPRESSED_POINTERS
+                   , (char *) length1, (char *) nilattrib
+#endif
+                  );
 
     /* Symbol constant. */
 
     sggc_constant (R_type_to_sggc_type[SYMSXP],
                    R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
-                   1, (char *) R_sym_consts);
+                   1, (char *) R_sym_consts
+#if USE_COMPRESSED_POINTERS
+                   , (char *) length1, (char *) nilattrib
+#endif
+                  );
 
     /* Numerical/logical constants.  All use same segment. */
 
@@ -255,14 +324,22 @@ void Rf_constant_init(void)
 
     sggc_constant (R_type_to_sggc_type[LGLSXP],
                    R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
-                   R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts);
+                   R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts
+#if USE_COMPRESSED_POINTERS
+                   , (char *) length1, (char *) nilattrib
+#endif
+                  );
 
     /* Pairlists of length 1. */
 
     sggc_constant (R_type_to_sggc_type[LISTSXP],
                    R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
                    sizeof R_List1_consts / sizeof R_List1_consts[0],
-                   (char *) R_List1_consts);
+                   (char *) R_List1_consts
+#if USE_COMPRESSED_POINTERS
+                   , (char *) length1, (char *) nilattrib
+#endif
+                  );
 }
 
 

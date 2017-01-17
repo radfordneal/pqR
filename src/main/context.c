@@ -779,7 +779,7 @@ R_tryEval(SEXP e, SEXP env, int *ErrorOccurred)
     ProtectedEvalData data;
 
     data.expression = e;
-    data.val = NULL;
+    data.val = R_NoObject;
     data.env = env;
 
     ok = R_ToplevelExec(protectedEval, &data);
@@ -787,7 +787,7 @@ R_tryEval(SEXP e, SEXP env, int *ErrorOccurred)
 	*ErrorOccurred = (ok == FALSE);
     }
     if (ok == FALSE)
-	data.val = NULL;
+	data.val = R_NoObject;
     else
 	UNPROTECT(1);
 

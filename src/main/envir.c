@@ -904,7 +904,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 R_varloc_t R_findVarLocInFrame(SEXP rho, SEXP symbol)
 {
     SEXP binding = findVarLocInFrame(rho, symbol, NULL);
-    return binding == R_NilValue ? NULL : (R_varloc_t) binding;
+    return binding == R_NilValue ? R_NoObject : (R_varloc_t) binding;
 }
 
 SEXP R_GetVarLocValue(R_varloc_t vl)

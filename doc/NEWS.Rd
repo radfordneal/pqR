@@ -11,7 +11,9 @@
   \subsection{INTRODUCTION}{
   \itemize{ 
   \item pqR now uses a new garbage collector.  Previously deprecated 
-        SETLENGTH is now eliminated.
+        SETLENGTH is now eliminated.  Passing non-vectors as SEXP 
+        args with .C is now tricky (see dotcode.c).  Disabled call_R
+        and call_S (unused?).
   }}
 
 }

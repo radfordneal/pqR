@@ -1341,7 +1341,7 @@ Rboolean R_HiddenFile(const char *);
 double	R_FileMtime(const char *);
 
 /* environment cell access */
-typedef struct R_varloc_st *R_varloc_t;
+typedef SEXP R_varloc_t;
 R_varloc_t R_findVarLocInFrame(SEXP, SEXP);
 SEXP R_GetVarLocValue(R_varloc_t);
 SEXP R_GetVarLocSymbol(R_varloc_t);

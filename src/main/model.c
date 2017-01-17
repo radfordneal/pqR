@@ -56,17 +56,17 @@ static R_INLINE Rboolean isOrdered_int(SEXP s)
 
 #define WORDSIZE (8*sizeof(int))
 
-static SEXP tildeSymbol = NULL;
-static SEXP plusSymbol  = NULL;
-static SEXP minusSymbol = NULL;
-static SEXP timesSymbol = NULL;
-static SEXP slashSymbol = NULL;
-static SEXP colonSymbol = NULL;
-static SEXP powerSymbol = NULL;
-static SEXP dotSymbol   = NULL;
-static SEXP parenSymbol = NULL;
-static SEXP inSymbol    = NULL;
-/* unused static SEXP identSymbol = NULL; */
+static SEXP tildeSymbol = R_NoObject;
+static SEXP plusSymbol  = R_NoObject;
+static SEXP minusSymbol = R_NoObject;
+static SEXP timesSymbol = R_NoObject;
+static SEXP slashSymbol = R_NoObject;
+static SEXP colonSymbol = R_NoObject;
+static SEXP powerSymbol = R_NoObject;
+static SEXP dotSymbol   = R_NoObject;
+static SEXP parenSymbol = R_NoObject;
+static SEXP inSymbol    = R_NoObject;
+/* unused static SEXP identSymbol = R_NoObject; */
 
 
 static int intercept;		/* intercept term in the model */
@@ -1094,8 +1094,7 @@ static SEXP ExpandDots(SEXP object, SEXP value)
     }
 
     if (TYPEOF(object) == LANGSXP) {
-	if (TYPEOF(value) == LANGSXP) op = CAR(value);
-	else op = NULL;
+	op = TYPEOF(value) == LANGSXP ? CAR(value) : R_NoObject;
 	PROTECT(object);
 	if (CAR(object) == plusSymbol) {
 	    if (length(object) == 2) {

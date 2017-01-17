@@ -1493,7 +1493,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
        when "set_cdr" is not NULL, "s" is instead stored in the CDR of
        "set_cdr", and "ss" is returned. */
 
-    SEXP s, ss, set_cdr = NULL;
+    SEXP s, ss, set_cdr = R_NoObject;
 
     R_assert(TYPEOF(ref_table) == LISTSXP && TYPEOF(CAR(ref_table)) == VECSXP);
 
@@ -1598,7 +1598,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             if (PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
         }
         else {  /* Eliminate tail recursion for CDR */
-            if (set_cdr) {
+            if (set_cdr != R_NoObject) {
                 SETCDR(set_cdr,s);
                 UNPROTECT(1);  /* s, which is now protected through ss */
             }
@@ -1747,7 +1747,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     }
 
   ret:
-    if (set_cdr) {
+    if (set_cdr != R_NoObject) {
         SETCDR(set_cdr, s);
         UNPROTECT(1);  /* ss */
         return ss;

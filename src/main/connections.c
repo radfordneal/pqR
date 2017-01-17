@@ -134,7 +134,7 @@ typedef long long int _lli_t;
 #define NSINKS 21
 
 static Rconnection Connections[NCONNECTIONS];
-static SEXP OutTextData;
+static SEXP OutTextData = R_NoObject;
 
 static int R_SinkNumber;
 static int SinkCons[NSINKS], SinkConsClose[NSINKS], R_SinkSplit[NSINKS];
@@ -515,7 +515,7 @@ void init_con(Rconnection new, const char *description, int enc,
     current_id = (void *)((size_t) current_id+1);
     if(!current_id) current_id = (void *) 1;
     new->id = current_id;
-    new->ex_ptr = NULL;
+    new->ex_ptr = R_NoObject;
 }
 
 /* ------------------- file connections --------------------- */
@@ -2607,7 +2607,7 @@ static void outtext_close(Rconnection con)
     int idx = ConnIndex(con);
     SEXP tmp, env = VECTOR_ELT(OutTextData, idx);
 
-    if(this->namesymbol &&
+    if(this->namesymbol != R_NoObject &&
        findVarInFrame3(env, this->namesymbol, FALSE) != R_UnboundValue)
 	R_unLockBinding(this->namesymbol, env);
     if(strlen(this->lastline) > 0) {
@@ -2729,7 +2729,7 @@ static void outtext_init(Rconnection con, SEXP stext, const char *mode, int idx)
     SEXP val;
 
     if(stext == R_NilValue) {
-	this->namesymbol = NULL;
+	this->namesymbol = R_NoObject;
 	    /* create variable pointed to by con->description */
 	val = allocVector(STRSXP, 0);
 	R_PreserveObject(val);
@@ -2838,7 +2838,7 @@ static SEXP do_textconnection(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("invalid '%s' argument"), "text");
 	con = Connections[ncon] = newtext(desc, stext, type);
     } else if (strncmp(open, "w", 1) == 0 || strncmp(open, "a", 1) == 0) {
-	if (OutTextData == NULL) {
+	if (OutTextData == R_NoObject) {
 	    OutTextData = allocVector(VECSXP, NCONNECTIONS);
 	    R_PreserveObject(OutTextData);
 	}

@@ -356,21 +356,21 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
 
     if (helpers_tasks == 0) return;
 
-    wait_for = NULL;
+    wait_for = R_NoObject;
 
     for (a = args; a != R_NilValue; a = CDR(a)) {
         SEXP this_arg = CAR(a);
         if (helpers_is_being_computed(this_arg)) {
-            if (wait_for == NULL)
+            if (wait_for == R_NoObject)
                 wait_for = this_arg;
             else {
                 helpers_wait_until_not_being_computed2 (wait_for, this_arg);
-                wait_for = NULL;
+                wait_for = R_NoObject;
             }
         }
     }
 
-    if (wait_for != NULL)
+    if (wait_for != R_NoObject)
         helpers_wait_until_not_being_computed (wait_for);
 }
 
@@ -593,7 +593,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	if (TYPEOF(op) == CLOSXP) {
             PROTECT(op);
 	    res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
-                                  NULL, variant);
+                                  R_NoObject, variant);
             UNPROTECT(1);
         }
 	else {
@@ -1266,7 +1266,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 	R_varloc_t loc;
 	int missing;
 	loc = R_findVarLocInFrame(rho,symbol);
-	if(loc == NULL)
+	if (loc == R_NoObject)
 	    error(_("could not find symbol \"%s\" in environment of the generic function"),
 		  CHAR(PRINTNAME(symbol)));
 	missing = R_GetVarLocMISSING(loc);
@@ -1997,7 +1997,7 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 
 static void tmp_cleanup(void *data)
 {
-    (void) RemoveVariable (R_TmpvalSymbol, (SEXP) data);
+    (void) RemoveVariable (R_TmpvalSymbol, (SEXP) (uintptr_t) data);
 }
 
 /* Main entry point for complex assignments; rhs has already been evaluated. */
@@ -2051,7 +2051,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
     begincontext(&cntxt, CTXT_CCODE, call, R_BaseEnv, R_BaseEnv,
 		 R_NilValue, R_NilValue);
     cntxt.cend = &tmp_cleanup;
-    cntxt.cenddata = rho;
+    cntxt.cenddata = (void *) (uintptr_t) rho;  /* DUBIOUS ??? */
 
     /*  Do a partial evaluation down through the LHS. */
     lhs = evalseq(CADR(expr), rho,

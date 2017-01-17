@@ -267,7 +267,10 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     DllReference dll;
     /* Null string for DLLname is shorthand for 'all' in R_FindSymbol, but
        should never be supplied */
-    dll.DLLname[0] = 0; dll.dll = NULL; dll.obj = NULL; dll.type = NOT_DEFINED;
+    dll.DLLname[0] = 0; 
+    dll.dll = NULL; 
+    dll.obj = R_NoObject;
+    dll.type = NOT_DEFINED;
     
     op = CAR(args);  // value of .NAME =
 
@@ -450,7 +453,7 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef __cplusplus
 typedef SEXP (*VarFun)(...);
 #else
-typedef DL_FUNC VarFun;
+typedef SEXP (*VarFun)();
 #endif
 
 /* .Call(name, <args>) */
@@ -462,8 +465,9 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
 
-    DL_FUNC ofun = NULL;
-    VarFun fun = NULL;
+    DL_FUNC fun0;
+    SEXP (*ofun)(void);
+    VarFun fun;
     SEXP retval, pargs;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
     int nargs, i;
@@ -477,7 +481,9 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
         errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT(spa.pkg);
-    resolveNativeRoutine(args, &ofun, &symbol, spa.pkg, buf, call, env);
+    resolveNativeRoutine(args, &fun0, &symbol, spa.pkg, buf, call, env);
+    ofun = (SEXP (*)(void)) fun0;
+    fun = (VarFun) fun0;
     args = CDR(args);
     UNPROTECT(1);
 
@@ -493,7 +499,6 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		      nargs, symbol.symbol.call->numArgs, buf);
     }
 
-    fun = (VarFun) ofun;
     switch (nargs) {
     case 0:
 	retval = (SEXP)ofun();
@@ -1262,7 +1267,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
     DllInfo *info;
     DL_FUNC fun = NULL;
 
-    if(dll->obj == NULL) {
+    if(dll->obj == R_NoObject) {
 	/* Rprintf("\nsearching for %s\n", name); */
 	if (env != R_NilValue) {
 	    SEXP e;
@@ -1308,29 +1313,35 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 
    If it is called directly, the function to call may be specified by the
    dotCode_fun variable.  If deferred, the function to call must be stored
-   in the rawfun operand, which is NULL otherwise.
+   in the rawfun operand, which is R_NoObject otherwise.
 
-   If the output, ans1, is not NULL, it is the sole result of the
+   If the output, ans1, is not R_NoObject, it is the sole result of the
    computation, with the arguments in args being ignored after the
-   call (they may or may not have changed).  If ans1 is NULL, this
+   call (they may or may not have changed).  If ans1 is R_NoObject, this
    task procedure must be called directly, not deferred, and the
    contents of args is updated to be returned as the result (or perhaps
    the procedure is called for its side effects).  Updating args may
    involve memory allocation, not allowed for a deferred task, as some
    arguments may need to be converted to an appropriate form.  
 
-   The args operand will be a vector list (VECSXP) containing pointers to 
-   the arguments of the function to be called.  For arguments that are
-   atomic vectors or vector lists, the function called is passed the DATAPTR 
-   for the vector (unless this argument is marked as an out-of-the-box scalar,
-   see below), except that zero-length arguments are passed as a pointer
-   to a block of 20 zero bytes (to suppress errors from some badly-written
-   packages).  For other argument types, the function is passed the SEXP 
-   for the operand itself.  If this task procedure is deferred, the arguments,
-   other than ans1, must all either be unshared (NAMEDCNT of zero) or be 
-   guaranteed to never change (NAMEDCNT at its maximum), since the helpers
-   "in use" mechanism will not work for such objects that are inside the operand
-   passed.
+   The args operand will be a vector list (VECSXP) containing pointers
+   to the arguments of the function to be called.  For arguments that
+   are atomic vectors or vector lists, the function called is passed
+   the DATAPTR for the vector (unless this argument is marked as an
+   out-of-the-box scalar, see below), except that zero-length
+   arguments are passed as a pointer to a block of 20 zero bytes (to
+   suppress errors from some badly-written packages).  For other
+   argument types, the function is passed the SEXP for the operand
+   itself.  This is rather tricky if compressed pointers are being
+   used - the function called must recevie the SEXP as a void *
+   pointer, and cast it to uintptr_t and then to SEXP, which will work
+   when SEXP is either a compressed an uncompressed pointer.
+
+   If this task procedure is deferred, the arguments, other than ans1,
+   must all either be unshared (NAMEDCNT of zero) or be guaranteed to
+   never change (NAMEDCNT at its maximum), since the helpers "in use"
+   mechanism will not work for such objects that are inside the
+   operand passed.
 
    A string argument needing converstion back to an R string is recognized 
    as such by ATTRIB being a RAWSXP (not a pairlist), with ATTRIB pointing 
@@ -1349,7 +1360,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    first 64 arguments are scalars that should be stored "out of their
    boxes" - copied to a local variable before the call, and if necessary 
    copied back after the call.  Any arguments past the first 64 are never 
-   treated as out-of-the-box scalars.  If ans1 is not NULL, it must not
+   treated as out-of-the-box scalars.  If ans1 is not R_NoObject, it must not
    be marked as an out-of-the-box scalar (even if it is of length one).
 
    The variable dotCode_spa_dup is consulted for the value of DUP (but only 
@@ -1383,7 +1394,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
        to get it from the rawfun operand, otherwise it's faster from a variable
        set by the caller. */
 
-    VarFun fun = rawfun!=NULL ? * (VarFun *) RAW(rawfun) : dotCode_fun;
+    VarFun fun = rawfun!=R_NoObject ? * (VarFun *) RAW(rawfun) : dotCode_fun;
 
     helpers_op_t sc;
     int na;
@@ -1406,7 +1417,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
         else if (isVectorAtomic(arg) || TYPEOF(arg) == VECSXP)
             cargs[na] = LENGTH(arg)==0 ? (void *) zeros : (void *) DATAPTR(arg);
         else
-            cargs[na] = (void *) arg;
+            cargs[na] = (void *) (uintptr_t) arg;
     }
 
     switch (nargs) {
@@ -2005,7 +2016,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
     /* Handle case where ans1 is the only result (any change to other
        arguments ignored). */
 
-    if (ans1) {
+    if (ans1 != R_NoObject) {
 
         /* Make sure a logical answer has valid values. Doesn't write if 
            unnecessary, since this may be faster. */
@@ -2407,7 +2418,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     if (!return_one_named || helpers_not_multithreading_now)
         spa.helper = 0;
 
-    SEXP ans1 = return_one_named ? VECTOR_ELT(ans,last_pos) : NULL;
+    SEXP ans1 = return_one_named ? VECTOR_ELT(ans,last_pos) : R_NoObject;
 
     if (spa.helper) {
         /* Ensure arguments won't change while task is not complete (the
@@ -2423,14 +2434,14 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     }
     else {
         dotCode_spa_dup = spa.dup;
-        task_dotCode (scalars, ans1, NULL, ans);
+        task_dotCode (scalars, ans1, R_NoObject, ans);
     }
 
     /* Either return just the one named element, ans1, as a pairlist,
        or the whole vector list of updated arguments.  We handle attaching
        names to the whole vector, and attributes to each element. */
 
-    if (return_one_named) {
+    if (return_one_named != R_NoObject) {
         if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
         ans = cons_with_tag (ans1, R_NilValue, last_tag);
     }
@@ -2498,8 +2509,12 @@ static int string2type(char *s)
 }
 
 /* This is entirely legacy, with no known users (Mar 2012).
-   So we freeze the code involved. 
+   So we freeze the code involved (as much as possible). 
+
+   NOW DISABLED.
  */
+
+#if 0
 
 static void *RObjToCPtr2(SEXP s)
 {
@@ -2546,7 +2561,7 @@ static void *RObjToCPtr2(SEXP s)
 	return (void*) lptr;
 	break;
     default:
-	return (void*) s;
+	return (void*) UNCOMPRESSED_PTR(s);
     }
 }
 
@@ -2637,6 +2652,8 @@ void call_S(char *func, long nargs, void **arguments, char **modes,
 {
     call_R(func, nargs, arguments, modes, lengths, names, nres, results);
 }
+
+#endif
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 

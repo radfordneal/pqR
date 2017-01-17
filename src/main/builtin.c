@@ -921,7 +921,7 @@ static SEXP setDflt(SEXP arg, SEXP dflt)
 static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int argval, nargs = length(args);
-    SEXP x, y, z, w, ans, dflt = NULL;
+    SEXP x, y, z, w, ans, dflt = R_NoObject;
 
     if (nargs < 1) errorcall(call, _("'EXPR' is missing"));
     check1arg(args, call, "EXPR");
@@ -962,7 +962,7 @@ static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
 		} else
 		    dflt = setDflt(y, dflt);
 	    }
- 	    if (dflt) {
+ 	    if (dflt != R_NoObject) {
 		ans =  eval(dflt, rho);
 		UNPROTECT(2);
 		return ans;
