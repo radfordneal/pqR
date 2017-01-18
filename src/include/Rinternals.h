@@ -371,7 +371,7 @@ typedef struct VECTOR_SEXPREC_C {
 #define REAL(x)    ((double *) DATAPTR(x))
 
 #if USE_COMPRESSED_POINTERS
-#define LENGTH(x) (* (R_len_t *) SGGC_AUX1(x))
+#define LENGTH(x)  NOT_LVALUE(* (R_len_t *) SGGC_AUX1(x))
 #else
 #define LENGTH(x)  NOT_LVALUE(((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->length)
 #endif
@@ -641,7 +641,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 /* General Cons Cell Attributes */
 
 #if USE_COMPRESSED_POINTERS
-#define ATTRIB(x)       (* (SEXP *) SGGC_AUX2(x))
+#define ATTRIB(x)       NOT_LVALUE(* (SEXP *) SGGC_AUX2(x))
 #else
 #define ATTRIB(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->attrib)
 #endif

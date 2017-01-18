@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2009,2011 The R Core Team.
@@ -59,12 +59,13 @@ static void PrintEnvironment(SEXP x)
 	Rprintf("<base>");
     else if (x == R_EmptyEnv)
 	Rprintf("<R_EmptyEnv>");
-    else if (R_IsPackageEnv(x))
+/*  else if (R_IsPackageEnv(x))
 	Rprintf("<%s>",
 		translateChar(STRING_ELT(R_PackageEnvName(x), 0)));
     else if (R_IsNamespaceEnv(x))
 	Rprintf("<namespace:%s>",
 		translateChar(STRING_ELT(R_NamespaceEnvSpec(x), 0)));
+*/
     else Rprintf("<%llx>", (long long int)(uintptr_t)x);
 }
 
@@ -112,19 +113,8 @@ static const char *typename(SEXP v) {
 static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     int a = 0;
     pp(pre);
-    /* the use of %lx is deliberate because I hate the output of %p,
-       but if this causes portability issues, it could be changed.
-       SU
-
-       It is invalid on 64-bit Windows.
-    */
-#ifdef _WIN64
-    Rprintf("@%p %02d %s g%d k%d [", v, TYPEOF(v), typename(v), 
+    Rprintf("@%llx %02d %s g%d k%d [", (long long) v, TYPEOF(v), typename(v), 
 	    GCGEN(v), GCKIND(v));
-#else
-    Rprintf("@%lx %02d %s g%d k%d [", (long) v, TYPEOF(v), typename(v), 
-	    GCGEN(v), GCKIND(v));
-#endif
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
