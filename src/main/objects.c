@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1005,9 +1005,9 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
  */
 int R_check_class_etc(SEXP x, const char **valid)
 {
-    static SEXP meth_classEnv = NULL;
+    static SEXP meth_classEnv = R_NoObject;
     SEXP cl = getAttrib(x, R_ClassSymbol), rho = R_GlobalEnv, pkg;
-    if(!meth_classEnv)
+    if (meth_classEnv = R_NoObject)
 	meth_classEnv = install(".classEnv");
 
     pkg = getAttrib(cl, R_PackageSymbol); /* ==R== packageSlot(class(x)) */
@@ -1053,7 +1053,7 @@ R_stdGen_ptr_t R_set_standardGeneric_ptr(R_stdGen_ptr_t val, SEXP envir)
 {
     R_stdGen_ptr_t old = R_standardGeneric_ptr;
     R_standardGeneric_ptr = val;
-    if(envir && !isNull(envir))
+    if (envir != R_NoObject && !isNull(envir))
 	R_MethodsNamespace = envir;
     /* just in case ... */
     if(!R_MethodsNamespace)
@@ -1149,7 +1149,7 @@ static SEXP do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!ptr) {
 	warningcall(call,
 		    _("standardGeneric called without methods dispatch enabled (will be ignored)"));
-	R_set_standardGeneric_ptr(dispatchNonGeneric, NULL);
+	R_set_standardGeneric_ptr(dispatchNonGeneric, R_NoObject);
 	ptr = R_get_standardGeneric_ptr();
     }
 
@@ -1280,8 +1280,8 @@ SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
 	    /* Realloc does not clear the added memory, hence: */
 	    for (i = maxMethodsOffset ; i < n ; i++) {
 		prim_methods[i]	 = NO_METHODS;
-		prim_generics[i] = NULL;
-		prim_mlist[i]	 = NULL;
+		prim_generics[i] = R_NoObject;
+		prim_mlist[i]	 = R_NoObject;
 	    }
 	}
 	else {
@@ -1442,7 +1442,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	error(_("invalid primitive operation given for dispatch"));
     current = prim_methods[offset];
     if(current == NO_METHODS || current == SUPPRESSED)
-	return(NULL);
+	return(R_NoObject);
     /* check that the methods for this function have been set */
     if(current == NEEDS_RESET) {
 	/* get the methods and store them in the in-core primitive
@@ -1460,16 +1460,16 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
        && quick_method_check_ptr) {
 	value = (*quick_method_check_ptr)(args, mlist, op);
 	if(isPrimitive(value))
-	    return(NULL);
+	    return(R_NoObject);
 	if(isFunction(value)) {
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
 		PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-		value =  applyClosure(call, value, s, rho, NULL);
+		value =  applyClosure(call, value, s, rho, R_NoObject);
 		UNPROTECT(1);
 		return value;
 	    } else
-		return applyClosure(call, value, args, rho, NULL);
+		return applyClosure(call, value, args, rho, R_NoObject);
 	}
 	/* else, need to perform full method search */
     }
@@ -1481,24 +1481,24 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
        error in method search */
     if(!promisedArgs) {
 	PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-	value = applyClosure(call, fundef, s, rho, NULL);
+	value = applyClosure(call, fundef, s, rho, R_NoObject);
 	UNPROTECT(1);
     } else
-	value = applyClosure(call, fundef, args, rho, NULL);
+	value = applyClosure(call, fundef, args, rho, R_NoObject);
     prim_methods[offset] = current;
     if(value == deferred_default_object)
-	return NULL;
+	return R_NoObject;
     else
 	return value;
 }
 
 SEXP R_do_MAKE_CLASS(const char *what)
 {
-    static SEXP s_getClass = NULL;
+    static SEXP s_getClass = R_NoObject;
     SEXP e, call;
     if(!what)
 	error(_("C level MAKE_CLASS macro called with NULL string pointer"));
-    if(!s_getClass) s_getClass = install("getClass");
+    if (s_getClass == R_NoObject) s_getClass = install("getClass");
     PROTECT(call = allocVector(LANGSXP, 2));
     SETCAR(call, s_getClass);
     SETCAR(CDR(call), mkString(what));
@@ -1507,14 +1507,14 @@ SEXP R_do_MAKE_CLASS(const char *what)
     return(e);
 }
 
-/* this very similar, but gives NULL instead of an error for a non-existing class */
+/* this very similar, but gives R_NoObject(?) instead of an error for a non-existing class */
 SEXP R_getClassDef(const char *what)
 {
-    static SEXP s_getClassDef = NULL;
+    static SEXP s_getClassDef = R_NoObject;
     SEXP e, call;
     if(!what)
 	error(_("R_getClassDef(.) called with NULL string pointer"));
-    if(!s_getClassDef) s_getClassDef = install("getClassDef");
+    if (s_getClassDef == R_NoObject) s_getClassDef = install("getClassDef");
     PROTECT(call = allocVector(LANGSXP, 2));
     SETCAR(call, s_getClassDef);
     SETCAR(CDR(call), mkString(what));
@@ -1525,9 +1525,9 @@ SEXP R_getClassDef(const char *what)
 
 SEXP R_do_new_object(SEXP class_def)
 {
-    static SEXP s_virtual = NULL, s_prototype, s_className;
+    static SEXP s_virtual = R_NoObject, s_prototype, s_className;
     SEXP e, value;
-    if(!s_virtual) {
+    if (s_virtual == R_NoObject) {
 	s_virtual = install("virtual");
 	s_prototype = install("prototype");
 	s_className = install("className");

@@ -65,10 +65,16 @@
 
 
 /*
- *  R : A Computer Langage for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2017 by Radford M. Neal
+ *
+ *  Based on R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2010  The R Core Team
  *  Copyright (C) 2010 Duncan Murdoch
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -570,9 +576,9 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   154,   154,   155,   156,   159,   160,   161,   162,   164,
-     165,   167,   168,   169,   170,   171,   172,   174,   174,   178,
-     180,   181
+       0,   160,   160,   161,   162,   165,   166,   167,   168,   170,
+     171,   173,   174,   175,   176,   177,   178,   180,   180,   184,
+     186,   187
 };
 #endif
 

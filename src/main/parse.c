@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -882,7 +882,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
 
 
 /* End a recursive-descent parsing routine.  Unprotects everything that
-   was protected with PROTECT_N.  Allows for exitting with NULL result
+   was protected with PROTECT_N.  Allows for exitting with R_NoObject result
    on an error. */
 
 #define END_PARSE_FUN \
@@ -891,7 +891,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
     goto finish; \
   error: \
     UNPROTECT(nprotect); \
-    return NULL; \
+    return R_NoObject; \
   finish:
 
 
@@ -903,7 +903,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
 #define PARSE_SUB(w) \
     do { \
         SEXP _sub_ = (w); \
-        if (_sub_ == NULL) goto error; \
+        if (_sub_ == R_NoObject) goto error; \
         PROTECT_N(_sub_); \
     } while (0)
 
@@ -912,7 +912,7 @@ void R_FinalizeSrcRefState (SrcRefState *state)
 #define PARSE_SUB_NO_PROTECT(w) \
     do { \
         SEXP _sub_ = (w); \
-        if (_sub_ == NULL) goto error; \
+        if (_sub_ == R_NoObject) goto error; \
     } while (0)
 
 
@@ -1251,7 +1251,7 @@ static int binary_op(void)
    parentheses if they are necessary (and hence will be re-inserted
    when the expression is deparsed).
 
-   The parse routines return the object parsed, or NULL if there was an
+   The parse routines return the object parsed, or R_NoObject if there was an
    error (or errors may cause exit out of the whole parser with a call
    of "error").
 
@@ -1985,7 +1985,7 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc)
     res = parse_prog (flags);
     end_location(loc);
 
-    if (res == NULL) {
+    if (res == R_NoObject) {
         *status = PARSE_ERROR;
         return R_NilValue;
     }

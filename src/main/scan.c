@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -813,9 +813,8 @@ static SEXP do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
     int i, c, nlines, nmax, nskip, flush, fill, blskip, multiline, escapes;
     const char *p, *encoding;
     RCNTXT cntxt;
-    LocalData data = {NULL, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
+    LocalData data = {R_NilValue, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
 		      FALSE, 0, FALSE, FALSE};
-    data.NAstrings = R_NilValue;
 
     checkArity(op, args);
 
@@ -975,9 +974,8 @@ static SEXP do_countfields(SEXP call, SEXP op, SEXP args, SEXP rho)
     int blocksize, nlines, blskip;
     const char *p;
     Rboolean dbcslocale = (MB_CUR_MAX == 2);
-    LocalData data = {NULL, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
+    LocalData data = {R_NilValue, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
 		      FALSE, 0, FALSE, FALSE};
-    data.NAstrings = R_NilValue;
 
     checkArity(op, args);
 
@@ -1200,14 +1198,13 @@ static SEXP do_typecvt(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean done = FALSE;
     char *endp;
     const char *tmp = NULL;
-    LocalData data = {NULL, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
+    LocalData data = {R_NilValue, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
 		      FALSE, 0, FALSE, FALSE};
     Typecvt_Info typeInfo;      /* keep track of possible types of cvec */
     typeInfo.islogical = TRUE;  /* we can't rule anything out initially */
     typeInfo.isinteger = TRUE;
     typeInfo.isreal = TRUE;
     typeInfo.iscomplex = TRUE;
-    data.NAstrings = R_NilValue;
 
     checkArity(op,args);
 
@@ -1437,9 +1434,8 @@ static SEXP do_menu(SEXP call, SEXP op, SEXP args, SEXP rho)
     int c, j;
     double first;
     char buffer[MAXELTSIZE], *bufp = buffer;
-    LocalData data = {NULL, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
+    LocalData data = {R_NilValue, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
 		      FALSE, 0, FALSE, FALSE};
-    data.NAstrings = R_NilValue;
 
     checkArity(op,args);
 
@@ -1481,9 +1477,8 @@ static SEXP do_readtablehead(SEXP call, SEXP op, SEXP args, SEXP rho)
     int nlines, i, c, quote=0, nread, nbuf, buf_size = BUF_SIZE, blskip;
     const char *p; char *buf;
     Rboolean empty, skip;
-    LocalData data = {NULL, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
+    LocalData data = {R_NilValue, 0, 0, '.', NULL, NO_COMCHAR, 0, NULL, FALSE,
 		      FALSE, 0, FALSE, FALSE};
-    data.NAstrings = R_NilValue;
 
     checkArity(op, args);
 

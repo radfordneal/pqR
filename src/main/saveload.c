@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1851,7 +1851,7 @@ void attribute_hidden R_SaveToFileV(SEXP obj, FILE *fp, int ascii, int version)
 	    type = R_pstream_xdr_format;
 	}
 	R_WriteMagic(fp, magic);
-	R_InitFileOutPStream(&out, fp, type, version, NULL, NULL);
+	R_InitFileOutPStream(&out, fp, type, version, NULL, R_NoObject);
 	R_Serialize(obj, &out);
     }
 }
@@ -1890,13 +1890,13 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
     case R_MAGIC_XDR_V1:
 	return_and_free(NewXdrLoad(fp, &data));
     case R_MAGIC_ASCII_V2:
-	R_InitFileInPStream(&in, fp, R_pstream_ascii_format, NULL, NULL);
+	R_InitFileInPStream(&in, fp, R_pstream_ascii_format, NULL, R_NoObject);
 	return_and_free(R_Unserialize(&in));
     case R_MAGIC_BINARY_V2:
-	R_InitFileInPStream(&in, fp, R_pstream_binary_format, NULL, NULL);
+	R_InitFileInPStream(&in, fp, R_pstream_binary_format, NULL, R_NoObject);
 	return_and_free(R_Unserialize(&in));
     case R_MAGIC_XDR_V2:
-	R_InitFileInPStream(&in, fp, R_pstream_xdr_format, NULL, NULL);
+	R_InitFileInPStream(&in, fp, R_pstream_xdr_format, NULL, R_NoObject);
 	return_and_free(R_Unserialize(&in));
     default:
 	R_FreeStringBuffer(&data.buffer);
@@ -2289,7 +2289,7 @@ static SEXP do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("error writing to connection"));
     }
 
-    R_InitConnOutPStream(&out, con, type, version, NULL, NULL);
+    R_InitConnOutPStream(&out, con, type, version, NULL, R_NoObject);
 
     len = length(list);
     PROTECT(s = allocList(len));
@@ -2363,7 +2363,7 @@ static SEXP do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (strncmp((char*)buf, "RDA2\n", 5) == 0 ||
 	strncmp((char*)buf, "RDB2\n", 5) == 0 ||
 	strncmp((char*)buf, "RDX2\n", 5) == 0) {
-	R_InitConnInPStream(&in, con, R_pstream_any_format, NULL, NULL);
+	R_InitConnInPStream(&in, con, R_pstream_any_format, NULL, R_NoObject);
 	/* PROTECT is paranoia: some close() method might allocate */
 	PROTECT(res = RestoreToEnv(R_Unserialize(&in), aenv));
 	if(!wasopen) {endcontext(&cntxt); con->close(con);}

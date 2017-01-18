@@ -65,9 +65,15 @@
 
 
 /*
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2017 by Radford M. Neal
+ *
  *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2011  The R Core Team
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -644,15 +650,15 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   207,   207,   208,   209,   212,   215,   218,   219,   221,
-     222,   223,   224,   225,   226,   227,   228,   229,   230,   231,
-     232,   233,   234,   236,   237,   239,   240,   241,   242,   243,
-     244,   245,   246,   247,   249,   250,   251,   252,   253,   254,
-     255,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   267,   268,   269,   270,   272,   274,   276,   278,   280,
-     283,   286,   291,   293,   294,   303,   305,   307,   311,   312,
-     314,   316,   320,   321,   323,   326,   328,   330,   332,   334,
-     336,   338,   340,   342,   344,   345,   346,   347,   348,   350
+       0,   213,   213,   214,   215,   218,   221,   224,   225,   227,
+     228,   229,   230,   231,   232,   233,   234,   235,   236,   237,
+     238,   239,   240,   242,   243,   245,   246,   247,   248,   249,
+     250,   251,   252,   253,   255,   256,   257,   258,   259,   260,
+     261,   262,   263,   264,   265,   266,   267,   268,   269,   270,
+     271,   273,   274,   275,   276,   278,   280,   282,   284,   286,
+     289,   292,   297,   299,   300,   309,   311,   313,   317,   318,
+     320,   322,   326,   327,   329,   332,   334,   336,   338,   340,
+     342,   344,   346,   348,   350,   351,   352,   353,   354,   356
 };
 #endif
 

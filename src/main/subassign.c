@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1173,7 +1173,7 @@ static SEXP do_subassign_dflt_seq
         if (seq) {
             int start, end;
             sub1 = Rf_DecideVectorOrRange (sub1, &start, &end, call);
-            if (sub1 == NULL) {
+            if (sub1 == R_NoObject) {
                 R_len_t leny;
                 if (start < 0 || y != R_NilValue && (leny = length(y)) != 1
                                                  && leny != end - start + 1)
@@ -1182,7 +1182,7 @@ static SEXP do_subassign_dflt_seq
                     x = VectorAssignSeq (call, x, start, end, y);
             }
         }
-        if (sub1 != NULL) {
+        if (sub1 != R_NoObject) {
             /* do simple scalar cases quickly */
             if ((TYPEOF(sub1) == INTSXP || TYPEOF(sub1) == REALSXP)
                   && TYPEOF(x) == TYPEOF(y) && LENGTH(sub1) == 1 

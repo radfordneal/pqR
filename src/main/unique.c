@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -712,7 +712,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     HashData data;
     int i, n;
 
-    data.HashTable = NULL;
+    data.HashTable = R_NoObject;
     BEGIN_PROTECT2 (x, table);
     ALSO_PROTECT2 (incomp, data.HashTable);
 
@@ -796,13 +796,13 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 
 SEXP matchE(SEXP itable, SEXP ix, int nmatch, SEXP env)
 {
-    return match5(itable, ix, nmatch, NULL, env);
+    return match5(itable, ix, nmatch, R_NoObject, env);
 }
 
 /* used from other code, not here: */
 SEXP match(SEXP itable, SEXP ix, int nmatch)
 {
-    return match5(itable, ix, nmatch, NULL, R_BaseEnv);
+    return match5(itable, ix, nmatch, R_NoObject, R_BaseEnv);
 }
 
 

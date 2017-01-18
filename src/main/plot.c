@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -3344,7 +3344,7 @@ static SEXP do_identify(SEXP call, SEXP op, SEXP args, SEXP env)
 	    warning(_("more 'labels' than points"));
 	if (n <= 0) {
 	    R_Visible = FALSE;
-	    return NULL;
+	    return R_NilValue;
 	}
 
 	/*

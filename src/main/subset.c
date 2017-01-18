@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -78,7 +78,7 @@ SEXP attribute_hidden Rf_VectorFromRange (int rng0, int rng1)
 
 /* Take a pointer to a range, check for validity, and either extract
    a range (possibly empty) of positive subscripts into start and end
-   and return NULL, or convert the range to a vector of negative
+   and return R_NoObject, or convert the range to a vector of negative
    integer subscripts that is returned. */
 
 SEXP attribute_hidden Rf_DecideVectorOrRange (SEXP rng, int *start, int *end, 
@@ -106,7 +106,7 @@ SEXP attribute_hidden Rf_DecideVectorOrRange (SEXP rng, int *start, int *end,
     if (rng0>0) {
         *start = rng0;
         *end = rng1;
-        return NULL;
+        return R_NoObject;
     }
     else {
         return Rf_VectorFromRange(rng0,rng1);
@@ -346,7 +346,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
     if (seq) {
         suppress_drop = LEVELS(sb);  /* get flag for seq having a dim attr */
         REPROTECT(sb = Rf_DecideVectorOrRange(sb,&start,&end,call), spi);
-        if (sb == NULL)
+        if (sb == R_NoObject)
             n = end - start + 1;
     }
 
@@ -358,13 +358,13 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
         start = 1;
         end = length(x);
         n = end;
-        sb = NULL;
+        sb = R_NoObject;
     }
 
     /* Check to see if we have special matrix subscripting. */
     /* If we do, make a real subscript vector and protect it. */
 
-    if (sb != NULL && isMatrix(sb) && isArray(x) && ncols(sb) == ndim) {
+    if (sb != R_NoObject && isMatrix(sb) && isArray(x) && ncols(sb) == ndim) {
         if (isString(sb)) {
             sb = strmat2intmat(sb, GetArrayDimnames(x), call);
             REPROTECT(sb,spi);
@@ -379,7 +379,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
        We suppress dropping when drop is NA when the index is not logical
        and is a 1D array. */
 
-    if (sb != NULL) {
+    if (sb != R_NoObject) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
         SEXP d;
         if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
@@ -390,7 +390,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
     /* Allocate and extract the result. */
 
     PROTECT (result = allocVector(TYPEOF(x),n));
-    if (sb==NULL)
+    if (sb==R_NoObject)
         ExtractRange(x, result, start, end, call);
     else 
         ExtractSubset(x, result, indx, call);
@@ -404,7 +404,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
         ) {
         PROTECT(attrib);
         PROTECT(nattrib = allocVector(TYPEOF(attrib), n));
-        if (sb==NULL)
+        if (sb==R_NoObject)
             ExtractRange(attrib, nattrib, start, end, call);
         else
             ExtractSubset(attrib, nattrib, indx, call);
@@ -415,7 +415,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
         TYPEOF(attrib) == VECSXP) {
         PROTECT(attrib);
         PROTECT(nattrib = allocVector(VECSXP, n));
-        if (sb==NULL)
+        if (sb==R_NoObject)
             ExtractRange(attrib, nattrib, start, end, call);
         else
             ExtractSubset(attrib, nattrib, indx, call);
@@ -432,7 +432,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
     }
 #endif
 
-    UNPROTECT(2 + (sb!=NULL));
+    UNPROTECT(2 + (sb!=R_NoObject));
 
   done:
     /* One-dimensional arrays should have their dimensions dropped only 
@@ -754,24 +754,24 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
     nr = INTEGER(dim)[0];
     nc = INTEGER(dim)[1];
 
-    /* s0 is set to NULL when we have a range for the first subscript */
+    /* s0 is set to R_NoObject when we have a range for the first subscript */
 
     if (s0 == R_MissingArg) {
         suppress_drop_row = MISSING(subs)==2;
         start = 1;
         end = nr;
         nrs = nr;
-        s0 = NULL;
+        s0 = R_NoObject;
     }
     else if (seq) {
         suppress_drop_row = LEVELS(s0);
         PROTECT(s0 = Rf_DecideVectorOrRange(s0,&start,&end,call));
         nprotect++;
-        if (s0 == NULL)
+        if (s0 == R_NoObject)
             nrs = end - start + 1;
     }
 
-    if (s0 != NULL) {
+    if (s0 != R_NoObject) {
         if (drop == NA_LOGICAL) 
             suppress_drop_row = whether_suppress_drop(s0);
         PROTECT (sr = arraySubscript(0, s0, dim, getAttrib, (STRING_ELT), x));
@@ -799,7 +799,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
 
     /* Extract elements from matrix x to result. */
 
-    if (s0 == NULL)
+    if (s0 == R_NoObject)
         range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc, ncs, nc);
     else if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER 
                       && ii >= 0 && ii <= nr)
@@ -830,7 +830,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
         if (TYPEOF(dimnames) == VECSXP) {
             if (VECTOR_ELT(dimnames,0) != R_NilValue) {
                 SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
-                if (s0 == NULL)
+                if (s0 == R_NoObject)
                     ExtractRange (VECTOR_ELT(dimnames,0),
                       VECTOR_ELT(newdimnames,0), start, end, call);
                 else
@@ -846,7 +846,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
         else {
             if (CAR(dimnames) != R_NilValue) {
                 SET_VECTOR_ELT (newdimnames, 0, allocVector(STRSXP, nrs));
-                if (s0 == NULL)
+                if (s0 == R_NoObject)
                     ExtractRange (CAR(dimnames),
                       VECTOR_ELT(newdimnames,0), start, end, call);
                 else
@@ -1057,18 +1057,18 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
    The search ends as soon as a matching argument is found.  If
    the argument is not found, the argument list is not modified
-   and the C NULL pointer is is returned.
+   and R_NoObject is is returned.
 
    The caller does not need to protect *args_ptr before.
  */
 static SEXP ExtractArg(SEXP *args_ptr, SEXP arg_sym)
 {
-    SEXP prev_arg = NULL;
+    SEXP prev_arg = R_NoObject;
     SEXP arg;
 
     for (arg = *args_ptr; arg != R_NilValue; arg = CDR(arg)) {
 	if(TAG(arg) == arg_sym) {
-	    if (prev_arg == NULL) /* found at head of args */
+	    if (prev_arg == R_NoObject) /* found at head of args */
 		*args_ptr = CDR(arg);
 	    else
 		SETCDR(prev_arg, CDR(arg));
@@ -1076,7 +1076,7 @@ static SEXP ExtractArg(SEXP *args_ptr, SEXP arg_sym)
 	}
 	prev_arg = arg;
     }
-    return NULL;
+    return R_NoObject;
 }
 
 /* Extracts the drop argument, if present, from the argument list.
@@ -1108,7 +1108,7 @@ static int ExtractDropArg(SEXP *args_ptr)
 static int ExtractExactArg(SEXP *args_ptr)
 {
     SEXP argval = ExtractArg(args_ptr, R_ExactSymbol);
-    if (argval == NULL) return 1; /* Default is true as from R 2.7.0 */
+    if (argval == R_NoObject) return 1; /* Default is true as from R 2.7.0 */
     int exact = asLogical(argval);
     if (exact == NA_LOGICAL) exact = -1;
     return exact;
@@ -1615,7 +1615,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
         if (nsubs != 1 || !isString(CAR(subs)) || length(CAR(subs)) != 1)
             errorcall(call, _("wrong arguments for subsetting an environment"));
         SEXP sym = installed_already (translateChar (STRING_ELT(CAR(subs),0)));
-        if (sym == NULL)
+        if (sym == R_NoObject)
             ans = R_NilValue;
         else {
             ans = findVarInFrame (x, sym);
@@ -1927,7 +1927,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
     else if (isEnvironment(x)) {
         if (name==R_NilValue) {
             name = installed_already (translateChar(input));
-            if (name == NULL) {
+            if (name == R_NoObject) {
                 UNPROTECT(1);
                 return R_NilValue;
             }

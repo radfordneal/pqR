@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -790,7 +790,7 @@ static SEXP do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Below should really use CDR(call) for the unevaluated expressions, 
        but it can't because args has been fiddled with by fixup_NaRm. */
     PROTECT(prargs = promiseArgsWithValues(args, R_EmptyEnv, args));
-    ans = applyClosure(call, op, prargs, env, NULL);
+    ans = applyClosure(call, op, prargs, env, R_NoObject);
     UNPROTECT(3);
     return(ans);
 }

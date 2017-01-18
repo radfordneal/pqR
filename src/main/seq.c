@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
@@ -247,11 +247,11 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     int i, j, k;
     SEXP u;
 
-    if (TYPEOF(a) != TYPEOF(s) || t != NULL && TYPEOF(t) != INTSXP) abort();
+    if (TYPEOF(a)!=TYPEOF(s) || t!=R_NoObject && TYPEOF(t)!=INTSXP) abort();
 
     if (na <= 0) return;
 
-    if (t == NULL || LENGTH(t) == 1 && INTEGER(t)[0] == 1) {
+    if (t == R_NoObject || LENGTH(t) == 1 && INTEGER(t)[0] == 1) {
         if (ns == 1) {
             /* Repeat of a single element na times. */
             switch (TYPEOF(s)) {
@@ -566,7 +566,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
 	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
         na = ncv * ns;
-        ncopy = NULL;
+        ncopy = R_NoObject;
     }
     else if (nc == ns) {
         PROTECT(ncopy = coerceVector(ncopy, INTSXP));
@@ -607,11 +607,11 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else 
             PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1 + (ncopy!=NULL));
+	UNPROTECT(1 + (ncopy!=R_NoObject));
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
-    UNPROTECT(2 + (ncopy!=NULL));
+    UNPROTECT(2 + (ncopy!=R_NoObject));
     return a;
 }
 
@@ -687,7 +687,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (len != NA_INTEGER) { /* takes precedence over times */
         if(len > 0 && each == 0)
             errorcall(call, _("invalid '%s' argument"), "each");
-        times = NULL;
+        times = R_NoObject;
     } 
     else {  /* len == NA_INTEGER */
 	int nt;
@@ -702,7 +702,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	    if (it == NA_INTEGER || it < 0 || (double) lx * it * each > INT_MAX)
 		errorcall(call, _("invalid '%s' argument"), "times");
 	    len = lx * it * each;
-            times = NULL;
+            times = R_NoObject;
 	} 
         else {
             if (nt != (double) lx * each)
@@ -962,16 +962,16 @@ done:
 
 static SEXP do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    static SEXP length_op = NULL;
+    static SEXP length_op = R_NoObject;
     SEXP arg, ans;
     int len;
 
     /* Store the .Primitive for 'length' for DispatchOrEval to use. */
-    if (length_op == NULL) {
+    if (length_op == R_NoObject) {
 	SEXP R_lengthSymbol = install("length");
 	length_op = eval(R_lengthSymbol, R_BaseEnv);
 	if (TYPEOF(length_op) != BUILTINSXP) {
-	    length_op = NULL;
+	    length_op = R_NoObject;
 	    error("'length' is not a BUILTIN");
 	}
 	R_PreserveObject(length_op);

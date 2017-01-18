@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
@@ -1038,7 +1038,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /*  Fix up any extras that were supplied by usemethod. */
 
-    if (suppliedenv) {
+    if (suppliedenv != R_NoObject) {
 	for (SEXP t = FRAME(suppliedenv); t != R_NilValue; t = CDR(t)) {
 	    for (a = actuals; a != R_NilValue; a = CDR(a))
 		if (TAG(a) == TAG(t))
@@ -3276,7 +3276,7 @@ static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP) 
     	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
+    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, R_NoObject, 0);
     UNPROTECT(1);
     return ans;
 }
@@ -3753,7 +3753,7 @@ void R_initialize_bcode(void)
   SET_NAMEDCNT_MAX(R_FalseValue);
   R_PreserveObject(R_FalseValue);
 #ifdef THREADED_CODE
-  bcEval(NULL, NULL, FALSE);
+  bcEval(R_NoObject, R_NoObject, FALSE);
 #endif
 }
 
@@ -4228,7 +4228,7 @@ static struct { void *addr; int argc; } opinfo[OPCOUNT];
 
 #define BEGIN_MACHINE  NEXT(); init: { loop: switch(which++)
 #define LASTOP } value = R_NilValue; goto done
-#define INITIALIZE_MACHINE() if (body == NULL) goto init
+#define INITIALIZE_MACHINE() if (body == R_NoObject) goto init
 
 #define NEXT() (__extension__ ({goto *(*pc++).v;}))
 #define GETOP() (*pc++).i
@@ -4261,7 +4261,7 @@ static R_INLINE SEXP GET_BINDING_CELL(SEXP symbol, SEXP rho)
 	return R_NilValue;
     else {
 	SEXP loc = (SEXP) R_findVarLocInFrame(rho, symbol);
-	return (loc != NULL) ? loc : R_NilValue;
+	return loc != R_NoObject ? loc : R_NilValue;
     }
 }
 
@@ -5485,7 +5485,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
+	  value = applyClosure_v(call, fun, args, rho, R_NoObject, 0);
 	  break;
 	default: bad_function_error();
 	}
@@ -5828,7 +5828,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
+	  value = applyClosure_v(call, fun, args, rho, R_NoObject, 0);
 	  break;
 	default: bad_function_error();
 	}
@@ -5872,7 +5872,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
+	  value = applyClosure_v(call, fun, args, rho, R_NoObject, 0);
 	  break;
 	default: bad_function_error();
 	}
