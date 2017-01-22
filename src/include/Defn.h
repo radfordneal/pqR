@@ -190,7 +190,6 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
 #define HASHTABLEGROWTHRATE  1.27
 #define HASHMINSIZE	     29
-/* #define SET_HASHSIZE(x,v)    SETLENGTH(x,v) */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
