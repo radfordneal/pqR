@@ -277,71 +277,86 @@ static const R_len_t length1[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
 
 void Rf_constant_init(void)
 {
+    sggc_cptr_t p;
+
     /* R_NilValue (= R NULL). */
 
-    sggc_constant (R_type_to_sggc_type[NILSXP],
-                   R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
-                   1, (char *) &R_NilValue_const
+    p = sggc_constant (R_type_to_sggc_type[NILSXP],
+                       R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
+                       1, (char *) &R_NilValue_const
 #if USE_COMPRESSED_POINTERS
-                   , (char *) length0, (char *) nilattrib
+                       , (char *) length0, (char *) nilattrib
 #endif
-                  );
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_NIL_INDEX) abort();
 
     /* Static boxes.  Uses same segment for integers and reals. */
 
     if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
 
-    sggc_constant (R_type_to_sggc_type[INTSXP],
-                   R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
-                   4, (char *) R_ScalarBox_space
+    p = sggc_constant (R_type_to_sggc_type[INTSXP],
+                       R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
+                       4, (char *) R_ScalarBox_space
 #if USE_COMPRESSED_POINTERS
-                   , (char *) length1, (char *) nilattrib
+                       , (char *) length1, (char *) nilattrib
 #endif
-                  );
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_STATIC_BOXES_INDEX) abort();
 
     /* Environment constant. */
 
-    sggc_constant (R_type_to_sggc_type[ENVSXP],
-                   R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
-                   1, (char *) R_env_consts
+    p = sggc_constant (R_type_to_sggc_type[ENVSXP],
+                       R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
+                       1, (char *) R_env_consts
 #if USE_COMPRESSED_POINTERS
-                   , (char *) length1, (char *) nilattrib
+                       , (char *) length1, (char *) nilattrib
 #endif
-                  );
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_ENV_INDEX) abort();
 
     /* Symbol constant. */
 
-    sggc_constant (R_type_to_sggc_type[SYMSXP],
-                   R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
-                   1, (char *) R_sym_consts
+    p = sggc_constant (R_type_to_sggc_type[SYMSXP],
+                       R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
+                       1, (char *) R_sym_consts
 #if USE_COMPRESSED_POINTERS
-                   , (char *) length1, (char *) nilattrib
+                       , (char *) length1, (char *) nilattrib
 #endif
-                  );
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_SYM_INDEX) abort();
 
     /* Numerical/logical constants.  All use same segment. */
 
     if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[LGLSXP]) abort();
     if (R_type_to_sggc_type[REALSXP] != R_type_to_sggc_type[LGLSXP]) abort();
 
-    sggc_constant (R_type_to_sggc_type[LGLSXP],
-                   R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
-                   R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts
+    p = sggc_constant (R_type_to_sggc_type[LGLSXP],
+                       R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
+                       R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts
 #if USE_COMPRESSED_POINTERS
-                   , (char *) length1, (char *) nilattrib
+                       , (char *) length1, (char *) nilattrib
 #endif
-                  );
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_NUM_INDEX) abort();
 
     /* Pairlists of length 1. */
 
-    sggc_constant (R_type_to_sggc_type[LISTSXP],
-                   R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
-                   sizeof R_List1_consts / sizeof R_List1_consts[0],
-                   (char *) R_List1_consts
+    p = sggc_constant (R_type_to_sggc_type[LISTSXP],
+                       R_type_to_sggc_type[LISTSXP]+SGGC_N_TYPES,
+                       sizeof R_List1_consts / sizeof R_List1_consts[0],
+                       (char *) R_List1_consts
 #if USE_COMPRESSED_POINTERS
-                   , (char *) length1, (char *) nilattrib
+                       , (char *) length1, (char *) nilattrib
 #endif
-                  );
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_LIST1_INDEX) abort();
+
 }
 
 
