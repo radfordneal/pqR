@@ -74,7 +74,6 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
@@ -110,7 +109,6 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
@@ -145,7 +143,6 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case STRSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
