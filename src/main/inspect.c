@@ -50,6 +50,15 @@
 #define GLOBAL_FRAME_MASK (1<<15)
 #define IS_GLOBAL_FRAME(e) (ENVFLAGS(e) & GLOBAL_FRAME_MASK)
 
+
+/* Enable to redirect to standard error. */
+
+#if 0
+#undef Rprintf
+#define Rprintf REprintf
+#endif
+
+
 /* based on EncodeEnvironment in  printutils.c */
 static void PrintEnvironment(SEXP x)
 {
@@ -66,7 +75,11 @@ static void PrintEnvironment(SEXP x)
 	Rprintf("<namespace:%s>",
 		translateChar(STRING_ELT(R_NamespaceEnvSpec(x), 0)));
 */
-    else Rprintf("<%llx>", (long long int)(uintptr_t)x);
+#   if USE_COMPRESSED_POINTERS
+    else Rprintf("<%d.%d>", SGGC_SEGMENT_INDEX(x), SGGC_SEGMENT_OFFSET(x));
+#   else
+    else Rprintf("<%llx>", (long long) x);
+#   endif
 }
 
 /* print prefix */
@@ -113,8 +126,19 @@ static const char *typename(SEXP v) {
 static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     int a = 0;
     pp(pre);
-    Rprintf("@%llx %02d %s g%d k%d [", (long long) v, TYPEOF(v), typename(v), 
-	    GCGEN(v), GCKIND(v));
+    if (v == R_NoObject) {
+        Rprintf("R_NoObject\n");
+        return;
+    }
+#   if USE_COMPRESSED_POINTERS
+       Rprintf("@%d.%d %02d %s g%d k%d [", 
+                SGGC_SEGMENT_INDEX(v), SGGC_SEGMENT_OFFSET(v),
+                TYPEOF(v), typename(v), GCGEN(v), GCKIND(v));
+#   else
+       Rprintf("@%llx %02d %s g%d k%d [", 
+                (long long) v,
+                TYPEOF(v), typename(v), GCGEN(v), GCKIND(v));
+#   endif
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
@@ -159,11 +183,26 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         else {
 	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
                     SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
-            Rprintf(" LAST... %p %p %p",LASTSYMENV(v),LASTSYMBINDING(v),
-                                LASTSYMENVNOTFOUND(v));
+#           if USE_COMPRESSED_POINTERS
+                Rprintf (" LAST...");
+                if (LASTSYMENV(v) == R_NoObject) Rprintf (" -");
+                else Rprintf(" %d.%d", SGGC_SEGMENT_INDEX(LASTSYMENV(v)),
+                                       SGGC_SEGMENT_OFFSET(LASTSYMENV(v)));
+                if (LASTSYMBINDING(v) == R_NoObject) Rprintf (" -");
+                else Rprintf(" %d.%d", SGGC_SEGMENT_INDEX(LASTSYMBINDING(v)),
+                                       SGGC_SEGMENT_OFFSET(LASTSYMBINDING(v)));
+                if (LASTSYMENVNOTFOUND(v) == R_NoObject) Rprintf (" -");
+                else Rprintf(" %d.%d",SGGC_SEGMENT_INDEX(LASTSYMENVNOTFOUND(v)),
+                                    SGGC_SEGMENT_OFFSET(LASTSYMENVNOTFOUND(v)));
+#           else
+                Rprintf (" LAST... %p %p %p",
+                           LASTSYMENV(v),
+                           LASTSYMBINDING(v),
+                           LASTSYMENVNOTFOUND(v));
+#           endif
         }
     }
-    switch (TYPEOF(v)) { /* for native vectors print the first elements in-line */
+    switch (TYPEOF(v)) {/* for native vectors print the first elements in-line*/
     case LGLSXP:
 	if (LENGTH(v) > 0) {
 		unsigned int i = 0;
@@ -211,7 +250,8 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 	    {
 		unsigned int i = 0;
 		while (i<LENGTH(v) && i < pvec) {
-		  inspect_tree(pre+2, VECTOR_ELT(v, i), deep - 1, pvec, prom);
+                    pp(pre+2); Rprintf("[[%d]]\n",i);
+                    inspect_tree(pre+2, VECTOR_ELT(v, i), 1 /* deep - 1 */, pvec, prom);
 		    i++;
 		}
 		if (i<LENGTH(v)) { pp(pre+2); Rprintf("...\n"); }
@@ -221,7 +261,8 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 	    {
 		unsigned int i = 0;
 		while (i < LENGTH(v) && i < pvec) {
-		  inspect_tree(pre+2, STRING_ELT(v, i), deep - 1, pvec, prom);
+                    pp(pre+2); Rprintf("[[%d]]\n",i);
+                    inspect_tree(pre+2, STRING_ELT(v, i), deep - 1, pvec, prom);
 		    i++;
 		}
 		if (i < LENGTH(v)) { pp(pre+2); Rprintf("...\n"); }
@@ -232,10 +273,14 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 		SEXP lc = v;
 		while (lc != R_NilValue) {
                     if (SHOW_PAIRLIST_NODES && lc != v) {
+                        pp(pre+1);
 #ifdef _WIN64
-                        pp(pre+1); Rprintf("@%p ... ", lc);
+                        Rprintf("@%p ... ", lc);
+#elif USE_UNCOMPRESSED_POINTERS
+                        Rprintf("@%d.%d... ", 
+                           SGGC_SEGMENT_INDEX(lc), SGGC_SEGMENT_OFFSET(lc));
 #else
-                        pp(pre+1); Rprintf("@%lx ... ", (long) lc);
+                        Rprintf("@%llx ... ", (long long) lc);
 #endif
                         Rprintf ("%s\n", TYPEOF(lc)==LISTSXP ? ""
                                           : TYPEOF(lc)==LANGSXP ? "L" : "?");
