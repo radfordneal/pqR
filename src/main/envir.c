@@ -357,9 +357,7 @@ static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
 
   R_NewHashTable
 
-  Hash table initialisation function.  Creates a table of size 'size'
-  that increases in size by 'growth_rate' after a threshold is met.
-
+  Hash table initialisation function.  Creates a table of size 'size'. 
 */
 
 static SEXP R_NewHashTable(int size)
@@ -370,7 +368,6 @@ static SEXP R_NewHashTable(int size)
 
     /* Allocate hash table in the form of a vector */
     PROTECT(table = allocVector(VECSXP, size));
-    /* SET_HASHSIZE(table, size); */
     SET_HASHSLOTSUSED(table, 0);
     UNPROTECT(1);
     return(table);
@@ -402,8 +399,8 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
   R_HashResize
 
   Hash table resizing function. Increase the size of the hash table by
-  the growth_rate of the table. The vector is reallocated, but the
-  lists with in the hash table have their pointers shuffled around
+  HASHTABLEGROWTHRATE. The vector is reallocated, but the
+  lists within the hash table have their pointers shuffled around
   so that they are not reallocated.
 */
 
@@ -1641,14 +1638,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
             SET_HASHASH(c, 1);
         }
-if (HASHSIZE(HASHTAB(rho))==0)
-{ REprintf("rho:\n");
-  R_inspect(rho);
-  REprintf("table:\n");
-  R_inspect(HASHTAB(rho));
-  abort();
-}
-  
         hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
         SEARCH_LOOP (loc, symbol, goto found);
@@ -2659,7 +2648,7 @@ static SEXP do_search(SEXP call, SEXP op, SEXP args, SEXP env)
 static int FrameSize(SEXP frame, int all)
 {
     int count = 0;
-if (frame == R_NoObject || CDR(frame) == R_NoObject) abort();
+
     while (frame != R_NilValue) {
 	if ((all || CHAR(PRINTNAME(TAG(frame)))[0] != '.') &&
 				      CAR(frame) != R_UnboundValue)
