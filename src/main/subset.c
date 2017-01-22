@@ -1091,7 +1091,7 @@ static SEXP ExtractArg(SEXP *args_ptr, SEXP arg_sym)
 static int ExtractDropArg(SEXP *args_ptr)
 {
     SEXP drop_arg = ExtractArg(args_ptr, R_DropSymbol);
-    return drop_arg ? asLogical(drop_arg) : NA_LOGICAL;
+    return drop_arg != R_NoObject ? asLogical(drop_arg) : NA_LOGICAL;
 }
 
 

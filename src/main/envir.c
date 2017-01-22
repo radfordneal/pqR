@@ -492,8 +492,10 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
     int slotsused = 0;
     int i;
     for (i = 0; i<LENGTH(table); i++) {
-        if (VECTOR_ELT(table,i) != R_NilValue) 
+        if (VECTOR_ELT(table,i) != R_NilValue) {
+            if (TYPEOF(VECTOR_ELT(table,i)) != LISTSXP) abort();
             slotsused += 1;
+        }
     }
     if (HASHSLOTSUSED(table) != slotsused) {
         REprintf("WRONG SLOTSUSED IN HASH TABLE! %d %d\n",
@@ -1639,6 +1641,14 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
             SET_HASHASH(c, 1);
         }
+if (HASHSIZE(HASHTAB(rho))==0)
+{ REprintf("rho:\n");
+  R_inspect(rho);
+  REprintf("table:\n");
+  R_inspect(HASHTAB(rho));
+  abort();
+}
+  
         hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
         SEARCH_LOOP (loc, symbol, goto found);
@@ -2649,6 +2659,7 @@ static SEXP do_search(SEXP call, SEXP op, SEXP args, SEXP env)
 static int FrameSize(SEXP frame, int all)
 {
     int count = 0;
+if (frame == R_NoObject || CDR(frame) == R_NoObject) abort();
     while (frame != R_NilValue) {
 	if ((all || CHAR(PRINTNAME(TAG(frame)))[0] != '.') &&
 				      CAR(frame) != R_UnboundValue)

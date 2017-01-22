@@ -349,6 +349,7 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
 }
 
 SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {
+    if (v == R_NoObject) abort();
     /*  we need to allow vector-like types here */
     if(TYPEOF(x) != VECSXP &&
        TYPEOF(x) != EXPRSXP &&
@@ -409,6 +410,7 @@ void (SET_TAG)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); TAG(x) = v; }
 
 SEXP (SETCAR)(SEXP x, SEXP y)
 {
+    if (y == R_NoObject) abort();
     CHECK_OLD_TO_NEW(x, y);
     CAR(x) = y;
     return y;
@@ -416,6 +418,7 @@ SEXP (SETCAR)(SEXP x, SEXP y)
 
 SEXP (SETCDR)(SEXP x, SEXP y)
 {
+    if (y == R_NoObject) abort();
     CHECK_OLD_TO_NEW(x, y);
     CDR(x) = y;
     return y;
@@ -423,6 +426,7 @@ SEXP (SETCDR)(SEXP x, SEXP y)
 
 SEXP (SETCADR)(SEXP x, SEXP y)
 {
+    if (y == R_NoObject) abort();
     SEXP cell;
     cell = CDR(x);
     CHECK_OLD_TO_NEW(cell, y);
@@ -432,6 +436,7 @@ SEXP (SETCADR)(SEXP x, SEXP y)
 
 SEXP (SETCADDR)(SEXP x, SEXP y)
 {
+    if (y == R_NoObject) abort();
     SEXP cell;
     cell = CDDR(x);
     CHECK_OLD_TO_NEW(cell, y);
@@ -443,6 +448,7 @@ SEXP (SETCADDR)(SEXP x, SEXP y)
 
 SEXP (SETCADDDR)(SEXP x, SEXP y)
 {
+    if (y == R_NoObject) abort();
     SEXP cell;
     cell = CDDDR(x);
     CHECK_OLD_TO_NEW(cell, y);
@@ -454,6 +460,7 @@ SEXP (SETCADDDR)(SEXP x, SEXP y)
 
 SEXP (SETCAD4R)(SEXP x, SEXP y)
 {
+    if (y == R_NoObject) abort();
     SEXP cell;
     cell = CD4R(x);
     CHECK_OLD_TO_NEW(cell, y);

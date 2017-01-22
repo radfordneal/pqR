@@ -221,7 +221,8 @@ static R_CONST SEXPREC R_List1_consts[] = {
 
 SEXP attribute_hidden MaybeConstList1(SEXP car)
 {
-    int list_chunks = sggc_kind_chunks[SGGC_N_TYPES+LISTSXP];
+    int list_chunks
+          = sggc_kind_chunks [R_type_to_sggc_type[LISTSXP] + SGGC_N_TYPES];
     for (int i = 0; ; i++) {
         SEXP c = SEXP_PTR (SGGC_CPTR_VAL (R_SGGC_LIST1_INDEX, i*list_chunks));
         if (CAR(c) == car) 
@@ -271,6 +272,7 @@ static const R_len_t length1[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
+
 #endif
 
 void Rf_constant_init(void)

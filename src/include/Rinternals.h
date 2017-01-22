@@ -215,22 +215,6 @@ struct sxpinfo_struct {
     unsigned int gp : 16;     /* The "general purpose" field */
 };
 
-struct primsxp_struct {    /* table offset of this and other info is in gp  */
-    /* The two function pointers below can't use SEXP, since not defined yet*/
-    void *(*primsxp_cfun)();   /* c-code address for prim fun, from table   */
-    void *(*primsxp_fast_cfun)(); /* c-code addr for fast interface, or NULL*/
-    unsigned short var1;       /* variant for eval of unary primitive arg */
-    short primsxp_code;        /* operation code, from table                */
-    signed char primsxp_arity; /* function arity (-1 for any), from table   */
-    unsigned char pending_ok;  /* whether args can have computation pending */
-    unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
-    unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
-    unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
-    unsigned int primsxp_fast_sub:1;/* subassign fn that can use fast method*/
-    unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument (only
-                                       for when fast_cfun != NULL */
-};
-
 struct listsxp_struct {
     SEXP carval;
     SEXP cdrval;
@@ -285,13 +269,36 @@ struct promsxp_struct {
 typedef struct SEXPREC {
     SEXPREC_HEADER;
     union {
-	struct primsxp_struct primsxp;
 	struct listsxp_struct listsxp;
 	struct envsxp_struct envsxp;
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
     } u;
 } SEXPREC;
+
+
+/* Version of SEXPREC used for primitives. */
+
+struct primsxp_struct {    /* table offset of this and other info is in gp  */
+    /* The two function pointers below can't use SEXP, since not defined yet*/
+    void *(*primsxp_cfun)();   /* c-code address for prim fun, from table   */
+    void *(*primsxp_fast_cfun)(); /* c-code addr for fast interface, or NULL*/
+    unsigned short var1;       /* variant for eval of unary primitive arg */
+    short primsxp_code;        /* operation code, from table                */
+    signed char primsxp_arity; /* function arity (-1 for any), from table   */
+    unsigned char pending_ok;  /* whether args can have computation pending */
+    unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
+    unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
+    unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
+    unsigned int primsxp_fast_sub:1;/* subassign fn that can use fast method*/
+    unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument (only
+                                       for when fast_cfun != NULL */
+};
+
+typedef struct PRIM_SEXPREC {
+    SEXPREC_HEADER;
+    struct primsxp_struct primsxp;
+} PRIM_SEXPREC, *PRIMSEXP;
 
 
 /* Version of SEXPREC used for symbols. */
@@ -310,6 +317,7 @@ typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
     struct symsxp_struct symsxp;
 } SYM_SEXPREC, *SYMSEXP;
+
 
 /* Version of SEXPREC used for external pointers. */
 

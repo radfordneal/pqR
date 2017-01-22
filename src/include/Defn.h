@@ -463,6 +463,7 @@ typedef struct {
  * of the Promise and Hashing groups.
  */
 
+
 /* Primitive Access Macros */
 
 /* Set offset of primitive in table, and copy some of the information
@@ -470,57 +471,74 @@ typedef struct {
    primsxp_fast_cfun will (possibly) be set in SetupBuiltins in names.c. */
 
 #define SET_PRIMOFFSET(x,v) do { \
-    SEXPREC *setprim_ptr = UNCOMPRESSED_PTR(x); \
+    PRIM_SEXPREC *setprim_ptr = (PRIM_SEXPREC *) UNCOMPRESSED_PTR(x); \
     int setprim_value = (v); \
     /* special fudge because the S4 bit is actually looked at some places */ \
     setprim_ptr->sxpinfo.gp = (setprim_ptr->sxpinfo.gp & (2*S4_OBJECT_MASK-1)) \
                                | (setprim_value << (S4_OBJECT_BIT_POS+1)); \
-    setprim_ptr->u.primsxp.primsxp_cfun = \
+    setprim_ptr->primsxp.primsxp_cfun = \
       (void *(*)()) R_FunTab[setprim_value].cfun; \
-    setprim_ptr->u.primsxp.primsxp_fast_cfun = 0; \
-    setprim_ptr->u.primsxp.primsxp_code   = R_FunTab[setprim_value].code; \
-    setprim_ptr->u.primsxp.primsxp_arity  = R_FunTab[setprim_value].arity; \
-    setprim_ptr->u.primsxp.primsxp_internal \
+    setprim_ptr->primsxp.primsxp_fast_cfun = 0; \
+    setprim_ptr->primsxp.primsxp_code   = R_FunTab[setprim_value].code; \
+    setprim_ptr->primsxp.primsxp_arity  = R_FunTab[setprim_value].arity; \
+    setprim_ptr->primsxp.primsxp_internal \
         = (R_FunTab[setprim_value].eval/10)&1; \
-    setprim_ptr->u.primsxp.primsxp_print \
+    setprim_ptr->primsxp.primsxp_print \
         = (R_FunTab[setprim_value].eval/100)%10; \
-    setprim_ptr->u.primsxp.primsxp_variant \
+    setprim_ptr->primsxp.primsxp_variant \
         = (R_FunTab[setprim_value].eval/1000)&1; \
-    setprim_ptr->u.primsxp.pending_ok \
+    setprim_ptr->primsxp.pending_ok \
         = (R_FunTab[setprim_value].eval/10000)&1; \
-    setprim_ptr->u.primsxp.primsxp_fast_sub \
+    setprim_ptr->primsxp.primsxp_fast_sub \
         = (R_FunTab[setprim_value].eval/100000)&1; \
 } while (0)
 
-#define PRIMOFFSET(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
+#define PRIMOFFSET(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
 
-#define PRIMFUN(x)	((CCODE)(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_cfun))
-#define PRIMFUNV(x)	((CCODEV)(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_cfun))
+#define PRIMFUN(x) \
+  ((CCODE)(((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_cfun))
+#define PRIMFUNV(x) \
+  ((CCODEV)(((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_cfun))
 #define SET_PRIMFUN(x,f) \
-    ( UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_cfun = \
-        (void *(*)()) (R_FunTab[PRIMOFFSET(x)].cfun = (SEXP (*)()) (f)), \
-      UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_cfun = 0 )
-#define PRIMVAL(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_code)
-#define PRIMARITY(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_arity)
-#define PRIMPRINT(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_print)
-#define PRIMINTERNAL(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_internal)
-#define PRIMVARIANT(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_variant)
-#define PRIMFASTSUB(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_sub)
-#define PRIMFOREIGN(x)	(R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
-#define PRIMNAME(x)	(R_FunTab[PRIMOFFSET(x)].name)
-#define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
+  ( ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_cfun = \
+      (void *(*)()) (R_FunTab[PRIMOFFSET(x)].cfun = (SEXP (*)()) (f)), \
+    ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_cfun = 0 )
+#define PRIMVAL(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_code)
+#define PRIMARITY(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_arity)
+#define PRIMPRINT(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_print)
+#define PRIMINTERNAL(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_internal)
+#define PRIMVARIANT(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_variant)
+#define PRIMFASTSUB(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_sub)
+#define PRIMFOREIGN(x) \
+  (R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
+#define PRIMNAME(x) \
+  (R_FunTab[PRIMOFFSET(x)].name)
+#define PPINFO(x) \
+  (R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
 
-#define PRIMFUN_PENDING_OK(x) (UNCOMPRESSED_PTR(x)->u.primsxp.pending_ok)
+#define PRIMFUN_PENDING_OK(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.pending_ok)
 
-#define PRIMFUN_FAST(x)	(UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_cfun)
-#define PRIMFUN_DSPTCH1(x) (UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_dsptch1)
-#define PRIMFUN_ARG1VAR(x) (UNCOMPRESSED_PTR(x)->u.primsxp.var1)
+#define PRIMFUN_FAST(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_cfun)
+#define PRIMFUN_DSPTCH1(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_dsptch1)
+#define PRIMFUN_ARG1VAR(x) \
+  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.var1)
 
 #define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
-    UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_fast_cfun = (void *(*)()) (f); \
-    UNCOMPRESSED_PTR(x)->u.primsxp.primsxp_dsptch1 = (dsptch1); \
-    UNCOMPRESSED_PTR(x)->u.primsxp.var1 = (v1); \
+  ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_cfun = (void*(*)())(f);\
+  ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_dsptch1 = (dsptch1); \
+  ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.var1 = (v1); \
 } while (0)
+
 
 /* Symbols for eval variants.  Variant 0 indicates the standard result.  
    Variants with numbers from 0x01, 0x02, 0x03, ..., 0x0f are passed on for

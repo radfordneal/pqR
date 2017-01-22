@@ -969,6 +969,25 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
+    /* Set up protection stack now, in case debug output uses it. */
+
+    R_StandardPPStackSize = R_PPStackSize;
+    R_RealPPStackSize = R_PPStackSize + PP_REDZONE_SIZE;
+    if (!(R_PPStack = (SEXP *) malloc(R_RealPPStackSize * sizeof(SEXP))))
+	R_Suicide("couldn't allocate memory for pointer stack");
+    R_PPStackTop = 0;
+#if VALGRIND_LEVEL>0
+    VALGRIND_MAKE_MEM_NOACCESS(R_PPStack+R_PPStackSize, PP_REDZONE_SIZE);
+#endif
+
+#   if 0
+    REprintf("Sizes of SEXPREC records:\n");
+    REprintf(
+    "SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d\n",
+     (int) sizeof(SEXPREC), (int) sizeof(SYM_SEXPREC), (int) sizeof(PRIM_SEXPREC),
+     (int) sizeof(EXTPTR_SEXPREC), (int) sizeof (VECTOR_SEXPREC));
+#   endif
+
     sggc_init(2000000);
 
     extern void Rf_constant_init(void);
@@ -1004,14 +1023,6 @@ void attribute_hidden InitMemory()
     init_gctorture();
 
     gc_reporting = R_Verbose;
-    R_StandardPPStackSize = R_PPStackSize;
-    R_RealPPStackSize = R_PPStackSize + PP_REDZONE_SIZE;
-    if (!(R_PPStack = (SEXP *) malloc(R_RealPPStackSize * sizeof(SEXP))))
-	R_Suicide("couldn't allocate memory for pointer stack");
-    R_PPStackTop = 0;
-#if VALGRIND_LEVEL>0
-    VALGRIND_MAKE_MEM_NOACCESS(R_PPStack+R_PPStackSize, PP_REDZONE_SIZE);
-#endif
 
     R_BCNodeStackBase = (SEXP *) malloc(R_BCNODESTACKSIZE * sizeof(SEXP));
     if (R_BCNodeStackBase == NULL)
@@ -1077,7 +1088,6 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
     LENGTH(r) = length;
-
     return r;
 }
 
@@ -1527,16 +1537,17 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 #endif
 
     /* Allocated space has been zeroed, which ensures CHARSXP has terminating
-       null.  But still need to set STRSXPs to R_BlankString and VECSXP/EXPRSXPs
-       to R_NilValue. */
+       null.  But still need to set STRSXPs to R_BlankString and perhaps
+       VECSXP/EXPRSXPs to R_NilValue (if it's not zero). */
 
     if (type == VECSXP || type == EXPRSXP) {
-	for (i = 0; i < length; i++)
-	    VECTOR_ELT(s,i) = R_NilValue;  /* no old-to-new check needed */
+        if (R_NilValue != 0)
+            for (i = 0; i < length; i++)
+                VECTOR_ELT(s,i) = R_NilValue;  /* no old-to-new check needed */
     }
     else if (type == STRSXP) {
-	for (i = 0; i < length; i++)
-	    STRING_ELT(s,i) = R_BlankString;  /* no old-to-new check needed */
+        for (i = 0; i < length; i++)
+            STRING_ELT(s,i) = R_BlankString;   /* no old-to-new check needed */
     }
 
     return s;

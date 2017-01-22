@@ -1207,7 +1207,7 @@ createRSymbolObject(SEXP sname, DL_FUNC f, R_RegisteredNativeSymbol *symbol,
     PROTECT(sym = allocVector(VECSXP, n));    numProtects++;
     PROTECT(names = allocVector(STRSXP, n));    numProtects++;
 
-    if(!sname || sname == R_NilValue) {
+    if(sname == R_NoObject || sname == R_NilValue) {
 	PROTECT(sname = mkString(symbol->symbol.call->name));
 	numProtects++;
     }

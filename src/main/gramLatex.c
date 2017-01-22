@@ -1944,7 +1944,7 @@ static SEXP xxblock(SEXP body, YYLTYPE *lloc)
 #if DEBUGVALS
     Rprintf("xxblock(body=%p)", body);    
 #endif
-    if (!body) 
+    if (body == R_NoObject) 
         PROTECT(ans = allocVector(VECSXP, 0));
     else {
 	PROTECT(ans = PairToVectorList(CDR(body)));
@@ -1981,7 +1981,7 @@ static void xxSetInVerbEnv(SEXP envname)
 
 static void xxsavevalue(SEXP items, YYLTYPE *lloc)
 {
-    if (items) {
+    if (items != R_NoObject) {
     	PROTECT(Value = PairToVectorList(CDR(items)));
     	UNPROTECT_PTR(items);
     } else {
@@ -2381,7 +2381,7 @@ static int token(void)
     
     setfirstloc();    
     
-    if (xxInVerbEnv)
+    if (xxInVerbEnv != R_NoObject)
     	return mkVerbEnv();    
     	
     c = xxgetc();

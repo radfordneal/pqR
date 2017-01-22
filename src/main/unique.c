@@ -739,7 +739,8 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     else type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
     x = coerceVector (x, type); 
     table = coerceVector (table, type);
-    if (incomp) incomp = coerceVector(incomp, type);
+    if (incomp != R_NoObject) 
+        incomp = coerceVector(incomp, type);
     data.nomatch = nmatch;
 
     HashTableSetup(table, &data);
@@ -787,7 +788,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     }
 
     DoHashing(table, &data);
-    if (incomp) UndoHashing(incomp, table, &data);
+    if (incomp != R_NoObject) UndoHashing(incomp, table, &data);
     ans = HashLookup(table, x, &data);
 
     END_PROTECT;

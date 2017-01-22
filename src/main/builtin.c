@@ -886,7 +886,7 @@ static SEXP expandDots(SEXP el, SEXP rho)
    
 static SEXP setDflt(SEXP arg, SEXP dflt) 
 {
-    if (dflt) {
+    if (dflt != R_NoObject) {
     	SEXP dflt1, dflt2;
     	PROTECT(dflt1 = deparse1line(dflt, TRUE));
     	PROTECT(dflt2 = deparse1line(CAR(arg), TRUE));

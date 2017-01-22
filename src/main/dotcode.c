@@ -305,14 +305,16 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     }
 
     /* We were given a symbol (or an address), so we are done. */
-    if (*fun) return;
+    if (*fun) 
+        return;
 
     // find if we were called from a namespace
     SEXP env2 = ENCLOS(env);
     const char *ns = "";
     if(R_IsNamespaceEnv(env2))
 	ns = CHAR(STRING_ELT(R_NamespaceEnvSpec(env2), 0));
-    else env2 = R_NilValue;
+    else
+        env2 = R_NilValue;
 
     /* Make up the load symbol */
     if(TYPEOF(op) == STRSXP) {
@@ -327,7 +329,8 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 	/* no PACKAGE= arg, so see if we can identify a DLL
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
-	if (*fun) return;
+	if (*fun) 
+            return;
 #ifdef CHECK_NAMSPACE_RESOLUTION
 	warningcall(call, 
 		    "\"%s\" not resolved from current namespace (%s)",
@@ -342,7 +345,8 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     */
 
     *fun = R_FindSymbol(buf, dll.DLLname, symbol);
-    if (*fun) return;
+    if (*fun)
+        return;
 
     /* so we've failed and bail out */
     if (*dll.DLLname != 0) {
@@ -426,8 +430,8 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
 
-    DL_FUNC ofun = NULL;
-    R_ExternalRoutine fun = NULL;
+    DL_FUNC fun0 = NULL;
+    R_ExternalRoutine fun;
     SEXP retval;
     R_RegisteredNativeSymbol symbol = {R_EXTERNAL_SYM, {NULL}, NULL};
     const void *vmax = VMAXGET();
@@ -437,8 +441,8 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     (void) trimargs (args, 0, &spa, call);
 
     PROTECT(spa.pkg);
-    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, buf, call, env);
-    fun = (R_ExternalRoutine) ofun;
+    resolveNativeRoutine (args, &fun0, &symbol, spa.pkg, buf, call, env);
+    fun = (R_ExternalRoutine) fun0;
     UNPROTECT(1);
 
     /* Note that .NAME is passed as the first argument (and usually ignored). */
@@ -465,7 +469,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
 
-    DL_FUNC fun0;
+    DL_FUNC fun0 = NULL;
     SEXP (*ofun)(void);
     VarFun fun;
     SEXP retval, pargs;
@@ -1251,12 +1255,13 @@ Rf_getCallingDLL(void)
 
 
 /*
-  We are given the PACKAGE argument in dll.obj
-  and we can try to figure out how to resolve this.
-  0) dll.obj is NULL.  Then find the environment of the
-   calling function and if it is a namespace, get the first registered DLL.
+  We are given the PACKAGE argument in dll->obj and we can try to figure 
+  out how to resolve this.
 
-  1) dll.obj is a DLLInfo object
+  If dll->obj is R_NoObject, find the environment of the calling
+  function and if it is a namespace, get the first registered DLL.
+
+  Otherwise, dll->obj is a DLLInfo object.
 */
 static DL_FUNC
 R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
@@ -1267,18 +1272,22 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
     DllInfo *info;
     DL_FUNC fun = NULL;
 
-    if(dll->obj == R_NoObject) {
+REprintf("FindNativeSymbolFromDLL: %d\n",dll->obj);
+
+    if (dll->obj == R_NoObject) {
 	/* Rprintf("\nsearching for %s\n", name); */
 	if (env != R_NilValue) {
 	    SEXP e;
 	    PROTECT(e = lang2(install("getCallingDLLe"), env));
 	    dll->obj = eval(e, R_GlobalEnv);
 	    UNPROTECT(1);
-	} else dll->obj = Rf_getCallingDLL();
+	} 
+        else 
+            dll->obj = Rf_getCallingDLL();
 	PROTECT(dll->obj); numProtects++;
     }
 
-    if(inherits(dll->obj, "DLLInfo")) {
+    if (inherits(dll->obj, "DLLInfo")) {
 	SEXP tmp;
 	tmp = VECTOR_ELT(dll->obj, 4);
 	info = (DllInfo *) R_ExternalPtrAddr(tmp);
@@ -1287,7 +1296,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 	fun = R_dlsym(info, name, symbol);
     }
 
-    if(numProtects) UNPROTECT(numProtects);
+    if (numProtects) UNPROTECT(numProtects);
 
     return fun;
 }
