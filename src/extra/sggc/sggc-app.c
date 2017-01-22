@@ -64,20 +64,20 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 {
     switch (type) {
     case RAWSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
+        return (8 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
     case CHARSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
+        return (8 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
     case INTSXP:
     case LGLSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (8 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case REALSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
+        return (8 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
     case STRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (8 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+        return (8 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
     case EXTPTRSXP:
     case BUILTINSXP:
     case SPECIALSXP:
