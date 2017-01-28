@@ -1007,7 +1007,7 @@ int R_check_class_etc(SEXP x, const char **valid)
 {
     static SEXP meth_classEnv = R_NoObject;
     SEXP cl = getAttrib(x, R_ClassSymbol), rho = R_GlobalEnv, pkg;
-    if (meth_classEnv = R_NoObject)
+    if (meth_classEnv == R_NoObject)
 	meth_classEnv = install(".classEnv");
 
     pkg = getAttrib(cl, R_PackageSymbol); /* ==R== packageSlot(class(x)) */
