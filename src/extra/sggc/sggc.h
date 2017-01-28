@@ -23,6 +23,15 @@
      discussion of the implementation of SGGC. */
 
 
+/* CONTROL EXTERN DECLARATIONS FOR GLOBAL VARIABLES.  SGGC_EXTERN will
+   be defined as nothing in sggc.c, where globals will actually be
+   defined, but will be "extern" elsewhere. */
+
+#ifndef SGGC_EXTERN
+#define SGGC_EXTERN extern
+#endif
+
+
 #include "set-app.h"
 
 
@@ -49,7 +58,7 @@ typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
    'small' segment, having total number of chunks no more than given by
    SGGC_CHUNKS_IN_SMALL_SEGMENT. */
 
-char **sggc_data;                  /* Pointer to array of pointers to arrays of 
+SGGC_EXTERN char **sggc_data;      /* Pointer to array of pointers to arrays of 
                                       data blocks for objects within segments */
 
 #define SGGC_CHUNKS_IN_SMALL_SEGMENT (1 << SET_OFFSET_BITS)
@@ -60,12 +69,12 @@ char **sggc_data;                  /* Pointer to array of pointers to arrays of
   (sggc_data [SET_VAL_INDEX(cptr)] + SGGC_CHUNK_SIZE * SET_VAL_OFFSET(cptr))
 
 #ifdef SGGC_AUX1_SIZE
-char **sggc_aux1;                  /* Pointer to array of pointers to arrays of 
+SGGC_EXTERN char **sggc_aux1;      /* Pointer to array of pointers to arrays of 
                                       auxiliary info for objects in segments */
 #endif
 
 #ifdef SGGC_AUX2_SIZE
-char **sggc_aux2;                  /* Pointer to array of pointers to arrays of 
+SGGC_EXTERN char **sggc_aux2;      /* Pointer to array of pointers to arrays of 
                                       auxiliary info for objects in segments */
 #endif
 
@@ -87,7 +96,7 @@ char **sggc_aux2;                  /* Pointer to array of pointers to arrays of
 typedef unsigned char sggc_type_t;
 typedef unsigned char sggc_kind_t;
 
-sggc_type_t *sggc_type;            /* Types of objects in each segment */
+SGGC_EXTERN sggc_type_t *sggc_type;  /* Types of objects in each segment */
 
 /* Macro to access type of object, using the index of its segment. */
 
@@ -101,16 +110,13 @@ sggc_type_t *sggc_type;            /* Types of objects in each segment */
 
 /* Numbers of chunks for the various kinds (zero for kinds for big segments). */
 
-const int sggc_kind_chunks[SGGC_N_KINDS];
+SGGC_EXTERN const int sggc_kind_chunks[SGGC_N_KINDS];
 
 
 /* STRUCTURE HOLDING INFORMATION ON CURRENT SPACE USAGE.  This structure
    is kept up-to-date after calls to sggc_alloc and sggc_collect. */
 
-#ifndef SGGC_INTERNAL
-extern 
-#endif
-struct sggc_info
+SGGC_EXTERN struct sggc_info
 { 
   unsigned gen0_count;       /* Number of newly-allocated objects */
   unsigned gen1_count;       /* Number of objects in old generation 1 */

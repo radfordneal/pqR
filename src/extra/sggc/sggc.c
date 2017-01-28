@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SGGC_INTERNAL  /* So sggc_info will be declared here without 'extern' */
+#define SGGC_EXTERN    /* So globals will be declared here without 'extern' */
 #include "sggc-app.h"
 
 #if SET_STATIC
@@ -151,6 +151,16 @@ int sggc_init (int max_segments)
 {
   int i, j, k;
 
+  /* Check that auxiliary block sixes aren't too big. */
+
+# ifdef SGGC_AUX1_SIZE
+    if (SGGC_AUX1_BLOCK_SIZE * SGGC_CHUNKS_IN_SMALL_SEGMENT > 256) abort();
+# endif
+
+# ifdef SGGC_AUX2_SIZE
+    if (SGGC_AUX2_BLOCK_SIZE * SGGC_CHUNKS_IN_SMALL_SEGMENT > 256) abort();
+# endif
+
   /* Allocate space for pointers to segment descriptors, data, and
      possibly auxiliary information for segments.  Information for
      segments these point to is allocated later, when the segment is
@@ -213,6 +223,22 @@ int sggc_init (int max_segments)
     }
   }
 
+  /* Initialize tables of read-only auxiliary information. */
+
+# ifdef SGGC_AUX1_READ_ONLY
+    for (k = 0; k < SGGC_N_KINDS; k++)
+    { kind_aux1_read_only[k] = sggc_kind_chunks[k] == 0 /* big segment */
+                                ? NULL : sggc_aux1_read_only(k);
+    }
+# endif
+
+# ifdef SGGC_AUX2_READ_ONLY
+    for (k = 0; k < SGGC_N_KINDS; k++)
+    { kind_aux2_read_only[k] = sggc_kind_chunks[k] == 0 /* big segment */
+                                ? NULL : sggc_aux2_read_only(k);
+    }
+# endif
+
   /* Check for read-only data for big segments, and initialize all aux blocks
      to NULL. */
 
@@ -245,20 +271,6 @@ int sggc_init (int max_segments)
         kind_aux2_block[k] = NULL;
         kind_aux2_block_pos[k] = 0;
       }
-    }
-# endif
-
-  /* Initialize tables of read-only auxiliary information. */
-
-# ifdef SGGC_AUX1_READ_ONLY
-    for (k = 0; k < SGGC_N_KINDS; k++)
-    { kind_aux1_read_only[k] = sggc_aux1_read_only(k);
-    }
-# endif
-
-# ifdef SGGC_AUX2_READ_ONLY
-    for (k = 0; k < SGGC_N_KINDS; k++)
-    { kind_aux2_read_only[k] = sggc_aux2_read_only(k);
     }
 # endif
 
@@ -300,29 +312,51 @@ int sggc_init (int max_segments)
 /* -------------------------------- ALLOCATION ------------------------------ */
 
 
-/* UPDATE POSITION TO USE NEXT IN BLOCK OF AUXILIARY INFORMATION. */
+/* UPDATE THE POSITION TO USE NEXT IN A BLOCK OF AUXILIARY INFORMATION.
+   For big segments (with only one object), auxiliary information is
+   used sequentially for each new segment, until all of an auxiliary
+   block has been used.  For small segments (with several objects),
+   new segments are allocated successive positions for the auxiliary
+   information for the segment's first object, until a position is
+   reached where this spot is already used by the second object of a
+   previous segment, at which time the position used jumps forward
+   past all previously-used positions.  In either case, when no space 
+   is left in the auxiliary block, the block pointer is set to NULL,
+   to indicate that a new block must be allocated next time. */
 
-static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos)
+static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos,
+                          int block_size)
 {
-  sggc_nchunks_t nch = sggc_kind_chunks[kind];
-  if (nch == 0) 
-  { nch = SGGC_CHUNKS_IN_SMALL_SEGMENT;
-  }
+  int new_pos;  /* used to avoid overflow in operations on *pos */
+*block = NULL; *pos = 0; return;
 
-  unsigned mask = SGGC_CHUNKS_IN_SMALL_SEGMENT - 1;
-  if ((*pos & mask) + 1 < nch)
-  { *pos += 1;
-  }
-  else 
-  { int b = (*pos >> SET_OFFSET_BITS) + 1;
-    if (b >= nch)
+  sggc_nchunks_t nch = sggc_kind_chunks[kind];
+
+  new_pos = *pos + 1;
+
+  if (nch == 0)  /* big segment */
+  { if (new_pos >= block_size * SGGC_CHUNKS_IN_SMALL_SEGMENT)
     { *block = NULL;
       *pos = 0;  /* though should be irrelevant */
     }
     else
-    { *pos = b << SET_OFFSET_BITS;
+    { *pos = new_pos;
     }
   }
+  else  /* small segment */
+  { if (*pos % nch == 0) 
+    { new_pos += nch * (kind_objects[kind] - 1);
+    }
+    if (new_pos + nch * (kind_objects[kind] - 1) 
+         >= block_size * SGGC_CHUNKS_IN_SMALL_SEGMENT)
+    { *block = NULL;
+      *pos = 0;  /* though should be irrelevant */
+    }
+    else
+    { *pos = new_pos;
+    }
+  }
+
 }
 
 
@@ -506,7 +540,8 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
             "sggc_alloc: aux1 block for %x has pos %d in block for kind %d\n",
              v, kind_aux1_block_pos[kind], kind);
         }
-        next_aux_pos (kind, &kind_aux1_block[kind], &kind_aux1_block_pos[kind]);
+        next_aux_pos (kind, &kind_aux1_block[kind], &kind_aux1_block_pos[kind],
+                      SGGC_AUX1_BLOCK_SIZE);
       }
     }
 # endif
@@ -547,7 +582,8 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
             "sggc_alloc: aux2 block for %x has pos %d in block for kind %d\n",
              v, kind_aux2_block_pos[kind], kind);
         }
-        next_aux_pos (kind, &kind_aux2_block[kind], &kind_aux2_block_pos[kind]);
+        next_aux_pos (kind, &kind_aux2_block[kind], &kind_aux2_block_pos[kind],
+                      SGGC_AUX2_BLOCK_SIZE);
       }
     }
 # endif

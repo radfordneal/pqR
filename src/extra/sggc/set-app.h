@@ -78,6 +78,11 @@
    is allocated when the GC is initialized, with the segments themselves
    allocated later, as needed. */
 
+#ifdef SGGC_EXTERN
+SGGC_EXTERN 
+#else
+extern
+#endif
 struct set_segment **sggc_segment;
 
 

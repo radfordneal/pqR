@@ -98,9 +98,13 @@ auxiliary information 2 is to be used:
   SGGC_AUX2_SIZE        As above, but for auxiliary information 2.
 
   SGGC_AUX1_BLOCK_SIZE  Number of blocks of auxiliary information 1
-                        allocated at once.  (Each block has space for
-                        auxiliary information for as many objects 
-                        as there are data chunks for a small segment.)
+                        allocated at once.  Each block has space for
+                        auxiliary information for as many objects as
+                        there are data chunks for a small segment.
+                        The total number of items of auxiliary
+                        information allocated at once must be no more
+                        than 256 (since offsets in it are stored in an
+                        unsigned char).
 
   SGGC_AUX2_BLOCK_SIZE  As above, but for auxiliary information 2.
 

@@ -1,5 +1,9 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-01-26
+
+  Various fixes, including for extern management of global variables.
+
 Version-2017-01-08
 
   Added option for set facility to be done as static procedures, other

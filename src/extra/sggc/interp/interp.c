@@ -164,7 +164,7 @@ static struct ptr_var { ptr_t *var; struct ptr_var *next; } *first_ptr_var;
 
 char *sggc_aux1_read_only (sggc_kind_t kind)
 {
-  static const char spaces[SGGC_CHUNKS_IN_SMALL_SEGMENT] =
+  static const char spaces[SGGC_CHUNKS_IN_SMALL_SEGMENT+1] =
     "                                                                ";
 
   return kind == TYPE_BINDING ? NULL : (char *) spaces;
