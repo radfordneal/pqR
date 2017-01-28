@@ -1272,8 +1272,6 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
     DllInfo *info;
     DL_FUNC fun = NULL;
 
-REprintf("FindNativeSymbolFromDLL: %d\n",dll->obj);
-
     if (dll->obj == R_NoObject) {
 	/* Rprintf("\nsearching for %s\n", name); */
 	if (env != R_NilValue) {
