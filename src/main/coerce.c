@@ -1128,10 +1128,9 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	 * here "always", but is really dubious since it makes x <- a
 	 * and x <- "a" come out identical. Won't fix just now. */
 	for (vp = v;  vp != R_NilValue; vp = CDR(vp), i++) {
-	    if (isString(CAR(vp)) && length(CAR(vp)) == 1)
-		SET_STRING_ELT(ans, i, STRING_ELT(CAR(vp), 0));
-	    else
-		SET_STRING_ELT(ans, i, STRING_ELT(deparse1line(CAR(vp), 0), 0));
+            SEXP str = isString(CAR(vp)) && length(CAR(vp)) == 1 
+                        ? CAR(vp) : deparse1line (CAR(vp), 0);
+            SET_STRING_ELT (ans, i, STRING_ELT(str,0));
 	}
 	UNPROTECT(1);
 	break;
