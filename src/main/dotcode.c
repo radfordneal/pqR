@@ -2448,7 +2448,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
        or the whole vector list of updated arguments.  We handle attaching
        names to the whole vector, and attributes to each element. */
 
-    if (return_one_named != R_NoObject) {
+    if (return_one_named) {
         if (ans1 != last_arg) DUPLICATE_ATTRIB(ans1, last_arg);
         ans = cons_with_tag (ans1, R_NilValue, last_tag);
     }
