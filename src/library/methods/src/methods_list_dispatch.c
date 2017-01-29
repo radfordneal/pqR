@@ -66,7 +66,7 @@ SEXP R_quick_method_check(SEXP object, SEXP fsym, SEXP fdef);
 static SEXP R_target, R_defined, R_nextMethod, R_dot_nextMethod,
     R_loadMethod_name;
 
-static SEXP Methods_Namespace = NULL;
+static SEXP Methods_Namespace = R_NoObject;
 
 static const char *check_single_string(SEXP, Rboolean, const char *);
 static const char *check_symbol_or_string(SEXP obj, Rboolean nonEmpty,
@@ -85,9 +85,9 @@ static void init_loadMethod()
 
 SEXP R_initMethodDispatch(SEXP envir)
 {
-    if(envir && !isNull(envir))
+    if (envir != R_NoObject && !isNull(envir))
 	Methods_Namespace = envir;
-    if(!Methods_Namespace)
+    if (Methods_Namespace == R_NoObject)
 	Methods_Namespace = R_GlobalEnv;
     if(initialized)
 	return(envir);
@@ -258,7 +258,7 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
 SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 {
     /* Match the list of (evaluated) args to the methods table. */
-    static SEXP  R_allmtable = NULL, R_siglength;
+    static SEXP  R_allmtable = R_NoObject, R_siglength;
     SEXP object, value, mtable;
     const char *class; int nsig, nargs;
 #define NBUF 200
@@ -456,7 +456,7 @@ SEXP R_standardGeneric(SEXP fname, SEXP ev, SEXP fdef)
     int nprotect = 0;
 
     if(!initialized)
-	R_initMethodDispatch(NULL);
+	R_initMethodDispatch(R_NoObject);
     fsym = fname;
     /* TODO:  the code for do_standardGeneric does a test of fsym,
      * with a less informative error message.  Should combine them.*/
@@ -536,7 +536,7 @@ static Rboolean is_missing_arg(SEXP symbol, SEXP ev)
     /* Sanity check, so don't translate */
     if (!isSymbol(symbol)) error("'symbol' must be a SYMSXP");
     loc = R_findVarLocInFrame(ev, symbol);
-    if (loc == NULL)
+    if (loc == R_NilValue)
 	error(_("could not find symbol '%s' in frame of call"),
 	      CHAR(PRINTNAME(symbol)));
     return R_GetVarLocMISSING(loc);
@@ -887,8 +887,8 @@ SEXP R_getClassFromCache(SEXP class, SEXP table)
 
 static SEXP do_inherited_table(SEXP class_objs, SEXP fdef, SEXP mtable, SEXP ev)
 {
-    static SEXP dotFind = NULL, f; SEXP  e, ee;
-    if(dotFind == NULL) {
+    static SEXP dotFind = R_NoObject, f; SEXP  e, ee;
+    if (dotFind == R_NoObject) {
 	dotFind = install(".InheritForDispatch");
 	f = findFun(dotFind, R_MethodsNamespace);
     }
@@ -904,8 +904,8 @@ static SEXP do_inherited_table(SEXP class_objs, SEXP fdef, SEXP mtable, SEXP ev)
 
 static SEXP dots_class(SEXP ev, int *checkerrP)
 {
-    static SEXP call = NULL; SEXP  ee;
-    if(call == NULL) {
+    static SEXP call = R_NoObject; SEXP  ee;
+    if (call == R_NoObject) {
 	SEXP dotFind, f, R_dots;
 	dotFind = install(".dotsClass");
 	PROTECT(f = findFun(dotFind, R_MethodsNamespace));
@@ -921,8 +921,8 @@ static SEXP dots_class(SEXP ev, int *checkerrP)
 
 static SEXP do_mtable(SEXP fdef, SEXP ev)
 {
-    static SEXP dotFind = NULL, f; SEXP  e, ee;
-    if(dotFind == NULL) {
+    static SEXP dotFind = R_NoObject, f; SEXP  e, ee;
+    if (dotFind == R_NoObject) {
 	dotFind = install(".getMethodsTable");
 	f = findFun(dotFind, R_MethodsNamespace);
 	R_PreserveObject(f);
@@ -937,14 +937,14 @@ static SEXP do_mtable(SEXP fdef, SEXP ev)
 
 SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 {
-    static SEXP R_mtable = NULL, R_allmtable, R_sigargs, R_siglength, R_dots;
+    static SEXP R_mtable = R_NoObject, R_allmtable, R_sigargs, R_siglength, R_dots;
     int nprotect = 0;
     SEXP mtable, classes, thisClass = R_NilValue /* -Wall */, sigargs, 
 	siglength, f_env = R_NilValue, method, f, val = R_NilValue;
     char *buf, *bufptr;
     int nargs, i, lwidth = 0;
 
-    if(!R_mtable) {
+    if (R_mtable == R_NoObject) {
 	R_mtable = install(".MTable");
 	R_allmtable = install(".AllMTable");
 	R_sigargs = install(".SigArgs");

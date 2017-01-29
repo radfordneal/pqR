@@ -43,7 +43,7 @@
 static SEXP
 getListElement(SEXP list, SEXP names, const char *str)
 {
-    SEXP elmt = (SEXP) NULL;
+    SEXP elmt = R_NoObject;
     const char *tempChar;
     int i;
 
@@ -105,27 +105,27 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     PROTECT(tmp = getAttrib(control, R_NamesSymbol));
 
     conv = getListElement(control, tmp, "maxiter");
-    if(conv == NULL || !isNumeric(conv))
+    if(conv == R_NoObject || !isNumeric(conv))
 	error(_("'%s' absent"), "control$maxiter");
     maxIter = asInteger(conv);
 
     conv = getListElement(control, tmp, "tol");
-    if(conv == NULL || !isNumeric(conv))
+    if(conv == R_NoObject || !isNumeric(conv))
 	error(_("'%s' absent"), "control$tol");
     tolerance = asReal(conv);
 
     conv = getListElement(control, tmp, "minFactor");
-    if(conv == NULL || !isNumeric(conv))
+    if(conv == R_NoObject || !isNumeric(conv))
 	error(_("'%s' absent"), "control$minFactor");
     minFac = asReal(conv);
 
     conv = getListElement(control, tmp, "warnOnly");
-    if(conv == NULL || !isLogical(conv))
+    if(conv == R_NoObject || !isLogical(conv))
 	error(_("'%s' absent"), "control$warnOnly");
     warnOnly = asLogical(conv);
 
     conv = getListElement(control, tmp, "printEval");
-    if(conv == NULL || !isLogical(conv))
+    if(conv == R_NoObject || !isLogical(conv))
 	error(_("'%s' absent"), "control$printEval");
     printEval = asLogical(conv);
 
@@ -166,32 +166,32 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     tmp = getAttrib(m, R_NamesSymbol);
 
     conv = getListElement(m, tmp, "conv");
-    if(conv == NULL || !isFunction(conv))
+    if(conv == R_NoObject || !isFunction(conv))
 	error(_("'%s' absent"), "m$conv()");
     PROTECT(conv = lang1(conv));
 
     incr = getListElement(m, tmp, "incr");
-    if(incr == NULL || !isFunction(incr))
+    if(incr == R_NoObject || !isFunction(incr))
 	error(_("'%s' absent"), "m$incr()");
     PROTECT(incr = lang1(incr));
 
     deviance = getListElement(m, tmp, "deviance");
-    if(deviance == NULL || !isFunction(deviance))
+    if(deviance == R_NoObject || !isFunction(deviance))
 	error(_("'%s' absent"), "m$deviance()");
     PROTECT(deviance = lang1(deviance));
 
     trace = getListElement(m, tmp, "trace");
-    if(trace == NULL || !isFunction(trace))
+    if(trace == R_NoObject || !isFunction(trace))
 	error(_("'%s' absent"), "m$trace()");
     PROTECT(trace = lang1(trace));
 
     setPars = getListElement(m, tmp, "setPars");
-    if(setPars == NULL || !isFunction(setPars))
+    if(setPars == R_NoObject || !isFunction(setPars))
 	error(_("'%s' absent"), "m$setPars()");
     PROTECT(setPars);
 
     getPars = getListElement(m, tmp, "getPars");
-    if(getPars == NULL || !isFunction(getPars))
+    if(getPars == R_NoObject || !isFunction(getPars))
 	error(_("'%s' absent"), "m$getPars()");
     PROTECT(getPars = lang1(getPars));
 
