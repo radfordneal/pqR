@@ -1104,7 +1104,7 @@ static SEXP do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (invert) { /* invert is actually useful here as it
 				 is performing something like strsplit */
 		    R_size_t pos = 0;
-		    SEXP elt, mvec = NULL;
+		    SEXP elt, mvec = R_NoObject;
 		    int *fmatches = (int*) matches; /* either the minbuffer or an allocated maxibuffer */
 
 		    if (!nmatches) return text;
@@ -1142,7 +1142,7 @@ static SEXP do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 		    SET_VECTOR_ELT(ans, nmatches, elt);
 		    if (LENGTH(elt))
 			memcpy(RAW(elt), RAW(text) + LENGTH(text) - LENGTH(elt), LENGTH(elt));
-		    if (mvec)
+		    if (mvec != R_NoObject)
 			UNPROTECT(1);
 		    UNPROTECT(1);
 		    return ans;

@@ -145,7 +145,7 @@ SEXP FixupLwd(SEXP lwd, double dflt)
 {
     int i, n;
     double w;
-    SEXP ans = NULL;
+    SEXP ans;
 
     n = length(lwd);
     if (n == 0)

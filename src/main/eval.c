@@ -3728,12 +3728,12 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 static int R_bcVersion = 7;
 static int R_bcMinVersion = 6;
 
-static SEXP R_SqrtSymbol = NULL;
-static SEXP R_ExpSymbol = NULL;
-static SEXP R_CSymbol = NULL;
+static SEXP R_SqrtSymbol = R_NoObject;
+static SEXP R_ExpSymbol = R_NoObject;
+static SEXP R_CSymbol = R_NoObject;
 
-static SEXP R_TrueValue = NULL;
-static SEXP R_FalseValue = NULL;
+static SEXP R_TrueValue = R_NoObject;
+static SEXP R_FalseValue = R_NoObject;
 
 #if defined(__GNUC__) && ! defined(BC_PROFILING) && (! defined(NO_THREADED_CODE))
 # define THREADED_CODE

@@ -3022,12 +3022,13 @@ void GEonExit()
 int GEstring_to_pch(SEXP pch)
 {
     int ipch = NA_INTEGER;
-    static SEXP last_pch = NULL;
+    static SEXP last_pch = R_NoObject;
     static int last_ipch = 0;
 
     if (pch == NA_STRING) return NA_INTEGER;
     if (CHAR(pch)[0] == 0) return NA_INTEGER;  /* pch = "" */
     if (pch == last_pch) return last_ipch;/* take advantage of CHARSXP cache */
+                                          /* BUT IS THIS SAFE??????? */
     ipch = (unsigned char) CHAR(pch)[0];
     if (IS_LATIN1(pch)) {
 	if (ipch > 127) ipch = -ipch;  /* record as Unicode */
