@@ -271,6 +271,9 @@ struct promsxp_struct {
 
 typedef struct SEXPREC {
     SEXPREC_HEADER;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+    int32_t padding;
+#endif
     union {
 	struct listsxp_struct listsxp;
 	struct envsxp_struct envsxp;
@@ -303,6 +306,12 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
 
 typedef struct PRIM_SEXPREC {
     SEXPREC_HEADER;
+#if USE_COMPRESSED_POINTERS
+    int32_t padding;
+#endif
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+    int32_t padding;
+#endif
     struct primsxp_struct primsxp;
 } PRIM_SEXPREC, *PRIMSEXP;
 
@@ -321,6 +330,9 @@ struct symsxp_struct {
 
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+    int32_t padding;
+#endif
     struct symsxp_struct symsxp;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
     int32_t padding;
@@ -332,6 +344,9 @@ typedef struct SYM_SEXPREC {
 
 typedef struct EXTPTR_SEXPREC {
     SEXPREC_HEADER;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+    int32_t padding;
+#endif
 #if USE_COMPRESSED_POINTERS
     SEXP unused;             /* Include 'unused' to match the offsets with    */
     SEXP prot;               /*   uncompressed pointers, in case of wrong use */
@@ -341,6 +356,9 @@ typedef struct EXTPTR_SEXPREC {
     void *ptr;               /* The actual exernal pointer */
     SEXP prot;
     SEXP tag;
+#endif
+#if USE_COMPRESSED_POINTERS
+    int32_t padding1, padding2;
 #endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
     int32_t padding;

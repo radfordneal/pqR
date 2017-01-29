@@ -70,7 +70,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
           (1 chunk)           (1 chunk)
 
       Symbol:             Primitive:                        External pointer:
-        info, pname         info, padding                     info, unused
+        info, pname         info, padding                     info, unused/shift
         value, internal     C-function                        prot, tag
         nextsym, lastenv    fast-C-function                   external ptr
         lastbinding, lastenvnotfound     64 bits of info      padding, padding
