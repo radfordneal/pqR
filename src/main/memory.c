@@ -983,9 +983,13 @@ void attribute_hidden InitMemory()
 #   if 0
     REprintf("Sizes of SEXPREC records:\n");
     REprintf(
-    "SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d\n",
-     (int) sizeof(SEXPREC), (int) sizeof(SYM_SEXPREC), (int) sizeof(PRIM_SEXPREC),
-     (int) sizeof(EXTPTR_SEXPREC), (int) sizeof (VECTOR_SEXPREC));
+    "SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d, VECTOR_SEXPREC_C %d\n",
+     (int) sizeof (SEXPREC), 
+     (int) sizeof (SYM_SEXPREC), 
+     (int) sizeof (PRIM_SEXPREC),
+     (int) sizeof (EXTPTR_SEXPREC),
+     (int) sizeof (VECTOR_SEXPREC),
+     (int) sizeof (VECTOR_SEXPREC_C));
 #   endif
 
     sggc_init(2000000);

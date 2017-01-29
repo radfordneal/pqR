@@ -124,11 +124,11 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         info, cptr          info, cptr                        info, cptr
         attrib              attrib                            attrib
         length, padding     length, padding                   length, padding
-        pname               C-function                         external ptr
-        value               fast-C-function                    prot
-        internal            64 bits of info                    tag
-        nextsym             = 48 bytes                         = 48 bytes
-        lastenv             (3 chunks)                           (3 chunks)
+        pname               C-function                        external ptr
+        value               fast-C-function                   prot
+        internal            64 bits of info                   tag
+        nextsym             = 48 bytes                        = 48 bytes
+        lastenv             (3 chunks)                          (3 chunks)
         lastbinding
         lastenvnotfound
         = 80 bytes
@@ -172,7 +172,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         info, cptr          info, cptr                        info, cptr
         attrib, length      attrib, length                    attrib, length
         pname, value        C-function, fast-C-function       prot, tag
-        internal, nextsym   64 bits of info                   external ptr
+        internal, nextsym   64 bits of info                   xptr, padding
         lastenv, lastbinding      = 32 bytes                  = 32 bytes
         lastenvnotfound, padding    (2 chunks)                  (2 chunks)
         = 48 bytes          

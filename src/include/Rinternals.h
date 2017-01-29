@@ -266,6 +266,9 @@ struct promsxp_struct {
 /* The standard node structure consists of a header followed by the
    node data. */
 
+
+/* SEXPREC for types not specially handled below. */
+
 typedef struct SEXPREC {
     SEXPREC_HEADER;
     union {
@@ -274,6 +277,9 @@ typedef struct SEXPREC {
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
     } u;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+    int32_t padding;
+#endif
 } SEXPREC;
 
 
@@ -316,6 +322,9 @@ struct symsxp_struct {
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
     struct symsxp_struct symsxp;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+    int32_t padding;
+#endif
 } SYM_SEXPREC, *SYMSEXP;
 
 
@@ -333,24 +342,35 @@ typedef struct EXTPTR_SEXPREC {
     SEXP prot;
     SEXP tag;
 #endif
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+    int32_t padding;
+#endif
 } EXTPTR_SEXPREC, *EXTPTRSEXP;
 
 /* Version of SEXPREC used as a header in vector nodes.  MUST be kept 
-   consistent with the SEXPREC definition. */
+   consistent with the SEXPREC definition, and with VECTOR_SEXPREC_C. */
 
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
     R_len_t truelength;   /* The mis-named "truelength" field */
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+    int32_t padding;
+#endif
 } VECTOR_SEXPREC;
 
 typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
-/* Version of VECTOR_SEXPREC used for defining constants in const-objs.c. */
+/* Version of VECTOR_SEXPREC used for defining constants in const-objs.c. 
+   MUST be kept consistent with the VECTOR_SEXPREC definition. */
 
 #define R_CONST const  /* Define as 'const' to get actual read-only constants,
                           or nothing if you don't want them to be read-only */
 typedef struct VECTOR_SEXPREC_C {
     SEXPREC_HEADER;
+    R_len_t truelength;   /* The mis-named "truelength" field */
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+    int32_t padding;
+#endif
     union { double d; int w[2]; int i; char c; char s[8]; } data;
 } VECTOR_SEXPREC_C;
 
