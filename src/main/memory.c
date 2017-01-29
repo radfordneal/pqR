@@ -980,17 +980,19 @@ void attribute_hidden InitMemory()
     VALGRIND_MAKE_MEM_NOACCESS(R_PPStack+R_PPStackSize, PP_REDZONE_SIZE);
 #endif
 
-#   if 0
-    REprintf("Sizes of SEXPREC records:\n");
-    REprintf(
-    "SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d, VECTOR_SEXPREC_C %d\n",
-     (int) sizeof (SEXPREC), 
-     (int) sizeof (SYM_SEXPREC), 
-     (int) sizeof (PRIM_SEXPREC),
-     (int) sizeof (EXTPTR_SEXPREC),
-     (int) sizeof (VECTOR_SEXPREC),
-     (int) sizeof (VECTOR_SEXPREC_C));
-#   endif
+    /* Optional display of sizes for the various kinds of SEXPREC structures. */
+
+    if (getenv("R_SHOW_SEXPREC_SIZES")) {
+        REprintf("Sizes of SEXPREC structures:\n");
+        REprintf(
+        "SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d, VECTOR_SEXPREC_C %d\n",
+         (int) sizeof (SEXPREC), 
+         (int) sizeof (SYM_SEXPREC), 
+         (int) sizeof (PRIM_SEXPREC),
+         (int) sizeof (EXTPTR_SEXPREC),
+         (int) sizeof (VECTOR_SEXPREC),
+         (int) sizeof (VECTOR_SEXPREC_C));
+    }
 
     sggc_init(2000000);
 
