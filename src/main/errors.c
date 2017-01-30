@@ -462,7 +462,8 @@ void PrintWarnings(void)
 	   REprintf("%s \n", CHAR(STRING_ELT(names, 0)));
 	else {
 	    const char *dcall, *sep = " ", *msg = CHAR(STRING_ELT(names, 0));
-	    dcall = CHAR(STRING_ELT(deparse1s(VECTOR_ELT(R_Warnings, 0)), 0));
+            SEXP str = deparse1s(VECTOR_ELT(R_Warnings, 0));
+	    dcall = CHAR(STRING_ELT(str,0));
 	    if (mbcslocale) {
 		int msgline1;
 		char *p = strchr(msg, '\n');
@@ -488,7 +489,8 @@ void PrintWarnings(void)
 		REprintf("%d: %s \n", i+1, CHAR(STRING_ELT(names, i)));
 	    else {
 		const char *dcall, *sep = " ", *msg = CHAR(STRING_ELT(names, i));
-		dcall = CHAR(STRING_ELT(deparse1s(VECTOR_ELT(R_Warnings, i)), 0));
+                SEXP str = deparse1s(VECTOR_ELT(R_Warnings, i));
+		dcall = CHAR(STRING_ELT(str,0));
 		if (mbcslocale) {
 		    int msgline1;
 		    char *p = strchr(msg, '\n');

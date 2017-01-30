@@ -35,6 +35,17 @@
 #include <Print.h>
 #include <R_ext/Rdynload.h>
 
+
+/* Enable the redefinition of "error" below to abort on invalid API arguments */
+
+#if 1
+#undef error
+#define error abort_on_error
+static R_NORETURN void abort_on_error()
+{ abort();
+}
+#endif
+
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */
 
