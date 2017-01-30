@@ -876,10 +876,9 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 	n = length(v);
 	PROTECT(rval = allocVector(type, n));
 	for (vp = v, i = 0; vp != R_NilValue; vp = CDR(vp), i++) {
-	    if (isString(CAR(vp)) && length(CAR(vp)) == 1)
-		SET_STRING_ELT(rval, i, STRING_ELT(CAR(vp), 0));
-	    else
-		SET_STRING_ELT(rval, i, STRING_ELT(deparse1line(CAR(vp), 0), 0));
+            SEXP str = isString(CAR(vp)) && length(CAR(vp)) == 1 
+                        ? CAR(vp) : deparse1line (CAR(vp), 0);
+            SET_STRING_ELT (rval, i, STRING_ELT(str,0));
 	}
     }
     else if (type == VECSXP) {
@@ -961,19 +960,9 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 	n = length(v);
 	PROTECT(rval = allocVector(type, n));
 	for (i = 0; i < n;  i++) {
-	    if (isString(VECTOR_ELT(v, i)) && length(VECTOR_ELT(v, i)) == 1)
-		SET_STRING_ELT(rval, i, STRING_ELT(VECTOR_ELT(v, i), 0));
-#if 0
-	    /* this will make as.character(list(s)) not backquote
-	     * non-syntactic name s. It is not entirely clear that
-	     * that is really desirable though....
-	     */
-	    else if (isSymbol(VECTOR_ELT(v, i)))
-		SET_STRING_ELT(rval, i, PRINTNAME(VECTOR_ELT(v, i)));
-#endif
-	    else
-		SET_STRING_ELT(rval, i,
-			       STRING_ELT(deparse1line(VECTOR_ELT(v, i), 0), 0));
+            SEXP str = isString(VECTOR_ELT(v,i)) && length(VECTOR_ELT(v,i)) == 1
+                        ? VECTOR_ELT(v,i) : deparse1line (VECTOR_ELT(v,i), 0);
+            SET_STRING_ELT (rval, i, STRING_ELT(str,0));
 	}
     }
     else if (type == LISTSXP) {
