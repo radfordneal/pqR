@@ -652,7 +652,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
 #   if 0  /* Enable for debug output after typing STATIC.BOX.DEBUG */
 
-    if (IS_STATIC_BOX(res) && installed_already("STATIC.BOX.DEBUG"))
+    if (IS_STATIC_BOX(res) 
+         && installed_already("STATIC.BOX.DEBUG") != R_No_object)
     { REprintf("STATIC BOX RETURNED: %s %f\n",
         TYPEOF(res)==INTSXP ? "int" : "real",
         TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
@@ -2468,8 +2469,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        prompt. */
 
 #   if 0
-        if (1 && !installed_already("switch to new")
-         || 0 && installed_already("switch to old")) {
+        if (1 && installed_already("switch to new") == R_NoObect
+         || 0 && installed_already("switch to old") != R_NoObject) {
 
             if ( ! (variant & VARIANT_NULL))
                 INC_NAMEDCNT(rhs);
@@ -2842,7 +2843,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
                  && isVectorAtomic(res) && LENGTH(res) == 1
                  && ATTRIB(res) == R_NilValue) {
                 if (0) { /* Enable for debugging */
-                    if (installed_already("UNSHARED.DEBUG"))
+                    if (installed_already("UNSHARED.DEBUG") != R_NoObject)
                         Rprintf("Making %s unshared\n",CHAR(PRINTNAME(e)));
                 }
                 res = duplicate(res);

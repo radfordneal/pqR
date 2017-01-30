@@ -332,7 +332,7 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     }
     SEXP buf_installed = installed_already(buf);
     value = R_NilValue;
-    if (buf_installed) {
+    if (buf_installed != R_NoObject) {
         value = findVarInFrame(mtable, buf_installed);
         if (value == R_UnboundValue)
             value = R_NilValue;
@@ -788,8 +788,8 @@ static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
     /* look up the method by package -- if R_unboundValue, will go on
      to do inherited calculation */
     SEXP buf_installed = installed_already(buf);
-    return buf_installed ? findVarInFrame(table, buf_installed)
-                         : R_UnboundValue;
+    return buf_installed != R_NoObject ? findVarInFrame(table, buf_installed)
+                                       : R_UnboundValue;
 }
 
 static const char *
@@ -1017,8 +1017,8 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	    bufptr++;
     }
     SEXP buf_installed = installed_already(buf);
-    method = buf_installed ? findVarInFrame(mtable, install(buf)) 
-                           : R_UnboundValue;
+    method = buf_installed != R_NoObject ? findVarInFrame(mtable, install(buf)) 
+                                         : R_UnboundValue;
     if(DUPLICATE_CLASS_CASE(method)) {
         PROTECT(method);
 	method = R_selectByPackage(method, classes, nargs);

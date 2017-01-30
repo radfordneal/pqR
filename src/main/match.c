@@ -338,7 +338,7 @@ SEXP attribute_hidden matchArgs (
     int arg_i, dots, n_supplied, n_matched;
 
 #if 0  /* Enable for debugging output */
-    if (installed_already("DEBUG.MATCHARGS")) {
+    if (installed_already("DEBUG.MATCHARGS") != R_NoObject) {
         SEXP p; int c;
         if (formals!=R_NilValue) {
             printf("--- Entering matchArgs.  Formals: ");
@@ -615,7 +615,7 @@ SEXP attribute_hidden matchArgs (
         UNPROTECT(1);
 
 #if 0  /* Enable for debugging output */
-    if (installed_already("DEBUG.MATCHARGS")) {
+    if (installed_already("DEBUG.MATCHARGS") != R_NoObject) {
         SEXP p;
         REprintf("    Leaving matchArgs.   Actuals: ");
         for (p = actuals_list; p!=R_NilValue; p = CDR(p)) {
