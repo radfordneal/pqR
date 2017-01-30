@@ -247,11 +247,12 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
     int i, j, k;
     SEXP u;
 
-    if (TYPEOF(a)!=TYPEOF(s) || t!=R_NoObject && TYPEOF(t)!=INTSXP) abort();
+    if (TYPEOF(a)!=TYPEOF(s) 
+         || t!=(helpers_var_ptr)0 && TYPEOF(t)!=INTSXP) abort();
 
     if (na <= 0) return;
 
-    if (t == R_NoObject || LENGTH(t) == 1 && INTEGER(t)[0] == 1) {
+    if (t == (helpers_var_ptr)0 || LENGTH(t) == 1 && INTEGER(t)[0] == 1) {
         if (ns == 1) {
             /* Repeat of a single element na times. */
             switch (TYPEOF(s)) {
@@ -566,7 +567,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	if (ncv == NA_INTEGER || ncv < 0 || (double)ncv*ns > INT_MAX)
 	    error(_("invalid '%s' value"), "times"); /* ncv = 0 is OK */
         na = ncv * ns;
-        ncopy = R_NoObject;
+        ncopy = (helpers_var_ptr)0;
     }
     else if (nc == ns) {
         PROTECT(ncopy = coerceVector(ncopy, INTSXP));
@@ -607,11 +608,11 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else 
             PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1 + (ncopy!=R_NoObject));
+	UNPROTECT(1 + (ncopy!=(helpers_var_ptr)0));
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
-    UNPROTECT(2 + (ncopy!=R_NoObject));
+    UNPROTECT(2 + (ncopy!=(helpers_var_ptr)0));
     return a;
 }
 
@@ -687,7 +688,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (len != NA_INTEGER) { /* takes precedence over times */
         if(len > 0 && each == 0)
             errorcall(call, _("invalid '%s' argument"), "each");
-        times = R_NoObject;
+        times = (helpers_var_ptr)0;
     } 
     else {  /* len == NA_INTEGER */
 	int nt;
@@ -702,7 +703,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	    if (it == NA_INTEGER || it < 0 || (double) lx * it * each > INT_MAX)
 		errorcall(call, _("invalid '%s' argument"), "times");
 	    len = lx * it * each;
-            times = R_NoObject;
+            times = (helpers_var_ptr)0;
 	} 
         else {
             if (nt != (double) lx * each)

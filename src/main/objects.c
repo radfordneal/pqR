@@ -176,10 +176,10 @@ static SEXP matchmethargs(SEXP oldargs, SEXP newargs)
 }
 
 #ifdef S3_for_S4_warn /* not currently used */
-static SEXP s_check_S3_for_S4 = 0;
+static SEXP s_check_S3_for_S4 = R_NoObject;
 void R_warn_S3_for_S4(SEXP method) {
   SEXP call;
-  if(!s_check_S3_for_S4)
+  if(s_check_S3_for_S4 == R_NoObject)
     s_check_S3_for_S4 = install(".checkS3forS4");
   PROTECT(call = lang2(s_check_S3_for_S4, method));
   eval(call, R_MethodsNamespace);
@@ -251,8 +251,8 @@ static int match_to_obj(SEXP arg, SEXP obj) {
    to an object from an S4 subclass.
 */
 int isBasicClass(const char *ss) {
-    static SEXP s_S3table = 0;
-    if(!s_S3table) {
+    static SEXP s_S3table = R_NoObject;
+    if(s_S3table == R_NoObject) {
       s_S3table = findVarInFrame3(R_MethodsNamespace, install(".S3MethodsClasses"), TRUE);
       if(s_S3table == R_UnboundValue)
 	error(_("No .S3MethodsClass table, can't use S4 objects with S3 methods (methods package not attached?)"));
@@ -1285,9 +1285,15 @@ SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
 	    }
 	}
 	else {
+            int i;
 	    prim_methods  = Calloc(n, prim_methods_t);
 	    prim_generics = Calloc(n, SEXP);
 	    prim_mlist	  = Calloc(n, SEXP);
+	    for (i = 0; i < n; i++) {
+		prim_methods[i]	 = NO_METHODS;
+		prim_generics[i] = R_NoObject;
+		prim_mlist[i]	 = R_NoObject;
+	    }
 	}
 	maxMethodsOffset = n;
     }
@@ -1301,12 +1307,13 @@ SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
        however) */
     value = prim_generics[offset];
     if(code == SUPPRESSED) {} /* leave the structure alone */
-    else if(code == NO_METHODS && prim_generics[offset]) {
+    else if(code == NO_METHODS && prim_generics[offset] != R_NoObject) {
 	R_ReleaseObject(prim_generics[offset]);
-	prim_generics[offset] = 0;
-	prim_mlist[offset] = 0;
+	prim_generics[offset] = R_NoObject;
+	prim_mlist[offset] = R_NoObject;
     }
-    else if(fundef && !isNull(fundef) && !prim_generics[offset]) {
+    else if(fundef != R_NoObject && !isNull(fundef) 
+                                 && prim_generics[offset] == R_NoObject) {
 	if(TYPEOF(fundef) != CLOSXP)
 	    error(_("the formal definition of a primitive generic must be a function object (got type '%s')"),
 		  type2char(TYPEOF(fundef)));
@@ -1314,10 +1321,10 @@ SEXP do_set_prim_method(SEXP op, const char *code_string, SEXP fundef,
 	prim_generics[offset] = fundef;
     }
     if(code == HAS_METHODS) {
-	if(!mlist  || isNull(mlist)) {
+	if(mlist == R_NoObject || isNull(mlist)) {
 	    /* turning methods back on after a SUPPRESSED */
 	} else {
-	    if(prim_mlist[offset])
+	    if(prim_mlist[offset] != R_NoObject)
 		R_ReleaseObject(prim_mlist[offset]);
 	    R_PreserveObject(mlist);
 	    prim_mlist[offset] = mlist;
@@ -1350,7 +1357,7 @@ argument to standardGeneric.
 */
 static SEXP get_this_generic(SEXP args)
 {
-    SEXP value = R_NilValue; static SEXP gen_name;
+    SEXP value = R_NilValue; static SEXP gen_name = R_NoObject;
     int i, n;
     RCNTXT *cptr;
     const char *fname;
@@ -1361,7 +1368,7 @@ static SEXP get_this_generic(SEXP args)
     /* else use sys.function (this is fairly expensive-- would be good
      * to force a second argument if possible) */
     PROTECT(args);
-    if(!gen_name)
+    if(gen_name == R_NoObject)
 	gen_name = install("generic");
     cptr = R_GlobalContext;
     fname = translateChar(asChar(CAR(args)));
@@ -1393,7 +1400,7 @@ Rboolean R_has_methods(SEXP op)
     R_stdGen_ptr_t ptr = R_get_standardGeneric_ptr(); int offset;
     if(NOT_METHODS_DISPATCH_PTR(ptr))
 	return(FALSE);
-    if(!op || TYPEOF(op) == CLOSXP) /* except for primitives, just test for the package */
+    if(op == R_NoObject || TYPEOF(op) == CLOSXP) /* except for primitives, just test for the package */
 	return(TRUE);
     if(!allowPrimitiveMethods) /* all primitives turned off by a call to R_set_prim */
 	return FALSE;
@@ -1404,11 +1411,11 @@ Rboolean R_has_methods(SEXP op)
     return(TRUE);
 }
 
-static SEXP deferred_default_object;
+static SEXP deferred_default_object = R_NoObject;
 
 SEXP R_deferred_default_method()
 {
-    if(!deferred_default_object)
+    if(deferred_default_object == R_NoObject)
 	deferred_default_object = install("__Deferred_Default_Marker__");
     return(deferred_default_object);
 }
@@ -1429,6 +1436,9 @@ void R_set_quick_method_check(R_stdGen_ptr_t value)
    0 if not, in which case this function will create a list of promises to
    pass to the method, using CDR(call) for the unevaluated arguments, and
    args for their values. */
+
+/* Returns R_NoObject if it didn't actually dispatch, and otherwise the
+   return value of the dispatched function. */
 
 SEXP attribute_hidden
 R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
@@ -1456,7 +1466,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	UNPROTECT(1);
     }
     mlist = prim_mlist[offset];
-    if(mlist && !isNull(mlist)
+    if(mlist != R_NoObject && !isNull(mlist)
        && quick_method_check_ptr) {
 	value = (*quick_method_check_ptr)(args, mlist, op);
 	if(isPrimitive(value))
@@ -1474,7 +1484,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	/* else, need to perform full method search */
     }
     fundef = prim_generics[offset];
-    if(!fundef || TYPEOF(fundef) != CLOSXP)
+    if(fundef == R_NoObject || TYPEOF(fundef) != CLOSXP)
 	error(_("primitive function \"%s\" has been set for methods but no generic function supplied"),
 	      PRIMNAME(op));
     /* To do:  arrange for the setting to be restored in case of an
@@ -1532,7 +1542,7 @@ SEXP R_do_new_object(SEXP class_def)
 	s_prototype = install("prototype");
 	s_className = install("className");
     }
-    if(!class_def)
+    if(class_def == R_NoObject)
 	error(_("C level NEW macro called with null class definition pointer"));
     e = R_do_slot(class_def, s_virtual);
     if(asLogical(e) != 0)  { /* includes NA, TRUE, or anything other than FALSE */

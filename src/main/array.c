@@ -805,7 +805,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 PROTECT(args = CONS(x,CONS(y,R_NilValue)));
                 nprotect += 1;
                 helpers_wait_until_not_being_computed2(x,y);
-                if (value = R_possible_dispatch(call, op, args, rho, FALSE)) {
+                value = R_possible_dispatch(call, op, args, rho, FALSE);
+                if (value != R_NoObject) {
                     UNPROTECT(nprotect);
                     return value;
                 }
@@ -834,7 +835,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 for (s = args; s != R_NilValue; s = CDR(s)) 
                     SET_TAG(s, R_NilValue);
                 wait_until_arguments_computed(args);
-                if (value = R_possible_dispatch(call, op, args, rho, FALSE)) {
+                value = R_possible_dispatch(call, op, args, rho, FALSE);
+                if (value != R_NoObject) {
                     UNPROTECT(nprotect);
                     return value;
                 }

@@ -225,7 +225,7 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
     /* Match the list of (evaluated) args to the methods list. */
     SEXP object, methods, value, retValue = R_NilValue;
     const char *class; int nprotect = 0;
-    if(!mlist)
+    if(mlist == R_NoObject)
 	return R_NilValue;
     methods = R_do_slot(mlist, s_allMethods);
     if(methods == R_NilValue)
@@ -263,11 +263,11 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     const char *class; int nsig, nargs;
 #define NBUF 200
     char buf[NBUF]; char *ptr;
-    if(!R_allmtable) {
+    if(R_allmtable == R_NoObject) {
 	R_allmtable = install(".AllMTable");
 	R_siglength = install(".SigLength");
     }
-    if(!genericEnv || TYPEOF(genericEnv) != ENVSXP)
+    if(genericEnv == R_NoObject || TYPEOF(genericEnv) != ENVSXP)
 	return R_NilValue; /* a bug or not initialized yet */
     mtable = findVarInFrame(genericEnv, R_allmtable);
     if(mtable == R_UnboundValue || TYPEOF(mtable) != ENVSXP)

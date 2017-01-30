@@ -659,7 +659,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     }
 
 #   endif
-
+if (res == R_NoObject) abort();
     return res;
 }
 
@@ -3311,7 +3311,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	for(el = argValue; el != R_NilValue; el = CDR(el)) {
 	    if(IS_S4_OBJECT(CAR(el))) {
 	        value = R_possible_dispatch(call, op, argValue, rho, TRUE);
-	        if(value) {
+	        if (value != R_NoObject) {
 		    *ans = value;
 		    UNPROTECT(nprotect);
 		    return 1;
@@ -3406,7 +3406,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 argValue = args;
 	    /* This means S4 dispatch */
 	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
-	    if(value) {
+	    if (value != R_NoObject) {
 		*ans = value;
 		RETURN_OUTSIDE_PROTECT (1);
 	    }
@@ -3557,10 +3557,12 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	/* Remove argument names to ensure positional matching */
 	if(isOps)
 	    for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG(s, R_NilValue);
-	if(R_has_methods(op) &&
-	   (value = R_possible_dispatch(call, op, args, rho, FALSE))) {
-	       *ans = value;
-	       return 1;
+	if(R_has_methods(op)) {
+	    value = R_possible_dispatch(call, op, args, rho, FALSE);
+            if (value != R_NoObject) {
+	        *ans = value;
+	        return 1;
+            }
 	}
 	/* else go on to look for S3 methods */
     }
@@ -4538,7 +4540,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
 	compiled argument code. */
   if (IS_S4_OBJECT(x) && R_has_methods(op)) {
     SEXP val = R_possible_dispatch(call, op, pargs, rho, TRUE);
-    if (val) {
+    if (val != R_NoObject) {
       *pv = val;
       UNPROTECT(1);
       return TRUE;

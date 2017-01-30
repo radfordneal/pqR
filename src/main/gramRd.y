@@ -422,7 +422,7 @@ static SEXP xxnewlist(SEXP item)
     Rprintf("xxnewlist(item=%p)", item);
 #endif    
     PROTECT(tmp = NewList());
-    if (item) {
+    if (item != R_NoObject) {
     	int flag = getDynamicFlag(item);
     	PROTECT(ans = GrowList(tmp, item));
     	setDynamicFlag(ans, flag);
