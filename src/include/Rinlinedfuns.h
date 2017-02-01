@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -34,46 +34,11 @@
 #ifndef R_INLINES_H_
 #define R_INLINES_H_
 
-/* Probably not able to use C99 semantics in gcc < 4.3.0 but who knows what
-   unofficial versions Debian or RedHat will distribute */
-#if __GNUC__ == 4 && __GNUC_MINOR__ >= 3 && defined(__GNUC_STDC_INLINE__) && !defined(C99_INLINE_SEMANTICS)
-#define C99_INLINE_SEMANTICS 1
-#endif
-
-/* Apple's gcc build >5400 (since Xcode 3.0) doesn't support GNU inline in C99 mode */
-#if __APPLE_CC__ > 5400 && !defined(C99_INLINE_SEMANTICS) && __STDC_VERSION__ >= 199901L
-#define C99_INLINE_SEMANTICS 1
-#endif
-
-#ifdef COMPILING_R
-/* defined only in inlined.c: this emits standalone code there */
-# define INLINE_FUN
+#ifdef COMPILING_R  /* only in inlined.c, to get externally linkable code */
+#   define INLINE_FUN
 #else
-/* This section is normally only used for versions of gcc which do not
-   support C99 semantics.  __GNUC_STDC_INLINE__ is defined if
-   GCC is following C99 inline semantics by default: we
-   switch R's usage to the older GNU semantics via attributes.
-   Do this even for __GNUC_GNUC_INLINE__ to shut up warnings in 4.2.x.
-   __GNUC_STDC_INLINE__ and __GNUC_GNU_INLINE__ were added in gcc 4.2.0.
-*/
-# if defined(__GNUC_STDC_INLINE__) || defined(__GNUC_GNU_INLINE__)
-#  define INLINE_FUN extern __attribute__((gnu_inline)) inline
-# else
-#  define INLINE_FUN extern R_INLINE
-# endif
-#endif /* ifdef COMPILING_R */
-
-#if C99_INLINE_SEMANTICS
-# undef INLINE_FUN
-# ifdef COMPILING_R
-/* force exported copy */
-#  define INLINE_FUN extern inline
-# else
-/* either inline or link to extern version at compiler's choice */
-#  define INLINE_FUN inline
-# endif /* ifdef COMPILING_R */
-#endif /* C99_INLINE_SEMANTICS */
-
+#   define INLINE_FUN static inline
+#endif
 
 #include <string.h> /* for strlen, strcmp */
 #include <complex.h>

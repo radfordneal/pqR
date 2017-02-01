@@ -61,13 +61,6 @@ typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
 SGGC_EXTERN char **sggc_data;      /* Pointer to array of pointers to arrays of 
                                       data blocks for objects within segments */
 
-#define SGGC_CHUNKS_IN_SMALL_SEGMENT (1 << SET_OFFSET_BITS)
-
-/* Macro to get data pointer for an object, from its index and offset. */
-
-#define SGGC_DATA(cptr) \
-  (sggc_data [SET_VAL_INDEX(cptr)] + SGGC_CHUNK_SIZE * SET_VAL_OFFSET(cptr))
-
 #ifdef SGGC_AUX1_SIZE
 SGGC_EXTERN char **sggc_aux1;      /* Pointer to array of pointers to arrays of 
                                       auxiliary info for objects in segments */
@@ -78,14 +71,27 @@ SGGC_EXTERN char **sggc_aux2;      /* Pointer to array of pointers to arrays of
                                       auxiliary info for objects in segments */
 #endif
 
-/* Macros to get pointer to auxiliarly information for an object, from its 
-   index and offset. */
+#define SGGC_CHUNKS_IN_SMALL_SEGMENT (1 << SET_OFFSET_BITS)
 
-#define SGGC_AUX1(cptr) \
-  (sggc_aux1[SET_VAL_INDEX(cptr)] + SGGC_AUX1_SIZE * SET_VAL_OFFSET(cptr))
 
-#define SGGC_AUX2(cptr) \
-  (sggc_aux2[SET_VAL_INDEX(cptr)] + SGGC_AUX2_SIZE * SET_VAL_OFFSET(cptr))
+/* INLINE FUNCTION TO GET DATA POINTER FOR AN OBJECT, and similarly
+   for auxiliary information (if present). */
+
+static inline char *SGGC_DATA (sggc_cptr_t cptr)
+{ return sggc_data[SET_VAL_INDEX(cptr)] + SGGC_CHUNK_SIZE*SET_VAL_OFFSET(cptr);
+}
+
+#ifdef SGGC_AUX1_SIZE
+static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
+{ return sggc_aux1[SET_VAL_INDEX(cptr)] + SGGC_AUX1_SIZE * SET_VAL_OFFSET(cptr);
+}
+#endif
+
+#ifdef SGGC_AUX2_SIZE
+static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
+{ return sggc_aux2[SET_VAL_INDEX(cptr)] + SGGC_AUX2_SIZE * SET_VAL_OFFSET(cptr);
+}
+#endif
 
 
 /* TYPES AND KINDS OF SEGMENTS.  Types and kinds must fit in 8 bits,
@@ -102,11 +108,12 @@ SGGC_EXTERN sggc_type_t *sggc_type;  /* Types of objects in each segment */
 
 #define SGGC_TYPE(cptr) (sggc_type[SET_VAL_INDEX(cptr)])
 
-/* Macro to find the kind of the segment containing an object. */
+/* Inline function to find the kind of the segment containing an object. */
 
-#define SGGC_KIND(cptr) \
-  (SET_SEGMENT(SET_VAL_INDEX(cptr))->x.big.big ? SGGC_TYPE(cptr) \
-    : SET_SEGMENT(SET_VAL_INDEX(cptr))->x.small.kind)
+static inline sggc_kind_t SGGC_KIND (sggc_cptr_t cptr) 
+{ return SET_SEGMENT(SET_VAL_INDEX(cptr))->x.big.big ? SGGC_TYPE(cptr)
+          : SET_SEGMENT(SET_VAL_INDEX(cptr))->x.small.kind;
+}
 
 /* Numbers of chunks for the various kinds (zero for kinds for big segments). */
 

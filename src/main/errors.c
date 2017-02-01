@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995--2012  The R Core Team.
@@ -298,6 +298,21 @@ static int wd(const char * buf)
     return nc;
 }
 
+const char *debug_var;
+void debug_fun1 (SEXP call)
+{
+	if (call != R_NilValue) {
+            SEXP str = deparse1s(call);
+	    debug_var = CHAR(STRING_ELT(str,0));
+	} 
+}
+void debug_fun2 (SEXP call)
+{
+	if (call != R_NilValue) {
+	    debug_var = CHAR(STRING_ELT(deparse1s(call),0));
+	} 
+}
+
 static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 {
     int w;
@@ -346,10 +361,12 @@ static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 	errorcall(call, _("(converted from warning) %s"), buf);
     }
     else if(w == 1) {	/* print as they happen */
-	char *tr;
-	if( call != R_NilValue ) {
-	    dcall = CHAR(STRING_ELT(deparse1s(call), 0));
-	} else dcall = "";
+	if (call != R_NilValue) {
+            SEXP str = deparse1s(call);
+	    dcall = CHAR(STRING_ELT(str,0));
+	} 
+        else 
+            dcall = "";
 	Rvsnprintf(buf, min(BUFSIZE, R_WarnLength+1), format, ap);
 	if(R_WarnLength < BUFSIZE - 20 && strlen(buf) == R_WarnLength)
 	    strcat(buf, " [... truncated]");
@@ -363,7 +380,7 @@ static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 	else
 	    REprintf(_("Warning in %s :\n  %s\n"), dcall, buf);
 	if(R_ShowWarnCalls && call != R_NilValue) {
-	    tr = R_ConciseTraceback(call, 0);
+	    char *tr = R_ConciseTraceback(call, 0);
 	    if (strlen(tr)) REprintf("Calls: %s\n", tr);
 	}
     }
