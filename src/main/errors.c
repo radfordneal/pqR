@@ -298,21 +298,6 @@ static int wd(const char * buf)
     return nc;
 }
 
-const char *debug_var;
-void debug_fun1 (SEXP call)
-{
-	if (call != R_NilValue) {
-            SEXP str = deparse1s(call);
-	    debug_var = CHAR(STRING_ELT(str,0));
-	} 
-}
-void debug_fun2 (SEXP call)
-{
-	if (call != R_NilValue) {
-	    debug_var = CHAR(STRING_ELT(deparse1s(call),0));
-	} 
-}
-
 static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 {
     int w;

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-2009   The R Core Team.
- *  Modifications for pqR Copyright (c) 2014, 2015 Radford M. Neal.
+ *  Modifications for pqR Copyright (c) 2014, 2015, 2017 Radford M. Neal.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -536,7 +536,7 @@ static Rboolean is_missing_arg(SEXP symbol, SEXP ev)
     /* Sanity check, so don't translate */
     if (!isSymbol(symbol)) error("'symbol' must be a SYMSXP");
     loc = R_findVarLocInFrame(ev, symbol);
-    if (loc == R_NilValue)
+    if (loc == R_NoObject)
 	error(_("could not find symbol '%s' in frame of call"),
 	      CHAR(PRINTNAME(symbol)));
     return R_GetVarLocMISSING(loc);
