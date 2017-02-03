@@ -5857,7 +5857,7 @@ shows a division of memory into @code{Vcells} used to store the contents
 of vectors and @code{Ncells} used to store everything else, including
 all the administrative overhead for vectors such as type and length
 information.  In fact the vector contents are divided into two
-pools. Memory for small vectors (by default 128 bytes or less) is
+pools. Memory for small vectors is
 obtained in large chunks and then parcelled out by @R{}; memory for
 larger vectors is obtained directly from the operating system.
 
@@ -5886,10 +5886,9 @@ print.svycoxph <- function (x, ...)
 @end smallexample
 
 @noindent
-It may not be obvious that the assignment to @code{x$call} will cause
-the entire object @code{x} to be copied.  This copying to preserve the
-call-by-value illusion is usually done by the internal C function
-@code{duplicate}.
+It may not be obvious whether or not the assignment to @code{x$call} will 
+cause the entire object @code{x} to be copied, as might (or might not)
+be needed to preserve the call-by-value illusion.
 
 The main reason that memory-use profiling is difficult is garbage
 collection. Memory is allocated at well-defined times in an @R{}
@@ -5898,7 +5897,6 @@ program, but is freed whenever the garbage collector happens to run.
 @menu
 * Memory statistics from Rprof::
 * Tracking memory allocations::
-* Tracing copies of an object::
 @end menu
 
 @node Memory statistics from Rprof, Tracking memory allocations, Profiling R code for memory use, Profiling R code for memory use
@@ -5922,7 +5920,7 @@ and it makes each garbage collection release a smaller amount of memory.
 Changing the memory limits with @code{mem.limits()} may also be useful,
 to see how the code would run under different memory conditions.
 
-@node Tracking memory allocations, Tracing copies of an object, Memory statistics from Rprof, Profiling R code for memory use
+@node Tracking memory allocations, , Memory statistics from Rprof, Profiling R code for memory use
 @subsection Tracking memory allocations
 @findex Rprofmem
 
@@ -5947,57 +5945,6 @@ Running the example from the previous section with
 @noindent
 shows that apart from some initial and final work in @code{boot} there
 are no vector allocations over 1000 bytes.
-
-@node  Tracing copies of an object,  , Tracking memory allocations, Profiling R code for memory use
-@subsection Tracing copies of an object
-@findex tracemem
-@findex untracemem
-
-The third method of memory profiling involves tracing copies made of a
-specific (presumably large) @R{} object. Calling @code{tracemem} on an
-object marks it so that a message is printed to standard output when
-the object is copied @emph{via} @code{duplicate} or coercion to another type,
-or when a new object of the same size is created in arithmetic
-operations. The main reason that this can be misleading is that
-copying of subsets or components of an object is not tracked. It may
-be helpful to use @code{tracemem} on these components.
-
-
-In the example above we can run @code{tracemem} on the data frame
-@code{st}
-
-@smallexample
-> tracemem(st)
-[1] "<0x9abd5e0>"
-> storm.boot <- boot(rs, storm.bf, R = 4)
-memtrace[0x9abd5e0->0x92a6d08]: statistic boot
-memtrace[0x92a6d08->0x92a6d80]: $<-.data.frame $<- statistic boot
-memtrace[0x92a6d80->0x92a6df8]: $<-.data.frame $<- statistic boot
-memtrace[0x9abd5e0->0x9271318]: statistic boot
-memtrace[0x9271318->0x9271390]: $<-.data.frame $<- statistic boot
-memtrace[0x9271390->0x9271408]: $<-.data.frame $<- statistic boot
-memtrace[0x9abd5e0->0x914f558]: statistic boot
-memtrace[0x914f558->0x914f5f8]: $<-.data.frame $<- statistic boot
-memtrace[0x914f5f8->0x914f670]: $<-.data.frame $<- statistic boot
-memtrace[0x9abd5e0->0x972cbf0]: statistic boot
-memtrace[0x972cbf0->0x972cc68]: $<-.data.frame $<- statistic boot
-memtrace[0x972cc68->0x972cd08]: $<-.data.frame $<- statistic boot
-memtrace[0x9abd5e0->0x98ead98]: statistic boot
-memtrace[0x98ead98->0x98eae10]: $<-.data.frame $<- statistic boot
-memtrace[0x98eae10->0x98eae88]: $<-.data.frame $<- statistic boot
-@end smallexample
-
-@noindent
-The object is duplicated fifteen times, three times for each of the
-@code{R+1} calls to @code{storm.bf}.  This is surprising, since none of the duplications happen inside @code{nls}. Stepping through @code{storm.bf} in the debugger shows that all three happen in the line
-
-@smallexample
-st$Time <- st$fit + rs[i]
-@end smallexample
-
-Data frames are slower than matrices and this is an example of why.
-Using @code{tracemem(st$Viscosity)} does not reveal any additional
-copying.
 
 @node Profiling compiled code,  , Profiling R code for memory use, Tidying and profiling R code
 @section Profiling compiled code

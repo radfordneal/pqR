@@ -179,14 +179,12 @@ static Rboolean gc_inhibit_release = FALSE;
 
 static int R_IsMemReporting;
 static int R_MemReportingToTerminal;
-static int R_MemPagesReporting;
 static int R_MemStackReporting;
 static int R_MemDetailsReporting;
 static FILE *R_MemReportingOutfile;
 static R_size_t R_MemReportingThreshold;
 static R_len_t R_MemReportingNElem;
 static void R_ReportAllocation (R_size_t, SEXPTYPE, R_len_t);
-static void R_ReportNewPage();
 
 
 R_size_t attribute_hidden R_GetMaxVSize(void)
@@ -231,7 +229,7 @@ static void mem_err_malloc(R_size_t size)
 /* compute size in VEC units so result will fit in LENGTH field for FREESXPs */
 static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
 {
-    return ((int64_t) sggc_nchunks(TYPEOF(s),LENGTH(s)) * SGGC_CHUNK_SIZE
+    return ((int64_t) Rf_nchunks(TYPEOF(s),LENGTH(s)) * SGGC_CHUNK_SIZE
              - sizeof(SEXPREC_ALIGN)) / sizeof(VECREC);
 }
 
@@ -1401,8 +1399,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
 
 /* Fast, specialize allocVector for vectors of length 1.  The type 
-   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so a that
-   there's no need to initialize a pointer in the data part. 
+   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so that it's
+   of SGGC type 1, and there's no need to initialize a pointer in the 
+   data part. 
 
    The version with an argument is static.  Versions for each allowed
    type are defined below for use elsewhere in the interpreter, in which
@@ -1414,9 +1413,8 @@ static SEXP allocVector1 (SEXPTYPE type)
 {
 #if VALGRIND_LEVEL==0
     SEXP s = alloc_vec(type,1);
-    if (R_IsMemReporting && !R_MemPagesReporting)
-        R_ReportAllocation (
-          sizeof(SEXPREC_ALIGN) + sizeof(VECREC), type, 1);
+    if (R_IsMemReporting)
+        R_ReportAllocation (Rf_nchunks(type,1) * SGGC_CHUNK_SIZE, type, 1);
     return s;
 #else
     return allocVector (type, 1);
@@ -1530,13 +1528,9 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     s = alloc_vec(type,length);
 
-    if (R_IsMemReporting) {
-        if (!R_MemPagesReporting) {
-            R_ReportAllocation (
-                sggc_nchunks(type,length) * SGGC_CHUNK_SIZE,
-                type, length);
-        }
-    }
+    if (R_IsMemReporting)
+        R_ReportAllocation (Rf_nchunks(type,length) * SGGC_CHUNK_SIZE,
+                            type, length);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
@@ -2022,17 +2016,6 @@ static void R_ReportAllocation (R_size_t size, SEXPTYPE type, R_len_t length)
     }
 }
 
-static void R_ReportNewPage(void)
-{
-    if (R_MemPagesReporting) {
-        if (R_MemReportingOutfile != NULL)
-            fprintf (R_MemReportingOutfile, "new page");
-        if (R_MemReportingToTerminal)
-            REprintf ("RPROFMEM: new page");
-	R_OutputStackTrace();
-    }
-}
-
 static void R_EndMemReporting(void)
 {
     if(R_MemReportingOutfile != NULL) {
@@ -2092,7 +2075,7 @@ static SEXP do_Rprofmem(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_MemReportingToTerminal = asLogical(CAR(ap));
 
     ap = CDR(ap);
-    R_MemPagesReporting = asLogical(CAR(ap));
+    /* R_MemPagesReporting = asLogical(CAR(ap)); - DEFUNCT */
 
     ap = CDR(ap);
     R_MemDetailsReporting = asLogical(CAR(ap));

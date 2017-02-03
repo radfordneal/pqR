@@ -1,7 +1,7 @@
 % File src/library/utils/man/Rprofmem.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
-% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Rprofmem}
@@ -32,9 +32,7 @@ Rprofmemt(filename = "", append = FALSE,
   \item{stack}{logical: should a stack trace be included in reports?}
   \item{terminal}{logical: should reports be printed on the terminal (as
     well as possibly written to \code{filename})?}
-  \item{pages}{logical: should allocation of pages for small vectors 
-    be reported, and reporting of individual small vector allocations 
-    suppressed?}
+  \item{pages}{logical: ignored, but retained for compatibility}
   \item{details}{logical: should details of allocation be reported,
     rather than only the total number of bytes?}
 }
@@ -59,16 +57,8 @@ Rprofmemt(filename = "", append = FALSE,
   Reports to the terminal are preceded by "RPROFMEM:".  These reports
   are not diverted to a file when \code{sink} is used.
 
-  If \code{pages=TRUE} allocations of individual
-  vectors will be reported only if they are "large", and allocations of 
-  pages to hold small vectors will be reported.
-  The size of a page of memory and the size over which a vector is "large"  
-  (and hence for which \code{malloc} is used) are compile-time constants, 
-  by default 2000 and 128 bytes respectively.
-
-  If \code{pages=FALSE}, allocations
-  of all vectors with size over \code{threshold} and number of elements 
-  at least \code{nelem} are reported, and page allocations are not reported.
+  Allocations of all vectors with size over \code{threshold} and
+  number of elements at least \code{nelem} are reported.
 
   A report of an allocation of a vector (to \code{filename} and/or the 
   terminal) will contain the number of bytes allocated, which
@@ -77,9 +67,6 @@ Rprofmemt(filename = "", append = FALSE,
   functions in the call stack will also be printed, and if
   \code{details=TRUE}, the type and length of the vector allocated will be 
   displayed in parentheses (before the call stack).  
-
-  An allocation of a page for small vectors (when \code{pages=TRUE}) will
-  result in a report consisting of "new page:" followed by the call stack.
 
   When \code{terminal=TRUE} or \code{details=TRUE}, a newline is always 
   written after each allocation report.  For backward compatibility, this 
@@ -95,8 +82,6 @@ Rprofmemt(filename = "", append = FALSE,
 \seealso{
   The R sampling profiler, \code{\link{Rprof}} also collects
   memory information.
-
-  \code{\link{tracemem}} traces duplications of specific objects.
 
   The "Writing R Extensions" manual section on "Tidying and profiling R code"
 }

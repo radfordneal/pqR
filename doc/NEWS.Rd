@@ -18,6 +18,8 @@
         and call_S (unused?).
 
         "identify" was returning C NULL sometimes - changed to R NULL.
+
+        "pages" option for Rprofmem is now defunct.
   }}
 
 }
