@@ -329,7 +329,7 @@ static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos,
 {
   int new_pos;  /* used to avoid overflow in operations on *pos */
 
-*block = NULL; *pos = 0; return; 
+/* *block = NULL; *pos = 0; return; */
 
   sggc_nchunks_t nch = sggc_kind_chunks[kind];
 
