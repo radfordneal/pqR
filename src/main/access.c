@@ -599,7 +599,7 @@ int  R_tint_a, R_tint_b, R_tint_c, R_tint_d, R_tint_e, R_tint_f, R_tint_g,
      R_tint_o, R_tint_p, R_tint_q, R_tint_r, R_tint_s, R_tint_t, R_tint_u,
      R_tint_v, R_tint_w, R_tint_x, R_tint_y, R_tint_z;
 
-void Rf_code_gen_test_func (void)
+void Rf_code_gen_test_func1 (void)
 {
   R_tint_a = NAMEDCNT(R_tobj_a);
   R_tint_b = NAMED(R_tobj_b);
@@ -625,6 +625,19 @@ void Rf_code_gen_test_func (void)
   SET_TRUELENGTH(R_tobj_p,R_tint_p);
 
   R_tint_q = TYPEOF(R_tobj_q);
+}
+
+void Rf_code_gen_test_func2 (void)
+{
+  R_tint_a = TYPEOF(R_tobj_a);
+  R_tint_b = LENGTH(R_tobj_a);
+  R_tint_c = INTEGER(R_tobj_a)[2];
+
+  R_tobj_w = ATTRIB(R_tobj_b);
+  R_tobj_x = CAR(R_tobj_b);
+  R_tobj_y = CDR(R_tobj_b);
+  R_tobj_z = TAG(R_tobj_b);
+
 }
 
 #endif
