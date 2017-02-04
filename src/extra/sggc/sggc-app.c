@@ -19,6 +19,28 @@
 
 #include <Defn.h>
 
+
+#if USE_COMPRESSED_POINTERS
+
+/* Constant lengths in auxiliary information 1, used for constant objects
+   in const-objs.c and also for many non-constant objects. */
+
+const R_len_t sggc_length0[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+const R_len_t sggc_length1[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
+
+#endif
+
 const char R_type_to_sggc_type[32] = 
 {
   0, /* NILSXP */

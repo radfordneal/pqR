@@ -1091,7 +1091,6 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
-    LENGTH(r) = length;
 
     if (R_IsMemReporting && isVector(r)) R_ReportAllocation (r);
 
@@ -1414,11 +1413,14 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
 static SEXP allocVector1 (SEXPTYPE type)
 {
+    SEXP s;
 #if VALGRIND_LEVEL==0
-    return alloc_vec(type,1);
+    s = alloc_vec(type,1);
+    LENGTH(s) = 1;
 #else
-    return allocVector (type, 1);
+    s = allocVector (type, 1);
 #endif
+    return s;
 }
 
 SEXP allocVector1RAW(void)  { return allocVector1(RAWSXP); }
@@ -1527,6 +1529,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     }
 
     s = alloc_vec(type,length);
+    LENGTH(s) = length;
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);

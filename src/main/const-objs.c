@@ -259,20 +259,6 @@ static const SEXP nilattrib[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
     R_NilValue, R_NilValue, R_NilValue, R_NilValue
 };
 
-static const R_len_t length0[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static const R_len_t length1[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-};
-
 #endif
 
 void Rf_constant_init(void)
@@ -285,7 +271,7 @@ void Rf_constant_init(void)
                        R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
                        1, (char *) &R_NilValue_const
 #if USE_COMPRESSED_POINTERS
-                       , (char *) length0, (char *) nilattrib
+                       , (char *) sggc_length0, (char *) nilattrib
 #endif
                       );
 
@@ -299,7 +285,7 @@ void Rf_constant_init(void)
                        R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
                        4, (char *) R_ScalarBox_space
 #if USE_COMPRESSED_POINTERS
-                       , (char *) length1, (char *) nilattrib
+                       , (char *) sggc_length1, (char *) nilattrib
 #endif
                       );
 
@@ -311,7 +297,7 @@ void Rf_constant_init(void)
                        R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
                        1, (char *) R_env_consts
 #if USE_COMPRESSED_POINTERS
-                       , (char *) length1, (char *) nilattrib
+                       , (char *) sggc_length1, (char *) nilattrib
 #endif
                       );
 
@@ -323,7 +309,7 @@ void Rf_constant_init(void)
                        R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
                        1, (char *) R_sym_consts
 #if USE_COMPRESSED_POINTERS
-                       , (char *) length1, (char *) nilattrib
+                       , (char *) sggc_length1, (char *) nilattrib
 #endif
                       );
 
@@ -338,7 +324,7 @@ void Rf_constant_init(void)
                        R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
                        R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts
 #if USE_COMPRESSED_POINTERS
-                       , (char *) length1, (char *) nilattrib
+                       , (char *) sggc_length1, (char *) nilattrib
 #endif
                       );
 
@@ -351,7 +337,7 @@ void Rf_constant_init(void)
                        sizeof R_List1_consts / sizeof R_List1_consts[0],
                        (char *) R_List1_consts
 #if USE_COMPRESSED_POINTERS
-                       , (char *) length1, (char *) nilattrib
+                       , (char *) sggc_length1, (char *) nilattrib
 #endif
                       );
 

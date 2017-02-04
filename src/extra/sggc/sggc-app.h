@@ -82,12 +82,20 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 #define SGGC_AUX1_SIZE 4        /* Lengths of objects */
 #define SGGC_AUX1_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
-/* #define SGGC_AUX1_READ_ONLY */  /* Lengths for non-vectors are constant 1 */
+
+#define SGGC_AUX1_READ_ONLY     /* Lengths of some non-vectors are constant 1 */
+
+#define sggc_aux1_read_only(kind) ( ( \
+ ( ((uint64_t)1 << (SGGC_N_TYPES+2))   /* LISTSXP, etc. */ + \
+   ((uint64_t)1 << (2*SGGC_N_TYPES+2)) /* SYMSXP */ ) >> (kind) ) & 1 \
+     ? (char *) sggc_length1 : (char *) NULL )
 
 #define SGGC_AUX2_SIZE 4        /* Attribute, as compressed pointer */
 #define SGGC_AUX2_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
 
-#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind plus 7 small; must not
+                                          exceed 64, given sggc_aux1_read_only
+                                          implementation above. */
 
 /* Note: chunks in non-vector types are given by second row below, except
    for EXTPTRSXP, BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
@@ -242,3 +250,6 @@ static inline sggc_kind_t sggc_kind_inline (sggc_type_t type,
 
     return type;  /* kind for a big segment */
 }
+
+extern const int32_t sggc_length0[SGGC_CHUNKS_IN_SMALL_SEGMENT];
+extern const int32_t sggc_length1[SGGC_CHUNKS_IN_SMALL_SEGMENT];
