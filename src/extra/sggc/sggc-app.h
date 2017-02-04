@@ -50,7 +50,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
 
 #define SGGC_N_TYPES 5
 
-const char R_type_to_sggc_type[32];  /* Initialized in sggc-app.c */
+extern const char R_type_to_sggc_type[32];  /* Initialized in sggc-app.c */
 
 sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
@@ -103,6 +103,11 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  32,  32,   2,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
 
+#define SGGC_TOTAL_BYTES(type,length) \
+    ( Rf_nchunks(type,length) * SGGC_CHUNK_SIZE /* data part */ \
+       + 4 /* attribute pointer */ \
+       + 4 * ((VECTOR_OR_CHAR_TYPES >> type) & 1) /* length */ )
+    
 #endif
 
 
@@ -153,6 +158,9 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  32,  32,   5,  32,   3         /* 7th smallest sizes, only for type 0 */ \
 }
 
+#define SGGC_TOTAL_BYTES(type,length) \
+    ( Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
+
 #endif
 
 
@@ -196,6 +204,9 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  16,  32,   3,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
  32,  32,   3,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
+
+#define SGGC_TOTAL_BYTES(type,length) \
+    ( Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
 
 #endif
 

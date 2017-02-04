@@ -184,7 +184,7 @@ static int R_MemDetailsReporting;
 static FILE *R_MemReportingOutfile;
 static R_size_t R_MemReportingThreshold;
 static R_len_t R_MemReportingNElem;
-static void R_ReportAllocation (R_size_t, SEXPTYPE, R_len_t);
+static void R_ReportAllocation (SEXP);
 
 
 R_size_t attribute_hidden R_GetMaxVSize(void)
@@ -1092,6 +1092,9 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
     LENGTH(r) = length;
+
+    if (R_IsMemReporting && isVector(r)) R_ReportAllocation (r);
+
     return r;
 }
 
@@ -1412,10 +1415,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 static SEXP allocVector1 (SEXPTYPE type)
 {
 #if VALGRIND_LEVEL==0
-    SEXP s = alloc_vec(type,1);
-    if (R_IsMemReporting)
-        R_ReportAllocation (Rf_nchunks(type,1) * SGGC_CHUNK_SIZE, type, 1);
-    return s;
+    return alloc_vec(type,1);
 #else
     return allocVector (type, 1);
 #endif
@@ -1527,10 +1527,6 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     }
 
     s = alloc_vec(type,length);
-
-    if (R_IsMemReporting)
-        R_ReportAllocation (Rf_nchunks(type,length) * SGGC_CHUNK_SIZE,
-                            type, length);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
@@ -1993,8 +1989,12 @@ print_newline:
         REprintf ("\n");
 }
 
-static void R_ReportAllocation (R_size_t size, SEXPTYPE type, R_len_t length)
+static void R_ReportAllocation (SEXP s)
 {
+    SEXPTYPE type = TYPEOF(s);
+    R_len_t length = LENGTH(s);
+    R_size_t size = SGGC_TOTAL_BYTES(type,length);
+
     if (size > R_MemReportingThreshold && length >= R_MemReportingNElem) {
         if (R_MemReportingOutfile != NULL) {
             if (R_MemDetailsReporting)
@@ -2473,23 +2473,25 @@ SEXP csduplicated(SEXP x);  /* from unique.c */
 
 static R_size_t objectsize(SEXP s)
 {
+    R_size_t cnt;
+    SEXP dup;
     int i;
-    SEXP tmp, dup;
-    Rboolean isVec = FALSE;
-    R_size_t cnt = 0;
 
     if (IS_CONSTANT(s)) 
        return 0;
 
+    cnt = SGGC_TOTAL_BYTES (TYPEOF(s), LENGTH(s));
+
     switch (TYPEOF(s)) {
     case NILSXP:
-	return(0);
+	return 0;
 	break;
     case SYMSXP:
 	break;
     case LISTSXP:
     case LANGSXP:
     case BCODESXP:
+    case DOTSXP:
 	cnt += objectsize(TAG(s));
 	cnt += objectsize(CAR(s));
 	cnt += objectsize(CDR(s));
@@ -2503,40 +2505,31 @@ static R_size_t objectsize(SEXP s)
     case PROMSXP:
     case SPECIALSXP:
     case BUILTINSXP:
-	break;
     case RAWSXP:
-    case CHARSXP:
     case LGLSXP:
     case INTSXP:
     case REALSXP:
     case CPLXSXP:
-	isVec = TRUE;
 	break;
+    case CHARSXP:
+        if (s == NA_STRING || LENGTH(s) <= 1 /* surely shared elsewhere */)
+            return 0;
+        break;
     case STRSXP:
 	dup = csduplicated(s);
 	for (i = 0; i < LENGTH(s); i++) {
-	    tmp = STRING_ELT(s, i);
-	    if(tmp != NA_STRING && !LOGICAL(dup)[i])
-		cnt += objectsize(tmp);
+	    if (!LOGICAL(dup)[i])
+		cnt += objectsize(STRING_ELT(s,i));
 	}
-	isVec = TRUE;
-	break;
-    case DOTSXP:
-    case ANYSXP:
-	/* we don't know about these */
 	break;
     case VECSXP:
     case EXPRSXP:
     case WEAKREFSXP:
 	/* Generic Vector Objects */
-	for (i = 0; i < length(s); i++)
+	for (i = 0; i < LENGTH(s); i++)
 	    cnt += objectsize(VECTOR_ELT(s, i));
-	isVec = TRUE;
 	break;
     case EXTPTRSXP:
-#if 0  /* disabled - seems to make no sense */
-	cnt += sizeof(void *);  /* the actual pointer */
-#endif
 	cnt += objectsize(EXTPTR_PROT(s));
 	cnt += objectsize(EXTPTR_TAG(s));
 	break;
@@ -2548,16 +2541,13 @@ static R_size_t objectsize(SEXP s)
 	UNIMPLEMENTED_TYPE("object.size", s);
     }
 
-    if (!isVec)
-        cnt += sizeof(SEXPREC);
-    else
-        cnt += sizeof(SEXPREC_ALIGN) + sizeof(VECREC) * getVecSizeInVEC(s);
-
-    /* add in attributes, except for CHARSXP, where they are actually
+    /* Add in attributes, except for CHARSXP, where they are actually
        the links for the CHARSXP cache. */
-    if(TYPEOF(s) != CHARSXP) cnt += objectsize(ATTRIB(s));
 
-    return(cnt);
+    if (TYPEOF(s) != CHARSXP)
+        cnt += objectsize(ATTRIB(s));
+
+    return cnt;
 }
 
 

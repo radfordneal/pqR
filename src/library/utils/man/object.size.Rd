@@ -33,7 +33,9 @@ object.size(x)
   (Sharing amongst elements of a character vector is taken into account,
   but not that between character vectors in a single object.)  A few
   common values (eg, TRUE, 0, and 2L) are often represented by pointers
-  to fixed constants, in which case they are counted as taking zero space.
+  to fixed constants, in which case they are counted as taking zero space,
+  as is also the case for character objects of length one, which are surely
+  shared many places (though not the space needed to point to them).
   
   The calculation is of the size of the object, and excludes the space
   needed to store its name in the symbol table.
@@ -43,8 +45,9 @@ object.size(x)
   calculation.
 
   Object sizes are larger on 64-bit builds than 32-bit ones, but will
-  very likely be the same on different platforms with the same word
-  length and pointer size.
+  very likely be the same on different platforms with the same pointer
+  size.  Object sizes when compressed pointers are used will be very
+  nearly the same on all platforms.
 
   \code{units = "auto"} in the \code{print} method chooses the largest
   units in which the result is one or more (before rounding).  Values in
