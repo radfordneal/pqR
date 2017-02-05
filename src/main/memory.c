@@ -1057,7 +1057,8 @@ void attribute_hidden InitMemory()
 }
 
 
-/* Allocate an object. */
+/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue.
+   Does not set LENGTH, which will sometimes be read-only. */
 
 static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
@@ -1096,7 +1097,8 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 }
 
 
-/* Allocate a non-vector object. */
+/* Allocate a non-vector object.  Caller should set LENGTH if it is not
+   read-only. */
 
 static SEXP alloc_nonvec (SEXPTYPE type)
 {
@@ -1174,15 +1176,21 @@ char *S_realloc(char *p, long new, long old, int size)
     return q;
 }
 
-/* "allocSExp" allocate a SEXPREC */
-/* call gc if necessary */
+/* "allocSExp" allocate a SEXPREC. */
 
 SEXP allocSExp(SEXPTYPE t)
 {
     SEXP s = alloc_nonvec(t);
+
+    /* Length will be non-zero when read-only, except for NILSXP, which 
+       shouldn't be allocated with this function. */
+
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
+
     CAR(s) = R_NilValue;
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
+
     return s;
 }
 
@@ -1192,13 +1200,10 @@ SEXP cons(SEXP car, SEXP cdr)
 {
     PROTECT2(car,cdr);
     SEXP s = alloc_nonvec(LISTSXP);
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = R_NilValue;
-/* REprintf("Did cons:\n");
-extern SEXP R_inspect(SEXP);
-R_inspect(s);
-REprintf("-----\n"); */
     UNPROTECT(2);
     return s;
 }
@@ -1209,6 +1214,7 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
     PROTECT3(car,cdr,tag);
     SEXP s = alloc_nonvec(LISTSXP);
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -1243,6 +1249,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     SEXP newrho = alloc_nonvec(ENVSXP);
     SEXP v, n;
 
+    if (LENGTH(newrho) == 0) LENGTH(newrho) = 1;
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
     HASHTAB(newrho) = R_NilValue;
@@ -1267,7 +1274,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     PROTECT2(expr,rho);
     SEXP s = alloc_nonvec(PROMSXP);
-
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
 
@@ -1312,6 +1319,7 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 
     if (result == R_NilValue) {
 	result = alloc_nonvec(type);
+        if (LENGTH(result) == 0) LENGTH(result) = 1;
 	SET_PRIMOFFSET(result, offset);
         SET_VECTOR_ELT (PrimCache, offset, result);
     }
@@ -1334,6 +1342,7 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 {
     PROTECT3(formals,body,rho);
     SEXP c = alloc_nonvec(CLOSXP);
+    if (LENGTH(c) == 0) LENGTH(c) = 1;
 
 #ifdef not_used_CheckFormals
     if(isList(formals))
@@ -1572,6 +1581,7 @@ SEXP allocList(int n)
 SEXP allocS4Object(void)
 {
    SEXP s = alloc_nonvec(S4SXP);
+   if (LENGTH(s) == 0) LENGTH(s) = 1;
    SET_S4_OBJECT(s);
    TAG(s) = R_NilValue;
    return s;
@@ -1893,6 +1903,7 @@ void R_ReleaseObject(SEXP object)
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
     SEXP s = alloc_nonvec(EXTPTRSXP);
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -1907,6 +1918,7 @@ SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
     fn_ptr tmp;
     SEXP s = alloc_nonvec(EXTPTRSXP);
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);

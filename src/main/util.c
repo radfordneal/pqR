@@ -868,23 +868,9 @@ SEXP with_no_nth (SEXP s, int n)
 R_len_t length(SEXP s)
 {
     extern int Rf_envlength(SEXP);
+    SEXPTYPE type = TYPEOF(s);
 
-    switch (TYPEOF(s)) {
-    case NILSXP:
-        return 0;
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case CHARSXP:
-    case VECSXP:
-    case EXPRSXP:
-    case RAWSXP:
-        return LENGTH(s);
-    case LISTSXP:
-    case LANGSXP:
-    case DOTSXP:
+    if ((CONS_TYPES >> type) & 1)
     {   /* Loop below relies on CDR(R_NilValue) == R_NilValue */
         SEXP t;
         int i;
@@ -896,11 +882,10 @@ R_len_t length(SEXP s)
         } while (s != R_NilValue);
         return t == R_NilValue ? i-1 : i;
     }
-    case ENVSXP:
+    else if (type == ENVSXP)
         return Rf_envlength(s);
-    default:
-        return 1;
-    }
+    else
+        return LENGTH(s);  /* Assumed to always exist */
 }
 
 /* This is a primitive (with no arguments) */
