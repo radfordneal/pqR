@@ -1057,9 +1057,9 @@ void attribute_hidden InitMemory()
 }
 
 
-/* Allocate a vector object. */
+/* Allocate an object. */
 
-static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
+static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
     sggc_type_t sggctype = R_type_to_sggc_type[type];
     sggc_length_t sggclength = Rf_nchunks(type,length);
@@ -1092,8 +1092,6 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
 
-    if (R_IsMemReporting && isVector(r)) R_ReportAllocation (r);
-
     return r;
 }
 
@@ -1102,7 +1100,7 @@ static SEXP alloc_vec (SEXPTYPE type, R_len_t length)
 
 static SEXP alloc_nonvec (SEXPTYPE type)
 {
-    return alloc_vec (type, 1);
+    return alloc_obj (type, 1);
 }
 
 
@@ -1415,8 +1413,9 @@ static SEXP allocVector1 (SEXPTYPE type)
 {
     SEXP s;
 #if VALGRIND_LEVEL==0
-    s = alloc_vec(type,1);
+    s = alloc_obj(type,1);
     LENGTH(s) = 1;
+    if (R_IsMemReporting) R_ReportAllocation (s);
 #else
     s = allocVector (type, 1);
 #endif
@@ -1528,8 +1527,9 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
         return allocList(length);
     }
 
-    s = alloc_vec(type,length);
+    s = alloc_obj(type,length);
     LENGTH(s) = length;
+    if (R_IsMemReporting) R_ReportAllocation (s);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
