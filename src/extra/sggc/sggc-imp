@@ -164,6 +164,14 @@ will be allocated auxiliary information from one allocation block.
 If the application also uses auxiliary information 2, it is handled in
 the same way as auxiliary information 1.
 
+The need to mask out just the offset part of a compressed pointer when
+computing the address of its data or auxiliary information may be
+eliminated by adjusting the pointers to data or auxiliary information
+for a segment so that the correct result is obtained when the unmasked
+index is present along with the offset.  This method is enabled if
+SGGC is compiled with SGGC_USE_OFFSET_POINTERS defined as 1 (versus
+being defined as 0 or not defined at all).
+
 An application may arrange that auxiliary information 1 and/or 2 for
 some kinds of segments is read-only, and perhaps shared between
 segments.  In particular, if the auxiliary information is irrelevant
@@ -410,12 +418,6 @@ include the following:
     into a free_or_new set to be done an entire segment at a time,
     giving a large speed improvement for small segments that contain
     many objects.
-
-  o The need to mask out just the offset part of a compressed pointer
-    when computing the address of its data or auxiliary information
-    may be eliminated by adjusting the pointers to data or auxiliary
-    information for a segment so that the correct result is obtained
-    when the unmasked index is present along with the offset.
 
   o Currently, small segments of a given kind are never freed, nor
     reused for a different kind, which could cause problems if many

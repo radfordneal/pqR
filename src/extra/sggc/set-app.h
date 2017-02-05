@@ -54,8 +54,8 @@
   union \
   { struct                 /* For big segments... */ \
     { unsigned big : 1;       /* 1 for a big segment with one large object  */ \
-      unsigned max_chunks : SGGC_CHUNK_BITS;/* Chunks that fit in the space */ \
-    } big;                                  /*  allocated; 0 if size fixed  */ \
+      unsigned max_chunks : SGGC_CHUNK_BITS;/* Chunks that fit in allocated */ \
+    } big;                                  /* space; 0 if too big to record*/ \
     struct                 /* For small segments... */ \
     { unsigned big : 1;       /* 0 for a segment with several small objects */ \
       unsigned unused : 6;    /* Bits not currently in use                  */ \
@@ -68,7 +68,7 @@
 
 
 /* INCLUDE THE NON-APPLICATION-SPECIFIC HEADER FOR THE SET MODULE. */
-
+ 
 #define SET_STATIC 1       /* Static set procedrues in source, not linked */
 
 #include "set.h"
@@ -76,14 +76,20 @@
 
 /* POINTER TO ARRAY OF POINTERS TO SEGMENTS.  This array of pointers
    is allocated when the GC is initialized, with the segments themselves
-   allocated later, as needed. */
+   allocated later, as needed, except that if SGGC_MAX_SEGMENTS is
+   defined, it is allocated statically instead. */
 
 #ifdef SGGC_EXTERN
 SGGC_EXTERN 
 #else
 extern
 #endif
+
+#ifdef SGGC_MAX_SEGMENTS
+struct set_segment *sggc_segment[SGGC_MAX_SEGMENTS];
+#else
 struct set_segment **sggc_segment;
+#endif
 
 
 /* MACRO FOR GETTING SEGMENT POINTER FROM SEGMENT INDEX. */

@@ -125,6 +125,16 @@ use during a garbage collection:
                         call sggc_look_at to mark additional objects as
                         in use.
 
+The following may be defined to specify the maximum number of segments
+allowed at compile time, so that they will be statically rather than
+dynamically allocated (for a possible speed advantage in data access):
+
+  SGGC_MAX_SEGMENTS     The maximum number of segments allowed. If
+                        specified, space for pointers to segment data
+                        (but not the data itself) is allocated
+                        statically, and the argument to sggc_init is
+                        ignored.
+
 The following types must be defined in sggc-app.h:
 
   sggc_length_t         Type for the "length" of an object.  The
@@ -394,7 +404,9 @@ macros) below, which have (if functions) prototypes as shown:
   int sggc_init (int max_segments)
 
     Initializes the SGGC facility, with the maximum number of segments
-    being as specified.
+    being as specified, except that this argument is ignored if the
+    maximum number of segments was specified at compile time with
+    SGGC_MAX_SEGMENTS.
 
   sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 

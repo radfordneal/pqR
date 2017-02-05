@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Test program #3 - main program
 
-   Copyright (c) 2016 Radford M. Neal.
+   Copyright (c) 2016, 2017 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

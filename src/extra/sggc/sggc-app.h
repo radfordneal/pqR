@@ -112,7 +112,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 }
 
 #define SGGC_TOTAL_BYTES(type,length) \
-    ( Rf_nchunks(type,length) * SGGC_CHUNK_SIZE /* data part */ \
+    ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE /* data part */ \
        + 4 /* attribute pointer */ \
        + 4 * ((VECTOR_OR_CHAR_TYPES >> type) & 1) /* length */ )
     
@@ -167,7 +167,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 }
 
 #define SGGC_TOTAL_BYTES(type,length) \
-    ( Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
+    ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
 
 #endif
 
@@ -214,7 +214,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 }
 
 #define SGGC_TOTAL_BYTES(type,length) \
-    ( Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
+    ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
 
 #endif
 
