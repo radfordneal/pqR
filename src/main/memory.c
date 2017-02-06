@@ -1394,6 +1394,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 {
     PROTECT2(name,value);
     SEXP c = alloc_nonvec(SYMSXP);
+    if (LENGTH(c) == 0) LENGTH(c) = 1;
     PRINTNAME(c) = name;
     SYMVALUE(c) = value;
     INTERNAL(c) = R_NilValue;
