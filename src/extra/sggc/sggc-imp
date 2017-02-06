@@ -164,14 +164,6 @@ will be allocated auxiliary information from one allocation block.
 If the application also uses auxiliary information 2, it is handled in
 the same way as auxiliary information 1.
 
-The need to mask out just the offset part of a compressed pointer when
-computing the address of its data or auxiliary information may be
-eliminated by adjusting the pointers to data or auxiliary information
-for a segment so that the correct result is obtained when the unmasked
-index is present along with the offset.  This method is enabled if
-SGGC is compiled with SGGC_USE_OFFSET_POINTERS defined as 1 (versus
-being defined as 0 or not defined at all).
-
 An application may arrange that auxiliary information 1 and/or 2 for
 some kinds of segments is read-only, and perhaps shared between
 segments.  In particular, if the auxiliary information is irrelevant
@@ -184,6 +176,31 @@ In addition to possible quicker access and perhaps sharing, another
 reason for use of auxiliary information may be that it could let other
 data fit neatly (considering alignment requirements) in some multiple
 of SGGC_CHUNK_SIZE bytes, without wasteful padding.
+
+
+MORE ON OFFSET ARITHMETIC
+
+In step (2) of finding the location of the data for an object (or
+similarly, the auxiliary information), the multiplication done will
+result in a small integer, which could be held in 32 bits.  However,
+depending on the machine used, it may be faster to do arithmetic in
+the same bit width as a pointer.  The SGGC_OFFSET_CAST symbol in
+sggc.h is defined to be a cast to whichever size of arithemtic is
+chosen.
+
+The need to mask out just the offset part of a compressed pointer when
+computing the address of its data or auxiliary information may be
+eliminated by adjusting the pointers to data or auxiliary information
+for a segment so that the correct result is obtained when the unmasked
+index is present along with the offset.  This method is enabled if
+SGGC is compiled with SGGC_USE_OFFSET_POINTERS defined as 1 (versus
+being defined as 0 or not defined at all).  
+
+A different value for SGGC_OFFSET_CAST may be used when
+SGGC_USE_OFFSET_POINTERS is 1, as may be chosen by appropriately
+editing sggc.h.  Any unsigned integer type of at least 32 bits should
+work, but whether uint32_t or uintptr_t is faster might depend on the
+machine used.
 
 
 GENERATIONAL GARBAGE COLLECTION

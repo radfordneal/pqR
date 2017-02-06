@@ -70,6 +70,23 @@
 const int sggc_kind_chunks[SGGC_N_KINDS] = SGGC_KIND_CHUNKS;
 
 
+/* MACROS TO APPLY OR UN-APPLY AN OFFSET TO A DATA/AUX POINTER. */
+
+#if SGGC_USE_OFFSET_POINTERS
+
+#define OFFSET(ptrs,ix,sz) \
+  ((ptrs)[ix] -= ((sz) << SET_OFFSET_BITS) * SGGC_OFFSET_CAST (ix))
+#define UNDO_OFFSET(ptrs,ix,sz) \
+  ((ptrs)[ix] += ((sz) << SET_OFFSET_BITS) * SGGC_OFFSET_CAST (ix))
+
+#else
+
+#define OFFSET(ptrs,ix,sz) 0       /* nothing to do */
+#define UNDO_OFFSET(ptrs,ix,sz) 0  /* nothing to do */
+
+#endif
+
+
 /* NUMBERS OF OBJECTS IN SEGMENTS OF EACH KIND, AND END OF ITS CHUNKS.  
    Computed at initialization from SGGC_CHUNKS_IN_SMALL_SEGMENT and 
    sggc_kind_chunks. */
@@ -146,6 +163,9 @@ static int old_to_new_check;   /* 1 if should look for old-to-new reference */
 /* INITIALIZE SEGMENTED MEMORY.  Allocates space for pointers for the
    specified number of segments (currently not expandable), unless
    SGGC_MAX_SEGMENTS is defined, so they are statically allocated.
+   Record the specified maximum number of segments, reduced to 
+   SGGC_MAX_SEGMENTS if that is defined.
+
    Returns zero if successful, non-zero if allocation fails. */
 
 int sggc_init (int max_segments)
@@ -177,27 +197,39 @@ int sggc_init (int max_segments)
 
     sggc_data = sggc_alloc_zeroed (max_segments * sizeof *sggc_data);
     if (sggc_data == NULL)
-    { return 2;
+    { sggc_free(sggc_segment);
+      return 2;
+    }
+
+    sggc_type = sggc_alloc_zeroed (max_segments * sizeof *sggc_type);
+    if (sggc_type == NULL)
+    { sggc_free(sggc_segment);
+      sggc_free(sggc_data);
+      return 3;
     }
 
 #   ifdef SGGC_AUX1_SIZE
       sggc_aux1 = sggc_alloc_zeroed (max_segments * sizeof *sggc_aux1);
       if (sggc_aux1 == NULL)
-      { return 3;
+      { sggc_free(sggc_segment);
+        sggc_free(sggc_data);
+        sggc_free(sggc_type);
+        return 4;
       }
 #   endif
 
 #   ifdef SGGC_AUX2_SIZE
       sggc_aux2 = sggc_alloc_zeroed (max_segments * sizeof *sggc_aux2);
       if (sggc_aux2 == NULL)
-      { return 4;
+      { sggc_free(sggc_segment);
+        sggc_free(sggc_data);
+        sggc_free(sggc_type);
+#       ifdef SGGC_AUX1_SIZE
+          sggc_free(sggc_aux1);
+#       endif
+        return 5;
       }
 #   endif
-
-    sggc_type = sggc_alloc_zeroed (max_segments * sizeof *sggc_type);
-    if (sggc_type == NULL)
-    { return 5;
-    }
 
 #endif
 
@@ -300,6 +332,12 @@ int sggc_init (int max_segments)
   /* Record maximum segments, and initialize to no segments in use. */
 
   maximum_segments = max_segments;
+# ifdef SGGC_MAX_SEGMENTS
+  if (maximum_segments > SGGC_MAX_SEGMENTS)
+  { maximum_segments = SGGC_MAX_SEGMENTS;
+  }
+# endif
+
   next_segment = 0;
 
   /* Initialize the sggc_info structure. */
@@ -600,9 +638,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
         next_aux_pos (kind, &kind_aux1_block[kind], &kind_aux1_block_pos[kind],
                       SGGC_AUX1_BLOCK_SIZE);
       }
-#     if SGGC_USE_OFFSET_POINTERS
-        sggc_aux1[index] -= (SGGC_AUX1_SIZE << SET_OFFSET_BITS) * index;
-#     endif
+      OFFSET(sggc_aux1,index,SGGC_AUX1_SIZE);
     }
 # endif
 
@@ -631,9 +667,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
         next_aux_pos (kind, &kind_aux2_block[kind], &kind_aux2_block_pos[kind],
                       SGGC_AUX2_BLOCK_SIZE);
       }
-#     if SGGC_USE_OFFSET_POINTERS
-        sggc_aux2[index] -= (SGGC_AUX2_SIZE << SET_OFFSET_BITS) * index;
-#     endif
+      OFFSET(sggc_aux2,index,SGGC_AUX2_SIZE);
     }
 # endif
 
@@ -650,9 +684,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 
     sggc_data[index] = data;
 
-#   if SGGC_USE_OFFSET_POINTERS
-      sggc_data[index] -= (SGGC_CHUNK_SIZE << SET_OFFSET_BITS) * index;
-#   endif
+    OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
   }
 
   else /* Using existing data area in small segment, so just set to zeros. */
@@ -734,22 +766,19 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
   set_assign_segment_bits (&constants, v, bits);
 
   sggc_type[index] = type;
+
   sggc_data[index] = data;
-# if SGGC_USE_OFFSET_POINTERS
-    sggc_data[index] -= (SGGC_CHUNK_SIZE << SET_OFFSET_BITS) * index;
-# endif
+  OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
+
 # ifdef SGGC_AUX1_SIZE
     sggc_aux1[index] = aux1;
-#   if SGGC_USE_OFFSET_POINTERS
-      sggc_aux1[index] -= (SGGC_AUX1_SIZE << SET_OFFSET_BITS) * index;
-#   endif
+    OFFSET(sggc_aux1,index,SGGC_AUX1_SIZE);
     seg->x.small.aux1_off = 0;
 # endif
+
 # ifdef SGGC_AUX2_SIZE
     sggc_aux2[index] = aux2;
-#   if SGGC_USE_OFFSET_POINTERS
-      sggc_aux2[index] -= (SGGC_AUX2_SIZE << SET_OFFSET_BITS) * index;
-#   endif
+    OFFSET(sggc_aux2,index,SGGC_AUX2_SIZE);
     seg->x.small.aux2_off = 0;
 # endif
     
@@ -1005,12 +1034,8 @@ void sggc_collect (int level)
         { printf ("sggc_collect: calling free for data for %x:: %p\n", 
                    v, SGGC_DATA(v));
         }
-#       if SGGC_USE_OFFSET_POINTERS
-          sggc_free (sggc_data[index] 
-                      + (SGGC_CHUNK_SIZE << SET_OFFSET_BITS) * index);
-#       else
-          sggc_free (sggc_data[index]);
-#       endif
+        UNDO_OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
+        sggc_free (sggc_data[index]);
         if (SGGC_DEBUG) 
         { printf("sggc_collect: putting %x in unused\n",(unsigned)v);
         }

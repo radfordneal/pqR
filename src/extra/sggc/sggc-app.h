@@ -24,6 +24,9 @@
 #endif
 
 
+#define SET_STATIC 1       /* Static set procedrues in source, not linked */
+
+
 /* LENGTH TYPES. */
 
 typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in an object */

@@ -99,37 +99,47 @@ SGGC_EXTERN char **sggc_aux2;      /* Pointer to array of pointers to arrays of
 
 #if SGGC_USE_OFFSET_POINTERS
 
+#define SGGC_OFFSET_CAST (uintptr_t) /* alternative is (uint32_t) */
+
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
-{ return sggc_data[SET_VAL_INDEX(cptr)] + SGGC_CHUNK_SIZE * cptr;
+{ return sggc_data[SET_VAL_INDEX(cptr)] 
+          + SGGC_CHUNK_SIZE * SGGC_OFFSET_CAST cptr;
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
-{ return sggc_aux1[SET_VAL_INDEX(cptr)] + SGGC_AUX1_SIZE * cptr;
+{ return sggc_aux1[SET_VAL_INDEX(cptr)] 
+           + SGGC_AUX1_SIZE * SGGC_OFFSET_CAST cptr;
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
-{ return sggc_aux2[SET_VAL_INDEX(cptr)] + SGGC_AUX2_SIZE * cptr;
+{ return sggc_aux2[SET_VAL_INDEX(cptr)] 
+           + SGGC_AUX2_SIZE * SGGC_OFFSET_CAST cptr;
 }
 #endif
 
 #else
 
+#define SGGC_OFFSET_CAST (uint32_t) /* alternatives are (uintptr_t) or (int) */
+
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
-{ return sggc_data[SET_VAL_INDEX(cptr)] + SGGC_CHUNK_SIZE*SET_VAL_OFFSET(cptr);
+{ return sggc_data[SET_VAL_INDEX(cptr)] 
+          + SGGC_CHUNK_SIZE * SGGC_OFFSET_CAST SET_VAL_OFFSET(cptr);
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
-{ return sggc_aux1[SET_VAL_INDEX(cptr)] + SGGC_AUX1_SIZE * SET_VAL_OFFSET(cptr);
+{ return sggc_aux1[SET_VAL_INDEX(cptr)] 
+           + SGGC_AUX1_SIZE * SGGC_OFFSET_CAST SET_VAL_OFFSET(cptr);
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
-{ return sggc_aux2[SET_VAL_INDEX(cptr)] + SGGC_AUX2_SIZE * SET_VAL_OFFSET(cptr);
+{ return sggc_aux2[SET_VAL_INDEX(cptr)] 
+           + SGGC_AUX2_SIZE * SGGC_OFFSET_CAST SET_VAL_OFFSET(cptr);
 }
 #endif
 

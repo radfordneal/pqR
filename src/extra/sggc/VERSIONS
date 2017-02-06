@@ -1,5 +1,11 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-02-05
+
+  Bugs fixed, allows compile-time specification of SGGC_MAX_SEGMENTS,
+  implements offsetted data pointers, control over cast for offset
+  arithmetic.
+
 Version-2017-01-26
 
   Various fixes, including for extern management of global variables.

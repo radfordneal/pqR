@@ -132,8 +132,8 @@ dynamically allocated (for a possible speed advantage in data access):
   SGGC_MAX_SEGMENTS     The maximum number of segments allowed. If
                         specified, space for pointers to segment data
                         (but not the data itself) is allocated
-                        statically, and the argument to sggc_init is
-                        ignored.
+                        statically, and the argument to sggc_init can
+                        only reduce this limit, not increase it.
 
 The following types must be defined in sggc-app.h:
 
@@ -404,9 +404,10 @@ macros) below, which have (if functions) prototypes as shown:
   int sggc_init (int max_segments)
 
     Initializes the SGGC facility, with the maximum number of segments
-    being as specified, except that this argument is ignored if the
-    maximum number of segments was specified at compile time with
-    SGGC_MAX_SEGMENTS.
+    being as specified, except that this argument is silently reduced
+    to SGGC_MAX_SEGMENTS if it is larger, if that constant was
+    specified at compile time.  Returns zero if no error, and non-zero
+    if allocation failed.
 
   sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 
