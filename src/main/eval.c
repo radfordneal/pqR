@@ -611,13 +611,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             else
                 apply_non_function_error();
 
-#           if 0  /* Can choose whichever seems fastest... */
-                if (!R_Visible && PRIMPRINT(op) == 0)
-                    R_Visible = TRUE;
-#           else
-                if (R_Visible + PRIMPRINT(op) == 0)
-                    R_Visible = TRUE;
-#           endif
+            if (!R_Visible && PRIMPRINT(op) == 0)
+                R_Visible = TRUE;
 
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);

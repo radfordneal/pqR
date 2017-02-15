@@ -961,7 +961,7 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
   Note that (option&1)!=0 if a get should aways be done on a user database,
   and (option&2)!=0 if we don't need to wait.
 
-  The findVarInFramePendingOK version is an abbreviation for option of 3.
+  The findVarInFramePendingOK version is an abbreviation for option 3.
   It may not only be more convenient, but also be faster.
 
   Sets R_binding_cell to the CONS cell for the binding, if the value returned
