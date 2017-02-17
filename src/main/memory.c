@@ -1508,9 +1508,8 @@ SEXP ScalarRawMaybeConst(Rbyte x)
 }
 
 /* Allocate a vector object (and also list-like objects).
-   This ensures only validity of list-like (LISTSXP, VECSXP, EXPRSXP),
-   STRSXP and CHARSXP types;  e.g., atomic types remain un-initialized
-   and must be initialized upstream, e.g., in do_makevector().
+   This ensures validity of list-like (LISTSXP, VECSXP, EXPRSXP),
+   STRSXP and CHARSXP types; others are initialized to all zero bits.
 */
 
 SEXP allocVector(SEXPTYPE type, R_len_t length)
@@ -1526,6 +1525,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
        allowed types for allocVector. */
 
     switch (type) {
+
     case NILSXP:
         return R_NilValue;
     case LANGSXP:
@@ -1535,6 +1535,21 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
         return s;
     case LISTSXP:
         return allocList(length);
+
+    case CHARSXP:
+    case RAWSXP:
+    case LGLSXP:
+    case INTSXP:
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case EXPRSXP:
+    case VECSXP:
+        break;
+
+    default:
+        error(_("invalid type/length (%s/%d) in vector allocation"),
+              type2char(type), length);
     }
 
     s = alloc_obj(type,length);
