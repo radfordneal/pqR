@@ -25,6 +25,11 @@
 #endif
 
 
+#ifndef SET_USE_BUILTINS
+#define SET_USE_BUILTINS (defined(__GNUC__) || defined(__clang__))
+#endif
+
+
 /*   See set-doc for general documentation on this facility, and for the
  *   documentation on functions that are part of the application interface.
  */
@@ -78,12 +83,13 @@ static int check_n_elements (struct set *set);
 /* FIND POSITION OF LOWEST-ORDER BIT.  The position returned is from 0 up.
    The argument must not be zero.
 
-   Fast for gcc, using its builtin. */
+   Fast for gcc and clang, using their builtin functions. */
 
 static inline int first_bit_pos (set_bits_t b)
 { 
   if (SET_DEBUG && b == 0) abort();
-# if __GNUC__
+
+# if SET_USE_BUILTINS
     return sizeof b <= sizeof (unsigned) ? __builtin_ctz(b) 
          : sizeof b <= sizeof (unsigned long) ? __builtin_ctzl(b) 
          : sizeof b <= sizeof (unsigned long long) ? __builtin_ctzll(b)
@@ -97,16 +103,17 @@ static inline int first_bit_pos (set_bits_t b)
     }
     return pos;
 # endif
+
 }
 
 
 /* FIND THE NUMBER OF BITS IN A SET OF BITS.  
 
-   Fast for gcc, using its builtin. */
+   Fast for gcc and clang, using their builtin functions. */
 
 static inline int bit_count (set_bits_t b)
 { 
-# if __GNUC__
+# if SET_USE_BUILTINS
     return sizeof b <= sizeof (unsigned) ? __builtin_popcount(b) 
          : sizeof b <= sizeof (unsigned long) ? __builtin_popcountl(b) 
          : sizeof b <= sizeof (unsigned long long) ? __builtin_popcountll(b)
@@ -120,6 +127,7 @@ static inline int bit_count (set_bits_t b)
     }
     return cnt;
 # endif
+
 }
 
 
@@ -319,6 +327,22 @@ SET_PROC_CLASS int set_chain_contains (int chain, set_value_t val)
 }
 
 
+/* CHECK WHETHER ANY SET USING A GIVEN CHAIN CONATAINS ANY ELEMENT IN A SEGMENT.
+
+   This is implemented by just checking whether any bits for that chain in the
+   segment. */
+
+SET_PROC_CLASS int set_chain_contains_any_in_segment(int chain, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  CHK_SEGMENT(seg,chain);
+
+  return seg->bits[chain] != 0;
+}
+
+
 /* FIND AND POSSIBLY REMOVE THE FIRST ELEMENT IN A SET.  Removal with
    the function of the last value in a segment allows that segment to
    be added to another set using the same chain.
@@ -432,6 +456,44 @@ SET_PROC_CLASS set_value_t set_next (struct set *set, set_value_t val,
   CHK_SET(set);
 
   return SET_VAL(index,offset);
+}
+
+
+/* FIND THE NEXT ELEMENT IN A SET THAT IS IN A DIFFERENT SEGMENT. */
+
+SET_PROC_CLASS set_value_t set_next_segment (struct set *set, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  CHK_SET(set);
+  CHK_SEGMENT(seg,set->chain);
+  CHK_SET_INDEX(set,index);
+
+  set_index_t nindex;
+  struct set_segment *nseg;
+
+  /* Go to the next segment, removing any segments that are unused. If there
+     is no next segment, return SET_NO_VALUE. */
+
+  for (;;)
+  { 
+    nindex = seg->next[set->chain];
+    if (nindex == SET_END_OF_CHAIN) 
+    { return SET_NO_VALUE;
+    }
+
+    nseg = SET_SEGMENT(nindex);
+    CHK_SEGMENT(nseg,set->chain);
+
+    set_bits_t b = nseg->bits[set->chain];
+    if (b != 0) 
+    { return SET_VAL (nindex, first_bit_pos(b));
+    }
+
+    seg->next[set->chain] = nseg->next[set->chain];
+    nseg->next[set->chain] = SET_NOT_IN_CHAIN;
+  }
 }
 
 
@@ -561,6 +623,59 @@ SET_PROC_CLASS void set_move_next (struct set *src, set_value_t val,
 
   CHK_SET(src);
   CHK_SET(dst);
+}
+
+
+/* ADD ELEMENTS IN ANY SET USING SOME CHAIN WITHIN SOME SEGMENT TO SOME SET. */
+
+SET_PROC_CLASS void set_add_segment (struct set *set, set_value_t val, 
+                                     int chain)
+{
+  CHK_SET(set);
+  int dst_chain = set->chain;
+
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  CHK_SEGMENT(seg,dst_chain);
+  CHK_SEGMENT(seg,chain);
+
+  set_bits_t added_bits = seg->bits[chain] & ~seg->bits[dst_chain];
+
+  if (added_bits != 0)
+  { 
+    seg->bits[dst_chain] |= added_bits;
+    set->n_elements += bit_count(added_bits);
+
+    if (seg->next[dst_chain] == SET_NOT_IN_CHAIN)
+    { seg->next[dst_chain] = set->first;
+      set->first = index;
+    }
+  }
+}
+
+
+/* REMOVE ELEMENTS IN A SET WITHIN SOME SEGMENT AND IN ANY SET IN SOME CHAIN. */
+
+SET_PROC_CLASS void set_remove_segment (struct set *set, set_value_t val, 
+                                        int chain)
+{
+  CHK_SET(set);
+  int dst_chain = set->chain;
+
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  CHK_SEGMENT(seg,dst_chain);
+  CHK_SEGMENT(seg,chain);
+
+  set_bits_t removed_bits = seg->bits[chain] & seg->bits[dst_chain];
+
+  if (removed_bits != 0)
+  { 
+    seg->bits[dst_chain] &= ~removed_bits;
+    set->n_elements -= bit_count(removed_bits);
+  }
 }
 
 

@@ -161,6 +161,13 @@ conflicts, and that an optimizing compiler may be able to produce
 faster code when it can see the definitions of the set facility's
 procedures (eg, sometimes inlining code).
 
+Whether the set facility tries to use fast builtin functions for
+finding and counting 1 bits in a word can be controlled by defining
+the SET_USE_BUILTINS pre-processor symbol to be 0 or 1.  If it is not
+defined, the builtin functions are used when the gcc or clang
+compilers are used (as indicated by __GNUC__ or __clang__ being
+defined).
+
 
 SETS SHARING THE SAME CHAIN
 
@@ -259,6 +266,11 @@ for use in an application, with prototypes (if functions) as shown:
     Returns 1 if 'val' is an element of any set using 'chain' (ie, is
     a member of the union of all sets using 'chain'), and 0 otherwise.
 
+  int set_chain_contains_any_in_segment (int chain, set_value_t val)
+
+    Returns 1 if any set using 'chain' contains any elements in the
+    same segment as 'val'.
+
   set_value_t set_first (struct set *set, int remove)
 
     Finds the first element in 'set', returning SET_NO_VALUE if the
@@ -278,6 +290,12 @@ for use in an application, with prototypes (if functions) as shown:
     If 'val' is not removed, the value returned (if not SET_NO_VALUE)
     will either be in the same segment as 'val' or in the next
     segment.  This is of relevance if set_move_next will be used.
+
+  set_value_t set_next_segment (struct set *set, set_value_t val)
+
+    Returns the next element of 'set' after 'val' (which must be an
+    element of 'set') that is in a different segment than 'val'.
+    Returns SET_NO_VALUE if there is no such element.
 
   set_bits_t set_first_bits (struct set *set)
 
@@ -316,6 +334,20 @@ for use in an application, with prototypes (if functions) as shown:
     containing 'val' to the front of 'dst'.  It is an error for there
     to be no elements of 'src' after 'val' that are in a different
     segment from 'val', or for 'src' and 'dst' to use different chains.
+
+  void set_add_segment (struct set *set, set_value_t val, int chain)
+
+    Add to 'set' all elements of sets using the given 'chain' that are
+    in the same segment as 'val' (which need not be an element of any
+    set using 'chain').
+
+  void set_remove_segment (struct set *set, set_value_t val, int chain)
+
+    Removes from 'set' all elements of sets using the given 'chain'
+    that are in the same segment as 'val' (which need not be an
+    element of any set using 'chain').  It is an error for any element
+    in this segment in any set using 'chain' to be an element of any
+    other set using the same chain as 'set'.
 
   set_value_t set_n_elements (struct set *set)
 

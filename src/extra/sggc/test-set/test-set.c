@@ -52,6 +52,8 @@ int main (void)
         b  set  index  offset        set_assign_segment_bits (to 7)
         n  set  index  offset        set_move_next (to other of set 1/2)
         m  set                       set_move_first (to other of set 1/2)
+        A  set  index  offset        set_add_segment (from chain 0)
+        R  set  index  offset        set_remove_segment (from chain 0)
   */
 
   for (;;)
@@ -126,6 +128,15 @@ int main (void)
       { set_move_first (&set[i], &set [i==1 ? 2 : 1]);
         break;
       }
+      case 'A':
+      { set_add_segment (&set[i], SET_VAL(x,o), 0);
+        break;
+      }
+      case 'R':
+      { set_remove_segment (&set[i], SET_VAL(x,o), 0);
+        break;
+      }
+      
       default: 
       { printf("Unknown operation");
         break;

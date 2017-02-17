@@ -99,7 +99,9 @@ SGGC_EXTERN char **sggc_aux2;      /* Pointer to array of pointers to arrays of
 
 #if SGGC_USE_OFFSET_POINTERS
 
-#define SGGC_OFFSET_CAST (uintptr_t) /* alternative is (uint32_t) */
+#ifndef SGGC_OFFSET_CAST
+#define SGGC_OFFSET_CAST (uintptr_t) /* either (uint32_t) or (unitptr_t) */
+#endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
 { return sggc_data[SET_VAL_INDEX(cptr)] 
@@ -122,7 +124,9 @@ static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
 
 #else
 
-#define SGGC_OFFSET_CAST (uint32_t) /* alternatives are (uintptr_t) or (int) */
+#ifndef SGGC_OFFSET_CASE
+#define SGGC_OFFSET_CAST (uint32_t) /* may be (uint32_t), (uintptr_t), (int) */
+#endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
 { return sggc_data[SET_VAL_INDEX(cptr)] 

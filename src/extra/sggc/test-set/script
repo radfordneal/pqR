@@ -29,4 +29,6 @@ m 1        move first segment of set 1 to set 2
 m 1        and move first segment of set 1 to set 2 again
 n 2 7 7    move segment after 7.7 from set 2 to set 1
 b 0 0 0    try changing bits of a segment in set 0
-
+A 2 0 1    add all elements in segment 0 in chain 0 to set 2
+R 2 0 1    remove all elements in segment 0 in chain 0 from set 2
+A 2 4 20   add all elements in segment 4 in chain 0 to set 2

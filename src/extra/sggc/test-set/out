@@ -149,4 +149,16 @@ Set 2 (chain 1), 3 elements: 0000000000000002 : 3.1 7.7 0.0
 Set 0 (chain 0), 4 elements: 0000000000100000 : 4.20 0.0 0.1 0.2
 Set 1 (chain 1), 2 elements: 8200000000000000 : 2.57 2.63
 Set 2 (chain 1), 3 elements: 0000000000000002 : 3.1 7.7 0.0
+> A 2 0 1      add all elements in segment 0 in chain 0 to set 2
+Set 0 (chain 0), 4 elements: 0000000000100000 : 4.20 0.0 0.1 0.2
+Set 1 (chain 1), 2 elements: 8200000000000000 : 2.57 2.63
+Set 2 (chain 1), 5 elements: 0000000000000002 : 3.1 7.7 0.0 0.1 0.2
+> R 2 0 1      remove all elements in segment 0 in chain 0 from set 2
+Set 0 (chain 0), 4 elements: 0000000000100000 : 4.20 0.0 0.1 0.2
+Set 1 (chain 1), 2 elements: 8200000000000000 : 2.57 2.63
+Set 2 (chain 1), 2 elements: 0000000000000002 : 3.1 7.7
+> A 2 4 20     add all elements in segment 4 in chain 0 to set 2
+Set 0 (chain 0), 4 elements: 0000000000100000 : 4.20 0.0 0.1 0.2
+Set 1 (chain 1), 2 elements: 8200000000000000 : 2.57 2.63
+Set 2 (chain 1), 3 elements: 0000000000100000 : 4.20 3.1 7.7
 > 

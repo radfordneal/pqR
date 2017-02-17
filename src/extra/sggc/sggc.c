@@ -43,6 +43,15 @@
 #endif
 
 
+/* ENABLE/DISABLE SEGMENT-AT-A-TIME OPERATIONS.  Set to 1 to enable use of
+   set functions for segment-at-a-time operations.  If not defined, defaults
+   to 1, which is what it should be except for debugging and timing tests. */
+
+#ifndef SGGC_SEGMENT_AT_A_TIME
+#define SGGC_SEGMENT_AT_A_TIME 1
+#endif
+
+
 /* ENABLE/DISABLE EXTRA CHECKS.  These are consistency checks that take
    non-negligible time. */
 
@@ -155,6 +164,19 @@ static set_offset_t next_segment;             /* Number of segments in use */
 
 static int collect_level = -1; /* Level of current garbage collection */
 static int old_to_new_check;   /* 1 if should look for old-to-new reference */
+
+
+/* MACRO TO DO SOMETHING FOR ELEMENT AND THOSE FOLLOWING IN THE SAME SEGMENT. 
+   The statement references the element as 'w'. */
+
+#define DO_FOR_SEGMENT(set,el,stmt) \
+  do { \
+    for (set_value_t w = el; \
+         w != SET_NO_VALUE && SET_VAL_INDEX(w) == SET_VAL_INDEX(el); \
+         w = set_next (&set, w, 0)) \
+    { stmt; \
+    } \
+  } while (0)
 
 
 /* ------------------------------ INITIALIZATION ---------------------------- */
@@ -417,18 +439,25 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
   { printf("sggc_alloc: type %u, length %u\n",(unsigned)type,(unsigned)length);
   }
 
-  sggc_kind_t kind = sggc_kind(type,length);
-  char *data = NULL;
-  sggc_index_t index;
-  sggc_nchunks_t nch;
-  sggc_cptr_t v;
-  int from_free = 0;
-  int new = 0;
+  int big = 0;  /* will object go in a big segment? */
+  int new = 0;  /* will object go in a new segment? */
+
+  char *data = NULL;  /* pointer to data area for segment used */
+
+  sggc_kind_t kind = sggc_kind(type,length);   /* kind of segment needed */
+  sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
+
+  sggc_index_t index;       /* index of segment that object will be in */
+  struct set_segment *seg;  /* points to struct for segment object will be in */
+  sggc_cptr_t v;            /* pointer to object, to be returned as value */
 
   /* If this object will be put in a big segment, try to allocate its
-     data area now, and return SGGC_NO_OBJECT if this does not succeed. */
+     data area now, and return SGGC_NO_OBJECT if this does not succeed.
+     The area allocated is freed if allocation later fails for some reason.
 
-  if (sggc_kind_chunks[kind] == 0) /* big segment */
+     We also set 'big' to 1 if a big segment is being used. */
+
+  if (nch == 0) /* big segment */
   { nch = sggc_nchunks (type, length);
     data = sggc_alloc_zeroed ((size_t) SGGC_CHUNK_SIZE * nch);
     if (data == NULL) 
@@ -439,19 +468,23 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
        "sggc_alloc: called alloc_zeroed for data (big %d, %d chunks):: %p\n", 
         kind, (int)nch, data);
     }
+    big = 1;
   }
 
   /* Make sure we have blocks of auxiliary information 1 and 2 available 
      (if required), in case we need them (though we may not).  Return
      SGGC_NO_OBJECT if we can't allocate these blocks (freeing data
-     if it was allocated). */
+     if it was allocated).  Trying to allocate them now avoids the need to 
+     back out later operations if the allocation fails, and is not really
+     a waste since the amount allocated should be small, and will be
+     needed sooner or later, even if not now. */
 
 # ifdef SGGC_AUX1_SIZE
-    char * const read_only_aux1 = 
+    char *const read_only_aux1 = 
 #     ifdef SGGC_AUX1_READ_ONLY
         kind_aux1_read_only[kind];
 #     else
-        0;
+        NULL;
 #     endif
     if (!read_only_aux1 && kind_aux1_block[kind] == NULL)
     { kind_aux1_block[kind] = sggc_alloc_zeroed
@@ -470,11 +503,11 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 # endif
 
 # ifdef SGGC_AUX2_SIZE 
-    char * const read_only_aux2 = 
+    char *const read_only_aux2 = 
 #     ifdef SGGC_AUX2_READ_ONLY
         kind_aux2_read_only[kind];
 #     else
-        0;
+        NULL;
 #     endif
     if (!read_only_aux2 && kind_aux2_block[kind] == NULL)
     { kind_aux2_block[kind] = sggc_alloc_zeroed
@@ -497,16 +530,19 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
      free_or_new, but will not be between next_free and end_free, and
      so won't be taken again (at least before the next collection).
      For a big segment, the segment will be taken from 'unused', if
-     one is there, and will be added to free_or_new for this kind. */
+     one is there. */
 
-  if (sggc_kind_chunks[kind] == 0) /* uses big segments */
+  if (big) /* big segment */
   { v = set_first (&unused, 1);
     if (v != SGGC_NO_OBJECT)
     { if (SGGC_DEBUG) printf("sggc_alloc: found %x in unused\n",(unsigned)v);
       set_add (&free_or_new[kind], v);
+      index = SET_VAL_INDEX(v);
+      seg = SET_SEGMENT(index);
+      sggc_type[index] = type;  /* may reuse big segments of other types */
     }
   }
-  else /* uses small segments */
+  else /* small segment */
   { v = next_free[kind]; 
     if (v == end_free[kind])
     { v = SGGC_NO_OBJECT;
@@ -514,24 +550,24 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
     else
     { next_free[kind] = set_next (&free_or_new[kind], v, 0);
       if (SGGC_DEBUG) printf("sggc_alloc: found %x in next_free\n",(unsigned)v);
-      from_free = 1;
+      index = SET_VAL_INDEX(v);
+      seg = SET_SEGMENT(index);
+      if (EXTRA_CHECKS) 
+      { if (sggc_type[index] != type) abort();
+      }
     }
   }
 
-  /* Create a new segment for this object, if none found above.  Also set
-     'index' to the new or old segment being used.  Allocate the data block
-     if the new segment is a small one.  Will return with value SGGC_NO_OBJECT
-     if a new segment or new data block can't be created (freeing data also
-     if it was allocated). */
+  /* Create a new segment for this object, if none found above.  Also
+     allocate the data block if the new segment is a small one.  Will
+     return with value SGGC_NO_OBJECT if a new segment or new data
+     block can't be created (freeing data also if it was allocated). */
 
-  if (v != SGGC_NO_OBJECT)
-  { index = SET_VAL_INDEX(v);
-  }
-  else
+  if (v == SGGC_NO_OBJECT)  /* new segment, big or small */
   { if (next_segment == maximum_segments)
     { goto fail;
     }
-    if (data == NULL) /* small segment */
+    if (!big) /* small segment */
     { data = sggc_alloc_zeroed ((size_t) SGGC_CHUNK_SIZE 
                                   * SGGC_CHUNKS_IN_SMALL_SEGMENT);
       if (data == NULL) 
@@ -544,7 +580,14 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
     }
     index = next_segment; 
     next_segment += 1;
-    set_segment_init (SET_SEGMENT(index));
+    seg = SET_SEGMENT(index);
+    set_segment_init (seg);
+    sggc_type[index] = type;
+    seg->x.big.big = big;
+    if (!big)
+    { seg->x.small.constant = 0;
+      seg->x.small.kind = kind;
+    }
     v = SGGC_CPTR_VAL(index,0);
     if (SGGC_DEBUG) 
     { printf("sggc_alloc: created %x in new segment\n", (unsigned)v);
@@ -552,43 +595,20 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
     new = 1;
   }
 
-  /* Set up type and flags for the segment, or (if enabled) check that they 
-     are already what they should be. */
-
-  struct set_segment *seg = SET_SEGMENT(index);
-
-  if (from_free) /* should be a small segment of the right kind already */
-  { if (EXTRA_CHECKS) 
-    { if (sggc_type[index] != type) abort();
-      if (seg->x.small.big) abort();
-      if (seg->x.small.constant) abort();
-      if (seg->x.small.kind != kind) abort();
-    }
-  }
-  else
-  { sggc_type[index] = type;
-    if (sggc_kind_chunks[kind] == 0) /* big segment */
-    { seg->x.big.big = 1;
-    }
-    else /* small segment */
-    { seg->x.small.big = 0;
-      seg->x.small.constant = 0;
-      seg->x.small.kind = kind;
-    }
-  }
-
   /* Add the object to the free_or_new set, if not already there.  For
      small segments not from free_or_new, we also put all other
      objects in the segment into free_or_new, and use them as the
-     current set of free objects if there were none before. */
+     current set of free objects, since there were none before. */
 
-  if (sggc_kind_chunks[kind] == 0) /* big segment, can't be from free_or_new */
+  if (big)  /* big segment */
   {
     set_add (&free_or_new[kind], v);
   }
-  else if (!from_free) /* small segment not already in new_or_free */
+  else if (new)  /* new small segment */
   { 
-    if (next_free[kind]!=end_free[kind]) abort(); /* should be none free now */
+    if (EXTRA_CHECKS)
+    { if (next_free[kind]!=end_free[kind]) abort(); /* should be none free now*/
+    }
 
     end_free[kind] = set_first (&free_or_new[kind], 0);
 
@@ -610,8 +630,8 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
     if (set_contains (&to_look_at, v)) abort();
   }
 
-  /* Allocate auxiliary information for the segment, if needed.  We've
-     previously guaranteed that space will be available if required. */
+  /* Allocate auxiliary information for the segment, if it's a new one.  
+     We've previously guaranteed that space will be available. */
 
 # ifdef SGGC_AUX1_SIZE
     if (new)
@@ -627,7 +647,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 #     endif
       { sggc_aux1[index] = kind_aux1_block[kind] 
                             + kind_aux1_block_pos[kind] * SGGC_AUX1_SIZE;
-        if (!seg->x.small.big)
+        if (0 && !big)  /* could be enabled if aux1_off were ever actually used */
         { seg->x.small.aux1_off = kind_aux1_block_pos[kind];
         }
         if (SGGC_DEBUG)
@@ -656,7 +676,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 #     endif
       { sggc_aux2[index] = kind_aux2_block[kind] 
                             + kind_aux2_block_pos[kind] * SGGC_AUX2_SIZE;
-        if (!seg->x.small.big)
+        if (0 && !big)  /* could be enabled if aux2_off were ever actually used */
         { seg->x.small.aux2_off = kind_aux2_block_pos[kind];
         }
         if (SGGC_DEBUG)
@@ -677,7 +697,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 
   if (data != NULL)  /* data area was allocated above, already zeroed. */
   {
-    if (seg->x.big.big) /* big segment */
+    if (big) /* big segment */
     { seg->x.big.max_chunks = (nch >> SGGC_CHUNK_BITS) == 0 ? nch : 0;
       sggc_info.big_chunks += nch;
     }
@@ -689,8 +709,16 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 
   else /* Using existing data area in small segment, so just set to zeros. */
   {
-    if (sggc_kind_chunks[kind] == 0) abort();
-    memset (SGGC_DATA(v), 0, (size_t) sggc_kind_chunks[kind] * SGGC_CHUNK_SIZE);
+    /* Handle clearing a single 8 or 16 byte chunk specially. */
+
+    if ((SGGC_CHUNK_SIZE == 8 || SGGC_CHUNK_SIZE == 16) && nch == 1)
+    { uint64_t *p = (uint64_t *) SGGC_DATA(v);  /* should be aligned properly */
+      *p = 0;
+      if (SGGC_CHUNK_SIZE == 16) *(p+1) = 0;
+    }
+    else
+    { memset (SGGC_DATA(v), 0, (size_t) nch * SGGC_CHUNK_SIZE);
+    }
   }
 
   sggc_info.gen0_count += 1;
@@ -855,29 +883,59 @@ void sggc_collect (int level)
 
   if (set_first(&to_look_at, 0) != SET_NO_VALUE) abort();
 
-  /* Put objects in the old generations being collected in the free_or_new set.
+  /* Put objects in the old generations being collected in the 
+     free_or_new set for their kind. 
 
-     This could be greatly sped up with some special facility in the set
-     module that would do it a segment at a time. */
+     Two versions are maintained, an old one doing it one object at a
+     time, and a new one that does it a segment at a time. */
 
-  if (level == 2)
-  { for (v = set_first(&old_gen2, 0); 
-         v != SET_NO_VALUE; 
-         v = set_next(&old_gen2,v,0))
-    { set_add (&free_or_new[SGGC_KIND(v)], v);
-      if (SGGC_DEBUG) 
-      { printf("sggc_collect: put %x from old_gen2 in free\n",(unsigned)v);
+  if (!SGGC_SEGMENT_AT_A_TIME) /* do it the old way, one object at a time */
+  {
+    if (level == 2)
+    { for (v = set_first(&old_gen2, 0);
+           v != SET_NO_VALUE;
+           v = set_next(&old_gen2,v,0))
+      { set_add (&free_or_new[SGGC_KIND(v)], v);
+        if (SGGC_DEBUG)
+        { printf("sggc_collect: put %x from old_gen2 in free\n",(unsigned)v);
+        }
+      }
+    }
+
+    if (level >= 1)
+    { for (v = set_first(&old_gen1, 0);
+           v != SET_NO_VALUE;
+           v = set_next(&old_gen1,v,0))
+      { set_add (&free_or_new[SGGC_KIND(v)], v);
+        if (SGGC_DEBUG)
+        { printf("sggc_collect: put %x from old_gen1 in free\n",(unsigned)v);
+        }
       }
     }
   }
+  else /* do it a segment at a time */
+  {
+    if (level == 2)
+    { for (v = set_first(&old_gen2, 0); 
+           v != SET_NO_VALUE; 
+           v = set_next_segment(&old_gen2,v))
+      { set_add_segment (&free_or_new[SGGC_KIND(v)], v, SET_OLD_GEN2_CONST);
+        if (SGGC_DEBUG) 
+        { DO_FOR_SEGMENT (old_gen2, v,
+           printf("sggc_collect: put %x from old_gen2 in free\n",(unsigned)w));
+        }
+      }
+    }
 
-  if (level >= 1)
-  { for (v = set_first(&old_gen1, 0);
-         v != SET_NO_VALUE; 
-         v = set_next(&old_gen1,v,0))
-    { set_add (&free_or_new[SGGC_KIND(v)], v);
-      if (SGGC_DEBUG) 
-      { printf("sggc_collect: put %x from old_gen1 in free\n",(unsigned)v);
+    if (level >= 1)
+    { for (v = set_first(&old_gen1, 0); 
+           v != SET_NO_VALUE; 
+           v = set_next_segment(&old_gen1,v))
+      { set_add_segment (&free_or_new[SGGC_KIND(v)], v, SET_OLD_GEN1);
+        if (SGGC_DEBUG) 
+        { DO_FOR_SEGMENT (old_gen1, v,
+           printf("sggc_collect: put %x from old_gen1 in free\n",(unsigned)w));
+        }
       }
     }
   }
@@ -980,42 +1038,80 @@ void sggc_collect (int level)
 
   } while (set_first (&to_look_at, 0) != SGGC_NO_OBJECT);
 
-  /* Remove objects that are still in the free_or_new set from the old 
-     generations that were collected.  Also remove them from the old-to-new
-     set.
+  /* Remove objects still in the free_or_new set from the old generations 
+     that were collected.  Also remove them from the old-to-new set.
 
-     This is done by scanning the old generation sets, not the free sets,
-     since this is easier, and likely faster, if lots of objects were 
+     This is done by scanning the old generation sets, not the free
+     sets, since this is likely faster, if lots of objects were
      allocated but not used for long, and hence are in the free sets.
 
-     This could be greatly sped up with some special facility in the set
-     module that would do it a segment at a time. */
+     Two versions are maintained, an old one doing it one object at a
+     time, and a new one that does it a segment at a time. */
 
-  if (level == 2)
-  { v = set_first (&old_gen2, 0); 
-    while (v != SET_NO_VALUE)
-    { int remove = set_chain_contains (SET_UNUSED_FREE_NEW, v);
-      if (SGGC_DEBUG && remove) 
-      { printf("sggc_collect: %x in old_gen2 now free\n",(unsigned)v);
+  if (!SGGC_SEGMENT_AT_A_TIME) /* do it the old way, one object at a time */
+  { 
+    if (level == 2)
+    { v = set_first (&old_gen2, 0); 
+      while (v != SET_NO_VALUE)
+      { int remove = set_chain_contains (SET_UNUSED_FREE_NEW, v);
+        if (SGGC_DEBUG && remove) 
+        { printf("sggc_collect: %x in old_gen2 now free\n",(unsigned)v);
+        }
+        if (remove)
+        { set_remove (&old_to_new, v);
+        }
+        v = set_next (&old_gen2, v, remove);
       }
-      if (remove)
-      { set_remove (&old_to_new, v);
+    }
+
+    if (level >= 1)
+    { v = set_first (&old_gen1, 0); 
+      while (v != SET_NO_VALUE)
+      { int remove = set_chain_contains (SET_UNUSED_FREE_NEW, v);
+        if (SGGC_DEBUG && remove) 
+        { printf("sggc_collect: %x in old_gen1 now free\n",(unsigned)v);
+        }
+        if (remove)
+        { set_remove (&old_to_new, v);
+        }
+        v = set_next (&old_gen1, v, remove);
       }
-      v = set_next (&old_gen2, v, remove);
     }
   }
+  else /* do it a segment at a time */
+  { 
+    if (level == 2)
+    { v = set_first(&old_gen2, 0); 
+      while (v != SET_NO_VALUE)
+      { if (SGGC_DEBUG)
+        { DO_FOR_SEGMENT (old_gen2, v, 
+            if (set_chain_contains(SET_UNUSED_FREE_NEW,w))
+              printf("sggc_collect: %x in old_gen2 now free\n",(unsigned)w));
+        }
+        sggc_cptr_t nv = set_next_segment(&old_gen2,v);
+        set_remove_segment (&old_gen2, v, SET_UNUSED_FREE_NEW);
+        if (set_chain_contains_any_in_segment (SET_UNUSED_FREE_NEW, v))
+        { set_remove_segment (&old_to_new, v, SET_UNUSED_FREE_NEW);
+        }
+        v = nv;
+      }
+    }
 
-  if (level >= 1)
-  { v = set_first (&old_gen1, 0); 
-    while (v != SET_NO_VALUE)
-    { int remove = set_chain_contains (SET_UNUSED_FREE_NEW, v);
-      if (SGGC_DEBUG && remove) 
-      { printf("sggc_collect: %x in old_gen1 now free\n",(unsigned)v);
+    if (level >= 1)
+    { v = set_first(&old_gen1, 0); 
+      while (v != SET_NO_VALUE)
+      { if (SGGC_DEBUG)
+        { DO_FOR_SEGMENT (old_gen1, v, 
+            if (set_chain_contains(SET_UNUSED_FREE_NEW,w))
+              printf("sggc_collect: %x in old_gen1 now free\n",(unsigned)w));
+        }
+        sggc_cptr_t nv = set_next_segment(&old_gen1,v);
+        set_remove_segment (&old_gen1, v, SET_UNUSED_FREE_NEW);
+        if (set_chain_contains_any_in_segment (SET_UNUSED_FREE_NEW, v))
+        { set_remove_segment (&old_to_new, v, SET_UNUSED_FREE_NEW);
+        }
+        v = nv;
       }
-      if (remove)
-      { set_remove (&old_to_new, v);
-      }
-      v = set_next (&old_gen1, v, remove);
     }
   }
 

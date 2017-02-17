@@ -1,5 +1,11 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-02-14
+
+  Implements segment-at-a-time operations in SGGC, with additional
+  functions in the set facility to support this.  Other miscellaneous
+  tweaks.
+
 Version-2017-02-05
 
   Bugs fixed, allows compile-time specification of SGGC_MAX_SEGMENTS,

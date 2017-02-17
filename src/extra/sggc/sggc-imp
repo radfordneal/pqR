@@ -42,16 +42,16 @@ INITIALIZATION
 
 Currently, the maximum number of segments that may be used is fixed at
 initialization time, when several arrays of that size are allocated.
-This maximum is limited to 2^26-1, but always allocating space for
-this maximum would occupy an excessive amount of virtual memory on
-some systems.
+Alternatively, the maximum is fixed at compile time, when
+SGGC_MAX_SEGMENTS is defined, which may slightly improve speed.  This
+maximum is limited to 2^26-1, but always allocating space for this
+maximum would occupy an excessive amount of virtual memory on some
+systems.
 
-More options for initialization may be provided in future.  Static
-allocation may be an option, with the maximum number of segments fixed
-at compile time, as this may slightly improve speed.  Alternatively,
-there may be an option to allow dynamic increases in the number of
-segments, by copying the arrays subscripted by segment indexes to
-larger arrays.
+More options for initialization may be provided in future.  For
+example, there could be an option to allow dynamic increases in the
+number of segments, by copying the arrays subscripted by segment
+indexes to larger arrays.
 
 
 REPRESENTATION OF DATA AND OTHER INFORMATION FOR AN OBJECT
@@ -186,7 +186,7 @@ result in a small integer, which could be held in 32 bits.  However,
 depending on the machine used, it may be faster to do arithmetic in
 the same bit width as a pointer.  The SGGC_OFFSET_CAST symbol in
 sggc.h is defined to be a cast to whichever size of arithemtic is
-chosen.
+chosen (or this may be set by a compiler option).
 
 The need to mask out just the offset part of a compressed pointer when
 computing the address of its data or auxiliary information may be
@@ -198,9 +198,13 @@ being defined as 0 or not defined at all).
 
 A different value for SGGC_OFFSET_CAST may be used when
 SGGC_USE_OFFSET_POINTERS is 1, as may be chosen by appropriately
-editing sggc.h.  Any unsigned integer type of at least 32 bits should
-work, but whether uint32_t or uintptr_t is faster might depend on the
-machine used.
+editing sggc.h (or setting a compiler option).  Any unsigned integer
+type of at least 32 bits (possibly less) should work, but whether
+uint32_t or uintptr_t is faster might depend on the machine used.
+Note that consistent use of one unsigned type is necessary, so that
+overflow (which may happen, and produces a well-defined result for
+unsigned types) will always occur in the same manner, leading to
+cancellation of all but the desired part of the operation.
 
 
 GENERATIONAL GARBAGE COLLECTION
@@ -425,16 +429,29 @@ level are summarized below:
         1      2        no         no         no
 
 
+IMPLEMENTATION OPTIONS
+
+In additon to the SGGC_USE_OFFSET_POINTERS and SGGC_OFFSET_CAST
+symbols mentioned above, two other pre-processor symbols may be
+defined with a compiler flag in order to select different
+implementation options.  Both of these are primarily useful for
+debugging and performance evaluation, since the default is likely to
+be the best choice.
+
+SET_USE_BUILTINS may be set to 0 or 1 to disable or enable use of the
+gcc/clang builtin functions for finding and counting 1 bits.  The
+default if this is not set is to use them if the compiler appears to
+be gcc or clang.
+
+SGGC_SEGMENT_AT_A_TIME may be set to 0 or 1 to disable or enable use
+of segment-at-a-time functions provided by the set facility to speed
+up some operations.
+
+
 FUTURE IMPROVEMENTS
 
 Possible (or likely) extensions and efficiency improvements for SGGC
 include the following:
-
-  o Additional procedures could be included in the set facility to
-    allow operations such as putting all objects in an old generation
-    into a free_or_new set to be done an entire segment at a time,
-    giving a large speed improvement for small segments that contain
-    many objects.
 
   o Currently, small segments of a given kind are never freed, nor
     reused for a different kind, which could cause problems if many
@@ -453,19 +470,20 @@ include the following:
     of sggc_alloc_zeroed fails).
 
   o Currently, SGGC never frees memory used for auxiliary information,
-    though it may be reused for other objects of the same kind.  If
-    many objects of some kind are allocated, and then most of them
-    become unused, this could lead to a large amount of memory being
-    allocated but unused.  A block of memory used for auxiliary
-    information could be freed once all objects using that block are
-    no longer in use.  There is currently no data structure support
-    for identifying such blocks, and adding such support would
-    probably increase the amount of memory used per object, but these
-    blocks could be identified by scanning the 'free_or_new' and
-    'unused' sets while maintaining a hash table of auxiliary data
-    block addresses.  There is current support for finding the start
-    of the auxiliary information block used by an object, via the
-    aux1_off and aux2_off fields in a segment.
+    though it may be reused for other objects of the same kind (or a
+    different kind, for big kinds).  If many objects of some kind are
+    allocated, and then most of them become unused, this could lead to
+    a large amount of memory being allocated but unused.  A block of
+    memory used for auxiliary information could be freed once all
+    objects using that block are no longer in use.  There is currently
+    no data structure support for identifying such blocks, and adding
+    such support would probably increase the amount of memory used per
+    object, but these blocks could be identified by scanning the
+    'free_or_new' and 'unused' sets while maintaining a hash table of
+    auxiliary data block addresses.  There is current support
+    (disabled by default) for finding the start of the auxiliary
+    information block used by an object, via the aux1_off and aux2_off
+    fields in a segment.
 
   o Currently, SGGC immediately frees the data area for a big segment
     once it is known to be unused.  This may be inefficient,
@@ -486,13 +504,13 @@ include the following:
     of data for one type, which might sometimes be a problem, though
     likely not on a system with a 32-bit address space.
 
-  o More information could be maintained in sggc_info to help the
-    application decide when to call sggc_collect.
-
   o A function could be provided that determines whether or not a
     32-bit word is a valid compressed pointer, to an object that is
     not currently free.  This could be done fairly efficiency (ie,
     with a fairly small number of fetches and tests, without any
     searching), by adding a flag in small segments that is set if any
     object in the segment is in the free portion of a free_or_new set.
+
+  o More information could be maintained in sggc_info to help the
+    application decide when to call sggc_collect.
 

@@ -78,7 +78,8 @@ The following constants must be declared with #define in sggc-app.h,
 before it includes sggc.h:
 
   SGGC_CHUNK_SIZE       Number of bytes in a data chunk.  Should be a 
-                        power of two for efficiency.
+                        power of two for efficiency, and must be a
+                        multiple of 8 for alignment reasons.
 
   SGGC_N_TYPES          Number of types of objects.
 
@@ -152,7 +153,8 @@ An application may optionally define the following in sggc-app.h:
                         is used by SGGC to allocate a block of memory
                         with the given number of bytes, which must be 
                         set to all zero bits, with return of NULL 
-                        indicating failure.  Defaults to a call of
+                        indicating failure.  The memory must be aligned
+                        to an 8-byte boundary.  Defaults to a call of
                         the C library 'calloc' function.
 
   sggc_free             May be defined as a simple symbol or as a 
@@ -212,6 +214,9 @@ Finally, the sggc.h file will declare prototypes (or macros, or static
 inline definitions) for the functions documented below, some of which
 may be used by the application, others of which must be defined by the
 application for use by SGGC.
+
+See sggc-imp for how to control some aspects of the implementation,
+for which the best choice might depend on the system used.
 
 
 TYPES, LENGTHS, AND KINDS
