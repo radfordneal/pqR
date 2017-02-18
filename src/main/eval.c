@@ -4042,7 +4042,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 }
 
 #define Builtin1(do_fun,which,rho) do { \
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   SETSTACK(-1, CONS(GETSTACK(-1), R_NilValue));		     \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP), \
 		      GETSTACK(-1), rho, 0));		     \
@@ -4050,7 +4050,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 } while(0)
 
 #define Builtin2(do_fun,which,rho) do {		     \
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   SEXP tmp = CONS(GETSTACK(-1), R_NilValue); \
   SETSTACK(-2, CONS(GETSTACK(-2), tmp));     \
   R_BCNodeStackTop--; \
@@ -4060,7 +4060,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 } while(0)
 
 #define Special2(do_fun,which,rho) do {		     \
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   SEXP tmp = CONS(GETSTACK(-1), R_NilValue); \
   SETSTACK(-2, CONS(GETSTACK(-2), tmp));     \
   R_BCNodeStackTop--; \
@@ -4070,7 +4070,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 } while(0)
 
 #define NewBuiltin2(do_fun,opval,opsym,rho) do {	\
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
   SETSTACK(-2, do_fun(call, opval, opsym, x, y,rho));	\
@@ -4079,7 +4079,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 } while(0)
 
 #define Arith1(opsym) do {		\
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   SEXP x = GETSTACK(-1); \
   SETSTACK(-1, cmp_arith1(call, opsym, x, rho)); \
   NEXT(); \
@@ -4484,7 +4484,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 		if (TYPEOF(value) == PROMSXP) {		\
 		    SEXP pv = PRVALUE(value);		\
 		    if (pv == R_UnboundValue) {		\
-			SEXP symbol = VECTOR_ELT(constants, sidx);	\
+			SEXP symbol = constants[sidx];	\
 			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
 		    }							\
 		    else value = pv;					\
@@ -4497,7 +4497,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	    }								\
 	}								\
     }									\
-    SEXP symbol = VECTOR_ELT(constants, sidx);				\
+    SEXP symbol = constants[sidx];				\
     R_Visible = TRUE;							\
     BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
     NEXT();								\
@@ -4505,7 +4505,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 #else
 #define DO_GETVAR(dd,keepmiss) do { \
   int sidx = GETOP(); \
-  SEXP symbol = VECTOR_ELT(constants, sidx); \
+  SEXP symbol = constants[sidx]; \
   R_Visible = TRUE; \
   BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
   NEXT(); \
@@ -4573,7 +4573,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 }
 
 #define DO_STARTDISPATCH(generic) do { \
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   int label = GETOP(); \
   value = GETSTACK(-1); \
   if (isObject(value) && tryDispatch(generic, call, value, rho, &value)) {\
@@ -4614,7 +4614,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 } while (0)
 
 #define DO_START_ASSIGN_DISPATCH(generic) do { \
-  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP call = constants[GETOP()]; \
   int label = GETOP(); \
   SEXP lhs = GETSTACK(-2); \
   SEXP rhs = GETSTACK(-1); \
@@ -4660,7 +4660,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
     int label = GETOP(); \
     value = GETSTACK(-1); \
     if (isObject(value)) { \
-	SEXP call = VECTOR_ELT(constants, callidx); \
+	SEXP call = constants[callidx]; \
 	if (tryDispatch(generic, call, value, rho, &value)) { \
 	    SETSTACK(-1, value); \
 	    BC_CHECK_SIGINT(); \
@@ -4675,7 +4675,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
     int label = GETOP(); \
     SEXP lhs = GETSTACK(-2); \
     if (isObject(lhs)) { \
-	SEXP call = VECTOR_ELT(constants, callidx); \
+	SEXP call = constants[callidx]; \
 	SEXP rhs = GETSTACK(-1); \
 	if (NAMEDCNT_GT_1(lhs) && lhs != R_NilValue) { \
 	    lhs = duplicate(lhs); \
@@ -4980,7 +4980,7 @@ static void DO_SETMATSUBSET(SEXP rho)
 	SEXP val = GETSTACK(-1); \
 	if (TYPEOF(val) != LGLSXP || LENGTH(val) != 1) { \
 	    if (!isNumber(val))	\
-		errorcall(VECTOR_ELT(constants, callidx), \
+		errorcall(constants[callidx], \
 			  _("invalid %s type in 'x %s y'"), arg, op);	\
 	    SETSTACK(-1, ScalarLogical(asLogical(val))); \
 	} \
@@ -5036,7 +5036,8 @@ static R_NORETURN void bad_function_error (void)
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
-  SEXP value, constants;
+  SEXP value;
+  SEXP *constants;
   BCODE *pc, *codebase;
   int ftype = 0;
   R_bcstack_t *oldntop = R_BCNodeStackTop;
@@ -5055,7 +5056,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 
   INITIALIZE_MACHINE();
   codebase = pc = BCCODE(body);
-  constants = BCCONSTS(body);
+  constants = (SEXP *) DATAPTR(BCCONSTS(body));
 
   /* allow bytecode to be disabled for testing */
   if (R_disable_bytecode)
@@ -5083,7 +5084,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   Rboolean smallcache = TRUE;
 #ifdef USE_BINDING_CACHE
   if (useCache) {
-      R_len_t n = LENGTH(constants);
+      R_len_t n = LENGTH(BCCONSTS(body));
 # ifdef CACHE_MAX
       if (n > CACHE_MAX) {
 	  n = CACHE_MAX;
@@ -5123,7 +5124,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int callidx = GETOP();
 	int label = GETOP();
 	int cond;
-	SEXP call = VECTOR_ELT(constants, callidx);
+	SEXP call = constants[callidx];
 	value = BCNPOP();
 	cond = asLogicalNoNA(value, call);
 	if (! cond) {
@@ -5137,7 +5138,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(PRINTVALUE, 0): PrintValue(BCNPOP()); NEXT();
     OP(STARTLOOPCNTXT, 1):
 	{
-	    SEXP code = VECTOR_ELT(constants, GETOP());
+	    SEXP code = constants[GETOP()];
 	    loopWithContext(code, rho);
 	    NEXT();
 	}
@@ -5148,7 +5149,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP seq = GETSTACK(-1);
 	int callidx = GETOP();
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	int label = GETOP();
 
 	/* if we are iterating over a factor, coerce to character first */
@@ -5166,7 +5167,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  INTEGER(value)[1] = LENGTH(seq);
 	else if (isList(seq) || isNull(seq))
 	  INTEGER(value)[1] = length(seq);
-	else errorcall(VECTOR_ELT(constants, callidx),
+	else errorcall(constants[callidx],
 		       _("invalid for() loop sequence"));
 	BCNPUSH(value);
 
@@ -5257,7 +5258,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  be defensive against bad package C code */
     OP(LDCONST, 1):
       R_Visible = TRUE;
-      value = VECTOR_ELT(constants, GETOP());
+      value = constants[GETOP()];
       /* make sure NAMED = 2 -- lower values might be safe in some cases but
 	 not in general, especially if the constant pool was created by
 	 unserializing a compiled expression. */
@@ -5276,13 +5277,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (smallcache)
 	    loc = GET_SMALLCACHE_BINDING_CELL(vcache, sidx);
 	else {
-	    SEXP symbol = VECTOR_ELT(constants, sidx);
+	    SEXP symbol = constants[sidx];
 	    loc = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	}
 	value = GETSTACK(-1);
         INC_NAMEDCNT(value);
 	if (! SET_BINDING_VALUE(loc, value)) {
-	    SEXP symbol = VECTOR_ELT(constants, sidx);
+	    SEXP symbol = constants[sidx];
 	    PROTECT(value);
 	    defineVar(symbol, value, rho);
 	    UNPROTECT(1);
@@ -5292,7 +5293,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(GETFUN, 1):
       {
 	/* get the function */
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = findFun(symbol, rho);
 	if(RTRACE(value)) {
             Rprintf("trace: ");
@@ -5312,7 +5313,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(GETGLOBFUN, 1):
       {
 	/* get the function */
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = findFun(symbol, R_GlobalEnv);
 	if(RTRACE(value)) {
             Rprintf("trace: ");
@@ -5332,7 +5333,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(GETSYMFUN, 1):
       {
 	/* get the function */
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
 	    value = forcePromise(value);
@@ -5356,7 +5357,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(GETBUILTIN, 1):
       {
 	/* get the function */
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = getPrimitive(symbol, BUILTINSXP);
 	if (RTRACE(value)) {
             Rprintf("trace: ");
@@ -5375,7 +5376,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(GETINTLBUILTIN, 1):
       {
 	/* get the function */
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = INTERNAL(symbol);
 	if (TYPEOF(value) != BUILTINSXP)
 	  error(_("there is no .Internal function '%s'"), 
@@ -5409,7 +5410,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(MAKEPROM, 1):
       {
-	SEXP code = VECTOR_ELT(constants, GETOP());
+	SEXP code = constants[GETOP()];
 	if (ftype != SPECIALSXP) {
 	  if (ftype == BUILTINSXP)
 	      value = bcEval(code, rho, TRUE);
@@ -5427,7 +5428,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(SETTAG, 1):
       {
-	SEXP tag = VECTOR_ELT(constants, GETOP());
+	SEXP tag = constants[GETOP()];
 	SEXP cell = GETSTACK(-1);
 	if (ftype != SPECIALSXP && cell != R_NilValue)
 	  SET_TAG(cell, CreateTag(tag));
@@ -5456,7 +5457,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     /**** for now PUSHCONST, PUSHTRUE, and PUSHFALSE duplicate/allocate to
 	  be defensive against bad package C code */
     OP(PUSHCONSTARG, 1):
-      value = VECTOR_ELT(constants, GETOP());
+      value = constants[GETOP()];
       PUSHCALLARG(duplicate(value));
       NEXT();
     OP(PUSHNULLARG, 0): PUSHCALLARG(R_NilValue); NEXT();
@@ -5465,7 +5466,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(CALL, 1):
       {
 	SEXP fun = GETSTACK(-3);
-	SEXP call = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
 	SEXP args = GETSTACK(-2);
 	int flag;
 	switch (ftype) {
@@ -5495,7 +5496,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(CALLBUILTIN, 1):
       {
 	SEXP fun = GETSTACK(-3);
-	SEXP call = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
 	SEXP args = GETSTACK(-2);
 	int flag;
 	const void *vmax = VMAXGET();
@@ -5512,7 +5513,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(CALLSPECIAL, 1):
       {
-	SEXP call = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
 	SEXP symbol = CAR(call);
 	SEXP fun = getPrimitive(symbol, SPECIALSXP);
 	int flag;
@@ -5532,7 +5533,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(MAKECLOSURE, 1):
       {
-	SEXP fb = VECTOR_ELT(constants, GETOP());
+	SEXP fb = constants[GETOP()];
 	SEXP forms = VECTOR_ELT(fb, 0);
 	SEXP body = VECTOR_ELT(fb, 1);
 	value = mkCLOSXP(forms, body, rho);
@@ -5561,7 +5562,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(STARTASSIGN, 1):
       {
 	int sidx = GETOP();
-	SEXP symbol = VECTOR_ELT(constants, sidx);
+	SEXP symbol = constants[sidx];
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = BINDING_VALUE(cell);
         if (TYPEOF(value) == PROMSXP)
@@ -5596,7 +5597,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(ENDASSIGN, 1):
       {
 	int sidx = GETOP();
-	SEXP symbol = VECTOR_ELT(constants, sidx);
+	SEXP symbol = constants[sidx];
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = GETSTACK(-1); /* leave on stack for GC protection */
         INC_NAMEDCNT(value);
@@ -5624,8 +5625,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(DOLLAR, 2):
       {
 	int dispatched = FALSE;
-	SEXP call = VECTOR_ELT(constants, GETOP());
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
+	SEXP symbol = constants[GETOP()];
 	SEXP x = GETSTACK(-1);
 	if (isObject(x)) {
 	    SEXP ncall;
@@ -5644,8 +5645,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(DOLLARGETS, 2):
       {
 	int dispatched = FALSE;
-	SEXP call = VECTOR_ELT(constants, GETOP());
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
+	SEXP symbol = constants[GETOP()];
 	SEXP x = GETSTACK(-2);
 	SEXP rhs = GETSTACK(-1);
 	if (NAMEDCNT_GT_1(x) && x != R_NilValue) {
@@ -5738,7 +5739,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(VISIBLE, 0): R_Visible = TRUE; NEXT();
     OP(SETVAR2, 1):
       {
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = GETSTACK(-1);
 	if (NAMEDCNT_GT_0(value)) {
 	    value = duplicate(value);
@@ -5749,7 +5750,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(STARTASSIGN2, 1):
       {
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = GETSTACK(-1);
 	BCNPUSH(getvar(symbol, ENCLOS(rho), FALSE, FALSE, NULL, 0));
 	BCNPUSH(value);
@@ -5758,7 +5759,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(ENDASSIGN2, 1):
       {
-	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	SEXP symbol = constants[GETOP()];
 	value = BCNPOP();
 	set_var_nonlocal (symbol, value, ENCLOS(rho), 3);
 	/* original right-hand side value is now on top of stack again */
@@ -5772,8 +5773,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
         SEXP lhs = GETSTACK(-5);
         SEXP rhs = GETSTACK(-4);
 	SEXP fun = GETSTACK(-3);
-	SEXP call = VECTOR_ELT(constants, GETOP());
-	SEXP vexpr = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
+	SEXP vexpr = constants[GETOP()];
 	SEXP args, prom, last;
 	if (NAMEDCNT_GT_1(lhs) && lhs != R_NilValue) {
 	  lhs = duplicate(lhs);
@@ -5839,7 +5840,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP lhs = GETSTACK(-5);
 	SEXP fun = GETSTACK(-3);
-	SEXP call = VECTOR_ELT(constants, GETOP());
+	SEXP call = constants[GETOP()];
 	SEXP args, prom;
 	switch (ftype) {
 	case BUILTINSXP:
@@ -5887,10 +5888,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     }
     OP(DUP2ND, 0): BCNDUP2ND(); NEXT();
     OP(SWITCH, 4): {
-       SEXP call = VECTOR_ELT(constants, GETOP());
-       SEXP names = VECTOR_ELT(constants, GETOP());
-       SEXP coffsets = VECTOR_ELT(constants, GETOP());
-       SEXP ioffsets = VECTOR_ELT(constants, GETOP());
+       SEXP call = constants[GETOP()];
+       SEXP names = constants[GETOP()];
+       SEXP coffsets = constants[GETOP()];
+       SEXP ioffsets = constants[GETOP()];
        value = BCNPOP();
        if (!isVector(value) || length(value) != 1)
 	   errorcall(call, _("EXPR must be a length 1 vector"));
