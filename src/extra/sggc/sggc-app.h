@@ -224,21 +224,11 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 #define SGGC_AFTER_MARKING
 
-
 #define sggc_kind sggc_kind_inline
 
-/* The sggc_find_object_ptrs procedure may be included after sggc.h,
-   as a "static inline" procedure, or defined as an external procedure
-   in memory.c, according to whether sggc_find_object_ptrs is defined
-   as sggc_find_object_ptrs_inline here, or left undefined. */
-
-/* #define sggc_find_object_ptrs sggc_find_object_ptrs_inline */
 
 #include "sggc.h"  /* Include the generic SGGC header file */
 
-#ifdef sggc_find_object_ptrs
-#include "sggc-find-ptrs.c"
-#endif
 
 static inline sggc_kind_t sggc_kind_inline (sggc_type_t type, 
                                             sggc_length_t length)

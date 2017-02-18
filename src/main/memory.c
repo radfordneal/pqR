@@ -520,13 +520,8 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* THE GENERATIONAL GARBAGE COLLECTOR. */
 
-#ifndef sggc_find_object_ptrs
-#include <sggc/sggc-find-ptrs.c>
-#endif
-
-#ifndef LOOK_AT
-#define LOOK_AT(x) ((x) ? sggc_look_at(COMPRESSED_PTR(x)) : 1)
-#endif
+#define LOOK_AT(x) \
+  ((void) ((x) != R_NoObject ? sggc_look_at(COMPRESSED_PTR(x)) : 0))
 
 #define NOT_MARKED(x) sggc_not_marked(COMPRESSED_PTR(x))
 
