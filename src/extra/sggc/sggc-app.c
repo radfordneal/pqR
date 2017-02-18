@@ -181,6 +181,12 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)
 
+#if USE_COMPRESSED_POINTERS
+#define CHK_NO_OBJECT(x) 1  /* since checked in sggc_look_at */
+#else
+#define CHK_NO_OBJECT(x) ((x) != R_NoObject)
+#endif
+
 void sggc_find_object_ptrs (sggc_cptr_t cptr)
 {
     sggc_type_t sggctype = SGGC_TYPE(cptr);
@@ -190,7 +196,7 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     SEXP n = SEXP_PTR(cptr);
 
-    if (ATTRIB(n) != R_NoObject && ATTRIB(n) != R_NilValue) {
+    if (CHK_NO_OBJECT(ATTRIB(n)) && ATTRIB(n) != R_NilValue) {
         sggc_cptr_t p = COMPRESSED_PTR(ATTRIB(n));
         if (!sggc_look_at(p)) return;
     }
@@ -199,12 +205,13 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
         return;
 
     if (sggctype == 2) {
-        sggc_cptr_t p1 = COMPRESSED_PTR(CAR(n));
-        sggc_cptr_t p2 = COMPRESSED_PTR(CDR(n));
-        sggc_cptr_t p3 = COMPRESSED_PTR(TAG(n));
-        if (p1 != R_NoObject) if (!sggc_look_at(p1)) return;
-        if (p2 != R_NoObject) if (!sggc_look_at(p2)) return;
-        if (p3 != R_NoObject) (void) sggc_look_at(p3);
+        SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
+        if (CHK_NO_OBJECT(car))
+            if (!sggc_look_at(COMPRESSED_PTR(car))) return;
+        if (cdr != R_NilValue && CHK_NO_OBJECT(cdr)) 
+            if (!sggc_look_at(COMPRESSED_PTR(cdr))) return;
+        if (tag != R_NilValue && CHK_NO_OBJECT(tag)) 
+            (void) sggc_look_at(COMPRESSED_PTR(tag));
         return;
     }
 
@@ -221,9 +228,9 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
     }
 
     if (sggctype == 4) {
-        if (CDR(n) != R_NoObject)
+        if (CHK_NO_OBJECT(CDR(n)))
             if (!sggc_look_at(COMPRESSED_PTR(CDR(n)))) return;
-        if (TAG(n) != R_NoObject)
+        if (CHK_NO_OBJECT(TAG(n)))
             (void) sggc_look_at(COMPRESSED_PTR(TAG(n)));
         return;
     }
