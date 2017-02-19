@@ -114,6 +114,17 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  32,  32,   2,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
 
+#define SGGC_KIND_TYPES \
+{ 0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4  \
+};
+
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE /* data part */ \
        + 4 /* attribute pointer */ \
@@ -169,6 +180,17 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  32,  32,   5,  32,   3         /* 7th smallest sizes, only for type 0 */ \
 }
 
+#define SGGC_KIND_TYPES \
+{ 0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4  \
+};
+
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
 
@@ -215,6 +237,17 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
  16,  32,   3,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
  32,  32,   3,  32,   2         /* 7th smallest sizes, only for type 0 */ \
 }
+
+#define SGGC_KIND_TYPES \
+{ 0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4, \
+  0, 1, 2, 3, 4  \
+};
 
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )

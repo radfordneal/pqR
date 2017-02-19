@@ -207,7 +207,7 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
 
 static ptr_t alloc (sggc_type_t type)
 {
-  static unsigned alloc_count = 0;
+  static unsigned alloc_count = 1;  /* 1 for allocation of nil at init */
   sggc_cptr_t a;
 
   /* Do optional garbage collections according to the scheme.  Do this first,
@@ -226,10 +226,19 @@ static ptr_t alloc (sggc_type_t type)
   /* Try to allocate object, calling garbage collector if this initially
      fails. */
 
-  a = sggc_alloc(type,1); /* length argument is ignored */
+# if USE_ALLOC_SMALL_KIND
+    a = sggc_alloc_small_kind(type);  /* kind always same as type in this app */
+# else
+    a = sggc_alloc(type,1); /* length argument is ignored */
+# endif
+
   if (a == SGGC_NO_OBJECT)
   { sggc_collect(2);
-    a = sggc_alloc(type,1);
+#   if USE_ALLOC_SMALL_KIND
+      a = sggc_alloc_small_kind(type);/* kind always same as type in this app */
+#   else
+      a = sggc_alloc(type,1); /* length argument is ignored */
+#   endif
     if (a == SGGC_NO_OBJECT)
     { printf("CAN'T ALLOCATE\n");
       abort();
@@ -612,7 +621,7 @@ int main (void)
 
   sggc_init (10000);
 
-  nil = alloc (TYPE_NIL);
+  nil = sggc_alloc (TYPE_NIL, 1);
   if (nil != 0) abort();  /* want nil to be zero for auto initialization */
 
   global_bindings = nil;

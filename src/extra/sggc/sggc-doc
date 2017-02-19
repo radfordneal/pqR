@@ -89,6 +89,12 @@ before it includes sggc.h:
                         chunks for each kind of object, 0 if the kind uses
                         "big" segments (with variable numbers of chunks).
 
+The following constant must be defined if the sggc_alloc_small_kind 
+function is used (see below):
+
+  SGGC_KIND_TYPES       An array initializer giving the type for each
+                        kind of object.
+
 The following may optionally be defined, if auxiliary information 1 or
 auxiliary information 2 is to be used:
 
@@ -430,6 +436,14 @@ macros) below, which have (if functions) prototypes as shown:
     The data area for the newly allocated object will be set to all
     zero bits, but any auxiliary information for the object will have
     undefined contents.
+
+  sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t)
+
+    A faster alternative to sggc_alloc, which exists only if the
+    application has defined SGGC_KIND_TYPE (see above).  It takes a
+    kind of an object as its argument, which must not be a kind for a
+    big segment.  The type and number of chunks needed are determined
+    by this kind.  The function otherwise acts the same as sggc_alloc.
 
   void sggc_collect (int level)
 

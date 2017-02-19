@@ -79,6 +79,13 @@
 const int sggc_kind_chunks[SGGC_N_KINDS] = SGGC_KIND_CHUNKS;
 
 
+/* TYPES FOR KINDS, IF PROVIDED BY APPLICATION. */
+
+#ifdef SGGC_KIND_TYPES
+static const sggc_type_t sggc_kind_types[SGGC_N_KINDS] = SGGC_KIND_TYPES;
+#endif
+
+
 /* MACROS TO APPLY OR UN-APPLY AN OFFSET TO A DATA/AUX POINTER. */
 
 #if SGGC_USE_OFFSET_POINTERS
@@ -423,28 +430,22 @@ static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos,
 }
 
 
-/* ALLOCATE AN OBJECT OF SPECIFIED TYPE AND LENGTH.  The length is
-   (possibly) used in determining the kind for the object, as
-   determined by the application's sggc_kind function, and the number
-   of chunks of storage it requires, as determined by the
-   application's sggc_nchunks function.  
+/* ALLOCATE AN OBJECT OF SPECIFIED KIND, TYPE, AND LENGTH.  The length
+   is used only for big kinds. The value returned is SGGC_NO_OBJECT if
+   allocation fails (but note that it might succeed if retried after
+   garbage collection is done). 
 
-   The value returned is SGGC_NO_OBJECT if allocation fails, but note
-   that it might succeed if retried after garbage collection is done
-   (but this is left to the application to do if it wants to). */
+   Used to implement sggc_alloc and sggc_alloc_small_kind. */
 
-sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
+static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind, 
+                                                sggc_type_t type,
+                                                sggc_length_t length)
 {
-  if (SGGC_DEBUG) 
-  { printf("sggc_alloc: type %u, length %u\n",(unsigned)type,(unsigned)length);
-  }
-
   int big = 0;  /* will object go in a big segment? */
   int new = 0;  /* will object go in a new segment? */
 
   char *data = NULL;  /* pointer to data area for segment used */
 
-  sggc_kind_t kind = sggc_kind(type,length);   /* kind of segment needed */
   sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
 
   sggc_index_t index;       /* index of segment that object will be in */
@@ -733,6 +734,36 @@ fail:
   if (data != NULL) sggc_free(data);
   return SGGC_NO_OBJECT;
 }
+
+
+/* ALLOCATE AN OBJECT WITH GIVEN KIND AND LENGTH. */
+
+sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
+{
+  if (SGGC_DEBUG) 
+  { printf("sggc_alloc: type %u, length %u\n",(unsigned)type,(unsigned)length);
+  }
+
+  return sggc_alloc_kind_type_length (sggc_kind(type,length), type, length);
+}
+
+
+/* ALLOCATE AN OBJECT WITH GIVEN KIND, WHICH MUST BE FOR A SMALL SEGMENT. 
+   Not defined if the application did not provide SGGC_KIND_TYPES. */
+
+#ifdef SGGC_KIND_TYPES
+
+sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
+{
+  if (SGGC_DEBUG) 
+  { printf("sggc_alloc_small_kind: kind %d (type %u)\n", 
+            (int) kind, (unsigned) sggc_kind_types[kind]);
+  }
+
+  return sggc_alloc_kind_type_length (kind, sggc_kind_types[kind], 0);
+}
+
+#endif
 
 
 /* REGISTER A CONSTANT SEGMENT.  Called with the type and kind of the

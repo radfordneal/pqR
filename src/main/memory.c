@@ -139,6 +139,8 @@ static SEXP R_StringHash;              /* Global hash of CHARSXPs */
 
 extern SEXP framenames;                /* in model.c */
 
+static sggc_kind_t R_type_length1_to_kind[32]; /* map R type to kind if len 1 */
+
 
 /* Variables controlling when garbage collections are done. */
 
@@ -989,6 +991,11 @@ void attribute_hidden InitMemory()
 
     sggc_init(2000000);
 
+    for (i = 0; i < 32; i++) {
+        R_type_length1_to_kind[i] 
+          = sggc_kind (R_type_to_sggc_type[i], Rf_nchunks(i,1));
+    }
+
     extern void Rf_constant_init(void);
     Rf_constant_init();
 
@@ -1052,15 +1059,15 @@ void attribute_hidden InitMemory()
 }
 
 
-/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue.
-   Does not set LENGTH, which will sometimes be read-only. */
+/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue,
+   type as passed.  Does not set LENGTH, which will sometimes be read-only. */
 
 static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
     sggc_type_t sggctype = R_type_to_sggc_type[type];
     sggc_length_t sggclength = Rf_nchunks(type,length);
 
-    if (gc_countdown-- == 0) {
+    if (gc_countdown-- <= 0) {
         R_gc_internal(); 
         gc_countdown = GC_INTERVAL;
     }
@@ -1101,6 +1108,32 @@ static SEXP alloc_nonvec (SEXPTYPE type)
     if (LENGTH(s) == 0) 
         LENGTH(s) = 1;
     return s;
+}
+
+
+/* Fast allocation of a non-vector or vector of length 1.  It never
+   garbage collects, but just returns R_NoObject if it fails to
+   allocate.  The caller must then call the garbage collector itself. */
+
+static SEXP alloc_fast (SEXPTYPE type)
+{
+    sggc_cptr_t cp = sggc_alloc_small_kind (R_type_length1_to_kind[type]);
+
+    if (cp == SGGC_NO_OBJECT)
+        return R_NoObject;
+
+    SEXP r = SEXP_PTR (cp);
+
+#if !USE_COMPRESSED_POINTERS
+    r->cptr = cp;
+#endif
+
+    TYPEOF(r) = type;
+    ATTRIB(r) = R_NilValue;
+    if (LENGTH(r) == 0) 
+        LENGTH(r) = 1;
+
+    return r;
 }
 
 
@@ -1191,12 +1224,18 @@ SEXP allocSExp(SEXPTYPE t)
 
 SEXP cons(SEXP car, SEXP cdr)
 {
-    PROTECT2(car,cdr);
-    SEXP s = alloc_nonvec(LISTSXP);
+    SEXP s;
+
+    if (gc_countdown-- <= 0 || (s = alloc_fast(LISTSXP)) == R_NoObject) {
+        PROTECT2(car,cdr);
+        s = alloc_nonvec(LISTSXP);
+        UNPROTECT(2);
+    }
+
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = R_NilValue;
-    UNPROTECT(2);
+
     return s;
 }
 
@@ -1204,12 +1243,18 @@ SEXP cons(SEXP car, SEXP cdr)
 
 SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
-    PROTECT3(car,cdr,tag);
-    SEXP s = alloc_nonvec(LISTSXP);
+    SEXP s;
+
+    if (gc_countdown-- <= 0 || (s = alloc_fast(LISTSXP)) == R_NoObject) {
+        PROTECT3(car,cdr,tag);
+        s = alloc_nonvec(LISTSXP);
+        UNPROTECT(3);
+    }
+
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
     TAG(s) = Rf_chk_valid_SEXP(tag);
-    UNPROTECT(3);
+
     return s;
 }
 
@@ -1236,8 +1281,14 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 
 SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
-    PROTECT3(namelist,valuelist,rho);
-    SEXP newrho = alloc_nonvec(ENVSXP);
+    SEXP newrho;
+
+    if (gc_countdown-- <= 0 || (newrho = alloc_fast(ENVSXP)) == R_NoObject) {
+        PROTECT3(namelist,valuelist,rho);
+        newrho = alloc_nonvec(ENVSXP);
+        UNPROTECT(3);
+    }
+
     SEXP v, n;
 
     FRAME(newrho) = valuelist;
@@ -1251,7 +1302,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	v = CDR(v);
 	n = CDR(n);
     }
-    UNPROTECT(3);
+
     return (newrho);
 }
 
@@ -1262,8 +1313,14 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
-    PROTECT2(expr,rho);
-    SEXP s = alloc_nonvec(PROMSXP);
+    SEXP s;
+
+    if (gc_countdown-- <= 0 || (s = alloc_fast(PROMSXP)) == R_NoObject) {
+        PROTECT2(expr,rho);
+        s = alloc_nonvec(PROMSXP);
+        UNPROTECT(2);
+    }
+
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
 
@@ -1271,7 +1328,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = Rf_chk_valid_SEXP(rho);
     PRSEEN(s) = 0;
-    UNPROTECT(2);
+
     return s;
 }
 
@@ -1328,8 +1385,13 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 
 SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 {
-    PROTECT3(formals,body,rho);
-    SEXP c = alloc_nonvec(CLOSXP);
+    SEXP c;
+
+    if (gc_countdown-- <= 0 || (c = alloc_fast(CLOSXP)) == R_NoObject) {
+        PROTECT3(formals,body,rho);
+        c = alloc_nonvec(CLOSXP);
+        UNPROTECT(3);
+    }
 
 #ifdef not_used_CheckFormals
     if(isList(formals))
@@ -1339,6 +1401,7 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 #else
     SET_FORMALS(c, formals);
 #endif
+
     switch (TYPEOF(body)) {
     case CLOSXP:
     case BUILTINSXP:
@@ -1352,11 +1415,8 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 	break;
     }
 
-    if(rho == R_NilValue)
-	SET_CLOENV(c, R_GlobalEnv);
-    else
-	SET_CLOENV(c, rho);
-    UNPROTECT(3);
+    SET_CLOENV(c, rho == R_NilValue ? R_GlobalEnv : rho);
+
     return c;
 }
 
@@ -1379,8 +1439,14 @@ static int isDDName(SEXP name)
 
 SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 {
-    PROTECT2(name,value);
-    SEXP c = alloc_nonvec(SYMSXP);
+    SEXP c;
+
+    if (gc_countdown-- <= 0 || (c = alloc_fast(SYMSXP)) == R_NoObject) {
+        PROTECT2(name,value);
+        c = alloc_nonvec(SYMSXP);
+        UNPROTECT(2);
+    }
+
     PRINTNAME(c) = name;
     SYMVALUE(c) = value;
     INTERNAL(c) = R_NilValue;
@@ -1388,16 +1454,16 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     LASTSYMENV(c) = R_NoObject;
     LASTSYMBINDING(c) = R_NoObject;
     LASTSYMENVNOTFOUND(c) = R_NoObject;
+
     SET_DDVAL(c, isDDName(name));
-    UNPROTECT(2);
+
     return c;
 }
 
 
 /* Fast, specialize allocVector for vectors of length 1.  The type 
-   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so that it's
-   of SGGC type 1, and there's no need to initialize a pointer in the 
-   data part. 
+   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so that 
+   there's no need to initialize a pointer in the data part. 
 
    The version with an argument is static.  Versions for each allowed
    type are defined below for use elsewhere in the interpreter, in which
@@ -1408,13 +1474,21 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 static SEXP allocVector1 (SEXPTYPE type)
 {
     SEXP s;
+
 #if VALGRIND_LEVEL==0
-    s = alloc_obj(type,1);
+
+    if (gc_countdown-- <= 0 || (s = alloc_fast(type)) == R_NoObject) {
+        s = alloc_obj(type,1);
+    }
     LENGTH(s) = 1;
     if (R_IsMemReporting) R_ReportAllocation (s);
+
 #else
+
     s = allocVector (type, 1);
+
 #endif
+
     return s;
 }
 
