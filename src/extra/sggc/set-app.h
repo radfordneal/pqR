@@ -70,11 +70,6 @@
   } x;
 
 
-/* INCLUDE THE NON-APPLICATION-SPECIFIC HEADER FOR THE SET MODULE. */
-
-#include "set.h"
-
-
 /* POINTER TO ARRAY OF POINTERS TO SEGMENTS.  This array of pointers
    is allocated when the GC is initialized, with the segments themselves
    allocated later, as needed, except that if SGGC_MAX_SEGMENTS is
@@ -96,3 +91,8 @@ struct set_segment **sggc_segment;
 /* MACRO FOR GETTING SEGMENT POINTER FROM SEGMENT INDEX. */
 
 #define SET_SEGMENT(index) (sggc_segment[index])
+
+
+/* INCLUDE THE NON-APPLICATION-SPECIFIC HEADER FOR THE SET MODULE. */
+
+#include "set.h"

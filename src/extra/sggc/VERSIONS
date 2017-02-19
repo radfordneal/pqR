@@ -1,5 +1,10 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-02-19
+
+  Implements sggc_alloc_small_kind and sggc_alloc_small_kind_quickly,
+  other performance improvements, bug fix.
+
 Version-2017-02-14
 
   Implements segment-at-a-time operations in SGGC, with additional

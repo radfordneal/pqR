@@ -240,15 +240,12 @@ int sggc_init (int max_segments);
 sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length);
 #ifdef SGGC_KIND_TYPES
 sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
+sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind);
 #endif
 void sggc_collect (int level);
 int sggc_look_at (sggc_cptr_t cptr);
 void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr);
-int sggc_youngest_generation (sggc_cptr_t from_ptr);
-int sggc_oldest_generation (sggc_cptr_t from_ptr);
-int sggc_not_marked (sggc_cptr_t cptr);
 
-int sggc_is_constant (sggc_cptr_t cptr);
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
 #ifdef SGGC_AUX1_SIZE
@@ -258,3 +255,41 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                          , char *aux2
 #endif
 );
+
+
+/* Functions below are defined here as "static inline" for speed. */
+
+
+/* CHECK WHETHER AN OBJECT IS IN THE YOUNGEST GENERATION.  */
+
+static inline int sggc_youngest_generation (sggc_cptr_t from_ptr)
+{
+  return set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr);
+}
+
+
+/* CHECK WHETHER AN OBJECT IS IN THE OLDEST GENERATION, OR IS A CONSTANT. */
+
+static inline int sggc_oldest_generation (sggc_cptr_t to_ptr)
+{
+  return set_chain_contains (SET_OLD_GEN2_CONST, to_ptr);
+}
+
+
+/* TEST WHETHER AN OBJECT IS NOT (YET) MARKED AS IN USE.  May only be 
+   called during a garbage collection. */
+
+static inline int sggc_not_marked (sggc_cptr_t cptr)
+{
+  return set_chain_contains (SET_UNUSED_FREE_NEW, cptr);
+}
+
+
+/* TEST WHETHER AN OBJECT IS A CONSTANT. */
+
+static inline int sggc_is_constant (sggc_cptr_t cptr)
+{
+  struct set_segment *set = SET_SEGMENT(SET_VAL_INDEX(cptr));
+
+  return !set->x.small.big && set->x.small.constant;
+}

@@ -115,10 +115,6 @@ struct set
 
 SET_PROC_CLASS void set_init (struct set *set, int chain);
 SET_PROC_CLASS void set_segment_init (struct set_segment *seg);
-SET_PROC_CLASS int set_chain (struct set *set);
-SET_PROC_CLASS int set_contains (struct set *set, set_value_t val);
-SET_PROC_CLASS int set_chain_contains (int chain, set_value_t val);
-SET_PROC_CLASS int set_chain_contains_any_in_segment(int chain,set_value_t val);
 SET_PROC_CLASS int set_add (struct set *set, set_value_t val);
 SET_PROC_CLASS int set_remove (struct set *set, set_value_t val);
 SET_PROC_CLASS set_value_t set_first (struct set *set, int remove);
@@ -136,4 +132,59 @@ SET_PROC_CLASS void set_add_segment (struct set *set, set_value_t val,
                                      int chain);
 SET_PROC_CLASS void set_remove_segment (struct set *set, set_value_t val,
                                         int chain);
-SET_PROC_CLASS set_value_t set_n_elements (struct set *set);
+
+
+/* Functions below are defined here as "static inline" for speed. */
+
+
+/* RETURN THE CHAIN USED BY A SET. */
+
+static inline int set_chain (struct set *set)
+{ 
+  return set->chain;
+}
+
+
+/* CHECK WHETHER A VALUE IS AN ELEMENT OF ANY SET USING A GIVEN CHAIN.
+
+   This is implemented by just looking at the right bit in the bits for
+   the chain. */
+
+static inline int set_chain_contains (int chain, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  set_offset_t offset = SET_VAL_OFFSET(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  return (seg->bits[chain] >> offset) & 1;
+}
+
+
+/* CHECK WHETHER ANY SET USING A GIVEN CHAIN CONATAINS ANY ELEMENT IN A SEGMENT.
+
+   This is implemented by just checking whether any bits for that chain in the
+   segment. */
+
+static inline int set_chain_contains_any_in_segment(int chain, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  return seg->bits[chain] != 0;
+}
+
+
+/* CHECK WHETHER A SET, OR ANY SET USING THE SAME CHAIN, CONTAINS A VALUE. */
+
+static inline int set_contains (struct set *set, set_value_t val)
+{
+  return set_chain_contains (set->chain, val);
+}
+
+
+/* RETURN THE NUMBER OF ELEMENTS IN A SET. */
+
+static inline set_value_t set_n_elements (struct set *set)
+{
+  return set->n_elements;
+}

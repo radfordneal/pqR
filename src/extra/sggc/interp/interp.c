@@ -226,7 +226,12 @@ static ptr_t alloc (sggc_type_t type)
   /* Try to allocate object, calling garbage collector if this initially
      fails. */
 
-# if USE_ALLOC_SMALL_KIND
+# if USE_ALLOC_SMALL_KIND_QUICKLY
+    a = sggc_alloc_small_kind_quickly(type);  /* kind always same as type */
+    if (a == SGGC_NO_OBJECT)
+    { a = sggc_alloc_small_kind(type);
+    }
+# elif USE_ALLOC_SMALL_KIND
     a = sggc_alloc_small_kind(type);  /* kind always same as type in this app */
 # else
     a = sggc_alloc(type,1); /* length argument is ignored */

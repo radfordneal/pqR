@@ -736,7 +736,7 @@ fail:
 }
 
 
-/* ALLOCATE AN OBJECT WITH GIVEN KIND AND LENGTH. */
+/* ALLOCATE AN OBJECT WITH GIVEN TYPE AND LENGTH. */
 
 sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 {
@@ -761,6 +761,67 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
   }
 
   return sggc_alloc_kind_type_length (kind, sggc_kind_types[kind], 0);
+}
+
+#endif
+
+
+/* QUICKLY ALLOCATE AN OBJECT WITH GIVEN KIND, WHICH MUST BE FOR SMALL SEGMENT. 
+   Returns SGGC_NO_OBJECT if quick allocation is not possible. 
+
+   Not defined if the application did not provide SGGC_KIND_TYPES. */
+
+#ifdef SGGC_KIND_TYPES
+
+sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
+{
+  if (SGGC_DEBUG) 
+  { printf("sggc_alloc_small_kind_quickly: kind %d (type %u)\n", 
+            (int) kind, (unsigned) sggc_kind_types[kind]);
+  }
+
+  sggc_type_t type = sggc_kind_types[kind];  /* Type for this kind of object */
+
+# ifdef SGGC_AUX1_SIZE
+    char *const read_only_aux1 =
+#     ifdef SGGC_AUX1_READ_ONLY
+        kind_aux1_read_only[kind];
+#     else
+        NULL;
+#     endif
+    if (!read_only_aux1 && kind_aux1_block[kind] == NULL) return SGGC_NO_OBJECT;
+# endif
+
+# ifdef SGGC_AUX2_SIZE
+    char *const read_only_aux2 =
+#     ifdef SGGC_AUX2_READ_ONLY
+        kind_aux2_read_only[kind];
+#     else
+        NULL;
+#     endif
+    if (!read_only_aux2 && kind_aux2_block[kind] == NULL) return SGGC_NO_OBJECT;
+# endif
+
+  sggc_cptr_t v = next_free[kind];    /* pointer to object, returned as value */
+
+  if (v == end_free[kind]) return SGGC_NO_OBJECT;
+
+  next_free[kind] = set_next (&free_or_new[kind], v, 0);
+
+  sggc_nchunks_t nch = sggc_kind_chunks[kind];  /* number of chunks for object*/
+
+  if ((SGGC_CHUNK_SIZE == 8 || SGGC_CHUNK_SIZE == 16) && nch == 1)
+  { uint64_t *p = (uint64_t *) SGGC_DATA(v);  /* should be aligned properly */
+    *p = 0;
+    if (SGGC_CHUNK_SIZE == 16) *(p+1) = 0;
+  }
+  else
+  { memset (SGGC_DATA(v), 0, (size_t) nch * SGGC_CHUNK_SIZE);
+  }
+
+  sggc_info.gen0_count += 1;
+
+  return v;
 }
 
 #endif
@@ -1307,41 +1368,4 @@ void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr)
      reference in from_ptr. */
 
   set_add (&old_to_new, from_ptr);
-}
-
-
-/* CHECK WHETHER AN OBJECT IS IN THE YOUNGEST GENERATION.  */
-
-int sggc_youngest_generation (sggc_cptr_t from_ptr)
-{
-  return set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr);
-}
-
-
-/* CHECK WHETHER AN OBJECT IS IN THE OLDEST GENERATION, OR IS A CONSTANT. */
-
-int sggc_oldest_generation (sggc_cptr_t to_ptr)
-{
-  return set_chain_contains (SET_OLD_GEN2_CONST, to_ptr);
-}
-
-
-/* TEST WHETHER AN OBJECT IS NOT (YET) MARKED AS IN USE.  May only be 
-   called during a garbage collection. */
-
-int sggc_not_marked (sggc_cptr_t cptr)
-{
-  if (collect_level < 0) abort();  /* not in middle of a garbage collection */
-
-  return set_chain_contains (SET_UNUSED_FREE_NEW, cptr);
-}
-
-
-/* TEST WHETHER AN OBJECT IS A CONSTANT. */
-
-int sggc_is_constant (sggc_cptr_t cptr)
-{
-  struct set_segment *set = SET_SEGMENT(SET_VAL_INDEX(cptr));
-
-  return !set->x.small.big && set->x.small.constant;
 }

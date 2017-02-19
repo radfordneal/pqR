@@ -1113,11 +1113,14 @@ static SEXP alloc_nonvec (SEXPTYPE type)
 
 /* Fast allocation of a non-vector or vector of length 1.  It never
    garbage collects, but just returns R_NoObject if it fails to
-   allocate.  The caller must then call the garbage collector itself. */
+   allocate (possibly because the sggc routine thought it wasn't easy). 
+   The caller must then call the garbage collector itself. */
 
 static SEXP alloc_fast (SEXPTYPE type)
 {
-    sggc_cptr_t cp = sggc_alloc_small_kind (R_type_length1_to_kind[type]);
+    sggc_cptr_t cp;
+
+    cp = sggc_alloc_small_kind_quickly (R_type_length1_to_kind[type]);
 
     if (cp == SGGC_NO_OBJECT)
         return R_NoObject;

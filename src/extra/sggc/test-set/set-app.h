@@ -21,10 +21,15 @@
 #define SET_OFFSET_BITS 6
 #define SET_CHAINS 2
 
+static struct set_segment *SET_SEGMENT ();
+
 #include "set.h"
 
 #define N_SEG 10
 
 struct set_segment segment[N_SEG];
 
-#define SET_SEGMENT(index) (&segment[index])
+static inline struct set_segment *SET_SEGMENT (set_index_t index)
+{ return &segment[index];
+}
+
