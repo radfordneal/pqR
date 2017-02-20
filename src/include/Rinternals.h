@@ -164,8 +164,13 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
 
 #if USE_COMPRESSED_POINTERS
 
+#if 1
 typedef sggc_cptr_t SEXP;
-typedef sggc_cptr_t VECSEXP;
+#else /* experimental idea */
+typedef enum SEXP_enum { SEXP_low = -2147483647, SEXP_high=2147483647 } SEXP;
+#endif
+
+typedef SEXP VECSEXP;
 
 #define COMPRESSED_PTR(x) (x)                        /* sggc_cptr_t from SEXP */
 #define UNCOMPRESSED_PTR(x) ((SEXPREC *) SGGC_DATA(x)) /* SEXPREC * from SEXP */
@@ -1389,7 +1394,7 @@ LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
-#define R_EmptyEnv SGGC_CPTR_VAL(R_SGGC_ENV_INDEX,0)
+#define R_EmptyEnv ((SEXP)SGGC_CPTR_VAL(R_SGGC_ENV_INDEX,0))
 #else
 ConstExtern R_CONST SEXPREC R_env_consts[1]; /* Defined in const-objs.c */
 #define R_EmptyEnv ((SEXP) &R_env_consts[0])
@@ -1408,7 +1413,7 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 LibExtern SEXP R_NilValue;          /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 #if USE_COMPRESSED_POINTERS
-#define R_NilValue SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0)  /* Should be zero */
+#define R_NilValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0)) /* Should be zero*/
 #else
 LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 #define R_NilValue ((SEXP) &R_NilValue_const)
@@ -1420,7 +1425,7 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
-#define R_UnboundValue SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0)
+#define R_UnboundValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0))
 #else
 ConstExtern R_CONST SYM_SEXPREC R_sym_consts[1]; /* defined in const-objs.c*/
 #define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value*/
@@ -1433,14 +1438,14 @@ LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
    in sync. */
 
 #if USE_COMPRESSED_POINTERS
-#define R_ScalarLogicalFALSE      SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,0)
-#define R_ScalarLogicalTRUE       SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,1)
-#define R_ScalarLogicalNA         SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,2)
-#define R_ScalarInteger0To10(v)   SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,3+v)
-#define R_ScalarIntegerNA         SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,14)
-#define R_ScalarRealZero          SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,15)
-#define R_ScalarRealOne           SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,16)
-#define R_ScalarRealNA            SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,17)
+#define R_ScalarLogicalFALSE      ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,0))
+#define R_ScalarLogicalTRUE       ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,1))
+#define R_ScalarLogicalNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,2))
+#define R_ScalarInteger0To10(v)   ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,3+v))
+#define R_ScalarIntegerNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,14))
+#define R_ScalarRealZero          ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,15))
+#define R_ScalarRealOne           ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,16))
+#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,17))
 #else
 ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 #define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarNumerical_consts[0])
@@ -1456,10 +1461,10 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 /* Integer and real static boxes.  Defined in const-objs.c. */
 
 #if USE_COMPRESSED_POINTERS
-#define R_ScalarIntegerBox0 SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,0)
-#define R_ScalarIntegerBox  SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,1)
-#define R_ScalarRealBox0    SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,2)
-#define R_ScalarRealBox     SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,3)
+#define R_ScalarIntegerBox0 ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,0))
+#define R_ScalarIntegerBox  ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,1))
+#define R_ScalarRealBox0    ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,2))
+#define R_ScalarRealBox     ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,3))
 #else
 ConstExtern VECTOR_SEXPREC_C R_ScalarBox_space[4];
 #define R_ScalarIntegerBox0 ((SEXP) &R_ScalarBox_space[0])
