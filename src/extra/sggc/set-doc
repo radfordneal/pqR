@@ -356,4 +356,10 @@ for use in an application, with prototypes (if functions) as shown:
     The return type is set_value_t because this is guaranteed to be a
     large enough integer type (unsigned).
 
+  int set_first_bit_pos (set_bits_t b)
+
+    Returns the index of the first (lowest-order) 1 bit in 'b', with
+    the bottom bit having index 0.  This is mainly for internal use,
+    but may be useful to applications that use set_segment_bits.
+
 All the functions above take O(1) amortized time.

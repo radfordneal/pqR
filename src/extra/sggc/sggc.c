@@ -153,12 +153,16 @@ static struct set to_look_at;                 /* Not yet looked at in sweep */
 static struct set constants;                  /* Prealloc'd constant segments */
 
 
-/* NEXT FREE OBJECT AND END OF FREE OBJECTS FOR EACH KIND.  The next_free[k]
-   pointer is to a free object, unless it is equal to end_free[k].  These
-   may be SGGC_NO_OBJECT. */
+/* NEXT FREE OBJECT FOR EACH KIND.  The next_free_seg[k] value is the
+   first object in a segment of free objects of kind k, unless it is
+   SGGC_NO_OBJECT.  For small kinds, next_free_val[k] is a free value
+   in the segment before the one in next_free_seg[k], unless there is
+   zero in next_free_bits[k], which records further free objects in
+   the segment of of next_free_val[k]. */
 
-static sggc_cptr_t next_free[SGGC_N_KINDS];   /* Next free object of kind */
-static sggc_cptr_t end_free[SGGC_N_KINDS];    /* Indicator when past free obj */
+static sggc_cptr_t next_free_seg[SGGC_N_KINDS];
+static sggc_cptr_t next_free_val[SGGC_N_KINDS];
+static set_bits_t next_free_bits[SGGC_N_KINDS];
 
 
 /* MAXIMUM NUMBER OF SEGMENTS, AND INDEX OF NEXT SEGMENT TO USE. */
@@ -354,8 +358,9 @@ int sggc_init (int max_segments)
   /* Initialize to no free objects of each kind. */
 
   for (k = 0; k < SGGC_N_KINDS; k++)
-  { next_free[k] = SGGC_NO_OBJECT;
-    end_free[k] = SGGC_NO_OBJECT;
+  { next_free_seg[k] = SGGC_NO_OBJECT;
+    next_free_val[k] = SGGC_NO_OBJECT;
+    next_free_bits[k] = 0;
   }
 
   /* Record maximum segments, and initialize to no segments in use. */
@@ -528,10 +533,8 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 
   /* Look for an existing segment for this object to go in (and offset
      within).  For a small segment, the object found will be in
-     free_or_new, but will not be between next_free and end_free, and
-     so won't be taken again (at least before the next collection).
-     For a big segment, the segment will be taken from 'unused', if
-     one is there. */
+     free_or_new. For a big segment, the segment will be taken from
+     'unused', if one is there. */
 
   if (big) /* big segment */
   { v = set_first (&unused, 1);
@@ -544,17 +547,31 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     }
   }
   else /* small segment */
-  { v = next_free[kind]; 
-    if (v == end_free[kind])
+  { if (next_free_bits[kind] == 0)  /* no space an existing small segment */
     { v = SGGC_NO_OBJECT;
     }
     else
-    { next_free[kind] = set_next (&free_or_new[kind], v, 0);
+    { v = next_free_val[kind];
       if (SGGC_DEBUG) printf("sggc_alloc: found %x in next_free\n",(unsigned)v);
-      index = SET_VAL_INDEX(v);
-      seg = SET_SEGMENT(index);
-      if (EXTRA_CHECKS) 
-      { if (sggc_type[index] != type) abort();
+      /* index = SET_VAL_INDEX(v); */  /* NOTE: not actually needed below */
+      /* seg = SET_SEGMENT(index); */
+      next_free_bits[kind] >>= 1;
+      if (next_free_bits[kind] != 0)  /* more available in same segment */
+      { int o = set_first_bit_pos(next_free_bits[kind]);
+        next_free_bits[kind] >>= o;
+        next_free_val[kind] += o+1;
+      }
+      else if (next_free_seg[kind] != SGGC_NO_OBJECT)  /* more in next_free */
+      { set_value_t n = next_free_seg[kind];
+        next_free_val[kind] = n;
+        next_free_bits[kind] = set_segment_bits (&free_or_new[kind], n);
+        next_free_bits[kind] >>= SET_VAL_OFFSET(n);
+        next_free_seg[kind] = set_next_segment (&free_or_new[kind], n);
+      }
+      if (SGGC_DEBUG)
+      { printf("sggc_alloc: next_free_val[%d]=%x, next_free_bits[%d]=%016llx\n",
+                kind, next_free_val[kind], 
+                kind, (unsigned long long) next_free_bits[kind]);
       }
     }
   }
@@ -607,21 +624,22 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
   }
   else if (new)  /* new small segment */
   { 
-    if (EXTRA_CHECKS)
-    { if (next_free[kind]!=end_free[kind]) abort(); /* should be none free now*/
-    }
-
-    end_free[kind] = set_first (&free_or_new[kind], 0);
-
     set_add (&free_or_new[kind], v);
-  
     set_assign_segment_bits (&free_or_new[kind], v, kind_full[kind]);
+
     if (SGGC_DEBUG)
     { printf("sggc_alloc: new segment has bits %016llx\n", 
               (unsigned long long) set_segment_bits (&free_or_new[kind], v));
     }
 
-    next_free[kind] = set_next (&free_or_new[kind], v, 0);
+    next_free_val[kind] = v + sggc_kind_chunks[kind];
+    next_free_bits[kind] = kind_full[kind] >> sggc_kind_chunks[kind];
+
+    if (SGGC_DEBUG)
+    { printf("sggc_alloc: next_free_val[%d]=%x, next_free_bits[%d]=%016llx\n",
+              kind, next_free_val[kind], 
+              kind, (unsigned long long) next_free_bits[kind]);
+    }
   }
 
   if (EXTRA_CHECKS)
@@ -775,38 +793,41 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
 
 sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
 {
+  sggc_cptr_t v;
+
   if (SGGC_DEBUG) 
   { printf("sggc_alloc_small_kind_quickly: kind %d (type %u)\n", 
             (int) kind, (unsigned) sggc_kind_types[kind]);
   }
 
-  sggc_type_t type = sggc_kind_types[kind];  /* Type for this kind of object */
+  if (next_free_bits[kind] == 0)
+  { return SGGC_NO_OBJECT;
+  }
 
-# ifdef SGGC_AUX1_SIZE
-    char *const read_only_aux1 =
-#     ifdef SGGC_AUX1_READ_ONLY
-        kind_aux1_read_only[kind];
-#     else
-        NULL;
-#     endif
-    if (!read_only_aux1 && kind_aux1_block[kind] == NULL) return SGGC_NO_OBJECT;
-# endif
+  v = next_free_val[kind];
+  if (SGGC_DEBUG) 
+  { printf("sggc_alloc_small_kind_quickly: found %x in next_free\n",
+           (unsigned)v);
+  }
 
-# ifdef SGGC_AUX2_SIZE
-    char *const read_only_aux2 =
-#     ifdef SGGC_AUX2_READ_ONLY
-        kind_aux2_read_only[kind];
-#     else
-        NULL;
-#     endif
-    if (!read_only_aux2 && kind_aux2_block[kind] == NULL) return SGGC_NO_OBJECT;
-# endif
-
-  sggc_cptr_t v = next_free[kind];    /* pointer to object, returned as value */
-
-  if (v == end_free[kind]) return SGGC_NO_OBJECT;
-
-  next_free[kind] = set_next (&free_or_new[kind], v, 0);
+  next_free_bits[kind] >>= 1;
+  if (next_free_bits[kind] != 0)  /* more available in same segment */
+  { int o = set_first_bit_pos(next_free_bits[kind]);
+    next_free_bits[kind] >>= o;
+    next_free_val[kind] += o+1;
+  }
+  else if (next_free_seg[kind] != SGGC_NO_OBJECT)  /* more in next_free */
+  { set_value_t n = next_free_seg[kind];
+    next_free_val[kind] = n;
+    next_free_bits[kind] = set_segment_bits (&free_or_new[kind], n);
+    next_free_bits[kind] >>= SET_VAL_OFFSET(n);
+    next_free_seg[kind] = set_next_segment (&free_or_new[kind], n);
+  }
+  if (SGGC_DEBUG)
+  { printf("sggc_alloc_small_kind_quickly: next_free_val[%d]=%x next_free_bits[%d]=%016llx\n",
+            kind, next_free_val[kind],
+            kind, (unsigned long long) next_free_bits[kind]);
+  }
 
   sggc_nchunks_t nch = sggc_kind_chunks[kind];  /* number of chunks for object*/
 
@@ -931,24 +952,34 @@ static void collect_debug (void)
   { printf(" [%d]: %3d ",k,set_n_elements(&free_or_new[k]));
   }
   printf("\n");
-  printf("    next_free");
+  printf("next_free_seg");
   for (k = 0; k < SGGC_N_KINDS; k++) 
-  { if (next_free[k] == SGGC_NO_OBJECT)
+  { if (next_free_seg[k] == SGGC_NO_OBJECT)
     { printf(" [%d]: --- ",k);
     }
     else
-    { printf(" [%d]: %3llx ",k,(unsigned long long)next_free[k]);
+    { printf(" [%d]: %3llx ",k,(unsigned long long)next_free_seg[k]);
     }
   }
   printf("\n");
-  printf("     end_free");
+  printf("next_free_val");
   for (k = 0; k < SGGC_N_KINDS; k++) 
-  { if (end_free[k] == SGGC_NO_OBJECT)
+  { if (next_free_val[k] == SGGC_NO_OBJECT)
     { printf(" [%d]: --- ",k);
     }
     else
-    { printf(" [%d]: %3llx ",k,(unsigned long long)end_free[k]);
+    { printf(" [%d]: %3llx ",k,(unsigned long long)next_free_val[k]);
     }
+  }
+  printf("\n");
+  printf("             ");
+  for (k = 0; k < SGGC_N_KINDS; k++) 
+  { printf(" %08lx ",(unsigned long)(next_free_bits[k]>>32));
+  }
+  printf("\n");
+  printf("             ");
+  for (k = 0; k < SGGC_N_KINDS; k++) 
+  { printf(" %08lx ",(unsigned long)(next_free_bits[k]&0xffffffff));
   }
   printf("\n");
 }
@@ -1234,12 +1265,22 @@ void sggc_collect (int level)
     }
   }
 
-  /* Set up new next_free and end_free pointers, to use all of free_or_new. */
+  /* Set up new next_free_seg, next_free_val, and next_free_bits to use 
+     all of free_or_new. */
 
   for (k = 0; k < SGGC_N_KINDS; k++)
   { if (sggc_kind_chunks[k] != 0)
-    { next_free[k] = set_first (&free_or_new[k], 0);
-      end_free[k] = SGGC_NO_OBJECT;
+    { set_value_t n = set_first (&free_or_new[k], 0);
+      next_free_val[k] = n;
+      if (n == SGGC_NO_OBJECT)
+      { next_free_bits[k] = 0;
+        next_free_seg[k] = SGGC_NO_OBJECT;
+      }
+      else 
+      { next_free_bits[k] = set_segment_bits (&free_or_new[k], n) 
+                             >> SET_VAL_OFFSET(n);
+        next_free_seg[k] = set_next_segment (&free_or_new[k], n);
+      }
     }
   }
 

@@ -25,11 +25,6 @@
 #endif
 
 
-#ifndef SET_USE_BUILTINS
-#define SET_USE_BUILTINS (defined(__GNUC__) || defined(__clang__))
-#endif
-
-
 /*   See set-doc for general documentation on this facility, and for the
  *   documentation on functions that are part of the application interface.
  */
@@ -78,33 +73,6 @@ static int check_n_elements (struct set *set);
     if (SET_DEBUG && (seg)->next[chain] == SET_NOT_IN_CHAIN \
                   && (seg)->bits[chain] != 0) abort(); \
   } while (0)
-
-
-/* FIND POSITION OF LOWEST-ORDER BIT.  The position returned is from 0 up.
-   The argument must not be zero.
-
-   Fast for gcc and clang, using their builtin functions. */
-
-static inline int first_bit_pos (set_bits_t b)
-{ 
-  if (SET_DEBUG && b == 0) abort();
-
-# if SET_USE_BUILTINS
-    return sizeof b <= sizeof (unsigned) ? __builtin_ctz(b) 
-         : sizeof b <= sizeof (unsigned long) ? __builtin_ctzl(b) 
-         : sizeof b <= sizeof (unsigned long long) ? __builtin_ctzll(b)
-         : (abort(), 0);
-# else
-    int pos;
-    pos = 0;
-    while ((b & 1) == 0)
-    { pos += 1;
-      b >>= 1;
-    }
-    return pos;
-# endif
-
-}
 
 
 /* FIND THE NUMBER OF BITS IN A SET OF BITS.  
@@ -321,7 +289,7 @@ SET_PROC_CLASS set_value_t set_first (struct set *set, int remove)
   CHK_SEGMENT(seg,set->chain);
 
   b = seg->bits[set->chain];
-  o = first_bit_pos(b);
+  o = set_first_bit_pos(b);
   first = SET_VAL (set->first, o);
 
   if (remove) 
@@ -400,7 +368,7 @@ SET_PROC_CLASS set_value_t set_next (struct set *set, set_value_t val,
     offset = 0;
   }
 
-  offset += first_bit_pos(b);
+  offset += set_first_bit_pos(b);
 
   CHK_SET(set);
 
@@ -437,7 +405,7 @@ SET_PROC_CLASS set_value_t set_next_segment (struct set *set, set_value_t val)
 
     set_bits_t b = nseg->bits[set->chain];
     if (b != 0) 
-    { return SET_VAL (nindex, first_bit_pos(b));
+    { return SET_VAL (nindex, set_first_bit_pos(b));
     }
 
     seg->next[set->chain] = nseg->next[set->chain];

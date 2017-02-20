@@ -26,6 +26,11 @@
 #include <stdint.h>
 
 
+#ifndef SET_USE_BUILTINS
+#define SET_USE_BUILTINS (defined(__GNUC__) || defined(__clang__))
+#endif
+
+
 /* TYPES FOR (INDEX, OFFSET) PAIRS.  The set_value_t type is for the pair,
    and is designed to be 32 bits.  The set_index_t type must be signed,
    and should also be 32 bits, to limit space used.  The set_offset_t type
@@ -187,4 +192,28 @@ static inline int set_contains (struct set *set, set_value_t val)
 static inline set_value_t set_n_elements (struct set *set)
 {
   return set->n_elements;
+}
+
+
+/* FIND POSITION OF LOWEST-ORDER BIT.  The position returned is from 0 up.
+   The argument must not be zero.
+
+   Fast for gcc and clang, using their builtin functions. */
+
+static inline int set_first_bit_pos (set_bits_t b)
+{ 
+# if SET_USE_BUILTINS
+    return sizeof b <= sizeof (unsigned) ? __builtin_ctz(b) 
+         : sizeof b <= sizeof (unsigned long) ? __builtin_ctzl(b) 
+         : __builtin_ctzll(b);
+# else
+    int pos;
+    pos = 0;
+    while ((b & 1) == 0)
+    { pos += 1;
+      b >>= 1;
+    }
+    return pos;
+# endif
+
 }

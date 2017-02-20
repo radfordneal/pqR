@@ -1,47 +1,52 @@
 STARTING TEST: segs = 5, iters = 50
 
 ABOUT TO CALL sggc_init
-test_calloc: 1 in use after:: 0x7fea11c03230
-test_calloc: 2 in use after:: 0x7fea11c03260
-test_calloc: 3 in use after:: 0x7fea11c03290
+test_calloc: 1 in use after:: 0x7f857a403230
+test_calloc: 2 in use after:: 0x7f857a403260
+test_calloc: 3 in use after:: 0x7f857a403290
 DONE sggc_init
 ALLOCATING nil
 sggc_alloc: type 0, length 0
-test_calloc: 4 in use after:: 0x7fea11c032a0
-sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7fea11c032a0
-test_calloc: 5 in use after:: 0x7fea11c032b0
+test_calloc: 4 in use after:: 0x7f857a4032a0
+sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7f857a4032a0
+test_calloc: 5 in use after:: 0x7f857a4032b0
 sggc_alloc: created 0 in new segment
 ALLOC RETURNING 0
 
 ITERATION 1
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
-test_calloc: 6 in use after:: 0x7fea12000600
-test_calloc: 7 in use after:: 0x7fea11c032f0
+test_calloc: 6 in use after:: 0x7f857a800600
+test_calloc: 7 in use after:: 0x7f857a4032f0
 sggc_alloc: created 40 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff
+sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7fffffffffffffff
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
-test_calloc: 8 in use after:: 0x7fea12000a00
-test_calloc: 9 in use after:: 0x7fea11c03330
+test_calloc: 8 in use after:: 0x7f857a800a00
+test_calloc: 9 in use after:: 0x7f857a403330
 sggc_alloc: created 80 in new segment
 sggc_alloc: new segment has bits 1249249249249249
+sggc_alloc: next_free_val[5]=83, next_free_bits[5]=0249249249249249
 ALLOC RETURNING 80
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffffff
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
-test_calloc: 10 in use after:: 0x7fea12003600
-test_calloc: 11 in use after:: 0x7fea11c03370
+test_calloc: 10 in use after:: 0x7f857a803600
+test_calloc: 11 in use after:: 0x7f857a403370
 sggc_alloc: created c0 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=43, next_free_bits[1]=1fffffffffffffff
 ALLOC RETURNING 42
 CHECKING CONTENTS
 
@@ -49,14 +54,17 @@ ITERATION 2
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 43 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0fffffffffffffff
 ALLOC RETURNING 43
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 8 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   1  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
-    next_free [0]: ---  [1]:  44  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  44  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+              00000000  0fffffff  00000000  7fffffff  00000000  02492492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: will look at 0
 sggc_look_at: 43 0
@@ -90,23 +98,29 @@ sggc_collect: 0 now old_gen1
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  61  [2]:   0  [3]:  63  [4]:   0  [5]:  20 
-    next_free [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+              00000000  3fffffff  00000000  7fffffff  00000000  02492492 
+              00000000  fffffffd  00000000  ffffffff  00000000  49249249 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0fffffffffffffff
 ALLOC RETURNING 42
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3fffffffffffffff
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 BUT KEEPING REFERENCE TO OLD a IN e
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffffff
 ALLOC RETURNING 44
 CHECKING CONTENTS
 
@@ -114,26 +128,32 @@ ITERATION 3
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03ffffffffffffff
 ALLOC RETURNING 45
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249249
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffffff
 ALLOC RETURNING 46
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 16 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  61  [2]:   0  [3]:  63  [4]:   0  [5]:  20 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+              00000000  01ffffff  00000000  1fffffff  00000000  00092492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: 45 0
 sggc_look_at: will look at 45
@@ -159,10 +179,13 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+              00000000  3fffffff  00000000  7fffffff  00000000  02492492 
+              00000000  ffffffe5  00000000  fffffffd  00000000  49249241 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffff9
 ALLOC RETURNING 42
 CHECKING CONTENTS
 
@@ -170,22 +193,27 @@ ITERATION 4
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffffff
 ALLOC RETURNING 44
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00ffffffffffffff
 ALLOC RETURNING 47
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffff
 ALLOC RETURNING 48
 CHECKING CONTENTS
 
@@ -193,18 +221,22 @@ ITERATION 5
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003fffffffffffff
 ALLOC RETURNING 49
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249249
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 24 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 10, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  4a  [2]: ---  [3]:  c3  [4]: ---  [5]:  8c 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4a  [2]: ---  [3]:  c3  [4]: ---  [5]:  8c 
+              00000000  003fffff  00000000  1fffffff  00000000  00012492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 0 from old_gen1 in free
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 41 from old_gen1 in free
@@ -264,18 +296,23 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 2, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
+              00000000  ffffffff  00000000  ffffffff  00000000  12492492 
+              00000000  fffffd67  00000000  fffffffd  00000000  49249041 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 40 in next_free
+sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7ffffffffffffeb3
 ALLOC RETURNING 40
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffff59
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -283,23 +320,28 @@ ITERATION 6
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffffeb
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 80 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249241
 ALLOC RETURNING 80
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03fffffffffffff5
 ALLOC RETURNING 45
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 BUT KEEPING REFERENCES TO OLD a IN e->x AND TO b IN e->y
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffffd
 ALLOC RETURNING 46
 CHECKING CONTENTS
 
@@ -309,8 +351,10 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 32 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  48  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  48  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+              00000000  00ffffff  00000000  1fffffff  00000000  00492492 
+              00000000  fffffffd  00000000  ffffffff  00000000  49249241 
 sggc_collect: old->new for 43 (gen2)
 sggc_look_at: 42 2
 sggc_look_at: will look at 42
@@ -345,26 +389,33 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 11, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+              00000000  ffffffff  00000000  ffffffff  00000000  00492492 
+              00000000  fffffd03  00000000  fffffff9  00000000  49249241 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 40 in next_free
+sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7ffffffffffffe81
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249249
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffffd
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003fffffffffffff
 ALLOC RETURNING 48
 CHECKING CONTENTS
 
@@ -372,22 +423,27 @@ ITERATION 8
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001fffffffffffff
 ALLOC RETURNING 4a
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8c in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 8c
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4b in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 4b
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 40 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 11, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
+              00000000  000fffff  00000000  1fffffff  00000000  00002492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: old->new for 43 (gen2)
 sggc_look_at: 42 2
 sggc_look_at: 80 0
@@ -417,14 +473,18 @@ sggc_look_at: 8c 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+              00000000  ffffffff  00000000  1fffffff  00000000  00492492 
+              00000000  fffff103  00000000  ffffffff  00000000  49249201 
 sggc_alloc: type 2, length 1
 sggc_alloc: found c3 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c3
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 40 in next_free
+sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7ffffffffffff881
 ALLOC RETURNING 40
 AND KEEP REFERENCE TO NEW a IN e->x
 CHECKING CONTENTS
@@ -433,22 +493,27 @@ ITERATION 9
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffff1
 ALLOC RETURNING 41
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 48
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c4 in next_free
+sggc_alloc: next_free_val[3]=c5, next_free_bits[3]=07ffffffffffffff
 ALLOC RETURNING c4
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4c in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007ffffffffffff
 ALLOC RETURNING 4c
 CHECKING CONTENTS
 
@@ -456,14 +521,17 @@ ITERATION 10
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4d in next_free
+sggc_alloc: next_free_val[1]=4e, next_free_bits[1]=0003ffffffffffff
 ALLOC RETURNING 4d
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 48 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 15, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4e  [2]: ---  [3]:  c5  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4e  [2]: ---  [3]:  c5  [4]: ---  [5]:  8f 
+              00000000  0003ffff  00000000  07ffffff  00000000  00002492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 0 from old_gen2 in free
 sggc_collect: put 43 from old_gen2 in free
 sggc_collect: put 42 from old_gen1 in free
@@ -483,6 +551,7 @@ sggc_collect: put c1 from old_gen1 in free
 sggc_collect: put c2 from old_gen1 in free
 sggc_collect: old->new for 43 (gen2)
 sggc_look_at: 40 2
+sggc_look_at: 80 -1
 sggc_collect: old->new for 43 still needed
 sggc_look_at: 0 0
 sggc_look_at: will look at 0
@@ -542,22 +611,28 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  42  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  3fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  fffff7bd  00000000  ffffffef  00000000  49249241 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffdef
 ALLOC RETURNING 42
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7ffffffffffffff7
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffef7
 ALLOC RETURNING 44
 CHECKING CONTENTS
 
@@ -565,26 +640,32 @@ ITERATION 11
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03ffffffffffff7b
 ALLOC RETURNING 45
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249249
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffffbd
 ALLOC RETURNING 46
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffb
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 56 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
+              00000000  01ffffff  00000000  3fffffff  00000000  00012492 
+              00000000  ffffffbd  00000000  fffffffb  00000000  49249249 
 sggc_collect: old->new for 43 (gen2)
 sggc_look_at: 40 2
 sggc_look_at: 80 0
@@ -614,10 +695,13 @@ sggc_look_at: 89 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  42  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  3fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  fffff7a5  00000000  ffffffed  00000000  49249201 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffde9
 ALLOC RETURNING 42
 CHECKING CONTENTS
 
@@ -625,22 +709,27 @@ ITERATION 12
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffffbd
 ALLOC RETURNING 44
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffef
 ALLOC RETURNING 47
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffb
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003ffffffffffff7
 ALLOC RETURNING 49
 CHECKING CONTENTS
 
@@ -648,18 +737,22 @@ ITERATION 13
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001ffffffffffffb
 ALLOC RETURNING 4a
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8c in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 8c
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 64 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 10, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  4b  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4b  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+              00000000  001fffff  00000000  3fffffff  00000000  00002492 
+              00000000  fffffffb  00000000  fffffffb  00000000  49249249 
 sggc_collect: old->new for 43 (gen2)
 sggc_look_at: 40 2
 sggc_look_at: 80 0
@@ -697,18 +790,23 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 16, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  42  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+              00000000  3fffffff  00000000  3fffffff  00000000  00002492 
+              00000000  fffff681  00000000  fffffffb  00000000  49249249 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffed
 ALLOC RETURNING 42
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1ffffffffffffffd
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001ffffffffffffb
 ALLOC RETURNING 49
 CHECKING CONTENTS
 
@@ -716,22 +814,27 @@ ITERATION 14
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4b in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000ffffffffffffd
 ALLOC RETURNING 4b
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8f in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8f
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4c in next_free
+sggc_alloc: next_free_val[1]=4e, next_free_bits[1]=0003ffffffffffff
 ALLOC RETURNING 4c
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c3 in next_free
+sggc_alloc: next_free_val[3]=c5, next_free_bits[3]=07ffffffffffffff
 ALLOC RETURNING c3
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4e in next_free
+sggc_alloc: next_free_val[1]=4f, next_free_bits[1]=0001ffffffffffff
 ALLOC RETURNING 4e
 CHECKING CONTENTS
 
@@ -741,8 +844,10 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 72 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 16, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+              00000000  0001ffff  00000000  07ffffff  00000000  00000492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 41 from old_gen1 in free
 sggc_collect: put 44 from old_gen1 in free
@@ -813,26 +918,33 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  ffffd3fb  00000000  fffffff7  00000000  49248249 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffe9fd
 ALLOC RETURNING 41
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249049
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffa7f
 ALLOC RETURNING 42
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7ffffffffffffffb
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffd3f
 ALLOC RETURNING 44
 CHECKING CONTENTS
 
@@ -840,22 +952,27 @@ ITERATION 16
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03fffffffffffe9f
 ALLOC RETURNING 45
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249209
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff4f
 ALLOC RETURNING 46
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 80 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  01ffffff  00000000  7fffffff  00000000  00092492 
+              00000000  ffffff4f  00000000  fffffffb  00000000  49249209 
 sggc_look_at: 0 0
 sggc_look_at: 45 0
 sggc_look_at: will look at 45
@@ -881,14 +998,18 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  7fffffff  00000000  02492492 
+              00000000  ffffd3cb  00000000  fffffffb  00000000  49248241 
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffd
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffe9e5
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -896,22 +1017,27 @@ ITERATION 17
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffa79
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249209
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff4f
 ALLOC RETURNING 44
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00ffffffffffffa7
 ALLOC RETURNING 47
 CHECKING CONTENTS
 
@@ -919,14 +1045,17 @@ ITERATION 18
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffd3
 ALLOC RETURNING 48
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 88 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  89 
+              00000000  007fffff  00000000  0fffffff  00000000  00092492 
+              00000000  ffffffd3  00000000  ffffffff  00000000  49249209 
 sggc_look_at: 0 0
 sggc_look_at: 48 0
 sggc_look_at: will look at 48
@@ -957,22 +1086,28 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  7fffffff  00000000  7fffffff  00000000  00092492 
+              00000000  ffffd341  00000000  fffffff9  00000000  49249209 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249241
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff4d
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffd3
 ALLOC RETURNING 47
 CHECKING CONTENTS
 
@@ -980,26 +1115,32 @@ ITERATION 19
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003fffffffffffe9
 ALLOC RETURNING 49
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8c in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8c
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007fffffffffffd
 ALLOC RETURNING 4a
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c4 in next_free
+sggc_alloc: next_free_val[3]=c5, next_free_bits[3]=07ffffffffffffff
 ALLOC RETURNING c4
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 96 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4d  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4d  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+              00000000  0007ffff  00000000  07ffffff  00000000  00000492 
+              00000000  fffffffd  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 0 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
@@ -1069,10 +1210,13 @@ sggc_collect: c3 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  fffffcfb  00000000  ffffffef  00000000  49249049 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffffe7d
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -1080,22 +1224,27 @@ ITERATION 20
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0fffffffffffff9f
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249209
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffffcf
 ALLOC RETURNING 44
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7ffffffffffffff7
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03ffffffffffffe7
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -1103,18 +1252,22 @@ ITERATION 21
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01fffffffffffff3
 ALLOC RETURNING 46
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249241
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 104 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  01ffffff  00000000  7fffffff  00000000  00092492 
+              00000000  fffffff3  00000000  fffffff7  00000000  49249241 
 sggc_look_at: 0 0
 sggc_look_at: 46 0
 sggc_look_at: will look at 46
@@ -1148,18 +1301,23 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  7fffffff  00000000  7fffffff  00000000  00092492 
+              00000000  fffffcd1  00000000  fffffff7  00000000  49249241 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffffcd
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffb
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01fffffffffffff3
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -1167,22 +1325,27 @@ ITERATION 22
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffff9
 ALLOC RETURNING 47
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001fffffffffffff
 ALLOC RETURNING 48
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1ffffffffffffffd
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4b in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 4b
 CHECKING CONTENTS
 
@@ -1192,8 +1355,10 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 112 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
+              00000000  000fffff  00000000  1fffffff  00000000  00002492 
+              00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: 4b 0
 sggc_look_at: will look at 4b
@@ -1224,26 +1389,33 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  8f 
+              00000000  7fffffff  00000000  7fffffff  00000000  00002492 
+              00000000  fffff811  00000000  fffffff5  00000000  49249249 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffff81
 ALLOC RETURNING 41
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8f in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8f
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 45
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1ffffffffffffffd
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4c in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007ffffffffffff
 ALLOC RETURNING 4c
 CHECKING CONTENTS
 
@@ -1251,22 +1423,27 @@ ITERATION 24
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4d in next_free
+sggc_alloc: next_free_val[1]=4e, next_free_bits[1]=0003ffffffffffff
 ALLOC RETURNING 4d
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 92 in next_free
+sggc_alloc: next_free_val[5]=95, next_free_bits[5]=0000009249249249
 ALLOC RETURNING 92
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4e in next_free
+sggc_alloc: next_free_val[1]=4f, next_free_bits[1]=0001ffffffffffff
 ALLOC RETURNING 4e
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 120 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c3  [4]: ---  [5]:  95 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c3  [4]: ---  [5]:  95 
+              00000000  0001ffff  00000000  1fffffff  00000000  00000092 
+              00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_collect: put 42 from old_gen1 in free
 sggc_collect: put 44 from old_gen1 in free
 sggc_collect: put 46 from old_gen1 in free
@@ -1322,14 +1499,18 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  ffffcffb  00000000  fffffffd  00000000  49241249 
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffe7fd
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -1337,22 +1518,27 @@ ITERATION 25
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffff9ff
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249248249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffcff
 ALLOC RETURNING 44
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03fffffffffffe7f
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -1360,14 +1546,17 @@ ITERATION 26
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff3f
 ALLOC RETURNING 46
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 128 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+              00000000  01ffffff  00000000  1fffffff  00000000  00492492 
+              00000000  ffffff3f  00000000  ffffffff  00000000  49248249 
 sggc_look_at: 0 0
 sggc_look_at: 46 0
 sggc_look_at: will look at 46
@@ -1398,22 +1587,28 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+              00000000  7fffffff  00000000  ffffffff  00000000  00492492 
+              00000000  ffffcfd1  00000000  fffffff9  00000000  49248249 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249049
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffcfd
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff3f
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -1421,26 +1616,32 @@ ITERATION 27
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00ffffffffffff9f
 ALLOC RETURNING 47
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249209
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffcf
 ALLOC RETURNING 48
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c3 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c3
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 136 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  8c 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  8c 
+              00000000  007fffff  00000000  0fffffff  00000000  00012492 
+              00000000  ffffffcf  00000000  ffffffff  00000000  49249209 
 sggc_look_at: 0 0
 sggc_look_at: 47 0
 sggc_look_at: will look at 47
@@ -1466,10 +1667,13 @@ sggc_look_at: 89 0
 sggc_collect: done
   unused: 0, old_gen1: 13, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+              00000000  7fffffff  00000000  ffffffff  00000000  00492492 
+              00000000  ffffcf11  00000000  fffffff1  00000000  49248241 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffcf1
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -1477,22 +1681,27 @@ ITERATION 28
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffcf
 ALLOC RETURNING 45
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249209
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003fffffffffffe7
 ALLOC RETURNING 49
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001ffffffffffff3
 ALLOC RETURNING 4a
 CHECKING CONTENTS
 
@@ -1500,18 +1709,22 @@ ITERATION 29
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4b in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000ffffffffffff9
 ALLOC RETURNING 4b
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8c in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249241
 ALLOC RETURNING 8c
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 144 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 13, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c4  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c4  [4]: ---  [5]:  8f 
+              00000000  000fffff  00000000  0fffffff  00000000  00002492 
+              00000000  fffffff9  00000000  ffffffff  00000000  49249241 
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 0 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
@@ -1587,18 +1800,23 @@ sggc_collect: c3 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  7fffffff  00000000  02492492 
+              00000000  fffffaeb  00000000  ffffffff  00000000  49249041 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffffd75
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3fffffffffffffff
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0fffffffffffff5d
 ALLOC RETURNING 42
 CHECKING CONTENTS
 
@@ -1606,22 +1824,27 @@ ITERATION 30
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03ffffffffffffd7
 ALLOC RETURNING 44
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249241
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffffeb
 ALLOC RETURNING 46
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffff5
 ALLOC RETURNING 47
 CHECKING CONTENTS
 
@@ -1631,8 +1854,10 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 152 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  48  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  48  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+              00000000  00ffffff  00000000  1fffffff  00000000  00092492 
+              00000000  fffffff5  00000000  ffffffff  00000000  49249241 
 sggc_look_at: 0 0
 sggc_look_at: 47 0
 sggc_look_at: will look at 47
@@ -1663,26 +1888,33 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 11, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  56  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  7fffffff  00000000  7fffffff  00000000  00092492 
+              00000000  fffffa83  00000000  fffffffd  00000000  49249241 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffffd41
 ALLOC RETURNING 41
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffff5
 ALLOC RETURNING 42
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003ffffffffffffd
 ALLOC RETURNING 48
 CHECKING CONTENTS
 
@@ -1690,22 +1922,27 @@ ITERATION 32
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 4a
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8f in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8f
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4c in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007ffffffffffff
 ALLOC RETURNING 4c
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 160 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 11, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  56  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4d  [2]: ---  [3]:  c3  [4]: ---  [5]:  92 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4d  [2]: ---  [3]:  c3  [4]: ---  [5]:  92 
+              00000000  0007ffff  00000000  1fffffff  00000000  00000492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: 4a 0
 sggc_look_at: will look at 4a
@@ -1731,14 +1968,18 @@ sggc_look_at: 8f 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+              00000000  7fffffff  00000000  1fffffff  00000000  00092492 
+              00000000  fffff083  00000000  ffffffff  00000000  49249201 
 sggc_alloc: type 2, length 1
 sggc_alloc: found c3 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c3
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffff841
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -1746,22 +1987,27 @@ ITERATION 33
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00ffffffffffffe1
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007ffffffffffff
 ALLOC RETURNING 48
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c4 in next_free
+sggc_alloc: next_free_val[3]=c5, next_free_bits[3]=07ffffffffffffff
 ALLOC RETURNING c4
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4d in next_free
+sggc_alloc: next_free_val[1]=4e, next_free_bits[1]=0003ffffffffffff
 ALLOC RETURNING 4d
 CHECKING CONTENTS
 
@@ -1769,14 +2015,17 @@ ITERATION 34
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4e in next_free
+sggc_alloc: next_free_val[1]=4f, next_free_bits[1]=0001ffffffffffff
 ALLOC RETURNING 4e
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 168 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+              00000000  0001ffff  00000000  07ffffff  00000000  00000492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 44 from old_gen1 in free
 sggc_collect: put 45 from old_gen1 in free
 sggc_collect: put 46 from old_gen1 in free
@@ -1837,22 +2086,28 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  ffffdf79  00000000  ffffffef  00000000  49249209 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249241
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffbef
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7ffffffffffffff7
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffdf7
 ALLOC RETURNING 44
 CHECKING CONTENTS
 
@@ -1860,26 +2115,32 @@ ITERATION 35
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03fffffffffffefb
 ALLOC RETURNING 45
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249249
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff7d
 ALLOC RETURNING 46
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffb
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 176 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
+              00000000  01ffffff  00000000  3fffffff  00000000  00012492 
+              00000000  ffffff7d  00000000  fffffffb  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: 45 0
 sggc_look_at: will look at 45
@@ -1905,10 +2166,13 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  ffffdf49  00000000  ffffffed  00000000  49249201 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffbe9
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -1916,22 +2180,27 @@ ITERATION 36
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff7d
 ALLOC RETURNING 44
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffdf
 ALLOC RETURNING 47
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffb
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003fffffffffffef
 ALLOC RETURNING 49
 CHECKING CONTENTS
 
@@ -1939,18 +2208,22 @@ ITERATION 37
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001ffffffffffff7
 ALLOC RETURNING 4a
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8c in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 8c
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 184 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  4b  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4b  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+              00000000  001fffff  00000000  3fffffff  00000000  00002492 
+              00000000  fffffff7  00000000  fffffffb  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: 4a 0
 sggc_look_at: will look at 4a
@@ -1984,18 +2257,23 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+              00000000  7fffffff  00000000  3fffffff  00000000  00002492 
+              00000000  ffffdd01  00000000  fffffffb  00000000  49249249 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffdd
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1ffffffffffffffd
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001ffffffffffff7
 ALLOC RETURNING 49
 CHECKING CONTENTS
 
@@ -2003,22 +2281,27 @@ ITERATION 38
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4b in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000ffffffffffffb
 ALLOC RETURNING 4b
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8f in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8f
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4c in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007fffffffffffd
 ALLOC RETURNING 4c
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c3 in next_free
+sggc_alloc: next_free_val[3]=c5, next_free_bits[3]=07ffffffffffffff
 ALLOC RETURNING c3
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4d in next_free
+sggc_alloc: next_free_val[1]=4f, next_free_bits[1]=0001ffffffffffff
 ALLOC RETURNING 4d
 CHECKING CONTENTS
 
@@ -2028,8 +2311,10 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 192 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+              00000000  0001ffff  00000000  07ffffff  00000000  00000492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 0 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
@@ -2106,26 +2391,33 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  ffffe3fb  00000000  fffffff7  00000000  49248249 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffff1fd
 ALLOC RETURNING 41
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249049
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffc7f
 ALLOC RETURNING 42
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7ffffffffffffffb
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffe3f
 ALLOC RETURNING 44
 CHECKING CONTENTS
 
@@ -2133,22 +2425,27 @@ ITERATION 40
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03ffffffffffff1f
 ALLOC RETURNING 45
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249209
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff8f
 ALLOC RETURNING 46
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 200 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  01ffffff  00000000  7fffffff  00000000  00092492 
+              00000000  ffffff8f  00000000  fffffffb  00000000  49249209 
 sggc_look_at: 0 0
 sggc_look_at: 45 0
 sggc_look_at: will look at 45
@@ -2174,14 +2471,18 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  7fffffff  00000000  02492492 
+              00000000  ffffe3cb  00000000  fffffffb  00000000  49248241 
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffd
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffff1e5
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -2189,22 +2490,27 @@ ITERATION 41
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffffc79
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249209
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff8f
 ALLOC RETURNING 44
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00ffffffffffffc7
 ALLOC RETURNING 47
 CHECKING CONTENTS
 
@@ -2212,14 +2518,17 @@ ITERATION 42
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffe3
 ALLOC RETURNING 48
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 208 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  89 
+              00000000  007fffff  00000000  0fffffff  00000000  00092492 
+              00000000  ffffffe3  00000000  ffffffff  00000000  49249209 
 sggc_look_at: 0 0
 sggc_look_at: 48 0
 sggc_look_at: will look at 48
@@ -2250,22 +2559,28 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  7fffffff  00000000  7fffffff  00000000  00092492 
+              00000000  ffffe341  00000000  fffffff9  00000000  49249209 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8c, next_free_bits[5]=0001249249249241
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff8d
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=49, next_free_bits[1]=007fffffffffffe3
 ALLOC RETURNING 47
 CHECKING CONTENTS
 
@@ -2273,26 +2588,32 @@ ITERATION 43
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 49 in next_free
+sggc_alloc: next_free_val[1]=4a, next_free_bits[1]=003ffffffffffff1
 ALLOC RETURNING 49
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8c in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8c
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4a in next_free
+sggc_alloc: next_free_val[1]=4e, next_free_bits[1]=0003ffffffffffff
 ALLOC RETURNING 4a
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c4 in next_free
+sggc_alloc: next_free_val[3]=c5, next_free_bits[3]=07ffffffffffffff
 ALLOC RETURNING c4
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 216 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4e  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4e  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+              00000000  0003ffff  00000000  07ffffff  00000000  00000492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 42 from old_gen1 in free
 sggc_collect: put 44 from old_gen1 in free
 sggc_collect: put 45 from old_gen1 in free
@@ -2346,10 +2667,13 @@ sggc_collect: c3 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  fffffcfb  00000000  ffffffef  00000000  49249049 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3ffffffffffffe7d
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -2357,22 +2681,27 @@ ITERATION 44
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0fffffffffffff9f
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249249209
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffffcf
 ALLOC RETURNING 44
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7ffffffffffffff7
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03ffffffffffffe7
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -2380,18 +2709,22 @@ ITERATION 45
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01fffffffffffff3
 ALLOC RETURNING 46
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249241
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 224 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  01ffffff  00000000  7fffffff  00000000  00092492 
+              00000000  fffffff3  00000000  fffffff7  00000000  49249241 
 sggc_look_at: 0 0
 sggc_look_at: 46 0
 sggc_look_at: will look at 46
@@ -2425,18 +2758,23 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+              00000000  7fffffff  00000000  7fffffff  00000000  00092492 
+              00000000  fffffcd1  00000000  fffffff7  00000000  49249241 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffffcd
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3ffffffffffffffb
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01fffffffffffff3
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -2444,22 +2782,27 @@ ITERATION 46
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 47 in next_free
+sggc_alloc: next_free_val[1]=48, next_free_bits[1]=00fffffffffffff9
 ALLOC RETURNING 47
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 89 in next_free
+sggc_alloc: next_free_val[5]=8f, next_free_bits[5]=0000249249249249
 ALLOC RETURNING 89
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 48 in next_free
+sggc_alloc: next_free_val[1]=4b, next_free_bits[1]=001fffffffffffff
 ALLOC RETURNING 48
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1ffffffffffffffd
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4b in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 4b
 CHECKING CONTENTS
 
@@ -2469,8 +2812,10 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 232 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-    next_free [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
+              00000000  000fffff  00000000  1fffffff  00000000  00002492 
+              00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_look_at: 0 0
 sggc_look_at: 4b 0
 sggc_look_at: will look at 4b
@@ -2501,26 +2846,33 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  8f 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  8f 
+              00000000  7fffffff  00000000  7fffffff  00000000  00002492 
+              00000000  fffff811  00000000  fffffff5  00000000  49249249 
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07ffffffffffff81
 ALLOC RETURNING 41
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 8f in next_free
+sggc_alloc: next_free_val[5]=92, next_free_bits[5]=0000049249249249
 ALLOC RETURNING 8f
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=4c, next_free_bits[1]=000fffffffffffff
 ALLOC RETURNING 45
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c1 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1ffffffffffffffd
 ALLOC RETURNING c1
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4c in next_free
+sggc_alloc: next_free_val[1]=4d, next_free_bits[1]=0007ffffffffffff
 ALLOC RETURNING 4c
 CHECKING CONTENTS
 
@@ -2528,22 +2880,27 @@ ITERATION 48
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4d in next_free
+sggc_alloc: next_free_val[1]=4e, next_free_bits[1]=0003ffffffffffff
 ALLOC RETURNING 4d
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 92 in next_free
+sggc_alloc: next_free_val[5]=95, next_free_bits[5]=0000009249249249
 ALLOC RETURNING 92
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 4e in next_free
+sggc_alloc: next_free_val[1]=4f, next_free_bits[1]=0001ffffffffffff
 ALLOC RETURNING 4e
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 240 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-    next_free [0]: ---  [1]:  4f  [2]: ---  [3]:  c3  [4]: ---  [5]:  95 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c3  [4]: ---  [5]:  95 
+              00000000  0001ffff  00000000  1fffffff  00000000  00000092 
+              00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 0 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
@@ -2615,14 +2972,18 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+              00000000  7fffffff  00000000  ffffffff  00000000  02492492 
+              00000000  ffffcffb  00000000  fffffffd  00000000  49241249 
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c2, next_free_bits[3]=3fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffe7fd
 ALLOC RETURNING 41
 CHECKING CONTENTS
 
@@ -2630,22 +2991,27 @@ ITERATION 49
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 42 in next_free
+sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0ffffffffffff9ff
 ALLOC RETURNING 42
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
 sggc_alloc: found 83 in next_free
+sggc_alloc: next_free_val[5]=86, next_free_bits[5]=0049249249248249
 ALLOC RETURNING 83
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 44 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffcff
 ALLOC RETURNING 44
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c2 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=46, next_free_bits[1]=03fffffffffffe7f
 ALLOC RETURNING 45
 CHECKING CONTENTS
 
@@ -2653,14 +3019,17 @@ ITERATION 50
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 46 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff3f
 ALLOC RETURNING 46
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 248 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+              00000000  01ffffff  00000000  1fffffff  00000000  00492492 
+              00000000  ffffff3f  00000000  ffffffff  00000000  49248249 
 sggc_look_at: 0 0
 sggc_look_at: 46 0
 sggc_look_at: will look at 46
@@ -2691,22 +3060,28 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+              00000000  7fffffff  00000000  ffffffff  00000000  00492492 
+              00000000  ffffcfd1  00000000  fffffff9  00000000  49248249 
 sggc_alloc: type 2, length 10
 sggc_alloc: found 86 in next_free
+sggc_alloc: next_free_val[5]=89, next_free_bits[5]=0009249249249049
 ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 sggc_alloc: type 1, length 2
 sggc_alloc: found 41 in next_free
+sggc_alloc: next_free_val[1]=45, next_free_bits[1]=07fffffffffffcfd
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
 sggc_alloc: found c0 in next_free
+sggc_alloc: next_free_val[3]=c3, next_free_bits[3]=1fffffffffffffff
 ALLOC RETURNING c0
 ALLOCATING a AGAIN, leaving contents as nil
 sggc_alloc: type 1, length 2
 sggc_alloc: found 45 in next_free
+sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffff3f
 ALLOC RETURNING 45
 CHECKING CONTENTS
 DONE MAIN PART OF TEST
@@ -2722,8 +3097,10 @@ COLLECTING EVERYTHING
 sggc_collect: level 2
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-    next_free [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+              00000000  01ffffff  00000000  1fffffff  00000000  00092492 
+              00000000  ffffff3f  00000000  ffffffff  00000000  49249049 
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 0 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
@@ -2760,7 +3137,9 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 0, old_gen2: 1, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
-    next_free [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
-     end_free [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
+next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
+              00000000  ffffffff  00000000  ffffffff  00000000  12492492 
+              00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 
 END TESTING
