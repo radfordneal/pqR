@@ -89,8 +89,8 @@ void sggc_find_root_ptrs (void)
 void sggc_find_object_ptrs (sggc_cptr_t cptr)
 {
   if (SGGC_TYPE(cptr) == 1)
-  { if (!sggc_look_at (CPTR(TYPE1(SGGC_DATA(cptr))->x))) return;
-    if (!sggc_look_at (CPTR(TYPE1(SGGC_DATA(cptr))->y))) return;
+  { sggc_look_at (CPTR(TYPE1(SGGC_DATA(cptr))->x));
+    sggc_look_at (CPTR(TYPE1(SGGC_DATA(cptr))->y));
   }
 }
 

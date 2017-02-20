@@ -172,31 +172,31 @@ char *sggc_aux1_read_only (sggc_kind_t kind)
 
 void sggc_find_root_ptrs (void)
 { 
-  (void) sggc_look_at (nil);  
+  sggc_look_at (nil);  
 
   int i;
   for (i = 0; symbol_chars[i]; i++)
-  { (void) sggc_look_at (symbols[i]);
+  { sggc_look_at (symbols[i]);
   }
 
   struct ptr_var *p;
   for (p = first_ptr_var; p != NULL; p = p->next)
-  { (void) sggc_look_at (*p->var);
+  { sggc_look_at (*p->var);
   }
 
-  (void) sggc_look_at (global_bindings);  
+  sggc_look_at (global_bindings);  
 }
 
 void sggc_find_object_ptrs (sggc_cptr_t cptr)
 {
   if (SGGC_TYPE(cptr) == TYPE_LIST)
-  { if (!sggc_look_at (LIST(cptr)->head)) return;
-    if (!sggc_look_at (LIST(cptr)->tail)) return;
+  { sggc_look_at (LIST(cptr)->head);
+    sggc_look_at (LIST(cptr)->tail);
   }
 
   else if (SGGC_TYPE(cptr) == TYPE_BINDING)
-  { if (!sggc_look_at (BINDING(cptr)->value)) return;
-    if (!sggc_look_at (BINDING(cptr)->next)) return;
+  { sggc_look_at (BINDING(cptr)->value);
+    sggc_look_at (BINDING(cptr)->next);
   }
 }
 

@@ -383,8 +383,8 @@ reference to a newly-allocated object is found, the generation 1
 object referring to it is not removed from 'old_to_new', since if this
 object survives collection, becoming generation 2, it will contain a
 reference to a generation 1 object.  Once such a reference is found,
-no further references need be examined, which is indicated to the
-application by having sggc_look_at return zero.
+no further references need be examined, so sggc_look_at for further
+calls for the object quickly returns (after checking a flag value).
 
 The actions to do for old-to-new references when collecting at each
 level are summarized below:

@@ -243,7 +243,7 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
 sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind);
 #endif
 void sggc_collect (int level);
-int sggc_look_at (sggc_cptr_t cptr);
+void sggc_look_at (sggc_cptr_t cptr);
 void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr);
 
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,

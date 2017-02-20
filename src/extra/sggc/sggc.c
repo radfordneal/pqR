@@ -1061,7 +1061,9 @@ void sggc_collect (int level)
       }
     }
     sggc_find_object_ptrs (v);
-    remove |= old_to_new_check;
+    if (old_to_new_check > 0) 
+    { remove = 1;
+    }
     if (SGGC_DEBUG) 
     { if (remove) 
       { printf("sggc_collect: old->new for %x no longer needed\n",(unsigned)v);
@@ -1286,12 +1288,9 @@ void sggc_collect (int level)
 
    This procedure is also used as part of the old-to-new scheme to
    check whether an object in the old-to-new set still needs to be
-   there, as well as sometimes marking the objects it points to.  In
-   this context, sggc_look_at will return 0 to indicate looking at
-   further references is unnecessary, since a reference requiring that
-   the object remain in the old-to-new set has been seen. */
+   there, as well as sometimes marking the objects it points to. */
 
-int sggc_look_at (sggc_cptr_t ptr)
+void sggc_look_at (sggc_cptr_t ptr)
 {
   if (SGGC_DEBUG) 
   { printf ("sggc_look_at: %x %d\n", (unsigned)ptr, old_to_new_check);
@@ -1299,7 +1298,10 @@ int sggc_look_at (sggc_cptr_t ptr)
 
   if (ptr != SGGC_NO_OBJECT)
   { if (old_to_new_check != 0)
-    { if (collect_level == 0)
+    { if (old_to_new_check < 0)
+      { return;
+      }
+      if (collect_level == 0)
       { if (!set_chain_contains (SET_OLD_GEN2_CONST, ptr))
         { old_to_new_check = 0;
         }
@@ -1313,10 +1315,9 @@ int sggc_look_at (sggc_cptr_t ptr)
       else /* collect_level==2 || collect_level == 1 && old_to_new_check == 1 */
       { if (!set_chain_contains (SET_OLD_GEN2_CONST, ptr) 
               && !set_contains (&old_gen1, ptr))
-        { old_to_new_check = 0;
-          return 0;
+        { old_to_new_check = -1;
         }
-        return 1;
+        return;
       }
     }
     if (set_remove (&free_or_new[SGGC_KIND(ptr)], ptr))
@@ -1324,8 +1325,6 @@ int sggc_look_at (sggc_cptr_t ptr)
       if (SGGC_DEBUG) printf("sggc_look_at: will look at %x\n",(unsigned)ptr);
     }
   }
-
-  return 1;
 }
 
 

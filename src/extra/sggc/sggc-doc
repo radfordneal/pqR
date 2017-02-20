@@ -313,8 +313,7 @@ sggc_collect is called.  This is done in three ways.
 First, the application must provided an sggc_find_root_ptrs procedure.
 This procedure must call the sggc_look_at function for every "root"
 compressed pointer, which the application might use to directly refer
-to an object.  In this context, the value returned by sggc_look_at may
-be ignored.
+to an object.
 
 Root pointers would, for example, include compressed pointers stored
 in global variables used by the application.  If the application also
@@ -331,9 +330,7 @@ each of them, passing the compressed pointer for the reference.
 Secondly, the application must provide an sggc_find_object_ptrs
 procedure, which is passed a compressed pointer to an object, and
 which must call sggc_look_at for every object that is referenced from
-that object - except that if a call of sggc_look_at returns zero,
-sggc_find_object_ptrs should return immediately without looking for
-any more pointers.
+that object.
 
 Finally, the application must call the sggc_old_to_new_check procedure
 whenever it may have modified an object in an older generation so that
@@ -465,7 +462,7 @@ macros) below, which have (if functions) prototypes as shown:
     It is up to the application to implement a policy for when to call
     the garbage collector, and at what level.
 
-  int sggc_look_at (sggc_cptr_t cptr)
+  void sggc_look_at (sggc_cptr_t cptr)
 
     This function must be called from the sggc_find_root_ptrs and
     sggc_find_object_ptrs procedures that the application provides for
@@ -473,12 +470,6 @@ macros) below, which have (if functions) prototypes as shown:
     to SGGC that the object referenced by the compressed pointer
     passed is accessible, via a root pointer or via a reference in
     another object, and hence should not be collected.  
-
-    The return value of sggc_look_at should be ignored if it is called
-    from sggc_find_root_ptrs.  If sggc_look_at is called from
-    sggc_find_object_ptrs, a return value of zero indicates that the
-    sggc_find_object_ptrs procedure should return immediately without
-    looking for further references.
 
   void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr)
 
@@ -579,18 +570,15 @@ before sggc.h is included):
 
     This procedure must call sggc_look_at for every "root" pointer via
     which an object might be referenced, passing sggc_look_at the
-    compressed pointer for that object.  See the discussion above
-    for more context.
+    compressed pointer for that object.  See the discussion above for
+    more context.
 
   void sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     This procedure must call sggc_look_at for every object that is
     referenced via 'cptr' (in any order), passing it the compressed
-    pointer to the object that is referenced, except that if such a
-    call of sggc_look_at returns 0, sggc_find_object_ptrs should
-    immediately return, rather than calling sggc_look_at for the
-    remaining objects referenced via 'cptr'.  See the discussion above
-    for more context.
+    pointer to the object that is referenced.  See the discussion
+    above for more context.
 
   char *sggc_aux1_read_only (sggc_kind_t kind)
 
