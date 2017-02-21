@@ -793,55 +793,58 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
 
 sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
 {
-  sggc_cptr_t v;
-
   if (SGGC_DEBUG) 
   { printf("sggc_alloc_small_kind_quickly: kind %d (type %u)\n", 
             (int) kind, (unsigned) sggc_kind_types[kind]);
   }
 
-  if (next_free_bits[kind] == 0)
+  set_bits_t nfb = next_free_bits[kind];
+
+  if (nfb == 0)
   { return SGGC_NO_OBJECT;
   }
 
-  v = next_free_val[kind];
+  sggc_cptr_t v = next_free_val[kind];
+
   if (SGGC_DEBUG) 
   { printf("sggc_alloc_small_kind_quickly: found %x in next_free\n",
            (unsigned)v);
   }
 
-  next_free_bits[kind] >>= 1;
-  if (next_free_bits[kind] != 0)  /* more available in same segment */
-  { int o = set_first_bit_pos(next_free_bits[kind]);
-    next_free_bits[kind] >>= o;
+  nfb >>= 1;
+  if (nfb != 0)  /* more available in same segment */
+  { int o = set_first_bit_pos(nfb);
+    nfb >>= o;
     next_free_val[kind] += o+1;
   }
   else if (next_free_seg[kind] != SGGC_NO_OBJECT)  /* more in next_free */
-  { set_value_t n = next_free_seg[kind];
-    next_free_val[kind] = n;
-    next_free_bits[kind] = set_segment_bits (&free_or_new[kind], n);
-    next_free_bits[kind] >>= SET_VAL_OFFSET(n);
-    next_free_seg[kind] = set_next_segment (&free_or_new[kind], n);
+  { set_value_t nfs = next_free_seg[kind];
+    next_free_val[kind] = nfs;
+    nfb = set_segment_bits (&free_or_new[kind], nfs);
+    nfb >>= SET_VAL_OFFSET(nfs);
+    next_free_seg[kind] = set_next_segment (&free_or_new[kind], nfs);
   }
+
   if (SGGC_DEBUG)
   { printf("sggc_alloc_small_kind_quickly: next_free_val[%d]=%x next_free_bits[%d]=%016llx\n",
             kind, next_free_val[kind],
-            kind, (unsigned long long) next_free_bits[kind]);
+            kind, (unsigned long long) nfb);
   }
 
   sggc_nchunks_t nch = sggc_kind_chunks[kind];  /* number of chunks for object*/
+  uint64_t *p = (uint64_t *) SGGC_DATA(v);      /* should be aligned properly */
 
   if ((SGGC_CHUNK_SIZE == 8 || SGGC_CHUNK_SIZE == 16) && nch == 1)
-  { uint64_t *p = (uint64_t *) SGGC_DATA(v);  /* should be aligned properly */
-    *p = 0;
+  { *p = 0;
     if (SGGC_CHUNK_SIZE == 16) *(p+1) = 0;
   }
   else
-  { memset (SGGC_DATA(v), 0, (size_t) nch * SGGC_CHUNK_SIZE);
+  { memset (p, 0, (size_t) nch * SGGC_CHUNK_SIZE);
   }
 
   sggc_info.gen0_count += 1;
 
+  next_free_bits[kind] = nfb;
   return v;
 }
 

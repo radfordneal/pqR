@@ -84,8 +84,7 @@ static inline int bit_count (set_bits_t b)
 # if SET_USE_BUILTINS
     return sizeof b <= sizeof (unsigned) ? __builtin_popcount(b) 
          : sizeof b <= sizeof (unsigned long) ? __builtin_popcountl(b) 
-         : sizeof b <= sizeof (unsigned long long) ? __builtin_popcountll(b)
-         : (abort(), 0);
+         : __builtin_popcountll(b);
 # else
     int cnt;
     cnt = 0;
