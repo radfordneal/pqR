@@ -145,7 +145,6 @@ static sggc_kind_t R_type_length1_to_kind[32]; /* map R type to kind if len 1 */
 /* Variables controlling when garbage collections are done. */
 
 static int gc_interval = 1000000;      /* Interval between garbage collections*/
-static int gc_countdown = 0;           /* Countdown to when to do next GC */
 static long long int gc_count = 0;     /* Number of garbage collections done */
 static int gc_last_level = 0;          /* Level of most recently done GC */
 static int gc_next_level = 0;          /* Level currently planned for next GC */
@@ -1067,21 +1066,18 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     sggc_type_t sggctype = R_type_to_sggc_type[type];
     sggc_length_t sggclength = Rf_nchunks(type,length);
 
-    if (gc_countdown-- <= 0) {
+    if (sggc_info.gen0_count >= gc_interval)
         R_gc_internal(); 
-        gc_countdown = gc_interval;
-    }
 
     sggc_cptr_t cp = sggc_alloc (sggctype, sggclength);
 
     while (cp == SGGC_NO_OBJECT) {
-        if (gc_countdown == gc_interval
+        if (sggc_info.gen0_count >= gc_interval
              && gc_last_level < 2
              && gc_next_level < gc_last_level + 1) {
             gc_next_level = gc_last_level + 1;
         }
         R_gc_internal();
-        gc_countdown = gc_interval;
         cp = sggc_alloc (sggctype, sggclength);
         if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
             R_Suicide("out of memory");
@@ -1229,7 +1225,7 @@ SEXP cons(SEXP car, SEXP cdr)
 {
     SEXP s;
 
-    if (gc_countdown-- <= 0 || (s = alloc_fast(LISTSXP)) == R_NoObject) {
+    if ((s = alloc_fast(LISTSXP)) == R_NoObject) {
         PROTECT2(car,cdr);
         s = alloc_nonvec(LISTSXP);
         UNPROTECT(2);
@@ -1248,7 +1244,7 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
     SEXP s;
 
-    if (gc_countdown-- <= 0 || (s = alloc_fast(LISTSXP)) == R_NoObject) {
+    if ((s = alloc_fast(LISTSXP)) == R_NoObject) {
         PROTECT3(car,cdr,tag);
         s = alloc_nonvec(LISTSXP);
         UNPROTECT(3);
@@ -1286,7 +1282,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
     SEXP newrho;
 
-    if (gc_countdown-- <= 0 || (newrho = alloc_fast(ENVSXP)) == R_NoObject) {
+    if ((newrho = alloc_fast(ENVSXP)) == R_NoObject) {
         PROTECT3(namelist,valuelist,rho);
         newrho = alloc_nonvec(ENVSXP);
         UNPROTECT(3);
@@ -1318,7 +1314,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
 
-    if (gc_countdown-- <= 0 || (s = alloc_fast(PROMSXP)) == R_NoObject) {
+    if ((s = alloc_fast(PROMSXP)) == R_NoObject) {
         PROTECT2(expr,rho);
         s = alloc_nonvec(PROMSXP);
         UNPROTECT(2);
@@ -1390,7 +1386,7 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 {
     SEXP c;
 
-    if (gc_countdown-- <= 0 || (c = alloc_fast(CLOSXP)) == R_NoObject) {
+    if ((c = alloc_fast(CLOSXP)) == R_NoObject) {
         PROTECT3(formals,body,rho);
         c = alloc_nonvec(CLOSXP);
         UNPROTECT(3);
@@ -1444,7 +1440,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 {
     SEXP c;
 
-    if (gc_countdown-- <= 0 || (c = alloc_fast(SYMSXP)) == R_NoObject) {
+    if ((c = alloc_fast(SYMSXP)) == R_NoObject) {
         PROTECT2(name,value);
         c = alloc_nonvec(SYMSXP);
         UNPROTECT(2);
@@ -1480,7 +1476,7 @@ static SEXP allocVector1 (SEXPTYPE type)
 
 #if VALGRIND_LEVEL==0
 
-    if (gc_countdown-- <= 0 || (s = alloc_fast(type)) == R_NoObject) {
+    if ((s = alloc_fast(type)) == R_NoObject) {
         s = alloc_obj(type,1);
     }
     LENGTH(s) = 1;
