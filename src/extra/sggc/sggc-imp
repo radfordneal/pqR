@@ -253,9 +253,9 @@ application specific header file for use of the set facility by SGGC),
 as follows:
 
   SET_UNUSED_FREE_NEW   Used for sets of free or newly-allocated objects
-                        of different kinds, called 'free_or_new[k]' for
-                        each kind k, and a set of unused big segments,
-                        called 'unused'.
+                        of different kinds, called 'free_or_new[k]'
+                        for each kind k, and a set of unused big
+                        segments, called 'unused'.
 
   SET_OLD_GEN1          Used for the set of objects in old generation 1,
                         called 'old_gen1'.
@@ -273,23 +273,17 @@ as follows:
 
 Note that with five chains, plus four bytes of extra information used
 by SGGC, the size of a set_segment structure is 64 bytes, which may be
-a good size for cache performance.  It would also allow efficient
-indexing of arrays of segments, though this is not relevant with the
-current implementation.
+a good size for cache performance.  As a power of two, it would also
+allow efficient indexing of arrays of segments, though this is not
+relevant with the current implementation, which uses an array of
+pointers to segments.
 
 Between calls of sggc_collect, for kinds, k, that use small segments,
-'free_or_new[[k]' contains objects in segments that have data and
-auxiliary information allocated.  Some of these objects are
+the set 'free_or_new[[k]' contains objects in segments that have data
+and auxiliary information allocated.  Some of these objects are
 newly-allocated (since the last call of sggc_collect), and may still
-be in use, and others are free.  The free objects form a sequential
-subset delimited by the compressed pointers in 'next_free[k]', which
-is the next free object of kind k, and 'end_free[k]', which is the
-first object after the free sequence (or SGGC_NO_OBJECT if the free
-sequence goes to the end of the set).  A call of sggc_alloc for an
-object of a small-segment kind, k, will use the object from
-'free_or_new[k]' identified by 'next_free[k]', unless this is equal to
-'end_free[k]', indicating that no free objects are available for reuse
-(in which case sggc_alloc_zeroed is called to obtain new space).
+be in use, and others are free.  The objects known to be free start at
+'sggc_next_val[k]'.
 
 If k uses big segments, 'free_or_new[[k]' contains only newly
 allocated objects between calls of sggc_collect.  Allocation for
@@ -332,8 +326,8 @@ until the 'to_look_at' set becomes empty.  This avoids use of
 recursion to following references to objects from other objects.
 
 Once the marking process has finished, the objects in all the
-'free_or_new[k]' sets are known to be unused.  However, some of them
-may still be in 'old_gen2' or 'old_gen1', so these sets are scanned to
+'free_or_new' sets are known to be unused.  However, some of them may
+still be in 'old_gen2' or 'old_gen1', so these sets are scanned to
 remove elements that are in a set in the SET_UNUSED_FREE_NEW chain.
 Such objects are also removed from the 'old_to_new' set (see below).
 

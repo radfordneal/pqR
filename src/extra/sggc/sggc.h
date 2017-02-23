@@ -240,7 +240,6 @@ int sggc_init (int max_segments);
 sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length);
 #ifdef SGGC_KIND_TYPES
 sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
-sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind);
 #endif
 void sggc_collect (int level);
 void sggc_look_at (sggc_cptr_t cptr);
@@ -257,7 +256,7 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
 );
 
 
-/* Functions below are defined here as "static inline" for speed. */
+/**** Functions below are defined here as "static inline" for speed. ****/
 
 
 /* CHECK WHETHER AN OBJECT IS IN THE YOUNGEST GENERATION.  */
@@ -292,4 +291,55 @@ static inline int sggc_is_constant (sggc_cptr_t cptr)
   struct set_segment *set = SET_SEGMENT(SET_VAL_INDEX(cptr));
 
   return !set->x.small.big && set->x.small.constant;
+}
+
+
+/* QUICKLY ALLOCATE AN OBJECT WITH GIVEN KIND, WHICH MUST BE FOR SMALL SEGMENT. 
+   Returns SGGC_NO_OBJECT if can't allocate quickly in an existing segment. */
+
+static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
+{
+  extern sggc_cptr_t sggc_next_free_val[SGGC_N_KINDS];
+  extern set_bits_t sggc_next_free_bits[SGGC_N_KINDS];
+  extern int sggc_next_segment_not_free[SGGC_N_KINDS];
+
+  sggc_cptr_t nfv = sggc_next_free_val[kind];
+
+  if (nfv == SGGC_NO_OBJECT)
+  { return SGGC_NO_OBJECT;
+  }
+
+  set_bits_t nfb = sggc_next_free_bits[kind];
+
+  nfb >>= 1;
+  if (nfb != 0)
+  { int o = set_first_bit_pos(nfb);
+    nfb >>= o;
+    sggc_next_free_val[kind] = nfv + o + 1;
+  }
+  else if (!sggc_next_segment_not_free[kind])
+  { sggc_cptr_t n = set_chain_next_segment (SET_UNUSED_FREE_NEW, nfv);
+    sggc_next_free_val[kind] = n;
+    if (n != SGGC_NO_OBJECT)
+    { nfb = set_chain_segment_bits (SET_UNUSED_FREE_NEW, n) >> SET_VAL_OFFSET(n);
+    }
+  }
+  else
+  { sggc_next_free_val[kind] = SGGC_NO_OBJECT;
+  }
+
+  sggc_next_free_bits[kind] = nfb;
+
+  sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
+  uint64_t *p = (uint64_t *) SGGC_DATA(nfv);   /* should be aligned properly  */
+
+  do 
+  { int i;
+    for (i = 0; i <SGGC_CHUNK_SIZE; i += 8) *p++ = 0;
+    nch -= 1;
+  } while (nch > 0);
+
+  sggc_info.gen0_count += 1;
+
+  return nfv;
 }

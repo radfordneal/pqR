@@ -1,31 +1,31 @@
 STARTING TEST: segs = 5, iters = 50
 
 ABOUT TO CALL sggc_init
-test_calloc: 1 in use after:: 0x7f857a403230
-test_calloc: 2 in use after:: 0x7f857a403260
-test_calloc: 3 in use after:: 0x7f857a403290
+test_calloc: 1 in use after:: 0x7f8918c02780
+test_calloc: 2 in use after:: 0x7f8918c027b0
+test_calloc: 3 in use after:: 0x7f8918c027e0
 DONE sggc_init
 ALLOCATING nil
 sggc_alloc: type 0, length 0
-test_calloc: 4 in use after:: 0x7f857a4032a0
-sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7f857a4032a0
-test_calloc: 5 in use after:: 0x7f857a4032b0
+test_calloc: 4 in use after:: 0x7f8918c027f0
+sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7f8918c027f0
+test_calloc: 5 in use after:: 0x7f8918c02800
 sggc_alloc: created 0 in new segment
 ALLOC RETURNING 0
 
 ITERATION 1
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2
-test_calloc: 6 in use after:: 0x7f857a800600
-test_calloc: 7 in use after:: 0x7f857a4032f0
+test_calloc: 6 in use after:: 0x7f8919002000
+test_calloc: 7 in use after:: 0x7f8918c02840
 sggc_alloc: created 40 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff
 sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7fffffffffffffff
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10
-test_calloc: 8 in use after:: 0x7f857a800a00
-test_calloc: 9 in use after:: 0x7f857a403330
+test_calloc: 8 in use after:: 0x7f8919002400
+test_calloc: 9 in use after:: 0x7f8918c02880
 sggc_alloc: created 80 in new segment
 sggc_alloc: new segment has bits 1249249249249249
 sggc_alloc: next_free_val[5]=83, next_free_bits[5]=0249249249249249
@@ -37,8 +37,8 @@ sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffffff
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1
-test_calloc: 10 in use after:: 0x7f857a803600
-test_calloc: 11 in use after:: 0x7f857a403370
+test_calloc: 10 in use after:: 0x7f8919002800
+test_calloc: 11 in use after:: 0x7f8918c028c0
 sggc_alloc: created c0 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff
 sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7fffffffffffffff
@@ -61,7 +61,6 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 8 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   1  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
 next_free_val [0]: ---  [1]:  44  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
               00000000  0fffffff  00000000  7fffffff  00000000  02492492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
@@ -98,8 +97,7 @@ sggc_collect: 0 now old_gen1
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  61  [2]:   0  [3]:  63  [4]:   0  [5]:  20 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  42^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  83^
               00000000  3fffffff  00000000  7fffffff  00000000  02492492 
               00000000  fffffffd  00000000  ffffffff  00000000  49249249 
 sggc_alloc: type 2, length 10
@@ -150,8 +148,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 16 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  61  [2]:   0  [3]:  63  [4]:   0  [5]:  20 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  89^
               00000000  01ffffff  00000000  1fffffff  00000000  00092492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_look_at: 0 0
@@ -179,8 +176,7 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  42^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  83^
               00000000  3fffffff  00000000  7fffffff  00000000  02492492 
               00000000  ffffffe5  00000000  fffffffd  00000000  49249241 
 sggc_alloc: type 1, length 2
@@ -233,8 +229,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 24 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 10, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4a  [2]: ---  [3]:  c3  [4]: ---  [5]:  8c 
+next_free_val [0]: ---  [1]:  4a^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  8c^
               00000000  003fffff  00000000  1fffffff  00000000  00012492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 0 from old_gen1 in free
@@ -296,8 +291,7 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 2, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
+next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  80^
               00000000  ffffffff  00000000  ffffffff  00000000  12492492 
               00000000  fffffd67  00000000  fffffffd  00000000  49249041 
 sggc_alloc: type 1, length 2
@@ -351,8 +345,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 32 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  48  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  48^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  86^
               00000000  00ffffff  00000000  1fffffff  00000000  00492492 
               00000000  fffffffd  00000000  ffffffff  00000000  49249241 
 sggc_collect: old->new for 43 (gen2)
@@ -389,8 +382,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 11, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  86^
               00000000  ffffffff  00000000  ffffffff  00000000  00492492 
               00000000  fffffd03  00000000  fffffff9  00000000  49249241 
 sggc_alloc: type 1, length 2
@@ -440,8 +432,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 40 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 11, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  8f^
               00000000  000fffff  00000000  1fffffff  00000000  00002492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: old->new for 43 (gen2)
@@ -473,8 +464,7 @@ sggc_look_at: 8c 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  86^
               00000000  ffffffff  00000000  1fffffff  00000000  00492492 
               00000000  fffff103  00000000  ffffffff  00000000  49249201 
 sggc_alloc: type 2, length 1
@@ -528,8 +518,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 48 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 15, old_gen2: 2, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4e  [2]: ---  [3]:  c5  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4e^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  8f^
               00000000  0003ffff  00000000  07ffffff  00000000  00002492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 0 from old_gen2 in free
@@ -611,8 +600,7 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  42^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  3fffffff  00000000  ffffffff  00000000  02492492 
               00000000  fffff7bd  00000000  ffffffef  00000000  49249241 
 sggc_alloc: type 2, length 10
@@ -662,8 +650,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 56 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8c^
               00000000  01ffffff  00000000  3fffffff  00000000  00012492 
               00000000  ffffffbd  00000000  fffffffb  00000000  49249249 
 sggc_collect: old->new for 43 (gen2)
@@ -695,8 +682,7 @@ sggc_look_at: 89 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  42^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  3fffffff  00000000  ffffffff  00000000  02492492 
               00000000  fffff7a5  00000000  ffffffed  00000000  49249201 
 sggc_alloc: type 1, length 2
@@ -749,8 +735,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 64 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 10, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4b  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4b^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8f^
               00000000  001fffff  00000000  3fffffff  00000000  00002492 
               00000000  fffffffb  00000000  fffffffb  00000000  49249249 
 sggc_collect: old->new for 43 (gen2)
@@ -790,8 +775,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 16, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  42  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  42^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8f^
               00000000  3fffffff  00000000  3fffffff  00000000  00002492 
               00000000  fffff681  00000000  fffffffb  00000000  49249249 
 sggc_alloc: type 1, length 2
@@ -844,8 +828,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 72 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 16, old_gen2: 3, old_to_new: 1, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  0001ffff  00000000  07ffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 40 from old_gen1 in free
@@ -918,8 +901,7 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  ffffd3fb  00000000  fffffff7  00000000  49248249 
 sggc_alloc: type 1, length 2
@@ -969,8 +951,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 80 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  01ffffff  00000000  7fffffff  00000000  00092492 
               00000000  ffffff4f  00000000  fffffffb  00000000  49249209 
 sggc_look_at: 0 0
@@ -998,8 +979,7 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  7fffffff  00000000  02492492 
               00000000  ffffd3cb  00000000  fffffffb  00000000  49248241 
 sggc_alloc: type 2, length 1
@@ -1052,8 +1032,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 88 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  49^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  89^
               00000000  007fffff  00000000  0fffffff  00000000  00092492 
               00000000  ffffffd3  00000000  ffffffff  00000000  49249209 
 sggc_look_at: 0 0
@@ -1086,8 +1065,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  7fffffff  00000000  7fffffff  00000000  00092492 
               00000000  ffffd341  00000000  fffffff9  00000000  49249209 
 sggc_alloc: type 2, length 10
@@ -1137,8 +1115,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 96 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4d  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+next_free_val [0]: ---  [1]:  4d^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  0007ffff  00000000  07ffffff  00000000  00000492 
               00000000  fffffffd  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 80 from old_gen2 in free
@@ -1210,8 +1187,7 @@ sggc_collect: c3 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  fffffcfb  00000000  ffffffef  00000000  49249049 
 sggc_alloc: type 1, length 2
@@ -1264,8 +1240,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 104 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  01ffffff  00000000  7fffffff  00000000  00092492 
               00000000  fffffff3  00000000  fffffff7  00000000  49249241 
 sggc_look_at: 0 0
@@ -1301,8 +1276,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  7fffffff  00000000  7fffffff  00000000  00092492 
               00000000  fffffcd1  00000000  fffffff7  00000000  49249241 
 sggc_alloc: type 1, length 2
@@ -1355,8 +1329,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 112 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  8f^
               00000000  000fffff  00000000  1fffffff  00000000  00002492 
               00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_look_at: 0 0
@@ -1389,8 +1362,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  8f^
               00000000  7fffffff  00000000  7fffffff  00000000  00002492 
               00000000  fffff811  00000000  fffffff5  00000000  49249249 
 sggc_alloc: type 1, length 2
@@ -1440,8 +1412,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 120 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c3  [4]: ---  [5]:  95 
+next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  95^
               00000000  0001ffff  00000000  1fffffff  00000000  00000092 
               00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_collect: put 42 from old_gen1 in free
@@ -1499,8 +1470,7 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  ffffcffb  00000000  fffffffd  00000000  49241249 
 sggc_alloc: type 2, length 1
@@ -1553,8 +1523,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 128 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  86^
               00000000  01ffffff  00000000  1fffffff  00000000  00492492 
               00000000  ffffff3f  00000000  ffffffff  00000000  49248249 
 sggc_look_at: 0 0
@@ -1587,8 +1556,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  86^
               00000000  7fffffff  00000000  ffffffff  00000000  00492492 
               00000000  ffffcfd1  00000000  fffffff9  00000000  49248249 
 sggc_alloc: type 2, length 10
@@ -1638,8 +1606,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 136 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  8c 
+next_free_val [0]: ---  [1]:  49^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  8c^
               00000000  007fffff  00000000  0fffffff  00000000  00012492 
               00000000  ffffffcf  00000000  ffffffff  00000000  49249209 
 sggc_look_at: 0 0
@@ -1667,8 +1634,7 @@ sggc_look_at: 89 0
 sggc_collect: done
   unused: 0, old_gen1: 13, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  86^
               00000000  7fffffff  00000000  ffffffff  00000000  00492492 
               00000000  ffffcf11  00000000  fffffff1  00000000  49248241 
 sggc_alloc: type 1, length 2
@@ -1721,8 +1687,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 144 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 13, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c4  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  8f^
               00000000  000fffff  00000000  0fffffff  00000000  00002492 
               00000000  fffffff9  00000000  ffffffff  00000000  49249241 
 sggc_collect: put 80 from old_gen2 in free
@@ -1800,8 +1765,7 @@ sggc_collect: c3 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 6, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  7fffffff  00000000  02492492 
               00000000  fffffaeb  00000000  ffffffff  00000000  49249041 
 sggc_alloc: type 1, length 2
@@ -1854,8 +1818,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 152 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 6, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  48  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  48^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  89^
               00000000  00ffffff  00000000  1fffffff  00000000  00092492 
               00000000  fffffff5  00000000  ffffffff  00000000  49249241 
 sggc_look_at: 0 0
@@ -1888,8 +1851,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 11, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  56  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  7fffffff  00000000  7fffffff  00000000  00092492 
               00000000  fffffa83  00000000  fffffffd  00000000  49249241 
 sggc_alloc: type 1, length 2
@@ -1939,8 +1901,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 160 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 11, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  56  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4d  [2]: ---  [3]:  c3  [4]: ---  [5]:  92 
+next_free_val [0]: ---  [1]:  4d^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  92^
               00000000  0007ffff  00000000  1fffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_look_at: 0 0
@@ -1968,8 +1929,7 @@ sggc_look_at: 8f 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  89^
               00000000  7fffffff  00000000  1fffffff  00000000  00092492 
               00000000  fffff083  00000000  ffffffff  00000000  49249201 
 sggc_alloc: type 2, length 1
@@ -2022,8 +1982,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 168 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  0001ffff  00000000  07ffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 44 from old_gen1 in free
@@ -2086,8 +2045,7 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  ffffdf79  00000000  ffffffef  00000000  49249209 
 sggc_alloc: type 2, length 10
@@ -2137,8 +2095,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 176 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c2  [4]: ---  [5]:  8c 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8c^
               00000000  01ffffff  00000000  3fffffff  00000000  00012492 
               00000000  ffffff7d  00000000  fffffffb  00000000  49249249 
 sggc_look_at: 0 0
@@ -2166,8 +2123,7 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  ffffdf49  00000000  ffffffed  00000000  49249201 
 sggc_alloc: type 1, length 2
@@ -2220,8 +2176,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 184 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4b  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4b^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8f^
               00000000  001fffff  00000000  3fffffff  00000000  00002492 
               00000000  fffffff7  00000000  fffffffb  00000000  49249249 
 sggc_look_at: 0 0
@@ -2257,8 +2212,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c2  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8f^
               00000000  7fffffff  00000000  3fffffff  00000000  00002492 
               00000000  ffffdd01  00000000  fffffffb  00000000  49249249 
 sggc_alloc: type 1, length 2
@@ -2311,8 +2265,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 192 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  0001ffff  00000000  07ffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 80 from old_gen2 in free
@@ -2391,8 +2344,7 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  ffffe3fb  00000000  fffffff7  00000000  49248249 
 sggc_alloc: type 1, length 2
@@ -2442,8 +2394,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 200 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 5, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  01ffffff  00000000  7fffffff  00000000  00092492 
               00000000  ffffff8f  00000000  fffffffb  00000000  49249209 
 sggc_look_at: 0 0
@@ -2471,8 +2422,7 @@ sggc_look_at: 86 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  7fffffff  00000000  02492492 
               00000000  ffffe3cb  00000000  fffffffb  00000000  49248241 
 sggc_alloc: type 2, length 1
@@ -2525,8 +2475,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 208 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  49  [2]: ---  [3]:  c4  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  49^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  89^
               00000000  007fffff  00000000  0fffffff  00000000  00092492 
               00000000  ffffffe3  00000000  ffffffff  00000000  49249209 
 sggc_look_at: 0 0
@@ -2559,8 +2508,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  7fffffff  00000000  7fffffff  00000000  00092492 
               00000000  ffffe341  00000000  fffffff9  00000000  49249209 
 sggc_alloc: type 2, length 10
@@ -2610,8 +2558,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 216 ALLOCATIONS
 sggc_collect: level 1
   unused: 0, old_gen1: 14, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4e  [2]: ---  [3]:  c5  [4]: ---  [5]:  92 
+next_free_val [0]: ---  [1]:  4e^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  0003ffff  00000000  07ffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 sggc_collect: put 42 from old_gen1 in free
@@ -2667,8 +2614,7 @@ sggc_collect: c3 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  fffffcfb  00000000  ffffffef  00000000  49249049 
 sggc_alloc: type 1, length 2
@@ -2721,8 +2667,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 224 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  01ffffff  00000000  7fffffff  00000000  00092492 
               00000000  fffffff3  00000000  fffffff7  00000000  49249241 
 sggc_look_at: 0 0
@@ -2758,8 +2703,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  7fffffff  00000000  7fffffff  00000000  00092492 
               00000000  fffffcd1  00000000  fffffff7  00000000  49249241 
 sggc_alloc: type 1, length 2
@@ -2812,8 +2756,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 232 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 10, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  17 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4c  [2]: ---  [3]:  c3  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  8f^
               00000000  000fffff  00000000  1fffffff  00000000  00002492 
               00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_look_at: 0 0
@@ -2846,8 +2789,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c1  [4]: ---  [5]:  8f 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  8f^
               00000000  7fffffff  00000000  7fffffff  00000000  00002492 
               00000000  fffff811  00000000  fffffff5  00000000  49249249 
 sggc_alloc: type 1, length 2
@@ -2897,8 +2839,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 240 ALLOCATIONS
 sggc_collect: level 2
   unused: 0, old_gen1: 15, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  16 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  4f  [2]: ---  [3]:  c3  [4]: ---  [5]:  95 
+next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  95^
               00000000  0001ffff  00000000  1fffffff  00000000  00000092 
               00000000  ffffffff  00000000  fffffffd  00000000  49249249 
 sggc_collect: put 80 from old_gen2 in free
@@ -2972,8 +2913,7 @@ sggc_collect: c4 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  83 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  83^
               00000000  7fffffff  00000000  ffffffff  00000000  02492492 
               00000000  ffffcffb  00000000  fffffffd  00000000  49241249 
 sggc_alloc: type 2, length 1
@@ -3026,8 +2966,7 @@ ABOUT TO CALL sggc_collect IN ALLOC DUE TO 248 ALLOCATIONS
 sggc_collect: level 0
   unused: 0, old_gen1: 4, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  19 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  86^
               00000000  01ffffff  00000000  1fffffff  00000000  00492492 
               00000000  ffffff3f  00000000  ffffffff  00000000  49248249 
 sggc_look_at: 0 0
@@ -3060,8 +2999,7 @@ sggc_look_at: 0 0
 sggc_collect: done
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  41  [2]: ---  [3]:  c0  [4]: ---  [5]:  86 
+next_free_val [0]: ---  [1]:  41^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  86^
               00000000  7fffffff  00000000  ffffffff  00000000  00492492 
               00000000  ffffcfd1  00000000  fffffff9  00000000  49248249 
 sggc_alloc: type 2, length 10
@@ -3097,8 +3035,7 @@ COLLECTING EVERYTHING
 sggc_collect: level 2
   unused: 0, old_gen1: 9, old_gen2: 4, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  47  [2]: ---  [3]:  c3  [4]: ---  [5]:  89 
+next_free_val [0]: ---  [1]:  47^ [2]: ---  [3]:  c3^ [4]: ---  [5]:  89^
               00000000  01ffffff  00000000  1fffffff  00000000  00092492 
               00000000  ffffff3f  00000000  ffffffff  00000000  49249049 
 sggc_collect: put 80 from old_gen2 in free
@@ -3137,8 +3074,7 @@ sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
   unused: 0, old_gen1: 0, old_gen2: 1, old_to_new: 0, to_look_at: 0, const: 0
   free_or_new [0]:   0  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
-next_free_seg [0]: ---  [1]: ---  [2]: ---  [3]: ---  [4]: ---  [5]: --- 
-next_free_val [0]: ---  [1]:  40  [2]: ---  [3]:  c0  [4]: ---  [5]:  80 
+next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  80^
               00000000  ffffffff  00000000  ffffffff  00000000  12492492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
 

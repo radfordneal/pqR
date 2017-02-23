@@ -89,8 +89,8 @@ before it includes sggc.h:
                         chunks for each kind of object, 0 if the kind uses
                         "big" segments (with variable numbers of chunks).
 
-The following constant must be defined if the sggc_alloc_small_kind or
-sggc_alloc_small_kind_quickly function is used (see below):
+The following constant must be defined if the sggc_alloc_small_kind
+function is used (see below):
 
   SGGC_KIND_TYPES       An array initializer giving the type for each
                         kind of object.
@@ -445,9 +445,10 @@ macros) below, which have (if functions) prototypes as shown:
   sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t)
 
     Like sggc_alloc_small_kind, except that it tries to do the
-    allocation very quickly, and may return SGGC_NO_OBJECT if it turns
-    out that more work is required, in which case the application
-    should try calling sggc_alloc_small_kind or sggc_alloc instead.
+    allocation very quickly, using only existing segments, and may
+    return SGGC_NO_OBJECT if this is not possible, in which case the
+    application should try calling sggc_alloc_small_kind or sggc_alloc
+    instead.  Does not require that SGGC_KIND_TYPE be defined.
 
   void sggc_collect (int level)
 

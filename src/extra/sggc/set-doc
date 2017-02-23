@@ -292,11 +292,12 @@ for use in an application, with prototypes (if functions) as shown:
     will either be in the same segment as 'val' or in the next
     segment.  This is of relevance if set_move_next will be used.
 
-  set_value_t set_next_segment (struct set *set, set_value_t val)
+  set_value_t set_chain_next_segment (int chain, set_value_t val)
 
-    Returns the next element of 'set' after 'val' (which must be an
-    element of 'set') that is in a different segment than 'val'.
-    Returns SET_NO_VALUE if there is no such element.
+    Returns the next element after 'val' that is in a different
+    segment, within the set using 'chain' that contains 'val'.  It is
+    an error for 'val' not be be in any set using 'chain'.  Returns
+    SET_NO_VALUE if there is no such element.
 
   set_bits_t set_first_bits (struct set *set)
 
@@ -305,11 +306,11 @@ for use in an application, with prototypes (if functions) as shown:
     being for the value with offset zero.  If 'set' is empty, the
     value returned is zero, which will not be returned otherwise.
 
-  set_bits_t set_segment_bits (struct set *set, set_value_t val)
+  set_bits_t set_chain_segment_bits (int chain, set_value_t val)
 
-    Returns the bit vector indicating membership in 'set' for all
-    values in the segment containing 'val' (which must be an element
-    of 'set').
+    Returns the bit vector indicating membership in a set using
+    'chain' of all values in the the segment containing 'val' (which
+    must be an element of a set using 'chain').
 
   void set_assign_segment_bits (struct set *set, set_value_t val, set_bits_t b)
 
@@ -355,6 +356,11 @@ for use in an application, with prototypes (if functions) as shown:
     Returns the number of elements in 'set', zero if the set is empty.
     The return type is set_value_t because this is guaranteed to be a
     large enough integer type (unsigned).
+
+  int set_bit_count (set_bits_t b)
+
+    Returns 1 bits in 'b'.  This is mainly for internal use, but may
+    be useful to applications that use set_segment_bits.
 
   int set_first_bit_pos (set_bits_t b)
 
