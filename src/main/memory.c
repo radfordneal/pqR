@@ -596,11 +596,8 @@ void sggc_find_root_ptrs (void)
     for (i = 0; root_vars[i] != 0; i++)
         LOOK_AT(*root_vars[i]);
 
-    if (R_VStack != R_NoObject)
-        LOOK_AT(R_VStack);
-
-    if (R_CurrentExpr != R_NoObject)	           /* Current expression */
-	LOOK_AT(R_CurrentExpr);
+    LOOK_AT(R_VStack);
+    LOOK_AT(R_CurrentExpr);
 
     for (i = 0; i < R_MaxDevices; i++) {   /* Device display lists */
 	pGEDevDesc gdd = GEgetDevice(i);
@@ -633,7 +630,7 @@ void sggc_find_root_ptrs (void)
             LOOK_AT(*cntxt_ptrs[i]);
     }
 
-    if (framenames != R_NoObject)	   /* used for interprocedure    */
+    if (framenames != R_NoObject)  /* used for interprocedure    */
         LOOK_AT(framenames);	   /*   communication in model.c */
 
     for (i = 0; i < R_PPStackTop; i++) {   /* Protected pointers */
@@ -1051,7 +1048,8 @@ void attribute_hidden InitMemory()
     R_weak_refs = R_NilValue;  /* This is redundant: it's statically initialized
                                   above so it'll work in R_Suicide at startup */
 
-    R_HandlerStack = R_RestartStack = R_NilValue;
+    R_HandlerStack = R_RestartStack = R_VStack = R_CurrentExpr = R_NilValue;
+    R_StringHash = R_NoObject;
 
     /*  Unbound values which are to be preserved through GCs */
     R_PreciousList = R_NilValue;
@@ -1179,7 +1177,7 @@ char *R_alloc(size_t nelem, int eltsize)
 		  dsize/1024.0/1024.0/1024.0);
 	s = allocVector(RAWSXP, size + 1);
 #endif
-	ATTRIB(s) = R_VStack == R_NoObject ? R_NilValue : R_VStack;
+	ATTRIB(s) = R_VStack;
 	R_VStack = s;
 	return (char *)DATAPTR(s);
     }
