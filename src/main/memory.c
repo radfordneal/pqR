@@ -144,9 +144,8 @@ static sggc_kind_t R_type_length1_to_kind[32]; /* map R type to kind if len 1 */
 
 /* Variables controlling when garbage collections are done. */
 
-#define GC_INTERVAL 1000000
-
-static int gc_countdown = GC_INTERVAL; /* Countdown to when to do next GC */
+static int gc_interval = 1000000;      /* Interval between garbage collections*/
+static int gc_countdown = 0;           /* Countdown to when to do next GC */
 static long long int gc_count = 0;     /* Number of garbage collections done */
 static int gc_last_level = 0;          /* Level of most recently done GC */
 static int gc_next_level = 0;          /* Level currently planned for next GC */
@@ -964,6 +963,9 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
+    if (getenv("R_GC_INTERVAL") && atoi(getenv("R_GC_INTERVAL")) > 0)
+        gc_interval = atoi(getenv("R_GC_INTERVAL"));
+
     /* Set up protection stack now, in case debug output uses it. */
 
     R_StandardPPStackSize = R_PPStackSize;
@@ -1069,19 +1071,19 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 
     if (gc_countdown-- <= 0) {
         R_gc_internal(); 
-        gc_countdown = GC_INTERVAL;
+        gc_countdown = gc_interval;
     }
 
     sggc_cptr_t cp = sggc_alloc (sggctype, sggclength);
 
     while (cp == SGGC_NO_OBJECT) {
-        if (gc_countdown == GC_INTERVAL
+        if (gc_countdown == gc_interval
              && gc_last_level < 2
              && gc_next_level < gc_last_level + 1) {
             gc_next_level = gc_last_level + 1;
         }
         R_gc_internal();
-        gc_countdown = GC_INTERVAL;
+        gc_countdown = gc_interval;
         cp = sggc_alloc (sggctype, sggclength);
         if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
             R_Suicide("out of memory");
