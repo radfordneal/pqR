@@ -125,6 +125,13 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   0, 1, 2, 3, 4  \
 };
 
+#define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
+#define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 2)
+#define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
+
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE /* data part */ \
        + 4 /* attribute pointer */ \
@@ -191,6 +198,13 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   0, 1, 2, 3, 4  \
 };
 
+#define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
+#define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 2)
+#define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
+
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
 
@@ -248,6 +262,13 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   0, 1, 2, 3, 4, \
   0, 1, 2, 3, 4  \
 };
+
+#define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
+#define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 2)
+#define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
 
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )

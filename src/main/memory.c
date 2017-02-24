@@ -1095,28 +1095,19 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 }
 
 
-/* Allocate a non-vector object.  Sets LENGTH to 1 if it is zero after
-   allocaton, which it will be if LENGTH is not read-only.  */
+/* Fast allocation of a small object.  It never garbage collects, but
+   just returns R_NoObject if it fails to allocate (possibly because
+   the sggc routine thought it wasn't easy).  The caller must then
+   call the garbage collector itself.  The caller must specify both
+   the R type and the correct corresponding SGGC kind, for the desired
+   length (if relevant).  The TYPE and ATTRIB fields are set here,
+   but not LENGTH. */
 
-static SEXP alloc_nonvec (SEXPTYPE type)
-{
-    SEXP s = alloc_obj (type, 1);
-    if (LENGTH(s) == 0) 
-        LENGTH(s) = 1;
-    return s;
-}
-
-
-/* Fast allocation of a non-vector or vector of length 1.  It never
-   garbage collects, but just returns R_NoObject if it fails to
-   allocate (possibly because the sggc routine thought it wasn't easy). 
-   The caller must then call the garbage collector itself. */
-
-static SEXP alloc_fast (SEXPTYPE type)
+static SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 {
     sggc_cptr_t cp;
 
-    cp = sggc_alloc_small_kind_quickly (R_type_length1_to_kind[type]);
+    cp = sggc_alloc_small_kind_quickly (kind);
 
     if (cp == SGGC_NO_OBJECT)
         return R_NoObject;
@@ -1129,8 +1120,6 @@ static SEXP alloc_fast (SEXPTYPE type)
 
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
-    if (LENGTH(r) == 0) 
-        LENGTH(r) = 1;
 
     return r;
 }
@@ -1210,7 +1199,9 @@ char *S_realloc(char *p, long new, long old, int size)
 
 SEXP allocSExp(SEXPTYPE t)
 {
-    SEXP s = alloc_nonvec(t);
+    SEXP s = alloc_obj(t,1);
+
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
 
     CAR(s) = R_NilValue;
     CDR(s) = R_NilValue;
@@ -1225,11 +1216,13 @@ SEXP cons(SEXP car, SEXP cdr)
 {
     SEXP s;
 
-    if ((s = alloc_fast(LISTSXP)) == R_NoObject) {
+    if ((s = alloc_fast(SGGC_LIST_KIND,LISTSXP)) == R_NoObject) {
         PROTECT2(car,cdr);
-        s = alloc_nonvec(LISTSXP);
+        s = alloc_obj(LISTSXP,1);
         UNPROTECT(2);
     }
+
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1244,11 +1237,13 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
     SEXP s;
 
-    if ((s = alloc_fast(LISTSXP)) == R_NoObject) {
+    if ((s = alloc_fast(SGGC_LIST_KIND,LISTSXP)) == R_NoObject) {
         PROTECT3(car,cdr,tag);
-        s = alloc_nonvec(LISTSXP);
+        s = alloc_obj(LISTSXP,1);
         UNPROTECT(3);
     }
+
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1282,13 +1277,15 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
     SEXP newrho;
 
-    if ((newrho = alloc_fast(ENVSXP)) == R_NoObject) {
+    if ((newrho = alloc_fast(SGGC_ENV_KIND,ENVSXP)) == R_NoObject) {
         PROTECT3(namelist,valuelist,rho);
-        newrho = alloc_nonvec(ENVSXP);
+        newrho = alloc_obj(ENVSXP,1);
         UNPROTECT(3);
     }
 
     SEXP v, n;
+
+    if (LENGTH(newrho) == 0) LENGTH(newrho) = 1;
 
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
@@ -1314,11 +1311,13 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
 
-    if ((s = alloc_fast(PROMSXP)) == R_NoObject) {
+    if ((s = alloc_fast(SGGC_PROM_KIND,PROMSXP)) == R_NoObject) {
         PROTECT2(expr,rho);
-        s = alloc_nonvec(PROMSXP);
+        s = alloc_obj(PROMSXP,1);
         UNPROTECT(2);
     }
+
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
@@ -1363,7 +1362,8 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
     result = VECTOR_ELT(PrimCache, offset);
 
     if (result == R_NilValue) {
-	result = alloc_nonvec(type);
+	result = alloc_obj(type,1);
+        if (LENGTH(result) == 0) LENGTH(result) = 1;
 	SET_PRIMOFFSET(result, offset);
         SET_VECTOR_ELT (PrimCache, offset, result);
     }
@@ -1386,11 +1386,13 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 {
     SEXP c;
 
-    if ((c = alloc_fast(CLOSXP)) == R_NoObject) {
+    if ((c = alloc_fast(SGGC_CLOS_KIND,CLOSXP)) == R_NoObject) {
         PROTECT3(formals,body,rho);
-        c = alloc_nonvec(CLOSXP);
+        c = alloc_obj(CLOSXP,1);
         UNPROTECT(3);
     }
+
+    if (LENGTH(c) == 0) LENGTH(c) = 1;
 
 #ifdef not_used_CheckFormals
     if(isList(formals))
@@ -1440,11 +1442,13 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 {
     SEXP c;
 
-    if ((c = alloc_fast(SYMSXP)) == R_NoObject) {
+    if ((c = alloc_fast(SGGC_SYM_KIND,SYMSXP)) == R_NoObject) {
         PROTECT2(name,value);
-        c = alloc_nonvec(SYMSXP);
+        c = alloc_obj(SYMSXP,1);
         UNPROTECT(2);
     }
+
+    if (LENGTH(c) == 0) LENGTH(c) = 1;
 
     PRINTNAME(c) = name;
     SYMVALUE(c) = value;
@@ -1460,11 +1464,13 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 }
 
 
-/* Fast, specialize allocVector for vectors of length 1.  The type 
-   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so that 
-   there's no need to initialize a pointer in the data part. 
+/* Fast, specialized allocVector for vectors of length 1.  The type
+   passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so that they all
+   fit in a SGGC_SMALL_VEC_KIND object, and so that there's no need to
+   initialize a pointer in the data part.  The kind passed must be the
+   correct one for the type with length 1.
 
-   The version with an argument is static.  Versions for each allowed
+   The version with arguments is static.  Versions for each allowed
    type are defined below for use elsewhere in the interpreter, in which
    we hope the compiler will optimize the tail call to a simple jump. 
    (This avoids any need for an error check on "type" to guard against 
@@ -1476,7 +1482,7 @@ static SEXP allocVector1 (SEXPTYPE type)
 
 #if VALGRIND_LEVEL==0
 
-    if ((s = alloc_fast(type)) == R_NoObject) {
+    if ((s = alloc_fast(SGGC_SMALL_VEC_KIND,type)) == R_NoObject) {
         s = alloc_obj(type,1);
     }
     LENGTH(s) = 1;
@@ -1655,7 +1661,8 @@ SEXP allocList(int n)
 
 SEXP allocS4Object(void)
 {
-   SEXP s = alloc_nonvec(S4SXP);
+   SEXP s = alloc_obj(S4SXP,1);
+   if (LENGTH(s) == 0) LENGTH(s) = 1;
    SET_S4_OBJECT(s);
    TAG(s) = R_NilValue;
    return s;
@@ -1976,7 +1983,8 @@ void R_ReleaseObject(SEXP object)
 /* External Pointer Objects */
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
-    SEXP s = alloc_nonvec(EXTPTRSXP);
+    SEXP s = alloc_obj(EXTPTRSXP,1);
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -1990,7 +1998,8 @@ typedef union {void *p; DL_FUNC fn;} fn_ptr;
 SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
     fn_ptr tmp;
-    SEXP s = alloc_nonvec(EXTPTRSXP);
+    SEXP s = alloc_obj(EXTPTRSXP,1);
+    if (LENGTH(s) == 0) LENGTH(s) = 1;
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
