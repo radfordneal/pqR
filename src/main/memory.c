@@ -41,6 +41,8 @@
 #define USE_FAST_PROTECT_MACROS   /* MUST use them in this module! */
 #define USE_FAST_PROTECT_MACROS_DISABLED  /* ... even if disabled! */
 
+#define SGGC_EXTERN  /* So SGGC globals are actually defined here */
+
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Print.h>
@@ -48,7 +50,7 @@
 #include <R_ext/Rdynload.h>
 
 #include <helpers/helpers-app.h>
-
+#include <sggc/sggc.c>
 
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */
@@ -1103,7 +1105,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
    length (if relevant).  The TYPE and ATTRIB fields are set here,
    but not LENGTH. */
 
-static SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
+static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 {
     sggc_cptr_t cp;
 

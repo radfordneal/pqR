@@ -17,6 +17,9 @@
  *  http://www.r-project.org/Licenses/
  */
 
+#ifndef SGGC_APP_H_
+#define SGGC_APP_H_
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #else
@@ -300,3 +303,5 @@ static inline sggc_kind_t sggc_kind_inline (sggc_type_t type,
 
 extern const int32_t sggc_length0[SGGC_CHUNKS_IN_SMALL_SEGMENT];
 extern const int32_t sggc_length1[SGGC_CHUNKS_IN_SMALL_SEGMENT];
+
+#endif
