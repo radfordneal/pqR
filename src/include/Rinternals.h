@@ -2281,7 +2281,7 @@ void Rf_R_from_C99_complex(Rcomplex *, double complex);
 
 /* Test macros with function versions above */
 #undef isNull
-#define isNull(s)	(TYPEOF(s) == NILSXP)
+#define isNull(s)	((s) == R_NilValue)
 #undef isRaw
 #define isRaw(s)	(TYPEOF(s) == RAWSXP)
 #undef isSymbol
