@@ -318,9 +318,9 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Evaluate arguments, maybe putting them in static boxes. */
 
-    PROTECT(argsevald = 
-      static_box_eval2 (args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
-    PROTECT2(arg1,arg2);
+    argsevald = 
+      static_box_eval2 (args, &arg1, &arg2, &obj1, &obj2, env, call, variant);
+    PROTECT3(argsevald,arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
 

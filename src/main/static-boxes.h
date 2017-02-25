@@ -53,11 +53,12 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
 {
     SEXP argsevald;
     SEXP x, y;
+    int o1, o2;
+
+    o1 = o2 = 0;
 
     x = CAR(args); 
     y = CADR(args);
-
-    *obj1 = *obj2 = 0;
 
     /* We evaluate by the general procedure if ... present or more than
        two arguments, not trying to put args in static boxes. */
@@ -66,8 +67,8 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
         argsevald = evalList (args, env);
         x = CAR(argsevald);
         y = CADR(argsevald);
-        *obj1 = isObject(x);
-        *obj2 = isObject(y);
+        o1 = isObject(x);
+        o2 = isObject(y);
         goto rtrn;
     }
 
@@ -81,13 +82,13 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
         if (R_variant_result & VARIANT_UNCLASS_FLAG)
             R_variant_result = 0;
         else
-            *obj1 = 1;
+            o1 = 1;
     }
 
     /* If first arg is an object, we evaluate the rest of the arguments
        normally. */
 
-    if (*obj1) {
+    if (o1) {
         argsevald = evalList (CDR(args), env);
         y = CAR(argsevald);
         argsevald = cons_with_tag (x, argsevald, TAG(args));
@@ -124,7 +125,7 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
         if (R_variant_result & VARIANT_UNCLASS_FLAG)
             R_variant_result = 0;
         else
-            *obj2 = 1;
+            o2 = 1;
     }
 
     if (IS_STATIC_BOX(x))
@@ -134,7 +135,7 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
        arg if it is in a static box, or an unclassed object, and create 
        the list of evaluated arguments. */
 
-    if (*obj2) {
+    if (o2) {
         if (IS_STATIC_BOX(x) || isObject(x)) /* can't be both */ {
             UNPROTECT(1); /* x */
             PROTECT(y);
@@ -142,7 +143,7 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                 PROTECT(x = duplicate(x));
             else { /* isObject(x) */
                 PROTECT(x = Rf_makeUnclassed(x));
-                *obj1 = 0;
+                o1 = 0;
             }
         }
         else
@@ -167,6 +168,8 @@ static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
   rtrn:
     *arg1 = x;
     *arg2 = y;
+    *obj1 = o1;
+    *obj2 = o2;
 
     return argsevald;
 }

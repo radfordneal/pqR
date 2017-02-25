@@ -169,7 +169,20 @@ static SEXP getActiveValue(SEXP fun)
    the statement to do if the symbol is found, which must have the effect
    of exitting the loop (ie, be a "break", "return", or "goto" statement).
    If the symbol is not found, execution continues after this macro, with
-   the chain pointer being R_NilValue. */
+   the chain pointer being R_NilValue. 
+
+   The optimal amount of unrolling may depend on whether compressed or
+   uncompressed pointers are used, so these cases are distinguished. */
+
+#if USE_COMPRESSED_POINTERS
+   
+#define SEARCH_LOOP(chain,symbol,statement) \
+    do { \
+        if (TAG(chain) == symbol) statement; \
+        chain = CDR(chain); \
+    } while (chain != R_NilValue)
+
+#else
    
 #define SEARCH_LOOP(chain,symbol,statement) \
     do { \
@@ -181,6 +194,7 @@ static SEXP getActiveValue(SEXP fun)
         chain = CDR(chain); \
     } while (chain != R_NilValue)
 
+#endif
 
 /* Function to correctly set NO_SPEC_SYM flag for an (unhashed) environment. */
 

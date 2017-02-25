@@ -655,88 +655,16 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     }
 
 #   endif
-if (res == R_NoObject) abort();
+
     return res;
 }
 
 
-/* Rf_builtin_op is a separate function (not declared static, even though 
-   used only in this this module, to try to prevent inlining by the compiler)
-   so that the local 'cntxt' variable will occupy space on the stack only 
-   if it is really needed. */
-
-SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
-{
-    RCNTXT cntxt;
-    SEXP args = CDR(e);
-    SEXP res;
-    SEXP arg1;
-
-    /* See if this may be a fast primitive.  All fast primitives
-       should be BUILTIN.  We do a fast call only if there is exactly
-       one argument, with no tag, not missing or a ... argument; also
-       must not be an object if the fast primitive dispatches, unless
-       the argument was evaluated with VARIANT_UNCLASS and we got this
-       variant result.  The argument is stored in arg1. */
-
-    if (args!=R_NilValue) {
-        if (PRIMFUN_FAST(op) 
-              && TAG(args)==R_NilValue && CDR(args)==R_NilValue
-              && (arg1 = CAR(args))!=R_DotsSymbol 
-              && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
-
-            PROTECT(arg1 = EVALV (arg1, rho, 
-                                  PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
-
-            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
-                if ((PRIMFUN_ARG1VAR (op) & VARIANT_UNCLASS)
-                       && (R_variant_result & VARIANT_UNCLASS_FLAG)) {
-                    R_variant_result &= ~VARIANT_UNCLASS_FLAG;
-                }
-                else {
-                    UNPROTECT(1);
-                    PROTECT(args = CONS(arg1,R_NilValue));
-                    goto not_fast;
-                }
-            }
-    
-            beginbuiltincontext (&cntxt, e);
-
-            if (!PRIMFUN_PENDING_OK(op)) {
-                WAIT_UNTIL_COMPUTED(arg1);
-            }
-
-            res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
-                     (e, op, arg1, rho, variant);
-
-            UNPROTECT(1); /* arg1 */
-            endcontext(&cntxt);
-            return res;
-        }
-        args = evalList_v (args, rho, VARIANT_PENDING_OK);
-    }
-
-    PROTECT(args);
-
-    /* Handle a non-fast op.  We may get here after starting to handle a
-       fast op, but if so, args has been set to the evaluated argument list. */
-
-  not_fast: 
-    beginbuiltincontext (&cntxt, e);
-    if (!PRIMFUN_PENDING_OK(op)) {
-        WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
-    }
-    res = CALL_PRIMFUN(e, op, args, rho, variant);
-
-    UNPROTECT(1); /* args */
-    endcontext(&cntxt);
-    return res;
-}
-
-/* Like Rf_builtin_op except that no context is created.  Making this
-   separate from Rf_builtin_op saves on stack space for the local context 
-   variable.  Since the somewhat time-consuming context creation is not done,
-   there is no advantage to evaluating a single argument with pending OK. */
+/* Like Rf_builtin_op (defined in builtin.c) except that no context is
+   created.  Making this separate from Rf_builtin_op saves on stack
+   space for the local context variable.  Since the somewhat
+   time-consuming context creation is not done, there is no advantage
+   to evaluating a single argument with pending OK. */
 
 static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
 {
@@ -938,11 +866,17 @@ static SEXP bytecodeExpr(SEXP);
 /* this function gets the srcref attribute from a statement block, 
    and confirms it's in the expected format */
    
-static R_INLINE SEXP getBlockSrcrefs(SEXP call)
+static R_INLINE SEXP getBlockSrcrefs(SEXP call, int *len)
 {
     SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
-    if (TYPEOF(srcrefs) == VECSXP) return srcrefs;
-    return R_NilValue;
+    if (TYPEOF(srcrefs) == VECSXP) {
+        *len = LENGTH(srcrefs);
+        return srcrefs;
+    }
+    else
+    {   *len = 0;
+        return R_NilValue;
+    }
 }
 
 /* this function extracts one srcref, and confirms the format */
@@ -952,7 +886,6 @@ static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
 {
     SEXP result;
     if (!isNull(srcrefs)
-        && LENGTH(srcrefs) > ind
         && TYPEOF(result = VECTOR_ELT(srcrefs, ind)) == INTSXP
 	&& LENGTH(result) >= 6)
 	return result;
@@ -1066,14 +999,15 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
     if( RSTEP(op) ) SET_RSTEP(op, 0);
     if (RDEBUG(newrho)) {
-	SEXP savesrcref;
+	SEXP savesrcref; SEXP srcrefblk; int len;
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
         printcall(call,rho);
 	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	srcrefblk = getBlockSrcrefs(body,&len);
+	PROTECT(R_Srcref = len == 0 ? R_NilValue : getSrcref(srcrefblk,0));
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
@@ -1177,14 +1111,15 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
     if( RSTEP(op) ) SET_RSTEP(op, 0);
     if (RDEBUG(op)) {
-        SEXP savesrcref;
+        SEXP savesrcref; SEXP srcrefblk; int len;
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
 	printcall (call, rho);
 	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	srcrefblk = getBlockSrcrefs(body,&len);
+	PROTECT(R_Srcref = len == 0 ? R_NilValue : getSrcref(srcrefblk,0));
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
@@ -1793,7 +1728,8 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP arg, s;
     SEXP savedsrcref = R_Srcref;
-    SEXP srcrefs = getBlockSrcrefs(call);
+    int len;
+    SEXP srcrefs = getBlockSrcrefs(call,&len);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
     variant = VARIANT_PASS_ON(variant);
@@ -1803,7 +1739,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     for (int i = 1; ; i++) {
         arg = CAR(args);
         args = CDR(args);
-        R_Srcref = getSrcref(srcrefs, i);
+        R_Srcref = i >= len ? R_NilValue : getSrcref(srcrefs, i);
         if (RDEBUG(rho)) {
             SrcrefPrompt("debug", R_Srcref);
             PrintValue(arg);
@@ -1812,9 +1748,10 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (args == R_NilValue)
             break;
         s = evalv (arg, rho, vrnt);
-        R_Srcref = savedsrcref;
-        if (R_variant_result & VARIANT_RTN_FLAG)
+        if (R_variant_result & VARIANT_RTN_FLAG) {
+            R_Srcref = savedsrcref;
             return s;
+        }
     }
 
     s = EVALV (arg, rho, variant);
@@ -3164,14 +3101,15 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     else if (TYPEOF(expr) == EXPRSXP) {
 	int i, n;
-        SEXP srcrefs = getBlockSrcrefs(expr);
+        int len;
+        SEXP srcrefs = getBlockSrcrefs(expr,&len);
 	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
         SEXP savedsrcref = R_Srcref;
 	if (!SETJMP(cntxt.cjmpbuf)) {
 	    for (i = 0 ; i < n ; i++) {
-                R_Srcref = getSrcref(srcrefs, i); 
+                R_Srcref = i >= len ? R_NilValue : getSrcref(srcrefs, i); 
 		tmp = evalv (VECTOR_ELT(expr, i), env, 
                         i==n-1 ? VARIANT_PASS_ON(variant) 
                                : VARIANT_NULL | VARIANT_PENDING_OK);

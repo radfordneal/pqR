@@ -36,6 +36,103 @@
 #include <Fileio.h>
 #include <Rconnections.h>
 
+#include <helpers/helpers-app.h>
+
+
+/* Wait until no value in an argument list is still being computed by a task.
+   Macro version does preliminary check in-line for speed. */
+
+#define WAIT_UNTIL_ARGUMENTS_COMPUTED(_args_) \
+    do { \
+        if (helpers_tasks > 0) { \
+            SEXP _a_ = (_args_); \
+            while (_a_ != R_NilValue) { \
+                if (helpers_is_being_computed(CAR(_a_))) { \
+                    wait_until_arguments_computed (_a_); \
+                    break; \
+                } \
+                _a_ = CDR(_a_); \
+            } \
+        } \
+    } while (0)
+
+void attribute_hidden wait_until_arguments_computed (SEXP args);
+
+
+/* Rf_builtin_op is a separate function, defined in a different source
+   file than where it is used in eval.c, to prevent inlining by the
+   compiler, so that the local 'cntxt' variable will occupy space on
+   the stack only if it is really needed. */
+
+SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
+{
+    RCNTXT cntxt;
+    SEXP args = CDR(e);
+    SEXP res;
+    SEXP arg1;
+
+    /* See if this may be a fast primitive.  All fast primitives
+       should be BUILTIN.  We do a fast call only if there is exactly
+       one argument, with no tag, not missing or a ... argument; also
+       must not be an object if the fast primitive dispatches, unless
+       the argument was evaluated with VARIANT_UNCLASS and we got this
+       variant result.  The argument is stored in arg1. */
+
+    if (args!=R_NilValue) {
+        if (PRIMFUN_FAST(op) 
+              && TAG(args)==R_NilValue && CDR(args)==R_NilValue
+              && (arg1 = CAR(args))!=R_DotsSymbol 
+              && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
+
+            PROTECT(arg1 = EVALV (arg1, rho, 
+                                  PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+
+            if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
+                if ((PRIMFUN_ARG1VAR (op) & VARIANT_UNCLASS)
+                       && (R_variant_result & VARIANT_UNCLASS_FLAG)) {
+                    R_variant_result &= ~VARIANT_UNCLASS_FLAG;
+                }
+                else {
+                    UNPROTECT(1);
+                    PROTECT(args = CONS(arg1,R_NilValue));
+                    goto not_fast;
+                }
+            }
+    
+            beginbuiltincontext (&cntxt, e);
+
+            if (!PRIMFUN_PENDING_OK(op)) {
+                WAIT_UNTIL_COMPUTED(arg1);
+            }
+
+            res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
+                     (e, op, arg1, rho, variant);
+
+            UNPROTECT(1); /* arg1 */
+            endcontext(&cntxt);
+            return res;
+        }
+        args = evalList_v (args, rho, VARIANT_PENDING_OK);
+    }
+
+    PROTECT(args);
+
+    /* Handle a non-fast op.  We may get here after starting to handle a
+       fast op, but if so, args has been set to the evaluated argument list. */
+
+  not_fast: 
+    beginbuiltincontext (&cntxt, e);
+    if (!PRIMFUN_PENDING_OK(op)) {
+        WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
+    }
+    res = CALL_PRIMFUN(e, op, args, rho, variant);
+
+    UNPROTECT(1); /* args */
+    endcontext(&cntxt);
+    return res;
+}
+
+
 static R_len_t asVecSize(SEXP x)
 {
     if (isVectorAtomic(x) && LENGTH(x) >= 1) {
