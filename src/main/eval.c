@@ -387,11 +387,12 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
     /* Mark the promise as under evaluation and push it on a stack
        that can be used to unmark pending promises if a jump out
        of the evaluation occurs. */
-    SET_PRSEEN(e, 1);
 
     prstack.promise = e;
     prstack.next = R_PendingPromises;
     R_PendingPromises = &prstack;
+
+    SET_PRSEEN(e, 1);
 
     val = EVALV (PRCODE(e), PRENV(e), 
                  (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
