@@ -61,31 +61,37 @@ typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
    'small' segment, having total number of chunks no more than given by
    SGGC_CHUNKS_IN_SMALL_SEGMENT. */
 
+#ifdef SGGC_USE_OFFSET_POINTERS
+typedef uintptr_t sggc_dptr;       /* So out-of-bounds arithmetic well-defined*/
+#else
+typedef char *sggc_dptr;           /* Ordinary pointer arithmetic */
+#endif
+
 #ifdef SGGC_MAX_SEGMENTS
 
-SGGC_EXTERN char *sggc_data[SGGC_MAX_SEGMENTS]; /* Pointers to arrays of data
-                                                   blocks for objects in seg */
+SGGC_EXTERN sggc_dptr sggc_data[SGGC_MAX_SEGMENTS]; /* Pointers to arrays of 
+                                                       blocks for objs in seg */
 
 #ifdef SGGC_AUX1_SIZE
-SGGC_EXTERN char *sggc_aux1[SGGC_MAX_SEGMENTS]; /* Pointers to aux1 data */
+SGGC_EXTERN sggc_dptr sggc_aux1[SGGC_MAX_SEGMENTS]; /* Pointers to aux1 data */
 #endif
 
 #ifdef SGGC_AUX2_SIZE
-SGGC_EXTERN char *sggc_aux2[SGGC_MAX_SEGMENTS]; /* Pointers to aux2 data */
+SGGC_EXTERN sggc_dptr sggc_aux2[SGGC_MAX_SEGMENTS]; /* Pointers to aux2 data */
 #endif
 
-#else
+#else  /* max number of segments determined at run time */
 
-SGGC_EXTERN char **sggc_data;      /* Pointer to array of pointers to arrays of 
+SGGC_EXTERN sggc_dptr *sggc_data;  /* Pointer to array of pointers to arrays of 
                                       data blocks for objects within segments */
 
 #ifdef SGGC_AUX1_SIZE
-SGGC_EXTERN char **sggc_aux1;      /* Pointer to array of pointers to arrays of 
+SGGC_EXTERN sggc_dptr *sggc_aux1;  /* Pointer to array of pointers to arrays of 
                                       auxiliary info for objects in segments */
 #endif
 
 #ifdef SGGC_AUX2_SIZE
-SGGC_EXTERN char **sggc_aux2;      /* Pointer to array of pointers to arrays of 
+SGGC_EXTERN sggc_dptr *sggc_aux2;  /* Pointer to array of pointers to arrays of 
                                       auxiliary info for objects in segments */
 #endif
 
@@ -104,27 +110,27 @@ SGGC_EXTERN char **sggc_aux2;      /* Pointer to array of pointers to arrays of
 #endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
-{ return sggc_data[SET_VAL_INDEX(cptr)] 
-          + SGGC_CHUNK_SIZE * SGGC_OFFSET_CAST cptr;
+{ return ((char *) (sggc_data[SET_VAL_INDEX(cptr)] 
+                     + SGGC_CHUNK_SIZE * SGGC_OFFSET_CAST cptr));
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
-{ return sggc_aux1[SET_VAL_INDEX(cptr)] 
-           + SGGC_AUX1_SIZE * SGGC_OFFSET_CAST cptr;
+{ return ((char *) (sggc_aux1[SET_VAL_INDEX(cptr)] 
+                     + SGGC_AUX1_SIZE * SGGC_OFFSET_CAST cptr));
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
-{ return sggc_aux2[SET_VAL_INDEX(cptr)] 
-           + SGGC_AUX2_SIZE * SGGC_OFFSET_CAST cptr;
+{ return ((char *) (sggc_aux2[SET_VAL_INDEX(cptr)] 
+                     + SGGC_AUX2_SIZE * SGGC_OFFSET_CAST cptr));
 }
 #endif
 
-#else
+#else /* not using offset pointers */
 
-#ifndef SGGC_OFFSET_CASE
+#ifndef SGGC_OFFSET_CAST
 #define SGGC_OFFSET_CAST (uint32_t) /* may be (uint32_t), (uintptr_t), (int) */
 #endif
 
@@ -243,7 +249,6 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
 #endif
 void sggc_collect (int level);
 void sggc_look_at (sggc_cptr_t cptr);
-void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr);
 
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
@@ -342,4 +347,51 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   sggc_info.gen0_count += 1;
 
   return nfv;
+}
+
+
+/* RECORD AN OLD-TO-NEW REFERENCE IF NECESSARY. */
+
+static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
+                                          sggc_cptr_t to_ptr)
+{
+  /* If from_ptr is youngest generation, no need to check anything else. */
+
+  if (set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr))
+  { return;
+  }
+
+  /* Can quit now if from_ptr is already in the old-to-new set (which is
+     the only one using the SET_OLD_TO_NEW chain). */
+
+  if (set_chain_contains (SET_OLD_TO_NEW, from_ptr))
+  { return;
+  }
+
+  /* Note:  from_ptr shouldn't be constant, so below can look in whole chain. */
+
+  if (set_chain_contains (SET_OLD_GEN2_CONST, from_ptr))
+  { 
+    /* If from_ptr is in old generation 2, only others in old generation 2
+       and constants can be referenced without using old-to-new. */
+
+    if (set_chain_contains (SET_OLD_GEN2_CONST, to_ptr))
+    { return;
+    }
+  }
+  else
+  { 
+    /* If from_ptr is in old generation 1, only references to newly 
+       allocated objects require using old-to-new. */
+
+    if (!set_chain_contains (SET_UNUSED_FREE_NEW, to_ptr))
+    { return;
+    }
+  }
+
+  /* If we get here, we need to record the existence of an old-to-new
+     reference in from_ptr. */
+
+  extern struct set sggc_old_to_new_set;
+  set_add (&sggc_old_to_new_set, from_ptr);
 }

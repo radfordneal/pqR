@@ -120,8 +120,6 @@ struct set
 
 SET_PROC_CLASS void set_init (struct set *set, int chain);
 SET_PROC_CLASS void set_segment_init (struct set_segment *seg);
-SET_PROC_CLASS int set_add (struct set *set, set_value_t val);
-SET_PROC_CLASS int set_remove (struct set *set, set_value_t val);
 SET_PROC_CLASS set_value_t set_first (struct set *set, int remove);
 SET_PROC_CLASS set_value_t set_next (struct set *set, set_value_t val, 
                                      int remove);
@@ -293,4 +291,63 @@ static inline set_value_t set_chain_next_segment (int chain, set_value_t val)
     seg->next[chain] = nseg->next[chain];
     nseg->next[chain] = SET_NOT_IN_CHAIN;
   }
+}
+
+
+/* ADD A VALUE TO A SET.  The value must not be in a segment with
+   members in a different set using the same chain (or previously,
+   if the segment may still be in the other set's chain).
+
+   This is implemented by setting the right bit in the bits for the
+   set's chain, within the segment structure for this value's index.
+   This segment is then added to the linked list of segments for this
+   set if it is not there already, and the element count is updated. */
+
+static inline int set_add (struct set *set, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  set_bits_t b = seg->bits[set->chain];
+  set_bits_t t = (set_bits_t)1 << SET_VAL_OFFSET(val);
+
+  if (b & t)
+  { return 1;
+  }
+
+  if (seg->next[set->chain] == SET_NOT_IN_CHAIN)
+  { seg->next[set->chain] = set->first;
+    set->first = index;
+  }
+
+  seg->bits[set->chain] |= t;
+  set->n_elements += 1;
+
+  return 0;
+}
+
+
+/* REMOVE A VALUE FROM A SET.  The value must not be in any other set using
+   the same chain.
+
+   This is implemented by clearing the right bit in the bits for the set's 
+   chain, within the segment structure for this value's index, and updating
+   the count of elements in the set. */
+
+static inline int set_remove (struct set *set, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  struct set_segment *seg = SET_SEGMENT(index);
+
+  set_bits_t b = seg->bits[set->chain];
+  set_bits_t t = (set_bits_t)1 << SET_VAL_OFFSET(val);
+
+  if ((b & t) == 0)
+  { return 0;
+  }
+
+  seg->bits[set->chain] &= ~t;
+  set->n_elements -= 1;
+
+  return 1;
 }

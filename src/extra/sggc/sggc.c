@@ -144,11 +144,13 @@ static set_bits_t kind_full[SGGC_N_KINDS];
 
 /* SETS OF OBJECTS. */
 
+#define old_to_new sggc_old_to_new_set  /* External for inline use in sggc.h */
+
 static struct set free_or_new[SGGC_N_KINDS];  /* Free or newly allocated */
 static struct set unused;                     /* Big segments not being used */
 static struct set old_gen1;                   /* Survived collection once */
 static struct set old_gen2;                   /* Survived collection >1 time */
-static struct set old_to_new;                 /* May have old->new references */
+struct set old_to_new;                        /* May have old->new references */
 static struct set to_look_at;                 /* Not yet looked at in sweep */
 static struct set constants;                  /* Prealloc'd constant segments */
 
@@ -647,15 +649,15 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     {
 #     ifdef SGGC_AUX1_READ_ONLY
       if (read_only_aux1)
-      { sggc_aux1[index] = read_only_aux1;
+      { sggc_aux1[index] = (sggc_dptr) read_only_aux1;
         if (SGGC_DEBUG)
         { printf("sggc_alloc: used read-only aux1 for %x\n", v);
         }
       }
       else
 #     endif
-      { sggc_aux1[index] = kind_aux1_block[kind] 
-                            + kind_aux1_block_pos[kind] * SGGC_AUX1_SIZE;
+      { sggc_aux1[index] = (sggc_dptr) (kind_aux1_block[kind] 
+                             + kind_aux1_block_pos[kind] * SGGC_AUX1_SIZE);
         if (0 && !big)  /* could be enabled if aux1_off were ever actually used */
         { seg->x.small.aux1_off = kind_aux1_block_pos[kind];
         }
@@ -676,15 +678,15 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     {
 #     ifdef SGGC_AUX2_READ_ONLY
       if (read_only_aux2)
-      { sggc_aux2[index] = read_only_aux2;
+      { sggc_aux2[index] = (sggc_dptr) read_only_aux2;
         if (SGGC_DEBUG)
         { printf("sggc_alloc: used read-only aux2 for %x\n", v);
         }
       }
       else
 #     endif
-      { sggc_aux2[index] = kind_aux2_block[kind] 
-                            + kind_aux2_block_pos[kind] * SGGC_AUX2_SIZE;
+      { sggc_aux2[index] = (sggc_dptr) (kind_aux2_block[kind] 
+                             + kind_aux2_block_pos[kind] * SGGC_AUX2_SIZE);
         if (0 && !big)  /* could be enabled if aux2_off were ever actually used */
         { seg->x.small.aux2_off = kind_aux2_block_pos[kind];
         }
@@ -707,7 +709,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     sggc_info.big_chunks += nch;
   }
 
-  sggc_data[index] = data;
+  sggc_data[index] = (sggc_dptr) data;
 
   OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
 
@@ -815,17 +817,17 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
 
   sggc_type[index] = type;
 
-  sggc_data[index] = data;
+  sggc_data[index] = (sggc_dptr) data;
   OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
 
 # ifdef SGGC_AUX1_SIZE
-    sggc_aux1[index] = aux1;
+    sggc_aux1[index] = (sggc_dptr) aux1;
     OFFSET(sggc_aux1,index,SGGC_AUX1_SIZE);
     seg->x.small.aux1_off = 0;
 # endif
 
 # ifdef SGGC_AUX2_SIZE
-    sggc_aux2[index] = aux2;
+    sggc_aux2[index] = (sggc_dptr) aux2;
     OFFSET(sggc_aux2,index,SGGC_AUX2_SIZE);
     seg->x.small.aux2_off = 0;
 # endif
@@ -1154,7 +1156,7 @@ void sggc_collect (int level)
                    v, SGGC_DATA(v));
         }
         UNDO_OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
-        sggc_free (sggc_data[index]);
+        sggc_free ((char *) sggc_data[index]);
         if (SGGC_DEBUG) 
         { printf("sggc_collect: putting %x in unused\n",(unsigned)v);
         }
@@ -1263,46 +1265,4 @@ void sggc_look_at (sggc_cptr_t ptr)
       if (SGGC_DEBUG) printf("sggc_look_at: will look at %x\n",(unsigned)ptr);
     }
   }
-}
-
-
-/* RECORD AN OLD-TO-NEW REFERENCE IF NECESSARY. */
-
-void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr)
-{
-  /* If from_ptr is youngest generation, no need to check anything else. */
-
-  if (set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr))
-  { return;
-  }
-
-  /* Can quit now if from_ptr is already in the old-to-new set. */
-
-  if (set_contains (&old_to_new, from_ptr))
-  { return;
-  }
-
-  if (set_contains (&old_gen2, from_ptr))
-  { 
-    /* If from_ptr is in old generation 2, only others in old generation 2
-       and constants can be referenced without using old-to-new. */
-
-    if (set_chain_contains (SET_OLD_GEN2_CONST, to_ptr))
-    { return;
-    }
-  }
-  else
-  { 
-    /* If from_ptr is in old generation 1, only references to newly 
-       allocated objects require using old-to-new. */
-
-    if (!set_chain_contains (SET_UNUSED_FREE_NEW, to_ptr))
-    { return;
-    }
-  }
-
-  /* If we get here, we need to record the existence of an old-to-new
-     reference in from_ptr. */
-
-  set_add (&old_to_new, from_ptr);
 }
