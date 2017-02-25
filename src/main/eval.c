@@ -863,34 +863,33 @@ static SEXP do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* forward declaration */
 static SEXP bytecodeExpr(SEXP);
 
-/* this function gets the srcref attribute from a statement block, 
+/* This function gets the srcref attribute from a statement block, 
    and confirms it's in the expected format */
    
-static R_INLINE SEXP getBlockSrcrefs(SEXP call, int *len)
+static R_INLINE void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
 {
     SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
     if (TYPEOF(srcrefs) == VECSXP) {
+        *refs = (SEXP *) DATAPTR(srcrefs);
         *len = LENGTH(srcrefs);
-        return srcrefs;
     }
     else
     {   *len = 0;
-        return R_NilValue;
     }
 }
 
-/* this function extracts one srcref, and confirms the format */
-/* It assumes srcrefs has already been validated to be a VECSXP or NULL */
+/* This function extracts one srcref, and confirms the format.  It is 
+   passed an index and the array and length from getBlockSrcrefs. */
 
-static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind)
+static R_INLINE SEXP getSrcref(SEXP *refs, int len, int ind)
 {
-    SEXP result;
-    if (!isNull(srcrefs)
-        && TYPEOF(result = VECTOR_ELT(srcrefs, ind)) == INTSXP
-	&& LENGTH(result) >= 6)
-	return result;
-    else
-	return R_NilValue;
+    if (ind < len) {
+        SEXP result = refs[ind];
+        if (TYPEOF(result) == INTSXP && LENGTH(result) >= 6)
+            return result;
+    }
+
+    return R_NilValue;
 }
 
 static void printcall (SEXP call, SEXP rho)
@@ -900,6 +899,13 @@ static void printcall (SEXP call, SEXP rho)
     if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
     PrintValueRec(call,rho);
     R_BrowseLines = old_bl;
+}
+
+static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
+{
+    SrcrefPrompt("debug", R_Srcref);
+    PrintValue(stmt);
+    do_browser(call, op, R_NilValue, env);
 }
 
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
@@ -996,21 +1002,19 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /* Debugging */
 
-    SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
-    if( RSTEP(op) ) SET_RSTEP(op, 0);
-    if (RDEBUG(newrho)) {
-	SEXP savesrcref; SEXP srcrefblk; int len;
+    if (RDEBUG(op) | RSTEP(op)) {
+        SET_RDEBUG(newrho, 1);
+        if (RSTEP(op)) SET_RSTEP(op, 0);
+	SEXP savesrcref; SEXP *srcrefs; int len;
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
         printcall(call,rho);
 	savesrcref = R_Srcref;
-	srcrefblk = getBlockSrcrefs(body,&len);
-	PROTECT(R_Srcref = len == 0 ? R_NilValue : getSrcref(srcrefblk,0));
-	SrcrefPrompt("debug", R_Srcref);
-	PrintValue(body);
-	do_browser(call, op, R_NilValue, newrho);
+	getBlockSrcrefs(body,&srcrefs,&len);
+	PROTECT(R_Srcref = getSrcref(srcrefs,len,0));
+        start_browser (call, op, body, newrho);
 	R_Srcref = savesrcref;
 	UNPROTECT(1);
     }
@@ -1108,21 +1112,19 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /* Debugging */
 
-    SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op));
-    if( RSTEP(op) ) SET_RSTEP(op, 0);
-    if (RDEBUG(op)) {
-        SEXP savesrcref; SEXP srcrefblk; int len;
+    if (RDEBUG(op) | RSTEP(op)) {
+        SET_RDEBUG(newrho, 1);
+        if (RSTEP(op)) SET_RSTEP(op, 0);
+        SEXP savesrcref; SEXP *srcrefs; int len;
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
 	printcall (call, rho);
 	savesrcref = R_Srcref;
-	srcrefblk = getBlockSrcrefs(body,&len);
-	PROTECT(R_Srcref = len == 0 ? R_NilValue : getSrcref(srcrefblk,0));
-	SrcrefPrompt("debug", R_Srcref);
-	PrintValue(body);
-	do_browser(call, op, R_NilValue, newrho);
+	getBlockSrcrefs(body,&srcrefs,&len);
+	PROTECT(R_Srcref = getSrcref(srcrefs,len,0));
+        start_browser (call, op, body, newrho);
 	R_Srcref = savesrcref;
 	UNPROTECT(1);
     }
@@ -1306,11 +1308,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
 
-    if (RDEBUG(rho) && Stmt!=R_NilValue && !BodyHasBraces(Stmt)) {
-	SrcrefPrompt("debug", R_Srcref);
-        PrintValue(Stmt);
-        do_browser(call, op, R_NilValue, rho);
-    } 
+    if (RDEBUG(rho) && Stmt!=R_NilValue && !BodyHasBraces(Stmt))
+        start_browser (call, op, Stmt, rho);
 
     if (absent_else) {
         R_Visible = FALSE; /* case of no 'else' so return invisible NULL */
@@ -1336,11 +1335,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
  */
 
 #define DO_LOOP_RDEBUG(call, op, body, rho, bgn) do { \
-    if (!bgn && RDEBUG(rho)) { \
-	SrcrefPrompt("debug", R_Srcref); \
-	PrintValue(body); \
-	do_browser(call, op, R_NilValue, rho); \
-    } } while (0)
+        if (!bgn && RDEBUG(rho)) start_browser (call, op, body, rho); \
+    } while (0)
 
 static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1729,7 +1725,9 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP arg, s;
     SEXP savedsrcref = R_Srcref;
     int len;
-    SEXP srcrefs = getBlockSrcrefs(call,&len);
+    SEXP *srcrefs;
+
+    getBlockSrcrefs(call,&srcrefs,&len);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
     variant = VARIANT_PASS_ON(variant);
@@ -1739,12 +1737,9 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     for (int i = 1; ; i++) {
         arg = CAR(args);
         args = CDR(args);
-        R_Srcref = i >= len ? R_NilValue : getSrcref(srcrefs, i);
-        if (RDEBUG(rho)) {
-            SrcrefPrompt("debug", R_Srcref);
-            PrintValue(arg);
-            do_browser(call, op, R_NilValue, rho);
-        }
+        R_Srcref = getSrcref (srcrefs, len, i);
+        if (RDEBUG(rho))
+            start_browser (call, op, arg, rho);
         if (args == R_NilValue)
             break;
         s = evalv (arg, rho, vrnt);
@@ -3102,14 +3097,15 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     else if (TYPEOF(expr) == EXPRSXP) {
 	int i, n;
         int len;
-        SEXP srcrefs = getBlockSrcrefs(expr,&len);
+        SEXP *srcrefs;
+        getBlockSrcrefs(expr,&srcrefs,&len);
 	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
         SEXP savedsrcref = R_Srcref;
 	if (!SETJMP(cntxt.cjmpbuf)) {
 	    for (i = 0 ; i < n ; i++) {
-                R_Srcref = i >= len ? R_NilValue : getSrcref(srcrefs, i); 
+                R_Srcref = getSrcref (srcrefs, len, i); 
 		tmp = evalv (VECTOR_ELT(expr, i), env, 
                         i==n-1 ? VARIANT_PASS_ON(variant) 
                                : VARIANT_NULL | VARIANT_PENDING_OK);
