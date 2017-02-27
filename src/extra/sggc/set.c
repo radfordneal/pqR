@@ -164,7 +164,7 @@ SET_PROC_CLASS void set_segment_init (struct set_segment *seg)
 
 
 /* FIND AND POSSIBLY REMOVE THE FIRST ELEMENT IN A SET.  Removal with
-   the function of the last value in a segment allows that segment to
+   this function of the last value in a segment allows that segment to
    be added to another set using the same chain.
 
    The linked list of segments for this set is first trimmed of any at

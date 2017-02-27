@@ -41,10 +41,6 @@ void *test_calloc (size_t size)
     return res;
   }
 
-  for (i = 0; i < size; i++)
-  { res[i] = -123;
-  }
-
   in_use += 1;
 
   printf ("test_calloc: %d in use after:: %p\n", in_use, res);

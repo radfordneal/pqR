@@ -34,6 +34,10 @@
 
 #include "set-app.h"
 
+#ifdef SGGC_USE_MEMSET
+#include <string.h>
+#endif
+
 
 /* COMPRESSED POINTER (INDEX, OFFSET) TYPE, AND NO OBJECT CONSTANT. */
 
@@ -106,7 +110,7 @@ SGGC_EXTERN sggc_dptr *sggc_aux2;  /* Pointer to array of pointers to arrays of
 #if SGGC_USE_OFFSET_POINTERS
 
 #ifndef SGGC_OFFSET_CAST
-#define SGGC_OFFSET_CAST (uintptr_t) /* either (uint32_t) or (unitptr_t) */
+#define SGGC_OFFSET_CAST (uintptr_t) /* either (uint32_t) or (uintptr_t) */
 #endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
@@ -338,11 +342,15 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
   uint64_t *p = (uint64_t *) SGGC_DATA(nfv);   /* should be aligned properly  */
 
+#ifdef SGGC_USE_MEMSET
+  memset (p, 0, (size_t) SGGC_CHUNK_SIZE * nch);
+#else
   do 
   { int i;
     for (i = 0; i <SGGC_CHUNK_SIZE; i += 8) *p++ = 0;
     nch -= 1;
   } while (nch > 0);
+#endif
 
   sggc_info.gen0_count += 1;
 

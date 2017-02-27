@@ -28,7 +28,7 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 #define SGGC_N_KINDS 6          /* Number of kinds of segments */
 #define SGGC_KIND_CHUNKS { 0, 1, 0, 1, 2, 3 } 
 
-/* Use special malloc/free for testing, defining sggc_malloc and sggc_free. */
+/* Special alloc/free for testing; defines sggc_alloc_zeroed and sggc_free. */
 
 #include "test-calloc.h"
 

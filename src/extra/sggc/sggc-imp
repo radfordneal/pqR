@@ -441,6 +441,11 @@ SGGC_SEGMENT_AT_A_TIME may be set to 0 or 1 to disable or enable use
 of segment-at-a-time functions provided by the set facility to speed
 up some operations.
 
+SGGC_USE_MEMSET may be defined (as anything) to enable use of memset
+rather than a loop (possibly unrolled by the compiler) when clearning
+the data area for an object in a small segment.  Since these objects
+are typically small, it's not obvious which is faster.
+
 
 FUTURE IMPROVEMENTS
 
