@@ -85,9 +85,9 @@ extern
 #endif
 
 #ifdef SGGC_MAX_SEGMENTS
-struct set_segment *sggc_segment[SGGC_MAX_SEGMENTS];
+struct set_segment * restrict sggc_segment[SGGC_MAX_SEGMENTS];
 #else
-struct set_segment **sggc_segment;
+struct set_segment * * restrict sggc_segment;
 #endif
 
 

@@ -476,7 +476,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
   char *data;               /* pointer to data area for segment used */
 
   sggc_index_t index;       /* index of segment that object will be in */
-  struct set_segment *seg;  /* points to struct for segment object will be in */
+  struct set_segment * restrict seg;  /* ptr to struct for seg object goes in */
   sggc_cptr_t v;            /* pointer to object, to be returned as value */
 
   /* Look for an existing segment for this object to go in.  For a
