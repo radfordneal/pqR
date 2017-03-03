@@ -446,6 +446,15 @@ rather than a loop (possibly unrolled by the compiler) when clearning
 the data area for an object in a small segment.  Since these objects
 are typically small, it's not obvious which is faster.
 
+SGGC_HUGE_SHIFT is used when the number of chunks asked for for a big
+segment is too large to fit in 21 bits.  In this case, the number of
+chunks is automatically increased to a multiple of 2^SGGC_HUGE_SHIFT
+so that the number can then be shifted right by SGGC_HUGE_SHIFT in
+order to try to get it to fit in 21 bits.  The default when
+SGGC_HUGE_SHIFT is not defined is 11, which limits the number of
+chunks in an object to less than 2^32, which is suitable if
+sggc_nchunks_t is defined to be uint32_t.
+
 
 FUTURE IMPROVEMENTS
 
@@ -502,6 +511,14 @@ include the following:
     had a data area of 1024 bytes, this would give a limit of 2 GBytes
     of data for one type, which might sometimes be a problem, though
     likely not on a system with a 32-bit address space.
+
+  o A function could be provided that tries to expand the number of
+    chunks in the data area for an object, in place.  This may fail,
+    but would succeed for small objects if the new number of chunks
+    fits in the same kind, and may succeed for big objects if the
+    number of chunks was increased automatically, or if the C realloc
+    function succeeds in reallocating the data area.  The alloc_chunks
+    field currently records the necessary information for this.
 
   o A function could be provided that determines whether or not a
     32-bit word is a valid compressed pointer, to an object that is

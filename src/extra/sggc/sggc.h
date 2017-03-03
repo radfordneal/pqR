@@ -182,8 +182,7 @@ SGGC_EXTERN sggc_type_t *sggc_type;  /* Types of objects in each segment */
 /* Inline function to find the kind of the segment containing an object. */
 
 static inline sggc_kind_t SGGC_KIND (sggc_cptr_t cptr) 
-{ return SET_SEGMENT(SET_VAL_INDEX(cptr))->x.big.big ? SGGC_TYPE(cptr)
-          : SET_SEGMENT(SET_VAL_INDEX(cptr))->x.small.kind;
+{ return SET_SEGMENT(SET_VAL_INDEX(cptr))->x.small.kind; /* same as big.kind */
 }
 
 /* Numbers of chunks for the various kinds (zero for kinds for big segments). */
@@ -201,7 +200,7 @@ SGGC_EXTERN struct sggc_info
   unsigned gen2_count;       /* Number of objects in old generation 2.
                                 Does not include constants */
 
-  sggc_nchunks_t big_chunks; /* # of chunks in newly-allocated big objects */
+  size_t big_chunks;         /* # of chunks in newly-allocated big objects */
 
 } sggc_info;
 
@@ -297,9 +296,8 @@ static inline int sggc_not_marked (sggc_cptr_t cptr)
 
 static inline int sggc_is_constant (sggc_cptr_t cptr)
 {
-  struct set_segment *set = SET_SEGMENT(SET_VAL_INDEX(cptr));
-
-  return !set->x.small.big && set->x.small.constant;
+  return SET_SEGMENT(SET_VAL_INDEX(cptr)) -> x.small.constant;
+                                          /* x.big.constant is the same thing */
 }
 
 

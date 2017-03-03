@@ -200,6 +200,18 @@ static int old_to_new_check;   /* 1 if should look for old-to-new reference */
   } while (0)
 
 
+/* NUMBER OF CHUNKS FOR A "HUGE" OBJECT.  For such objects, the number
+   of chunks is increased if necessary to a multiple of 2^SGGC_HUGE_SHIFT,
+   so that the maximum number of chunks can be recorded in the available 
+   space after shifting it right by SGGC_HUGE_SHIFT bits. */
+
+#define HUGE_CHUNKS (1 << 21)  /* Number of chunks where object becomes huge */
+
+#ifndef SGGC_HUGE_SHIFT
+#define SGGC_HUGE_SHIFT 11     /* Amount to shift to try to get # in range */
+#endif
+
+
 /* ------------------------------ INITIALIZATION ---------------------------- */
 
 
@@ -448,7 +460,8 @@ static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos,
 /* ALLOCATE AN OBJECT OF SPECIFIED KIND, TYPE, AND LENGTH.  The length
    is used only for big kinds. The value returned is SGGC_NO_OBJECT if
    allocation fails (but note that it might succeed if retried after
-   garbage collection is done). 
+   garbage collection is done), or if the number of chunks required 
+   is greater than can be stored in alloc_chunks.
 
    Used to implement sggc_alloc and sggc_alloc_small_kind. */
 
@@ -483,9 +496,21 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
       index = SET_VAL_INDEX(v);
       seg = SET_SEGMENT(index);
       sggc_type[index] = type;  /* may reuse big segments of other types */
+      seg->x.big.kind = kind; 
     }
 
     nch = sggc_nchunks (type, length);
+
+    /* Increase nch if necesary for huge objects so it can be shifted to fit. */
+
+    if (nch >= HUGE_CHUNKS)
+    { nch = ((nch + (1<<SGGC_HUGE_SHIFT) - 1) >> SGGC_HUGE_SHIFT) 
+                                              << SGGC_HUGE_SHIFT;
+      if ((nch >> SGGC_HUGE_SHIFT) >= HUGE_CHUNKS) 
+      { return SGGC_NO_OBJECT;
+      }
+    }
+
     data = sggc_alloc_zeroed ((size_t) SGGC_CHUNK_SIZE * nch);
     if (SGGC_DEBUG) 
     { printf (
@@ -601,6 +626,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     next_segment += 1;
     set_segment_init (seg);
     sggc_type[index] = type;
+    seg->x.big.kind = kind;  /* small.kind and big.kind are the same place */
 
     v = SGGC_CPTR_VAL(index,0);
     set_add (&free_or_new[kind], v);
@@ -613,8 +639,6 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     }
     else  /* small segment */
     { 
-      seg->x.small.kind = kind;
-
       set_assign_segment_bits (&free_or_new[kind], v, kind_full[kind]);
 
       if (SGGC_DEBUG)
@@ -699,8 +723,13 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
   /* Set up the data pointer for the segment. */
 
   if (big)
-  { seg->x.big.max_chunks = (nch >> SGGC_CHUNK_BITS) == 0 ? nch 
-                              : 0 /* nch is too big to store here */ ;
+  { if (nch < HUGE_CHUNKS)
+    { seg->x.big.alloc_chunks = nch;
+    }
+    else
+    { seg->x.big.alloc_chunks = nch >> SGGC_HUGE_SHIFT;
+      seg->x.big.huge = 1;
+    }
     sggc_info.big_chunks += nch;
   }
 
@@ -755,17 +784,7 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
 #endif
 
 
-/* REGISTER A CONSTANT SEGMENT.  Called with the type and kind of the
-   segment (must not be big), the set of bits indicating which objects
-   exist in the segment, and the segment's data and optionally aux1
-   and aux2 storage.
-
-   Returns a compressed pointer to the first object in the segment (at
-   offset zero), or SGGC_NO_OBJECT if a segment couldn't be allocated.
-
-   If called several times before any calls of sggc_alloc, the segments 
-   will have indexes 0, 1, 2, etc., which fact may be used when setting
-   up their contents if they reference each other. */
+/* REGISTER A CONSTANT SEGMENT. */
 
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
@@ -883,14 +902,7 @@ static void collect_debug (void)
 }
 
 
-/* DO A GARBAGE COLLECTION AT THE SPECIFIED LEVEL.  Levels are 0 for
-   collecting only newly allocated objects, 1 for also collecting
-   objects that have survived one collection, and 2 for collecting all
-   objects.
-
-   This procedure is called automatically when sggc_alloc would
-   otherwise fail, but should also be called by the application
-   according to its heuristics for when this would be desirable. */
+/* DO A GARBAGE COLLECTION AT THE SPECIFIED LEVEL. */
 
 void sggc_collect (int level)
 { 
