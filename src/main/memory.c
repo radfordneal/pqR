@@ -525,6 +525,8 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 #define LOOK_AT(x) \
   ((void) ((x) != R_NoObject ? sggc_look_at(COMPRESSED_PTR(x)) : 0))
 
+#define MARK(x) sggc_mark(COMPRESSED_PTR(x))
+
 #define NOT_MARKED(x) sggc_not_marked(COMPRESSED_PTR(x))
 
 
@@ -535,7 +537,8 @@ void sggc_find_root_ptrs (void)
     /* Start by scanning the symbol table.  We have to scan the symbol
        table specially, because it's linked by NEXTSYM_PTR, which
        sggc_find_object_ptrs doesn't know about, and because we need to 
-       clear LASTSYMENV and LASTSYMENVNOTFOUND. */
+       clear LASTSYMENV and LASTSYMENVNOTFOUND.  Plus it's faster to
+       mark / follow the pointers with special code here. */
  
     if (R_SymbolTable != NULL) { /* Symbol table nonexistent at startup */
         for (i = 0; i < HSIZE; i++) {
@@ -543,7 +546,10 @@ void sggc_find_root_ptrs (void)
                 LASTSYMENV(s) = R_NoObject;
                 LASTSYMBINDING(s) = R_NoObject; /* not needed; just in case...*/
                 LASTSYMENVNOTFOUND(s) = R_NoObject;
-                LOOK_AT(s);
+                MARK(PRINTNAME(s));
+                if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
+                if (INTERNAL(s) != R_NilValue) LOOK_AT(INTERNAL(s));
+                MARK(s);
             }
         }
     }
@@ -597,7 +603,12 @@ void sggc_find_root_ptrs (void)
     for (i = 0; root_vars[i] != 0; i++)
         LOOK_AT(*root_vars[i]);
 
-    LOOK_AT(R_VStack);
+    if (R_VStack != R_NoObject) {
+        SEXP v;
+        for (v = R_VStack; v != R_NilValue; v = ATTRIB(v))
+            MARK(v);  /* contains no pointers to follow, other than ATTRIB */
+    }
+
     LOOK_AT(R_CurrentExpr);
 
     for (i = 0; i < R_MaxDevices; i++) {   /* Device display lists */
@@ -781,7 +792,7 @@ void sggc_after_marking (int level, int rep)
 	    if(VECTOR_ELT(R_StringHash, i) != R_NilValue) nc++;
 	}
 	SET_HASHSLOTSUSED (R_StringHash, nc);
-        LOOK_AT(R_StringHash);
+        MARK(R_StringHash);  /* don't look at contents - handled above */
     }
 
 #ifdef PROTECTCHECK

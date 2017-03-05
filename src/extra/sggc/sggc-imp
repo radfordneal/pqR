@@ -448,9 +448,10 @@ are typically small, it's not obvious which is faster.
 SGGC_SEG_DIRECT may be defined (as anything) to enable use of a direct
 array of segments, rather than the default of using an array of
 pointers to segments.  This may be slightly faster, but will result in
-a larger allocation of address space (and perhaps actual memory) if
-not all the segments are actually used.  Note that all combinations of
-this option (or not) with or without SGGC_MAX_SEGMENTS are allowed.
+a larger allocation of address space (and perhaps physical memory) if
+not all the segments are actually used.  Note that all four
+combinations of this option (or not) with or without SGGC_MAX_SEGMENTS
+are allowed.
 
 SGGC_HUGE_SHIFT is used when the number of chunks asked for for a big
 segment is too large to fit in 21 bits.  In this case, the number of

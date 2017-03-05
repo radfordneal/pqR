@@ -463,7 +463,8 @@ static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos,
    garbage collection is done), or if the number of chunks required 
    is greater than can be stored in alloc_chunks.
 
-   Used to implement sggc_alloc and sggc_alloc_small_kind. */
+   Used to implement sggc_alloc, sggc_alloc_gen1, sggc_alloc_gen2, and
+   sggc_alloc_small_kind. */
 
 static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind, 
                                                 sggc_type_t type,
@@ -770,6 +771,50 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 }
 
 
+/* ALLOCATE AN OBJECT WITH GIVEN TYPE AND LENGTH, PUTTING IT IN GENERATION 1. */
+
+sggc_cptr_t sggc_alloc_gen1 (sggc_type_t type, sggc_length_t length)
+{
+  sggc_kind_t kind = sggc_kind(type,length);
+
+  if (SGGC_DEBUG) 
+  { printf("sggc_alloc_gen1: type %u, length %u, kind %d\n",
+            (unsigned) type, (unsigned) length, (int) kind);
+  }
+
+  sggc_cptr_t r = sggc_alloc_kind_type_length (kind, type, length);
+  if (r != SGGC_NO_OBJECT) 
+  { set_remove (&free_or_new[kind], r);
+    set_add (&old_gen1, r);
+    sggc_info.gen0_count -= 1;
+    sggc_info.gen1_count += 1;
+  }
+  return r;
+}
+
+
+/* ALLOCATE AN OBJECT WITH GIVEN TYPE AND LENGTH, PUTTING IT IN GENERATION 2. */
+
+sggc_cptr_t sggc_alloc_gen2 (sggc_type_t type, sggc_length_t length)
+{
+  sggc_kind_t kind = sggc_kind(type,length);
+
+  if (SGGC_DEBUG) 
+  { printf("sggc_alloc_gen2: type %u, length %u, kind %d\n",
+            (unsigned) type, (unsigned) length, (int) kind);
+  }
+
+  sggc_cptr_t r = sggc_alloc_kind_type_length (kind, type, length);
+  if (r != SGGC_NO_OBJECT) 
+  { set_remove (&free_or_new[kind], r);
+    set_add (&old_gen2, r);
+    sggc_info.gen0_count -= 1;
+    sggc_info.gen2_count += 1;
+  }
+  return r;
+}
+
+
 /* ALLOCATE AN OBJECT WITH GIVEN KIND, WHICH MUST BE FOR A SMALL SEGMENT. 
    Not defined if the application did not provide SGGC_KIND_TYPES. */
 
@@ -777,12 +822,18 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 
 sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
 {
+  sggc_cptr_t r;
+
   if (SGGC_DEBUG) 
   { printf("sggc_alloc_small_kind: kind %d (type %u)\n", 
             (int) kind, (unsigned) sggc_kind_types[kind]);
   }
 
-  return sggc_alloc_kind_type_length (kind, sggc_kind_types[kind], 0);
+  r = sggc_alloc_kind_type_length (kind, sggc_kind_types[kind], 0);
+  if (r != SGGC_NO_OBJECT) 
+  { sggc_info.gen0_count += 1;
+  }
+  return r;
 }
 
 #endif
@@ -1288,39 +1339,48 @@ void sggc_collect (int level)
    check whether an object in the old-to-new set still needs to be
    there, as well as sometimes marking the objects it points to. */
 
-void sggc_look_at (sggc_cptr_t ptr)
+void sggc_look_at (sggc_cptr_t cptr)
 {
   if (SGGC_DEBUG) 
-  { printf ("sggc_look_at: %x %d\n", (unsigned)ptr, old_to_new_check);
+  { printf ("sggc_look_at: %x %d\n", (unsigned)cptr, old_to_new_check);
   }
 
-  if (ptr != SGGC_NO_OBJECT)
+  if (cptr != SGGC_NO_OBJECT)
   { if (old_to_new_check != 0)
     { if (old_to_new_check < 0)
       { return;
       }
       if (collect_level == 0)
-      { if (!set_chain_contains (SET_OLD_GEN2_CONST, ptr))
+      { if (!set_chain_contains (SET_OLD_GEN2_CONST, cptr))
         { old_to_new_check = 0;
         }
       }
       else if (collect_level == 1 && old_to_new_check == 2)
-      { if (!set_chain_contains (SET_OLD_GEN2_CONST, ptr) 
-              && !set_chain_contains (SET_OLD_GEN1, ptr))
+      { if (!set_chain_contains (SET_OLD_GEN2_CONST, cptr) 
+              && !set_chain_contains (SET_OLD_GEN1, cptr))
         { old_to_new_check = 0;
         }
       }
       else /* collect_level==2 || collect_level == 1 && old_to_new_check == 1 */
-      { if (!set_chain_contains (SET_OLD_GEN2_CONST, ptr) 
-              && !set_chain_contains (SET_OLD_GEN1, ptr))
+      { if (!set_chain_contains (SET_OLD_GEN2_CONST, cptr) 
+              && !set_chain_contains (SET_OLD_GEN1, cptr))
         { old_to_new_check = -1;
         }
         return;
       }
     }
-    if (set_remove (&free_or_new[SGGC_KIND(ptr)], ptr))
-    { set_add (&to_look_at, ptr);
-      if (SGGC_DEBUG) printf("sggc_look_at: will look at %x\n",(unsigned)ptr);
+    if (set_remove (&free_or_new[SGGC_KIND(cptr)], cptr))
+    { set_add (&to_look_at, cptr);
+      if (SGGC_DEBUG) printf("sggc_look_at: will look at %x\n",(unsigned)cptr);
     }
   }
+}
+
+
+/* MARK AN OBJECT AS IN USE, BUT DON"T FOLLOW REFERENCES WITHIN IT. */
+
+void sggc_mark (sggc_cptr_t cptr)
+{
+  set_remove (&free_or_new[SGGC_KIND(cptr)], cptr);
+  if (SGGC_DEBUG) printf("sggc_mark: %x\n",(unsigned)cptr);
 }

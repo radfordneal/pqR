@@ -254,11 +254,14 @@ void sggc_after_marking (int level, int rep);
 
 int sggc_init (int max_segments);
 sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length);
+sggc_cptr_t sggc_alloc_gen1 (sggc_type_t type, sggc_length_t length);
+sggc_cptr_t sggc_alloc_gen2 (sggc_type_t type, sggc_length_t length);
 #ifdef SGGC_KIND_TYPES
 sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
 #endif
 void sggc_collect (int level);
 void sggc_look_at (sggc_cptr_t cptr);
+void sggc_mark (sggc_cptr_t cptr);
 
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
@@ -335,7 +338,7 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   { sggc_cptr_t n = set_chain_next_segment (SET_UNUSED_FREE_NEW, nfv);
     sggc_next_free_val[kind] = n;
     if (n != SGGC_NO_OBJECT)
-    { nfb = set_chain_segment_bits (SET_UNUSED_FREE_NEW, n) >> SET_VAL_OFFSET(n);
+    { nfb = set_chain_segment_bits(SET_UNUSED_FREE_NEW,n) >> SET_VAL_OFFSET(n);
     }
   }
   else

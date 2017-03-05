@@ -129,17 +129,18 @@ use during a garbage collection:
                         after preliminary marking of objects (see below).
                         This procedure may call sggc_not_marked to see
                         which objects are known to be in use, and may
-                        call sggc_look_at to mark additional objects as
-                        in use.
+                        call sggc_look_at (or sggc_mark) to mark 
+                        additional objects as in use.
 
 The following may be defined to specify the maximum number of segments
 allowed at compile time, so that they will be statically rather than
 dynamically allocated (for a possible speed advantage in data access):
 
-  SGGC_MAX_SEGMENTS     The maximum number of segments allowed. If
-                        specified, space for pointers to segment data
-                        (but not the data itself) is allocated
-                        statically, and the argument to sggc_init can
+  SGGC_MAX_SEGMENTS     The maximum number of segments allowed. If it
+                        is specified, space is statically allocated
+                        for pointers to segment data (or for the
+                        segment data itself, if SGGC_SEG_DIRECT is
+                        defined), and the argument to sggc_init can
                         only reduce this limit, not increase it.
 
 The following types must be defined in sggc-app.h:
@@ -311,9 +312,9 @@ will be informed of all references to objects at any time when
 sggc_collect is called.  This is done in three ways.
 
 First, the application must provided an sggc_find_root_ptrs procedure.
-This procedure must call the sggc_look_at function for every "root"
-compressed pointer, which the application might use to directly refer
-to an object.
+This procedure must call the sggc_look_at function (or sggc_mark) for
+every "root" compressed pointer, which the application might use to
+directly refer to an object.
 
 Root pointers would, for example, include compressed pointers stored
 in global variables used by the application.  If the application also
@@ -450,6 +451,19 @@ macros) below, which have (if functions) prototypes as shown:
     application should try calling sggc_alloc_small_kind or sggc_alloc
     instead.  Does not require that SGGC_KIND_TYPE be defined.
 
+  sggc_cptr_t sggc_alloc_gen1 (sggc_type_t type, sggc_length_t length)
+
+    Like sggc_alloc, except that the object is immediately placed in
+    old generation 1.  This may be desirable if it is thought that the
+    object will be long-lived.
+
+  sggc_cptr_t sggc_alloc_gen2 (sggc_type_t type, sggc_length_t length)
+
+    Like sggc_alloc, except that the object is immediately placed in
+    old generation 2.  This may be desirable if it is thought that the
+    object will be even longer-lived than when sggc_alloc_gen1 is
+    used.
+
   void sggc_collect (int level)
 
     Performs a garbage collection operation, at the specified level.
@@ -470,7 +484,21 @@ macros) below, which have (if functions) prototypes as shown:
     SGGC (and must only be called from these procedures).  It signals
     to SGGC that the object referenced by the compressed pointer
     passed is accessible, via a root pointer or via a reference in
-    another object, and hence should not be collected.  
+    another object, and hence should not be collected.  It also
+    signals that sggc_find_object_ptrs should be called (sometime
+    later) to look for references within the object.
+
+  void sggc_mark (sggc_cptr_t cptr)
+
+    This function is like sggc_look_at, except that it should be
+    called only from sggc_find_root_ptrs or from sggc_after_marking
+    (not from sggc_find_object_ptrs), and that it does not cause
+    sggc_find_object_ptrs to be called to look for references within
+    the object.  This procedure should be called instead of
+    sggc_look_at only if the application is certain that there are no
+    references in the object, or that any such references are to
+    objects that will be found by the garbage collector in some other
+    way.
 
   void sggc_old_to_new_check (sggc_cptr_t from_ptr, sggc_cptr_t to_ptr)
 
@@ -544,6 +572,12 @@ macros) below, which have (if functions) prototypes as shown:
     If called several times before any calls of sggc_alloc, the
     segments will have indexes 0, 1, 2, etc., which fact may be used
     when setting up their contents if they reference each other.
+
+    Note that although this function is primarily meant for creating
+    objects that are actually unchanging constants, an application is
+    allowed to change the data or auxiliary information in the object,
+    as long as no references to other objects that need to be found by
+    the garbage collector are stored there.
 
 
 FUNCTIONS THE APPLICATION MUST PROVIDE TO SGGC
