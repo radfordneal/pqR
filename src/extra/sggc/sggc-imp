@@ -42,11 +42,11 @@ INITIALIZATION
 
 Currently, the maximum number of segments that may be used is fixed at
 initialization time, when several arrays of that size are allocated.
-Alternatively, the maximum is fixed at compile time, when
-SGGC_MAX_SEGMENTS is defined, which may slightly improve speed.  This
-maximum is limited to 2^26-1, but always allocating space for this
-maximum would occupy an excessive amount of virtual memory on some
-systems.
+Alternatively, the maximum may be fixed at compile time, and the
+arrays allocated statically, when SGGC_MAX_SEGMENTS is defined, which
+may slightly improve speed.  This maximum is limited to 2^26-1, but
+always allocating space for this maximum by setting SGGC_MAX_SEGMENTS
+would occupy an excessive amount of virtual memory on some systems.
 
 More options for initialization may be provided in future.  For
 example, there could be an option to allow dynamic increases in the
@@ -182,11 +182,12 @@ MORE ON OFFSET ARITHMETIC
 
 In step (2) of finding the location of the data for an object (or
 similarly, the auxiliary information), the multiplication done will
-result in a small integer, which could be held in 32 bits.  However,
-depending on the machine used, it may be faster to do arithmetic in
-the same bit width as a pointer.  The SGGC_OFFSET_CAST symbol in
-sggc.h is defined to be a cast to whichever size of arithemtic is
-chosen (or this may be set by a compiler option).
+result in a small integer, which could be held in as few as 16 bits.
+However, depending on the machine used, it may be faster to do
+arithmetic in some other integer type, perhaps with the same bit width
+as a pointer.  The SGGC_OFFSET_CALC symbol may be defined (and has a
+default in sggc.h) to be a cast to whichever size of arithemtic is
+chosen.
 
 The need to mask out just the offset part of a compressed pointer when
 computing the address of its data or auxiliary information may be
@@ -194,17 +195,15 @@ eliminated by adjusting the pointers to data or auxiliary information
 for a segment so that the correct result is obtained when the unmasked
 index is present along with the offset.  This method is enabled if
 SGGC is compiled with SGGC_USE_OFFSET_POINTERS defined as 1 (versus
-being defined as 0 or not defined at all).  
-
-A different value for SGGC_OFFSET_CAST may be used when
-SGGC_USE_OFFSET_POINTERS is 1, as may be chosen by appropriately
-editing sggc.h (or setting a compiler option).  Any unsigned integer
-type of at least 32 bits (possibly less) should work, but whether
-uint32_t or uintptr_t is faster might depend on the machine used.
-Note that consistent use of one unsigned type is necessary, so that
-overflow (which may happen, and produces a well-defined result for
-unsigned types) will always occur in the same manner, leading to
-cancellation of all but the desired part of the operation.
+being defined as 0 or not defined at all).  A different
+SGGC_OFFSET_CALC type might be best when SGGC_USE_OFFSET_POINTERS is
+1.  Any unsigned integer type of at least 16 bits should work, but
+whether uint16_t, uint32_t, or uintptr_t is faster might depend on the
+machine used.  Note that consistent use of one unsigned type is
+necessary, so that overflow (which may happen, and produces a
+well-defined result for unsigned types) will always occur in the same
+manner, leading to cancellation of all but the desired part of the
+operation.
 
 
 GENERATIONAL GARBAGE COLLECTION
@@ -273,10 +272,10 @@ as follows:
 
 Note that with five chains, plus four bytes of extra information used
 by SGGC, the size of a set_segment structure is 64 bytes, which may be
-a good size for cache performance.  As a power of two, it would also
-allow efficient indexing of arrays of segments, though this is not
-relevant with the current implementation, which uses an array of
-pointers to segments.
+a good size for cache performance.  As a power of two, it also allows
+efficient indexing in an array of segments, which is used with one
+implementation option (the alternative being to use an array of
+pointers to segments).
 
 Between calls of sggc_collect, for kinds, k, that use small segments,
 the set 'free_or_new[[k]' contains objects in segments that have data
@@ -425,12 +424,12 @@ level are summarized below:
 
 IMPLEMENTATION OPTIONS
 
-In additon to the SGGC_USE_OFFSET_POINTERS and SGGC_OFFSET_CAST
-symbols mentioned above, two other pre-processor symbols may be
-defined with a compiler flag in order to select different
-implementation options.  Both of these are primarily useful for
-debugging and performance evaluation, since the default is likely to
-be the best choice.
+In additon to the SGGC_MAX_SEGMENTS, SGGC_USE_OFFSET_POINTERS, and
+SGGC_OFFSET_CALC symbols mentioned above, several other pre-processor
+symbols may be defined (eg, with a compiler flag) in order to select
+different implementation options.  The first two below are primarily
+useful for debugging and performance evaluation, since the default is
+likely to be the best choice.
 
 SET_USE_BUILTINS may be set to 0 or 1 to disable or enable use of the
 gcc/clang builtin functions for finding and counting 1 bits.  The
@@ -445,6 +444,13 @@ SGGC_USE_MEMSET may be defined (as anything) to enable use of memset
 rather than a loop (possibly unrolled by the compiler) when clearning
 the data area for an object in a small segment.  Since these objects
 are typically small, it's not obvious which is faster.
+
+SGGC_SEG_DIRECT may be defined (as anything) to enable use of a direct
+array of segments, rather than the default of using an array of
+pointers to segments.  This may be slightly faster, but will result in
+a larger allocation of address space (and perhaps actual memory) if
+not all the segments are actually used.  Note that all combinations of
+this option (or not) with or without SGGC_MAX_SEGMENTS are allowed.
 
 SGGC_HUGE_SHIFT is used when the number of chunks asked for for a big
 segment is too large to fit in 21 bits.  In this case, the number of

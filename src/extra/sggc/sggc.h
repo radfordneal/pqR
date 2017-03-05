@@ -68,7 +68,7 @@ typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
 #ifdef SGGC_USE_OFFSET_POINTERS
 typedef uintptr_t sggc_dptr;       /* So out-of-bounds arithmetic well-defined*/
 #else
-typedef char *sggc_dptr;           /* Ordinary pointer arithmetic */
+typedef char * restrict sggc_dptr; /* Ordinary pointer arithmetic */
 #endif
 
 #ifdef SGGC_MAX_SEGMENTS
@@ -86,17 +86,17 @@ SGGC_EXTERN sggc_dptr sggc_aux2[SGGC_MAX_SEGMENTS]; /* Pointers to aux2 data */
 
 #else  /* max number of segments determined at run time */
 
-SGGC_EXTERN sggc_dptr *sggc_data;  /* Pointer to array of pointers to arrays of 
-                                      data blocks for objects within segments */
+SGGC_EXTERN sggc_dptr * restrict sggc_data;   /* Pointer to array of pointers 
+                         to arrays of data blocks for objects within segments */
 
 #ifdef SGGC_AUX1_SIZE
-SGGC_EXTERN sggc_dptr *sggc_aux1;  /* Pointer to array of pointers to arrays of 
-                                      auxiliary info for objects in segments */
+SGGC_EXTERN sggc_dptr * restrict sggc_aux1;   /* Pointer to array of pointers
+                                  to auxiliary info 1 for objects in segments */
 #endif
 
 #ifdef SGGC_AUX2_SIZE
-SGGC_EXTERN sggc_dptr *sggc_aux2;  /* Pointer to array of pointers to arrays of 
-                                      auxiliary info for objects in segments */
+SGGC_EXTERN sggc_dptr * restrict sggc_aux2;   /* Pointer to array of pointers
+                                  to auxiliary info 2 for objects in segments */
 #endif
 
 #endif
@@ -105,55 +105,62 @@ SGGC_EXTERN sggc_dptr *sggc_aux2;  /* Pointer to array of pointers to arrays of
 
 
 /* INLINE FUNCTION TO GET DATA POINTER FOR AN OBJECT, and similarly
-   for auxiliary information (if present). */
+   for auxiliary information (if present). 
+
+   This is done differently if pointers are offset or not offset.  
+   In both cases, the computation of the segment offset times the
+   chunk size may be done with various integer types, with the
+   same end result.  The type used is SGGC_OFFSET_CALC, which may
+   be set by a compiler flag or left to default as below. */
 
 #if SGGC_USE_OFFSET_POINTERS
 
-#ifndef SGGC_OFFSET_CAST
-#define SGGC_OFFSET_CAST (uintptr_t) /* either (uint32_t) or (uintptr_t) */
+#ifndef SGGC_OFFSET_CALC
+#define SGGC_OFFSET_CALC uintptr_t /* uint16_t, uint32_t, or uintptr_t */
 #endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
 { return ((char *) (sggc_data[SET_VAL_INDEX(cptr)] 
-                     + SGGC_CHUNK_SIZE * SGGC_OFFSET_CAST cptr));
+            + (SGGC_OFFSET_CALC) SGGC_CHUNK_SIZE * (SGGC_OFFSET_CALC) cptr));
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
 { return ((char *) (sggc_aux1[SET_VAL_INDEX(cptr)] 
-                     + SGGC_AUX1_SIZE * SGGC_OFFSET_CAST cptr));
+   + (SGGC_OFFSET_CALC) SGGC_AUX1_SIZE * (SGGC_OFFSET_CALC) cptr));
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
 { return ((char *) (sggc_aux2[SET_VAL_INDEX(cptr)] 
-                     + SGGC_AUX2_SIZE * SGGC_OFFSET_CAST cptr));
+   + (SGGC_OFFSET_CALC) SGGC_AUX2_SIZE * (SGGC_OFFSET_CALC) cptr));
 }
 #endif
 
 #else /* not using offset pointers */
 
-#ifndef SGGC_OFFSET_CAST
-#define SGGC_OFFSET_CAST (uint32_t) /* may be (uint32_t), (uintptr_t), (int) */
+#ifndef SGGC_OFFSET_CALC
+#define SGGC_OFFSET_CALC uintptr_t  /* uint16_t, uint32_t, uintptr_t, 
+                                       short, int, or intptr_t */
 #endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
 { return sggc_data[SET_VAL_INDEX(cptr)] 
-          + SGGC_CHUNK_SIZE * SGGC_OFFSET_CAST SET_VAL_OFFSET(cptr);
+   + (SGGC_OFFSET_CALC)SGGC_CHUNK_SIZE * (SGGC_OFFSET_CALC)SET_VAL_OFFSET(cptr);
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
 { return sggc_aux1[SET_VAL_INDEX(cptr)] 
-           + SGGC_AUX1_SIZE * SGGC_OFFSET_CAST SET_VAL_OFFSET(cptr);
+   + (SGGC_OFFSET_CALC)SGGC_AUX1_SIZE * (SGGC_OFFSET_CALC) SET_VAL_OFFSET(cptr);
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
 { return sggc_aux2[SET_VAL_INDEX(cptr)] 
-           + SGGC_AUX2_SIZE * SGGC_OFFSET_CAST SET_VAL_OFFSET(cptr);
+   + (SGGC_OFFSET_CALC)SGGC_AUX2_SIZE * (SGGC_OFFSET_CALC) SET_VAL_OFFSET(cptr);
 }
 #endif
 
@@ -162,7 +169,7 @@ static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
 
 /* TYPES AND KINDS OF SEGMENTS.  Types and kinds must fit in 8 bits,
    with the kind being equal to the type if it is for a "big" segment.
-   The kind of a small segment is recorded in the segment description.
+   The kind of a segment is recorded in the segment description.
    The array of types for segments is allocated at initialization, or
    statically if SGGC_MAX_SEGMENTS is defined. */
 

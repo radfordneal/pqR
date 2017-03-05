@@ -91,7 +91,7 @@ For convenience, the application might also at this point define
 symbols for the chains, which are identified by integers from 0 to
 SET_CHAINS-1, though these symbols would be used only by the
 application itself.  Also, the definition of SET_EXTRA_INFO might
-involve various other declarations.
+involve various other declarations. 
 
 The set.h file should then be included in set-app.h.  It will define
 the following types:
@@ -118,7 +118,10 @@ The following constant is also defined in set.h:
                    the absence of a value.
 
 Finally, the set.h file will declare prototypes (or macros, or static
-inline definitions) for the functions documented below.
+inline definitions) for the functions documented below.  If set-app.h
+defines SET_DO_BEFORE_INLINE, the code it is defined to will be
+inserted before any inline function definitions in set.h, but after
+all the other declarations.
 
 Before including set.h in set-app.h, the application should declare a
 function (or macro), which (if a function) should have the following
@@ -132,7 +135,8 @@ application to decide how memory for segment structures is allocated
 (eg, a static array, or using an array of pointers to structures
 allocated with malloc), and hence how a pointer is found from an
 index.  (Note that the actual definition of SET_SEGMENT might need to
-be put after set.h is included, as illustrated in test-set/set-app.h.)
+be put after set.h is included, as illustrated in test-set/set-app.h,
+or in SET_DO_BEFORE_INLINE.)
 
 The set-app.h file should be included in application modules that use
 the set facility.  There are two options for how an application

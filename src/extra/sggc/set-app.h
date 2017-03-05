@@ -73,27 +73,39 @@
   } x;
 
 
-/* POINTER TO ARRAY OF POINTERS TO SEGMENTS.  This array of pointers
-   is allocated when the GC is initialized, with the segments themselves
-   allocated later, as needed, except that if SGGC_MAX_SEGMENTS is
-   defined, it is allocated statically instead. */
+/* POINTER TO ARRAY OF SEGMETNS OR POINTERS TO SEGMENTS.  This array
+   of segments or pointers to them is allocated when the GC is
+   initialized, with the segments themselves allocated later, as
+   needed, except that if SGGC_MAX_SEGMENTS is defined, it is
+   allocated statically instead. */
 
-#ifdef SGGC_EXTERN
-SGGC_EXTERN 
-#else
-extern
+#ifndef SGGC_EXTERN
+#define SGGC_EXTERN extern
 #endif
 
 #ifdef SGGC_MAX_SEGMENTS
-struct set_segment * restrict sggc_segment[SGGC_MAX_SEGMENTS];
+#ifdef SGGC_SEG_DIRECT
+#define SET_DO_BEFORE_INLINE \
+  SGGC_EXTERN struct set_segment sggc_segment[SGGC_MAX_SEGMENTS];
 #else
-struct set_segment * * restrict sggc_segment;
+SGGC_EXTERN struct set_segment * restrict sggc_segment[SGGC_MAX_SEGMENTS];
+#endif
+#else
+#ifdef SGGC_SEG_DIRECT
+SGGC_EXTERN struct set_segment * restrict sggc_segment;
+#else
+SGGC_EXTERN struct set_segment * restrict * restrict sggc_segment;
+#endif
 #endif
 
 
 /* MACRO FOR GETTING SEGMENT POINTER FROM SEGMENT INDEX. */
 
+#ifdef SGGC_SEG_DIRECT
+#define SET_SEGMENT(index) (sggc_segment+index)
+#else
 #define SET_SEGMENT(index) (sggc_segment[index])
+#endif
 
 
 /* INCLUDE THE NON-APPLICATION-SPECIFIC HEADER FOR THE SET MODULE. */

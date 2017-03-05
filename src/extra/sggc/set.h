@@ -135,6 +135,12 @@ SET_PROC_CLASS void set_remove_segment (struct set *set, set_value_t val,
 
 /**** Functions below are defined here as "static inline" for speed. ****/
 
+/* First, do anything that needs doing at this point from set-app.h. */
+
+#ifdef SET_DO_BEFORE_INLINE
+SET_DO_BEFORE_INLINE
+#endif
+
 
 /* RETURN THE CHAIN USED BY A SET. */
 

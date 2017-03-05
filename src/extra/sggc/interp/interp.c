@@ -656,3 +656,24 @@ int main (void)
 
   return 0;
 }
+
+
+/* CODE GENERATION TEST.  Not actually executed, but compiled here to
+   be disassembled to see what code gets generated. */
+
+ptr_t code_gen_test (ptr_t a, ptr_t b)
+{
+  if (TYPE(a) == TYPE_LIST)
+  { return LIST(a)->tail == nil ? LIST(a)->head : LIST(b)->head;
+  }
+
+  if (TYPE(a) == TYPE_SYMBOL)
+  { return SYMBOL(a)->symbol == 'a' ? a : b;
+  }
+
+  if (TYPE(a) == TYPE_BINDING)
+  { return BOUND_SYMBOL(a) == ' ' ? BINDING(a)->value : b;
+  }
+
+  return nil;
+}
