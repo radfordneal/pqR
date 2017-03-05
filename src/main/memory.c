@@ -769,11 +769,13 @@ void sggc_after_marking (int level, int rep)
            an older generation not being collected, or from a reference from
            a scanned node.  We need to remove unmarked entries here. */
 
-	SEXP t;
+        SEXP *p = &VECTOR_ELT(R_StringHash,0);
+        SEXP *q = p + LENGTH (R_StringHash);
 	int nc = 0;
-	for (i = 0; i < LENGTH(R_StringHash); i++) {
+	SEXP t;
+        while (p < q) {
 	    t = R_NilValue;
-	    for (s = VECTOR_ELT(R_StringHash,i); s!=R_NilValue; s = ATTRIB(s)) {
+	    for (s = *p; s != R_NilValue; s = ATTRIB(s)) {
                 if (DEBUG_GLOBAL_STRING_HASH && TYPEOF(s)!=CHARSXP)
                    REprintf(
                      "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
@@ -782,14 +784,15 @@ void sggc_after_marking (int level, int rep)
                     /* remove unused CHARSXP */
 		    if (t == R_NilValue) /* head of list */
                         /* Do NOT use SET_VECTOR_ELT - no old-to-new tracking */
-			VECTOR_ELT(R_StringHash, i) = ATTRIB(s);
+			*p = ATTRIB(s);
 		    else
 			ATTRIB(t) = ATTRIB(s);
 		}
                 else 
                     t = s;
 	    }
-	    if(VECTOR_ELT(R_StringHash, i) != R_NilValue) nc++;
+	    if (*p != R_NilValue) nc++;
+            p += 1;
 	}
 	SET_HASHSLOTSUSED (R_StringHash, nc);
         MARK(R_StringHash);  /* don't look at contents - handled above */
