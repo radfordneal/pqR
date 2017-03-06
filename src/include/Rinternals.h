@@ -329,8 +329,8 @@ struct symsxp_struct {
     SEXP internal;
     SEXP nextsym;
     SEXP lastenv;
-    SEXP lastbinding;
     SEXP lastenvnotfound;
+    SEXP lastbinding;
 };
 
 typedef struct SYM_SEXPREC {

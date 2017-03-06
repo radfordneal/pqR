@@ -547,24 +547,20 @@ void sggc_find_root_ptrs (void)
 
        The symbol table may be nonexistent at startup (NULL). */
  
-    if (0 /* DISABLED */ && gc_next_level < 2 && R_SymbolTable != NULL) { 
+    if (gc_next_level < 2 && R_SymbolTable != NULL) { 
         for (i = 0; i < HSIZE; i++) {
             for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
                 LASTSYMENV(s) = R_NoObject;
-                LASTSYMBINDING(s) = R_NoObject; /* not needed; just in case...*/
                 LASTSYMENVNOTFOUND(s) = R_NoObject;
             }
         }
     }
 
-    if ((1 /* SEE ABOVE */ || gc_next_level == 2) && R_SymbolTable != NULL) { 
+    if (gc_next_level == 2 && R_SymbolTable != NULL) { 
         for (i = 0; i < HSIZE; i++) {
             for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
-                if (!sggc_oldest_generation(COMPRESSED_PTR(s))) abort();
                 LASTSYMENV(s) = R_NoObject;
-                LASTSYMBINDING(s) = R_NoObject; /* not needed; just in case...*/
                 LASTSYMENVNOTFOUND(s) = R_NoObject;
-                if (TYPEOF(PRINTNAME(s)) != CHARSXP) abort();
                 MARK(PRINTNAME(s));
                 if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
                 if (INTERNAL(s) != R_NilValue) LOOK_AT(INTERNAL(s));
@@ -1524,9 +1520,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
     if (LENGTH(c) == 0) LENGTH(c) = 1;
 
-    PRINTNAME(c) = name;
-    SYMVALUE(c) = value;
-    INTERNAL(c) = R_NilValue;
+    SET_PRINTNAME (c, name);
+    SET_SYMVALUE (c, value);
+    INTERNAL(c) = R_NilValue; /* old-to-new check unneeded as R_NilValue new */
     NEXTSYM_PTR(c) = R_NilValue;
     LASTSYMENV(c) = R_NoObject;
     LASTSYMBINDING(c) = R_NoObject;
