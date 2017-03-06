@@ -103,7 +103,7 @@ static SEXP do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
     int opt_icase, opt_value, opt_fixed, useBytes;
     int i, j, n, nmatches, patlen;
     Rboolean useWC = FALSE;
-    const void *vmax = NULL;
+    const void *vmax;
 
     regex_t reg;
     regaparams_t params;
@@ -478,7 +478,7 @@ static SEXP do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
     int opt_fixed, opt_partial, opt_counts, opt_icase, useBytes;
     int i = 0, j = 0, m, nx, ny, nxy;
     const char *s, *t;
-    const void *vmax = NULL;
+    const void *vmax;
 
     Rboolean haveBytes, useWC = FALSE;
 
@@ -725,7 +725,7 @@ static SEXP do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 
     Rboolean haveBytes, useWC = FALSE;
     const char *s, *t;
-    const void *vmax = NULL;
+    const void *vmax;
     
     regex_t reg;
     size_t nmatch;

@@ -1460,7 +1460,7 @@ static SEXP do_plot_xy(SEXP call, SEXP op, SEXP args, SEXP env)
     double *x, *y, xold, yold, xx, yy, thiscex, thislwd;
     int i, n, npch, ncex, ncol, nbg, nlwd, type=0, start=0, thispch;
     rcolor thiscol, thisbg;
-    const void *vmax = NULL /* -Wall */;
+    const void *vmax;
 
     SEXP originalArgs = args;
     pGEDevDesc dd = GEcurrentDevice();
@@ -1931,7 +1931,7 @@ static SEXP do_path(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP sx, sy, nper, rule, col, border, lty;
     int i, nx, npoly;
     double *xx, *yy;
-    const void *vmax = NULL /* -Wall */;
+    const void *vmax;
 
     SEXP originalArgs = args;
     pGEDevDesc dd = GEcurrentDevice();

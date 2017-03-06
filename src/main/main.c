@@ -895,7 +895,7 @@ void setup_Rmainloop(void)
     R_Toplevel.cloenv = R_BaseEnv;
     R_Toplevel.sysparent = R_BaseEnv;
     R_Toplevel.conexit = R_NilValue;
-    R_Toplevel.vmax = NULL;
+    R_Toplevel.vmax = R_NilValue;
     R_Toplevel.nodestack = R_BCNodeStackTop;
 #ifdef BC_INT_STACK
     R_Toplevel.intstack = R_BCIntStackTop;

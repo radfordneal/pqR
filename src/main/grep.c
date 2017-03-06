@@ -2569,7 +2569,7 @@ static SEXP do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 
     Rboolean haveBytes, useWC = FALSE;
     const char *s, *t;
-    const void *vmax = NULL;
+    const void *vmax;
     
     regex_t reg;
     size_t nmatch;
