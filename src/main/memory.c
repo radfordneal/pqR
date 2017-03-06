@@ -534,18 +534,37 @@ void sggc_find_root_ptrs (void)
 {
     int i;
 
-    /* Start by scanning the symbol table.  We have to scan the symbol
-       table specially, because it's linked by NEXTSYM_PTR, which
-       sggc_find_object_ptrs doesn't know about, and because we need to 
-       clear LASTSYMENV and LASTSYMENVNOTFOUND.  Plus it's faster to
-       mark / follow the pointers with special code here. */
+    /* Start by scanning the symbol table. 
+
+       We have to scan the symbol table specially, because it's linked
+       by NEXTSYM_PTR, which sggc_find_object_ptrs doesn't know about,
+       and because we need to clear LASTSYMENV and LASTSYMENVNOTFOUND.
+       Plus it's faster to mark / follow the pointers with special
+       code here. 
+
+       Since symbols are created already in old generation 2, for all but
+       a level 2 collections, we need only do the LAST... clearing.
+
+       The symbol table may be nonexistent at startup (NULL). */
  
-    if (R_SymbolTable != NULL) { /* Symbol table nonexistent at startup */
+    if (0 /* DISABLED */ && gc_next_level < 2 && R_SymbolTable != NULL) { 
         for (i = 0; i < HSIZE; i++) {
             for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
                 LASTSYMENV(s) = R_NoObject;
                 LASTSYMBINDING(s) = R_NoObject; /* not needed; just in case...*/
                 LASTSYMENVNOTFOUND(s) = R_NoObject;
+            }
+        }
+    }
+
+    if ((1 /* SEE ABOVE */ || gc_next_level == 2) && R_SymbolTable != NULL) { 
+        for (i = 0; i < HSIZE; i++) {
+            for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
+                if (!sggc_oldest_generation(COMPRESSED_PTR(s))) abort();
+                LASTSYMENV(s) = R_NoObject;
+                LASTSYMBINDING(s) = R_NoObject; /* not needed; just in case...*/
+                LASTSYMENVNOTFOUND(s) = R_NoObject;
+                if (TYPEOF(PRINTNAME(s)) != CHARSXP) abort();
                 MARK(PRINTNAME(s));
                 if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
                 if (INTERNAL(s) != R_NilValue) LOOK_AT(INTERNAL(s));
@@ -1111,6 +1130,46 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 }
 
 
+/* Allocate an object in an old generation.  Sets all flags to zero,
+   attribute to R_NilValue, type as passed.  Does not set LENGTH,
+   which will sometimes be read-only. */
+
+static SEXP alloc_obj_old_gen (SEXPTYPE type, R_len_t length, int gen)
+{
+    sggc_type_t sggctype = R_type_to_sggc_type[type];
+    sggc_length_t sggclength = Rf_nchunks(type,length);
+
+    if (sggc_info.gen0_count >= gc_interval)
+        R_gc_internal(); 
+
+    sggc_cptr_t cp = gen == 1 ? sggc_alloc_gen1 (sggctype, sggclength)
+                              : sggc_alloc_gen2 (sggctype, sggclength);
+
+    while (cp == SGGC_NO_OBJECT) {
+        if (sggc_info.gen0_count >= gc_interval
+             && gc_last_level < 2
+             && gc_next_level < gc_last_level + 1) {
+            gc_next_level = gc_last_level + 1;
+        }
+        R_gc_internal();
+        cp = gen == 1 ? sggc_alloc_gen1 (sggctype, sggclength)
+                      : sggc_alloc_gen2 (sggctype, sggclength);
+        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
+            R_Suicide("out of memory");
+    }
+
+    SEXP r = SEXP_PTR (cp);
+#if !USE_COMPRESSED_POINTERS
+    r->cptr = cp;
+#endif
+
+    TYPEOF(r) = type;
+    ATTRIB(r) = R_NilValue;
+
+    return r;
+}
+
+
 /* Fast allocation of a small object.  It never garbage collects, but
    just returns R_NoObject if it fails to allocate (possibly because
    the sggc routine thought it wasn't easy).  The caller must then
@@ -1178,6 +1237,7 @@ char *R_alloc(size_t nelem, int eltsize)
 		  dsize/1024.0/1024.0/1024.0);
 	s = allocVector(RAWSXP, size + 1);
 #endif
+	if (R_VStack == R_NoObject) abort();
 	ATTRIB(s) = R_VStack;
 	R_VStack = s;
 	return (char *)DATAPTR(s);
@@ -1458,11 +1518,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 {
     SEXP c;
 
-    if ((c = alloc_fast(SGGC_SYM_KIND,SYMSXP)) == R_NoObject) {
-        PROTECT2(name,value);
-        c = alloc_obj(SYMSXP,1);
-        UNPROTECT(2);
-    }
+    PROTECT2(name,value);
+    c = alloc_obj_old_gen (SYMSXP, 1, 2);
+    UNPROTECT(2);
 
     if (LENGTH(c) == 0) LENGTH(c) = 1;
 
