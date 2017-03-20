@@ -178,8 +178,8 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 
 #endif
 
-#undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
-#define NOT_LVALUE(x) (x)
+#undef NOT_LVALUE          /* Allow CAR, etc. as lvalue here, since */
+#define NOT_LVALUE(x) (x)  /*   needed for &STRING_ELT(...) below   */
 
 #if USE_COMPRESSED_POINTERS
 #define CHK_NO_OBJECT(x) 1  /* since checked in sggc_look_at */

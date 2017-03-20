@@ -542,21 +542,9 @@ void sggc_find_root_ptrs (void)
        Plus it's faster to mark / follow the pointers with special
        code here. 
 
-       Since symbols are created already in old generation 2, for all but
-       a level 2 collections, we need only do the LAST... clearing.
-
        The symbol table may be nonexistent at startup (NULL). */
- 
-    if (gc_next_level < 2 && R_SymbolTable != NULL) { 
-        for (i = 0; i < HSIZE; i++) {
-            for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
-                LASTSYMENV(s) = R_NoObject;
-                LASTSYMENVNOTFOUND(s) = R_NoObject;
-            }
-        }
-    }
 
-    if (gc_next_level == 2 && R_SymbolTable != NULL) { 
+    if (R_SymbolTable != NULL) { 
         for (i = 0; i < HSIZE; i++) {
             for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
                 LASTSYMENV(s) = R_NoObject;
@@ -564,6 +552,7 @@ void sggc_find_root_ptrs (void)
                 MARK(PRINTNAME(s));
                 if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
                 if (INTERNAL(s) != R_NilValue) LOOK_AT(INTERNAL(s));
+                if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
                 MARK(s);
             }
         }
@@ -1126,46 +1115,6 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 }
 
 
-/* Allocate an object in an old generation.  Sets all flags to zero,
-   attribute to R_NilValue, type as passed.  Does not set LENGTH,
-   which will sometimes be read-only. */
-
-static SEXP alloc_obj_old_gen (SEXPTYPE type, R_len_t length, int gen)
-{
-    sggc_type_t sggctype = R_type_to_sggc_type[type];
-    sggc_length_t sggclength = Rf_nchunks(type,length);
-
-    if (sggc_info.gen0_count >= gc_interval)
-        R_gc_internal(); 
-
-    sggc_cptr_t cp = gen == 1 ? sggc_alloc_gen1 (sggctype, sggclength)
-                              : sggc_alloc_gen2 (sggctype, sggclength);
-
-    while (cp == SGGC_NO_OBJECT) {
-        if (sggc_info.gen0_count >= gc_interval
-             && gc_last_level < 2
-             && gc_next_level < gc_last_level + 1) {
-            gc_next_level = gc_last_level + 1;
-        }
-        R_gc_internal();
-        cp = gen == 1 ? sggc_alloc_gen1 (sggctype, sggclength)
-                      : sggc_alloc_gen2 (sggctype, sggclength);
-        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
-            R_Suicide("out of memory");
-    }
-
-    SEXP r = SEXP_PTR (cp);
-#if !USE_COMPRESSED_POINTERS
-    r->cptr = cp;
-#endif
-
-    TYPEOF(r) = type;
-    ATTRIB(r) = R_NilValue;
-
-    return r;
-}
-
-
 /* Fast allocation of a small object.  It never garbage collects, but
    just returns R_NoObject if it fails to allocate (possibly because
    the sggc routine thought it wasn't easy).  The caller must then
@@ -1267,19 +1216,28 @@ char *S_realloc(char *p, long new, long old, int size)
     return q;
 }
 
-/* "allocSExp" allocate a SEXPREC. */
+/* "allocSExp" allocate a SEXPREC.  Should not be a vector type. */
 
 SEXP allocSExp(SEXPTYPE t)
 {
-    SEXP s = alloc_obj(t,1);
+    SEXP s;
 
-    if (LENGTH(s) == 0) LENGTH(s) = 1;
+    switch (t) {
 
-    CAR(s) = R_NilValue;
-    CDR(s) = R_NilValue;
-    TAG(s) = R_NilValue;
+    case SYMSXP:
+        return mkSYMSXP (R_BlankString, R_UnboundValue);
+        
+    case EXTPTRSXP:
+        return R_MakeExternalPtr (NULL, R_NilValue, R_NilValue);
 
-    return s;
+    default:
+        s = alloc_obj(t,1);
+        CAR(s) = R_NilValue;
+        CDR(s) = R_NilValue;
+        TAG(s) = R_NilValue;
+        if (LENGTH(s) == 0) LENGTH(s) = 1;
+        return s;
+    }
 }
 
 /* Caller needn't protect arguments of cons. */
@@ -1515,14 +1473,14 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SEXP c;
 
     PROTECT2(name,value);
-    c = alloc_obj_old_gen (SYMSXP, 1, 2);
+    c = alloc_obj (SYMSXP, 1);
     UNPROTECT(2);
 
     if (LENGTH(c) == 0) LENGTH(c) = 1;
 
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
-    INTERNAL(c) = R_NilValue; /* old-to-new check unneeded as R_NilValue new */
+    INTERNAL(c) = R_NilValue; /* old-to-new check unneeded, R_NilValue is old */
     NEXTSYM_PTR(c) = R_NilValue;
     LASTSYMENV(c) = R_NoObject;
     LASTSYMBINDING(c) = R_NoObject;

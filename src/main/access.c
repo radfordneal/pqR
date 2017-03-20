@@ -199,21 +199,21 @@ int (RTRACE)(SEXP x) { return RTRACE(Rf_chk_valid_SEXP(x)); }
 int (LEVELS)(SEXP x) { return LEVELS(Rf_chk_valid_SEXP(x)); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
-    if (v == R_NoObject || TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
-	error(
-          "value for 'SET_ATTRIB' must be a pairlist or R_NoObject, not a '%s'",
-	   v == R_NoObject ? "R_NoObject" : type2char(TYPEOF(x)));
-    if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
     if (ATTRIB(x) != v) {
+        if (v == R_NoObject || TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
+            error(
+             "value for 'SET_ATTRIB' must be pairlist or R_NilValue, not '%s'",
+              v == R_NoObject ? "R_NoObject" : type2char(TYPEOF(x)));
+        if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
         CHECK_OLD_TO_NEW(x, v);
         ATTRIB(x) = v;
     }
 }
 
 void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
-    if (v == R_NoObject) abort();
-    if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
     if (ATTRIB(x) != v) {
+        if (v == R_NoObject) abort();
+        if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
         CHECK_OLD_TO_NEW(x, v);
         ATTRIB(x) = v;
     }
