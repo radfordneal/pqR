@@ -37,8 +37,6 @@
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
-#define GCGEN(x) (1 + sggc_oldest_generation(COMPRESSED_PTR(x)) \
-                    - sggc_youngest_generation(COMPRESSED_PTR(x)))
 #define GCKIND(x) SGGC_KIND(COMPRESSED_PTR(x))
 
 #define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in
@@ -131,13 +129,13 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         return;
     }
 #   if USE_COMPRESSED_POINTERS
-       Rprintf("@%d.%d %02d %s g%d k%d [", 
+       Rprintf("@%d.%d %02d %s k%d [", 
                 SGGC_SEGMENT_INDEX(v), SGGC_SEGMENT_OFFSET(v),
-                TYPEOF(v), typename(v), GCGEN(v), GCKIND(v));
+                TYPEOF(v), typename(v), GCKIND(v));
 #   else
-       Rprintf("@%llx %02d %s g%d k%d [", 
+       Rprintf("@%llx %02d %s k%d [", 
                 (long long) v,
-                TYPEOF(v), typename(v), GCGEN(v), GCKIND(v));
+                TYPEOF(v), typename(v), GCKIND(v));
 #   endif
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }

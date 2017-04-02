@@ -1,25 +1,25 @@
 STARTING TEST: segs = 100, iters = 50
 
 ABOUT TO CALL sggc_init
-test_calloc: 1 in use after:: 0x7fa5d9c03330
-test_calloc: 2 in use after:: 0x7fa5d9c03650
-test_calloc: 3 in use after:: 0x7fa5d9c03230
-test_calloc: 4 in use after:: 0x7fa5d9c03970
-test_calloc: 5 in use after:: 0x7fa5d9c03c90
+test_calloc: 1 in use after:: 0x7f9e75c02860
+test_calloc: 2 in use after:: 0x7f9e75c02b80
+test_calloc: 3 in use after:: 0x7f9e75c02760
+test_calloc: 4 in use after:: 0x7f9e75c02ea0
+test_calloc: 5 in use after:: 0x7f9e75c031c0
 DONE sggc_init
 
 CREATING CONSTANT SEGMENT FOR nil
-test_calloc: 6 in use after:: 0x7fa5d9c032a0
+test_calloc: 6 in use after:: 0x7f9e75c027d0
 sggc_constant: first object in segment is 0
 CONSTANT OBJECT RETURNED: 0
 
 ITERATION 1
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2, kind 1
-test_calloc: 7 in use after:: 0x7fa5da000600
-test_calloc: 8 in use after:: 0x7fa5da000a00
-sggc_alloc: called alloc_zeroed for aux2 block (kind 1):: 0x7fa5da000a00
-test_calloc: 9 in use after:: 0x7fa5d9c032e0
+test_calloc: 7 in use after:: 0x7f9e76002000
+test_calloc: 8 in use after:: 0x7f9e76002400
+sggc_alloc: called alloc_zeroed for aux2 block (kind 1):: 0x7f9e76002400
+test_calloc: 9 in use after:: 0x7f9e75c02810
 sggc_alloc: created 40 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff, 64 in free_or_new[1]
 sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7fffffffffffffff
@@ -28,12 +28,12 @@ sggc_alloc: aux2 block for 40 has pos 0 in block for kind 1
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10, kind 5
-test_calloc: 10 in use after:: 0x7fa5da003600
-test_calloc: 11 in use after:: 0x7fa5da003a00
-sggc_alloc: called alloc_zeroed for aux1 block (kind 5):: 0x7fa5da003a00
-test_calloc: 12 in use after:: 0x7fa5da003e00
-sggc_alloc: called alloc_zeroed for aux2 block (kind 5):: 0x7fa5da003e00
-test_calloc: 13 in use after:: 0x7fa5d9c03fb0
+test_calloc: 10 in use after:: 0x7f9e76002800
+test_calloc: 11 in use after:: 0x7f9e76002c00
+sggc_alloc: called alloc_zeroed for aux1 block (kind 5):: 0x7f9e76002c00
+test_calloc: 12 in use after:: 0x7f9e76003000
+sggc_alloc: called alloc_zeroed for aux2 block (kind 5):: 0x7f9e76003000
+test_calloc: 13 in use after:: 0x7f9e75c034e0
 sggc_alloc: created 80 in new segment
 sggc_alloc: new segment has bits 1249249249249249, 21 in free_or_new[5]
 sggc_alloc: next_free_val[5]=83, next_free_bits[5]=0249249249249249
@@ -47,12 +47,12 @@ sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffffff
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1, kind 3
-test_calloc: 14 in use after:: 0x7fa5da004200
-test_calloc: 15 in use after:: 0x7fa5da004600
-sggc_alloc: called alloc_zeroed for aux1 block (kind 3):: 0x7fa5da004600
-test_calloc: 16 in use after:: 0x7fa5da004a00
-sggc_alloc: called alloc_zeroed for aux2 block (kind 3):: 0x7fa5da004a00
-test_calloc: 17 in use after:: 0x7fa5d9c03ff0
+test_calloc: 14 in use after:: 0x7f9e76003400
+test_calloc: 15 in use after:: 0x7f9e76003800
+sggc_alloc: called alloc_zeroed for aux1 block (kind 3):: 0x7f9e76003800
+test_calloc: 16 in use after:: 0x7f9e76003c00
+sggc_alloc: called alloc_zeroed for aux2 block (kind 3):: 0x7f9e76003c00
+test_calloc: 17 in use after:: 0x7f9e75c03520
 sggc_alloc: created c0 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff, 64 in free_or_new[3]
 sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7fffffffffffffff
@@ -80,7 +80,9 @@ ALLOC RETURNING 44
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 8 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
+    old gen 2 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
   free_or_new [0]:   0  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
 next_free_val [0]: ---  [1]:  45  [2]: ---  [3]:  c1  [4]: ---  [5]:  83 
               00000000  07ffffff  00000000  7fffffff  00000000  02492492 
@@ -118,7 +120,9 @@ sggc_collect: 44 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
   free_or_new [0]:   0  [1]:  60  [2]:   0  [3]:  63  [4]:   0  [5]:  20 
 next_free_val [0]: ---  [1]:  42^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  83^
               00000000  3fffffff  00000000  7fffffff  00000000  02492492 
@@ -149,13 +153,13 @@ sggc_alloc: next_free_val[1]=47, next_free_bits[1]=01ffffffffffffff
 ALLOC RETURNING 46
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 18 in use after:: 0x7fa5d9c04030
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04030
-test_calloc: 19 in use after:: 0x7fa5da004e00
-sggc_alloc: called alloc_zeroed for aux1 block (kind 2):: 0x7fa5da004e00
-test_calloc: 20 in use after:: 0x7fa5da005200
-sggc_alloc: called alloc_zeroed for aux2 block (kind 2):: 0x7fa5da005200
-test_calloc: 21 in use after:: 0x7fa5d9c04080
+test_calloc: 18 in use after:: 0x7f9e75c03560
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03560
+test_calloc: 19 in use after:: 0x7f9e76004000
+sggc_alloc: called alloc_zeroed for aux1 block (kind 2):: 0x7f9e76004000
+test_calloc: 20 in use after:: 0x7f9e76004400
+sggc_alloc: called alloc_zeroed for aux2 block (kind 2):: 0x7f9e76004400
+test_calloc: 21 in use after:: 0x7f9e75c035b0
 sggc_alloc: created 100 in new segment
 sggc_alloc: aux1 block for 100 has pos 0 in block for kind 2
 sggc_alloc: aux2 block for 100 has pos 0 in block for kind 2
@@ -176,7 +180,9 @@ ALLOC RETURNING 86
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 16 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 6, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
   free_or_new [0]:   0  [1]:  60  [2]:   1  [3]:  63  [4]:   0  [5]:  20 
 next_free_val [0]: ---  [1]:  48^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  89^
               00000000  00ffffff  00000000  3fffffff  00000000  00092492 
@@ -215,7 +221,9 @@ sggc_collect: 47 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 13, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
 next_free_val [0]: ---  [1]:  45^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  89^
               00000000  07ffffff  00000000  3fffffff  00000000  00092492 
@@ -265,12 +273,13 @@ ALLOC RETURNING c3
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 24 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 13, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
   free_or_new [0]:   0  [1]:  57  [2]:   0  [3]:  62  [4]:   0  [5]:  18 
 next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  8c^
               00000000  000fffff  00000000  0fffffff  00000000  00012492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
-sggc_collect: put 100 from old_gen1 in free
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 41 from old_gen1 in free
 sggc_collect: put 42 from old_gen1 in free
@@ -278,11 +287,12 @@ sggc_collect: put 43 from old_gen1 in free
 sggc_collect: put 44 from old_gen1 in free
 sggc_collect: put 46 from old_gen1 in free
 sggc_collect: put 47 from old_gen1 in free
+sggc_collect: put c0 from old_gen1 in free
+sggc_collect: put c1 from old_gen1 in free
 sggc_collect: put 80 from old_gen1 in free
 sggc_collect: put 83 from old_gen1 in free
 sggc_collect: put 86 from old_gen1 in free
-sggc_collect: put c0 from old_gen1 in free
-sggc_collect: put c1 from old_gen1 in free
+sggc_collect: put 100 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 4a 0
 sggc_look_at: will look at 4a
@@ -334,11 +344,13 @@ sggc_collect: 41 in old_gen1 now free
 sggc_collect: 42 in old_gen1 now free
 sggc_collect: 44 in old_gen1 now free
 sggc_collect: 47 in old_gen1 now free
+sggc_collect: c1 in old_gen1 now free
 sggc_collect: 80 in old_gen1 now free
 sggc_collect: 83 in old_gen1 now free
-sggc_collect: c1 in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 5, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:   2  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  80^
               00000000  ffffffff  00000000  7fffffff  00000000  12492492 
@@ -388,7 +400,9 @@ ALLOC RETURNING 47
 ALLOCATING VECTOR OF LENGTH 20
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 32 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 5, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:   2  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
   free_or_new [0]:   0  [1]:  59  [2]:   0  [3]:  62  [4]:   0  [5]:  19 
 next_free_val [0]: ---  [1]:  48^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  83^
               00000000  00ffffff  00000000  3fffffff  00000000  02492492 
@@ -431,15 +445,17 @@ sggc_collect: 41 now old_gen1
 sggc_look_at: 49 0
 sggc_look_at: c3 0
 sggc_collect: done
-  unused: 0, old_gen1: 12, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   8  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   0 
+    old gen 2 [0]:   0  [1]:   2  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
   free_or_new [0]:   0  [1]:  54  [2]:   0  [3]:  61  [4]:   0  [5]:  18 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  83^
               00000000  ffffffff  00000000  3fffffff  00000000  02492492 
               00000000  fffff101  00000000  fffffffd  00000000  49249201 
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 22 in use after:: 0x7fa5d9c040c0
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c040c0
-test_calloc: 23 in use after:: 0x7fa5d9c04110
+test_calloc: 22 in use after:: 0x7f9e75c035f0
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c035f0
+test_calloc: 23 in use after:: 0x7f9e75c03640
 sggc_alloc: created 140 in new segment
 sggc_alloc: aux1 block for 140 has pos 1 in block for kind 2
 sggc_alloc: aux2 block for 140 has pos 1 in block for kind 2
@@ -488,7 +504,9 @@ ALLOC RETURNING 4e
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 40 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 12, old_gen2: 5, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   8  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   0 
+    old gen 2 [0]:   0  [1]:   2  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
   free_or_new [0]:   0  [1]:  54  [2]:   1  [3]:  61  [4]:   0  [5]:  18 
 next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  8c^
               00000000  0001ffff  00000000  0fffffff  00000000  00012492 
@@ -533,7 +551,9 @@ sggc_look_at: 0 0
 sggc_collect: looking at 140
 sggc_collect: 140 now old_gen1
 sggc_collect: done
-  unused: 0, old_gen1: 19, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:   2  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
   free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
 next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c4^ [4]: ---  [5]:  8c^
               00000000  000fffff  00000000  0fffffff  00000000  00012492 
@@ -583,17 +603,15 @@ ALLOC RETURNING 52
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 48 ALLOCATIONS
 sggc_collect: level 2
-  unused: 0, old_gen1: 19, old_gen2: 5, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:   2  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
   free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
 next_free_val [0]: ---  [1]:  53^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  00001fff  00000000  07ffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 43 from old_gen2 in free
 sggc_collect: put 46 from old_gen2 in free
-sggc_collect: put 86 from old_gen2 in free
-sggc_collect: put 140 from old_gen1 in free
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 41 from old_gen1 in free
 sggc_collect: put 42 from old_gen1 in free
@@ -606,12 +624,16 @@ sggc_collect: put 4a from old_gen1 in free
 sggc_collect: put 4b from old_gen1 in free
 sggc_collect: put 4d from old_gen1 in free
 sggc_collect: put 4e from old_gen1 in free
-sggc_collect: put 80 from old_gen1 in free
-sggc_collect: put 83 from old_gen1 in free
-sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
 sggc_collect: put c1 from old_gen1 in free
 sggc_collect: put c2 from old_gen1 in free
 sggc_collect: put c3 from old_gen1 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 83 from old_gen1 in free
+sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 140 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 51 0
 sggc_look_at: will look at 51
@@ -690,12 +712,14 @@ sggc_collect: 48 in old_gen1 now free
 sggc_collect: 4a in old_gen1 now free
 sggc_collect: 4b in old_gen1 now free
 sggc_collect: 4e in old_gen1 now free
-sggc_collect: 80 in old_gen1 now free
-sggc_collect: 89 in old_gen1 now free
 sggc_collect: c1 in old_gen1 now free
 sggc_collect: c2 in old_gen1 now free
+sggc_collect: 80 in old_gen1 now free
+sggc_collect: 89 in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 5, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   2 
   free_or_new [0]:   0  [1]:  55  [2]:   0  [3]:  61  [4]:   0  [5]:  18 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  80^
               00000000  ffffffff  00000000  7fffffff  00000000  12492492 
@@ -716,9 +740,9 @@ sggc_alloc: next_free_val[1]=44, next_free_bits[1]=0fffffffffff8dd3
 ALLOC RETURNING 42
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 24 in use after:: 0x7fa5d9c04150
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04150
-test_calloc: 25 in use after:: 0x7fa5d9c041a0
+test_calloc: 24 in use after:: 0x7f9e75c03680
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03680
+test_calloc: 25 in use after:: 0x7f9e75c036d0
 sggc_alloc: created 180 in new segment
 sggc_alloc: aux1 block for 180 has pos 2 in block for kind 2
 sggc_alloc: aux2 block for 180 has pos 2 in block for kind 2
@@ -749,7 +773,9 @@ ALLOC RETURNING c2
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 56 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 5, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   2 
   free_or_new [0]:   0  [1]:  55  [2]:   1  [3]:  61  [4]:   0  [5]:  18 
 next_free_val [0]: ---  [1]:  48^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  89^
               00000000  00ffffff  00000000  07ffffff  00000000  00092492 
@@ -785,7 +811,9 @@ sggc_collect: 45 now old_gen1
 sggc_look_at: 44 0
 sggc_look_at: 80 0
 sggc_collect: done
-  unused: 0, old_gen1: 11, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   2 
   free_or_new [0]:   0  [1]:  52  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c1^ [4]: ---  [5]:  89^
               00000000  ffffffff  00000000  7fffffff  00000000  00092492 
@@ -838,7 +866,9 @@ ITERATION 11
 ALLOCATING a, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 64 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 11, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   2 
   free_or_new [0]:   0  [1]:  52  [2]:   0  [3]:  60  [4]:   0  [5]:  17 
 next_free_val [0]: ---  [1]:  4f^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  8c^
               00000000  0001ffff  00000000  07ffffff  00000000  00012492 
@@ -881,7 +911,9 @@ sggc_collect: 48 now old_gen1
 sggc_look_at: 42 0
 sggc_look_at: 80 0
 sggc_collect: done
-  unused: 0, old_gen1: 18, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   2 
   free_or_new [0]:   0  [1]:  47  [2]:   0  [3]:  59  [4]:   0  [5]:  16 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  8c^
               00000000  ffffffff  00000000  07ffffff  00000000  00012492 
@@ -917,9 +949,9 @@ sggc_alloc: next_free_val[1]=55, next_free_bits[1]=000007ffffffffff
 ALLOC RETURNING 54
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 26 in use after:: 0x7fa5d9c041e0
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c041e0
-test_calloc: 27 in use after:: 0x7fa5d9c04230
+test_calloc: 26 in use after:: 0x7f9e75c03710
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03710
+test_calloc: 27 in use after:: 0x7f9e75c03760
 sggc_alloc: created 1c0 in new segment
 sggc_alloc: aux1 block for 1c0 has pos 3 in block for kind 2
 sggc_alloc: aux2 block for 1c0 has pos 3 in block for kind 2
@@ -935,12 +967,13 @@ ALLOC RETURNING 55
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 72 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 18, old_gen2: 12, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   2 
   free_or_new [0]:   0  [1]:  47  [2]:   1  [3]:  59  [4]:   0  [5]:  16 
 next_free_val [0]: ---  [1]:  56^ [2]: ---  [3]:  c6^ [4]: ---  [5]:  92^
               00000000  000003ff  00000000  03ffffff  00000000  00000492 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
-sggc_collect: put 180 from old_gen1 in free
 sggc_collect: put 42 from old_gen1 in free
 sggc_collect: put 44 from old_gen1 in free
 sggc_collect: put 45 from old_gen1 in free
@@ -952,12 +985,13 @@ sggc_collect: put 4e from old_gen1 in free
 sggc_collect: put 50 from old_gen1 in free
 sggc_collect: put 51 from old_gen1 in free
 sggc_collect: put 52 from old_gen1 in free
-sggc_collect: put 80 from old_gen1 in free
-sggc_collect: put 89 from old_gen1 in free
-sggc_collect: put 8f from old_gen1 in free
 sggc_collect: put c1 from old_gen1 in free
 sggc_collect: put c2 from old_gen1 in free
 sggc_collect: put c4 from old_gen1 in free
+sggc_collect: put 80 from old_gen1 in free
+sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put 8f from old_gen1 in free
+sggc_collect: put 180 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 55 0
 sggc_look_at: will look at 55
@@ -1032,11 +1066,13 @@ sggc_collect: 4b in old_gen1 now free
 sggc_collect: 4c in old_gen1 now free
 sggc_collect: 51 in old_gen1 now free
 sggc_collect: 52 in old_gen1 now free
+sggc_collect: c2 in old_gen1 now free
 sggc_collect: 89 in old_gen1 now free
 sggc_collect: 8f in old_gen1 now free
-sggc_collect: c2 in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  10  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   3 
   free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  59  [4]:   0  [5]:  17 
 next_free_val [0]: ---  [1]:  44^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  89^
               00000000  0fffffff  00000000  3fffffff  00000000  00092492 
@@ -1086,7 +1122,9 @@ ALLOC RETURNING 4c
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 80 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 7, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  10  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   3 
   free_or_new [0]:   0  [1]:  50  [2]:   0  [3]:  59  [4]:   0  [5]:  17 
 next_free_val [0]: ---  [1]:  51^ [2]: ---  [3]:  c6^ [4]: ---  [5]:  92^
               00000000  00007fff  00000000  03ffffff  00000000  00000492 
@@ -1122,7 +1160,9 @@ sggc_collect: 4c now old_gen1
 sggc_look_at: 4b 0
 sggc_look_at: 8f 0
 sggc_collect: done
-  unused: 0, old_gen1: 13, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  10  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   3 
   free_or_new [0]:   0  [1]:  47  [2]:   0  [3]:  58  [4]:   0  [5]:  15 
 next_free_val [0]: ---  [1]:  44^ [2]: ---  [3]:  c6^ [4]: ---  [5]:  92^
               00000000  0fffffff  00000000  03ffffff  00000000  00000492 
@@ -1172,7 +1212,9 @@ ALLOC RETURNING 53
 ALLOCATING e, setting its contents to old e and vec length 20
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 88 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 13, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  10  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   3 
   free_or_new [0]:   0  [1]:  47  [2]:   0  [3]:  58  [4]:   0  [5]:  15 
 next_free_val [0]: ---  [1]:  56^ [2]: ---  [3]:  c8^ [4]: ---  [5]:  95^
               00000000  000003ff  00000000  00ffffff  00000000  00000092 
@@ -1213,7 +1255,9 @@ sggc_collect: 53 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 20, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   4  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  10  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   3 
   free_or_new [0]:   0  [1]:  43  [2]:   0  [3]:  56  [4]:   0  [5]:  14 
 next_free_val [0]: ---  [1]:  44^ [2]: ---  [3]:  c8^ [4]: ---  [5]:  95^
               00000000  0fffffff  00000000  00ffffff  00000000  00000092 
@@ -1224,9 +1268,9 @@ sggc_alloc: next_free_val[1]=56, next_free_bits[1]=000003ffffffffff
 ALLOC RETURNING 44
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 28 in use after:: 0x7fa5d9c04270
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04270
-test_calloc: 29 in use after:: 0x7fa5d9c042c0
+test_calloc: 28 in use after:: 0x7f9e75c037a0
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c037a0
+test_calloc: 29 in use after:: 0x7f9e75c037f0
 sggc_alloc: created 200 in new segment
 sggc_alloc: aux1 block for 200 has pos 4 in block for kind 2
 sggc_alloc: aux2 block for 200 has pos 4 in block for kind 2
@@ -1270,18 +1314,13 @@ ITERATION 16
 ALLOCATING a, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 96 ALLOCATIONS
 sggc_collect: level 2
-  unused: 0, old_gen1: 20, old_gen2: 20, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   4  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  10  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   3 
   free_or_new [0]:   0  [1]:  43  [2]:   1  [3]:  56  [4]:   0  [5]:  14 
 next_free_val [0]: ---  [1]:  5a^ [2]: ---  [3]:  c9^ [4]: ---  [5]:  98^
               00000000  0000003f  00000000  007fffff  00000000  00000012 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
-sggc_collect: put 180 from old_gen2 in free
-sggc_collect: put 140 from old_gen2 in free
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put c1 from old_gen2 in free
-sggc_collect: put c3 from old_gen2 in free
-sggc_collect: put c4 from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 41 from old_gen2 in free
 sggc_collect: put 42 from old_gen2 in free
 sggc_collect: put 43 from old_gen2 in free
@@ -1292,10 +1331,6 @@ sggc_collect: put 49 from old_gen2 in free
 sggc_collect: put 4d from old_gen2 in free
 sggc_collect: put 4e from old_gen2 in free
 sggc_collect: put 50 from old_gen2 in free
-sggc_collect: put 80 from old_gen2 in free
-sggc_collect: put 83 from old_gen2 in free
-sggc_collect: put 86 from old_gen2 in free
-sggc_collect: put 1c0 from old_gen1 in free
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 45 from old_gen1 in free
 sggc_collect: put 4a from old_gen1 in free
@@ -1307,14 +1342,25 @@ sggc_collect: put 52 from old_gen1 in free
 sggc_collect: put 53 from old_gen1 in free
 sggc_collect: put 54 from old_gen1 in free
 sggc_collect: put 55 from old_gen1 in free
-sggc_collect: put 89 from old_gen1 in free
-sggc_collect: put 8c from old_gen1 in free
-sggc_collect: put 8f from old_gen1 in free
-sggc_collect: put 92 from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
 sggc_collect: put c2 from old_gen1 in free
 sggc_collect: put c5 from old_gen1 in free
 sggc_collect: put c6 from old_gen1 in free
 sggc_collect: put c7 from old_gen1 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen1 in free
+sggc_collect: put 8c from old_gen1 in free
+sggc_collect: put 8f from old_gen1 in free
+sggc_collect: put 92 from old_gen1 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 58 0
 sggc_look_at: will look at 58
@@ -1447,14 +1493,16 @@ sggc_collect: 51 in old_gen1 now free
 sggc_collect: 52 in old_gen1 now free
 sggc_collect: 53 in old_gen1 now free
 sggc_collect: 55 in old_gen1 now free
-sggc_collect: 8c in old_gen1 now free
-sggc_collect: 8f in old_gen1 now free
-sggc_collect: 92 in old_gen1 now free
 sggc_collect: c2 in old_gen1 now free
 sggc_collect: c5 in old_gen1 now free
 sggc_collect: c7 in old_gen1 now free
+sggc_collect: 8c in old_gen1 now free
+sggc_collect: 8f in old_gen1 now free
+sggc_collect: 92 in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 8, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   5  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  13  [2]:   0  [3]:   5  [4]:   0  [5]:   4  big:   4 
   free_or_new [0]:   0  [1]:  46  [2]:   0  [3]:  58  [4]:   0  [5]:  16 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c2^ [4]: ---  [5]:  8c^
               00000000  ffffffff  00000000  3fffffff  00000000  00012492 
@@ -1504,7 +1552,9 @@ ALLOC RETURNING 8f
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 104 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 8, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   5  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  13  [2]:   0  [3]:   5  [4]:   0  [5]:   4  big:   4 
   free_or_new [0]:   0  [1]:  46  [2]:   0  [3]:  58  [4]:   0  [5]:  16 
 next_free_val [0]: ---  [1]:  52^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  00003fff  00000000  07ffffff  00000000  00000492 
@@ -1545,7 +1595,9 @@ sggc_collect: 51 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 15, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  13  [2]:   0  [3]:   5  [4]:   0  [5]:   4  big:   4 
   free_or_new [0]:   0  [1]:  42  [2]:   0  [3]:  57  [4]:   0  [5]:  14 
 next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  92^
               00000000  000fffff  00000000  07ffffff  00000000  00000492 
@@ -1571,9 +1623,9 @@ sggc_alloc: next_free_val[1]=55, next_free_bits[1]=000007ffffffffe1
 ALLOC RETURNING 53
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 30 in use after:: 0x7fa5d9c04300
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04300
-test_calloc: 31 in use after:: 0x7fa5d9c04350
+test_calloc: 30 in use after:: 0x7f9e75c03830
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03830
+test_calloc: 31 in use after:: 0x7f9e75c03880
 sggc_alloc: created 240 in new segment
 sggc_alloc: aux1 block for 240 has pos 5 in block for kind 2
 sggc_alloc: aux2 block for 240 has pos 5 in block for kind 2
@@ -1599,7 +1651,9 @@ ALLOC RETURNING 5a
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 112 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 15, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  13  [2]:   0  [3]:   5  [4]:   0  [5]:   4  big:   4 
   free_or_new [0]:   0  [1]:  42  [2]:   1  [3]:  57  [4]:   0  [5]:  14 
 next_free_val [0]: ---  [1]:  5b^ [2]: ---  [3]:  c7^ [4]: ---  [5]:  98^
               00000000  0000001f  00000000  01ffffff  00000000  00000012 
@@ -1635,7 +1689,9 @@ sggc_collect: 5a now old_gen1
 sggc_look_at: 55 0
 sggc_look_at: 92 0
 sggc_collect: done
-  unused: 0, old_gen1: 21, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   2 
+    old gen 2 [0]:   0  [1]:  13  [2]:   0  [3]:   5  [4]:   0  [5]:   4  big:   4 
   free_or_new [0]:   0  [1]:  39  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
 next_free_val [0]: ---  [1]:  4c^ [2]: ---  [3]:  c7^ [4]: ---  [5]:  98^
               00000000  000fffff  00000000  01ffffff  00000000  00000012 
@@ -1685,13 +1741,13 @@ ALLOC RETURNING 5d
 ALLOCATING e, setting its contents to old e and d
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 120 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 21, old_gen2: 26, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   2 
+    old gen 2 [0]:   0  [1]:  13  [2]:   0  [3]:   5  [4]:   0  [5]:   4  big:   4 
   free_or_new [0]:   0  [1]:  39  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
 next_free_val [0]: ---  [1]:  5e^ [2]: ---  [3]:  ca^ [4]: ---  [5]:  9b^
               00000000  00000003  00000000  003fffff  00000000  00000002 
               00000000  ffffffff  00000000  ffffffff  00000000  49249249 
-sggc_collect: put 240 from old_gen1 in free
-sggc_collect: put 200 from old_gen1 in free
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 44 from old_gen1 in free
 sggc_collect: put 4b from old_gen1 in free
@@ -1704,13 +1760,15 @@ sggc_collect: put 57 from old_gen1 in free
 sggc_collect: put 58 from old_gen1 in free
 sggc_collect: put 59 from old_gen1 in free
 sggc_collect: put 5a from old_gen1 in free
+sggc_collect: put c2 from old_gen1 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put c8 from old_gen1 in free
 sggc_collect: put 8c from old_gen1 in free
 sggc_collect: put 8f from old_gen1 in free
 sggc_collect: put 92 from old_gen1 in free
 sggc_collect: put 95 from old_gen1 in free
-sggc_collect: put c2 from old_gen1 in free
-sggc_collect: put c5 from old_gen1 in free
-sggc_collect: put c8 from old_gen1 in free
+sggc_collect: put 240 from old_gen1 in free
+sggc_collect: put 200 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 5d 0
 sggc_look_at: will look at 5d
@@ -1786,12 +1844,14 @@ sggc_collect: 56 in old_gen1 now free
 sggc_collect: 57 in old_gen1 now free
 sggc_collect: 58 in old_gen1 now free
 sggc_collect: 5a in old_gen1 now free
-sggc_collect: 8c in old_gen1 now free
-sggc_collect: 8f in old_gen1 now free
 sggc_collect: c5 in old_gen1 now free
 sggc_collect: c8 in old_gen1 now free
+sggc_collect: 8c in old_gen1 now free
+sggc_collect: 8f in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 6, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  17  [2]:   0  [3]:   6  [4]:   0  [5]:   6  big:   6 
   free_or_new [0]:   0  [1]:  43  [2]:   0  [3]:  57  [4]:   0  [5]:  14 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  8c^
               00000000  ffffffff  00000000  07ffffff  00000000  00012492 
@@ -1835,9 +1895,9 @@ sggc_alloc: next_free_val[1]=56, next_free_bits[1]=000003ffffffff17
 ALLOC RETURNING 55
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 32 in use after:: 0x7fa5d9c04390
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04390
-test_calloc: 33 in use after:: 0x7fa5d9c043e0
+test_calloc: 32 in use after:: 0x7f9e75c038c0
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c038c0
+test_calloc: 33 in use after:: 0x7f9e75c03910
 sggc_alloc: created 280 in new segment
 sggc_alloc: aux1 block for 280 has pos 6 in block for kind 2
 sggc_alloc: aux2 block for 280 has pos 6 in block for kind 2
@@ -1848,7 +1908,9 @@ ITERATION 21
 ALLOCATING a, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 128 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 6, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  17  [2]:   0  [3]:   6  [4]:   0  [5]:   6  big:   6 
   free_or_new [0]:   0  [1]:  43  [2]:   1  [3]:  57  [4]:   0  [5]:  14 
 next_free_val [0]: ---  [1]:  56^ [2]: ---  [3]:  c7^ [4]: ---  [5]:  8f^
               00000000  000003ff  00000000  01ffffff  00000000  00002492 
@@ -1894,7 +1956,9 @@ sggc_collect: 40 now old_gen1
 sggc_look_at: 52 0
 sggc_look_at: c9 0
 sggc_collect: done
-  unused: 0, old_gen1: 14, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  17  [2]:   0  [3]:   6  [4]:   0  [5]:   6  big:   6 
   free_or_new [0]:   0  [1]:  38  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
 next_free_val [0]: ---  [1]:  56^ [2]: ---  [3]:  c7^ [4]: ---  [5]:  8f^
               00000000  000003ff  00000000  01ffffff  00000000  00002492 
@@ -1944,7 +2008,9 @@ ALLOC RETURNING 9b
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 136 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 14, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  17  [2]:   0  [3]:   6  [4]:   0  [5]:   6  big:   6 
   free_or_new [0]:   0  [1]:  38  [2]:   0  [3]:  56  [4]:   0  [5]:  13 
 next_free_val [0]: ---  [1]:  5f^ [2]: ---  [3]:  c8^ [4]: ---  [5]:  9e^
               00000000  00000001  00000000  00ffffff  00000000  00000000 
@@ -1985,7 +2051,9 @@ sggc_collect: 5e now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 21, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  13  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  17  [2]:   0  [3]:   6  [4]:   0  [5]:   6  big:   6 
   free_or_new [0]:   0  [1]:  34  [2]:   0  [3]:  55  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  c8^ [4]: ---  [5]:  9e^
               00000000  000000ff  00000000  00ffffff  00000000  00000000 
@@ -2035,23 +2103,13 @@ ALLOC RETURNING ca
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 144 ALLOCATIONS
 sggc_collect: level 2
-  unused: 0, old_gen1: 21, old_gen2: 35, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  13  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  17  [2]:   0  [3]:   6  [4]:   0  [5]:   6  big:   6 
   free_or_new [0]:   0  [1]:  34  [2]:   0  [3]:  55  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  63^ [2]: ---  [3]:  cb^ [4]: ---  [5]:  a1^
               00000000  00000000  00000000  001fffff  00000000  00000000 
               00000000  1fffffff  00000000  ffffffff  00000000  09249249 
-sggc_collect: put 200 from old_gen2 in free
-sggc_collect: put 240 from old_gen2 in free
-sggc_collect: put 1c0 from old_gen2 in free
-sggc_collect: put 180 from old_gen2 in free
-sggc_collect: put 140 from old_gen2 in free
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put c1 from old_gen2 in free
-sggc_collect: put c2 from old_gen2 in free
-sggc_collect: put c3 from old_gen2 in free
-sggc_collect: put c4 from old_gen2 in free
-sggc_collect: put c6 from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 41 from old_gen2 in free
 sggc_collect: put 42 from old_gen2 in free
 sggc_collect: put 43 from old_gen2 in free
@@ -2069,13 +2127,6 @@ sggc_collect: put 50 from old_gen2 in free
 sggc_collect: put 53 from old_gen2 in free
 sggc_collect: put 54 from old_gen2 in free
 sggc_collect: put 59 from old_gen2 in free
-sggc_collect: put 80 from old_gen2 in free
-sggc_collect: put 83 from old_gen2 in free
-sggc_collect: put 86 from old_gen2 in free
-sggc_collect: put 89 from old_gen2 in free
-sggc_collect: put 92 from old_gen2 in free
-sggc_collect: put 95 from old_gen2 in free
-sggc_collect: put 280 from old_gen1 in free
 sggc_collect: put 40 from old_gen1 in free
 sggc_collect: put 4b from old_gen1 in free
 sggc_collect: put 4c from old_gen1 in free
@@ -2089,13 +2140,32 @@ sggc_collect: put 5b from old_gen1 in free
 sggc_collect: put 5c from old_gen1 in free
 sggc_collect: put 5d from old_gen1 in free
 sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put c7 from old_gen1 in free
+sggc_collect: put c9 from old_gen1 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
 sggc_collect: put 8c from old_gen1 in free
 sggc_collect: put 8f from old_gen1 in free
 sggc_collect: put 98 from old_gen1 in free
 sggc_collect: put 9b from old_gen1 in free
-sggc_collect: put c5 from old_gen1 in free
-sggc_collect: put c7 from old_gen1 in free
-sggc_collect: put c9 from old_gen1 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 280 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 61 0
 sggc_look_at: will look at 61
@@ -2268,13 +2338,15 @@ sggc_collect: 5b in old_gen1 now free
 sggc_collect: 5c in old_gen1 now free
 sggc_collect: 5d in old_gen1 now free
 sggc_collect: 5e in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: c7 in old_gen1 now free
 sggc_collect: 8c in old_gen1 now free
 sggc_collect: 98 in old_gen1 now free
 sggc_collect: 9b in old_gen1 now free
-sggc_collect: c5 in old_gen1 now free
-sggc_collect: c7 in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 6, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   2  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  21  [2]:   0  [3]:   7  [4]:   0  [5]:   7  big:   7 
   free_or_new [0]:   0  [1]:  40  [2]:   0  [3]:  55  [4]:   0  [5]:  13 
 next_free_val [0]: ---  [1]:  4b^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  8c^
               00000000  001fffff  00000000  07ffffff  00000000  00012492 
@@ -2290,9 +2362,9 @@ sggc_alloc: next_free_val[1]=51, next_free_bits[1]=00007ffffffc7ce1
 ALLOC RETURNING 4c
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 34 in use after:: 0x7fa5d9c04420
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04420
-test_calloc: 35 in use after:: 0x7fa5d9c04470
+test_calloc: 34 in use after:: 0x7f9e75c03950
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03950
+test_calloc: 35 in use after:: 0x7f9e75c039a0
 sggc_alloc: created 2c0 in new segment
 sggc_alloc: aux1 block for 2c0 has pos 7 in block for kind 2
 sggc_alloc: aux2 block for 2c0 has pos 7 in block for kind 2
@@ -2328,7 +2400,9 @@ ALLOC RETURNING 57
 ALLOCATING e, setting its contents to old e and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 152 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 6, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   2  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  21  [2]:   0  [3]:   7  [4]:   0  [5]:   7  big:   7 
   free_or_new [0]:   0  [1]:  40  [2]:   1  [3]:  55  [4]:   0  [5]:  13 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  c7^ [4]: ---  [5]:  98^
               00000000  000000ff  00000000  01ffffff  00000000  00000012 
@@ -2369,7 +2443,9 @@ sggc_collect: 57 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 13, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   3  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  21  [2]:   0  [3]:   7  [4]:   0  [5]:   7  big:   7 
   free_or_new [0]:   0  [1]:  36  [2]:   0  [3]:  54  [4]:   0  [5]:  12 
 next_free_val [0]: ---  [1]:  4b^ [2]: ---  [3]:  c7^ [4]: ---  [5]:  98^
               00000000  001fffff  00000000  01ffffff  00000000  00000012 
@@ -2422,7 +2498,9 @@ ALLOC RETURNING 5e
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 160 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 13, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   3  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  21  [2]:   0  [3]:   7  [4]:   0  [5]:   7  big:   7 
   free_or_new [0]:   0  [1]:  36  [2]:   0  [3]:  54  [4]:   0  [5]:  12 
 next_free_val [0]: ---  [1]:  5f^ [2]: ---  [3]:  cb^ [4]: ---  [5]:  9b^
               00000000  00000001  00000000  001fffff  00000000  00000002 
@@ -2465,7 +2543,9 @@ sggc_collect: 5e now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 20, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  21  [2]:   0  [3]:   7  [4]:   0  [5]:   7  big:   7 
   free_or_new [0]:   0  [1]:  31  [2]:   0  [3]:  53  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  5c^ [2]: ---  [3]:  cb^ [4]: ---  [5]:  9b^
               00000000  0000000f  00000000  001fffff  00000000  00000002 
@@ -2496,9 +2576,9 @@ sggc_alloc: next_free_val[1]=64, next_free_bits[1]=000000000fffffff
 ALLOC RETURNING 63
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 36 in use after:: 0x7fa5d9c044b0
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c044b0
-test_calloc: 37 in use after:: 0x7fa5d9c04500
+test_calloc: 36 in use after:: 0x7f9e75c039e0
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c039e0
+test_calloc: 37 in use after:: 0x7f9e75c03a30
 sggc_alloc: created 300 in new segment
 sggc_alloc: aux1 block for 300 has pos 8 in block for kind 2
 sggc_alloc: aux2 block for 300 has pos 8 in block for kind 2
@@ -2519,12 +2599,13 @@ ALLOC RETURNING a1
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 168 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 20, old_gen2: 42, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   4  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  21  [2]:   0  [3]:   7  [4]:   0  [5]:   7  big:   7 
   free_or_new [0]:   0  [1]:  31  [2]:   1  [3]:  53  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  65^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  a4^
               00000000  00000000  00000000  000fffff  00000000  00000000 
               00000000  07ffffff  00000000  ffffffff  00000000  01249249 
-sggc_collect: put 2c0 from old_gen1 in free
 sggc_collect: put 4b from old_gen1 in free
 sggc_collect: put 4c from old_gen1 in free
 sggc_collect: put 51 from old_gen1 in free
@@ -2537,13 +2618,14 @@ sggc_collect: put 5e from old_gen1 in free
 sggc_collect: put 60 from old_gen1 in free
 sggc_collect: put 61 from old_gen1 in free
 sggc_collect: put 62 from old_gen1 in free
-sggc_collect: put 8c from old_gen1 in free
-sggc_collect: put 98 from old_gen1 in free
-sggc_collect: put 9e from old_gen1 in free
 sggc_collect: put c5 from old_gen1 in free
 sggc_collect: put c7 from old_gen1 in free
 sggc_collect: put c8 from old_gen1 in free
 sggc_collect: put ca from old_gen1 in free
+sggc_collect: put 8c from old_gen1 in free
+sggc_collect: put 98 from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put 2c0 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 64 0
 sggc_look_at: will look at 64
@@ -2621,12 +2703,14 @@ sggc_collect: 58 in old_gen1 now free
 sggc_collect: 5b in old_gen1 now free
 sggc_collect: 61 in old_gen1 now free
 sggc_collect: 62 in old_gen1 now free
-sggc_collect: 98 in old_gen1 now free
-sggc_collect: 9e in old_gen1 now free
 sggc_collect: c5 in old_gen1 now free
 sggc_collect: ca in old_gen1 now free
+sggc_collect: 98 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  26  [2]:   0  [3]:   9  [4]:   0  [5]:   8  big:   8 
   free_or_new [0]:   0  [1]:  35  [2]:   0  [3]:  54  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  51^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  98^
               00000000  00007fff  00000000  07ffffff  00000000  00000012 
@@ -2676,7 +2760,9 @@ ALLOC RETURNING ca
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 176 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 7, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  26  [2]:   0  [3]:   9  [4]:   0  [5]:   8  big:   8 
   free_or_new [0]:   0  [1]:  35  [2]:   0  [3]:  54  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  5f^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  9e^
               00000000  00000001  00000000  000fffff  00000000  00000000 
@@ -2709,7 +2795,9 @@ sggc_collect: 5b now old_gen1
 sggc_look_at: 58 0
 sggc_look_at: 98 0
 sggc_collect: done
-  unused: 0, old_gen1: 12, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  26  [2]:   0  [3]:   9  [4]:   0  [5]:   8  big:   8 
   free_or_new [0]:   0  [1]:  32  [2]:   0  [3]:  53  [4]:   0  [5]:  10 
 next_free_val [0]: ---  [1]:  51^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  9e^
               00000000  00007fff  00000000  07ffffff  00000000  00000000 
@@ -2759,7 +2847,9 @@ ALLOC RETURNING 65
 ALLOCATING VECTOR OF LENGTH 20
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 184 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 12, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   6  [2]:   0  [3]:   2  [4]:   0  [5]:   3  big:   1 
+    old gen 2 [0]:   0  [1]:  26  [2]:   0  [3]:   9  [4]:   0  [5]:   8  big:   8 
   free_or_new [0]:   0  [1]:  32  [2]:   0  [3]:  53  [4]:   0  [5]:  10 
 next_free_val [0]: ---  [1]:  66^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  a4^
               00000000  00000000  00000000  000fffff  00000000  00000000 
@@ -2802,15 +2892,17 @@ sggc_collect: 56 now old_gen1
 sggc_look_at: 57 0
 sggc_look_at: ca 0
 sggc_collect: done
-  unused: 0, old_gen1: 19, old_gen2: 51, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  26  [2]:   0  [3]:   9  [4]:   0  [5]:   8  big:   8 
   free_or_new [0]:   0  [1]:  27  [2]:   0  [3]:  52  [4]:   0  [5]:   9 
 next_free_val [0]: ---  [1]:  51^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  a4^
               00000000  00007fff  00000000  000fffff  00000000  00000000 
               00000000  ffe00001  00000000  ffffffff  00000000  01249249 
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 38 in use after:: 0x7fa5d9c04540
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04540
-test_calloc: 39 in use after:: 0x7fa5d9c04590
+test_calloc: 38 in use after:: 0x7f9e75c03a70
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03a70
+test_calloc: 39 in use after:: 0x7f9e75c03ac0
 sggc_alloc: created 340 in new segment
 sggc_alloc: aux1 block for 340 has pos 9 in block for kind 2
 sggc_alloc: aux2 block for 340 has pos 9 in block for kind 2
@@ -2859,28 +2951,13 @@ ALLOC RETURNING 69
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 192 ALLOCATIONS
 sggc_collect: level 2
-  unused: 0, old_gen1: 19, old_gen2: 51, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  26  [2]:   0  [3]:   9  [4]:   0  [5]:   8  big:   8 
   free_or_new [0]:   0  [1]:  27  [2]:   1  [3]:  52  [4]:   0  [5]:   9 
 next_free_val [0]: ---  [1]:  6a^ [2]: ---  [3]:  cd^ [4]: ---  [5]:  a7^
               00000000  00000000  00000000  0007ffff  00000000  00000000 
               00000000  003fffff  00000000  ffffffff  00000000  00249249 
-sggc_collect: put 2c0 from old_gen2 in free
-sggc_collect: put 280 from old_gen2 in free
-sggc_collect: put 200 from old_gen2 in free
-sggc_collect: put 240 from old_gen2 in free
-sggc_collect: put 1c0 from old_gen2 in free
-sggc_collect: put 180 from old_gen2 in free
-sggc_collect: put 140 from old_gen2 in free
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put c1 from old_gen2 in free
-sggc_collect: put c2 from old_gen2 in free
-sggc_collect: put c3 from old_gen2 in free
-sggc_collect: put c4 from old_gen2 in free
-sggc_collect: put c6 from old_gen2 in free
-sggc_collect: put c7 from old_gen2 in free
-sggc_collect: put c8 from old_gen2 in free
-sggc_collect: put c9 from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
 sggc_collect: put 41 from old_gen2 in free
 sggc_collect: put 42 from old_gen2 in free
@@ -2907,15 +2984,6 @@ sggc_collect: put 5a from old_gen2 in free
 sggc_collect: put 5d from old_gen2 in free
 sggc_collect: put 5e from old_gen2 in free
 sggc_collect: put 60 from old_gen2 in free
-sggc_collect: put 80 from old_gen2 in free
-sggc_collect: put 83 from old_gen2 in free
-sggc_collect: put 86 from old_gen2 in free
-sggc_collect: put 89 from old_gen2 in free
-sggc_collect: put 8c from old_gen2 in free
-sggc_collect: put 8f from old_gen2 in free
-sggc_collect: put 92 from old_gen2 in free
-sggc_collect: put 95 from old_gen2 in free
-sggc_collect: put 300 from old_gen1 in free
 sggc_collect: put 56 from old_gen1 in free
 sggc_collect: put 57 from old_gen1 in free
 sggc_collect: put 58 from old_gen1 in free
@@ -2927,13 +2995,39 @@ sggc_collect: put 62 from old_gen1 in free
 sggc_collect: put 63 from old_gen1 in free
 sggc_collect: put 64 from old_gen1 in free
 sggc_collect: put 65 from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put c5 from old_gen1 in free
+sggc_collect: put ca from old_gen1 in free
+sggc_collect: put cb from old_gen1 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 8c from old_gen2 in free
+sggc_collect: put 8f from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
 sggc_collect: put 98 from old_gen1 in free
 sggc_collect: put 9b from old_gen1 in free
 sggc_collect: put 9e from old_gen1 in free
 sggc_collect: put a1 from old_gen1 in free
-sggc_collect: put c5 from old_gen1 in free
-sggc_collect: put ca from old_gen1 in free
-sggc_collect: put cb from old_gen1 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 300 from old_gen1 in free
 sggc_collect: old->new for 65 (gen1)
 sggc_look_at: 56 1
 sggc_look_at: 340 1
@@ -3160,13 +3254,15 @@ sggc_collect: 5f in old_gen1 now free
 sggc_collect: 61 in old_gen1 now free
 sggc_collect: 62 in old_gen1 now free
 sggc_collect: 64 in old_gen1 now free
+sggc_collect: c5 in old_gen1 now free
+sggc_collect: cb in old_gen1 now free
 sggc_collect: 98 in old_gen1 now free
 sggc_collect: 9b in old_gen1 now free
 sggc_collect: 9e in old_gen1 now free
-sggc_collect: c5 in old_gen1 now free
-sggc_collect: cb in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  29  [2]:   0  [3]:  10  [4]:   0  [5]:   9  big:   9 
   free_or_new [0]:   0  [1]:  31  [2]:   0  [3]:  53  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  c5^ [4]: ---  [5]:  98^
               00000000  000000ff  00000000  07ffffff  00000000  00000012 
@@ -3216,7 +3312,9 @@ ALLOC RETURNING 5f
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 200 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 7, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  29  [2]:   0  [3]:  10  [4]:   0  [5]:   9  big:   9 
   free_or_new [0]:   0  [1]:  31  [2]:   0  [3]:  53  [4]:   0  [5]:  11 
 next_free_val [0]: ---  [1]:  61^ [2]: ---  [3]:  cb^ [4]: ---  [5]:  9e^
               00000000  00000000  00000000  001fffff  00000000  00000000 
@@ -3253,7 +3351,9 @@ sggc_collect: 5f now old_gen1
 sggc_look_at: 5e 0
 sggc_look_at: 9b 0
 sggc_collect: done
-  unused: 0, old_gen1: 12, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  29  [2]:   0  [3]:  10  [4]:   0  [5]:   9  big:   9 
   free_or_new [0]:   0  [1]:  28  [2]:   0  [3]:  52  [4]:   0  [5]:  10 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  cb^ [4]: ---  [5]:  98^
               00000000  000000ff  00000000  001fffff  00000000  00000012 
@@ -3274,9 +3374,9 @@ sggc_alloc: next_free_val[1]=61, next_free_bits[1]=000000007ffffe4b
 ALLOC RETURNING 5b
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 40 in use after:: 0x7fa5d9c045d0
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c045d0
-test_calloc: 41 in use after:: 0x7fa5d9c04620
+test_calloc: 40 in use after:: 0x7f9e75c03b00
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03b00
+test_calloc: 41 in use after:: 0x7f9e75c03b50
 sggc_alloc: created 380 in new segment
 sggc_alloc: aux1 block for 380 has pos 10 in block for kind 2
 sggc_alloc: aux2 block for 380 has pos 10 in block for kind 2
@@ -3307,7 +3407,9 @@ ALLOC RETURNING cd
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 208 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 12, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  29  [2]:   0  [3]:  10  [4]:   0  [5]:   9  big:   9 
   free_or_new [0]:   0  [1]:  28  [2]:   1  [3]:  52  [4]:   0  [5]:  10 
 next_free_val [0]: ---  [1]:  64^ [2]: ---  [3]:  ce^ [4]: ---  [5]:  9e^
               00000000  00000000  00000000  0003ffff  00000000  00000000 
@@ -3347,7 +3449,9 @@ sggc_collect: 62 now old_gen1
 sggc_look_at: 61 0
 sggc_look_at: 98 0
 sggc_collect: done
-  unused: 0, old_gen1: 18, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  10  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   2 
+    old gen 2 [0]:   0  [1]:  29  [2]:   0  [3]:  10  [4]:   0  [5]:   9  big:   9 
   free_or_new [0]:   0  [1]:  25  [2]:   0  [3]:  51  [4]:   0  [5]:   9 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  cb^ [4]: ---  [5]:  9e^
               00000000  000000ff  00000000  001fffff  00000000  00000000 
@@ -3400,13 +3504,13 @@ ITERATION 35
 ALLOCATING a, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 216 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 18, old_gen2: 57, old_to_new: 1, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 1, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  10  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   2 
+    old gen 2 [0]:   0  [1]:  29  [2]:   0  [3]:  10  [4]:   0  [5]:   9  big:   9 
   free_or_new [0]:   0  [1]:  25  [2]:   0  [3]:  51  [4]:   0  [5]:   9 
 next_free_val [0]: ---  [1]:  6d^ [2]: ---  [3]:  ce^ [4]: ---  [5]:  a7^
               00000000  00000000  00000000  0003ffff  00000000  00000000 
               00000000  0007ffff  00000000  ffffffff  00000000  00249249 
-sggc_collect: put 380 from old_gen1 in free
-sggc_collect: put 340 from old_gen1 in free
 sggc_collect: put 51 from old_gen1 in free
 sggc_collect: put 5b from old_gen1 in free
 sggc_collect: put 5c from old_gen1 in free
@@ -3417,12 +3521,14 @@ sggc_collect: put 62 from old_gen1 in free
 sggc_collect: put 66 from old_gen1 in free
 sggc_collect: put 68 from old_gen1 in free
 sggc_collect: put 69 from old_gen1 in free
-sggc_collect: put 98 from old_gen1 in free
-sggc_collect: put 9b from old_gen1 in free
-sggc_collect: put a4 from old_gen1 in free
 sggc_collect: put c5 from old_gen1 in free
 sggc_collect: put cc from old_gen1 in free
 sggc_collect: put cd from old_gen1 in free
+sggc_collect: put 98 from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put a4 from old_gen1 in free
+sggc_collect: put 380 from old_gen1 in free
+sggc_collect: put 340 from old_gen1 in free
 sggc_collect: old->new for 65 (gen2)
 sggc_look_at: 56 2
 sggc_look_at: 340 2
@@ -3501,11 +3607,13 @@ sggc_collect: 61 in old_gen1 now free
 sggc_collect: 62 in old_gen1 now free
 sggc_collect: 66 in old_gen1 now free
 sggc_collect: 69 in old_gen1 now free
-sggc_collect: 9b in old_gen1 now free
 sggc_collect: cc in old_gen1 now free
 sggc_collect: cd in old_gen1 now free
+sggc_collect: 9b in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   5  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  32  [2]:   0  [3]:  11  [4]:   0  [5]:  11  big:  11 
   free_or_new [0]:   0  [1]:  27  [2]:   0  [3]:  52  [4]:   0  [5]:   9 
 next_free_val [0]: ---  [1]:  51^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  9b^
               00000000  00007fff  00000000  000fffff  00000000  00000002 
@@ -3541,9 +3649,9 @@ sggc_alloc: next_free_val[1]=61, next_free_bits[1]=000000007ffff123
 ALLOC RETURNING 5f
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 42 in use after:: 0x7fa5d9c04660
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04660
-test_calloc: 43 in use after:: 0x7fa5d9c046b0
+test_calloc: 42 in use after:: 0x7f9e75c03b90
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03b90
+test_calloc: 43 in use after:: 0x7f9e75c03be0
 sggc_alloc: created 3c0 in new segment
 sggc_alloc: aux1 block for 3c0 has pos 11 in block for kind 2
 sggc_alloc: aux2 block for 3c0 has pos 11 in block for kind 2
@@ -3559,7 +3667,9 @@ ALLOC RETURNING 61
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 224 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 7, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   5  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  32  [2]:   0  [3]:  11  [4]:   0  [5]:  11  big:  11 
   free_or_new [0]:   0  [1]:  27  [2]:   1  [3]:  52  [4]:   0  [5]:   9 
 next_free_val [0]: ---  [1]:  62^ [2]: ---  [3]:  cd^ [4]: ---  [5]:  a7^
               00000000  00000000  00000000  0007ffff  00000000  00000000 
@@ -3600,7 +3710,9 @@ sggc_collect: 61 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 14, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  32  [2]:   0  [3]:  11  [4]:   0  [5]:  11  big:  11 
   free_or_new [0]:   0  [1]:  23  [2]:   0  [3]:  51  [4]:   0  [5]:   8 
 next_free_val [0]: ---  [1]:  5e^ [2]: ---  [3]:  cd^ [4]: ---  [5]:  a7^
               00000000  00000003  00000000  0007ffff  00000000  00000000 
@@ -3650,7 +3762,9 @@ ALLOC RETURNING 6d
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 232 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 14, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  32  [2]:   0  [3]:  11  [4]:   0  [5]:  11  big:  11 
   free_or_new [0]:   0  [1]:  23  [2]:   0  [3]:  51  [4]:   0  [5]:   8 
 next_free_val [0]: ---  [1]:  6e^ [2]: ---  [3]:  ce^ [4]: ---  [5]:  ad^
               00000000  00000000  00000000  0003ffff  00000000  00000000 
@@ -3686,7 +3800,9 @@ sggc_collect: 6d now old_gen1
 sggc_look_at: 69 0
 sggc_look_at: aa 0
 sggc_collect: done
-  unused: 0, old_gen1: 20, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  32  [2]:   0  [3]:  11  [4]:   0  [5]:  11  big:  11 
   free_or_new [0]:   0  [1]:  20  [2]:   0  [3]:  50  [4]:   0  [5]:   6 
 next_free_val [0]: ---  [1]:  5e^ [2]: ---  [3]:  ce^ [4]: ---  [5]:  ad^
               00000000  00000003  00000000  0003ffff  00000000  00000000 
@@ -3736,33 +3852,13 @@ ALLOC RETURNING 70
 ALLOCATING e, setting its contents to old e and vec length 20
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 240 ALLOCATIONS
 sggc_collect: level 2
-  unused: 0, old_gen1: 20, old_gen2: 65, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  32  [2]:   0  [3]:  11  [4]:   0  [5]:  11  big:  11 
   free_or_new [0]:   0  [1]:  20  [2]:   0  [3]:  50  [4]:   0  [5]:   6 
 next_free_val [0]: ---  [1]:  71^ [2]: ---  [3]:  d0^ [4]: ---  [5]:  b0^
               00000000  00000000  00000000  0000ffff  00000000  00000000 
               00000000  00007fff  00000000  ffffffff  00000000  00001249 
-sggc_collect: put 340 from old_gen2 in free
-sggc_collect: put 380 from old_gen2 in free
-sggc_collect: put 300 from old_gen2 in free
-sggc_collect: put 2c0 from old_gen2 in free
-sggc_collect: put 280 from old_gen2 in free
-sggc_collect: put 200 from old_gen2 in free
-sggc_collect: put 240 from old_gen2 in free
-sggc_collect: put 1c0 from old_gen2 in free
-sggc_collect: put 180 from old_gen2 in free
-sggc_collect: put 140 from old_gen2 in free
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put c1 from old_gen2 in free
-sggc_collect: put c2 from old_gen2 in free
-sggc_collect: put c3 from old_gen2 in free
-sggc_collect: put c4 from old_gen2 in free
-sggc_collect: put c5 from old_gen2 in free
-sggc_collect: put c6 from old_gen2 in free
-sggc_collect: put c7 from old_gen2 in free
-sggc_collect: put c8 from old_gen2 in free
-sggc_collect: put c9 from old_gen2 in free
-sggc_collect: put ca from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
 sggc_collect: put 41 from old_gen2 in free
 sggc_collect: put 42 from old_gen2 in free
@@ -3795,18 +3891,6 @@ sggc_collect: put 60 from old_gen2 in free
 sggc_collect: put 63 from old_gen2 in free
 sggc_collect: put 65 from old_gen2 in free
 sggc_collect: put 68 from old_gen2 in free
-sggc_collect: put 80 from old_gen2 in free
-sggc_collect: put 83 from old_gen2 in free
-sggc_collect: put 86 from old_gen2 in free
-sggc_collect: put 89 from old_gen2 in free
-sggc_collect: put 8c from old_gen2 in free
-sggc_collect: put 8f from old_gen2 in free
-sggc_collect: put 92 from old_gen2 in free
-sggc_collect: put 95 from old_gen2 in free
-sggc_collect: put 98 from old_gen2 in free
-sggc_collect: put a1 from old_gen2 in free
-sggc_collect: put a4 from old_gen2 in free
-sggc_collect: put 3c0 from old_gen1 in free
 sggc_collect: put 51 from old_gen1 in free
 sggc_collect: put 58 from old_gen1 in free
 sggc_collect: put 5f from old_gen1 in free
@@ -3819,13 +3903,47 @@ sggc_collect: put 6a from old_gen1 in free
 sggc_collect: put 6b from old_gen1 in free
 sggc_collect: put 6c from old_gen1 in free
 sggc_collect: put 6d from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c5 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put ca from old_gen2 in free
+sggc_collect: put cb from old_gen1 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put cd from old_gen1 in free
+sggc_collect: put 80 from old_gen2 in free
+sggc_collect: put 83 from old_gen2 in free
+sggc_collect: put 86 from old_gen2 in free
+sggc_collect: put 89 from old_gen2 in free
+sggc_collect: put 8c from old_gen2 in free
+sggc_collect: put 8f from old_gen2 in free
+sggc_collect: put 92 from old_gen2 in free
+sggc_collect: put 95 from old_gen2 in free
+sggc_collect: put 98 from old_gen2 in free
+sggc_collect: put a1 from old_gen2 in free
+sggc_collect: put a4 from old_gen2 in free
 sggc_collect: put 9b from old_gen1 in free
 sggc_collect: put 9e from old_gen1 in free
 sggc_collect: put a7 from old_gen1 in free
 sggc_collect: put aa from old_gen1 in free
-sggc_collect: put cb from old_gen1 in free
-sggc_collect: put cc from old_gen1 in free
-sggc_collect: put cd from old_gen1 in free
+sggc_collect: put 340 from old_gen2 in free
+sggc_collect: put 380 from old_gen2 in free
+sggc_collect: put 300 from old_gen2 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 3c0 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 70 0
 sggc_look_at: will look at 70
@@ -4092,13 +4210,15 @@ sggc_collect: 69 in old_gen1 now free
 sggc_collect: 6a in old_gen1 now free
 sggc_collect: 6b in old_gen1 now free
 sggc_collect: 6d in old_gen1 now free
+sggc_collect: cc in old_gen1 now free
+sggc_collect: cd in old_gen1 now free
 sggc_collect: 9b in old_gen1 now free
 sggc_collect: 9e in old_gen1 now free
 sggc_collect: aa in old_gen1 now free
-sggc_collect: cc in old_gen1 now free
-sggc_collect: cd in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   2  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  36  [2]:   0  [3]:  12  [4]:   0  [5]:  12  big:  12 
   free_or_new [0]:   0  [1]:  24  [2]:   0  [3]:  50  [4]:   0  [5]:   8 
 next_free_val [0]: ---  [1]:  51^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  9b^
               00000000  00007fff  00000000  000fffff  00000000  00000002 
@@ -4109,9 +4229,9 @@ sggc_alloc: next_free_val[1]=58, next_free_bits[1]=000000fffe2e8241
 ALLOC RETURNING 51
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 44 in use after:: 0x7fa5d9c046f0
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c046f0
-test_calloc: 45 in use after:: 0x7fa5d9c04740
+test_calloc: 44 in use after:: 0x7f9e75c03c20
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03c20
+test_calloc: 45 in use after:: 0x7f9e75c03c70
 sggc_alloc: created 400 in new segment
 sggc_alloc: aux1 block for 400 has pos 12 in block for kind 2
 sggc_alloc: aux2 block for 400 has pos 12 in block for kind 2
@@ -4155,7 +4275,9 @@ ITERATION 40
 ALLOCATING a, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 248 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 7, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   2  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  36  [2]:   0  [3]:  12  [4]:   0  [5]:  12  big:  12 
   free_or_new [0]:   0  [1]:  24  [2]:   1  [3]:  50  [4]:   0  [5]:   8 
 next_free_val [0]: ---  [1]:  69^ [2]: ---  [3]:  cd^ [4]: ---  [5]:  9e^
               00000000  00000000  00000000  0007ffff  00000000  00000000 
@@ -4201,7 +4323,9 @@ sggc_look_at: will look at 400
 sggc_collect: looking at 400
 sggc_collect: 400 now old_gen1
 sggc_collect: done
-  unused: 0, old_gen1: 15, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   3  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  36  [2]:   0  [3]:  12  [4]:   0  [5]:  12  big:  12 
   free_or_new [0]:   0  [1]:  19  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
 next_free_val [0]: ---  [1]:  69^ [2]: ---  [3]:  cd^ [4]: ---  [5]:  9e^
               00000000  00000000  00000000  0007ffff  00000000  00000000 
@@ -4251,7 +4375,9 @@ ALLOC RETURNING aa
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 256 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 15, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   9  [2]:   0  [3]:   3  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  36  [2]:   0  [3]:  12  [4]:   0  [5]:  12  big:  12 
   free_or_new [0]:   0  [1]:  19  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
 next_free_val [0]: ---  [1]:  72^ [2]: ---  [3]:  d0^ [4]: ---  [5]:  b0^
               00000000  00000000  00000000  0000ffff  00000000  00000000 
@@ -4292,7 +4418,9 @@ sggc_collect: 71 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 22, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  13  [2]:   0  [3]:   4  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  36  [2]:   0  [3]:  12  [4]:   0  [5]:  12  big:  12 
   free_or_new [0]:   0  [1]:  15  [2]:   0  [3]:  48  [4]:   0  [5]:   5 
 next_free_val [0]: ---  [1]:  6b^ [2]: ---  [3]:  d0^ [4]: ---  [5]:  b0^
               00000000  00000000  00000000  0000ffff  00000000  00000000 
@@ -4318,9 +4446,9 @@ sggc_alloc: next_free_val[1]=74, next_free_bits[1]=0000000000000fff
 ALLOC RETURNING 73
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 46 in use after:: 0x7fa5d9c04780
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04780
-test_calloc: 47 in use after:: 0x7fa5d9c047d0
+test_calloc: 46 in use after:: 0x7f9e75c03cb0
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03cb0
+test_calloc: 47 in use after:: 0x7f9e75c03d00
 sggc_alloc: created 440 in new segment
 sggc_alloc: aux1 block for 440 has pos 13 in block for kind 2
 sggc_alloc: aux2 block for 440 has pos 13 in block for kind 2
@@ -4346,12 +4474,13 @@ ALLOC RETURNING 75
 ALLOCATING d, setting contents to 7777
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 264 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 22, old_gen2: 72, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  13  [2]:   0  [3]:   4  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  36  [2]:   0  [3]:  12  [4]:   0  [5]:  12  big:  12 
   free_or_new [0]:   0  [1]:  15  [2]:   1  [3]:  48  [4]:   0  [5]:   5 
 next_free_val [0]: ---  [1]:  76^ [2]: ---  [3]:  d1^ [4]: ---  [5]:  b3^
               00000000  00000000  00000000  00007fff  00000000  00000000 
               00000000  000003ff  00000000  ffffffff  00000000  00000249 
-sggc_collect: put 400 from old_gen1 in free
 sggc_collect: put 51 from old_gen1 in free
 sggc_collect: put 58 from old_gen1 in free
 sggc_collect: put 5e from old_gen1 in free
@@ -4365,14 +4494,15 @@ sggc_collect: put 6e from old_gen1 in free
 sggc_collect: put 6f from old_gen1 in free
 sggc_collect: put 70 from old_gen1 in free
 sggc_collect: put 71 from old_gen1 in free
-sggc_collect: put 9b from old_gen1 in free
-sggc_collect: put 9e from old_gen1 in free
-sggc_collect: put aa from old_gen1 in free
-sggc_collect: put ad from old_gen1 in free
 sggc_collect: put cc from old_gen1 in free
 sggc_collect: put cd from old_gen1 in free
 sggc_collect: put ce from old_gen1 in free
 sggc_collect: put cf from old_gen1 in free
+sggc_collect: put 9b from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put aa from old_gen1 in free
+sggc_collect: put ad from old_gen1 in free
+sggc_collect: put 400 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 74 0
 sggc_look_at: will look at 74
@@ -4444,13 +4574,15 @@ sggc_collect: 6e in old_gen1 now free
 sggc_collect: 6f in old_gen1 now free
 sggc_collect: 70 in old_gen1 now free
 sggc_collect: 71 in old_gen1 now free
+sggc_collect: cc in old_gen1 now free
+sggc_collect: cf in old_gen1 now free
 sggc_collect: 9e in old_gen1 now free
 sggc_collect: aa in old_gen1 now free
 sggc_collect: ad in old_gen1 now free
-sggc_collect: cc in old_gen1 now free
-sggc_collect: cf in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 6, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  40  [2]:   0  [3]:  14  [4]:   0  [5]:  13  big:  13 
   free_or_new [0]:   0  [1]:  21  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  9e^
               00000000  000000ff  00000000  000fffff  00000000  00000000 
@@ -4500,7 +4632,9 @@ ALLOC RETURNING 6a
 ALLOCATING e, setting its contents to old e and d
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 272 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 6, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   3  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   1 
+    old gen 2 [0]:   0  [1]:  40  [2]:   0  [3]:  14  [4]:   0  [5]:  13  big:  13 
   free_or_new [0]:   0  [1]:  21  [2]:   0  [3]:  49  [4]:   0  [5]:   7 
 next_free_val [0]: ---  [1]:  6b^ [2]: ---  [3]:  d1^ [4]: ---  [5]:  aa^
               00000000  00000000  00000000  00007fff  00000000  00000000 
@@ -4538,7 +4672,9 @@ sggc_collect: 6a now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 12, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  40  [2]:   0  [3]:  14  [4]:   0  [5]:  13  big:  13 
   free_or_new [0]:   0  [1]:  17  [2]:   0  [3]:  48  [4]:   0  [5]:   6 
 next_free_val [0]: ---  [1]:  58^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  aa^
               00000000  000000ff  00000000  000fffff  00000000  00000000 
@@ -4582,9 +4718,9 @@ sggc_alloc: next_free_val[1]=71, next_free_bits[1]=0000000000007fe3
 ALLOC RETURNING 70
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 48 in use after:: 0x7fa5d9c04810
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04810
-test_calloc: 49 in use after:: 0x7fa5d9c04860
+test_calloc: 48 in use after:: 0x7f9e75c03d40
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03d40
+test_calloc: 49 in use after:: 0x7f9e75c03d90
 sggc_alloc: created 480 in new segment
 sggc_alloc: aux1 block for 480 has pos 14 in block for kind 2
 sggc_alloc: aux2 block for 480 has pos 14 in block for kind 2
@@ -4595,7 +4731,9 @@ ITERATION 45
 ALLOCATING a, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 280 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 12, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   2  [4]:   0  [5]:   2  big:   1 
+    old gen 2 [0]:   0  [1]:  40  [2]:   0  [3]:  14  [4]:   0  [5]:  13  big:  13 
   free_or_new [0]:   0  [1]:  17  [2]:   1  [3]:  48  [4]:   0  [5]:   6 
 next_free_val [0]: ---  [1]:  71^ [2]: ---  [3]:  d1^ [4]: ---  [5]:  ad^
               00000000  00000000  00000000  00007fff  00000000  00000000 
@@ -4641,7 +4779,9 @@ sggc_collect: 58 now old_gen1
 sggc_look_at: 5e 0
 sggc_look_at: cf 0
 sggc_collect: done
-  unused: 0, old_gen1: 20, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   2 
+    old gen 2 [0]:   0  [1]:  40  [2]:   0  [3]:  14  [4]:   0  [5]:  13  big:  13 
   free_or_new [0]:   0  [1]:  12  [2]:   0  [3]:  47  [4]:   0  [5]:   5 
 next_free_val [0]: ---  [1]:  71^ [2]: ---  [3]:  d1^ [4]: ---  [5]:  ad^
               00000000  00000000  00000000  00007fff  00000000  00000000 
@@ -4691,38 +4831,13 @@ ALLOC RETURNING b3
 ALLOCATING c, setting its contents to a and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 288 ALLOCATIONS
 sggc_collect: level 2
-  unused: 0, old_gen1: 20, old_gen2: 80, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  12  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   2 
+    old gen 2 [0]:   0  [1]:  40  [2]:   0  [3]:  14  [4]:   0  [5]:  13  big:  13 
   free_or_new [0]:   0  [1]:  12  [2]:   0  [3]:  47  [4]:   0  [5]:   5 
 next_free_val [0]: ---  [1]:  79^ [2]: ---  [3]:  d2^ [4]: ---  [5]:  b6^
               00000000  00000000  00000000  00003fff  00000000  00000000 
               00000000  0000007f  00000000  ffffffff  00000000  00000049 
-sggc_collect: put 400 from old_gen2 in free
-sggc_collect: put 3c0 from old_gen2 in free
-sggc_collect: put 340 from old_gen2 in free
-sggc_collect: put 380 from old_gen2 in free
-sggc_collect: put 300 from old_gen2 in free
-sggc_collect: put 2c0 from old_gen2 in free
-sggc_collect: put 280 from old_gen2 in free
-sggc_collect: put 200 from old_gen2 in free
-sggc_collect: put 240 from old_gen2 in free
-sggc_collect: put 1c0 from old_gen2 in free
-sggc_collect: put 180 from old_gen2 in free
-sggc_collect: put 140 from old_gen2 in free
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put c1 from old_gen2 in free
-sggc_collect: put c2 from old_gen2 in free
-sggc_collect: put c3 from old_gen2 in free
-sggc_collect: put c4 from old_gen2 in free
-sggc_collect: put c5 from old_gen2 in free
-sggc_collect: put c6 from old_gen2 in free
-sggc_collect: put c7 from old_gen2 in free
-sggc_collect: put c8 from old_gen2 in free
-sggc_collect: put c9 from old_gen2 in free
-sggc_collect: put ca from old_gen2 in free
-sggc_collect: put cb from old_gen2 in free
-sggc_collect: put cd from old_gen2 in free
-sggc_collect: put ce from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
 sggc_collect: put 41 from old_gen2 in free
 sggc_collect: put 42 from old_gen2 in free
@@ -4763,6 +4878,35 @@ sggc_collect: put 67 from old_gen2 in free
 sggc_collect: put 68 from old_gen2 in free
 sggc_collect: put 6c from old_gen2 in free
 sggc_collect: put 6d from old_gen2 in free
+sggc_collect: put 58 from old_gen1 in free
+sggc_collect: put 5e from old_gen1 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 69 from old_gen1 in free
+sggc_collect: put 6a from old_gen1 in free
+sggc_collect: put 6b from old_gen1 in free
+sggc_collect: put 6e from old_gen1 in free
+sggc_collect: put 6f from old_gen1 in free
+sggc_collect: put 70 from old_gen1 in free
+sggc_collect: put 73 from old_gen1 in free
+sggc_collect: put 74 from old_gen1 in free
+sggc_collect: put 75 from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c5 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put ca from old_gen2 in free
+sggc_collect: put cb from old_gen2 in free
+sggc_collect: put cd from old_gen2 in free
+sggc_collect: put ce from old_gen2 in free
+sggc_collect: put cc from old_gen1 in free
+sggc_collect: put cf from old_gen1 in free
+sggc_collect: put d0 from old_gen1 in free
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 83 from old_gen2 in free
 sggc_collect: put 86 from old_gen2 in free
@@ -4776,26 +4920,24 @@ sggc_collect: put 9b from old_gen2 in free
 sggc_collect: put a1 from old_gen2 in free
 sggc_collect: put a4 from old_gen2 in free
 sggc_collect: put a7 from old_gen2 in free
-sggc_collect: put 480 from old_gen1 in free
-sggc_collect: put 440 from old_gen1 in free
-sggc_collect: put 58 from old_gen1 in free
-sggc_collect: put 5e from old_gen1 in free
-sggc_collect: put 61 from old_gen1 in free
-sggc_collect: put 69 from old_gen1 in free
-sggc_collect: put 6a from old_gen1 in free
-sggc_collect: put 6b from old_gen1 in free
-sggc_collect: put 6e from old_gen1 in free
-sggc_collect: put 6f from old_gen1 in free
-sggc_collect: put 70 from old_gen1 in free
-sggc_collect: put 73 from old_gen1 in free
-sggc_collect: put 74 from old_gen1 in free
-sggc_collect: put 75 from old_gen1 in free
 sggc_collect: put 9e from old_gen1 in free
 sggc_collect: put aa from old_gen1 in free
 sggc_collect: put b0 from old_gen1 in free
-sggc_collect: put cc from old_gen1 in free
-sggc_collect: put cf from old_gen1 in free
-sggc_collect: put d0 from old_gen1 in free
+sggc_collect: put 400 from old_gen2 in free
+sggc_collect: put 3c0 from old_gen2 in free
+sggc_collect: put 340 from old_gen2 in free
+sggc_collect: put 380 from old_gen2 in free
+sggc_collect: put 300 from old_gen2 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
+sggc_collect: put 480 from old_gen1 in free
+sggc_collect: put 440 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 78 0
 sggc_look_at: will look at 78
@@ -5111,12 +5253,14 @@ sggc_collect: 6e in old_gen1 now free
 sggc_collect: 6f in old_gen1 now free
 sggc_collect: 74 in old_gen1 now free
 sggc_collect: 75 in old_gen1 now free
-sggc_collect: 9e in old_gen1 now free
-sggc_collect: aa in old_gen1 now free
 sggc_collect: cc in old_gen1 now free
 sggc_collect: d0 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: aa in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   2  big:   0 
+    old gen 2 [0]:   0  [1]:  44  [2]:   0  [3]:  15  [4]:   0  [5]:  14  big:  15 
   free_or_new [0]:   0  [1]:  16  [2]:   0  [3]:  48  [4]:   0  [5]:   5 
 next_free_val [0]: ---  [1]:  61^ [2]: ---  [3]:  cc^ [4]: ---  [5]:  9e^
               00000000  00000000  00000000  000fffff  00000000  00000000 
@@ -5166,7 +5310,9 @@ ALLOC RETURNING d0
 ALLOCATING a AGAIN, leaving contents as nil
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 296 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 7, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   4  [2]:   0  [3]:   1  [4]:   0  [5]:   2  big:   0 
+    old gen 2 [0]:   0  [1]:  44  [2]:   0  [3]:  15  [4]:   0  [5]:  14  big:  15 
   free_or_new [0]:   0  [1]:  16  [2]:   0  [3]:  48  [4]:   0  [5]:   5 
 next_free_val [0]: ---  [1]:  6f^ [2]: ---  [3]:  d2^ [4]: ---  [5]:  aa^
               00000000  00000000  00000000  00003fff  00000000  00000000 
@@ -5202,7 +5348,9 @@ sggc_collect: 6e now old_gen1
 sggc_look_at: 6b 0
 sggc_look_at: 9e 0
 sggc_collect: done
-  unused: 0, old_gen1: 13, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   0 
+    old gen 2 [0]:   0  [1]:  44  [2]:   0  [3]:  15  [4]:   0  [5]:  14  big:  15 
   free_or_new [0]:   0  [1]:  13  [2]:   0  [3]:  46  [4]:   0  [5]:   4 
 next_free_val [0]: ---  [1]:  61^ [2]: ---  [3]:  d2^ [4]: ---  [5]:  aa^
               00000000  00000000  00000000  00003fff  00000000  00000000 
@@ -5218,9 +5366,9 @@ sggc_alloc: next_free_val[1]=6f, next_free_bits[1]=000000000001fce1
 ALLOC RETURNING 69
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 50 in use after:: 0x7fa5d9c048a0
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c048a0
-test_calloc: 51 in use after:: 0x7fa5d9c048f0
+test_calloc: 50 in use after:: 0x7f9e75c03dd0
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03dd0
+test_calloc: 51 in use after:: 0x7f9e75c03e20
 sggc_alloc: created 4c0 in new segment
 sggc_alloc: aux1 block for 4c0 has pos 15 in block for kind 2
 sggc_alloc: aux2 block for 4c0 has pos 15 in block for kind 2
@@ -5256,7 +5404,9 @@ ALLOC RETURNING 75
 ALLOCATING e, setting its contents to old e and b
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 304 ALLOCATIONS
 sggc_collect: level 0
-  unused: 0, old_gen1: 13, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   7  [2]:   0  [3]:   3  [4]:   0  [5]:   3  big:   0 
+    old gen 2 [0]:   0  [1]:  44  [2]:   0  [3]:  15  [4]:   0  [5]:  14  big:  15 
   free_or_new [0]:   0  [1]:  13  [2]:   1  [3]:  46  [4]:   0  [5]:   4 
 next_free_val [0]: ---  [1]:  76^ [2]: ---  [3]:  d3^ [4]: ---  [5]:  b6^
               00000000  00000000  00000000  00001fff  00000000  00000000 
@@ -5297,7 +5447,9 @@ sggc_collect: 75 now old_gen1
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_collect: done
-  unused: 0, old_gen1: 20, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   4  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  44  [2]:   0  [3]:  15  [4]:   0  [5]:  14  big:  15 
   free_or_new [0]:   0  [1]:   9  [2]:   0  [3]:  45  [4]:   0  [5]:   3 
 next_free_val [0]: ---  [1]:  61^ [2]: ---  [3]:  d3^ [4]: ---  [5]:  b6^
               00000000  00000000  00000000  00001fff  00000000  00000000 
@@ -5350,12 +5502,13 @@ ALLOC RETURNING 7c
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 ABOUT TO CALL sggc_collect IN ALLOC DUE TO 312 ALLOCATIONS
 sggc_collect: level 1
-  unused: 0, old_gen1: 20, old_gen2: 88, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:  11  [2]:   0  [3]:   4  [4]:   0  [5]:   4  big:   1 
+    old gen 2 [0]:   0  [1]:  44  [2]:   0  [3]:  15  [4]:   0  [5]:  14  big:  15 
   free_or_new [0]:   0  [1]:   9  [2]:   0  [3]:  45  [4]:   0  [5]:   3 
 next_free_val [0]: ---  [1]:  7d^ [2]: ---  [3]:  d4^ [4]: ---  [5]:  b9^
               00000000  00000000  00000000  00000fff  00000000  00000000 
               00000000  00000007  00000000  ffffffff  00000000  00000009 
-sggc_collect: put 4c0 from old_gen1 in free
 sggc_collect: put 69 from old_gen1 in free
 sggc_collect: put 6a from old_gen1 in free
 sggc_collect: put 6b from old_gen1 in free
@@ -5367,14 +5520,15 @@ sggc_collect: put 74 from old_gen1 in free
 sggc_collect: put 75 from old_gen1 in free
 sggc_collect: put 77 from old_gen1 in free
 sggc_collect: put 78 from old_gen1 in free
-sggc_collect: put 9e from old_gen1 in free
-sggc_collect: put aa from old_gen1 in free
-sggc_collect: put ad from old_gen1 in free
-sggc_collect: put b3 from old_gen1 in free
 sggc_collect: put cc from old_gen1 in free
 sggc_collect: put d0 from old_gen1 in free
 sggc_collect: put d1 from old_gen1 in free
 sggc_collect: put d2 from old_gen1 in free
+sggc_collect: put 9e from old_gen1 in free
+sggc_collect: put aa from old_gen1 in free
+sggc_collect: put ad from old_gen1 in free
+sggc_collect: put b3 from old_gen1 in free
+sggc_collect: put 4c0 from old_gen1 in free
 sggc_look_at: 0 0
 sggc_look_at: 7c 0
 sggc_look_at: will look at 7c
@@ -5447,13 +5601,15 @@ sggc_collect: 72 in old_gen1 now free
 sggc_collect: 74 in old_gen1 now free
 sggc_collect: 75 in old_gen1 now free
 sggc_collect: 78 in old_gen1 now free
-sggc_collect: 9e in old_gen1 now free
-sggc_collect: b3 in old_gen1 now free
 sggc_collect: d0 in old_gen1 now free
 sggc_collect: d1 in old_gen1 now free
 sggc_collect: d2 in old_gen1 now free
+sggc_collect: 9e in old_gen1 now free
+sggc_collect: b3 in old_gen1 now free
 sggc_collect: done
-  unused: 0, old_gen1: 7, old_gen2: 95, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   5  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  47  [2]:   0  [3]:  16  [4]:   0  [5]:  16  big:  16 
   free_or_new [0]:   0  [1]:  12  [2]:   0  [3]:  47  [4]:   0  [5]:   4 
 next_free_val [0]: ---  [1]:  6b^ [2]: ---  [3]:  d0^ [4]: ---  [5]:  9e^
               00000000  00000000  00000000  0000ffff  00000000  00000000 
@@ -5484,9 +5640,9 @@ sggc_alloc: next_free_val[1]=71, next_free_bits[1]=000000000000729b
 ALLOC RETURNING 6f
 ALLOCATING VECTOR OF LENGTH 20
 sggc_alloc: type 2, length 20, kind 2
-test_calloc: 52 in use after:: 0x7fa5d9c04930
-sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7fa5d9c04930
-test_calloc: 53 in use after:: 0x7fa5d9c04980
+test_calloc: 52 in use after:: 0x7f9e75c03e60
+sggc_alloc: called alloc_zeroed for data (big 2, 5 chunks):: 0x7f9e75c03e60
+test_calloc: 53 in use after:: 0x7f9e75c03eb0
 sggc_alloc: created 500 in new segment
 sggc_alloc: aux1 block for 500 has pos 16 in block for kind 2
 sggc_alloc: aux2 block for 500 has pos 16 in block for kind 2
@@ -5498,51 +5654,19 @@ SGGC_INFO:  gen0: 6, gen1: 7, gen2: 95, big chunks: 5
 
 FINAL YOUNGEST:  nil 0, a 1, b 1, c 1, d 1, e 1
 
-FINAL OLDEST:  nil 1, a 0, b 0, c 0, d 0, e 0
-
 FINAL LENGTHS:  nil   0, a   2, b  10, c   2, d   1, e   2
 FINAL SEQNUMS:  nil   0, a 314, b 311, c 312, d 313, e 315
 
 COLLECTING EVERYTHING EXCEPT nil
 
 sggc_collect: level 2
-  unused: 0, old_gen1: 7, old_gen2: 95, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 0, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   5  [2]:   0  [3]:   1  [4]:   0  [5]:   1  big:   0 
+    old gen 2 [0]:   0  [1]:  47  [2]:   0  [3]:  16  [4]:   0  [5]:  16  big:  16 
   free_or_new [0]:   0  [1]:  12  [2]:   1  [3]:  47  [4]:   0  [5]:   4 
 next_free_val [0]: ---  [1]:  71^ [2]: ---  [3]:  d1^ [4]: ---  [5]:  b3^
               00000000  00000000  00000000  00007fff  00000000  00000000 
               00000000  0000729b  00000000  fffffffb  00000000  00000241 
-sggc_collect: put 4c0 from old_gen2 in free
-sggc_collect: put 440 from old_gen2 in free
-sggc_collect: put 480 from old_gen2 in free
-sggc_collect: put 400 from old_gen2 in free
-sggc_collect: put 3c0 from old_gen2 in free
-sggc_collect: put 340 from old_gen2 in free
-sggc_collect: put 380 from old_gen2 in free
-sggc_collect: put 300 from old_gen2 in free
-sggc_collect: put 2c0 from old_gen2 in free
-sggc_collect: put 280 from old_gen2 in free
-sggc_collect: put 200 from old_gen2 in free
-sggc_collect: put 240 from old_gen2 in free
-sggc_collect: put 1c0 from old_gen2 in free
-sggc_collect: put 180 from old_gen2 in free
-sggc_collect: put 140 from old_gen2 in free
-sggc_collect: put c0 from old_gen2 in free
-sggc_collect: put c1 from old_gen2 in free
-sggc_collect: put c2 from old_gen2 in free
-sggc_collect: put c3 from old_gen2 in free
-sggc_collect: put c4 from old_gen2 in free
-sggc_collect: put c5 from old_gen2 in free
-sggc_collect: put c6 from old_gen2 in free
-sggc_collect: put c7 from old_gen2 in free
-sggc_collect: put c8 from old_gen2 in free
-sggc_collect: put c9 from old_gen2 in free
-sggc_collect: put ca from old_gen2 in free
-sggc_collect: put cb from old_gen2 in free
-sggc_collect: put cc from old_gen2 in free
-sggc_collect: put cd from old_gen2 in free
-sggc_collect: put ce from old_gen2 in free
-sggc_collect: put cf from old_gen2 in free
-sggc_collect: put 100 from old_gen2 in free
 sggc_collect: put 40 from old_gen2 in free
 sggc_collect: put 41 from old_gen2 in free
 sggc_collect: put 42 from old_gen2 in free
@@ -5590,6 +5714,28 @@ sggc_collect: put 6d from old_gen2 in free
 sggc_collect: put 70 from old_gen2 in free
 sggc_collect: put 73 from old_gen2 in free
 sggc_collect: put 77 from old_gen2 in free
+sggc_collect: put 61 from old_gen1 in free
+sggc_collect: put 76 from old_gen1 in free
+sggc_collect: put 79 from old_gen1 in free
+sggc_collect: put 7b from old_gen1 in free
+sggc_collect: put 7c from old_gen1 in free
+sggc_collect: put c0 from old_gen2 in free
+sggc_collect: put c1 from old_gen2 in free
+sggc_collect: put c2 from old_gen2 in free
+sggc_collect: put c3 from old_gen2 in free
+sggc_collect: put c4 from old_gen2 in free
+sggc_collect: put c5 from old_gen2 in free
+sggc_collect: put c6 from old_gen2 in free
+sggc_collect: put c7 from old_gen2 in free
+sggc_collect: put c8 from old_gen2 in free
+sggc_collect: put c9 from old_gen2 in free
+sggc_collect: put ca from old_gen2 in free
+sggc_collect: put cb from old_gen2 in free
+sggc_collect: put cc from old_gen2 in free
+sggc_collect: put cd from old_gen2 in free
+sggc_collect: put ce from old_gen2 in free
+sggc_collect: put cf from old_gen2 in free
+sggc_collect: put d3 from old_gen1 in free
 sggc_collect: put 80 from old_gen2 in free
 sggc_collect: put 83 from old_gen2 in free
 sggc_collect: put 86 from old_gen2 in free
@@ -5606,51 +5752,29 @@ sggc_collect: put a7 from old_gen2 in free
 sggc_collect: put aa from old_gen2 in free
 sggc_collect: put ad from old_gen2 in free
 sggc_collect: put b0 from old_gen2 in free
-sggc_collect: put 61 from old_gen1 in free
-sggc_collect: put 76 from old_gen1 in free
-sggc_collect: put 79 from old_gen1 in free
-sggc_collect: put 7b from old_gen1 in free
-sggc_collect: put 7c from old_gen1 in free
 sggc_collect: put b6 from old_gen1 in free
-sggc_collect: put d3 from old_gen1 in free
+sggc_collect: put 4c0 from old_gen2 in free
+sggc_collect: put 440 from old_gen2 in free
+sggc_collect: put 480 from old_gen2 in free
+sggc_collect: put 400 from old_gen2 in free
+sggc_collect: put 3c0 from old_gen2 in free
+sggc_collect: put 340 from old_gen2 in free
+sggc_collect: put 380 from old_gen2 in free
+sggc_collect: put 300 from old_gen2 in free
+sggc_collect: put 2c0 from old_gen2 in free
+sggc_collect: put 280 from old_gen2 in free
+sggc_collect: put 200 from old_gen2 in free
+sggc_collect: put 240 from old_gen2 in free
+sggc_collect: put 1c0 from old_gen2 in free
+sggc_collect: put 180 from old_gen2 in free
+sggc_collect: put 140 from old_gen2 in free
+sggc_collect: put 100 from old_gen2 in free
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_look_at: 0 0
 sggc_look_at: 0 0
-sggc_collect: 4c0 in old_gen2 now free
-sggc_collect: 440 in old_gen2 now free
-sggc_collect: 480 in old_gen2 now free
-sggc_collect: 400 in old_gen2 now free
-sggc_collect: 3c0 in old_gen2 now free
-sggc_collect: 340 in old_gen2 now free
-sggc_collect: 380 in old_gen2 now free
-sggc_collect: 300 in old_gen2 now free
-sggc_collect: 2c0 in old_gen2 now free
-sggc_collect: 280 in old_gen2 now free
-sggc_collect: 200 in old_gen2 now free
-sggc_collect: 240 in old_gen2 now free
-sggc_collect: 1c0 in old_gen2 now free
-sggc_collect: 180 in old_gen2 now free
-sggc_collect: 140 in old_gen2 now free
-sggc_collect: c0 in old_gen2 now free
-sggc_collect: c1 in old_gen2 now free
-sggc_collect: c2 in old_gen2 now free
-sggc_collect: c3 in old_gen2 now free
-sggc_collect: c4 in old_gen2 now free
-sggc_collect: c5 in old_gen2 now free
-sggc_collect: c6 in old_gen2 now free
-sggc_collect: c7 in old_gen2 now free
-sggc_collect: c8 in old_gen2 now free
-sggc_collect: c9 in old_gen2 now free
-sggc_collect: ca in old_gen2 now free
-sggc_collect: cb in old_gen2 now free
-sggc_collect: cc in old_gen2 now free
-sggc_collect: cd in old_gen2 now free
-sggc_collect: ce in old_gen2 now free
-sggc_collect: cf in old_gen2 now free
-sggc_collect: 100 in old_gen2 now free
 sggc_collect: 40 in old_gen2 now free
 sggc_collect: 41 in old_gen2 now free
 sggc_collect: 42 in old_gen2 now free
@@ -5698,6 +5822,28 @@ sggc_collect: 6d in old_gen2 now free
 sggc_collect: 70 in old_gen2 now free
 sggc_collect: 73 in old_gen2 now free
 sggc_collect: 77 in old_gen2 now free
+sggc_collect: 61 in old_gen1 now free
+sggc_collect: 76 in old_gen1 now free
+sggc_collect: 79 in old_gen1 now free
+sggc_collect: 7b in old_gen1 now free
+sggc_collect: 7c in old_gen1 now free
+sggc_collect: c0 in old_gen2 now free
+sggc_collect: c1 in old_gen2 now free
+sggc_collect: c2 in old_gen2 now free
+sggc_collect: c3 in old_gen2 now free
+sggc_collect: c4 in old_gen2 now free
+sggc_collect: c5 in old_gen2 now free
+sggc_collect: c6 in old_gen2 now free
+sggc_collect: c7 in old_gen2 now free
+sggc_collect: c8 in old_gen2 now free
+sggc_collect: c9 in old_gen2 now free
+sggc_collect: ca in old_gen2 now free
+sggc_collect: cb in old_gen2 now free
+sggc_collect: cc in old_gen2 now free
+sggc_collect: cd in old_gen2 now free
+sggc_collect: ce in old_gen2 now free
+sggc_collect: cf in old_gen2 now free
+sggc_collect: d3 in old_gen1 now free
 sggc_collect: 80 in old_gen2 now free
 sggc_collect: 83 in old_gen2 now free
 sggc_collect: 86 in old_gen2 now free
@@ -5714,66 +5860,78 @@ sggc_collect: a7 in old_gen2 now free
 sggc_collect: aa in old_gen2 now free
 sggc_collect: ad in old_gen2 now free
 sggc_collect: b0 in old_gen2 now free
-sggc_collect: 61 in old_gen1 now free
-sggc_collect: 76 in old_gen1 now free
-sggc_collect: 79 in old_gen1 now free
-sggc_collect: 7b in old_gen1 now free
-sggc_collect: 7c in old_gen1 now free
 sggc_collect: b6 in old_gen1 now free
-sggc_collect: d3 in old_gen1 now free
-sggc_collect: calling free for data for 100:: 0x7fa5d9c04030
-test_free: 52 in use after:: 0x7fa5d9c04030
+sggc_collect: 100 in old_gen2 now free
+sggc_collect: calling free for data for 100:: 0x7f9e75c03560
+test_free: 52 in use after:: 0x7f9e75c03560
 sggc_collect: putting 100 in unused
-sggc_collect: calling free for data for 140:: 0x7fa5d9c040c0
-test_free: 51 in use after:: 0x7fa5d9c040c0
+sggc_collect: 140 in old_gen2 now free
+sggc_collect: calling free for data for 140:: 0x7f9e75c035f0
+test_free: 51 in use after:: 0x7f9e75c035f0
 sggc_collect: putting 140 in unused
-sggc_collect: calling free for data for 180:: 0x7fa5d9c04150
-test_free: 50 in use after:: 0x7fa5d9c04150
+sggc_collect: 180 in old_gen2 now free
+sggc_collect: calling free for data for 180:: 0x7f9e75c03680
+test_free: 50 in use after:: 0x7f9e75c03680
 sggc_collect: putting 180 in unused
-sggc_collect: calling free for data for 1c0:: 0x7fa5d9c041e0
-test_free: 49 in use after:: 0x7fa5d9c041e0
+sggc_collect: 1c0 in old_gen2 now free
+sggc_collect: calling free for data for 1c0:: 0x7f9e75c03710
+test_free: 49 in use after:: 0x7f9e75c03710
 sggc_collect: putting 1c0 in unused
-sggc_collect: calling free for data for 240:: 0x7fa5d9c04300
-test_free: 48 in use after:: 0x7fa5d9c04300
+sggc_collect: 240 in old_gen2 now free
+sggc_collect: calling free for data for 240:: 0x7f9e75c03830
+test_free: 48 in use after:: 0x7f9e75c03830
 sggc_collect: putting 240 in unused
-sggc_collect: calling free for data for 200:: 0x7fa5d9c04270
-test_free: 47 in use after:: 0x7fa5d9c04270
+sggc_collect: 200 in old_gen2 now free
+sggc_collect: calling free for data for 200:: 0x7f9e75c037a0
+test_free: 47 in use after:: 0x7f9e75c037a0
 sggc_collect: putting 200 in unused
-sggc_collect: calling free for data for 280:: 0x7fa5d9c04390
-test_free: 46 in use after:: 0x7fa5d9c04390
+sggc_collect: 280 in old_gen2 now free
+sggc_collect: calling free for data for 280:: 0x7f9e75c038c0
+test_free: 46 in use after:: 0x7f9e75c038c0
 sggc_collect: putting 280 in unused
-sggc_collect: calling free for data for 2c0:: 0x7fa5d9c04420
-test_free: 45 in use after:: 0x7fa5d9c04420
+sggc_collect: 2c0 in old_gen2 now free
+sggc_collect: calling free for data for 2c0:: 0x7f9e75c03950
+test_free: 45 in use after:: 0x7f9e75c03950
 sggc_collect: putting 2c0 in unused
-sggc_collect: calling free for data for 300:: 0x7fa5d9c044b0
-test_free: 44 in use after:: 0x7fa5d9c044b0
+sggc_collect: 300 in old_gen2 now free
+sggc_collect: calling free for data for 300:: 0x7f9e75c039e0
+test_free: 44 in use after:: 0x7f9e75c039e0
 sggc_collect: putting 300 in unused
-sggc_collect: calling free for data for 380:: 0x7fa5d9c045d0
-test_free: 43 in use after:: 0x7fa5d9c045d0
+sggc_collect: 380 in old_gen2 now free
+sggc_collect: calling free for data for 380:: 0x7f9e75c03b00
+test_free: 43 in use after:: 0x7f9e75c03b00
 sggc_collect: putting 380 in unused
-sggc_collect: calling free for data for 340:: 0x7fa5d9c04540
-test_free: 42 in use after:: 0x7fa5d9c04540
+sggc_collect: 340 in old_gen2 now free
+sggc_collect: calling free for data for 340:: 0x7f9e75c03a70
+test_free: 42 in use after:: 0x7f9e75c03a70
 sggc_collect: putting 340 in unused
-sggc_collect: calling free for data for 3c0:: 0x7fa5d9c04660
-test_free: 41 in use after:: 0x7fa5d9c04660
+sggc_collect: 3c0 in old_gen2 now free
+sggc_collect: calling free for data for 3c0:: 0x7f9e75c03b90
+test_free: 41 in use after:: 0x7f9e75c03b90
 sggc_collect: putting 3c0 in unused
-sggc_collect: calling free for data for 400:: 0x7fa5d9c046f0
-test_free: 40 in use after:: 0x7fa5d9c046f0
+sggc_collect: 400 in old_gen2 now free
+sggc_collect: calling free for data for 400:: 0x7f9e75c03c20
+test_free: 40 in use after:: 0x7f9e75c03c20
 sggc_collect: putting 400 in unused
-sggc_collect: calling free for data for 480:: 0x7fa5d9c04810
-test_free: 39 in use after:: 0x7fa5d9c04810
+sggc_collect: 480 in old_gen2 now free
+sggc_collect: calling free for data for 480:: 0x7f9e75c03d40
+test_free: 39 in use after:: 0x7f9e75c03d40
 sggc_collect: putting 480 in unused
-sggc_collect: calling free for data for 440:: 0x7fa5d9c04780
-test_free: 38 in use after:: 0x7fa5d9c04780
+sggc_collect: 440 in old_gen2 now free
+sggc_collect: calling free for data for 440:: 0x7f9e75c03cb0
+test_free: 38 in use after:: 0x7f9e75c03cb0
 sggc_collect: putting 440 in unused
-sggc_collect: calling free for data for 4c0:: 0x7fa5d9c048a0
-test_free: 37 in use after:: 0x7fa5d9c048a0
+sggc_collect: 4c0 in old_gen2 now free
+sggc_collect: calling free for data for 4c0:: 0x7f9e75c03dd0
+test_free: 37 in use after:: 0x7f9e75c03dd0
 sggc_collect: putting 4c0 in unused
-sggc_collect: calling free for data for 500:: 0x7fa5d9c04930
-test_free: 36 in use after:: 0x7fa5d9c04930
+sggc_collect: calling free for data for 500:: 0x7f9e75c03e60
+test_free: 36 in use after:: 0x7f9e75c03e60
 sggc_collect: putting 500 in unused
 sggc_collect: done
-  unused: 17, old_gen1: 0, old_gen2: 0, old_to_new: 0, to_look_at: 0, const: 1
+  unused: 17, old_to_new: 0, to_look_at: 0, constants: 1
+    old gen 1 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
+    old gen 2 [0]:   0  [1]:   0  [2]:   0  [3]:   0  [4]:   0  [5]:   0  big:   0 
   free_or_new [0]:   0  [1]:  64  [2]:   0  [3]:  64  [4]:   0  [5]:  21 
 next_free_val [0]: ---  [1]:  40^ [2]: ---  [3]:  c0^ [4]: ---  [5]:  80^
               00000000  ffffffff  00000000  ffffffff  00000000  12492492 

@@ -28,6 +28,7 @@ int main (void)
 { 
   FILE *f;
   int i, j, x, o, r;
+  int use_set_chain_next = 0;
   char s[1000];
   char c; 
 
@@ -143,7 +144,8 @@ int main (void)
       }
     }
 
-    /* Show the contents of all the sets. */
+    /* Show the contents of all the sets, using either set_next or 
+       set_chain_next. */
 
     for (i = 0; i<N_SET; i++)
     { set_value_t v;
@@ -157,9 +159,12 @@ int main (void)
       printf (" %016llx :", (long long) set_first_bits (&set[i]));
       while (v != SET_NO_VALUE)
       { printf(" %d.%d",SET_VAL_INDEX(v),SET_VAL_OFFSET(v));
-        v = set_next (&set[i], v, 0);
+        v = use_set_chain_next ? set_chain_next (set[i].chain, v)
+                               : set_next (&set[i], v, 0);
       }
       printf("\n");
     }
+
+    use_set_chain_next = !use_set_chain_next;
   }
 }

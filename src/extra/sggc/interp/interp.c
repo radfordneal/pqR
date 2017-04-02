@@ -57,8 +57,8 @@
                                 evaluates e1, e2, ...; returns the last of them
 
      (? w a b)       Conditional expression, evaluates w, then returns result of
-                       evaluating a if w is a list (not () or a symbol), and
-                       otherwise returns result of evaluing b (default ())
+                     evaluating a if w is a list (not () or a symbol), and
+                     otherwise returns result of evaluing b (default ())
 
      (! w e1 e2 ...) Looping expression, evaluates w, then if it is a list
                      (not () or a symbol), e1, e2, ..., then does it again,
@@ -69,11 +69,11 @@
      (` a)          Evaluates a, then returns the result of evaluating that
 
      (@ v e)        Assignment expression, evaluates e, then changes the most
-                       recent binding of symbol v to be the value of e; value
-                       returned is v (unevaluated)
+                    recent binding of symbol v to be the value of e; value
+                    returned is v (unevaluated)
 
      (= a b)        Returns '(=) if the results of evaluating a and b are equal,
-                       () if not
+                    () if not
 
      (. a)          If a evaluates to a list, returns its first element
 
@@ -113,6 +113,9 @@ struct type_binding { ptr_t value, next; };  /* Binding, symbol is in aux1 */
 #define TYPE_LIST 1
 #define TYPE_SYMBOL 2
 #define TYPE_BINDING 3
+
+#define KIND_GLOBAL_BINDING 4  /* Used if UNCOLLECTED_NIL_SYMS_GLOBALS defined*/
+
 
 #define LIST(v) ((struct type_list *) SGGC_DATA(v))
 #define SYMBOL(v) ((struct type_symbol *) SGGC_DATA(v))
@@ -167,24 +170,30 @@ char *sggc_aux1_read_only (sggc_kind_t kind)
   static const char spaces[SGGC_CHUNKS_IN_SMALL_SEGMENT+1] =
     "                                                                ";
 
-  return kind == TYPE_BINDING ? NULL : (char *) spaces;
+  return kind >= TYPE_BINDING ? NULL : (char *) spaces;
 }
 
 void sggc_find_root_ptrs (void)
 { 
-  sggc_mark (nil);  
+# if UNCOLLECT_LEVEL < 1
+    sggc_mark (nil);  
+# endif
 
-  int i;
-  for (i = 0; symbol_chars[i]; i++)
-  { sggc_mark (symbols[i]);
-  }
+# if UNCOLLECT_LEVEL < 2
+    int i;
+    for (i = 0; symbol_chars[i]; i++)
+    { sggc_mark (symbols[i]);
+    }
+# endif
+
+# if UNCOLLECT_LEVEL < 3
+    sggc_look_at (global_bindings);  
+# endif
 
   struct ptr_var *p;
   for (p = first_ptr_var; p != NULL; p = p->next)
   { sggc_look_at (*p->var);
   }
-
-  sggc_look_at (global_bindings);  
 }
 
 void sggc_find_object_ptrs (sggc_cptr_t cptr)
@@ -200,14 +209,14 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
   }
 }
 
-
 /* ALLOCATE FUNCTION FOR THIS APPLICATION.  Calls the garbage collector
    when necessary, or otherwise every 100th allocation, with every 500th
    being level 1, and every 2000th being level 2. */
 
+static unsigned alloc_count = 1;  /* 1 for allocation of nil at init */
+
 static ptr_t alloc (sggc_type_t type)
 {
-  static unsigned alloc_count = 1;  /* 1 for allocation of nil at init */
   sggc_cptr_t a;
 
   /* Do optional garbage collections according to the scheme.  Do this first,
@@ -233,21 +242,15 @@ static ptr_t alloc (sggc_type_t type)
     }
 # elif USE_ALLOC_SMALL_KIND
     a = sggc_alloc_small_kind(type);  /* kind always same as type in this app */
-# elif NEW_BINDING_IN_OLD_GEN==1
-    a = type == TYPE_BINDING ? sggc_alloc_gen1(type,1) : sggc_alloc(type,1); 
-# elif NEW_BINDING_IN_OLD_GEN==2
-    a = type == TYPE_BINDING ? sggc_alloc_gen2(type,1) : sggc_alloc(type,1); 
+# elif USE_ALLOC_KIND
+    a = sggc_alloc_kind(type,1);      /* kind always same as type in this app */
 # else
     a = sggc_alloc(type,1); /* length argument is ignored */
 # endif
 
   if (a == SGGC_NO_OBJECT)
   { sggc_collect(2);
-#   if USE_ALLOC_SMALL_KIND
-      a = sggc_alloc_small_kind(type);/* kind always same as type in this app */
-#   else
-      a = sggc_alloc(type,1); /* length argument is ignored */
-#   endif
+    a = sggc_alloc(type,1); /* length argument is ignored */
     if (a == SGGC_NO_OBJECT)
     { printf("CAN'T ALLOCATE\n");
       abort();
@@ -311,7 +314,9 @@ static void print (ptr_t a)
 }
 
 
-/* READ A CHARACTER.  Skips white space and comments.  Exits on EOF. */
+/* READ A CHARACTER.  Skips white space and comments.  Calls end_prog on EOF. */
+
+static void end_prog(void);
 
 static char read_char (void)
 {
@@ -320,7 +325,7 @@ static char read_char (void)
   for (;;)
   {
     if (scanf(" %c",&c) != 1) 
-    { exit(0);
+    { end_prog();
     }
 
     if (c != '#')
@@ -641,9 +646,15 @@ int main (void)
   for (i = 0; symbol_chars[i]; i++)
   { symbols[i] = alloc (TYPE_SYMBOL);
     SYMBOL(symbols[i]) -> symbol = symbol_chars[i];
-    n = alloc (TYPE_BINDING);
-    BOUND_SYMBOL(n) = symbol_chars[i];
-    BINDING(n) -> next = global_bindings;
+#   if UNCOLLECT_LEVEL >= 3
+      n = sggc_alloc_small_kind (KIND_GLOBAL_BINDING);
+      alloc_count += 1;
+#   else
+      n = alloc (TYPE_BINDING);
+#   endif
+    BOUND_SYMBOL(n) = symbol_chars[i];     /* no old-to-new check needed:   */
+    BINDING(n) -> next = global_bindings;  /*   either n is new, or n is    */
+    BINDING(n) -> value = nil;             /*   uncollected, and so is "to" */
     global_bindings = n;
   }
 
@@ -659,6 +670,43 @@ int main (void)
   }
 
   return 0;
+}
+
+
+/* COUNT OBJECTS OF AN UNCOLLECTED KIND. */
+
+static unsigned count_uncol (sggc_kind_t kind)
+{
+  unsigned cnt = 0;
+  sggc_cptr_t u = sggc_first_uncollected_of_kind(kind);
+
+  while (u != SGGC_NO_OBJECT)
+  { cnt += 1;
+    u = sggc_next_uncollected_of_kind(u);
+  }
+
+  return cnt;
+}
+
+
+/* TERMINATE PROGRAM.  Checks that the numbers and types of uncollected 
+   objects (if any) are as they ought to be, then exits. */
+
+static void end_prog (void)
+{
+# if UNCOLLECT_LEVEL >= 1
+    if (count_uncol(TYPE_NIL) != 1) abort();
+# endif
+
+# if UNCOLLECT_LEVEL >= 2
+    if (count_uncol(TYPE_SYMBOL) + 1 != sizeof symbol_chars) abort();
+# endif
+
+# if UNCOLLECT_LEVEL >= 3
+    if (count_uncol(KIND_GLOBAL_BINDING) + 1 != sizeof symbol_chars) abort();
+# endif
+
+  exit(0);
 }
 
 

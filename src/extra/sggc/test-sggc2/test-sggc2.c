@@ -34,14 +34,12 @@
 
 /* TYPE OF A POINTER USED IN THIS APPLICATION.  Uses compressed pointers.
    The OLD_TO_NEW_CHECK macro can therefore just call sggc_old_to_new,
-   YOUNGEST and OLDEST just call sggc_youngest_generation and
-   sggc_oldest_generation, and TYPE is just SGGC_TYPE. */
+   YOUNGEST just call sggc_youngest_generation, and TYPE is just SGGC_TYPE. */
 
 typedef sggc_cptr_t ptr_t;
 
 #define OLD_TO_NEW_CHECK(from,to) sggc_old_to_new_check(from,to)
 #define YOUNGEST(v) sggc_youngest_generation(v)
-#define OLDEST(v) sggc_oldest_generation(v)
 #define TYPE(v) SGGC_TYPE(v)
 
 
@@ -103,9 +101,10 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
    when necessary, or otherwise every 8th allocation, with every 24th
    being level 1, and every 48th being level 2. */
 
+static unsigned alloc_count = 0;
+
 static ptr_t alloc (sggc_type_t type, sggc_length_t length)
 {
-  static unsigned alloc_count = 0;
   sggc_cptr_t a;
 
   /* Do optional garbage collections according to the scheme.  Do this first,
@@ -156,15 +155,65 @@ static ptr_t alloc (sggc_type_t type, sggc_length_t length)
 
 /* MAIN TEST PROGRAM. */
 
+static int freed0 (sggc_cptr_t v)
+{ printf("CALLED_FOR_NEWLY_FREE: Object %x of kind %d being freed at end\n",
+          (unsigned)v, SGGC_KIND(v));
+  return 0;
+}
+
+static int freed1 (sggc_cptr_t v)
+{ printf("CALLED_FOR_NEWLY_FREE: Object %x of kind %d won't be freed\n",
+          (unsigned)v, SGGC_KIND(v));
+  return 1;
+}
+
 int main (int argc, char **argv)
 { 
   int segs = argc<2 ? 5 /* min for no failure */ : atoi(argv[1]);
   int iters = argc<3 ? 50 : atoi(argv[2]);
+  sggc_kind_t k;
 
 # include "test-common.h"
 
-  printf("\nCOLLECTING EVERYTHING\n\n");
+  alloc_count = 0;  /* don't want any automatic timed collections */
+
+  for (k = 2; k < SGGC_N_KINDS; k++)
+  { sggc_call_for_newly_freed_object (k, freed0);
+  }
+
+  (void) alloc (2, 3);   /* Type 2, of small and big kinds */
+  (void) alloc (2, 12);
+
+  printf("\nCOLLECTING EVERYTHING, EXCEPT nil\n\n");
   a = b = c = d = e = nil;
+  sggc_collect(2);
+
+  /* Try it suppressing collection of type 2. */
+
+  for (k = 2; k < SGGC_N_KINDS; k++)
+  { sggc_call_for_newly_freed_object (k, freed1);
+  }
+
+  (void) alloc (2, 3);  /* Will be in generation 0 for first collection, then */
+  (void) alloc (2, 12); /* move to generations 1 and 2 later */
+
+  printf("\nCOLLECTING AT LEVEL 0\n\n");
+  sggc_collect(0);
+
+  (void) alloc (2, 3);
+
+  printf("\nCOLLECTING AT LEVEL 1\n\n");
+  sggc_collect(1);
+
+  (void) alloc (2, 11);
+
+  printf("\nCOLLECTING AT LEVEL 2\n\n");
+  sggc_collect(2);
+
+  printf("\nCOLLECTING AT LEVEL 2 AGAIN\n\n");
+  sggc_collect(2);
+
+  printf("\nCOLLECTING AT LEVEL 2 YET AGAIN\n\n");
   sggc_collect(2);
 
   printf("\nEND TESTING\n");

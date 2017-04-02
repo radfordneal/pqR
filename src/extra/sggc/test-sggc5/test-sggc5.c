@@ -35,14 +35,12 @@
 
 /* TYPE OF A POINTER USED IN THIS APPLICATION.  Uses compressed pointers.
    The OLD_TO_NEW_CHECK macro can therefore just call sggc_old_to_new,
-   YOUNGEST and OLDEST just call sggc_youngest_generation and
-   sggc_oldest_generation, and TYPE is just SGGC_TYPE. */
+   YOUNGEST just call sggc_youngest_generation, and TYPE is just SGGC_TYPE. */
 
 typedef sggc_cptr_t ptr_t;
 
 #define OLD_TO_NEW_CHECK(from,to) sggc_old_to_new_check(from,to)
 #define YOUNGEST(v) sggc_youngest_generation(v)
-#define OLDEST(v) sggc_oldest_generation(v)
 #define TYPE(v) SGGC_TYPE(v)
 
 
@@ -185,7 +183,7 @@ int main (int argc, char **argv)
   printf("\nFINAL LENGTHS:  nil %u, a %u, b %u, c %u, d %u, e %u\n",
          LENGTH(nil), LENGTH(a), LENGTH(b), LENGTH(c), LENGTH(d), LENGTH(e));
 
-  printf("\nCOLLECTING EVERYTHING\n\n");
+  printf("\nCOLLECTING EVERYTHING, EXCEPT nil\n\n");
   a = b = c = d = e = nil;
   sggc_collect(2);
 

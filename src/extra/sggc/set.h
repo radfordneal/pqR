@@ -110,7 +110,7 @@ struct set
    If SET_STATIC is defined as non-zero, all API procedures are
    static.  This makes sense only if this .c file is included at
    compile time in any module using it, rather than being compiled
-   compiled separately and then linked. */
+   separately and then linked. */
 
 #if SET_STATIC
 #  define SET_PROC_CLASS static
@@ -264,6 +264,60 @@ static inline void set_assign_segment_bits (struct set * restrict set,
   set->n_elements -= set_bit_count(seg->bits[set->chain]);
   seg->bits[set->chain] = b;
   set->n_elements += set_bit_count(b);
+}
+
+
+/* FIND THE NEXT ELEMENT IN A CHAIN.
+
+   If the linked list has to be followed to a later segment, any
+   unused segments that are skipped are deleted from the list, to save
+   time in any future searches. */
+
+static inline set_value_t set_chain_next (int chain, set_value_t val)
+{
+  set_index_t index = SET_VAL_INDEX(val);
+  set_offset_t offset = SET_VAL_OFFSET(val);
+  struct set_segment * restrict seg = SET_SEGMENT(index);
+
+  /* Get the bits after the one for the element we are looking after. */
+
+  set_bits_t b = seg->bits[chain] >> offset;
+  offset += 1;
+  b >>= 1;
+
+  /* If no bits are set after the one we are starting at, go to the
+     next segment, removing ones that are unused.  We may discover
+     that there is no next element, and return SET_NO_VALUE. */
+
+  if (b == 0)
+  { set_index_t nindex;
+    struct set_segment * restrict nseg;
+
+    for (;;)
+    { 
+      nindex = seg->next[chain];
+      if (nindex == SET_END_OF_CHAIN) 
+      { return SET_NO_VALUE;
+      }
+
+      nseg = SET_SEGMENT(nindex);
+
+      b = nseg->bits[chain];
+      if (b != 0) 
+      { break;
+      }
+
+      seg->next[chain] = nseg->next[chain];
+      nseg->next[chain] = SET_NOT_IN_CHAIN;
+    }
+
+    index = nindex;
+    offset = 0;
+  }
+
+  offset += set_first_bit_pos(b);
+
+  return SET_VAL(index,offset);
 }
 
 

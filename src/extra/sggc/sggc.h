@@ -204,8 +204,9 @@ SGGC_EXTERN struct sggc_info
 { 
   unsigned gen0_count;       /* Number of newly-allocated objects */
   unsigned gen1_count;       /* Number of objects in old generation 1 */
-  unsigned gen2_count;       /* Number of objects in old generation 2.
-                                Does not include constants */
+  unsigned gen2_count;       /* Number of objects in old generation 2 */
+
+  unsigned uncol_count;      /* Number of uncollected objects */
 
   size_t big_chunks;         /* # of chunks in newly-allocated big objects */
 
@@ -254,15 +255,17 @@ void sggc_after_marking (int level, int rep);
 
 int sggc_init (int max_segments);
 sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length);
-sggc_cptr_t sggc_alloc_gen1 (sggc_type_t type, sggc_length_t length);
-sggc_cptr_t sggc_alloc_gen2 (sggc_type_t type, sggc_length_t length);
 #ifdef SGGC_KIND_TYPES
+sggc_cptr_t sggc_alloc_kind (sggc_kind_t kind, sggc_length_t length);
 sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
 #endif
 void sggc_collect (int level);
 void sggc_look_at (sggc_cptr_t cptr);
 void sggc_mark (sggc_cptr_t cptr);
-
+sggc_cptr_t sggc_first_uncollected_of_kind (sggc_kind_t kind);
+int sggc_is_uncollected (sggc_cptr_t cptr);
+void sggc_call_for_newly_freed_object (sggc_kind_t kind,
+                                       int (*fun) (sggc_cptr_t));
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
 #ifdef SGGC_AUX1_SIZE
@@ -282,14 +285,6 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
 static inline int sggc_youngest_generation (sggc_cptr_t from_ptr)
 {
   return set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr);
-}
-
-
-/* CHECK WHETHER AN OBJECT IS IN THE OLDEST GENERATION, OR IS A CONSTANT. */
-
-static inline int sggc_oldest_generation (sggc_cptr_t to_ptr)
-{
-  return set_chain_contains (SET_OLD_GEN2_CONST, to_ptr);
 }
 
 
@@ -320,13 +315,13 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   extern set_bits_t sggc_next_free_bits[SGGC_N_KINDS];
   extern int sggc_next_segment_not_free[SGGC_N_KINDS];
 
-  sggc_cptr_t nfv = sggc_next_free_val[kind];
+  set_bits_t nfb = sggc_next_free_bits[kind];
 
-  if (nfv == SGGC_NO_OBJECT)
+  if (nfb == 0)
   { return SGGC_NO_OBJECT;
   }
 
-  set_bits_t nfb = sggc_next_free_bits[kind];
+  sggc_cptr_t nfv = sggc_next_free_val[kind];
 
   nfb >>= 1;
   if (nfb != 0)
@@ -360,7 +355,17 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   } while (nch > 0);
 #endif
 
-  sggc_info.gen0_count += 1;
+#ifdef SGGC_KIND_UNCOLLECTED
+  extern const int sggc_kind_uncollected[SGGC_N_KINDS];
+  extern struct set sggc_uncollected_sets[SGGC_N_KINDS];
+  if (sggc_kind_uncollected[kind])
+  { set_add (&sggc_uncollected_sets[kind], nfv);
+    sggc_info.uncol_count += 1;
+  }
+  else
+#endif
+  { sggc_info.gen0_count += 1;
+  }
 
   return nfv;
 }
@@ -377,25 +382,48 @@ static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
   { return;
   }
 
-  /* Can quit now if from_ptr is already in the old-to-new set (which is
-     the only one using the SET_OLD_TO_NEW chain). */
+  /* Can quit now if from_ptr is already in an old-to-new set (which are
+     the only ones using the SET_OLD_TO_NEW chain). */
 
   if (set_chain_contains (SET_OLD_TO_NEW, from_ptr))
   { return;
   }
 
-  /* Note:  from_ptr shouldn't be constant, so below can look in whole chain. */
+  /* Note:  from_ptr shouldn't be a constant, so below can look in whole chain,
+     in order to check for from_ptr being old generation 2 or uncollected. */
 
-  if (set_chain_contains (SET_OLD_GEN2_CONST, from_ptr))
+  if (set_chain_contains (SET_OLD_GEN2_UNCOL, from_ptr))
   { 
-    /* If from_ptr is in old generation 2, only others in old generation 2
-       and constants can be referenced without using old-to-new. */
+    /* If from_ptr is in old generation 2 or uncollected, only others in 
+       old generation 2, uncollected, or constants, can possibly be 
+       referenced without using old-to-new. */
 
-    if (set_chain_contains (SET_OLD_GEN2_CONST, to_ptr))
-    { return;
+    if (set_chain_contains (SET_OLD_GEN2_UNCOL, to_ptr)) 
+    { 
+#ifndef SGGC_KIND_UNCOLLECTED
+
+      return; /* no need for further checks if can't be an uncollected object */
+
+#else
+      /* If the reference is from old generation 2 rather than an uncollected
+         object, we don't need to use old_to_new. */
+
+      extern const int sggc_kind_uncollected[SGGC_N_KINDS];
+      if (!sggc_kind_uncollected[SGGC_KIND(from_ptr)])
+      { return;
+      }
+
+      /* If the reference is from an uncollected object, a reference to a
+         constant or uncollected object doesn't need to use old_to_new. */
+
+      if (sggc_is_constant(to_ptr) || sggc_kind_uncollected[SGGC_KIND(to_ptr)])
+      { return;
+      }
+#endif
     }
   }
-  else
+
+  else /* must be in old generation 1 */
   { 
     /* If from_ptr is in old generation 1, only references to newly 
        allocated objects require using old-to-new. */
@@ -410,4 +438,12 @@ static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
 
   extern struct set sggc_old_to_new_set;
   set_add (&sggc_old_to_new_set, from_ptr);
+}
+
+
+/* FIND THE NEXT UNCOLLECTED OBJECT OF THE SAME KIND. */
+
+static inline sggc_cptr_t sggc_next_uncollected_of_kind (sggc_cptr_t obj)
+{
+  return set_chain_next (SET_OLD_GEN2_UNCOL, obj);
 }

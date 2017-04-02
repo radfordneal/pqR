@@ -1,5 +1,10 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-04-02
+
+  Significant API changes, including uncollected objects and 
+  sggc_call_for_newly_freed_object.
+
 Version-2017-03-04
 
   Various changes and performance tweaks.

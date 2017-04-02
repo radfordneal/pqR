@@ -38,7 +38,7 @@
    This may be done with a compiler flag, in which case it isn't
    overridden here. */
 
-static int check_n_elements (struct set *set);
+static void check_n_elements (struct set *set);
 
 #ifndef SET_DEBUG
 #define SET_DEBUG 0
@@ -56,7 +56,7 @@ static int check_n_elements (struct set *set);
                   && (set)->first != SET_END_OF_CHAIN) abort(); \
     if (SET_DEBUG && (set)->n_elements != 0 \
                   && (set)->first == SET_END_OF_CHAIN) abort(); \
-    if (SET_DEBUG && !check_n_elements((set))) abort(); \
+    if (SET_DEBUG) check_n_elements(set); \
   } while (0)
 
 #define CHK_SET_INDEX(set,index) \
@@ -98,9 +98,9 @@ static inline void remove_empty (struct set * restrict set)
 }
 
 
-/* CHECK WHETHER THE COUNT OF NUMBER OF ELEMENTS IN A SET IS CORRECT. */
+/* ABORT IF THE COUNT OF NUMBER OF ELEMENTS IN A SET IS INCORRECT. */
 
-static int check_n_elements (struct set *set)
+static void check_n_elements (struct set *set)
 {
   struct set_segment *seg;
   set_index_t index;
@@ -117,7 +117,7 @@ static int check_n_elements (struct set *set)
     index = seg->next[chain];
   }
 
-  return cnt == 0;
+  if (cnt != 0) abort();
 }
 
 
@@ -398,6 +398,8 @@ SET_PROC_CLASS void set_add_segment (struct set * restrict set,
       set->first = index;
     }
   }
+
+  CHK_SET(set);
 }
 
 
@@ -422,4 +424,6 @@ SET_PROC_CLASS void set_remove_segment (struct set * restrict set,
     seg->bits[dst_chain] &= ~removed_bits;
     set->n_elements -= set_bit_count(removed_bits);
   }
+
+  CHK_SET(set);
 }

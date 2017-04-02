@@ -34,14 +34,12 @@
 
 /* TYPE OF A POINTER USED IN THIS APPLICATION.  Uses compressed pointers.
    The OLD_TO_NEW_CHECK macro can therefore just call sggc_old_to_new,
-   YOUNGEST and OLDEST just call sggc_youngest_generation and
-   sggc_oldest_generation, and TYPE is just SGGC_TYPE. */
+   YOUNGEST just call sggc_youngest_generation, and TYPE is just SGGC_TYPE. */
 
 typedef sggc_cptr_t ptr_t;
 
 #define OLD_TO_NEW_CHECK(from,to) sggc_old_to_new_check(from,to)
 #define YOUNGEST(v) sggc_youngest_generation(v)
-#define OLDEST(v) sggc_oldest_generation(v)
 #define TYPE(v) SGGC_TYPE(v)
 
 
@@ -150,6 +148,18 @@ static ptr_t alloc (sggc_type_t type, sggc_length_t length)
 
 /* MAIN TEST PROGRAM. */
 
+static int freed1 (sggc_cptr_t v)
+{ printf("CALLED_FOR_NEWLY_FREE: Object %x of type 1 being freed at end\n",
+          (unsigned)v);
+  return 0;
+}
+
+static int freed2 (sggc_cptr_t v)
+{ printf("CALLED_FOR_NEWLY_FREE: Object %x of type 2 won't be freed at end\n",
+          (unsigned)v);
+  return 1;
+}
+
 int main (int argc, char **argv)
 { 
   int segs = argc<2 ? 11 /* min for no failure */ : atoi(argv[1]);
@@ -157,8 +167,18 @@ int main (int argc, char **argv)
 
 # include "test-common.h"
 
-  printf("\nCOLLECTING EVERYTHING\n\n");
+  sggc_call_for_newly_freed_object (1, freed1);
+  sggc_call_for_newly_freed_object (2, freed2);
+
+  printf("\nCOLLECTING EVERYTHING, EXCEPT TYPE 2 AND nil\n\n");
   a = b = c = d = e = nil;
+  sggc_collect(2);
+
+  sggc_call_for_newly_freed_object (1, freed1);
+  sggc_call_for_newly_freed_object (2, 0);
+
+  printf("\nCOLLECTING EVERYTHING\n\n");
+  nil = a = b = c = d = e = SGGC_NO_OBJECT;
   sggc_collect(2);
 
   printf("\nEND TESTING\n");

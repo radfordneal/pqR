@@ -33,8 +33,8 @@
 
 
 /* TYPE OF A POINTER USED IN THIS APPLICATION.  Uses regular, uncompressed 
-   pointers.  CPTR converts to a compressed pointer.  The OLD_TO_NEW_CHECK,
-   YOUNGEST, and OLDEST macros also have to convert, as does TYPE. */
+   pointers.  CPTR converts to a compressed pointer.  The OLD_TO_NEW_CHECK
+   and YOUNGEST macros also have to convert, as does TYPE. */
 
 typedef char *ptr_t;
 
@@ -42,7 +42,6 @@ typedef char *ptr_t;
 
 #define OLD_TO_NEW_CHECK(from,to) sggc_old_to_new_check(CPTR(from),CPTR(to))
 #define YOUNGEST(p) sggc_youngest_generation(CPTR(p))
-#define OLDEST(p) sggc_oldest_generation(CPTR(p))
 #define TYPE(p) SGGC_TYPE(CPTR(p))
 
 
@@ -163,7 +162,7 @@ int main (int argc, char **argv)
 
 # include "test-common.h"
 
-  printf("\nCOLLECTING EVERYTHING\n\n");
+  printf("\nCOLLECTING EVERYTHING, EXCEPT nil\n\n");
   a = b = c = d = e = nil;
   sggc_collect(2);
 
