@@ -553,7 +553,6 @@ void sggc_find_root_ptrs (void)
                 if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
                 if (INTERNAL(s) != R_NilValue) LOOK_AT(INTERNAL(s));
                 if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
-                MARK(s);
             }
         }
     }
@@ -585,9 +584,6 @@ void sggc_find_root_ptrs (void)
         &NA_STRING,	          /* Builtin constants */
         &R_BlankString,
 	&R_BlankScalarString,
-        &R_RestartToken,
-        &R_MissingArg,
-	&R_MissingUnder,
 
         &R_print.na_string,       /* Printing defaults - very kludgy! */
         &R_print.na_string_noquote,

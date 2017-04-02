@@ -44,7 +44,7 @@ const R_len_t sggc_length1[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
 const char R_type_to_sggc_type[32] = 
 {
   0, /* NILSXP */
-  2, /* SYMSXP */
+  5, /* SYMSXP */
   2, /* LISTSXP */
   2, /* CLOSXP */
   2, /* ENVSXP */

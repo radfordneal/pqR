@@ -53,7 +53,8 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
        2  Attribute pointer plus three others (eg, LISTSXP, SYMSXP)
        3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
        4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
-       5  Only attribute pointer to follow, uncollected (SPECIALSXP, BUILTINSXP)
+       5  Only attribute pointer to follow, uncollected, used for primitives
+          and symbols, which are distinguished by kind (even if same size)
 */
 
 #define SGGC_N_TYPES 6
@@ -111,7 +112,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
   1,   1,   1,   1,   1,   2,    /* Smallest sizes for the SGGC types */ \
-  2,   2,   2,   2,   2,   2,    /* 2nd smallest sizes, unused for types 4&5 */ \
+  2,   2,   2,   2,   2,   2,    /* 2nd smallest sizes, unused for type 4 */ \
   3,   4,   2,   4,   2,   2,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
   5,   8,   2,   8,   2,   2,    /* 4th smallest sizes, unused for types 2,4&5 */ \
   8,  16,   2,  16,   2,   2,    /* 5th smallest sizes, unused for types 2,4&5 */ \
@@ -145,7 +146,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
-#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
 #define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
 
 #define SGGC_TOTAL_BYTES(type,length) \
@@ -195,12 +196,12 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   3,   2,   3,   3,    /* Smallest sizes for the SGGC types */ \
-  3,   3,   5,   3,   3,   3,    /* 2nd smallest sizes, unused for type 4&5 */ \
-  4,   5,   5,   5,   3,   3,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   5,   8,   3,   3,    /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   5,  16,   3,   3,    /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   5,  32,   3,   3,    /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   5,  32,   3,   3     /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   5,   3,   3,   5,    /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   5,   5,   3,   5,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   5,   8,   3,   5,    /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   5,  16,   3,   5,    /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   5,  32,   3,   5,    /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   5,  32,   3,   5     /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -229,7 +230,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
-#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
 #define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
 
 #define SGGC_TOTAL_BYTES(type,length) \
@@ -271,12 +272,12 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   2,   2,   2,   2,    /* Smallest sizes for the SGGC types */ \
-  3,   3,   3,   3,   2,   2,    /* 2nd smallest sizes, unused for type 4&5 */ \
-  4,   5,   3,   5,   2,   2,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   3,   8,   2,   2,    /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   3,  16,   2,   2,    /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   3,  32,   2,   2,    /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   3,  32,   2    2,    /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   3,   3,   2,   3,    /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   3,   5,   2,   3,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   3,   8,   2,   3,    /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   3,  16,   2,   3,    /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   3,  32,   2,   3,    /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   3,  32,   2    3,    /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -305,7 +306,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
-#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
 #define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
 
 #define SGGC_TOTAL_BYTES(type,length) \
