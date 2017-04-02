@@ -42,19 +42,21 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
 
 /* NUMBER OF OBJECT TYPES.  The SGGC types are not the same as the R
    types, partly because of the possible use of SET_TYPE.  Instead,
-   there are only five SGGC types, whose distinctions are useful for
-   determining what pointers to follow in an object in find_object_ptrs.
+   there are only the SGGC types below, whose distinctions are useful for
+   determining what pointers to follow in an object in find_object_ptrs,
+   and to make some objected uncollected.
 
    These SGGC types are as follows:
 
        0  No pointers to follow (NILSXP, CHARSXP)
-       1  Only attribute pointer to follow (eg, INTSXP, BUILTINSXP)
+       1  Only attribute pointer to follow (eg, INTSXP)
        2  Attribute pointer plus three others (eg, LISTSXP, SYMSXP)
        3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
        4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
+       5  Only attribute pointer to follow, uncollected (SPECIALSXP, BUILTINSXP)
 */
 
-#define SGGC_N_TYPES 5
+#define SGGC_N_TYPES 6
 
 extern const char R_type_to_sggc_type[32];  /* Initialized in sggc-app.c */
 
@@ -104,28 +106,39 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
                                           implementation above. */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for EXTPTRSXP, BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
+   for EXTPTRSXP and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
-  1,   1,   1,   1,   1,        /* Smallest sizes for the SGGC types */ \
-  2,   2,   2,   2,   2,        /* 2nd smallest sizes, unused for type 4 */ \
-  3,   4,   2,   4,   2,        /* 3rd smallest sizes, unused for types 2&4 */ \
-  5,   8,   2,   8,   2,        /* 4th smallest sizes, unused for types 2&4 */ \
-  8,  16,   2,  16,   2,        /* 5th smallest sizes, unused for types 2&4 */ \
- 16,  32,   2,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
- 32,  32,   2,  32,   2         /* 7th smallest sizes, only for type 0 */ \
+{ 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
+  1,   1,   1,   1,   1,   2,    /* Smallest sizes for the SGGC types */ \
+  2,   2,   2,   2,   2,   2,    /* 2nd smallest sizes, unused for types 4&5 */ \
+  3,   4,   2,   4,   2,   2,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   2,   8,   2,   2,    /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   2,  16,   2,   2,    /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   2,  32,   2,   2,    /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   2,  32,   2,   2     /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
-{ 0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4  \
+{ 0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5  \
+};
+
+#define SGGC_KIND_UNCOLLECTED \
+{ 0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1  \
 };
 
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
@@ -177,28 +190,39 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for BUILTINSXP, SPECIALSXP, and SYMSXP, given by third row. */
+   for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
-  2,   2,   3,   2,   3,        /* Smallest sizes for the SGGC types */ \
-  3,   3,   5,   3,   3,        /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   5,   5,   3,        /* 3rd smallest sizes, unused for types 2&4 */ \
-  5,   8,   5,   8,   3,        /* 4th smallest sizes, unused for types 2&4 */ \
-  8,  16,   5,  16,   3,        /* 5th smallest sizes, unused for types 2&4 */ \
- 16,  32,   5,  32,   3,        /* 6th smallest sizes, unused for types 2&4 */ \
- 32,  32,   5,  32,   3         /* 7th smallest sizes, only for type 0 */ \
+{ 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   3,   2,   3,   3,    /* Smallest sizes for the SGGC types */ \
+  3,   3,   5,   3,   3,   3,    /* 2nd smallest sizes, unused for type 4&5 */ \
+  4,   5,   5,   5,   3,   3,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   5,   8,   3,   3,    /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   5,  16,   3,   3,    /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   5,  32,   3,   3,    /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   5,  32,   3,   3     /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
-{ 0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4  \
+{ 0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5  \
+};
+
+#define SGGC_KIND_UNCOLLECTED \
+{ 0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1  \
 };
 
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
@@ -245,25 +269,36 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
    for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,        /* Kinds for big segments, only types 1 & 3 */ \
-  2,   2,   2,   2,   2,        /* Smallest sizes for the SGGC types */ \
-  3,   3,   3,   3,   2,        /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   3,   5,   2,        /* 3rd smallest sizes, unused for types 2&4 */ \
-  5,   8,   3,   8,   2,        /* 4th smallest sizes, unused for types 2&4 */ \
-  8,  16,   3,  16,   2,        /* 5th smallest sizes, unused for types 2&4 */ \
- 16,  32,   3,  32,   2,        /* 6th smallest sizes, unused for types 2&4 */ \
- 32,  32,   3,  32,   2         /* 7th smallest sizes, only for type 0 */ \
+{ 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   2,   2,   2,   2,    /* Smallest sizes for the SGGC types */ \
+  3,   3,   3,   3,   2,   2,    /* 2nd smallest sizes, unused for type 4&5 */ \
+  4,   5,   3,   5,   2,   2,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   3,   8,   2,   2,    /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   3,  16,   2,   2,    /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   3,  32,   2,   2,    /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   3,  32,   2    2,    /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
-{ 0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4, \
-  0, 1, 2, 3, 4  \
+{ 0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5  \
+};
+
+#define SGGC_KIND_UNCOLLECTED \
+{ 0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1  \
 };
 
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)

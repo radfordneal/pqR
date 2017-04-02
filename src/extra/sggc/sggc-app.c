@@ -50,8 +50,8 @@ const char R_type_to_sggc_type[32] =
   2, /* ENVSXP */
   2, /* PROMSXP */
   2, /* LANGSXP */
-  1, /* SPECIALSXP */
-  1, /* BUILTINSXP */
+  5, /* SPECIALSXP */
+  5, /* BUILTINSXP */
   0, /* CHARSXP */
   1, /* LGLSXP */
   0, /* unused */
@@ -101,8 +101,6 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
     case CPLXSXP:
         return (8 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
     case EXTPTRSXP:
-    case BUILTINSXP:
-    case SPECIALSXP:
     case SYMSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
@@ -135,8 +133,6 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
         return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
     case CPLXSXP:
         return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
-    case BUILTINSXP:
-    case SPECIALSXP:
     case SYMSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
@@ -234,6 +230,9 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
             sggc_look_at(COMPRESSED_PTR(TAG(n)));
         return;
     }
+
+    if (sggctype == 5)
+        return;
 
     abort();
 }

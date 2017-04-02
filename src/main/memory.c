@@ -1235,7 +1235,7 @@ SEXP allocSExp(SEXPTYPE t)
         CAR(s) = R_NilValue;
         CDR(s) = R_NilValue;
         TAG(s) = R_NilValue;
-        if (LENGTH(s) == 0) LENGTH(s) = 1;
+        if (LENGTH(s) != 1) LENGTH(s) = 1;
         return s;
     }
 }
@@ -1252,7 +1252,7 @@ SEXP cons(SEXP car, SEXP cdr)
         UNPROTECT(2);
     }
 
-    if (LENGTH(s) == 0) LENGTH(s) = 1;
+    if (LENGTH(s) != 1) LENGTH(s) = 1;
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1273,7 +1273,7 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
         UNPROTECT(3);
     }
 
-    if (LENGTH(s) == 0) LENGTH(s) = 1;
+    if (LENGTH(s) != 1) LENGTH(s) = 1;
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1315,7 +1315,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 
     SEXP v, n;
 
-    if (LENGTH(newrho) == 0) LENGTH(newrho) = 1;
+    if (LENGTH(newrho) != 1) LENGTH(newrho) = 1;
 
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
@@ -1347,7 +1347,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
         UNPROTECT(2);
     }
 
-    if (LENGTH(s) == 0) LENGTH(s) = 1;
+    if (LENGTH(s) != 1) LENGTH(s) = 1;
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
@@ -1361,41 +1361,45 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 }
 
 
-/*  mkPRIMSXP - return a builtin function      */
-/*              either "builtin" or "special"  */
+/* mkPRIMSXP - return a primitve function, "builtin" or "special".
 
-/*  The value produced is cached do avoid the need for GC protection
-    in cases where a .Primitive is produced by unserializing or
-    reconstructed after a package has clobbered the value assigned to
-    a symbol in the base package.  Also relied on to protect op in "eval". */
+   Primitive objects are recorded to avoid creation of extra ones
+   during unserializaton or reconstruction after a package has
+   clobbered the value assigned to the symbol for a primitive.
+   Primitives are of an uncollected kind, so they don't need to be
+   protected from garbage collection. */
+
+#define MAX_PRIMITIVES 1000   /* Increase if necessary */
+
+static SEXP primitive_cache[MAX_PRIMITIVES];
+static int FunTabSize = 0;
 
 SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 {
     SEXP result;
     SEXPTYPE type = eval ? BUILTINSXP : SPECIALSXP;
-    static SEXP PrimCache = R_NoObject;
     static int FunTabSize = 0;
     
-    if (PrimCache == R_NoObject) {
+    if (FunTabSize == 0) {
 	/* compute the number of entires in R_FunTab */
-	while (R_FunTab[FunTabSize].name)
-	    FunTabSize++;
-
-	/* allocate and protect the cache */
-	PrimCache = allocVector(VECSXP, FunTabSize);
-	R_PreserveObject(PrimCache);
+	while (R_FunTab[FunTabSize].name) {
+            if (FunTabSize >= MAX_PRIMITIVES)
+                R_Suicide("too many primitives");
+            primitive_cache[FunTabSize] = R_NoObject;
+	    FunTabSize += 1;
+        }
     }
 
     if (offset < 0 || offset >= FunTabSize)
-	error("offset is out of R_FunTab range");
+	error("offset is out of range for a primitive");
 
-    result = VECTOR_ELT(PrimCache, offset);
+    result = primitive_cache[offset];
 
-    if (result == R_NilValue) {
+    if (result == R_NoObject) {
 	result = alloc_obj(type,1);
-        if (LENGTH(result) == 0) LENGTH(result) = 1;
+        if (LENGTH(result) != 1) LENGTH(result) = 1;
 	SET_PRIMOFFSET(result, offset);
-        SET_VECTOR_ELT (PrimCache, offset, result);
+        primitive_cache[offset] = result;
     }
     else if (TYPEOF(result) != type)
 	error("requested primitive type is not consistent with cached value");
@@ -1422,7 +1426,7 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
         UNPROTECT(3);
     }
 
-    if (LENGTH(c) == 0) LENGTH(c) = 1;
+    if (LENGTH(c) != 1) LENGTH(c) = 1;
 
 #ifdef not_used_CheckFormals
     if(isList(formals))
@@ -1476,7 +1480,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_obj (SYMSXP, 1);
     UNPROTECT(2);
 
-    if (LENGTH(c) == 0) LENGTH(c) = 1;
+    if (LENGTH(c) != 1) LENGTH(c) = 1;
 
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
@@ -1690,7 +1694,7 @@ SEXP allocList(int n)
 SEXP allocS4Object(void)
 {
    SEXP s = alloc_obj(S4SXP,1);
-   if (LENGTH(s) == 0) LENGTH(s) = 1;
+   if (LENGTH(s) != 1) LENGTH(s) = 1;
    SET_S4_OBJECT(s);
    TAG(s) = R_NilValue;
    return s;
@@ -1768,8 +1772,8 @@ static void R_gc_internal(void)
     gc_ran_finalizers = RunFinalizers();
 
     if (gc_reporting) {
-        REprintf("Did garbage collection #%lld at level %d\n",
-                  gc_count, gc_last_level);
+        REprintf("Did garbage collection #%lld at level %d, uncol_count %d\n",
+                  gc_count, gc_last_level, sggc_info.uncol_count);
     }
 }
 
@@ -2012,7 +2016,7 @@ void R_ReleaseObject(SEXP object)
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
     SEXP s = alloc_obj(EXTPTRSXP,1);
-    if (LENGTH(s) == 0) LENGTH(s) = 1;
+    if (LENGTH(s) != 1) LENGTH(s) = 1;
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -2027,7 +2031,7 @@ SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
     fn_ptr tmp;
     SEXP s = alloc_obj(EXTPTRSXP,1);
-    if (LENGTH(s) == 0) LENGTH(s) = 1;
+    if (LENGTH(s) != 1) LENGTH(s) = 1;
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
