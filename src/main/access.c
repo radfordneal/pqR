@@ -504,9 +504,15 @@ SEXP (SYMVALUE)(SEXP x) { return Rf_chk_valid_SEXP(SYMVALUE(Rf_chk_valid_SEXP(x)
 SEXP (INTERNAL)(SEXP x) { return Rf_chk_valid_SEXP(INTERNAL(Rf_chk_valid_SEXP(x))); }
 int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
 
-void (SET_PRINTNAME)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRINTNAME(x) = v; }
-void (SET_SYMVALUE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); SYMVALUE(x) = v; }
-void (SET_INTERNAL)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); INTERNAL(x) = v; }
+/* Don't do old-to-new check when setting fields in symbols, since they are
+   always scanned anyway. */
+
+void (SET_PRINTNAME)(SEXP x, SEXP v) { PRINTNAME(x) = v; }
+void (SET_SYMVALUE)(SEXP x, SEXP v) { SYMVALUE(x) = v; }
+void (SET_INTERNAL)(SEXP x, SEXP v) 
+  { if (TYPEOF(v)!=BUILTINSXP && TYPEOF(v)!=SPECIALSXP) abort(); 
+    INTERNAL(x) = v; 
+  }
 void (SET_DDVAL)(SEXP x, int v) { SET_DDVAL(Rf_chk_valid_SEXP(x), v); }
 
 /* Environment Accessors */

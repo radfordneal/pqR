@@ -20,6 +20,8 @@
         "identify" was returning C NULL sometimes - changed to R NULL.
 
         "pages" option for Rprofmem is now defunct.
+
+        prohibit setting INTERNAL to anything other than a primitive
   }}
 
 }

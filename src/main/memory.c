@@ -540,7 +540,9 @@ void sggc_find_root_ptrs (void)
        by NEXTSYM_PTR, which sggc_find_object_ptrs doesn't know about,
        and because we need to clear LASTSYMENV and LASTSYMENVNOTFOUND.
        Plus it's faster to mark / follow the pointers with special
-       code here. 
+       code here.  So we don't need old-to-new processing when setting
+       fields.  Also, INTERNAL is always an uncollected primitive, so
+       needn't mark.
 
        The symbol table may be nonexistent at startup (NULL). */
 
@@ -551,7 +553,6 @@ void sggc_find_root_ptrs (void)
                 LASTSYMENVNOTFOUND(s) = R_NoObject;
                 MARK(PRINTNAME(s));
                 if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
-                if (INTERNAL(s) != R_NilValue) LOOK_AT(INTERNAL(s));
                 if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
             }
         }
