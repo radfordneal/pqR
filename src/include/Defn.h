@@ -955,8 +955,9 @@ LibExtern SEXP *R_internal_table;
 
 static inline SEXP INTERNAL_fun (SEXP x)
 {
-    return x < R_first_internal || x > R_max_internal ? R_NilValue
-             : R_internal_table[COMPRESSED_PTR(x)-R_first_internal];
+    sggc_cptr_t s = COMPRESSED_PTR(x);
+    return s < R_first_internal || s > R_max_internal ? R_NilValue
+             : R_internal_table[s-R_first_internal];
 }
 
 

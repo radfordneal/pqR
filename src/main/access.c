@@ -510,9 +510,11 @@ int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
 void (SET_PRINTNAME)(SEXP x, SEXP v) { PRINTNAME(x) = v; }
 void (SET_SYMVALUE)(SEXP x, SEXP v) { SYMVALUE(x) = v; }
 void (SET_INTERNAL)(SEXP x, SEXP v) 
-{   if (TYPEOF(v)!=BUILTINSXP && TYPEOF(v)!=SPECIALSXP) abort(); 
-    if (x < R_first_internal || x > R_max_internal) abort();
-    R_internal_table[COMPRESSED_PTR(x)-R_first_internal] = v;    
+{
+    sggc_cptr_t s = COMPRESSED_PTR(x);
+    if (TYPEOF(v)!=BUILTINSXP && TYPEOF(v)!=SPECIALSXP) abort(); 
+    if (s < R_first_internal || s > R_max_internal) abort();
+    R_internal_table[s-R_first_internal] = v;    
 }
 void (SET_DDVAL)(SEXP x, int v) { SET_DDVAL(Rf_chk_valid_SEXP(x), v); }
 
