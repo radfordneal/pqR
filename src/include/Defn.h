@@ -89,6 +89,11 @@
 #   define HELPERS_DISABLED
 # endif
 
+
+#define R_MAX_FUNTAB_ENTRIES 1000 /* Size of FunTab in names.c. */
+                                  /* Increase as needed; spare slots allowed, */
+                                  /* but limited to 2048, due to 16 bits in gp*/
+
 #define MAXELTSIZE 8192 /* Used as a default for string buffer sizes,
 			   and occasionally as a limit. */
 
@@ -938,6 +943,21 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 # define INI_as(v)
 #define extern0 extern
 #endif
+
+
+/* Table of INTERNAL primitives associated with symbols, allocated and
+   set up in names.c. */
+
+LibExtern int R_first_internal, R_max_internal;
+LibExtern SEXP *R_internal_table;
+
+#define INTERNAL(x) INTERNAL_fun(x)
+
+static inline SEXP INTERNAL_fun (SEXP x)
+{
+    return x < R_first_internal || x > R_max_internal ? R_NilValue
+             : R_internal_table[COMPRESSED_PTR(x)-R_first_internal];
+}
 
 
 /* Fast interface for subassign primitives.  These variables are set in

@@ -102,10 +102,8 @@
    files where the functions are defined, and copied to the table below on
    initialization.  Some entries are defined in this source file (names.c). */
 
-#define MAX_FUNTAB_ENTRIES 1000 /* Increase as needed; spare slots are allowed*/
-                                /* but no more than 2048, due to 16 bits in gp*/
-
-attribute_hidden FUNTAB R_FunTab[MAX_FUNTAB_ENTRIES+1]; /* terminated by NULL */
+attribute_hidden FUNTAB R_FunTab[R_MAX_FUNTAB_ENTRIES+1]; 
+                                /* terminated by NULL name */
 
 /* Pointers to the FUNTAB tables in the various source files, to be copied to
    R_FunTab.  Their names have the form R_FunTab_srcfilename. */
@@ -571,9 +569,9 @@ static void SetupBuiltins(void)
 
     for (j = 0; FunTab_ptrs[j]!=NULL; j++) {
         for (k = 0; FunTab_ptrs[j][k].name!=NULL; k++) {
-            if (i > MAX_FUNTAB_ENTRIES) {
+            if (i > R_MAX_FUNTAB_ENTRIES) {
                 REprintf(
-                  "Too many builtin functions - increase MAX_FUNTAB_ENTRIES\n");
+                "Too many builtin functions - increase R_MAX_FUNTAB_ENTRIES\n");
                 exit(1);
             }
             R_FunTab[i++] = FunTab_ptrs[j][k];
@@ -581,6 +579,30 @@ static void SetupBuiltins(void)
     }
 
     R_FunTab[i].name = NULL;
+
+    /* Install the symbols for internals first, so they will have small
+       compressed pointers, allowing for a small table of internals. */
+
+    R_first_internal = 0;
+    R_max_internal = 0;
+
+    for (i = 0; R_FunTab[i].name!=NULL; i++) {
+        if ((R_FunTab[i].eval % 100 )/10) {
+            SEXP sym = install(R_FunTab[i].name);
+            if (R_first_internal == 0)
+                R_first_internal = COMPRESSED_PTR(sym);
+            if (COMPRESSED_PTR(sym) > R_max_internal)
+                R_max_internal = COMPRESSED_PTR(sym);
+        }
+    }
+
+    if (0) /* can enable for debugging */
+        REprintf("first_internal: %d, max_internal: %d\n",
+                 (int) R_first_internal, (int) R_max_internal);
+
+    R_internal_table = calloc (sizeof(SEXP), R_max_internal-R_first_internal+1);
+    if (R_internal_table == NULL) 
+        R_Suicide("Can't allocate R_internal_table");
 
     /* Install the primitive and internal functions.  Look for fast versions
        of the primitives (but not internals). */
@@ -596,10 +618,11 @@ static void SetupBuiltins(void)
             Rprintf ("SETUP: %s, internal %d, visible %d\n",
                      PRIMNAME(prim), PRIMINTERNAL(prim), PRIMPRINT(prim));
         }
+        SEXP sym = install(R_FunTab[i].name);
         if ((R_FunTab[i].eval % 100 )/10)
-            SET_INTERNAL(install(R_FunTab[i].name), prim);
+            SET_INTERNAL(sym, prim);
         else {
-            SET_SYMVALUE(install(R_FunTab[i].name), prim);
+            SET_SYMVALUE(sym, prim);
             for (j = 0; FastFunTab_ptrs[j]!=NULL; j++) {
                 for (k = 0; FastFunTab_ptrs[j][k].slow!=0; k++) {
                     FASTFUNTAB *f = &FastFunTab_ptrs[j][k];
@@ -633,6 +656,10 @@ void InitNames()
 	R_Suicide("couldn't allocate memory for symbol table");
     for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
 
+    /* Set up built-in functions.  Do first so internals have small
+       compressed pointers. */
+    SetupBuiltins();
+
     /* The SYMSXP objects below are not in the symbol table, and hence
        must be roots for the garbage collector. */
     /* R_MissingArg */
@@ -664,9 +691,6 @@ void InitNames()
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
     SymbolShortcuts();
-
-    /* Set up built-in functions. */
-    SetupBuiltins();
 
     framenames = R_NilValue;
 

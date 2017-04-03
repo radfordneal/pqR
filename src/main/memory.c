@@ -1366,28 +1366,14 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
    Primitives are of an uncollected kind, so they don't need to be
    protected from garbage collection. */
 
-#define MAX_PRIMITIVES 1000   /* Increase if necessary */
-
-static SEXP primitive_cache[MAX_PRIMITIVES];
-static int FunTabSize = 0;
+static SEXP primitive_cache[R_MAX_FUNTAB_ENTRIES];
 
 SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 {
-    SEXP result;
     SEXPTYPE type = eval ? BUILTINSXP : SPECIALSXP;
-    static int FunTabSize = 0;
-    
-    if (FunTabSize == 0) {
-	/* compute the number of entires in R_FunTab */
-	while (R_FunTab[FunTabSize].name) {
-            if (FunTabSize >= MAX_PRIMITIVES)
-                R_Suicide("too many primitives");
-            primitive_cache[FunTabSize] = R_NoObject;
-	    FunTabSize += 1;
-        }
-    }
+    SEXP result;
 
-    if (offset < 0 || offset >= FunTabSize)
+    if (offset < 0 || offset >= R_MAX_FUNTAB_ENTRIES)
 	error("offset is out of range for a primitive");
 
     result = primitive_cache[offset];
@@ -1481,7 +1467,6 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
-    INTERNAL(c) = R_NilValue; /* old-to-new check unneeded, R_NilValue is old */
     NEXTSYM_PTR(c) = R_NilValue;
     LASTSYMENV(c) = R_NoObject;
     LASTSYMBINDING(c) = R_NoObject;

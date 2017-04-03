@@ -326,7 +326,7 @@ typedef struct PRIM_SEXPREC {
 struct symsxp_struct {
     SEXP pname;
     SEXP value;
-    SEXP internal;
+    SEXP internal_del;
     SEXP nextsym;
     SEXP lastenv;
     SEXP lastenvnotfound;
@@ -769,7 +769,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.pname)
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.value)
-#define INTERNAL(x)	(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.internal)
 #define NEXTSYM_PTR(x)	(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.nextsym)
 #define LASTSYMENV(x)	(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.lastbinding)
