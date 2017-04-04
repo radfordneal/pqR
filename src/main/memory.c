@@ -1366,7 +1366,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
    Primitives are of an uncollected kind, so they don't need to be
    protected from garbage collection. */
 
-static SEXP primitive_cache[R_MAX_FUNTAB_ENTRIES];
+static SEXP primitive_cache[R_MAX_FUNTAB_ENTRIES]; /* initialized to 0 by default */
 
 SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 {
@@ -1378,7 +1378,10 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 
     result = primitive_cache[offset];
 
-    if (result == R_NoObject) {
+    /* Check for empty table entry - 0 is what entries are initialized to,
+       possibly R_NoObject or R_NilValue, but in any case, not a valid value. */
+
+    if (result == 0) {
 	result = alloc_obj(type,1);
         if (LENGTH(result) != 1) LENGTH(result) = 1;
 	SET_PRIMOFFSET(result, offset);
