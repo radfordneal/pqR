@@ -326,7 +326,6 @@ typedef struct PRIM_SEXPREC {
 struct symsxp_struct {
     SEXP pname;
     SEXP value;
-    SEXP internal_del;
     SEXP nextsym;
     SEXP lastenv;
     SEXP lastenvnotfound;
@@ -336,11 +335,18 @@ struct symsxp_struct {
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
-    int32_t padding;
+    int32_t padding1;
 #endif
     struct symsxp_struct symsxp;
+#if USE_COMPRESSED_POINTERS
+    int32_t padding1;
+#endif
+#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+    int64_t padding2;
+#endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
-    int32_t padding;
+    int32_t padding1;
+    int32_t padding2;
 #endif
 } SYM_SEXPREC, *SYMSEXP;
 

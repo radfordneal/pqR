@@ -80,11 +80,11 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
       Symbol:             Primitive:                        External pointer:
         info, pname         info, padding                     info, unused/shift
-        value, internal     C-function                        prot, tag
-        nextsym, lastenv    fast-C-function                   external ptr
-        lastbinding, lastenvnotfound     64 bits of info      padding, padding
-        = 32 bytes                       = 32 bytes           = 32 bytes
-          (2 chunks)                       (2 chunks)           (2 chunks)
+        value, nextsym      C-function                        prot, tag
+        lastenv, last-enf   fast-C-function                   external ptr
+        lastbinding,padding 64 bits of info                   padding, padding
+        = 32 bytes          = 32 bytes                        = 32 bytes
+          (2 chunks)          (2 chunks)                        (2 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -110,14 +110,14 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
    for EXTPTRSXP and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
-  1,   1,   1,   1,   1,   2,    /* Smallest sizes for the SGGC types */ \
-  2,   2,   2,   2,   2,   2,    /* 2nd smallest sizes, unused for type 4 */ \
-  3,   4,   2,   4,   2,   2,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   2,   8,   2,   2,    /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   2,  16,   2,   2,    /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   2,  32,   2,   2,    /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   2,  32,   2,   2     /* 7th smallest sizes, only for type 0 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+  1,   1,   1,   1,   1,   2, /* Smallest sizes for the SGGC types */ \
+  2,   2,   2,   2,   2,   2, /* 2nd smallest sizes, unused for type 4 */ \
+  3,   4,   2,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   2,   8,   2,   2, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   2,  16,   2,   2, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   2,  32,   2,   2, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   2,  32,   2,   2  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -177,11 +177,11 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         length, padding     length, padding                   length, padding
         pname               C-function                        external ptr
         value               fast-C-function                   prot
-        internal            64 bits of info                   tag
-        nextsym             = 48 bytes                        = 48 bytes
-        lastenv             (3 chunks)                          (3 chunks)
+        nextsym             64 bits of info                   tag
+        lastenv             = 48 bytes                        = 48 bytes
+        last-enf            (3 chunks)                          (3 chunks)
         lastbinding
-        lastenvnotfound
+        padding
         = 80 bytes
           (5 chunks)
 */
@@ -194,14 +194,14 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
    for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
-  2,   2,   3,   2,   3,   3,    /* Smallest sizes for the SGGC types */ \
-  3,   3,   5,   3,   3,   5,    /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   5,   5,   3,   5,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   5,   8,   3,   5,    /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   5,  16,   3,   5,    /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   5,  32,   3,   5,    /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   5,  32,   3,   5     /* 7th smallest sizes, only for type 0 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   3,   2,   3,   3, /* Smallest sizes for the SGGC types */ \
+  3,   3,   5,   3,   3,   5, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   5,   5,   3,   5, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   5,   8,   3,   5, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   5,  16,   3,   5, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   5,  32,   3,   5, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   5,  32,   3,   5  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -255,9 +255,9 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         info, cptr          info, cptr                        info, cptr
         attrib, length      attrib, length                    attrib, length
         pname, value        C-function, fast-C-function       prot, tag
-        internal, nextsym   64 bits of info                   xptr, padding
-        lastenv, lastbinding      = 32 bytes                  = 32 bytes
-        lastenvnotfound, padding    (2 chunks)                  (2 chunks)
+        nextsym, lastenv    64 bits of info                   xptr, padding
+        last-enf, lastbinding     = 32 bytes                  = 32 bytes
+        padding, padding            (2 chunks)                  (2 chunks)
         = 48 bytes          
           (3 chunks)
 */
@@ -270,14 +270,14 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
    for SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0,    /* Kinds for big segments, only types 1 & 3 */ \
-  2,   2,   2,   2,   2,   2,    /* Smallest sizes for the SGGC types */ \
-  3,   3,   3,   3,   2,   3,    /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   3,   5,   2,   3,    /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   3,   8,   2,   3,    /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   3,  16,   2,   3,    /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   3,  32,   2,   3,    /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   3,  32,   2    3,    /* 7th smallest sizes, only for type 0 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
+  3,   3,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   3,  32,   2    3, /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
