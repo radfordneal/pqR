@@ -1432,8 +1432,8 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 #if USE_COMPRESSED_POINTERS
 #define R_UnboundValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0))
 #else
-ConstExtern R_CONST SYM_SEXPREC R_sym_consts[1]; /* defined in const-objs.c*/
-#define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value*/
+ConstExtern SYM_SEXPREC R_sym_consts[1];         /* defined in const-objs.c */
+#define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value */
 #endif
 
 LibExtern SEXP	R_MissingArg;       /* Missing argument marker */

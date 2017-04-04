@@ -578,7 +578,9 @@ void sggc_find_root_ptrs (void)
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++)
         LOOK_AT(*sp);
 
-    /* Scan the symbol table. 
+    /* Scan symbols.  May be done either using the symbol table or
+       SGGC's set of uncollected objects of the symbol kind.  Scanning
+       the uncollected set may have better cache properties.
 
        We have to scan the symbol table specially, because it's linked
        by NEXTSYM_PTR, which sggc_find_object_ptrs doesn't know about,
@@ -590,38 +592,55 @@ void sggc_find_root_ptrs (void)
 
        The symbol table may be nonexistent at startup (NULL). */
 
-    if (R_SymbolTable != NULL) { 
-        for (i = 0; i < HSIZE; i++) {
-            for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
-                LASTSYMENV(s) = R_NoObject;
-                LASTSYMENVNOTFOUND(s) = R_NoObject;
-                MARK(PRINTNAME(s));
-                if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
-                if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
+#   if 0  /* scan using the symbol table */
+    {
+        if (R_SymbolTable != NULL) { 
+            for (i = 0; i < HSIZE; i++) {
+                for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
+                    LASTSYMENV(s) = R_NoObject;
+                    LASTSYMENVNOTFOUND(s) = R_NoObject;
+                    MARK(PRINTNAME(s));
+                    if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
+                    if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
+                }
             }
         }
+    
+        /* Clear fields in the few symbols not in the symbol table, though
+           they shouldn't ever be set anyway.  Note that R_UnboundValue is
+           a constant now, so its fields shouldn't change. */
+    
+        if (R_MissingArg) {
+            LASTSYMENV(R_MissingArg) = R_NoObject;
+            LASTSYMBINDING(R_MissingArg) = R_NoObject;
+            LASTSYMENVNOTFOUND(R_MissingArg) = R_NoObject;
+        }
+        if (R_MissingUnder) {
+            LASTSYMENV(R_MissingUnder) = R_NoObject;
+            LASTSYMBINDING(R_MissingUnder) = R_NoObject;
+            LASTSYMENVNOTFOUND(R_MissingUnder) = R_NoObject;
+        }
+        if (R_RestartToken) {
+            LASTSYMENV(R_RestartToken) = R_NoObject;
+            LASTSYMBINDING(R_RestartToken) = R_NoObject;
+            LASTSYMENVNOTFOUND(R_RestartToken) = R_NoObject;
+        }
     }
-
-    /* Clear fields in the few symbols not in the symbol table, though
-       they shouldn't ever be set anyway.  Note that R_UnboundValue is
-       a constant now, so its fields aren't going to change (if actually
-       kept in read-only memory). */
-
-    if (R_MissingArg) {
-        LASTSYMENV(R_MissingArg) = R_NoObject;
-        LASTSYMBINDING(R_MissingArg) = R_NoObject;
-        LASTSYMENVNOTFOUND(R_MissingArg) = R_NoObject;
+#   else  /* scan using the SGGC uncollected set */
+    {
+        sggc_cptr_t nxt;
+        for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
+             nxt != SGGC_NO_OBJECT;
+             nxt = sggc_next_uncollected_of_kind(nxt)) {
+            SEXP s = SEXP_PTR(nxt);
+            LASTSYMENV(s) = R_NoObject;
+            LASTSYMENVNOTFOUND(s) = R_NoObject;
+            MARK(PRINTNAME(s));
+            if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
+            if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
+        }
     }
-    if (R_MissingUnder) {
-        LASTSYMENV(R_MissingUnder) = R_NoObject;
-        LASTSYMBINDING(R_MissingUnder) = R_NoObject;
-        LASTSYMENVNOTFOUND(R_MissingUnder) = R_NoObject;
-    }
-    if (R_RestartToken) {
-        LASTSYMENV(R_RestartToken) = R_NoObject;
-        LASTSYMBINDING(R_RestartToken) = R_NoObject;
-        LASTSYMENVNOTFOUND(R_RestartToken) = R_NoObject;
-    }
+#   endif
 
     /* Forward other roots. */
 
@@ -1119,13 +1138,47 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 }
 
 
+/* Allocate a symbol.  Needs some special processing since symbols share an
+   sggc type with other objects, but should be in their own kind. */
+
+static SEXP alloc_sym (void)
+{
+    if (sggc_info.gen0_count >= gc_interval)
+        R_gc_internal(); 
+
+    sggc_cptr_t cp = sggc_alloc_small_kind (SGGC_SYM_KIND);
+
+    while (cp == SGGC_NO_OBJECT) {
+        if (sggc_info.gen0_count >= gc_interval
+             && gc_last_level < 2
+             && gc_next_level < gc_last_level + 1) {
+            gc_next_level = gc_last_level + 1;
+        }
+        R_gc_internal();
+        cp = sggc_alloc_small_kind (SGGC_SYM_KIND);
+        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
+            R_Suicide("out of memory");
+    }
+
+    SEXP r = SEXP_PTR (cp);
+#if !USE_COMPRESSED_POINTERS
+    r->cptr = cp;
+#endif
+
+    TYPEOF(r) = SYMSXP;
+    ATTRIB(r) = R_NilValue;
+
+    return r;
+}
+
+
 /* Fast allocation of a small object.  It never garbage collects, but
    just returns R_NoObject if it fails to allocate (possibly because
    the sggc routine thought it wasn't easy).  The caller must then
-   call the garbage collector itself.  The caller must specify both
-   the R type and the correct corresponding SGGC kind, for the desired
-   length (if relevant).  The TYPE and ATTRIB fields are set here,
-   but not LENGTH. */
+   call alloc_obj.  The caller must specify both the R type and the
+   correct corresponding SGGC kind, for the desired length (if
+   relevant).  The TYPE and ATTRIB fields are set here, but not
+   LENGTH. */
 
 static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 {
@@ -1470,7 +1523,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SEXP c;
 
     PROTECT2(name,value);
-    c = alloc_obj (SYMSXP, 1);
+    c = alloc_sym();
     UNPROTECT(2);
 
     if (LENGTH(c) != 1) LENGTH(c) = 1;
