@@ -534,7 +534,51 @@ void sggc_find_root_ptrs (void)
 {
     int i;
 
-    /* Start by scanning the symbol table. 
+    /* Start with things that might currently be in the cache, so quicker
+       to do now than later. */
+
+    /* Contexts of R evaluations. */
+
+    RCNTXT *ctxt;
+    for (ctxt = R_GlobalContext; ctxt != NULL; ctxt = ctxt->nextcontext) {
+        SEXP *cntxt_ptrs[] = { /* using this run-time initialized table may be
+                                  slower, but is certainly more compact */
+	    &ctxt->conexit,       /* on.exit expressions */
+	    &ctxt->promargs,	  /* promises supplied to closure */
+	    &ctxt->callfun,       /* the closure called */
+	    &ctxt->sysparent,     /* calling environment */
+	    &ctxt->call,          /* the call */
+	    &ctxt->cloenv,        /* the closure environment */
+	    &ctxt->handlerstack,  /* the condition handler stack */
+	    &ctxt->restartstack,  /* the available restarts stack */
+	    &ctxt->srcref,	  /* the current source reference */
+            0
+        };
+        for (i = 0; cntxt_ptrs[i] != 0; i++)
+            LOOK_AT(*cntxt_ptrs[i]);
+    }
+
+    /* Protected pointers */
+
+    for (i = R_PPStackTop-1; i >= 0; i--) {
+        if (R_PPStack[i] != R_NoObject) 
+            LOOK_AT(R_PPStack[i]);
+    }
+
+    /* Pointers from protected local SEXP variables. */
+
+    for (const struct R_local_protect *p = R_local_protect_start;
+           p != NULL; p = p->next) {
+        for (i = 0; i < p->cnt; i++) 
+            if (*p->Protected[i]) LOOK_AT(*p->Protected[i]);
+    }
+
+    /* Byte code stack */
+
+    for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++)
+        LOOK_AT(*sp);
+
+    /* Scan the symbol table. 
 
        We have to scan the symbol table specially, because it's linked
        by NEXTSYM_PTR, which sggc_find_object_ptrs doesn't know about,
@@ -624,45 +668,8 @@ void sggc_find_root_ptrs (void)
 	}
     }
 
-    RCNTXT *ctxt;
-    for (ctxt = R_GlobalContext; ctxt != NULL; ctxt = ctxt->nextcontext) {
-        SEXP *cntxt_ptrs[] = { /* using this run-time initialized table may be
-                                  slower, but is certainly more compact */
-	    &ctxt->conexit,       /* on.exit expressions */
-	    &ctxt->promargs,	  /* promises supplied to closure */
-	    &ctxt->callfun,       /* the closure called */
-	    &ctxt->sysparent,     /* calling environment */
-	    &ctxt->call,          /* the call */
-	    &ctxt->cloenv,        /* the closure environment */
-	    &ctxt->handlerstack,  /* the condition handler stack */
-	    &ctxt->restartstack,  /* the available restarts stack */
-	    &ctxt->srcref,	  /* the current source reference */
-            0
-        };
-        for (i = 0; cntxt_ptrs[i] != 0; i++)
-            LOOK_AT(*cntxt_ptrs[i]);
-    }
-
     if (framenames != R_NoObject)  /* used for interprocedure    */
         LOOK_AT(framenames);	   /*   communication in model.c */
-
-    for (i = 0; i < R_PPStackTop; i++) {   /* Protected pointers */
-        if (R_PPStack[i] != R_NoObject) 
-            LOOK_AT(R_PPStack[i]);
-    }
-
-    /* Pointers from protected local SEXP variables. */
-
-    for (const struct R_local_protect *p = R_local_protect_start;
-           p != NULL; p = p->next) {
-        for (i = 0; i < p->cnt; i++) 
-            if (*p->Protected[i]) LOOK_AT(*p->Protected[i]);
-    }
-
-    /* Byte code stack */
-
-    for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++)
-        LOOK_AT(*sp);
 }
 
 void sggc_after_marking (int level, int rep)
