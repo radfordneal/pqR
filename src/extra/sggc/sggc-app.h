@@ -277,7 +277,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   5,   8,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
   8,  16,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
  16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   3,  32,   2    3, /* 7th smallest sizes, only for type 0 */ \
+ 32,  32,   3,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
