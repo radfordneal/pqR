@@ -247,31 +247,6 @@ void setNoSpecSymFlag (SEXP env)
 
 */
 
-/* was extern: used in this file and names.c (for the symbol table).
-
-   This hash function seems to work well enough for symbol tables,
-   and hash tables get saved as part of environments so changing it
-   is a major decision.
-
-   PROBLEM HERE???  If characters can have the top bit set, the 
-   result can depend on whether the "char" type is signed, which 
-   is platform-dependent.
- */
-int attribute_hidden R_Newhashpjw(const char *s)
-{
-    char *p;
-    unsigned h = 0, g;
-    for (p = (char *) s; *p; p++) {
-	h = (h << 4) + (*p);
-	if ((g = h & 0xf0000000) != 0) {
-	    h = h ^ (g >> 24);
-	    h = h ^ g;
-	}
-    }
-    return h;
-}
-
-
 /*----------------------------------------------------------------------
 
   R_HashSet
@@ -444,15 +419,10 @@ static SEXP R_HashResize(SEXP table)
     for (counter = 0; counter < LENGTH(table); counter++) {
 	chain = VECTOR_ELT(table, counter);
 	while (chain != R_NilValue) {
-            SEXP pnamtag = PRINTNAME(TAG(chain));
 #if DEBUG_OUTPUT
             n_entries += 1;
 #endif
-            if (!HASHASH(pnamtag)) {
-                SET_HASHVALUE (pnamtag, R_Newhashpjw(CHAR(pnamtag)));
-                SET_HASHASH (pnamtag, 1);
-            }
-            new_hashcode = HASHVALUE(pnamtag) % HASHSIZE(new_table);
+            new_hashcode = SYM_HASH(TAG(chain)) % HASHSIZE(new_table);
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
 	    if (new_chain == R_NilValue)
@@ -539,12 +509,7 @@ static void R_HashFrame(SEXP rho)
     table = HASHTAB(rho);
     frame = FRAME(rho);
     while (frame != R_NilValue) {
-        SEXP pnamtag = PRINTNAME(TAG(frame));
-	if (!HASHASH(pnamtag)) {
-	    SET_HASHVALUE (pnamtag, R_Newhashpjw(CHAR(pnamtag)));
-	    SET_HASHASH (pnamtag, 1);
-	}
-	hashcode = HASHVALUE(pnamtag) % HASHSIZE(table);
+	hashcode = SYM_HASH(TAG(frame)) % HASHSIZE(table);
 	chain = VECTOR_ELT(table, hashcode);
 	/* If using a previously-unused slot then increase HASHSLOTSUSED */
 	if (chain == R_NilValue) 
@@ -690,14 +655,9 @@ void attribute_hidden InitGlobalEnv()
     /**** needed to properly initialize the base namespace */
 }
 
-static int hashIndex(SEXP symbol, SEXP table)
+static inline int hashIndex(SEXP symbol, SEXP table)
 {
-    SEXP c = PRINTNAME(symbol);
-    if( !HASHASH(c) ) {
-	SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	SET_HASHASH(c, 1);
-    }
-    return HASHVALUE(c) % HASHSIZE(table);
+    return SYM_HASH(symbol) % HASHSIZE(table);
 }
 
 static void R_FlushGlobalCache(SEXP sym)
@@ -893,12 +853,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     }
     else {
         int hashcode;
-	SEXP c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c,  1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_NilValue' if not found */
 	loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
     }
@@ -1121,13 +1076,8 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
     }
 
     else {
-        SEXP c = PRINTNAME(symbol);
         int hashcode;
-        if( !HASHASH(c) ) {
-            SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-            SET_HASHASH(c, 1);
-        }
-        hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+        hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
         if (loc == R_NilValue)
             goto ret;
@@ -1647,12 +1597,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         }
     }
     else { /* hashed environment */
-        SEXP c = PRINTNAME(symbol);
-        if( !HASHASH(c) ) {
-            SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-            SET_HASHASH(c, 1);
-        }
-        hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+        hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
         SEARCH_LOOP (loc, symbol, goto found);
     }
@@ -1917,8 +1862,7 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 
     if (IS_HASHED(env)) {
 	SEXP hashtab = HASHTAB(env);
-        int hashcode = HASHASH(PRINTNAME(name)) ? HASHVALUE(PRINTNAME(name))
-                        : R_Newhashpjw(CHAR(PRINTNAME(name)));
+        int hashcode = SYM_HASH(name);
 	int idx = hashcode % HASHSIZE(hashtab);
 	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
 	if (value != R_NoObject) {

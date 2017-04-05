@@ -22,6 +22,9 @@
         "pages" option for Rprofmem is now defunct.
 
         prohibit setting INTERNAL to anything other than a primitive
+
+        Changed how hashing for symbols works, may be desirable to
+        change suppression of serialization of gp bit 1...
   }}
 
 }

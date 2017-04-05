@@ -666,10 +666,10 @@ static R_INLINE int PackFlags(int type, int levs, int isobj, int hasattr,
        - not that it matters to this version of R, but it saves
        checking all previous versions.
 
-       Also make sure the HASHASH bit is not written out.
+       Also make sure the former HASHASH bit (1) is not written out.
     */
     int val;
-    if (type == CHARSXP) levs &= (~(CACHED_MASK | HASHASH_MASK));
+    if (type == CHARSXP) levs &= (~(CACHED_MASK | 1));
     val = type | ENCODE_LEVELS(levs);
     if (isobj) val |= IS_OBJECT_BIT_MASK;
     if (hasattr) val |= HAS_ATTR_BIT_MASK;

@@ -658,10 +658,11 @@ void InitNames()
 
     /* Set up built-in functions.  Do first so internals have small
        compressed pointers. */
+
     SetupBuiltins();
 
-    /* The SYMSXP objects below are not in the symbol table, and hence
-       must be roots for the garbage collector. */
+    /* The SYMSXP objects below are not in the symbol table. */
+
     /* R_MissingArg */
     R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
@@ -712,8 +713,8 @@ static SEXP install_with_hashcode (const char *name, int hashcode)
 
     /* Check to see if the symbol is already present;  if it is, return it. */
     for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        const char *s = CHAR(PRINTNAME(sym));
-	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
+        if (SYM_HASH(sym) == hashcode /* quick pre-check */
+             && strcmp (name, CHAR(PRINTNAME(sym))) == 0)
             return sym;
     }
 
@@ -721,8 +722,6 @@ static SEXP install_with_hashcode (const char *name, int hashcode)
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
     sym = mkSYMSXP(mkChar(name), R_UnboundValue);
-    SET_HASHVALUE(PRINTNAME(sym), hashcode);
-    SET_HASHASH(PRINTNAME(sym), 1);
     NEXTSYM_PTR(sym) = R_SymbolTable[i];
     R_SymbolTable[i] = sym;
 
@@ -762,13 +761,7 @@ SEXP installChar(SEXP charSXP)
 
     PROTECT(charSXP);
 
-    if( !HASHASH(charSXP) ) {
-        hashcode = R_Newhashpjw(name);
-        SET_HASHVALUE(charSXP, hashcode);
-        SET_HASHASH(charSXP, 1);
-    } else {
-        hashcode = HASHVALUE(charSXP);
-    }
+    hashcode = R_Newhashpjw(name);
 
     res = install_with_hashcode (name, hashcode);
 
@@ -791,8 +784,8 @@ SEXP installed_already(const char *name)
 
     /* Check to see if the symbol is already present;  if it is, return it. */
     for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        const char *s = CHAR(PRINTNAME(sym));
-	if (name[0] == s[0] /* quick pre-check */ && strcmp(name,s) == 0)
+        if (SYM_HASH(sym) == hashcode /* quick pre-check */
+             && strcmp (name, CHAR(PRINTNAME(sym))) == 0)
             return sym;
     }
 

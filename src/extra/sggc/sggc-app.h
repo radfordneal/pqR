@@ -82,7 +82,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         info, pname         info, padding                     info, unused/shift
         value, nextsym      C-function                        prot, tag
         lastenv, last-enf   fast-C-function                   external ptr
-        lastbinding,padding 64 bits of info                   padding, padding
+        lastbinding, hash   64 bits of info                   padding, padding
         = 32 bytes          = 32 bytes                        = 32 bytes
           (2 chunks)          (2 chunks)                        (2 chunks)
 */
@@ -174,7 +174,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
       Symbol:             Primitive:                        External pointer:
         info, cptr          info, cptr                        info, cptr
         attrib              attrib                            attrib
-        length, padding     length, padding                   length, padding
+        length, hash        length, padding                   length, padding
         pname               C-function                        external ptr
         value               fast-C-function                   prot
         nextsym             64 bits of info                   tag
@@ -257,7 +257,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         pname, value        C-function, fast-C-function       prot, tag
         nextsym, lastenv    64 bits of info                   xptr, padding
         last-enf, lastbinding     = 32 bytes                  = 32 bytes
-        padding, padding            (2 chunks)                  (2 chunks)
+        hash, padding               (2 chunks)                  (2 chunks)
         = 48 bytes          
           (3 chunks)
 */

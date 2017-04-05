@@ -335,18 +335,18 @@ struct symsxp_struct {
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
-    int32_t padding1;
+    int32_t sym_hash;
 #endif
     struct symsxp_struct symsxp;
 #if USE_COMPRESSED_POINTERS
-    int32_t padding1;
+    int32_t sym_hash;
 #endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
-    int64_t padding2;
+    int64_t padding;
 #endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
-    int32_t padding1;
-    int32_t padding2;
+    int32_t sym_hash
+    int32_t padding;
 #endif
 } SYM_SEXPREC, *SYMSEXP;
 
@@ -933,14 +933,6 @@ void SET_PRENV(SEXP x, SEXP v);
 void SET_PRVALUE(SEXP x, SEXP v);
 void SET_PRCODE(SEXP x, SEXP v);
 void SET_PRSEEN(SEXP x, int v);
-
-/* Hashing Functions */
-/* There are macro versions in Defn.h */
-int  (HASHASH)(SEXP x);
-int  (HASHVALUE)(SEXP x);
-void (SET_HASHASH)(SEXP x, int v);
-void (SET_HASHVALUE)(SEXP x, int v);
-
 
 /* External pointer access macros */
 #define EXTPTR_PTR(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->ptr)

@@ -187,7 +187,6 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 /* (1<<4) is taken by S4_OBJECT_MASK */
 #define CACHED_MASK (1<<5)
 #define ASCII_MASK (1<<6)
-#define HASHASH_MASK 1
 
 /* Symbol and string hash table declarations. */
 #define HASHMAXSIZE          1000000
@@ -197,6 +196,8 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define HASHMINSIZE	     29
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
+
+#define SYM_HASH(x)          (((SYM_SEXPREC*)UNCOMPRESSED_PTR(x))->sym_hash)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
 #define IS_CONSTANT(x) (sggc_is_constant(COMPRESSED_PTR(x)))
@@ -735,14 +736,6 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 #define PRENV(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.env)
 #define PRSEEN(x)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp = (v))
-
-/* Hashing Macros */
-#define HASHASH(x)      (UNCOMPRESSED_PTR(x)->sxpinfo.gp & HASHASH_MASK)
-#define HASHVALUE(x)    TRUELENGTH(x)
-#define SET_HASHASH(x,v) \
-  ((v) ? ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= HASHASH_MASK) : \
-         ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) &= (~HASHASH_MASK)))
-#define SET_HASHVALUE(x,v) SET_TRUELENGTH(x, v)
 
 /* Vector Heap Structure */
 typedef struct {
