@@ -330,6 +330,7 @@
  Rf_asLogicalNoNA_warning
  Rf_bd0
  Rf_builtin_op
+ Rf_char_hash
  Rf_chebyshev_eval
  Rf_chebyshev_init
  Rf_check1arg

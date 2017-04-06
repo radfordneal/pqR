@@ -709,11 +709,11 @@ static SEXP install_with_hashcode (const char *name, int hashcode)
     SEXP sym;
     int i;
 
-    i = hashcode % HSIZE;
+    i = hashcode & HSIZE_MASK;
 
     /* Check to see if the symbol is already present;  if it is, return it. */
     for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        if (SYM_HASH(sym) == hashcode /* quick pre-check */
+        if (CHAR_HASH(PRINTNAME(sym)) == hashcode /* quick pre-check */
              && strcmp (name, CHAR(PRINTNAME(sym))) == 0)
             return sym;
     }
@@ -730,8 +730,6 @@ static SEXP install_with_hashcode (const char *name, int hashcode)
 
 SEXP install(const char *name)
 {
-    int hashcode;
-
 #if 0  /* Enable for tuning info */
     if (strcmp(name,"HOWMANYSYMBOLS")==0) {
         double count = 0, count_sq = 0;
@@ -750,22 +748,19 @@ SEXP install(const char *name)
     if (*name == '\0')
 	error(_("attempt to use zero-length variable name"));
 
-    return install_with_hashcode (name, R_Newhashpjw(name));
+    return install_with_hashcode (name, Rf_char_hash(name));
 }
 
 SEXP installChar(SEXP charSXP)
 {
     const char *name = CHAR(charSXP);
-    int hashcode;
+    unsigned hashcode = CHAR_HASH(charSXP);
     SEXP res;
 
     PROTECT(charSXP);
-
-    hashcode = R_Newhashpjw(name);
-
     res = install_with_hashcode (name, hashcode);
-
     UNPROTECT(1);
+
     return res;
 }
 
@@ -774,17 +769,18 @@ SEXP installChar(SEXP charSXP)
 
 SEXP installed_already(const char *name)
 {
+    unsigned hashcode;
     SEXP sym;
-    int i, hashcode;
+    int i;
 
     if (*name == 0) return R_NoObject;
 
-    hashcode = R_Newhashpjw(name);
-    i = hashcode % HSIZE;
+    hashcode = Rf_char_hash(name);
+    i = hashcode & HSIZE_MASK;
 
     /* Check to see if the symbol is already present;  if it is, return it. */
     for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        if (SYM_HASH(sym) == hashcode /* quick pre-check */
+        if (CHAR_HASH(PRINTNAME(sym)) == hashcode /* quick pre-check */
              && strcmp (name, CHAR(PRINTNAME(sym))) == 0)
             return sym;
     }

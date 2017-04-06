@@ -371,7 +371,9 @@ extern int putenv(char *string);
 #endif
 #endif
 
-#define HSIZE	   4119	/* The size of the hash table for symbols */
+#define HSIZE 4096  /* Size of the hash table for symbols, must be power of 2 */
+#define HSIZE_MASK (HSIZE-1)        /* Mask for computing remainder mod HSIZE */
+
 #define MAXIDSIZE 10000	/* Largest symbol size, 
 			   in bytes excluding terminator.
 			   Was 256 prior to 2.13.0, now just a sanity check.
@@ -1519,7 +1521,8 @@ SEXP R_data_class2(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
 SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
-extern int R_Newhashpjw(const char *);
+int R_Newhashpjw(const char *);
+unsigned Rf_char_hash(const char *);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);
