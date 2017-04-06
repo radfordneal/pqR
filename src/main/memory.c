@@ -2373,8 +2373,6 @@ static void R_StringHash_resize(unsigned int newsize)
    this will always zero-terminate */
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
-    SEXP cval, val;
-    unsigned int hashcode;
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
 
@@ -2419,66 +2417,67 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     default: need_enc = 0;
     }
 
-    hashcode = Rf_char_hash(name, len) & char_hash_mask;
+    unsigned int full_hash = Rf_char_hash (name, len);
+    unsigned int hashcode = full_hash & char_hash_mask;
+    SEXP val;
 
     /* Search for a cached value */
-    cval = R_NilValue;
+
     for (val = VECTOR_ELT(R_StringHash, hashcode); 
          val != R_NilValue; 
          val = ATTRIB(val)) {
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
-            if (LENGTH(val) == len) {
-                if (len == 0 || *CHAR(val) == *name /* quick pretest */
-                                   && memcmp(CHAR(val), name, len) == 0) {
-                    cval = val;
-                    break;
-                }
+            if (full_hash == CHAR_HASH(val) && LENGTH(val) == len
+                   && memcmp (CHAR(val), name, len) == 0) {
+                return val;
             }
 	}
     }
-    if (cval == R_NilValue) {
-	/* no cached value; need to allocate one and add to the cache */
-	cval = allocCharsxp(len);
-	memcpy(CHAR_RW(cval), name, len);
-	switch(enc) {
-	case 0:
-	    break;          /* don't set encoding */
-	case CE_UTF8:
-	    SET_UTF8(cval);
-	    break;
-	case CE_LATIN1:
-	    SET_LATIN1(cval);
-	    break;
-	case CE_BYTES:
-	    SET_BYTES(cval);
-	    break;
-	default:
-	    error("unknown encoding mask: %d", enc);
-	}
-	if (is_ascii) SET_ASCII(cval);
-	SET_CACHED(cval);  /* Mark it */
-	/* add the new value to the cache */
-	val = VECTOR_ELT(R_StringHash, hashcode);
-	if (val == R_NilValue)
-	    SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
 
-        /* The modifications below should NOT do the old-to-new check, since
-           the table should not be looked at in the initial GC scan. */
-	ATTRIB(cval) = val;                         /* not SET_ATTRIB! */
-	VECTOR_ELT(R_StringHash, hashcode) = cval;  /* not SET_VECTOR_ELT! */
+    /* no cached value; need to allocate one and add to the cache */
 
-	/* Resize the hash table if desirable and possible. */
-	if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
-             && 2*char_hash_size <= STRHASHMAXSIZE) {
-            /* NOTE!  Must protect cval here, since it is NOT protected by
-               its presence in the hash table. */
-            PROTECT(cval);
-	    R_StringHash_resize (2*char_hash_size);
-            UNPROTECT(1);
-        }
+    val = allocCharsxp(len);
+    memcpy(CHAR_RW(val), name, len);
+    switch(enc) {
+    case 0:
+        break;          /* don't set encoding */
+    case CE_UTF8:
+        SET_UTF8(val);
+        break;
+    case CE_LATIN1:
+        SET_LATIN1(val);
+        break;
+    case CE_BYTES:
+        SET_BYTES(val);
+        break;
+    default:
+        error("unknown encoding mask: %d", enc);
+    }
+    if (is_ascii) SET_ASCII(val);
+    CHAR_HASH(val) = full_hash;
+    SET_CACHED(val);  /* Mark it */
+
+    /* add the new value to the cache */
+    
+    if (VECTOR_ELT(R_StringHash, hashcode) == R_NilValue)
+        SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
+
+    /* The modifications below should NOT do the old-to-new check, since
+       the table should not be looked at in the initial GC scan. */
+    ATTRIB(val) = VECTOR_ELT(R_StringHash, hashcode);      /* not SET_ATTRIB! */
+    VECTOR_ELT(R_StringHash, hashcode) = val;          /* not SET_VECTOR_ELT! */
+
+    /* Resize the hash table if desirable and possible. */
+    if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
+         && 2*char_hash_size <= STRHASHMAXSIZE) {
+        /* NOTE!  Must protect val here, since it is NOT protected by
+           its presence in the hash table. */
+        PROTECT(val);
+        R_StringHash_resize (2*char_hash_size);
+        UNPROTECT(1);
     }
 
-    return cval;
+    return val;
 }
 
 

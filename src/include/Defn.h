@@ -198,6 +198,7 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 #define SYM_HASH(x)          (((SYM_SEXPREC*)UNCOMPRESSED_PTR(x))->sym_hash)
+#define CHAR_HASH(x)         TRUELENGTH(x)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
 #define IS_CONSTANT(x) (sggc_is_constant(COMPRESSED_PTR(x)))
