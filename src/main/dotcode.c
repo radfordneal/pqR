@@ -2568,7 +2568,7 @@ static void *RObjToCPtr2(SEXP s)
 	return (void*) lptr;
 	break;
     default:
-	return (void*) UNCOMPRESSED_PTR(s);
+	return (void*) UPTR_FROM_SEXP(s);
     }
 }
 

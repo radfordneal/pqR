@@ -51,7 +51,7 @@ static R_NORETURN void abort_on_error()
 
 
 #define CHECK_OLD_TO_NEW(x,y) \
-    sggc_old_to_new_check(COMPRESSED_PTR(x),COMPRESSED_PTR(y))
+    sggc_old_to_new_check(CPTR_FROM_SEXP(x),CPTR_FROM_SEXP(y))
 
 
 #ifdef TESTING_WRITE_BARRIER
@@ -342,7 +342,7 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
 	error("%s() can only be applied to a '%s', not a '%s'",
          "copy_string_elements", "character vector", type2char(TYPEOF(x)));
 
-    if (sggc_youngest_generation(COMPRESSED_PTR(x))) {
+    if (sggc_youngest_generation(CPTR_FROM_SEXP(x))) {
         /* x can't be older than anything */
         for (k = 0; k<n; k++) {
             e = STRING_ELT(v,j+k);
@@ -386,7 +386,7 @@ void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n)
 	      "copy_vector_elements", "list", type2char(TYPEOF(x)));
     }
 
-    if (sggc_youngest_generation(COMPRESSED_PTR(x))) {
+    if (sggc_youngest_generation(CPTR_FROM_SEXP(x))) {
         /* x can't be older than anything */
         for (k = 0; k<n; k++) {
             e = VECTOR_ELT(v,j+k);
@@ -544,7 +544,7 @@ void (SET_PRINTNAME)(SEXP x, SEXP v)
 void (SET_SYMVALUE)(SEXP x, SEXP v) { SYMVALUE(x) = v; }
 void (SET_INTERNAL)(SEXP x, SEXP v) 
 {
-    sggc_cptr_t s = COMPRESSED_PTR(x);
+    sggc_cptr_t s = CPTR_FROM_SEXP(x);
     if (TYPEOF(v)!=BUILTINSXP && TYPEOF(v)!=SPECIALSXP) abort(); 
     if (s < R_first_internal || s > R_max_internal) abort();
     R_internal_table[s-R_first_internal] = v;    
@@ -570,7 +570,7 @@ int (PRSEEN)(SEXP x) { return PRSEEN(Rf_chk_valid_SEXP(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
 void (SET_PRVALUE)(SEXP x, SEXP v) 
-  { CHECK_OLD_TO_NEW(x, v); UNCOMPRESSED_PTR(x)->u.promsxp.value = v; }
+  { CHECK_OLD_TO_NEW(x, v); UPTR_FROM_SEXP(x)->u.promsxp.value = v; }
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(Rf_chk_valid_SEXP(x), v); }
 

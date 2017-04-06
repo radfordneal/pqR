@@ -172,18 +172,32 @@ typedef enum SEXP_enum { SEXP_low = -2147483647, SEXP_high=2147483647 } SEXP;
 
 typedef SEXP VECSEXP;
 
-#define COMPRESSED_PTR(x) (x)                        /* sggc_cptr_t from SEXP */
-#define UNCOMPRESSED_PTR(x) ((SEXPREC *) SGGC_DATA(x)) /* SEXPREC * from SEXP */
-#define SEXP_PTR(x) (x)                              /* SEXP from sggc_cptr_t */
+typedef SEXP SEXP32;
+#define SEXP32_FROM_SEXP(x) (x)
+#define SEXP_FROM_SEXP32(x) (x)
+
+#define CPTR_FROM_SEXP(x) (x)
+#define UPTR_FROM_SEXP(x) ((SEXPREC *) SGGC_DATA(x))
+#define SEXP_FROM_CPTR(x) (x)
 
 #else /* !USE_COMPRESSED_POINTERS */
 
 typedef struct SEXPREC *SEXP;
 typedef struct VECTOR_SEXPREC *VECSEXP;
 
-#define COMPRESSED_PTR(x) ((x)->cptr)                /* sggc_cptr_t from SEXP */
-#define UNCOMPRESSED_PTR(x) (x)                      /* SEXPREC * from SEXP */
-#define SEXP_PTR(x) ((SEXP) SGGC_DATA(x))            /* SEXP from sggc_cptr_t */
+#if SIZEOF_SIZE_T == 4
+typedef SEXP SEXP32;
+#define SEXP32_FROM_SEXP(x) (x)
+#define SEXP_FROM_SEXP32(x) (x)
+#else
+typedef sggc_cptr_t SEXP32;
+#define SEXP32_FROM_SEXP(x) CPTR_FROM_SEXP(x)
+#define SEXP_FROM_SEXP32(x) SEXP_FROM_CPTR(x)
+#endif
+
+#define CPTR_FROM_SEXP(x) ((x)->cptr) 
+#define UPTR_FROM_SEXP(x) (x)
+#define SEXP_FROM_CPTR(x) ((SEXP) SGGC_DATA(x))
 
 #endif
 
@@ -403,7 +417,7 @@ typedef struct VECTOR_SEXPREC_C {
     union { double d; int w[2]; int i; char c; char s[8]; } data;
 } VECTOR_SEXPREC_C;
 
-#define DATAPTR(x)	(((SEXPREC_ALIGN *) UNCOMPRESSED_PTR(x)) + 1)
+#define DATAPTR(x)	(((SEXPREC_ALIGN *) UPTR_FROM_SEXP(x)) + 1)
 
 
 /* Pairlist and data access macros / static inline functions that are now 
@@ -415,11 +429,11 @@ typedef struct VECTOR_SEXPREC_C {
 
 #ifdef USE_RINTERNALS
 
-#define TAG(e)     NOT_LVALUE(UNCOMPRESSED_PTR(e)->u.listsxp.tagval)
-#define CAR(e)     NOT_LVALUE(UNCOMPRESSED_PTR(e)->u.listsxp.carval)
-#define CDR(e)     NOT_LVALUE(UNCOMPRESSED_PTR(e)->u.listsxp.cdrval)
+#define TAG(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.tagval)
+#define CAR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.carval)
+#define CDR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.cdrval)
 
-#define TYPEOF(x)  /*NOT_LVALUE*/(UNCOMPRESSED_PTR(x)->sxpinfo.type)
+#define TYPEOF(x)  /*NOT_LVALUE*/(UPTR_FROM_SEXP(x)->sxpinfo.type)
 
 #define LOGICAL(x) ((int *) DATAPTR(x))
 #define INTEGER(x) ((int *) DATAPTR(x))
@@ -430,20 +444,20 @@ typedef struct VECTOR_SEXPREC_C {
 #if USE_COMPRESSED_POINTERS
 #define LENGTH(x)  NOT_LVALUE(* (R_len_t *) SGGC_AUX1(x))
 #else
-#define LENGTH(x)  NOT_LVALUE(((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->length)
+#define LENGTH(x)  NOT_LVALUE(((VECTOR_SEXPREC *) UPTR_FROM_SEXP(x))->length)
 #endif
 
 #else /* USE_RINTERNALS not defined */
 
 static inline SEXP TAG (SEXP e) 
-  { return UNCOMPRESSED_PTR(e)->u.listsxp.tagval; }
+  { return UPTR_FROM_SEXP(e)->u.listsxp.tagval; }
 static inline SEXP CAR (SEXP e) 
-  { return UNCOMPRESSED_PTR(e)->u.listsxp.carval; }
+  { return UPTR_FROM_SEXP(e)->u.listsxp.carval; }
 static inline SEXP CDR (SEXP e) 
-  { return UNCOMPRESSED_PTR(e)->u.listsxp.cdrval; }
+  { return UPTR_FROM_SEXP(e)->u.listsxp.cdrval; }
 
 static inline SEXPTYPE TYPEOF (SEXP x) 
-  { return UNCOMPRESSED_PTR(x)->sxpinfo.type; }
+  { return UPTR_FROM_SEXP(x)->sxpinfo.type; }
 
 extern R_NORETURN void Rf_LOGICAL_error(SEXP);
 static inline int *LOGICAL(SEXP x) 
@@ -476,7 +490,7 @@ static inline int LENGTH (SEXP x)
   { return * (R_len_t *) SGGC_AUX1(x); }
 #else
 static inline int LENGTH (SEXP x) 
-  { return ((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->length; }
+  { return ((VECTOR_SEXPREC *) UPTR_FROM_SEXP(x))->length; }
 #endif
 
 #endif /* USE_RINTERNALS */
@@ -540,54 +554,54 @@ extern void helpers_wait_until_not_in_use(SEXP);
    include Defn.h, where helpers_is_in_use is defined. */
 
 #ifndef helpers_is_in_use  
-#define helpers_is_in_use(x)        (UNCOMPRESSED_PTR(x)->sxpinfo.in_use)
+#define helpers_is_in_use(x)        (UPTR_FROM_SEXP(x)->sxpinfo.in_use)
 #endif
 
 #define NAMEDCNT(x) \
-( helpers_is_in_use(x) && UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt != MAX_NAMEDCNT \
-     ? (helpers_wait_until_not_in_use(x), UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt) \
-     : UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt )
+( helpers_is_in_use(x) && UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != MAX_NAMEDCNT \
+     ? (helpers_wait_until_not_in_use(x), UPTR_FROM_SEXP(x)->sxpinfo.nmcnt) \
+     : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt )
 
 #define NAMEDCNT_EQ_0(x) \
-( UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt != 0 ? 0 : !helpers_is_in_use(x) ? 1 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 0 : !helpers_is_in_use(x) ? 1 \
     : (helpers_wait_until_not_in_use(x), 1) )
 
 #define NAMEDCNT_GT_0(x) \
-( UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt != 0 ? 1 : !helpers_is_in_use(x) ? 0 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #define NAMEDCNT_GT_1(x) \
-( UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
-#define SET_NAMEDCNT_0(x)    (UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt = 0)
-#define SET_NAMEDCNT_1(x)    (UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt = 1)
+#define SET_NAMEDCNT_0(x)    (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 0)
+#define SET_NAMEDCNT_1(x)    (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 1)
 
 /* Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
    even if the new value is also MAX_NAMEDCNT, since it might be a constant 
    object in a read-only memory area. */
 
 #define SET_NAMEDCNT(x,v) do { \
-    SEXPREC *_p_ = UNCOMPRESSED_PTR(x); \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     int _v_ = v; \
     if (_p_->sxpinfo.nmcnt != _v_) \
         _p_->sxpinfo.nmcnt = _v_; \
   } while (0)
 
 #define SET_NAMEDCNT_MAX(x) do { \
-    SEXPREC *_p_ = UNCOMPRESSED_PTR(x); \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
         _p_->sxpinfo.nmcnt = MAX_NAMEDCNT; \
   } while (0)
 
 #define INC_NAMEDCNT(x) do { \
-    SEXPREC *_p_ = UNCOMPRESSED_PTR(x); \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
         _p_->sxpinfo.nmcnt += 1; \
   } while (0)
 
 #define INC_NAMEDCNT_0_AS_1(x) do { \
-    SEXPREC *_p_ = UNCOMPRESSED_PTR(x); \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     if (_p_->sxpinfo.nmcnt == 0) \
         _p_->sxpinfo.nmcnt = 2; \
     else if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
@@ -595,7 +609,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 
 #define DEC_NAMEDCNT(x) do { \
-    SEXPREC *_p_ = UNCOMPRESSED_PTR(x); \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT && _p_->sxpinfo.nmcnt != 0) \
         _p_->sxpinfo.nmcnt -= 1; \
   } while (0)
@@ -609,7 +623,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #undef NAMEDCNT_GT_1
 #define NAMEDCNT_GT_1(x) \
-( (UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
+( (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
     : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
@@ -634,9 +648,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #else 			/* New scheme with MAX_NAMEDCNT > 2 */
 
 #define NAMED(x) \
-  ( UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt > 1 \
-     && UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt < MAX_NAMEDCNT \
-      ? ((UNCOMPRESSED_PTR(x)->sxpinfo.nmcnt = MAX_NAMEDCNT), 2) \
+  ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt > 1 \
+     && UPTR_FROM_SEXP(x)->sxpinfo.nmcnt < MAX_NAMEDCNT \
+      ? ((UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = MAX_NAMEDCNT), 2) \
       : NAMEDCNT((x)) )
 
 #define SET_NAMED(x,v) do { \
@@ -700,44 +714,44 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #if USE_COMPRESSED_POINTERS
 #define ATTRIB(x)       NOT_LVALUE(* (SEXP *) SGGC_AUX2(x))
 #else
-#define ATTRIB(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->attrib)
+#define ATTRIB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->attrib)
 #endif
 
-#define OBJECT(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.obj)
-#define RTRACE(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.trace_basec)
-#define LEVELS(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.gp)
+#define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
+#define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_basec)
+#define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
      in read-only memory. */
 #define SET_OBJECT(x,v) do { \
-    SEXPREC *_x_ = UNCOMPRESSED_PTR(x); int _v_ = (v); \
+    SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
     if (_x_->sxpinfo.obj!=_v_) _x_->sxpinfo.obj = _v_; \
   } while (0)
 #define SET_TYPEOF(x,v) do { \
-    SEXPREC *_x_ = UNCOMPRESSED_PTR(x); int _v_ = (v); \
+    SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
     if (_x_->sxpinfo.type!=_v_) _x_->sxpinfo.type = _v_; \
   } while (0)
-#define SET_RTRACE(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.trace_basec=(v))
-#define SETLEVELS(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp=(v))
+#define SET_RTRACE(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.trace_basec=(v))
+#define SETLEVELS(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
 #define TRUELENGTH(x)	\
-  NOT_LVALUE(((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->truelength)
+  NOT_LVALUE(((VECTOR_SEXPREC *) UPTR_FROM_SEXP(x))->truelength)
 #define SET_TRUELENGTH(x,v) \
-  (((VECTOR_SEXPREC *) UNCOMPRESSED_PTR(x))->truelength = (v))
+  (((VECTOR_SEXPREC *) UPTR_FROM_SEXP(x))->truelength = (v))
 
 /* S4 object bit, set by R_do_new_object for all new() calls.  Avoid writes
    of what's already there, in case object is a constant in read-only memory. */
 #define S4_OBJECT_BIT_POS 4
 #define S4_OBJECT_MASK (1<<S4_OBJECT_BIT_POS)
-#define IS_S4_OBJECT(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp & S4_OBJECT_MASK)!=0)
+#define IS_S4_OBJECT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp & S4_OBJECT_MASK)!=0)
 #define SET_S4_OBJECT(x) SET_S4_OBJECT_inline(x)
 static inline void SET_S4_OBJECT_inline (SEXP x) {
-    if (!IS_S4_OBJECT(x)) UNCOMPRESSED_PTR(x)->sxpinfo.gp |= S4_OBJECT_MASK;
+    if (!IS_S4_OBJECT(x)) UPTR_FROM_SEXP(x)->sxpinfo.gp |= S4_OBJECT_MASK;
 }
 #define UNSET_S4_OBJECT(x) UNSET_S4_OBJECT_inline(x)
 static inline void UNSET_S4_OBJECT_inline (SEXP x) {
-    if (IS_S4_OBJECT(x)) UNCOMPRESSED_PTR(x)->sxpinfo.gp &= ~S4_OBJECT_MASK;
+    if (IS_S4_OBJECT(x)) UPTR_FROM_SEXP(x)->sxpinfo.gp &= ~S4_OBJECT_MASK;
 }
 
 /* Vector Access Macros */
@@ -753,55 +767,55 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 
 /* List Access Macros.  Some are now found above, outside USE_RINTERNALS. */
 /* These also work for ... objects */
-#define LISTVAL(x)	(UNCOMPRESSED_PTR(x)->u.listsxp)
+#define LISTVAL(x)	(UPTR_FROM_SEXP(x)->u.listsxp)
 #define MISSING_MASK	15 /* reserve 4 bits--only 2 uses now */
-#define MISSING(x)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp & MISSING_MASK)/* for closure calls */
+#define MISSING(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp & MISSING_MASK)/* for closure calls */
 #define SET_MISSING(x,v) do { \
-  SEXPREC *__x__ = UNCOMPRESSED_PTR(x); \
+  SEXPREC *__x__ = UPTR_FROM_SEXP(x); \
   int __v__ = (v); \
   int __other_flags__ = __x__->sxpinfo.gp & ~MISSING_MASK; \
   __x__->sxpinfo.gp = __other_flags__ | __v__; \
 } while (0)
 
 /* Closure Access Macros */
-#define FORMALS(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->u.closxp.formals)
-#define BODY(x)		NOT_LVALUE(UNCOMPRESSED_PTR(x)->u.closxp.body)
-#define CLOENV(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->u.closxp.env)
-#define RDEBUG(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.debug)
-#define SET_RDEBUG(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.debug=(v))
-#define RSTEP(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.rstep)
-#define SET_RSTEP(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.rstep=(v))
+#define FORMALS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.closxp.formals)
+#define BODY(x)		NOT_LVALUE(UPTR_FROM_SEXP(x)->u.closxp.body)
+#define CLOENV(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.closxp.env)
+#define RDEBUG(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
+#define SET_RDEBUG(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
+#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep)
+#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.pname)
-#define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.value)
-#define NEXTSYM_PTR(x)	(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.nextsym)
-#define LASTSYMENV(x)	(((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.lastenv)
-#define LASTSYMBINDING(x) (((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.lastbinding)
-#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UNCOMPRESSED_PTR(x))->symsxp.lastenvnotfound)
+#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.pname)
+#define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.value)
+#define NEXTSYM_PTR(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.nextsym)
+#define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.lastenv)
+#define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.lastbinding)
+#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.lastenvnotfound)
 #define DDVAL_MASK	1
-#define DDVAL(x)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
-#define SET_DDVAL_BIT(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= DDVAL_MASK)
-#define UNSET_DDVAL_BIT(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) &= ~DDVAL_MASK)
+#define DDVAL(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
+#define SET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= DDVAL_MASK)
+#define UNSET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.trace_basec) /* 1 = base binding
+#define BASE_CACHE(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_basec) /* 1 = base binding
                                                                in global cache*/
-#define SET_BASE_CACHE(x,v) (UNCOMPRESSED_PTR(x)->sxpinfo.trace_basec = (v))
+#define SET_BASE_CACHE(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.trace_basec = (v))
 
 /* Flag indicating whether a symbol is special. */
-#define SPEC_SYM(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.spec_sym)
-#define SET_SPEC_SYM(x,v) (UNCOMPRESSED_PTR(x)->sxpinfo.spec_sym = (v)) 
+#define SPEC_SYM(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.spec_sym)
+#define SET_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.spec_sym = (v)) 
 
 /* Environment Access Macros */
-#define FRAME(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->u.envsxp.frame)
-#define ENCLOS(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->u.envsxp.enclos)
-#define HASHTAB(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->u.envsxp.hashtab)
-#define ENVFLAGS(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.gp)	/* for environments */
-#define SET_ENVFLAGS(x,v)	((UNCOMPRESSED_PTR(x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.spec_sym) 
+#define FRAME(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.frame)
+#define ENCLOS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.enclos)
+#define HASHTAB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.hashtab)
+#define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)	/* for environments */
+#define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
+#define NO_SPEC_SYM(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.spec_sym) 
                                            /* 1 = env has no special symbol */
-#define SET_NO_SPEC_SYM(x,v) (UNCOMPRESSED_PTR(x)->sxpinfo.spec_sym = (v))
-#define IS_BASE(x)	NOT_LVALUE(UNCOMPRESSED_PTR(x)->sxpinfo.base_env)
+#define SET_NO_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.spec_sym = (v))
+#define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_env)
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
@@ -935,9 +949,9 @@ void SET_PRCODE(SEXP x, SEXP v);
 void SET_PRSEEN(SEXP x, int v);
 
 /* External pointer access macros */
-#define EXTPTR_PTR(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->ptr)
-#define EXTPTR_PROT(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->prot)
-#define EXTPTR_TAG(x)	(((EXTPTRSEXP)UNCOMPRESSED_PTR(x))->tag)
+#define EXTPTR_PTR(x)	(((EXTPTRSEXP)UPTR_FROM_SEXP(x))->ptr)
+#define EXTPTR_PROT(x)	(((EXTPTRSEXP)UPTR_FROM_SEXP(x))->prot)
+#define EXTPTR_TAG(x)	(((EXTPTRSEXP)UPTR_FROM_SEXP(x))->tag)
 
 /* Bytecode access macros */
 #define BCODE_CODE(x)	CAR(x)
@@ -978,7 +992,7 @@ struct R_local_protect {
 
 
 #define CHK_IS_SEXP(v) \
-    if (0) (UNCOMPRESSED_PTR(v)->sxpinfo) /* try to get error if v not a SEXP */
+    if (0) (UPTR_FROM_SEXP(v)->sxpinfo) /* try to get error if v not a SEXP */
 
 #define BEGIN_PROTECT0() \
     do { \

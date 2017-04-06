@@ -37,7 +37,7 @@
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 
-#define GCKIND(x) SGGC_KIND(COMPRESSED_PTR(x))
+#define GCKIND(x) SGGC_KIND(CPTR_FROM_SEXP(x))
 
 #define SHOW_PAIRLIST_NODES 1  /* Should some details of all nodes in
                                      a LISTSXP or LANGSXP be shown? */

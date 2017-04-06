@@ -224,7 +224,7 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
     int list_chunks
           = sggc_kind_chunks [R_type_to_sggc_type[LISTSXP] + SGGC_N_TYPES];
     for (int i = 0; ; i++) {
-        SEXP c = SEXP_PTR (SGGC_CPTR_VAL (R_SGGC_LIST1_INDEX, i*list_chunks));
+        SEXP c = SEXP_FROM_CPTR (SGGC_CPTR_VAL (R_SGGC_LIST1_INDEX, i*list_chunks));
         if (CAR(c) == car) 
             return c;
         if (CAR(c) == R_NilValue)

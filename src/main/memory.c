@@ -237,7 +237,7 @@ static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
 
 
 #define CHECK_OLD_TO_NEW(x,y) \
-    sggc_old_to_new_check(COMPRESSED_PTR(x),COMPRESSED_PTR(y))
+    sggc_old_to_new_check(CPTR_FROM_SEXP(x),CPTR_FROM_SEXP(y))
 
 
 /* Finalization and Weak References */
@@ -252,20 +252,20 @@ static SEXP R_weak_refs = R_NilValue;
 #define READY_TO_FINALIZE_MASK 1
 
 #define SET_READY_TO_FINALIZE(s) \
-  (UNCOMPRESSED_PTR(s)->sxpinfo.gp |= READY_TO_FINALIZE_MASK)
+  (UPTR_FROM_SEXP(s)->sxpinfo.gp |= READY_TO_FINALIZE_MASK)
 #define CLEAR_READY_TO_FINALIZE(s) \
-  (UNCOMPRESSED_PTR(s)->sxpinfo.gp &= ~READY_TO_FINALIZE_MASK)
+  (UPTR_FROM_SEXP(s)->sxpinfo.gp &= ~READY_TO_FINALIZE_MASK)
 #define IS_READY_TO_FINALIZE(s) \
-  (UNCOMPRESSED_PTR(s)->sxpinfo.gp & READY_TO_FINALIZE_MASK)
+  (UPTR_FROM_SEXP(s)->sxpinfo.gp & READY_TO_FINALIZE_MASK)
 
 #define FINALIZE_ON_EXIT_MASK 2
 
 #define SET_FINALIZE_ON_EXIT(s) \
-  (UNCOMPRESSED_PTR(s)->sxpinfo.gp |= FINALIZE_ON_EXIT_MASK)
+  (UPTR_FROM_SEXP(s)->sxpinfo.gp |= FINALIZE_ON_EXIT_MASK)
 #define CLEAR_FINALIZE_ON_EXIT(s) \
-  (UNCOMPRESSED_PTR(s)->sxpinfo.gp &= ~FINALIZE_ON_EXIT_MASK)
+  (UPTR_FROM_SEXP(s)->sxpinfo.gp &= ~FINALIZE_ON_EXIT_MASK)
 #define FINALIZE_ON_EXIT(s) \
-  (UNCOMPRESSED_PTR(s)->sxpinfo.gp & FINALIZE_ON_EXIT_MASK)
+  (UPTR_FROM_SEXP(s)->sxpinfo.gp & FINALIZE_ON_EXIT_MASK)
 
 #define WEAKREF_SIZE 4
 #define WEAKREF_KEY(w) VECTOR_ELT(w, 0)
@@ -340,7 +340,7 @@ static void CheckFinalizers(void)
 {
     SEXP s;
     for (s = R_weak_refs; s != R_NilValue; s = WEAKREF_NEXT(s))
-	if (sggc_not_marked(COMPRESSED_PTR(WEAKREF_KEY(s))) 
+	if (sggc_not_marked(CPTR_FROM_SEXP(WEAKREF_KEY(s))) 
              && ! IS_READY_TO_FINALIZE(s))
 	    SET_READY_TO_FINALIZE(s);
 }
@@ -523,11 +523,11 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* THE GENERATIONAL GARBAGE COLLECTOR. */
 
 #define LOOK_AT(x) \
-  ((void) ((x) != R_NoObject ? sggc_look_at(COMPRESSED_PTR(x)) : 0))
+  ((void) ((x) != R_NoObject ? sggc_look_at(CPTR_FROM_SEXP(x)) : 0))
 
-#define MARK(x) sggc_mark(COMPRESSED_PTR(x))
+#define MARK(x) sggc_mark(CPTR_FROM_SEXP(x))
 
-#define NOT_MARKED(x) sggc_not_marked(COMPRESSED_PTR(x))
+#define NOT_MARKED(x) sggc_not_marked(CPTR_FROM_SEXP(x))
 
 
 void sggc_find_root_ptrs (void)
@@ -632,7 +632,7 @@ void sggc_find_root_ptrs (void)
         for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
              nxt != SGGC_NO_OBJECT;
              nxt = sggc_next_uncollected_of_kind(nxt)) {
-            SEXP s = SEXP_PTR(nxt);
+            SEXP s = SEXP_FROM_CPTR(nxt);
             LASTSYMENV(s) = R_NoObject;
             LASTSYMENVNOTFOUND(s) = R_NoObject;
             MARK(PRINTNAME(s));
@@ -1126,7 +1126,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
             R_Suicide("out of memory");
     }
 
-    SEXP r = SEXP_PTR (cp);
+    SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
     r->cptr = cp;
 #endif
@@ -1160,7 +1160,7 @@ static SEXP alloc_sym (void)
             R_Suicide("out of memory");
     }
 
-    SEXP r = SEXP_PTR (cp);
+    SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
     r->cptr = cp;
 #endif
@@ -1189,7 +1189,7 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
     if (cp == SGGC_NO_OBJECT)
         return R_NoObject;
 
-    SEXP r = SEXP_PTR (cp);
+    SEXP r = SEXP_FROM_CPTR (cp);
 
 #if !USE_COMPRESSED_POINTERS
     r->cptr = cp;
@@ -1409,7 +1409,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
 
-    UNCOMPRESSED_PTR(s)->u.promsxp.value = R_UnboundValue;
+    UPTR_FROM_SEXP(s)->u.promsxp.value = R_UnboundValue;
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = Rf_chk_valid_SEXP(rho);
     PRSEEN(s) = 0;
@@ -2102,7 +2102,7 @@ static SEXP do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* access nmcnt directly, so won't delay for possible task syncronization */
     Rprintf ("PNAMEDCNT:  %d  %x  %s", 
-      UNCOMPRESSED_PTR(CAR(args))->sxpinfo.nmcnt,
+      UPTR_FROM_SEXP(CAR(args))->sxpinfo.nmcnt,
       CAR(args),
       type2char(TYPEOF(CAR(args))));
 
@@ -2774,7 +2774,7 @@ static SEXP do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         SEXP vec = allocVector(INTSXP,sizel);
 
         REprintf("Invalid read before start of object\n");
-        R_valgrind_test_int = ((int*)UNCOMPRESSED_PTR(vec))[-1];
+        R_valgrind_test_int = ((int*)UPTR_FROM_SEXP(vec))[-1];
         REprintf("Invalid read after end of object\n");
         R_valgrind_test_int = INTEGER(vec)[sizel];
 
@@ -2813,7 +2813,7 @@ static SEXP do_testvalgrind(SEXP call, SEXP op, SEXP args, SEXP env)
         SEXP vec = allocVector(REALSXP,sizel);
 
         REprintf("Invalid read before start of object\n");
-        R_valgrind_test_real = ((double*)UNCOMPRESSED_PTR(vec))[-1];
+        R_valgrind_test_real = ((double*)UPTR_FROM_SEXP(vec))[-1];
         REprintf("Invalid read after end of object\n");
         R_valgrind_test_real = REAL(vec)[sizel];
 

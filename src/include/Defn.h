@@ -197,16 +197,16 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
-#define SYM_HASH(x)          (((SYM_SEXPREC*)UNCOMPRESSED_PTR(x))->sym_hash)
+#define SYM_HASH(x)          (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->sym_hash)
 #define CHAR_HASH(x)         TRUELENGTH(x)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
-#define IS_CONSTANT(x) (sggc_is_constant(COMPRESSED_PTR(x)))
+#define IS_CONSTANT(x) (sggc_is_constant(CPTR_FROM_SEXP(x)))
 
 /* Test if this is a static box object (which are defined in const-objs.c). */
 
 #define IS_STATIC_BOX(x) \
-  (SGGC_SEGMENT_INDEX(COMPRESSED_PTR(x)) == R_SGGC_STATIC_BOXES_INDEX)
+  (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) == R_SGGC_STATIC_BOXES_INDEX)
 
 /* Stuff for saving static boxes, if doing another eval */
 typedef union { int i; double r; } R_static_box_contents;
@@ -219,17 +219,17 @@ typedef union { int i; double r; } R_static_box_contents;
    *(x) == R_ScalarRealBox ? (*(x) = R_ScalarRealBox0) : R_NoObject)
 
 #ifdef USE_RINTERNALS
-# define IS_BYTES(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & BYTES_MASK)
-# define SET_BYTES(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= BYTES_MASK)
-# define IS_LATIN1(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & LATIN1_MASK)
-# define SET_LATIN1(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= LATIN1_MASK)
-# define IS_ASCII(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & ASCII_MASK)
-# define SET_ASCII(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= ASCII_MASK)
-# define IS_UTF8(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & UTF8_MASK)
-# define SET_UTF8(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= UTF8_MASK)
-# define ENC_KNOWN(x) (UNCOMPRESSED_PTR(x)->sxpinfo.gp & (LATIN1_MASK|UTF8_MASK))
-# define SET_CACHED(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) |= CACHED_MASK)
-# define IS_CACHED(x) ((UNCOMPRESSED_PTR(x)->sxpinfo.gp) & CACHED_MASK)
+# define IS_BYTES(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & BYTES_MASK)
+# define SET_BYTES(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= BYTES_MASK)
+# define IS_LATIN1(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & LATIN1_MASK)
+# define SET_LATIN1(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= LATIN1_MASK)
+# define IS_ASCII(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & ASCII_MASK)
+# define SET_ASCII(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= ASCII_MASK)
+# define IS_UTF8(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & UTF8_MASK)
+# define SET_UTF8(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= UTF8_MASK)
+# define ENC_KNOWN(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & (LATIN1_MASK|UTF8_MASK))
+# define SET_CACHED(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= CACHED_MASK)
+# define IS_CACHED(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) & CACHED_MASK)
 #else /* USE_RINTERNALS */
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
@@ -479,7 +479,7 @@ typedef struct {
    primsxp_fast_cfun will (possibly) be set in SetupBuiltins in names.c. */
 
 #define SET_PRIMOFFSET(x,v) do { \
-    PRIM_SEXPREC *setprim_ptr = (PRIM_SEXPREC *) UNCOMPRESSED_PTR(x); \
+    PRIM_SEXPREC *setprim_ptr = (PRIM_SEXPREC *) UPTR_FROM_SEXP(x); \
     int setprim_value = (v); \
     /* special fudge because the S4 bit is actually looked at some places */ \
     setprim_ptr->sxpinfo.gp = (setprim_ptr->sxpinfo.gp & (2*S4_OBJECT_MASK-1)) \
@@ -502,28 +502,28 @@ typedef struct {
 } while (0)
 
 #define PRIMOFFSET(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
 
 #define PRIMFUN(x) \
-  ((CCODE)(((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_cfun))
+  ((CCODE)(((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_cfun))
 #define PRIMFUNV(x) \
-  ((CCODEV)(((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_cfun))
+  ((CCODEV)(((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_cfun))
 #define SET_PRIMFUN(x,f) \
-  ( ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_cfun = \
+  ( ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_cfun = \
       (void *(*)()) (R_FunTab[PRIMOFFSET(x)].cfun = (SEXP (*)()) (f)), \
-    ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_cfun = 0 )
+    ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_cfun = 0 )
 #define PRIMVAL(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_code)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_code)
 #define PRIMARITY(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_arity)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_arity)
 #define PRIMPRINT(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_print)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_print)
 #define PRIMINTERNAL(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_internal)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_internal)
 #define PRIMVARIANT(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_variant)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_variant)
 #define PRIMFASTSUB(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_sub)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_sub)
 #define PRIMFOREIGN(x) \
   (R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
 #define PRIMNAME(x) \
@@ -532,19 +532,19 @@ typedef struct {
   (R_FunTab[PRIMOFFSET(x)].gram)  /* NO LONGER USED */
 
 #define PRIMFUN_PENDING_OK(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.pending_ok)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.pending_ok)
 
 #define PRIMFUN_FAST(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_cfun)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_cfun)
 #define PRIMFUN_DSPTCH1(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_dsptch1)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_dsptch1)
 #define PRIMFUN_ARG1VAR(x) \
-  (((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.var1)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.var1)
 
 #define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
-  ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_fast_cfun = (void*(*)())(f);\
-  ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.primsxp_dsptch1 = (dsptch1); \
-  ((PRIMSEXP)UNCOMPRESSED_PTR(x))->primsxp.var1 = (v1); \
+  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_cfun = (void*(*)())(f);\
+  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_dsptch1 = (dsptch1); \
+  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.var1 = (v1); \
 } while (0)
 
 
@@ -683,24 +683,24 @@ typedef struct {
    don't need "in use" anyway, since they'll never have lower NAMEDCNT). */
 
 #define helpers_is_being_computed(x) \
-  (UNCOMPRESSED_PTR(x)->sxpinfo.being_computed)
+  (UPTR_FROM_SEXP(x)->sxpinfo.being_computed)
 
 #ifndef helpers_is_in_use
 #define helpers_is_in_use(x) \
-  (UNCOMPRESSED_PTR(x)->sxpinfo.in_use)
+  (UPTR_FROM_SEXP(x)->sxpinfo.in_use)
 #endif
 
 #define helpers_mark_in_use(v) \
-    (UNCOMPRESSED_PTR(v)->sxpinfo.nmcnt < MAX_NAMEDCNT \
-       ? UNCOMPRESSED_PTR(v)->sxpinfo.in_use = 1 : 1)
+    (UPTR_FROM_SEXP(v)->sxpinfo.nmcnt < MAX_NAMEDCNT \
+       ? UPTR_FROM_SEXP(v)->sxpinfo.in_use = 1 : 1)
 #define helpers_mark_not_in_use(v) \
-    (UNCOMPRESSED_PTR(v)->sxpinfo.in_use \
-       ? UNCOMPRESSED_PTR(v)->sxpinfo.in_use = 0 : 0)
+    (UPTR_FROM_SEXP(v)->sxpinfo.in_use \
+       ? UPTR_FROM_SEXP(v)->sxpinfo.in_use = 0 : 0)
 
 #define helpers_mark_being_computed(v) \
-    (UNCOMPRESSED_PTR(v)->sxpinfo.being_computed = 1)
+    (UPTR_FROM_SEXP(v)->sxpinfo.being_computed = 1)
 #define helpers_mark_not_being_computed(v) \
-    (UNCOMPRESSED_PTR(v)->sxpinfo.being_computed = 0)
+    (UPTR_FROM_SEXP(v)->sxpinfo.being_computed = 0)
 
 /* Macros to wait until variables(s) computed. */
 
@@ -732,13 +732,13 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 
 /* Promise Access Macros */
 #define PRVALUE(x) \
-  (WAIT_UNTIL_COMPUTED(UNCOMPRESSED_PTR(x)->u.promsxp.value), \
-   (UNCOMPRESSED_PTR(x)->u.promsxp.value))
-#define PRVALUE_PENDING_OK(x) (UNCOMPRESSED_PTR(x)->u.promsxp.value)
-#define PRCODE(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.expr)
-#define PRENV(x)	(UNCOMPRESSED_PTR(x)->u.promsxp.env)
-#define PRSEEN(x)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp)
-#define SET_PRSEEN(x,v)	(UNCOMPRESSED_PTR(x)->sxpinfo.gp = (v))
+  (WAIT_UNTIL_COMPUTED(UPTR_FROM_SEXP(x)->u.promsxp.value), \
+   (UPTR_FROM_SEXP(x)->u.promsxp.value))
+#define PRVALUE_PENDING_OK(x) (UPTR_FROM_SEXP(x)->u.promsxp.value)
+#define PRCODE(x)	(UPTR_FROM_SEXP(x)->u.promsxp.expr)
+#define PRENV(x)	(UPTR_FROM_SEXP(x)->u.promsxp.env)
+#define PRSEEN(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp)
+#define SET_PRSEEN(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp = (v))
 
 /* Vector Heap Structure */
 typedef struct {
@@ -762,15 +762,15 @@ typedef struct {
 #define BINDING_LOCK_MASK (1<<14)
 #define SPECIAL_BINDING_MASK (ACTIVE_BINDING_MASK | BINDING_LOCK_MASK)
 #define IS_ACTIVE_BINDING(b) \
-  (UNCOMPRESSED_PTR(b)->sxpinfo.gp & ACTIVE_BINDING_MASK)
+  (UPTR_FROM_SEXP(b)->sxpinfo.gp & ACTIVE_BINDING_MASK)
 #define BINDING_IS_LOCKED(b) \
-  (UNCOMPRESSED_PTR(b)->sxpinfo.gp & BINDING_LOCK_MASK)
+  (UPTR_FROM_SEXP(b)->sxpinfo.gp & BINDING_LOCK_MASK)
 #define SET_ACTIVE_BINDING_BIT(b) \
-  (UNCOMPRESSED_PTR(b)->sxpinfo.gp |= ACTIVE_BINDING_MASK)
+  (UPTR_FROM_SEXP(b)->sxpinfo.gp |= ACTIVE_BINDING_MASK)
 #define LOCK_BINDING(b) \
-  (UNCOMPRESSED_PTR(b)->sxpinfo.gp |= BINDING_LOCK_MASK)
+  (UPTR_FROM_SEXP(b)->sxpinfo.gp |= BINDING_LOCK_MASK)
 #define UNLOCK_BINDING(b) \
-  (UNCOMPRESSED_PTR(b)->sxpinfo.gp &= (~BINDING_LOCK_MASK))
+  (UPTR_FROM_SEXP(b)->sxpinfo.gp &= (~BINDING_LOCK_MASK))
 
 #define check1arg_x(args,call) \
     do { \
@@ -951,7 +951,7 @@ LibExtern SEXP *R_internal_table;
 
 static inline SEXP INTERNAL_fun (SEXP x)
 {
-    sggc_cptr_t s = COMPRESSED_PTR(x);
+    sggc_cptr_t s = CPTR_FROM_SEXP(x);
     return s < R_first_internal || s > R_max_internal ? R_NilValue
              : R_internal_table[s-R_first_internal];
 }

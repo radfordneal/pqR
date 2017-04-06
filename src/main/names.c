@@ -590,9 +590,9 @@ static void SetupBuiltins(void)
         if ((R_FunTab[i].eval % 100 )/10) {
             SEXP sym = install(R_FunTab[i].name);
             if (R_first_internal == 0)
-                R_first_internal = COMPRESSED_PTR(sym);
-            if (COMPRESSED_PTR(sym) > R_max_internal)
-                R_max_internal = COMPRESSED_PTR(sym);
+                R_first_internal = CPTR_FROM_SEXP(sym);
+            if (CPTR_FROM_SEXP(sym) > R_max_internal)
+                R_max_internal = CPTR_FROM_SEXP(sym);
         }
     }
 
