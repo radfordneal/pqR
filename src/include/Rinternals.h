@@ -359,7 +359,7 @@ typedef struct SYM_SEXPREC {
     int32_t sym_hash;
 #endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
-    int32_t sym_hash
+    int32_t sym_hash;
     int32_t padding;
 #endif
 } SYM_SEXPREC, *SYMSEXP;
