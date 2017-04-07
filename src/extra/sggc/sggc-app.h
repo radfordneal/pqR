@@ -50,7 +50,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
 
        0  No pointers to follow (NILSXP, CHARSXP)
        1  Only attribute pointer to follow (eg, INTSXP)
-       2  Attribute pointer plus three others (eg, LISTSXP, SYMSXP)
+       2  Attribute pointer plus three others (eg, LISTSXP)
        3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
        4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
        5  Only attribute pointer to follow, uncollected, used for primitives
