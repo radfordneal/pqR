@@ -181,22 +181,25 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         else {
 	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
                     SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
+            Rprintf (" LAST...");
+            if (LASTSYMENV(v) == R_NoObject32) Rprintf (" -");
+            else Rprintf(" %d.%d", 
+                  SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
+                   (LASTSYMENV(v)))),
+                  SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
+                   (LASTSYMENV(v)))));
+            if (LASTSYMENVNOTFOUND(v) == R_NoObject32) Rprintf (" -");
+            else Rprintf(" %d.%d", 
+                  SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
+                   (LASTSYMENVNOTFOUND(v)))),
+                  SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
+                   (LASTSYMENVNOTFOUND(v)))));
 #           if USE_COMPRESSED_POINTERS
-                Rprintf (" LAST...");
-                if (LASTSYMENV(v) == R_NoObject) Rprintf (" -");
-                else Rprintf(" %d.%d", SGGC_SEGMENT_INDEX(LASTSYMENV(v)),
-                                       SGGC_SEGMENT_OFFSET(LASTSYMENV(v)));
                 if (LASTSYMBINDING(v) == R_NoObject) Rprintf (" -");
                 else Rprintf(" %d.%d", SGGC_SEGMENT_INDEX(LASTSYMBINDING(v)),
                                        SGGC_SEGMENT_OFFSET(LASTSYMBINDING(v)));
-                if (LASTSYMENVNOTFOUND(v) == R_NoObject) Rprintf (" -");
-                else Rprintf(" %d.%d",SGGC_SEGMENT_INDEX(LASTSYMENVNOTFOUND(v)),
-                                    SGGC_SEGMENT_OFFSET(LASTSYMENVNOTFOUND(v)));
 #           else
-                Rprintf (" LAST... %p %p %p",
-                           LASTSYMENV(v),
-                           LASTSYMBINDING(v),
-                           LASTSYMENVNOTFOUND(v));
+                Rprintf (" %p", LASTSYMBINDING(v));
 #           endif
         }
     }

@@ -178,12 +178,10 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
         pname               C-function                        external ptr
         value               fast-C-function                   prot
         nextsym             64 bits of info                   tag
-        lastenv             = 48 bytes                        = 48 bytes
-        last-enf            (3 chunks)                          (3 chunks)
-        lastbinding
-        padding
-        = 80 bytes
-          (5 chunks)
+        lastenv, last-enf   = 48 bytes                        = 48 bytes
+        lastbinding           (3 chunks)                        (3 chunks)
+        = 64 bytes
+          (4 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -196,12 +194,12 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   3,   2,   3,   3, /* Smallest sizes for the SGGC types */ \
-  3,   3,   5,   3,   3,   5, /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   5,   5,   3,   5, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   5,   8,   3,   5, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   5,  16,   3,   5, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   5,  32,   3,   5, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   5,  32,   3,   5  /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   5,   3,   3,   4, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   5,   5,   3,   4, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   5,   8,   3,   4, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   5,  16,   3,   4, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   5,  32,   3,   4, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   5,  32,   3,   4  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \

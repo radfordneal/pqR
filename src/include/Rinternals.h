@@ -175,6 +175,7 @@ typedef SEXP VECSEXP;
 typedef SEXP SEXP32;
 #define SEXP32_FROM_SEXP(x) (x)
 #define SEXP_FROM_SEXP32(x) (x)
+#define R_NoObject32 R_NoObject
 
 #define CPTR_FROM_SEXP(x) (x)
 #define UPTR_FROM_SEXP(x) ((SEXPREC *) SGGC_DATA(x))
@@ -189,10 +190,12 @@ typedef struct VECTOR_SEXPREC *VECSEXP;
 typedef SEXP SEXP32;
 #define SEXP32_FROM_SEXP(x) (x)
 #define SEXP_FROM_SEXP32(x) (x)
+#define R_NoObject32 R_NoObject
 #else
 typedef sggc_cptr_t SEXP32;
 #define SEXP32_FROM_SEXP(x) CPTR_FROM_SEXP(x)
 #define SEXP_FROM_SEXP32(x) SEXP_FROM_CPTR(x)
+#define R_NoObject32 SGGC_NO_OBJECT
 #endif
 
 #define CPTR_FROM_SEXP(x) ((x)->cptr) 
@@ -341,8 +344,8 @@ struct symsxp_struct {
     SEXP pname;
     SEXP value;
     SEXP nextsym;
-    SEXP lastenv;
-    SEXP lastenvnotfound;
+    SEXP32 lastenv;
+    SEXP32 lastenvnotfound;
     SEXP lastbinding;
 };
 
@@ -354,9 +357,6 @@ typedef struct SYM_SEXPREC {
     struct symsxp_struct symsxp;
 #if USE_COMPRESSED_POINTERS
     int32_t sym_hash;
-#endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
-    int64_t padding;
 #endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
     int32_t sym_hash

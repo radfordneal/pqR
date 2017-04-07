@@ -1744,11 +1744,11 @@ extern void *alloca(size_t);
 
 static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 {
-    if (LASTSYMENV(sym) == rho) {
+    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
         SEXP b = CAR(LASTSYMBINDING(sym));
         if (b != R_UnboundValue)
             return b;
-        LASTSYMENV(sym) = R_NoObject;
+        LASTSYMENV(sym) = R_NoObject32;
     }
 
     return findVarPendingOK(sym,rho);
@@ -1790,7 +1790,7 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 #       if (R_EVAL_TWEAKS/100)%10 > 1
 
             if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
-                if (LASTSYMENV(e) == rho) {
+                if (LASTSYMENV(e) == SEXP32_FROM_SEXP(rho)) {
                     SEXP res = CAR(LASTSYMBINDING(e));
                     if (TYPEOF(res) == PROMSXP) 
                         res = PRVALUE_PENDING_OK(res);

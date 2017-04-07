@@ -803,10 +803,10 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 {
     SEXP loc;
 
-    if (rho == LASTSYMENV(symbol)) {
+    if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
          loc = LASTSYMBINDING(symbol);
          if (BINDING_VALUE(loc) == R_UnboundValue)
-             LASTSYMENV(symbol) = R_NoObject;
+             LASTSYMENV(symbol) = R_NoObject32;
          else
              return loc;
     }
@@ -847,7 +847,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
         if ( ! IS_ACTIVE_BINDING(loc) && !DDVAL(symbol)) {
             /* Note:  R_MakeActiveBinding won't let an existing binding 
                become active, so we later assume this can't be active. */
-            LASTSYMENV(symbol) = rho;
+            LASTSYMENV(symbol) = SEXP32_FROM_SEXP(rho);
             LASTSYMBINDING(symbol) = loc;
         }
     }
@@ -945,12 +945,12 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 
     if (TYPEOF(symbol) != SYMSXP) abort();
 
-    if (rho == LASTSYMENV(symbol)) {
+    if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
         if ( ! BINDING_IS_LOCKED(binding)) {
             value = CAR(binding);
             if (value == R_UnboundValue)
-                LASTSYMENV(symbol) = R_NoObject;
+                LASTSYMENV(symbol) = R_NoObject32;
             else {
                 R_binding_cell = binding;
                 return value;
@@ -967,12 +967,12 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
     if (TYPEOF(symbol) != SYMSXP) abort();
 
-    if (rho == LASTSYMENV(symbol)) {
+    if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
         if ( ! BINDING_IS_LOCKED(binding)) {
             value = CAR(binding);
             if (value == R_UnboundValue)
-                LASTSYMENV(symbol) = R_NoObject;
+                LASTSYMENV(symbol) = R_NoObject32;
             else {
                 switch (option) {
                 case 0:
@@ -1045,10 +1045,10 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 
     else if (HASHTAB(rho) == R_NilValue) {
 
-        if (LASTSYMENVNOTFOUND(symbol) != rho) {
+        if (LASTSYMENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
             loc = FRAME(rho);
             SEARCH_LOOP (loc, symbol, goto found);
-            LASTSYMENVNOTFOUND(symbol) = rho;
+            LASTSYMENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(rho);
         }
 
         goto ret;
@@ -1062,7 +1062,7 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
             if (!DDVAL(symbol)) {
                 /* Note:  R_MakeActiveBinding won't let an existing binding 
                    become active, so we later assume this can't be active. */
-                LASTSYMENV(symbol) = rho;
+                LASTSYMENV(symbol) = SEXP32_FROM_SEXP(rho);
                 LASTSYMBINDING(symbol) = loc;
             }
             if (BINDING_IS_LOCKED(loc)) {
@@ -1412,7 +1412,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 
 SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 {
-    SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
+    SEXP32 last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
     SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
 
@@ -1449,7 +1449,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
         /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
            in this environment. */
 
-        if (rho == last_sym_not_found) {
+        if (SEXP32_FROM_SEXP(rho) == last_sym_not_found) {
             last_unhashed_env_nf = rho;
             continue;
         }
@@ -1470,7 +1470,8 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
         if (isFunction (vl)) {
             if (last_unhashed_env_nf != R_NoObject)
-                LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
+                LASTSYMENVNOTFOUND(symbol) = 
+                  SEXP32_FROM_SEXP(last_unhashed_env_nf);
             return vl;
         }
 
@@ -1492,12 +1493,12 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
     if (TYPEOF(symbol) != SYMSXP) abort();
 
-    SEXP last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
+    SEXP32 last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
     SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
 
     for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
-        if (rho == last_sym_not_found) {
+        if (SEXP32_FROM_SEXP(rho) == last_sym_not_found) {
             last_unhashed_env_nf = rho;
             continue;
         }
@@ -1511,13 +1512,14 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
             vl = forcePromise(vl);
         if (isFunction(vl)) {
             if (last_unhashed_env_nf != R_NoObject)
-                LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
+                LASTSYMENVNOTFOUND(symbol) = 
+                  SEXP32_FROM_SEXP(last_unhashed_env_nf);
             return vl;
         }
     }
 
     if (last_unhashed_env_nf != R_NoObject && !IS_BASE(last_unhashed_env_nf))
-        LASTSYMENVNOTFOUND(symbol) = last_unhashed_env_nf;
+        LASTSYMENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(last_unhashed_env_nf);
     return R_UnboundValue;
 }
 
@@ -1551,7 +1553,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     R_binding_cell = R_NilValue;
 
-    if (rho == LASTSYMENV(symbol)) {
+    if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         loc = LASTSYMBINDING(symbol);    /* won't be an active binding */
         if (CAR(loc) != R_UnboundValue)  /* could be unbound if var removed */
             goto found;
@@ -1591,7 +1593,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
 
     if (HASHTAB(rho) == R_NilValue) {
-        if (LASTSYMENVNOTFOUND(symbol) != rho) {
+        if (LASTSYMENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
             loc = FRAME(rho);
             SEARCH_LOOP (loc, symbol, goto found_update_last);
         }
@@ -1634,8 +1636,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
                 SET_HASHTAB(rho, R_HashResize(table));
         }
 
-        if (LASTSYMENVNOTFOUND(symbol) == rho)
-            LASTSYMENVNOTFOUND(symbol) = R_NoObject;
+        if (LASTSYMENVNOTFOUND(symbol) == SEXP32_FROM_SEXP(rho))
+            LASTSYMENVNOTFOUND(symbol) = R_NoObject32;
 
         if (incdec&2)
             INC_NAMEDCNT(value);
@@ -1652,7 +1654,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     if ( ! IS_ACTIVE_BINDING(loc) && !DDVAL(symbol)) {
         /* Note:  R_MakeActiveBinding won't let an existing binding 
            become active, so we later assume this can't be active. */
-        LASTSYMENV(symbol) = rho;
+        LASTSYMENV(symbol) = SEXP32_FROM_SEXP(rho);
         LASTSYMBINDING(symbol) = loc;
     }
     

@@ -592,13 +592,13 @@ void sggc_find_root_ptrs (void)
 
        The symbol table may be nonexistent at startup (NULL). */
 
-#   if 0  /* scan using the symbol table */
+    if (0)  /* scan using the symbol table */
     {
         if (R_SymbolTable != NULL) { 
             for (i = 0; i < HSIZE; i++) {
-                for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)) {
-                    LASTSYMENV(s) = R_NoObject;
-                    LASTSYMENVNOTFOUND(s) = R_NoObject;
+                for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)){
+                    LASTSYMENV(s) = R_NoObject32;
+                    LASTSYMENVNOTFOUND(s) = R_NoObject32;
                     MARK(PRINTNAME(s));
                     if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
                     if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
@@ -611,36 +611,35 @@ void sggc_find_root_ptrs (void)
            a constant now, so its fields shouldn't change. */
     
         if (R_MissingArg) {
-            LASTSYMENV(R_MissingArg) = R_NoObject;
+            LASTSYMENV(R_MissingArg) = R_NoObject32;
+            LASTSYMENVNOTFOUND(R_MissingArg) = R_NoObject32;
             LASTSYMBINDING(R_MissingArg) = R_NoObject;
-            LASTSYMENVNOTFOUND(R_MissingArg) = R_NoObject;
         }
         if (R_MissingUnder) {
-            LASTSYMENV(R_MissingUnder) = R_NoObject;
+            LASTSYMENV(R_MissingUnder) = R_NoObject32;
+            LASTSYMENVNOTFOUND(R_MissingUnder) = R_NoObject32;
             LASTSYMBINDING(R_MissingUnder) = R_NoObject;
-            LASTSYMENVNOTFOUND(R_MissingUnder) = R_NoObject;
         }
         if (R_RestartToken) {
-            LASTSYMENV(R_RestartToken) = R_NoObject;
+            LASTSYMENV(R_RestartToken) = R_NoObject32;
+            LASTSYMENVNOTFOUND(R_RestartToken) = R_NoObject32;
             LASTSYMBINDING(R_RestartToken) = R_NoObject;
-            LASTSYMENVNOTFOUND(R_RestartToken) = R_NoObject;
         }
     }
-#   else  /* scan using the SGGC uncollected set */
+    else  /* scan using the SGGC uncollected set */
     {
         sggc_cptr_t nxt;
         for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
              nxt != SGGC_NO_OBJECT;
              nxt = sggc_next_uncollected_of_kind(nxt)) {
             SEXP s = SEXP_FROM_CPTR(nxt);
-            LASTSYMENV(s) = R_NoObject;
-            LASTSYMENVNOTFOUND(s) = R_NoObject;
+            LASTSYMENV(s) = R_NoObject32;
+            LASTSYMENVNOTFOUND(s) = R_NoObject32;
             MARK(PRINTNAME(s));
             if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
             if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
         }
     }
-#   endif
 
     /* Forward other roots. */
 
@@ -1531,9 +1530,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
     NEXTSYM_PTR(c) = R_NilValue;
-    LASTSYMENV(c) = R_NoObject;
+    LASTSYMENV(c) = R_NoObject32;
+    LASTSYMENVNOTFOUND(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
-    LASTSYMENVNOTFOUND(c) = R_NoObject;
 
     SET_DDVAL(c, isDDName(name));
 

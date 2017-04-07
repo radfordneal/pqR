@@ -2276,7 +2276,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (isVectorNonpointer(rhs) && LENGTH(rhs) == 1 && NAMEDCNT_GT_0(rhs)) {
             SEXPTYPE rhs_type = TYPEOF(rhs);
             SEXP v;
-            if (rho != LASTSYMENV(lhs) 
+            if (SEXP32_FROM_SEXP(rho) != LASTSYMENV(lhs) 
                   || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
                   || (v = CAR(R_binding_cell)) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
