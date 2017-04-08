@@ -41,7 +41,6 @@
 
 /* COMPRESSED POINTER (INDEX, OFFSET) TYPE, AND NO OBJECT CONSTANT. */
 
-typedef set_index_t sggc_index_t; /* Type of segment index */
 typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
 
 #define SGGC_CPTR_VAL(i,o) SET_VAL((i),(o))
@@ -266,6 +265,8 @@ sggc_cptr_t sggc_first_uncollected_of_kind (sggc_kind_t kind);
 int sggc_is_uncollected (sggc_cptr_t cptr);
 void sggc_call_for_newly_freed_object (sggc_kind_t kind,
                                        int (*fun) (sggc_cptr_t));
+void sggc_no_reuse (int enable);
+sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr);
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
                            char *data
 #ifdef SGGC_AUX1_SIZE
@@ -315,19 +316,24 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   extern set_bits_t sggc_next_free_bits[SGGC_N_KINDS];
   extern int sggc_next_segment_not_free[SGGC_N_KINDS];
 
-  set_bits_t nfb = sggc_next_free_bits[kind];
+  set_bits_t nfb = sggc_next_free_bits[kind];  /* bits indicating where free */
 
   if (nfb == 0)
   { return SGGC_NO_OBJECT;
   }
 
-  sggc_cptr_t nfv = sggc_next_free_val[kind];
-
-  nfb >>= 1;
+  sggc_cptr_t nfv = sggc_next_free_val[kind];  /* pointer to current free obj */
+  sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
+/* printf("--- %llx %x",nfb,nfv); */
+  nfb >>= nch;
   if (nfb != 0)
-  { int o = set_first_bit_pos(nfb);
-    nfb >>= o;
-    sggc_next_free_val[kind] = nfv + o + 1;
+  { sggc_cptr_t new_nfv = nfv + nch;
+    if ((nfb&1) == 0) /* next object in segment not free, look for first free */
+    { int o = set_first_bit_pos(nfb);
+      nfb >>= o;
+      new_nfv += o;
+    }
+    sggc_next_free_val[kind] = new_nfv;
   }
   else if (!sggc_next_segment_not_free[kind])
   { sggc_cptr_t n = set_chain_next_segment (SET_UNUSED_FREE_NEW, nfv);
@@ -339,10 +345,10 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   else
   { sggc_next_free_val[kind] = SGGC_NO_OBJECT;
   }
+/* printf(" : %llx %x\n",nfb,sggc_next_free_val[kind]); */
 
   sggc_next_free_bits[kind] = nfb;
 
-  sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
   uint64_t *p = (uint64_t *) SGGC_DATA(nfv);   /* should be aligned properly  */
 
 #ifdef SGGC_USE_MEMSET

@@ -58,6 +58,25 @@
 #define EXTRA_CHECKS 0
 
 
+/* CLEARING OF FREED DATA AREAS. */
+
+#ifdef SGGC_CLEAR_FREE
+
+#ifndef SGGC_CLEAR_DATA_BYTE
+#define SGGC_CLEAR_DATA_BYTE 0
+#endif
+
+#ifndef SGGC_CLEAR_AUX1_BYTE
+#define SGGC_CLEAR_AUX1_BYTE 0
+#endif
+
+#ifndef SGGC_CLEAR_AUX2_BYTE
+#define SGGC_CLEAR_AUX2_BYTE 0
+#endif
+
+#endif
+
+
 /* ALLOCATE / FREE MACROS.  Defaults to the system calloc/free if something
    else is not defined in sggc-app.h. */
 
@@ -196,14 +215,19 @@ int sggc_next_segment_not_free[SGGC_N_KINDS];
 
 /* MAXIMUM NUMBER OF SEGMENTS, AND INDEX OF NEXT SEGMENT TO USE. */
 
-static set_offset_t maximum_segments;         /* Max segments, fixed for now */
-static set_offset_t next_segment;             /* Number of segments in use */
+static set_index_t maximum_segments;         /* Max segments, fixed for now */
+static set_index_t next_segment;             /* Number of segments in use */
 
 
 /* GLOBAL VARIABLES USED FOR LOOKING AT OLD-NEW REFERENCES. */
 
 static int collect_level = -1; /* Level of current garbage collection */
 static int old_to_new_check;   /* Controls how old-to-new processing is done */
+
+
+/* SUPPRESS MEMORY REUSE FLAG. */
+
+static int do_not_reuse_memory;  /* Non-zero to suppress reuse */
 
 
 /* MACRO TO DO SOMETHING FOR ELEMENT AND THOSE FOLLOWING IN THE SAME SEGMENT. 
@@ -500,7 +524,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 
   char *data;               /* pointer to data area for segment used */
 
-  sggc_index_t index;       /* index of segment that object will be in */
+  unsigned index;           /* index of segment that object will be in */
   struct set_segment * restrict seg;  /* ptr to struct for seg object goes in */
   sggc_cptr_t v;            /* pointer to object, to be returned as value */
 
@@ -1245,23 +1269,35 @@ void sggc_collect_remove_free_small (void)
          to the point where we reach objects that were freed before
          this collection and weren't allocated since (which may now be
          mixed in with objects that were moved from old generations,
-         if collect_level is greater than zero).  If one of these
-         newly-freed objects is in an old generation, we remove it now
-         (but note that this doesn't get all free objects, so we still
-         need the scan done below). */
+         if collect_level is greater than zero).  (Note that we also
+         have to handle the case where we've used all of the free set
+         and are now allocating from a single newly-created segment.)
+         If one of these newly-freed objects is in an old generation,
+         we remove it now (but note that this doesn't get all free
+         objects, so we still need the scan done below). */
 
-      if (call)
+      if (call && (v = set_first (&free_or_new[k], 0)) != SGGC_NO_OBJECT)
       {
-        v = set_first (&free_or_new[k], 0);
+        sggc_cptr_t next_free = sggc_next_free_val[k];
 
-        while (v != sggc_next_free_val[k])
+        for (;;)
         { 
+          if (v == next_free)
+          { if (sggc_next_segment_not_free[k])
+            { v = set_chain_next_segment (SET_UNUSED_FREE_NEW, v);
+            }
+          }
+
+          if (v == SGGC_NO_OBJECT || v == next_free)
+          { break;
+          }
+
           sggc_cptr_t ov = v;
+
           v = set_chain_next (SET_UNUSED_FREE_NEW, v);
 
-          /* Call the function to call for a newly-freed object of this
-             kind, if there is one.  If it returns a non-zero value, don't
-             free this object after all. */
+          /* Call the function to call for a newly-freed object of this kind.
+             If it returns a non-zero value, don't free the object after all. */
   
           if ((*call)(ov))
           { if (SGGC_DEBUG) 
@@ -1280,7 +1316,7 @@ void sggc_collect_remove_free_small (void)
             { if (SGGC_DEBUG)
               { printf("sggc_collect: %x in old_gen1 now free\n",(unsigned)ov);
               }
-              (void) set_remove (&old_to_new, v);
+              (void) set_remove (&old_to_new, ov);
             }
             else if (collect_level > 1 && set_remove (&old_gen2[k], ov))
             { if (SGGC_DEBUG)
@@ -1389,6 +1425,43 @@ void sggc_collect_remove_free_small (void)
           }
         }
       }
+
+      /* Clear freed data and aux areas for small kinds if asked to do so. */
+
+#     ifdef SGGC_CLEAR_FREE
+      { sggc_nchunks_t nch = sggc_kind_chunks[k];
+        sggc_cptr_t p;
+        for (p = set_first (&free_or_new[k], 0); 
+             p != SGGC_NO_OBJECT;
+             p = set_next (&free_or_new[k], p, 0))
+        { if (SGGC_DATA(p) != NULL)
+          { memset (SGGC_DATA(p), SGGC_CLEAR_DATA_BYTE, SGGC_CHUNK_SIZE * nch);
+          }
+#         ifdef SGGC_AUX1_SIZE
+#         ifdef SGGC_AUX1_READ_ONLY
+          if (!kind_aux1_read_only[k])
+#         endif
+          { memset (SGGC_AUX1(p), SGGC_CLEAR_AUX1_BYTE, SGGC_AUX1_SIZE * nch);
+          }
+#         endif
+#         ifdef SGGC_AUX2_SIZE
+#         ifdef SGGC_AUX2_READ_ONLY
+          if (!kind_aux2_read_only[k])
+#         endif
+          { memset (SGGC_AUX2(p), SGGC_CLEAR_AUX2_BYTE, SGGC_AUX2_SIZE * nch);
+          }
+#         endif
+        }
+      }
+#     endif
+
+      /* Remove all objects from the free set if we aren't reusing them. */
+
+      if (do_not_reuse_memory)
+      { do
+        { v = set_first (&free_or_new[k], 1); 
+        } while (v != SGGC_NO_OBJECT);
+      }
     }
   }
 }
@@ -1445,6 +1518,29 @@ void sggc_collect_remove_free_big (void)
           }
         }
 
+        /* Clear data and auxiliary info areas if asked to do so.  Note that
+           big objects can't have read-only auxiliary information. */
+
+#       ifdef SGGC_CLEAR_FREE
+        { sggc_nchunks_t nch = sggc_kind_chunks[k];
+          memset (SGGC_DATA(v), SGGC_CLEAR_DATA_BYTE, SGGC_CHUNK_SIZE * nch);
+#         ifdef SGGC_AUX1_SIZE
+          { memset (SGGC_AUX1(v), SGGC_CLEAR_AUX1_BYTE, SGGC_AUX1_SIZE * nch);
+          }
+#         endif
+#         ifdef SGGC_AUX2_SIZE
+          { memset (SGGC_AUX2(v), SGGC_CLEAR_AUX2_BYTE, SGGC_AUX2_SIZE * nch);
+          }
+#         endif
+        }
+#       endif
+
+        /* Don't free memory or put in 'unused' if we're not reusing memory. */
+
+        if (do_not_reuse_memory)
+        { continue;
+        }
+
         /* Free the object's data area. */
 
         set_index_t index = SET_VAL_INDEX(v);
@@ -1452,14 +1548,13 @@ void sggc_collect_remove_free_big (void)
         { printf ("sggc_collect: calling free for data for %x:: %p\n", 
                    v, SGGC_DATA(v));
         }
-        UNDO_OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
-        sggc_free ((char *) sggc_data[index]);
-        if (SGGC_DEBUG) 
-        { printf("sggc_collect: putting %x in unused\n",(unsigned)v);
-        }
+        sggc_free ((char *) SGGC_DATA(v));
 
         /* Put it in 'unused', for later re-use. */
 
+        if (SGGC_DEBUG) 
+        { printf("sggc_collect: putting %x in unused\n",(unsigned)v);
+        }
         set_add (&unused, v); /* allowed because v was removed with set_first */
                               /*   and it was the only value in its segment   */
       }
@@ -1478,8 +1573,8 @@ void sggc_collect (int level)
 
   if (set_first(&to_look_at, 0) != SET_NO_VALUE) abort();
 
-  sggc_collect_put_in_free_or_new();
-  sggc_collect_old_to_new();
+  sggc_collect_put_in_free_or_new(); /* put collected generations in free set */
+  sggc_collect_old_to_new();         /* handle old-to-new references */
 
   /* Get the application to take root pointers out of the free_or_new set,
      and put them in the to_look_at set. */
@@ -1487,9 +1582,9 @@ void sggc_collect (int level)
   old_to_new_check = 0;  /* no special old-to-new processing in sggc_look_at */
   sggc_find_root_ptrs();
 
-  sggc_collect_look_at();
-  sggc_collect_remove_free_small();
-  sggc_collect_remove_free_big();
+  sggc_collect_look_at();            /* look at objects until no more to see */
+  sggc_collect_remove_free_small();  /* handle freed small objects */
+  sggc_collect_remove_free_big();    /* handle freed big objects */
 
   /* For each kind, set up sggc_next_free_val, and sggc_next_free_bits to 
      use all of free_or_new.  For uncollected kinds, we just leave these as
@@ -1511,26 +1606,6 @@ void sggc_collect (int level)
                                      >> SET_VAL_OFFSET(n);
         }
         sggc_next_segment_not_free[k] = 0;
-      }
-    }
-  }
-
-  /* Code below can be enabled to wipe out data in free objects, storing
-     up to two copies of SGGC_NO_OBJECT at the front, to help debugging. */
-
-  if (EXTRA_CHECKS)
-  { for (k = 0; k < SGGC_N_KINDS; k++)
-    { if (sggc_kind_chunks[k] != 0)
-      { sggc_cptr_t p;
-        for (p = set_first (&free_or_new[k], 0); 
-             p != SGGC_NO_OBJECT;
-             p = set_next (&free_or_new[k], p, 0))
-        { if (SGGC_DATA(p) != NULL)
-          { sggc_cptr_t *d =  (sggc_cptr_t *) SGGC_DATA(p);
-            if (sizeof (sggc_cptr_t) < SGGC_CHUNK_SIZE) *d++ = SGGC_NO_OBJECT;
-            if (2 * sizeof (sggc_cptr_t) < SGGC_CHUNK_SIZE) *d = SGGC_NO_OBJECT;
-          }
-        }
       }
     }
   }
@@ -1666,3 +1741,36 @@ void sggc_call_for_newly_freed_object (sggc_kind_t kind,
   call_for_newly_freed[kind] = fun;
 }
 
+
+
+/* ENABLE OR DISABLE SUPPRESSION OF MEMORY REUSE. */
+
+void sggc_no_reuse (int enable)
+{
+  do_not_reuse_memory = enable;
+}
+
+
+/* TRY TO CRASH IF COMPRESSED POINTER IS NOT VALID. 
+
+   Currently, doesn't try to distinguish free from recently-allocated
+   objects in UNUSED_FREE_NEW.  This might be possible without huge
+   effort using a flag in a segment saying whether any objects in it
+   are free. */
+
+sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr)
+{
+  unsigned index = SGGC_SEGMENT_INDEX(cptr);
+  if (index >= next_segment)
+  { abort();
+  }
+
+  if (!sggc_is_constant(cptr)
+   && !set_chain_contains(SET_UNUSED_FREE_NEW,cptr)
+   && !set_chain_contains(SET_OLD_GEN1,cptr)
+   && !set_chain_contains(SET_OLD_GEN2_UNCOL,cptr))
+  { abort();
+  }
+
+  return cptr;
+}

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run the Sieve of Eratosthenes program, with iterative defintions of r and a,
+# Run the Sieve of Eratosthenes program, with iterative definitions of r and a,
 # comparing to the saved correct output.
 
 ( cat defs-iterative

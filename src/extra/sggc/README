@@ -8,14 +8,17 @@ freeing objects, such as is needed in interpreters for languages such
 as R.  The interface to this facility is documented in sggc-doc.
 Documentation on its design and internals is in sggc-imp.
 
-Some tests of SGGC are in test-sggc1, test-sggc2, etc.
+Some tests of SGGC are in test-sggc1, test-sggc2, etc.  They can be
+run with run-tests.
 
 As a higher-level test, also useful for performance assessment, an
 interpreter for a toy Lisp-like language is in interp, along with
-example programs in this language.
+example programs in this language.  The interpreter can be compiled
+with various option settings to test these out, as is done in the
+Makefile supplied.
 
 A facility used by SGGC for managing sets of values is documented in
-set-doc, and tested in test-set.
+set-doc, and tested in test-set, also runnable with run-tests.
 
 See VERSIONS for information on current and past stable versions.
 

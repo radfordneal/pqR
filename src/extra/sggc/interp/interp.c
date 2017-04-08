@@ -117,10 +117,16 @@ struct type_binding { ptr_t value, next; };  /* Binding, symbol is in aux1 */
 #define KIND_GLOBAL_BINDING 4  /* Used if UNCOLLECTED_NIL_SYMS_GLOBALS defined*/
 
 
-#define LIST(v) ((struct type_list *) SGGC_DATA(v))
-#define SYMBOL(v) ((struct type_symbol *) SGGC_DATA(v))
-#define BINDING(v) ((struct type_binding *) SGGC_DATA(v))
-#define BOUND_SYMBOL(v) (* (char *) SGGC_AUX1(v))
+#ifdef CHECK_VALID
+#define CHK(x) sggc_check_valid_cptr(x)
+#else
+#define CHK(x) (x)
+#endif
+
+#define LIST(v) ((struct type_list *) SGGC_DATA(CHK(v)))
+#define SYMBOL(v) ((struct type_symbol *) SGGC_DATA(CHK(v)))
+#define BINDING(v) ((struct type_binding *) SGGC_DATA(CHK(v)))
+#define BOUND_SYMBOL(v) (* (char *) SGGC_AUX1(CHK(v)))
 
 
 /* VALID SYMBOLS. */
@@ -135,6 +141,10 @@ static ptr_t symbols[SGGC_CHUNKS_IN_SMALL_SEGMENT];
 
 static ptr_t nil;              /* The nil object, () */
 static ptr_t global_bindings;  /* Global bindings of symbols with values */
+
+#if CALL_NEWLY_FREED
+static unsigned freed_count;  /* Count of freed objects, if doing that */
+#endif
 
 
 /* SCHEME FOR PROTECTING POINTERS FROM GARBAGE COLLECTION. */
@@ -253,7 +263,6 @@ static ptr_t alloc (sggc_type_t type)
     a = sggc_alloc(type,1); /* length argument is ignored */
     if (a == SGGC_NO_OBJECT)
     { printf("CAN'T ALLOCATE\n");
-      abort();
       exit(1);
     }
   }
@@ -339,10 +348,19 @@ static char read_char (void)
 
 /* READ AN OBJECT.  Passed the next character of input; reads more if
    appropriate, but doesn't read past end of expression.  Prints an
-   error message and exits if there is a syntax error. */
+   error message and exits if there is a syntax error. 
+
+   As a special fudge for testing, if the first character is '^', a
+   level 2 garbage collection is done, and then this character is
+   skipped. */
 
 static ptr_t read (char c)
 {
+  while (c == '^') 
+  { sggc_collect(2);
+    c = read_char();
+  }
+
   if (strchr(symbol_chars,c))
   { return symbols [strchr(symbol_chars,c) - symbol_chars];
   }
@@ -627,13 +645,42 @@ done:
 }
 
 
+/* FUNCTION TO CALL FOR NEWLY-FREED OBJECTS. */
+
+#if CALL_NEWLY_FREED
+
+int freed_fun (sggc_cptr_t cptr)
+{
+  freed_count += 1;
+  return 0;
+}
+
+#endif
+
+
 /* MAIN PROGRAM. */
 
 int main (void)
 {
   int seqno = 1;
 
-  sggc_init (10000);
+# if NO_REUSE
+    sggc_init (SGGC_MAX_SEGMENTS);
+# else
+    sggc_init (10000);
+# endif
+
+# if NO_REUSE
+    sggc_no_reuse(1);
+# endif
+
+# if CALL_NEWLY_FREED
+  { sggc_kind_t k;
+    for (k = 0; k < SGGC_N_KINDS; k++) 
+    { sggc_call_for_newly_freed_object(k,freed_fun);
+    }
+  }
+# endif
 
   nil = sggc_alloc (TYPE_NIL, 1);
   if (nil != 0) abort();  /* want nil to be zero for auto initialization */
@@ -689,11 +736,29 @@ static unsigned count_uncol (sggc_kind_t kind)
 }
 
 
-/* TERMINATE PROGRAM.  Checks that the numbers and types of uncollected 
-   objects (if any) are as they ought to be, then exits. */
+/* TERMINATE PROGRAM.  Prints number of allocations and current usage,
+   plus freed objects, if that's enabled, then checks that the numbers
+   and types of uncollected objects (if any) are as they ought to be,
+   then exits. */
 
 static void end_prog (void)
 {
+  unsigned total;
+
+  printf("Allocated objects: %u\n",alloc_count);
+  printf("Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+          sggc_info.gen0_count, sggc_info.gen1_count, sggc_info.gen2_count,
+          sggc_info.uncol_count);
+# if CALL_NEWLY_FREED
+    printf("Number of freed objects: %u\n",freed_count);
+    total =  sggc_info.gen0_count + sggc_info.gen1_count + sggc_info.gen2_count
+              + sggc_info.uncol_count + freed_count;
+    printf("Freed + still around: %u\n",total);
+    if (total != alloc_count)
+    { printf("DOESN'T MATCH ALLOC COUNT!\n");
+    }
+# endif
+
 # if UNCOLLECT_LEVEL >= 1
     if (count_uncol(TYPE_NIL) != 1) abort();
 # endif

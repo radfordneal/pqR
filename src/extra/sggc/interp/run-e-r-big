@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Run the Sieve of Eratosthenes program, with iterative defintions of r and a,
+# Run the Sieve of Eratosthenes program, with recursive defintions of r and a,
 # comparing to the saved correct output.
 
-( cat defs-iterative
+( cat defs-recursive
   cat defs-numeric
   cat eratosthenes
   echo "(E ('(O O O O O I)))"
   echo "(@l (E ('(O O O O O O O O O O I))))"
   echo "l"
-) | interp$1 >o-e-i-big
+) | interp$1 >o-e-r-big
 
-diff -u out-e-i-big o-e-i-big
+diff -u out-e-r-big o-e-r-big

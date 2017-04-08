@@ -1,5 +1,11 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-04-08
+
+  Bug fixes.  New features call_newly_freed_object, CLEAR_FREE, no_reuse, 
+  check_valid_cptr.  Performance tweak in alloc_small_kind_quickly.
+  More tests.
+
 Version-2017-04-02
 
   Significant API changes, including uncollected objects and 

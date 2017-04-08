@@ -155,6 +155,29 @@ dynamically allocated (for a possible speed advantage in data access):
                         defined), and the argument to sggc_init can
                         only reduce this limit, not increase it.
 
+The symbols below may be defined if the application wishes bytes of
+memory for objects found to be free after a garbage collection to be
+set to some value, as a measure to make errors in which freed memory
+is still referenced more apparent.  There is a fairly large, but not
+extreme, performance penalty for doing this.  Note that sometimes
+freed memory will cease to be mapped into the address space, in which
+case accessing it will cause a program crash.  Note also that memory
+for freed objets may be reused for other objects, unless the program
+calls sggc_no_reuse (see below).
+
+  SGGC_CLEAR_FREE       If defined (as anything), bytes in the data
+                        area and the auxiliary information (if not
+                        read-only) for an object are set to contants
+                        when it becomes free.
+
+  SGGC_CLEAR_DATA_BYTE  The byte to set free data areas to; default 0.
+
+  SGGC_CLEAR_AUX1_BYTE  The byte to set free auxiliary information 1
+                        to, if it is not read-only; default 0.
+
+  SGGC_CLEAR_AUX2_BYTE  The byte to set free auxiliary information 2 
+                        to, if it is not read-only; default 0.
+
 The following types must be defined in sggc-app.h:
 
   sggc_length_t         Type for the "length" of an object.  The
@@ -184,9 +207,6 @@ An application may optionally define the following in sggc-app.h:
 
 The sggc.h file should be included after the above have been defined,
 at the end of sggc-app.h.  It will define the following types:
-
-  sggc_index_t          Type for holding the index of a segment.
-                        Currently int32_t.
 
   sggc_cptr_t           Type for holding a compressed pointer.
                         Currently uint32_t.
@@ -218,8 +238,7 @@ garbage collection:
     unsigned gen1_count;       /* Number of objects in old generation 1 */
     unsigned gen2_count;       /* Number of objects in old generation 2 */
 
-    unsigned uncol_count;      /* Number of uncollected objects.  Does not
-                                  inclu */
+    unsigned uncol_count;      /* Number of uncollected objects. */
 
     size_t big_chunks;         /* # of chunks in newly-allocated big objects */
 
@@ -642,6 +661,26 @@ macros) below, which have (if functions) prototypes as shown:
 
     If 'fun' is 0, any previous set up of a function to call for this
     kind is cancelled.
+
+  void sggc_no_reuse (int enable)
+  
+    If 'enable' is non-zero, newly-freed objects will no longer have
+    their data and auxiliary information reused for new objects.  This
+    is meant for use as a desparate measure to try to find a bug.  It
+    obviously may result in extremely high memory usage.  Calling this
+    function with zero for 'enable' will restore normal behaviour for
+    the future, but will not recover memory for objects freed when
+    'enable' was non-zero.
+
+  sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr)
+
+    Attempts to cause a program crash if 'cptr' is not a valid
+    compressed pointer, to an object that has not been freed.  This is
+    done on a "best effort" basis, with no guarantee that all invalid
+    pointers cause a crash.  The nature of the crash may vary (eg, a
+    memory fault or a call of 'abort').  If 'cptr' is valid, it is
+    returned as the value of this function, which will take a fairly
+    small amount of time to do so.
 
 
 FUNCTIONS THE APPLICATION MUST PROVIDE TO SGGC

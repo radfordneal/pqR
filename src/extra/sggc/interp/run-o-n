@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Run stuff designed to exercise the old-to-new mechanism, particularly
+# if global bindings are uncollected.  The task done is multiplication
+# by repeated addition.  Uses I for increment, + for addition, and n for
+# not equal comparison.
+
+( cat defs-recursive
+  cat defs-numeric
+  echo " "
+  echo "(@a ('(O O O O O O O I)))"
+  echo "(@b ('(I I O I)))"
+  echo "(@i ())"
+  echo "(@r ())"
+  echo "(! (n i a) (@i (I i)) (@r (+ r b)))"
+  echo "r"
+  echo "(@r ())" # After this, the global binding for r needn't be in old-to-new
+  echo "(@i ())"
+  echo "(@s ())"
+  echo "(! (n i b) (@i (I i)) (@s (+ s a)))"
+  echo "s"
+) | interp$1 >o-o-n
+
+diff -u out-o-n o-o-n

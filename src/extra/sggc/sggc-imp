@@ -637,13 +637,6 @@ include the following:
     function succeeds in reallocating the data area.  The alloc_chunks
     field currently records the necessary information for this.
 
-  o A function could be provided that determines whether or not a
-    32-bit word is a valid compressed pointer, to an object that is
-    not currently free.  This could be done fairly efficiency (ie,
-    with a fairly small number of fetches and tests, without any
-    searching), by adding a flag in small segments that is set if any
-    object in the segment is in the free portion of a free_or_new set.
-
   o Uncollected objects with old-to-new references could be kept in a
     separate set that uses the SET_OLD_TO_NEW chain (since they are
     in separate kinds, hence don't share segments with collected
