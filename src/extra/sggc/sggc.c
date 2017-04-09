@@ -1445,14 +1445,14 @@ void sggc_collect_remove_free_small (void)
 #         ifdef SGGC_AUX1_READ_ONLY
           if (!kind_aux1_read_only[k])
 #         endif
-          { memset (SGGC_AUX1(p), SGGC_CLEAR_AUX1_BYTE, SGGC_AUX1_SIZE * nch);
+          { memset (SGGC_AUX1(p), SGGC_CLEAR_AUX1_BYTE, SGGC_AUX1_SIZE);
           }
 #         endif
 #         ifdef SGGC_AUX2_SIZE
 #         ifdef SGGC_AUX2_READ_ONLY
           if (!kind_aux2_read_only[k])
 #         endif
-          { memset (SGGC_AUX2(p), SGGC_CLEAR_AUX2_BYTE, SGGC_AUX2_SIZE * nch);
+          { memset (SGGC_AUX2(p), SGGC_CLEAR_AUX2_BYTE, SGGC_AUX2_SIZE);
           }
 #         endif
         }
