@@ -1077,16 +1077,20 @@ void helpers_master (void)
 
         Rprintf("\n");
         if (helpers_are_disabled)
-            Rprintf (_("Deferred evaluation disabled (no helper threads, no task merging).\n"));
+            Rprintf (_("Deferred evaluation disabled (no helper threads, no task merging)"));
         else if (helpers_not_multithreading_now && helpers_not_merging)
-            Rprintf (_("No helper threads, no task merging.\n"));
+            Rprintf (_("No helper threads, no task merging"));
         else if (helpers_not_multithreading_now)
-            Rprintf (_("No helper threads, task merging enabled.\n"));
+            Rprintf (_("No helper threads, task merging enabled"));
         else if (helpers_not_merging)
-            Rprintf (_("%d helper threads, no task merging.\n"), helpers_num);
+            Rprintf (_("%d helper threads, no task merging"), helpers_num);
         else
-            Rprintf (_("%d helper threads, task merging enabled.\n"), helpers_num);
-        Rprintf("\n");
+            Rprintf (_("%d helper threads, task merging enabled"), helpers_num);
+#       if USE_COMPRESSED_POINTERS
+            Rprintf (_(", compressed pointers.\n\n"));
+#       else
+            Rprintf (_(", uncompressed pointers.\n\n"));
+#       endif
 
         printed_already = 1;
     }
