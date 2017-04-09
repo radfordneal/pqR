@@ -566,9 +566,11 @@ Rboolean StringFalse(const char *name)
     return FALSE;
 }
 
-/* Used in memory.c and names.c; also here to stop compiler from inlining it. */
+/* Character hashing done in memory.c and names.c; also here to stop compiler 
+   from inlining it.  Two forms, one for null-terminated string, other with
+   specified length. */
 
-attribute_hidden unsigned Rf_char_hash(const char *s)
+attribute_hidden unsigned Rf_char_hash (const char *s)
 {
     /* Hash function due to Dan Bernstein, called "djb2" at
        http://www.cse.yorku.ca/~oz/hash.html */
@@ -581,6 +583,31 @@ attribute_hidden unsigned Rf_char_hash(const char *s)
         h = (h << 5) + h + t;
     }
 
+    return h;
+}
+
+attribute_hidden unsigned int Rf_char_hash_len (const char *s, int len)
+{
+    /* Hash function due to Dan Bernstein, called "djb2" at
+       http://www.cse.yorku.ca/~oz/hash.html 
+
+       Basic idea is to iterate h = ((h << 5) + h) + *s++, but here
+       this is unrolled, allowing some merging of operations to be
+       done (though we actually end up doing more shifts and adds),
+       and more scope for instruction-level parallelism. */
+
+    unsigned int h = 5381;
+    if (len & 1) {
+        h = (5381*33) + *s++;
+        len -= 1;
+    }
+    while (len > 0) {
+        unsigned int t;
+        t = *s++;
+        t = (t << 5) + t + *s++;
+        h = (h << 10) + (h << 6) + h + t;
+        len -= 2;
+    }
     return h;
 }
 

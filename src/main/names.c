@@ -758,6 +758,7 @@ SEXP installChar(SEXP charSXP)
     SEXP res;
 
     PROTECT(charSXP);
+
     res = install_with_hashcode (name, hashcode);
     UNPROTECT(1);
 

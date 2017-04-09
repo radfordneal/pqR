@@ -2362,7 +2362,9 @@ static void R_StringHash_resize(unsigned int newsize)
 /* mkCharCE - make a character (CHARSXP) variable and set its
    encoding bit.  If a CHARSXP with the same string already exists in
    the global CHARSXP cache, R_StringHash, it is returned.  Otherwise,
-   a new CHARSXP is created, added to the cache and then returned. */
+   a new CHARSXP is created, added to the cache and then returned. 
+
+   Note:  'name' has the specified length, but may not be null-terminated. */
 
 
 /* Because allocCharsxp allocates len+1 bytes and zeros the last,
@@ -2413,7 +2415,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     default: need_enc = 0;
     }
 
-    unsigned int full_hash = Rf_char_hash (name);
+    unsigned int full_hash = Rf_char_hash_len (name,len);
     unsigned int hashcode = full_hash & char_hash_mask;
     SEXP val;
 

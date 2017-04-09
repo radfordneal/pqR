@@ -1523,6 +1523,7 @@ SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
 int R_Newhashpjw(const char *);
 unsigned Rf_char_hash(const char *);
+unsigned Rf_char_hash_len(const char *, int len);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);
