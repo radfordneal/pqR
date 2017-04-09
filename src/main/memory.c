@@ -796,10 +796,10 @@ void sggc_after_marking (int level, int rep)
 
     if (any) return;
 
-    /* PROCESS CHARSXP CACHE.  Not done if free_charsxp is being called instead. */
+    /* PROCESS CHARSXP CACHE.  Don't do if free_charsxp being called instead. */
 
     if (SCAN_CHARSXP_CACHE 
-         && R_StringHash != R_NoObject) /* in case of GC during initialization */
+      && R_StringHash != R_NoObject) /* in case of GC during initialization */
     {
         /* At this point, the hash table itself will not have been scanned.
            Some of the CHARSXP entries will be marked, either from being in 
@@ -834,87 +834,38 @@ void sggc_after_marking (int level, int rep)
 	SET_HASHSLOTSUSED (R_StringHash, nc);
     }
 
-    if (R_StringHash!=R_NoObject) MARK(R_StringHash);  /* don't look at contents */
-
-#ifdef PROTECTCHECK
-    for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
-	s = NEXT_NODE(R_GenHeap[i].New);
-	while (s != R_GenHeap[i].New) {
-	    SEXP next = NEXT_NODE(s);
-	    if (TYPEOF(s) != NEWSXP) {
-		if (TYPEOF(s) != FREESXP) {
-		    SETOLDTYPE(s, TYPEOF(s));
-		    TYPEOF(s) = FREESXP;
-		}
-		if (gc_inhibit_release)
-		    LOOK_AT(s);
-	    }
-	    s = next;
-	}
-    }
-    s = NEXT_NODE(R_GenHeap[LARGE_NODE_CLASS].New);
-    while (s != R_GenHeap[LARGE_NODE_CLASS].New) {
-	SEXP next = NEXT_NODE(s);
-	if (TYPEOF(s) != NEWSXP) {
-	    if (TYPEOF(s) != FREESXP) {
-		/**** could also leave this alone and restore the old
-		      node type in ReleaseLargeFreeVectors before
-		      calculating size */
-		R_size_t size = getVecSizeInVEC(s);
-		LENGTH(s) = size;
-		SETOLDTYPE(s, TYPEOF(s));
-		TYPEOF(s) = FREESXP;
-	    }
-	    if (gc_inhibit_release)
-		LOOK_AT(s);
-	}
-	s = next;
-    }
-#endif
+    if (R_StringHash!=R_NoObject) 
+        MARK(R_StringHash);  /* don't look at contents */
 }
 
 
 /* Function called when a CHARSXP is freed.  Removes it from the cache.  
    Note that the manipulations should NOT be done with an old-to-new check! */
 
-/*      ...RATHER A LOT OF ABORTS FOR NOW...    */
-
 static int free_charsxp (sggc_cptr_t cptr)
 {
     SEXP chr = SEXP_FROM_CPTR(cptr);
+
     if (TYPEOF(chr) != CHARSXP) abort();
 
-    if (char_hash_mask+1 != LENGTH(R_StringHash)) abort();
     int index = CHAR_HASH(chr) & char_hash_mask;
-    if (index < 0 || index >= LENGTH(R_StringHash)) abort();
 
     SEXP chain = VECTOR_ELT(R_StringHash,index);
 
-/* if (chain == R_NilValue) return; */
-
-    if (TYPEOF(chain) != CHARSXP) abort();
-
     if (chain == chr) {  /* CHARSXP to be deleted is first in chain */
-
         chain = ATTRIB(chain);
         VECTOR_ELT(R_StringHash,index) = chain;
         if (chain == R_NilValue)
             SET_HASHSLOTSUSED (R_StringHash, HASHSLOTSUSED(R_StringHash) - 1);
-        else 
-            if (TYPEOF(chain) != CHARSXP) abort();
     }
 
 
     else { /* CHARSXP to be deleted is not first in chain */
-
         SEXP prev;
         do {
             prev = chain;
             chain = ATTRIB(chain);
-            if (TYPEOF(chain) != CHARSXP) abort();
         } while (chain != chr);
-
-        if (ATTRIB(chain)!=R_NilValue && TYPEOF(ATTRIB(chain))!=CHARSXP) abort();
         ATTRIB(prev) = ATTRIB(chain);
     }
 
@@ -2483,7 +2434,6 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     for (val = VECTOR_ELT(R_StringHash, hashcode); 
          val != R_NilValue; 
          val = ATTRIB(val)) {
-        if (TYPEOF(val) != CHARSXP) abort();  /* MIGHT REMOVE AT SOME POINT */
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
             if (full_hash == CHAR_HASH(val) && LENGTH(val) == len
                    && memcmp (CHAR(val), name, len) == 0) {
