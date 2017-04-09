@@ -67,6 +67,9 @@
 
 #define STRHASHMAXSIZE (1<<21)  /* Maximum slots in the string hash table */
 
+#define SCAN_CHARSXP_CACHE 1    /* If 1, char cache is scanned after marking;
+                                   if 0, uses sggc_call_for_newly_free_object */
+
 #define ENABLE_SHARED_CONSTANTS 1  /* Normally 1, to enable use of shared
                                       constants 0.0, 0L, etc. But doesn't affect
                                       sharing of logicals FALSE, TRUE, and NA,
@@ -142,6 +145,13 @@ static SEXP R_StringHash;              /* Global hash of CHARSXPs */
 extern SEXP framenames;                /* in model.c */
 
 static sggc_kind_t R_type_length1_to_kind[32]; /* map R type to kind if len 1 */
+
+
+/* char_hash_size MUST be a power of 2 and char_hash_mask == char_hash_size - 1
+   in order for x & char_hash_mask to be equivalent to x % char_hash_size. */
+
+static unsigned int char_hash_size = STRHASHINITSIZE;
+static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 
 /* Variables controlling when garbage collections are done. */
@@ -786,9 +796,10 @@ void sggc_after_marking (int level, int rep)
 
     if (any) return;
 
-    /* PROCESS CHARSXP CACHE */
+    /* PROCESS CHARSXP CACHE.  Not done if free_charsxp is being called instead. */
 
-    if (R_StringHash != R_NoObject) /* in case of GC during initialization */
+    if (SCAN_CHARSXP_CACHE 
+         && R_StringHash != R_NoObject) /* in case of GC during initialization */
     {
         /* At this point, the hash table itself will not have been scanned.
            Some of the CHARSXP entries will be marked, either from being in 
@@ -821,8 +832,9 @@ void sggc_after_marking (int level, int rep)
             p += 1;
 	}
 	SET_HASHSLOTSUSED (R_StringHash, nc);
-        MARK(R_StringHash);  /* don't look at contents - handled above */
     }
+
+    if (R_StringHash!=R_NoObject) MARK(R_StringHash);  /* don't look at contents */
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
@@ -859,6 +871,51 @@ void sggc_after_marking (int level, int rep)
 	s = next;
     }
 #endif
+}
+
+
+/* Function called when a CHARSXP is freed.  Removes it from the cache.  
+   Note that the manipulations should NOT be done with an old-to-new check! */
+
+/*      ...RATHER A LOT OF ABORTS FOR NOW...    */
+
+static int free_charsxp (sggc_cptr_t cptr)
+{
+    SEXP chr = SEXP_FROM_CPTR(cptr);
+    if (TYPEOF(chr) != CHARSXP) abort();
+
+    if (char_hash_mask+1 != LENGTH(R_StringHash)) abort();
+    int index = CHAR_HASH(chr) & char_hash_mask;
+    if (index < 0 || index >= LENGTH(R_StringHash)) abort();
+
+    SEXP chain = VECTOR_ELT(R_StringHash,index);
+    if (TYPEOF(chain) != CHARSXP) abort();
+
+    if (chain == chr) {  /* CHARSXP to be deleted is first in chain */
+
+        chain = ATTRIB(chain);
+        VECTOR_ELT(R_StringHash,index) = chain;
+        if (chain == R_NilValue)
+            SET_HASHSLOTSUSED (R_StringHash, HASHSLOTSUSED(R_StringHash) - 1);
+        else 
+            if (TYPEOF(chain) != CHARSXP) abort();
+    }
+
+
+    else { /* CHARSXP to be deleted is not first in chain */
+
+        SEXP prev;
+        do {
+            prev = chain;
+            chain = ATTRIB(chain);
+            if (TYPEOF(chain) != CHARSXP) abort();
+        } while (chain != chr);
+
+        if (ATTRIB(chain)!=R_NilValue && TYPEOF(ATTRIB(chain))!=CHARSXP) abort();
+        ATTRIB(prev) = ATTRIB(chain);
+    }
+
+    return 0;
 }
 
 
@@ -1806,6 +1863,8 @@ static void R_gc_internal(void)
 
     BEGIN_SUSPEND_INTERRUPTS {
 	gc_start_timing();
+        if (!SCAN_CHARSXP_CACHE) 
+            sggc_call_for_newly_freed_object (SGGC_SYM_KIND, free_charsxp);
 	sggc_collect(gc_next_level);
         gc_last_level = gc_next_level;
 	gc_end_timing();
@@ -2293,12 +2352,6 @@ SEXP mkChar(const char *name)
    and a power of 2 for the hash size.
 */
 
-/* char_hash_size MUST be a power of 2 and char_hash_mask == char_hash_size - 1
-   in order for x & char_hash_mask to be equivalent to x % char_hash_size. */
-
-static unsigned int char_hash_size = STRHASHINITSIZE;
-static unsigned int char_hash_mask = STRHASHINITSIZE-1;
-
 void attribute_hidden InitStringHash()
 {
     R_StringHash = allocVector (VECSXP, char_hash_size);
@@ -2424,6 +2477,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     for (val = VECTOR_ELT(R_StringHash, hashcode); 
          val != R_NilValue; 
          val = ATTRIB(val)) {
+        if (TYPEOF(val) != CHARSXP) abort();  /* MIGHT REMOVE AT SOME POINT */
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
             if (full_hash == CHAR_HASH(val) && LENGTH(val) == len
                    && memcmp (CHAR(val), name, len) == 0) {
