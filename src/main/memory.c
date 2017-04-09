@@ -67,7 +67,7 @@
 
 #define STRHASHMAXSIZE (1<<21)  /* Maximum slots in the string hash table */
 
-#define SCAN_CHARSXP_CACHE 1    /* If 1, char cache is scanned after marking;
+#define SCAN_CHARSXP_CACHE 0    /* If 1, char cache is scanned after marking;
                                    if 0, uses sggc_call_for_newly_free_object */
 
 #define ENABLE_SHARED_CONSTANTS 1  /* Normally 1, to enable use of shared
@@ -889,6 +889,9 @@ static int free_charsxp (sggc_cptr_t cptr)
     if (index < 0 || index >= LENGTH(R_StringHash)) abort();
 
     SEXP chain = VECTOR_ELT(R_StringHash,index);
+
+/* if (chain == R_NilValue) return; */
+
     if (TYPEOF(chain) != CHARSXP) abort();
 
     if (chain == chr) {  /* CHARSXP to be deleted is first in chain */
@@ -1863,8 +1866,11 @@ static void R_gc_internal(void)
 
     BEGIN_SUSPEND_INTERRUPTS {
 	gc_start_timing();
-        if (!SCAN_CHARSXP_CACHE) 
-            sggc_call_for_newly_freed_object (SGGC_SYM_KIND, free_charsxp);
+        if (!SCAN_CHARSXP_CACHE) {
+            sggc_kind_t k;
+            for (k = SGGC_CHAR_KIND_START; k < SGGC_N_KINDS; k += SGGC_N_TYPES)
+                sggc_call_for_newly_freed_object (k, free_charsxp);
+        }
 	sggc_collect(gc_next_level);
         gc_last_level = gc_next_level;
 	gc_end_timing();

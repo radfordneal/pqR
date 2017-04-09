@@ -1282,14 +1282,18 @@ void sggc_collect_remove_free_small (void)
 
         for (;;)
         { 
-          if (v == next_free)
-          { if (sggc_next_segment_not_free[k])
-            { v = set_chain_next_segment (SET_UNUSED_FREE_NEW, v);
-            }
+          if (v == SGGC_NO_OBJECT)
+          { break;
           }
 
-          if (v == SGGC_NO_OBJECT || v == next_free)
-          { break;
+          if (v == next_free)
+          { if (!sggc_next_segment_not_free[k])
+            { break;
+            }
+            v = set_chain_next_segment (SET_UNUSED_FREE_NEW, v);
+            if (v == SGGC_NO_OBJECT)
+            { break;
+            }
           }
 
           sggc_cptr_t ov = v;

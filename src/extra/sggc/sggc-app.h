@@ -137,6 +137,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   0, 0, 0, 0, 0, 1  \
 };
 
+#define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
 #define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
@@ -223,6 +224,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   0, 0, 0, 0, 0, 1  \
 };
 
+#define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
 #define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
@@ -299,6 +301,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
   0, 0, 0, 0, 0, 1  \
 };
 
+#define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
 #define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
