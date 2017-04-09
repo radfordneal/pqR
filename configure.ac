@@ -202,6 +202,17 @@ AC_SUBST(config_opts)
 
 ### ** Optional features.
 
+## Enable use of compressed pointers.
+AC_ARG_ENABLE([compressed-pointers],
+[AS_HELP_STRING([--enable-compressed-pointers],[use compressed pointers
+                 @<:@no@:>@])],
+[use_compressed_pointers="${enableval}"],
+[use_compressed_pointers=no])
+if test x"${use_compressed_pointers}" = xyes; then
+  AC_DEFINE(USE_COMPRESSED_POINTERS, 1,
+            [Define to 1 to enable use of compressed pointers.])
+fi
+
 ## Allow the user to specify that the helpers apparatus can use multithreading.
 AC_ARG_ENABLE([helper_threads],
 [AS_HELP_STRING([--enable-helper-threads],[support use of helper threads @<:@yes@:>@])],
@@ -947,6 +958,7 @@ AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(long double)
 AC_CHECK_SIZEOF(size_t)
+AC_CHECK_SIZEOF(char *)
 
 R_PROG_CC_MAKEFRAG
 R_PROG_CC_LO_MAKEFRAG
@@ -2892,7 +2904,7 @@ fi
 
 AC_MSG_RESULT(
 [
-R is now configured for ${host}
+R is now configured for ${host}, ${ac_cv_sizeof_char_p}-byte pointers
 
   Source directory:       ${srcdir}
   Installation directory: ${prefix}
@@ -2903,6 +2915,8 @@ R is now configured for ${host}
   C++ compiler:           ${r_cxx_compiler}
   Fortran 90/95 compiler: ${r_f95_compiler}
   Obj-C compiler:         ${r_objc_compiler}
+
+  Compressed pointers:    ${use_compressed_pointers}
 
   BLAS/LAPACK options:    ${r_blas_info1}
                           ${r_blas_info2}

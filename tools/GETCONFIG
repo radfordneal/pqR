@@ -26,6 +26,10 @@ line=`grep "SUPPORT_OPENMP" config.h`
 echo "${line}"
 line=`grep "SIZEOF_SIZE_T" config.h`
 echo "${line}"
+line=`grep "SIZEOF_CHAR_P" config.h`
+echo "${line}"
+line=`grep "USE_COMPRESSED_POINTERS" config.h`
+echo "${line}"
 echo
 echo "#endif /* not R_CONFIG_H */"
 echo

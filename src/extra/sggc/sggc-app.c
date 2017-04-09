@@ -113,7 +113,7 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 
 /* UNCOMPRESSED, 64-BIT POINTERS. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
 
 sggc_nchunks_t Rf_nchunks (int type, int length)
 {
@@ -145,7 +145,7 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 
 /* UNCOMPRESSED, 32-BIT POINTERS. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
 
 sggc_nchunks_t Rf_nchunks (int type, int length)
 {

@@ -159,7 +159,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 /* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
 
 /*    Cons-type:          Vector:             
         info, cptr          info, cptr  
@@ -240,7 +240,7 @@ sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
 
 /* LAYOUT WITH UNCOMPRESSED 32-BIT POINTERS. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
 
 /*    Cons-type:          Vector:             
         info, cptr          info, cptr  

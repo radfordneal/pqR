@@ -186,7 +186,7 @@ typedef SEXP SEXP32;
 typedef struct SEXPREC *SEXP;
 typedef struct VECTOR_SEXPREC *VECSEXP;
 
-#if SIZEOF_SIZE_T == 4
+#if SIZEOF_CHAR_P == 4
 typedef SEXP SEXP32;
 #define SEXP32_FROM_SEXP(x) (x)
 #define SEXP_FROM_SEXP32(x) (x)
@@ -293,7 +293,7 @@ struct promsxp_struct {
 
 typedef struct SEXPREC {
     SEXPREC_HEADER;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
     int32_t padding;
 #endif
     union {
@@ -302,7 +302,7 @@ typedef struct SEXPREC {
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
     } u;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
 } SEXPREC;
@@ -331,7 +331,7 @@ typedef struct PRIM_SEXPREC {
 #if USE_COMPRESSED_POINTERS
     int32_t padding;
 #endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
     int32_t padding;
 #endif
     struct primsxp_struct primsxp;
@@ -351,14 +351,14 @@ struct symsxp_struct {
 
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
     int32_t sym_hash;
 #endif
     struct symsxp_struct symsxp;
 #if USE_COMPRESSED_POINTERS
     int32_t sym_hash;
 #endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t sym_hash;
     int32_t padding;
 #endif
@@ -369,7 +369,7 @@ typedef struct SYM_SEXPREC {
 
 typedef struct EXTPTR_SEXPREC {
     SEXPREC_HEADER;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
     int32_t padding;
 #endif
 #if USE_COMPRESSED_POINTERS
@@ -385,7 +385,7 @@ typedef struct EXTPTR_SEXPREC {
 #if USE_COMPRESSED_POINTERS
     int32_t padding1, padding2;
 #endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
 } EXTPTR_SEXPREC, *EXTPTRSEXP;
@@ -396,7 +396,7 @@ typedef struct EXTPTR_SEXPREC {
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
     R_len_t truelength;   /* The mis-named "truelength" field */
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
 } VECTOR_SEXPREC;
@@ -411,7 +411,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 typedef struct VECTOR_SEXPREC_C {
     SEXPREC_HEADER;
     R_len_t truelength;   /* The mis-named "truelength" field */
-#if !USE_COMPRESSED_POINTERS && SIZEOF_SIZE_T == 4
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
     union { double d; int w[2]; int i; char c; char s[8]; } data;

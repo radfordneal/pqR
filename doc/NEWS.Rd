@@ -27,6 +27,18 @@
         change suppression of serialization of gp bit 1...
   }}
 
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item There is now a \code{--enable-compressed-pointers} option to
+        \code{configure}.  When included, pqR will be built with 
+        32-bit compressed pointers, which considerably reduces
+        memory usage (especially if many small objects are on used) 
+        on a system with 64-bit pointers (slightly on
+        a system with 32-bit pointers).  Speed on some tasks
+        will also be improved, while on other tasks, using compressed
+        pointers has a speed penalty of about 25\%.
+  }}
+
 }
 
 

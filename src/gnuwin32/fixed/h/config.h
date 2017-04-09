@@ -24,6 +24,9 @@
 /* Define this to the default for BLAS_in_helpers. */
 #define R_BLAS_IN_HELPERS_DEFAULT TRUE
 
+/* Define to 1 to enable compressed pointers. */
+/* #undef USE_COMPRESSED_POINTERS */
+
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.
@@ -995,6 +998,13 @@
 #define SIZEOF_SIZE_T 8
 #else
 #define SIZEOF_SIZE_T 4
+#endif
+
+/* The size of `char *', as computed by sizeof. */
+#ifdef WIN64
+#define SIZEOF_CHAR_P 8
+#else
+#define SIZEOF_CHAR_P 4
 #endif
 
 /* Define as the maximum value of type 'size_t', if the system doesn't define

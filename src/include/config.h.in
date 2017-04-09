@@ -915,6 +915,9 @@
 /* Define this to be the name of the CPU of your system. */
 #undef R_CPU
 
+/* Define this as 1 to enable use of compressed pointers */
+#undef USE_COMPRESSED_POINTERS
+
 /* Define this to enable deferred evaluation. */
 #undef R_DEFERRED_EVAL
 
@@ -972,6 +975,9 @@
 
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T
+
+/* The size of `char *', as computed by sizeof. */
+#undef SIZEOF_CHAR_P
 
 /* Define as the maximum value of type 'size_t', if the system doesn't define
    it. (For intl) */
