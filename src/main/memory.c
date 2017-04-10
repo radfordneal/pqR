@@ -1040,7 +1040,7 @@ void attribute_hidden InitMemory()
          (int) sizeof (VECTOR_SEXPREC_C));
     }
 
-    sggc_init(2000000);
+    sggc_init(SGGC_MAX_SEGMENTS);
 
     for (i = 0; i < 32; i++) {
         R_type_length1_to_kind[i] 

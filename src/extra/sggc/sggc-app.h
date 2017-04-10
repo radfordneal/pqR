@@ -27,6 +27,25 @@
 #endif
 
 
+/* DEFINE SGGC_MAX_SEGMENTS APPROPRIATELY.  Has separate defaults 
+   for 32-bit and 64-bit systems, which can be overridden by 
+   including -DSGGC_MAX_SEGMENTS=n in CFLAGS. */
+
+#if SGGC_MAX_SEGMENTS > (1<<26)
+#   define SGGC_MAX_SEGMENTS (1<<26)
+#endif
+
+#if SGGC_MAX_SEGMENTS <= 0
+#   if SIZEOF_CHAR_P < 8
+#       define SGGC_MAX_SEGMENTS 1500000
+#   else
+#       define SGGC_MAX_SEGMENTS 6000000
+#   endif
+#endif
+
+
+/* SELECT IMPLEMENTATION OPTIONS. */
+
 #define SGGC_USE_OFFSET_POINTERS 1  /* Use offset form of data pointers */
 
 #define SET_STATIC 1       /* Static set procedures in source, not linked */
