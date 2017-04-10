@@ -25,6 +25,9 @@
 
         Changed how hashing for symbols works, may be desirable to
         change suppression of serialization of gp bit 1...
+
+        R_alloc doesn't go through allocVector - so won't appear in
+        Rprofmem output.x
   }}
 
   \subsection{INSTALLATION}{

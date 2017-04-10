@@ -1111,6 +1111,26 @@ void attribute_hidden InitMemory()
 }
 
 
+/* Macro to wrap allocation statement in code to do garbage collections. */
+
+#define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt) do { \
+    if (sggc_info.gen0_count >= gc_interval) \
+        R_gc_internal(); \
+    alloc_stmt; \
+    while (cp == SGGC_NO_OBJECT) { \
+        if (sggc_info.gen0_count >= gc_interval \
+             && gc_last_level < 2 \
+             && gc_next_level < gc_last_level + 1) { \
+            gc_next_level = gc_last_level + 1; \
+        } \
+        R_gc_internal(); \
+        alloc_stmt; \
+        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers) \
+            fail_stmt; \
+    } \
+} while (0)
+
+
 /* Allocate an object.  Sets all flags to zero, attribute to R_NilValue,
    type as passed.  Does not set LENGTH, which will sometimes be read-only. */
 
@@ -1118,23 +1138,10 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
     sggc_type_t sggctype = R_type_to_sggc_type[type];
     sggc_length_t sggclength = Rf_nchunks(type,length);
+    sggc_cptr_t cp;
 
-    if (sggc_info.gen0_count >= gc_interval)
-        R_gc_internal(); 
-
-    sggc_cptr_t cp = sggc_alloc (sggctype, sggclength);
-
-    while (cp == SGGC_NO_OBJECT) {
-        if (sggc_info.gen0_count >= gc_interval
-             && gc_last_level < 2
-             && gc_next_level < gc_last_level + 1) {
-            gc_next_level = gc_last_level + 1;
-        }
-        R_gc_internal();
-        cp = sggc_alloc (sggctype, sggclength);
-        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
-            R_Suicide("out of memory");
-    }
+    ALLOC_WITH_COLLECT(cp = sggc_alloc (sggctype, sggclength),
+                       R_Suicide("out of memory"));
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
@@ -1148,27 +1155,16 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 }
 
 
-/* Allocate a symbol.  Needs some special processing since symbols share an
-   sggc type with other objects, but should be in their own kind. */
+/* Allocate a symbol.  Needs to be done with its own function because
+   symbols share an sggc type with other objects, but should be in their 
+   own kind. */
 
 static SEXP alloc_sym (void)
 {
-    if (sggc_info.gen0_count >= gc_interval)
-        R_gc_internal(); 
+    sggc_cptr_t cp;
 
-    sggc_cptr_t cp = sggc_alloc_small_kind (SGGC_SYM_KIND);
-
-    while (cp == SGGC_NO_OBJECT) {
-        if (sggc_info.gen0_count >= gc_interval
-             && gc_last_level < 2
-             && gc_next_level < gc_last_level + 1) {
-            gc_next_level = gc_last_level + 1;
-        }
-        R_gc_internal();
-        cp = sggc_alloc_small_kind (SGGC_SYM_KIND);
-        if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers)
-            R_Suicide("out of memory");
-    }
+    ALLOC_WITH_COLLECT(cp = sggc_alloc_small_kind (SGGC_SYM_KIND),
+                       R_Suicide("out of memory"));
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
@@ -1212,10 +1208,17 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 }
 
 
-/* Since memory allocated from the heap is non-moving, R_alloc just
-   allocates off the heap as RAWSXP/REALSXP and maintains the stack of
-   allocations through the ATTRIB pointer.  The stack pointer R_VStack
-   is traced by the collector.  Defined using the fast macros in Defn.h */
+/* R_alloc allocates memory for use in C functions that is managed by
+   the garbage collector, with the same SGGC type as INTSXP, etc.  
+
+   If compressed pointers are used, the entire data area can be used.
+   With uncompressed pointers, the first 16 bytes are needed for the
+   compressed pointer and attribute fields.
+
+   The allocated areas are linked through the ATTRIB pointer to be 
+   traced by the garbage collector.  The root of this list is managed
+   with vmaxget and vmaxset, defined here using the fast macros in Defn.h */
+
 void *vmaxget(void)
 {
     return VMAXGET();
@@ -1226,35 +1229,50 @@ void vmaxset(const void *ovmax)
     VMAXSET(ovmax);
 }
 
-char *R_alloc(size_t nelem, int eltsize)
+char *R_alloc (size_t nelem, int eltsize)
 {
-    R_size_t size = nelem * eltsize;
-    double dsize = (double)nelem * eltsize;
-    if (dsize > 0) { /* precaution against integer overflow */
-	SEXP s;
-#if SIZEOF_SIZE_T > 4
-	/* In this case by allocating larger units we can get up to
-	   size(double) * (2^31 - 1) bytes, approx 16Gb */
-	if(dsize < R_LEN_T_MAX)
-	    s = allocVector(RAWSXP, size + 1);
-	else if(dsize < sizeof(double) * (R_LEN_T_MAX - 1))
-	    s = allocVector(REALSXP, (int)(0.99+dsize/sizeof(double)));
-	else {
-	    error(_("cannot allocate memory block of size %0.1f Gb"),
-		  dsize/1024.0/1024.0/1024.0);
-	}
-#else
-	if(dsize > R_LEN_T_MAX) /* must be in the Gb range */
-	    error(_("cannot allocate memory block of size %0.1f Gb"),
-		  dsize/1024.0/1024.0/1024.0);
-	s = allocVector(RAWSXP, size + 1);
+    double dsize = (double)nelem * eltsize + SGGC_CHUNK_SIZE - 1;
+
+    if (dsize < 0)
+        return NULL;
+
+    size_t size = nelem * eltsize + SGGC_CHUNK_SIZE - 1;;
+#if !USE_COMPRESSED_POINTERS
+    size += SGGC_CHUNK_SIZE;  /* Since need one chunk for header */
+    dsize += SGGC_CHUNK_SIZE;
 #endif
-	if (R_VStack == R_NoObject) abort();
-	ATTRIB(s) = R_VStack;
-	R_VStack = s;
-	return (char *)DATAPTR(s);
-    }
-    else return NULL;
+
+    if (size != dsize)  /* overflow when computing size */
+        goto cannot_allocate;
+
+    sggc_nchunks_t nch = size / SGGC_CHUNK_SIZE;
+
+    if (nch != size / SGGC_CHUNK_SIZE)  /* overflow when computing nch*/
+        goto cannot_allocate;
+
+    sggc_cptr_t cp;
+
+    ALLOC_WITH_COLLECT(cp = sggc_alloc (1, nch), 
+                       goto cannot_allocate);
+
+    SEXP r = SEXP_FROM_CPTR (cp);
+#if !USE_COMPRESSED_POINTERS
+    r->cptr = cp;
+#endif
+
+    ATTRIB(r) = R_VStack;
+    R_VStack = r;
+
+    char *s = (char *) r;
+#if !USE_COMPRESSED_POINTERS
+    s += SGGC_CHUNK_SIZE;  /* don't use header, with cptr and attrib */
+#endif 
+
+    return s;
+
+  cannot_allocate:
+    error(_("cannot allocate memory block of size %0.1f Gb"),
+          dsize/1024.0/1024.0/1024.0);
 }
 
 
