@@ -237,15 +237,6 @@ static void mem_err_malloc(R_size_t size)
     errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
 }
 
-
-/* compute size in VEC units so result will fit in LENGTH field for FREESXPs */
-static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
-{
-    return ((int64_t) Rf_nchunks(TYPEOF(s),LENGTH(s)) * SGGC_CHUNK_SIZE
-             - sizeof(SEXPREC_ALIGN)) / sizeof(VECREC);
-}
-
-
 #define CHECK_OLD_TO_NEW(x,y) \
     sggc_old_to_new_check(CPTR_FROM_SEXP(x),CPTR_FROM_SEXP(y))
 
@@ -2204,19 +2195,21 @@ static void R_ReportAllocation (SEXP s)
     if (size > R_MemReportingThreshold && length >= R_MemReportingNElem) {
         if (R_MemReportingOutfile != NULL) {
             if (R_MemDetailsReporting)
-                fprintf (R_MemReportingOutfile, "%lu (%s %lu)",
-                  (unsigned long) size, type2char(type), (unsigned long)length);
+                fprintf (R_MemReportingOutfile, "%llu (%s %lu)",
+                  (unsigned long long) size, type2char(type),
+                  (unsigned long)length);
             else 
-                fprintf (R_MemReportingOutfile, "%lu ",
-                  (unsigned long) size);
+                fprintf (R_MemReportingOutfile, "%llu ",
+                  (unsigned long long) size);
         }
         if (R_MemReportingToTerminal) {
             if (R_MemDetailsReporting)
-                REprintf ("RPROFMEM: %lu (%s %lu)",
-                  (unsigned long) size, type2char(type), (unsigned long)length);
+                REprintf ("RPROFMEM: %llu (%s %lu)",
+                  (unsigned long long) size, type2char(type),
+                  (unsigned long)length);
             else
-                REprintf ("RPROFMEM: %lu ", 
-                  (unsigned long) size);
+                REprintf ("RPROFMEM: %llu ", 
+                  (unsigned long long) size);
         }
         R_OutputStackTrace();
     }

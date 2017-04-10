@@ -82,24 +82,26 @@ const char R_type_to_sggc_type[32] =
 
 #if USE_COMPRESSED_POINTERS
 
-sggc_nchunks_t Rf_nchunks (int type, int length)
+sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 {
+    unsigned hd = 8;  /* Size of header */
+
     switch (type) {
     case RAWSXP:
-        return (8 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + length) / SGGC_CHUNK_SIZE;
     case CHARSXP:
-        return (8 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + length+1) / SGGC_CHUNK_SIZE;
     case INTSXP:
     case LGLSXP:
-        return (8 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)4*length) / SGGC_CHUNK_SIZE;
     case REALSXP:
-        return (8 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)8*length) / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
     case STRSXP:
-        return (8 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)4*length) / SGGC_CHUNK_SIZE;
     case CPLXSXP:
-        return (8 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case EXTPTRSXP:
     case SYMSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
@@ -117,22 +119,24 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 
 sggc_nchunks_t Rf_nchunks (int type, int length)
 {
+    unsigned hd = 24;  /* Size of header */
+
     switch (type) {
     case RAWSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + length) / SGGC_CHUNK_SIZE;
     case CHARSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + length+1) / SGGC_CHUNK_SIZE;
     case INTSXP:
     case LGLSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)4*length) / SGGC_CHUNK_SIZE;
     case REALSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)8*length) / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
     case STRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)8*length) / SGGC_CHUNK_SIZE;
     case CPLXSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
@@ -149,22 +153,24 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 
 sggc_nchunks_t Rf_nchunks (int type, int length)
 {
+    unsigned hd = 24;  /* Size of header */
+
     switch (type) {
     case RAWSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + length)    / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + length) / SGGC_CHUNK_SIZE;
     case CHARSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + length+1)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + length+1) / SGGC_CHUNK_SIZE;
     case INTSXP:
     case LGLSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)4*length) / SGGC_CHUNK_SIZE;
     case REALSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 8*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)8*length) / SGGC_CHUNK_SIZE;
     case VECSXP:
     case EXPRSXP:
     case STRSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 4*length)  / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)4*length) / SGGC_CHUNK_SIZE;
     case CPLXSXP:
-        return (24 + SGGC_CHUNK_SIZE-1 + 16*length) / SGGC_CHUNK_SIZE;
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
