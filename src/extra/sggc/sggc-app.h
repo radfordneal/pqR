@@ -27,6 +27,8 @@
 #endif
 
 
+#define SGGC_USE_OFFSET_POINTERS 1  /* Use offset form of data pointers */
+
 #define SET_STATIC 1       /* Static set procedures in source, not linked */
 
 
