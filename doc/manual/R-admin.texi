@@ -899,17 +899,21 @@ not matter.
 @node Other Options, Stack growth direction, Sub-architectures, Installing R under Unix-alikes
 @section Other Options
 
-There are many other installation options, most of which are listed by
-@command{configure --help}.  Almost all of those not listed elsewhere in
-this manual are either standard @command{autoconf} options not relevant
-to @R{} or intended for specialist uses by the @R{} developers.
+Other configuration options for can be listed with @command{configure
+--help}.  For pqR, these include options for enabling or disabling use
+of helper threads and compressed pointers, which are discussed in 
+@ref{Configuration on a Unix-alike}.
 
-One that may be useful when working on @R{} itself is the option
-@option{--disable-byte-compiled-packages}, which ensures that the base
-and recommended packages are lazyloaded but not byte-compiled.
-(Alternatively the (make or environment) variable
+The @option{--disable-byte-compiled-packages} option may be useful for
+pqR, for which byte compiling is not necessarily beneficial.  It
+ensures that the base and recommended packages are lazyloaded but not
+byte-compiled.  (Alternatively the (make or environment) variable
 @env{R_NO_BASE_COMPILE} can be set to a non-empty value other than
 FALSE for the duration of the build.)
+
+Most options not listed elsewhere in this manual are either standard
+@command{autoconf} options not relevant to @R{} or are intended for
+specialist uses by the @R{} developers.
 
 @node Stack growth direction, Testing a Unix-alike Installation, Other Options, Installing R under Unix-alikes
 @section Stack growth direction
@@ -3412,6 +3416,7 @@ gfortran}.
 
 @menu
 * Configuration options::       
+* Compressed pointers::
 * Helper threads and task merging::              
 * Internationalization support::  
 * Configuration variables::     
@@ -3421,7 +3426,7 @@ gfortran}.
 * Compile and load flags::      
 @end menu
 
-@node Configuration options, Helper threads and task merging, Configuration on a Unix-alike, Configuration on a Unix-alike
+@node Configuration options, Compressed pointers, Configuration on a Unix-alike, Configuration on a Unix-alike
 @section Configuration options
 
 @command{configure} has many options: running
@@ -3479,7 +3484,33 @@ If you need to re-configure @R{} with different options you may need to run
 @code{make clean} or even @code{make distclean} before doing so.
 
 
-@node Helper threads and task merging, Internationalization support, Configuration options, Configuration on a Unix-alike
+@node Compressed pointers, Helper threads and task merging, Configuration options, Configuration on a Unix-alike
+@section Compressed pointers
+
+By default, pqR represents objects internally using ordinary pointers
+(machine addresses), which are commonly either 64 bits or 32 bits in
+size.  As an alternative, pqR can instead use compressed pointers,
+which are 32 bits in size on all platforms.  On a 64-bit platform,
+this reduces memory usage, considerably in some cases.  On a 32-bit
+platform, there is also some reduction in memory usage, though not by
+as much.  The cost is that some programs run a bit slower, due to the
+overhead of decoding the compressed pointers, though other programs
+run faster, due to the smaller memory usage.
+
+To enable use of compressed pointers, give the
+@option{--enable-compressed-pointers} option to @command{./configure}.
+
+That option is probably all that is needed to use compressed pointers,
+but programs that use a large amount of memory (many Gigabytes), in
+the form of a huge number of fairly small objects, may need to
+increase the default limit on the number of ``segments'' used for
+compressed pointers.  This can be done by adding, for example,
+@option{-DSGGC_MAX_SEGMENTS=50000000} to @option{CFLAGS}.  On Intel
+machines (and perhaps others), such a large limit may be undesirable
+otherwise, since it reduces the size of a program that can be handled
+with the ``medium'' memory model, though problems are still unlikely.
+
+@node Helper threads and task merging, Internationalization support, Compressed pointers, Configuration on a Unix-alike
 @section Helper threads and task merging
 
 Support for computations in helper threads and for merging of tasks is
