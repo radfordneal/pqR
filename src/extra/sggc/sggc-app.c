@@ -117,7 +117,7 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
 
-sggc_nchunks_t Rf_nchunks (int type, int length)
+sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 {
     unsigned hd = 24;  /* Size of header */
 
@@ -151,7 +151,7 @@ sggc_nchunks_t Rf_nchunks (int type, int length)
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
 
-sggc_nchunks_t Rf_nchunks (int type, int length)
+sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 {
     unsigned hd = 24;  /* Size of header */
 

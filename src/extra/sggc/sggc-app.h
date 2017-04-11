@@ -82,7 +82,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
 
 extern const char R_type_to_sggc_type[32];  /* Initialized in sggc-app.c */
 
-sggc_nchunks_t Rf_nchunks (int /* SEXPTYPE */, int /* R_len_t */);
+sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 
 /* LAYOUT WITH COMPRESSED POINTERS. */

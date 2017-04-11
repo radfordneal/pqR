@@ -1254,7 +1254,7 @@ char *R_alloc (size_t nelem, int eltsize)
     ATTRIB(r) = R_VStack;
     R_VStack = r;
 
-    char *s = (char *) r;
+    char *s = (char *) UPTR_FROM_SEXP(r);
 #if !USE_COMPRESSED_POINTERS
     s += SGGC_CHUNK_SIZE;  /* don't use header, with cptr and attrib */
 #endif 
