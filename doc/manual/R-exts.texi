@@ -7905,16 +7905,34 @@ two or more packages you would need to resort to setting @env{PATH}.
 @section Handling R objects in C
 @cindex Handling R objects in C
 
-Using C code to speed up the execution of an @R{} function is often very
-fruitful.  Traditionally this has been done @emph{via} the @code{.C}
-function in @R{}.  However, if a user wants to write C code using
-internal @R{} data structures, then that can be done using the
-@code{.Call} and @code{.External} functions.  The syntax for the calling
-function in @R{} in each case is similar to that of @code{.C}, but the
-two functions have different C interfaces.  Generally the @code{.Call}
-interface (which is modelled on the interface of the same name in @Sl{}
-version 4) is a little simpler to use, but @code{.External} is a little
-more general.
+Using C code to speed up the execution of an @R{} function is often
+very fruitful.  Traditionally this has been done @emph{via} the
+@code{.C} function in @R{}.  However, if a user wants to write C code
+using internal @R{} data structures, then that can be done using the
+@code{.Call} and @code{.External} functions.  But before you decide to
+use these, you should look at other alternatives.  First, consider
+working in interpreted @R{} code; if this is fast enough, this is
+normally the best option.  You should also see if using @code{.C} is
+enough.  If the task to be performed in C is simple enough involving
+only atomic vectors and requiring no call to @R{}, @code{.C} suffices.
+The new interfaces are relatively recent additions to @Sl{} and @R{},
+and a great deal of useful code has been written using just @code{.C}
+before they were available.  The @code{.Call} and @code{.External}
+interfaces allow much more control, but they also impose much greater
+responsibilities so need to be used with care.  
+
+Neither @code{.Call} nor @code{.External} copy their arguments: you
+should treat arguments you receive through these interfaces as
+read-only, unless you have a thorough understanding of how to check
+whether modifications are safe, using the @code{NAMED} field of
+objects.
+
+The syntax for the calling function in @R{} with @code{.Call} and
+@code{.External} is similar to that of @code{.C}, but the two
+functions have different C interfaces.  Generally the @code{.Call}
+interface (which is modelled on the interface of the same name in
+@Sl{} version 4) is a little simpler to use, but @code{.External} is a
+little more general.
 @findex .Call
 @findex .External
 
@@ -7968,25 +7986,11 @@ or some S4-compatibility macros defined in @file{Rdefines.h}.  See
 @ref{Interface functions .Call and .External} for details on
 @code{.Call} and @code{.External}.
 
-Before you decide to use @code{.Call} or @code{.External}, you should
-look at other alternatives.  First, consider working in interpreted @R{}
-code; if this is fast enough, this is normally the best option.  You
-should also see if using @code{.C} is enough.  If the task to be
-performed in C is simple enough involving only atomic vectors and
-requiring no call to @R{}, @code{.C} suffices.  The new interfaces are
-relatively recent additions to @Sl{} and @R{}, and a great deal of
-useful code has been written using just @code{.C} before they were
-available.  The @code{.Call} and @code{.External} interfaces allow much
-more control, but they also impose much greater responsibilities so need
-to be used with care.  Neither @code{.Call} nor @code{.External} copy
-their arguments: you should treat arguments you receive through these
-interfaces as read-only.
-
 There are two approaches that can be taken to handling @R{} objects from
 within C code.  The first (historically) is to use the macros and
 functions that have been used to implement the core parts of @R{}
 through @code{.Internal} calls.  A public@footnote{ @pxref{The R API}:
-note that these are not all part of the API.}  subset of these is
+note that these are not all part of the API.} subset of these is
 defined in the header file @file{Rinternals.h} in the directory
 @file{@var{R_INCLUDE_DIR}} (default @file{@var{R_HOME}/include}) that
 should be available on any @R{} installation.
@@ -8005,23 +8009,27 @@ macros described here, so the @R{} source code provides a rich source of
 examples and ``how to do it'': do make use of the source code for
 inspirational examples.
 
-It is necessary to know something about how @R{} objects are handled in
-C code.  All the @R{} objects you will deal with will be handled with
-the type @dfn{SEXP}@footnote{SEXP is an acronym for @emph{S}imple
-@emph{EXP}ression, common in LISP-like language syntaxes.}, which is a
-pointer to a structure with typedef @code{SEXPREC}.  Think of this
-structure as a @emph{variant type} that can handle all the usual types
-of @R{} objects, that is vectors of various modes, functions,
-environments, language objects and so on.  The details are given later
-in this section and in @ref{R Internal Structures, , R Internal
-Structures, R-ints, R Internals}, but for most
-purposes the programmer does not need to know them.  Think rather of a
-model such as that used by Visual Basic, in which @R{} objects are
-handed around in C code (as they are in interpreted @R{} code) as the
-variant type, and the appropriate part is extracted for, for example,
-numerical calculations, only when it is needed.  As in interpreted @R{}
-code, much use is made of coercion to force the variant object to the
-right type.
+The C type @dfn{SEXP}@footnote{SEXP is an acronym for @emph{S}imple
+@emph{EXP}ression, common in LISP-like language syntaxes.} is central
+to how C code manipulates R objects.  All the @R{} objects you will
+deal with will be handled with the type, whose nature will vary
+depending on the platform and configuration options used.  It may be a
+C pointer to a C structure, or it may be a ``compressed pointer'', by
+which such a structure can be located indirectly.  Either way, it can
+handle all the usual types of @R{} objects --- that is, vectors of
+various modes, functions, environments, language objects and so on.
+@R{} objects are handed around in C code (as they are in interpreted
+@R{} code) as @code{SEXP} values, and the appropriate part is
+extracted, for example for numerical calculations, only when it is
+needed.  As in interpreted @R{} code, much use is made of coercion to
+force the object to the right type.
+
+Details regarding @code{SEXP} are given later in this section and in
+@ref{R Internal Structures, , R Internal Structures, R-ints, R
+Internals}, but for most purposes the programmer does not need to know
+them --- and indeed @emph{should not} pay any attention to them, since
+they may change, and will differ depending on whether compressed
+pointers are used.
 
 @menu
 * Garbage Collection::
