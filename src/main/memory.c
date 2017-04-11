@@ -2649,9 +2649,9 @@ int Seql(SEXP a, SEXP b)
    This is called from user-level, so only some types of objects are important.
    
    An object gets charged for all the space allocated on the heap and
-   all the nodes specifically due to it (including padding to the size
-   of its node class), but not for the space for its name, nor for
-   .Internals it references, nor for unused padding in pages of nodes. 
+   all the nodes specifically due to it (including padding to a whole
+   number of chunks), but not for the space for its name, nor for
+   .Internals it references.
 
    Sharing of CHARSXPs within a string (eg, in c("abc","abc")) is accounted
    for, but not other types of sharing (eg, in list("abc","abc")).
