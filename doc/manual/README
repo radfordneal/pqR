@@ -1,3 +1,10 @@
+NOTE!!  External references to other manuals are done via the
+htmlxref.cnf file in .texinfo, which makinfo looks at.  In R Core
+versions, this is not present, and they are found instead from a Linux
+system version of this file, going to current versions found at
+r-project.org, even if those versions are not for the version of R
+being used.
+
 The version of Rd.sty in R_HOME/share/texmf uses url.sty.  This is
 normally installed, and can be obtained from any CTAN node or mirror:
 see

@@ -1,0 +1,7 @@
+R = .
+ R-intro        mono    ${R}/R-intro.html
+ R-lang         mono    ${R}/R-lang.html
+ R-exts         mono    ${R}/R-exts.html
+ R-data         mono    ${R}/R-data.html
+ R-admin        mono    ${R}/R-admin.html
+ R-ints         mono    ${R}/R-ints.html

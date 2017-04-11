@@ -1,0 +1,6 @@
+Replaces the previously-used garbage collector with one using sggc.
+
+Information about this is in NEWS, R-admin, R-exts, and R-ints.
+
+Also fixes the problem of manual cross-references going to wrong
+versons at r-project.org (noted in NEWS).

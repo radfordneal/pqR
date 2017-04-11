@@ -2665,6 +2665,7 @@ AC_CONFIG_FILES(
   doc/Makefile
   doc/html/Makefile
   doc/manual/Makefile
+  doc/manual/.texinfo/htmlxref.cnf
   etc/Makefile
   etc/Makeconf
   etc/Renviron

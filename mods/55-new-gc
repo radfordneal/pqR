@@ -1,3 +1,0 @@
-Replaces the previously-used garbage collector with one using sggc.
-
-(But not done yet...)

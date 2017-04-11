@@ -39,7 +39,16 @@
         on a system with 64-bit pointers (slightly on
         a system with 32-bit pointers).  Speed on some tasks
         will also be improved, while on other tasks, using compressed
-        pointers has a speed penalty of about 25\%.
+        pointers has a speed penalty of up to about 25\%.
+  }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Cross-references between manuals in doc/manual/R-admin.html, etc.
+        now go to the other manuals in this same place.  Previously (and
+        in current R core versions), they went to the manuals of that
+        name at cran.r-project.org, even when those manuals are not for
+        the same version of R.
   }}
 
 }
