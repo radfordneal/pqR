@@ -1208,7 +1208,10 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 
    The allocated areas are linked through the ATTRIB pointer to be 
    traced by the garbage collector.  The root of this list is managed
-   with vmaxget and vmaxset, defined here using the fast macros in Defn.h */
+   with vmaxget and vmaxset, defined here using the fast macros in Defn.h 
+
+   NOTE:  One more byte is allocated than asked for.  This is apparently
+   traditional. */
 
 void *vmaxget(void)
 {
@@ -1222,12 +1225,12 @@ void vmaxset(const void *ovmax)
 
 char *R_alloc (size_t nelem, int eltsize)
 {
-    double dsize = (double)nelem * eltsize + SGGC_CHUNK_SIZE - 1;
+    double dsize = (double)nelem * eltsize + 1 + SGGC_CHUNK_SIZE - 1;
 
     if (dsize < 0)
         return NULL;
 
-    size_t size = nelem * eltsize + SGGC_CHUNK_SIZE - 1;;
+    size_t size = nelem * eltsize + 1 + SGGC_CHUNK_SIZE - 1;;
 #if !USE_COMPRESSED_POINTERS
     size += SGGC_CHUNK_SIZE;  /* Since need one chunk for header */
     dsize += SGGC_CHUNK_SIZE;
