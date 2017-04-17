@@ -18,4 +18,6 @@
 18 \ ()
 19 \ (O O O O O O O I I O I)
 Allocated objects: 7098
-Gen0: 99, Gen1: 53, Gen2: 406, Uncollected: 0
+Counts... Gen0: 99, Gen1: 53, Gen2: 406, Uncollected: 0
+Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+Number of segments: 12,  Total memory usage: 7220 bytes

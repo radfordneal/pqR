@@ -23,6 +23,13 @@
      discussion of the implementation of SGGC. */
 
 
+/* SELECT WHETHER SGGC_NO_OBJECT IS ALL 0s OR ALL 1s. */
+
+#ifdef SGGC_NO_OBJECT_ZERO
+#define SET_NO_VALUE_ZERO
+#endif
+
+
 /* CONTROL EXTERN DECLARATIONS FOR GLOBAL VARIABLES.  SGGC_EXTERN will
    be defined as nothing in sggc.c, where globals will actually be
    defined, but will be "extern" elsewhere. */
@@ -30,7 +37,6 @@
 #ifndef SGGC_EXTERN
 #define SGGC_EXTERN extern
 #endif
-
 
 #include "set-app.h"
 
@@ -64,7 +70,7 @@ typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
    'small' segment, having total number of chunks no more than given by
    SGGC_CHUNKS_IN_SMALL_SEGMENT. */
 
-#ifdef SGGC_USE_OFFSET_POINTERS
+#if SGGC_USE_OFFSET_POINTERS
 typedef uintptr_t sggc_dptr;       /* So out-of-bounds arithmetic well-defined*/
 #else
 typedef char * restrict sggc_dptr; /* Ordinary pointer arithmetic */
@@ -201,13 +207,18 @@ SGGC_EXTERN const int sggc_kind_chunks[SGGC_N_KINDS];
 
 SGGC_EXTERN struct sggc_info
 { 
-  unsigned gen0_count;       /* Number of newly-allocated objects */
-  unsigned gen1_count;       /* Number of objects in old generation 1 */
-  unsigned gen2_count;       /* Number of objects in old generation 2 */
+  unsigned gen0_count;     /* Number of newly-allocated objects */
+  unsigned gen1_count;     /* Number of objects in old generation 1 */
+  unsigned gen2_count;     /* Number of objects in old generation 2 */
+  unsigned uncol_count;    /* Number of uncollected objects */
 
-  unsigned uncol_count;      /* Number of uncollected objects */
+  size_t gen0_big_chunks;  /* # of chunks in newly-allocated big objects */
+  size_t gen1_big_chunks;  /* # of chunks in big objects in old generation 1*/
+  size_t gen2_big_chunks;  /* # of chunks in big objects in old generation 2*/
+  size_t uncol_big_chunks; /* # of chunks in uncollected big objects */
 
-  size_t big_chunks;         /* # of chunks in newly-allocated big objects */
+  unsigned n_segments;     /* Number of segments in use */
+  size_t total_mem_usage;  /* Approximate total memory usage (in bytes) */
 
 } sggc_info;
 
@@ -252,7 +263,7 @@ void sggc_after_marking (int level, int rep);
 
 /* FUNCTIONS USED BY THE APPLICATION. */
 
-int sggc_init (int max_segments);
+int sggc_init (unsigned max_segments);
 sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length);
 #ifdef SGGC_KIND_TYPES
 sggc_cptr_t sggc_alloc_kind (sggc_kind_t kind, sggc_length_t length);

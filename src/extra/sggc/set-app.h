@@ -73,7 +73,7 @@
   } x;
 
 
-/* POINTER TO ARRAY OF SEGMETNS OR POINTERS TO SEGMENTS.  This array
+/* POINTER TO ARRAY OF SEGMENTS OR POINTERS TO SEGMENTS.  This array
    of segments or pointers to them is allocated when the GC is
    initialized, with the segments themselves allocated later, as
    needed, except that if SGGC_MAX_SEGMENTS is defined, it is

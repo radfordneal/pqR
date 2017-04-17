@@ -35,6 +35,14 @@ of segment index and offset within segment, which must fit in 32 bits
 (though expanding this to 64 bits, allowing bigger indexes, would be
 possible).
 
+What segment indexes are permitted is determined by the application,
+via its definition of the SET_SEGMENT function/macro, and its calls of
+the set_segment_init procedure.  The application must reserve
+SET_NO_VALUE as something never used as a real value, but can select
+whether the (index, offset) pair for SET_NO_VALUE has both index and
+offset that are all 0 bits, or both index and offset that are all 1
+bits.
+
 Each set is associated with a "chain", with the restriction that two
 sets sharing the same chain must not both contain values that are in
 the same segment (see more on this below).  For some purposes, a chain
@@ -87,6 +95,11 @@ of set-app.h:
                    Should have the form of a structure field, including
                    the terminating semicolon.
 
+The application may also define the following:
+
+  SET_NO_VALUE_ZERO  If defined (as anything), SET_NO_VALUE will 
+                     consist of all 0 bits (rather than all 1 bits).
+
 For convenience, the application might also at this point define
 symbols for the chains, which are identified by integers from 0 to
 SET_CHAINS-1, though these symbols would be used only by the
@@ -113,9 +126,12 @@ the following types:
 
 The following constant is also defined in set.h:
 
-  SET_NO_VALUE     A constant of type set_value_t that cannot be an
-                   actual value, and hence can be used to indicate
-                   the absence of a value.
+  SET_NO_VALUE     A constant of type set_value_t that must not be
+                   used as an actual value, and hence can be used to
+                   indicate the absence of a value.  By default, this
+                   value has all 1s for both index and offset, but 
+                   if the applicaton defines SET_NO_VALUE_ZERO it is
+                   instead all 0s.
 
 Finally, the set.h file will declare prototypes (or macros, or static
 inline definitions) for the functions documented below.  If set-app.h
@@ -136,7 +152,7 @@ application to decide how memory for segment structures is allocated
 allocated with malloc), and hence how a pointer is found from an
 index.  (Note that the actual definition of SET_SEGMENT might need to
 be put after set.h is included, as illustrated in test-set/set-app.h,
-or in SET_DO_BEFORE_INLINE.)
+or be put in SET_DO_BEFORE_INLINE.)
 
 The set-app.h file should be included in application modules that use
 the set facility.  There are two options for how an application

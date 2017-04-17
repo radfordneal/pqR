@@ -551,9 +551,11 @@ of segment-at-a-time functions provided by the set facility to speed
 up some operations.
 
 SGGC_USE_MEMSET may be defined (as anything) to enable use of memset
-rather than a loop (possibly unrolled by the compiler) when clearning
+rather than a loop (possibly unrolled by the compiler) when clearing
 the data area for an object in a small segment.  Since these objects
-are typically small, it's not obvious which is faster.
+are typically small, it's not obvious which is faster.  It's possible
+that this option is ineffective, with the compiler begin clever enough
+to (not necessarily wisely?) convert a loop to a call of memset.
 
 SGGC_SEG_DIRECT may be defined (as anything) to enable use of a direct
 array of segments, rather than the default of using an array of
@@ -562,6 +564,15 @@ a larger allocation of address space (and perhaps physical memory) if
 not all the segments are actually used.  Note that all four
 combinations of this option (or not) with or without SGGC_MAX_SEGMENTS
 are allowed.
+
+SGGC_SEG_BLOCKING may be defined as an integer greater than 1 to
+enable allocation of segments in blocks containing that number of
+segments, and also to guarantee that segments are aligned to the size
+of the segment structure (64 bytes), which is of possible significance
+for cache performance.  Allocating segments in large blocks may also
+help if the process is forked with copy-on-write shared memory, since
+segment structures are written to as part of a garbage collection.
+SGGC_SEG_BLOCKING is ignored if SGGC_SEG_DIRECT is defined.
 
 SGGC_HUGE_SHIFT is used when the number of chunks asked for for a big
 segment is too large to fit in 21 bits.  In this case, the number of
@@ -654,6 +665,3 @@ include the following:
     already in old generation 2 (in case it references younger
     objects).  It would then always be OK to scan the old-to-new set
     for uncollected objects only for level 2 garbage collections.
-
-  o More information could be maintained in sggc_info to help the
-    application decide when to call sggc_collect.

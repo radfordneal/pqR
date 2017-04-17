@@ -1,5 +1,10 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version-2017-04-17
+
+  Various additions, including SGGC_NO_OBJECT_ZERO, SGGC_SEG_BLOCKING,
+  and more information in sggc_info, and some bug fixes.
+
 Version-2017-04-08
 
   Bug fixes.  New features call_newly_freed_object, CLEAR_FREE, no_reuse, 

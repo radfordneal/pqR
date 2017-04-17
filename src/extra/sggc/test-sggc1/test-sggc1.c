@@ -174,12 +174,32 @@ int main (int argc, char **argv)
   a = b = c = d = e = nil;
   sggc_collect(2);
 
+  printf("\nSGGC INFO\n\n");
+  printf("Counts... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+          sggc_info.gen0_count, sggc_info.gen1_count, 
+          sggc_info.gen2_count, sggc_info.uncol_count);
+  printf("Big chunks... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+   (unsigned) sggc_info.gen0_big_chunks, (unsigned) sggc_info.gen1_big_chunks, 
+   (unsigned) sggc_info.gen2_big_chunks, (unsigned) sggc_info.uncol_big_chunks);
+  printf("Number of segments: %u,  Total memory usage: %llu bytes\n",
+          sggc_info.n_segments, (unsigned long long) sggc_info.total_mem_usage);
+
   sggc_call_for_newly_freed_object (1, freed1);
   sggc_call_for_newly_freed_object (2, 0);
 
   printf("\nCOLLECTING EVERYTHING\n\n");
   nil = a = b = c = d = e = SGGC_NO_OBJECT;
   sggc_collect(2);
+
+  printf("\nSGGC INFO\n\n");
+  printf("Counts... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+          sggc_info.gen0_count, sggc_info.gen1_count, 
+          sggc_info.gen2_count, sggc_info.uncol_count);
+  printf("Big chunks... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+   (unsigned) sggc_info.gen0_big_chunks, (unsigned) sggc_info.gen1_big_chunks, 
+   (unsigned) sggc_info.gen2_big_chunks, (unsigned) sggc_info.uncol_big_chunks);
+  printf("Number of segments: %u,  Total memory usage: %llu bytes\n",
+          sggc_info.n_segments, (unsigned long long) sggc_info.total_mem_usage);
 
   printf("\nEND TESTING\n");
 

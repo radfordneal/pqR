@@ -267,7 +267,7 @@ static ptr_t alloc (sggc_type_t type)
     }
   }
 
-  /* Initialize the object if it contains pointers. */
+  /* Initialize the object. */
 
   if (type == TYPE_LIST)
   { LIST(a)->head = nil;
@@ -683,7 +683,10 @@ int main (void)
 # endif
 
   nil = sggc_alloc (TYPE_NIL, 1);
-  if (nil != 0) abort();  /* want nil to be zero for auto initialization */
+
+# ifndef SGGC_NO_OBJECT_ZERO
+    if (nil != 0) abort();
+# endif
 
   global_bindings = nil;
 
@@ -737,18 +740,23 @@ static unsigned count_uncol (sggc_kind_t kind)
 
 
 /* TERMINATE PROGRAM.  Prints number of allocations and current usage,
-   plus freed objects, if that's enabled, then checks that the numbers
-   and types of uncollected objects (if any) are as they ought to be,
-   then exits. */
+   and other stuff in sggc_info, plus freed objects, if that's
+   enabled, then checks that the numbers and types of uncollected
+   objects (if any) are as they ought to be, then exits. */
 
 static void end_prog (void)
 {
   unsigned total;
 
   printf("Allocated objects: %u\n",alloc_count);
-  printf("Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
-          sggc_info.gen0_count, sggc_info.gen1_count, sggc_info.gen2_count,
-          sggc_info.uncol_count);
+  printf("Counts... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+          sggc_info.gen0_count, sggc_info.gen1_count, 
+          sggc_info.gen2_count, sggc_info.uncol_count);
+  printf("Big chunks... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+   (unsigned) sggc_info.gen0_big_chunks, (unsigned) sggc_info.gen1_big_chunks, 
+   (unsigned) sggc_info.gen2_big_chunks, (unsigned) sggc_info.uncol_big_chunks);
+  printf("Number of segments: %u,  Total memory usage: %llu bytes\n",
+          sggc_info.n_segments, (unsigned long long) sggc_info.total_mem_usage);
 # if CALL_NEWLY_FREED
     printf("Number of freed objects: %u\n",freed_count);
     total =  sggc_info.gen0_count + sggc_info.gen1_count + sggc_info.gen2_count

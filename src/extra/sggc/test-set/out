@@ -8,7 +8,7 @@ result: 0
 Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
 Set 1 (chain 1), 0 elements: empty
 Set 2 (chain 1), 0 elements: empty
-> a 2 0 0      add same value to set 1
+> a 2 0 0      add same value to set 2
 result: 0
 Set 0 (chain 0), 1 elements: 0000000000000001 : 0.0
 Set 1 (chain 1), 0 elements: empty

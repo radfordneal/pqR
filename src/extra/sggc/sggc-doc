@@ -178,6 +178,13 @@ calls sggc_no_reuse (see below).
   SGGC_CLEAR_AUX2_BYTE  The byte to set free auxiliary information 2 
                         to, if it is not read-only; default 0.
 
+The following may be defined to change the bit pattern used to
+represent SGGC_NO_OBJECT:
+
+  SGGC_NO_OBJECT_ZERO   If defined (as anything), SGGC_NO_OBJECT will
+                        be represented by all 0 bits, rather than the
+                        default of all 1 bits.
+
 The following types must be defined in sggc-app.h:
 
   sggc_length_t         Type for the "length" of an object.  The
@@ -234,17 +241,26 @@ garbage collection:
 
   extern struct sggc_info
   {
-    unsigned gen0_count;       /* Number of newly-allocated objects */
-    unsigned gen1_count;       /* Number of objects in old generation 1 */
-    unsigned gen2_count;       /* Number of objects in old generation 2 */
+    unsigned gen0_count;     /* Number of newly-allocated objects */
+    unsigned gen1_count;     /* Number of objects in old generation 1 */
+    unsigned gen2_count;     /* Number of objects in old generation 2 */
+    unsigned uncol_count;    /* Number of uncollected objects */
 
-    unsigned uncol_count;      /* Number of uncollected objects. */
+    size_t gen0_big_chunks;  /* # of chunks in newly-allocated big objects */
+    size_t gen1_big_chunks;  /* # of chunks in big objects in old generation 1*/
+    size_t gen2_big_chunks;  /* # of chunks in big objects in old generation 2*/
+    size_t uncol_big_chunks; /* # of chunks in uncollected big objects */
 
-    size_t big_chunks;         /* # of chunks in newly-allocated big objects */
+    unsigned n_segments;     /* Number of segments in use */
+    size_t total_mem_usage;  /* Approximate total memory usage (in bytes) */
 
   } sggc_info;
 
-Constants are not included in any of the counts above.
+Constants are not included in any of the counts or sizes above, except
+for n_segments.  Shared read-only auxiliary information areas are also
+not counted.  The total memory usage estimate is for physical memory,
+and assumes that virtual memory space that has not been used will not
+have been assigned physical memory.
 
 The sggc.h file will also declare the array initialized with the
 application's definition of SGGC_KIND_CHUNKS in sggc-app.h, as
@@ -447,13 +463,14 @@ macros) below, which have (if functions) prototypes as shown:
     Returns the offset within a segment of a compressed pointer.  This
     is needed only in a few specialized contexts.
 
-  int sggc_init (int max_segments)
+  int sggc_init (unsigned max_segments)
 
     Initializes the SGGC facility, with the maximum number of segments
     being as specified, except that this argument is silently reduced
     to SGGC_MAX_SEGMENTS if it is larger, if that constant was
-    specified at compile time.  Returns zero if no error, and non-zero
-    if allocation failed.
+    specified at compile time.  Also silently reduced to the maximum
+    allowed by the number of bits in a segment index.  Returns zero if
+    no error, and non-zero if allocation failed.
 
   sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length)
 
@@ -526,6 +543,7 @@ macros) below, which have (if functions) prototypes as shown:
 
     It is not necessary (but is allowed) to call sggc_look_at for a
     pointer to a constant object, or an object of an uncollected kind.
+    Calling it with SGGC_NO_OBJECT is allowed, and does nothing.
 
   void sggc_mark (sggc_cptr_t cptr)
 
@@ -613,13 +631,14 @@ macros) below, which have (if functions) prototypes as shown:
     SGGC_AUX1_SIZE or SGGC_AUX2_SIZE are defined.
 
     If called several times before any calls of sggc_alloc (or related
-    functions), the segments will have indexes 0, 1, 2, etc., which
-    fact may be used when setting up their contents if they reference
-    each other.  Constant objects should reference only other constant
-    objects.
+    functions), the segments used will have indexes 0, 1, 2, ... if
+    SGGC_NO_OBJECT_ZERO is not defined, and indexes 1, 2, 3, ... if it
+    is defined.  This fact may be used when setting up their contents
+    if they reference each other.  Constant objects should reference
+    only other constant objects.
 
     Note that although this function is primarily meant for creating
-    objects that are actually unchanging constants, an application is
+    objects that actually are unchanging constants, an application is
     allowed to change the data or auxiliary information in the object,
     as long as no references to other objects that need to be found by
     the garbage collector are stored there.  If an application never

@@ -166,6 +166,16 @@ int main (int argc, char **argv)
   a = b = c = d = e = nil;
   sggc_collect(2);
 
+  printf("\nSGGC INFO\n\n");
+  printf("Counts... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+          sggc_info.gen0_count, sggc_info.gen1_count, 
+          sggc_info.gen2_count, sggc_info.uncol_count);
+  printf("Big chunks... Gen0: %u, Gen1: %d, Gen2: %d, Uncollected: %d\n",
+   (unsigned) sggc_info.gen0_big_chunks, (unsigned) sggc_info.gen1_big_chunks, 
+   (unsigned) sggc_info.gen2_big_chunks, (unsigned) sggc_info.uncol_big_chunks);
+  printf("Number of segments: %u,  Total memory usage: %llu bytes\n",
+          sggc_info.n_segments, (unsigned long long) sggc_info.total_mem_usage);
+
   printf("\nEND TESTING\n");
 
   return 0;

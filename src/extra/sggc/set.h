@@ -66,10 +66,15 @@ typedef uint32_t set_value_t;
 #endif
 
 
-/* SPECIAL NULL VALUE.  Uses all 1s in the index and offset.  This value must 
-   not be used for an actual object. */
+/* SPECIAL NO VALUE INDICATOR.  Uses either all 0s or all 1s in the
+   index and offset.  This value must not be used for an actual
+   element in a set. */
 
+#ifdef SET_NO_VALUE_ZERO
+#define SET_NO_VALUE ((set_value_t)0)
+#else
 #define SET_NO_VALUE (~(set_value_t)0)
+#endif
 
 
 /* SPECIAL INDEXES USED IN CHAINS.  These are not used in real (index, offset)
