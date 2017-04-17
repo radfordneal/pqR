@@ -1387,14 +1387,24 @@ struct R_local_protect {
     } while (0)
 
 
-/* Segment indexes for constant segments. */
+/* Segment indexes for constant segments.  They start at 0 or 1 depending
+   on whether SGGC_NO_OBJECT_ZERO is defined (1) or not (0). */
 
-#define R_SGGC_NIL_INDEX 0          /* must be 0 */
+#ifdef SGGC_NO_OBJECT_ZERO
+#define R_SGGC_NIL_INDEX 1
+#define R_SGGC_STATIC_BOXES_INDEX 2
+#define R_SGGC_ENV_INDEX 3
+#define R_SGGC_SYM_INDEX 4
+#define R_SGGC_NUM_INDEX 5
+#define R_SGGC_LIST1_INDEX 6
+#else
+#define R_SGGC_NIL_INDEX 0
 #define R_SGGC_STATIC_BOXES_INDEX 1
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
 #define R_SGGC_NUM_INDEX 4
 #define R_SGGC_LIST1_INDEX 5
+#endif
 
 #define R_N_NUM_CONSTS (3+12+3)     /* # of numerical constants in const-objs */
 
@@ -1424,7 +1434,7 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 LibExtern SEXP R_NilValue;          /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 #if USE_COMPRESSED_POINTERS
-#define R_NilValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0)) /* Should be zero*/
+#define R_NilValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0))
 #else
 LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 #define R_NilValue ((SEXP) &R_NilValue_const)

@@ -352,7 +352,7 @@ void Rf_constant_init(void)
 
 #undef R_NilValue
 #if USE_COMPRESSED_POINTERS
-SEXP R_NilValue = SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0);  /* Should be zero */
+SEXP R_NilValue = SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0);
 #else
 SEXP R_NilValue = (SEXP) &R_NilValue_const;
 #endif
