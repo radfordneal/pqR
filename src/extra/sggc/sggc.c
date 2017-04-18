@@ -205,9 +205,10 @@ const int sggc_kind_uncollected[SGGC_N_KINDS] = SGGC_KIND_UNCOLLECTED;
 #endif
 
 
-/* FUNCTIONS TO BE CALLED WHEN OBJECTS OF SPECIFIED KINDS ARE FREED. */
+/* FUNCTIONS TO SOMETIMES BE CALLED FOR OBJECTS AT END OF COLLECTION. */
 
-static int (*call_for_newly_freed[SGGC_N_KINDS])(sggc_cptr_t);
+static int (*call_for_newly_freed[SGGC_N_KINDS]) (sggc_cptr_t);
+static void (*call_for_object_in_use) (sggc_cptr_t, sggc_nchunks_t);
 
 
 /* RECORDS OF NEXT FREE OBJECTS FOR EACH KIND.  These are used only
@@ -1790,6 +1791,50 @@ void sggc_collect (int level)
 
   collect_level = -1;
 
+  /* Call the function registered to be called for every object still in use. */
+
+  if (call_for_object_in_use)
+  { 
+    sggc_cptr_t v;
+
+    for (k = 0; k < SGGC_N_KINDS; k++)
+    { sggc_nchunks_t nch = sggc_kind_chunks[k];
+      for (v = set_first(&old_gen1[k],0); 
+           v != SGGC_NO_OBJECT;
+           v = set_chain_next(SET_OLD_GEN1,v))
+      { call_for_object_in_use (v, nch != 0 ? nch 
+          : CHUNKS_ALLOCATED (SET_SEGMENT (SET_VAL_INDEX(v))));
+      }
+      for (v = set_first(&old_gen2[k],0); 
+           v != SGGC_NO_OBJECT;
+           v = set_chain_next(SET_OLD_GEN2_UNCOL,v))
+      { call_for_object_in_use (v, nch != 0 ? nch 
+          : CHUNKS_ALLOCATED (SET_SEGMENT (SET_VAL_INDEX(v))));
+      }
+#ifdef SGGC_KIND_UNCOLLECTED
+      for (v = set_first(&uncollected[k],0); 
+           v != SGGC_NO_OBJECT;
+           v = set_chain_next(SET_OLD_GEN2_UNCOL,v))
+      { call_for_object_in_use (v, nch != 0 ? nch 
+          : CHUNKS_ALLOCATED (SET_SEGMENT (SET_VAL_INDEX(v))));
+      }
+#endif
+    }
+
+    for (v = set_first(&old_gen1_big,0); 
+         v != SGGC_NO_OBJECT;
+         v = set_chain_next(SET_OLD_GEN1,v))
+    { call_for_object_in_use (v, 
+        CHUNKS_ALLOCATED (SET_SEGMENT (SET_VAL_INDEX(v))));
+    }
+    for (v = set_first(&old_gen2_big,0); 
+         v != SGGC_NO_OBJECT;
+         v = set_chain_next(SET_OLD_GEN2_UNCOL,v))
+    { call_for_object_in_use (v, 
+        CHUNKS_ALLOCATED (SET_SEGMENT (SET_VAL_INDEX(v))));
+    }
+  }
+
   if (SGGC_DEBUG) printf("sggc_collect: done\n");
   if (SGGC_DEBUG) collect_debug();
 }
@@ -1893,6 +1938,14 @@ void sggc_call_for_newly_freed_object (sggc_kind_t kind,
                                        int (*fun) (sggc_cptr_t))
 {
   call_for_newly_freed[kind] = fun;
+}
+
+
+/* REGISTER A FUNCTION TO BE CALLED FOR OBJECTS IN USE. */
+
+void sggc_call_for_object_in_use (void (*fun) (sggc_cptr_t,sggc_nchunks_t))
+{
+  call_for_object_in_use = fun;
 }
 
 

@@ -676,10 +676,27 @@ macros) below, which have (if functions) prototypes as shown:
     references exist, or that they have ALREADY been marked before
     'fun' was called.  Note also that 'fun' is not allowed to call
     sggc_look_at, sggc_mark, sggc_collect, or sggc_alloc or related
-    functions.
+    functions.  The contents of sggc_info are undefined when calls
+    to this function are made.
 
     If 'fun' is 0, any previous set up of a function to call for this
     kind is cancelled.
+
+  void sggc_call_for_object_in_use (void (*fun) (sggc_cptr_t, sggc_nchunks_t))
+
+    This procedure tells the garbage collector that at the end of
+    every garbage collection (after any call of sggc_after_marking and
+    all calls via sggc_call_for_newly_freed_object) the function 'fun'
+    should be called for every object that is still in use (in some
+    arbitrary order).  This includes uncollected objects, but not
+    constants.  The function will be passed the compressed pointer to
+    the object, and the number of chunks in its data area (which may
+    be more than was asked for when it was allocated).  The sggc_info
+    structure will have been updated to reflect the results of the
+    garbage collection before calls to this function are made.
+
+    If 'fun' is 0, any previous set up of a function to call is
+    cancelled.
 
   void sggc_no_reuse (int enable)
   
@@ -698,8 +715,8 @@ macros) below, which have (if functions) prototypes as shown:
     done on a "best effort" basis, with no guarantee that all invalid
     pointers cause a crash.  The nature of the crash may vary (eg, a
     memory fault or a call of 'abort').  If 'cptr' is valid, it is
-    returned as the value of this function, which will take a fairly
-    small amount of time to do so.
+    returned as the value of this function, and this will take a
+    fairly small, though not trivial, amount of time.
 
 
 FUNCTIONS THE APPLICATION MUST PROVIDE TO SGGC

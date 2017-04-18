@@ -276,6 +276,7 @@ sggc_cptr_t sggc_first_uncollected_of_kind (sggc_kind_t kind);
 int sggc_is_uncollected (sggc_cptr_t cptr);
 void sggc_call_for_newly_freed_object (sggc_kind_t kind,
                                        int (*fun) (sggc_cptr_t));
+void sggc_call_for_object_in_use (void (*fun) (sggc_cptr_t, sggc_nchunks_t));
 void sggc_no_reuse (int enable);
 sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr);
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,

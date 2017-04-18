@@ -167,6 +167,11 @@ static int freed1 (sggc_cptr_t v)
   return 1;
 }
 
+static void in_use (sggc_cptr_t v, sggc_nchunks_t nch)
+{ printf("CALLED_FOR_OBJECT_IN_USE: Object %x with %d chunks\n",
+          (unsigned)v, (int) nch);
+}
+
 int main (int argc, char **argv)
 { 
   int segs = argc<2 ? 5 /* min for no failure */ : atoi(argv[1]);
@@ -180,6 +185,8 @@ int main (int argc, char **argv)
   for (k = 2; k < SGGC_N_KINDS; k++)
   { sggc_call_for_newly_freed_object (k, freed0);
   }
+
+  sggc_call_for_object_in_use (in_use);
 
   (void) alloc (2, 3);   /* Type 2, of small and big kinds */
   (void) alloc (2, 12);

@@ -1,18 +1,18 @@
 STARTING TEST: segs = 5, iters = 50
 
 ABOUT TO CALL sggc_init
-test_calloc: 1 in use after:: 0x7fee02402620
-test_calloc: 2 in use after:: 0x7fee02402650
-test_calloc: 3 in use after:: 0x7fee02400370
-test_calloc: 4 in use after:: 0x7fee02402680
+test_calloc: 1 in use after:: 0x7f87bd402620
+test_calloc: 2 in use after:: 0x7f87bd402650
+test_calloc: 3 in use after:: 0x7f87bd400370
+test_calloc: 4 in use after:: 0x7f87bd402680
 DONE sggc_init
 ALLOCATING nil
 sggc_alloc: type 0, length 0, kind 0
-test_calloc: 5 in use after:: 0x7fee024026b0
-sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7fee024026b0
-test_calloc: 6 in use after:: 0x7fee02802000
-sggc_alloc: called alloc_zeroed for aux1 block (kind 0):: 0x7fee02802000
-test_calloc: 7 in use after:: 0x7fee024026c0
+test_calloc: 5 in use after:: 0x7f87bd4026b0
+sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7f87bd4026b0
+test_calloc: 6 in use after:: 0x7f87bd802000
+sggc_alloc: called alloc_zeroed for aux1 block (kind 0):: 0x7f87bd802000
+test_calloc: 7 in use after:: 0x7f87bd4026c0
 sggc_alloc: created 0 in new segment
 sggc_alloc: aux1 block for 0 has pos 0 in block for kind 0
 ALLOC RETURNING 0
@@ -20,8 +20,8 @@ ALLOC RETURNING 0
 ITERATION 1
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2, kind 1
-test_calloc: 8 in use after:: 0x7fee02802400
-test_calloc: 9 in use after:: 0x7fee02402720
+test_calloc: 8 in use after:: 0x7f87bd802400
+test_calloc: 9 in use after:: 0x7f87bd402720
 sggc_alloc: created 40 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff, 64 in free_or_new[1]
 sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7fffffffffffffff
@@ -29,10 +29,10 @@ sggc_alloc: used read-only aux1 for 40
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10, kind 5
-test_calloc: 10 in use after:: 0x7fee02802800
-test_calloc: 11 in use after:: 0x7fee02802c00
-sggc_alloc: called alloc_zeroed for aux1 block (kind 5):: 0x7fee02802c00
-test_calloc: 12 in use after:: 0x7fee02402760
+test_calloc: 10 in use after:: 0x7f87bd802800
+test_calloc: 11 in use after:: 0x7f87bd802c00
+sggc_alloc: called alloc_zeroed for aux1 block (kind 5):: 0x7f87bd802c00
+test_calloc: 12 in use after:: 0x7f87bd402760
 sggc_alloc: created 80 in new segment
 sggc_alloc: new segment has bits 1249249249249249, 21 in free_or_new[5]
 sggc_alloc: next_free_val[5]=83, next_free_bits[5]=0249249249249249
@@ -45,10 +45,10 @@ sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffffff
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1, kind 3
-test_calloc: 13 in use after:: 0x7fee02803000
-test_calloc: 14 in use after:: 0x7fee02803400
-sggc_alloc: called alloc_zeroed for aux1 block (kind 3):: 0x7fee02803400
-test_calloc: 15 in use after:: 0x7fee024027a0
+test_calloc: 13 in use after:: 0x7f87bd803000
+test_calloc: 14 in use after:: 0x7f87bd803400
+sggc_alloc: called alloc_zeroed for aux1 block (kind 3):: 0x7f87bd803400
+test_calloc: 15 in use after:: 0x7f87bd4027a0
 sggc_alloc: created c0 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff, 64 in free_or_new[3]
 sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7fffffffffffffff
