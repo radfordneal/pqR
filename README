@@ -20,9 +20,9 @@ version 2 of the GNU General Public Licence, and the files in
 share/licenses for copies of other licenses.  See doc/COPYRIGHTS for
 futher details on copyright of this software.
 
-See the files INSTALL, NEWS, and MODS (or the directory "mods" if you
-are looking at a development version) for more information.  The "doc"
-directory contains much additional documentation.
+See the files INSTALL, NEWS, and MODS (or the directory "mods-dir" if
+you are looking at a development version) for more information.  The
+"doc" directory contains much additional documentation.
 
 -----------------------------------------------------------------------------
 

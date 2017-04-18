@@ -1,12 +1,11 @@
-In a development branch, the 'mods' directory contains a file for each
-git branch in the pqR repository, documenting what that branch is for.
-These files will ultimately be combined in a release branch to produce
-the MODS file in the main source directory.
+In a development branch, the 'mods-dir' directory contains a file for
+each git branch in the pqR repository, documenting what that branch is
+for.  These files will ultimately be combined in a release branch to
+produce the MODS file in the main source directory.
 
 Development branches start with branch 00, which is identical to the
 version of R released by the R Core Team on which pqR is based
-(currently R-2.15.0), except for the 00 and README files in the mods
-directory.
+(currently R-2.15.0), except for the 00 and README files in mods-dir.
 
 Later development branches have the form DD-desc, where DD is a
 two-digit number, and desc is a descriptive string.  All branches
@@ -43,14 +42,14 @@ After the new release branch is created, the following should be done:
     the build directory to the source directory (R-admin.html from 
     doc/manual).  Add them to the git repository.
 
- 6) Concatenate all files in the "mods" directory into the file 
+ 6) Concatenate all files in the "mods-dir" directory into the file 
     "MODS", as follows:
 
-      (cd mods; cat README; for i in [0-9]*; \
+      (cd mods-dir; cat README; for i in [0-9]*; \
        do echo " "; echo " "; echo ${i}:; echo " "; cat $i; done) >MODS
 
-    Add it to the git repository, then delete the "mods" directory with 
-    "git rm -r".
+    Add it to the git repository, then delete the "mods-dir" directory
+    with "git rm -r".
 
  7) Commit the above changes to create the final version for a release.
     Give this commit the pqR-YYYY-MM-DD tag.
