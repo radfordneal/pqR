@@ -137,7 +137,7 @@ extern void *Rm_realloc(void * p, size_t n);
 
 /* Miscellaneous declarations for garbage collector. */
 
-static void R_gc_internal(void);       /* The main GC procedure */
+static void R_gc_internal(SEXP);       /* The main GC procedure */
 
 static SEXP R_PreciousList;            /* List of Persistent Objects */
 static SEXP R_StringHash;              /* Global hash of CHARSXPs */
@@ -1119,7 +1119,7 @@ void attribute_hidden InitMemory()
 
 #define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt) do { \
     if (sggc_info.gen0_count >= gc_interval) \
-        R_gc_internal(); \
+        R_gc_internal(R_NoObject); \
     alloc_stmt; \
     while (cp == SGGC_NO_OBJECT) { \
         if (sggc_info.gen0_count >= gc_interval \
@@ -1127,7 +1127,7 @@ void attribute_hidden InitMemory()
              && gc_next_level < gc_last_level + 1) { \
             gc_next_level = gc_last_level + 1; \
         } \
-        R_gc_internal(); \
+        R_gc_internal(R_NoObject); \
         alloc_stmt; \
         if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers) \
             fail_stmt; \
@@ -1785,7 +1785,7 @@ SEXP allocS4Object(void)
 
 void R_gc(void)
 {
-    R_gc_internal();
+    R_gc_internal(R_NoObject);
 }
 
 extern double R_getClockIncrement(void);
@@ -1834,22 +1834,41 @@ static void gc_end_timing(void)
     }
 }
 
-#define R_MAX(a,b) ( (a) < (b) ? (b) : (a) )
+/* Procedure for counting object of various types, for do_memoryprofile. */
 
-static void R_gc_internal(void)
+static SEXP counters_vec;
+
+static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
+{
+    int type = TYPEOF(SEXP_FROM_CPTR(v));
+    if (type > LGLSXP) type -= 2;
+    if (type < 24) INTEGER(counters_vec)[type] += 1;
+}
+
+/* Main GC procedure.  Argument is a vector in which to store type counts,
+   or R_NoObject if this is not to be done. */
+
+static void R_gc_internal (SEXP counters)
 {
     gc_count++;
 
     BEGIN_SUSPEND_INTERRUPTS {
+
 	gc_start_timing();
+        counters_vec = counters;
+        sggc_call_for_object_in_use (counters == R_NoObject ? 0 : count_obj);
         if (!SCAN_CHARSXP_CACHE) {
             sggc_kind_t k;
             for (k = SGGC_CHAR_KIND_START; k < SGGC_N_KINDS; k += SGGC_N_TYPES)
                 sggc_call_for_newly_freed_object (k, free_charsxp);
         }
+
 	sggc_collect(gc_next_level);
+
+        sggc_call_for_object_in_use (0);
         gc_last_level = gc_next_level;
 	gc_end_timing();
+
     } END_SUSPEND_INTERRUPTS;
 
     gc_next_level = ((gc_count&0x7)==0) + ((gc_count&0x1f)==0);
@@ -1881,8 +1900,10 @@ static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ans, nms;
+    SEXP ans, nms, v;
     int i, tmp;
+
+    /* Allocate space for counts. */
 
     PROTECT(ans = allocVector(INTSXP, 24));
     PROTECT(nms = allocVector(STRSXP, 24));
@@ -1891,6 +1912,19 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_STRING_ELT(nms, i, type2str(i > LGLSXP? i+2 : i));
     }
     setAttrib(ans, R_NamesSymbol, nms);
+
+    /* Do a GC, with counts added to 'ans'. */
+
+    R_gc_internal(ans);
+
+    /* Undo counts for objects allocated by R_alloc. */
+
+    for (v = R_VStack; v != R_NilValue && v != R_NoObject; v = ATTRIB(v)) {
+        int type = TYPEOF(v);
+        if (type > LGLSXP) type -= 2;
+        if (type < 24) INTEGER(ans)[type] -= 1;
+    }
+
     UNPROTECT(2);
     return ans;
 }

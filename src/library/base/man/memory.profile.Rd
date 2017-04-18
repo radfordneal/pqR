@@ -1,13 +1,15 @@
 % File src/library/base/man/memory.profile.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{memory.profile}
 \alias{memory.profile}
-\title{Profile the Usage of Cons Cells}
+\title{Profile Memory Usage by Type}
 \description{
-    Lists the usage of the cons cells by \code{SEXPREC} type.
+    Lists the number of objects of each\code{SEXPREC} type that are currently 
+    in use.
 }
 \usage{
 memory.profile()
@@ -27,7 +29,7 @@ memory.profile()
 }
 
 \seealso{
-  \code{\link{gc}} for the overall usage of cons cells.
+  \code{\link{gc}} for the overall usage counts.
   \code{\link{Rprofmem}} allows memory profiling.
 }
 
