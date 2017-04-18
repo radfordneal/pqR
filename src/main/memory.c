@@ -968,23 +968,36 @@ void attribute_hidden get_current_mem(unsigned long *smallvsize,
 
 static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    static double max_objects = 0, max_megabytes = 0;
+
     SEXP value;
     int ogc, reset_max;
-    double R_NMega;
-    R_size_t onsize = R_NSize /* can change during collection */;
 
     checkArity(op, args);
     ogc = gc_reporting;
     gc_reporting = asLogical(CAR(args));
     reset_max = asLogical(CADR(args));
+    if (reset_max) {
+        max_objects = 0;
+        max_megabytes = 0;
+    }
     gc_next_level = 2;
 
     R_gc();
 
     gc_reporting = ogc;
-    /*- now return the [used , gc trigger size] for cells and heap */
-    PROTECT(value = allocVector(REALSXP, 14));
-    for (int i = 0; i < 14; i++) REAL(value)[i] = NA_REAL;
+
+    PROTECT(value = allocVector(REALSXP, 6));
+    REAL(value)[0] = sggc_info.gen0_count + sggc_info.gen1_count + 
+                     sggc_info.gen2_count + sggc_info.uncol_count;
+    if (REAL(value)[0] > max_objects) max_objects = REAL(value)[0];
+    REAL(value)[1] = max_objects;
+    REAL(value)[2] = (double) sggc_info.total_mem_usage / (1<<20);
+    if (REAL(value)[2] > max_megabytes) max_megabytes = REAL(value)[2];
+    REAL(value)[3] = max_megabytes;
+    REAL(value)[4] = sggc_info.n_segments;
+    REAL(value)[5] = sggc_info.n_segments;
+
     UNPROTECT(1);
     return value;
 }

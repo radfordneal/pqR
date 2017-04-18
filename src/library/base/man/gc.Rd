@@ -46,20 +46,14 @@ gcinfo(verbose)
 }
 
 \value{
-  \code{gc} returns a matrix with rows \code{"Ncells"} (\emph{cons
-  cells}) and \code{"Vcells"} (\emph{vector cells}, and columns 
-  \code{"used"} and \code{"gc trigger"},
-  each also interpreted in megabytes (rounded up to the next 0.1Mb).
-
-  See \code{\link{Memory}} for an explanation of \code{Ncells} and
-  \code{Vcells}.
-
-  If maxima have been set for either \code{"Ncells"} or \code{"Vcells"},
-  a fifth column is printed giving the current limits in Mb (with
-  \code{NA} denoting no limit).
-
-  The final two columns show the maximum space used since the last call
-  to \code{gc(reset=TRUE)} (or since \R started).
+  \code{gc} returns a matrix with columns \code{"Objects"} giving
+  the number of underlying objects (which is not entirely the same as the
+  number visible in R), \code{"Megabytes"} giving the approximate number of 
+  Megabytes of storage in use for R objects, and \code{"Segments"} giving
+  the number of segments for objects (see \link{Memory}).  The value
+  returned has two rows, \code{"Current"} for current usage, and 
+  \code{"Maximum"} for the maximum usage since startup, or a call
+  of \code{gc} with \code{reset=TRUE}.
   
   \code{gcinfo} returns the previous value of the flag.
 }
@@ -80,8 +74,12 @@ gcinfo(TRUE) #-- in the future, show when R does it
 x <- integer(100000); for(i in 1:18) x <- c(x,i)
 gcinfo(verbose = FALSE)#-- don't show it anymore
 
-gc(TRUE)
+bigvec <- numeric(50000)  # Ensure that maximum usage
+gc()                      # is greater than current
+bigvec <- NULL 
 
+gc(TRUE)
 gc(reset=TRUE)
+
 }}
 \keyword{environment}

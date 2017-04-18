@@ -140,12 +140,11 @@ format.info <- function(x, digits = NULL, nsmall = 0L)
 
 gc <- function(verbose = getOption("verbose"),	reset=FALSE)
 {
-    res <- .Internal(gc(verbose, reset))
-    res <- matrix(res, 2L, 7L,
-		  dimnames = list(c("Ncells","Vcells"),
-		  c("used", "(Mb)", "gc trigger", "(Mb)",
-		    "limit (Mb)", "max used", "(Mb)")))
-    if(all(is.na(res[, 5L]))) res[, -5L] else res
+    res <- matrix(.Internal(gc(verbose, reset)),2,3)
+    res[_,2] <- round(res[_,2],3)
+    rownames(res) <- c("Current","Maximum")
+    colnames(res) <- c("Objects","Megabytes","Segments")
+    res
 }
 gcinfo <- function(verbose) .Internal(gcinfo(verbose))
 gctorture <- function(on=TRUE) invisible(.Internal(gctorture(on)))
