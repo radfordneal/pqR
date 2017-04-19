@@ -224,20 +224,6 @@ void R_SetPPSize(R_size_t size)
     R_PPStackSize = size;
 }
 
-static void mem_err_heap(R_size_t size)
-{
-    errorcall(R_NilValue, _("vector memory exhausted (limit reached?)"));
-}
-
-static void mem_err_cons(void)
-{
-    errorcall(R_NilValue, _("cons memory exhausted (limit reached?)"));
-}
-
-static void mem_err_malloc(R_size_t size)
-{
-    errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
-}
 
 #define CHECK_OLD_TO_NEW(x,y) \
     sggc_old_to_new_check(CPTR_FROM_SEXP(x),CPTR_FROM_SEXP(y))
@@ -1135,6 +1121,14 @@ void attribute_hidden InitMemory()
 } while (0)
 
 
+/* Report failure of memory allocation. */
+
+static void mem_error(void)
+{
+    errorcall(R_NilValue, _("memory exhausted (limit reached?)"));
+}
+
+
 /* Allocate an object.  Sets all flags to zero, attribute to R_NilValue,
    type as passed.  Does not set LENGTH, which will sometimes be read-only. */
 
@@ -1145,7 +1139,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     sggc_cptr_t cp;
 
     ALLOC_WITH_COLLECT(cp = sggc_alloc (sggctype, sggclength),
-                       R_Suicide("out of memory"));
+                       mem_error());
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
@@ -1168,7 +1162,7 @@ static SEXP alloc_sym (void)
     sggc_cptr_t cp;
 
     ALLOC_WITH_COLLECT(cp = sggc_alloc_small_kind (SGGC_SYM_KIND),
-                       R_Suicide("out of memory"));
+                       mem_error());
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
