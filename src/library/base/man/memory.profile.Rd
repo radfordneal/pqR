@@ -25,7 +25,9 @@ memory.profile()
 % Nonsense: that is a mode, not a type.
 \value{
   A vector of counts, named by the types.  See \code{\link{typeof}} for
-  an explanation of types.
+  an explanation of types.  A small number of constant 
+  objects (eg, 0, \code{TRUE}, and \code{NULL}) are not included in
+  these counts.
 }
 
 \seealso{

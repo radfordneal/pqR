@@ -42,6 +42,13 @@
         pointers has a speed penalty of up to about 25\%.
   }}
 
+  \subsection{DOCUMENTATION AND FEATURE CHANGES}{
+  \itemize{
+  \item The format of the output of \code{gc} has changed, to reflect
+        the characteristics of the new garbage collector.  See
+        \code{help(gc)} for details.
+  }
+
   \subsection{BUG FIXES}{
   \itemize{
   \item Cross-references between manuals in doc/manual/R-admin.html, etc.

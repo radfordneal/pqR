@@ -137,7 +137,7 @@ extern void *Rm_realloc(void * p, size_t n);
 
 /* Miscellaneous declarations for garbage collector. */
 
-static void R_gc_internal(SEXP);       /* The main GC procedure */
+static void R_gc_internal(int,SEXP);   /* The main GC procedure */
 
 static SEXP R_PreciousList;            /* List of Persistent Objects */
 static SEXP R_StringHash;              /* Global hash of CHARSXPs */
@@ -158,6 +158,8 @@ static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 static int gc_interval = 1000000;      /* Interval between garbage collections*/
 static long long int gc_count = 0;     /* Number of garbage collections done */
+static long long int gc_count1 = 0;    /*   - at level 1 */
+static long long int gc_count2 = 0;    /*   - at level 2 */
 static int gc_last_level = 0;          /* Level of most recently done GC */
 static int gc_next_level = 0;          /* Level currently planned for next GC */
 static int gc_ran_finalizers;          /* Whether finalizers ran in last GC */
@@ -1119,15 +1121,13 @@ void attribute_hidden InitMemory()
 
 #define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt) do { \
     if (sggc_info.gen0_count >= gc_interval) \
-        R_gc_internal(R_NoObject); \
+        R_gc_internal(1,R_NoObject); \
     alloc_stmt; \
     while (cp == SGGC_NO_OBJECT) { \
-        if (sggc_info.gen0_count >= gc_interval \
-             && gc_last_level < 2 \
-             && gc_next_level < gc_last_level + 1) { \
+        if (gc_last_level < 2 && gc_next_level < gc_last_level + 1) { \
             gc_next_level = gc_last_level + 1; \
         } \
-        R_gc_internal(R_NoObject); \
+        R_gc_internal(2,R_NoObject); \
         alloc_stmt; \
         if (cp == SGGC_NO_OBJECT && gc_last_level == 2 && !gc_ran_finalizers) \
             fail_stmt; \
@@ -1785,7 +1785,7 @@ SEXP allocS4Object(void)
 
 void R_gc(void)
 {
-    R_gc_internal(R_NoObject);
+    R_gc_internal(0,R_NoObject);
 }
 
 extern double R_getClockIncrement(void);
@@ -1845,12 +1845,15 @@ static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
     if (type < 24) INTEGER(counters_vec)[type] += 1;
 }
 
-/* Main GC procedure.  Argument is a vector in which to store type counts,
+/* Main GC procedure.  Arguments are the reason for collection (0=requested,
+   1=automatic, 2=space needed) and a vector in which to store type counts,
    or R_NoObject if this is not to be done. */
 
-static void R_gc_internal (SEXP counters)
+static void R_gc_internal (int reason, SEXP counters)
 {
-    gc_count++;
+    gc_count += 1;
+    if (gc_next_level == 1) gc_count1 += 1;
+    if (gc_next_level == 2) gc_count2 += 1;
 
     BEGIN_SUSPEND_INTERRUPTS {
 
@@ -1873,12 +1876,15 @@ static void R_gc_internal (SEXP counters)
 
     gc_next_level = ((gc_count&0x7)==0) + ((gc_count&0x1f)==0);
 
-    gc_ran_finalizers = RunFinalizers();
-
     if (gc_reporting) {
-        REprintf("Did garbage collection #%lld at level %d, uncol_count %d\n",
-                  gc_count, gc_last_level, sggc_info.uncol_count);
+        REprintf(
+    "Garbage collection %lld = %lld+%lld+%lld (level %d), %.3f Megabytes, %s\n",
+        gc_count, gc_count-gc_count1-gc_count2, gc_count1, gc_count2, 
+        gc_last_level, (double) sggc_info.total_mem_usage / 1024 / 1024,
+        reason == 0 ? "requested" : reason == 1 ? "automatic" : "space needed");
     }
+
+    gc_ran_finalizers = RunFinalizers();
 }
 
 static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1915,7 +1921,7 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Do a GC, with counts added to 'ans'. */
 
-    R_gc_internal(ans);
+    R_gc_internal(0,ans);
 
     /* Undo counts for objects allocated by R_alloc. */
 

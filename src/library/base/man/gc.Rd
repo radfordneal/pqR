@@ -1,7 +1,7 @@
 % File src/library/base/man/gc.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
-% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{gc}
@@ -14,9 +14,9 @@ gcinfo(verbose)
 \alias{gcinfo}
 \arguments{
   \item{verbose}{logical; if \code{TRUE}, the garbage collection prints
-    statistics about cons cells and the space allocated for vectors.}
-  \item{reset}{logical; if \code{TRUE} the values for maximum space used
-    are reset to the current values.}
+    statistics about numbers of objects and space used.}
+  \item{reset}{logical; if \code{TRUE} the values for maximum counts and
+    space used are reset to the current values.}
 }
 \description{
   A call of \code{gc} causes a garbage collection to take place.
@@ -35,14 +35,17 @@ gcinfo(verbose)
 
   When \code{gcinfo(TRUE)} is in force, messages are sent to the message
   connection at each garbage collection of the form
-\preformatted{    Garbage collection 12 = 10+0+2 (level 0) ...
-    6.4 Mbytes of cons cells used (58\%)
-    2.0 Mbytes of vectors used (32\%)
+\preformatted{  Garbage collection 12 = 10+0+2 (level 0), 12.345 Megabytes, automatic
 }
-  Here the last two lines give the current memory usage rounded up to
-  the next 0.1Mb and as a percentage of the current trigger value.
-  The first line gives a breakdown of the number of garbage collections
-  at various levels (for an explanation see the \sQuote{R Internals} manual).
+  In this message, the number of garbage collections done is broken
+  down by level, and the level of the current collection is displayed
+  (for an explanation see the \sQuote{R Internals} manual).  This is
+  followed by the total memory usage after collection (excluding
+  constants), and by what prompted the current collection --- either
+  ``requested'', ``automatic'', or ``space needed'', the last
+  indicating that an attempt at allocating a new object failed, and
+  collection is being done in an attempt to recover enough memory for
+  it to succeed.
 }
 
 \value{
@@ -53,7 +56,8 @@ gcinfo(verbose)
   the number of segments for objects (see \link{Memory}).  The value
   returned has two rows, \code{"Current"} for current usage, and 
   \code{"Maximum"} for the maximum usage since startup, or a call
-  of \code{gc} with \code{reset=TRUE}.
+  of \code{gc} with \code{reset=TRUE}.  A small number of constant 
+  objects (eg, 0 and \code{TRUE}) are not included in any of these counts.
   
   \code{gcinfo} returns the previous value of the flag.
 }
