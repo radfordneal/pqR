@@ -27,6 +27,9 @@
 /* Define to 1 to enable compressed pointers. */
 /* #undef USE_COMPRESSED_POINTERS */
 
+/* Define to 1 to enable aux1 for attrib with 64-bit uncompressed ptrs */
+/* #undef USE_AUX_FOR_ATTRIB */
+
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.

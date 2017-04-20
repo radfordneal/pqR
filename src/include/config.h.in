@@ -918,6 +918,9 @@
 /* Define this as 1 to enable use of compressed pointers */
 #undef USE_COMPRESSED_POINTERS
 
+/* Define this as 1 to enable aux1 for attrib with 64-bit uncompressed ptrs */
+#undef USE_AUX_FOR_ATTRIB
+
 /* Define this to enable deferred evaluation. */
 #undef R_DEFERRED_EVAL
 

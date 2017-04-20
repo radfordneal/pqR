@@ -213,6 +213,17 @@ if test x"${use_compressed_pointers}" = xyes; then
             [Define to 1 to enable use of compressed pointers.])
 fi
 
+## Enable use aux1 for attributes in builds with 64-bit uncompressed pointers
+AC_ARG_ENABLE([aux-for-attrib],
+[AS_HELP_STRING([--enable-aux-for-attrib],[use auxiliary info for attributes
+                 @<:@no@:>@])],
+[use_aux_for_attrib="${enableval}"],
+[use_aux_for_attrib=no])
+if test x"${use_aux_for_attrib}" = xyes; then
+  AC_DEFINE(USE_AUX_FOR_ATTRIB, 1,
+            [Define to 1 to enable use of auxiliary info for attributes.])
+fi
+
 ## Allow the user to specify that the helpers apparatus can use multithreading.
 AC_ARG_ENABLE([helper_threads],
 [AS_HELP_STRING([--enable-helper-threads],[support use of helper threads @<:@yes@:>@])],
