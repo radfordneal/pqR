@@ -23,56 +23,46 @@
   to run out of resources.  See also \code{\link{memory.limit}}.
 #endif
 
-  All objects in pqR (eg, vectors, symbols, language elements, and
-  internal represenations of argument lists) are stored in nodes.
-  There are several pools of small nodes, used for non-vector objects
-  and for small vectors, that are allocated in pages of many nodes
-  each.  Typically, the small nodes used for pairlists, language
-  elements, and some very small vectors occupy 32 bytes for a 32-bit
-  platform, and 56 bytes for a 64-bit platform.  Small nodes for
-  somewhat larger vectors may be up to a few hundred bytes in size,
-  depending on settings of tuning options.  Larger vectors are
-  allocated individually.
+  Memory is occupied both by visible objects (eg, vectors, symbols,
+  language elements), and by other objects that are used internally
+  (eg, internal representations of argument lists).  In pqR, objects
+  of both sorts are stored in ``segments'', and can be referenced by
+  the index of the segment in which they are located and an offset
+  within this segment.  When pqR is configured with the
+  \code{--enable-compressed-pointers} option, such (index,offset)
+  pairs are the primary way of storing references to objects --- in
+  particular, the SEXP type in C code is such a pair.  When
+  uncompressed pointers are used, the SEXP type is a standard C
+  pointer, but (index,offset) pairs are still used within the memory
+  allocation and garbage collection routines.
 
-  The terminology used in describing memory usage is tied to past
-  implementations, and does not correspond well with this scheme (nor
-  did it in correspond well with the somewhat different scheme used in
-  \R 2.15.0).  The total number of nodes for all objects is referred
-  to as the number of \code{Ncells} (also called ``cons'' cells) ---
-  though note that what looks like a single object to the user may be
-  represented internally by several nodes.  The amount of memory said
-  to be occupied by \code{Ncells} (as reported by \code{\link{gc}}) is
-  the total size of the small nodes, plus the total size of headers
-  for the large vector nodes. The number of \code{Vcells} is the total
-  amount of data space, counted in 8-byte chunks, for large vector
-  nodes (not including the space for the header).  The amount of
-  memory said to be occupied by \code{Vcells} is the number of
-  \code{Vcells} times 8.  
+  Some segments can contain several objects, which for each kind of
+  segment are limited to being no more than a certain size, and of
+  certain types.  Other ``big'' segments contain only one object,
+  which may be of any size, up to the maximum supported by the
+  platform.  All non-vector objects and vector objects with small
+  lengths will be placed in small segments.  Larger vectors (with more
+  than roughly a hundred elements) will be placed in big segments.
 
-  The sum of the memory said to be occupied by
-  \code{Ncells} and said to be occupied by \code{Vcells} is the total
-  memory used for R objects (though note that this does not include
-  some memory that is unused but cannot be freed, because it shares the
-  same page as objects that are still in use).  Note that this memory usage
-  may include some padding in small nodes, to the fixed size for the
-  class of node used.  Note also that memory usage will vary with the
-  platform and R build, both because pointers are of different sizes
-  in 32-bit and 64-bit platforms, and because the amount of padding
-  can vary with tuning options.  
-  
-  Target values for the number of \code{Ncells} and \code{Vcells}
-  are maintained, with initial values (currently) of 
-  350,000 \code{Ncells} and 1,000,000 \code{Vcells} (which totals
-  about 18 Megabytes for a 32-bit implementation, or 29 Megabytes for
-  a 64-bit implementation).
-  This space is not actually allocated initially: rather these values are 
-  the sizes for triggering garbage collection.  
-  The target values will grow or shrink depending on usage, but never 
-  decreasing below the initial values.
+  The amount of memory in use and the maximum used now or previously
+  are reported by \code{\link{gc}} when given \code{TRUE} as its
+  \code{verbose} argument.  The report contains the number of objects
+  (including those not visible to the user), and the total amount of
+  memory used for all objects, including memory for parts of small
+  segments that are not currently being used, and other overhead (but
+  not the memory for holding the the R interpreter's instructions, or
+  memory for things like file buffers that are not closely connected
+  to R objects).  The number of segments allocated is also reported.
+  Currently, segments are never freed, so the current value of this
+  will also be the maximum.  The limit on the number of segments can
+  be set when pqR is configured --- see the R Installation and
+  Administration manual.
 
-  You can find out the current memory consumption by typing \code{\link{gc}()} 
-  at the \R prompt.  Note that following \code{\link{gcinfo}(TRUE)}, automatic
-  garbage collection always prints memory use statistics.
+  Memory usage will vary with the platform and pqR configuration, both
+  because uncompressed pointers are of different sizes in 32-bit and
+  64-bit platforms, and because memory usage is affected by whether
+  pqR was configured with the \code{--enable-compressed-pointers} or
+  \code{--enable-aux-for-attrib} options.
   
   The command-line option \option{--max-ppsize} controls the maximum
   size of the pointer protection stack.  This defaults to 50000, but can
@@ -86,12 +76,15 @@
   \code{\link{Memory-limits}} for the design limitations.
 
   \code{\link{gc}} for information on the garbage collector and total
-  memory usage,  \code{\link{object.size}(a)} for the (approximate)
-  size of \R object \code{a}.  \code{\link{memory.profile}} for
-  profiling the usage of cons cells.
+  memory usage.
+
+  \code{\link{object.size}(a)} for the (approximate)
+  size of \R object \code{a}. 
+
+  \code{\link{memory.profile}} for profiling the usage of cons cells.
 #ifdef windows
 
-  \code{\link{memory.size}} to monitor total memory usage,
+  On Windows, \code{\link{memory.size}} to monitor total memory usage and
   \code{\link{memory.limit}} for the current limit.
 #endif
 }

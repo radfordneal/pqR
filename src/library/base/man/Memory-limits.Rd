@@ -23,30 +23,27 @@
   \R holds all objects in memory, and there are limits based on the
   amount of memory that can be used by all objects:
   \itemize{
-    \item There may be limits on the size of the heap and the number of
-    cons cells allowed -- see \code{\link{Memory}} -- but these are
-    usually not imposed.
+    \item There is a limit on the number of ``segments'' holding objects
+    --- see \code{\link{Memory}} -- but this will seldom be an issue.
     \item There is a limit on the (user) address space of a single
     process such as the \R executable.  This is system-specific, and can
     depend on the executable.
     \item The environment may impose limitations on the resources
     available to a single process: Windows' versions of \R do so directly.
   }
-  Error messages beginning \code{cannot allocate vector of size}
-  indicate a failure to obtain memory, either because the size exceeded
-  the address-space limit for a process or, more likely, because the
-  system was unable to provide the memory.  Note that on a 32-bit build
-  there may well be enough free memory available, but not a large enough
-  contiguous block of address space into which to map it.
 
-  There are also limits on individual objects.  On all builds of \R,
+  Error messages containing phrases such as \code{memory exhausted} or
+  \code{cannot allocate vector} indicate a failure to obtain memory,
+  either because the size exceeded the address-space limit for a
+  process or because the system was unable to provide physical memory.
+  Note that on a 32-bit build there may well be enough free memory
+  available, but not a large enough contiguous block of address space
+  into which to map it.
+
+  There are also limits on individual objects.  In pqR
   the maximum length (number of elements) of a vector is
   \eqn{2^{31} - 1 \approx 2\thinspace 10^9}{2^31 - 1 ~ 2*10^9}, as
-  lengths are stored as signed integers.  In addition, the storage space
-  cannot exceed the address limit, and if you try to exceed that limit,
-  the error message begins \code{cannot allocate vector of length}.
-  The number of characters in a character string is in theory only
-  limited by the address space.
+  lengths are stored as signed integers. 
 }
 \section{Unix}{
   The address-space limit is system-specific: 32-bit OSes
