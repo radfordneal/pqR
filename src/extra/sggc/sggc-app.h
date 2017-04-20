@@ -27,6 +27,13 @@
 #endif
 
 
+/* ELIMINATE USE_AUX_FOR_ATTRIB IF IRRELEVANT. */
+
+#if USE_COMPRESSED_POINTERS || SIZEOF_CHAR_P != 8
+#undef USE_AUX_FOR_ATTRIB
+#endif
+
+
 /* DEFINE SGGC_MAX_SEGMENTS APPROPRIATELY.  Has separate defaults 
    for 32-bit and 64-bit systems, which can be overridden by 
    including -DSGGC_MAX_SEGMENTS=n in CFLAGS. */
@@ -48,7 +55,11 @@
 
 #define SGGC_USE_OFFSET_POINTERS 1  /* Use offset form of data pointers */
 
-#define SET_STATIC 1       /* Static set procedures in source, not linked */
+#define SET_STATIC 1          /* Static set procedures in source, not linked */
+
+#define SGGC_NO_OBJECT_ZERO   /* Make SGGC_NO_OBJECT be all 0s rather than 1s */
+
+#define SGGC_SEG_BLOCKING 2000   /* Alloc segments in big blocks, aligned */
 
 
 /* LENGTH TYPES. */
