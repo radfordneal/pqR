@@ -53,13 +53,20 @@
 
 
 #if USE_COMPRESSED_POINTERS
-#define CPTR_FIELD(index,offset) /* nothing */
-#define LENGTH1 /* nothing */
-#define NILATTRIB /* nothing */
+#   define CPTR_FIELD(index,offset) /* nothing */
+#   define LENGTH1 /* nothing */
+#   define LENGTH1_NONVEC /* nothing */
+#   define NILATTRIB /* nothing */
+#elif USE_AUX_FOR_ATTRIB
+#   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
+#   define LENGTH1 .length = 1,
+#   define LENGTH1_NONVEC /* nothing */
+#   define NILATTRIB /* nothing */
 #else
-#define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
-#define LENGTH1 .length = 1,
-#define NILATTRIB .attrib = R_NilValue,
+#   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
+#   define LENGTH1 .length = 1,
+#   define LENGTH1_NONVEC .length = 1,
+#   define NILATTRIB .attrib = R_NilValue,
 #endif
 
 
@@ -104,7 +111,7 @@ VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
 
 
 /* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
-   R_EmptyEnv.  */
+   R_EmptyEnv.  Leave LENGTH (if present) as zero. */
 
 R_CONST SEXPREC R_env_consts[1] = {
 {
@@ -118,7 +125,8 @@ R_CONST SEXPREC R_env_consts[1] = {
 
 /* Definition of the R_UnboundValue constant, whose address when cast to SEXP
    is R_UnboundValue.  Don't put in read-only memory, so won't have to special
-   case it when clearing LASTSYMENV and LASTSYMENVNOTFOUND. */
+   case it when clearing LASTSYMENV and LASTSYMENVNOTFOUND.  Leave LENGTH
+   (if it exists) as zero. */
 
 SYM_SEXPREC R_sym_consts[1] = { 
 {
@@ -183,13 +191,14 @@ R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
 };
 
 
-/* 1-element pairlist constants. */
+/* 1-element pairlist constants.  Set LENGTH (if it exists) to 1. */
 
 #define LIST1_CONST(car,offset) { \
-  CONST_HEADER(LISTSXP,R_SGGC_LIST1_INDEX,offset), \
-  .u = { .listsxp = \
-          { .carval = car, .cdrval = R_NilValue, .tagval = R_NilValue } \
-       } \
+    CONST_HEADER(LISTSXP,R_SGGC_LIST1_INDEX,offset), \
+    LENGTH1_NONVEC \
+    .u = { .listsxp = \
+            { .carval = car, .cdrval = R_NilValue, .tagval = R_NilValue } \
+         } \
 }
 
 static R_CONST SEXPREC R_List1_consts[] = {
@@ -235,7 +244,7 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 
 /* Initialize constants (and static boxes). */
 
-#if USE_COMPRESSED_POINTERS
+#if USE_COMPRESSED_POINTERS || USE_AUX_FOR_ATTRIB
 
 static const SEXP nilattrib[SGGC_CHUNKS_IN_SMALL_SEGMENT] = {
     R_NilValue, R_NilValue, R_NilValue, R_NilValue,
@@ -272,6 +281,8 @@ void Rf_constant_init(void)
                        1, (char *) &R_NilValue_const
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length0, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
 #endif
                       );
 
@@ -286,6 +297,8 @@ void Rf_constant_init(void)
                        4, (char *) R_ScalarBox_space
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
 #endif
                       );
 
@@ -298,6 +311,8 @@ void Rf_constant_init(void)
                        1, (char *) R_env_consts
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
 #endif
                       );
 
@@ -310,6 +325,8 @@ void Rf_constant_init(void)
                        1, (char *) R_sym_consts
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
 #endif
                       );
 
@@ -325,6 +342,8 @@ void Rf_constant_init(void)
                        R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
 #endif
                       );
 
@@ -338,6 +357,8 @@ void Rf_constant_init(void)
                        (char *) R_List1_consts
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
 #endif
                       );
 

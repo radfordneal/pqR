@@ -113,13 +113,47 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 #endif
 
 
-/* UNCOMPRESSED, 64-BIT POINTERS. */
+/* UNCOMPRESSED, 64-BIT POINTERS, ATTRIBUTE IN DATA AREA. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
 
 sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 {
     unsigned hd = 24;  /* Size of header */
+
+    switch (type) {
+    case RAWSXP:
+        return (hd + SGGC_CHUNK_SIZE-1 + length) / SGGC_CHUNK_SIZE;
+    case CHARSXP:
+        return (hd + SGGC_CHUNK_SIZE-1 + length+1) / SGGC_CHUNK_SIZE;
+    case INTSXP:
+    case LGLSXP:
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)4*length) / SGGC_CHUNK_SIZE;
+    case REALSXP:
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)8*length) / SGGC_CHUNK_SIZE;
+    case VECSXP:
+    case EXPRSXP:
+    case STRSXP:
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)8*length) / SGGC_CHUNK_SIZE;
+    case CPLXSXP:
+        return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
+    case SYMSXP:
+        return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
+    default:
+        return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
+    }
+}
+
+#endif
+
+
+/* UNCOMPRESSED, 64-BIT POINTERS, ATTRIBUTE IN AUXILIARY INFO 1. */
+
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+
+sggc_nchunks_t Rf_nchunks (int type, unsigned length)
+{
+    unsigned hd = 16;  /* Size of header for vector types */
 
     switch (type) {
     case RAWSXP:

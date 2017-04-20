@@ -889,7 +889,9 @@ R_len_t length(SEXP s)
     extern int Rf_envlength(SEXP);
     SEXPTYPE type = TYPEOF(s);
 
-    if ((CONS_TYPES >> type) & 1)
+    if (type == NILSXP)
+        return 0;
+    else if ((CONS_TYPES >> type) & 1)
     {   /* Loop below relies on CDR(R_NilValue) == R_NilValue */
         SEXP t;
         int i;
@@ -903,8 +905,12 @@ R_len_t length(SEXP s)
     }
     else if (type == ENVSXP)
         return Rf_envlength(s);
+#if USE_AUX_FOR_ATTRIB
+    else if ( ! ((VECTOR_OR_CHAR_TYPES >> type) & 1))
+        return 1;
+#endif
     else
-        return LENGTH(s);  /* Assumed to always exist */
+        return LENGTH(s);  /* Always exists unless USE_AUX_FOR_ATTRIB */
 }
 
 /* This is a primitive (with no arguments) */

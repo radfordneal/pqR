@@ -270,7 +270,9 @@ struct promsxp_struct {
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo \
 
-#else /* !USE_COMPRESSED_POINTERS */
+#endif
+
+#if !USE_COMPRESSED_POINTERS && !USE_AUX_FOR_ATTRIB
 
 /* Every node must have a set of sxpinfo flags and an attribute field,
    plus a cptr field giving the compressed pointer to the node.  They
@@ -283,7 +285,20 @@ struct promsxp_struct {
     SEXP attrib; \
     R_len_t length
 
-#endif /* USE_COMPRESSED_POINTERS */
+#endif
+
+#if !USE_COMPRESSED_POINTERS && USE_AUX_FOR_ATTRIB
+
+/* Every node must have a set of sxpinfo flags and a cptr field giving 
+   the compressed pointer to the node.  They also all have an attribute
+   field, but it is in auxiliary information 1.  Not all nodes have
+   a length field, so it's not in the header. */
+
+#define SEXPREC_HEADER \
+    struct sxpinfo_struct sxpinfo; \
+    uint32_t cptr; \
+
+#endif
 
 /* The standard node structure consists of a header followed by the
    node data. */
@@ -293,7 +308,7 @@ struct promsxp_struct {
 
 typedef struct SEXPREC {
     SEXPREC_HEADER;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
     union {
@@ -331,7 +346,7 @@ typedef struct PRIM_SEXPREC {
 #if USE_COMPRESSED_POINTERS
     int32_t padding;
 #endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
     struct primsxp_struct primsxp;
@@ -351,12 +366,17 @@ struct symsxp_struct {
 
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t sym_hash;
 #endif
     struct symsxp_struct symsxp;
 #if USE_COMPRESSED_POINTERS
     int32_t sym_hash;
+#endif
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+    int32_t sym_hash;
+    int32_t padding;
+    int64_t padding2;
 #endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t sym_hash;
@@ -369,7 +389,7 @@ typedef struct SYM_SEXPREC {
 
 typedef struct EXTPTR_SEXPREC {
     SEXPREC_HEADER;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
 #if USE_COMPRESSED_POINTERS
@@ -395,6 +415,9 @@ typedef struct EXTPTR_SEXPREC {
 
 typedef struct VECTOR_SEXPREC {
     SEXPREC_HEADER;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+    R_len_t length;       /* The length, only in vectors for this setup */
+#endif
     R_len_t truelength;   /* The mis-named "truelength" field */
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
@@ -410,11 +433,17 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
                           or nothing if you don't want them to be read-only */
 typedef struct VECTOR_SEXPREC_C {
     SEXPREC_HEADER;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+    R_len_t length;       /* The length, only in vectors for this setup */
+#endif
     R_len_t truelength;   /* The mis-named "truelength" field */
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
     union { double d; int w[2]; int i; char c; char s[8]; } data;
+#if USE_AUX_FOR_ATTRIB
+    double const_padding; /* Needed to fill out full chunk */
+#endif
 } VECTOR_SEXPREC_C;
 
 #define DATAPTR(x)	(((SEXPREC_ALIGN *) UPTR_FROM_SEXP(x)) + 1)
@@ -713,6 +742,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #if USE_COMPRESSED_POINTERS
 #define ATTRIB(x)       NOT_LVALUE(* (SEXP *) SGGC_AUX2(x))
+#elif SIZEOF_CHAR_P==8 && USE_AUX_FOR_ATTRIB
+#define ATTRIB(x)       NOT_LVALUE(* (SEXP *) SGGC_AUX1(CPTR_FROM_SEXP(x)))
 #else
 #define ATTRIB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->attrib)
 #endif

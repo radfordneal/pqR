@@ -178,9 +178,9 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #endif
 
 
-/* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS. */
+/* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS, ATTRIBUTE IN DATA AREA. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
 
 /*    Cons-type:          Vector:             
         info, cptr          info, cptr  
@@ -255,6 +255,92 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_TOTAL_BYTES(type,length) \
     ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE )
+
+#endif
+
+
+/* LAYOUT WITH UNCOMPRESSED 64-BIT POINTERS, ATTRIBUTE IN AUXILIARY INFO 1. */
+
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+
+/*    All:
+        attrib in auxiliary information 1
+
+      Cons-type:          Vector:             
+        info, cptr          info, cptr  
+        car                 length, truelength
+        cdr                 data...
+        tag
+        = 32 bytes          = 32 bytes if length==1
+          (2 chunks)          (2 chunks)
+
+      Symbol:             Primitive:                        External pointer:
+        info, cptr          info, cptr                        info, cptr
+        pname               C-function                        external ptr
+        value               fast-C-function                   prot
+        nextsym             64 bits of info                   tag
+        lastenv, last-enf   = 32 bytes                        = 32 bytes
+        lastbinding         (2 chunks)                        (2 chunks)
+        hash, padding
+        padding
+        = 64 bytes
+          (4 chunks)
+*/
+
+#define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
+
+#define SGGC_AUX1_SIZE 8        /* Attribute, as uncompressed pointer */
+#define SGGC_AUX1_BLOCK_SIZE 2  /* So blocks are the same size as data blocks */
+
+#define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
+
+/* Note: chunks in non-vector types are given by second row below, except
+   for SYMSXP, given by third row. */
+
+#define SGGC_KIND_CHUNKS \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+  2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
+  3,   3,   2,   3,   2,   4, /* 2nd smallest sizes, unused for types 2&4 */ \
+  4,   5,   2,   5,   2,   4, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   2,   8,   2,   4, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   2,  16,   2,   4, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   2,  32,   2,   4, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   2,  32,   2,   4  /* 7th smallest sizes, only for type 0 */ \
+}
+
+#define SGGC_KIND_TYPES \
+{ 0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5, \
+  0, 1, 2, 3, 4, 5  \
+};
+
+#define SGGC_KIND_UNCOLLECTED \
+{ 0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1, \
+  0, 0, 0, 0, 0, 1  \
+};
+
+#define SGGC_CHAR_KIND_START 0
+#define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
+#define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
+#define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
+#define SGGC_SMALL_VEC_KIND (SGGC_N_TYPES + 1)
+
+#define SGGC_TOTAL_BYTES(type,length) \
+    ( (R_size_t) Rf_nchunks(type,length) * SGGC_CHUNK_SIZE /* data part */ \
+       + 8 /* attribute pointer */ )
 
 #endif
 

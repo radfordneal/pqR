@@ -1321,7 +1321,9 @@ SEXP allocSExp(SEXPTYPE t)
         CAR(s) = R_NilValue;
         CDR(s) = R_NilValue;
         TAG(s) = R_NilValue;
+#if !USE_AUX_FOR_ATTRIB
         if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
         return s;
     }
 }
@@ -1338,7 +1340,9 @@ SEXP cons(SEXP car, SEXP cdr)
         UNPROTECT(2);
     }
 
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1359,7 +1363,9 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
         UNPROTECT(3);
     }
 
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1401,7 +1407,9 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 
     SEXP v, n;
 
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(newrho) != 1) LENGTH(newrho) = 1;
+#endif
 
     FRAME(newrho) = valuelist;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
@@ -1433,7 +1441,9 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
         UNPROTECT(2);
     }
 
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
@@ -1472,7 +1482,9 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 
     if (result == 0) {
 	result = alloc_obj(type,1);
+#if !USE_AUX_FOR_ATTRIB
         if (LENGTH(result) != 1) LENGTH(result) = 1;
+#endif
 	SET_PRIMOFFSET(result, offset);
         primitive_cache[offset] = result;
     }
@@ -1501,7 +1513,9 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
         UNPROTECT(3);
     }
 
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(c) != 1) LENGTH(c) = 1;
+#endif
 
 #ifdef not_used_CheckFormals
     if(isList(formals))
@@ -1555,7 +1569,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_sym();
     UNPROTECT(2);
 
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(c) != 1) LENGTH(c) = 1;
+#endif
 
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
@@ -1768,7 +1784,9 @@ SEXP allocList(int n)
 SEXP allocS4Object(void)
 {
    SEXP s = alloc_obj(S4SXP,1);
+#if !USE_AUX_FOR_ATTRIB
    if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
    SET_S4_OBJECT(s);
    TAG(s) = R_NilValue;
    return s;
@@ -2135,7 +2153,9 @@ void R_ReleaseObject(SEXP object)
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
     SEXP s = alloc_obj(EXTPTRSXP,1);
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -2150,7 +2170,9 @@ SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
     fn_ptr tmp;
     SEXP s = alloc_obj(EXTPTRSXP,1);
+#if !USE_AUX_FOR_ATTRIB
     if (LENGTH(s) != 1) LENGTH(s) = 1;
+#endif
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
