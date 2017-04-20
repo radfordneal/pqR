@@ -22,17 +22,11 @@
         "pages" option for Rprofmem is now defunct.
 
         prohibit setting INTERNAL to anything other than a primitive
-
-        Changed how hashing for symbols works, may be desirable to
-        change suppression of serialization of gp bit 1...
-
-        R_alloc doesn't go through allocVector - so won't appear in
-        Rprofmem output.x
   }}
 
   \subsection{INSTALLATION}{
   \itemize{
-  \item There is now a \code{--enable-compressed-pointers} option to
+  \item There is now an \code{--enable-compressed-pointers} option to
         \code{configure}.  When included, pqR will be built with 
         32-bit compressed pointers, which considerably reduces
         memory usage (especially if many small objects are on used) 
@@ -40,6 +34,13 @@
         a system with 32-bit pointers).  Speed on some tasks
         will also be improved, while on other tasks, using compressed
         pointers has a speed penalty of up to about 25\%.
+  \item There is now an \code{--enable-aux-for-attrib} option to
+        \code{configure}.  This is ignored if 
+        \code{--enable-compressed-pointers} is used, or if the platform
+        does not use 64-bit pointers.  Otherwise, it results in 
+        attributes for objects being stored as ``auxiliary information'',
+        which allows for some objects to be stored more compactly,
+        with possible speed and memory advantages.
   }}
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{
@@ -47,11 +48,14 @@
   \item The format of the output of \code{gc} has changed, to reflect
         the characteristics of the new garbage collector.  See
         \code{help(gc)} for details.
-  }
+  \item Memory allocated by a C function using \code{R_alloc} will no
+        longer appear in output of \code{Rprofmem}.
+  }}
 
   \subsection{BUG FIXES}{
   \itemize{
-  \item Cross-references between manuals in doc/manual/R-admin.html, etc.
+  \item Cross-references between manuals in doc/manual, such as R-admin.html
+        and R-exts.html,
         now go to the other manuals in this same place.  Previously (and
         in current R core versions), they went to the manuals of that
         name at cran.r-project.org, even when those manuals are not for

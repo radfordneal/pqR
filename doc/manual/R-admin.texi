@@ -3416,7 +3416,7 @@ gfortran}.
 
 @menu
 * Configuration options::       
-* Compressed pointers::
+* Compressed and uncompressed pointers::
 * Helper threads and task merging::              
 * Internationalization support::  
 * Configuration variables::     
@@ -3426,7 +3426,7 @@ gfortran}.
 * Compile and load flags::      
 @end menu
 
-@node Configuration options, Compressed pointers, Configuration on a Unix-alike, Configuration on a Unix-alike
+@node Configuration options, Compressed and uncompressed pointers, Configuration on a Unix-alike, Configuration on a Unix-alike
 @section Configuration options
 
 @command{configure} has many options: running
@@ -3484,8 +3484,8 @@ If you need to re-configure @R{} with different options you may need to run
 @code{make clean} or even @code{make distclean} before doing so.
 
 
-@node Compressed pointers, Helper threads and task merging, Configuration options, Configuration on a Unix-alike
-@section Compressed pointers
+@node Compressed and uncompressed pointers, Helper threads and task merging, Configuration options, Configuration on a Unix-alike
+@section Compressed and uncompressed pointers
 
 By default, pqR represents objects internally using ordinary pointers
 (machine addresses), which are commonly either 64 bits or 32 bits in
@@ -3510,7 +3510,20 @@ machines (and perhaps others), such a large limit may be undesirable
 otherwise, since it reduces the size of a program that can be handled
 with the ``medium'' memory model, though problems are still unlikely.
 
-@node Helper threads and task merging, Internationalization support, Compressed pointers, Configuration on a Unix-alike
+If uncompressed pointers are used, on a platform with 64-bit pointers,
+the @option{--enable-aux-for-attrib} option to @command{./configure}
+will alter the representation of objects so that attributes are
+stored as ``auxiliary information''.  This allows more compact
+representations of some objects, with possible speed and memory
+benefits.
+
+The @option{--enable-compressed-pointers} and
+@option{--enable-aux-for-attrib} options affect how C code used with
+@code{.Call} and @code{.External} is compiled.  C code compiled with
+one setting for these options must not be used by a version of pqR
+compiled with other settings.
+
+@node Helper threads and task merging, Internationalization support, Compressed and uncompressed pointers, Configuration on a Unix-alike
 @section Helper threads and task merging
 
 Support for computations in helper threads and for merging of tasks is

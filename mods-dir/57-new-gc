@@ -4,3 +4,6 @@ Information about this is in NEWS, R-admin, R-exts, and R-ints.
 
 Also fixes the problem of manual cross-references going to wrong
 versons at r-project.org (noted in NEWS).
+
+Changed how hashing for symbols works, may be desirable to
+change suppression of serialization of gp bit 1...
