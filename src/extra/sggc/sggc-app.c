@@ -230,15 +230,26 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
     if (sggctype == 0)
         return;
 
-    SEXP n = SEXP_FROM_CPTR(cptr);
+    SEXP a, n;
 
-    if (CHK_NO_OBJECT(ATTRIB(n)) && ATTRIB(n) != R_NilValue) {
-        sggc_cptr_t p = CPTR_FROM_SEXP(ATTRIB(n));
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+    a = * (SEXP *) SGGC_AUX1(cptr);  /* avoid waste of CPTR -> UPTR -> CPTR */
+#else
+    n = SEXP_FROM_CPTR(cptr);
+    a = ATTRIB(n);
+#endif
+
+    if (CHK_NO_OBJECT(a) && a != R_NilValue) {
+        sggc_cptr_t p = CPTR_FROM_SEXP(a);
         sggc_look_at(p);
     }
 
     if (sggctype == 1)
         return;
+
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
+    n = SEXP_FROM_CPTR(cptr);
+#endif
 
     if (sggctype == 2) {
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
