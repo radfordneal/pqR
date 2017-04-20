@@ -132,11 +132,15 @@
   works, and even if it works at all, depends on the C and Fortran
   compilers and the platform.)
   
-  Lists, functions are other \R objects can (for historical reasons) be
-  passed to \code{.C}, but the \code{\link{.Call}} interface is much
-  preferred.  All inputs apart from atomic vectors should be regarded as
-  read-only, and use of any inputs other that vectors (including lists), 
-  functions and environments are now deprecated.
+  Lists, functions are other \R objects can (for historical reasons)
+  be passed to \code{.C}, but the \code{\link{.Call}} interface is
+  much preferred.  All inputs apart from atomic vectors should be
+  regarded as read-only, and use of any inputs other that vectors
+  (including lists), functions and environments are now deprecated.
+  If compressed pointers are used, passing non-vector objects will
+  work only if the argument is recevied as a \code{void*} pointer,
+  then cast to \code{uintptr_t}, then to \code{SEXP} (this should work
+  when SEXP is either a compressed an uncompressed pointer).  
 }
 
 \section{Use of \code{DUP = FALSE}}{

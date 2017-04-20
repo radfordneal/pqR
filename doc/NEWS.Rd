@@ -10,18 +10,12 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item pqR now uses a new garbage collector.  
-
-        Previously deprecated 
-        SETLENGTH is now eliminated.  Passing non-vectors as SEXP 
-        args with .C is now tricky (see dotcode.c).  Disabled call_R
-        and call_S (unused?).
-
-        "identify" was returning C NULL sometimes - changed to R NULL.
-
-        "pages" option for Rprofmem is now defunct.
-
-        prohibit setting INTERNAL to anything other than a primitive
+  \item pqR now uses a new garbage collector and new schemes for memory
+        layout.  Objects are represented more compactly, much more compactly
+        if ``compressed pointers'' are used. Garbage collection is faster,
+        and will have a more localized memory access/write pattern, of
+        significance for cache performance and for performance with
+        functions like \code{mclapply} from the \code{parallel} package.
   }}
 
   \subsection{INSTALLATION}{
@@ -29,7 +23,7 @@
   \item There is now an \code{--enable-compressed-pointers} option to
         \code{configure}.  When included, pqR will be built with 
         32-bit compressed pointers, which considerably reduces
-        memory usage (especially if many small objects are on used) 
+        memory usage (especially if many small objects are used) 
         on a system with 64-bit pointers (slightly on
         a system with 32-bit pointers).  Speed on some tasks
         will also be improved, while on other tasks, using compressed
@@ -45,11 +39,34 @@
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{
   \itemize{
+  \item Documentation in the ``R Installation and Administration'',
+        ``Writing R Extensions'', and ``R Internals'' manuals has
+        been updated to reflect the new garbage collection and memory
+        layout schemes.  There are also updates to \code{help(Memory)},
+        \code{help("Memory-limits")}, and \code{help(gc)}.
   \item The format of the output of \code{gc} has changed, to reflect
         the characteristics of the new garbage collector.  See
         \code{help(gc)} for details.
   \item Memory allocated by a C function using \code{R_alloc} will no
         longer appear in output of \code{Rprofmem}.
+  \item The \code{pages} argument for Rprofmem is now ignored.
+  }}
+
+  \subsection{CHANGES TO THE C API}{
+  \itemize{
+  \item The \code{SETLENGTH} function has been eliminated.  It has never 
+        been safe to use.
+  \item The probably never-used \code{call_R} and \code{call_S} functions
+        have been disabled.
+  \item It is now illegal to set the \code{INTERNAL} field of a symbol
+        to anything other than a primitive function (\code{BUILTINSXP}
+        or \code{SPECIALSXP} type).
+  \item Passing a non-vector object to a C function using \code{.C} is now
+        even less advisable than before.  If compressed pointers are used,
+        this will work only if the argument is recevied as a \code{void*}
+        pointer, then cast to \code{uintptr_t}, then to \code{SEXP} (this
+        should work when SEXP is either a compressed an uncompressed 
+        pointer).
   }}
 
   \subsection{BUG FIXES}{
