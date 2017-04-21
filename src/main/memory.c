@@ -154,12 +154,12 @@ static unsigned int char_hash_size = STRHASHINITSIZE;
 static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 
-/* Variables controlling when garbage collections are done. */
+/* Variables recording garbage collections and other state. */
 
-static int gc_interval = 1000000;      /* Interval between garbage collections*/
 static long long int gc_count = 0;     /* Number of garbage collections done */
 static long long int gc_count1 = 0;    /*   - at level 1 */
 static long long int gc_count2 = 0;    /*   - at level 2 */
+static long long int gc_count_last_full; /* gc_count after last done at lev 2 */
 static int gc_last_level = 0;          /* Level of most recently done GC */
 static int gc_next_level = 0;          /* Level currently planned for next GC */
 static int gc_ran_finalizers;          /* Whether finalizers ran in last GC */
@@ -1004,9 +1004,6 @@ void attribute_hidden InitMemory()
     valgrind_test();
 #endif
 
-    if (getenv("R_GC_INTERVAL") && atoi(getenv("R_GC_INTERVAL")) > 0)
-        gc_interval = atoi(getenv("R_GC_INTERVAL"));
-
     /* Set up protection stack now, in case debug output uses it. */
 
     R_StandardPPStackSize = R_PPStackSize;
@@ -1103,11 +1100,71 @@ void attribute_hidden InitMemory()
 }
 
 
+/* GC STRATEGY.  The numerical constants below are tunable, as is the
+   overall strategy.  The numerical constants have not been given
+   names because they are used only here, and their meanings are best
+   discerned by looking at this code. */
+
+static int gc_countdown = 100;  /* Collections before next strategic decision */
+
+static double recovery_frac0 = 0.5;  /* Recent average recovery from gen0 */
+static double recovery_frac1 = 0.5;  /* Recent average recovery from gen1 */
+static double recovery_frac2 = 0.1;  /* Recent average recovery from gen2 */
+
+static void gc_strategy (void)
+{
+    gc_countdown = 100;
+
+    if (sggc_info.gen0_count * recovery_frac0 
+         < 0.75 * (sggc_info.gen1_count + sggc_info.gen2_count))
+        return;
+
+    if ((gc_count - gc_count_last_full) * recovery_frac2 > 4.0)
+        gc_next_level = 2;
+    else if (sggc_info.gen1_count * recovery_frac1 
+         < 0.1 * (sggc_info.gen1_count + sggc_info.gen2_count))
+        gc_next_level = 0;    
+    else 
+        gc_next_level = 1;
+
+    R_gc_internal(1,R_NoObject);
+}
+
+static void update_recovery_fractions (struct sggc_info old_sggc_info)
+{
+    switch (gc_last_level) {
+    case 0:
+        recovery_frac0 = 0.9 * recovery_frac0 + 0.1 * (1 - 
+          (double)(sggc_info.gen1_count-old_sggc_info.gen1_count) 
+            / (1+old_sggc_info.gen0_count));
+        if (recovery_frac0 < 0.1) recovery_frac0 = 0.1;
+        break;
+    case 1:
+        recovery_frac1 = 0.9 * recovery_frac1 + 0.1 * (1 -
+          (double)(sggc_info.gen2_count-old_sggc_info.gen2_count) 
+            / (1+old_sggc_info.gen1_count));
+        if (recovery_frac1 < 0.1) recovery_frac1 = 0.1;
+        break;
+    case 2: ;
+        double recovered = old_sggc_info.gen2_count + old_sggc_info.gen1_count
+                             - sggc_info.gen2_count;
+        recovery_frac2 = 0.9 * recovery_frac2 + 0.1 * (
+         recovered / (1 + old_sggc_info.gen2_count + old_sggc_info.gen1_count));
+        if (recovery_frac2 < 0.05) recovery_frac2 = 0.05;
+        break;
+    
+    }
+
+    if (0) /* may be enabled for debugging/tuning */
+        printf ("Recovery fractions: %.3f %.3f %.3f\n",
+                 recovery_frac0, recovery_frac1, recovery_frac2);
+}
+
 /* Macro to wrap allocation statement in code to do garbage collections. */
 
 #define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt) do { \
-    if (sggc_info.gen0_count >= gc_interval) \
-        R_gc_internal(1,R_NoObject); \
+    gc_countdown -= 1; \
+    if (gc_countdown <= 0) gc_strategy(); \
     alloc_stmt; \
     while (cp == SGGC_NO_OBJECT) { \
         if (gc_last_level < 2 && gc_next_level < gc_last_level + 1) { \
@@ -1863,6 +1920,8 @@ static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
 
 static void R_gc_internal (int reason, SEXP counters)
 {
+    struct sggc_info old_sggc_info = sggc_info;
+
     gc_count += 1;
     if (gc_next_level == 1) gc_count1 += 1;
     if (gc_next_level == 2) gc_count2 += 1;
@@ -1886,7 +1945,10 @@ static void R_gc_internal (int reason, SEXP counters)
 
     } END_SUSPEND_INTERRUPTS;
 
-    gc_next_level = ((gc_count&0x7)==0) + ((gc_count&0x1f)==0);
+    if (gc_last_level == 2)
+        gc_count_last_full = gc_count;
+
+    gc_next_level = 2;  /* just in case - should be changed before next call */
 
     if (gc_reporting) {
         REprintf(
@@ -1895,6 +1957,8 @@ static void R_gc_internal (int reason, SEXP counters)
         gc_last_level, (double) sggc_info.total_mem_usage / 1024 / 1024,
         reason == 0 ? "requested" : reason == 1 ? "automatic" : "space needed");
     }
+
+    update_recovery_fractions(old_sggc_info);
 
     gc_ran_finalizers = RunFinalizers();
 }
