@@ -631,7 +631,7 @@ static SEXP R_BaseNamespaceName;
 void attribute_hidden InitBaseEnv()
 {
     R_BaseEnv = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv);
-    UPTR_FROM_SEXP(R_BaseEnv)->sxpinfo.base_env = 1;
+    UPTR_FROM_SEXP(R_BaseEnv)->sxpinfo.trace_base = 1;
 }
 
 void attribute_hidden InitGlobalEnv()
@@ -644,7 +644,7 @@ void attribute_hidden InitGlobalEnv()
     R_PreserveObject(R_GlobalCachePreserve);
 
     R_BaseNamespace = NewEnvironment(R_NilValue, R_NilValue, R_GlobalEnv);
-    UPTR_FROM_SEXP(R_BaseNamespace)->sxpinfo.base_env = 1;
+    UPTR_FROM_SEXP(R_BaseNamespace)->sxpinfo.trace_base = 1;
     R_PreserveObject(R_BaseNamespace);
     SET_SYMVALUE(install(".BaseNamespaceEnv"), R_BaseNamespace);
     R_BaseNamespaceName = ScalarString(mkChar("base"));

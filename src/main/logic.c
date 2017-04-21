@@ -207,7 +207,7 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 
     /* Quickly do scalar operation on logical with no attributes. */
 
-    if (len==1 && isLogical(arg) && ATTRIB(arg)==R_NilValue) {
+    if (len==1 && isLogical(arg) && !HAS_ATTRIB(arg)) {
         int v = LOGICAL(arg)[0];
         return ScalarLogicalMaybeConst (v==NA_LOGICAL ? v : !v);
     }

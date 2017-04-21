@@ -1335,7 +1335,7 @@ static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
     if(TYPEOF(x) == type) {
         if (! (variant & VARIANT_PENDING_OK) )
             WAIT_UNTIL_COMPUTED(x);
-        if(ATTRIB(x) == R_NilValue) 
+        if (!HAS_ATTRIB(x)) 
             return x;
         if (NAMEDCNT_EQ_0(x))
             ans = x;
@@ -1387,7 +1387,7 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	case CPLXSXP:
 	case STRSXP:
 	case RAWSXP:
-	    if(ATTRIB(x) == R_NilValue)
+	    if (!HAS_ATTRIB(x))
                 return x;
             if (NAMEDCNT_EQ_0(x))
                 ans = x;
@@ -1884,7 +1884,7 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	log_ans = 0;
 
     /* We allow a "names" attribute on any vector. */
-    if (log_ans && ATTRIB(CAR(args)) != R_NilValue) {
+    if (log_ans && HAS_ATTRIB(CAR(args))) {
 	a = ATTRIB(CAR(args));
 	while(a != R_NilValue) {
 	    if (TAG(a) != R_NamesSymbol) {

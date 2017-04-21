@@ -351,9 +351,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     int type = TYPEOF(arg1);
 
-    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 
-          && (ATTRIB(arg1)==R_NilValue || 
-               !isObject(arg1) && (variant&VARIANT_ANY_ATTR))) {
+    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 &&
+         (!HAS_ATTRIB(arg1) || !isObject(arg1) && (variant&VARIANT_ANY_ATTR))) {
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             switch (opcode) {
@@ -380,9 +379,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             default: abort();
             }
         }
-        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1 
-                   && (ATTRIB(arg2)==R_NilValue || 
-                        !isObject(arg2) && (variant&VARIANT_ANY_ATTR))) {
+        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1 &&
+         (!HAS_ATTRIB(arg2) || !isObject(arg2) && (variant&VARIANT_ANY_ATTR))) {
 
             if (type==REALSXP) {
 
@@ -1151,7 +1149,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     FIXUP_NULL_AND_CHECK_TYPES(y, ypi);
 
     nx = LENGTH(x);
-    if (ATTRIB(x) != R_NilValue) {
+    if (HAS_ATTRIB(x)) {
         xattr = TRUE;
         xarray = isArray(x);
         xts = isTs(x);
@@ -1159,7 +1157,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     }
     else xarray = xts = xattr = FALSE;
     ny = LENGTH(y);
-    if (ATTRIB(y) != R_NilValue) {
+    if (HAS_ATTRIB(y)) {
         yattr = TRUE;
         yarray = isArray(y);
         yts = isTs(y);
@@ -1478,8 +1476,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
     else
         errorcall(call, _("invalid argument to unary operator"));
 
-    if (ans != s1 && ATTRIB(s1) != R_NilValue 
-         && (obj1 || !(variant & VARIANT_ANY_ATTR))) {
+    if (ans!=s1 && HAS_ATTRIB(s1) && (obj1 || !(variant & VARIANT_ANY_ATTR))) {
         PROTECT(ans);
         DUPLICATE_ATTRIB(ans,s1);
         if (isObject(ans) && !obj1) 
@@ -1658,7 +1655,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             sy = sa;
             *REAL(sy) = res;
         }
-        else if ((variant & VARIANT_STATIC_BOX_OK) && (ATTRIB(sa)==R_NilValue
+        else if ((variant & VARIANT_STATIC_BOX_OK) && (!HAS_ATTRIB(sa)
                    || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
             sy = R_ScalarRealBox;
             *REAL(sy) = res;
@@ -1808,9 +1805,8 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         int n = LENGTH(x);
         if (n == 1) {
             s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
-              : (variant&VARIANT_STATIC_BOX_OK) != 0 
-                    && ATTRIB(x) == R_NilValue ? R_ScalarIntegerBox
-              :   allocVector1INT();
+              : (variant&VARIANT_STATIC_BOX_OK) != 0 && !HAS_ATTRIB(x) 
+                  ? R_ScalarIntegerBox : allocVector1INT();
             int v = *INTEGER(x);
             WAIT_UNTIL_COMPUTED(x);
             *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
@@ -1837,9 +1833,8 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         }
         else if (n == 1) {
             s = NAMEDCNT_EQ_0(x) ? x 
-              : (variant&VARIANT_STATIC_BOX_OK) != 0 
-                    && ATTRIB(x) == R_NilValue ? R_ScalarRealBox
-              :   allocVector1REAL();
+              : (variant&VARIANT_STATIC_BOX_OK) != 0 && !HAS_ATTRIB(x)
+                  ? R_ScalarRealBox : allocVector1REAL();
             WAIT_UNTIL_COMPUTED(x);
             *REAL(s) = fabs(*REAL(x));
         }

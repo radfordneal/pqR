@@ -218,13 +218,17 @@ struct sxpinfo_struct {
                                  when SEXPTYPE was an enum */
 
     /* Miscellaneous flags, some with multiple meanings depending on type */
-    unsigned int spec_sym : 1;    /* Symbol: this is a "special" symbol,
-                                     Environment: has no special symbols */
-    unsigned int base_env : 1;    /* Environment: R_BaseEnv or R_BaseNamespace*/
+
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep : 1;       /* Function: is to be debugged just once */
-    unsigned int trace_basec : 1; /* Function: is being traced,
-                                     Symbol: has base binding in global cache */
+    unsigned int rstep_spec : 1;  /* Function: is to be debugged just once,
+                                     Symbol: this is a "special" symbol,
+                                     Environment: has no special symbols */
+    unsigned int trace_base : 1;  /* Function: is being traced,
+                                     Symbol: has base binding in global cache,
+                                     Environment: R_BaseEnv or R_BaseNamespace*/
+    unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
+                                     not used when ATTRIB isn't normal attrib */
+    unsigned int unused : 1;
 
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
@@ -748,8 +752,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define ATTRIB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->attrib)
 #endif
 
+#define HAS_ATTRIB(x)   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.has_attrib)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
-#define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_basec)
+#define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
@@ -762,7 +767,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
     SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
     if (_x_->sxpinfo.type!=_v_) _x_->sxpinfo.type = _v_; \
   } while (0)
-#define SET_RTRACE(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.trace_basec=(v))
+#define SET_RTRACE(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.trace_base=(v))
 #define SETLEVELS(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
@@ -814,8 +819,8 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define CLOENV(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.closxp.env)
 #define RDEBUG(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
 #define SET_RDEBUG(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
-#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep)
-#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep=(v))
+#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec)
+#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.pname)
@@ -829,13 +834,13 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_basec) /* 1 = base binding
+#define BASE_CACHE(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base) /* 1 = base binding
                                                                in global cache*/
-#define SET_BASE_CACHE(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.trace_basec = (v))
+#define SET_BASE_CACHE(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.trace_base = (v))
 
 /* Flag indicating whether a symbol is special. */
-#define SPEC_SYM(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.spec_sym)
-#define SET_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.spec_sym = (v)) 
+#define SPEC_SYM(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec)
+#define SET_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v)) 
 
 /* Environment Access Macros */
 #define FRAME(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.frame)
@@ -843,10 +848,10 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define HASHTAB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.hashtab)
 #define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
-#define NO_SPEC_SYM(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.spec_sym) 
+#define NO_SPEC_SYM(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec) 
                                            /* 1 = env has no special symbol */
-#define SET_NO_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.spec_sym = (v))
-#define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_env)
+#define SET_NO_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v))
+#define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )

@@ -1512,7 +1512,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
             for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {
                 SEXP v = VECTOR_ELT(ixvals,j);
-                if (v==R_NilValue || NAMEDCNT_GT_1(v) || ATTRIB(v)!=R_NilValue){
+                if (v==R_NilValue || NAMEDCNT_GT_1(v) || HAS_ATTRIB(v)){
                     v = allocVector(INTSXP,1);
                     SET_VECTOR_ELT(ixvals,j,v);
                 }
@@ -1549,7 +1549,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
                been assigned to another variable (NAMEDCNT(v) > 1), and when an
                attribute has been attached to it. */
 
-            if (v == R_NilValue || NAMEDCNT_GT_1(v) || ATTRIB(v) != R_NilValue)
+            if (v == R_NilValue || NAMEDCNT_GT_1(v) || HAS_ATTRIB(v))
                 REPROTECT(v = allocVector(val_type, 1), vpi);
 
             switch (val_type) {
@@ -2768,8 +2768,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
         }
         else {
             if (NAMEDCNT_GT_1(res) && R_binding_cell != R_NilValue
-                 && isVectorAtomic(res) && LENGTH(res) == 1
-                 && ATTRIB(res) == R_NilValue) {
+              && isVectorAtomic(res) && LENGTH(res) == 1 && !HAS_ATTRIB(res)) {
                 if (0) { /* Enable for debugging */
                     if (installed_already("UNSHARED.DEBUG") != R_NoObject)
                         Rprintf("Making %s unshared\n",CHAR(PRINTNAME(e)));
@@ -3841,7 +3840,7 @@ typedef union { double dval; int ival; } scalar_value_t;
 static R_INLINE int bcStackScalar(R_bcstack_t *s, scalar_value_t *v)
 {
     SEXP x = *s;
-    if (ATTRIB(x) == R_NilValue) {
+    if (!HAS_ATTRIB(x)) {
 	switch(TYPEOF(x)) {
 	case REALSXP:
 	    if (LENGTH(x) == 1) {
@@ -4689,7 +4688,7 @@ static void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
     SEXP vec = GETSTACK_PTR(sx);
     int i = bcStackIndex(si) - 1;
 
-    if (ATTRIB(vec) == R_NilValue && i >= 0) {
+    if (!HAS_ATTRIB(vec) && i >= 0) {
 	switch (TYPEOF(vec)) {
 	case REALSXP:
 	    if (LENGTH(vec) <= i) break;
@@ -4833,7 +4832,7 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     else
 	SET_NAMEDCNT_0(vec);
 
-    if (ATTRIB(vec) == R_NilValue) {
+    if (!HAS_ATTRIB(vec)) {
 	int i = bcStackIndex(si);
 	if (i > 0) {
 	    scalar_value_t v;

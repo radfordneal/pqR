@@ -653,7 +653,7 @@ SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n,
             /* Must remove any "names" attribute of s2 to match action of
                copyMostAttrib.  Any "dim" and "dimnames" attributes are allowed
                to stay, since they will be overwritten anyway. */
-            if (ATTRIB(s2)!=R_NilValue) 
+            if (HAS_ATTRIB(s2)) 
                 setAttrib (s2, R_NamesSymbol, R_NilValue);
             return s2;
         }
@@ -661,7 +661,7 @@ SEXP attribute_hidden alloc_or_reuse (SEXP s1, SEXP s2, SEXPTYPE typ, int n,
             /* Can use 1st arg's space only if 2nd arg has no attributes, else
                we may not get attributes of result right. */
             if (n1==n && TYPEOF(s1)==typ && (local_assign1 || NAMEDCNT_EQ_0(s1))
-                      && ATTRIB(s2)==R_NilValue)
+                      && !HAS_ATTRIB(s2))
                 return s1;
         }
     } 

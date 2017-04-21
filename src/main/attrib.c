@@ -206,8 +206,7 @@ SEXP getAttrib(SEXP vec, SEXP name)
     if(TYPEOF(vec) == CHARSXP)
 	error("cannot have attributes on a CHARSXP");
     /* pre-test to avoid expensive operations if clearly not needed -- LT */
-    if (ATTRIB(vec) == R_NilValue &&
-	! (TYPEOF(vec) == LISTSXP || TYPEOF(vec) == LANGSXP))
+    if (!HAS_ATTRIB(vec) && !(TYPEOF(vec) == LISTSXP || TYPEOF(vec) == LANGSXP))
 	return R_NilValue;
 
     if (isString(name)) name = install(translateChar(STRING_ELT(name, 0)));

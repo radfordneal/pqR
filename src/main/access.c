@@ -205,8 +205,15 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
              "value for 'SET_ATTRIB' must be pairlist or R_NilValue, not '%s'",
               v == R_NoObject ? "R_NoObject" : type2char(TYPEOF(x)));
         if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
-        CHECK_OLD_TO_NEW(x, v);
-        ATTRIB(x) = v;
+        if (v == R_NilValue) {
+            ATTRIB(x) = R_NilValue;
+            HAS_ATTRIB(x) = 0;
+        }
+        else {
+            CHECK_OLD_TO_NEW(x, v);
+            ATTRIB(x) = v;
+            HAS_ATTRIB(x) = 1;
+        }
     }
 }
 
@@ -214,8 +221,15 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
     if (ATTRIB(x) != v) {
         if (v == R_NoObject) abort();
         if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP) abort();
-        CHECK_OLD_TO_NEW(x, v);
-        ATTRIB(x) = v;
+        if (v == R_NilValue) {
+            ATTRIB(x) = R_NilValue;
+            HAS_ATTRIB(x) = 0;
+        }
+        else {
+            CHECK_OLD_TO_NEW(x, v);
+            ATTRIB(x) = v;
+            HAS_ATTRIB(x) = 1;
+        }
     }
 }
 

@@ -306,7 +306,7 @@ static inline int whether_suppress_drop (SEXP sb)
 {
     SEXP d;
     return TYPEOF(sb) != LGLSXP 
-             && ATTRIB(sb) != R_NilValue
+             && HAS_ATTRIB(sb)
              && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
              && LENGTH(d) == 1;
 }
@@ -1120,7 +1120,7 @@ static int ExtractExactArg(SEXP *args_ptr)
 
 static R_INLINE R_len_t simple_index (SEXP s)
 {
-    if (ATTRIB(s) != R_NilValue && getAttrib(s,R_DimSymbol) != R_NilValue)
+    if (HAS_ATTRIB(s) && getAttrib(s,R_DimSymbol) != R_NilValue)
         return 0;
 
     switch (TYPEOF(s)) {
@@ -1521,7 +1521,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
         PROTECT(ans);
     }
 
-    if (ATTRIB(ans) != R_NilValue) { /* remove probably erroneous attr's */
+    if (HAS_ATTRIB(ans)) { /* remove probably erroneous attr's */
 	setAttrib(ans, R_TspSymbol, R_NilValue);
 #ifdef _S4_subsettable
 	if(!IS_S4_OBJECT(x))

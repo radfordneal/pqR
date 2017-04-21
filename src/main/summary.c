@@ -409,17 +409,17 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
 
     case INTSXP:  
-        if (LENGTH(arg) == 1 && ATTRIB(arg) == R_NilValue) break;
+        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) break;
         WAIT_UNTIL_COMPUTED(arg);
         return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
 
     case REALSXP:
-        if (LENGTH(arg) == 1 && ATTRIB(arg) == R_NilValue) break;
+        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) break;
         WAIT_UNTIL_COMPUTED(arg);
         return ScalarReal (rsum (REAL(arg), LENGTH(arg), 0));
 
     case CPLXSXP:
-        if (LENGTH(arg) == 1 && ATTRIB(arg) == R_NilValue) break;
+        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) break;
         WAIT_UNTIL_COMPUTED(arg);
         return ScalarComplex (csum (COMPLEX(arg), LENGTH(arg), 0));
 

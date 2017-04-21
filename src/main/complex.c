@@ -247,9 +247,9 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
     /* Copy attributes from longer argument. */
 
-    if (ATTRIB(s2)!=R_NilValue && n2==n && ans!=s2)
+    if (HAS_ATTRIB(s2) && n2==n && ans!=s2)
         copyMostAttrib(s2, ans);
-    if (ATTRIB(s1)!=R_NilValue && n1==n && ans!=s1)
+    if (HAS_ATTRIB(s1) && n1==n && ans!=s1)
         copyMostAttrib(s1, ans); /* Done 2nd so s1's attrs overwrite s2's */
 
     UNPROTECT(1);

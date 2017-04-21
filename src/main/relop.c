@@ -100,8 +100,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         nx = LENGTH(x);
         ny = LENGTH(y);
 
-        if (ATTRIB(x) == R_NilValue && ATTRIB(y) == R_NilValue 
-             && nx > 0 && ny > 0) {
+        if (!HAS_ATTRIB(x) && !HAS_ATTRIB(y) && nx > 0 && ny > 0) {
     
             /* Handle scalars even quicker, using ScalarLogicalMaybeConst. */
     
