@@ -343,6 +343,9 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int primsxp_fast_sub:1;/* subassign fn that can use fast method*/
     unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument (only
                                        for when fast_cfun != NULL */
+#if USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
+    int32_t padding1, padding2;
+#endif
 };
 
 typedef struct PRIM_SEXPREC {
@@ -406,11 +409,11 @@ typedef struct EXTPTR_SEXPREC {
     SEXP prot;
     SEXP tag;
 #endif
+#if SIZEOF_CHAR_P == 4
+    int32_t padding;
+#endif
 #if USE_COMPRESSED_POINTERS
     int32_t padding1, padding2;
-#endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
-    int32_t padding;
 #endif
 } EXTPTR_SEXPREC, *EXTPTRSEXP;
 

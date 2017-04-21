@@ -113,10 +113,11 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:                        External pointer:
         info, pname         info, padding                     info, unused/shift
         value, nextsym      C-function                        prot, tag
-        lastenv, last-enf   fast-C-function                   external ptr
+        lastenv, last-enf   fast-C-function                   external ptr(+pad)
         lastbinding, hash   64 bits of info                   padding, padding
-        = 32 bytes          = 32 bytes                        = 32 bytes
-          (2 chunks)          (2 chunks)                        (2 chunks)
+        = 32 bytes          padding if 32-bit                 = 32 bytes
+          (2 chunks)        = 32 bytes                        (2 chunks)
+                            (2 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
