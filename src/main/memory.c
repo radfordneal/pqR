@@ -1646,8 +1646,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 /* Fast, specialized allocVector for vectors of length 1.  The type
    passed must be RAWSXP, LGLSXP, INTSXP, or REALSXP, so that they all
    fit in a SGGC_SMALL_VEC_KIND object, and so that there's no need to
-   initialize a pointer in the data part.  The kind passed must be the
-   correct one for the type with length 1.
+   initialize a pointer in the data part. 
 
    The version with arguments is static.  Versions for each allowed
    type are defined below for use elsewhere in the interpreter, in which
