@@ -4355,6 +4355,15 @@ static R_INLINE SEXP FIND_VAR_NO_CACHE(SEXP symbol, SEXP rho, SEXP cell)
     return value;
 }
 
+static void getvar_error (SEXP value, SEXP symbol)
+{
+    if (value == R_UnboundValue)
+	unbound_var_error(symbol);
+    if (value == R_MissingArg)
+	arg_missing_error(symbol);
+    abort();
+}
+
 static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 			    Rboolean dd, Rboolean keepmiss,
 			    R_binding_cache_t vcache, int sidx)
@@ -4371,15 +4380,15 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     else
 	value = findVar(symbol, rho);
 
-    if (value == R_UnboundValue)
-	unbound_var_error(symbol);
-    else if (value == R_MissingArg) {
-	if (! keepmiss) arg_missing_error(symbol);
-    }
-    else if (TYPEOF(value) == PROMSXP)
-	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
-    else if (NAMEDCNT_EQ_0(value))
+    if (TYPEOF(value) == PROMSXP)
+        return FORCE_PROMISE(value, symbol, rho, keepmiss);
+
+    if (value == R_UnboundValue || value == R_MissingArg && !keepmiss)
+        getvar_error(value,symbol);
+
+    if (NAMEDCNT_EQ_0(value))
 	SET_NAMEDCNT_1(value);
+
     return value;
 }
 
