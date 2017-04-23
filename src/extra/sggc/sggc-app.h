@@ -40,7 +40,7 @@
 
 #define SGGC_SMALL_DATA_AREA_BLOCKING 128
 
-#if 0
+#if 1
 #define SGGC_SMALL_DATA_AREA_ALIGN 32 /* Two chunks, suitable for all configs */
 #endif
 
