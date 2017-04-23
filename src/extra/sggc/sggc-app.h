@@ -34,6 +34,17 @@
 #endif
 
 
+/* BLOCKING FOR SMALL DATA AREAS.  Alignment may best be omitted if large
+   blocks are used and the calloc supplied always allocates such to an
+   aligned section of the address space. */
+
+#define SGGC_SMALL_DATA_AREA_BLOCKING 128
+
+#if 0
+#define SGGC_SMALL_DATA_AREA_ALIGN 32 /* Two chunks, suitable for all configs */
+#endif
+
+
 /* DEFINE SGGC_MAX_SEGMENTS APPROPRIATELY.  Has separate defaults 
    for 32-bit and 64-bit systems, which can be overridden by 
    including -DSGGC_MAX_SEGMENTS=n in CFLAGS. */
@@ -76,7 +87,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
    types, partly because of the possible use of SET_TYPE.  Instead,
    there are only the SGGC types below, whose distinctions are useful for
    determining what pointers to follow in an object in find_object_ptrs,
-   and to make some objected uncollected.
+   and to make some objects uncollected.
 
    These SGGC types are as follows:
 

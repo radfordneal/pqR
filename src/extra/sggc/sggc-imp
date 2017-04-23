@@ -574,6 +574,11 @@ help if the process is forked with copy-on-write shared memory, since
 segment structures are written to as part of a garbage collection.
 SGGC_SEG_BLOCKING is ignored if SGGC_SEG_DIRECT is defined.
 
+SGGC_SMALL_DATA_AREA_BLOCKING may be defined as an integer greater
+than 1 to enable allocation of data areas for small segments in blocks
+of that number.  SGGC_SMALL_DATA_AREA_ALIGN may also be defined (as a
+power of two) to a boundary to which data areas should be aligned.
+
 SGGC_HUGE_SHIFT is used when the number of chunks asked for for a big
 segment is too large to fit in 21 bits.  In this case, the number of
 chunks is automatically increased to a multiple of 2^SGGC_HUGE_SHIFT

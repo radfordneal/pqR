@@ -1,5 +1,10 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2017-04-22
+
+  Added SGGC_SMALL_DATA_AREA_BLOCKING/ALIGN and sggc_call_for_object_in_use
+  to API.
+
 Version-2017-04-17
 
   Various additions, including SGGC_NO_OBJECT_ZERO, SGGC_SEG_BLOCKING,

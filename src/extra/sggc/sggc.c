@@ -52,6 +52,13 @@
 #endif
 
 
+/* BLOCKING FOR SMALL DATA AREAS. */
+
+#ifndef SGGC_SMALL_DATA_AREA_BLOCKING
+#define SGGC_SMALL_DATA_AREA_BLOCKING 1
+#endif
+
+
 /* ENABLE/DISABLE EXTRA CHECKS.  These are consistency checks that take
    non-negligible time. */
 
@@ -170,6 +177,15 @@ static char *kind_aux2_read_only[SGGC_N_KINDS];
 static struct set_segment *seg_block; /* Pointer to next segment in block */
 static int seg_block_remaining;       /* # of segments remaining in seg_block */
 #endif
+
+
+/* CURRENT BLOCK OF SPACE TO ALLOCATE SMALL DATA AREAS FROM. */
+
+#define SMALL_DATA_AREA_SIZE \
+  ((size_t) SGGC_CHUNK_SIZE * SGGC_CHUNKS_IN_SMALL_SEGMENT)
+
+static char *small_data_area_next;    /* Next position in small data area */
+static char *small_data_area_end;     /* End of small data area */
 
 
 /* BIT VECTORS FOR FULL SEGMENTS.  Computed at initialization from 
@@ -471,6 +487,10 @@ int sggc_init (unsigned max_segments)
   seg_block_remaining = 0;
 # endif
 
+  /* Initialize block of space for data areas of small segments. */
+
+  small_data_area_next = NULL;
+
   /* Initialize the sggc_info structure. */
 
   sggc_info.gen0_count = 0;
@@ -626,6 +646,43 @@ static set_index_t new_segment (void)
 }
 
 
+/* ARRANGE THAT A SMALL DATA AREA IS AVAILABLE.  Sets small_data_area_next 
+
+   to NULL if it couldn't allocate space.  Otherwise, small_data_area_next 
+   is set to point just past the data area that is available, which is of 
+   size SMALL_DATA_AREA_SIZE.  If the data area is not used in the end, 
+   SMALL_DATA_AREA_SIZE should be subtracted from small_data_area_next, so 
+   that the space will be used next time. */
+
+static void get_small_data_area (void)
+{
+  if (small_data_area_next == NULL 
+       || small_data_area_next == small_data_area_end)
+  { 
+#   if SGGC_SMALL_DATA_AREA_ALIGN
+      small_data_area_next = 
+       sggc_alloc_zeroed (SMALL_DATA_AREA_SIZE * SGGC_SMALL_DATA_AREA_BLOCKING
+                            + SGGC_SMALL_DATA_AREA_ALIGN - 1);
+#   else
+      small_data_area_next = 
+       sggc_alloc_zeroed (SMALL_DATA_AREA_SIZE * SGGC_SMALL_DATA_AREA_BLOCKING);
+#   endif
+    if (small_data_area_next == NULL)
+    { return;
+    }
+#   if SGGC_SMALL_DATA_AREA_ALIGN
+      small_data_area_next = (char *) 
+       (((uintptr_t)small_data_area_next + SGGC_SMALL_DATA_AREA_ALIGN - 1) 
+           & ~ ((uintptr_t)SGGC_SMALL_DATA_AREA_ALIGN - 1));
+#   endif
+    small_data_area_end = small_data_area_next +
+                           SMALL_DATA_AREA_SIZE * SGGC_SMALL_DATA_AREA_BLOCKING;
+  }
+
+  small_data_area_next += SMALL_DATA_AREA_SIZE;
+}
+
+
 /* ALLOCATE AN OBJECT OF SPECIFIED KIND, TYPE, AND LENGTH.  The length
    is used only for big kinds. The value returned is SGGC_NO_OBJECT if
    allocation fails (but note that it might succeed if retried after
@@ -707,8 +764,9 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
       return v;
     }
 
-    data_size = (size_t) SGGC_CHUNK_SIZE * SGGC_CHUNKS_IN_SMALL_SEGMENT;
-    data = sggc_alloc_zeroed (data_size);
+    get_small_data_area();
+    data_size = SMALL_DATA_AREA_SIZE;
+    data = small_data_area_next - SMALL_DATA_AREA_SIZE;
 
     big = 0;
   }
@@ -938,10 +996,14 @@ fail:
   /* Some allocation failed.  Return SGGC_NO_OBJECT, after freeing 'data', 
      and for a big segment, putting it back in 'unused'. */
 
-  sggc_free(data);
-
-  if (big && v != SGGC_NO_OBJECT) 
-  { set_add (&unused, v);
+  if (big)
+  { if (v != SGGC_NO_OBJECT) 
+    { set_add (&unused, v);
+    }
+    sggc_free(data);
+  }
+  else
+  { small_data_area_next -= SMALL_DATA_AREA_SIZE;
   }
 
   return SGGC_NO_OBJECT;
